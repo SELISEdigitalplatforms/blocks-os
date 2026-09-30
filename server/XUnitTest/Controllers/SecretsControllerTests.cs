@@ -92,6 +92,7 @@ namespace XUnitTest.Controllers
         [InlineData(nameof(SecretsController.Lock), "blocks-os::secret::lock")]
         [InlineData(nameof(SecretsController.Delete), "blocks-os::secret::delete")]
         [InlineData(nameof(SecretsController.Restore), "blocks-os::secret::restore")]
+        [InlineData(nameof(SecretsController.Purge), "blocks-os::secret::delete")]
         [InlineData(nameof(SecretsController.Access), "blocks-os::secret::access")]
         [InlineData(nameof(SecretsController.Audit), "blocks-os::secret::audit")]
         public void EveryEndpointCarriesItsProtectedResource(string action, string expectedResource)

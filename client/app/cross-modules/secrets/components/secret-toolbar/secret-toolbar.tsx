@@ -1,4 +1,13 @@
+import { Archive, KeyRound } from "lucide-react";
 import { FilterToolbar } from "@/components/filter-toolbar";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  underlineTabTriggerClass,
+  underlineTabsListClass,
+} from "@/components/ui-kits/tabs/tabs";
+import { cn } from "@/lib/utils";
 import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useSecretTags } from "@/cross-modules/secrets/hooks/use-secret-management";
 import {
@@ -25,11 +34,15 @@ const TYPE_OPTIONS = [
   { value: SECRET_TYPE.Both, label: SECRET_TYPE_LABEL.both },
 ];
 
+// Archived is its own tab, not a status option: it is where restore and purge live, and a
+// radio buried in the filter popover is not somewhere anyone would look for it.
 const STATUS_OPTIONS = [
   { value: SECRET_STATUS.Active, label: SECRET_STATUS_LABEL.active },
   { value: SECRET_STATUS.Locked, label: SECRET_STATUS_LABEL.locked },
-  { value: SECRET_STATUS.Deleted, label: SECRET_STATUS_LABEL.deleted },
 ];
+
+export const SECRET_VIEW = { Secrets: "secrets", Archived: "archived" } as const;
+export type SecretView = (typeof SECRET_VIEW)[keyof typeof SECRET_VIEW];
 
 export const SECRET_FILTER_DEFAULTS: SecretFilterValues = {
   search: "",
@@ -80,16 +93,22 @@ export const useSecretFilterQueryParams = () => {
     pageSize: queryParams.secretPageSize,
   };
 
+  // The Archived tab is the `deleted` status filter; there is no separate URL key to drift.
+  const view: SecretView =
+    values.status === SECRET_STATUS.Deleted ? SECRET_VIEW.Archived : SECRET_VIEW.Secrets;
+
   const setPage = (page: number) => setQueryParams((params) => ({ ...params, secretPage: page }));
 
   const setPageSize = (pageSize: number) =>
     setQueryParams((params) => ({ ...params, secretPageSize: pageSize, secretPage: 0 }));
 
-  return { queryParams, setQueryParams, values, filter, setPage, setPageSize };
+  return { queryParams, setQueryParams, values, filter, view, setPage, setPageSize };
 };
 
 export function SecretToolbar() {
-  const { setQueryParams, values } = useSecretFilterQueryParams();
+  const { setQueryParams, values, view } = useSecretFilterQueryParams();
+  const isArchived = view === SECRET_VIEW.Archived;
+  const viewStatus = isArchived ? SECRET_STATUS.Deleted : "";
   const { data: tagCatalogue = [], isLoading: isTagsLoading } = useSecretTags();
 
   // The catalogue is the whole option list: the server adds any tag someone invents to it, so
@@ -99,6 +118,8 @@ export function SecretToolbar() {
   // Radio clears to null; normalise to "" so it round-trips through the URL as "no filter".
   const changeHandler = (key: keyof SecretFilterValues, value: unknown) => {
     const next = typeof value === "string" ? value : "";
+    // The status control is not rendered on the Archived tab; never let it leave that view.
+    if (key === "status" && isArchived) return;
     setQueryParams((params) => ({
       ...params,
       ...(key === "search" ? { secretSearch: next } : {}),
@@ -123,42 +144,83 @@ export function SecretToolbar() {
       ...params,
       secretSearch: "",
       secretType: "",
-      secretStatus: "",
+      // Reset clears the filters, not the tab you are on.
+      secretStatus: viewStatus,
       secretTags: null,
       secretPage: 0,
     }));
 
+  // Switching tabs drops the status filter (Active/Locked mean nothing among archived secrets)
+  // and returns to the first page; search, type and tags carry over.
+  const viewChangeHandler = (next: string) =>
+    setQueryParams((params) => ({
+      ...params,
+      secretStatus: next === SECRET_VIEW.Archived ? SECRET_STATUS.Deleted : "",
+      secretPage: 0,
+    }));
+
   return (
-    <FilterToolbar<SecretFilterValues>
-      filters={[
-        {
-          key: "search",
-          type: "SearchInput",
-          label: "",
-          // The control defaults to w-52, which clips a placeholder this long. The backend also
-          // matches description, but naming every matched field is what made it overflow.
-          props: {
-            placeholder: "Search by name or ID",
-            className: "w-full sm:w-72",
+    <div className="space-y-3">
+      <Tabs value={view} onValueChange={viewChangeHandler}>
+        <TabsList className={cn(underlineTabsListClass, "w-fit")}>
+          <TabsTrigger
+            value={SECRET_VIEW.Secrets}
+            className={cn(underlineTabTriggerClass, "gap-1.5")}
+          >
+            <KeyRound className="h-4 w-4" />
+            <span>Secrets</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value={SECRET_VIEW.Archived}
+            className={cn(underlineTabTriggerClass, "gap-1.5")}
+          >
+            <Archive className="h-4 w-4" />
+            <span>Archived</span>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      <FilterToolbar<SecretFilterValues>
+        filters={[
+          {
+            key: "search",
+            type: "SearchInput",
+            label: "",
+            // The control defaults to w-52, which clips a placeholder this long. The backend also
+            // matches description, but naming every matched field is what made it overflow.
+            props: {
+              placeholder: "Search by name or ID",
+              className: "w-full sm:w-72",
+            },
           },
-        },
-        { key: "type", type: "Radio", label: "Type", props: { options: TYPE_OPTIONS } },
-        { key: "status", type: "Radio", label: "Status", props: { options: STATUS_OPTIONS } },
-        {
-          key: "tags",
-          type: "MultiSelect",
-          label: "Tags",
-          props: { options: tagOptions, disabled: isTagsLoading },
-        },
-      ]}
-      values={values}
-      defaultValues={SECRET_FILTER_DEFAULTS}
-      onChange={(key, value) =>
-        key === "tags"
-          ? tagsChangeHandler(value as string[])
-          : changeHandler(key as keyof SecretFilterValues, value)
-      }
-      onReset={resetHandler}
-    />
+          { key: "type", type: "Radio", label: "Type", props: { options: TYPE_OPTIONS } },
+          ...(isArchived
+            ? []
+            : [
+                {
+                  key: "status" as const,
+                  type: "Radio" as const,
+                  label: "Status",
+                  props: { options: STATUS_OPTIONS },
+                },
+              ]),
+          {
+            key: "tags",
+            type: "MultiSelect",
+            label: "Tags",
+            props: { options: tagOptions, disabled: isTagsLoading },
+          },
+        ]}
+        values={values}
+        // On the Archived tab the `deleted` status is the tab itself, not an applied filter.
+        defaultValues={{ ...SECRET_FILTER_DEFAULTS, status: viewStatus }}
+        onChange={(key, value) =>
+          key === "tags"
+            ? tagsChangeHandler(value as string[])
+            : changeHandler(key as keyof SecretFilterValues, value)
+        }
+        onReset={resetHandler}
+      />
+    </div>
   );
 }

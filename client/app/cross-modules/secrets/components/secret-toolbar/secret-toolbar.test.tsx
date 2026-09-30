@@ -114,6 +114,54 @@ describe("SecretToolbar", () => {
     expect(screen.queryAllByRole("button", { name: /Reset/ })).toHaveLength(0);
   });
 
+  describe("Secrets / Archived tabs", () => {
+    it("opens on the Secrets tab", () => {
+      renderToolbar();
+      expect(screen.getByRole("tab", { name: /Secrets/ }).getAttribute("aria-selected")).toBe("true");
+      expect(screen.getByRole("tab", { name: /Archived/ }).getAttribute("aria-selected")).toBe("false");
+    });
+
+    it("reads the Archived tab from the URL", () => {
+      renderToolbar("?secretStatus=deleted");
+      expect(screen.getByRole("tab", { name: /Archived/ }).getAttribute("aria-selected")).toBe("true");
+    });
+
+    it("hides the status filter on the Archived tab", () => {
+      renderToolbar("?secretStatus=deleted");
+      expect(screen.queryAllByRole("button", { name: /Status/ })).toHaveLength(0);
+    });
+
+    it("does not count the Archived tab itself as a filter to reset", () => {
+      renderToolbar("?secretStatus=deleted");
+      expect(screen.queryAllByRole("button", { name: /Reset/ })).toHaveLength(0);
+    });
+
+    it("switches between the tabs", async () => {
+      const user = userEvent.setup();
+      renderToolbar("?secretStatus=locked");
+
+      await user.click(screen.getByRole("tab", { name: /Archived/ }));
+      expect(screen.getByRole("tab", { name: /Archived/ }).getAttribute("aria-selected")).toBe("true");
+      // Leaving Secrets drops its Locked filter along with the status control.
+      expect(screen.queryAllByRole("button", { name: /Status/ })).toHaveLength(0);
+
+      await user.click(screen.getByRole("tab", { name: /Secrets/ }));
+      expect(screen.getByRole("tab", { name: /Secrets/ }).getAttribute("aria-selected")).toBe("true");
+      // Coming back does not resurrect the old Locked filter either.
+      expect(screen.queryAllByRole("button", { name: /Reset/ })).toHaveLength(0);
+    });
+
+    it("keeps you on the Archived tab when you reset its filters", async () => {
+      const user = userEvent.setup();
+      renderToolbar("?secretStatus=deleted&secretType=api");
+
+      await user.click(screen.getAllByRole("button", { name: /Reset/ })[0]);
+
+      expect(screen.getByRole("tab", { name: /Archived/ }).getAttribute("aria-selected")).toBe("true");
+      expect(screen.queryAllByRole("button", { name: /Reset/ })).toHaveLength(0);
+    });
+  });
+
   it("clears every filter on reset", async () => {
     const user = userEvent.setup();
     renderToolbar("?secretSearch=gateway&secretType=api&secretStatus=locked");

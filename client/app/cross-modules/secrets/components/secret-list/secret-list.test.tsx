@@ -101,6 +101,26 @@ describe("SecretList", () => {
     expect(screen.getByText(/clear the filters/i)).toBeTruthy();
   });
 
+  it("explains the Archived tab when nothing is archived", () => {
+    hoisted.state.data = { data: [], totalCount: 0 };
+    renderList("?secretStatus=deleted");
+    expect(screen.getByText("No archived secrets")).toBeTruthy();
+    expect(screen.getByText(/restore one to use it again, or purge it/i)).toBeTruthy();
+    expect(screen.queryByText("No secrets yet")).toBeNull();
+  });
+
+  it("suggests clearing filters when an archived search finds nothing", () => {
+    hoisted.state.data = { data: [], totalCount: 0 };
+    renderList("?secretStatus=deleted&secretSearch=nothing");
+    expect(screen.getByText("No matching archived secrets")).toBeTruthy();
+  });
+
+  it("treats a tag filter as a filter for the empty state", () => {
+    hoisted.state.data = { data: [], totalCount: 0 };
+    renderList("?secretTags=iam");
+    expect(screen.getByText("No matching secrets")).toBeTruthy();
+  });
+
   describe("filters to request mapping", () => {
     it("defaults to page one with no type or status filter", () => {
       hoisted.state.data = { data: [], totalCount: 0 };

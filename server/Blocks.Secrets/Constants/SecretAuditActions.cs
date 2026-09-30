@@ -15,6 +15,9 @@ public static class SecretAuditActions
     public const string Unlock = "Unlock";
     public const string Delete = "Delete";
     public const string Restore = "Restore";
+
+    /// <summary>A deleted secret was permanently removed: metadata and vault value.</summary>
+    public const string Purge = "Purge";
     public const string UpdateAccess = "UpdateAccess";
     public const string AccessDenied = "AccessDenied";
 
@@ -59,5 +62,8 @@ public static class SecretAuditReasons
     public const string VaultFailure = "VAULT_FAILURE";
     public const string MetadataWriteFailed = "METADATA_WRITE_FAILED";
     public const string CleanupFailed = "CLEANUP_FAILED";
+
+    /// <summary>The vault deleted the value but refused to purge it; it expires on its own.</summary>
+    public const string VaultPurgeFailed = "VAULT_PURGE_FAILED";
     public const string AccessNotApplicable = "ACCESS_NOT_APPLICABLE";
 }

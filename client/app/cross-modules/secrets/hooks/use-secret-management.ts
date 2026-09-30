@@ -235,9 +235,11 @@ export const useDeleteSecret = () => {
     onSuccess: (_, secretId) => {
       invalidateList();
       invalidateItem(secretId);
-      showSuccessToast({ description: "Secret deleted. It can still be restored." });
+      showSuccessToast({
+        description: "Secret archived. Find it under Archived to restore or purge it.",
+      });
     },
-    onError: (error) => toastError(error, "Could not delete the secret."),
+    onError: (error) => toastError(error, "Could not archive the secret."),
   });
 };
 
@@ -251,5 +253,18 @@ export const useRestoreSecret = () => {
       showSuccessToast({ description: "Secret restored." });
     },
     onError: (error) => toastError(error, "Could not restore the secret."),
+  });
+};
+
+export const usePurgeSecret = () => {
+  const { invalidateList, invalidateItem, toastError } = useSecretMutationHelpers();
+  return useMutation({
+    mutationFn: (secretId: string) => secretManagementService.purge(secretId),
+    onSuccess: (_, secretId) => {
+      invalidateList();
+      invalidateItem(secretId);
+      showSuccessToast({ description: "Secret purged." });
+    },
+    onError: (error) => toastError(error, "Could not purge the secret."),
   });
 };

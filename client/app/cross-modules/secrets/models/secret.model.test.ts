@@ -8,6 +8,7 @@ import {
   SECRET_VALUE_MAX_BYTES,
   isApiSecret,
   isDeleted,
+  secretAuditActionLabel,
   looksLikeSecretId,
   secretValueByteLength,
   supportsValueReveal,
@@ -50,7 +51,18 @@ describe("secret model", () => {
     it("capitalises statuses for display", () => {
       expect(SECRET_STATUS_LABEL.active).toBe("Active");
       expect(SECRET_STATUS_LABEL.locked).toBe("Locked");
-      expect(SECRET_STATUS_LABEL.deleted).toBe("Deleted");
+      expect(SECRET_STATUS_LABEL.deleted).toBe("Archived");
+    });
+  });
+
+  describe("audit action labels", () => {
+    it("names the soft delete Archive and keeps Purge", () => {
+      expect(secretAuditActionLabel("Delete")).toBe("Archive");
+      expect(secretAuditActionLabel("Purge")).toBe("Purge");
+    });
+
+    it("falls back to the raw action for anything it does not know", () => {
+      expect(secretAuditActionLabel("Rotate")).toBe("Rotate");
     });
   });
 

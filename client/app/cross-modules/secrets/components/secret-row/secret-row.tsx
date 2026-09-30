@@ -9,6 +9,7 @@ import {
   MoreHorizontal,
   Pencil,
   RefreshCw,
+  Archive,
   RotateCcw,
   Trash2,
   Unlock,
@@ -260,11 +261,21 @@ export function SecretRow({ secret }: SecretRowProps) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {isDeleted ? (
-                  // A deleted secret cannot be edited, rotated or locked — only brought back.
-                  <DropdownMenuItem onClick={() => setLifecycleAction("restore")}>
-                    <RotateCcw className="mr-2 h-4 w-4" />
-                    Restore
-                  </DropdownMenuItem>
+                  // An archived secret cannot be edited, rotated or locked — only brought back,
+                  // or purged for good.
+                  <>
+                    <DropdownMenuItem onClick={() => setLifecycleAction("restore")}>
+                      <RotateCcw className="mr-2 h-4 w-4" />
+                      Restore
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() => setLifecycleAction("purge")}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Purge
+                    </DropdownMenuItem>
+                  </>
                 ) : (
                   <>
                     <DropdownMenuItem onClick={() => setEditOpen(true)}>
@@ -290,8 +301,8 @@ export function SecretRow({ secret }: SecretRowProps) {
                       className="text-destructive focus:text-destructive"
                       onClick={() => setLifecycleAction("delete")}
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
+                      <Archive className="mr-2 h-4 w-4" />
+                      Archive
                     </DropdownMenuItem>
                   </>
                 )}

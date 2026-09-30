@@ -178,6 +178,13 @@
         <member name="M:BlocksOs.Api.Controllers.SecretsController.Unlock(Blocks.Secrets.SecretIdRequest,System.Threading.CancellationToken)">
             <summary>Unlocks a secret. Shares the lock permission — they are one capability.</summary>
         </member>
+        <member name="M:BlocksOs.Api.Controllers.SecretsController.Purge(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Permanently deletes an already-deleted secret: metadata and vault value. Shares the delete
+            permission — it is the second half of the same capability, and only reaches secrets the
+            soft delete has already taken out of service.
+            </summary>
+        </member>
         <member name="T:BlocksOs.Api.Controllers.VersionController">
             <summary>
             Reports the running API assembly version. Public by design (no auth) so health/deploy
