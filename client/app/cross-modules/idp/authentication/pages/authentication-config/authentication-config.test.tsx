@@ -26,6 +26,10 @@ vi.mock("@blocks-idp/iam/modules/organization-management", () => ({
 vi.mock("@blocks-idp/iam/modules/user-management", () => ({
   InviteUser: () => <div data-testid="invite-user" />,
 }));
+vi.mock("@blocks-idp/iam/modules/signup-link-management", () => ({
+  AddConfigurationHeader: () => <div data-testid="add-configuration" />,
+  ActivityRefreshHeader: () => <div data-testid="activity-refresh" />,
+}));
 vi.mock("@/components/action-buttons/primary-button", () => ({
   PrimaryButton: ({ label }: { label: string }) => <button>{label}</button>,
 }));
@@ -52,6 +56,20 @@ describe("AuthenticationConfigLayout", () => {
     h.pathname = "/app/auth/roles";
     render(<AuthenticationConfigLayout />);
     expect(screen.getByTestId("add-role")).toBeTruthy();
+  });
+
+  it("shows the Add Configuration action on the signup-link-configurations path", () => {
+    h.pathname = "/app/auth/signup-link-configurations";
+    render(<AuthenticationConfigLayout />);
+    expect(screen.getByTestId("add-configuration")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "One-Click Signup" })).toBeTruthy();
+  });
+
+  it("shows the Refresh action on the signup-link-activity path", () => {
+    h.pathname = "/app/auth/signup-link-activity";
+    render(<AuthenticationConfigLayout />);
+    expect(screen.getByTestId("activity-refresh")).toBeTruthy();
+    expect(screen.queryByTestId("add-configuration")).toBeNull();
   });
 
   it("shows the Add Permission action on the permissions path", () => {

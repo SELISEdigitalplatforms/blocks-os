@@ -291,3 +291,4 @@ test-results/
 
 # Developer-specific project references and build overrides
 /server/Directory.Build.local.props
+.loop/

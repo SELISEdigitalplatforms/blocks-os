@@ -1,5 +1,6 @@
 import { Menu } from "@/models/menu-models";
 import {
+  // Activity,  // restore with the signup-link-activity entry below
   BarChart3,
   Bell,
   BookMinus,
@@ -25,6 +26,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Smartphone,
+  Ticket,
   Users,
   Zap,
 } from "lucide-react";
@@ -284,6 +286,29 @@ export const navigationMenus: Menu[] = [
         desc: "Manage permissions",
         type: "menu",
       },
+      {
+        id: "signup-link-configurations",
+        name: "One-Click Signup",
+        // Plural is safe here, unlike the siblings above: this screen edits in dialogs
+        // rather than detail routes, so there is no sibling path for startsWith to swallow.
+        // It shares the "/app/iam/signup-link" prefix with the hidden activity route below,
+        // but neither path is a prefix of the other, so expansion highlights exactly one.
+        path: "/app/iam/signup-link-configurations",
+        icon: Ticket,
+        desc: "Manage configurations that one-click signup links are generated from",
+        type: "menu",
+      },
+      // Hidden from the sidebar for now. The route, the page and its summary endpoint are
+      // all still live, so /app/iam/signup-link-activity works if you go to it directly --
+      // restoring the entry is uncommenting this and the Activity icon import.
+      // {
+      //   id: "signup-link-activity",
+      //   name: "Signup Link Activity",
+      //   path: "/app/iam/signup-link-activity",
+      //   icon: Activity,
+      //   desc: "Review per-configuration signup link activity counts",
+      //   type: "menu",
+      // },
     ],
   },
   { type: "separator", id: "separator-lmt" },
