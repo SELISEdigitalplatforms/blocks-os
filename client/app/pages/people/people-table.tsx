@@ -232,7 +232,7 @@ export const PeopleTable = ({
                 className={
                   isOwner
                     ? "w-fit bg-primary/10 px-2 py-0.5 text-xs font-normal text-primary"
-                    : "w-fit bg-neutral-100 px-2 py-0.5 text-xs font-normal text-medium-emphasis"
+                    : "w-fit bg-neutral-100 px-2 py-0.5 text-xs font-normal text-medium-emphasis dark:bg-primary/10 dark:text-primary"
                 }
               />
             </div>
