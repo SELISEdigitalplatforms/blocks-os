@@ -152,6 +152,46 @@ namespace XUnitTest.Validators
 
             result.IsValid.Should().BeTrue();
         }
+
+        [Fact]
+        public async Task Validate_NewProject_BelowOwnedLimit_IsValid()
+        {
+            _repo.Setup(r => r.GetOwnedProjectGroupCountAsync())
+                 .ReturnsAsync(CreateProjectRequestValidator.MaxOwnedProjectGroups - 1);
+
+            var result = await CreateValidator().ValidateAsync(ValidRequest());
+
+            result.IsValid.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task Validate_NewProject_AtOwnedLimit_Fails()
+        {
+            _repo.Setup(r => r.GetOwnedProjectGroupCountAsync())
+                 .ReturnsAsync(CreateProjectRequestValidator.MaxOwnedProjectGroups);
+
+            var result = await CreateValidator().ValidateAsync(ValidRequest());
+
+            result.IsValid.Should().BeFalse();
+            result.Errors.Should().Contain(e => e.ErrorMessage.Contains("more than 10 projects"));
+        }
+
+        [Fact]
+        public async Task Validate_AddingEnvironmentToExistingGroup_IgnoresOwnedLimit()
+        {
+            _repo.Setup(r => r.IsExistingEnviroment(It.IsAny<List<string>>(), It.IsAny<string>()))
+                 .ReturnsAsync(false);
+            _repo.Setup(r => r.GetOwnedProjectGroupCountAsync())
+                 .ReturnsAsync(CreateProjectRequestValidator.MaxOwnedProjectGroups);
+
+            var request = ValidRequest();
+            request.TenantGroupId = "group-1";
+
+            var result = await CreateValidator().ValidateAsync(request);
+
+            result.IsValid.Should().BeTrue();
+            _repo.Verify(r => r.GetOwnedProjectGroupCountAsync(), Times.Never);
+        }
     }
 
     public class UpdateProjectRequestValidatorTests

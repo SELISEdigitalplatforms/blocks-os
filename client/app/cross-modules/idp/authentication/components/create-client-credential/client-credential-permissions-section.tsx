@@ -9,12 +9,17 @@ type ClientCredentialPermissionsSectionProps = {
   selectedResources: string[];
   onChange: (resources: string[]) => void;
   maxPermissions?: number;
+  /** Copy overrides so other features can reuse this section verbatim. */
+  label?: string;
+  description?: string;
 };
 
 export const ClientCredentialPermissionsSection = ({
   selectedResources,
   onChange,
   maxPermissions = 10,
+  label = "Permissions",
+  description = "Select permissions to include in the access token granted by this client.",
 }: ClientCredentialPermissionsSectionProps) => {
   const permissions = useMemo(() => toPermissionStubs(selectedResources), [selectedResources]);
 
@@ -32,16 +37,14 @@ export const ClientCredentialPermissionsSection = ({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex-1 space-y-1">
           <div className="flex items-center gap-2">
-            <Label className="text-base font-medium">Permissions</Label>
+            <Label className="text-base font-medium">{label}</Label>
             {permissions.length > 0 && (
               <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                 {permissions.length}
               </span>
             )}
           </div>
-          <p className="text-sm text-muted-foreground">
-            Select permissions to include in the access token granted by this client.
-          </p>
+          <p className="text-sm text-muted-foreground">{description}</p>
         </div>
         <div className="shrink-0">
           <AddClientCredentialPermission
