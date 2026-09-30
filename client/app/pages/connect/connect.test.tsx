@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -9,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   approve: vi.fn(),
   checkReadiness: vi.fn(),
   startImpersonation: vi.fn(),
+  createProject: vi.fn(),
   requestQueryResult: undefined as unknown,
   projectsQueryResult: undefined as unknown,
 }));
@@ -43,6 +45,10 @@ const httpError = (errors: Record<string, string>) =>
 
 vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useStartImpersonation: () => ({ mutateAsync: mocks.startImpersonation }),
+}));
+
+vi.mock("@/hooks/use-project", () => ({
+  useCreateProject: () => ({ isPending: false, mutateAsync: mocks.createProject }),
 }));
 
 const { default: ConnectPage } = await import("./connect");
@@ -89,6 +95,10 @@ describe("ConnectPage error states (P3-16)", () => {
     const { unmount } = mount();
 
     expect(screen.getByText("This connection link has expired")).toBeTruthy();
+    expect(screen.getAllByAltText("Blocks OS").map((image) => image.getAttribute("src"))).toEqual([
+      "/blocks-logos/os_light_mode.svg",
+      "/blocks-logos/os_dark_mode.svg",
+    ]);
     expect(screen.getByText("Back to your site")).toBeTruthy();
     // Leaving the screen removes the pending id so a later login is not redirected to a
     // dead request — verified after unmount, since the screen itself still needs the data.
@@ -121,6 +131,66 @@ describe("ConnectPage error states (P3-16)", () => {
     expect(screen.getByText("Something went wrong")).toBeTruthy();
   });
 
+  it("goes back from project creation to project selection without cancelling the connection", async () => {
+    mocks.requestQueryResult = {
+      data: {
+        requestId: "req-1",
+        siteName: "My Blog",
+        redirectHost: "site.example.com",
+        family: "localization",
+        status: "pending",
+        expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        templates: [],
+      },
+    };
+    mocks.projectsQueryResult = {
+      data: [{
+        tenantGroupId: "group-1",
+        projects: [{ itemId: "project-1", tenantId: "environment-1", environment: "dev", name: "Project" }],
+      }],
+    };
+
+    mount();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Create new project" }));
+    expect(screen.getByLabelText("Project name")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Go back" }));
+    expect(screen.getByRole("combobox", { name: "Project" })).toBeTruthy();
+    expect(screen.queryByLabelText("Project name")).toBeNull();
+  });
+
+  it("shows project creation success and does not offer the create action again", async () => {
+    mocks.requestQueryResult = {
+      data: {
+        requestId: "req-1",
+        siteName: "My Blog",
+        redirectHost: "site.example.com",
+        family: "localization",
+        status: "pending",
+        expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        templates: [],
+      },
+    };
+    mocks.projectsQueryResult = { data: [] };
+    mocks.createProject.mockResolvedValue({ isSuccess: true, tenantGroupId: "new-group", errors: {} });
+
+    mount();
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Project name"), "New project");
+    await user.click(screen.getByRole("button", { name: "Development, branch dev" }));
+    await user.click(screen.getByRole("checkbox", { name: "Use Blocks exclusively" }));
+    await user.click(screen.getByRole("checkbox", { name: "Accept the Terms of services" }));
+    await user.click(screen.getByRole("button", { name: "Create project" }));
+
+    await waitFor(() => expect(mocks.createProject).toHaveBeenCalledOnce());
+    expect(await screen.findByText("Project created successfully")).toBeTruthy();
+    expect(screen.getByText("Loading environments for New project…")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Create project" })).toBeNull();
+    expect(screen.queryByLabelText("Project name")).toBeNull();
+  });
+
   it("shows Connect cards after choosing an environment and connects the selected option when ready", async () => {
     mocks.requestQueryResult = {
       data: {
@@ -148,12 +218,21 @@ describe("ConnectPage error states (P3-16)", () => {
       .mockResolvedValueOnce({ ready: true, missingPermissions: [] });
 
     mount();
+    const user = userEvent.setup();
+    expect(screen.queryByText(/Step 2 of 3/)).toBeNull();
+    expect(screen.queryByText("Connection request")).toBeNull();
+    expect(screen.getByText("My Blog")).toBeTruthy();
+    expect(screen.getByText("site.example.com")).toBeTruthy();
+    await user.click(screen.getByRole("combobox", { name: "Project" }));
+    await user.click(screen.getByRole("option", { name: "Project" }));
     expect(screen.queryByText("Connect options")).toBeNull();
     fireEvent.click(screen.getByText("dev"));
+    expect(screen.getByText("Development")).toBeTruthy();
     expect(screen.getByText("Connect options")).toBeTruthy();
     expect(screen.getByText("Read translations.")).toBeTruthy();
     expect(screen.getByText("Manage translations.")).toBeTruthy();
     expect(screen.getAllByRole("button", { name: /^Connect Localization/ })).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Connect Localization Full" }).className).toContain("bg-primary");
     expect(screen.getAllByRole("button", { name: "Cancel" })).toHaveLength(1);
 
     fireEvent.click(screen.getByRole("button", { name: "Connect Localization Full" }));
@@ -161,6 +240,11 @@ describe("ConnectPage error states (P3-16)", () => {
     expect((screen.getByRole("button", { name: "Connect Localization Read" }) as HTMLButtonElement).disabled).toBe(true);
     await waitFor(() => expect(mocks.checkReadiness).toHaveBeenCalledTimes(2), { timeout: 4_000 });
     await waitFor(() => expect(mocks.approve).toHaveBeenCalledWith("req-1", "localization-full"));
+    expect(await screen.findByText("Connection successful")).toBeTruthy();
+    expect(screen.getByText("Your site is connected to Blocks OS.")).toBeTruthy();
+    expect(screen.getByText("Redirecting you to My Blog…")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Go to site now" }).getAttribute("href"))
+      .toBe("https://site.example.com/callback?code=code-1");
   }, 5_000);
 
 });

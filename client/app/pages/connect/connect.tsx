@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useAuthStore } from "@seliseblocks/genesis-os/store";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Loader2, Plug } from "lucide-react";
+import { ArrowLeft, ArrowRight, CircleCheck, GitBranch, Loader2, Plug } from "lucide-react";
 import { Banner } from "@/components/ui-kits/banner/banner";
 import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
@@ -11,6 +11,7 @@ import {
   ProjectEnvironmentCheckboxes,
   sortEnvironments,
 } from "@/components/create-project/form/project-environment-checkboxes";
+import { environmentOptions } from "@/components/create-project/form/create-project-environments-form/utils";
 import { ProjectTermsCheckboxes } from "@/components/create-project/form/project-terms-checkboxes";
 import { integrationConnectService } from "@/cross-modules/integration/services/integration-connect.service";
 import {
@@ -29,11 +30,14 @@ import {
 } from "@/lib/pending-connect";
 import { hasErrorCode, isErrorWithErrors } from "@/lib/error";
 import { showErrorToast } from "@/hooks/use-toast";
+import { ConnectProjectPicker } from "./connect-project-picker";
 
 const PROJECTS_QUERY_KEY = ["identifier", "projects", "connect"] as const;
+const environmentLabel = (value: string) =>
+  environmentOptions.find((option) => option.value === value)?.label ?? value;
 
 /**
- * The "Connect with Blocks" page (P3-11 entry, P3-13 approve screen, P3-14 no-project branch,
+ * The "Connect with Blocks OS" page (P3-11 entry, P3-13 approve screen, P3-14 no-project branch,
  * P3-15 readiness wait). Reached from a CMS redirect; every step must survive a login
  * round-trip via the localStorage pending-request hand-off.
  */
@@ -125,18 +129,24 @@ export default function ConnectPage() {
     if (requestFailed) clearPendingConnectRequest();
   }, [requestFailed]);
 
+  const [createdProject, setCreatedProject] = useState<{ tenantGroupId: string; name: string } | null>(null);
   const projectsQuery = useQuery({
     queryKey: PROJECTS_QUERY_KEY,
     queryFn: () => projectService.getProjects(0, 100, ""),
     enabled: !!requestId && isAuthenticated,
+    refetchInterval: (query) =>
+      createdProject && !query.state.data?.some((group) => group.tenantGroupId === createdProject.tenantGroupId)
+        ? 3_000
+        : false,
   });
   const groups = useMemo(() => projectsQuery.data ?? [], [projectsQuery.data]);
 
   const [selectedTenantGroupId, setSelectedTenantGroupId] = useState<string | null>(null);
-  const effectiveSelectedGroupId = selectedTenantGroupId ?? groups[0]?.tenantGroupId ?? null;
+  const selectedGroup = groups.find((group) => group.tenantGroupId === selectedTenantGroupId);
   const [selectedEnvironment, setSelectedEnvironment] = useState<{ itemId: string; tenantId: string; environment: string } | null>(null);
   const [templateKey, setTemplateKey] = useState<string | null>(null);
   const [showCreateProject, setShowCreateProject] = useState(false);
+  const [successRedirectUrl, setSuccessRedirectUrl] = useState<string | null>(null);
 
   const readiness = useReadinessWait(
     templateKey,
@@ -166,15 +176,23 @@ export default function ConnectPage() {
     try {
       const result = await approve.mutateAsync({ requestId: request.requestId, templateKey: selectedTemplateKey });
       clearPendingConnectRequest();
-      window.location.assign(result.redirectUrl);
+      setSuccessRedirectUrl(result.redirectUrl);
     } catch {
       // Toast already shown by the hook.
     }
   }, [approve, request, selectedEnvironment]);
 
   useEffect(() => {
+    if (!successRedirectUrl) return;
+    const timer = window.setTimeout(() => window.location.assign(successRedirectUrl), 2_000);
+    return () => window.clearTimeout(timer);
+  }, [successRedirectUrl]);
+
+  useEffect(() => {
     if (readiness.state.phase !== "ready" || !selectedEnvironment || !templateKey) return;
     if (readiness.state.templateKey !== templateKey || readiness.state.environmentTenantId !== selectedEnvironment.tenantId) return;
+    // Approval updates the success screen only after its asynchronous request resolves.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void handleApprove(templateKey);
   }, [handleApprove, readiness.state, selectedEnvironment, templateKey]);
 
@@ -215,7 +233,7 @@ export default function ConnectPage() {
 
   if (!requestId) {
     return (
-      <ConnectShell title="Connect with Blocks">
+      <ConnectShell title="Connect with Blocks OS">
         <div className="flex justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-medium-emphasis" />
         </div>
@@ -225,7 +243,7 @@ export default function ConnectPage() {
 
   if (!isAuthenticated) {
     return (
-      <ConnectShell title="Connect with Blocks">
+      <ConnectShell title="Connect with Blocks OS">
         <div className="flex justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-medium-emphasis" />
         </div>
@@ -233,9 +251,30 @@ export default function ConnectPage() {
     );
   }
 
+  if (successRedirectUrl) {
+    return (
+      <ConnectShell title="Connection successful">
+        <div className="flex flex-col items-center gap-3 py-4 text-center" role="status">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500/10 text-green-600 dark:text-green-400">
+            <CircleCheck className="h-6 w-6" aria-hidden="true" />
+          </span>
+          <p className="text-sm text-high-emphasis">Your site is connected to Blocks OS.</p>
+          <p className="text-sm text-medium-emphasis">
+            Redirecting you to {request?.siteName || request?.redirectHost || "your site"}…
+          </p>
+        </div>
+        <div className="flex justify-center">
+          <Button asChild size="sm" className="gap-2">
+            <a href={successRedirectUrl}>Go to site now <ArrowRight className="h-4 w-4" aria-hidden="true" /></a>
+          </Button>
+        </div>
+      </ConnectShell>
+    );
+  }
+
   if (requestLoading) {
     return (
-      <ConnectShell title="Connect with Blocks">
+      <ConnectShell title="Connect with Blocks OS">
         <div className="flex justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-medium-emphasis" />
         </div>
@@ -276,50 +315,98 @@ export default function ConnectPage() {
     );
   }
 
+  if (projectsQuery.isLoading) {
+    return (
+      <ConnectShell title="Connect to Blocks OS">
+        <div className="flex items-center gap-2 py-4 text-sm text-medium-emphasis" role="status">
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          Loading projects…
+        </div>
+      </ConnectShell>
+    );
+  }
+
+  if (projectsQuery.isError && !createdProject) {
+    return (
+      <ConnectShell title="Connect to Blocks OS">
+        <Banner variant="destructive" title="Projects could not be loaded" compact={false}>
+          Check your connection, then try again.
+        </Banner>
+        <Button size="sm" variant="outline" onClick={() => void projectsQuery.refetch()}>Retry</Button>
+      </ConnectShell>
+    );
+  }
+
   const waiting = readiness.state.phase === "checking" || readiness.state.phase === "waiting";
   const busy = waiting || approve.isPending;
 
   return (
-    <ConnectShell title="Connect to Blocks">
-      <p className="text-xs font-medium uppercase tracking-wide text-medium-emphasis">Step 2 of 3 · Choose a connection</p>
-      <Banner variant="info" title={`${request.redirectHost} wants access to Blocks Localization`} compact={false}>
-        {request.siteName && request.siteName !== request.redirectHost ? (
-          <span className="text-xs">{request.siteName}</span>
-        ) : null}
-      </Banner>
+    <ConnectShell title="Connect to Blocks OS">
+      <p className="text-sm leading-relaxed text-medium-emphasis">
+        Choose the project, environment, and access this application can use.
+      </p>
+      <section aria-label="Connection request" className="rounded-lg border border-border bg-muted/20 p-4">
+        <div className="flex items-start gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <Plug className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <p className="break-words text-sm font-semibold text-high-emphasis">{request.siteName || request.redirectHost}</p>
+            <p className="mt-0.5 text-xs text-medium-emphasis">Requests access to Blocks Localization</p>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-t border-border pt-3 text-xs">
+          <span className="text-medium-emphasis">Request origin</span>
+          <code className="break-all font-mono text-high-emphasis">{request.redirectHost}</code>
+        </div>
+      </section>
 
-      {showCreateProject || groups.length === 0 ? (
+      {createdProject && !showCreateProject && (
+        <Banner variant="success" title="Project created successfully" compact={false}>
+          {selectedGroup
+            ? `Choose an environment for ${createdProject.name} to continue.`
+            : projectsQuery.isError
+              ? `Could not load environments for ${createdProject.name}.`
+              : `Loading environments for ${createdProject.name}…`}
+          {!selectedGroup && projectsQuery.isError && (
+            <button type="button" className="ml-1 font-semibold underline" onClick={() => void projectsQuery.refetch()}>
+              Retry
+            </button>
+          )}
+        </Banner>
+      )}
+
+      {showCreateProject || (groups.length === 0 && !createdProject) ? (
         <CreateProjectBranch
-          onCreated={async (tenantGroupId) => {
-            await queryClient.invalidateQueries({ queryKey: PROJECTS_QUERY_KEY });
+          onCreated={(tenantGroupId, name) => {
+            setCreatedProject({ tenantGroupId, name });
             setShowCreateProject(false);
             setSelectedTenantGroupId(tenantGroupId);
+            void queryClient.invalidateQueries({ queryKey: PROJECTS_QUERY_KEY });
           }}
           onChooseExisting={groups.length > 0 ? () => setShowCreateProject(false) : undefined}
         />
       ) : (
         <div className="space-y-6">
           <section>
-            <label htmlFor="connect-project" className="mb-2 block text-sm font-medium text-high-emphasis">Project</label>
-            <select
-              id="connect-project"
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-high-emphasis focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              value={effectiveSelectedGroupId ?? ""}
-              onChange={(e) => {
-                setSelectedTenantGroupId(e.target.value);
+            <p className="mb-2 text-sm font-medium text-high-emphasis">Project</p>
+            {groups.length > 0 ? <ConnectProjectPicker
+              projects={groups.map((group) => ({
+                tenantGroupId: group.tenantGroupId,
+                name: group.projects[0]?.name ?? group.tenantGroupId,
+              }))}
+              value={selectedTenantGroupId}
+              onValueChange={(tenantGroupId) => {
+                if (tenantGroupId === selectedTenantGroupId) return;
+                setSelectedTenantGroupId(tenantGroupId);
+                if (tenantGroupId !== createdProject?.tenantGroupId) setCreatedProject(null);
                 setSelectedEnvironment(null);
                 setTemplateKey(null);
                 startedFor.current = null;
                 approvalStartedFor.current = null;
                 readiness.reset();
               }}
-            >
-              {groups.map((g) => (
-                <option key={g.tenantGroupId} value={g.tenantGroupId}>
-                  {g.projects[0]?.name ?? g.tenantGroupId}
-                </option>
-              ))}
-            </select>
+            /> : <p className="text-sm text-medium-emphasis" role="status">Loading projects…</p>}
             <button
               type="button"
               className="mt-2 text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -329,52 +416,62 @@ export default function ConnectPage() {
             </button>
           </section>
 
-          <section>
-            <h2 className="mb-2 text-sm font-medium text-high-emphasis">Environment</h2>
-            <RadioGroup
-              value={selectedEnvironment?.tenantId ?? ""}
-              onValueChange={(value) => {
-                const project = groups
-                  .find((g) => g.tenantGroupId === effectiveSelectedGroupId)
-                  ?.projects.find((p) => p.tenantId === value);
-                if (project) {
-                  setSelectedEnvironment({
-                    itemId: project.itemId,
-                    tenantId: project.tenantId,
-                    environment: project.environment,
-                  });
-                  setTemplateKey(null);
-                  startedFor.current = null;
-                  approvalStartedFor.current = null;
-                  readiness.reset();
-                }
-              }}
-            >
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {groups
-                  .find((g) => g.tenantGroupId === effectiveSelectedGroupId)
-                  ?.projects.map((p) => (
+          {selectedGroup ? (
+            <section>
+              <h2 id="connect-environment-heading" className="mb-2 text-sm font-medium text-high-emphasis">Environment</h2>
+              <p className="mb-3 text-xs text-medium-emphasis">Select the environment this application can access.</p>
+              <RadioGroup
+                aria-labelledby="connect-environment-heading"
+                value={selectedEnvironment?.tenantId ?? ""}
+                onValueChange={(value) => {
+                  const project = selectedGroup.projects.find((p) => p.tenantId === value);
+                  if (project) {
+                    setSelectedEnvironment({
+                      itemId: project.itemId,
+                      tenantId: project.tenantId,
+                      environment: project.environment,
+                    });
+                    setTemplateKey(null);
+                    startedFor.current = null;
+                    approvalStartedFor.current = null;
+                    readiness.reset();
+                  }
+                }}
+              >
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {selectedGroup.projects.map((p) => (
                     <label
                       key={p.tenantId}
-                      className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-md border px-3 py-2.5 text-sm transition-colors ${
+                      className={`flex min-h-12 cursor-pointer items-center gap-2.5 rounded-md border px-3 py-2.5 text-sm transition-colors ${
                         selectedEnvironment?.tenantId === p.tenantId
                           ? "border-primary bg-primary/5"
                           : "border-border bg-background hover:border-primary/50 hover:bg-accent/40"
                       }`}
                     >
                       <RadioGroupItem value={p.tenantId} />
-                      {p.environment}
+                      <span className="min-w-0 flex-1 truncate font-medium text-high-emphasis">{environmentLabel(p.environment)}</span>
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border bg-muted/50 px-2 py-0.5 font-mono text-xs text-medium-emphasis">
+                        <GitBranch className="h-3 w-3" aria-hidden="true" />
+                        {p.environment === "prod" ? "main" : p.environment}
+                      </span>
                     </label>
                   ))}
-              </div>
-            </RadioGroup>
-          </section>
+                </div>
+              </RadioGroup>
+            </section>
+          ) : (
+            <p className="text-xs text-medium-emphasis">
+              {createdProject ? "The new project will appear here when its environments are available." : "Select a project to see its environments."}
+            </p>
+          )}
 
           {selectedEnvironment && (
             <section aria-labelledby="connect-options-heading" className="space-y-3">
               <div>
                 <h2 id="connect-options-heading" className="text-sm font-medium text-high-emphasis">Connect options</h2>
-                <p className="mt-1 text-xs text-medium-emphasis">Choose the access your site needs in {selectedEnvironment.environment}.</p>
+                <p className="mt-1 text-xs text-medium-emphasis">
+                  Select the level of localization access to grant in {environmentLabel(selectedEnvironment.environment)}.
+                </p>
               </div>
               <div className="space-y-2">
                 {request.templates.map((template) => {
@@ -386,9 +483,10 @@ export default function ConnectPage() {
                           <span className="flex h-8 w-8 flex-none items-center justify-center rounded-md bg-primary/10 text-primary"><Plug className="h-4 w-4" aria-hidden="true" /></span>
                           <h3 className="text-sm font-semibold text-high-emphasis">{template.displayName}</h3>
                         </div>
-                        <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={() => handleConnect(template.key)} disabled={busy} aria-label={`Connect ${template.displayName}`}>
-                          {isCurrent && busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <ArrowRight className="h-4 w-4" aria-hidden="true" />}
+                        <Button type="button" size="sm" variant="default" className="h-10 min-w-28 gap-2 rounded-md px-4 font-semibold shadow-sm hover:shadow-md" onClick={() => handleConnect(template.key)} disabled={busy} aria-label={`Connect ${template.displayName}`}>
+                          {isCurrent && busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
                           {isCurrent && busy ? (approve.isPending ? "Connecting…" : "Checking…") : "Connect"}
+                          {!busy && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
                         </Button>
                       </div>
                       {template.description && <p className="mt-2 text-xs leading-relaxed text-medium-emphasis">{template.description}</p>}
@@ -423,9 +521,15 @@ export default function ConnectPage() {
 
 const ConnectShell = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10 sm:px-6">
-    <div className="w-full max-w-xl space-y-5 rounded-lg border border-border bg-card p-5 shadow-sm sm:p-8">
-      <h1 className="text-lg font-semibold text-high-emphasis">{title}</h1>
-      {children}
+    <div className="w-full max-w-xl">
+      <div className="mb-6 flex justify-center">
+        <img src="/blocks-logos/os_light_mode.svg" alt="Blocks OS" className="h-14 w-auto dark:hidden" />
+        <img src="/blocks-logos/os_dark_mode.svg" alt="Blocks OS" className="hidden h-14 w-auto dark:block" />
+      </div>
+      <div className="space-y-5 rounded-lg border border-border bg-card p-5 shadow-sm sm:p-8">
+        <h1 className="text-lg font-semibold text-high-emphasis">{title}</h1>
+        {children}
+      </div>
     </div>
   </div>
 );
@@ -456,10 +560,11 @@ const CreateProjectBranch = ({
   onCreated,
   onChooseExisting,
 }: {
-  onCreated: (tenantGroupId: string) => Promise<void> | void;
+  onCreated: (tenantGroupId: string, name: string) => void;
   onChooseExisting?: () => void;
 }) => {
   const { isPending, mutateAsync } = useCreateProject();
+  const [created, setCreated] = useState(false);
   const [name, setName] = useState("");
   const [isAcceptBlocksTerms, setIsAcceptBlocksTerms] = useState(false);
   const [isUseBlocksExclusively, setIsUseBlocksExclusively] = useState(false);
@@ -471,12 +576,19 @@ const CreateProjectBranch = ({
     isAcceptBlocksTerms &&
     isUseBlocksExclusively &&
     environments.length >= 1 &&
-    !isPending;
+    !isPending &&
+    !created;
 
   const handleSubmit = async () => {
+    if (!canSubmit) return;
     try {
       const response = await mutateateProject();
-      if (response?.isSuccess && response.tenantGroupId) await onCreated(response.tenantGroupId);
+      if (response?.isSuccess && response.tenantGroupId) {
+        setCreated(true);
+        onCreated(response.tenantGroupId, name.trim());
+      } else {
+        showErrorToast({ errors: response?.errors ?? "Could not create the project." });
+      }
     } catch (error) {
       if (error && typeof error === "object" && "errors" in error) {
         showErrorToast({ errors: (error as { errors: unknown }).errors });
@@ -533,15 +645,16 @@ const CreateProjectBranch = ({
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         {onChooseExisting ? (
-          <Button variant="ghost" size="sm" onClick={onChooseExisting} disabled={isPending}>
-            Choose an existing project
+          <Button variant="ghost" size="sm" className="gap-2" onClick={onChooseExisting} disabled={isPending || created}>
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            Go back
           </Button>
         ) : (
           <span />
         )}
         <Button onClick={handleSubmit} disabled={!canSubmit}>
           {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Create project
+          {created ? "Project created" : "Create project"}
         </Button>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { IIntegrationConnection } from "@/cross-modules/integration/models/integration.model";
+import { formatFullDate } from "@/lib/utils";
 
 const connection = (overrides: Partial<IIntegrationConnection> = {}): IIntegrationConnection => ({
   itemId: "conn-1",
@@ -43,12 +44,33 @@ describe("IntegrationConnectionList", () => {
     await mountList();
 
     expect(screen.getByText("WordPress")).toBeTruthy();
-    expect(screen.getByText("Full")).toBeTruthy();
+    expect(screen.getByText("Full access")).toBeTruthy();
     expect(screen.getByText("active")).toBeTruthy();
-    expect(screen.getByText(/Client ID client-1/)).toBeTruthy();
+    expect(screen.getByText("Client ID")).toBeTruthy();
+    expect(screen.getByText("client-1")).toBeTruthy();
     expect(screen.getByText(/site\.example\.com/)).toBeTruthy();
     const row = screen.getByTestId("integration-connection-row");
-    expect(within(row).getByText(/Created/)).toBeTruthy();
+    expect(within(row).getByText(formatFullDate(new Date("2026-09-30T10:00:00Z")))).toBeTruthy();
+    expect(within(row).getByText("u1")).toBeTruthy();
+  });
+
+  it("copies structured connection metadata without a client secret", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    await mountList();
+
+    fireEvent.click(screen.getByRole("button", { name: "Copy as JSON" }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+    const details = JSON.parse(writeText.mock.calls[0][0] as string) as Record<string, unknown>;
+    expect(details).toMatchObject({
+      connectionId: "conn-1",
+      connectionName: "WordPress",
+      templateKey: "localization-full",
+      clientCredentialId: "client-1",
+      siteUrl: "https://site.example.com",
+      createdDate: "2026-09-30T10:00:00Z",
+    });
+    expect(details).not.toHaveProperty("clientSecret");
   });
 
   it("labels a revoked connection without action buttons", async () => {
