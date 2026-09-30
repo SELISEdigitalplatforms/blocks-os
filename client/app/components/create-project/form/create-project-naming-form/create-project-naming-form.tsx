@@ -5,11 +5,10 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui-kits/form/form";
-import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { createProjectNamingFormDefaultValue, createProjectNamingFormSchema } from "./utils";
+import { ProjectTermsCheckboxes } from "../project-terms-checkboxes";
 import { Button } from "@/components/ui-kits/button/button";
 import { useStepper } from "@/components/stepper/stepper-provider";
 import { useCreateProjectFormState } from "../../utils";
@@ -58,41 +57,14 @@ export const CreateProjectNamingForm = () => {
                 name="isUseBlocksExclusively"
                 render={({ field }) => (
                   <FormItem>
-                    <div className="flex gap-2">
-                      <FormControl>
-                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                      </FormControl>
-                      <FormLabel className="-mt-[2px] flex-1 text-sm font-medium text-black dark:text-white">
-                        I confirm that I will use Blocks exclusively for purposes relating to my
-                        trade, business, craft, or profession
-                      </FormLabel>
-                    </div>
-                  </FormItem>
-                )}
-              />
-            </div>
-            <div className="mt-4">
-              <FormField
-                control={form.control}
-                name="isAcceptBlocksTerms"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="flex items-center gap-2">
-                      <FormControl>
-                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                      </FormControl>
-                      <FormLabel className="!m-0 text-sm font-medium text-black dark:text-white">
-                        I accept the{" "}
-                        <a
-                          href="https://selisegroup.com/software-development-term/"
-                          className="text-primary"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Terms of services
-                        </a>
-                      </FormLabel>
-                    </div>
+                    <ProjectTermsCheckboxes
+                      isAcceptBlocksTerms={form.watch("isAcceptBlocksTerms")}
+                      isUseBlocksExclusively={field.value}
+                      onAcceptBlocksTermsChange={(checked) =>
+                        form.setValue("isAcceptBlocksTerms", checked, { shouldValidate: true })
+                      }
+                      onUseBlocksExclusivelyChange={field.onChange}
+                    />
                   </FormItem>
                 )}
               />

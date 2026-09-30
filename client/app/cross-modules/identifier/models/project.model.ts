@@ -43,6 +43,7 @@ export interface IProjectGroup {
   tenantGroupId: string;
   projects: IProject[];
 }
+
 export interface ICreateProjectPayload {
   name: string;
   isAcceptBlocksTerms: boolean;

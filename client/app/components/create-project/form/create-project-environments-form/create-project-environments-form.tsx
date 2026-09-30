@@ -1,19 +1,16 @@
 import { useForm } from "react-hook-form";
-import { GitBranch } from "lucide-react";
 import {
   Form,
-  FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui-kits/form/form";
-import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import {
   createProjectEnvironmentFormDefaultValue,
   createProjectEnvironmentFormSchema,
   environmentOptions,
 } from "./utils";
+import { ProjectEnvironmentCheckboxes } from "../project-environment-checkboxes";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui-kits/button/button";
 import { useCreateProjectFormState } from "../../utils";
@@ -58,56 +55,23 @@ export const CreateProjectEnvironmentsForm = () => {
               <FormField
                 control={form.control}
                 name="environments"
-                render={() => (
+                render={({ field }) => (
                   <FormItem>
-                    {environmentOptions.map((option) => (
-                      <FormField
-                        key={option.value}
-                        control={form.control}
-                        name="environments"
-                        render={({ field }) => {
-                          const isSelected = field.value?.some(
-                            (env: { value: string }) => env.value === option.value,
+                    <ProjectEnvironmentCheckboxes
+                      selected={(field.value || []).map((env: { value: string }) => env.value)}
+                      onToggle={(environment, checked) => {
+                        const currentValues = [...(field.value || [])];
+                        if (checked) {
+                          field.onChange([...currentValues, { value: environment }]);
+                        } else {
+                          field.onChange(
+                            currentValues.filter(
+                              (env: { value: string }) => env.value !== environment,
+                            ),
                           );
-                          return (
-                            <FormItem className="mb-4 flex flex-col">
-                              <div className="flex items-center gap-2">
-                                <FormControl>
-                                  <Checkbox
-                                    className="h-5 w-5"
-                                    checked={isSelected}
-                                    onCheckedChange={(checked) => {
-                                      const currentValues = [...(field.value || [])];
-                                      if (checked) {
-                                        field.onChange([...currentValues, { value: option.value }]);
-                                      } else {
-                                        field.onChange(
-                                          currentValues.filter(
-                                            (env: { value: string }) => env.value !== option.value,
-                                          ),
-                                        );
-                                      }
-                                    }}
-                                  />
-                                </FormControl>
-                                <FormLabel className="!m-0 text-lg font-bold">
-                                  <div className="flex flex-row items-center gap-2">
-                                    <span>{option.label}</span>
-                                    <div className="flex flex-row items-center">
-                                      <GitBranch className="h-3 w-3 text-gray-400" />
-                                      <span className="text-sm text-gray-400">
-                                        {option.value === "prod" ? "main" : option.value}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </FormLabel>
-                              </div>
-                              <div className="ml-7 text-base font-normal">{option.subtext}</div>
-                            </FormItem>
-                          );
-                        }}
-                      />
-                    ))}
+                        }
+                      }}
+                    />
                     <FormMessage />
                   </FormItem>
                 )}

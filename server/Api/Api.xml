@@ -50,6 +50,108 @@
              </para>
              </remarks>
         </member>
+        <member name="T:BlocksOs.Api.Controllers.IntegrationClientIp">
+            <summary>Gets the caller address after trusted forwarded-header processing has run.</summary>
+        </member>
+        <member name="T:BlocksOs.Api.Controllers.IntegrationController">
+            <summary>
+            Integration setup endpoints. Routing only; the rules live in <see cref="T:Configuration.DomainService.Integration.Services.IIntegrationService"/>.
+            </summary>
+            <remarks>
+            Protected by their own permissions, like Storage and Notification, so access to Integration can
+            be granted apart from Secrets. Both permissions are seeded from
+            <c>server/seed/integration-permissions.upsert.json</c> into the root tenant's <c>Permissions</c>.
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.GetTemplates(System.String)">
+            <summary>
+            Lists the active integration templates, optionally narrowed to one family, sorted by <c>SortOrder</c>.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.GetTemplate(System.String,System.Boolean)">
+            <summary>
+            Fetches one template by key, including inactive ones when asked, so legacy setups can
+            still resolve their base URL.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.GetConnections">
+            <summary>
+            Lists the environment's integration connections. Replaces the old <c>GetSetup</c>.
+            </summary>
+            <remarks>
+            The response never contains a client secret: rows carry the client id and metadata only,
+            so a list read can never leak credential material. Records predating per-connection
+            setups are labelled "Legacy connection".
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.RunSetup(Configuration.DomainService.Integration.RequestModel.RunIntegrationSetupRequest)">
+            <summary>
+            Creates a connection in one server-side call. Replaces the old browser-run setup and <c>SaveSetup</c>.
+            </summary>
+            <remarks>
+            Resolves the template's permissions, reuses or creates its IAM role, and creates a client
+            credential named for this connection. This and <see cref="M:BlocksOs.Api.Controllers.IntegrationController.RegenerateSecret(Configuration.DomainService.Integration.RequestModel.IntegrationConnectionRequest)"/> are the only
+            endpoints that return a client secret, and they return it exactly once. An interrupted run
+            can be repeated without leaving duplicates behind.
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.Disconnect(Configuration.DomainService.Integration.RequestModel.IntegrationConnectionRequest)">
+            <summary>
+            Disconnects a connection: deletes its IAM client credential and marks the record revoked.
+            </summary>
+            <remarks>
+            If IAM cannot delete the credential the record stays active and <c>iam_error</c> is
+            returned, so a live credential is never recorded as disconnected.
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.RegenerateSecret(Configuration.DomainService.Integration.RequestModel.IntegrationConnectionRequest)">
+            <summary>
+            Rotates a connection's client secret. The client id is unchanged; the new secret is
+            returned once, here and nowhere else.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.CheckReadiness(System.String)">
+            <summary>
+            Reports whether the environment's permission store has every permission the template
+            grants, so the connect flow can wait for freshly provisioned environments.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.GetRequest(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Reads a connect request for the Approve screen. The first call by a logged-in user
+            claims the request; after that only the claimer can see, approve or cancel it.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.Cancel(Configuration.DomainService.Integration.RequestModel.CancelIntegrationRequest,System.Threading.CancellationToken)">
+            <summary>
+            Cancels a claimed connect request and redirects the browser back to the CMS with
+            <c>error=access_denied</c> and the original state.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.Approve(Configuration.DomainService.Integration.RequestModel.ApproveIntegrationRequest,System.Threading.CancellationToken)">
+            <summary>
+            Approves a claimed connect request: runs the server-side setup, stores a one-time code
+            hash and the credential secret encrypted, and returns the redirect to the CMS carrying
+            code, state and blocks_key. Double-approve returns the same redirect idempotently.
+            </summary>
+            <remarks>
+            Must run inside the chosen environment (impersonated) with <c>blocks-os::integration::save</c>.
+            The user must be the request's claimer.
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.Exchange(Configuration.DomainService.Integration.RequestModel.ExchangeIntegrationRequest,System.Threading.CancellationToken)">
+            <summary>
+            Redeems a one-time code server to server: verifies PKCE S256 and the redirect URI,
+            returns the connection's keys, and removes the stored secret. A failed attempt burns
+            the code. Rate limited per IP; over the limit responds 429.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.CreateRequest(Configuration.DomainService.Integration.RequestModel.CreateIntegrationRequest,System.Threading.CancellationToken)">
+            <summary>
+            Opens an anonymous "Connect with Blocks" request from a CMS and returns its id and expiry.
+            Rate limited per IP; over the limit responds 429 with the <c>rate_limited</c> error.
+            </summary>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.LogAndTraceRestoreController.CancelRestoreProcess(Cloud.LmtService.Models.ColdRestore.CancelRestoreRequest)">
             <summary>
             Cancels an unfinished cold or archive restore and discards whatever it had restored so
