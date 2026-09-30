@@ -16,7 +16,7 @@ const hoisted = vi.hoisted(() => ({
 }));
 
 vi.mock("@/cross-modules/secrets/hooks/use-secret-management", () => ({
-  useSecretViewCounts: () => ({ secrets: 7, archived: 2 }),
+  useArchivedSecretCount: () => 2,
   useFindSecrets: (filter: unknown) => {
     hoisted.lastFilter = filter;
     return hoisted.state;
@@ -102,11 +102,11 @@ describe("SecretList", () => {
     expect(screen.getByText(/clear the filters/i)).toBeTruthy();
   });
 
-  it("explains the Archived tab when nothing is archived", () => {
+  it("explains the archived view when nothing is archived", () => {
     hoisted.state.data = { data: [], totalCount: 0 };
     renderList("?secretStatus=deleted");
     expect(screen.getByText("No archived secrets")).toBeTruthy();
-    expect(screen.getByText(/archive from the Secrets tab will appear here/i)).toBeTruthy();
+    expect(screen.getByText(/archive will appear here/i)).toBeTruthy();
     expect(screen.queryByText("No secrets yet")).toBeNull();
   });
 
@@ -122,7 +122,7 @@ describe("SecretList", () => {
     expect(screen.getByText("No matching secrets")).toBeTruthy();
   });
 
-  it("swaps Status for Archived On on the Archived tab", () => {
+  it("swaps Status for Archived On in the archived view", () => {
     hoisted.state.data = { data: [], totalCount: 0 };
     renderList("?secretStatus=deleted");
     const headers = screen.getAllByRole("columnheader").map((h) => h.textContent);
@@ -130,7 +130,7 @@ describe("SecretList", () => {
     expect(headers).not.toContain("Status");
   });
 
-  it("keeps the Status column on the Secrets tab", () => {
+  it("keeps the Status column outside the archived view", () => {
     hoisted.state.data = { data: [], totalCount: 0 };
     renderList();
     const headers = screen.getAllByRole("columnheader").map((h) => h.textContent);

@@ -69,7 +69,7 @@ export function SecretList() {
   const totalCount = data?.totalCount ?? 0;
   const isBusy = isLoading || isFetching;
   const isArchived = view === SECRET_VIEW.Archived;
-  // On the Archived tab the `deleted` status is the tab, not a filter the user applied.
+  // Archived on its own is a view, not a narrowing search: its empty state should say so.
   const hasFilters =
     !!values.search || !!values.type || values.tags.length > 0 || (!isArchived && !!values.status);
 
@@ -84,7 +84,7 @@ export function SecretList() {
           icon: Archive,
           title: "No archived secrets",
           description:
-            "Secrets you archive from the Secrets tab will appear here.",
+            "Secrets you archive will appear here. Turn off the Archived filter to see the rest.",
         }
       : {
           icon: KeyRound,

@@ -79,19 +79,17 @@ export const useFindSecrets = (filter: SecretFilter = {}, enabled = true) => {
 };
 
 /**
- * Totals for the Secrets / Archived tabs. One-row pages: only `totalCount` is read. They share
- * the list key prefix, so every archive, restore and purge refreshes them with the list.
+ * How many secrets are archived, for the Archived filter's badge. A one-row page: only
+ * `totalCount` is read. It shares the list key prefix, so every archive, restore and purge
+ * refreshes it along with the list.
  */
-export const useSecretViewCounts = () => {
-  const active = useFindSecrets({ pageNumber: 1, pageSize: 1 });
-  const archived = useFindSecrets({
+export const useArchivedSecretCount = (): number | undefined =>
+  useFindSecrets({
     status: SECRET_STATUS.Deleted,
     includeDeleted: true,
     pageNumber: 1,
     pageSize: 1,
-  });
-  return { secrets: active.data?.totalCount, archived: archived.data?.totalCount };
-};
+  }).data?.totalCount;
 
 export const useGetSecret = (secretId: string, enabled = true) => {
   const tenantId = useTenantId();

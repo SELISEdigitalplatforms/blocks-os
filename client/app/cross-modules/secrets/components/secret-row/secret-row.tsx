@@ -221,7 +221,7 @@ export function SecretRow({ secret }: SecretRowProps) {
         </TableCell>
 
         {isDeleted ? (
-          // Matches the Archived tab's columns: Created On, then Archived On in place of status.
+          // Matches the archived view's columns: Created On, then Archived On in place of status.
           <>
             <TableCell className="py-3.5 text-sm text-muted-foreground">
               {formatCreated(secret.createdDate)}

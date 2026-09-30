@@ -69,7 +69,7 @@ describe("SecretActionDialog", () => {
   it("describes archive as reversible, because the backend keeps the value", () => {
     renderDialog("delete");
     expect(screen.getByText("Archive payment-gateway-key?")).toBeTruthy();
-    expect(screen.getByText(/Archived tab/)).toBeTruthy();
+    expect(screen.getByText(/Archived filter/)).toBeTruthy();
     expect(screen.getByText(/restore it later/i)).toBeTruthy();
     expect(screen.queryByText(/cannot be undone/i)).toBeNull();
   });

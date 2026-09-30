@@ -46,7 +46,7 @@ const COPY: Record<SecretLifecycleAction, Copy> = {
   // so restore can bring the secret back. Saying "cannot be undone" here would simply be false.
   delete: {
     title: (name) => `Archive ${name}?`,
-    body: "The secret stops working immediately and moves to the Archived tab. You can restore it later, or purge it from there to remove it for good.",
+    body: "The secret stops working immediately and is archived. You can restore it later, or purge it to remove it for good — use the Archived filter to find it.",
     confirm: "Archive",
     pending: "Archiving…",
   },
