@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
-import { ChevronRight, RotateCw, Shield, Trash2 } from "lucide-react";
+import { ChevronRight, Power, PowerOff, RotateCw, Shield, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
 import {
@@ -19,10 +19,12 @@ import { cn } from "@/lib/utils";
 import {
   useDeleteAuthOidc,
   useRotateAuthOidcSecret,
+  useSaveAuthOidc,
 } from "@blocks-idp/authentication/hooks/use-auth-oidc";
 import {
   IDeleteOidcClientPayload,
   IOidcConfig,
+  ISaveOidcCredentialPayload,
 } from "@blocks-idp/authentication/models/auth.oidc.model";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { CreateOIDC } from "../create-oidc/create-oidc";
@@ -37,6 +39,7 @@ interface OIDCRowProps {
 const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [showRotateDialog, setShowRotateDialog] = useState(false);
   const [showRotatedSecretDialog, setShowRotatedSecretDialog] = useState(false);
   const [rotatedSecret, setRotatedSecret] = useState<string | null>(null);
@@ -47,8 +50,11 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
   const { mutateAsync: rotateSecret, isPending: isRotating } = useRotateAuthOidcSecret({
     projectKey: tenantId,
   });
+  const { mutateAsync: saveOidc, isPending: isUpdating } = useSaveAuthOidc();
 
   const clientSecret = rotatedSecret ?? item.clientSecret;
+  const isActive = item.isActive;
+  const willEnable = !isActive;
 
   const createdAt = item.createdDate ? format(new Date(item.createdDate), "dd MMM yyyy") : "—";
 
@@ -98,10 +104,6 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
             value: item.isAutoRedirect ? "true" : "false",
           },
         ]),
-    {
-      key: "Status",
-      value: item.isActive ? "active" : "inactive",
-    },
   ].filter((pair) => pair.value);
 
   const clientLabel = useMemo(
@@ -119,6 +121,37 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
       if (!res.isSuccess) return showErrorToast({ errors: res.error });
       showSuccessToast({ description: "OIDC credential deleted successfully" });
       setShowDeleteDialog(false);
+    } catch (error) {
+      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
+      showErrorToast({ errors: "Something went wrong" });
+    }
+  };
+
+  const handleConfirmStatusChange = async () => {
+    try {
+      // The save endpoint replaces the whole client, so resend its current configuration and
+      // flip only isActive -- the same shape the edit form submits.
+      const payload: ISaveOidcCredentialPayload = {
+        itemId: item.itemId,
+        clientDisplayName: item.clientDisplayName,
+        redirectUris: item.isDeviceFlowClient ? [] : redirectUris,
+        scope: item.scope,
+        isAutoRedirect: item.isDeviceFlowClient ? false : item.isAutoRedirect,
+        isActive: !item.isActive,
+        requirePkce: item.isDeviceFlowClient ? false : item.requirePkce,
+        registerAsIdentityProvider: item.isDeviceFlowClient
+          ? false
+          : (item.registerAsIdentityProvider ?? false),
+        isDeviceFlowClient: item.isDeviceFlowClient ?? false,
+        allowedResponseTypes: item.isDeviceFlowClient ? [] : responseTypes,
+        allowedServiceAccessResources: item.allowedServiceAccessResources,
+      };
+      const res = await saveOidc(payload);
+      if (!res.isSuccess) return showErrorToast({ errors: res.error });
+      showSuccessToast({
+        description: `OIDC client ${item.isActive ? "disabled" : "enabled"} successfully`,
+      });
+      setShowStatusDialog(false);
     } catch (error) {
       if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
       showErrorToast({ errors: "Something went wrong" });
@@ -156,6 +189,7 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
           "hover:bg-muted/50",
           kvPairs.length > 0 && "cursor-pointer",
           expanded && kvPairs.length > 0 ? "border-b-0" : "border-b-2 border-border",
+          !isActive && "opacity-75",
         )}
         onClick={() => kvPairs.length > 0 && setExpanded((e) => !e)}
       >
@@ -170,8 +204,18 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
         </TableCell>
         <TableCell className="py-3.5">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-950">
-              <Shield className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <div
+              className={cn(
+                "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+                isActive ? "bg-emerald-100 dark:bg-emerald-950" : "bg-muted",
+              )}
+            >
+              <Shield
+                className={cn(
+                  "h-4 w-4",
+                  isActive ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground",
+                )}
+              />
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">
@@ -200,6 +244,20 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
             )}
           </div>
         </TableCell>
+        <TableCell className="hidden py-3.5 sm:table-cell">
+          <Badge
+            variant="outline"
+            className="w-fit gap-1.5 border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis"
+          >
+            <span
+              className={cn(
+                "h-1.5 w-1.5 shrink-0 rounded-full",
+                isActive ? "bg-emerald-500" : "bg-muted-foreground/40",
+              )}
+            />
+            {isActive ? "Active" : "Inactive"}
+          </Badge>
+        </TableCell>
         <TableCell className="hidden py-3.5 text-sm text-muted-foreground md:table-cell">
           {createdAt}
         </TableCell>
@@ -223,6 +281,30 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
                 <TooltipContent>Rotate Secret</TooltipContent>
               </Tooltip>
             )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "h-7 w-7 p-0",
+                    isActive
+                      ? "text-emerald-600 hover:text-destructive"
+                      : "text-muted-foreground hover:text-emerald-600",
+                  )}
+                  aria-label={isActive ? "Disable OIDC client" : "Enable OIDC client"}
+                  onClick={() => setShowStatusDialog(true)}
+                  disabled={isUpdating}
+                >
+                  {isActive ? (
+                    <Power className="h-3.5 w-3.5" />
+                  ) : (
+                    <PowerOff className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{isActive ? "Disable" : "Enable"}</TooltipContent>
+            </Tooltip>
             <span className="mx-0.5 h-4 w-px shrink-0 bg-border" aria-hidden />
             <Tooltip>
               <TooltipTrigger asChild>
@@ -245,7 +327,7 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
       {expanded && (
         <TableRow className="border-b-2 border-border hover:bg-transparent">
           <TableCell
-            colSpan={5}
+            colSpan={6}
             className="max-w-0 bg-muted/20 px-3 py-3 pl-8 sm:px-6 sm:py-4 sm:pl-12"
           >
             <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
@@ -262,6 +344,51 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
           </TableCell>
         </TableRow>
       )}
+
+      <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{willEnable ? "Enable OIDC client" : "Disable OIDC client"}</DialogTitle>
+            <DialogDescription>
+              {willEnable ? (
+                <>
+                  <strong>{clientLabel}</strong> will be able to sign users in again. Are you sure
+                  you want to enable it?
+                </>
+              ) : (
+                <>
+                  <strong>{clientLabel}</strong> will no longer be able to sign users in. Are you
+                  sure you want to disable it?
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowStatusDialog(false)}
+              disabled={isUpdating}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant={willEnable ? "default" : "destructive"}
+              size="sm"
+              onClick={handleConfirmStatusChange}
+              disabled={isUpdating}
+            >
+              {isUpdating
+                ? willEnable
+                  ? "Enabling…"
+                  : "Disabling…"
+                : willEnable
+                  ? "Enable"
+                  : "Disable"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showRotateDialog} onOpenChange={setShowRotateDialog}>
         <DialogContent>
