@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useAuthStore } from "@seliseblocks/genesis-os/store";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, CircleCheck, GitBranch, Loader2, Plug } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CircleCheck, GitBranch, Loader2, Plug } from "lucide-react";
 import { Banner } from "@/components/ui-kits/banner/banner";
 import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
@@ -153,17 +153,6 @@ export default function ConnectPage() {
     selectedEnvironment?.tenantId ?? null,
   );
 
-  // A template is chosen by its Connect button, then checked in the selected environment.
-  const startedFor = useRef<string | null>(null);
-  useEffect(() => {
-    if (!selectedEnvironment || !templateKey) return;
-    const key = `${selectedEnvironment.tenantId}:${templateKey}`;
-    if (startedFor.current === key) return;
-    startedFor.current = key;
-    void readiness.begin();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedEnvironment, templateKey]);
-
   const approve = useApproveConnectRequest();
   const cancel = useCancelConnectRequest();
   const approvalStartedFor = useRef<string | null>(null);
@@ -196,23 +185,17 @@ export default function ConnectPage() {
     void handleApprove(templateKey);
   }, [handleApprove, readiness.state, selectedEnvironment, templateKey]);
 
-  const handleConnect = (selectedTemplateKey: string) => {
-    if (!selectedEnvironment || approve.isPending) return;
-    if (readiness.state.phase === "ready" && readiness.state.templateKey === selectedTemplateKey && readiness.state.environmentTenantId === selectedEnvironment.tenantId) {
+  const handleConnect = () => {
+    if (!selectedEnvironment || !templateKey || approve.isPending) return;
+    if (readiness.state.phase === "ready" && readiness.state.templateKey === templateKey && readiness.state.environmentTenantId === selectedEnvironment.tenantId) {
       // A failed approval stays on this screen; a deliberate second click retries it.
       approvalStartedFor.current = null;
-      void handleApprove(selectedTemplateKey);
+      void handleApprove(templateKey);
       return;
     }
     readiness.reset();
-    startedFor.current = null;
     approvalStartedFor.current = null;
-    if (templateKey === selectedTemplateKey) {
-      startedFor.current = `${selectedEnvironment.tenantId}:${selectedTemplateKey}`;
-      void readiness.begin();
-    } else {
-      setTemplateKey(selectedTemplateKey);
-    }
+    void readiness.begin();
   };
 
   const handleCancel = async () => {
@@ -402,7 +385,6 @@ export default function ConnectPage() {
                 if (tenantGroupId !== createdProject?.tenantGroupId) setCreatedProject(null);
                 setSelectedEnvironment(null);
                 setTemplateKey(null);
-                startedFor.current = null;
                 approvalStartedFor.current = null;
                 readiness.reset();
               }}
@@ -431,8 +413,12 @@ export default function ConnectPage() {
                       tenantId: project.tenantId,
                       environment: project.environment,
                     });
-                    setTemplateKey(null);
-                    startedFor.current = null;
+                    setTemplateKey(
+                      request.templates.find((template) => template.key === request.suggestedTemplateKey)?.key
+                      ?? request.templates.find((template) => template.accessLevel === "read")?.key
+                      ?? request.templates[0]?.key
+                      ?? null,
+                    );
                     approvalStartedFor.current = null;
                     readiness.reset();
                   }
@@ -473,24 +459,40 @@ export default function ConnectPage() {
                   Select the level of localization access to grant in {environmentLabel(selectedEnvironment.environment)}.
                 </p>
               </div>
-              <div className="space-y-2">
+              <div role="group" aria-labelledby="connect-options-heading" className="grid gap-2">
                 {request.templates.map((template) => {
-                  const isCurrent = templateKey === template.key;
+                  const isSelected = templateKey === template.key;
+                  const accessLabel = template.accessLevel === "read" ? "Read-only" : template.accessLevel === "full" ? "Full access" : template.accessLevel;
                   return (
-                    <div key={template.key} className={`rounded-lg border bg-card p-4 transition-colors ${isCurrent && busy ? "border-primary/60" : "border-border hover:border-primary/40"}`}>
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex min-w-0 items-center gap-2.5">
-                          <span className="flex h-8 w-8 flex-none items-center justify-center rounded-md bg-primary/10 text-primary"><Plug className="h-4 w-4" aria-hidden="true" /></span>
-                          <h3 className="text-sm font-semibold text-high-emphasis">{template.displayName}</h3>
-                        </div>
-                        <Button type="button" size="sm" variant="default" className="h-10 min-w-28 gap-2 rounded-md px-4 font-semibold shadow-sm hover:shadow-md" onClick={() => handleConnect(template.key)} disabled={busy} aria-label={`Connect ${template.displayName}`}>
-                          {isCurrent && busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-                          {isCurrent && busy ? (approve.isPending ? "Connecting…" : "Checking…") : "Connect"}
-                          {!busy && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
-                        </Button>
-                      </div>
-                      {template.description && <p className="mt-2 text-xs leading-relaxed text-medium-emphasis">{template.description}</p>}
-                    </div>
+                    <button
+                      key={template.key}
+                      type="button"
+                      aria-label={`Select ${template.displayName}`}
+                      aria-pressed={isSelected}
+                      disabled={busy}
+                      onClick={() => {
+                        setTemplateKey(template.key);
+                        approvalStartedFor.current = null;
+                        readiness.reset();
+                      }}
+                      className={`relative w-full rounded-lg border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed ${isSelected ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/50 hover:bg-accent/30"}`}
+                    >
+                      <span className="block min-w-0">
+                        <span className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="flex items-center gap-2.5">
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Plug className="h-4 w-4" aria-hidden="true" /></span>
+                            <span className="text-sm font-semibold text-high-emphasis">{template.displayName}</span>
+                          </span>
+                          <span className="rounded-full border border-border bg-muted/50 px-2 py-0.5 text-xs font-medium text-medium-emphasis">{accessLabel}</span>
+                        </span>
+                        {template.description && <span className="mt-2 block pr-8 text-xs leading-relaxed text-medium-emphasis">{template.description}</span>}
+                      </span>
+                      {isSelected && (
+                        <span className="absolute bottom-3 right-3 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground" aria-hidden="true">
+                          <Check className="h-3.5 w-3.5" />
+                        </span>
+                      )}
+                    </button>
                   );
                 })}
               </div>
@@ -510,10 +512,17 @@ export default function ConnectPage() {
           )}
         </div>
       )}
-      <div className="border-t border-border pt-4">
+      <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
         <Button variant="outline" size="sm" onClick={handleCancel} disabled={approve.isPending || cancel.isPending}>
           Cancel
         </Button>
+        {selectedEnvironment && (
+          <Button type="button" className="min-w-32 gap-2 font-semibold" onClick={handleConnect} disabled={!templateKey || busy || cancel.isPending}>
+            {busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+            {approve.isPending ? "Connecting…" : waiting ? "Checking…" : "Connect"}
+            {!busy && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
+          </Button>
+        )}
       </div>
     </ConnectShell>
   );

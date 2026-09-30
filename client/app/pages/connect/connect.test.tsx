@@ -191,7 +191,7 @@ describe("ConnectPage error states (P3-16)", () => {
     expect(screen.queryByLabelText("Project name")).toBeNull();
   });
 
-  it("shows Connect cards after choosing an environment and connects the selected option when ready", async () => {
+  it("selects an access option and connects from the single footer action", async () => {
     mocks.requestQueryResult = {
       data: {
         requestId: "req-1",
@@ -231,13 +231,18 @@ describe("ConnectPage error states (P3-16)", () => {
     expect(screen.getByText("Connect options")).toBeTruthy();
     expect(screen.getByText("Read translations.")).toBeTruthy();
     expect(screen.getByText("Manage translations.")).toBeTruthy();
-    expect(screen.getAllByRole("button", { name: /^Connect Localization/ })).toHaveLength(2);
-    expect(screen.getByRole("button", { name: "Connect Localization Full" }).className).toContain("bg-primary");
+    expect(screen.getByRole("button", { name: "Select Localization Read" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "Select Localization Full" }).getAttribute("aria-pressed")).toBe("false");
+    expect(screen.getAllByRole("button", { name: "Connect" })).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: "Cancel" })).toHaveLength(1);
+    expect(mocks.checkReadiness).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: "Connect Localization Full" }));
+    await user.click(screen.getByRole("button", { name: "Select Localization Full" }));
+    expect(screen.getByRole("button", { name: "Select Localization Full" }).getAttribute("aria-pressed")).toBe("true");
+    expect(mocks.checkReadiness).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Connect" }));
     await waitFor(() => expect(mocks.checkReadiness).toHaveBeenCalledTimes(1));
-    expect((screen.getByRole("button", { name: "Connect Localization Read" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "Select Localization Read" }) as HTMLButtonElement).disabled).toBe(true);
     await waitFor(() => expect(mocks.checkReadiness).toHaveBeenCalledTimes(2), { timeout: 4_000 });
     await waitFor(() => expect(mocks.approve).toHaveBeenCalledWith("req-1", "localization-full"));
     expect(await screen.findByText("Connection successful")).toBeTruthy();
