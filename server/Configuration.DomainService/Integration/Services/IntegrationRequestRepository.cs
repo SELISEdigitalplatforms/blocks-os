@@ -150,7 +150,20 @@ public sealed class IntegrationRequestRepository : IIntegrationRequestRepository
     {
         var indexes = Collection().Indexes;
         await indexes.CreateOneAsync(new CreateIndexModel<IntegrationRequest>(Builders<IntegrationRequest>.IndexKeys.Ascending(r => r.ExpiresAt), new CreateIndexOptions { Name = "ExpiresAt_ttl", ExpireAfter = TimeSpan.Zero }), cancellationToken: cancellationToken);
-        await indexes.CreateOneAsync(new CreateIndexModel<IntegrationRequest>(Builders<IntegrationRequest>.IndexKeys.Ascending(r => r.CodeHash), new CreateIndexOptions { Name = "CodeHash_unique_sparse", Unique = true, Sparse = true }), cancellationToken: cancellationToken);
+        // A sparse index only skips documents where the field is missing, not where it is null,
+        // so pending requests written with CodeHash: null collided on it. The partial filter
+        // indexes string values only. The old index is dropped first because Mongo refuses to
+        // create a second index on the same key with different options.
+        try { await indexes.DropOneAsync("CodeHash_unique_sparse", cancellationToken); }
+        catch (MongoCommandException ex) when (ex.CodeName == "IndexNotFound") { }
+        await indexes.CreateOneAsync(new CreateIndexModel<IntegrationRequest>(
+            Builders<IntegrationRequest>.IndexKeys.Ascending(r => r.CodeHash),
+            new CreateIndexOptions<IntegrationRequest>
+            {
+                Name = "CodeHash_unique_partial",
+                Unique = true,
+                PartialFilterExpression = Builders<IntegrationRequest>.Filter.Type(r => r.CodeHash, MongoDB.Bson.BsonType.String),
+            }), cancellationToken: cancellationToken);
         await indexes.CreateOneAsync(new CreateIndexModel<IntegrationRequest>(Builders<IntegrationRequest>.IndexKeys.Ascending(r => r.Status).Ascending(r => r.ExpiresAt), new CreateIndexOptions { Name = "Status_ExpiresAt" }), cancellationToken: cancellationToken);
     }
 

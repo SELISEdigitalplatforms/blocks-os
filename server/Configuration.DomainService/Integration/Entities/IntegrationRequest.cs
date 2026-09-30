@@ -20,6 +20,9 @@ public sealed class IntegrationRequest : BaseEntity
     public string? EnvironmentTenantId { get; set; }
     public string? TemplateKey { get; set; }
     public string? ConnectionId { get; set; }
+    // Left out of the document until approval: the unique index on CodeHash must never see a
+    // null, or every pending request after the first collides on it.
+    [BsonIgnoreIfNull]
     public string? CodeHash { get; set; }
     public string? ClientId { get; set; }
     public string? SecretCipher { get; set; }
