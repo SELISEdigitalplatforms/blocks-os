@@ -136,14 +136,19 @@ export const ConfigurationFormFields = ({ form, formLevelError }: Props) => {
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
-                <SelectItem value="Oidc">OIDC application</SelectItem>
-                <SelectItem value="Embedded">Embedded construct</SelectItem>
+                {/* "Blocks OIDC" is the name the rest of the console already uses for this --
+                    the client form offers "Register as a Blocks OIDC identity provider", and
+                    that registration is exactly what this mode depends on. "Construct" is
+                    left out of both labels: whoever is authoring an invitation is thinking
+                    about their app, not about what the platform calls it. */}
+                <SelectItem value="Oidc">Blocks OIDC</SelectItem>
+                <SelectItem value="Embedded">Embedded</SelectItem>
               </SelectContent>
             </Select>
             <FormDescription>
               {field.value === "Embedded"
-                ? "The construct hosts its own join screen and receives tokens directly."
-                : "The invitee is signed in through the OIDC application below."}
+                ? "Your app hosts the join page and receives the session directly. No OIDC client needed."
+                : "The invitee signs in through the application you pick below. Choose this if your app uses Blocks-hosted sign-in."}
             </FormDescription>
             <FormMessage />
           </FormItem>

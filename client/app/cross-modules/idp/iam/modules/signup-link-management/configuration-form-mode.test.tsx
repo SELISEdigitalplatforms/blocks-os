@@ -105,7 +105,7 @@ describe("ConfigurationFormFields mode", () => {
 
     expect(screen.getByTestId("client-select")).toBeTruthy();
 
-    await switchMode(user, "Embedded construct");
+    await switchMode(user, "Embedded");
 
     await waitFor(() => expect(screen.queryByTestId("client-select")).toBeNull());
     expect(screen.queryByTestId("redirect-select")).toBeNull();
