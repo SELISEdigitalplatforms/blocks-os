@@ -19,6 +19,12 @@ namespace Configuration.DomainService.Integration.Entities
         /// <summary>Stable identifier of the template, e.g. <c>localization</c>.</summary>
         public string Key { get; set; } = string.Empty;
 
+        /// <summary>Related templates, such as the read and full variants of localization.</summary>
+        public string Family { get; set; } = string.Empty;
+
+        /// <summary>The access level this template grants, for example <c>read</c> or <c>full</c>.</summary>
+        public string AccessLevel { get; set; } = string.Empty;
+
         public string DisplayName { get; set; } = string.Empty;
 
         public string? Description { get; set; }
@@ -39,6 +45,12 @@ namespace Configuration.DomainService.Integration.Entities
         public string ClientCredentialName { get; set; } = string.Empty;
 
         public int AccessTokenValidForNumberMinutes { get; set; } = 60;
+
+        /// <summary>Absolute URL of the Blocks service the issued credential calls.</summary>
+        public string BaseUrl { get; set; } = string.Empty;
+
+        /// <summary>Stable presentation order within a template family.</summary>
+        public int SortOrder { get; set; }
 
         public bool IsActive { get; set; } = true;
     }

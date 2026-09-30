@@ -17,8 +17,9 @@
     <PackageReference Include="SSH.NET" />
   </ItemGroup>
 
-  <ItemGroup>
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\Blocks.Secrets\Blocks.Secrets.csproj" />
+	</ItemGroup>
 
 
 

@@ -1,7 +1,9 @@
 import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { Badge } from "@/components/ui-kits/badge/badge";
+import { useState } from "react";
 import { Button } from "@/components/ui-kits/button/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui-kits/radio-group/radio-group";
+import { Input } from "@/components/ui-kits/input/input";
+import { IRunIntegrationSetupResponse } from "@/cross-modules/integration/models/integration.model";
 import {
   Dialog,
   DialogContent,
@@ -11,46 +13,35 @@ import {
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
 import { useIntegrationTemplates, useRunIntegrationSetup } from "@/cross-modules/integration/hooks/use-integration";
-import {
-  INTEGRATION_SETUP_STEP_LABELS,
-  IntegrationSetupStep,
-} from "@/cross-modules/integration/services/integration-setup.runner";
 
 type IntegrationSetupModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onCreated?: (response: IRunIntegrationSetupResponse) => void;
 };
 
-export function IntegrationSetupModal({ open, onOpenChange }: Readonly<IntegrationSetupModalProps>) {
+export function IntegrationSetupModal({ open, onOpenChange, onCreated }: Readonly<IntegrationSetupModalProps>) {
   const [templateKey, setTemplateKey] = useState("");
-  const [currentStep, setCurrentStep] = useState<IntegrationSetupStep | null>(null);
+  const [connectionName, setConnectionName] = useState("");
   const { data: templates = [], isLoading } = useIntegrationTemplates(open);
-  const { mutate: runSetup, isPending } = useRunIntegrationSetup(setCurrentStep);
+  const { mutate: runSetup, isPending } = useRunIntegrationSetup();
 
   const selected = templates.find((t) => t.key === templateKey);
-
-  // Only one template is offered today, so it's preselected rather than left for the user to pick.
-  useEffect(() => {
-    if (!templateKey && templates.length > 0) {
-      setTemplateKey(templates[0].key);
-    }
-  }, [templateKey, templates]);
 
   const handleOpenChange = (next: boolean) => {
     // Setup is a sequence of IAM calls; closing mid-way would hide which step it stopped at.
     if (isPending) return;
     if (!next) {
       setTemplateKey("");
-      setCurrentStep(null);
+      setConnectionName("");
     }
     onOpenChange(next);
   };
 
   const handleConfirm = () => {
     if (!selected) return;
-    runSetup(selected, {
-      onSuccess: () => handleOpenChange(false),
-      onSettled: () => setCurrentStep(null),
+    runSetup({ templateKey: selected.key, connectionName }, {
+      onSuccess: (response) => { if (response.clientSecret) onCreated?.(response); handleOpenChange(false); },
     });
   };
 
@@ -66,28 +57,33 @@ export function IntegrationSetupModal({ open, onOpenChange }: Readonly<Integrati
         <div className="space-y-2">
           {isLoading ? (
             <p className="text-xs text-medium-emphasis">Loading...</p>
-          ) : selected ? (
-            <Badge variant="secondary" className="w-fit">
-              {selected.displayName}
-            </Badge>
+          ) : templates.length > 0 ? (
+            <RadioGroup value={templateKey} onValueChange={setTemplateKey}>
+              {templates.map((template) => (
+                <label
+                  key={template.key}
+                  htmlFor={`integration-template-${template.key}`}
+                  className="flex cursor-pointer gap-3 rounded-md border border-border p-3 text-xs"
+                >
+                  <RadioGroupItem
+                    id={`integration-template-${template.key}`}
+                    value={template.key}
+                    className="mt-0.5"
+                  />
+                  <span className="space-y-1">
+                    <span className="block font-medium text-high-emphasis">{template.displayName}</span>
+                    {template.description && <span className="block text-medium-emphasis">{template.description}</span>}
+                    <span className="block text-medium-emphasis">
+                      Role {template.roleName} with {template.permissions.length} permissions.
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </RadioGroup>
           ) : (
             <p className="text-xs text-medium-emphasis">No Integration templates are available.</p>
           )}
-          {selected && (
-            <div className="space-y-1 rounded-md border border-border p-3 text-xs text-medium-emphasis">
-              {selected.description && <p>{selected.description}</p>}
-              <p>
-                Role <span className="font-medium text-high-emphasis">{selected.roleName}</span>{" "}
-                with {selected.permissions.length} permissions.
-              </p>
-            </div>
-          )}
-          {isPending && currentStep && (
-            <p className="flex items-center gap-2 text-xs text-medium-emphasis">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              {INTEGRATION_SETUP_STEP_LABELS[currentStep]}...
-            </p>
-          )}
+          <Input value={connectionName} onChange={(event) => setConnectionName(event.target.value)} placeholder="Connection name" maxLength={60} />
         </div>
         <DialogFooter>
           <Button
@@ -98,7 +94,7 @@ export function IntegrationSetupModal({ open, onOpenChange }: Readonly<Integrati
           >
             Cancel
           </Button>
-          <Button type="button" onClick={handleConfirm} disabled={!selected || isPending}>
+          <Button type="button" onClick={handleConfirm} disabled={!selected || !connectionName.trim() || isPending}>
             {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Confirm
           </Button>

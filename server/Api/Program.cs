@@ -10,8 +10,10 @@ using Configuration.DomainService.Shared.Utilities;
 using DomainService.Access;
 using DomainService.Shared;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using SeliseBlocks.ConfigurationDriver;
+using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 ApplicationConfigurations.ConfigureApiEnv(builder, args);
@@ -35,6 +37,28 @@ builder.Services.Configure<FormOptions>(options =>
 });
 
 var services = builder.Services;
+
+var knownForwardedProxies = builder.Configuration.GetSection("ForwardedHeaders:KnownProxies").Get<string[]>() ?? [];
+var knownForwardedNetworks = builder.Configuration.GetSection("ForwardedHeaders:KnownNetworks").Get<string[]>() ?? [];
+if (knownForwardedProxies.Length > 0 || knownForwardedNetworks.Length > 0)
+{
+    services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.KnownIPNetworks.Clear();
+        options.KnownProxies.Clear();
+        foreach (var value in knownForwardedProxies)
+        {
+            if (IPAddress.TryParse(value, out var proxy)) options.KnownProxies.Add(proxy);
+            else Console.Error.WriteLine($"Invalid ForwardedHeaders:KnownProxies value '{value}' was ignored.");
+        }
+        foreach (var value in knownForwardedNetworks)
+        {
+            if (System.Net.IPNetwork.TryParse(value, out var network)) options.KnownIPNetworks.Add(network);
+            else Console.Error.WriteLine($"Invalid ForwardedHeaders:KnownNetworks value '{value}' was ignored.");
+        }
+    });
+}
 
 services.AddHealthChecks();
 
@@ -72,6 +96,10 @@ await services.RegisterBlocksReleaseServicesAsync(vaultType);
 
 
 var app = builder.Build();
+
+// Only configured ingress proxies may supply a client address; without configuration this
+// preserves ASP.NET's default trusted-proxy behavior and remote-address semantics.
+app.UseForwardedHeaders();
 
 // Built once: the policy is derived from configuration, which does not change per request.
 var contentSecurityPolicy = ContentSecurityPolicy.Build(app.Configuration);

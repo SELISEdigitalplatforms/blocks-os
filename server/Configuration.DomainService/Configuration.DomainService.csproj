@@ -14,4 +14,8 @@
 		<!-- Captcha configuration links to a secret value; ISecretService owns the vault. -->
 		<ProjectReference Include="..\Blocks.Secrets\Blocks.Secrets.csproj" />
 	</ItemGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="XUnitTest" />
+	</ItemGroup>
 </Project>

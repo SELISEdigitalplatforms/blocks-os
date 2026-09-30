@@ -4,6 +4,7 @@ import { CallbackPage, ConsolePage, LoginPage, ProfilePage } from "@seliseblocks
 import { createBrowserRouter, matchRoutes, Navigate, Outlet, useLocation } from "react-router";
 import { navigationMenus } from "@/constants/navigation-menus";
 import { DeepLinkRedirect } from "@/components/deep-link-redirect/deep-link-redirect";
+import { PendingConnectRedirect } from "@/components/pending-connect-redirect/pending-connect-redirect";
 // Temporarily disabled
 // import { AIModels } from "./cross-modules/ai/pages/ai-models";
 import { EmailConfigurationPage, NewCommunication } from "@/cross-modules/communication/mail";
@@ -14,6 +15,7 @@ import { StorageContents } from "@/cross-modules/storage/pages/storage/storage-c
 // Temporarily disabled
 // import { MagicUrls } from "@/cross-modules/utilities/pages/magic-urls/magic-urls";
 import ActivatePage from "@/pages/auth/activate-page";
+import ConnectPage from "@/pages/connect/connect";
 import GitHubCallbackPage from "@/pages/github-callback/github-callback";
 import { ClientCredentials } from "@blocks-idp/authentication/components/client-credentials";
 import { OIDC } from "@blocks-idp/authentication/components/oidc";
@@ -124,11 +126,19 @@ export const router = createBrowserRouter([
             children: [{ path: "/login", element: <LoginPage /> }],
           },
 
+          // ── "Connect with Blocks" (linked from a CMS) ──
+          // A sibling of the PublicGuard block, not under /app: the visitor may be logged
+          // out, and ConsoleLayout's ImpersonationTerminator must not run before Approve.
+          { path: "/connect", element: <ConnectPage /> },
+
           // protected
           {
             path: "/app",
             element: (
               <ProtectedGuard>
+                {/* After login (direct or activation → login), a pending /connect request
+                    resumes from here; no-op without one. */}
+                <PendingConnectRedirect />
                 <Outlet />
               </ProtectedGuard>
             ),

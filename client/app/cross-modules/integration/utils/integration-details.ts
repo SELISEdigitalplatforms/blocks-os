@@ -1,15 +1,4 @@
-import { getRuntimeEnv, type RuntimeKey } from "@/lib/runtime-env";
 import { IIntegrationDetails } from "@/cross-modules/integration/models/integration.model";
-
-/** Which Blocks service each template integrates with, as the base URL a client should call. */
-const TEMPLATE_BASE_URL_KEYS: Record<string, RuntimeKey> = {
-  localization: "BLOCKS_LOCALIZATION_BASE_URL",
-};
-
-export const resolveIntegrationBaseUrl = (templateKey: string): string => {
-  const key = TEMPLATE_BASE_URL_KEYS[templateKey];
-  return key ? getRuntimeEnv(key).replace(/\/$/, "") : "";
-};
 
 type ProjectDomainSource = {
   customDomain?: string | null;

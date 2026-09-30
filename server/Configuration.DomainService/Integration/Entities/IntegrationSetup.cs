@@ -24,5 +24,14 @@ namespace Configuration.DomainService.Integration.Entities
 
         /// <summary>The IAM client credential id, which is also the client id.</summary>
         public string ClientCredentialId { get; set; } = string.Empty;
+
+        public string ConnectionName { get; set; } = string.Empty;
+        public string Source { get; set; } = "manual";
+        public string Status { get; set; } = "active";
+        public string? SiteUrl { get; set; }
+        public bool NeverDelivered { get; set; }
+        public string? RevokedBy { get; set; }
+        public DateTime? RevokedDate { get; set; }
+        public string TemplateAccessLevel { get; set; } = string.Empty;
     }
 }

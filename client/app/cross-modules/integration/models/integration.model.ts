@@ -2,6 +2,8 @@
 export interface IIntegrationTemplate {
   itemId: string;
   key: string;
+  family: string;
+  accessLevel: string;
   displayName: string;
   description?: string | null;
   roleName: string;
@@ -11,6 +13,8 @@ export interface IIntegrationTemplate {
   permissions: string[];
   clientCredentialName: string;
   accessTokenValidForNumberMinutes: number;
+  baseUrl: string;
+  sortOrder: number;
   isActive: boolean;
 }
 
@@ -29,6 +33,20 @@ export interface IIntegrationSetup {
 export interface IGetIntegrationSetupResponse {
   data: IIntegrationSetup | null;
   errors?: Record<string, string> | null;
+}
+
+export interface IIntegrationConnection extends IIntegrationSetup {
+  connectionName: string;
+  templateAccessLevel: string;
+  siteUrl?: string | null;
+  source: "manual" | "connect";
+  status: "active" | "revoked";
+  neverDelivered?: boolean;
+}
+
+export interface IRunIntegrationSetupPayload { templateKey: string; connectionName: string; }
+export interface IRunIntegrationSetupResponse extends ISaveIntegrationSetupResponse {
+  connectionId?: string; clientId?: string; clientSecret?: string; xBlocksKey?: string; baseUrl?: string; domain?: string;
 }
 
 export interface ISaveIntegrationSetupPayload {

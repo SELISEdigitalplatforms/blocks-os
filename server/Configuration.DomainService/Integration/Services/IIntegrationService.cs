@@ -15,10 +15,29 @@ namespace Configuration.DomainService.Integration.Services
     /// </remarks>
     public interface IIntegrationService
     {
-        Task<List<IntegrationTemplate>> GetTemplatesAsync();
+        Task<List<IntegrationTemplate>> GetTemplatesAsync(string? family = null);
 
-        Task<BaseQueryResponse<IntegrationSetup>> GetSetupAsync();
+        Task<IntegrationTemplate?> GetTemplateByKeyAsync(string key, bool includeInactive = false);
 
-        Task<BaseMutationResponse> SaveSetupAsync(SaveIntegrationSetupRequest request);
+        Task<RunIntegrationSetupResponse> RunSetupAsync(RunIntegrationSetupRequest request);
+        Task<BaseQueryResponse<List<IntegrationSetup>>> GetConnectionsAsync();
+        Task<BaseMutationResponse> RevokeConnectionAsync(string connectionId);
+        Task RevokeUndeliveredConnectionAsync(string environmentTenantId, string connectionId);
+        Task<BaseMutationResponse> DisconnectAsync(string connectionId);
+        Task<RegenerateIntegrationSecretResponse> RegenerateSecretAsync(string connectionId);
+
+        /// <summary>
+        /// Reports whether the environment's permission store already contains every permission the
+        /// template grants. Used by the connect flow to detect environments whose provisioning
+        /// (role and permission copy from BlocksConfiguration) has not finished yet.
+        /// </summary>
+        Task<CheckIntegrationReadinessResponse> CheckReadinessAsync(string templateKey);
+    }
+
+    public sealed class CheckIntegrationReadinessResponse
+    {
+        public bool Ready { get; set; }
+        public List<string> MissingPermissions { get; set; } = new();
+        public string? Error { get; set; }
     }
 }

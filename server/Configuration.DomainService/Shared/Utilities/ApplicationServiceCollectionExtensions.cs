@@ -38,6 +38,10 @@ namespace Configuration.DomainService.Shared.Utilities
             serviceCollection.AddSingleton<IMailboxRepository, MailboxRepository>();
             serviceCollection.AddSingleton<IIntegrationService, IntegrationService>();
             serviceCollection.AddSingleton<IIntegrationRepository, IntegrationRepository>();
+            serviceCollection.AddSingleton<IIntegrationRequestRepository, IntegrationRequestRepository>();
+            serviceCollection.AddSingleton<IIntegrationConnectService, IntegrationConnectService>();
+            serviceCollection.AddSingleton<IIamClient, IamClient>();
+            serviceCollection.AddSingleton<IIntegrationRateLimiter, IntegrationRateLimiter>();
 
             // Scoped, unlike the services above: it depends on Blocks.Secrets' ISecretService/
             // ISecretAuditService/ISecretAuthorizationService, which are themselves Scoped
@@ -62,12 +66,7 @@ namespace Configuration.DomainService.Shared.Utilities
             serviceCollection.AddSingleton<IValidator<MailConfiguration>, MailConfigurationValidator>();
             serviceCollection.AddSingleton<IValidator<SaveMailTemplateRequest>, MailTemplateValidator>();
             serviceCollection.AddSingleton<IValidator<SaveCaptchaConfigRequest>, CaptchaConfigValidator>();
-            serviceCollection.AddSingleton<IValidator<SaveIntegrationSetupRequest>, SaveIntegrationSetupRequestValidator>();
+            serviceCollection.AddSingleton<IValidator<RunIntegrationSetupRequest>, RunIntegrationSetupRequestValidator>();
         }
     }
 }
-
-
-
-
-
