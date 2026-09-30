@@ -13,6 +13,7 @@ const hoisted = vi.hoisted(() => ({
   unlock: vi.fn(),
   remove: vi.fn(),
   restore: vi.fn(),
+  purge: vi.fn(),
 }));
 
 vi.mock("@/cross-modules/secrets/hooks/use-secret-management", () => ({
@@ -20,15 +21,14 @@ vi.mock("@/cross-modules/secrets/hooks/use-secret-management", () => ({
   useUnlockSecret: () => ({ mutateAsync: hoisted.unlock, isPending: false }),
   useDeleteSecret: () => ({ mutateAsync: hoisted.remove, isPending: false }),
   useRestoreSecret: () => ({ mutateAsync: hoisted.restore, isPending: false }),
+  usePurgeSecret: () => ({ mutateAsync: hoisted.purge, isPending: false }),
 }));
 
 import { SecretActionDialog, type SecretLifecycleAction } from "./secret-action-dialog";
 
 const renderDialog = (action: SecretLifecycleAction, secret = makeSecret()) => {
   const onOpenChange = vi.fn();
-  render(
-    <SecretActionDialog open onOpenChange={onOpenChange} secret={secret} action={action} />,
-  );
+  render(<SecretActionDialog open onOpenChange={onOpenChange} secret={secret} action={action} />);
   return { onOpenChange };
 };
 
@@ -41,8 +41,9 @@ describe("SecretActionDialog", () => {
   it.each([
     ["lock", "Lock", hoisted.lock],
     ["unlock", "Unlock", hoisted.unlock],
-    ["delete", "Delete", hoisted.remove],
+    ["delete", "Archive", hoisted.remove],
     ["restore", "Restore", hoisted.restore],
+    ["purge", "Purge", hoisted.purge],
   ] as const)("requires a click on %s before anything happens", async (action, label, fn) => {
     const user = userEvent.setup();
     const { onOpenChange } = renderDialog(action);
@@ -65,11 +66,29 @@ describe("SecretActionDialog", () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it("describes delete as reversible, because the backend keeps the value", () => {
+  it("describes archive as reversible, because the backend keeps the value", () => {
     renderDialog("delete");
-    expect(screen.getByText(/soft delete/i)).toBeTruthy();
+    expect(screen.getByText("Archive payment-gateway-key?")).toBeTruthy();
+    expect(screen.getByText(/Archived filter/)).toBeTruthy();
     expect(screen.getByText(/restore it later/i)).toBeTruthy();
     expect(screen.queryByText(/cannot be undone/i)).toBeNull();
+  });
+
+  it("describes purge as irreversible", () => {
+    renderDialog("purge", makeSecret({ status: SECRET_STATUS.Deleted }));
+    expect(screen.getByText("Purge payment-gateway-key?")).toBeTruthy();
+    expect(screen.getByText(/cannot be restored/i)).toBeTruthy();
+  });
+
+  it("keeps the dialog open and explains a refused purge", async () => {
+    const user = userEvent.setup();
+    hoisted.purge.mockRejectedValue(new FakeHttpError(409, {}));
+    const { onOpenChange } = renderDialog("purge", makeSecret({ status: SECRET_STATUS.Deleted }));
+
+    await user.click(screen.getByRole("button", { name: "Purge" }));
+
+    await waitFor(() => expect(screen.getAllByRole("alert").length).toBeGreaterThan(0));
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
   });
 
   it("names the secret it is about to act on", () => {
@@ -82,7 +101,7 @@ describe("SecretActionDialog", () => {
     hoisted.remove.mockRejectedValue(new FakeHttpError(403, {}));
     const { onOpenChange } = renderDialog("delete");
 
-    await user.click(screen.getByRole("button", { name: "Delete" }));
+    await user.click(screen.getByRole("button", { name: "Archive" }));
 
     await waitFor(() =>
       expect(

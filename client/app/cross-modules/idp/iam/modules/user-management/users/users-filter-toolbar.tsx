@@ -5,6 +5,10 @@ import {
   useGetOrganizationConfig,
 } from "@blocks-idp/iam/hooks/use-organization";
 import { useGetRoleFilterOptions } from "@blocks-idp/iam/hooks/use-roles";
+import {
+  USER_ACCOUNT_STATE_FILTER_OPTIONS,
+  toAccountStatesFilter,
+} from "@blocks-idp/iam/utils/user-account-state";
 import { Mail, User } from "lucide-react";
 import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useProjectStore } from "@seliseblocks/genesis-os";
@@ -21,6 +25,7 @@ type SearchFilter = {
 type DateFilters = {
   organizationIds: string[];
   roles: string[];
+  accountStates: string[];
   joinedOn: DateRange;
   lastLogin: DateRange;
   lastUpdatedDate: DateRange;
@@ -35,6 +40,8 @@ export const useUsersFilterQueryParams = () => {
     email: parseAsString.withDefault(""),
     organizationIds: parseAsArrayOf(parseAsString).withDefault([]),
     roles: parseAsArrayOf(parseAsString).withDefault([]),
+    // Account states, matched by ANY: the lifecycle states plus LockedOut. Empty means all.
+    accountStates: parseAsArrayOf(parseAsString).withDefault([]),
     "joinedOn-start": parseAsString.withDefault(""),
     "joinedOn-end": parseAsString.withDefault(""),
     "lastLogin-start": parseAsString.withDefault(""),
@@ -217,6 +224,7 @@ export const UsersDateFilters = () => {
       ...params,
       organizationIds: [],
       roles: [],
+      accountStates: [],
       "joinedOn-start": "",
       "joinedOn-end": "",
       "lastLogin-start": "",
@@ -261,6 +269,12 @@ export const UsersDateFilters = () => {
             ]
           : []),
         {
+          key: "accountStates",
+          type: "MultiSelect",
+          label: "Status",
+          props: { options: USER_ACCOUNT_STATE_FILTER_OPTIONS },
+        },
+        {
           key: "joinedOn",
           type: "DateRange",
           label: "Created On",
@@ -282,6 +296,7 @@ export const UsersDateFilters = () => {
       values={{
         organizationIds: showOrganizationSelection ? selectedOrganizationIds : [],
         roles: showRoleSelection && !isRoleSelectionWaitingForOrganizations ? selectedRoles : [],
+        accountStates: toAccountStatesFilter(queryParams.accountStates),
         joinedOn: isoToRange(queryParams["joinedOn-start"], queryParams["joinedOn-end"]),
         lastLogin: isoToRange(queryParams["lastLogin-start"], queryParams["lastLogin-end"]),
         lastUpdatedDate: isoToRange(
@@ -292,6 +307,7 @@ export const UsersDateFilters = () => {
       defaultValues={{
         organizationIds: [],
         roles: [],
+        accountStates: [],
         joinedOn: { from: undefined, to: undefined },
         lastLogin: { from: undefined, to: undefined },
         lastUpdatedDate: { from: undefined, to: undefined },

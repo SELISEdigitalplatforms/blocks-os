@@ -1,4 +1,4 @@
-import { KeyRound, SearchX, ShieldAlert } from "lucide-react";
+import { Archive, KeyRound, SearchX, ShieldAlert } from "lucide-react";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { EmptyState } from "@/components/ui-kits/empty-state";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
@@ -14,9 +14,15 @@ import {
 import { useFindSecrets } from "@/cross-modules/secrets/hooks/use-secret-management";
 import { describeSecretError } from "@/cross-modules/secrets/utils/secret-error";
 import { SecretRow } from "../secret-row/secret-row";
-import { SecretToolbar, useSecretFilterQueryParams } from "../secret-toolbar/secret-toolbar";
+import {
+  SECRET_VIEW,
+  SecretToolbar,
+  useSecretFilterQueryParams,
+} from "../secret-toolbar/secret-toolbar";
 
 const COLUMNS = ["Secret", "Type", "Status", "Created On"] as const;
+// Every archived row has the same status, so that column gives way to when it was archived.
+const ARCHIVED_COLUMNS = ["Secret", "Type", "Created On", "Archived On"] as const;
 
 const ListSkeleton = () => (
   <TableBody>
@@ -56,13 +62,35 @@ const ListSkeleton = () => (
  * {@link useSecretFilterQueryParams}) so the view survives a reload and can be linked to.
  */
 export function SecretList() {
-  const { values, filter, queryParams, setPage, setPageSize } = useSecretFilterQueryParams();
+  const { values, filter, view, queryParams, setPage, setPageSize } = useSecretFilterQueryParams();
   const { data, isLoading, isFetching, error } = useFindSecrets(filter);
 
   const secrets = data?.data ?? [];
   const totalCount = data?.totalCount ?? 0;
   const isBusy = isLoading || isFetching;
-  const hasFilters = !!values.search || !!values.type || !!values.status;
+  const isArchived = view === SECRET_VIEW.Archived;
+  // Archived on its own is a view, not a narrowing search: its empty state should say so.
+  const hasFilters =
+    !!values.search || !!values.type || values.tags.length > 0 || (!isArchived && !!values.status);
+
+  const empty = hasFilters
+    ? {
+        icon: SearchX,
+        title: isArchived ? "No matching archived secrets" : "No matching secrets",
+        description: "Try a different search or clear the filters.",
+      }
+    : isArchived
+      ? {
+          icon: Archive,
+          title: "No archived secrets",
+          description:
+            "Secrets you archive will appear here. Turn off the Archived filter to see the rest.",
+        }
+      : {
+          icon: KeyRound,
+          title: "No secrets yet",
+          description: "Create your first secret to get started.",
+        };
 
   // 403 is a routine outcome, not a bug: the value/rotate/access/audit endpoints default to
   // admin-only, and until secret permissions are seeded for a tenant every endpoint refuses.
@@ -92,7 +120,7 @@ export function SecretList() {
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
                     <TableHead className="w-8 pl-4" />
-                    {COLUMNS.map((column) => (
+                    {(isArchived ? ARCHIVED_COLUMNS : COLUMNS).map((column) => (
                       <TableHead
                         key={column}
                         className="text-xs font-semibold uppercase tracking-wide text-high-emphasis"
@@ -117,13 +145,9 @@ export function SecretList() {
                         <TableCell colSpan={6} className="p-0">
                           <EmptyState
                             className="border-0 shadow-none"
-                            icon={hasFilters ? SearchX : KeyRound}
-                            title={hasFilters ? "No matching secrets" : "No secrets yet"}
-                            description={
-                              hasFilters
-                                ? "Try a different search or clear the filters."
-                                : "Create your first secret to get started."
-                            }
+                            icon={empty.icon}
+                            title={empty.title}
+                            description={empty.description}
                           />
                         </TableCell>
                       </TableRow>

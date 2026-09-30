@@ -1,0 +1,57 @@
+using Blocks.Genesis;
+using MongoDB.Bson.Serialization.Attributes;
+
+namespace Configuration.DomainService.Integration.Entities
+{
+    /// <summary>
+    /// What an Integration setup provisions: the role to create, the permissions to assign to it and
+    /// the client credential to issue for it.
+    /// </summary>
+    /// <remarks>
+    /// Lives in the shared <c>BlocksConfiguration</c> database, not in a tenant's own, so every
+    /// project reads the same template and a change to it needs no per-tenant copy. Permissions
+    /// are listed by resource name because permission ids differ from tenant to tenant; the
+    /// caller resolves them against the tenant's own <c>Permissions</c> at setup time.
+    /// </remarks>
+    [BsonIgnoreExtraElements]
+    public class IntegrationTemplate : BaseEntity
+    {
+        /// <summary>Stable identifier of the template, e.g. <c>localization</c>.</summary>
+        public string Key { get; set; } = string.Empty;
+
+        /// <summary>Related templates, such as the read and full variants of localization.</summary>
+        public string Family { get; set; } = string.Empty;
+
+        /// <summary>The access level this template grants, for example <c>read</c> or <c>full</c>.</summary>
+        public string AccessLevel { get; set; } = string.Empty;
+
+        public string DisplayName { get; set; } = string.Empty;
+
+        public string? Description { get; set; }
+
+        public string RoleName { get; set; } = string.Empty;
+
+        /// <summary>
+        /// The slug requested when the role is created. IAM derives the stored slug itself, so
+        /// the one actually in effect is the one recorded on <see cref="IntegrationSetup.RoleSlug"/>.
+        /// </summary>
+        public string RoleSlug { get; set; } = string.Empty;
+
+        public string? RoleDescription { get; set; }
+
+        /// <summary>Permission resource names, e.g. <c>blocks-localization::key::gets</c>.</summary>
+        public List<string> Permissions { get; set; } = [];
+
+        public string ClientCredentialName { get; set; } = string.Empty;
+
+        public int AccessTokenValidForNumberMinutes { get; set; } = 60;
+
+        /// <summary>Absolute URL of the Blocks service the issued credential calls.</summary>
+        public string BaseUrl { get; set; } = string.Empty;
+
+        /// <summary>Stable presentation order within a template family.</summary>
+        public int SortOrder { get; set; }
+
+        public bool IsActive { get; set; } = true;
+    }
+}

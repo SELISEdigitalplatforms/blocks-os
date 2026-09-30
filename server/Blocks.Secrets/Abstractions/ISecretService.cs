@@ -79,6 +79,15 @@ public interface ISecretService
     /// <summary>Restores a soft-deleted secret.</summary>
     Task RestoreAsync(string secretId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Permanently deletes a soft-deleted secret: its value is removed from the vault (purged,
+    /// for Key Vault) and its metadata is removed. The audit trail is kept. Cannot be undone.
+    /// </summary>
+    /// <exception cref="SecretStateException">The secret is not deleted — delete it first.</exception>
+    /// <exception cref="SecretAccessDeniedException">The caller is not on the secret's access list.</exception>
+    /// <exception cref="SecretVaultException">The vault value could not be removed; the secret is left deleted.</exception>
+    Task PurgeAsync(string secretId, CancellationToken cancellationToken = default);
+
     /// <summary>Replaces the access list of an <see cref="SecretTypes.Api"/> secret.</summary>
     /// <exception cref="SecretValidationException">The secret is a Service secret, which has no access list.</exception>
     Task UpdateAccessAsync(string secretId, SecretAccess access, CancellationToken cancellationToken = default);

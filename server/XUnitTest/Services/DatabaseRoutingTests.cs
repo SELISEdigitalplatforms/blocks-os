@@ -1,4 +1,6 @@
 using Blocks.Genesis;
+using Configuration.DomainService.Integration.Entities;
+using Configuration.DomainService.Integration.Services;
 using DomainService.Entities;
 using DomainService.ManagedService.Services;
 using DomainService.Migration.Entities;
@@ -17,6 +19,28 @@ namespace XUnitTest.Services;
 
 public class DatabaseRoutingTests
 {
+    [Fact]
+    public async Task IntegrationRequests_UseConfiguredRootDatabase_EvenWhenImpersonating()
+    {
+        using var context = new BlocksTestContext(tenantId: "environment-dev", impersonated: true);
+        var provider = new Mock<IDbContextProvider>(MockBehavior.Strict);
+        var secret = new BlocksSecret { DatabaseConnectionString = "mongodb://main", RootDatabaseName = "custom-root" };
+        var root = new Mock<IMongoDatabase>(MockBehavior.Strict);
+        var requests = new Mock<IMongoCollection<IntegrationRequest>>(MockBehavior.Strict);
+        provider.Setup(p => p.GetDatabase("mongodb://main", "custom-root", false)).Returns(root.Object);
+        root.Setup(d => d.GetCollection<IntegrationRequest>("IntegrationRequests", null)).Returns(requests.Object);
+        requests.Setup(c => c.FindAsync(It.IsAny<FilterDefinition<IntegrationRequest>>(),
+                It.IsAny<FindOptions<IntegrationRequest, IntegrationRequest>>(), default))
+            .ReturnsAsync(Cursor(Array.Empty<IntegrationRequest>()));
+
+        var repository = new IntegrationRequestRepository(provider.Object, secret);
+        Assert.Null(await repository.GetByIdAsync("request-1"));
+
+        provider.Verify(p => p.GetDatabase("mongodb://main", "custom-root", false), Times.Once);
+        provider.Verify(p => p.GetDatabase("mongodb://main", "BlocksConfiguration", false), Times.Never);
+        provider.Verify(p => p.GetDatabase(It.IsAny<string>()), Times.Never);
+    }
+
     [Fact]
     public async Task ProjectProvisioning_KeepsRegistryAndTemplatesOnMain_AndWritesStoredPlacement()
     {

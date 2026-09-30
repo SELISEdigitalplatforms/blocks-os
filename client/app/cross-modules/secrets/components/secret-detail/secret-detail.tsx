@@ -1,12 +1,12 @@
 import { format } from "date-fns";
 import {
+  Archive,
   Clock,
   Fingerprint,
   PenLine,
   RefreshCw,
   ShieldCheck,
   Tag,
-  Trash2,
   User,
 } from "lucide-react";
 import { Badge } from "@/components/ui-kits/badge/badge";
@@ -133,7 +133,7 @@ export function SecretDetail({ secret }: { secret: SecretResult }) {
         )}
 
         {secret.deletedDate && (
-          <Stat icon={Trash2} label="Deleted">
+          <Stat icon={Archive} label="Archived">
             {formatMoment(secret.deletedDate)}
           </Stat>
         )}

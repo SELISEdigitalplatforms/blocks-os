@@ -35,8 +35,11 @@ const LoadingSkeleton = () => (
             </div>
           </div>
           <Skeleton className="h-5 w-16 rounded-full" />
+          <Skeleton className="h-5 w-16 rounded-full" />
           <Skeleton className="h-3 w-24" />
           <div className="ml-auto flex gap-1.5">
+            <Skeleton className="h-7 w-7 rounded" />
+            <Skeleton className="h-7 w-7 rounded" />
             <Skeleton className="h-7 w-7 rounded" />
             <Skeleton className="h-7 w-7 rounded" />
           </div>
@@ -92,10 +95,13 @@ export const OidcList = () => {
               <TableHead className="hidden w-32 text-xs font-semibold uppercase tracking-wide text-high-emphasis sm:table-cell">
                 Type
               </TableHead>
+              <TableHead className="hidden w-32 text-xs font-semibold uppercase tracking-wide text-high-emphasis sm:table-cell">
+                Status
+              </TableHead>
               <TableHead className="hidden w-40 text-xs font-semibold uppercase tracking-wide text-high-emphasis md:table-cell">
                 Created On
               </TableHead>
-              <TableHead className="w-28 text-left text-xs font-semibold uppercase tracking-wide text-high-emphasis">
+              <TableHead className="w-36 text-left text-xs font-semibold uppercase tracking-wide text-high-emphasis">
                 Actions
               </TableHead>
             </TableRow>
