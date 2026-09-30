@@ -2,7 +2,8 @@
 
 	<ItemGroup>
 		<!--<PackageReference Include="MongoDB.Driver" />-->
-		<PackageReference Include="SeliseBlocks.Genesis.OS" />
+		<PackageReference Include="SeliseBlocks.Genesis.OS" Condition="'$(UseLocalGenesis)' != 'true'" />
+		<ProjectReference Include="$(LocalGenesisProject)" Condition="'$(UseLocalGenesis)' == 'true'" />
 		<PackageReference Include="SeliseBlocks.MailDriver.OS" />
 		<PackageReference Include="Azure.Storage.Blobs" />
 		<PackageReference Include="Parquet.Net" />

@@ -93,3 +93,57 @@ export const CLOUD_BUILD_ENDPOINTS = {
   REPOS_LIST: `${API_BASES.OS}/Release/GetReposList`,
   REPO_UPDATE: `${API_BASES.OS}/Release/UpdateRepoDomain`,
 } as const;
+
+// ─── Catalogue and usage ──────────────────────────────────────────────────────
+//
+// The catalogue is published data, not code. These two endpoints are the only thing the console
+// needs in order to draw every meter, limit and top-up — adding a meter is an edit to the
+// published catalogue, never to the front end.
+
+const CATALOGUE_SUBPATH = "/Catalogue";
+
+export const CATALOGUE_ENDPOINTS = {
+  GET: `/api${CATALOGUE_SUBPATH}`,
+  PUBLISH: `/api${CATALOGUE_SUBPATH}/publish`,
+  RELOAD: `/api${CATALOGUE_SUBPATH}/reload`,
+  HISTORY: `/api${CATALOGUE_SUBPATH}/history`,
+} as const;
+
+const USAGE_SUBPATH = "/Usage";
+
+export const USAGE_ENDPOINTS = {
+  GET: `/api${USAGE_SUBPATH}`,
+  SYNC: `/api${USAGE_SUBPATH}/sync`,
+} as const;
+
+const BILLING_SUBPATH = "/Billing";
+
+export const BILLING_ENDPOINTS = {
+  /** Cards on file for a project. Brand and last four only — nothing secret. */
+  CARDS: `/api${BILLING_SUBPATH}/cards`,
+  SET_DEFAULT_CARD: `/api${BILLING_SUBPATH}/cards/default`,
+  REMOVE_CARD: `/api${BILLING_SUBPATH}/cards/remove`,
+  /** Opens a provider session so the browser can add a card. The card never comes here. */
+  CARD_SESSION: `/api${BILLING_SUBPATH}/cards/session`,
+  /** What the project pays each month, and when it is next charged. */
+  SUBSCRIPTION: `/api${BILLING_SUBPATH}/subscription`,
+  INVOICES: `/api${BILLING_SUBPATH}/invoices`,
+  /** One invoice as a PDF. */
+  INVOICE_PDF: (invoiceId: string) => `/api${BILLING_SUBPATH}/invoices/${invoiceId}/pdf`,
+  /** Stops the monthly charge. Leaves environments running. */
+  UNSUBSCRIBE: `/api${BILLING_SUBPATH}/unsubscribe`,
+} as const;
+
+const CHECKOUT_SUBPATH = "/Checkout";
+
+export const CHECKOUT_ENDPOINTS = {
+  /** Prices a selection without writing anything. Called while the user is still choosing. */
+  QUOTE: `/api${CHECKOUT_SUBPATH}/quote`,
+  /** Writes the order and mints the idempotency key. Called once, before Pay is available. */
+  START: `/api${CHECKOUT_SUBPATH}/start`,
+  /** Charges the card. Safe to repeat with the same key. */
+  PAY: `/api${CHECKOUT_SUBPATH}/pay`,
+  ORDER: `/api${CHECKOUT_SUBPATH}/order`,
+  /** The order still being worked on. Read once on load to rebuild the progress bar. */
+  ACTIVE: `/api${CHECKOUT_SUBPATH}/active`,
+} as const;

@@ -7,6 +7,8 @@ using DomainService.Shared.Entities;
 using SeliseBlocks.ConfigurationDriver;
 using Worker;
 using Worker.Configuration;
+using DomainService.Billing.Services;
+using Worker.Consumers.Billing;
 using Worker.Consumers.Identifier;
 using Worker.Consumers.Migration;
 
@@ -30,7 +32,7 @@ IHostBuilder CreateHostBuilder(string[] args) =>
           options.SecretKey = "blocks-secret-os";
          });
         })
-        .ConfigureServices((services) =>
+        .ConfigureServices((context, services) =>
         {
             services.AddHttpClient();
 
@@ -40,12 +42,15 @@ IHostBuilder CreateHostBuilder(string[] args) =>
           //  services.AddHostedService<RestoreUnfinishedProjectBackgroundService>();
 
             #region Identifier Service Consumers
-            services.AddApplicationServices();
+            services.AddApplicationServices(
+                isProduction: context.HostingEnvironment.IsProduction(),
+                logicBaseUrl: context.Configuration["Blocks:LogicBaseUrl"]);
+            // A paid order, waiting for its environments to be built.
+            services.AddSingleton<IConsumer<ProvisionOrderCommand>, ProvisionOrderConsumer>();
             services.AddSingleton<IConsumer<Tenant>, ConfigureProjectConsumer>();
             services.AddSingleton<IConsumer<DisableDomainBindingRequest>, DisableDomainBindingConsumer>();
             services.AddSingleton<IConsumer<RestoreProjectRequest>, RestoreProjectConsumer>();
             services.AddSingleton<IConsumer<ConfigureDomainRequest>, DomainConfigureConsumer>();
-            services.AddSingleton<IConsumer<UpdateResourceUsageCommand_Identifier>, UpdateResourceUsageConsumer>();
             services.AddSingleton<IConsumer<CreateUserByEmailPostEvent>, CreateUserByEmailPostConsumer>();
             services.AddSingleton<IConsumer<MigrationCompletionEvent>, MigrationCompletionConsumer>();
          ApplicationConfigurations.ConfigureWorker(services, IdentifierConstants.GetMessageConfiguration(secret.MessageConnectionString));

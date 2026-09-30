@@ -1,5 +1,6 @@
 ﻿using Blocks.Extensions.DependencyInjection;
 using Blocks.Genesis;
+using DomainService.Billing.Services;
 using Blocks.Secrets;
 using BlocksOs.Api;
 using BlocksOs.Api.Middleware;
@@ -60,7 +61,15 @@ Directory.CreateDirectory(wwwrootPath);
 
 ApplyFrontendRuntimeSettings(builder.Configuration, wwwrootPath);
 
-services.AddApplicationServices();
+services.AddApplicationServices(
+    // Live payment credentials are accepted in production and nowhere else, so a staging
+    // deployment pointed at the live merchant account refuses to use it rather than charging
+    // real cards.
+    isProduction: builder.Environment.IsProduction(),
+    logicBaseUrl: builder.Configuration["Blocks:LogicBaseUrl"]);
+
+// The sweeper and the unique index that duplicate-charge protection depends on.
+services.AddBlocksBillingWorkers();
 services.AddCloudDomainServices();
 services.AddCloudLmtServices();
 services.AddConfigurationServices();

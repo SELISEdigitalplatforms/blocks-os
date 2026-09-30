@@ -43,7 +43,10 @@ import { PersonDetailPage } from "@/pages/people/person-detail-page";
 import { RepositoriesPage } from "@/pages/repositories/repositories";
 import { SettingsPage } from "@/pages/settings/settings";
 // Temporarily disabled
-// import { SubscriptionUsagePage } from "@/pages/subscription-usage/subscription-usage-page";
+import { SubscriptionUsagePage } from "@/pages/subscription-usage/subscription-usage-page";
+import { BillingPage } from "@/pages/billing/billing-page";
+import { CheckoutPage } from "@/pages/checkout/checkout-page";
+import { OrderPage } from "@/pages/order/order-page";
 // Temporarily disabled
 // import AiModelSelectedRoute from "@/pages/dashboard/ai-model-selected";
 import ApiSettingsPage from "@/pages/api-settings/api-settings";
@@ -188,11 +191,25 @@ export const router = createBrowserRouter([
                     path: "settings",
                     element: <SettingsPage />,
                   },
-                  // Temporarily disabled
-                  // {
-                  //   path: "subscription-usage",
-                  //   element: <SubscriptionUsagePage />,
-                  // },
+                  // Subscription: what the project uses, what it pays, and what it is buying.
+                  // All four take their project from :tenantGroupId on the parent route — none of
+                  // them infers it from the session.
+                  {
+                    path: "subscription-usage",
+                    element: <SubscriptionUsagePage />,
+                  },
+                  {
+                    path: "billing",
+                    element: <BillingPage />,
+                  },
+                  {
+                    path: "checkout",
+                    element: <CheckoutPage />,
+                  },
+                  {
+                    path: "order",
+                    element: <OrderPage />,
+                  },
                 ],
               },
 

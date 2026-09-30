@@ -18,9 +18,37 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui-kits/button/button";
 import { useCreateProjectFormState } from "../../utils";
 import { useProjectForm } from "@/hooks/use-project";
+import { useEnvironmentOptions } from "@blocks-identifier/hooks/use-catalogue";
 export const CreateProjectEnvironmentsForm = () => {
   const { isPending, saveProject } = useProjectForm();
   const { formData, setFormData } = useCreateProjectFormState();
+  // Environments come from the published catalogue. The static list is only a fallback for when
+  // the catalogue cannot be reached — it is not the source of truth and must not drift into one.
+  const { options: catalogueOptions, market, loading: catalogueLoading } = useEnvironmentOptions();
+  const options = catalogueOptions.length
+    ? catalogueOptions.map((option) => ({
+        index: option.rank,
+        label: option.label,
+        value: option.value,
+        subtext:
+          environmentOptions.find((fallback) => fallback.value === option.value)?.subtext ?? "",
+        price: option.price,
+        freePrice: option.freeTierAvailable ? option.freePrice : null,
+        meterCount: Object.keys(option.limits).length,
+      }))
+    : environmentOptions.map((option) => ({
+        ...option,
+        price: null as number | null,
+        freePrice: null as number | null,
+        meterCount: 0,
+      }));
+
+  const money = (amount: number | null) =>
+    amount === null || market === null
+      ? null
+      : amount === 0
+        ? "Free"
+        : `${market} ${amount.toLocaleString()}`;
   const form = useForm({
     defaultValues: formData[2],
     resolver: zodResolver(createProjectEnvironmentFormSchema),
@@ -28,8 +56,8 @@ export const CreateProjectEnvironmentsForm = () => {
   const onSubmitHandler = (values: typeof createProjectEnvironmentFormDefaultValue) => {
     const sortedEnvironments = [...values.environments].sort(
       (a: { value: string }, b: { value: string }) => {
-        const aIndex = environmentOptions.find((opt) => opt.value === a.value)?.index ?? 0;
-        const bIndex = environmentOptions.find((opt) => opt.value === b.value)?.index ?? 0;
+        const aIndex = options.find((opt) => opt.value === a.value)?.index ?? 0;
+        const bIndex = options.find((opt) => opt.value === b.value)?.index ?? 0;
         return aIndex - bIndex;
       },
     );
@@ -60,7 +88,7 @@ export const CreateProjectEnvironmentsForm = () => {
                 name="environments"
                 render={() => (
                   <FormItem>
-                    {environmentOptions.map((option) => (
+                    {options.map((option) => (
                       <FormField
                         key={option.value}
                         control={form.control}
@@ -99,10 +127,21 @@ export const CreateProjectEnvironmentsForm = () => {
                                         {option.value === "prod" ? "main" : option.value}
                                       </span>
                                     </div>
+                                    {money(option.price) && (
+                                      <span className="text-sm font-medium text-gray-500">
+                                        {money(option.price)}
+                                        {option.freePrice !== null && " · free tier available"}
+                                      </span>
+                                    )}
                                   </div>
                                 </FormLabel>
                               </div>
                               <div className="ml-7 text-base font-normal">{option.subtext}</div>
+                              {option.meterCount > 0 && (
+                                <div className="ml-7 text-sm text-gray-400">
+                                  {option.meterCount} metered limits
+                                </div>
+                              )}
                             </FormItem>
                           );
                         }}
@@ -116,7 +155,7 @@ export const CreateProjectEnvironmentsForm = () => {
           </div>
         </div>
         <div className="mb-4 mt-10">
-          <Button size="lg" disabled={!isValid || isPending}>
+          <Button size="lg" disabled={!isValid || isPending || catalogueLoading}>
             Submit
           </Button>
         </div>

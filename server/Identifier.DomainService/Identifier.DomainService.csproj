@@ -8,7 +8,9 @@
 	  <PackageReference Include="Azure.Storage.Blobs" />
 	  <PackageReference Include="FluentValidation" />
 	  <PackageReference Include="MongoDB.Driver" />
-	  <PackageReference Include="SeliseBlocks.Genesis.OS" />
+	  <PackageReference Include="SeliseBlocks.Genesis.OS" Condition="'$(UseLocalGenesis)' != 'true'" />
+	  <ProjectReference Include="..\Blocks.Secrets\Blocks.Secrets.csproj" />
+	  <ProjectReference Include="$(LocalGenesisProject)" Condition="'$(UseLocalGenesis)' == 'true'" />
 	  <PackageReference Include="SeliseBlocks.MailDriver.OS" />
 	  <PackageReference Include="SeliseBlocks.StorageDriver.OS" />
    <PackageReference Include="MimeKit" />
@@ -22,4 +24,11 @@
 
 
 
+
+  <ItemGroup>
+    <!-- The catalogue is data: it ships beside the assembly so a limit change is a file edit. -->
+    <None Update="Catalogue\Data\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>

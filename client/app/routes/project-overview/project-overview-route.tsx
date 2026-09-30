@@ -6,7 +6,9 @@ import type { LayoutProps } from "@seliseblocks/genesis-os/layouts";
 import { useProjectStore } from "@seliseblocks/genesis-os/store";
 import type { Menu } from "@seliseblocks/genesis-os/types";
 import { useEffect } from "react";
-import { Navigate, Outlet, useLocation, useParams } from "react-router";
+import { Navigate, Outlet, useLocation, useNavigate, useParams } from "react-router";
+import { useOrderNotifications } from "@blocks-identifier/hooks/use-order-notifications";
+import { OrderNotificationBell } from "@blocks-identifier/components/order/order-notification-bell";
 
 export type ProjectOverviewRouteProps = LayoutProps & {
   /** Base path the project-overview routes live under. */
@@ -160,7 +162,43 @@ export function ProjectOverviewRoute({
       )}
       forwardedTo={forwardedTo}
     >
+      <ProjectNotifications tenantGroupId={tenantGroupId} basePath={basePath} />
       <Outlet />
     </ProjectOverviewLayout>
+  );
+}
+
+/**
+ * The bell, on every page of a project.
+ *
+ * It lives here rather than in the header because <c>DashboardHeader</c> comes from the shared
+ * package and has no slot for it, and here is the first place that knows which project is open.
+ *
+ * Listening at the layout means a purchase keeps reporting while the person moves around the
+ * console, which is the point: creation takes minutes and nobody waits on one screen for it.
+ */
+function ProjectNotifications({
+  tenantGroupId,
+  basePath,
+}: {
+  tenantGroupId: string;
+  basePath: string;
+}) {
+  const navigate = useNavigate();
+  const { order, connected } = useOrderNotifications(tenantGroupId);
+
+  // Nothing to say and nothing to show: no bell, no empty popover, no dead pixel.
+  if (!order) return null;
+
+  return (
+    <div className="pointer-events-none sticky top-0 z-40 flex justify-end px-4 pt-2">
+      <div className="pointer-events-auto">
+        <OrderNotificationBell
+          order={order}
+          connected={connected}
+          onOpenOrder={() => navigate(`${basePath}/${tenantGroupId}/order`)}
+        />
+      </div>
+    </div>
   );
 }

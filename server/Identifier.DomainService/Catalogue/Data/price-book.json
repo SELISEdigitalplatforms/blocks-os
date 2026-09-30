@@ -1,0 +1,272 @@
+{
+  "schemaVersion": 1,
+  "priceBookVersion": "2026-09-24.1",
+  "catalogueVersion": "2026-09-24.1",
+  "notes": {
+    "markets": "One column per market. Amounts are set per market, never converted from a base currency at an exchange rate - purchasing power differs by more than FX does.",
+    "cycle": "Monthly only. Adding an environment or a recurring top-up mid-period is prorated to the end of the current usage period and charged immediately.",
+    "environments": "The price of one environment of that kind. A project may hold several of the same kind; each is a separate line.",
+    "freeTier": "dev.free is the free tier: one per project, no top-ups, never expires.",
+    "topUp": "price is per whole step, as defined by topUpSteps in the catalogue. Counter steps are charged once and the units carry until spent. Resource steps are charged every period for as long as the raised limit is held.",
+    "premium": "Top-up units are deliberately dearer per unit than the same units inside a package, so sustained growth is met by moving up an environment and top-ups cover spikes and the gap between two environments.",
+    "placeholder": "PLACEHOLDER VALUES - confirm before selling anything."
+  },
+  "markets": [
+    "CHF",
+    "USD"
+  ],
+  "defaultMarket": "CHF",
+  "environments": {
+    "dev": {
+      "free": {
+        "CHF": 0,
+        "USD": 0
+      },
+      "paid": {
+        "CHF": 50,
+        "USD": 55
+      }
+    },
+    "test": {
+      "paid": {
+        "CHF": 80,
+        "USD": 88
+      }
+    },
+    "stg": {
+      "paid": {
+        "CHF": 100,
+        "USD": 110
+      }
+    },
+    "iat": {
+      "paid": {
+        "CHF": 150,
+        "USD": 165
+      }
+    },
+    "uat": {
+      "paid": {
+        "CHF": 150,
+        "USD": 165
+      }
+    },
+    "pre-prod": {
+      "paid": {
+        "CHF": 150,
+        "USD": 165
+      }
+    },
+    "prod": {
+      "paid": {
+        "CHF": 300,
+        "USD": 330
+      }
+    }
+  },
+  "topUpSteps": {
+    "api": {
+      "calls": {
+        "kind": "counter",
+        "step": 100000,
+        "billing": "oneOffCarries",
+        "price": {
+          "CHF": 20,
+          "USD": 22
+        }
+      }
+    },
+    "logic": {
+      "workflows": {
+        "kind": "counter",
+        "step": 5000,
+        "billing": "oneOffCarries",
+        "price": {
+          "CHF": 20,
+          "USD": 22
+        }
+      }
+    },
+    "localization": {
+      "languages": {
+        "kind": "resource",
+        "step": 5,
+        "billing": "recurringWhileHeld",
+        "price": {
+          "CHF": 15,
+          "USD": 16
+        }
+      },
+      "keys": {
+        "kind": "resource",
+        "step": 10000,
+        "billing": "recurringWhileHeld",
+        "price": {
+          "CHF": 15,
+          "USD": 16
+        }
+      },
+      "modules": {
+        "kind": "resource",
+        "step": 10,
+        "billing": "recurringWhileHeld",
+        "price": {
+          "CHF": 12,
+          "USD": 13
+        }
+      },
+      "publishes": {
+        "kind": "counter",
+        "step": 50,
+        "billing": "oneOffCarries",
+        "price": {
+          "CHF": 12,
+          "USD": 13
+        }
+      },
+      "autoTranslations": {
+        "kind": "counter",
+        "step": 1000,
+        "billing": "oneOffCarries",
+        "price": {
+          "CHF": 10,
+          "USD": 11
+        }
+      }
+    },
+    "ai": {
+      "blocksCredits": {
+        "kind": "counter",
+        "step": 1000,
+        "billing": "oneOffCarries",
+        "price": {
+          "CHF": 20,
+          "USD": 22
+        }
+      },
+      "byoCredits": {
+        "kind": "counter",
+        "step": 100000,
+        "billing": "oneOffCarries",
+        "price": {
+          "CHF": 8,
+          "USD": 9
+        }
+      },
+      "agents": {
+        "kind": "resource",
+        "step": 5,
+        "billing": "recurringWhileHeld",
+        "price": {
+          "CHF": 40,
+          "USD": 44
+        }
+      },
+      "knowledgeBases": {
+        "kind": "resource",
+        "step": 5,
+        "billing": "recurringWhileHeld",
+        "price": {
+          "CHF": 30,
+          "USD": 33
+        }
+      },
+      "knowledgeBaseStorageMb": {
+        "kind": "resource",
+        "step": 5000,
+        "billing": "recurringWhileHeld",
+        "price": {
+          "CHF": 20,
+          "USD": 22
+        }
+      },
+      "tools": {
+        "kind": "resource",
+        "step": 10,
+        "billing": "recurringWhileHeld",
+        "price": {
+          "CHF": 15,
+          "USD": 16
+        }
+      },
+      "mcpServers": {
+        "kind": "resource",
+        "step": 2,
+        "billing": "recurringWhileHeld",
+        "price": {
+          "CHF": 15,
+          "USD": 16
+        }
+      }
+    },
+    "studio": {
+      "apps": {
+        "kind": "resource",
+        "step": 5,
+        "billing": "recurringWhileHeld",
+        "price": {
+          "CHF": 30,
+          "USD": 33
+        }
+      },
+      "blocksCredits": {
+        "kind": "counter",
+        "step": 1000,
+        "billing": "oneOffCarries",
+        "price": {
+          "CHF": 20,
+          "USD": 22
+        }
+      },
+      "byoCredits": {
+        "kind": "counter",
+        "step": 100000,
+        "billing": "oneOffCarries",
+        "price": {
+          "CHF": 8,
+          "USD": 9
+        }
+      }
+    },
+    "release": {
+      "repos": {
+        "kind": "resource",
+        "step": 5,
+        "billing": "recurringWhileHeld",
+        "price": {
+          "CHF": 20,
+          "USD": 22
+        }
+      },
+      "deployments": {
+        "kind": "counter",
+        "step": 25,
+        "billing": "oneOffCarries",
+        "price": {
+          "CHF": 20,
+          "USD": 22
+        }
+      },
+      "builds": {
+        "kind": "counter",
+        "step": 50,
+        "billing": "oneOffCarries",
+        "price": {
+          "CHF": 20,
+          "USD": 22
+        }
+      }
+    },
+    "data": {
+      "schemas": {
+        "kind": "resource",
+        "step": 25,
+        "billing": "recurringWhileHeld",
+        "price": {
+          "CHF": 25,
+          "USD": 28
+        }
+      }
+    }
+  }
+}

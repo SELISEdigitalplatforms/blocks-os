@@ -1,0 +1,618 @@
+{
+  "schemaVersion": 5,
+  "catalogueVersion": "2026-09-24.1",
+  "notes": {
+    "model": "A project is the sum of its environments. Each environment is bought on its own and carries its own limit for every meter. There is no project-wide pool, no split across environments and no swapping between them.",
+    "unlimited": "-1 means uncapped. On idleStopMinutes it means the environment never idle-stops. 0 means the environment does not include the feature.",
+    "scope": "Every meter is environment-scoped. An environment is a tenant with its own Mongo database, so repositories (release.repos) and people (platform.people) belong to the environment, not the project.",
+    "kind": "counter = consumed over the period, held in Redis. resource = live objects that exist right now, counted in Mongo. policy = a setting, read from config.",
+    "reset": "period = the included allowance returns to 0 at each boundary. never = it is a standing count. none = no usage is stored.",
+    "limitSet": "Environments are individual records that reference a shared limit set and may override any meter. iat, uat and pre-prod share the integration set today; changing one means adding an override, and nothing else moves.",
+    "freeTier": "dev alone offers a free tier. It is the same environment with a smaller limit set, so buying the dev package upgrades it in place with used as the floor. Top-ups are not available on the free tier.",
+    "topUp": "Any meter on any paid environment can be topped up in whole steps. Counter top-ups are bought once and carry across period boundaries; the included allowance is always drained first. Resource top-ups are recurring: they are charged every period while held, and lowering one defers to the period boundary and can never go below used.",
+    "topUpCap": "A meter can be topped up to at most maxMultipleOfIncluded times what the environment includes, rounded down to a whole step. prod is uncapped, because there is no larger environment to move to.",
+    "billing": "Monthly only. Adding an environment or a top-up mid-period is prorated to the end of the current period and charged immediately. Removing one takes effect at the period boundary with no refund. Nothing ever re-anchors the usage period.",
+    "prices": "Prices are not in this file. See price-book.json, which carries one column per market."
+  },
+  "unlimited": -1,
+  "usagePeriod": {
+    "days": 30,
+    "anchor": "subscribedAtUtc"
+  },
+  "billing": {
+    "cycles": [
+      "monthly"
+    ],
+    "defaultCycle": "monthly",
+    "onAdd": "prorateAndChargeNow",
+    "onRemove": "atUsagePeriodEnd",
+    "refundOnRemove": false,
+    "reanchorOnChange": false
+  },
+  "defaults": {
+    "alertAtPercent": [
+      80,
+      100
+    ],
+    "packageChange": {
+      "upgrade": "immediate",
+      "downgrade": "atUsagePeriodEnd",
+      "prorate": true,
+      "reanchor": false,
+      "floor": "used"
+    },
+    "topUp": {
+      "requiresPaidEnvironment": true,
+      "maxMultipleOfIncluded": 2,
+      "roundDownToWholeStep": true,
+      "counterUnitsCarry": true,
+      "drainOrder": [
+        "allowance",
+        "purchased"
+      ],
+      "resourceUnitsRecurring": true,
+      "resourceDecreaseAt": "usagePeriodEnd"
+    }
+  },
+  "aliases": {
+    "stage": "stg",
+    "staging": "stg",
+    "production": "prod"
+  },
+  "services": {
+    "platform": {
+      "label": "Platform",
+      "meters": {
+        "people": {
+          "label": "People",
+          "unit": "person",
+          "scope": "environment",
+          "kind": "resource",
+          "reset": "never",
+          "purchasable": false
+        }
+      }
+    },
+    "api": {
+      "label": "API",
+      "meters": {
+        "calls": {
+          "label": "API calls",
+          "unit": "call",
+          "scope": "environment",
+          "kind": "counter",
+          "reset": "period"
+        }
+      }
+    },
+    "logic": {
+      "label": "Logic",
+      "meters": {
+        "workflows": {
+          "label": "Workflow runs",
+          "unit": "run",
+          "scope": "environment",
+          "kind": "counter",
+          "reset": "period"
+        }
+      }
+    },
+    "localization": {
+      "label": "Localization",
+      "meters": {
+        "languages": {
+          "label": "Languages",
+          "unit": "language",
+          "scope": "environment",
+          "kind": "resource",
+          "reset": "never"
+        },
+        "keys": {
+          "label": "Translation keys",
+          "unit": "key",
+          "scope": "environment",
+          "kind": "resource",
+          "reset": "never"
+        },
+        "modules": {
+          "label": "Modules",
+          "unit": "module",
+          "scope": "environment",
+          "kind": "resource",
+          "reset": "never"
+        },
+        "publishes": {
+          "label": "Publishes",
+          "unit": "publish",
+          "scope": "environment",
+          "kind": "counter",
+          "reset": "period"
+        },
+        "autoTranslations": {
+          "label": "Auto translations",
+          "unit": "translation",
+          "scope": "environment",
+          "kind": "counter",
+          "reset": "period"
+        }
+      }
+    },
+    "ai": {
+      "label": "AI",
+      "meters": {
+        "blocksCredits": {
+          "label": "AI credits (Blocks model)",
+          "unit": "credit",
+          "scope": "environment",
+          "kind": "counter",
+          "reset": "period",
+          "scale": 2
+        },
+        "byoCredits": {
+          "label": "AI credits (BYO model)",
+          "unit": "credit",
+          "scope": "environment",
+          "kind": "counter",
+          "reset": "period",
+          "scale": 2
+        },
+        "agents": {
+          "label": "Agents",
+          "unit": "agent",
+          "scope": "environment",
+          "kind": "resource",
+          "reset": "never"
+        },
+        "knowledgeBases": {
+          "label": "Knowledge bases",
+          "unit": "kb",
+          "scope": "environment",
+          "kind": "resource",
+          "reset": "never"
+        },
+        "knowledgeBaseStorageMb": {
+          "label": "Knowledge base storage",
+          "unit": "MB",
+          "scope": "environment",
+          "kind": "resource",
+          "reset": "never"
+        },
+        "tools": {
+          "label": "Tools",
+          "unit": "tool",
+          "scope": "environment",
+          "kind": "resource",
+          "reset": "never"
+        },
+        "mcpServers": {
+          "label": "MCP servers",
+          "unit": "server",
+          "scope": "environment",
+          "kind": "resource",
+          "reset": "never"
+        }
+      }
+    },
+    "studio": {
+      "label": "Studio",
+      "meters": {
+        "apps": {
+          "label": "Apps",
+          "unit": "app",
+          "scope": "environment",
+          "kind": "resource",
+          "reset": "never"
+        },
+        "blocksCredits": {
+          "label": "Studio AI credits (Blocks model)",
+          "unit": "credit",
+          "scope": "environment",
+          "kind": "counter",
+          "reset": "period",
+          "scale": 2
+        },
+        "byoCredits": {
+          "label": "Studio AI credits (BYO model)",
+          "unit": "credit",
+          "scope": "environment",
+          "kind": "counter",
+          "reset": "period",
+          "scale": 2
+        }
+      }
+    },
+    "release": {
+      "label": "Release",
+      "meters": {
+        "repos": {
+          "label": "Repositories",
+          "unit": "repo",
+          "scope": "environment",
+          "kind": "resource",
+          "reset": "never"
+        },
+        "deployments": {
+          "label": "Deployments",
+          "unit": "deployment",
+          "scope": "environment",
+          "kind": "counter",
+          "reset": "period"
+        },
+        "builds": {
+          "label": "Builds",
+          "unit": "build",
+          "scope": "environment",
+          "kind": "counter",
+          "reset": "period"
+        },
+        "idleStopMinutes": {
+          "label": "Idle stop",
+          "unit": "minute",
+          "scope": "environment",
+          "kind": "policy",
+          "reset": "none",
+          "purchasable": false
+        }
+      }
+    },
+    "data": {
+      "label": "Data",
+      "meters": {
+        "schemas": {
+          "label": "Schemas",
+          "unit": "schema",
+          "scope": "environment",
+          "kind": "resource",
+          "reset": "never"
+        },
+        "idleStopMinutes": {
+          "label": "Idle stop",
+          "unit": "minute",
+          "scope": "environment",
+          "kind": "policy",
+          "reset": "none",
+          "purchasable": false
+        }
+      }
+    }
+  },
+  "limitSets": {
+    "free-dev": {
+      "platform": {
+        "people": 2
+      },
+      "api": {
+        "calls": 25000
+      },
+      "logic": {
+        "workflows": 500
+      },
+      "localization": {
+        "languages": 2,
+        "keys": 500,
+        "modules": 2,
+        "publishes": 10,
+        "autoTranslations": 200
+      },
+      "ai": {
+        "blocksCredits": 500,
+        "byoCredits": 50000,
+        "agents": 2,
+        "knowledgeBases": 1,
+        "knowledgeBaseStorageMb": 100,
+        "tools": 2,
+        "mcpServers": 1
+      },
+      "studio": {
+        "apps": 1,
+        "blocksCredits": 500,
+        "byoCredits": 50000
+      },
+      "release": {
+        "repos": 1,
+        "deployments": 5,
+        "builds": 10,
+        "idleStopMinutes": 15
+      },
+      "data": {
+        "schemas": 3,
+        "idleStopMinutes": 15
+      }
+    },
+    "dev": {
+      "platform": {
+        "people": -1
+      },
+      "api": {
+        "calls": 100000
+      },
+      "logic": {
+        "workflows": 5000
+      },
+      "localization": {
+        "languages": 5,
+        "keys": 5000,
+        "modules": 10,
+        "publishes": 30,
+        "autoTranslations": 2000
+      },
+      "ai": {
+        "blocksCredits": 2000,
+        "byoCredits": 250000,
+        "agents": 7,
+        "knowledgeBases": 5,
+        "knowledgeBaseStorageMb": 1000,
+        "tools": 10,
+        "mcpServers": 2
+      },
+      "studio": {
+        "apps": 5,
+        "blocksCredits": 2000,
+        "byoCredits": 250000
+      },
+      "release": {
+        "repos": 3,
+        "deployments": 30,
+        "builds": 60,
+        "idleStopMinutes": 30
+      },
+      "data": {
+        "schemas": 12,
+        "idleStopMinutes": 30
+      }
+    },
+    "test": {
+      "platform": {
+        "people": -1
+      },
+      "api": {
+        "calls": 200000
+      },
+      "logic": {
+        "workflows": 10000
+      },
+      "localization": {
+        "languages": 10,
+        "keys": 10000,
+        "modules": 20,
+        "publishes": 60,
+        "autoTranslations": 4000
+      },
+      "ai": {
+        "blocksCredits": 4000,
+        "byoCredits": 500000,
+        "agents": 15,
+        "knowledgeBases": 10,
+        "knowledgeBaseStorageMb": 2000,
+        "tools": 20,
+        "mcpServers": 4
+      },
+      "studio": {
+        "apps": 10,
+        "blocksCredits": 4000,
+        "byoCredits": 500000
+      },
+      "release": {
+        "repos": 5,
+        "deployments": 60,
+        "builds": 120,
+        "idleStopMinutes": 45
+      },
+      "data": {
+        "schemas": 25,
+        "idleStopMinutes": 45
+      }
+    },
+    "stg": {
+      "platform": {
+        "people": -1
+      },
+      "api": {
+        "calls": 250000
+      },
+      "logic": {
+        "workflows": 15000
+      },
+      "localization": {
+        "languages": 15,
+        "keys": 15000,
+        "modules": 25,
+        "publishes": 75,
+        "autoTranslations": 5000
+      },
+      "ai": {
+        "blocksCredits": 5000,
+        "byoCredits": 600000,
+        "agents": 20,
+        "knowledgeBases": 15,
+        "knowledgeBaseStorageMb": 3000,
+        "tools": 25,
+        "mcpServers": 5
+      },
+      "studio": {
+        "apps": 15,
+        "blocksCredits": 5000,
+        "byoCredits": 600000
+      },
+      "release": {
+        "repos": 6,
+        "deployments": 75,
+        "builds": 150,
+        "idleStopMinutes": 60
+      },
+      "data": {
+        "schemas": 30,
+        "idleStopMinutes": 60
+      }
+    },
+    "integration": {
+      "platform": {
+        "people": -1
+      },
+      "api": {
+        "calls": 400000
+      },
+      "logic": {
+        "workflows": 25000
+      },
+      "localization": {
+        "languages": 25,
+        "keys": 25000,
+        "modules": 40,
+        "publishes": 100,
+        "autoTranslations": 8000
+      },
+      "ai": {
+        "blocksCredits": 8000,
+        "byoCredits": 1000000,
+        "agents": 30,
+        "knowledgeBases": 25,
+        "knowledgeBaseStorageMb": 5000,
+        "tools": 40,
+        "mcpServers": 8
+      },
+      "studio": {
+        "apps": 25,
+        "blocksCredits": 8000,
+        "byoCredits": 1000000
+      },
+      "release": {
+        "repos": 10,
+        "deployments": 100,
+        "builds": 200,
+        "idleStopMinutes": 90
+      },
+      "data": {
+        "schemas": 50,
+        "idleStopMinutes": 90
+      }
+    },
+    "prod": {
+      "platform": {
+        "people": -1
+      },
+      "api": {
+        "calls": 1200000
+      },
+      "logic": {
+        "workflows": 75000
+      },
+      "localization": {
+        "languages": 40,
+        "keys": 75000,
+        "modules": 80,
+        "publishes": 300,
+        "autoTranslations": 24000
+      },
+      "ai": {
+        "blocksCredits": 24000,
+        "byoCredits": 3000000,
+        "agents": 60,
+        "knowledgeBases": 40,
+        "knowledgeBaseStorageMb": 15000,
+        "tools": 80,
+        "mcpServers": 15
+      },
+      "studio": {
+        "apps": 40,
+        "blocksCredits": 24000,
+        "byoCredits": 3000000
+      },
+      "release": {
+        "repos": 20,
+        "deployments": 200,
+        "builds": 400,
+        "idleStopMinutes": -1
+      },
+      "data": {
+        "schemas": 100,
+        "idleStopMinutes": -1
+      }
+    }
+  },
+  "environments": {
+    "dev": {
+      "label": "Development",
+      "rank": 1,
+      "limitSet": "dev",
+      "overrides": {},
+      "freeLimitSet": "free-dev",
+      "freeTierAvailable": true,
+      "maxFreePerProject": 1
+    },
+    "test": {
+      "label": "Test",
+      "rank": 2,
+      "limitSet": "test",
+      "overrides": {}
+    },
+    "stg": {
+      "label": "Staging",
+      "rank": 3,
+      "limitSet": "stg",
+      "overrides": {}
+    },
+    "iat": {
+      "label": "Integration acceptance",
+      "rank": 4,
+      "limitSet": "integration",
+      "overrides": {}
+    },
+    "uat": {
+      "label": "User acceptance",
+      "rank": 5,
+      "limitSet": "integration",
+      "overrides": {}
+    },
+    "pre-prod": {
+      "label": "Pre-production",
+      "rank": 6,
+      "limitSet": "integration",
+      "overrides": {}
+    },
+    "prod": {
+      "label": "Production",
+      "rank": 7,
+      "limitSet": "prod",
+      "overrides": {},
+      "topUpUncapped": true
+    }
+  },
+  "topUpSteps": {
+    "api": {
+      "calls": 100000
+    },
+    "logic": {
+      "workflows": 5000
+    },
+    "localization": {
+      "languages": 5,
+      "keys": 10000,
+      "modules": 10,
+      "publishes": 50,
+      "autoTranslations": 1000
+    },
+    "ai": {
+      "blocksCredits": 1000,
+      "byoCredits": 100000,
+      "agents": 5,
+      "knowledgeBases": 5,
+      "knowledgeBaseStorageMb": 5000,
+      "tools": 10,
+      "mcpServers": 2
+    },
+    "studio": {
+      "apps": 5,
+      "blocksCredits": 1000,
+      "byoCredits": 100000
+    },
+    "release": {
+      "repos": 5,
+      "deployments": 25,
+      "builds": 50
+    },
+    "data": {
+      "schemas": 25
+    }
+  }
+}

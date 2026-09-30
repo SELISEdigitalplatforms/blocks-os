@@ -10,4 +10,19 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <AnalysisLevel>latest-All</AnalysisLevel>
   </PropertyGroup>
+
+  <!--
+    Local Genesis.
+
+    Set UseLocalGenesis=true (here, or -p:UseLocalGenesis=true on the command line) and every
+    project references ../../blocks-genesis-net source instead of the published
+    SeliseBlocks.Genesis.OS package. That is how a Genesis change is verified end to end in
+    blocks-os before the package is cut; leave it false for normal builds.
+  -->
+  <PropertyGroup>
+    <UseLocalGenesis Condition="'$(UseLocalGenesis)' == ''">false</UseLocalGenesis>
+    <!-- The local source has the quota API; the published 4.2.2 package does not yet. -->
+    <DefineConstants Condition="'$(UseLocalGenesis)' == 'true'">$(DefineConstants);GENESIS_QUOTA</DefineConstants>
+    <LocalGenesisProject>$(MSBuildThisFileDirectory)..\..\blocks-genesis-net\src\Genesis\Blocks.Genesis.csproj</LocalGenesisProject>
+  </PropertyGroup>
 </Project>

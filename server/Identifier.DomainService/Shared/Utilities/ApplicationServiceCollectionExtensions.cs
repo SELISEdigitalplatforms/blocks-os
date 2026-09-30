@@ -2,6 +2,8 @@ using Blocks.Extension.DependencyInjection;
 using Blocks.Genesis;
 using DomainService.Access;
 using DomainService.Access.Services;
+using DomainService.Billing.Services;
+using DomainService.Catalogue.Services;
 using DomainService.Certificate;
 using DomainService.ManagedService;
 using DomainService.ManagedService.Services;
@@ -23,8 +25,34 @@ namespace DomainService.Shared
 {
     public static class ApplicationServiceCollectionExtensions
     {
-        public static void AddApplicationServices(this IServiceCollection services)
+        /// <param name="isProduction">
+        /// Whether live payment credentials may be used. False refuses them, so a non-production
+        /// deployment cannot charge a real card however it is configured.
+        /// </param>
+        /// <param name="logicBaseUrl">
+        /// Where blocks-logic serves its notification hub, for pushing order progress to the
+        /// console. Empty leaves progress unsent, which costs live updates and nothing else.
+        /// </param>
+        public static void AddApplicationServices(
+            this IServiceCollection services,
+            bool isProduction = false,
+            string? logicBaseUrl = null)
         {
+            // The catalogue: published to the platform database, served to the console, seeded per
+            // tenant. Adding a meter is an edit to that data, not to this file.
+            services.AddBlocksCatalogue();
+            // Subscriptions: cards, orders, payment and the workers that build what was bought.
+            services.AddBlocksBilling(isProduction, logicBaseUrl);
+
+            // Quota enforcement. Genesis knows how to check and record; it never learns what a
+            // credit costs or what counts as a build.
+            //
+            // Only present on a Genesis that has the quota work. Build with
+            // -p:UseLocalGenesis=true to reference ../../blocks-genesis-net directly; on the
+            // published package this compiles once the version is cut.
+#if GENESIS_QUOTA
+            services.AddBlocksQuota();
+#endif
             // Register validator
             services.AddTransient<IValidator<CreateProjectRequest>, CreateProjectRequestValidator>();
             services.AddTransient<IValidator<UpdateAuthConfigRequest>, UpdateAuthConfigRequestValidator>();

@@ -37,6 +37,18 @@ namespace DomainService.Shared
         // declares it. Deliberately absent from the MessageConfiguration below: binding a queue this
         // service has no consumer for would let the broker hand it deletes it would silently drop.
         public const string ReleaseProjectDeleteQueue = "blocks_release_project_delete_listener";
+
+        /// <summary>Paid orders waiting for their environments to be built.</summary>
+        public const string ProvisionOrderQueue = "blocks_provision_order_listener";
+
+        /// <summary>A collected invoice. The template is a receipt.</summary>
+        public const string InvoicePaidMailPurpose = "blocks_invoice_paid";
+
+        /// <summary>
+        /// An invoice that could not be collected. The template says the amount carries to the
+        /// next bill, because nothing is suspended over it.
+        /// </summary>
+        public const string InvoiceUnpaidMailPurpose = "blocks_invoice_unpaid";
         public const string MigrationCompletionTopic = "blocks_migration_topic";
         public const string ProjectPeopleInvitationMailPurpose = "project_invitation";
         public const string BlocksDomain = "seliseblocks.com";
@@ -93,6 +105,7 @@ namespace DomainService.Shared
                     ConsumerSubscriptions = [ConsumerSubscription.BindToQueue(IdentifierQueueName),
                                              ConsumerSubscription.BindToQueue(GenericMigrationQueue),
                                              ConsumerSubscription.BindToQueue(DataCleanupQueue),
+                                             ConsumerSubscription.BindToQueue(ProvisionOrderQueue),
                                              ConsumerSubscription.BindToQueue(MigrationCompletionTopic),],
                 }
             };
@@ -114,7 +127,7 @@ namespace DomainService.Shared
                     // Api still publishes to those queues: SendToConsumerAsync names the queue on
                     // each ConsumerMessage, so sending never needed them declared. This mirrors
                     // ReleaseProjectDeleteQueue above, which is published to and likewise unbound.
-                    Queues = [IdentifierQueueName, GenericMigrationQueue, DataCleanupQueue],
+                    Queues = [IdentifierQueueName, GenericMigrationQueue, DataCleanupQueue, ProvisionOrderQueue],
                     Topics = [MigrationCompletionTopic]
                 }
             };

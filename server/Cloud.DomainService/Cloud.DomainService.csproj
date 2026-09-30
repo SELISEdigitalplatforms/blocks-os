@@ -3,7 +3,8 @@
 
   <ItemGroup>
     <!--<PackageReference Include="MongoDB.Driver" />-->
-    <PackageReference Include="SeliseBlocks.Genesis.OS" />
+    <PackageReference Include="SeliseBlocks.Genesis.OS" Condition="'$(UseLocalGenesis)' != 'true'" />
+    <ProjectReference Include="$(LocalGenesisProject)" Condition="'$(UseLocalGenesis)' == 'true'" />
   </ItemGroup>
 
 </Project>

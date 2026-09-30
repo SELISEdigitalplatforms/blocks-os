@@ -14,6 +14,19 @@ WWWROOT_DIR="$SCRIPT_DIR/server/Api/wwwroot"
 API_PORT=5000
 FRONTEND_PORT=4000
 
+# Interface Kestrel binds. Defaults to every address; set API_HOST to a specific one when
+# something else already holds the port on loopback (the function registry sits on 127.0.0.1:5000).
+API_HOST="${API_HOST:-0.0.0.0}"
+
+# Build against ../blocks-genesis-net source instead of the published
+# SeliseBlocks.Genesis.OS package. Set LOCAL_GENESIS=1, or pass -g / --local-genesis, to verify a
+# Genesis change end to end in blocks-os before the package is cut.
+LOCAL_GENESIS="${LOCAL_GENESIS:-0}"
+GENESIS_ARGS=()
+if [ "$LOCAL_GENESIS" = "1" ]; then
+    GENESIS_ARGS=(-p:UseLocalGenesis=true)
+fi
+
 # Ensure SSL vars are explicitly in scope for Vite
 export OS_SSL_CERT="${OS_SSL_CERT:-}"
 export OS_SSL_KEY="${OS_SSL_KEY:-}"
@@ -30,6 +43,7 @@ Options:
   -b, --backend     Run .NET API
   -w, --worker      Run .NET Worker
   -f, --frontend    Run frontend dev server
+  -g, --local-genesis  Build against ../blocks-genesis-net source, not the package
   -k, --kill-port   Kill API port ($API_PORT)
   -n, --npm         Run npm command inside client/
   -h, --help        Show help
@@ -136,10 +150,10 @@ configure_backend_tls() {
        && [ -f "$OS_SSL_CERT" ] && [ -f "$OS_SSL_KEY" ]; then
         export Kestrel__Certificates__Default__Path="$OS_SSL_CERT"
         export Kestrel__Certificates__Default__KeyPath="$OS_SSL_KEY"
-        export ASPNETCORE_URLS="https://0.0.0.0:$API_PORT"
-        echo "Backend TLS: HTTPS on $API_PORT"
+        export ASPNETCORE_URLS="https://$API_HOST:$API_PORT"
+        echo "Backend TLS: HTTPS on $API_HOST:$API_PORT"
     else
-        export ASPNETCORE_URLS="http://0.0.0.0:$API_PORT"
+        export ASPNETCORE_URLS="http://$API_HOST:$API_PORT"
         echo "Backend TLS: cert env not set/found — HTTP on $API_PORT"
     fi
 }
@@ -150,12 +164,15 @@ run_backend() {
     # Pass the URL on the command line: it has higher precedence than the
     # launchSettings.json applicationUrl, which would otherwise override
     # the ASPNETCORE_URLS we exported above.
-    dotnet run --project "$API_PROJECT" -- --urls "$ASPNETCORE_URLS"
+    if [ "$LOCAL_GENESIS" = "1" ]; then
+        echo "Genesis: ../blocks-genesis-net source (not the published package)"
+    fi
+    dotnet run --project "$API_PROJECT" "${GENESIS_ARGS[@]+"${GENESIS_ARGS[@]}"}" -- --urls "$ASPNETCORE_URLS"
 }
 
 run_worker() {
     echo "Running .NET Worker..."
-    dotnet run --project "$WORKER_PROJECT"
+    dotnet run --project "$WORKER_PROJECT" "${GENESIS_ARGS[@]+"${GENESIS_ARGS[@]}"}"
 }
 
 # ---------- TESTS ----------
@@ -217,7 +234,14 @@ if [ $# -eq 0 ]; then
     usage
 fi
 
-case "$1" in
+# -g / --local-genesis may lead any other option: shift it off and keep going.
+if [ "${1:-}" = "-g" ] || [ "${1:-}" = "--local-genesis" ]; then
+    LOCAL_GENESIS=1
+    GENESIS_ARGS=(-p:UseLocalGenesis=true)
+    shift
+fi
+
+case "${1:-}" in
 
     -k|--kill-port)
         free_port $API_PORT
