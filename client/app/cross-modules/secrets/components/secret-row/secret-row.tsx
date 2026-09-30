@@ -63,7 +63,8 @@ const STATUS_VARIANT: Record<SecretStatus, "success" | "warning" | "secondary"> 
 
 const NO_READ_PERMISSION = "You do not have permission to read this value";
 
-const formatCreated = (value: string): string => {
+const formatCreated = (value?: string | null): string => {
+  if (!value) return "—";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : format(date, "dd MMM yyyy");
 };
@@ -184,7 +185,13 @@ export function SecretRow({ secret }: SecretRowProps) {
 
         <TableCell className="py-3.5">
           {/* Name and tags. The description lives in the expanded panel, where it has room. */}
-          <p className="truncate font-medium text-high-emphasis" title={secret.name}>
+          <p
+            className={cn(
+              "truncate font-medium",
+              isDeleted ? "text-muted-foreground" : "text-high-emphasis",
+            )}
+            title={secret.name}
+          >
             {displaySecretName(secret.name)}
           </p>
           {tags.length > 0 && (
@@ -213,18 +220,58 @@ export function SecretRow({ secret }: SecretRowProps) {
           </Badge>
         </TableCell>
 
-        <TableCell className="py-3.5">
-          <Badge variant={STATUS_VARIANT[secret.status]} className="w-fit whitespace-nowrap font-normal">
-            {SECRET_STATUS_LABEL[secret.status]}
-          </Badge>
-        </TableCell>
+        {isDeleted ? (
+          // Matches the Archived tab's columns: Created On, then Archived On in place of status.
+          <>
+            <TableCell className="py-3.5 text-sm text-muted-foreground">
+              {formatCreated(secret.createdDate)}
+            </TableCell>
+            <TableCell className="py-3.5 text-sm text-muted-foreground">
+              {formatCreated(secret.deletedDate)}
+            </TableCell>
+          </>
+        ) : (
+          <>
+            <TableCell className="py-3.5">
+              <Badge variant={STATUS_VARIANT[secret.status]} className="w-fit whitespace-nowrap font-normal">
+                {SECRET_STATUS_LABEL[secret.status]}
+              </Badge>
+            </TableCell>
 
-        <TableCell className="py-3.5 text-sm text-muted-foreground">
-          {formatCreated(secret.createdDate)}
-        </TableCell>
+            <TableCell className="py-3.5 text-sm text-muted-foreground">
+              {formatCreated(secret.createdDate)}
+            </TableCell>
+          </>
+        )}
 
         <TableCell className="py-3.5 pr-4 text-right" onClick={(event) => event.stopPropagation()}>
           <div className="flex items-center justify-end gap-0.5">
+            {isDeleted && (
+              // The two things an archived secret is for, in plain sight rather than in the menu.
+              <div className="mr-1 flex items-center gap-1.5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1.5 px-2.5"
+                  onClick={() => setLifecycleAction("restore")}
+                >
+                  <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+                  Restore
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1.5 px-2.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => setLifecycleAction("purge")}
+                >
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                  Purge
+                </Button>
+              </div>
+            )}
+
             {showValueActions && !isLocked && (
               <>
                 <ExplainedButton
@@ -260,23 +307,9 @@ export function SecretRow({ secret }: SecretRowProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {isDeleted ? (
-                  // An archived secret cannot be edited, rotated or locked — only brought back,
-                  // or purged for good.
-                  <>
-                    <DropdownMenuItem onClick={() => setLifecycleAction("restore")}>
-                      <RotateCcw className="mr-2 h-4 w-4" />
-                      Restore
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
-                      onClick={() => setLifecycleAction("purge")}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Purge
-                    </DropdownMenuItem>
-                  </>
-                ) : (
+                {/* Restore and Purge sit on the row itself for an archived secret; its menu
+                    keeps only what applies to any state. */}
+                {!isDeleted && (
                   <>
                     <DropdownMenuItem onClick={() => setEditOpen(true)}>
                       <Pencil className="mr-2 h-4 w-4" />
@@ -297,16 +330,13 @@ export function SecretRow({ secret }: SecretRowProps) {
                         Lock
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
-                      onClick={() => setLifecycleAction("delete")}
-                    >
+                    <DropdownMenuItem onClick={() => setLifecycleAction("delete")}>
                       <Archive className="mr-2 h-4 w-4" />
                       Archive
                     </DropdownMenuItem>
                   </>
                 )}
-                <DropdownMenuSeparator />
+                {!isDeleted && <DropdownMenuSeparator />}
                 <DropdownMenuItem onClick={() => setAuditOpen(true)}>
                   <History className="mr-2 h-4 w-4" />
                   Audit

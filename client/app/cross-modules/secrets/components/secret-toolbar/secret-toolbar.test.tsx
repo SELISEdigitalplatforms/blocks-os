@@ -10,6 +10,7 @@ import {
 } from "@/cross-modules/secrets/models/secret.model";
 
 vi.mock("@/cross-modules/secrets/hooks/use-secret-management", () => ({
+  useSecretViewCounts: () => ({ secrets: 7, archived: 2 }),
   useSecretTags: () => ({
     data: [
       { key: "iam", label: "Blocks Iam" },
@@ -133,6 +134,32 @@ describe("SecretToolbar", () => {
 
     it("does not count the Archived tab itself as a filter to reset", () => {
       renderToolbar("?secretStatus=deleted");
+      expect(screen.queryAllByRole("button", { name: /Reset/ })).toHaveLength(0);
+    });
+
+    it("shows the total on each tab", () => {
+      renderToolbar();
+      expect(screen.getByRole("tab", { name: /Secrets/ }).textContent).toContain("7");
+      expect(screen.getByRole("tab", { name: /Archived/ }).textContent).toContain("2");
+    });
+
+    it("explains the Archived tab only while it is open", () => {
+      const { unmount } = renderToolbar("?secretStatus=deleted");
+      expect(screen.getByText(/Archived secrets no longer work/)).toBeTruthy();
+      unmount();
+      renderToolbar();
+      expect(screen.queryByText(/Archived secrets no longer work/)).toBeNull();
+    });
+
+    it("does not show Reset after switching to the Archived tab", async () => {
+      // Regression: the toolbar freezes its defaults on mount, so the tab's own status used
+      // to read as an applied filter once you switched to it.
+      const user = userEvent.setup();
+      renderToolbar();
+
+      await user.click(screen.getByRole("tab", { name: /Archived/ }));
+
+      expect(screen.getByRole("tab", { name: /Archived/ }).getAttribute("aria-selected")).toBe("true");
       expect(screen.queryAllByRole("button", { name: /Reset/ })).toHaveLength(0);
     });
 

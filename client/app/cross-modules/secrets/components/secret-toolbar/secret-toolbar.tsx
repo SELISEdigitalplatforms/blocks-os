@@ -1,4 +1,4 @@
-import { Archive, KeyRound } from "lucide-react";
+import { Archive, Info, KeyRound } from "lucide-react";
 import { FilterToolbar } from "@/components/filter-toolbar";
 import {
   Tabs,
@@ -9,7 +9,10 @@ import {
 } from "@/components/ui-kits/tabs/tabs";
 import { cn } from "@/lib/utils";
 import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
-import { useSecretTags } from "@/cross-modules/secrets/hooks/use-secret-management";
+import {
+  useSecretTags,
+  useSecretViewCounts,
+} from "@/cross-modules/secrets/hooks/use-secret-management";
 import {
   SECRET_STATUS,
   SECRET_STATUS_LABEL,
@@ -43,6 +46,19 @@ const STATUS_OPTIONS = [
 
 export const SECRET_VIEW = { Secrets: "secrets", Archived: "archived" } as const;
 export type SecretView = (typeof SECRET_VIEW)[keyof typeof SECRET_VIEW];
+
+/** Count pill on a tab. Absent until the total has loaded, so it never flashes a wrong 0. */
+const TabCount = ({ value, active }: { value?: number; active: boolean }) =>
+  value === undefined ? null : (
+    <span
+      className={cn(
+        "min-w-5 rounded-full px-1.5 py-px text-center text-xs font-medium tabular-nums",
+        active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
+      )}
+    >
+      {value}
+    </span>
+  );
 
 export const SECRET_FILTER_DEFAULTS: SecretFilterValues = {
   search: "",
@@ -107,8 +123,12 @@ export const useSecretFilterQueryParams = () => {
 
 export function SecretToolbar() {
   const { setQueryParams, values, view } = useSecretFilterQueryParams();
+  const counts = useSecretViewCounts();
   const isArchived = view === SECRET_VIEW.Archived;
   const viewStatus = isArchived ? SECRET_STATUS.Deleted : "";
+  // The toolbar freezes its defaults on first render, so the `deleted` status cannot be taught
+  // to it as a per-tab default. It is the tab, not a filter: hide it from the toolbar instead.
+  const toolbarValues = isArchived ? { ...values, status: "" } : values;
   const { data: tagCatalogue = [], isLoading: isTagsLoading } = useSecretTags();
 
   // The catalogue is the whole option list: the server adds any tag someone invents to it, so
@@ -152,33 +172,48 @@ export function SecretToolbar() {
 
   // Switching tabs drops the status filter (Active/Locked mean nothing among archived secrets)
   // and returns to the first page; search, type and tags carry over.
-  const viewChangeHandler = (next: string) =>
+  const viewChangeHandler = (next: string) => {
+    // Re-picking the current tab is not a change; it would otherwise throw away the page.
+    if (next === view) return;
     setQueryParams((params) => ({
       ...params,
       secretStatus: next === SECRET_VIEW.Archived ? SECRET_STATUS.Deleted : "",
       secretPage: 0,
     }));
+  };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <Tabs value={view} onValueChange={viewChangeHandler}>
-        <TabsList className={cn(underlineTabsListClass, "w-fit")}>
+        <TabsList aria-label="Secret views" className={underlineTabsListClass}>
           <TabsTrigger
             value={SECRET_VIEW.Secrets}
-            className={cn(underlineTabTriggerClass, "gap-1.5")}
+            className={cn(underlineTabTriggerClass, "gap-2")}
           >
-            <KeyRound className="h-4 w-4" />
+            <KeyRound className="h-4 w-4" aria-hidden />
             <span>Secrets</span>
+            <TabCount value={counts.secrets} active={!isArchived} />
           </TabsTrigger>
           <TabsTrigger
             value={SECRET_VIEW.Archived}
-            className={cn(underlineTabTriggerClass, "gap-1.5")}
+            className={cn(underlineTabTriggerClass, "gap-2")}
           >
-            <Archive className="h-4 w-4" />
+            <Archive className="h-4 w-4" aria-hidden />
             <span>Archived</span>
+            <TabCount value={counts.archived} active={isArchived} />
           </TabsTrigger>
         </TabsList>
       </Tabs>
+
+      {isArchived && (
+        <p className="flex items-start gap-2 text-sm text-muted-foreground">
+          <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <span>
+            Archived secrets no longer work. Restore one to use it again, or purge it to delete
+            it and its value permanently.
+          </span>
+        </p>
+      )}
 
       <FilterToolbar<SecretFilterValues>
         filters={[
@@ -211,9 +246,8 @@ export function SecretToolbar() {
             props: { options: tagOptions, disabled: isTagsLoading },
           },
         ]}
-        values={values}
-        // On the Archived tab the `deleted` status is the tab itself, not an applied filter.
-        defaultValues={{ ...SECRET_FILTER_DEFAULTS, status: viewStatus }}
+        values={toolbarValues}
+        defaultValues={SECRET_FILTER_DEFAULTS}
         onChange={(key, value) =>
           key === "tags"
             ? tagsChangeHandler(value as string[])

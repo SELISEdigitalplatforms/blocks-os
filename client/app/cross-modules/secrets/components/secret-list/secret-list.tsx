@@ -21,6 +21,8 @@ import {
 } from "../secret-toolbar/secret-toolbar";
 
 const COLUMNS = ["Secret", "Type", "Status", "Created On"] as const;
+// Every archived row has the same status, so that column gives way to when it was archived.
+const ARCHIVED_COLUMNS = ["Secret", "Type", "Created On", "Archived On"] as const;
 
 const ListSkeleton = () => (
   <TableBody>
@@ -82,7 +84,7 @@ export function SecretList() {
           icon: Archive,
           title: "No archived secrets",
           description:
-            "Secrets you archive appear here. Restore one to use it again, or purge it to remove it for good.",
+            "Secrets you archive from the Secrets tab will appear here.",
         }
       : {
           icon: KeyRound,
@@ -118,7 +120,7 @@ export function SecretList() {
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
                     <TableHead className="w-8 pl-4" />
-                    {COLUMNS.map((column) => (
+                    {(isArchived ? ARCHIVED_COLUMNS : COLUMNS).map((column) => (
                       <TableHead
                         key={column}
                         className="text-xs font-semibold uppercase tracking-wide text-high-emphasis"

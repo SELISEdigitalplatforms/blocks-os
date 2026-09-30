@@ -49,7 +49,6 @@ const COPY: Record<SecretLifecycleAction, Copy> = {
     body: "The secret stops working immediately and moves to the Archived tab. You can restore it later, or purge it from there to remove it for good.",
     confirm: "Archive",
     pending: "Archiving…",
-    destructive: true,
   },
   restore: {
     title: (name) => `Restore ${name}?`,

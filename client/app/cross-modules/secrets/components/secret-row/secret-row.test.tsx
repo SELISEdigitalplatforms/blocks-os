@@ -206,17 +206,44 @@ describe("SecretRow", () => {
       expect(within(menu).getByText("Rotate")).toBeTruthy();
     });
 
-    it("offers only restore, purge and audit on an archived secret", async () => {
+    it("puts restore and purge on an archived row and leaves only audit in its menu", async () => {
       const user = userEvent.setup();
       renderRow(makeSecret({ status: SECRET_STATUS.Deleted, deletedDate: "2026-03-01T00:00:00Z" }));
-      const menu = await openMenu(user);
 
-      expect(within(menu).getByText("Restore")).toBeTruthy();
-      expect(within(menu).getByText("Purge")).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Restore" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Purge" })).toBeTruthy();
+
+      const menu = await openMenu(user);
       expect(within(menu).getByText("Audit")).toBeTruthy();
-      for (const label of ["Edit", "Rotate", "Lock", "Unlock", "Archive"]) {
+      for (const label of ["Edit", "Rotate", "Lock", "Unlock", "Archive", "Restore", "Purge"]) {
         expect(within(menu).queryByText(label)).toBeNull();
       }
+    });
+
+    it.each([
+      ["Restore", "restore"],
+      ["Purge", "purge"],
+    ])("opens the %s confirmation from the archived row", async (label, action) => {
+      const user = userEvent.setup();
+      renderRow(makeSecret({ status: SECRET_STATUS.Deleted, deletedDate: "2026-03-01T00:00:00Z" }));
+
+      await user.click(screen.getByRole("button", { name: label }));
+
+      expect(screen.getByTestId("action-dialog").textContent).toBe(action);
+      // A row-level button must not also toggle the row's detail panel.
+      expect(screen.queryByTestId("secret-detail")).toBeNull();
+    });
+
+    it("shows the archive date instead of a status badge on an archived row", () => {
+      renderRow(makeSecret({ status: SECRET_STATUS.Deleted, deletedDate: "2026-03-01T00:00:00Z" }));
+      expect(screen.getByText("01 Mar 2026")).toBeTruthy();
+      expect(screen.queryByText("Archived")).toBeNull();
+    });
+
+    it("does not show restore or purge on an active row", () => {
+      renderRow();
+      expect(screen.queryByRole("button", { name: "Restore" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Purge" })).toBeNull();
     });
 
     it("keeps rotate available on a service secret", async () => {

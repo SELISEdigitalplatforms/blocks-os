@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { secretManagementService } from "@/cross-modules/secrets/services/secret-management.service";
 import {
+  SECRET_STATUS,
   looksLikeSecretId,
   secretTags,
   type SecretAccess,
@@ -75,6 +76,21 @@ export const useFindSecrets = (filter: SecretFilter = {}, enabled = true) => {
     },
     enabled: enabled && !!tenantId,
   });
+};
+
+/**
+ * Totals for the Secrets / Archived tabs. One-row pages: only `totalCount` is read. They share
+ * the list key prefix, so every archive, restore and purge refreshes them with the list.
+ */
+export const useSecretViewCounts = () => {
+  const active = useFindSecrets({ pageNumber: 1, pageSize: 1 });
+  const archived = useFindSecrets({
+    status: SECRET_STATUS.Deleted,
+    includeDeleted: true,
+    pageNumber: 1,
+    pageSize: 1,
+  });
+  return { secrets: active.data?.totalCount, archived: archived.data?.totalCount };
 };
 
 export const useGetSecret = (secretId: string, enabled = true) => {
