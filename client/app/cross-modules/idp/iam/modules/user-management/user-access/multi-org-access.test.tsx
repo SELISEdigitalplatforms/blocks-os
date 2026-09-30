@@ -208,7 +208,7 @@ describe("MultiOrgAccess", () => {
     await waitFor(() => expect(screen.queryByTestId("remove-membership")).toBeNull());
   });
 
-  it("disables revoke access for the default organization", () => {
+  it("allows revoking access from the default organization", () => {
     h.userResult = {
       data: {
         data: {
@@ -229,6 +229,6 @@ describe("MultiOrgAccess", () => {
     expect(
       (screen.getByLabelText(/Revoke user's access from Default/i) as HTMLButtonElement)
         .disabled,
-    ).toBe(true);
+    ).toBe(false);
   });
 });

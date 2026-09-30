@@ -31,6 +31,7 @@ export const SECRET_ENDPOINTS = {
   UNLOCK: `${BASE}/unlock`,
   DELETE: `${BASE}/delete`,
   RESTORE: `${BASE}/restore`,
+  PURGE: `${BASE}/purge`,
   ACCESS: `${BASE}/access`,
   AUDIT: `${BASE}/audit`,
   TAGS: `${BASE}/tags`,
@@ -123,6 +124,14 @@ export class SecretManagementService {
 
   restore(secretId: string): Promise<BaseResponse> {
     return http.post<BaseResponse>(SECRET_ENDPOINTS.RESTORE, { secretId });
+  }
+
+  /**
+   * Permanent delete of an already-deleted secret: metadata and vault value both go. The server
+   * refuses it for a secret that is not deleted.
+   */
+  purge(secretId: string): Promise<BaseResponse> {
+    return http.delete<BaseResponse>(`${SECRET_ENDPOINTS.PURGE}${toQuery({ secretId })}`);
   }
 
   /**

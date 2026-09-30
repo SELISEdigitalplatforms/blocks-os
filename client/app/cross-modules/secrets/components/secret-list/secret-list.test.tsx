@@ -16,6 +16,7 @@ const hoisted = vi.hoisted(() => ({
 }));
 
 vi.mock("@/cross-modules/secrets/hooks/use-secret-management", () => ({
+  useArchivedSecretCount: () => 2,
   useFindSecrets: (filter: unknown) => {
     hoisted.lastFilter = filter;
     return hoisted.state;
@@ -99,6 +100,42 @@ describe("SecretList", () => {
     renderList("?secretSearch=nothing");
     expect(screen.getByText("No matching secrets")).toBeTruthy();
     expect(screen.getByText(/clear the filters/i)).toBeTruthy();
+  });
+
+  it("explains the archived view when nothing is archived", () => {
+    hoisted.state.data = { data: [], totalCount: 0 };
+    renderList("?secretStatus=deleted");
+    expect(screen.getByText("No archived secrets")).toBeTruthy();
+    expect(screen.getByText(/archive will appear here/i)).toBeTruthy();
+    expect(screen.queryByText("No secrets yet")).toBeNull();
+  });
+
+  it("suggests clearing filters when an archived search finds nothing", () => {
+    hoisted.state.data = { data: [], totalCount: 0 };
+    renderList("?secretStatus=deleted&secretSearch=nothing");
+    expect(screen.getByText("No matching archived secrets")).toBeTruthy();
+  });
+
+  it("treats a tag filter as a filter for the empty state", () => {
+    hoisted.state.data = { data: [], totalCount: 0 };
+    renderList("?secretTags=iam");
+    expect(screen.getByText("No matching secrets")).toBeTruthy();
+  });
+
+  it("swaps Status for Archived On in the archived view", () => {
+    hoisted.state.data = { data: [], totalCount: 0 };
+    renderList("?secretStatus=deleted");
+    const headers = screen.getAllByRole("columnheader").map((h) => h.textContent);
+    expect(headers).toEqual(expect.arrayContaining(["Created On", "Archived On"]));
+    expect(headers).not.toContain("Status");
+  });
+
+  it("keeps the Status column outside the archived view", () => {
+    hoisted.state.data = { data: [], totalCount: 0 };
+    renderList();
+    const headers = screen.getAllByRole("columnheader").map((h) => h.textContent);
+    expect(headers).toContain("Status");
+    expect(headers).not.toContain("Archived On");
   });
 
   describe("filters to request mapping", () => {
