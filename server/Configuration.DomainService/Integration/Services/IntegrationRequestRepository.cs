@@ -6,7 +6,6 @@ namespace Configuration.DomainService.Integration.Services;
 
 public sealed class IntegrationRequestRepository : IIntegrationRequestRepository
 {
-    private const string DatabaseName = "BlocksConfiguration";
     private const string CollectionName = "IntegrationRequests";
     private readonly IDbContextProvider _dbContextProvider;
     private readonly IBlocksSecret _blocksSecret;
@@ -167,5 +166,9 @@ public sealed class IntegrationRequestRepository : IIntegrationRequestRepository
         await indexes.CreateOneAsync(new CreateIndexModel<IntegrationRequest>(Builders<IntegrationRequest>.IndexKeys.Ascending(r => r.Status).Ascending(r => r.ExpiresAt), new CreateIndexOptions { Name = "Status_ExpiresAt" }), cancellationToken: cancellationToken);
     }
 
-    private IMongoCollection<IntegrationRequest> Collection() => _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, DatabaseName).GetCollection<IntegrationRequest>(CollectionName);
+    // Connect requests are shared across environments but belong to the configured root
+    // database, not the template seed database or the currently impersonated environment.
+    private IMongoCollection<IntegrationRequest> Collection() => _dbContextProvider
+        .GetDatabase(_blocksSecret.DatabaseConnectionString, _blocksSecret.RootDatabaseName)
+        .GetCollection<IntegrationRequest>(CollectionName);
 }
