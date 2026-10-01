@@ -50,6 +50,14 @@
              </para>
              </remarks>
         </member>
+        <member name="M:BlocksOs.Api.Controllers.DomainController.ConfigureStream(DomainService.Shared.ConfigureDomainRequest)">
+            <summary>
+            Configures a domain like <see cref="M:BlocksOs.Api.Controllers.DomainController.Configure(DomainService.Shared.ConfigureDomainRequest)"/>, streaming each step as a server-sent
+            event: "step" events (<see cref="T:DomainService.Shared.DomainSetupProgress"/>) while it runs, then one "result"
+            event (<see cref="T:Blocks.Genesis.BaseResponse"/>). The run does not depend on the connection: a browser
+            that goes away mid-run leaves it to finish, and the domain's status shows the outcome.
+            </summary>
+        </member>
         <member name="T:BlocksOs.Api.Controllers.IntegrationClientIp">
             <summary>Gets the caller address after trusted forwarded-header processing has run.</summary>
         </member>

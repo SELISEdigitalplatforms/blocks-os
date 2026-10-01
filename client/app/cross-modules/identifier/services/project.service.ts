@@ -4,6 +4,7 @@ import type {
 } from "../models/third-party-jwt-provider.model";
 import { http } from "@/lib/http/http-client";
 import { IValidateCnameProjectPayload } from "@/models/project.model";
+import type { IDomainSetupGuideResponse } from "@/models/domain-setup.model";
 import {
   CLOUD_BUILD_ENDPOINTS,
   DOMAIN_ENDPOINTS,
@@ -133,6 +134,23 @@ export class ProjectService {
     payload: IValidateCnameProjectPayload,
   ): Promise<IValidateCNameProjectResponse> {
     return http.post(DOMAIN_ENDPOINTS.CONFIGURE, payload);
+  }
+
+  getDomainSetupGuide(): Promise<IDomainSetupGuideResponse> {
+    return http.get(DOMAIN_ENDPOINTS.SETUP_GUIDE);
+  }
+
+  // Server-sent events: `step` updates while the setup runs, then one `result`
+  configureDomainStream(
+    payload: IValidateCnameProjectPayload,
+    signal?: AbortSignal,
+  ): Promise<ReadableStream<Uint8Array>> {
+    return http.stream(
+      DOMAIN_ENDPOINTS.CONFIGURE_STREAM,
+      payload,
+      { Accept: "text/event-stream" },
+      { signal },
+    );
   }
 
   updateProject(payload: IUpdateProjectPayload): Promise<IUpdateProjectResponse> {

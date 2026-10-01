@@ -24,7 +24,7 @@ export const DomainsSection = ({ applications }: DomainsSectionProps) => {
 
       <DashboardSectionCard
         title="Domains"
-        description="Domains and cookie domains configured for this project"
+        description="Domains where your apps are deployed. Apps on a verified domain call Blocks through its API base URL."
         contentClassName="p-0"
         headerRight={
           <Button
