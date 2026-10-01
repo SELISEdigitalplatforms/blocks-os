@@ -84,18 +84,7 @@ const buildColumns = (
 ) => [
   columnHelper.accessor("domain", {
     header: "Domain",
-    cell: (info) => (
-      <div className="flex min-w-0 items-center gap-2">
-        <CopyableDomainValue value={info.getValue()} />
-        <RenderConditionally
-          condition={Boolean(guideByDomain.get(info.getValue())?.isPlatformDomain)}
-        >
-          <span className="shrink-0 rounded bg-muted px-2 py-0.5 text-xs font-medium text-medium-emphasis">
-            Default
-          </span>
-        </RenderConditionally>
-      </div>
-    ),
+    cell: (info) => <CopyableDomainValue value={info.getValue()} />,
   }),
   columnHelper.accessor("isDomainVerified", {
     header: "DNS Status",

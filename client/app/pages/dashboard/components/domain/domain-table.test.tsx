@@ -158,12 +158,12 @@ describe("DomainTable", () => {
     expect(screen.getByText("Available after verification")).toBeTruthy();
   });
 
-  it("marks the platform default domain", () => {
+  it("does not badge the platform default domain", () => {
     setupGuide.current = {
       applications: [{ domain: "verified.com", apiBaseUrl: "x", isPlatformDomain: true }],
     };
     render(<DomainTable data={domains} />);
-    expect(screen.getByText("Default")).toBeTruthy();
+    expect(screen.queryByText("Default")).toBeNull();
   });
 
   it("opens the edit dialog when configure is clicked", async () => {
