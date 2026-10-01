@@ -213,6 +213,9 @@ describe("DomainSetupDialog", () => {
     expect(screen.getByText(/Default domain/)).toBeTruthy();
     expect(screen.getByText("VITE_BLOCKS_API_URL=https://blocksapi.dev.slsblx.com")).toBeTruthy();
     expect(screen.getByText("Ready to use.")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Test now/ }).getAttribute("href")).toBe(
+      "https://blocksapi.dev.slsblx.com/iam/v4/swagger/index.html",
+    );
   });
 
   it("moves on to connect with the stepper complete once setup succeeds", () => {

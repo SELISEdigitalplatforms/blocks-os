@@ -3,7 +3,9 @@ import type { IDomainSetupGuideItem } from "@/models/domain-setup.model";
 import { CopyValueButton } from "./copy-value-button";
 
 const API_URL_ENV_KEY = "VITE_BLOCKS_API_URL";
-const HEALTH_CHECK_PATH = "/release/v4/auth/testping";
+// The IAM service's Swagger page: loads only when the API host, its certificate and
+// the gateway route all work, and is something a person can read in the browser
+const CONNECTION_CHECK_PATH = "/iam/v4/swagger/index.html";
 
 interface ConnectAppStepProps {
   guide?: IDomainSetupGuideItem;
@@ -27,7 +29,7 @@ export const ConnectAppStep = ({ guide, isLoading, host }: ConnectAppStepProps) 
 
   const isPlatform = guide.isPlatformDomain;
   const envLine = `${API_URL_ENV_KEY}=${guide.apiBaseUrl}`;
-  const healthCheckUrl = `${guide.apiBaseUrl}${HEALTH_CHECK_PATH}`;
+  const connectionCheckUrl = `${guide.apiBaseUrl}${CONNECTION_CHECK_PATH}`;
 
   return (
     <div className="flex flex-col gap-5">
@@ -92,13 +94,18 @@ export const ConnectAppStep = ({ guide, isLoading, host }: ConnectAppStepProps) 
         <h3 className="text-sm font-semibold text-high-emphasis">Check the connection</h3>
         <div className="flex items-center justify-between gap-3 rounded-lg border border-border px-3.5 py-3">
           <div className="flex min-w-0 flex-col gap-0.5">
-            <code className="truncate font-mono text-xs text-high-emphasis" title={healthCheckUrl}>
-              GET {healthCheckUrl}
+            <code
+              className="truncate font-mono text-xs text-high-emphasis"
+              title={connectionCheckUrl}
+            >
+              {connectionCheckUrl}
             </code>
-            <span className="text-xs text-muted-foreground">Should respond with 200 OK</span>
+            <span className="text-xs text-muted-foreground">
+              Should open the IAM API’s Swagger page
+            </span>
           </div>
           <a
-            href={healthCheckUrl}
+            href={connectionCheckUrl}
             target="_blank"
             rel="noreferrer"
             className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-input px-3 text-sm font-semibold text-high-emphasis hover:bg-accent"
