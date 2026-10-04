@@ -171,11 +171,22 @@ export default function ConnectPage() {
     }
   }, [approve, request, selectedEnvironment]);
 
+  // The redirect carries a one-time code, so the browser must load it exactly once. The
+  // "Go to site now" click and the auto-redirect share this guard: otherwise a click followed
+  // by the timer loads the callback twice, and the CMS sees the second load fail with
+  // invalid_code even though the first one connected.
+  const leftForSite = useRef(false);
+  const goToSite = useCallback(() => {
+    if (!successRedirectUrl || leftForSite.current) return;
+    leftForSite.current = true;
+    window.location.assign(successRedirectUrl);
+  }, [successRedirectUrl]);
+
   useEffect(() => {
     if (!successRedirectUrl) return;
-    const timer = window.setTimeout(() => window.location.assign(successRedirectUrl), 2_000);
+    const timer = window.setTimeout(goToSite, 2_000);
     return () => window.clearTimeout(timer);
-  }, [successRedirectUrl]);
+  }, [successRedirectUrl, goToSite]);
 
   useEffect(() => {
     if (readiness.state.phase !== "ready" || !selectedEnvironment || !templateKey) return;
@@ -248,7 +259,15 @@ export default function ConnectPage() {
         </div>
         <div className="flex justify-center">
           <Button asChild size="sm" className="gap-2">
-            <a href={successRedirectUrl}>Go to site now <ArrowRight className="h-4 w-4" aria-hidden="true" /></a>
+            <a
+              href={successRedirectUrl}
+              onClick={(event) => {
+                event.preventDefault();
+                goToSite();
+              }}
+            >
+              Go to site now <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </a>
           </Button>
         </div>
       </ConnectShell>
