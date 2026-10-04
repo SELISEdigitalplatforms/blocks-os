@@ -1,4 +1,4 @@
-using Cloud.LmtService.Services.BlocksServices;
+﻿using Cloud.LmtService.Services.BlocksServices;
 using Cloud.LmtService.Services.BlocksServices;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -83,7 +83,7 @@ namespace XUnitTest.Controllers
     public class DomainControllerTests
     {
         private readonly Mock<IDomainManagementService> _service = new();
-        private DomainController Controller() => new(_service.Object);
+        private DomainController Controller() => new(_service.Object, Microsoft.Extensions.Logging.Abstractions.NullLogger<DomainController>.Instance);
 
         [Fact]
         public async Task Configure_EmptyDomain_ReturnsError()
