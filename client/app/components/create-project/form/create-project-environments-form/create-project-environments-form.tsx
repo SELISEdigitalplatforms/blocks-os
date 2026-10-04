@@ -43,13 +43,6 @@ export const CreateProjectEnvironmentsForm = () => {
             Select the environments you want to enable for this project. You can configure each one
             individually later.
           </p>
-          <div className="mt-2 flex min-h-10 w-fit flex-row items-center gap-1 rounded border border-base-warning bg-warning-100 p-3 text-sm text-warning-800">
-            <span>
-              Please ensure that the branch name in your Git repository matches the
-              environment&apos;s label exactly — for example, use &apos;dev&apos; for the
-              Development environment.
-            </span>
-          </div>
           <div className="">
             <div className="mt-8 text-sm">
               <FormField
