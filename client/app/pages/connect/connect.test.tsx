@@ -250,6 +250,23 @@ describe("ConnectPage error states (P3-16)", () => {
     expect(screen.getByText("Redirecting you to My Blog…")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Go to site now" }).getAttribute("href"))
       .toBe("https://site.example.com/callback?code=code-1");
-  }, 5_000);
+
+    // The redirect carries a one-time code: clicking "Go to site now" and then letting the
+    // auto-redirect timer fire must still load it only once.
+    const assign = vi.fn();
+    const originalLocation = Object.getOwnPropertyDescriptor(window, "location");
+    Object.defineProperty(window, "location", { configurable: true, value: { ...window.location, assign } });
+    try {
+      await user.click(screen.getByRole("link", { name: "Go to site now" }));
+      // The click itself navigates, through the shared guard…
+      expect(assign).toHaveBeenCalledTimes(1);
+      await new Promise((resolve) => setTimeout(resolve, 2_200));
+      // …and the auto-redirect timer must not load the callback a second time.
+      expect(assign).toHaveBeenCalledTimes(1);
+      expect(assign).toHaveBeenCalledWith("https://site.example.com/callback?code=code-1");
+    } finally {
+      if (originalLocation) Object.defineProperty(window, "location", originalLocation);
+    }
+  }, 9_000);
 
 });
