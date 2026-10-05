@@ -363,6 +363,13 @@
             <c>Csp:ExtraConnectSrc</c> / <c>Csp:ExtraImgSrc</c> rather than back into code.
             </summary>
         </member>
+        <member name="F:BlocksOs.Api.Security.ContentSecurityPolicy.WebSocketOriginKeys">
+            <summary>
+            Hosts the SPA opens a WebSocket to: the notification hub on blocks-logic. CSP does not
+            let an <c>https:</c> source match a <c>wss:</c> URL, so without the <c>wss:</c> twin the
+            browser refuses the socket before sending it and no live notification ever arrives.
+            </summary>
+        </member>
         <member name="F:BlocksOs.Api.Security.ContentSecurityPolicy.FormActionOriginKeys">
             <summary>Where a login POST may be sent: the identity host and the SPA's own host.</summary>
         </member>
@@ -378,9 +385,12 @@
         <member name="M:BlocksOs.Api.Security.ContentSecurityPolicy.ToOrigin(System.String)">
             <summary>
             A CSP source is an origin, so any path, query or trailing slash is dropped. A value
-            that is not an absolute http(s) URL is ignored rather than emitted verbatim, so a
-            malformed secret cannot inject a directive.
+            that is not an absolute http(s) or ws(s) URL is ignored rather than emitted verbatim, so
+            a malformed secret cannot inject a directive.
             </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.ContentSecurityPolicy.ToWebSocketOrigin(System.String)">
+            <summary>The ws(s) origin a browser uses to open a socket to an http(s) host, or null.</summary>
         </member>
         <member name="M:BlocksOs.Api.Security.ContentSecurityPolicy.Split(System.String)">
             <summary>Space- or comma-separated list, for origins no runtime key describes.</summary>

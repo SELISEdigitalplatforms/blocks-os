@@ -18,7 +18,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
 import { useNotificationListener } from "@/cross-modules/communication/hooks/use-notification-listener";
-import { useGetMigrationStatus, useGetProjects } from "@/hooks/use-project";
+import {
+  MIGRATION_ONGOING_WINDOW_MS,
+  useGetMigrationStatus,
+  useGetProjects,
+} from "@/hooks/use-project";
 import { useProjectPermissions } from "@/hooks/use-project-access";
 import type { IMigrationStatusResponse } from "@blocks-identifier/models/project.model";
 import { useProjectStore } from "@seliseblocks/genesis-os";
@@ -34,8 +38,7 @@ const isRecentMigrationForTarget = (
     return false;
   }
   const createdDate = new Date(data.createdDate);
-  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-  return createdDate > tenMinutesAgo;
+  return createdDate.getTime() > Date.now() - MIGRATION_ONGOING_WINDOW_MS;
 };
 
 const ProjectGroupLoading = () => (

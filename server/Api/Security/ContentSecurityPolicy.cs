@@ -38,6 +38,16 @@ public static class ContentSecurityPolicy
         "BLOCKS_APP_URL",
     ];
 
+    /// <summary>
+    /// Hosts the SPA opens a WebSocket to: the notification hub on blocks-logic. CSP does not
+    /// let an <c>https:</c> source match a <c>wss:</c> URL, so without the <c>wss:</c> twin the
+    /// browser refuses the socket before sending it and no live notification ever arrives.
+    /// </summary>
+    internal static readonly string[] WebSocketOriginKeys =
+    [
+        "BLOCKS_LOGIC_BASE_URL",
+    ];
+
     /// <summary>Where a login POST may be sent: the identity host and the SPA's own host.</summary>
     internal static readonly string[] FormActionOriginKeys =
     [
@@ -55,7 +65,9 @@ public static class ContentSecurityPolicy
         var csp = configuration.GetSection("Csp");
 
         return BuildPolicy(
-            connectSrc: Origins(runtime, ConnectOriginKeys).Concat(Split(csp["ExtraConnectSrc"])),
+            connectSrc: Origins(runtime, ConnectOriginKeys)
+                .Concat(Origins(runtime, WebSocketOriginKeys).Select(ToWebSocketOrigin))
+                .Concat(Split(csp["ExtraConnectSrc"])),
             imgSrc: Split(csp["ExtraImgSrc"]),
             formAction: Origins(runtime, FormActionOriginKeys).Concat(Split(csp["ExtraFormAction"])));
     }
@@ -116,8 +128,8 @@ public static class ContentSecurityPolicy
 
     /// <summary>
     /// A CSP source is an origin, so any path, query or trailing slash is dropped. A value
-    /// that is not an absolute http(s) URL is ignored rather than emitted verbatim, so a
-    /// malformed secret cannot inject a directive.
+    /// that is not an absolute http(s) or ws(s) URL is ignored rather than emitted verbatim, so
+    /// a malformed secret cannot inject a directive.
     /// </summary>
     public static string? ToOrigin(string? value)
     {
@@ -125,9 +137,23 @@ public static class ContentSecurityPolicy
 
         if (!Uri.TryCreate(value.Trim(), UriKind.Absolute, out var uri)) return null;
 
-        if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) return null;
+        if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps
+            && uri.Scheme != Uri.UriSchemeWs && uri.Scheme != Uri.UriSchemeWss) return null;
 
         return uri.GetLeftPart(UriPartial.Authority);
+    }
+
+    /// <summary>The ws(s) origin a browser uses to open a socket to an http(s) host, or null.</summary>
+    public static string? ToWebSocketOrigin(string? value)
+    {
+        var origin = ToOrigin(value);
+        if (origin is null) return null;
+
+        if (origin.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            return "wss://" + origin["https://".Length..];
+        if (origin.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            return "ws://" + origin["http://".Length..];
+        return origin;
     }
 
     /// <summary>Space- or comma-separated list, for origins no runtime key describes.</summary>

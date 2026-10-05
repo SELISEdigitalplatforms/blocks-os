@@ -203,11 +203,29 @@ export const useCreateProject = () => {
   });
 };
 
+// The server only returns trackers with unfinished services, and the environments page treats
+// one as ongoing for ten minutes after it was created.
+export const MIGRATION_ONGOING_WINDOW_MS = 10 * 60 * 1000;
+const MIGRATION_STATUS_POLL_MS = 5000;
+
 export const useGetMigrationStatus = (tenantGroupId: string) => {
   return useQuery({
     queryKey: ["identifier", "migration-status", tenantGroupId],
     queryFn: () => crossProjectService.getMigrationStatus(tenantGroupId),
     enabled: !!tenantGroupId,
+    // The completion push alone is not enough. The wizard redirects from the console layout to
+    // the project layout, and genesis-os tears the notification socket down and rebuilds it on
+    // that switch; a migration that finishes a couple of seconds later pushes into the gap and
+    // SignalR does not replay it. Poll while a migration is in its ongoing window.
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (!Array.isArray(data)) return false;
+      const cutoff = Date.now() - MIGRATION_ONGOING_WINDOW_MS;
+      const hasOngoing = data.some(
+        (d) => !!d.createdDate && new Date(d.createdDate).getTime() > cutoff,
+      );
+      return hasOngoing ? MIGRATION_STATUS_POLL_MS : false;
+    },
   });
 };
 
