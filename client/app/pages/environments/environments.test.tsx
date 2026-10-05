@@ -23,6 +23,7 @@ vi.mock("@seliseblocks/genesis-os", () => {
   };
 });
 vi.mock("@/hooks/use-project", () => ({
+  MIGRATION_ONGOING_WINDOW_MS: 10 * 60 * 1000,
   useGetProjects: (args: unknown) => h.useGetProjects(args),
   useGetMigrationStatus: (id: string) => h.useGetMigrationStatus(id),
 }));

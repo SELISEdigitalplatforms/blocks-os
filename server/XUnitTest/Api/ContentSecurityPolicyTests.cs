@@ -80,6 +80,29 @@ public class ContentSecurityPolicyTests
     }
 
     [Fact]
+    public void Build_AllowsTheNotificationHubWebSocket()
+    {
+        // An https: source does not match a wss: URL, so listing only https://logic left the
+        // browser refusing the SignalR socket and every live notification silently dropped.
+        var policy = ContentSecurityPolicy.Build(Config(new()
+        {
+            ["FrontendRuntime:BLOCKS_LOGIC_BASE_URL"] = "https://logic.example.com/",
+        }));
+
+        Directive(policy, "connect-src").Should().Contain("https://logic.example.com")
+            .And.Contain("wss://logic.example.com");
+    }
+
+    [Theory]
+    [InlineData("https://logic.example.com/api", "wss://logic.example.com")]
+    [InlineData("http://localhost:5001", "ws://localhost:5001")]
+    [InlineData("not a url", null)]
+    public void ToWebSocketOrigin_MapsTheSchemeAndDropsThePath(string value, string? expected)
+    {
+        ContentSecurityPolicy.ToWebSocketOrigin(value).Should().Be(expected);
+    }
+
+    [Fact]
     public void Build_WithNoConfiguration_StillProducesASelfOnlyPolicy()
     {
         var policy = ContentSecurityPolicy.Build(Config(new()));
