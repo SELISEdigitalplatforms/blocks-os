@@ -110,6 +110,55 @@ public sealed class KeyVaultSecretValueStore : ISecretValueStore
     }
 
     /// <summary>
+    /// Deletes the value, waits for Key Vault to finish, then purges it.
+    /// </summary>
+    /// <remarks>
+    /// Key Vault only ever soft-deletes, and a purge issued while the delete is still in flight
+    /// is refused with a conflict — hence the wait. A 404 on the delete is not the end of it: the
+    /// value may already sit in the deleted state (a compensated create, or an earlier purge that
+    /// stopped half way), so the purge still runs. A refused purge — purge protection, or no
+    /// Purge permission — is reported as <see cref="SecretVaultOperations.Purge"/> so the caller
+    /// can tell "deleted but still recoverable in the vault" from "not deleted at all".
+    /// </remarks>
+    public async Task PurgeAsync(string secretId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(secretId);
+
+        var key = ToVaultKey(secretId);
+
+        try
+        {
+            var operation = await _secretClient.StartDeleteSecretAsync(key, cancellationToken).ConfigureAwait(false);
+            await operation.WaitForCompletionAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (RequestFailedException ex) when (ex.Status == 404)
+        {
+            // Not live. It may still be in the deleted state, so fall through to the purge.
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(ex, "Failed to delete secret {SecretId} from Key Vault before purging.", secretId);
+            throw new SecretVaultException("Failed to delete the secret value from the vault.", SecretVaultOperations.Delete, secretId, ex);
+        }
+
+        try
+        {
+            await _secretClient.PurgeDeletedSecretAsync(key, cancellationToken).ConfigureAwait(false);
+        }
+        catch (RequestFailedException ex) when (ex.Status == 404)
+        {
+            // Nothing in the deleted state either: already purged.
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(ex,
+                "Secret {SecretId} was deleted from Key Vault but the purge failed; it stays recoverable in the vault " +
+                "until its retention period ends. Check purge protection and the Purge permission.", secretId);
+            throw new SecretVaultException("The secret value was deleted but could not be purged from the vault.", SecretVaultOperations.Purge, secretId, ex);
+        }
+    }
+
+    /// <summary>
     /// Derives the vault key from a secret id. Never stored — recomputed on every call, so
     /// there is no vault coordinate in Mongo to leak.
     /// </summary>

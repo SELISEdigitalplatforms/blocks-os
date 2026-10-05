@@ -19,6 +19,8 @@ export interface User {
   active: boolean;
   lockoutUntilUtc: string | null;
   isLockedOut: boolean;
+  /** IAM's derived lifecycle state; read it through `resolveUserAccountState`. */
+  accountState?: string;
   status: number;
   statusReason: string | null;
   deactivatedAtUtc: string | null;
@@ -65,6 +67,8 @@ export interface IGetUsersPayload {
     name: string;
     userIds?: string[];
     status?: { active?: boolean; inactive?: boolean };
+    /** Users in ANY of these states; see USER_ACCOUNT_STATE_FILTER_OPTIONS. */
+    accountStates?: string[];
     mfa?: { enabled?: boolean; disabled?: boolean };
     joinedOn?: string;
     lastLogin?: string;

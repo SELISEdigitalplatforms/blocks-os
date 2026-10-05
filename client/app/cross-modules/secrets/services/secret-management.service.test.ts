@@ -167,6 +167,18 @@ describe("SecretManagementService", () => {
     expect(http.delete).toHaveBeenCalledWith(`${SECRET_ENDPOINTS.DELETE}?secretId=s-1`);
   });
 
+  it("purge uses DELETE on the purge endpoint with the id as a query parameter", async () => {
+    vi.mocked(http.delete).mockResolvedValue({ isSuccess: true });
+    await service.purge("s-1");
+    expect(http.delete).toHaveBeenCalledWith(`${SECRET_ENDPOINTS.PURGE}?secretId=s-1`);
+  });
+
+  it("purge encodes an id that needs escaping", async () => {
+    vi.mocked(http.delete).mockResolvedValue({ isSuccess: true });
+    await service.purge("a&b=c");
+    expect(http.delete).toHaveBeenCalledWith(`${SECRET_ENDPOINTS.PURGE}?secretId=a%26b%3Dc`);
+  });
+
   it("updateAccess posts to the dedicated access endpoint", async () => {
     vi.mocked(http.post).mockResolvedValue({ isSuccess: true });
     const access = { userIds: ["u-1"], roles: ["admin"] };

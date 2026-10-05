@@ -1,4 +1,4 @@
-using DomainService.Shared;
+﻿using DomainService.Shared;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Controllers;
@@ -18,6 +18,18 @@ namespace XUnitTest.Helpers
         public void BeAValidUrl_ReturnsExpected(string url, bool expected)
         {
             IdentifierHelper.BeAValidUrl(url).Should().Be(expected);
+        }
+
+        [Theory]
+        [InlineData("app.example.com", "example.com")]
+        [InlineData("example.com", "example.com")]
+        [InlineData("a.b.example.com", "example.com")]
+        [InlineData("app.example.co.uk", "example.co.uk")]
+        [InlineData("example.co.uk", "example.co.uk")]
+        [InlineData("localhost", "localhost")]
+        public void GetRegistrableDomain_ReturnsZoneRoot(string host, string expected)
+        {
+            IdentifierHelper.GetRegistrableDomain(host).Should().Be(expected);
         }
 
         [Theory]

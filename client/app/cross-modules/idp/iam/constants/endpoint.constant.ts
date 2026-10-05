@@ -11,7 +11,10 @@ export const USER_ENDPOINTS = {
   USER_INFO: `${API_BASES.IAM}/idp/UserInfo`,
   CREATE: `${API_BASES.IAM}${IAM_SUBPATH}/users/create`,
   UPDATE: `${API_BASES.IAM}${IAM_SUBPATH}/users/update`,
-  GET_SIGNUP_SETTING: `${API_BASES.IAM}${IAM_SUBPATH}/signup-settings`,
+  // The authenticated read. The bare GET /signup-settings is anonymous (for OIDC login and
+  // public signup) and resolves its tenant from X-Blocks-Key, which here names the root
+  // tenant -- so without a valid token it answers 200 with the root tenant's settings.
+  GET_SIGNUP_SETTING: `${API_BASES.IAM}${IAM_SUBPATH}/signup-settings/admin`,
   SAVE_SIGNUP_SETTING: `${API_BASES.IAM}${IAM_SUBPATH}/signup-settings`,
   SAVE_ROLES_AND_PERMISSIONS: `${API_BASES.IAM}${IAM_SUBPATH}/roles-permissions`,
 
@@ -90,13 +93,31 @@ export const ORGANIZATION_ENDPOINTS = {
   GET_ORGANIZATION: `${API_BASES.IAM}${IAM_SUBPATH}/organizations`,
   // Base path for the update route, POST /organizations/{id}.
   SAVE_ORGANIZATION: `${API_BASES.IAM}${IAM_SUBPATH}/organizations`,
-  GET_ORGANIZATION_CONFIG: `${API_BASES.IAM}${IAM_SUBPATH}/organizations/config`,
+  // Authenticated read, for the same reason as USER_ENDPOINTS.GET_SIGNUP_SETTING: the bare
+  // GET /organizations/config is anonymous and answers for the X-Blocks-Key (root) tenant.
+  GET_ORGANIZATION_CONFIG: `${API_BASES.IAM}${IAM_SUBPATH}/organizations/config/admin`,
   SAVE_ORGANIZATION_CONFIG: `${API_BASES.IAM}${IAM_SUBPATH}/organizations/config`,
 } as const;
 
 // ─── IAM configuration endpoints (configuration.service) ───────────────────
 
+export const SIGNUP_LINK_CONFIGURATION_ENDPOINTS = {
+  // Collection root. Create is POST here; query is POST to /query (filter in body), same as roles.
+  BASE: `${API_BASES.IAM}${IAM_SUBPATH}/signup-links/configurations`,
+  QUERY: `${API_BASES.IAM}${IAM_SUBPATH}/signup-links/configurations/query`,
+} as const;
+
 export const IAM_CONFIGURATION_ENDPOINTS = {
   GET: `${API_BASES.IAM}${IAM_SUBPATH}/config`,
   SAVE: `${API_BASES.IAM}${IAM_SUBPATH}/config`,
+} as const;
+
+// ─── Signup link activity (portal summary only) ─────────────────────────────
+
+export const SIGNUP_LINK_ENDPOINTS = {
+  // The portal's ONLY signup-link endpoint. Generation, listing and revocation are
+  // permission-protected API surfaces for the calling service, not portal actions --
+  // a generated link is a bearer credential and this console is not in its delivery
+  // path. Do not add BASE / QUERY / REVOKE here.
+  SUMMARY: `${API_BASES.IAM}${IAM_SUBPATH}/signup-links/summary`,
 } as const;

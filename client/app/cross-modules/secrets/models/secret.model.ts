@@ -46,10 +46,14 @@ export const SECRET_TYPE_DESCRIPTION: Record<SecretType, string> = {
     "and rotate it, so it has no per-person access list.",
 };
 
+/**
+ * A `deleted` secret is shown as "Archived": the backend's delete is a soft delete the user can
+ * restore, and "Purge" is the one that removes it for good. The wire value stays `deleted`.
+ */
 export const SECRET_STATUS_LABEL: Record<SecretStatus, string> = {
   active: "Active",
   locked: "Locked",
-  deleted: "Deleted",
+  deleted: "Archived",
 };
 
 /** Toolbar options. `""` is "All" — an empty filter value is omitted from the query. */
@@ -237,6 +241,19 @@ export const SECRET_AUDIT_OUTCOME = {
   PartialFailure: "PartialFailure",
 } as const;
 
+/**
+ * Display names for audit actions, matching what the UI calls them. Unknown actions fall back
+ * to the raw value, so a new backend action still shows up.
+ */
+export const SECRET_AUDIT_ACTION_LABEL: Record<string, string> = {
+  Delete: "Archive",
+  Restore: "Restore",
+  Purge: "Purge",
+};
+
+export const secretAuditActionLabel = (action: string): string =>
+  SECRET_AUDIT_ACTION_LABEL[action] ?? action;
+
 export type SecretAuditOutcome = (typeof SECRET_AUDIT_OUTCOME)[keyof typeof SECRET_AUDIT_OUTCOME];
 
 /** Human-readable labels for the reason codes the API returns in audit rows and errors. */
@@ -245,11 +262,12 @@ export const SECRET_AUDIT_REASON_LABEL: Record<string, string> = {
   INVALID_CONTEXT: "Invalid context",
   NOT_IN_ACCESS_LIST: "Not in the access list",
   STATUS_LOCKED: "Secret is locked",
-  STATUS_DELETED: "Secret is deleted",
+  STATUS_DELETED: "Secret is archived",
   VALUE_MISSING: "Value missing from the store",
   VAULT_FAILURE: "Secret store failure",
   METADATA_WRITE_FAILED: "Metadata write failed",
   CLEANUP_FAILED: "Cleanup failed",
+  VAULT_PURGE_FAILED: "Removed, but the vault kept a recoverable copy until its retention ends",
   ACCESS_NOT_APPLICABLE: "Access list not applicable",
   TAG_INVALID: "Invalid tag",
   TOO_MANY_TAGS: "Too many tags",

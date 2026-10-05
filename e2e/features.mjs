@@ -129,6 +129,18 @@ export const OS_FEATURES = [
     enabled: true,
     spec: "tests/04-identity-and-access/05-permissions-flow.spec.ts",
   },
+  {
+    id: "signup-link-configurations",
+    name: "Identity & Access — Signup Link Configurations",
+    enabled: true,
+    spec: "tests/04-identity-and-access/06-signup-link-configurations-617.spec.ts",
+  },
+  {
+    id: "signup-link-activity",
+    name: "Identity & Access — Signup Link Activity",
+    enabled: true,
+    spec: "tests/04-identity-and-access/07-signup-link-activity-618.spec.ts",
+  },
 
   // Logs & Traces (sidebar submenu order)
   {

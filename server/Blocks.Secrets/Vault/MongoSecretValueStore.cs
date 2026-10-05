@@ -119,8 +119,9 @@ public sealed class MongoSecretValueStore : ISecretValueStore
     /// Removes the value outright.
     /// </summary>
     /// <remarks>
-    /// Only ever reached when a metadata write failed after the value was written, so there is no
-    /// secret left for the value to belong to and nothing to recover it for. Key Vault does a
+    /// Reached when a metadata write failed after the value was written, and through
+    /// <see cref="PurgeAsync"/> when a deleted secret is permanently deleted — in both cases there
+    /// is no secret left for the value to belong to and nothing to recover it for. Key Vault does a
     /// recoverable delete at this point because that is all its API offers; a hard delete is the
     /// more honest outcome. A soft delete through <see cref="ISecretService"/> does not come here
     /// at all — it flips status and leaves the value in place so a restore can work.
@@ -141,4 +142,11 @@ public sealed class MongoSecretValueStore : ISecretValueStore
             throw new SecretVaultException("Failed to delete the secret value from the vault.", "Delete", secretId, ex);
         }
     }
+
+    /// <summary>
+    /// Same as <see cref="DeleteAsync"/>: removing the document is already permanent here, there
+    /// is no recoverable state to purge from.
+    /// </summary>
+    public Task PurgeAsync(string secretId, CancellationToken cancellationToken = default) =>
+        DeleteAsync(secretId, cancellationToken);
 }
