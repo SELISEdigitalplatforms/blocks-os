@@ -69,7 +69,7 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
   };
 
   return (
-    <div className="flex min-h-[40rem] min-w-0 flex-1 flex-col lg:min-h-0">
+    <div className="flex min-h-160 min-w-0 flex-1 flex-col lg:min-h-0">
       <div className="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="min-w-0">
           <PageBreadcrumb

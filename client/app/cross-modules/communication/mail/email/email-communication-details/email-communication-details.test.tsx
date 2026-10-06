@@ -116,7 +116,7 @@ describe("EmailCommunicationDetails", () => {
     expect(previewGrid?.className).toContain("grid-cols-[minmax(0,1.4fr)_minmax(10rem,0.8fr)]");
     expect(previewGrid?.className).not.toContain("grid-cols-1");
     expect(screen.getByTitle("Welcome Email preview").closest("section")?.className).toContain(
-      "sm:min-h-[38rem]",
+      "sm:min-h-152",
     );
     expect(screen.getByTitle("Welcome Email preview").closest("section")?.className).toContain(
       "border-r",

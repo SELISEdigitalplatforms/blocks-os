@@ -55,7 +55,7 @@ export const StorageCard = ({ data, onClick, onViewDetails, onEdit }: StorageCar
         <div className="flex flex-1 items-center gap-3">
           <div
             className={cn(
-              "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md",
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-md",
               providerColorClass,
             )}
           >
@@ -78,7 +78,7 @@ export const StorageCard = ({ data, onClick, onViewDetails, onEdit }: StorageCar
           <DropdownMenuTrigger asChild>
             <button
               onClick={(e) => e.stopPropagation()}
-              className="flex-shrink-0 text-muted-foreground hover:text-foreground"
+              className="shrink-0 text-muted-foreground hover:text-foreground"
             >
               <MoreVertical className="h-5 w-5" />
             </button>

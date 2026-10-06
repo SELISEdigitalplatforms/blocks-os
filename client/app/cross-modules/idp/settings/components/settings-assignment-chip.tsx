@@ -51,7 +51,7 @@ export const SettingsAssignmentChip = ({
       className={cn(
         "inline-flex h-8 w-full max-w-full items-center gap-2 rounded-full sm:w-auto",
         "border px-3",
-        "text-sm shadow-sm transition-colors",
+        "text-sm shadow-xs transition-colors",
         styles.chip,
         className,
       )}

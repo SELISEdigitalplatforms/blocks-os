@@ -334,7 +334,7 @@ export const RepositorySelectionModal = ({
                     placeholder="Search repositories..."
                     value={searchTerm}
                     onChange={(e) => handleSearchChange(e.target.value)}
-                    className="h-11 w-full border-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
+                    className="h-11 w-full border-0 bg-transparent text-sm outline-hidden placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                 </div>
                 <div
@@ -365,7 +365,7 @@ export const RepositorySelectionModal = ({
                       }}
                       onMouseEnter={() => setHighlightedIndex(idx)}
                       className={cn(
-                        "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none",
+                        "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-hidden",
                         highlightedIndex === idx && "bg-accent text-accent-foreground",
                         selectedRepoId === String(repo.id) && "bg-accent text-accent-foreground",
                       )}

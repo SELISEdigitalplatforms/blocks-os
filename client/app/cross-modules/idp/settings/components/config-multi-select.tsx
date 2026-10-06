@@ -68,7 +68,7 @@ export const ConfigMultiSelect = ({
             const option = options.find((item) => item.value === value);
             return (
               <Badge key={value} variant="secondary" className="gap-1 pr-1">
-                <span className="max-w-[12rem] truncate">{option?.label ?? value}</span>
+                <span className="max-w-48 truncate">{option?.label ?? value}</span>
                 <button
                   type="button"
                   className="rounded-sm p-0.5 hover:bg-muted"

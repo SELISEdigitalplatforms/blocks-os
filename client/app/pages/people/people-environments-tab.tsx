@@ -192,7 +192,7 @@ export const PeopleEnvironmentsTab = ({
                 currentAvailableEnvironments.map((envValue) => (
                   <div
                     key={envValue}
-                    className="flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 shadow-sm transition-colors hover:bg-muted/50"
+                    className="flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 shadow-xs transition-colors hover:bg-muted/50"
                   >
                     <span className="text-sm font-medium">{getEnvironmentLabel(envValue)}</span>
                     {canRemove && !isProfileUserOwner && (
@@ -226,7 +226,7 @@ export const PeopleEnvironmentsTab = ({
                   withoutAccessEnvironments.map((envValue) => (
                     <div
                       key={envValue}
-                      className="flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 shadow-sm transition-colors hover:bg-muted/50"
+                      className="flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 shadow-xs transition-colors hover:bg-muted/50"
                     >
                       <span className="text-sm font-medium">{getEnvironmentLabel(envValue)}</span>
                       {canInvite && !isProfileUserOwner && (

@@ -190,7 +190,7 @@ function EmailTemplateStepper() {
         "main-container":
           "w-full justify-start gap-y-4 rounded-sm border border-border bg-card px-4 py-4 sm:px-6 sm:py-5 md:gap-y-0",
         "horizontal-step":
-          "flex-1 [&:not(:last-child)]:after:w-full sm:[&:not(:last-child)]:after:w-full lg:[&:not(:last-child)]:after:w-full",
+          "flex-1 not-last:after:w-full sm:not-last:after:w-full lg:not-last:after:w-full",
         "horizontal-step-container": "min-w-0",
         "step-label-container": "min-w-0",
         "step-label": "font-medium",

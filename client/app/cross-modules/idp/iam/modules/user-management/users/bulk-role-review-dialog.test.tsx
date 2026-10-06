@@ -131,7 +131,7 @@ describe("BulkRoleReviewDialog — long values", () => {
 
     const matchedBy = screen.getByTestId("bulk-review-matched-by");
     expect(matchedBy.className).toContain("min-w-0");
-    expect(matchedBy.className).toContain("break-words");
+    expect(matchedBy.className).toContain("wrap-break-word");
     expect(matchedBy.className).not.toContain("truncate");
 
     expect(screen.getByTestId("bulk-review-matched").className).toContain("min-w-0");

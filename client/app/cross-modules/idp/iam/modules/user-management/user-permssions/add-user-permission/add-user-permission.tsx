@@ -143,7 +143,7 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
                   <button
                     type="button"
                     aria-label="Maximum permissions info"
-                    className="inline-flex items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus:outline-none"
+                    className="inline-flex items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus:outline-hidden"
                   >
                     <Info className="h-4 w-4" aria-hidden />
                   </button>

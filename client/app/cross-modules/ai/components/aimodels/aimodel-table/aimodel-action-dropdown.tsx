@@ -41,7 +41,7 @@ export const AIModelRowActionsDropdown = ({
           Edit
         </DropdownMenuItem>
         <DropdownMenuItem
-          className="!text-error"
+          className="text-error!"
           onClick={(e) => {
             e.stopPropagation();
             onDelete(model);

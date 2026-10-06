@@ -59,7 +59,7 @@ function Detail({ label, children }: Readonly<{ label: string; children: ReactNo
   return (
     <div className="min-w-0 space-y-1">
       <dt className="text-xs font-medium text-medium-emphasis">{label}</dt>
-      <dd className="break-words text-sm text-high-emphasis">{children}</dd>
+      <dd className="wrap-break-word text-sm text-high-emphasis">{children}</dd>
     </div>
   );
 }
@@ -93,7 +93,7 @@ export function IntegrationConnectionList({
           >
             <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
               <div className="min-w-0 space-y-2">
-                <h3 className="break-words text-base font-semibold text-high-emphasis">{connection.connectionName}</h3>
+                <h3 className="wrap-break-word text-base font-semibold text-high-emphasis">{connection.connectionName}</h3>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant={connection.status === "active" ? "success" : "secondary"}>{connection.status}</Badge>
                   <Badge variant="outline">{accessLevelLabel(connection)} access</Badge>

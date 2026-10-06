@@ -130,7 +130,7 @@ export const ModelAddKeyModal = ({
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="start"
-                    className="max-h-52 w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto"
+                    className="max-h-52 w-(--radix-dropdown-menu-trigger-width) overflow-y-auto"
                   >
                     {modelOptions.map((opt, i) => (
                       <div key={opt.model}>

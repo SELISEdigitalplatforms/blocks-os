@@ -224,7 +224,7 @@ export const InviteUser = () => {
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader className="mb-4">
           <DialogTitle>Invite User</DialogTitle>
-          <DialogDescription className="!mt-2 text-sm text-medium-emphasis">
+          <DialogDescription className="mt-2! text-sm text-medium-emphasis">
             Add a user to an organization.
           </DialogDescription>
         </DialogHeader>

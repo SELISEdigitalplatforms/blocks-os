@@ -8,7 +8,7 @@ namespace XUnitTest.Api;
 /// The SPA's CSP. Two things went wrong with the first version of this policy and both are
 /// pinned here: the host list was hardcoded to <c>dev-*</c>, and <c>style-src 'self'</c>
 /// blocked the inline <c>&lt;style&gt;</c> elements the UI libraries inject at runtime, which
-/// left the login page rendering unusable.
+/// left the login page rendering unusable. Those elements now carry a per-request nonce.
 /// </summary>
 public class ContentSecurityPolicyTests
 {
@@ -95,11 +95,34 @@ public class ContentSecurityPolicyTests
 
     [Theory]
     [InlineData("https://logic.example.com/api", "wss://logic.example.com")]
-    [InlineData("http://localhost:5001", "ws://localhost:5001")]
+    [InlineData("wss://logic.example.com/hub", "wss://logic.example.com")]
     [InlineData("not a url", null)]
     public void ToWebSocketOrigin_MapsTheSchemeAndDropsThePath(string value, string? expected)
     {
         ContentSecurityPolicy.ToWebSocketOrigin(value).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("http://localhost:5001")]
+    [InlineData("HTTP://logic.example.com/api")]
+    public void ToWebSocketOrigin_RefusesPlainHttpHosts(string value)
+    {
+        // Only encrypted sockets are allowed; an http host must not widen connect-src to an
+        // unencrypted socket.
+        ContentSecurityPolicy.ToWebSocketOrigin(value).Should().BeNull();
+    }
+
+    [Fact]
+    public void Build_AddsNoUnencryptedSocketForAnHttpHost()
+    {
+        var policy = ContentSecurityPolicy.Build(Config(new()
+        {
+            ["FrontendRuntime:BLOCKS_LOGIC_BASE_URL"] = "http://logic.example.com/",
+        }));
+
+        var connectSrc = Directive(policy, "connect-src");
+        connectSrc.Should().Contain("http://logic.example.com");
+        connectSrc.Should().NotContain("ws:");
     }
 
     [Fact]
@@ -114,25 +137,57 @@ public class ContentSecurityPolicyTests
     // ---------- Inline styles ----------
 
     [Fact]
-    public void Policy_AllowsInlineStyles()
+    public void Policy_AllowsStyleElementsOnlyWithTheNonce()
     {
-        // Measured, not assumed: under style-src 'self' the built bundle raised three
-        // style-src-elem violations in Chromium and the login page rendered 2809px tall
-        // instead of 900px. Radix/vaul/sonner/cmdk inject <style> elements at runtime.
+        // Radix/vaul/sonner/cmdk inject <style> elements at runtime. Under plain style-src
+        // 'self' they were blocked and the login page rendered 2809px tall. They now carry the
+        // per-request nonce (stamped by /csp-nonce.js), so 'unsafe-inline' is not needed.
         var policy = ContentSecurityPolicy.BuildPolicy([], [], []);
 
-        policy.Should().Contain("style-src 'self' 'unsafe-inline';");
+        Directive(policy, "style-src").Should()
+            .Be($"style-src 'self' 'nonce-{ContentSecurityPolicy.StyleNoncePlaceholder}'");
+        Directive(policy, "style-src").Should().NotContain("unsafe-inline");
     }
 
     [Fact]
-    public void Policy_DoesNotSplitStyleSrcIntoAStricterElementRule()
+    public void Policy_KeepsStyleAttributesThroughStyleSrcAttrOnly()
     {
-        // Relaxing only style-src-attr was tried and does not work -- the injected elements
-        // are what gets blocked. A style-src-elem 'self' here would silently reintroduce the
-        // outage, because the fallback style-src would no longer govern them.
+        // Email bodies and mailcraft blocks use style attributes, which cannot carry a nonce.
         var policy = ContentSecurityPolicy.BuildPolicy([], [], []);
 
-        policy.Should().NotContain("style-src-elem 'self';");
+        Directive(policy, "style-src-attr").Should().Be("style-src-attr 'unsafe-inline'");
+        policy.Should().NotContain("style-src-elem");
+    }
+
+    [Fact]
+    public void WithStyleNonce_PutsTheResponseNonceInThePolicy()
+    {
+        var policy = ContentSecurityPolicy.BuildPolicy([], [], []);
+
+        var perRequest = ContentSecurityPolicy.WithStyleNonce(policy, "abc123==");
+
+        Directive(perRequest, "style-src").Should().Be("style-src 'self' 'nonce-abc123=='");
+        perRequest.Should().NotContain(ContentSecurityPolicy.StyleNoncePlaceholder);
+    }
+
+    [Fact]
+    public void RenderIndex_PutsTheSameNonceInTheShell()
+    {
+        const string template =
+            "<head><meta name=\"csp-nonce\" nonce=\"__CSP_STYLE_NONCE__\" /></head>";
+
+        ContentSecurityPolicy.RenderIndex(template, "abc123==")
+            .Should().Be("<head><meta name=\"csp-nonce\" nonce=\"abc123==\" /></head>");
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void WithStyleNonce_RefusesAnEmptyNonce(string? nonce)
+    {
+        var act = () => ContentSecurityPolicy.WithStyleNonce("style-src 'self'", nonce!);
+
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -205,11 +260,16 @@ public class ContentSecurityPolicyTests
         var path = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
         if (!File.Exists(path)) return;
 
-        var policy = ContentSecurityPolicy.Build(
-            new ConfigurationBuilder().AddJsonFile(path).Build());
+        var configuration = new ConfigurationBuilder().AddJsonFile(path).Build();
+        var policy = ContentSecurityPolicy.Build(configuration);
 
-        Directive(policy, "connect-src").Should().Contain("https://code.selise.biz");
-        Directive(policy, "img-src").Should().Contain("https://az-cdn.selise.biz");
+        // The extra origins moved from appsettings.json to per-environment secrets, so the
+        // shipped file may carry none. Whatever it does carry must reach the policy.
+        policy.Should().Contain("default-src 'self';");
+        foreach (var origin in ContentSecurityPolicy.Split(configuration["Csp:ExtraConnectSrc"]))
+            Directive(policy, "connect-src").Should().Contain(origin!);
+        foreach (var origin in ContentSecurityPolicy.Split(configuration["Csp:ExtraImgSrc"]))
+            Directive(policy, "img-src").Should().Contain(origin!);
     }
 
     private static string Directive(string policy, string name) =>

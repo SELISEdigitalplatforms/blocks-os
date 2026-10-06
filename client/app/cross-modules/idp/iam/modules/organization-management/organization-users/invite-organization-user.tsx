@@ -241,7 +241,7 @@ export const InviteOrganizationUser = ({
       <DialogContent className="flex max-h-[90vh] flex-col sm:max-w-[480px]">
         <DialogHeader className="shrink-0">
           <DialogTitle>Invite Member</DialogTitle>
-          <DialogDescription className="!mt-2 text-sm text-medium-emphasis">
+          <DialogDescription className="mt-2! text-sm text-medium-emphasis">
             Add a member to this organization.
           </DialogDescription>
         </DialogHeader>
