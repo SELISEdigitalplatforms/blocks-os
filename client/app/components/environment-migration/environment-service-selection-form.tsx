@@ -1,7 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useRef, type MouseEvent } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, X } from "lucide-react";
 import { useStepper } from "@/components/stepper/stepper-provider";
 import { useGetProjects } from "@/hooks/use-project";
 import { useProjectStore } from "@seliseblocks/genesis-os";
@@ -32,12 +32,41 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
+import { cn } from "@/lib/utils";
 import { useDataMigrationFormState } from "./migration-form-state";
 import {
   environmentServiceSelectionFormDefaultValue,
   environmentServiceSelectionFormSchema,
   MIGRATION_SERVICE_UI_CATALOG,
 } from "./migration-form-schema";
+
+type EnvironmentClearButtonProps = {
+  label: string;
+  onClear: () => void;
+};
+
+// Sits next to the Radix trigger rather than inside it: a button nested in the trigger would be
+// invalid markup and its pointerdown would open the dropdown before the click could clear it.
+const EnvironmentClearButton = ({ label, onClear }: EnvironmentClearButtonProps) => {
+  const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onClear();
+  };
+
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={handleClick}
+      className="absolute right-9 top-1/2 -translate-y-1/2 rounded-sm p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <X className="h-4 w-4" />
+    </button>
+  );
+};
+
+type EnvironmentField = "sourceEnvironment" | "targetEnvironment";
 
 export const EnvironmentServiceSelectionForm = () => {
   const { formData, setFormData } = useDataMigrationFormState();
@@ -62,6 +91,22 @@ export const EnvironmentServiceSelectionForm = () => {
   const selectedServices = form.watch("services");
   const sourceEnvironment = form.watch("sourceEnvironment");
   const targetEnvironment = form.watch("targetEnvironment");
+  const sourceTriggerRef = useRef<HTMLButtonElement>(null);
+  const targetTriggerRef = useRef<HTMLButtonElement>(null);
+
+  // Clearing only touches the form: the persisted wizard state still changes on Continue and on
+  // close, and services and Overwrite toggles keep whatever the user already chose.
+  const clearEnvironment = (fieldName: EnvironmentField) => {
+    const options = { shouldValidate: true, shouldDirty: true };
+    form.setValue(fieldName, "", options);
+    form.setValue(
+      fieldName === "sourceEnvironment" ? "sourceEnvironmentName" : "targetEnvironmentName",
+      "",
+      options,
+    );
+    const trigger = fieldName === "sourceEnvironment" ? sourceTriggerRef : targetTriggerRef;
+    trigger.current?.focus();
+  };
 
   const projectEnvironmentOptions = useMemo(() => {
     if (!groupId || isLoading) return [];
@@ -121,15 +166,29 @@ export const EnvironmentServiceSelectionForm = () => {
                         }}
                         disabled={isLoading}
                       >
-                        <FormControl>
-                          <SelectTrigger aria-label="Source environment">
-                            <SelectValue
-                              placeholder={
-                                isLoading ? "Loading environments..." : "Select source environment"
-                              }
+                        <div className="relative">
+                          <FormControl>
+                            <SelectTrigger
+                              ref={sourceTriggerRef}
+                              aria-label="Source environment"
+                              className={cn(field.value && !isLoading && "pr-14")}
+                            >
+                              <SelectValue
+                                placeholder={
+                                  isLoading
+                                    ? "Loading environments..."
+                                    : "Select source environment"
+                                }
+                              />
+                            </SelectTrigger>
+                          </FormControl>
+                          {field.value && !isLoading ? (
+                            <EnvironmentClearButton
+                              label="Clear source environment"
+                              onClear={() => clearEnvironment("sourceEnvironment")}
                             />
-                          </SelectTrigger>
-                        </FormControl>
+                          ) : null}
+                        </div>
                         <SelectContent>
                           {projectEnvironmentOptions.map((option) => (
                             <SelectItem
@@ -167,15 +226,29 @@ export const EnvironmentServiceSelectionForm = () => {
                         }}
                         disabled={isLoading}
                       >
-                        <FormControl>
-                          <SelectTrigger aria-label="Target environment">
-                            <SelectValue
-                              placeholder={
-                                isLoading ? "Loading environments..." : "Select target environment"
-                              }
+                        <div className="relative">
+                          <FormControl>
+                            <SelectTrigger
+                              ref={targetTriggerRef}
+                              aria-label="Target environment"
+                              className={cn(field.value && !isLoading && "pr-14")}
+                            >
+                              <SelectValue
+                                placeholder={
+                                  isLoading
+                                    ? "Loading environments..."
+                                    : "Select target environment"
+                                }
+                              />
+                            </SelectTrigger>
+                          </FormControl>
+                          {field.value && !isLoading ? (
+                            <EnvironmentClearButton
+                              label="Clear target environment"
+                              onClear={() => clearEnvironment("targetEnvironment")}
                             />
-                          </SelectTrigger>
-                        </FormControl>
+                          ) : null}
+                        </div>
                         <SelectContent>
                           {projectEnvironmentOptions.map((option) => (
                             <SelectItem
