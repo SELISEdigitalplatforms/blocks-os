@@ -1,6 +1,6 @@
 import { Page, expect, test } from "@playwright/test"
 import { e2eBaseUrl, e2eDebugLog } from "./env"
-import { ensureAuthenticated, isLoginSurface, loginFresh } from "./login-helper"
+import { ensureAuthenticated, gotoSettled, isLoginSurface, loginFresh } from "./login-helper"
 import { gotoE2e, resolveE2eUrl } from "./navigation"
 import { readOsProject, writeOsProject } from "./os-project"
 
@@ -306,7 +306,7 @@ export async function createProject(page: Page) {
       try {
         await page.waitForURL(/\/app\/(?!project\/)[^/]+\/dashboard/, { timeout: 15_000 })
         break
-      } catch (error) {
+      } catch {
         if (attempt === 2) {
           await tryOpenFromConsole()
           return
@@ -549,7 +549,7 @@ export async function resolveTenantGroupId(page: Page): Promise<string> {
 }
 
 async function openProjectById(page: Page, projectId: string) {
-  await page.goto(`${e2eBaseUrl()}/app/${projectId}/dashboard`, { waitUntil: "domcontentloaded" })
+  await gotoSettled(page, `${e2eBaseUrl()}/app/${projectId}/dashboard`)
   await waitForOsDashboardReady(page)
 
   const reuseName =

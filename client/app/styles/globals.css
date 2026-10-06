@@ -353,6 +353,18 @@
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --blur-sm: 4px;
 
+  /* v3 font-size utilities set an absolute line-height (text-xs -> 1rem). v4 uses a ratio of
+     the font size, which changes the line box wherever a component overrides the font size
+     but keeps the text-* class (genesis-os badges, card titles). Pin the v3 values. */
+  --text-xs--line-height: 1rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl--line-height: 2.25rem;
+  --text-4xl--line-height: 2.5rem;
+
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);

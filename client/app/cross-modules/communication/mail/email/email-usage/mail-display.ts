@@ -1,3 +1,4 @@
+import { withStyleNonce } from "@/lib/csp-nonce";
 /**
  * Presentation helpers shared by the mail list and the mail details page. Pure
  * functions, so the formatting rules can be tested without rendering.
@@ -122,7 +123,7 @@ export const toPreview = (body: string | null | undefined, maxLength = 140): str
     .replace(/<?https?:\/\/\S+>?/gi, " ")
     .replace(/[[\]*_#>`]/g, " ")
     .replace(/-{3,}|={3,}/g, " ")
-    .replace(/[ ​-‍­﻿]/g, " ")
+    .replace(/[\u00a0\u200b-\u200d\u00ad\ufeff]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
   return text.length > maxLength ? `${text.slice(0, maxLength).trimEnd()}…` : text;
@@ -141,5 +142,6 @@ export const buildMailFrameDocument = (html: string): string => {
     "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; img-src https: http: data: cid:; style-src 'unsafe-inline' https:; font-src https: data:; form-action 'none'\">" +
     '<base target="_blank">' +
     "<style>body{margin:0;padding:16px;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:14px;line-height:1.5;color:#1f2937;word-break:break-word}img{max-width:100%;height:auto}</style>";
-  return `<!DOCTYPE html><html><head>${head}</head><body>${html}</body></html>`;
+  // srcdoc inherits the page CSP: its <style> blocks need the page nonce.
+  return withStyleNonce(`<!DOCTYPE html><html><head>${head}</head><body>${html}</body></html>`);
 };

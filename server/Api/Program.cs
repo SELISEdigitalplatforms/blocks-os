@@ -103,10 +103,15 @@ app.UseForwardedHeaders();
 
 // Built once: the policy is derived from configuration, which does not change per request.
 var contentSecurityPolicy = ContentSecurityPolicy.Build(app.Configuration);
+const string StyleNonceItemKey = "csp-style-nonce";
 
 // Browser-facing security headers for the SPA and static assets (ZAP DAST bar: 0 alerts).
 app.Use(async (context, next) =>
 {
+    // One style nonce per response; the SPA shell below is rendered with the same value.
+    var styleNonce = ContentSecurityPolicy.NewNonce();
+    context.Items[StyleNonceItemKey] = styleNonce;
+
     context.Response.OnStarting(() =>
     {
         var headers = context.Response.Headers;
@@ -117,7 +122,7 @@ app.Use(async (context, next) =>
         headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
         // Runtime config is an external /runtime-config.js (no inline script), so script-src
         // stays strict. The hosts come from configuration -- see ContentSecurityPolicy.
-        headers["Content-Security-Policy"] = contentSecurityPolicy;
+        headers["Content-Security-Policy"] = ContentSecurityPolicy.WithStyleNonce(contentSecurityPolicy, styleNonce);
 
         var path = context.Request.Path.Value ?? "";
         if (path == "/" || path.EndsWith(".html", StringComparison.OrdinalIgnoreCase) ||
@@ -140,12 +145,39 @@ app.Use(async (context, next) =>
     await next();
 });
 
+var indexHtml = Path.Combine(app.Environment.WebRootPath ?? "", "index.html");
+// Read after ApplyFrontendRuntimeSettings has filled the runtime placeholders.
+var indexHtmlTemplate = File.Exists(indexHtml) ? File.ReadAllText(indexHtml) : null;
+
+async Task WriteSpaShell(HttpContext context)
+{
+    var nonce = context.Items[StyleNonceItemKey] as string ?? ContentSecurityPolicy.NewNonce();
+    context.Response.ContentType = "text/html; charset=utf-8";
+    await context.Response.WriteAsync(ContentSecurityPolicy.RenderIndex(indexHtmlTemplate!, nonce));
+}
+
+if (indexHtmlTemplate is not null)
+{
+    // "/" and "/index.html" would otherwise be served verbatim by the static file
+    // middleware, with the nonce placeholder still in them.
+    app.Use(async (context, next) =>
+    {
+        var path = context.Request.Path.Value;
+        if ((HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method)) &&
+            (path is "/" or "" || string.Equals(path, "/index.html", StringComparison.OrdinalIgnoreCase)))
+        {
+            await WriteSpaShell(context);
+            return;
+        }
+
+        await next();
+    });
+}
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-var indexHtml = Path.Combine(app.Environment.WebRootPath ?? "", "index.html");
-
-if (File.Exists(indexHtml))
+if (indexHtmlTemplate is not null)
 {
     // SPA fallback must not 200 for VCS / backup probes — MapFallbackToFile would
     // serve index.html for /BitKeeper, /.git, etc. and OWASP ZAP flags "Hidden File Found".
@@ -157,8 +189,7 @@ if (File.Exists(indexHtml))
             return;
         }
 
-        context.Response.ContentType = "text/html; charset=utf-8";
-        await context.Response.SendFileAsync(indexHtml);
+        await WriteSpaShell(context);
     });
 }
 

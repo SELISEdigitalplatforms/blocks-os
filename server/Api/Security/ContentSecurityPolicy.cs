@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Microsoft.Extensions.Configuration;
 
 namespace BlocksOs.Api.Security;
@@ -57,6 +58,31 @@ public static class ContentSecurityPolicy
         "BLOCKS_OS_URL",
     ];
 
+    /// <summary>
+    /// Stands in for the per-request style nonce: in the policy built at startup and in the
+    /// built index.html (meta[name=csp-nonce] and nonce attributes). Replaced on every request.
+    /// </summary>
+    public const string StyleNoncePlaceholder = "__CSP_STYLE_NONCE__";
+
+    /// <summary>A fresh nonce for one response: 128 random bits, base64.</summary>
+    public static string NewNonce() => Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
+
+    /// <summary>The policy for one response, with the placeholder swapped for its nonce.</summary>
+    public static string WithStyleNonce(string policy, string nonce)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+        ArgumentException.ThrowIfNullOrEmpty(nonce);
+        return policy.Replace(StyleNoncePlaceholder, nonce, StringComparison.Ordinal);
+    }
+
+    /// <summary>The SPA shell for one response, carrying the same nonce as its header.</summary>
+    public static string RenderIndex(string indexHtmlTemplate, string nonce)
+    {
+        ArgumentNullException.ThrowIfNull(indexHtmlTemplate);
+        ArgumentException.ThrowIfNullOrEmpty(nonce);
+        return indexHtmlTemplate.Replace(StyleNoncePlaceholder, nonce, StringComparison.Ordinal);
+    }
+
     public static string Build(IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(configuration);
@@ -90,20 +116,17 @@ public static class ContentSecurityPolicy
             "default-src 'self';",
             "script-src 'self';",
 
-            // Inline styles, both <style> elements and style attributes.
+            // Styles. <style> elements need the per-request nonce. Radix (react-remove-scroll),
+            // vaul, sonner, cmdk, input-otp and mailcraft create them at runtime; /csp-nonce.js
+            // stamps the nonce on every <style> made through document.createElement, and the
+            // server writes it into index.html (see WithStyleNonce / RenderIndex).
             //
-            // The narrower option was tried first and measured: keep style-src-elem 'self'
-            // and relax only style-src-attr. It does not work here. Loading the built bundle
-            // under that policy in Chromium still reported three style-src-elem violations --
-            // Radix/vaul/sonner/cmdk inject <style> elements at runtime for scroll-lock and
-            // positioning -- and the login page still rendered at 2809px tall instead of 900px
-            // because the layout could not apply. Relaxing both cleared every violation.
-            //
-            // Neither form can carry a nonce (a style attribute has nowhere to put one, and
-            // the elements are injected by library code that is not given one), and the values
-            // are unbounded, so hashes are not an option either. script-src stays strict, which
-            // is the directive that actually matters for injection.
-            "style-src 'self' 'unsafe-inline';",
+            // style attributes stay allowed through style-src-attr only. Markup and library
+            // code set them (email bodies, mailcraft blocks), they cannot carry a nonce, and
+            // an attribute cannot load a script; script-src stays strict, which is the
+            // directive that matters for injection.
+            $"style-src 'self' 'nonce-{StyleNoncePlaceholder}';",
+            "style-src-attr 'unsafe-inline';",
 
             $"img-src 'self' data: blob:{Suffix(img)};",
             "font-src 'self' data:;",

@@ -18,6 +18,7 @@ import {
   useSendTestMail,
 } from "@blocks-communication/mail/hooks/use-email-template";
 import { EmailTemplateDetailsSkeleton } from "./email-template-details-skeleton";
+import { withStyleNonce } from "@/lib/csp-nonce";
 export function EmailCommunicationDetails({
   params,
   onBack,
@@ -185,7 +186,7 @@ export function EmailCommunicationDetails({
           <div className="min-h-0 flex-1 bg-muted/30">
             <iframe
               title={`${emailDetails.name || "Email template"} preview`}
-              srcDoc={emailDetails.templateBody}
+              srcDoc={withStyleNonce(emailDetails.templateBody ?? "")}
               className="h-full min-h-120 w-full border-0 bg-white sm:min-h-136 xl:min-h-0"
             />
           </div>
