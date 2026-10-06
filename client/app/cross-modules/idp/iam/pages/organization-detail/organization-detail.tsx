@@ -75,7 +75,7 @@ export const OrganizationDetail = ({ id }: { id: string }) => {
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-12">
         <aside className="lg:col-span-3 xl:col-span-2">
-          <Card className="sticky top-4 border-none shadow-sm">
+          <Card className="sticky top-4 border-none shadow-xs">
             <div className="divide-y divide-border">
               <InfoRow icon={<Mail className="h-3.5 w-3.5" />} label="Email" value={org?.email} />
               <InfoRow

@@ -145,7 +145,7 @@ export const BulkRolesDialog = ({
           </p>
           <p className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5 text-sm font-semibold text-high-emphasis">
             <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
-            <span className="min-w-0 break-words">{organizationLabel}</span>
+            <span className="min-w-0 wrap-break-word">{organizationLabel}</span>
             <span className="font-normal text-muted-foreground">· from the page filter</span>
           </p>
           <p className="mt-1 text-xs text-muted-foreground">

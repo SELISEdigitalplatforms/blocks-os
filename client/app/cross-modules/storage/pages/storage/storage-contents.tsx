@@ -100,7 +100,7 @@ export function StorageContents() {
             {[...Array(4)].map((_, index) => (
               <div
                 key={index}
-                className="flex h-full flex-col rounded-sm border bg-card p-5 shadow-sm"
+                className="flex h-full flex-col rounded-sm border bg-card p-5 shadow-xs"
               >
                 <div className="flex items-start gap-3 pb-3">
                   <Skeleton className="h-10 w-10 rounded-md" />

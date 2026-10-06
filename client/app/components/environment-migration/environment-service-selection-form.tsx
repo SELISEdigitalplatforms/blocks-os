@@ -59,7 +59,7 @@ const EnvironmentClearButton = ({ label, onClear }: EnvironmentClearButtonProps)
       type="button"
       aria-label={label}
       onClick={handleClick}
-      className="absolute right-9 top-1/2 -translate-y-1/2 rounded-sm p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="absolute right-9 top-1/2 -translate-y-1/2 rounded-sm p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
     >
       <X className="h-4 w-4" />
     </button>

@@ -219,7 +219,7 @@ export const EnvironmentsPage = () => {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger type="button" asChild>
-                      <CircleHelp className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                      <CircleHelp className="mt-0.5 h-4 w-4 shrink-0" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs text-xs font-normal md:max-w-96 md:text-sm">
                       You must have the corresponding branch in your repository.

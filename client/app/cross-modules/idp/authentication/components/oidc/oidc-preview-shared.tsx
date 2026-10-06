@@ -45,7 +45,7 @@ export const OidcPreviewModeToggle = ({
   <Tabs value={mode} onValueChange={(value) => onModeChange(value as OidcPreviewThemeMode)}>
     <TabsList
       aria-label="Preview theme"
-      className="pointer-events-auto h-auto gap-0.5 rounded-md !bg-transparent p-0.5"
+      className="pointer-events-auto h-auto gap-0.5 rounded-md bg-transparent! p-0.5"
     >
       {THEME_OPTIONS.filter(({ value }) => showAuto || value !== "system").map(
         ({ value, label, Icon }) => (
@@ -55,7 +55,7 @@ export const OidcPreviewModeToggle = ({
             // The label is hidden until selected, so it can't carry the accessible
             // name on its own.
             aria-label={label}
-            className="group h-auto rounded-sm px-2 py-1 text-xs font-medium data-[state=active]:bg-[hsl(var(--primary)/0.1)] data-[state=active]:text-[hsl(var(--primary))] data-[state=active]:shadow-sm data-[state=inactive]:text-[hsl(var(--muted-foreground)/0.9)] data-[state=inactive]:hover:text-[hsl(var(--foreground)/0.9)]"
+            className="group h-auto rounded-sm px-2 py-1 text-xs font-medium data-[state=active]:bg-[hsl(var(--primary)/0.1)] data-[state=active]:text-[hsl(var(--primary))] data-[state=active]:shadow-xs data-[state=inactive]:text-[hsl(var(--muted-foreground)/0.9)] data-[state=inactive]:hover:text-[hsl(var(--foreground)/0.9)]"
           >
             <Icon size={13} aria-hidden />
             <span className="ml-1.5 hidden group-data-[state=active]:inline">{label}</span>
@@ -109,7 +109,7 @@ export const OidcPreviewShell = ({
   const resolvedLogoUrl = resolveOidcLogoUrl(template.branding, resolvedTheme);
   return (
     <div
-      className="oidc-scifi-root oidc-login-preview-embed pointer-events-none relative flex min-h-[500px] select-none flex-col overflow-hidden rounded-lg bg-[var(--bg)] xl:h-full xl:min-h-0"
+      className="oidc-scifi-root oidc-login-preview-embed pointer-events-none relative flex min-h-[500px] select-none flex-col overflow-hidden rounded-lg bg-(--bg) xl:h-full xl:min-h-0"
       data-theme={resolvedTheme}
       style={buildOidcBrandCssVars(palette)}
       aria-label={`${pageLabel} page preview`}
@@ -125,9 +125,9 @@ export const OidcPreviewShell = ({
         aria-hidden
       />
       <div className="relative z-10 flex min-h-0 flex-1 items-stretch justify-center p-3 sm:p-4 2xl:p-6">
-        <div className="oidc-login-preview-card flex min-h-0 w-full max-w-[30rem] flex-col overflow-hidden rounded-[1.5rem] bg-[var(--surface)] shadow-xl">
+        <div className="oidc-login-preview-card flex min-h-0 w-full max-w-120 flex-col overflow-hidden rounded-3xl bg-(--surface) shadow-xl">
           <div
-            className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-5 py-5 outline-none [scrollbar-gutter:stable] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)] sm:px-7 sm:py-6 2xl:px-9 2xl:py-8"
+            className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-5 py-5 outline-hidden scrollbar-gutter-stable focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-(--accent) sm:px-7 sm:py-6 2xl:px-9 2xl:py-8"
             tabIndex={0}
             aria-label={`${pageLabel} preview content`}
           >
@@ -142,8 +142,8 @@ export const OidcPreviewShell = ({
                 ) : (
                   <BlocksLogo />
                 )}
-                <Separator orientation="vertical" className="h-4 bg-[var(--border)]" />
-                <span className="truncate text-xs font-semibold uppercase tracking-[.18em] text-[var(--fg)]">
+                <Separator orientation="vertical" className="h-4 bg-(--border)" />
+                <span className="truncate text-xs font-semibold uppercase tracking-[.18em] text-(--fg)">
                   {template.branding.brandName}
                 </span>
               </div>
@@ -154,7 +154,7 @@ export const OidcPreviewShell = ({
               />
             </div>
             <div className="flex flex-col">{children}</div>
-            <p className="mt-auto shrink-0 pt-5 text-xs text-[var(--muted)] sm:pt-6 2xl:pt-8">
+            <p className="mt-auto shrink-0 pt-5 text-xs text-(--muted) sm:pt-6 2xl:pt-8">
               {template.pages.shared.footerText.replaceAll(
                 "{year}",
                 String(new Date().getFullYear()),
@@ -168,7 +168,7 @@ export const OidcPreviewShell = ({
 };
 
 export const PreviewHeading = ({ children }: { children: ReactNode }) => (
-  <h1 className="mb-4 text-xl font-semibold leading-snug tracking-tight text-[var(--fg)] sm:mb-5 sm:text-2xl 2xl:mb-6">
+  <h1 className="mb-4 text-xl font-semibold leading-snug tracking-tight text-(--fg) sm:mb-5 sm:text-2xl 2xl:mb-6">
     {children}
   </h1>
 );
@@ -191,7 +191,7 @@ export const PreviewField = ({
         readOnly
       />
       {password && (
-        <Eye className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted)]" />
+        <Eye className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-(--muted)" />
       )}
     </div>
   </div>
@@ -219,15 +219,15 @@ export const PreviewSsoSeparator = ({ text }: { text: string | null }) =>
   text ? (
     <div className="mt-3 flex items-center gap-3">
       <div className="flex-1 border-t" style={{ borderColor: "var(--border)" }} />
-      <span className="oidc-font-rajdhani text-xs text-[var(--muted)]">{text}</span>
+      <span className="oidc-font-rajdhani text-xs text-(--muted)">{text}</span>
       <div className="flex-1 border-t" style={{ borderColor: "var(--border)" }} />
     </div>
   ) : null;
 
 export const PreviewSuccess = ({ title, subtitle }: { title: string; subtitle: string }) => (
-  <div className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--accent-soft)] p-3 sm:mt-5">
-    <p className="text-sm font-semibold text-[var(--success)]">{title}</p>
-    <p className="text-xs text-[var(--muted)]">{subtitle}</p>
+  <div className="mt-4 rounded-lg border border-(--border) bg-(--accent-soft) p-3 sm:mt-5">
+    <p className="text-sm font-semibold text-(--success)">{title}</p>
+    <p className="text-xs text-(--muted)">{subtitle}</p>
   </div>
 );
 

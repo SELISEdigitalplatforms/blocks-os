@@ -54,7 +54,7 @@ export function StorageTierSwitcher({
                   className={cn(
                     "h-8 w-fit gap-1.5",
                     tier === value
-                      ? "bg-background text-foreground shadow-sm"
+                      ? "bg-background text-foreground shadow-xs"
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >

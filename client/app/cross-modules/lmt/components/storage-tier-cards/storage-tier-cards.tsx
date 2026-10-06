@@ -83,7 +83,7 @@ export function StorageTierCards({ value, onChange, descriptions }: StorageTierC
             className={[
               "rounded-xl border p-4 text-left transition-all",
               isActive
-                ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20"
+                ? "border-primary bg-primary/5 shadow-xs ring-1 ring-primary/20"
                 : "border-border bg-background hover:border-primary/40 hover:bg-accent/30",
             ].join(" ")}
           >

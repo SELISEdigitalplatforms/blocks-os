@@ -175,7 +175,7 @@ export function RestoredTracesTab({
   return (
     <Card className="relative min-h-[280px] overflow-hidden">
       {showProcessingOverlay && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/80 px-6 py-10 text-center backdrop-blur-sm">
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/80 px-6 py-10 text-center backdrop-blur-xs">
           <Loader2 className="mb-3 h-7 w-7 animate-spin text-primary" />
           <h3 className="mb-2 text-base font-semibold">
             Your request for {sourceType.toLowerCase()} traces is currently in progress

@@ -21,7 +21,7 @@ export const ProjectOverview: React.FC<ProjectOverviewProps> = ({
   return (
     <div className="flex min-w-0 flex-col gap-2">
      <div className="flex items-start gap-1.5">
-       <h1 className="min-w-0 break-words text-lg font-bold md:text-2xl">{name}</h1>
+       <h1 className="min-w-0 wrap-break-word text-lg font-bold md:text-2xl">{name}</h1>
        <Badge className="-mt-2 shrink-0 self-start rounded-lg text-xs px-1 py-0.5 hover:bg-primary">
          {environment}
        </Badge>

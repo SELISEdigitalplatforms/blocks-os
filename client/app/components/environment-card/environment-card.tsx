@@ -108,7 +108,7 @@ export const EnvironmentCard = ({
         onClick={handleCardClick}
         className={`group flex min-h-[70px] cursor-pointer flex-col justify-between rounded-sm p-4 shadow-none transition-shadow duration-200 hover:shadow-md ${className}`}
       >
-        <CardHeader className="flex flex-row justify-between !p-0">
+        <CardHeader className="flex flex-row justify-between p-0!">
           <CardTitle className="line-clamp-1 break-all text-lg leading-tight">
             <div className="flex w-fit flex-row items-center gap-1">
               <div className="text-base text-medium-emphasis">

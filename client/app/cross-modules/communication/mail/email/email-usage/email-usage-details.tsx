@@ -124,7 +124,7 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
       <Card className="mt-2 shadow-none">
         <CardContent className="space-y-5 p-5 md:p-6">
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-            <h1 className="break-words text-lg font-semibold text-high-emphasis md:text-2xl">
+            <h1 className="wrap-break-word text-lg font-semibold text-high-emphasis md:text-2xl">
               {details.subject || <span className="italic text-muted-foreground">(no subject)</span>}
             </h1>
             <div className="flex shrink-0 items-center gap-2">
@@ -172,7 +172,7 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
           {details.error && (
             <div className="flex items-start gap-2 rounded-md border border-error/30 bg-error/5 p-3 text-sm text-error">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-              <span className="break-words">{details.error}</span>
+              <span className="wrap-break-word">{details.error}</span>
             </div>
           )}
 
@@ -186,7 +186,7 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
                   <button
                     type="button"
                     key={`${attachment.fileName}-${index}`}
-                    className="group flex max-w-xs items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+                    className="group flex max-w-xs items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-left transition-colors hover:bg-muted/60 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
                     title={`Download ${attachment.fileName}`}
                     aria-label={`Download ${attachment.fileName}`}
                     disabled={downloadingIndex === index}
@@ -250,7 +250,7 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
             />
           )}
           {activeView === "text" && (
-            <pre className="max-h-[70vh] overflow-auto whitespace-pre-wrap break-words p-5 font-sans text-sm leading-relaxed text-high-emphasis">
+            <pre className="max-h-[70vh] overflow-auto whitespace-pre-wrap wrap-break-word p-5 font-sans text-sm leading-relaxed text-high-emphasis">
               {bodies.text}
             </pre>
           )}

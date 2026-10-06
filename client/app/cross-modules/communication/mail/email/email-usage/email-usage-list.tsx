@@ -280,7 +280,7 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
                       role="link"
                       tabIndex={0}
                       aria-label={`Open ${row.original.subject || "message"}`}
-                      className="cursor-pointer focus-visible:bg-muted/60 focus-visible:outline-none"
+                      className="cursor-pointer focus-visible:bg-muted/60 focus-visible:outline-hidden"
                       onClick={() => navigate(detailsPath(row.original))}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") navigate(detailsPath(row.original));

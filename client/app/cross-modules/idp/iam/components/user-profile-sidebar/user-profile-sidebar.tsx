@@ -99,7 +99,7 @@ export const UserProfileSidebar = ({ id, projectKey }: UserProfileSidebarProps) 
       </div>
 
       {/* Account details */}
-      <CardContent className="mt-4 w-full rounded-sm border bg-card p-5 shadow-sm md:flex-1 md:overflow-y-auto">
+      <CardContent className="mt-4 w-full rounded-sm border bg-card p-5 shadow-xs md:flex-1 md:overflow-y-auto">
         <h3 className="mb-3 text-base font-semibold text-high-emphasis">Account details</h3>
         <InfoRow
           icon={<Shield className="h-4 w-4 text-muted-foreground" />}

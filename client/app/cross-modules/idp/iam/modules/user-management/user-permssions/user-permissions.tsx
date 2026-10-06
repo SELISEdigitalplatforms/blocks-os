@@ -68,7 +68,7 @@ export function UserPermissions({ userId, projectKey }: UserPermissionsProps) {
     <div>
       <div className="flex w-full flex-col">
         <Card>
-          <CardHeader className="flex !flex-row items-center justify-between">
+          <CardHeader className="flex flex-row! items-center justify-between">
             <CardTitle>Permissions</CardTitle>
             <div className="flex gap-2">
               {!!removedResources.length && (

@@ -148,7 +148,7 @@ export const SaveStorageConfiguration = ({
                         }}
                         value={field.value}
                       >
-                        <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                        <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2">
                           <SelectValue placeholder="Select configuration provider" />
                         </SelectTrigger>
                         <SelectContent>

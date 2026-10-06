@@ -29,7 +29,7 @@ export const ProjectRepoList = ({
 
   if (isLoading || isLoadingEnvRepos || isFetchingEnvRepos) {
     return (
-      <div className="mt-6 rounded-lg border bg-card px-2 py-2 shadow-sm md:mt-0">
+      <div className="mt-6 rounded-lg border bg-card px-2 py-2 shadow-xs md:mt-0">
         <div className="grid-col-1 grid gap-3 px-2 py-4 md:grid-cols-2 md:gap-4 lg:gap-6">
           {Array.from({ length: 6 }).map((_item, index) => (
             <div key={index}>

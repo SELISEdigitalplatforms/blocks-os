@@ -189,7 +189,7 @@ export function MagicUrlDialog({ open, onOpenChange, trigger, initialData }: Mag
                     setValue("uri", e.target.value, { shouldValidate: true });
                   }}
                 />
-                <div className="min-h-[1.25rem]">
+                <div className="min-h-5">
                   {errors.uri && <p className="text-xs text-error">{errors.uri.message}</p>}
                 </div>
               </div>
@@ -205,7 +205,7 @@ export function MagicUrlDialog({ open, onOpenChange, trigger, initialData }: Mag
                     setValue("name", e.target.value, { shouldValidate: true });
                   }}
                 />
-                <div className="min-h-[1.25rem]">
+                <div className="min-h-5">
                   {errors.name && <p className="text-xs text-error">{errors.name.message}</p>}
                 </div>
               </div>

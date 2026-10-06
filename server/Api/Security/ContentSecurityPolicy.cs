@@ -143,7 +143,11 @@ public static class ContentSecurityPolicy
         return uri.GetLeftPart(UriPartial.Authority);
     }
 
-    /// <summary>The ws(s) origin a browser uses to open a socket to an http(s) host, or null.</summary>
+    /// <summary>
+    /// The wss origin a browser uses to open a socket to an https host, or null. Plain http and
+    /// ws hosts get no socket allowance: an unencrypted socket would carry the session token and
+    /// notification payloads in clear text.
+    /// </summary>
     public static string? ToWebSocketOrigin(string? value)
     {
         var origin = ToOrigin(value);
@@ -151,9 +155,9 @@ public static class ContentSecurityPolicy
 
         if (origin.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             return "wss://" + origin["https://".Length..];
-        if (origin.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
-            return "ws://" + origin["http://".Length..];
-        return origin;
+        if (origin.StartsWith("wss://", StringComparison.OrdinalIgnoreCase))
+            return origin;
+        return null;
     }
 
     /// <summary>Space- or comma-separated list, for origins no runtime key describes.</summary>

@@ -42,7 +42,7 @@ export function ConnectProjectPicker({ projects, value, onValueChange }: Readonl
           role="combobox"
           aria-label="Project"
           aria-expanded={open}
-          className="flex h-11 w-full items-center justify-between gap-3 rounded-md border border-input bg-background px-3 text-left text-sm text-high-emphasis transition-colors hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex h-11 w-full items-center justify-between gap-3 rounded-md border border-input bg-background px-3 text-left text-sm text-high-emphasis transition-colors hover:border-primary/50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span className={`truncate ${selected ? "" : "text-muted-foreground"}`}>
             {selected?.name ?? "Select a project"}
@@ -50,7 +50,7 @@ export function ConnectProjectPicker({ projects, value, onValueChange }: Readonl
           <ChevronDown className="h-4 w-4 shrink-0 text-medium-emphasis" aria-hidden="true" />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[--radix-popover-trigger-width] p-1 shadow-lg">
+      <PopoverContent align="start" className="w-(--radix-popover-trigger-width) p-1 shadow-lg">
         <Command shouldFilter={false} label="Search projects">
           <CommandInput
             autoFocus

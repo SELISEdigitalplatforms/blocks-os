@@ -162,7 +162,7 @@ export function CheckboxTree({
         <div className="flex items-center border-b px-3">
           <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
           <Input
-            className="flex h-11 w-full rounded-md border-none bg-transparent px-0 py-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-11 w-full rounded-md border-none bg-transparent px-0 py-3 text-sm outline-hidden placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
             placeholder={label}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -238,7 +238,7 @@ export function CheckboxTree({
             })}
           </div>
         ) : (
-          <div className="py-6 text-center text-sm !text-popover-foreground">No results found.</div>
+          <div className="py-6 text-center text-sm text-popover-foreground!">No results found.</div>
         )}
       </PopoverContent>
     </Popover>

@@ -150,7 +150,7 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
     await renderForm("?section=pages");
     const previewFrame = screen.getByTestId("preview").parentElement;
 
-    expect(previewFrame?.className).toContain("max-w-[42rem]");
+    expect(previewFrame?.className).toContain("max-w-2xl");
     expect(previewFrame?.parentElement?.className).toContain("min-h-[500px]");
     expect(previewFrame?.parentElement?.className).toContain("lg:min-h-[620px]");
   });

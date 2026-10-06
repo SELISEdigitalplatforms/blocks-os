@@ -72,7 +72,7 @@ const createGuideComponents = (): Components => ({
     const language = /language-(\w+)/.exec(className ?? "")?.[1];
     if (!language) {
       return (
-        <code className="break-words rounded bg-muted px-1 py-0.5 font-mono text-[0.85em] text-high-emphasis">
+        <code className="wrap-break-word rounded bg-muted px-1 py-0.5 font-mono text-[0.85em] text-high-emphasis">
           {children}
         </code>
       );

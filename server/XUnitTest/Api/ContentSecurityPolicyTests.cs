@@ -95,11 +95,34 @@ public class ContentSecurityPolicyTests
 
     [Theory]
     [InlineData("https://logic.example.com/api", "wss://logic.example.com")]
-    [InlineData("http://localhost:5001", "ws://localhost:5001")]
+    [InlineData("wss://logic.example.com/hub", "wss://logic.example.com")]
     [InlineData("not a url", null)]
     public void ToWebSocketOrigin_MapsTheSchemeAndDropsThePath(string value, string? expected)
     {
         ContentSecurityPolicy.ToWebSocketOrigin(value).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("http://localhost:5001")]
+    [InlineData("HTTP://logic.example.com/api")]
+    public void ToWebSocketOrigin_RefusesPlainHttpHosts(string value)
+    {
+        // Only encrypted sockets are allowed; an http host must not widen connect-src to an
+        // unencrypted socket.
+        ContentSecurityPolicy.ToWebSocketOrigin(value).Should().BeNull();
+    }
+
+    [Fact]
+    public void Build_AddsNoUnencryptedSocketForAnHttpHost()
+    {
+        var policy = ContentSecurityPolicy.Build(Config(new()
+        {
+            ["FrontendRuntime:BLOCKS_LOGIC_BASE_URL"] = "http://logic.example.com/",
+        }));
+
+        var connectSrc = Directive(policy, "connect-src");
+        connectSrc.Should().Contain("http://logic.example.com");
+        connectSrc.Should().NotContain("ws:");
     }
 
     [Fact]
@@ -205,11 +228,16 @@ public class ContentSecurityPolicyTests
         var path = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
         if (!File.Exists(path)) return;
 
-        var policy = ContentSecurityPolicy.Build(
-            new ConfigurationBuilder().AddJsonFile(path).Build());
+        var configuration = new ConfigurationBuilder().AddJsonFile(path).Build();
+        var policy = ContentSecurityPolicy.Build(configuration);
 
-        Directive(policy, "connect-src").Should().Contain("https://code.selise.biz");
-        Directive(policy, "img-src").Should().Contain("https://az-cdn.selise.biz");
+        // The extra origins moved from appsettings.json to per-environment secrets, so the
+        // shipped file may carry none. Whatever it does carry must reach the policy.
+        policy.Should().Contain("default-src 'self';");
+        foreach (var origin in ContentSecurityPolicy.Split(configuration["Csp:ExtraConnectSrc"]))
+            Directive(policy, "connect-src").Should().Contain(origin!);
+        foreach (var origin in ContentSecurityPolicy.Split(configuration["Csp:ExtraImgSrc"]))
+            Directive(policy, "img-src").Should().Contain(origin!);
     }
 
     private static string Directive(string policy, string name) =>

@@ -46,7 +46,7 @@ const LinkButton = ({ onClick, children }: { onClick: () => void; children: Reac
   <button
     type="button"
     onClick={onClick}
-    className="inline-flex items-center justify-center whitespace-nowrap rounded-sm border border-input bg-background p-2 py-1.5 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+    className="inline-flex items-center justify-center whitespace-nowrap rounded-sm border border-input bg-background p-2 py-1.5 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
   >
     {children}
   </button>
@@ -138,7 +138,7 @@ export const ServiceCard = ({ service }: { service: RegisteredService }) => {
         {service.description && (
           <div className="mt-3 text-sm">
             <h3 className="text-low-emphasis">Description</h3>
-            <p className="break-words text-high-emphasis">{service.description}</p>
+            <p className="wrap-break-word text-high-emphasis">{service.description}</p>
           </div>
         )}
         {service.tags?.length > 0 && (

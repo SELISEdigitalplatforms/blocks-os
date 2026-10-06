@@ -69,7 +69,7 @@ export const BulkRoleReviewDialog = ({
               users will be updated
             </span>
           </p>
-          <p className="mt-1 break-words text-sm text-muted-foreground">in {organizationLabel}</p>
+          <p className="mt-1 wrap-break-word text-sm text-muted-foreground">in {organizationLabel}</p>
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <span className="text-sm font-medium text-high-emphasis">
               {isRemove ? "Removing" : "Adding"}
@@ -114,7 +114,7 @@ export const BulkRoleReviewDialog = ({
                   clipping it to "Asif ..." hides the thing being reconciled. */}
               <dd
                 data-testid="bulk-review-matched-by"
-                className="min-w-0 break-words text-right font-medium text-high-emphasis"
+                className="min-w-0 wrap-break-word text-right font-medium text-high-emphasis"
               >
                 {matchedBy}
               </dd>
