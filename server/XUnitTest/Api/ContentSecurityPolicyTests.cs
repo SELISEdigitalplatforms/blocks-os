@@ -180,16 +180,6 @@ public class ContentSecurityPolicyTests
             .Should().Be("<head><meta name=\"csp-nonce\" nonce=\"abc123==\" /></head>");
     }
 
-    [Fact]
-    public void NewNonce_IsFreshAndCarries128Bits()
-    {
-        var first = ContentSecurityPolicy.NewNonce();
-        var second = ContentSecurityPolicy.NewNonce();
-
-        first.Should().NotBe(second);
-        Convert.FromBase64String(first).Should().HaveCount(16);
-    }
-
     [Theory]
     [InlineData(null)]
     [InlineData("")]

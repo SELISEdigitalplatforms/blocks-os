@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using Microsoft.Extensions.Configuration;
 
 namespace BlocksOs.Api.Security;
@@ -59,13 +58,10 @@ public static class ContentSecurityPolicy
     ];
 
     /// <summary>
-    /// Stands in for the per-request style nonce: in the policy built at startup and in the
-    /// built index.html (meta[name=csp-nonce] and nonce attributes). Replaced on every request.
+    /// Stands in for the style nonce (see <see cref="StyleNonce"/>): in the policy built at
+    /// startup and in the built index.html (meta[name=csp-nonce]). Replaced on every response.
     /// </summary>
     public const string StyleNoncePlaceholder = "__CSP_STYLE_NONCE__";
-
-    /// <summary>A fresh nonce for one response: 128 random bits, base64.</summary>
-    public static string NewNonce() => Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
 
     /// <summary>The policy for one response, with the placeholder swapped for its nonce.</summary>
     public static string WithStyleNonce(string policy, string nonce)
@@ -116,7 +112,7 @@ public static class ContentSecurityPolicy
             "default-src 'self';",
             "script-src 'self';",
 
-            // Styles. <style> elements need the per-request nonce. Radix (react-remove-scroll),
+            // Styles. <style> elements need the style nonce (StyleNonce). Radix (react-remove-scroll),
             // vaul, sonner, cmdk, input-otp and mailcraft create them at runtime; /csp-nonce.js
             // stamps the nonce on every <style> made through document.createElement, and the
             // server writes it into index.html (see WithStyleNonce / RenderIndex).

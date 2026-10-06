@@ -104,12 +104,14 @@ app.UseForwardedHeaders();
 // Built once: the policy is derived from configuration, which does not change per request.
 var contentSecurityPolicy = ContentSecurityPolicy.Build(app.Configuration);
 const string StyleNonceItemKey = "csp-style-nonce";
+var styleNonces = StyleNonce.CreateWithRandomKey();
 
 // Browser-facing security headers for the SPA and static assets (ZAP DAST bar: 0 alerts).
 app.Use(async (context, next) =>
 {
-    // One style nonce per response; the SPA shell below is rendered with the same value.
-    var styleNonce = ContentSecurityPolicy.NewNonce();
+    // The response's style nonce, stable per browser (see StyleNonce); the SPA shell below is
+    // rendered with the same value as the header.
+    var styleNonce = styleNonces.ForRequest(context);
     context.Items[StyleNonceItemKey] = styleNonce;
 
     context.Response.OnStarting(() =>
@@ -151,7 +153,7 @@ var indexHtmlTemplate = File.Exists(indexHtml) ? File.ReadAllText(indexHtml) : n
 
 async Task WriteSpaShell(HttpContext context)
 {
-    var nonce = context.Items[StyleNonceItemKey] as string ?? ContentSecurityPolicy.NewNonce();
+    var nonce = (string)context.Items[StyleNonceItemKey]!;
     context.Response.ContentType = "text/html; charset=utf-8";
     await context.Response.WriteAsync(ContentSecurityPolicy.RenderIndex(indexHtmlTemplate!, nonce));
 }
