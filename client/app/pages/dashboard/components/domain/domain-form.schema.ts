@@ -1,6 +1,22 @@
 import { z } from "zod";
 
-const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z]{2,})+$/;
+/**
+ * The server's hostname grammar (DomainManagementService.HostnameRegex): two or
+ * more labels of letters, digits and inner hyphens, 1–63 characters each. The
+ * server lower-cases before matching, so the client matches case-insensitively.
+ */
+const hostnameRegex = /^(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))+$/i;
+
+const MAX_HOSTNAME_LENGTH = 253;
+
+/**
+ * True when the server would accept the value as a hostname. The length limit
+ * is checked first, so oversized input is rejected without running the regex.
+ */
+export const isValidHostname = (value: string): boolean =>
+  value.length <= MAX_HOSTNAME_LENGTH && hostnameRegex.test(value);
+
+const INVALID_DOMAIN_MESSAGE = "Please enter a valid domain (e.g. example.com)";
 
 /**
  * Enough of the public suffix list to recognise the common multi-label TLDs.
@@ -59,14 +75,11 @@ export const isCookieDomainValidFor = (domain: string, cookieDomain: string): bo
 
 export const domainFormSchema = z
   .object({
-    domain: z
-      .string()
-      .min(1, "Domain is required")
-      .regex(domainRegex, "Please enter a valid domain (e.g. example.com)"),
+    domain: z.string().min(1, "Domain is required").refine(isValidHostname, INVALID_DOMAIN_MESSAGE),
     cookieDomain: z
       .string()
       .min(1, "Cookie domain is required")
-      .regex(domainRegex, "Please enter a valid domain (e.g. example.com)"),
+      .refine(isValidHostname, INVALID_DOMAIN_MESSAGE),
   })
   .refine(({ domain, cookieDomain }) => isCookieDomainValidFor(domain, cookieDomain), {
     path: ["cookieDomain"],

@@ -23,6 +23,8 @@ vi.mock("@/components/ui-kits/dialog/dialog", () => ({
 
 import { DomainForm } from "./domain-form";
 
+const INVALID_DOMAIN = "Please enter a valid domain (e.g. example.com)";
+
 describe("DomainForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -73,6 +75,75 @@ describe("DomainForm", () => {
           action: 1,
           applicationDomain: "https://old.example.com",
           application: expect.objectContaining({ isDomainVerified: true }),
+        }),
+      ),
+    );
+  });
+
+  it("accepts hyphens and digits in a non-first label and adds the application", async () => {
+    const user = userEvent.setup();
+    render(<DomainForm onAfterSubmit={vi.fn()} />);
+
+    const [domainInput, cookieDomainInput] = screen.getAllByPlaceholderText("your-domain.com");
+    await user.type(domainInput, "abc.se-ll.com");
+    const addButton = screen.getByRole("button", { name: "Add" }) as HTMLButtonElement;
+    await waitFor(() => expect(addButton.disabled).toBe(false));
+    expect((cookieDomainInput as HTMLInputElement).value).toBe("se-ll.com");
+    expect(screen.queryByText(INVALID_DOMAIN)).toBeNull();
+
+    await user.click(addButton);
+
+    await waitFor(() =>
+      expect(h.mutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 0,
+          application: {
+            domain: "https://abc.se-ll.com",
+            cookieDomain: "se-ll.com",
+            isDomainVerified: false,
+          },
+        }),
+      ),
+    );
+    expect(h.showSuccessToast).toHaveBeenCalledWith({
+      description: "Application added successfully",
+    });
+  });
+
+  it("rejects a label that starts with a hyphen and keeps Add disabled", async () => {
+    const user = userEvent.setup();
+    render(<DomainForm onAfterSubmit={vi.fn()} />);
+
+    await user.type(screen.getAllByPlaceholderText("your-domain.com")[0], "abc.-sell.com");
+
+    expect(await screen.findAllByText(INVALID_DOMAIN)).not.toHaveLength(0);
+    expect((screen.getByRole("button", { name: "Add" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("opens a stored hyphenated domain for editing with Update enabled", async () => {
+    const user = userEvent.setup();
+    const application = {
+      domain: "https://abc.se-ll.com",
+      cookieDomain: "se-ll.com",
+      isDomainVerified: false,
+    } as IDomain;
+    render(<DomainForm application={application} onAfterSubmit={vi.fn()} />);
+
+    expect((screen.getAllByPlaceholderText("your-domain.com")[0] as HTMLInputElement).value).toBe(
+      "abc.se-ll.com",
+    );
+    expect(screen.queryByText(INVALID_DOMAIN)).toBeNull();
+    const update = screen.getByRole("button", { name: "Update" }) as HTMLButtonElement;
+    expect(update.disabled).toBe(false);
+
+    await user.click(update);
+
+    await waitFor(() =>
+      expect(h.mutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 1,
+          applicationDomain: "https://abc.se-ll.com",
+          application: expect.objectContaining({ isDomainVerified: false }),
         }),
       ),
     );
