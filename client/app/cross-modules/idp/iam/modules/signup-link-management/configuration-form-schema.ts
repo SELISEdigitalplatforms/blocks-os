@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_REDEMPTIONS_LIMIT } from "./max-redemptions";
 
 const relativePath = z
   .string()
@@ -68,6 +69,19 @@ export const signupLinkConfigurationFormSchema = z
       .int("Must be between 5 and 10080")
       .min(5, "Must be between 5 and 10080")
       .max(10080, "Must be between 5 and 10080"),
+    // A string, not z.coerce.number(): Number("") is 0, which IAM reads as unlimited.
+    // The regex rejects signs, decimals, letters and exponent notation.
+    defaultMaxRedemptions: z
+      .string()
+      .trim()
+      .regex(/^\d*$/, "Enter 0 or a whole number")
+      // Size is judged only for well-formed digits; anything else already has the message above.
+      .refine((value) => !/^\d+$/.test(value) || Number(value) <= MAX_REDEMPTIONS_LIMIT, {
+        message: "Enter a smaller number",
+      })
+      .default(""),
+    // Secure by default: on for new configurations and for legacy ones without a value.
+    requireExistingUserPassword: z.boolean().default(true),
     defaultRoles: z.array(z.string()),
     defaultPermissions: z.array(z.string()).max(50, "At most 50 permissions"),
   })
@@ -109,9 +123,7 @@ export const signupLinkConfigurationFormSchema = z
     }
   });
 
-export type SignupLinkConfigurationFormValues = z.infer<
-  typeof signupLinkConfigurationFormSchema
->;
+export type SignupLinkConfigurationFormValues = z.infer<typeof signupLinkConfigurationFormSchema>;
 
 export const signupLinkConfigurationFormDefaults: SignupLinkConfigurationFormValues = {
   name: "",
@@ -127,6 +139,9 @@ export const signupLinkConfigurationFormDefaults: SignupLinkConfigurationFormVal
   // where the server refuses it — see toModePayload.
   signInAfterActivation: true,
   defaultLifetimeMinutes: 1440,
+  // Empty means IAM's default of a single use.
+  defaultMaxRedemptions: "",
+  requireExistingUserPassword: true,
   defaultRoles: [],
   defaultPermissions: [],
 };

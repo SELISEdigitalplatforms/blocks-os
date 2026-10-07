@@ -21,6 +21,7 @@ import {
   SignupLinkConfigurationFormValues,
 } from "../configuration-form-schema";
 import { applyServerFieldErrors } from "../apply-server-field-errors";
+import { fromConfigurationMaxRedemptions, toEditMaxRedemptions } from "../max-redemptions";
 
 type UpdateConfigurationProps = {
   configuration: ISignupLinkConfiguration;
@@ -41,6 +42,9 @@ const toFormValues = (
   credentialMode: configuration.credentialMode,
   signInAfterActivation: configuration.signInAfterActivation ?? false,
   defaultLifetimeMinutes: configuration.defaultLifetimeMinutes,
+  defaultMaxRedemptions: fromConfigurationMaxRedemptions(configuration.defaultMaxRedemptions),
+  // A response from before the field existed, or a legacy document, reads as on.
+  requireExistingUserPassword: configuration.requireExistingUserPassword ?? true,
   defaultRoles: configuration.defaultRoles ?? [],
   defaultPermissions: configuration.defaultPermissions ?? [],
 });
@@ -61,11 +65,17 @@ export const UpdateConfiguration = ({
     formState: { isDirty, dirtyFields },
   } = form;
 
+  // A new configuration (or reopening) clears the previous form-level error. Done while
+  // rendering rather than in the effect, so it does not cost an extra render pass.
+  const openedFor = isOpen ? configuration : null;
+  const [lastOpenedFor, setLastOpenedFor] = useState(openedFor);
+  if (lastOpenedFor !== openedFor) {
+    setLastOpenedFor(openedFor);
+    if (openedFor) setFormLevelError(null);
+  }
+
   useEffect(() => {
-    if (isOpen) {
-      form.reset(toFormValues(configuration));
-      setFormLevelError(null);
-    }
+    if (isOpen) form.reset(toFormValues(configuration));
   }, [configuration, form, isOpen]);
 
   const onSubmit: SubmitHandler<SignupLinkConfigurationFormValues> = async (data) => {
@@ -85,8 +95,16 @@ export const UpdateConfiguration = ({
         patch.defaultForwardedTo = "";
         return;
       }
+      if (key === "defaultMaxRedemptions") {
+        // IAM ignores null on PATCH, so a cleared field sends 1 (what null resolves to).
+        patch.defaultMaxRedemptions = toEditMaxRedemptions(data.defaultMaxRedemptions);
+        return;
+      }
       patch[key] = value;
     });
+
+    // Always sent, touched or not, so every saved configuration stores an explicit value.
+    patch.requireExistingUserPassword = data.requireExistingUserPassword;
 
     if (data.mode === "Embedded") {
       delete patch.clientId;
@@ -104,9 +122,7 @@ export const UpdateConfiguration = ({
     }
 
     try {
-      const response = await mutateAsync(
-        patch as Parameters<typeof mutateAsync>[0],
-      );
+      const response = await mutateAsync(patch as Parameters<typeof mutateAsync>[0]);
       if (response?.isSuccess === false && response.errors) {
         const { formLevelError: level } = applyServerFieldErrors(form, response.errors);
         setFormLevelError(level);
@@ -145,7 +161,11 @@ export const UpdateConfiguration = ({
       </DialogHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
-          <ConfigurationFormFields form={form} formLevelError={formLevelError} />
+          <ConfigurationFormFields
+            form={form}
+            formLevelError={formLevelError}
+            isPending={isPending}
+          />
           <DialogFooter className="mt-6">
             <Button
               type="button"

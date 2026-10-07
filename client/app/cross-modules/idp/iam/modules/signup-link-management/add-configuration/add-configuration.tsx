@@ -25,6 +25,7 @@ import {
   toModePayload,
 } from "../configuration-form-schema";
 import { applyServerFieldErrors } from "../apply-server-field-errors";
+import { toCreateMaxRedemptions } from "../max-redemptions";
 
 type AddConfigurationProps = {
   /** When true, render only the trigger styling used inside the empty state. */
@@ -58,22 +59,28 @@ export const AddConfiguration = ({ triggerLabel = "Add Configuration" }: AddConf
         : data.defaultLifetimeMinutes;
     // toModePayload drops the fields the chosen mode forbids, so a value left behind by
     // switching the mode mid-edit is never sent and bounced by the server.
-    const payload = toModePayload(
-      {
-        name: data.name,
-        description: data.description || undefined,
-        defaultRoles: data.defaultRoles,
-        defaultPermissions: data.defaultPermissions,
-        mode: data.mode,
-        clientId: data.clientId,
-        redirectUri: data.redirectUri,
-        joinUrl: data.joinUrl || undefined,
-        defaultForwardedTo: data.defaultForwardedTo || undefined,
-        credentialMode: data.credentialMode,
-        defaultLifetimeMinutes: lifetime,
-      },
-      data.mode,
-    );
+    const payload = {
+      ...toModePayload(
+        {
+          name: data.name,
+          description: data.description || undefined,
+          defaultRoles: data.defaultRoles,
+          defaultPermissions: data.defaultPermissions,
+          mode: data.mode,
+          clientId: data.clientId,
+          redirectUri: data.redirectUri,
+          joinUrl: data.joinUrl || undefined,
+          defaultForwardedTo: data.defaultForwardedTo || undefined,
+          credentialMode: data.credentialMode,
+          defaultLifetimeMinutes: lifetime,
+          // Sent in every mode so the stored value is always explicit; toModePayload keeps it.
+          requireExistingUserPassword: data.requireExistingUserPassword,
+        },
+        data.mode,
+      ),
+      // Empty sends null (IAM default, single use), never 0, which would mean unlimited.
+      defaultMaxRedemptions: toCreateMaxRedemptions(data.defaultMaxRedemptions),
+    };
     try {
       const response = await mutateAsync(payload);
       if (response?.isSuccess === false && response.errors) {
@@ -133,7 +140,11 @@ export const AddConfiguration = ({ triggerLabel = "Add Configuration" }: AddConf
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
-            <ConfigurationFormFields form={form} formLevelError={formLevelError} />
+            <ConfigurationFormFields
+              form={form}
+              formLevelError={formLevelError}
+              isPending={isPending}
+            />
             <DialogFooter className="mt-6">
               <Button
                 type="button"
