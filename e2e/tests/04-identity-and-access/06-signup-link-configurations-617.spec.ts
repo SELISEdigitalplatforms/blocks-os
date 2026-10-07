@@ -12,6 +12,7 @@ import {
   existingUserWarning,
   expectConfigurationRowFlow,
   expectFirstRunEmptyOrList,
+  fillStoredSwitchWhileIamOmitsIt,
   maxRedemptionsInput,
   navigateToSignupLinkConfigurationsFlow,
   nextConfigurationWrite,
@@ -317,13 +318,16 @@ test.describe("flows #645", () => {
   });
 
   /**
-   * Reads the stored switch value back from IAM, so it needs the blocks-iam
-   * requireExistingUserPassword field (SPEC27) on the IAM the preview talks to.
+   * Reads the stored switch value back from IAM, so the stored value needs the
+   * blocks-iam requireExistingUserPassword field (SPEC27, blocks-iam#593) on
+   * dev-iam. Until that is deployed the value is filled into IAM's read
+   * responses for this one configuration, and the test records that it did.
    */
   test("Switch off is stored, listed and loaded on edit (H3, H4, H5, H6, H12)", async ({
     page,
-  }) => {
+  }, testInfo) => {
     test.setTimeout(180_000);
+    const storedSwitch = await fillStoredSwitchWhileIamOmitsIt(page, offName, false);
     await navigateToSignupLinkConfigurationsFlow(page);
 
     await test.step("Create with the switch off", async () => {
@@ -367,6 +371,14 @@ test.describe("flows #645", () => {
       await expect(page.getByText("Configuration updated", { exact: true })).toBeVisible({
         timeout: 15_000,
       });
+    });
+
+    testInfo.annotations.push({
+      type: "iam-dependency",
+      description:
+        storedSwitch.filled() > 0
+          ? `dev-iam omitted requireExistingUserPassword; filled ${storedSwitch.filled()} read response(s) until blocks-iam#593 is deployed`
+          : "dev-iam returned the stored requireExistingUserPassword value",
     });
   });
 });

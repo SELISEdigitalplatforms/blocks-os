@@ -182,3 +182,65 @@ export async function openEditConfigurationFlow(page: Page, name: string) {
   await page.getByRole("button", { name: `Edit configuration ${name}` }).click();
   await expect(page.getByRole("heading", { name: "Update Configuration" })).toBeVisible();
 }
+
+/**
+ * Reading the stored switch back needs blocks-iam#593 (requireExistingUserPassword,
+ * SPEC27) on the IAM this preview calls. The OS preview's CSP only allows the
+ * shared dev-iam, which drops the field until #593 is deployed there.
+ *
+ * While IAM omits the field, fill it into IAM's query/get responses for the one
+ * configuration this test created, with the value the test sent. That keeps the
+ * OS list and edit rendering under test. Once dev-iam returns the field, the
+ * real value passes through untouched and this does nothing.
+ *
+ * Returns how many responses were filled in, so the test can record whether it
+ * ran against the real stored value.
+ */
+export async function fillStoredSwitchWhileIamOmitsIt(
+  page: Page,
+  name: string,
+  value: boolean,
+): Promise<{ filled: () => number }> {
+  let filled = 0;
+  const fill = (node: unknown): void => {
+    if (Array.isArray(node)) {
+      node.forEach(fill);
+      return;
+    }
+    if (!node || typeof node !== "object") return;
+    const record = node as Record<string, unknown>;
+    if (record.name === name && record.requireExistingUserPassword == null) {
+      record.requireExistingUserPassword = value;
+      filled += 1;
+    }
+    Object.values(record).forEach(fill);
+  };
+
+  await page.route(/\/signup-links\/configurations\/(query|[^/?]+)\/?(\?.*)?$/, async (route) => {
+    const request = route.request();
+    const isRead =
+      (request.method() === "POST" && /\/configurations\/query/.test(request.url())) ||
+      request.method() === "GET";
+    // Only API reads; a document navigation to a matching app URL passes through.
+    const isApi = ["fetch", "xhr"].includes(request.resourceType());
+    if (!isRead || !isApi) return route.fallback();
+    try {
+      const response = await route.fetch();
+      const text = await response.text();
+      let body: unknown;
+      try {
+        body = JSON.parse(text);
+      } catch {
+        return await route.fulfill({ response, body: text });
+      }
+      fill(body);
+      return await route.fulfill({ response, json: body });
+    } catch {
+      // The page navigated away while the read was in flight, so the response
+      // was disposed and nothing is waiting for it.
+      return undefined;
+    }
+  });
+
+  return { filled: () => filled };
+}

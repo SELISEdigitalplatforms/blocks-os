@@ -45,8 +45,11 @@ test.describe("flows", () => {
       await verifyNameValidationFlow(page);
     });
 
+    // Alternate between "<base>" and "<base> Renamed" so a rerun against an
+    // already renamed shared project still changes the name and Update enables.
     const baseProjectName = projectName.replace(/(?: Renamed)+$/, "");
-    const renamedProject = `${baseProjectName} Renamed`;
+    const renamedProject =
+      projectName === baseProjectName ? `${baseProjectName} Renamed` : baseProjectName;
 
     await test.step("Rename the project and save", async () => {
       await renameProjectFlow(page, renamedProject);

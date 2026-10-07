@@ -68,15 +68,15 @@ test.describe("flows", () => {
     });
 
     await test.step("Reopen the configuration for editing and close without changes", async () => {
-      await openEditEmailAndCloseFlow(page);
+      await openEditEmailAndCloseFlow(page, configName);
     });
 
     await test.step("Edit the configuration and actually save the change", async () => {
-      await editEmailConfigAndSaveFlow(page, "Flow Sender Updated");
+      await editEmailConfigAndSaveFlow(page, configName, "Flow Sender Updated");
     });
 
     await test.step("Delete the configuration via its confirmation dialog", async () => {
-      await deleteEmailConfigFlow(page);
+      await deleteEmailConfigFlow(page, configName);
     });
   });
 
@@ -116,19 +116,19 @@ test.describe("flows", () => {
     });
 
     await test.step("A whitespace-only replacement secret is rejected rather than preserved", async () => {
-      await verifyOffice365BlankSecretRejectedFlow(page);
+      await verifyOffice365BlankSecretRejectedFlow(page, configName);
     });
 
     await test.step("Editing with a blank secret keeps the one on file", async () => {
-      await editOffice365KeepingSecretFlow(page, "Contoso Alerts");
+      await editOffice365KeepingSecretFlow(page, configName, "Contoso Alerts");
     });
 
     await test.step("Editing with a replacement secret rotates it, leaking nothing", async () => {
-      await editOffice365RotatingSecretFlow(page, replacementSecret);
+      await editOffice365RotatingSecretFlow(page, configName, replacementSecret);
     });
 
     await test.step("Delete the configuration via its confirmation dialog", async () => {
-      await deleteEmailConfigFlow(page);
+      await deleteEmailConfigFlow(page, configName);
     });
   });
 });

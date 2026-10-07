@@ -62,8 +62,9 @@ export const ProjectEnvironmentCheckboxes = ({
               onCheckedChange={(checked) => onToggle(option.value, checked === true)}
               disabled={disabled}
               aria-label={option.label}
+              id={`project-environment-${option.value}`}
             />
-            <label className="text-lg font-bold">
+            <label className="text-lg font-bold" htmlFor={`project-environment-${option.value}`}>
               <div className="flex flex-row items-center gap-2">
                 <span>{option.label}</span>
                 <div className="flex flex-row items-center">

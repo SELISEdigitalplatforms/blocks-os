@@ -6,6 +6,9 @@ const dialog = (page: Page): Locator => page.getByRole("dialog");
 
 const IDP_HEADER = "x-blocks-idp";
 
+// "JWKS URL" labels both the key-source radio and the URL field, so lookups
+// use the role: textbox for the field, radio for the source switch.
+
 /**
  * The API returns keys masked, so every label built from a key has to be masked too. Mirrors
  * ProjectManagementService.MaskProviderKey: six characters or fewer have no middle to hide.
@@ -40,7 +43,10 @@ export async function verifyRequiredFieldsRejectedFlow(page: Page) {
 
   await expect(form.getByText("Pick a provider")).toBeVisible({ timeout: 10000 });
   await expect(form.getByText(/Key is required/)).toBeVisible();
-  await expect(form.getByText(/Issuer is required/)).toBeVisible();
+  // Issuer is optional (blank means "tokens without iss"), so an empty submit
+  // explains that instead of rejecting it.
+  await expect(form.getByText(/Issuer is required/)).toBeHidden();
+  await expect(form.getByText(/Tokens carrying any issuer will not reach this provider/)).toBeVisible();
 }
 
 async function selectOption(page: Page, triggerName: string, optionName: string) {
@@ -70,14 +76,14 @@ export async function verifyStatusBlockFlow(page: Page) {
 
 export async function verifyKeySourceFollowsAlgorithmFlow(page: Page) {
   const form = dialog(page);
-  await expect(form.getByLabel("JWKS URL")).toBeVisible();
+  await expect(form.getByRole("textbox", { name: "JWKS URL" })).toBeVisible();
 
   await selectOption(page, "Signing algorithm", "HS256");
   await expect(form.getByLabel("Signing secret")).toBeVisible();
-  await expect(form.getByLabel("JWKS URL")).toBeHidden();
+  await expect(form.getByRole("textbox", { name: "JWKS URL" })).toBeHidden();
 
   await selectOption(page, "Signing algorithm", "RS256");
-  await expect(form.getByLabel("JWKS URL")).toBeVisible();
+  await expect(form.getByRole("textbox", { name: "JWKS URL" })).toBeVisible();
   await expect(form.getByLabel("Signing secret")).toBeHidden();
 }
 
@@ -93,7 +99,7 @@ export async function verifyKeySourceFollowsTheAlgorithmNotTheBrandFlow(page: Pa
 
   for (const provider of ["Keycloak", "Auth0", "Others"]) {
     await selectOption(page, "Provider", provider);
-    await expect(form.getByLabel("JWKS URL")).toBeVisible();
+    await expect(form.getByRole("textbox", { name: "JWKS URL" })).toBeVisible();
     await expect(form.getByLabel("Upload certificate")).toBeVisible();
   }
 
@@ -131,9 +137,9 @@ export async function verifyCertificateUploadAndPassphraseFlow(page: Page) {
   await selectOption(page, "Provider", "Others");
   await form.getByLabel("Upload certificate").click();
 
-  await expect(form.getByLabel("JWKS URL")).toBeHidden();
+  await expect(form.getByRole("textbox", { name: "JWKS URL" })).toBeHidden();
   await expect(form.getByText("Click to upload or drag and drop")).toBeVisible();
-  await expect(form.getByText(/\.crt, \.der, \.pfx, \.p12/)).toBeVisible();
+  await expect(form.getByText(/\.crt, \.pem, \.der, \.pfx, \.p12/)).toBeVisible();
 
   // A passphrase is offered only once the chosen file is a PKCS#12 container, which is the only
   // kind that can be protected by one.
@@ -155,7 +161,7 @@ export async function verifyCertificateUploadAndPassphraseFlow(page: Page) {
   await expect(passphrase).toHaveAttribute("type", "text");
 
   // Back to the JWKS source, which drops the certificate fields again.
-  await form.getByLabel("JWKS URL").click();
+  await form.getByRole("radio", { name: "JWKS URL" }).click();
   await expect(form.getByText("Click to upload or drag and drop")).toBeHidden();
 }
 

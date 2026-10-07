@@ -1,7 +1,6 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 import { openSecretManagement } from "../../support/os-helpers";
 
-const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 export async function navigateToNotificationFlow(page: Page) {
   await openSecretManagement(page, "notification", "Notification");
@@ -72,9 +71,9 @@ export async function fillAndSaveNotificationConfigFlow(page: Page, configName: 
   await expect(saveButton).toBeEnabled({ timeout: 10000 });
   await saveButton.click();
   if (
-    await page.getByText("New configuration added successfully.").isVisible({ timeout: 15000 })
+    await page.getByText("New configuration added successfully.", { exact: true }).isVisible({ timeout: 15000 })
   ) {
-    await expect(page.getByText("New configuration added successfully.")).toBeVisible();
+    await expect(page.getByText("New configuration added successfully.", { exact: true })).toBeVisible();
   }
 }
 
@@ -125,9 +124,9 @@ export async function editNotificationConfigAndSaveFlow(page: Page, configRow: L
   await expect(updateButton).toBeEnabled({ timeout: 10000 });
   await updateButton.click();
   if (
-    await page.getByText("Configuration updated successfully.").isVisible({ timeout: 15000 })
+    await page.getByText("Configuration updated successfully.", { exact: true }).isVisible({ timeout: 15000 })
   ) {
-    await expect(page.getByText("Configuration updated successfully.")).toBeVisible();
+    await expect(page.getByText("Configuration updated successfully.", { exact: true })).toBeVisible();
   }
 }
 
@@ -155,8 +154,8 @@ export async function deleteNotificationConfigFlow(page: Page, configRow: Locato
   ).toBeVisible();
   await page.getByRole("button", { name: "Yes", exact: true }).click();
   if (
-    await page.getByText("Configuration deleted successfully").isVisible({ timeout: 15000 })
+    await page.getByText("Configuration deleted successfully", { exact: true }).isVisible({ timeout: 15000 })
   ) {
-    await expect(page.getByText("Configuration deleted successfully")).toBeVisible();
+    await expect(page.getByText("Configuration deleted successfully", { exact: true })).toBeVisible();
   }
 }

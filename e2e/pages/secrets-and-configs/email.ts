@@ -122,14 +122,14 @@ export async function fillAndSaveEmailConfigFlow(page: Page, configName: string)
   await saveButton.click();
   if (
     await page
-      .getByText("Configuration created successfully.")
-      .or(page.getByText("New configuration added successfully."))
+      .getByText("Configuration created successfully.", { exact: true })
+      .or(page.getByText("New configuration added successfully.", { exact: true }))
       .isVisible({ timeout: 15000 })
   ) {
     await expect(
       page
-        .getByText("Configuration created successfully.")
-        .or(page.getByText("New configuration added successfully.")),
+        .getByText("Configuration created successfully.", { exact: true })
+        .or(page.getByText("New configuration added successfully.", { exact: true })),
     ).toBeVisible();
   }
 }
@@ -144,16 +144,29 @@ export async function expandConfigRowAndVerifyFlow(page: Page, configName: strin
   await expect(panel.getByText("Outbound")).toBeVisible();
 }
 
-export async function openEditEmailAndCloseFlow(page: Page) {
-  const editButton = page.getByRole("button", { name: "Edit", exact: true }).first();
+/**
+ * Edit/Delete sit in each configuration's accordion header. The Default record
+ * now has its own Edit (sender name only), so `.first()` on the page would open
+ * the Default dialog instead; scope to the configuration under test.
+ */
+function configHeaderButton(page: Page, configName: string, name: "Edit" | "Delete") {
+  return page.getByRole("button", { name: configName }).getByRole("button", { name, exact: true });
+}
+
+export async function openEditEmailAndCloseFlow(page: Page, configName: string) {
+  const editButton = configHeaderButton(page, configName, "Edit");
   if (!(await editButton.isVisible({ timeout: 8000 }))) return;
   await editButton.click();
   await expect(page.getByRole("heading", { name: "Edit Configuration" })).toBeVisible();
   await page.getByRole("button", { name: "Cancel" }).click();
 }
 
-export async function editEmailConfigAndSaveFlow(page: Page, newSenderName: string) {
-  const editButton = page.getByRole("button", { name: "Edit", exact: true }).first();
+export async function editEmailConfigAndSaveFlow(
+  page: Page,
+  configName: string,
+  newSenderName: string,
+) {
+  const editButton = configHeaderButton(page, configName, "Edit");
   if (!(await editButton.isVisible({ timeout: 8000 }))) return;
   await editButton.click();
   await expect(page.getByRole("heading", { name: "Edit Configuration" })).toBeVisible();
@@ -163,14 +176,14 @@ export async function editEmailConfigAndSaveFlow(page: Page, newSenderName: stri
   await expect(updateButton).toBeEnabled({ timeout: 10000 });
   await updateButton.click();
   if (
-    await page.getByText("Configuration updated successfully.").isVisible({ timeout: 15000 })
+    await page.getByText("Configuration updated successfully.", { exact: true }).isVisible({ timeout: 15000 })
   ) {
-    await expect(page.getByText("Configuration updated successfully.")).toBeVisible();
+    await expect(page.getByText("Configuration updated successfully.", { exact: true })).toBeVisible();
   }
 }
 
-export async function deleteEmailConfigFlow(page: Page) {
-  const deleteButton = page.getByRole("button", { name: "Delete", exact: true }).first();
+export async function deleteEmailConfigFlow(page: Page, configName: string) {
+  const deleteButton = configHeaderButton(page, configName, "Delete");
   if (!(await deleteButton.isVisible({ timeout: 8000 }))) return;
   await deleteButton.click();
   await expect(page.getByRole("heading", { name: "Delete configuration" })).toBeVisible();
@@ -185,8 +198,8 @@ export async function deleteEmailConfigFlow(page: Page) {
   }
   await page.getByRole("button", { name: "Delete Configuration" }).click();
   if (
-    await page.getByText("Configuration deleted successfully.").isVisible({ timeout: 15000 })
+    await page.getByText("Configuration deleted successfully.", { exact: true }).isVisible({ timeout: 15000 })
   ) {
-    await expect(page.getByText("Configuration deleted successfully.")).toBeVisible();
+    await expect(page.getByText("Configuration deleted successfully.", { exact: true })).toBeVisible();
   }
 }

@@ -94,9 +94,9 @@ export async function createOidcClientFlow(page: Page, clientName: string) {
   await expect(addButton).toBeEnabled({ timeout: 10000 });
   await addButton.click();
   if (
-    await page.getByText("OIDC Client created successfully").isVisible({ timeout: 15000 })
+    await page.getByText("OIDC Client created successfully", { exact: true }).isVisible({ timeout: 15000 })
   ) {
-    await expect(page.getByText("OIDC Client created successfully")).toBeVisible();
+    await expect(page.getByText("OIDC Client created successfully", { exact: true })).toBeVisible();
   }
   await waitForOidcListSettledFlow(page);
 }
@@ -399,9 +399,9 @@ export async function rotateClientSecretFlow(page: Page, clientRow: Locator, cli
   }
   await page.getByRole("button", { name: "Rotate Secret" }).click();
   if (
-    await page.getByText("Client secret rotated successfully").isVisible({ timeout: 15000 })
+    await page.getByText("Client secret rotated successfully", { exact: true }).isVisible({ timeout: 15000 })
   ) {
-    await expect(page.getByText("Client secret rotated successfully")).toBeVisible();
+    await expect(page.getByText("Client secret rotated successfully", { exact: true })).toBeVisible();
   }
   const revealHeading = page.getByRole("heading", { name: "New client secret" });
   if (await revealHeading.isVisible({ timeout: 5000 })) {
@@ -433,9 +433,9 @@ export async function editOidcClientAndSaveFlow(page: Page, clientRow: Locator) 
   await expect(updateButton).toBeEnabled({ timeout: 10000 });
   await updateButton.click();
   if (
-    await page.getByText("OIDC Client updated successfully").isVisible({ timeout: 15000 })
+    await page.getByText("OIDC Client updated successfully", { exact: true }).isVisible({ timeout: 15000 })
   ) {
-    await expect(page.getByText("OIDC Client updated successfully")).toBeVisible();
+    await expect(page.getByText("OIDC Client updated successfully", { exact: true })).toBeVisible();
   }
 }
 
@@ -449,8 +449,8 @@ export async function deleteOidcClientFlow(page: Page, clientRow: Locator, clien
   ).toBeVisible();
   await page.getByRole("button", { name: "Delete", exact: true }).last().click();
   if (
-    await page.getByText("OIDC credential deleted successfully").isVisible({ timeout: 15000 })
+    await page.getByText("OIDC credential deleted successfully", { exact: true }).isVisible({ timeout: 15000 })
   ) {
-    await expect(page.getByText("OIDC credential deleted successfully")).toBeVisible();
+    await expect(page.getByText("OIDC credential deleted successfully", { exact: true })).toBeVisible();
   }
 }

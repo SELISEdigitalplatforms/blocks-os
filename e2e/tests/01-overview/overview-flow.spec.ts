@@ -9,7 +9,7 @@ import {
   openBootstrapBriefFlow,
   openConfigureDomainDialogFlow,
   paginateDomainsFlow,
-  validateDomainCnameFlow,
+  openDomainSetupGuideFlow,
   verifyAddDomainDisabledAndValidationFlow,
   verifyConsolePageResourceLinksFlow,
   verifyDomainRowActionsFlow,
@@ -96,7 +96,7 @@ test.describe("flows", () => {
       domainRow = await verifyNewDomainAppearsAsUnverifiedFlow(page, domainName);
     });
 
-    await test.step("Unverified domain offers Configure and Validate CNAME actions", async () => {
+    await test.step("Unverified domain offers Configure and Set up domain actions", async () => {
       await verifyDomainRowActionsFlow(page, domainRow);
     });
 
@@ -108,8 +108,8 @@ test.describe("flows", () => {
       await openConfigureDomainDialogFlow(page, domainRow, domainName);
     });
 
-    await test.step("'Validate CNAME' runs a real lookup against the unverified domain", async () => {
-      await validateDomainCnameFlow(page, domainName);
+    await test.step("'Set up domain' opens the DNS records guide for the unverified domain", async () => {
+      await openDomainSetupGuideFlow(page, domainName);
     });
 
     await test.step("Domain search filter narrows the table", async () => {

@@ -310,8 +310,16 @@ export async function templatesFlow(page: Page) {
 
   // ---------- Clone the first row ----------
   const sourceName = (await firstRow.locator("td").first().innerText()).trim();
-  await firstRow.getByRole("button", { name: "Open menu", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Clone Template", exact: true }).click();
+  // The list refetches after returning from the details page and can re-render
+  // under an open menu, which closes it. Reopen until the item is there.
+  const cloneItem = page.getByRole("menuitem", { name: "Clone Template", exact: true });
+  await expect(async () => {
+    if (!(await cloneItem.isVisible())) {
+      await firstRow.getByRole("button", { name: "Open menu", exact: true }).click();
+    }
+    await expect(cloneItem).toBeVisible({ timeout: 3_000 });
+  }).toPass({ timeout: 30_000 });
+  await cloneItem.click();
   await expect(page.getByRole("heading", { name: "Confirmation", exact: true })).toBeVisible({
     timeout: 10_000,
   });
@@ -368,10 +376,11 @@ export async function incomingMailsFlow(page: Page) {
   await expect(table.getByRole("columnheader", { name: "From", exact: true })).toBeVisible({
     timeout: 15_000,
   });
-  await expect(table.getByRole("columnheader", { name: "To", exact: true })).toBeVisible({
+  // Inbound shows the receiving mailbox instead of a "To" column.
+  await expect(table.getByRole("columnheader", { name: "Subject", exact: true })).toBeVisible({
     timeout: 15_000,
   });
-  await expect(table.getByRole("columnheader", { name: "Subject", exact: true })).toBeVisible({
+  await expect(table.getByRole("columnheader", { name: "Mailbox", exact: true })).toBeVisible({
     timeout: 15_000,
   });
   await expect(table.getByRole("columnheader", { name: "Received Date", exact: true })).toBeVisible(
