@@ -77,19 +77,16 @@ test.describe("flows #645", () => {
   const stamp = Date.now();
   const defaultsName = `E2E 645 defaults ${stamp}`;
   const offName = `E2E 645 off ${stamp}`;
+  const maxName = `E2E 645 max ${stamp}`;
   const embeddedName = `E2E 645 embedded ${stamp}`;
   const created: string[] = [];
 
-  test.afterAll(async ({ browser }) => {
+  // Archive what each test created, with the test's own signed-in page.
+  test.afterEach(async ({ page }) => {
     if (!created.length) return;
-    const context = await browser.newContext({ storageState: "fixtures/os-session.json" });
-    const page = await context.newPage();
-    try {
-      await navigateToSignupLinkConfigurationsFlow(page);
-      for (const name of created) await archiveIfPresentFlow(page, name);
-    } finally {
-      await context.close();
-    }
+    const names = created.splice(0);
+    await navigateToSignupLinkConfigurationsFlow(page);
+    for (const name of names) await archiveIfPresentFlow(page, name);
   });
 
   test("Create with defaults sends the switch on and null max (H1, H2, H7, H11, H12)", async ({
@@ -249,63 +246,48 @@ test.describe("flows #645", () => {
     await page.getByRole("button", { name: "Cancel" }).click();
   });
 
-  /**
-   * These steps read the stored switch value back from IAM, so they need the blocks-iam
-   * requireExistingUserPassword field (SPEC27) on the IAM the preview talks to.
-   */
-  test("Toggle off and max 0 are stored, edited and listed (H3, H5, H6, H8, H9, H10, C5)", async ({
-    page,
-  }) => {
+  test("Max redemptions are stored, edited and listed (H8, H9, H10, H11, C5)", async ({ page }) => {
     test.setTimeout(180_000);
     await navigateToSignupLinkConfigurationsFlow(page);
 
-    await test.step("Create with the switch off and max 0", async () => {
+    await test.step("Create with max 0", async () => {
       await openAddConfigurationDialogFlow(page);
-      await page.getByPlaceholder("Partner onboarding").fill(offName);
+      await page.getByPlaceholder("Partner onboarding").fill(maxName);
       await chooseFirstClientFlow(page);
-      await setRequireExistingUserPasswordFlow(page, false);
-      await expect(existingUserWarning(page)).toBeVisible();
-      await setRequireExistingUserPasswordFlow(page, true);
-      await expect(existingUserWarning(page)).toHaveCount(0);
-      await setRequireExistingUserPasswordFlow(page, false);
       await maxRedemptionsInput(page).fill("0");
       const body = nextConfigurationWrite(page, "POST");
       await page.getByRole("button", { name: "Create" }).click();
       const sent = await body;
-      expect(sent.requireExistingUserPassword).toBe(false);
       expect(sent.defaultMaxRedemptions).toBe(0);
+      expect(sent.requireExistingUserPassword).toBe(true);
       await expect(page.getByText("Configuration created", { exact: true })).toBeVisible({
         timeout: 20_000,
       });
-      created.push(offName);
-      await expectConfigurationRowFlow(page, offName, {
+      created.push(maxName);
+      await expectConfigurationRowFlow(page, maxName, {
         maxUses: "Unlimited",
-        existingUserPassword: "Not required",
+        existingUserPassword: "Required",
       });
     });
 
-    await test.step("Edit loads the stored values and sends the switch with a description-only change", async () => {
-      await openEditConfigurationFlow(page, offName);
-      await expect(requireExistingUserPasswordSwitch(page)).toHaveAttribute(
-        "aria-checked",
-        "false",
-      );
+    await test.step("Edit loads 0 and a description-only change sends only dirty fields plus the switch", async () => {
+      await openEditConfigurationFlow(page, maxName);
       await expect(maxRedemptionsInput(page)).toHaveValue("0");
       await page.getByPlaceholder("Optional description").fill("Edited by E2E 645");
       const body = nextConfigurationWrite(page, "PATCH");
       await page.getByRole("button", { name: "Update" }).click();
       const sent = await body;
       expect(Object.keys(sent).sort()).toEqual(
-        ["description", "itemId", "mode", "requireExistingUserPassword"].sort(),
+        ["description", "mode", "requireExistingUserPassword"].sort(),
       );
-      expect(sent.requireExistingUserPassword).toBe(false);
+      expect(sent.requireExistingUserPassword).toBe(true);
       await expect(page.getByText("Configuration updated", { exact: true })).toBeVisible({
         timeout: 15_000,
       });
     });
 
     await test.step("Set max 5, then clear it and save as single use", async () => {
-      await openEditConfigurationFlow(page, offName);
+      await openEditConfigurationFlow(page, maxName);
       await maxRedemptionsInput(page).fill("5");
       const five = nextConfigurationWrite(page, "PATCH");
       await page.getByRole("button", { name: "Update" }).click();
@@ -313,12 +295,12 @@ test.describe("flows #645", () => {
       await expect(page.getByRole("heading", { name: "Update Configuration" })).toBeHidden({
         timeout: 15_000,
       });
-      await expectConfigurationRowFlow(page, offName, {
+      await expectConfigurationRowFlow(page, maxName, {
         maxUses: "5 uses",
-        existingUserPassword: "Not required",
+        existingUserPassword: "Required",
       });
 
-      await openEditConfigurationFlow(page, offName);
+      await openEditConfigurationFlow(page, maxName);
       await expect(maxRedemptionsInput(page)).toHaveValue("5");
       await maxRedemptionsInput(page).fill("");
       const cleared = nextConfigurationWrite(page, "PATCH");
@@ -327,9 +309,63 @@ test.describe("flows #645", () => {
       await expect(page.getByRole("heading", { name: "Update Configuration" })).toBeHidden({
         timeout: 15_000,
       });
+      await expectConfigurationRowFlow(page, maxName, {
+        maxUses: "Single use",
+        existingUserPassword: "Required",
+      });
+    });
+  });
+
+  /**
+   * Reads the stored switch value back from IAM, so it needs the blocks-iam
+   * requireExistingUserPassword field (SPEC27) on the IAM the preview talks to.
+   */
+  test("Switch off is stored, listed and loaded on edit (H3, H4, H5, H6, H12)", async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    await navigateToSignupLinkConfigurationsFlow(page);
+
+    await test.step("Create with the switch off", async () => {
+      await openAddConfigurationDialogFlow(page);
+      await page.getByPlaceholder("Partner onboarding").fill(offName);
+      await chooseFirstClientFlow(page);
+      await setRequireExistingUserPasswordFlow(page, false);
+      await expect(existingUserWarning(page)).toBeVisible();
+      await setRequireExistingUserPasswordFlow(page, true);
+      await expect(existingUserWarning(page)).toHaveCount(0);
+      await setRequireExistingUserPasswordFlow(page, false);
+      const body = nextConfigurationWrite(page, "POST");
+      await page.getByRole("button", { name: "Create" }).click();
+      const sent = await body;
+      expect(sent.requireExistingUserPassword).toBe(false);
+      await expect(page.getByText("Configuration created", { exact: true })).toBeVisible({
+        timeout: 20_000,
+      });
+      created.push(offName);
       await expectConfigurationRowFlow(page, offName, {
         maxUses: "Single use",
         existingUserPassword: "Not required",
+      });
+    });
+
+    await test.step("Edit loads the switch off and sends it with a description-only change", async () => {
+      await openEditConfigurationFlow(page, offName);
+      await expect(requireExistingUserPasswordSwitch(page)).toHaveAttribute(
+        "aria-checked",
+        "false",
+      );
+      await expect(existingUserWarning(page)).toBeVisible();
+      await page.getByPlaceholder("Optional description").fill("Edited by E2E 645");
+      const body = nextConfigurationWrite(page, "PATCH");
+      await page.getByRole("button", { name: "Update" }).click();
+      const sent = await body;
+      expect(Object.keys(sent).sort()).toEqual(
+        ["description", "mode", "requireExistingUserPassword"].sort(),
+      );
+      expect(sent.requireExistingUserPassword).toBe(false);
+      await expect(page.getByText("Configuration updated", { exact: true })).toBeVisible({
+        timeout: 15_000,
       });
     });
   });

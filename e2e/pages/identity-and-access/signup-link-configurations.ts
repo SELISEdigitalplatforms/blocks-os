@@ -135,8 +135,14 @@ export async function setRequireExistingUserPasswordFlow(page: Page, on: boolean
   await expect(control).toHaveAttribute("aria-checked", String(on));
 }
 
-const isConfigurationWrite = (req: Request, method: "POST" | "PATCH") =>
-  req.method() === method && /\/signup-links\/configurations\/?$/.test(new URL(req.url()).pathname);
+/** Create is POST /configurations; update is PATCH /configurations/{itemId}. */
+const isConfigurationWrite = (req: Request, method: "POST" | "PATCH") => {
+  if (req.method() !== method) return false;
+  const path = new URL(req.url()).pathname;
+  return method === "POST"
+    ? /\/signup-links\/configurations\/?$/.test(path)
+    : /\/signup-links\/configurations\/[^/]+\/?$/.test(path);
+};
 
 /** Resolves with the JSON body of the next configuration create (POST) or update (PATCH). */
 export function nextConfigurationWrite(
