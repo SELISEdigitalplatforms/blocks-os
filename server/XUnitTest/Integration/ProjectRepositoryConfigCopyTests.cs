@@ -142,7 +142,7 @@ namespace XUnitTest.Integration
             var suffix = Guid.NewGuid().ToString("N");
             using var _ = new IntegrationContext(suffix);
             var project = NewProject(suffix);
-            var tracer = new ProjectStatusTracer { ProjectId = project.ItemId, IsDefaultConfigurationCopied = true };
+            var tracer = new ProjectStatusTracer { ProjectId = project.ItemId, IsDefaultConfigurationCopied = true, IsSeedSchemaApplied = true };
 
             await NewRepository().CreateDefaultConfigurationAsync(tracer, project);
 
@@ -212,6 +212,56 @@ namespace XUnitTest.Integration
                 .Find(Builders<BsonDocument>.Filter.Eq("_id", "iam-" + suffix)).FirstAsync();
             var domain = project.Applications.First().Domain;
             updated["AccountActivationUrl"].AsString.Should().Be($"{domain}/activate");
+        }
+
+        [Fact]
+        public async Task CreateDefaultConfigurationAsync_CopiesSeedDocumentsThenSeedCollectionsAndIndexes()
+        {
+            var suffix = Guid.NewGuid().ToString("N");
+            using var _ = new IntegrationContext(suffix);
+            var project = NewProject(suffix);
+            var source = SourceDb();
+            await source.GetCollection<BsonDocument>("EmailTemplates")
+                .InsertOneAsync(new BsonDocument { { "_id", "tpl-idx-" + suffix }, { "Name", "welcome" }, { "Language", "en" } });
+            await source.GetCollection<BsonDocument>("EmailTemplates").Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(
+                new BsonDocument { { "Name", 1 }, { "Language", 1 } }, new CreateIndexOptions { Name = "blk_emailtpl_name_lang" }));
+            await source.GetCollection<BsonDocument>("WorkflowItemExecutions").Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(
+                new BsonDocument { { "WorkflowExecutionId", 1 }, { "NodeId", 1 }, { "Branch", 1 } }, new CreateIndexOptions { Name = "blk_wfitem_exec_node_branch" }));
+
+            var tracer = new ProjectStatusTracer { ProjectId = project.ItemId };
+            await NewRepository().CreateDefaultConfigurationAsync(tracer, project);
+
+            tracer.IsDefaultConfigurationCopied.Should().BeTrue();
+            tracer.IsSeedSchemaApplied.Should().BeTrue();
+            tracer.SeedSchemaErrors.Should().BeEmpty();
+            var target = TargetDb(project);
+            // Documents were still copied: the collections are created only after the copy.
+            (await target.GetCollection<BsonDocument>("EmailTemplates").CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().BeGreaterThan(0);
+            var templateIndexes = await (await target.GetCollection<BsonDocument>("EmailTemplates").Indexes.ListAsync()).ToListAsync();
+            templateIndexes.Select(i => i["name"].AsString).Should().Contain("blk_emailtpl_name_lang");
+            var itemIndexes = await (await target.GetCollection<BsonDocument>("WorkflowItemExecutions").Indexes.ListAsync()).ToListAsync();
+            itemIndexes.Select(i => i["name"].AsString).Should().Contain("blk_wfitem_exec_node_branch");
+        }
+
+        [Fact]
+        public async Task CreateDefaultConfigurationAsync_ResumedRunAppliesSeedSchemaWithoutRecopying()
+        {
+            var suffix = Guid.NewGuid().ToString("N");
+            using var _ = new IntegrationContext(suffix);
+            var project = NewProject(suffix);
+            // A seed collection only this test uses: the seed DB is shared by every test in the run.
+            var probe = "ResumeProbe" + suffix[..8];
+            await SourceDb().CreateCollectionAsync(probe);
+
+            // An older run copied the documents before this step existed.
+            var tracer = new ProjectStatusTracer { ProjectId = project.ItemId, IsDefaultConfigurationCopied = true };
+            await NewRepository().CreateDefaultConfigurationAsync(tracer, project);
+
+            tracer.IsSeedSchemaApplied.Should().BeTrue();
+            var target = TargetDb(project);
+            (await (await target.ListCollectionNamesAsync()).ToListAsync()).Should().Contain(probe);
+            // No document copy ran: the documents-copied flag was already set.
+            (await target.GetCollection<BsonDocument>("MailServerConfigurations").CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(0);
         }
     }
 }
