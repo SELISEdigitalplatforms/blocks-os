@@ -130,7 +130,7 @@ export async function verifyIssuerIsOptionalFlow(page: Page) {
   await expect(form.getByText(/Issuer is required/)).toBeHidden();
 }
 
-/** Picking the certificate source replaces the JWKS field with a dropzone and a passphrase. */
+/** Picking the certificate source replaces the JWKS field with a dropzone and an optional passphrase. */
 export async function verifyCertificateUploadAndPassphraseFlow(page: Page) {
   const form = dialog(page);
 
@@ -141,9 +141,8 @@ export async function verifyCertificateUploadAndPassphraseFlow(page: Page) {
   await expect(form.getByText("Click to upload or drag and drop")).toBeVisible();
   await expect(form.getByText(/\.crt, \.pem, \.der, \.pfx, \.p12/)).toBeVisible();
 
-  // A passphrase is offered only once the chosen file is a PKCS#12 container, which is the only
-  // kind that can be protected by one.
-  await expect(form.getByLabel(/Passphrase/)).toBeHidden();
+  // The certificate source always offers an optional passphrase field next to the dropzone.
+  await expect(form.getByText("Passphrase (optional)")).toBeVisible();
 
   await form.locator('input[type="file"]').setInputFiles({
     name: "provider.pfx",
@@ -198,7 +197,14 @@ export async function verifyProviderCardFlow(
   });
   await expect(page.getByText(provider.issuer)).toBeVisible();
   await expect(page.getByText(provider.audience)).toBeVisible();
-  await expect(page.getByText("https://www.googleapis.com/oauth2/v3/certs")).toBeVisible();
+  // Scope to this provider's card: providers left by earlier runs share the same JWKS URL.
+  const jwksUrl = "https://www.googleapis.com/oauth2/v3/certs";
+  const card = page
+    .locator("div")
+    .filter({ has: page.getByText(provider.audience) })
+    .filter({ has: page.getByText(jwksUrl) })
+    .last();
+  await expect(card.getByText(jwksUrl)).toBeVisible();
 
   // The raw key is never rendered: the API only ever sends the mask.
   await expect(page.getByText(provider.key, { exact: true })).toHaveCount(0);
@@ -215,7 +221,7 @@ export async function openDetailsAndVerifyIntegrationFlow(page: Page, key: strin
     timeout: 15000,
   });
   await expect(page.getByText("Header optional")).toBeVisible();
-  await expect(page.getByText("Claim mapping")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Claim mapping" })).toBeVisible();
 
   await expect(page.getByRole("button", { name: "Copy x-blocks-key" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Copy x-blocks-idp" })).toBeVisible();
@@ -269,10 +275,8 @@ export async function mapClaimsFromTokenFlow(page: Page, key: string, token: str
   const panel = drawer(page);
   await expect(panel.getByText("Mapping table")).toBeVisible({ timeout: 15000 });
 
-  // Nothing is mappable until a token names the claims, which is the point of the flow.
-  await expect(
-    panel.getByText("Decode a token above to list the claims it carries."),
-  ).toBeVisible();
+  // The table opens on the default claim per field; decoding a token lists the other claims.
+  await expect(panel.getByRole("combobox", { name: "User ID" })).toBeVisible();
 
   await panel.getByLabel("JSON Web Token (JWT)").fill(token);
   await panel.getByRole("button", { name: "Decode" }).click();
@@ -285,7 +289,7 @@ export async function mapClaimsFromTokenFlow(page: Page, key: string, token: str
   await page.getByRole("option", { name: "preferred_username", exact: true }).click();
 
   await panel.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByText(`Claim mapping saved for ${maskKey(key)}`)).toBeVisible({
+  await expect(page.getByText(`Claim mapping saved for ${maskKey(key)}`, { exact: true })).toBeVisible({
     timeout: 20000,
   });
 }
@@ -332,11 +336,11 @@ export async function toggleProviderFromListFlow(page: Page, key: string) {
     timeout: 15000,
   });
   await page.getByRole("button", { name: "Disable", exact: true }).click();
-  await expect(page.getByText(`${masked} disabled`)).toBeVisible({ timeout: 20000 });
+  await expect(page.getByText(`${masked} disabled`, { exact: true })).toBeVisible({ timeout: 20000 });
   await expect(page.getByText("Inactive")).toBeVisible({ timeout: 15000 });
 
   await page.getByRole("button", { name: `Enable ${masked}` }).click();
   await expect(page.getByRole("heading", { name: "Enable provider" })).toBeVisible();
   await page.getByRole("button", { name: "Enable", exact: true }).click();
-  await expect(page.getByText(`${masked} enabled`)).toBeVisible({ timeout: 20000 });
+  await expect(page.getByText(`${masked} enabled`, { exact: true })).toBeVisible({ timeout: 20000 });
 }
