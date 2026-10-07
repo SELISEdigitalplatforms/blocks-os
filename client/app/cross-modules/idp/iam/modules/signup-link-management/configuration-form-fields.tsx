@@ -6,6 +6,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui-kits/form/form";
+import { Banner } from "@/components/ui-kits/banner/banner";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { Input } from "@/components/ui-kits/input/input";
 import {
@@ -15,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui-kits/select/select";
+import { Switch } from "@/components/ui-kits/switch/switch";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
 import { ClientCredentialPermissionsSection } from "@blocks-idp/authentication/components/create-client-credential/client-credential-permissions-section";
 import { ClientCredentialRolesSection } from "@blocks-idp/authentication/components/create-client-credential/client-credential-roles-section";
@@ -27,16 +29,19 @@ import { SignupLinkConfigurationFormValues } from "./configuration-form-schema";
 type Props = {
   form: UseFormReturn<SignupLinkConfigurationFormValues>;
   formLevelError?: string | null;
+  /** While a save is in flight, the fields whose value was already read into the request lock. */
+  isPending?: boolean;
 };
 
 /** The red marker the rest of the console uses on mandatory fields. */
 const Required = () => <span className="text-destructive"> *</span>;
 
-export const ConfigurationFormFields = ({ form, formLevelError }: Props) => {
+export const ConfigurationFormFields = ({ form, formLevelError, isPending = false }: Props) => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const mode = form.watch("mode");
   const selectedClientId = form.watch("clientId");
   const credentialMode = form.watch("credentialMode");
+  const requireExistingUserPassword = form.watch("requireExistingUserPassword");
 
   const { data: oidcData, isLoading: clientsLoading } = useGetAuthOidcCredentials({
     projectKey: tenantId,
@@ -250,8 +255,8 @@ export const ConfigurationFormFields = ({ form, formLevelError }: Props) => {
                 <Input {...field} placeholder="https://app.example.com/join (optional)" />
               </FormControl>
               <FormDescription>
-                Where your construct hosts its join screen. Used only to build the link handed
-                back at generation — leave it empty to compose the link yourself.
+                Where your construct hosts its join screen. Used only to build the link handed back
+                at generation — leave it empty to compose the link yourself.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -324,8 +329,7 @@ export const ConfigurationFormFields = ({ form, formLevelError }: Props) => {
                 </label>
               </div>
               <FormDescription>
-                Otherwise they finish on the sign-in screen and type the password they just
-                chose.
+                Otherwise they finish on the sign-in screen and type the password they just chose.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -335,6 +339,52 @@ export const ConfigurationFormFields = ({ form, formLevelError }: Props) => {
 
       {/* Offered only for PasswordRequired: Passwordless issues no activation key, so there
           is no activation for this to act on and the server rejects it. */}
+
+      {/* Shown in every mode and credential mode: it governs how a link treats someone who
+          already has an account, which is independent of how new users get a password. */}
+      <FormField
+        name="requireExistingUserPassword"
+        control={form.control}
+        render={({ field }) => (
+          <FormItem>
+            <div className="flex items-center justify-between gap-4 rounded-sm border p-3">
+              <div className="space-y-0.5">
+                <FormLabel className="text-sm">
+                  Existing users must confirm their password
+                </FormLabel>
+                <FormDescription className="text-xs">
+                  When on, someone who already has an account must enter their password before an
+                  invitation link signs them in.
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Switch
+                  size="md"
+                  data-testid="require-existing-user-password"
+                  checked={field.value !== false}
+                  onCheckedChange={(checked) => field.onChange(checked)}
+                  onBlur={field.onBlur}
+                  ref={field.ref}
+                  disabled={isPending}
+                />
+              </FormControl>
+            </div>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {requireExistingUserPassword === false && (
+        <Banner
+          variant="warning"
+          className="mb-0"
+          compact={false}
+          title="Existing users won't be asked for a password"
+        >
+          Anyone who can generate links from this configuration will be able to sign in as an
+          existing user without their password.
+        </Banner>
+      )}
 
       <FormField
         name="defaultLifetimeMinutes"
@@ -362,6 +412,31 @@ export const ConfigurationFormFields = ({ form, formLevelError }: Props) => {
               />
             </FormControl>
             <FormDescription>Between 5 and 10080 (7 days).</FormDescription>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        name="defaultMaxRedemptions"
+        control={form.control}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Max redemptions</FormLabel>
+            <FormControl>
+              <Input
+                type="text"
+                inputMode="numeric"
+                data-testid="default-max-redemptions"
+                placeholder="1 (single use)"
+                {...field}
+                value={field.value ?? ""}
+                disabled={isPending}
+              />
+            </FormControl>
+            <FormDescription>
+              Leave empty for single use. 0 = unlimited until the link expires.
+            </FormDescription>
             <FormMessage />
           </FormItem>
         )}

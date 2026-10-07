@@ -50,9 +50,12 @@ export async function createNewGroupFlow(page: Page, groupName: string) {
   const groupSearchInput = page.getByPlaceholder("Search or create a group...");
   await expect(groupSearchInput).toBeVisible({ timeout: 10_000 });
   await groupSearchInput.fill(groupName);
-  const createGroupOption = page.getByRole("option", {
-    name: `Create group.*${groupName}`,
-  });
+  // The option reads: Create group “<name>” Enter. A string name is matched as a
+  // literal substring, so the old ".*" pattern never matched; filter on both parts.
+  const createGroupOption = page
+    .getByRole("option")
+    .filter({ hasText: "Create group" })
+    .filter({ hasText: groupName });
   await expect(createGroupOption).toBeVisible({ timeout: 10_000 });
   await createGroupOption.click();
   await expect(groupCombobox).toHaveText(groupName, { timeout: 10_000 });

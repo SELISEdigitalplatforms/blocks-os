@@ -22,6 +22,12 @@ export interface ISignupLinkConfiguration {
   signInAfterActivation: boolean;
   defaultLifetimeMinutes: number;
   defaultMaxRedemptions: number | null;
+  /**
+   * Whether an already-active user must confirm their own password before a link signs them
+   * in. Optional so a response from an IAM that predates the field still types; a missing or
+   * null value means on, matching IAM's default for legacy documents.
+   */
+  requireExistingUserPassword?: boolean | null;
   isActive: boolean;
   createdDate: string;
   lastUpdatedDate: string;
@@ -66,12 +72,19 @@ export interface ISignupLinkConfigurationCreatePayload {
    */
   signInAfterActivation?: boolean;
   defaultLifetimeMinutes?: number;
+  /**
+   * null means "use IAM's default" (single use). 0 means unlimited until the link expires,
+   * so an empty form field must never become 0 — see max-redemptions.ts.
+   */
   defaultMaxRedemptions?: number | null;
+  /** Always sent, in every mode, so each configuration stores an explicit value. */
+  requireExistingUserPassword?: boolean;
 }
 
-export type ISignupLinkConfigurationUpdatePayload = Partial<ISignupLinkConfigurationCreatePayload> & {
-  itemId: string;
-};
+export type ISignupLinkConfigurationUpdatePayload =
+  Partial<ISignupLinkConfigurationCreatePayload> & {
+    itemId: string;
+  };
 
 /** Maps IAM PascalCase field errors onto form field names. */
 export const SIGNUP_LINK_CONFIGURATION_FIELD_ERROR_MAP: Record<
@@ -88,6 +101,8 @@ export const SIGNUP_LINK_CONFIGURATION_FIELD_ERROR_MAP: Record<
   | "joinUrl"
   | "signInAfterActivation"
   | "defaultLifetimeMinutes"
+  | "defaultMaxRedemptions"
+  | "requireExistingUserPassword"
 > = {
   Name: "name",
   Description: "description",
@@ -101,4 +116,6 @@ export const SIGNUP_LINK_CONFIGURATION_FIELD_ERROR_MAP: Record<
   JoinUrl: "joinUrl",
   SignInAfterActivation: "signInAfterActivation",
   DefaultLifetimeMinutes: "defaultLifetimeMinutes",
+  DefaultMaxRedemptions: "defaultMaxRedemptions",
+  RequireExistingUserPassword: "requireExistingUserPassword",
 };

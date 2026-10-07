@@ -310,11 +310,21 @@ export async function templatesFlow(page: Page) {
 
   // ---------- Clone the first row ----------
   const sourceName = (await firstRow.locator("td").first().innerText()).trim();
-  await firstRow.getByRole("button", { name: "Open menu", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Clone Template", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Confirmation", exact: true })).toBeVisible({
-    timeout: 10_000,
-  });
+  // The list refetches after returning from the details page and can re-render
+  // under an open menu, which closes it. Reopen until the item is there.
+  // The click itself is retried too: a re-render can detach the item between the check and
+  // the click, and a plain click would then wait for it until the test times out.
+  const cloneItem = page.getByRole("menuitem", { name: "Clone Template", exact: true });
+  const confirmation = page.getByRole("heading", { name: "Confirmation", exact: true });
+  await expect(async () => {
+    if (!(await confirmation.isVisible())) {
+      if (!(await cloneItem.isVisible())) {
+        await firstRow.getByRole("button", { name: "Open menu", exact: true }).click();
+      }
+      await cloneItem.click({ timeout: 3_000 });
+    }
+    await expect(confirmation).toBeVisible({ timeout: 3_000 });
+  }).toPass({ timeout: 45_000 });
   await expect(page.getByText(`clone the ${sourceName} template`, { exact: false })).toBeVisible({
     timeout: 10_000,
   });
@@ -368,10 +378,11 @@ export async function incomingMailsFlow(page: Page) {
   await expect(table.getByRole("columnheader", { name: "From", exact: true })).toBeVisible({
     timeout: 15_000,
   });
-  await expect(table.getByRole("columnheader", { name: "To", exact: true })).toBeVisible({
+  // Inbound shows the receiving mailbox instead of a "To" column.
+  await expect(table.getByRole("columnheader", { name: "Subject", exact: true })).toBeVisible({
     timeout: 15_000,
   });
-  await expect(table.getByRole("columnheader", { name: "Subject", exact: true })).toBeVisible({
+  await expect(table.getByRole("columnheader", { name: "Mailbox", exact: true })).toBeVisible({
     timeout: 15_000,
   });
   await expect(table.getByRole("columnheader", { name: "Received Date", exact: true })).toBeVisible(

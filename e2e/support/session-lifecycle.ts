@@ -24,14 +24,13 @@ import { OS_SESSION_PATH, readOsProject } from "./os-project"
  */
 const SESSION_META_PATH = path.resolve(__dirname, "../fixtures/os-session-meta.json")
 
-// 5 minutes. Was 10 — too close to (or past) the real access-token TTL in
-// practice: three unrelated flows (organizations, environments, people) all
-// hit a 401 mid-test in the same long serial run at that interval. The
-// app's own silent refresh can't recover from that (genesis-os posts a
-// hardcoded empty refresh_token — see the comment above), so every 401 is
-// terminal for whatever request hit it. Shrinking the window is the only
-// lever available from the test side.
-const DEFAULT_REFRESH_INTERVAL_MS = 300_000
+// 3 minutes. The dev access token lives 300 s and the app's own silent refresh
+// cannot renew it (genesis-os posts a hardcoded empty refresh_token, see the
+// comment above), so every 401 is terminal for the request that hit it. At 10
+// and then 5 minutes, tests still started with seconds left on the token and
+// hit a 401 or the sign-in page mid-test (organizations, environments, people,
+// the Logs reload step). Shrinking the window is the only lever on the test side.
+const DEFAULT_REFRESH_INTERVAL_MS = 180_000
 
 function refreshIntervalMs(): number {
   const configured = Number(process.env.E2E_SESSION_REFRESH_INTERVAL_MS)

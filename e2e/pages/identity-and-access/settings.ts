@@ -62,7 +62,10 @@ export async function resetDiscardsEditFlow(page: Page) {
 export async function saveValidAuthSettingFlow(page: Page) {
   const lockoutInput = page.getByLabel("Maximum Failed Login Attempts");
   await expect(lockoutInput).toBeVisible({ timeout: 5_000 });
-  await lockoutInput.fill("7");
+  // The shared project keeps the last run's value, and re-entering the same
+  // number leaves the form pristine (Save disabled). Alternate 7 and 8.
+  const current = await lockoutInput.inputValue();
+  await lockoutInput.fill(current === "7" ? "8" : "7");
 
   const saveButton = page.getByRole("button", { name: "Save" });
   await expect(saveButton).toBeEnabled({ timeout: 10_000 });
@@ -122,6 +125,22 @@ export async function toggleLogoutAndEditRegexFlow(page: Page) {
   );
 }
 
+/**
+ * The assign dialogs load their list after opening, and isVisible() does not
+ * wait, so the old check often saw no checkbox, toggled nothing, and left Save
+ * disabled once Sign Up was already on from an earlier run. Wait for the list
+ * (or its empty state) and toggle the first entry, which always differs from
+ * what is stored.
+ */
+async function toggleFirstListedItem(page: Page, emptyText: RegExp) {
+  const dialog = page.getByRole("dialog");
+  const firstCheckbox = dialog.getByRole("checkbox").first();
+  await expect(firstCheckbox.or(dialog.getByText(emptyText))).toBeVisible({ timeout: 15_000 });
+  if (await firstCheckbox.isVisible()) {
+    await firstCheckbox.click();
+  }
+}
+
 export async function enableSignupAndAssignRolesFlow(page: Page) {
   const signUpSwitch = page.getByLabel("Sign Up Enabled");
   await expect(signUpSwitch).toBeVisible({ timeout: 8_000 });
@@ -134,10 +153,7 @@ export async function enableSignupAndAssignRolesFlow(page: Page) {
   if (await manageRolesButton.isVisible({ timeout: 5_000 })) {
     await manageRolesButton.click();
     await expect(page.getByRole("heading", { name: "Assign roles" })).toBeVisible();
-    const firstRoleCheckbox = page.getByRole("checkbox").first();
-    if (await firstRoleCheckbox.isVisible({ timeout: 5_000 })) {
-      await firstRoleCheckbox.click();
-    }
+    await toggleFirstListedItem(page, /No roles (are )?found/);
     await page.getByRole("button", { name: "Set", exact: true }).click();
   }
 
@@ -148,10 +164,7 @@ export async function enableSignupAndAssignRolesFlow(page: Page) {
     await expect(page.getByRole("heading", { name: "Assign permissions" })).toBeVisible({
       timeout: 8_000,
     });
-    const firstPermissionCheckbox = page.getByRole("checkbox").first();
-    if (await firstPermissionCheckbox.isVisible({ timeout: 5_000 })) {
-      await firstPermissionCheckbox.click();
-    }
+    await toggleFirstListedItem(page, /No permissions (are )?found/);
     await page.getByRole("button", { name: "Set", exact: true }).click();
   }
 

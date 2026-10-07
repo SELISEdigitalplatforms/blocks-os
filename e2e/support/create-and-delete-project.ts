@@ -188,7 +188,7 @@ export async function createProject(page: Page) {
     const nameInput = page.locator('[placeholder="Enter your project name"]:visible')
     await nameInput.fill(projectName)
 
-    await page.getByRole("checkbox", { name: /confirm that I will use/i }).click()
+    await page.getByRole("checkbox", { name: /Use Blocks exclusively|confirm that I will use/i }).click()
     await page.getByRole("checkbox", { name: /accept the Terms of services/i }).click()
 
     const continueButton = page.getByRole("button", { name: "Continue", exact: true })
@@ -208,7 +208,7 @@ export async function createProject(page: Page) {
       page.getByText("Select environments", { exact: true }).and(page.locator(":visible")),
     ).toBeVisible({ timeout: 30_000 })
 
-    await page.getByText("Development", { exact: true }).and(page.locator(":visible")).click()
+    await page.getByRole("checkbox", { name: "Development", exact: true }).click()
     const submitButton = page.getByRole("button", { name: "Submit" })
     await expect(submitButton).toBeEnabled()
     await submitButton.click()
@@ -552,9 +552,22 @@ async function openProjectById(page: Page, projectId: string) {
   await gotoSettled(page, `${e2eBaseUrl()}/app/${projectId}/dashboard`)
   await waitForOsDashboardReady(page)
 
+  // The id is the stable key. Read the name the dashboard shows now, because a
+  // previous run's project-settings flow may have renamed the project and the
+  // configured E2E_REUSE_PROJECT_NAME would then never match the console card.
   const reuseName =
     process.env.E2E_REUSE_PROJECT_NAME?.trim() || process.env.E2E_PROJECT_NAME?.trim()
-  const projectName = reuseName || (await readProjectNameFromDashboard(page))
+  const dashboardName = await readProjectNameFromDashboard(page).catch(() => "")
+  if (reuseName && dashboardName && dashboardName !== reuseName) {
+    e2eDebugLog(
+      `[e2e] project ${projectId} is named "${dashboardName}" on the dashboard; ` +
+        `ignoring E2E_REUSE_PROJECT_NAME="${reuseName}"`,
+    )
+  }
+  const projectName = dashboardName || reuseName
+  if (!projectName) {
+    throw new Error(`Could not read project name from dashboard: ${page.url()}`)
+  }
   const tenantGroupId = await resolveTenantGroupId(page)
 
   return {

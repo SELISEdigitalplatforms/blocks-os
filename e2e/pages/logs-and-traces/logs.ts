@@ -1,5 +1,7 @@
 import { expect, type Page } from "@playwright/test";
+import { isLoginSurface } from "../../support/login-helper";
 import { openLmt } from "../../support/os-helpers";
+import { refreshSuiteSession } from "../../support/session-lifecycle";
 
 export async function navigateToLogsFlow(page: Page) {
   await openLmt(page, "logs");
@@ -27,8 +29,19 @@ export async function toggleMyServiceSourceFlow(page: Page) {
 }
 
 export async function sourceParamSurvivesReloadFlow(page: Page) {
+  const logsUrl = page.url();
   await page.reload();
+  // The app cannot renew an expired access token (see session-lifecycle.ts), so
+  // a hard reload late in the token's life lands on the sign-in page. Sign in
+  // again and reopen the same URL; the check is about the query param.
+  if (await isLoginSurface(page)) {
+    await refreshSuiteSession(page);
+    await page.goto(logsUrl, { waitUntil: "domcontentloaded" });
+  }
   await page.waitForURL(/source=managed/, { timeout: 15_000 });
+  await expect(page.getByRole("tab", { name: "Managed Service" })).toBeVisible({
+    timeout: 45_000,
+  });
 }
 
 export async function openServiceLogDetailsFlow(page: Page): Promise<boolean> {
