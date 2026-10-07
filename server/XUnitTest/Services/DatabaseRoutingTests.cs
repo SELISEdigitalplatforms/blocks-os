@@ -63,8 +63,20 @@ public class DatabaseRoutingTests
                 collection.Setup(c => c.FindAsync(It.IsAny<FilterDefinition<BsonDocument>>(), It.IsAny<FindOptions<BsonDocument, BsonDocument>>(), default))
                     .ReturnsAsync(() => Cursor(name is "Roles" or "Permissions" or "StorageConfigurations"
                         ? new[] { new BsonDocument("_id", name) } : Array.Empty<BsonDocument>()));
+                collection.Setup(c => c.Indexes).Returns(IndexManager(
+                    new BsonDocument { { "name", "_id_" }, { "key", new BsonDocument("_id", 1) } },
+                    new BsonDocument { { "name", "blk_roles_slug" }, { "key", new BsonDocument("Slug", 1) } }));
                 return collection.Object;
             });
+        // Seed schema step: the seed is read on main, collections and indexes land on the stored placement.
+        source.Setup(d => d.ListCollectionsAsync(It.IsAny<ListCollectionsOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => Cursor(new[] { new BsonDocument { { "name", "Roles" }, { "type", "collection" } } }));
+        target.Setup(d => d.ListCollectionNamesAsync(It.IsAny<ListCollectionNamesOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => Cursor(Array.Empty<string>()));
+        target.Setup(d => d.CreateCollectionAsync("Roles", It.IsAny<CreateCollectionOptions>(), It.IsAny<CancellationToken>()))
+            .Callback(() => { lock (writes) writes.Add("create:Roles"); }).Returns(Task.CompletedTask);
+        target.Setup(d => d.RunCommandAsync(It.IsAny<Command<BsonDocument>>(), It.IsAny<ReadPreference>(), It.IsAny<CancellationToken>()))
+            .Callback(() => { lock (writes) writes.Add("index:Roles"); }).ReturnsAsync(new BsonDocument("ok", 1));
         target.Setup(d => d.ListCollectionNames(It.IsAny<ListCollectionNamesOptions>(), default))
             .Returns(() => Cursor(Array.Empty<string>()));
         target.Setup(d => d.GetCollection<BsonDocument>(It.IsAny<string>(), null))
@@ -75,6 +87,8 @@ public class DatabaseRoutingTests
                     .Callback(() => { lock (writes) writes.Add(name); }).Returns(Task.CompletedTask);
                 collection.Setup(c => c.InsertManyAsync(It.IsAny<IEnumerable<BsonDocument>>(), null, default))
                     .Callback(() => { lock (writes) writes.Add(name); }).Returns(Task.CompletedTask);
+                collection.Setup(c => c.Indexes).Returns(IndexManager(
+                    new BsonDocument { { "name", "_id_" }, { "key", new BsonDocument("_id", 1) } }));
                 return collection.Object;
             });
         var encoding = new Mock<IEncodingService>();
@@ -96,6 +110,8 @@ public class DatabaseRoutingTests
         Assert.Contains("Roles", writes);
         Assert.Contains("Permissions", writes);
         Assert.Contains("StorageConfigurations", writes);
+        Assert.Contains("create:Roles", writes);
+        Assert.Contains("index:Roles", writes);
         registry.Verify(c => c.InsertOneAsync(tenant, null, default), Times.Once);
         provider.Verify(p => p.GetDatabase(It.IsAny<string>()), Times.Never);
         root.Verify(d => d.GetCollection<BsonDocument>(It.IsAny<string>(), null), Times.Never);
@@ -164,6 +180,13 @@ public class DatabaseRoutingTests
             collection.Verify(c => c.InsertOneAsync(It.Is<BlocksManagedService>(s => s.ItemId == owner), null, default), Times.Once);
             collection.Verify(c => c.InsertOneAsync(It.Is<BlocksManagedService>(s => s.ItemId != owner), null, default), Times.Never);
         }
+    }
+
+    private static IMongoIndexManager<BsonDocument> IndexManager(params BsonDocument[] indexes)
+    {
+        var manager = new Mock<IMongoIndexManager<BsonDocument>>();
+        manager.Setup(m => m.ListAsync(It.IsAny<CancellationToken>())).ReturnsAsync(() => Cursor(indexes));
+        return manager.Object;
     }
 
     private static IAsyncCursor<T> Cursor<T>(IEnumerable<T> items)
