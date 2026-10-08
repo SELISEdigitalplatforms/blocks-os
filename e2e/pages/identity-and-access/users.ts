@@ -1,6 +1,5 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 import path from "path";
-import { e2eDebugLog } from "../../support/env";
 import { openIam } from "../../support/os-helpers";
 
 const TEST_AVATAR_PATH = path.resolve(__dirname, "../../fixtures/test-avatar.png");
@@ -128,7 +127,12 @@ async function selectInviteOrganization(
   organizationName?: string,
 ) {
   const orgTrigger = inviteDialog.getByRole("combobox");
-  const orgComboboxVisible = await orgTrigger.isVisible({ timeout: 8_000 });
+  // locator.isVisible() ignores its timeout and checks once — use waitFor to
+  // actually give the picker time to render.
+  const orgComboboxVisible = await orgTrigger
+    .waitFor({ state: "visible", timeout: 8_000 })
+    .then(() => true)
+    .catch(() => false);
   if (!orgComboboxVisible) {
     if (organizationName) {
       throw new Error(
@@ -142,19 +146,25 @@ async function selectInviteOrganization(
   const alreadySelected = await orgTrigger.getByText(targetName, { exact: true }).isVisible();
   if (!alreadySelected) {
     await orgTrigger.click();
+    // The picker only fetches once opened, debounces the search by 500ms and
+    // searches server-side (organization-combobox.tsx), showing "Loading
+    // organizations..." meanwhile — so the option must be waited for, not
+    // checked once.
     const search = page.getByPlaceholder("Search organizations...");
-    if (await search.isVisible({ timeout: 3_000 })) {
-      await search.fill(targetName);
-    }
-    const option = page.getByRole("option", { name: targetName, exact: true });
-    if (await option.isVisible({ timeout: 8_000 })) {
+    await expect(search).toBeVisible({ timeout: 5_000 });
+    await search.fill(targetName);
+    const optionsList = page.getByTestId("organization-options-list");
+    const option = optionsList.getByRole("option", { name: targetName, exact: true });
+    if (organizationName) {
+      await expect(
+        option,
+        `Organization "${organizationName}" not in Invite User picker.`,
+      ).toBeVisible({ timeout: 20_000 });
       await option.click();
-    } else if (!organizationName) {
-      const firstOrg = page.getByTestId("organization-options-list").getByRole("option").first();
-      await expect(firstOrg).toBeVisible({ timeout: 8_000 });
-      await firstOrg.click();
     } else {
-      throw new Error(`Organization "${organizationName}" not in Invite User picker.`);
+      const firstOrg = optionsList.getByRole("option").first();
+      await expect(option.or(firstOrg).first()).toBeVisible({ timeout: 20_000 });
+      await ((await option.isVisible()) ? option : firstOrg).click();
     }
   }
 
@@ -316,15 +326,19 @@ export async function uploadValidProfilePictureFlow(page: Page) {
   });
   // Fresh e2e projects often have no "Default" storage configuration — the
   // uploader hard-requires that name. Treat a surfaced error as an env skip
-  // rather than a product regression in the users flow.
+  // rather than a product regression in the users flow. When the storage
+  // service returns an error code, profile-image-uploader.tsx shows that raw
+  // code (e.g. "default_directory_not_found") instead of its friendly
+  // fallback, and a rejected upload shows "Profile picture failed verification".
   const errorToast = notifications.getByText(
-    /Unable to upload profile picture|Something went wrong|Default storage|storage configuration/i,
+    /Unable to upload profile picture|Something went wrong|Default storage|storage configuration|default_directory_not_found|failed verification/i,
   );
 
   await expect(successToast.or(errorToast)).toBeVisible({ timeout: 20_000 });
   if (await errorToast.isVisible()) {
-    e2eDebugLog(
-      "[users-flow] Profile pic upload failed (likely missing Default storage) — continuing without it.",
+    console.warn(
+      `[users-flow] Profile pic upload failed ("${await errorToast.first().textContent()}", ` +
+        "likely missing Default storage) — continuing without it.",
     );
     return;
   }

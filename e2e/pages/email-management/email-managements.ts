@@ -266,6 +266,20 @@ export async function templatesFlow(page: Page) {
   // ---------- At least one built-in row ----------
   const firstRow = table.getByRole("row").nth(1);
   await expect(firstRow).toBeVisible({ timeout: 30_000 });
+  // An empty table renders a single "No templates found." row with no menu.
+  // Built-in templates come from the background seed copy, not from this
+  // test — say so instead of timing out on a missing "Open menu" button.
+  const emptyState = tabpanel.getByText("No templates found.", { exact: true });
+  await expect(
+    firstRow.getByRole("button", { name: "Open menu", exact: true }).or(emptyState),
+  ).toBeVisible({ timeout: 30_000 });
+  if (await emptyState.isVisible()) {
+    throw new Error(
+      "The project has no email templates. Built-in templates are copied from the " +
+        "BlocksConfiguration seed database by the background project-provisioning " +
+        "worker; check the suite setup log for whether that copy finished.",
+    );
+  }
   await expect(firstRow.getByRole("button", { name: "Open menu", exact: true })).toBeVisible({
     timeout: 15_000,
   });

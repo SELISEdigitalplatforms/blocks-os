@@ -6,11 +6,13 @@
  * Extra CLI args are forwarded to Playwright (e.g. --headed, --ui, --debug).
  */
 import { spawnSync } from "node:child_process"
+import { createRequire } from "node:module"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { orderedSuiteSpecs, resolveEnabledFeatures } from "./features.mjs"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const require = createRequire(import.meta.url)
 
 function main() {
   const features = resolveEnabledFeatures()
@@ -31,10 +33,17 @@ function main() {
   const hasSpecFilter = forwardedArgs.some(looksLikeSpecArg)
   const specArgs = hasSpecFilter ? [] : orderedSuiteSpecs()
 
+  // Run Playwright's own CLI script with the current node binary instead of
+  // going through `npx`. On Windows `npx` is `npx.cmd`, which spawnSync can
+  // only find through a shell; a plain .js file under node_modules runs the
+  // same way on Windows, Linux and macOS, with no shell and no argument
+  // re-quoting, and always uses the locally installed Playwright version.
+  const playwrightCli = require.resolve("@playwright/test/cli")
+
   const result = spawnSync(
-    "npx",
+    process.execPath,
     [
-      "playwright",
+      playwrightCli,
       "test",
       ...forwardedArgs,
       "--project=setup",
@@ -46,14 +55,12 @@ function main() {
       cwd: __dirname,
       stdio: "inherit",
       env: process.env,
-      // Windows: node's spawnSync does not append .cmd, so `npx` resolves to
-      // nothing and the call fails with ENOENT. Delegate to the OS shell so
-      // it can find npx.cmd. All args are hard-coded spec paths or trusted
-      // forwarded flags, so the shell-injection warning does not apply.
-      shell: false,
     },
   )
 
+  if (result.error) {
+    console.error(`[e2e] Could not start Playwright: ${result.error.message}`)
+  }
   process.exit(result.status ?? 1)
 }
 

@@ -1,5 +1,5 @@
-import { expect, type Page } from "@playwright/test";
-import { openProjectOverview } from "../../support/os-helpers";
+import { expect, type Locator, type Page } from "@playwright/test";
+import { openProjectOverview, waitForProjectOverviewSettled } from "../../support/os-helpers";
 import {
   waitForEnvironmentsListReady,
   openEnvironmentCardDashboard,
@@ -20,13 +20,24 @@ export async function verifyEnvironmentCardVisibleFlow(page: Page) {
 }
 
 /**
+ * Waits up to `timeout` for the locator to show. Unlike locator.isVisible(),
+ * which ignores its timeout and checks only once.
+ */
+function waitUntilVisible(locator: Locator, timeout: number): Promise<boolean> {
+  return locator
+    .waitFor({ state: "visible", timeout })
+    .then(() => true)
+    .catch(() => false);
+}
+
+/**
  * Opens the Add Environment dialog and selects a row, returning its (still
  * disabled-until-checked) Add button. Returns null when there's nothing to
  * add (no New Environment button, or no environment left to pick).
  */
 async function openAddEnvironmentDialogAndSelect(page: Page) {
   const newEnvButton = page.getByRole("button", { name: "New Environment" });
-  if (!(await newEnvButton.isVisible({ timeout: 5000 }))) {
+  if (!(await waitUntilVisible(newEnvButton, 15000))) {
     return null;
   }
   await newEnvButton.click();
@@ -34,7 +45,7 @@ async function openAddEnvironmentDialogAndSelect(page: Page) {
   await expect(addDialog).toBeVisible({ timeout: 10000 });
 
   const firstCheckbox = addDialog.getByRole("checkbox").first();
-  if (!(await firstCheckbox.isVisible({ timeout: 5000 }))) {
+  if (!(await waitUntilVisible(firstCheckbox, 5000))) {
     await page.keyboard.press("Escape");
     return null;
   }
@@ -42,16 +53,24 @@ async function openAddEnvironmentDialogAndSelect(page: Page) {
   const addButton = addDialog.getByRole("button", { name: "Add" });
   await expect(addButton).toBeDisabled();
 
+  // `has` locators are resolved inside each candidate div, so they must start
+  // from `page`, not `addDialog` — a dialog-rooted inner locator never matches.
   const testingRow = addDialog
     .locator("div")
-    .filter({ has: addDialog.getByText("Testing", { exact: true }) })
-    .filter({ has: addDialog.getByRole("checkbox") })
-    .first();
-  if (await testingRow.isVisible({ timeout: 2000 })) {
-    await testingRow.getByRole("checkbox").click({ force: true });
-  } else {
-    await firstCheckbox.click({ force: true });
-  }
+    .filter({ has: page.getByText("Testing", { exact: true }) })
+    .filter({ has: page.getByRole("checkbox") })
+    .last();
+  const checkbox =
+    (await testingRow.count()) > 0 ? testingRow.getByRole("checkbox") : firstCheckbox;
+
+  // No force-click: the dialog slides in, and a forced click computed mid-
+  // animation lands on dialog padding without toggling anything. A plain
+  // click waits for the checkbox to be stable; retry until it really is
+  // checked in case the first click still raced the animation.
+  await expect(async () => {
+    if (!(await checkbox.isChecked())) await checkbox.click();
+    await expect(checkbox).toBeChecked({ timeout: 1000 });
+  }).toPass({ timeout: 10000 });
   await expect(addButton).toBeEnabled({ timeout: 10000 });
   return addButton;
 }
@@ -140,13 +159,21 @@ export async function verifyStartMigrationDisabledFlow(page: Page) {
 }
 
 async function pickEnvironmentOption(page: Page, trigger: string, index: number) {
-  await page.getByRole("combobox", { name: trigger }).click();
+  const combobox = page.getByRole("combobox", { name: trigger });
   const listbox = page.getByRole("listbox");
-  await expect(listbox).toBeVisible({ timeout: 10000 });
-  const option = listbox.getByRole("option").nth(index);
-  const label = ((await option.textContent()) ?? "").trim();
-  await option.click();
-  await expect(listbox).toBeHidden();
+  let label = "";
+  // A click that lands while the Select is still animating open can close it
+  // without picking anything, leaving the placeholder in place. Retry until
+  // the trigger actually shows the picked option.
+  await expect(async () => {
+    if (!(await listbox.isVisible())) await combobox.click();
+    await expect(listbox).toBeVisible({ timeout: 5000 });
+    const option = listbox.getByRole("option").nth(index);
+    label = ((await option.textContent()) ?? "").trim();
+    await option.click();
+    await expect(listbox).toBeHidden({ timeout: 2000 });
+    await expect(combobox).toContainText(label, { timeout: 2000 });
+  }).toPass({ timeout: 20000 });
   return label;
 }
 
@@ -211,7 +238,9 @@ export async function openMigrationWizardFlow(
   options: { exerciseClear?: boolean } = {},
 ): Promise<boolean> {
   const startMigrationButton = page.getByRole("button", { name: "Start Migration" });
-  if (!(await startMigrationButton.isVisible({ timeout: 8000 }))) {
+  // Allow for the "Returning to the console…" screen the project-overview
+  // layout shows while it ends a lingering environment impersonation.
+  if (!(await waitUntilVisible(startMigrationButton, 30000))) {
     return false;
   }
   const environmentCount = await readAccessibleEnvironmentCount(page);
@@ -227,6 +256,14 @@ export async function openMigrationWizardFlow(
     timeout: 15000,
   });
   await expect(page.getByText("Environments & services", { exact: true }).last()).toBeVisible();
+  // The wizard can still be swapped for the full-screen loading spinner and
+  // remounted right after it first shows. If that happens while a Select is
+  // open, the Select is torn down mid-open and leaves the page ignoring
+  // pointer events, so every later click fails. Let it settle first.
+  await waitForProjectOverviewSettled(
+    page,
+    page.getByRole("combobox", { name: "Source environment" }),
+  );
 
   if (options.exerciseClear) {
     await verifyClearableEnvironmentSelectorsFlow(page);
