@@ -1,5 +1,7 @@
 import { expect, type Locator, type Page, type Request } from "@playwright/test";
+import { isLoginSurface } from "../../support/login-helper";
 import { openIam } from "../../support/os-helpers";
+import { refreshSuiteSession } from "../../support/session-lifecycle";
 
 /** The page heading is served by localization; dev currently shows "One-Click Signup". */
 export const SIGNUP_LINK_CONFIGURATIONS_HEADING = /^(One-Click Signup|Signup Link Configurations)$/;
@@ -172,10 +174,27 @@ export async function expectConfigurationRowFlow(
   name: string,
   cells: { maxUses: string; existingUserPassword: string },
 ) {
-  const row = configurationRow(page, name);
-  await expect(row).toBeVisible({ timeout: 20_000 });
-  await expect(row.getByTestId("max-uses")).toHaveText(cells.maxUses);
-  await expect(row.getByTestId("existing-user-password")).toHaveText(cells.existingUserPassword);
+  const assertRow = async () => {
+    const row = configurationRow(page, name);
+    await expect(row).toBeVisible({ timeout: 20_000 });
+    await expect(row.getByTestId("max-uses")).toHaveText(cells.maxUses);
+    await expect(row.getByTestId("existing-user-password")).toHaveText(
+      cells.existingUserPassword,
+    );
+  };
+
+  try {
+    await assertRow();
+  } catch (error) {
+    // The app's token refresh is broken (see session-lifecycle.ts): an access
+    // token that expires right after a save sends the page to sign-in before
+    // the list refetch renders the new values. The save itself already went
+    // through, so sign in again, reopen the list and check the stored row.
+    if (!(await isLoginSurface(page))) throw error;
+    await refreshSuiteSession(page);
+    await navigateToSignupLinkConfigurationsFlow(page);
+    await assertRow();
+  }
 }
 
 export async function openEditConfigurationFlow(page: Page, name: string) {

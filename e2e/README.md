@@ -120,6 +120,7 @@ npm run report        # from e2e/
 | `E2E_PROJECT_ID` | Open project by UUID — skips console card search |
 | `E2E_KEEP_PROJECT=1` | Never delete shared project after run |
 | `E2E_NO_WEBSERVER=1` | Don't auto-start the app |
+| `E2E_SEED_TIMEOUT_MS` | How long suite setup waits for a new project's default data (templates, roles, languages…) to be copied in by the background worker (default 300000) |
 | `E2E_PAUSE_MS` | Hold browser after each test (headed debugging) |
 | `E2E_SLOWMO` | Slow motion ms per Playwright action |
 

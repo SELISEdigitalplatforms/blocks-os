@@ -37,8 +37,16 @@ export async function lockoutValidationFlow(page: Page) {
   // set — so clicking Save is what surfaces the validation message.
   await expect(saveButton).toBeEnabled({ timeout: 10_000 });
   await saveButton.click();
-  // Strict: zero MUST surface the validation error.
-  await expect(page.getByText("Value must be greater than zero.")).toBeVisible();
+  // Strict: zero MUST surface the validation error on the lockout field.
+  // Scope to that field's own message — a fresh project loads every numeric
+  // Auth field as 0, so Save flags all six and a page-wide getByText hits a
+  // strict-mode violation. FormControl gives the input id "<id>-form-item"
+  // and FormMessage renders as "<id>-form-item-message".
+  await expect(lockoutInput).toHaveAttribute("aria-invalid", "true");
+  const lockoutInputId = await lockoutInput.getAttribute("id");
+  await expect(page.locator(`[id="${lockoutInputId}-message"]`)).toHaveText(
+    "Value must be greater than zero.",
+  );
 }
 
 export async function resetDiscardsEditFlow(page: Page) {

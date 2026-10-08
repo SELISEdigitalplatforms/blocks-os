@@ -52,48 +52,49 @@ export async function openServiceLogDetailsFlow(page: Page): Promise<boolean> {
     timeout: 30_000,
   });
 
-  // Wait for the list to reach a terminal state: either service cards
-  // appear, trace links appear, or the empty state surfaces. The "Loading
-  // services..." spinner flickers in/out as data loads, so polling all
-  // three terminal states concurrently is more reliable than waiting for
-  // the spinner to disappear (which can briefly succeed mid-refresh).
+  // Wait for the list to reach a terminal state: service cards, trace
+  // links, "No services found." (no service registered), or "No logs
+  // found" (a service is auto-selected — e.g. the one My Services flow
+  // registers earlier in the run — but it has no log traffic). The
+  // "Loading services..." spinner and the log skeleton rows flicker as data
+  // loads, so wait on all terminal states at once rather than for the
+  // loader to disappear. (locator.isVisible() ignores its timeout and
+  // checks only once, so it can't be used for this wait.)
   const serviceOption = page.getByRole("button", { name: /View logs for/ }).first();
   const traceLink = page.getByRole("link", { name: /View trace details for/ }).first();
-  const emptyState = page.getByText("No services found.", { exact: true });
+  const noServices = page.getByText("No services found.", { exact: true });
+  const noLogs = page.getByText("No logs found", { exact: true });
   const loadingState = page.getByText("Loading services...");
 
-  const [cardVisible, streamVisible, emptyVisible] = await Promise.all([
-    serviceOption.isVisible({ timeout: 30_000 }),
-    traceLink.isVisible({ timeout: 30_000 }),
-    emptyState.isVisible({ timeout: 30_000 }),
-  ]);
-
-  if (!cardVisible && !streamVisible && !emptyVisible) {
+  try {
+    await expect(serviceOption.or(traceLink).or(noServices).or(noLogs).first()).toBeVisible({
+      timeout: 30_000,
+    });
+  } catch (error) {
     // Last-resort: if the loader is still showing, the backend didn't
     // respond in time on a fresh project. Don't hard-fail the whole flow
     // — the test exercises the UI, and a slow backend is an environment
     // problem, not a test contract violation. Skip downstream detail-
     // page steps.
-    if (await loadingState.isVisible({ timeout: 1_000 })) {
+    if (await loadingState.isVisible()) {
       return false;
     }
     throw new Error(
       "Logs page is in an unexpected state — no service cards, no trace links, " +
         "no empty state, and the loader has cleared. UI may have drifted; " +
         "see snapshots.",
+      { cause: error },
     );
   }
 
-  if (!cardVisible && !streamVisible) {
+  if (await serviceOption.isVisible()) {
+    await serviceOption.click();
+  } else if (await traceLink.isVisible()) {
+    await traceLink.click();
+  } else {
     // Empty-state path: nothing to click. Downstream steps assume a
     // service-details page, so signal that with a false return.
     return false;
-  }
-
-  if (cardVisible) {
-    await serviceOption.click();
-  } else {
-    await traceLink.click();
   }
   await expect(page.getByRole("heading").first()).toBeVisible();
   return true;

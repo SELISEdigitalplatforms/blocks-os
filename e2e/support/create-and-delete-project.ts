@@ -167,6 +167,12 @@ export async function createProject(page: Page) {
     await freeProjectSlotIfNeeded(page)
 
     // Prefer the empty-console CTA when present; fall back to Add Project on a populated console.
+    // Wait for one of the two to render before choosing: the console can still be finishing an
+    // OIDC redirect here, and a one-shot isVisible() check then sees neither and picks the
+    // wrong branch.
+    await expect(
+      createProjectButton.or(welcomeHeading).or(addProjectButton).first(),
+    ).toBeVisible({ timeout: 30_000 })
     if (
       (await createProjectButton.isVisible().catch(() => false)) ||
       (await welcomeHeading.isVisible().catch(() => false))
@@ -865,26 +871,49 @@ export async function listEnvironmentItemIds(
   page: Page,
   tenantGroupId: string,
 ): Promise<string[]> {
-  const getsMatcher = (response: { url: () => string; ok: () => boolean }) =>
-    /\/api\/Project\/Gets/i.test(response.url()) &&
-    response.url().includes(`tenantGroupId=${tenantGroupId}`) &&
-    response.ok()
+  // Read the body inside the predicate. The overview page re-renders right
+  // after it loads (ending an environment impersonation invalidates every
+  // query) and Chrome can drop the first response's body before a later
+  // response.json() reaches it ("No resource with given identifier found").
+  // A body that can't be read just means waiting for the refetch.
+  const waitForGetsBody = () => {
+    let body: unknown
+    const matched = page.waitForResponse(
+      async (response) => {
+        if (
+          !/\/api\/Project\/Gets/i.test(response.url()) ||
+          !response.url().includes(`tenantGroupId=${tenantGroupId}`) ||
+          !response.ok()
+        ) {
+          return false
+        }
+        try {
+          body = await response.json()
+          return true
+        } catch {
+          return false
+        }
+      },
+      { timeout: 45_000 },
+    )
+    return matched.then(() => body)
+  }
 
-  const responsePromise = page.waitForResponse(getsMatcher, { timeout: 45_000 })
+  const bodyPromise = waitForGetsBody()
   await page.goto(`${e2eBaseUrl()}/app/project/${tenantGroupId}/environments`, {
     waitUntil: "domcontentloaded",
   })
   if (await isLoginSurface(page)) {
+    // The first wait may never resolve now — don't leave it as an unhandled rejection.
+    bodyPromise.catch(() => undefined)
     await ensureAuthenticated(page)
-    const retry = page.waitForResponse(getsMatcher, { timeout: 45_000 })
+    const retry = waitForGetsBody()
     await page.goto(`${e2eBaseUrl()}/app/project/${tenantGroupId}/environments`, {
       waitUntil: "domcontentloaded",
     })
-    const response = await retry
-    return itemIdsFromProjectGetsBody(await response.json())
+    return itemIdsFromProjectGetsBody(await retry)
   }
-  const response = await responsePromise
-  return itemIdsFromProjectGetsBody(await response.json())
+  return itemIdsFromProjectGetsBody(await bodyPromise)
 }
 
 /** Persist known environment ids on the shared fixture (create / add-env flows). */
