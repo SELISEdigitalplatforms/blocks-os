@@ -118,6 +118,12 @@ export const OS_FEATURES = [
     spec: "tests/04-identity-and-access/02-users-flow.spec.ts",
   },
   {
+    id: "org-membership-notify",
+    name: "Identity & Access — Organization membership notify",
+    enabled: true,
+    spec: "tests/04-identity-and-access/08-organization-membership-notify.spec.ts",
+  },
+  {
     id: "roles",
     name: "Identity & Access — Roles",
     enabled: true,
