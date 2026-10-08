@@ -42,6 +42,7 @@ import {
   useGetOrganizations,
 } from "@blocks-idp/iam/hooks/use-organization";
 import { OrganizationCombobox } from "@blocks-idp/iam/components/organization-combobox";
+import { NotifyUserCheckbox } from "@blocks-idp/iam/components/notify-user-checkbox";
 
 type InviteFormValues = z.infer<typeof inviteUserFormSchema>;
 
@@ -51,6 +52,7 @@ export const InviteUser = () => {
   const { isPending: isCreatingUser, mutateAsync: createUser } = useAddUser();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const [open, setOpen] = useState(false);
+  const [notifyUser, setNotifyUser] = useState(true);
 
   const { data: orgsData } = useGetOrganizations({
     projectKey: tenantId,
@@ -124,6 +126,7 @@ export const InviteUser = () => {
   useEffect(() => {
     if (!open) {
       form.reset();
+      setNotifyUser(true);
       return;
     }
     // When multi-org is disabled we don't show an org picker, and the server
@@ -159,6 +162,7 @@ export const InviteUser = () => {
           organizationId: isMultiOrgEnabled ? selectedOrgId : DEFAULT_ORGANIZATION_ID,
           roles: [],
           permissions: [],
+          notifyUser,
         });
         if (!res.isSuccess) {
           const msg =
@@ -185,6 +189,7 @@ export const InviteUser = () => {
         platform: "blocks_portal",
         projectKey: tenantId,
         ...(isMultiOrgEnabled ? { organizationId: selectedOrgId } : {}),
+        notifyUser,
       });
       if (!res.isSuccess) {
         const msg =
@@ -306,6 +311,17 @@ export const InviteUser = () => {
                       <FormMessage />
                     </FormItem>
                   )}
+                />
+              )}
+
+              {/* A new account always gets its activation mail, so the choice only
+                  applies when an existing user is being added to an organization. */}
+              {exists && isMultiOrgEnabled && !selectedOrganizationAlreadyAssigned && (
+                <NotifyUserCheckbox
+                  checked={notifyUser}
+                  onCheckedChange={setNotifyUser}
+                  disabled={isPending}
+                  description="Send them an email saying they were added to this organization."
                 />
               )}
             </div>

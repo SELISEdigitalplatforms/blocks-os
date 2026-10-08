@@ -180,9 +180,40 @@ describe("InviteOrganizationUser", () => {
     await user.click(submit);
 
     await waitFor(() => expect(h.updateUserAccess).toHaveBeenCalled());
+    expect(h.updateUserAccess.mock.calls[0][0]).toMatchObject({ notifyUser: true });
     expect(h.showSuccessToast).toHaveBeenCalledWith({
       description: "User granted access to the organization",
     });
+  });
+
+  it("sends notifyUser false when an existing user is granted access with the box unchecked", async () => {
+    h.checkExists = { data: { userId: "u1", organizationIds: [] }, isFetching: false };
+    h.updateUserAccess.mockResolvedValue({ isSuccess: true });
+    const user = userEvent.setup();
+    renderInvite();
+    await user.click(screen.getByRole("button", { name: /invite member/i }));
+    await user.type(screen.getByPlaceholderText("name@company.com"), "existing@org.com");
+
+    const checkbox = await screen.findByRole("checkbox", { name: "Notify user by email" });
+    expect(checkbox.getAttribute("data-state")).toBe("checked");
+    await user.click(checkbox);
+
+    const submit = await screen.findByRole("button", { name: /grant access/i });
+    await waitFor(() => expect(submit as HTMLButtonElement).toHaveProperty("disabled", false));
+    await user.click(submit);
+
+    await waitFor(() => expect(h.updateUserAccess).toHaveBeenCalled());
+    expect(h.updateUserAccess.mock.calls[0][0]).toMatchObject({ notifyUser: false });
+  });
+
+  it("does not offer the notify choice for a brand-new email", async () => {
+    const user = userEvent.setup();
+    renderInvite();
+    await user.click(screen.getByRole("button", { name: /invite member/i }));
+    await user.type(screen.getByPlaceholderText("name@company.com"), "new@org.com");
+
+    await screen.findByRole("button", { name: /send invite/i });
+    expect(screen.queryByRole("checkbox", { name: "Notify user by email" })).toBeNull();
   });
 
   it("shows the first array error when granting access fails", async () => {

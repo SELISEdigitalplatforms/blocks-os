@@ -21,6 +21,7 @@ import { useOrganizationUsersSortQueryParams } from "./organization-users-filter
 import { FilterControls } from "@/components/filter-toolbar";
 import { useNavigate } from "react-router";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
+import { NotifyUserCheckbox } from "@blocks-idp/iam/components/notify-user-checkbox";
 
 type OrganizationUsersTableProps = {
   users: User[];
@@ -43,12 +44,16 @@ const RevokeConfirmDialog = ({
   userName,
   onConfirm,
   isPending,
+  notifyUser,
+  onNotifyUserChange,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userName: string;
   onConfirm: () => void;
   isPending: boolean;
+  notifyUser: boolean;
+  onNotifyUserChange: (notifyUser: boolean) => void;
 }) => (
   <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent className="sm:max-w-[425px]">
@@ -59,6 +64,12 @@ const RevokeConfirmDialog = ({
           remove all roles and permissions granted within this organization.
         </DialogDescription>
       </DialogHeader>
+      <NotifyUserCheckbox
+        checked={notifyUser}
+        onCheckedChange={onNotifyUserChange}
+        disabled={isPending}
+        description="Send them an email saying they were removed from this organization."
+      />
       <DialogFooter>
         <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
           Cancel
@@ -81,6 +92,12 @@ export const OrganizationUsersTable = ({
   const { sortQueryParams, setSortQueryParams } = useOrganizationUsersSortQueryParams();
 
   const [confirmRevoke, setConfirmRevoke] = useState<User | null>(null);
+  const [notifyUser, setNotifyUser] = useState(true);
+
+  const closeConfirmRevoke = () => {
+    setConfirmRevoke(null);
+    setNotifyUser(true);
+  };
   const { mutateAsync, isPending } = useRevokeAccess({
     id: confirmRevoke?.itemId ?? "",
   });
@@ -92,7 +109,7 @@ export const OrganizationUsersTable = ({
   const handleConfirmRevoke = async () => {
     if (!confirmRevoke) return;
     try {
-      const res = await mutateAsync({ organizationId });
+      const res = await mutateAsync({ organizationId, notifyUser });
       if (!res.isSuccess) {
         showErrorToast({ errors: res.errors });
         return;
@@ -100,7 +117,7 @@ export const OrganizationUsersTable = ({
       showSuccessToast({
         description: `${confirmRevoke.email} has been revoked from this organization`,
       });
-      setConfirmRevoke(null);
+      closeConfirmRevoke();
     } catch (error) {
       showErrorToast({
         errors:
@@ -292,10 +309,12 @@ export const OrganizationUsersTable = ({
 
       <RevokeConfirmDialog
         open={!!confirmRevoke}
-        onOpenChange={(open) => !open && setConfirmRevoke(null)}
+        onOpenChange={(open) => !open && closeConfirmRevoke()}
         userName={confirmUserName}
         onConfirm={handleConfirmRevoke}
         isPending={isPending}
+        notifyUser={notifyUser}
+        onNotifyUserChange={setNotifyUser}
       />
     </>
   );

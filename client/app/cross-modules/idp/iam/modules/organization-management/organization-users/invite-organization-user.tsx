@@ -37,6 +37,7 @@ import { isErrorWithErrors } from "@/lib/error";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { OrganizationCombobox } from "@blocks-idp/iam/components/organization-combobox";
+import { NotifyUserCheckbox } from "@blocks-idp/iam/components/notify-user-checkbox";
 
 const DEFAULT_ORGANIZATION_ID = "default";
 
@@ -80,6 +81,7 @@ export const InviteOrganizationUser = ({
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const [open, setOpen] = useState(false);
   const [selectedOrgId, setSelectedOrgId] = useState(organizationId);
+  const [notifyUser, setNotifyUser] = useState(true);
 
   const { data: orgsData } = useGetOrganizations({
     page: 0,
@@ -152,6 +154,7 @@ export const InviteOrganizationUser = ({
     if (!open) {
       form.reset();
       setSelectedOrgId(organizationId);
+      setNotifyUser(true);
       return;
     }
     // When multi-org is disabled we do not show an org picker, and the parent
@@ -185,6 +188,7 @@ export const InviteOrganizationUser = ({
           organizationId: selectedOrgId,
           roles: [],
           permissions: [],
+          notifyUser,
         });
         if (!res.isSuccess) {
           showErrorToast({
@@ -209,6 +213,7 @@ export const InviteOrganizationUser = ({
         userCreationType: 1,
         platform: "blocks_portal",
         organizationId: selectedOrgId,
+        notifyUser,
       });
       if (!res.isSuccess) {
         showErrorToast({
@@ -310,6 +315,17 @@ export const InviteOrganizationUser = ({
                     </p>
                   )}
                 </div>
+              )}
+
+              {/* A new account always gets its activation mail, so the choice only
+                  applies when an existing user is being added to an organization. */}
+              {exists && !selectedOrganizationAlreadyAssigned && (
+                <NotifyUserCheckbox
+                  checked={notifyUser}
+                  onCheckedChange={setNotifyUser}
+                  disabled={isPending}
+                  description="Send them an email saying they were added to this organization."
+                />
               )}
             </div>
             <DialogFooter className="shrink-0 pt-4">
