@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, ReactNode, useCallback } from "react";
+import { useState, useEffect, ReactNode, useCallback } from "react";
 interface InfiniteScrollProps<T> {
   initialData: T[];
   renderItem: (item: T, index: number) => React.ReactNode;
@@ -22,7 +22,9 @@ export const InfiniteScroll = <T,>({
   const [data, setData] = useState(initialData);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(hasTopMore);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  // Held in state (set by the callback ref below) so handlers passed to bottomIndicator never
+  // read a ref while rendering.
+  const [scrollContainer, setScrollContainer] = useState<HTMLDivElement | null>(null);
   const [isNewDataAvailable, setNewDataAvailable] = useState(false);
   // Fetch older data when scrolling to the top
   const handleFetchOlderData = useCallback(async () => {
@@ -33,7 +35,6 @@ export const InfiniteScroll = <T,>({
       const olderData = await topFn(firstItem);
       if (olderData.length > 0) {
         // Save the current scroll height
-        const scrollContainer = scrollContainerRef.current;
         const previousScrollHeight = scrollContainer?.scrollHeight || 0;
         // Add older data to the top
         setData((prevData) => [...olderData, ...prevData]);
@@ -55,7 +56,7 @@ export const InfiniteScroll = <T,>({
     } finally {
       setIsLoading(false);
     }
-  }, [data, hasMore, isLoading, topFn]);
+  }, [data, hasMore, isLoading, scrollContainer, topFn]);
   // Fetch newer data periodically
   const handleFetchNewerData = useCallback(async () => {
     try {
@@ -71,7 +72,6 @@ export const InfiniteScroll = <T,>({
   }, [data, pollingFn]);
   // Handle scroll to top for fetching older data
   useEffect(() => {
-    const scrollContainer = scrollContainerRef.current;
     const handleScroll = () => {
       if (scrollContainer && scrollContainer.scrollTop === 0 && hasMore) {
         handleFetchOlderData();
@@ -85,7 +85,7 @@ export const InfiniteScroll = <T,>({
     };
     scrollContainer?.addEventListener("scroll", handleScroll);
     return () => scrollContainer?.removeEventListener("scroll", handleScroll);
-  }, [handleFetchOlderData, hasMore, isLoading]);
+  }, [handleFetchOlderData, hasMore, isLoading, scrollContainer]);
   // Periodically fetch newer data
   useEffect(() => {
     const interval = setInterval(() => {
@@ -94,23 +94,21 @@ export const InfiniteScroll = <T,>({
     return () => clearInterval(interval);
   }, [handleFetchNewerData, pollingInterval]);
   const bottomIndicatorHandler = () => {
-    scrollContainerRef.current?.scrollTo({
-      top: scrollContainerRef.current?.scrollHeight,
+    scrollContainer?.scrollTo({
+      top: scrollContainer.scrollHeight,
       behavior: "smooth",
     });
     setNewDataAvailable(false);
   };
-  useEffect(() => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current?.scrollTo({
-        top: scrollContainerRef.current.scrollHeight,
-      });
-    }
+  // Stable, so React calls it once on mount (start at the bottom) and once on unmount.
+  const attachScrollContainer = useCallback((node: HTMLDivElement | null) => {
+    node?.scrollTo({ top: node.scrollHeight });
+    setScrollContainer(node);
   }, []);
   return (
     <div className="relative flex h-full flex-col">
       <div
-        ref={scrollContainerRef}
+        ref={attachScrollContainer}
         data-testid="infinite-scroll-container"
         className="h-full overflow-y-auto overflow-x-hidden"
       >

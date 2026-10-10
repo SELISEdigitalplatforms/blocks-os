@@ -24,19 +24,25 @@ interface MultiSelectProps {
   value: string;
   onChange: (value: unknown) => void;
 }
+/** The option (or child option) matching `value`, with its parent's label for children. */
+function findSelected(
+  options: RadioOption[],
+  value: string,
+): { label: string; parentLabel?: string } | null {
+  for (const option of options) {
+    if (option.value === value) return { label: option.label };
+    const child = option.children?.find((item) => item.value === value);
+    if (child) return { label: child.label, parentLabel: option.label };
+  }
+  return null;
+}
+
 export function Radio({ label, options, onChange, value }: MultiSelectProps) {
   const [search, setSearch] = useState("");
   const [manuallyExpanded, setManuallyExpanded] = useState<string | null>(null);
   const [buttonRef, popoverWidth] = usePopoverWidth();
   const isMobile = useIsMobile();
-  const selected = useMemo(() => {
-    for (const option of options) {
-      if (option.value === value) return { label: option.label };
-      const child = option.children?.find((item) => item.value === value);
-      if (child) return { label: child.label, parentLabel: option.label };
-    }
-    return null;
-  }, [options, value]);
+  const selected = useMemo(() => findSelected(options, value), [options, value]);
   // The parent of the current selection is expanded by default, so reopening the
   // popover shows the active child instead of hiding it behind a collapsed row.
   const autoExpanded = useMemo(

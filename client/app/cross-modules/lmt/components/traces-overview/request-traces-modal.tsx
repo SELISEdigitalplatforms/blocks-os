@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Banner } from "@/components/ui-kits/banner/banner";
 import { Button } from "@/components/ui-kits/button/button";
 import {
@@ -36,11 +36,10 @@ export function RequestTracesModal({
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const { data: retentionData } = useGetRestoredDataRetentionDays({ enabled: open });
 
-  useEffect(() => {
-    if (!open) {
-      setDateRange(undefined);
-    }
-  }, [open]);
+  // Closing the modal clears the chosen range.
+  if (!open && dateRange !== undefined) {
+    setDateRange(undefined);
+  }
 
   const handleSend = async () => {
     if (!dateRange?.from || !dateRange?.to) return;
@@ -93,7 +92,7 @@ export function RequestTracesModal({
         </DialogHeader>
 
         <Banner variant="warning" title="Warning">
-          Requesting {sourceType.toLowerCase()} traces may affect your project's pricing. Please
+          Requesting {sourceType.toLowerCase()} traces may affect your project&apos;s pricing. Please
           continue with caution.
         </Banner>
 

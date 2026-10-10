@@ -23,13 +23,12 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   }
   const inputRef = useRef<HTMLInputElement>(null);
   // The debounced wrapper must stay stable for the whole lifetime, but callers pass a new
-  // inline onChange every render. Route through a ref refreshed on each render so the
-  // debounced call always reaches the latest prop instead of the first render's closure.
-  const onChangeRef = useRef(onChange);
-  useEffect(() => {
-    onChangeRef.current = onChange;
-  });
-  const debounced = useMemo(() => debounce((val: string) => onChangeRef.current(val), 300), []);
+  // inline onChange every render. The handler hands the current onChange to each call, so the
+  // debounced call reaches the latest prop instead of the first render's closure.
+  const debounced = useMemo(
+    () => debounce((callback: (val: string) => void, val: string) => callback(val), 300),
+    [],
+  );
   useEffect(() => {
     return () => {
       debounced.cancel();
@@ -38,7 +37,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     event.stopPropagation();
     setState(event.target.value);
-    debounced(event.target.value);
+    debounced(onChange, event.target.value);
   };
   const handleClear = (e: MouseEvent) => {
     e.stopPropagation();

@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useMemo } from "react";
 import {
   getPasswordRequirements,
-  createInitialChecks,
   validatePasswordChecks,
   calculateStrength,
   areAllRequirementsMet,
@@ -13,23 +12,10 @@ export type { PasswordChecks, PasswordRequirement } from "../utils/password-stre
 export { getPasswordRequirements } from "../utils/password-strength.util";
 
 export const usePasswordStrength = (password: string) => {
-  const [strength, setStrength] = useState(0);
   const requirements = getPasswordRequirements();
-  const [checks, setChecks] = useState<PasswordChecks>(createInitialChecks);
-
-  const validatePassword = useCallback(() => {
-    const newChecks = validatePasswordChecks(password);
-    setChecks(newChecks);
-
-    const strengthScore = calculateStrength(newChecks);
-    setStrength(strengthScore);
-
-    return areAllRequirementsMet(newChecks);
-  }, [password]);
-
-  useEffect(() => {
-    validatePassword();
-  }, [validatePassword]);
+  // Derived from the password on every render, so the result is never a render behind.
+  const checks = useMemo<PasswordChecks>(() => validatePasswordChecks(password), [password]);
+  const strength = calculateStrength(checks);
 
   return {
     strength,

@@ -1,4 +1,4 @@
-import React, { ReactNode, useEffect, useState } from "react";
+import React, { ReactNode, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -42,17 +42,28 @@ export const ConfigureMagicUrlModal = ({
   const [errors, setErrors] = useState({ contextName: "", shortUrlBase: "" });
   const { mutateAsync: saveConfig, isPending: isSaving } = useSaveMagicUrlConfig();
 
-  useEffect(() => {
-    if (!open) return;
-    if (configuration) {
-      setContextName(configuration.contextName || "");
-      setShortUrlBase(configuration.shortUrlBase || "");
-    } else {
-      setContextName("Default");
-      setShortUrlBase(getDefaultShortUrlBase());
+  // Opening the modal (or a changed configuration while open) prefills the fields. Done while
+  // rendering, keyed on the same values the prefill depends on.
+  const prefillKey = JSON.stringify([
+    open,
+    configuration?.itemId,
+    configuration?.contextName,
+    configuration?.shortUrlBase,
+  ]);
+  const [prefilledFor, setPrefilledFor] = useState<string | null>(null);
+  if (prefilledFor !== prefillKey) {
+    setPrefilledFor(prefillKey);
+    if (open) {
+      if (configuration) {
+        setContextName(configuration.contextName || "");
+        setShortUrlBase(configuration.shortUrlBase || "");
+      } else {
+        setContextName("Default");
+        setShortUrlBase(getDefaultShortUrlBase());
+      }
+      setErrors({ contextName: "", shortUrlBase: "" });
     }
-    setErrors({ contextName: "", shortUrlBase: "" });
-  }, [open, configuration?.itemId, configuration?.contextName, configuration?.shortUrlBase]);
+  }
 
   const validateFields = (): boolean => {
     const newErrors = { contextName: "", shortUrlBase: "" };
