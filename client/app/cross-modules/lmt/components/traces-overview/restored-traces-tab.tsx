@@ -66,32 +66,43 @@ export function RestoredTracesTab({
   const { mutateAsync: cancelRestoreRequest, isPending: isCancelPending } =
     useCancelRestoreRequest();
 
-  const fetchStatus = useCallback(async () => {
+  // Loads the request and its status without touching state; callers apply the result.
+  const loadStatus = useCallback(async (): Promise<{ requestId?: string; status: string }> => {
+    let requestId: string | undefined;
     try {
-      setIsLoadingStatus(true);
       const reqRes = await getRequestId({ ProjectKey: projectKey, SourceType: sourceType });
-      if (reqRes?.requestId) {
-        setRequestId(reqRes.requestId);
-        const statusRes = await getTraceStatus({
-          RequestId: reqRes.requestId,
-          SourceType: sourceType,
-        });
-        setTraceStatus(statusRes?.status || "NoRequest");
-      } else {
-        setTraceStatus("NoRequest");
-      }
+      if (!reqRes?.requestId) return { status: "NoRequest" };
+      requestId = reqRes.requestId;
+      const statusRes = await getTraceStatus({ RequestId: requestId, SourceType: sourceType });
+      return { requestId, status: statusRes?.status || "NoRequest" };
     } catch {
-      setTraceStatus("NoRequest");
-    } finally {
-      setIsLoadingStatus(false);
+      return { requestId, status: "NoRequest" };
     }
   }, [getRequestId, getTraceStatus, projectKey, sourceType]);
 
+  const applyStatus = useCallback((result: { requestId?: string; status: string }) => {
+    if (result.requestId) setRequestId(result.requestId);
+    setTraceStatus(result.status);
+    setIsLoadingStatus(false);
+  }, []);
+
+  const fetchStatus = useCallback(() => {
+    setIsLoadingStatus(true);
+    return loadStatus().then(applyStatus);
+  }, [applyStatus, loadStatus]);
+
+  // A new project or source type starts a fresh status load (the effect below runs it).
+  const [statusSource, setStatusSource] = useState({ projectKey, sourceType });
+  if (statusSource.projectKey !== projectKey || statusSource.sourceType !== sourceType) {
+    setStatusSource({ projectKey, sourceType });
+    if (projectKey) setIsLoadingStatus(true);
+  }
+
   useEffect(() => {
     if (projectKey) {
-      void fetchStatus();
+      void loadStatus().then(applyStatus);
     }
-  }, [fetchStatus, projectKey]);
+  }, [applyStatus, loadStatus, projectKey]);
 
   const showTraces =
     traceStatus === TRACE_REQUEST_STATUS.completed ||
@@ -207,7 +218,7 @@ export function RestoredTracesTab({
           <History className="mb-3 h-7 w-7 text-muted-foreground" />
           <h3 className="text-base font-semibold tracking-tight">No Request Found</h3>
           <p className="mb-5 mt-2 max-w-md text-sm text-muted-foreground">
-            You haven't requested any {sourceType.toLowerCase()} traces yet.
+            You haven&apos;t requested any {sourceType.toLowerCase()} traces yet.
           </p>
           <Button size="sm" onClick={() => setShowDialog(true)}>
             <Plus className="mr-2 h-4 w-4" />

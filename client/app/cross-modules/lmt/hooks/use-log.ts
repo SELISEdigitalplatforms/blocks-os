@@ -1,11 +1,17 @@
-import { UseQueryOptions, useQuery } from "@tanstack/react-query";
+import { QueryKey, UseQueryOptions, useQuery } from "@tanstack/react-query";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { IGetLiveLogsPayload, IGetLogsPayload, IGetRestoredLogsPayload } from "../models/log.model";
 import { lmtService } from "../services/lmt.service";
 
+/** Extra react-query options a caller may pass; the hook owns queryKey and queryFn. */
+type QueryOptionsFor<TFn extends (...args: never[]) => Promise<unknown>> = Omit<
+  UseQueryOptions<Awaited<ReturnType<TFn>>, Error, Awaited<ReturnType<TFn>>, QueryKey>,
+  "queryKey" | "queryFn"
+>;
+
 export const useGetLogs = (
   option: IGetLogsPayload,
-  queryOptions?: Omit<UseQueryOptions<any, any, any, any>, "queryKey" | "queryFn">,
+  queryOptions?: QueryOptionsFor<typeof lmtService.log.getLogs>,
 ) => {
   // The endpoint resolves the tenant from the request token rather than the payload, so the
   // active tenant keys the cache -- otherwise switching projects serves the previous one's logs.
@@ -19,7 +25,7 @@ export const useGetLogs = (
 
 export const useGetRestoredLogs = (
   option: IGetRestoredLogsPayload,
-  queryOptions?: Omit<UseQueryOptions<any, any, any, any>, "queryKey" | "queryFn">,
+  queryOptions?: QueryOptionsFor<typeof lmtService.log.getRestoredLogs>,
 ) => {
   return useQuery({
     queryKey: ["restored-logs", option],

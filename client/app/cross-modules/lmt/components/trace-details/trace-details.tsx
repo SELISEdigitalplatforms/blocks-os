@@ -105,23 +105,28 @@ export const TraceDetails = ({
   );
   const { isLoading, isFetching, isError, data } = requestId ? restoredTrace : normalTrace;
   const [selectedTrace, setSelectedTrace] = useState<TraceTree | null>(null);
-  useEffect(() => {
-    if (!data?.data) {
+  // A new trace (or trace id) resets the drill-down history to that trace's root.
+  const [historySource, setHistorySource] = useState<{
+    trace: TraceTree | undefined;
+    id: typeof id;
+  } | null>(null);
+  if (historySource === null || historySource.trace !== data?.data || historySource.id !== id) {
+    setHistorySource({ trace: data?.data, id });
+    const trace = data?.data;
+    if (!trace) {
       setTraceHistory([]);
       setSelectedTrace(null);
-      return;
+    } else {
+      setTraceHistory([
+        {
+          root: trace,
+          current: trace,
+          rootId: trace.spanId,
+        },
+      ]);
+      setSelectedTrace(trace);
     }
-
-    const trace = data.data;
-    setTraceHistory([
-      {
-        root: trace,
-        current: trace,
-        rootId: trace.spanId,
-      },
-    ]);
-    setSelectedTrace(trace);
-  }, [data?.data, id]);
+  }
   const downloadJSONFile = () => {
     if (!data?.data) return;
     const jsonString = JSON.stringify(data.data, null, 2);
