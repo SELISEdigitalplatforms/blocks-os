@@ -8,6 +8,7 @@ import {
   countConfigurationWrites,
   createConfigurationFlow,
   editDescriptionOnlyFlow,
+  ensureSignupLinkClientFlow,
   EXISTING_USER_WARNING,
   existingUserWarning,
   expectConfigurationRowFlow,
@@ -24,6 +25,11 @@ import {
   setRequireExistingUserPasswordFlow,
   showArchivedFlow,
 } from "../../pages/identity-and-access/signup-link-configurations";
+
+// Most tests pick a client in the Client select, which needs an eligible OIDC client.
+test.beforeEach(async ({ page }) => {
+  await ensureSignupLinkClientFlow(page);
+});
 
 /**
  * Feature E2E for blocks-os#617 — Signup Link Configurations.
