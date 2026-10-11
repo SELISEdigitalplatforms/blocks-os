@@ -21,7 +21,7 @@ type ActivationProps = {
   code?: string;
   lang?: string;
 };
-const x_blocks_key = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
+const xBlocksKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
 
 export const Activation = ({ code }: ActivationProps) => {
   const { isPending: isActivationPending, mutateAsync: activationCodeValidation } =
@@ -51,7 +51,7 @@ export const Activation = ({ code }: ActivationProps) => {
     const validateCode = async () => {
       try {
         const res = await activationCodeValidation({
-          projectKey: x_blocks_key as string,
+          projectKey: xBlocksKey as string,
           activationCode: code,
         });
         setResendMessage(null);
@@ -101,7 +101,7 @@ export const Activation = ({ code }: ActivationProps) => {
       setResendSuccess(false);
       const response = await resendActivationLink({
         userId: activationUserId,
-        projectKey: x_blocks_key as string,
+        projectKey: xBlocksKey as string,
       });
       if (response?.isSuccess) {
         setResendSuccess(true);

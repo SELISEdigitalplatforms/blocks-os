@@ -46,7 +46,7 @@ export const ModelEditKeyModal = ({
   setEditKeyModalOpen,
   model,
 }: ModelEditKeyModalProps) => {
-  const project_key = useProjectStore().selectedProject?.tenantId || "";
+  const projectKey = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useUpdateModel();
   const {
     schema: baseSchema,
@@ -94,7 +94,7 @@ export const ModelEditKeyModal = ({
       const rawApiKey = (data.apiKey ?? "") as string;
       const trimmedApiKey = rawApiKey.trim();
       const payload: IUpdateModelPayload & { model_name: string } = {
-        project_key,
+        project_key: projectKey,
         display_name: model.DisplayName,
         base_url: data.url ?? model.BaseUrl ?? "",
         openai_organization_id: data.organizationId ?? model.OpenAiOrganizationId,

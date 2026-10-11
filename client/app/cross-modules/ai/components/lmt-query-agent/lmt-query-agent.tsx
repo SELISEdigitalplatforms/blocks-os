@@ -2,7 +2,6 @@ import React, { Fragment, useCallback, useEffect, useRef, useState } from "react
 import { Bot, X } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card } from "@/components/ui-kits/card/card";
-import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useLMTQueryAgentSSE } from "@blocks-ai/hooks/use-agent";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -45,7 +44,6 @@ export const LMTQueryAgent: React.FC<LMTQueryAgentProps> = ({
   const [currentEvent, setCurrentEvent] = useState<{ message: string } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { streamQuery } = useLMTQueryAgentSSE();
   const form = useForm<LmtQueryAgentForm>({
     defaultValues: lmtQueryAgentFormDefaultValue,
@@ -135,7 +133,7 @@ export const LMTQueryAgent: React.FC<LMTQueryAgentProps> = ({
         }, 0);
       }
     },
-    [addMessage, form, handleStreamEvent, session, streamQuery, tenantId],
+    [addMessage, form, handleStreamEvent, session, streamQuery],
   );
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

@@ -1,5 +1,4 @@
 import { expect, type Locator, type Page } from "@playwright/test";
-import { escapeForRegex } from "./users";
 
 /**
  * Helpers for the "Notify user by email" choice on organization membership
@@ -153,7 +152,7 @@ export async function grantExistingMemberFlow(
 function memberRow(page: Page, email: string) {
   return page
     .getByRole("button")
-    .filter({ hasText: new RegExp(escapeForRegex(email), "i") })
+    .filter({ hasText: email })
     .first();
 }
 
@@ -200,9 +199,7 @@ export async function revokeMemberFromOrganizationFlow(page: Page, email: string
   expect(body.notifyUser).toBe(notify);
 
   await expect(
-    notificationsRegion(page).getByText(
-      new RegExp(`${escapeForRegex(email)} has been revoked`, "i"),
-    ),
+    notificationsRegion(page).getByText(`${email} has been revoked`),
   ).toBeVisible({ timeout: 15_000 });
   await expect(dialog).toBeHidden({ timeout: 15_000 });
 }

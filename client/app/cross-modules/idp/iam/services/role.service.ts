@@ -6,7 +6,6 @@ import {
   GetRolesResponse,
   IGetRolePayload,
   IGetRoleResponse,
-  IRole,
   SetRoles,
   UpdateRolePayload,
 } from "@blocks-idp/iam/models/role";

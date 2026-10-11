@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useProjectStore } from "@seliseblocks/genesis-os";
-import { IIntegrationTemplate, IRunIntegrationSetupPayload } from "@/cross-modules/integration/models/integration.model";
+import { IRunIntegrationSetupPayload } from "@/cross-modules/integration/models/integration.model";
 import { integrationService } from "@/cross-modules/integration/services/integration.service";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 

@@ -1,7 +1,7 @@
 import { useGetPermissionById, useUpdatePermission } from "@blocks-idp/iam/hooks/use-permission";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { useMemo } from "react";
-import { mapPermissionToFormValues, permissionFormSchemaType } from "../permission-form/utils";
+import { mapPermissionToFormValues, PermissionFormSchemaType } from "../permission-form/utils";
 import { PermissionForm } from "../permission-form";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
@@ -45,7 +45,7 @@ export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
     return mapPermissionToFormValues(permission);
   }, [permission]);
 
-  const onSubmit = async (formData: permissionFormSchemaType) => {
+  const onSubmit = async (formData: PermissionFormSchemaType) => {
     if (permission?.isBuiltIn) return;
     try {
       const res = await mutateAsync({
