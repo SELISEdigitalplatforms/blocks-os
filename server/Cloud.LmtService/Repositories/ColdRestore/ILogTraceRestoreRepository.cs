@@ -19,7 +19,7 @@ namespace Cloud.LmtService.Repositories.ColdRestore
 
         Task CreateFileProgressAsync(LogTraceRestoreFileProgressRecord record, CancellationToken ct = default);
 
-        Task UpdateFileProgressAsync(string requestId, RestoreDataType dataType, DateTime fileDate, RestoreFileProgressStatus status, int rowsRestored = 0, string? errorMessage = null, DateTime? startedAt = null, DateTime? completedAt = null, CancellationToken ct = default);
+        Task UpdateFileProgressAsync(string requestId, RestoreDataType dataType, DateTime fileDate, FileProgressUpdate update, CancellationToken ct = default);
 
         Task<List<LogTraceRestoreFileProgressRecord>> GetFileProgressByRequestIdAsync(string requestId, CancellationToken ct = default);
         Task UpdateTotalFilesAsync(string requestId, int totalFiles, CancellationToken ct = default);
@@ -41,14 +41,19 @@ namespace Cloud.LmtService.Repositories.ColdRestore
         Task<long> DeleteExpiredFileProgressAsync(CancellationToken ct = default);
         Task<string?> GetLatestRequestIdByProjectKeyAsync(string projectKey,string sourceType, CancellationToken ct = default);
         Task<List<LogTraceRestoreFileProgressRecord>> GetFileProgressByBlobPathAsync(string requestId, string blobPath, CancellationToken ct = default);
-        Task UpdateFileProgressStatusByIdAsync(string requestId,string blobPath, RestoreFileProgressStatus status, bool? needsHydration = null, ArchiveHydrationStatus? hydrationStatus = null, DateTime? startedAt = null, DateTime? completedAt = null, string? errorMessage = null, CancellationToken ct = default);
+        /// <summary>
+        /// Updates one file-progress row of the request with the given blob path. An unset
+        /// <see cref="ArchiveFileProgressUpdate.RowsRestored"/> leaves RowsRestored unchanged.
+        /// </summary>
+        Task UpdateFileProgressStatusByIdAsync(string requestId, string blobPath, ArchiveFileProgressUpdate update, CancellationToken ct = default);
         /// <summary>
         /// Updates a single FileProgress document by its MongoDB _id.
         /// Preferred over UpdateFileProgressStatusByIdAsync when the record's ObjectId
         /// is already known (e.g. inside ProcessArchiveRestoreFileAsync), because the
         /// _id filter is unambiguous and cannot silently miss the document.
+        /// An unset <see cref="ArchiveFileProgressUpdate.RowsRestored"/> writes RowsRestored = 0.
         /// </summary>
-        Task UpdateFileProgressStatusByObjectIdAsync(ObjectId id, RestoreFileProgressStatus status, bool? needsHydration = null, int rowsRestored = 0, ArchiveHydrationStatus? hydrationStatus = null, DateTime? startedAt = null, DateTime? completedAt = null, string? errorMessage = null, CancellationToken ct = default);
+        Task UpdateFileProgressStatusByObjectIdAsync(ObjectId id, ArchiveFileProgressUpdate update, CancellationToken ct = default);
         Task ResetStuckProcessingFilesAsync(string requestId, CancellationToken ct = default);
 
         /// <summary>
