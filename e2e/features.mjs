@@ -55,6 +55,12 @@ export const OS_FEATURES = [
     spec: "tests/02-secrets-and-configs/05-identity-provider-flow.spec.ts",
   },
   {
+    id: "sso",
+    name: "Secrets & Configs — SSO",
+    enabled: true,
+    spec: "tests/02-secrets-and-configs/14-sso-flow.spec.ts",
+  },
+  {
     id: "external-idp",
     name: "Secrets & Configs — External IdP",
     enabled: true,
@@ -90,6 +96,18 @@ export const OS_FEATURES = [
     enabled: true,
     spec: "tests/02-secrets-and-configs/11-storage-flow.spec.ts",
   },
+  {
+    id: "data-gateway",
+    name: "Secrets & Configs — Data Gateway",
+    enabled: true,
+    spec: "tests/02-secrets-and-configs/15-data-gateway-flow.spec.ts",
+  },
+  {
+    id: "integration",
+    name: "Secrets & Configs — Integrations",
+    enabled: true,
+    spec: "tests/02-secrets-and-configs/16-integrations-flow.spec.ts",
+  },
 
   {
     id: "email-management",
@@ -113,9 +131,9 @@ export const OS_FEATURES = [
   },
   {
     id: "organizations",
-    name: "Identity & Access — Organizations (merged into users)",
-    enabled: false,
-    spec: "tests/04-identity-and-access/02-users-flow.spec.ts",
+    name: "Identity & Access — Organizations",
+    enabled: true,
+    spec: "tests/04-identity-and-access/03-organizations-flow.spec.ts",
   },
   {
     id: "org-membership-notify",
