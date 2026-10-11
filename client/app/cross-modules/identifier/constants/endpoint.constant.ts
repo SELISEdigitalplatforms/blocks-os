@@ -56,6 +56,8 @@ const DOMAIN_SUBPATH = "/Domain";
 
 export const DOMAIN_ENDPOINTS = {
   CONFIGURE: `/api${DOMAIN_SUBPATH}/Configure`,
+  SETUP_GUIDE: `/api${DOMAIN_SUBPATH}/SetupGuide`,
+  CONFIGURE_STREAM: `/api${DOMAIN_SUBPATH}/ConfigureStream`,
 } as const;
 
 // ─── Migration endpoints ──────────────────────────────────────────────────────

@@ -30,9 +30,8 @@ vi.mock("@blocks-idp/iam/hooks/use-signup-link-configurations", () => ({
 }));
 
 vi.mock("@tanstack/react-query", async () => {
-  const actual = await vi.importActual<typeof import("@tanstack/react-query")>(
-    "@tanstack/react-query",
-  );
+  const actual =
+    await vi.importActual<typeof import("@tanstack/react-query")>("@tanstack/react-query");
   return {
     ...actual,
     useQueryClient: () => ({ invalidateQueries: h.invalidateQueries }),
@@ -129,6 +128,7 @@ const configuration: ISignupLinkConfiguration = {
 describe("UpdateConfiguration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    h.isPending = false;
     h.mutateAsync.mockResolvedValue({ isSuccess: true, itemId: "cfg-1" });
   });
 
@@ -147,49 +147,188 @@ describe("UpdateConfiguration", () => {
     await user.click(screen.getByRole("button", { name: "Update" }));
 
     await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+    // requireExistingUserPassword rides along on every PATCH (#645 H6); a fixture without
+    // the field is a legacy document and reads as on.
     expect(h.mutateAsync).toHaveBeenCalledWith({
       itemId: "cfg-1",
       mode: "Oidc",
       description: "new description only",
+      requireExistingUserPassword: true,
     });
     expect(h.showSuccessToast).toHaveBeenCalledWith({ description: "Configuration updated" });
     expect(onClose).toHaveBeenCalled();
   });
 });
 
-  it("keeps dialog open on 400 field errors", async () => {
-    h.mutateAsync.mockRejectedValue({
-      status: 400,
-      errors: { Name: "taken" },
-    });
-    const user = userEvent.setup();
-    const onClose = vi.fn();
-    render(
-      <Dialog open>
-        <UpdateConfiguration configuration={configuration} isOpen onClose={onClose} />
-      </Dialog>,
-    );
-    const description = screen.getByPlaceholderText("Optional description");
-    await user.clear(description);
-    await user.type(description, "x");
-    await user.click(screen.getByRole("button", { name: "Update" }));
-    expect(await screen.findByText("taken")).toBeTruthy();
-    expect(onClose).not.toHaveBeenCalled();
+it("keeps dialog open on 400 field errors", async () => {
+  h.mutateAsync.mockRejectedValue({
+    status: 400,
+    errors: { Name: "taken" },
+  });
+  const user = userEvent.setup();
+  const onClose = vi.fn();
+  render(
+    <Dialog open>
+      <UpdateConfiguration configuration={configuration} isOpen onClose={onClose} />
+    </Dialog>,
+  );
+  const description = screen.getByPlaceholderText("Optional description");
+  await user.clear(description);
+  await user.type(description, "x");
+  await user.click(screen.getByRole("button", { name: "Update" }));
+  expect(await screen.findByText("taken")).toBeTruthy();
+  expect(onClose).not.toHaveBeenCalled();
+});
+
+it("toasts and closes on 404", async () => {
+  h.mutateAsync.mockRejectedValue({ status: 404 });
+  const user = userEvent.setup();
+  const onClose = vi.fn();
+  render(
+    <Dialog open>
+      <UpdateConfiguration configuration={configuration} isOpen onClose={onClose} />
+    </Dialog>,
+  );
+  const description = screen.getByPlaceholderText("Optional description");
+  await user.clear(description);
+  await user.type(description, "x");
+  await user.click(screen.getByRole("button", { name: "Update" }));
+  await waitFor(() => expect(h.showErrorToast).toHaveBeenCalled());
+  expect(onClose).toHaveBeenCalled();
+});
+
+describe("UpdateConfiguration existing-user password and max redemptions (#645)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    h.isPending = false;
+    h.mutateAsync.mockResolvedValue({ isSuccess: true, itemId: "cfg-1" });
   });
 
-  it("toasts and closes on 404", async () => {
-    h.mutateAsync.mockRejectedValue({ status: 404 });
-    const user = userEvent.setup();
-    const onClose = vi.fn();
+  const renderWith = (overrides: Partial<ISignupLinkConfiguration>) =>
     render(
       <Dialog open>
-        <UpdateConfiguration configuration={configuration} isOpen onClose={onClose} />
+        <UpdateConfiguration
+          configuration={{ ...configuration, ...overrides }}
+          isOpen
+          onClose={vi.fn()}
+        />
       </Dialog>,
     );
+
+  const theSwitch = () =>
+    screen.getByRole("switch", { name: "Existing users must confirm their password" });
+  const max = () => screen.getByTestId("default-max-redemptions") as HTMLInputElement;
+
+  it("loads the stored values: off and 0 (H5, H9)", () => {
+    renderWith({ requireExistingUserPassword: false, defaultMaxRedemptions: 0 });
+    expect(theSwitch().getAttribute("aria-checked")).toBe("false");
+    expect(max().value).toBe("0");
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Anyone who can generate links from this configuration will be able to sign in as an existing user without their password.",
+    );
+  });
+
+  it.each([
+    ["missing", undefined],
+    ["null", null],
+  ])(
+    "shows the switch on when the value is %s, and an empty max for null (H5, H9, C10)",
+    (_, value) => {
+      renderWith({ requireExistingUserPassword: value, defaultMaxRedemptions: null });
+      expect(theSwitch().getAttribute("aria-checked")).toBe("true");
+      expect(max().value).toBe("");
+    },
+  );
+
+  it("sends the unchanged switch value with a description-only edit (H6, C5)", async () => {
+    const user = userEvent.setup();
+    renderWith({ requireExistingUserPassword: false, defaultMaxRedemptions: 0 });
     const description = screen.getByPlaceholderText("Optional description");
     await user.clear(description);
-    await user.type(description, "x");
+    await user.type(description, "only this");
     await user.click(screen.getByRole("button", { name: "Update" }));
-    await waitFor(() => expect(h.showErrorToast).toHaveBeenCalled());
-    expect(onClose).toHaveBeenCalled();
+    await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(h.mutateAsync).toHaveBeenCalledWith({
+      itemId: "cfg-1",
+      mode: "Oidc",
+      description: "only this",
+      requireExistingUserPassword: false,
+    });
   });
+
+  it("sends a name-only edit of a legacy configuration with the switch on (Example 5)", async () => {
+    const user = userEvent.setup();
+    renderWith({ requireExistingUserPassword: true });
+    const name = screen.getByPlaceholderText("Partner onboarding");
+    await user.clear(name);
+    await user.type(name, "Renamed");
+    await user.click(screen.getByRole("button", { name: "Update" }));
+    await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(h.mutateAsync).toHaveBeenCalledWith({
+      itemId: "cfg-1",
+      mode: "Oidc",
+      name: "Renamed",
+      requireExistingUserPassword: true,
+    });
+  });
+
+  it("sends 1 when a stored max is cleared (H10, Example 4)", async () => {
+    const user = userEvent.setup();
+    renderWith({ defaultMaxRedemptions: 5, requireExistingUserPassword: true });
+    expect(max().value).toBe("5");
+    await user.clear(max());
+    const description = screen.getByPlaceholderText("Optional description");
+    await user.clear(description);
+    await user.type(description, "cleared");
+    await user.click(screen.getByRole("button", { name: "Update" }));
+    await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(h.mutateAsync).toHaveBeenCalledWith({
+      itemId: "cfg-1",
+      mode: "Oidc",
+      description: "cleared",
+      defaultMaxRedemptions: 1,
+      requireExistingUserPassword: true,
+    });
+  });
+
+  it("sends a changed max as a number and the toggled switch (H8)", async () => {
+    const user = userEvent.setup();
+    renderWith({ defaultMaxRedemptions: null });
+    await user.type(max(), "0");
+    await user.click(theSwitch());
+    await user.click(screen.getByRole("button", { name: "Update" }));
+    await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(h.mutateAsync).toHaveBeenCalledWith({
+      itemId: "cfg-1",
+      mode: "Oidc",
+      defaultMaxRedemptions: 0,
+      requireExistingUserPassword: false,
+    });
+  });
+
+  it("blocks an invalid max with no request (C1)", async () => {
+    const user = userEvent.setup();
+    renderWith({ defaultMaxRedemptions: null });
+    await user.type(max(), "-1");
+    await user.click(screen.getByRole("button", { name: "Update" }));
+    expect(await screen.findByText("Enter 0 or a whole number")).toBeTruthy();
+    expect(h.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("maps a DefaultMaxRedemptions 400 onto the field and focuses it (C4)", async () => {
+    h.mutateAsync.mockRejectedValue({ status: 400, errors: { DefaultMaxRedemptions: "Bad" } });
+    const user = userEvent.setup();
+    renderWith({ defaultMaxRedemptions: null });
+    await user.type(max(), "3");
+    await user.click(screen.getByRole("button", { name: "Update" }));
+    expect(await screen.findByText("Bad")).toBeTruthy();
+    await waitFor(() => expect(document.activeElement).toBe(max()));
+  });
+
+  it("locks the switch and Max redemptions while saving (C8)", () => {
+    h.isPending = true;
+    renderWith({});
+    expect((theSwitch() as HTMLButtonElement).disabled).toBe(true);
+    expect(max().disabled).toBe(true);
+  });
+});

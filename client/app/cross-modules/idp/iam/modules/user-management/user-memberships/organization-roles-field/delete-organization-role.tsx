@@ -41,7 +41,7 @@ export const DeleteOrganizationRole = ({
           <DialogTitle className="text-left text-lg font-semibold leading-7">
             Remove Role
           </DialogTitle>
-          <DialogDescription className="mb-6 mt-2 break-words text-left text-sm font-normal leading-5 text-medium-emphasis">
+          <DialogDescription className="mb-6 mt-2 wrap-break-word text-left text-sm font-normal leading-5 text-medium-emphasis">
             Are you sure you want to remove this role?
           </DialogDescription>
         </DialogHeader>

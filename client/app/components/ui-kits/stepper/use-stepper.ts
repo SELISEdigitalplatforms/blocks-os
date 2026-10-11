@@ -1,14 +1,18 @@
 import * as React from "react";
 import { StepperContext } from "./context";
 
+/** The value `value` held before its most recent change (undefined until it first changes). */
 function usePrevious<T>(value: T): T | undefined {
-  const ref = React.useRef<T | undefined>(undefined);
+  const [tracked, setTracked] = React.useState<{ current: T; previous: T | undefined }>({
+    current: value,
+    previous: undefined,
+  });
 
-  React.useEffect(() => {
-    ref.current = value;
-  }, [value]);
+  if (!Object.is(tracked.current, value)) {
+    setTracked({ current: value, previous: tracked.current });
+  }
 
-  return ref.current;
+  return tracked.previous;
 }
 
 export function useStepper() {

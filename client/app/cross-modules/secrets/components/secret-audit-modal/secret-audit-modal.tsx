@@ -27,6 +27,7 @@ import { describeSecretError } from "@/cross-modules/secrets/utils/secret-error"
 import {
   SECRET_AUDIT_OUTCOME,
   SECRET_AUDIT_REASON_LABEL,
+  secretAuditActionLabel,
   type SecretAuditLogResult,
   type SecretResult,
 } from "@/cross-modules/secrets/models/secret.model";
@@ -50,7 +51,9 @@ const AuditRow = ({ log }: { log: SecretAuditLogResult }) => (
     <TableCell className="whitespace-nowrap py-2.5 text-sm text-muted-foreground">
       {formatWhen(log.createdDate)}
     </TableCell>
-    <TableCell className="py-2.5 text-sm font-medium">{log.action}</TableCell>
+    <TableCell className="py-2.5 text-sm font-medium">
+      {secretAuditActionLabel(log.action)}
+    </TableCell>
     <TableCell className="py-2.5 text-sm">
       <div className="flex items-center gap-1.5">
         <span className="max-w-[160px] truncate font-mono text-xs" title={log.actorUserId}>

@@ -60,9 +60,32 @@ describe("UsersTable", () => {
   //   expect(screen.queryByText("Last updated")).toBeNull();
   // });
 
-  it("renders the inactive badge for inactive users", () => {
-    renderTable({ users: [user({ active: false })] });
+  it.each([
+    ["Active", "Active", "bg-green-100"],
+    ["PendingVerification", "Inactive", "bg-red-100"],
+    ["Suspended", "Suspended", "bg-warning-100"],
+    ["Deactivated", "Deactivated", "bg-secondary"],
+  ])("shows the %s account state as its own badge", (accountState, label, colour) => {
+    renderTable({ users: [user({ active: accountState === "Active", accountState })] });
+    expect(screen.getByText(label).className).toContain(colour);
+  });
+
+  it("reads the state from accountState, not from the active flag", () => {
+    // An invited user: inactive, but not deactivated.
+    renderTable({ users: [user({ active: false, accountState: "PendingVerification" })] });
     expect(screen.getByText("Inactive")).toBeTruthy();
+    expect(screen.queryByText("Deactivated")).toBeNull();
+  });
+
+  it("falls back to active and isVerified when IAM sends no accountState", () => {
+    renderTable({
+      users: [
+        user({ itemId: "invited", active: false, isVerified: false }),
+        user({ itemId: "deactivated", active: false, isVerified: true }),
+      ],
+    });
+    expect(screen.getByText("Inactive")).toBeTruthy();
+    expect(screen.getByText("Deactivated")).toBeTruthy();
   });
 
   it("adds a lockout badge without replacing an active user's status", () => {
@@ -78,9 +101,9 @@ describe("UsersTable", () => {
     expect(screen.queryByText("Locked out")).toBeNull();
   });
 
-  it("shows inactive and locked-out states together", () => {
-    renderTable({ users: [user({ active: false, isLockedOut: true })] });
-    expect(screen.getByText("Inactive")).toBeTruthy();
+  it("shows a non-active state and locked-out together", () => {
+    renderTable({ users: [user({ active: false, accountState: "Suspended", isLockedOut: true })] });
+    expect(screen.getByText("Suspended")).toBeTruthy();
     expect(screen.getByText("Locked out")).toBeTruthy();
   });
 

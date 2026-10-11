@@ -112,9 +112,9 @@ describe("SecretRow", () => {
   describe("value actions", () => {
     it("offers reveal and copy on an active api secret the caller may read", () => {
       renderRow();
-      expect(screen.getByRole("button", { name: "Reveal value" }).getAttribute("aria-disabled")).not.toBe(
-        "true",
-      );
+      expect(
+        screen.getByRole("button", { name: "Reveal value" }).getAttribute("aria-disabled"),
+      ).not.toBe("true");
       expect(screen.getByRole("button", { name: "Copy value" })).toBeTruthy();
     });
 
@@ -180,16 +180,20 @@ describe("SecretRow", () => {
   });
 
   describe("menu actions by state", () => {
-    it("offers edit, rotate, lock, delete and audit on an active secret", async () => {
+    it("offers edit, rotate, lock, archive and audit on an active secret", async () => {
       const user = userEvent.setup();
       renderRow();
       const menu = await openMenu(user);
 
-      for (const label of ["Edit", "Rotate", "Lock", "Delete", "Audit"]) {
+      for (const label of ["Edit", "Rotate", "Lock", "Archive", "Audit"]) {
         expect(within(menu).getByText(label)).toBeTruthy();
       }
       expect(within(menu).queryByText("Unlock")).toBeNull();
       expect(within(menu).queryByText("Restore")).toBeNull();
+      // Purge is only reachable once a secret is archived.
+      expect(within(menu).queryByText("Purge")).toBeNull();
+      // Nothing in the UI calls it "delete" any more.
+      expect(within(menu).queryByText("Delete")).toBeNull();
     });
 
     it("swaps lock for unlock on a locked secret", async () => {
@@ -202,16 +206,44 @@ describe("SecretRow", () => {
       expect(within(menu).getByText("Rotate")).toBeTruthy();
     });
 
-    it("offers only restore and audit on a deleted secret", async () => {
+    it("puts restore and purge on an archived row and leaves only audit in its menu", async () => {
       const user = userEvent.setup();
       renderRow(makeSecret({ status: SECRET_STATUS.Deleted, deletedDate: "2026-03-01T00:00:00Z" }));
-      const menu = await openMenu(user);
 
-      expect(within(menu).getByText("Restore")).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Restore" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Purge" })).toBeTruthy();
+
+      const menu = await openMenu(user);
       expect(within(menu).getByText("Audit")).toBeTruthy();
-      for (const label of ["Edit", "Rotate", "Lock", "Unlock", "Delete"]) {
+      for (const label of ["Edit", "Rotate", "Lock", "Unlock", "Archive", "Restore", "Purge"]) {
         expect(within(menu).queryByText(label)).toBeNull();
       }
+    });
+
+    it.each([
+      ["Restore", "restore"],
+      ["Purge", "purge"],
+    ])("opens the %s confirmation from the archived row", async (label, action) => {
+      const user = userEvent.setup();
+      renderRow(makeSecret({ status: SECRET_STATUS.Deleted, deletedDate: "2026-03-01T00:00:00Z" }));
+
+      await user.click(screen.getByRole("button", { name: label }));
+
+      expect(screen.getByTestId("action-dialog").textContent).toBe(action);
+      // A row-level button must not also toggle the row's detail panel.
+      expect(screen.queryByTestId("secret-detail")).toBeNull();
+    });
+
+    it("shows the archive date instead of a status badge on an archived row", () => {
+      renderRow(makeSecret({ status: SECRET_STATUS.Deleted, deletedDate: "2026-03-01T00:00:00Z" }));
+      expect(screen.getByText("01 Mar 2026")).toBeTruthy();
+      expect(screen.queryByText("Archived")).toBeNull();
+    });
+
+    it("does not show restore or purge on an active row", () => {
+      renderRow();
+      expect(screen.queryByRole("button", { name: "Restore" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Purge" })).toBeNull();
     });
 
     it("keeps rotate available on a service secret", async () => {
@@ -227,7 +259,7 @@ describe("SecretRow", () => {
       const user = userEvent.setup();
       renderRow();
       const menu = await openMenu(user);
-      await user.click(within(menu).getByText("Delete"));
+      await user.click(within(menu).getByText("Archive"));
 
       expect(screen.getByTestId("action-dialog").textContent).toBe("delete");
     });

@@ -138,13 +138,13 @@ const colorPickerValue = (value: string) => {
 };
 
 const TemplateSkeleton = () => (
-  <Card className="overflow-hidden rounded-xl bg-card p-0 shadow-sm">
+  <Card className="overflow-hidden rounded-xl bg-card p-0 shadow-xs">
     <CardContent>
-      <div className="grid min-h-[34rem] min-w-0 grid-cols-1 xl:h-[calc(100dvh-10rem)] xl:max-h-[46rem] xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+      <div className="grid min-h-136 min-w-0 grid-cols-1 xl:h-[calc(100dvh-10rem)] xl:max-h-184 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <section className="flex border-b xl:border-b-0 xl:border-r">
-          <div className="hidden w-[5.5rem] shrink-0 space-y-2 border-r bg-muted/20 p-2 xl:block">
+          <div className="hidden w-22 shrink-0 space-y-2 border-r bg-muted/20 p-2 xl:block">
             {[0, 1, 2].map((item) => (
-              <Skeleton key={item} className="h-[4.25rem] w-full rounded-lg" />
+              <Skeleton key={item} className="h-17 w-full rounded-lg" />
             ))}
           </div>
           <div className="flex-1 space-y-5 p-5">
@@ -190,7 +190,7 @@ const ColorInput = ({
         )}
       >
         <div
-          className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-border shadow-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
+          className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-border shadow-xs ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
           style={{ backgroundColor: value }}
         >
           <input
@@ -216,7 +216,7 @@ const ColorInput = ({
           maxLength={48}
           aria-invalid={!!error}
           aria-describedby={error ? `${id}-error` : undefined}
-          className="h-8 w-[7.25rem] shrink-0 px-2 font-mono text-xs shadow-none"
+          className="h-8 w-29 shrink-0 px-2 font-mono text-xs shadow-none"
         />
       </div>
       {error && (
@@ -278,7 +278,7 @@ const LogoUploadField = ({
       }}
     >
       <div className="flex flex-col items-center gap-3">
-        <div className="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-background shadow-sm">
+        <div className="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-background shadow-xs">
           {previewUrl ? (
             <img
               src={previewUrl}
@@ -754,15 +754,15 @@ export const OidcBrandingForm = () => {
   const selectedPageLabel = PAGE_OPTIONS.find(({ key }) => key === selectedPage)?.label ?? "Signup";
 
   return (
-    <Card className="overflow-hidden rounded-xl bg-card p-0 shadow-sm">
+    <Card className="overflow-hidden rounded-xl bg-card p-0 shadow-xs">
       <CardContent>
         <Tabs
           value={editorTab}
           onValueChange={handleEditorTabChange}
-          className="grid min-w-0 grid-cols-1 xl:h-[calc(100dvh-10rem)] xl:min-h-[34rem] xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]"
+          className="grid min-w-0 grid-cols-1 xl:h-[calc(100dvh-10rem)] xl:min-h-136 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]"
         >
           <section className="flex min-h-0 min-w-0 flex-col border-b border-border bg-card xl:flex-row xl:border-b-0 xl:border-r">
-            <div className="shrink-0 border-b border-border bg-muted/20 p-2 xl:w-[5.5rem] xl:border-b-0 xl:border-r">
+            <div className="shrink-0 border-b border-border bg-muted/20 p-2 xl:w-22 xl:border-b-0 xl:border-r">
               <TabsList
                 className="grid h-auto w-full grid-cols-3 gap-1 rounded-lg bg-transparent p-0 xl:flex xl:h-full xl:flex-col xl:justify-start xl:gap-2"
                 aria-label="Template sections"
@@ -771,7 +771,7 @@ export const OidcBrandingForm = () => {
                   <TabsTrigger
                     key={value}
                     value={value}
-                    className="h-11 gap-2 rounded-lg border border-transparent px-2 text-xs shadow-none hover:bg-background/60 data-[state=active]:border-border data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm xl:h-[4.25rem] xl:w-full xl:flex-col xl:gap-1.5 xl:px-1 xl:text-[11px]"
+                    className="h-11 gap-2 rounded-lg border border-transparent px-2 text-xs shadow-none hover:bg-background/60 data-[state=active]:border-border data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-xs xl:h-17 xl:w-full xl:flex-col xl:gap-1.5 xl:px-1 xl:text-[11px]"
                   >
                     <Icon className="h-4 w-4 xl:h-[18px] xl:w-[18px]" aria-hidden />
                     {label}
@@ -780,7 +780,7 @@ export const OidcBrandingForm = () => {
               </TabsList>
             </div>
 
-            <ScrollArea className="h-auto min-h-0 min-w-0 flex-1 [&>[data-radix-scroll-area-viewport]>div]:!block xl:h-full">
+            <ScrollArea className="h-auto min-h-0 min-w-0 flex-1 [&>[data-radix-scroll-area-viewport]>div]:block! xl:h-full">
               <div className="p-4 sm:p-5">
                 <TabsContent value="branding" className="m-0 space-y-6">
                   <div className="flex gap-3">
@@ -883,13 +883,13 @@ export const OidcBrandingForm = () => {
                     >
                       <TabsTrigger
                         value="light"
-                        className="h-9 gap-2 rounded-md text-xs shadow-none data-[state=active]:shadow-sm sm:text-sm"
+                        className="h-9 gap-2 rounded-md text-xs shadow-none data-[state=active]:shadow-xs sm:text-sm"
                       >
                         <Sun className="h-4 w-4" aria-hidden /> Light
                       </TabsTrigger>
                       <TabsTrigger
                         value="dark"
-                        className="h-9 gap-2 rounded-md text-xs shadow-none data-[state=active]:shadow-sm sm:text-sm"
+                        className="h-9 gap-2 rounded-md text-xs shadow-none data-[state=active]:shadow-xs sm:text-sm"
                       >
                         <Moon className="h-4 w-4" aria-hidden /> Dark
                       </TabsTrigger>
@@ -948,7 +948,7 @@ export const OidcBrandingForm = () => {
                       </p>
                     </div>
                   </div>
-                  <div className="w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  <div className="w-full overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden">
                     <div
                       role="tablist"
                       aria-label="OIDC page"
@@ -961,9 +961,9 @@ export const OidcBrandingForm = () => {
                           role="tab"
                           aria-selected={selectedPage === key}
                           className={cn(
-                            "rounded-md px-3 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            "rounded-md px-3 py-2 text-xs font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
                             selectedPage === key
-                              ? "bg-background text-high-emphasis shadow-sm"
+                              ? "bg-background text-high-emphasis shadow-xs"
                               : "text-muted-foreground hover:bg-background/60 hover:text-high-emphasis",
                           )}
                           onClick={() => void setEditorState({ page: key })}
@@ -1170,7 +1170,7 @@ export const OidcBrandingForm = () => {
               </div>
             </div>
             <div className="flex min-h-[500px] flex-1 items-center justify-center p-3 sm:min-h-[560px] sm:p-4 lg:min-h-[620px] xl:min-h-0 xl:p-3">
-              <div className="h-full max-h-full w-full max-w-[42rem] overflow-hidden rounded-xl border border-border bg-background shadow-sm">
+              <div className="h-full max-h-full w-full max-w-2xl overflow-hidden rounded-xl border border-border bg-background shadow-xs">
                 <OidcTemplatePreview
                   template={previewTemplate}
                   selectedPage={selectedPage}

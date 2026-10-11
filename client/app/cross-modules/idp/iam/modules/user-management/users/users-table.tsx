@@ -11,6 +11,10 @@ import { getUserDisplayName, getUserInitials } from "@blocks-idp/iam/utils/user-
 import { Users as UsersIcon } from "lucide-react";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { cn } from "@/lib/utils";
+import {
+  USER_ACCOUNT_STATE_META,
+  resolveUserAccountState,
+} from "@blocks-idp/iam/utils/user-account-state";
 
 type UserTableProps = {
   users: User[];
@@ -24,8 +28,15 @@ type UserTableProps = {
 
 // One extra leading column while selecting, so the header and the rows stay aligned
 // without either of them knowing why the other shifted.
-const GRID_COLUMNS = "md:grid-cols-[200px_minmax(0,1fr)_90px_130px_140px]";
-const GRID_COLUMNS_SELECTING = "md:grid-cols-[32px_200px_minmax(0,1fr)_90px_130px_140px]";
+//
+// Name and email share the spare width instead of email taking all of it: with a fixed
+// name column, email was the only flexible one and a wide screen opened a large empty
+// gap between the address and Status. Email gets the larger share since addresses run
+// longer than names.
+const GRID_COLUMNS =
+  "md:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)_110px_150px_150px]";
+const GRID_COLUMNS_SELECTING =
+  "md:grid-cols-[32px_minmax(0,1fr)_minmax(0,1.25fr)_110px_150px_150px]";
 
 // Radix renders the same tick for "mixed" as for "checked", which would read as
 // "everything is selected" when only some rows are. The tick is hidden in that state
@@ -147,6 +158,7 @@ export const UsersTable = ({
           const fullName = getUserDisplayName(user);
           const hasLastLogin = checkValidDate(user.lastLoggedInTime);
           const hasCreated = checkValidDate(user.createdDate);
+          const accountState = USER_ACCOUNT_STATE_META[resolveUserAccountState(user)];
 
           return (
             <div
@@ -214,8 +226,8 @@ export const UsersTable = ({
                   their own grid columns (3-5), matching the header. */}
               <div className="flex flex-wrap items-center justify-between gap-3 md:contents">
                 <div className="flex flex-wrap items-center gap-1 md:shrink-0">
-                  <Badge variant={user.active ? "success" : "error"} className="w-fit">
-                    {user.active ? "Active" : "Inactive"}
+                  <Badge variant={accountState.variant} className="w-fit whitespace-nowrap">
+                    {accountState.label}
                   </Badge>
                   {user.isLockedOut === true && (
                     <Badge variant="error" className="w-fit">

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 
 interface ChatEventMessageProps {
   message: string;
@@ -249,15 +249,10 @@ export const AnimatedDots = () => {
 };
 
 export const ChatEventMessage: React.FC<ChatEventMessageProps> = ({ message }) => {
-  const [key, setKey] = useState(0);
-
-  useEffect(() => {
-    setKey((prev) => prev + 1);
-  }, [message]);
-
+  // Keyed on the message so each new message remounts and replays the entrance animation.
   return (
     <div
-      key={key}
+      key={message}
       className="flex items-center gap-2 duration-500 animate-in fade-in slide-in-from-left-2"
     >
       <p className="text-sm italic text-medium-emphasis">{message}</p>

@@ -79,7 +79,7 @@ describe("SecretDetail", () => {
     expect(screen.getByText("Created")).toBeTruthy();
   });
 
-  it("shows deletion details for a deleted secret", () => {
+  it("shows when an archived secret was archived", () => {
     render(
       <SecretDetail
         secret={makeSecret({
@@ -89,7 +89,7 @@ describe("SecretDetail", () => {
         })}
       />,
     );
-    expect(screen.getByText("Deleted")).toBeTruthy();
+    expect(screen.getByText("Archived")).toBeTruthy();
   });
 
   describe("api secrets", () => {

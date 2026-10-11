@@ -59,7 +59,7 @@ export const UsageServiceCard: React.FC<ServiceCardProps> = ({
   if (isLoading) return <UsageServiceCardSkelton name={name} />;
   const currentMatrix = metrics[selected];
   return (
-    <Card className="border shadow-none transition-shadow duration-200 hover:shadow-sm">
+    <Card className="border shadow-none transition-shadow duration-200 hover:shadow-xs">
       <CardContent className="p-4">
         <div className="mb-4 flex items-start justify-between gap-2">
           <div className="min-w-0">
@@ -83,7 +83,7 @@ export const UsageServiceCard: React.FC<ServiceCardProps> = ({
             {logLink ? (
               <Link
                 to={logLink}
-                className="flex h-7 w-7 items-center justify-center rounded-lg border border-border/70 bg-muted/40 text-medium-emphasis transition-colors hover:bg-background hover:text-high-emphasis hover:shadow-sm"
+                className="flex h-7 w-7 items-center justify-center rounded-lg border border-border/70 bg-muted/40 text-medium-emphasis transition-colors hover:bg-background hover:text-high-emphasis hover:shadow-xs"
                 title="View logs"
               >
                 <Logs className="h-3.5 w-3.5" />

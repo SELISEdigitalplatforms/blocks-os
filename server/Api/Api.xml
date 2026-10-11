@@ -220,6 +220,116 @@
             answers. One request, not a poll.
             </remarks>
         </member>
+        <member name="M:BlocksOs.Api.Controllers.DomainController.ConfigureStream(DomainService.Shared.ConfigureDomainRequest)">
+            <summary>
+            Configures a domain like <see cref="M:BlocksOs.Api.Controllers.DomainController.Configure(DomainService.Shared.ConfigureDomainRequest)"/>, streaming each step as a server-sent
+            event: "step" events (<see cref="T:DomainService.Shared.DomainSetupProgress"/>) while it runs, then one "result"
+            event (<see cref="T:Blocks.Genesis.BaseResponse"/>). The run does not depend on the connection: a browser
+            that goes away mid-run leaves it to finish, and the domain's status shows the outcome.
+            </summary>
+        </member>
+        <member name="T:BlocksOs.Api.Controllers.IntegrationClientIp">
+            <summary>Gets the caller address after trusted forwarded-header processing has run.</summary>
+        </member>
+        <member name="T:BlocksOs.Api.Controllers.IntegrationController">
+            <summary>
+            Integration setup endpoints. Routing only; the rules live in <see cref="T:Configuration.DomainService.Integration.Services.IIntegrationService"/>.
+            </summary>
+            <remarks>
+            Protected by their own permissions, like Storage and Notification, so access to Integration can
+            be granted apart from Secrets. Both permissions are seeded from
+            <c>server/seed/integration-permissions.upsert.json</c> into the root tenant's <c>Permissions</c>.
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.GetTemplates(System.String)">
+            <summary>
+            Lists the active integration templates, optionally narrowed to one family, sorted by <c>SortOrder</c>.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.GetTemplate(System.String,System.Boolean)">
+            <summary>
+            Fetches one template by key, including inactive ones when asked, so legacy setups can
+            still resolve their base URL.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.GetConnections">
+            <summary>
+            Lists the environment's integration connections. Replaces the old <c>GetSetup</c>.
+            </summary>
+            <remarks>
+            The response never contains a client secret: rows carry the client id and metadata only,
+            so a list read can never leak credential material. Records predating per-connection
+            setups are labelled "Legacy connection".
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.RunSetup(Configuration.DomainService.Integration.RequestModel.RunIntegrationSetupRequest)">
+            <summary>
+            Creates a connection in one server-side call. Replaces the old browser-run setup and <c>SaveSetup</c>.
+            </summary>
+            <remarks>
+            Resolves the template's permissions, reuses or creates its IAM role, and creates a client
+            credential named for this connection. This and <see cref="M:BlocksOs.Api.Controllers.IntegrationController.RegenerateSecret(Configuration.DomainService.Integration.RequestModel.IntegrationConnectionRequest)"/> are the only
+            endpoints that return a client secret, and they return it exactly once. An interrupted run
+            can be repeated without leaving duplicates behind.
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.Disconnect(Configuration.DomainService.Integration.RequestModel.IntegrationConnectionRequest)">
+            <summary>
+            Disconnects a connection: deletes its IAM client credential and marks the record revoked.
+            </summary>
+            <remarks>
+            If IAM cannot delete the credential the record stays active and <c>iam_error</c> is
+            returned, so a live credential is never recorded as disconnected.
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.RegenerateSecret(Configuration.DomainService.Integration.RequestModel.IntegrationConnectionRequest)">
+            <summary>
+            Rotates a connection's client secret. The client id is unchanged; the new secret is
+            returned once, here and nowhere else.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.CheckReadiness(System.String)">
+            <summary>
+            Reports whether the environment's permission store has every permission the template
+            grants, so the connect flow can wait for freshly provisioned environments.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.GetRequest(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Reads a connect request for the Approve screen. The first call by a logged-in user
+            claims the request; after that only the claimer can see, approve or cancel it.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.Cancel(Configuration.DomainService.Integration.RequestModel.CancelIntegrationRequest,System.Threading.CancellationToken)">
+            <summary>
+            Cancels a claimed connect request and redirects the browser back to the CMS with
+            <c>error=access_denied</c> and the original state.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.Approve(Configuration.DomainService.Integration.RequestModel.ApproveIntegrationRequest,System.Threading.CancellationToken)">
+            <summary>
+            Approves a claimed connect request: runs the server-side setup, stores a one-time code
+            hash and the credential secret encrypted, and returns the redirect to the CMS carrying
+            code, state and blocks_key. Double-approve returns the same redirect idempotently.
+            </summary>
+            <remarks>
+            Must run inside the chosen environment (impersonated) with <c>blocks-os::integration::save</c>.
+            The user must be the request's claimer.
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.Exchange(Configuration.DomainService.Integration.RequestModel.ExchangeIntegrationRequest,System.Threading.CancellationToken)">
+            <summary>
+            Redeems a one-time code server to server: verifies PKCE S256 and the redirect URI,
+            returns the connection's keys, and removes the stored secret. A failed attempt burns
+            the code. Rate limited per IP; over the limit responds 429.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.CreateRequest(Configuration.DomainService.Integration.RequestModel.CreateIntegrationRequest,System.Threading.CancellationToken)">
+            <summary>
+            Opens an anonymous "Connect with Blocks" request from a CMS and returns its id and expiry.
+            Rate limited per IP; over the limit responds 429 with the <c>rate_limited</c> error.
+            </summary>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.LogAndTraceRestoreController.CancelRestoreProcess(Cloud.LmtService.Models.ColdRestore.CancelRestoreRequest)">
             <summary>
             Cancels an unfinished cold or archive restore and discards whatever it had restored so
@@ -348,6 +458,13 @@
         <member name="M:BlocksOs.Api.Controllers.SecretsController.Unlock(Blocks.Secrets.SecretIdRequest,System.Threading.CancellationToken)">
             <summary>Unlocks a secret. Shares the lock permission — they are one capability.</summary>
         </member>
+        <member name="M:BlocksOs.Api.Controllers.SecretsController.Purge(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Permanently deletes an already-deleted secret: metadata and vault value. Shares the delete
+            permission — it is the second half of the same capability, and only reaches secrets the
+            soft delete has already taken out of service.
+            </summary>
+        </member>
         <member name="T:BlocksOs.Api.Controllers.UsageController">
             <summary>
             What a project is using, and the sync that gives an environment rows for anything new in the
@@ -448,8 +565,27 @@
             <c>Csp:ExtraConnectSrc</c> / <c>Csp:ExtraImgSrc</c> rather than back into code.
             </summary>
         </member>
+        <member name="F:BlocksOs.Api.Security.ContentSecurityPolicy.WebSocketOriginKeys">
+            <summary>
+            Hosts the SPA opens a WebSocket to: the notification hub on blocks-logic. CSP does not
+            let an <c>https:</c> source match a <c>wss:</c> URL, so without the <c>wss:</c> twin the
+            browser refuses the socket before sending it and no live notification ever arrives.
+            </summary>
+        </member>
         <member name="F:BlocksOs.Api.Security.ContentSecurityPolicy.FormActionOriginKeys">
             <summary>Where a login POST may be sent: the identity host and the SPA's own host.</summary>
+        </member>
+        <member name="F:BlocksOs.Api.Security.ContentSecurityPolicy.StyleNoncePlaceholder">
+            <summary>
+            Stands in for the style nonce (see <see cref="T:BlocksOs.Api.Security.StyleNonce"/>): in the policy built at
+            startup and in the built index.html (meta[name=csp-nonce]). Replaced on every response.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.ContentSecurityPolicy.WithStyleNonce(System.String,System.String)">
+            <summary>The policy for one response, with the placeholder swapped for its nonce.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.ContentSecurityPolicy.RenderIndex(System.String,System.String)">
+            <summary>The SPA shell for one response, carrying the same nonce as its header.</summary>
         </member>
         <member name="M:BlocksOs.Api.Security.ContentSecurityPolicy.BuildPolicy(System.Collections.Generic.IEnumerable{System.String},System.Collections.Generic.IEnumerable{System.String},System.Collections.Generic.IEnumerable{System.String})">
             <summary>
@@ -463,12 +599,59 @@
         <member name="M:BlocksOs.Api.Security.ContentSecurityPolicy.ToOrigin(System.String)">
             <summary>
             A CSP source is an origin, so any path, query or trailing slash is dropped. A value
-            that is not an absolute http(s) URL is ignored rather than emitted verbatim, so a
-            malformed secret cannot inject a directive.
+            that is not an absolute http(s) or ws(s) URL is ignored rather than emitted verbatim, so
+            a malformed secret cannot inject a directive.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.ContentSecurityPolicy.ToWebSocketOrigin(System.String)">
+            <summary>
+            The wss origin a browser uses to open a socket to an https host, or null. Plain http and
+            ws hosts get no socket allowance: an unencrypted socket would carry the session token and
+            notification payloads in clear text.
             </summary>
         </member>
         <member name="M:BlocksOs.Api.Security.ContentSecurityPolicy.Split(System.String)">
             <summary>Space- or comma-separated list, for origins no runtime key describes.</summary>
+        </member>
+        <member name="T:BlocksOs.Api.Security.StyleNonce">
+            <summary>
+            The CSP style nonce for a browser.
+            <para>
+            A fresh nonce on every response changes the HTML body on every request, and a scanner
+            comparing two responses for the same page (ZAP rule 10104, User Agent Fuzzer) then reports
+            every page. So the nonce is derived from a random per-browser seed held in an HttpOnly
+            cookie, keyed with a secret that never leaves the process. The same browser gets the same
+            shell; another browser, or the same one after the cookie expires, gets a different nonce.
+            A page cannot read the seed, and the nonce itself is hidden from CSS and the DOM.
+            </para>
+            </summary>
+        </member>
+        <member name="F:BlocksOs.Api.Security.StyleNonce.SeedCookieName">
+            <summary>Host-only, Secure, HttpOnly cookie carrying the per-browser seed.</summary>
+        </member>
+        <member name="F:BlocksOs.Api.Security.StyleNonce.SeedLifetime">
+            <summary>The seed is rotated by expiry, which also rotates the nonce.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.StyleNonce.CreateWithRandomKey">
+            <summary>A process-local key: every response from this process uses it.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.StyleNonce.NewSeed">
+            <summary>A new random seed, base64url without padding (cookie-safe).</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.StyleNonce.IsValidSeed(System.String)">
+            <summary>True for a value <see cref="M:BlocksOs.Api.Security.StyleNonce.NewSeed"/> could have produced.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.StyleNonce.For(System.String)">
+            <summary>The nonce for a seed: 128 bits of HMAC-SHA256(key, seed), base64.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.StyleNonce.ForRequest(Microsoft.AspNetCore.Http.HttpContext)">
+            <summary>
+            The nonce for one response. A request without a valid seed that may render the SPA shell
+            gets a new seed cookie; API calls and static files get a throwaway nonce and no cookie.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.StyleNonce.MayServeShell(System.String)">
+            <summary>True for "/index.html" and extension-less paths outside /api (SPA routes).</summary>
         </member>
         <member name="T:Program">
             <summary>

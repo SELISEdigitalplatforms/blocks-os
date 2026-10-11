@@ -162,6 +162,19 @@ public class SecretsController : ControllerBase
         return Success();
     }
 
+    /// <summary>
+    /// Permanently deletes an already-deleted secret: metadata and vault value. Shares the delete
+    /// permission — it is the second half of the same capability, and only reaches secrets the
+    /// soft delete has already taken out of service.
+    /// </summary>
+    [HttpDelete("purge")]
+    [ProtectedEndPoint("blocks-os::secret::delete")]
+    public async Task<BaseResponse> Purge([FromQuery] string secretId, CancellationToken cancellationToken)
+    {
+        await _secretService.PurgeAsync(secretId, cancellationToken);
+        return Success();
+    }
+
     [HttpPost("access")]
     [ProtectedEndPoint("blocks-os::secret::access")]
     public async Task<BaseResponse> Access([FromBody] UpdateSecretAccessApiRequest request, CancellationToken cancellationToken)

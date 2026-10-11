@@ -553,24 +553,9 @@ namespace DomainService.Projects
 
         private string ResolveIamBaseUrl()
         {
-            var raw = ResolveFrontendRuntimeValue("BLOCKS_IAM_BASE_URL");
-            if (string.IsNullOrWhiteSpace(raw))
-            {
-                throw new InvalidOperationException(
-                    "FrontendRuntime:BLOCKS_IAM_BASE_URL is not configured; a tenant cannot be created without a JWT issuer.");
-            }
-
-            raw = raw.Trim();
-            if (!Uri.TryCreate(raw, UriKind.Absolute, out var uri)
-                || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
-                || !string.IsNullOrEmpty(uri.Query)
-                || !string.IsNullOrEmpty(uri.Fragment))
-            {
-                throw new InvalidOperationException(
-                    "FrontendRuntime:BLOCKS_IAM_BASE_URL must be an absolute http or https URL without query or fragment.");
-            }
-
-            return raw;
+            return Blocks.Secrets.FrontendRuntimeUrl.ResolveIamBaseUrl(
+                _configuration,
+                "FrontendRuntime:BLOCKS_IAM_BASE_URL is not configured; a tenant cannot be created without a JWT issuer.");
         }
 
         // Issuer format forced by blocks-iam OidcServices.ResolveEndpoints:

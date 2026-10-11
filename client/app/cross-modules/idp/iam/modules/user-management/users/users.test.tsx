@@ -164,6 +164,21 @@ describe("Users", () => {
     expect(filter.createdDate).toBeUndefined();
   });
 
+  it("sends the chosen account states, dropping values IAM does not know", () => {
+    h.queryParams.accountStates = ["LockedOut", "Verified", "Suspended"];
+    render(<Users />);
+    expect((h.lastQuery?.filter as { accountStates?: string[] }).accountStates).toEqual([
+      "Suspended",
+      "LockedOut",
+    ]);
+  });
+
+  it("sends no account-state filter when none is chosen", () => {
+    render(<Users />);
+    expect(h.lastQuery?.filter).not.toHaveProperty("accountStates");
+    expect(h.lastQuery?.filter).not.toHaveProperty("status");
+  });
+
   it("marks the table as loading while fetching", () => {
     h.isFetching = true;
     render(<Users />);

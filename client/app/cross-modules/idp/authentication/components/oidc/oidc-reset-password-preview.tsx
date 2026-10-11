@@ -16,9 +16,9 @@ export const OidcResetPasswordPreview = (props: OidcPagePreviewProps) => {
         <PreviewField label={copy.passwordLabel} password />
         <PreviewField label={copy.confirmPasswordLabel} password />
       </div>
-      <div className="mt-4 flex items-start gap-2 text-xs text-[var(--muted)] sm:mt-5">
+      <div className="mt-4 flex items-start gap-2 text-xs text-(--muted) sm:mt-5">
         <span
-          className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border border-[var(--border-strong)] text-[10px] text-[var(--accent)]"
+          className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border border-(--border-strong) text-[10px] text-(--accent)"
           aria-hidden
         >
           ✓
@@ -26,12 +26,12 @@ export const OidcResetPasswordPreview = (props: OidcPagePreviewProps) => {
         <p>{copy.logoutFromDevicesLabel}</p>
       </div>
       <PreviewButton>{copy.submitButton}</PreviewButton>
-      <p className="mt-3 text-center text-xs text-[var(--accent)] sm:mt-4">
+      <p className="mt-3 text-center text-xs text-(--accent) sm:mt-4">
         {copy.backToLoginButton}
       </p>
-      <div className="mt-3 rounded-lg border border-[var(--border-strong)] p-2.5 sm:mt-4 sm:p-3">
-        <p className="text-xs text-[var(--danger)]">{copy.missingCodeMessage}</p>
-        <p className="mt-2 text-xs text-[var(--accent)]">{copy.requestNewLinkButton}</p>
+      <div className="mt-3 rounded-lg border border-(--border-strong) p-2.5 sm:mt-4 sm:p-3">
+        <p className="text-xs text-(--danger)">{copy.missingCodeMessage}</p>
+        <p className="mt-2 text-xs text-(--accent)">{copy.requestNewLinkButton}</p>
       </div>
       <PreviewSuccess title={copy.successTitle} subtitle={copy.successSubtitle} />
     </OidcPreviewShell>

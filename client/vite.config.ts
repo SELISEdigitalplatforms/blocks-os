@@ -2,6 +2,7 @@
 import crypto from "node:crypto";
 import fs from "fs";
 import path from "path";
+import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
 import { getRuntimeEnv } from "./app/lib/runtime-env";
@@ -22,7 +23,6 @@ function resolveDevHttps(): { cert: Buffer; key: Buffer } | undefined {
   }
   return { cert: fs.readFileSync(certPath), key: fs.readFileSync(keyPath) };
 }
-
 
 function sriForBuiltHtml() {
   return {
@@ -78,7 +78,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     envPrefix: ["BLOCKS_"],
-    plugins: [react(), sriForBuiltHtml()],
+    plugins: [react(), tailwindcss(), sriForBuiltHtml()],
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./app"),

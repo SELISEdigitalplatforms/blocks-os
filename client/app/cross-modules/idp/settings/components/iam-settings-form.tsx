@@ -123,7 +123,7 @@ const AccountActionBaseUrlInput = ({
       className={cn(
         "h-full min-w-0 flex-1 rounded-none border-0 py-2 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0",
         readOnly
-          ? "cursor-not-allowed bg-muted/80 text-muted-foreground opacity-100 focus-visible:outline-none"
+          ? "cursor-not-allowed bg-muted/80 text-muted-foreground opacity-100 focus-visible:outline-hidden"
           : "bg-transparent",
       )}
       placeholder="console.enterprise.cloud"
@@ -142,7 +142,7 @@ type SwitchRowProps = {
 const SwitchRow = ({ label, description, checked, onCheckedChange, disabled }: SwitchRowProps) => (
   <FormItem className={cn(SETTINGS_FORM_LAYOUT.toggleRow, "pb-2")}>
     <div className={SETTINGS_FORM_LAYOUT.toggleLabelGroup}>
-      <FormLabel className={cn("!mt-0", SETTINGS_FORM_LAYOUT.toggleTitle)}>{label}</FormLabel>
+      <FormLabel className={cn("mt-0!", SETTINGS_FORM_LAYOUT.toggleTitle)}>{label}</FormLabel>
       {description ? <p className={SETTINGS_FORM_LAYOUT.toggleDescription}>{description}</p> : null}
     </div>
     <FormControl className="shrink-0 self-start sm:self-center">
@@ -310,7 +310,7 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
                         <FormItem className="flex shrink-0 items-center gap-2 space-y-0 self-start sm:self-center">
                           <FormLabel
                             htmlFor="use-account-action-base-url-as-default"
-                            className="!mt-0 cursor-pointer font-normal text-muted-foreground"
+                            className="mt-0! cursor-pointer font-normal text-muted-foreground"
                           >
                             Use as default
                           </FormLabel>

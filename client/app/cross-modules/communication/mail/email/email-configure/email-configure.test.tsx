@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
   config: { isLoading: false, data: { configurations: [] as Record<string, unknown>[] } },
+  formMounts: [] as string[],
 }));
 
 // Tooltip re-exports blocks-kit (process.env at load); passthrough keeps it renderable.
@@ -19,18 +20,27 @@ vi.mock(
   "@blocks-communication/mail/components/email-service/modals/new-configuration/new-configuration",
   async () => {
     const { DialogContent, DialogTitle } = await import("@/components/ui-kits/dialog/dialog");
-    return {
-      default: ({
-        dialogTitle,
-        previousData,
-      }: {
-        dialogTitle: string;
-        previousData?: { name: string };
-      }) => (
+    const { useEffect } = await import("react");
+    function NewConfigurationStub({
+      dialogTitle,
+      previousData,
+    }: Readonly<{
+      dialogTitle: string;
+      previousData?: { name: string };
+    }>) {
+      // Records each time a form instance is created, so a test can tell whether
+      // reopening the dialog starts a fresh form or reuses the unsaved one.
+      useEffect(() => {
+        h.formMounts.push(dialogTitle);
+      }, [dialogTitle]);
+      return (
         <DialogContent aria-describedby={undefined}>
           <DialogTitle>{`${dialogTitle}: ${previousData?.name ?? "new"}`}</DialogTitle>
         </DialogContent>
-      ),
+      );
+    }
+    return {
+      default: NewConfigurationStub,
     };
   },
 );
@@ -88,6 +98,23 @@ describe("EmailConfiguration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     h.config = { isLoading: false, data: { configurations: [] } };
+    h.formMounts = [];
+  });
+
+  it("starts a fresh edit form each time the dialog opens, so Cancel drops unsaved input", () => {
+    h.config = { isLoading: false, data: { configurations: [outbound] } };
+    render(<EmailConfiguration />);
+
+    // Closed dialogs hold no form.
+    expect(h.formMounts).toEqual([]);
+
+    fireEvent.click(screen.getByLabelText("Edit"));
+    expect(screen.getByText("Edit Configuration: Primary Outbound")).toBeTruthy();
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    expect(screen.queryByText("Edit Configuration: Primary Outbound")).toBeNull();
+
+    fireEvent.click(screen.getByLabelText("Edit"));
+    expect(h.formMounts).toEqual(["Edit Configuration", "Edit Configuration"]);
   });
 
   it("renders skeletons while loading", () => {

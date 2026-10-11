@@ -19,6 +19,8 @@ export interface User {
   active: boolean;
   lockoutUntilUtc: string | null;
   isLockedOut: boolean;
+  /** IAM's derived lifecycle state; read it through `resolveUserAccountState`. */
+  accountState?: string;
   status: number;
   statusReason: string | null;
   deactivatedAtUtc: string | null;
@@ -65,6 +67,8 @@ export interface IGetUsersPayload {
     name: string;
     userIds?: string[];
     status?: { active?: boolean; inactive?: boolean };
+    /** Users in ANY of these states; see USER_ACCOUNT_STATE_FILTER_OPTIONS. */
+    accountStates?: string[];
     mfa?: { enabled?: boolean; disabled?: boolean };
     joinedOn?: string;
     lastLogin?: string;
@@ -140,6 +144,8 @@ export interface ICreateUserPayload {
   projectKey?: string;
   organizationId?: string;
   organizationIds?: string[];
+  /** Server default is true. Only used when the email already has an account. */
+  notifyUser?: boolean;
 }
 export interface ICreateUserResponse {
   errors: unknown;
@@ -195,6 +201,8 @@ export interface IUpdateUserAccessControlPayload {
   roles: string[];
   permissions: string[];
   organizationId: string;
+  /** Server default is true. Mails only when this adds the user to the organization. */
+  notifyUser?: boolean;
 }
 export interface IUpdateUserAccessControlResponse {
   errors: unknown | null;
@@ -204,6 +212,8 @@ export interface IUpdateUserAccessControlResponse {
 export interface IRevokeAccessPayload {
   userId: string;
   organizationId: string;
+  /** Server default is true. Mails only when the user was a member. */
+  notifyUser?: boolean;
 }
 
 export interface IRevokeAccessResponse {

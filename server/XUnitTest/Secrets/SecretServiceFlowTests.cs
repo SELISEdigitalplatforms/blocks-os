@@ -340,6 +340,8 @@ namespace XUnitTest.Secrets
         [InlineData(SecretStatuses.Locked, "restore")]
         [InlineData(SecretStatuses.Deleted, "update")]
         [InlineData(SecretStatuses.Deleted, "rotate")]
+        [InlineData(SecretStatuses.Active, "purge")]
+        [InlineData(SecretStatuses.Locked, "purge")]
         public async Task IllegalTransitionsAreRefused(string currentStatus, string action)
         {
             _context.GivenSecret(status: currentStatus);
@@ -350,11 +352,118 @@ namespace XUnitTest.Secrets
                 "unlock" => () => _context.Service.UnlockAsync("secret-1"),
                 "delete" => () => _context.Service.DeleteAsync("secret-1"),
                 "restore" => () => _context.Service.RestoreAsync("secret-1"),
+                "purge" => () => _context.Service.PurgeAsync("secret-1"),
                 "update" => () => _context.Service.UpdateAsync("secret-1", new UpdateSecretRequest { Name = "renamed" }),
                 _ => () => _context.Service.RotateAsync("secret-1", new RotateSecretRequest { Value = "v" })
             };
 
             await act.Should().ThrowAsync<SecretStateException>();
+        }
+
+        [Fact]
+        public async Task Purge_RemovesTheVaultValueThenTheMetadataAndAudits()
+        {
+            _context.GivenSecret(status: SecretStatuses.Deleted);
+            var order = new List<string>();
+            _context.ValueStore
+                .Setup(v => v.PurgeAsync("secret-1", It.IsAny<CancellationToken>()))
+                .Callback(() => order.Add("vault"))
+                .Returns(Task.CompletedTask);
+            _context.Repository
+                .Setup(r => r.HardDeleteAsync(SecretTestContext.TenantId, "secret-1", It.IsAny<CancellationToken>()))
+                .Callback(() => order.Add("metadata"))
+                .Returns(Task.CompletedTask);
+
+            await _context.Service.PurgeAsync("secret-1");
+
+            order.Should().Equal("vault", "metadata");
+            _context.AuditLog.Should().ContainSingle(l => l.Action == SecretAuditActions.Purge)
+                .Which.Outcome.Should().Be(SecretAuditOutcomes.Success);
+        }
+
+        [Fact]
+        public async Task Purge_WhenTheVaultDeleteFails_KeepsTheMetadataSoItCanBeRetried()
+        {
+            _context.GivenSecret(status: SecretStatuses.Deleted);
+            _context.ValueStore
+                .Setup(v => v.PurgeAsync("secret-1", It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new SecretVaultException("vault down", SecretVaultOperations.Delete, "secret-1"));
+
+            var act = () => _context.Service.PurgeAsync("secret-1");
+
+            await act.Should().ThrowAsync<SecretVaultException>();
+            _context.Repository.Verify(
+                r => r.HardDeleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+            _context.AuditLog.Should().ContainSingle(l => l.Action == SecretAuditActions.Purge)
+                .Which.Outcome.Should().Be(SecretAuditOutcomes.Failed);
+        }
+
+        [Fact]
+        public async Task Purge_WhenTheVaultRefusesOnlyThePurgeStep_StillRemovesTheMetadata()
+        {
+            // Purge protection or a missing Purge permission: the value is deleted and unreadable,
+            // so the secret is still gone for the user; the audit flags the vault leftover.
+            _context.GivenSecret(status: SecretStatuses.Deleted);
+            _context.ValueStore
+                .Setup(v => v.PurgeAsync("secret-1", It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new SecretVaultException("purge refused", SecretVaultOperations.Purge, "secret-1"));
+
+            await _context.Service.PurgeAsync("secret-1");
+
+            _context.Repository.Verify(
+                r => r.HardDeleteAsync(SecretTestContext.TenantId, "secret-1", It.IsAny<CancellationToken>()), Times.Once);
+            var log = _context.AuditLog.Should().ContainSingle(l => l.Action == SecretAuditActions.Purge).Which;
+            log.Outcome.Should().Be(SecretAuditOutcomes.PartialFailure);
+            log.Reason.Should().Be(SecretAuditReasons.VaultPurgeFailed);
+        }
+
+        [Fact]
+        public async Task Purge_WhenTheMetadataRemovalFails_AuditsAPartialFailureAndThrows()
+        {
+            _context.GivenSecret(status: SecretStatuses.Deleted);
+            _context.Repository
+                .Setup(r => r.HardDeleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new InvalidOperationException("mongo down"));
+
+            var act = () => _context.Service.PurgeAsync("secret-1");
+
+            await act.Should().ThrowAsync<InvalidOperationException>();
+            _context.AuditLog.Should().ContainSingle(l => l.Action == SecretAuditActions.Purge)
+                .Which.Reason.Should().Be(SecretAuditReasons.MetadataWriteFailed);
+        }
+
+        [Fact]
+        public async Task Purge_IsRefusedForACallerOutsideTheAccessList()
+        {
+            _context.GivenSecret(status: SecretStatuses.Deleted, createdBy: "someone-else");
+
+            var act = () => _context.Service.PurgeAsync("secret-1");
+
+            await act.Should().ThrowAsync<SecretAccessDeniedException>();
+            _context.ValueStore.Verify(v => v.PurgeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+            _context.Repository.Verify(
+                r => r.HardDeleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Purge_OfAnUnknownSecret_IsNotFound()
+        {
+            var act = () => _context.Service.PurgeAsync("missing");
+
+            await act.Should().ThrowAsync<SecretNotFoundException>();
+            _context.ValueStore.Verify(v => v.PurgeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Purge_IsScopedToTheCallersTenant()
+        {
+            // Same id, another tenant: the lookup is tenant-scoped, so it is simply not found.
+            _context.GivenSecret(status: SecretStatuses.Deleted, tenantId: "tenant-2");
+
+            var act = () => _context.Service.PurgeAsync("secret-1");
+
+            await act.Should().ThrowAsync<SecretNotFoundException>();
+            _context.ValueStore.Verify(v => v.PurgeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]

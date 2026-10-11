@@ -81,8 +81,8 @@ export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
           className={cn(
             "shrink-0",
             permission.isBuiltIn
-              ? "!bg-gray-300 !text-gray-800"
-              : "!bg-purple-100 !text-purple-700",
+              ? "bg-gray-300! text-gray-800!"
+              : "bg-purple-100! text-purple-700!",
           )}
         >
           {permission.isBuiltIn ? "Built In" : "Custom"}

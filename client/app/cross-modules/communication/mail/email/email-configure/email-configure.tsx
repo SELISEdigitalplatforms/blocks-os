@@ -63,12 +63,16 @@ export function EmailConfiguration({
   // }
   return (
     <div>
+      {/* The form lives only while its dialog is open, so Cancel drops unsaved
+          input and the next open starts from the stored record. */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <NewConfiguration
-          dialogTitle="Add Configuration"
-          onClose={() => setOpen(false)}
-          isEdit={false}
-        />
+        {open && (
+          <NewConfiguration
+            dialogTitle="Add Configuration"
+            onClose={() => setOpen(false)}
+            isEdit={false}
+          />
+        )}
       </Dialog>
       {data && data.length > 0 ? (
         <Accordion type="single" collapsible className="mt-6" defaultValue={data[0].itemId}>
@@ -105,12 +109,13 @@ export function EmailConfiguration({
                           </TooltipTrigger>
                           <TooltipContent>Edit</TooltipContent>
                         </Tooltip>
-                        {config.isDefault ? (
+                        {editingId === config.itemId && config.isDefault && (
                           <EditDefaultSenderName
                             config={config}
                             onClose={() => setEditingId(null)}
                           />
-                        ) : (
+                        )}
+                        {editingId === config.itemId && !config.isDefault && (
                           <NewConfiguration
                             dialogTitle="Edit Configuration"
                             previousData={config}

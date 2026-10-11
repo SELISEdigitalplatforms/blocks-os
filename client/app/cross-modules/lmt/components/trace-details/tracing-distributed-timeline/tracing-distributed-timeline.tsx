@@ -99,7 +99,7 @@ const SpanBar = ({ row }: { row: SpanRow }) => {
             className={cn(
               "group flex w-full items-center rounded-sm text-left transition-colors",
               ROW_HEIGHT,
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
               // The selected row is tinted with the span's own hue rather than with `muted`,
               // which in dark mode is the same value as `border` -- it would paint out the
               // gridlines the row is meant to be read against.

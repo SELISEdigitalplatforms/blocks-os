@@ -83,7 +83,7 @@ export const LogItem = ({ log }: { log: ILog }) => {
             <CopyToClipboardButton textToCopy={log.traceId} isHoverable>
               <Link
                 to={traceHref}
-                className="truncate text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="truncate text-xs text-primary hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                 aria-label={`View trace details for ${log.traceId}`}
               >
                 {log.traceId}
@@ -99,7 +99,7 @@ export const LogItem = ({ log }: { log: ILog }) => {
 
       {/* Width comes from the container, not the viewport. The previous calc(80vw - 120px)
           ignored the actual column and was what forced the list to scroll sideways. */}
-      <div className="whitespace-pre-wrap break-words text-left text-sm leading-relaxed text-high-emphasis">
+      <div className="whitespace-pre-wrap wrap-break-word text-left text-sm leading-relaxed text-high-emphasis">
         {log.message}
       </div>
 

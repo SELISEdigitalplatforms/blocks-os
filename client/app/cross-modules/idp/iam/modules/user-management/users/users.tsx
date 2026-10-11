@@ -30,6 +30,7 @@ import type { IBulkRoleChangePayload, IBulkRolePreviewResponse } from "@blocks-i
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { normalizeSearchQueryText } from "@blocks-idp/iam/utils/normalize-search-query";
+import { toAccountStatesFilter } from "@blocks-idp/iam/utils/user-account-state";
 import { useMemo, useState } from "react";
 
 const DEFAULT_ORGANIZATION_ID = "default";
@@ -60,6 +61,7 @@ export const Users = () => {
 
   const searchText =
     queryParams["selected-filter"] === "email" ? queryParams.email : queryParams.name;
+  const accountStates = toAccountStatesFilter(queryParams.accountStates);
 
   const listFilter = {
     email: queryParams.email,
@@ -69,6 +71,7 @@ export const Users = () => {
     lastUpdatedDate: queryParams["lastUpdatedDate-start"] || undefined,
     ...(organizationIds.length > 0 ? { organizationIds } : {}),
     ...(roles.length > 0 ? { roles } : {}),
+    ...(accountStates.length > 0 ? { accountStates } : {}),
   };
 
   const { isLoading, isFetching, data, dataUpdatedAt } = useGetUsers({
@@ -106,6 +109,7 @@ export const Users = () => {
     queryParams["lastUpdatedDate-start"],
     organizationIds.length > 0 ? "organizations" : "",
     roles.length > 0 ? "roles" : "",
+    accountStates.length > 0 ? "accountStates" : "",
   ].filter((value) => !!value).length;
 
   /**

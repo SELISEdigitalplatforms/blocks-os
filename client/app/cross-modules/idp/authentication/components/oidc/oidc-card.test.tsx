@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
   deleteOidc: vi.fn(),
+  saveOidc: vi.fn(),
   rotateSecret: vi.fn(),
   showErrorToast: vi.fn(),
   showSuccessToast: vi.fn(),
@@ -23,6 +24,7 @@ vi.mock("@seliseblocks/genesis-os", () => {
 vi.mock("@blocks-idp/authentication/hooks/use-auth-oidc", () => ({
   useDeleteAuthOidc: () => ({ mutateAsync: h.deleteOidc, isPending: false }),
   useRotateAuthOidcSecret: () => ({ mutateAsync: h.rotateSecret, isPending: false }),
+  useSaveAuthOidc: () => ({ mutateAsync: h.saveOidc, isPending: false }),
 }));
 vi.mock("@/hooks/use-toast", () => ({
   showErrorToast: h.showErrorToast,
@@ -74,6 +76,62 @@ describe("OIDCCard", () => {
 
     expect(screen.getByText("OIDC")).toBeTruthy();
     expect(screen.getByText("Device Flow")).toBeTruthy();
+  });
+
+  it("shows an Active status badge for active clients", () => {
+    renderCard();
+    expect(screen.getByText("Active")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Disable OIDC client" })).toBeTruthy();
+  });
+
+  it("shows an Inactive status badge and an enable action for inactive clients", () => {
+    renderCard(makeItem({ isActive: false }));
+    expect(screen.getByText("Inactive")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Enable OIDC client" })).toBeTruthy();
+  });
+
+  it("disables the client after confirmation, resending its configuration", async () => {
+    h.saveOidc.mockResolvedValueOnce({ isSuccess: true });
+    const user = userEvent.setup();
+    renderCard();
+    await user.click(screen.getByRole("button", { name: "Disable OIDC client" }));
+    await user.click(await screen.findByRole("button", { name: "Disable" }));
+    await waitFor(() =>
+      expect(h.saveOidc).toHaveBeenCalledWith(
+        expect.objectContaining({
+          itemId: "oidc-123",
+          clientDisplayName: "Portal",
+          redirectUris: ["https://portal/cb"],
+          scope: "openid profile",
+          requirePkce: true,
+          allowedResponseTypes: ["code"],
+          isActive: false,
+        }),
+      ),
+    );
+    expect(h.showSuccessToast).toHaveBeenCalledWith({
+      description: "OIDC client disabled successfully",
+    });
+  });
+
+  it("enables an inactive client after confirmation", async () => {
+    h.saveOidc.mockResolvedValueOnce({ isSuccess: true });
+    const user = userEvent.setup();
+    renderCard(makeItem({ isActive: false }));
+    await user.click(screen.getByRole("button", { name: "Enable OIDC client" }));
+    await user.click(await screen.findByRole("button", { name: "Enable" }));
+    await waitFor(() =>
+      expect(h.saveOidc).toHaveBeenCalledWith(expect.objectContaining({ isActive: true })),
+    );
+  });
+
+  it("shows an error toast when the status change fails", async () => {
+    h.saveOidc.mockResolvedValueOnce({ isSuccess: false, error: "save failed" });
+    const user = userEvent.setup();
+    renderCard();
+    await user.click(screen.getByRole("button", { name: "Disable OIDC client" }));
+    await user.click(await screen.findByRole("button", { name: "Disable" }));
+    await waitFor(() => expect(h.showErrorToast).toHaveBeenCalledWith({ errors: "save failed" }));
   });
 
   it("does not render a per-row Template action", () => {

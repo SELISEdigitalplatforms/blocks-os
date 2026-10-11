@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { secretManagementService } from "@/cross-modules/secrets/services/secret-management.service";
 import {
+  SECRET_STATUS,
   looksLikeSecretId,
   secretTags,
   type SecretAccess,
@@ -76,6 +77,19 @@ export const useFindSecrets = (filter: SecretFilter = {}, enabled = true) => {
     enabled: enabled && !!tenantId,
   });
 };
+
+/**
+ * How many secrets are archived, for the Archived filter's badge. A one-row page: only
+ * `totalCount` is read. It shares the list key prefix, so every archive, restore and purge
+ * refreshes it along with the list.
+ */
+export const useArchivedSecretCount = (): number | undefined =>
+  useFindSecrets({
+    status: SECRET_STATUS.Deleted,
+    includeDeleted: true,
+    pageNumber: 1,
+    pageSize: 1,
+  }).data?.totalCount;
 
 export const useGetSecret = (secretId: string, enabled = true) => {
   const tenantId = useTenantId();
@@ -235,9 +249,11 @@ export const useDeleteSecret = () => {
     onSuccess: (_, secretId) => {
       invalidateList();
       invalidateItem(secretId);
-      showSuccessToast({ description: "Secret deleted. It can still be restored." });
+      showSuccessToast({
+        description: "Secret archived. Find it under Archived to restore or purge it.",
+      });
     },
-    onError: (error) => toastError(error, "Could not delete the secret."),
+    onError: (error) => toastError(error, "Could not archive the secret."),
   });
 };
 
@@ -251,5 +267,18 @@ export const useRestoreSecret = () => {
       showSuccessToast({ description: "Secret restored." });
     },
     onError: (error) => toastError(error, "Could not restore the secret."),
+  });
+};
+
+export const usePurgeSecret = () => {
+  const { invalidateList, invalidateItem, toastError } = useSecretMutationHelpers();
+  return useMutation({
+    mutationFn: (secretId: string) => secretManagementService.purge(secretId),
+    onSuccess: (_, secretId) => {
+      invalidateList();
+      invalidateItem(secretId);
+      showSuccessToast({ description: "Secret purged." });
+    },
+    onError: (error) => toastError(error, "Could not purge the secret."),
   });
 };

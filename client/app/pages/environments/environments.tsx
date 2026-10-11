@@ -18,7 +18,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
 import { useNotificationListener } from "@/cross-modules/communication/hooks/use-notification-listener";
-import { useGetMigrationStatus, useGetProjects } from "@/hooks/use-project";
+import {
+  MIGRATION_ONGOING_WINDOW_MS,
+  useGetMigrationStatus,
+  useGetProjects,
+} from "@/hooks/use-project";
 import { useProjectPermissions } from "@/hooks/use-project-access";
 import type { IMigrationStatusResponse } from "@blocks-identifier/models/project.model";
 import { useProjectStore } from "@seliseblocks/genesis-os";
@@ -34,8 +38,7 @@ const isRecentMigrationForTarget = (
     return false;
   }
   const createdDate = new Date(data.createdDate);
-  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-  return createdDate > tenMinutesAgo;
+  return createdDate.getTime() > Date.now() - MIGRATION_ONGOING_WINDOW_MS;
 };
 
 const ProjectGroupLoading = () => (
@@ -91,9 +94,12 @@ export const EnvironmentsPage = () => {
   // Creating an environment is owner-only and deliberately absent from the grant catalog:
   // provisioning one writes an owner row, so a contributor able to do it could widen their own
   // standing. Migration is delegable, so it is a grant like any other.
-  const canAddEnvironment =
-    environmentList && environmentList[0]?.projects?.length < 8 && isOwner;
+  const canAddEnvironment = environmentList && environmentList[0]?.projects?.length < 8 && isOwner;
   const canMigrate = can("environments", "migrate");
+  // Counts the environments this user can open (the same list the wizard offers), so greyed-out
+  // "Others" never make a single accessible environment look migratable.
+  const accessibleEnvironmentCount = environmentList[0]?.projects?.length ?? 0;
+  const canStartMigration = canMigrate && accessibleEnvironmentCount >= 2;
   return (
     <main className="flex flex-1 flex-col gap-4 p-6 md:gap-6">
       <div>
@@ -107,15 +113,46 @@ export const EnvironmentsPage = () => {
             </p>
           </div>
           <div className="flex gap-2 sm:gap-4">
-            {canMigrate && (
+            {canStartMigration && (
               <Button
                 variant="outline"
                 size="sm"
+                aria-label="Start Migration"
                 onClick={() => navigate("/app/data-migration")}
-                className="h-10 whitespace-nowrap text-sm">
+                className="h-10 whitespace-nowrap text-sm"
+              >
                 <ArrowRightLeft className="mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">Start Migration</span>
               </Button>
+            )}
+            {canMigrate && !canStartMigration && (
+              <TooltipProvider>
+                <Tooltip>
+                  {/* A disabled button gets no pointer or focus events, so the focusable
+                      wrapper is what opens the explanation. */}
+                  <TooltipTrigger asChild>
+                    <span
+                      tabIndex={0}
+                      data-testid="start-migration-disabled-trigger"
+                      className="inline-flex"
+                    >
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        aria-label="Start Migration"
+                        disabled
+                        className="h-10 whitespace-nowrap text-sm"
+                      >
+                        <ArrowRightLeft className="mr-2 h-4 w-4" />
+                        <span className="hidden sm:inline">Start Migration</span>
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent className="border-none bg-neutral-500 text-white shadow-none">
+                    Add another environment to start a migration.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
             {canAddEnvironment && (
               <Button
@@ -182,7 +219,7 @@ export const EnvironmentsPage = () => {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger type="button" asChild>
-                      <CircleHelp className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                      <CircleHelp className="mt-0.5 h-4 w-4 shrink-0" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs text-xs font-normal md:max-w-96 md:text-sm">
                       You must have the corresponding branch in your repository.

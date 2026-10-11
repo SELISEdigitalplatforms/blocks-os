@@ -10,6 +10,7 @@ import {
 } from "@/cross-modules/secrets/models/secret.model";
 
 vi.mock("@/cross-modules/secrets/hooks/use-secret-management", () => ({
+  useArchivedSecretCount: () => 2,
   useSecretTags: () => ({
     data: [
       { key: "iam", label: "Blocks Iam" },
@@ -112,6 +113,59 @@ describe("SecretToolbar", () => {
   it("hides the reset control when nothing is filtered", () => {
     renderToolbar();
     expect(screen.queryAllByRole("button", { name: /Reset/ })).toHaveLength(0);
+  });
+
+  describe("Archived filter", () => {
+    const archivedButton = () => screen.getByRole("button", { name: /Archived/ });
+
+    it("is off by default and shows the archived count", () => {
+      renderToolbar();
+      expect(archivedButton().getAttribute("aria-pressed")).toBe("false");
+      expect(archivedButton().textContent).toContain("2");
+    });
+
+    it("reads as on from the URL", () => {
+      renderToolbar("?secretStatus=deleted");
+      expect(archivedButton().getAttribute("aria-pressed")).toBe("true");
+    });
+
+    it("hides the status filter while on", () => {
+      renderToolbar("?secretStatus=deleted");
+      expect(screen.queryAllByRole("button", { name: /Status/ })).toHaveLength(0);
+    });
+
+    it("explains the view only while on", () => {
+      const { unmount } = renderToolbar("?secretStatus=deleted");
+      expect(screen.getByText(/Showing archived secrets/)).toBeTruthy();
+      unmount();
+      renderToolbar();
+      expect(screen.queryByText(/Showing archived secrets/)).toBeNull();
+    });
+
+    it("toggles on and off, dropping an Active/Locked status on the way in", async () => {
+      const user = userEvent.setup();
+      renderToolbar("?secretStatus=locked");
+
+      await user.click(archivedButton());
+      expect(archivedButton().getAttribute("aria-pressed")).toBe("true");
+      expect(screen.queryAllByRole("button", { name: /Status/ })).toHaveLength(0);
+
+      await user.click(archivedButton());
+      expect(archivedButton().getAttribute("aria-pressed")).toBe("false");
+      // Turning it off does not bring the old Locked filter back.
+      expect(screen.queryAllByRole("button", { name: /Reset/ })).toHaveLength(0);
+    });
+
+    it("counts as a filter, so Reset shows and turns it off", async () => {
+      const user = userEvent.setup();
+      renderToolbar();
+
+      await user.click(archivedButton());
+      await user.click(screen.getAllByRole("button", { name: /Reset/ })[0]);
+
+      expect(archivedButton().getAttribute("aria-pressed")).toBe("false");
+      expect(screen.queryAllByRole("button", { name: /Reset/ })).toHaveLength(0);
+    });
   });
 
   it("clears every filter on reset", async () => {

@@ -1,4 +1,4 @@
-﻿using Blocks.Genesis;
+using Blocks.Genesis;
 using Blocks.MailDriver;
 using DomainService.Dtos;
 using DomainService.Migration.Entities;
@@ -317,7 +317,7 @@ namespace DomainService.Migration
                 DenormalizedPayload = JsonSerializer.Serialize(new
                 {
                     IsSuccess = response,
-                    title = "Migration Completed",
+                    title = response ? "Migration Completed": "Migration failed",
                     projectKey = projectKey,
                     targetedProjectKey = targetedProjectKey
                 }),

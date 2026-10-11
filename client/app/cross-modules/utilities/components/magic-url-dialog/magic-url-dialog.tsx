@@ -91,13 +91,23 @@ export function MagicUrlDialog({ open, onOpenChange, trigger, initialData }: Mag
     setIsCalendarOpen(false);
     reset({ uri: "", name: "" });
   }, [reset]);
-  React.useEffect(() => {
+  // Opening the dialog (or new initial data while open) prefills the local fields from
+  // initialData, or clears them when there is none. Done while rendering; the form library's
+  // own values are synced in the effect below.
+  const [prefillSource, setPrefillSource] = useState<{
+    open: boolean | undefined;
+    initialData: MagicUrl | undefined;
+  } | null>(null);
+  if (
+    prefillSource === null ||
+    prefillSource.open !== open ||
+    prefillSource.initialData !== initialData
+  ) {
+    setPrefillSource({ open, initialData });
     if (open) {
       if (initialData) {
         setUrl(initialData.uri);
         setName(initialData.name || "");
-        setValue("uri", initialData.uri, { shouldValidate: true });
-        setValue("name", initialData.name || "", { shouldValidate: true });
         setType(initialData.type || "1");
         setRequestMethod(initialData.requestMethod || "GET");
         setClientCredential(initialData.clientCredential || "");
@@ -108,10 +118,34 @@ export function MagicUrlDialog({ open, onOpenChange, trigger, initialData }: Mag
         setAutoExpiry(!!initialData.expiryLifeSpan || !!initialData.expiryDate);
         setExpiryDate(initialData.expiryDate ? new Date(initialData.expiryDate) : undefined);
       } else {
-        resetForm();
+        setUrl("");
+        setName("");
+        setType("1");
+        setRequestMethod("GET");
+        setRequestPayload("");
+        setRequestHeaders("");
+        setRequestEncodedQueryString("");
+        setClientCredential("");
+        setLinkBasedActionConfigId("");
+        setCache(false);
+        setUserCanLogin(false);
+        setUsageLimit(false);
+        setUsageLimitValue("");
+        setAutoExpiry(false);
+        setExpiryDate(undefined);
+        setIsCalendarOpen(false);
       }
     }
-  }, [open, initialData, setValue, resetForm]);
+  }
+  React.useEffect(() => {
+    if (!open) return;
+    if (initialData) {
+      setValue("uri", initialData.uri, { shouldValidate: true });
+      setValue("name", initialData.name || "", { shouldValidate: true });
+    } else {
+      reset({ uri: "", name: "" });
+    }
+  }, [open, initialData, setValue, reset]);
   const handleShorten = () => {
     if (!isValid) {
       toast({
@@ -189,7 +223,7 @@ export function MagicUrlDialog({ open, onOpenChange, trigger, initialData }: Mag
                     setValue("uri", e.target.value, { shouldValidate: true });
                   }}
                 />
-                <div className="min-h-[1.25rem]">
+                <div className="min-h-5">
                   {errors.uri && <p className="text-xs text-error">{errors.uri.message}</p>}
                 </div>
               </div>
@@ -205,7 +239,7 @@ export function MagicUrlDialog({ open, onOpenChange, trigger, initialData }: Mag
                     setValue("name", e.target.value, { shouldValidate: true });
                   }}
                 />
-                <div className="min-h-[1.25rem]">
+                <div className="min-h-5">
                   {errors.name && <p className="text-xs text-error">{errors.name.message}</p>}
                 </div>
               </div>

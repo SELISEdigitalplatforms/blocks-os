@@ -35,7 +35,7 @@ export const ProviderCard = (provider: IProvider) => {
   };
   return (
     <Card
-      className="w-75 group flex cursor-pointer flex-col items-start gap-4 rounded-md px-4 py-5 transition hover:bg-accent hover:shadow-sm"
+      className="w-75 group flex cursor-pointer flex-col items-start gap-4 rounded-md px-4 py-5 transition hover:bg-accent hover:shadow-xs"
       onClick={handleClick}
     >
       <CardHeader className="mb-0 flex w-full flex-row justify-between p-0">

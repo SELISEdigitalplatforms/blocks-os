@@ -46,10 +46,24 @@ describe("RemoveMembership", () => {
     h.mutateAsync.mockResolvedValue({ isSuccess: true });
     const { onSuccess, onOpenChange } = renderModal();
     fireEvent.click(screen.getByRole("button", { name: "Remove" }));
-    await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledWith({ organizationId: "org1" }));
+    await waitFor(() =>
+      expect(h.mutateAsync).toHaveBeenCalledWith({ organizationId: "org1", notifyUser: true }),
+    );
     await waitFor(() => expect(h.showSuccess).toHaveBeenCalled());
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(onSuccess).toHaveBeenCalled();
+  });
+
+  it("notifies the user by default and sends notifyUser false once unchecked", async () => {
+    h.mutateAsync.mockResolvedValue({ isSuccess: true });
+    renderModal();
+    const checkbox = screen.getByRole("checkbox", { name: "Notify user by email" });
+    expect(checkbox.getAttribute("data-state")).toBe("checked");
+    fireEvent.click(checkbox);
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+    await waitFor(() =>
+      expect(h.mutateAsync).toHaveBeenCalledWith({ organizationId: "org1", notifyUser: false }),
+    );
   });
 
   it("shows an error toast when the result is not successful", async () => {

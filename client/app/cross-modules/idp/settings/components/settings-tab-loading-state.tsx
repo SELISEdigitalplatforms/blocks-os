@@ -78,9 +78,9 @@ const SectionCardSkeleton = ({
               key={index}
               className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 p-3 sm:p-4"
             >
-              <Skeleton className="col-start-1 row-start-1 h-4 w-full max-w-[12rem]" />
+              <Skeleton className="col-start-1 row-start-1 h-4 w-full max-w-48" />
               <Skeleton className="col-start-2 row-start-1 h-6 w-11 rounded-full" />
-              <Skeleton className="col-start-1 row-start-2 h-3 w-full max-w-[10rem]" />
+              <Skeleton className="col-start-1 row-start-2 h-3 w-full max-w-40" />
             </div>
           ))}
         </div>

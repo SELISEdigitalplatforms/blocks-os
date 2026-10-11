@@ -1,4 +1,4 @@
-import { UseQueryOptions, useMutation, useQuery } from "@tanstack/react-query";
+import { QueryKey, UseQueryOptions, useMutation, useQuery } from "@tanstack/react-query";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { lmtService } from "../services/lmt.service";
 import {
@@ -9,6 +9,12 @@ import {
   IGetTraceStatusPayload,
   ITraceRequestPayload,
 } from "../models/trace.model";
+
+/** Extra react-query options a caller may pass; the hook owns queryKey and queryFn. */
+type QueryOptionsFor<TFn extends (...args: never[]) => Promise<unknown>> = Omit<
+  UseQueryOptions<Awaited<ReturnType<TFn>>, Error, Awaited<ReturnType<TFn>>, QueryKey>,
+  "queryKey" | "queryFn"
+>;
 
 export const useGetTraces = (option: IGetTracesPayload) => {
   // The endpoint resolves the tenant from the request token rather than the payload, so the
@@ -22,7 +28,7 @@ export const useGetTraces = (option: IGetTracesPayload) => {
 
 export const useGetTraceById = (
   option: IGetTraceByTraceIdPayload,
-  queryOptions?: Omit<UseQueryOptions<any, any, any, any>, "queryKey" | "queryFn">,
+  queryOptions?: QueryOptionsFor<typeof lmtService.trace.getTraceByTraceId>,
 ) => {
   const enabled = Boolean(option.traceId);
 
@@ -66,7 +72,7 @@ export const useGetRequestId = () => {
 
 export const useGetRestoredTraces = (
   option: IGetTracesPayload,
-  queryOptions?: Omit<UseQueryOptions<any, any, any, any>, "queryKey" | "queryFn">,
+  queryOptions?: QueryOptionsFor<typeof lmtService.trace.getRestoredTraces>,
 ) => {
   return useQuery({
     queryKey: ["restored-traces", option],
@@ -77,7 +83,7 @@ export const useGetRestoredTraces = (
 
 export const useGetRestoredTraceById = (
   option: IGetTraceByTraceIdPayload,
-  queryOptions?: Omit<UseQueryOptions<any, any, any, any>, "queryKey" | "queryFn">,
+  queryOptions?: QueryOptionsFor<typeof lmtService.trace.getRestoredTraceByTraceId>,
 ) => {
   return useQuery({
     queryKey: ["restored-trace", option],
@@ -87,7 +93,7 @@ export const useGetRestoredTraceById = (
 };
 
 export const useGetRestoredDataRetentionDays = (
-  queryOptions?: Omit<UseQueryOptions<any, any, any, any>, "queryKey" | "queryFn">,
+  queryOptions?: QueryOptionsFor<typeof lmtService.trace.getRestoredDataRetentionDays>,
 ) => {
   return useQuery({
     queryKey: ["restored-data-retention-days"],

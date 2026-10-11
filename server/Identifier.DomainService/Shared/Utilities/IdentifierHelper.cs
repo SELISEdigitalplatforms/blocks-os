@@ -111,6 +111,25 @@ namespace DomainService.Shared
             "ac", "biz", "co", "com", "edu", "gob", "gov", "info", "mil", "ne", "net", "or", "org", "res", "sch"
         };
 
+        /// <summary>
+        /// The registrable domain a host belongs to, which is the root of the DNS zone its
+        /// records live in: "example.com" for "app.example.com", "example.co.uk" for
+        /// "app.example.co.uk". Expects a normalized host (lowercase, no scheme).
+        /// </summary>
+        public static string GetRegistrableDomain(string host)
+        {
+            var labels = host.Split('.');
+
+            for (var i = labels.Length - 2; i >= 0; i--)
+            {
+                var candidate = string.Join('.', labels[i..]);
+                if (!IsPublicSuffix(candidate))
+                    return candidate;
+            }
+
+            return host;
+        }
+
         private static bool IsPublicSuffix(string domain)
         {
             var labels = domain.Split('.');

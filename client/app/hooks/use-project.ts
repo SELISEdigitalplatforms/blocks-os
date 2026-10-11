@@ -1,6 +1,6 @@
-import { shortGuidGenerator, useCreateProjectFormState } from "@/components/create-project/utils";
+import { useCreateProjectFormState } from "@/components/create-project/utils";
+import { buildCreateProjectPayload } from "@/utils/create-project-payload";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-import { getRuntimeEnv } from "@/lib/runtime-env";
 import {
   IRestoreProjectPayload,
   IUpdateProjectPayload,
@@ -203,11 +203,29 @@ export const useCreateProject = () => {
   });
 };
 
+// The server only returns trackers with unfinished services, and the environments page treats
+// one as ongoing for ten minutes after it was created.
+export const MIGRATION_ONGOING_WINDOW_MS = 10 * 60 * 1000;
+const MIGRATION_STATUS_POLL_MS = 5000;
+
 export const useGetMigrationStatus = (tenantGroupId: string) => {
   return useQuery({
     queryKey: ["identifier", "migration-status", tenantGroupId],
     queryFn: () => crossProjectService.getMigrationStatus(tenantGroupId),
     enabled: !!tenantGroupId,
+    // The completion push alone is not enough. The wizard redirects from the console layout to
+    // the project layout, and genesis-os tears the notification socket down and rebuilds it on
+    // that switch; a migration that finishes a couple of seconds later pushes into the gap and
+    // SignalR does not replay it. Poll while a migration is in its ongoing window.
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (!Array.isArray(data)) return false;
+      const cutoff = Date.now() - MIGRATION_ONGOING_WINDOW_MS;
+      const hasOngoing = data.some(
+        (d) => !!d.createdDate && new Date(d.createdDate).getTime() > cutoff,
+      );
+      return hasOngoing ? MIGRATION_STATUS_POLL_MS : false;
+    },
   });
 };
 
@@ -248,28 +266,17 @@ export const useProjectForm = () => {
   const saveProject = async () => {
     try {
       const environments = formData[2]?.environments || [];
-      const shortGuid = shortGuidGenerator(5);
-      const baseDomain = getRuntimeEnv("BLOCKS_BASE_DOMAIN") || "seliseblocks.com";
-      const applicationContexts =
-        environments.map((env: { value: string }) => ({
-          environment: env.value,
-          domain: `https://${env.value === "main" ? "" : env.value}-${shortGuid}.${baseDomain}`,
-          cookieDomain: baseDomain,
-        })) || [];
-
       const assets = formData[1]?.assets || [];
 
-      const response = await mutateAsync({
-        name: formData[0].name,
-        isAcceptBlocksTerms: formData[0].isAcceptBlocksTerms,
-        isUseBlocksExclusively: formData[0].isUseBlocksExclusively,
-        resources: assets.map((asset) => ({
-          name: asset.full_name,
-          link: asset.html_url,
-          resourceId: asset.id !== undefined ? String(asset.id) : "",
-        })),
-        applicationContexts,
-      });
+      const response = await mutateAsync(
+        buildCreateProjectPayload({
+          name: formData[0].name,
+          isAcceptBlocksTerms: formData[0].isAcceptBlocksTerms,
+          isUseBlocksExclusively: formData[0].isUseBlocksExclusively,
+          environments,
+          assets,
+        }),
+      );
       if (response?.isSuccess) {
         showSuccessToast({ description: "Your project has been created." });
         setTenantGroup(response.tenantGroupId);

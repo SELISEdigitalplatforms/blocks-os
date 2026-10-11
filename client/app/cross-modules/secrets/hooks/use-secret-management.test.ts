@@ -16,6 +16,7 @@ import {
   useFindSecrets,
   useGetSecret,
   useLockSecret,
+  usePurgeSecret,
   useRestoreSecret,
   useRevealSecret,
   useRotateSecret,
@@ -40,6 +41,7 @@ vi.mock("@/cross-modules/secrets/services/secret-management.service", () => ({
     unlock: vi.fn(),
     remove: vi.fn(),
     restore: vi.fn(),
+    purge: vi.fn(),
     getAuditLogs: vi.fn(),
   },
 }));
@@ -243,18 +245,21 @@ describe("mutations", () => {
     ["lock", useLockSecret, "lock", "Secret locked."],
     ["unlock", useUnlockSecret, "unlock", "Secret unlocked."],
     ["restore", useRestoreSecret, "restore", "Secret restored."],
+    ["purge", usePurgeSecret, "purge", "Secret purged."],
   ] as const)("%s reports success", async (_label, hook, method, description) => {
     vi.mocked(secretManagementService[method]).mockResolvedValue({ isSuccess: true });
     const { result } = renderHook(() => hook(), { wrapper: createWrapper() });
 
     await result.current.mutateAsync(
-      method === "rotate" ? ({ secretId: SECRET_ID, value: "next" } as never) : (SECRET_ID as never),
+      method === "rotate"
+        ? ({ secretId: SECRET_ID, value: "next" } as never)
+        : (SECRET_ID as never),
     );
 
     expect(showSuccessToast).toHaveBeenCalledWith({ description });
   });
 
-  it("says a deleted secret can be restored", async () => {
+  it("says an archived secret can still be restored or purged", async () => {
     // The backend keeps the vault value so restore can bring it back; calling it permanent
     // would be false.
     vi.mocked(secretManagementService.remove).mockResolvedValue({ isSuccess: true });
@@ -263,7 +268,7 @@ describe("mutations", () => {
     await result.current.mutateAsync(SECRET_ID);
 
     expect(showSuccessToast).toHaveBeenCalledWith({
-      description: "Secret deleted. It can still be restored.",
+      description: "Secret archived. Find it under Archived to restore or purge it.",
     });
   });
 

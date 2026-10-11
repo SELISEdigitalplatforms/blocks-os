@@ -9,7 +9,7 @@ import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
 // };
 
 // const SummaryTile = ({ label, value }: SummaryTileProps) => (
-//   <div className="rounded-sm border bg-card px-5 py-4 shadow-sm">
+//   <div className="rounded-sm border bg-card px-5 py-4 shadow-xs">
 //     <p className="text-xs font-medium uppercase tracking-wide text-low-emphasis">
 //       {label}
 //     </p>

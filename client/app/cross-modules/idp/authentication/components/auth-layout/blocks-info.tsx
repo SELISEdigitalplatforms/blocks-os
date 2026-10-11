@@ -29,7 +29,7 @@ export const BlockInfo = () => {
               >
                 Npm
               </Link>
-              <span className="h-4 w-[1px] bg-gray-300"></span>
+              <span className="h-4 w-px bg-gray-300"></span>
               <Link
                 to="https://github.com/SELISEdigitalplatforms/l3-react-blocks-construct"
                 className="text-primary"
@@ -37,7 +37,7 @@ export const BlockInfo = () => {
               >
                 GitHub
               </Link>
-              <span className="h-4 w-[1px] bg-gray-300"></span>
+              <span className="h-4 w-px bg-gray-300"></span>
               <Link
                 to={getRuntimeEnv("BLOCKS_CONSTRUCT_URL") || "https://construct.seliseblocks.com"}
                 className="text-primary"

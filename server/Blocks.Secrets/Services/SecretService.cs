@@ -482,6 +482,90 @@ public sealed partial class SecretService : ISecretService
         await _audit.RecordAsync(caller, SecretAuditActions.Restore, secret, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
+    /// <remarks>
+    /// Vault first, metadata second. If the metadata removal fails the secret is still listed as
+    /// deleted with no value behind it, and purging again finishes the job (an absent value is a
+    /// no-op). The reverse order could strand a value nothing points at.
+    /// <para>
+    /// Only a deleted secret can be purged, so the soft delete stays the undo window. Unlike the
+    /// soft delete, this cannot be taken back, so the access list is enforced as for a mutation.
+    /// </para>
+    /// </remarks>
+    public async Task PurgeAsync(string secretId, CancellationToken cancellationToken = default)
+    {
+        var caller = _authorization.ResolveContext();
+        var secret = await LoadAsync(caller, secretId, cancellationToken).ConfigureAwait(false);
+
+        EnsureTransitionAllowed(secret, "permanently delete", [SecretStatuses.Deleted]);
+
+        if (!caller.IsRoot && SecretTypes.HasAccessList(secret.Type))
+        {
+            var denial = CheckMutationAccess(caller, secret);
+            if (denial is not null)
+            {
+                await _audit.RecordAsync(
+                    caller,
+                    SecretAuditActions.AccessDenied,
+                    secret,
+                    SecretAuditOutcomes.Denied,
+                    denial,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                throw new SecretAccessDeniedException(denial);
+            }
+        }
+
+        var purgeRefused = false;
+
+        try
+        {
+            await _valueStore.PurgeAsync(secret.ItemId, cancellationToken).ConfigureAwait(false);
+        }
+        catch (SecretVaultException ex) when (ex.Operation == SecretVaultOperations.Purge)
+        {
+            // Deleted but not purged: unreadable, and the vault drops it when retention ends.
+            // Not a reason to keep the metadata — the user asked for the secret to be gone.
+            purgeRefused = true;
+        }
+        catch (SecretVaultException)
+        {
+            await _audit.RecordAsync(
+                caller,
+                SecretAuditActions.Purge,
+                secret,
+                SecretAuditOutcomes.Failed,
+                SecretAuditReasons.VaultFailure,
+                cancellationToken: CancellationToken.None).ConfigureAwait(false);
+            throw;
+        }
+
+        // Past the vault: the value is gone, so do not let a late cancellation leave the
+        // metadata behind half way through.
+        try
+        {
+            await _repository.HardDeleteAsync(caller.TenantId, secret.ItemId, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            await _audit.RecordAsync(
+                caller,
+                SecretAuditActions.Purge,
+                secret,
+                SecretAuditOutcomes.PartialFailure,
+                SecretAuditReasons.MetadataWriteFailed,
+                cancellationToken: CancellationToken.None).ConfigureAwait(false);
+            throw;
+        }
+
+        await _audit.RecordAsync(
+            caller,
+            SecretAuditActions.Purge,
+            secret,
+            purgeRefused ? SecretAuditOutcomes.PartialFailure : SecretAuditOutcomes.Success,
+            purgeRefused ? SecretAuditReasons.VaultPurgeFailed : null,
+            cancellationToken: CancellationToken.None).ConfigureAwait(false);
+    }
+
     public async Task UpdateAccessAsync(string secretId, SecretAccess access, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(access);

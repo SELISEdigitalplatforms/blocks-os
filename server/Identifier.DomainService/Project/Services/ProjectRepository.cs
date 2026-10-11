@@ -378,12 +378,25 @@ namespace DomainService.Projects
 
         public async Task CreateDefaultConfigurationAsync(ProjectStatusTracer statusTracer, Tenant project)
         {
-            if (statusTracer.IsDefaultConfigurationCopied) return;
+            if (statusTracer.IsDefaultConfigurationCopied && statusTracer.IsSeedSchemaApplied) return;
 
             var dataBase = _dbContextProvider.GetDatabase(project.DbConnectionString, project.DBName);
 
-            await InitializeDefaultConfigurationsAsync(dataBase, project);
-            statusTracer.IsDefaultConfigurationCopied = true;
+            if (!statusTracer.IsDefaultConfigurationCopied)
+            {
+                await InitializeDefaultConfigurationsAsync(dataBase, project);
+                statusTracer.IsDefaultConfigurationCopied = true;
+            }
+
+            // After the document copy on purpose: CopyDocumentAsync skips any collection that
+            // already exists, so creating the seed collections first would stop the copy.
+            if (!statusTracer.IsSeedSchemaApplied)
+            {
+                var seedDb = _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, "BlocksConfiguration");
+                var result = await SeedSchemaReplicator.ApplyAsync(seedDb, dataBase);
+                statusTracer.SeedSchemaErrors = result.Errors;
+                statusTracer.IsSeedSchemaApplied = true;
+            }
         }
 
         private async Task InitializeDefaultConfigurationsAsync(IMongoDatabase consumerDb, Tenant project)

@@ -12,13 +12,14 @@ import {
 import {
   useDeleteSecret,
   useLockSecret,
+  usePurgeSecret,
   useRestoreSecret,
   useUnlockSecret,
 } from "@/cross-modules/secrets/hooks/use-secret-management";
 import { describeSecretError } from "@/cross-modules/secrets/utils/secret-error";
 import type { SecretResult } from "@/cross-modules/secrets/models/secret.model";
 
-export type SecretLifecycleAction = "lock" | "unlock" | "delete" | "restore";
+export type SecretLifecycleAction = "lock" | "unlock" | "delete" | "restore" | "purge";
 
 interface Copy {
   title: (name: string) => string;
@@ -41,20 +42,26 @@ const COPY: Record<SecretLifecycleAction, Copy> = {
     confirm: "Unlock",
     pending: "Unlocking…",
   },
+  // The backend's soft delete, presented as archive: the vault value is deliberately retained
+  // so restore can bring the secret back. Saying "cannot be undone" here would simply be false.
   delete: {
-    title: (name) => `Delete ${name}?`,
-    // A soft delete: the vault value is deliberately retained so restore can bring the secret
-    // back. Saying "cannot be undone" here would simply be false.
-    body: "The secret stops working immediately and is hidden from the default list. This is a soft delete — you can restore it later from the Deleted filter.",
-    confirm: "Delete",
-    pending: "Deleting…",
-    destructive: true,
+    title: (name) => `Archive ${name}?`,
+    body: "The secret stops working immediately and is archived. You can restore it later, or purge it to remove it for good — use the Archived filter to find it.",
+    confirm: "Archive",
+    pending: "Archiving…",
   },
   restore: {
     title: (name) => `Restore ${name}?`,
     body: "The secret becomes active again with its previous value.",
     confirm: "Restore",
     pending: "Restoring…",
+  },
+  purge: {
+    title: (name) => `Purge ${name}?`,
+    body: "The secret and its value are permanently removed from the store and cannot be restored. Anything still referencing it will keep failing. The audit trail is kept.",
+    confirm: "Purge",
+    pending: "Purging…",
+    destructive: true,
   },
 };
 
@@ -66,7 +73,7 @@ interface SecretActionDialogProps {
 }
 
 /**
- * Confirmation for the four lifecycle transitions. Nothing here fires without a click.
+ * Confirmation for the lifecycle transitions. Nothing here fires without a click.
  *
  * Mount this only while it is open; a fresh mount is what clears a previous error.
  */
@@ -82,8 +89,9 @@ export function SecretActionDialog({
   const unlock = useUnlockSecret();
   const remove = useDeleteSecret();
   const restore = useRestoreSecret();
+  const purge = usePurgeSecret();
 
-  const mutation = { lock, unlock, delete: remove, restore }[action];
+  const mutation = { lock, unlock, delete: remove, restore, purge }[action];
   const copy = COPY[action];
 
   const confirm = async () => {
@@ -92,7 +100,8 @@ export function SecretActionDialog({
       await mutation.mutateAsync(secret.secretId);
       onOpenChange(false);
     } catch (cause) {
-      setError(describeSecretError(cause, `Could not ${action} the secret.`).message);
+      const verb = action === "delete" ? "archive" : action;
+      setError(describeSecretError(cause, `Could not ${verb} the secret.`).message);
     }
   };
 

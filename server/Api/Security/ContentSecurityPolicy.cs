@@ -38,6 +38,16 @@ public static class ContentSecurityPolicy
         "BLOCKS_APP_URL",
     ];
 
+    /// <summary>
+    /// Hosts the SPA opens a WebSocket to: the notification hub on blocks-logic. CSP does not
+    /// let an <c>https:</c> source match a <c>wss:</c> URL, so without the <c>wss:</c> twin the
+    /// browser refuses the socket before sending it and no live notification ever arrives.
+    /// </summary>
+    internal static readonly string[] WebSocketOriginKeys =
+    [
+        "BLOCKS_LOGIC_BASE_URL",
+    ];
+
     /// <summary>Where a login POST may be sent: the identity host and the SPA's own host.</summary>
     internal static readonly string[] FormActionOriginKeys =
     [
@@ -47,6 +57,28 @@ public static class ContentSecurityPolicy
         "BLOCKS_OS_URL",
     ];
 
+    /// <summary>
+    /// Stands in for the style nonce (see <see cref="StyleNonce"/>): in the policy built at
+    /// startup and in the built index.html (meta[name=csp-nonce]). Replaced on every response.
+    /// </summary>
+    public const string StyleNoncePlaceholder = "__CSP_STYLE_NONCE__";
+
+    /// <summary>The policy for one response, with the placeholder swapped for its nonce.</summary>
+    public static string WithStyleNonce(string policy, string nonce)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+        ArgumentException.ThrowIfNullOrEmpty(nonce);
+        return policy.Replace(StyleNoncePlaceholder, nonce, StringComparison.Ordinal);
+    }
+
+    /// <summary>The SPA shell for one response, carrying the same nonce as its header.</summary>
+    public static string RenderIndex(string indexHtmlTemplate, string nonce)
+    {
+        ArgumentNullException.ThrowIfNull(indexHtmlTemplate);
+        ArgumentException.ThrowIfNullOrEmpty(nonce);
+        return indexHtmlTemplate.Replace(StyleNoncePlaceholder, nonce, StringComparison.Ordinal);
+    }
+
     public static string Build(IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(configuration);
@@ -55,7 +87,9 @@ public static class ContentSecurityPolicy
         var csp = configuration.GetSection("Csp");
 
         return BuildPolicy(
-            connectSrc: Origins(runtime, ConnectOriginKeys).Concat(Split(csp["ExtraConnectSrc"])),
+            connectSrc: Origins(runtime, ConnectOriginKeys)
+                .Concat(Origins(runtime, WebSocketOriginKeys).Select(ToWebSocketOrigin))
+                .Concat(Split(csp["ExtraConnectSrc"])),
             imgSrc: Split(csp["ExtraImgSrc"]),
             formAction: Origins(runtime, FormActionOriginKeys).Concat(Split(csp["ExtraFormAction"])));
     }
@@ -78,20 +112,17 @@ public static class ContentSecurityPolicy
             "default-src 'self';",
             "script-src 'self';",
 
-            // Inline styles, both <style> elements and style attributes.
+            // Styles. <style> elements need the style nonce (StyleNonce). Radix (react-remove-scroll),
+            // vaul, sonner, cmdk, input-otp and mailcraft create them at runtime; /csp-nonce.js
+            // stamps the nonce on every <style> made through document.createElement, and the
+            // server writes it into index.html (see WithStyleNonce / RenderIndex).
             //
-            // The narrower option was tried first and measured: keep style-src-elem 'self'
-            // and relax only style-src-attr. It does not work here. Loading the built bundle
-            // under that policy in Chromium still reported three style-src-elem violations --
-            // Radix/vaul/sonner/cmdk inject <style> elements at runtime for scroll-lock and
-            // positioning -- and the login page still rendered at 2809px tall instead of 900px
-            // because the layout could not apply. Relaxing both cleared every violation.
-            //
-            // Neither form can carry a nonce (a style attribute has nowhere to put one, and
-            // the elements are injected by library code that is not given one), and the values
-            // are unbounded, so hashes are not an option either. script-src stays strict, which
-            // is the directive that actually matters for injection.
-            "style-src 'self' 'unsafe-inline';",
+            // style attributes stay allowed through style-src-attr only. Markup and library
+            // code set them (email bodies, mailcraft blocks), they cannot carry a nonce, and
+            // an attribute cannot load a script; script-src stays strict, which is the
+            // directive that matters for injection.
+            $"style-src 'self' 'nonce-{StyleNoncePlaceholder}';",
+            "style-src-attr 'unsafe-inline';",
 
             $"img-src 'self' data: blob:{Suffix(img)};",
             "font-src 'self' data:;",
@@ -116,8 +147,8 @@ public static class ContentSecurityPolicy
 
     /// <summary>
     /// A CSP source is an origin, so any path, query or trailing slash is dropped. A value
-    /// that is not an absolute http(s) URL is ignored rather than emitted verbatim, so a
-    /// malformed secret cannot inject a directive.
+    /// that is not an absolute http(s) or ws(s) URL is ignored rather than emitted verbatim, so
+    /// a malformed secret cannot inject a directive.
     /// </summary>
     public static string? ToOrigin(string? value)
     {
@@ -125,9 +156,27 @@ public static class ContentSecurityPolicy
 
         if (!Uri.TryCreate(value.Trim(), UriKind.Absolute, out var uri)) return null;
 
-        if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) return null;
+        if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps
+            && uri.Scheme != Uri.UriSchemeWs && uri.Scheme != Uri.UriSchemeWss) return null;
 
         return uri.GetLeftPart(UriPartial.Authority);
+    }
+
+    /// <summary>
+    /// The wss origin a browser uses to open a socket to an https host, or null. Plain http and
+    /// ws hosts get no socket allowance: an unencrypted socket would carry the session token and
+    /// notification payloads in clear text.
+    /// </summary>
+    public static string? ToWebSocketOrigin(string? value)
+    {
+        var origin = ToOrigin(value);
+        if (origin is null) return null;
+
+        if (origin.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            return "wss://" + origin["https://".Length..];
+        if (origin.StartsWith("wss://", StringComparison.OrdinalIgnoreCase))
+            return origin;
+        return null;
     }
 
     /// <summary>Space- or comma-separated list, for origins no runtime key describes.</summary>
