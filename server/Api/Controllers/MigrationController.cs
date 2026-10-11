@@ -6,10 +6,12 @@ using DomainService.Shared;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics.CodeAnalysis;
 
 namespace BlocksOs.Api.Controllers
  {
  [ApiController]
+ [SuppressMessage("Major Code Smell", "S6960:Controllers should not have mixed responsibilities", Justification = "Splitting would change controller names, Swagger grouping and operation ids that clients rely on.")]
  [Route("[controller]/[action]")]
  public class MigrationController : ControllerBase
   {
