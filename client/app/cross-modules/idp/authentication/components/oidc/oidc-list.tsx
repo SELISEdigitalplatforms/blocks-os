@@ -51,7 +51,7 @@ const LoadingSkeleton = () => (
 
 export const OidcList = () => {
   const { tenantId } = useProjectStore().selectedProject || { tenantId: "" };
-  const { isLoading, isFetching, data } = useGetAuthOidcCredentials({
+  const { isLoading, data } = useGetAuthOidcCredentials({
     projectKey: tenantId,
   });
   // OIDC client credentials are backed by Secret Management. Keep its default list query
@@ -70,7 +70,10 @@ export const OidcList = () => {
     });
   }, [data]);
 
-  if (isLoading || isFetching) return <LoadingSkeleton />;
+  // Only the first load shows the skeleton. Swapping it in on every refetch unmounts the rows,
+  // which closes any dialog a row has open, including the one-time "New client secret" reveal
+  // that opens right as the rotate mutation invalidates this list.
+  if (isLoading) return <LoadingSkeleton />;
 
   if (!sortedOidcData.length) {
     return (

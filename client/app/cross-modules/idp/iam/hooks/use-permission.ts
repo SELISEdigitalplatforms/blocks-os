@@ -1,12 +1,10 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { normalizeArchiveErrors } from "../constants/archive-error-messages";
-import { useMemo } from "react";
 import {
   IGetPermissionByIdPayload,
   IGetPermissionsSeverityRequestPayload,
   IGetResourceGroupPayload,
   IPermissionFilter,
-  getSeverityOptionsFromResponse,
 } from "@blocks-idp/iam/models/permission";
 import { iamService } from "@blocks-idp/iam/services/iam.service";
 

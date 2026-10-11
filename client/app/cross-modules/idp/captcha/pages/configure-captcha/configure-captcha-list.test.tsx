@@ -113,4 +113,82 @@ describe("ConfigureCaptchaList", () => {
     expect(screen.getAllByLabelText("Edit")).toHaveLength(2);
     expect(screen.getAllByLabelText("Delete")).toHaveLength(2);
   });
+
+  describe("linked secret status", () => {
+    const secretKeyCell = () => screen.getByText("Secret Key").parentElement as HTMLElement;
+
+    it.each([
+      ["active", "sec-1"],
+      ["locked", "sec-1"],
+    ] as const)("shows exactly the existing 'Configured' text for a %s secret", (secretStatus) => {
+      render(<ConfigureCaptchaList isLoading={false} configurations={[config({ secretStatus })]} />);
+
+      const cell = secretKeyCell();
+      expect(cell.textContent).toBe("Secret KeyConfigured");
+      expect(screen.queryByText("Archived")).toBeNull();
+      expect(screen.queryByText("Missing")).toBeNull();
+    });
+
+    it("shows the existing 'Not set' text when there is no linked secret", () => {
+      render(
+        <ConfigureCaptchaList
+          isLoading={false}
+          configurations={[config({ secretId: null, secretStatus: "none" })]}
+        />,
+      );
+      expect(secretKeyCell().textContent).toBe("Secret KeyNot set");
+    });
+
+    it.each([
+      [
+        "archived",
+        "Archived",
+        "The linked secret was archived. Edit this configuration and enter a new secret to repair it.",
+      ],
+      [
+        "missing",
+        "Missing",
+        "The linked secret no longer exists. Edit this configuration and enter a new secret to repair it.",
+      ],
+    ] as const)("shows a warning badge and the repair hint for a %s secret", (secretStatus, label, help) => {
+      render(<ConfigureCaptchaList isLoading={false} configurations={[config({ secretStatus })]} />);
+
+      const badge = screen.getByText(label);
+      // A text label carried by the warning badge, never colour alone.
+      expect(badge.className).toContain("bg-warning-100");
+      expect(badge.className).toContain("text-warning-700");
+      expect(screen.getByText(help)).toBeTruthy();
+      expect(screen.queryByText("Configured")).toBeNull();
+    });
+
+    it("shows 'Status unavailable' with its explanation when the status could not be read", () => {
+      render(
+        <ConfigureCaptchaList
+          isLoading={false}
+          configurations={[config({ secretStatus: "unavailable" })]}
+        />,
+      );
+
+      expect(screen.getByText("Status unavailable").className).toContain("text-muted-foreground");
+      expect(screen.getByText("Couldn't check the linked secret right now.")).toBeTruthy();
+      expect(screen.queryByText("Configured")).toBeNull();
+    });
+
+    it("keeps the rest of the list intact when one configuration is unavailable", () => {
+      render(
+        <ConfigureCaptchaList
+          isLoading={false}
+          configurations={[
+            config({ id: "cfg-1", secretStatus: "unavailable" }),
+            config({ id: "cfg-2", provider: "hcaptcha", secretStatus: "active" }),
+          ]}
+        />,
+      );
+
+      expect(screen.getByText("Status unavailable")).toBeTruthy();
+      expect(screen.getByText("Configured")).toBeTruthy();
+      expect(screen.getByText("hCAPTCHA")).toBeTruthy();
+    });
+  });
 });
+

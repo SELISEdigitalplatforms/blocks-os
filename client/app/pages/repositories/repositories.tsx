@@ -249,7 +249,7 @@ export const RepositoriesPage = () => {
         ),
       },
     ],
-    [],
+    [canDelete],
   );
   // The server returns one page of resources plus the count of everything the current search
   // matches, so neither list is filtered or sliced again here.

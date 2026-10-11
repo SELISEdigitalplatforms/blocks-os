@@ -18,6 +18,7 @@ import {
   useSendTestMail,
 } from "@blocks-communication/mail/hooks/use-email-template";
 import { EmailTemplateDetailsSkeleton } from "./email-template-details-skeleton";
+import { withStyleNonce } from "@/lib/csp-nonce";
 export function EmailCommunicationDetails({
   params,
   onBack,
@@ -164,8 +165,8 @@ export function EmailCommunicationDetails({
           </Dialog>
         </div>
       </div>
-      <div className="grid min-h-[34rem] min-w-0 flex-none grid-cols-[minmax(0,1.4fr)_minmax(10rem,0.8fr)] overflow-hidden rounded-lg border border-border bg-card shadow-sm sm:min-h-[38rem] sm:grid-cols-[minmax(0,2fr)_minmax(16rem,0.9fr)] xl:min-h-0 xl:flex-1 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,0.9fr)]">
-        <section className="flex min-h-[34rem] min-w-0 flex-col border-r border-border sm:min-h-[38rem] xl:min-h-0">
+      <div className="grid min-h-136 min-w-0 flex-none grid-cols-[minmax(0,1.4fr)_minmax(10rem,0.8fr)] overflow-hidden rounded-lg border border-border bg-card shadow-xs sm:min-h-152 sm:grid-cols-[minmax(0,2fr)_minmax(16rem,0.9fr)] xl:min-h-0 xl:flex-1 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,0.9fr)]">
+        <section className="flex min-h-136 min-w-0 flex-col border-r border-border sm:min-h-152 xl:min-h-0">
           <header className="flex min-h-16 items-center justify-between gap-3 border-b border-border px-5 py-3 sm:px-6">
             <h2 className="text-lg font-semibold tracking-tight text-high-emphasis">
               Template preview
@@ -185,8 +186,8 @@ export function EmailCommunicationDetails({
           <div className="min-h-0 flex-1 bg-muted/30">
             <iframe
               title={`${emailDetails.name || "Email template"} preview`}
-              srcDoc={emailDetails.templateBody}
-              className="h-full min-h-[30rem] w-full border-0 bg-white sm:min-h-[34rem] xl:min-h-0"
+              srcDoc={withStyleNonce(emailDetails.templateBody ?? "")}
+              className="h-full min-h-120 w-full border-0 bg-white sm:min-h-136 xl:min-h-0"
             />
           </div>
         </section>
@@ -217,13 +218,13 @@ export function EmailCommunicationDetails({
           <div className="grid gap-x-6 gap-y-7 p-5 sm:grid-cols-2 sm:p-6 xl:grid-cols-1 2xl:grid-cols-2">
             <div className="grid min-w-0 gap-1 sm:col-span-2 xl:col-span-1 2xl:col-span-2">
               <h3 className="text-sm font-medium text-low-emphasis">Subject</h3>
-              <p className="break-words text-base font-medium text-high-emphasis">
+              <p className="wrap-break-word text-base font-medium text-high-emphasis">
                 {emailDetails.templateSubject || "-"}
               </p>
             </div>
             <div className="grid min-w-0 gap-1">
               <h3 className="text-sm font-medium text-low-emphasis">Language</h3>
-              <p className="break-words text-base font-medium text-high-emphasis">
+              <p className="wrap-break-word text-base font-medium text-high-emphasis">
                 {langConfigureData.find(
                   (lang) =>
                     lang.itemId.split("-")[0] === (emailDetails.language ?? "").split("-")[0],
@@ -232,7 +233,7 @@ export function EmailCommunicationDetails({
             </div>
             <div className="grid min-w-0 gap-1">
               <h3 className="text-sm font-medium text-low-emphasis">Configuration</h3>
-              <p className="break-words text-base font-medium text-high-emphasis">
+              <p className="wrap-break-word text-base font-medium text-high-emphasis">
                 {emailConfigsData?.find(
                   (config) => config.itemId === emailDetails.mailConfigurationId,
                 )?.name || "-"}
@@ -240,7 +241,7 @@ export function EmailCommunicationDetails({
             </div>
             <div className="grid min-w-0 gap-1">
               <h3 className="text-sm font-medium text-low-emphasis">Created on</h3>
-              <p className="break-words text-base font-medium text-high-emphasis">
+              <p className="wrap-break-word text-base font-medium text-high-emphasis">
                 {!emailDetails.createdDate || !checkValidDate(emailDetails.createdDate)
                   ? "-"
                   : formatFullDate(parseDateString(emailDetails.createdDate))}
@@ -248,7 +249,7 @@ export function EmailCommunicationDetails({
             </div>
             <div className="grid min-w-0 gap-1">
               <h3 className="text-sm font-medium text-low-emphasis">Last modified</h3>
-              <p className="break-words text-base font-medium text-high-emphasis">
+              <p className="wrap-break-word text-base font-medium text-high-emphasis">
                 {!emailDetails.lastUpdatedDate || !checkValidDate(emailDetails.lastUpdatedDate)
                   ? "-"
                   : formatFullDate(parseDateString(emailDetails.lastUpdatedDate))}

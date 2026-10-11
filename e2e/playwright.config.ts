@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test"
 import dotenv from "dotenv"
 import fs from "fs"
 import path from "path"
+import { e2eBrowserLaunchArgs } from "./support/env"
 
 dotenv.config({ path: path.resolve(__dirname, ".env.e2e") })
 
@@ -47,6 +48,7 @@ export default defineConfig({
     ignoreHTTPSErrors: true,
     launchOptions: {
       slowMo: process.env.E2E_SLOWMO ? Number(process.env.E2E_SLOWMO) : 0,
+      args: e2eBrowserLaunchArgs(),
     },
   },
   ...(autoStartServer

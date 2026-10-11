@@ -7,6 +7,8 @@ namespace Configuration.DomainService.Integration.Services;
 public sealed class IntegrationRequestRepository : IIntegrationRequestRepository
 {
     private const string CollectionName = "IntegrationRequests";
+    private const string PendingStatus = "pending";
+    private const string ApprovingStatus = "approving";
     private readonly IDbContextProvider _dbContextProvider;
     private readonly IBlocksSecret _blocksSecret;
 
@@ -31,7 +33,7 @@ public sealed class IntegrationRequestRepository : IIntegrationRequestRepository
         var now = DateTime.UtcNow;
         var claimable = Builders<IntegrationRequest>.Filter.And(
             Builders<IntegrationRequest>.Filter.Eq(r => r.ItemId, requestId),
-            Builders<IntegrationRequest>.Filter.Eq(r => r.Status, "pending"),
+            Builders<IntegrationRequest>.Filter.Eq(r => r.Status, PendingStatus),
             Builders<IntegrationRequest>.Filter.Gt(r => r.ExpiresAt, now),
             Builders<IntegrationRequest>.Filter.Or(
                 Builders<IntegrationRequest>.Filter.Exists(r => r.ClaimedByUserId, false),
@@ -48,7 +50,7 @@ public sealed class IntegrationRequestRepository : IIntegrationRequestRepository
         var now = DateTime.UtcNow;
         var owned = Builders<IntegrationRequest>.Filter.And(
             Builders<IntegrationRequest>.Filter.Eq(r => r.ItemId, requestId),
-            Builders<IntegrationRequest>.Filter.Eq(r => r.Status, "pending"),
+            Builders<IntegrationRequest>.Filter.Eq(r => r.Status, PendingStatus),
             Builders<IntegrationRequest>.Filter.Eq(r => r.ClaimedByUserId, userId),
             Builders<IntegrationRequest>.Filter.Gt(r => r.ExpiresAt, now));
         var update = Builders<IntegrationRequest>.Update
@@ -64,14 +66,14 @@ public sealed class IntegrationRequestRepository : IIntegrationRequestRepository
         var filter = Builders<IntegrationRequest>.Filter.And(
             Builders<IntegrationRequest>.Filter.Eq(r => r.ItemId, requestId),
             Builders<IntegrationRequest>.Filter.Or(
-                Builders<IntegrationRequest>.Filter.Eq(r => r.Status, "pending"),
+                Builders<IntegrationRequest>.Filter.Eq(r => r.Status, PendingStatus),
                 Builders<IntegrationRequest>.Filter.And(
-                    Builders<IntegrationRequest>.Filter.Eq(r => r.Status, "approving"),
+                    Builders<IntegrationRequest>.Filter.Eq(r => r.Status, ApprovingStatus),
                     Builders<IntegrationRequest>.Filter.Lt(r => r.LastUpdatedDate, staleApprovalCutoff))),
             Builders<IntegrationRequest>.Filter.Eq(r => r.ClaimedByUserId, userId),
             Builders<IntegrationRequest>.Filter.Gt(r => r.ExpiresAt, now));
         var update = Builders<IntegrationRequest>.Update
-            .Set(r => r.Status, "approving")
+            .Set(r => r.Status, ApprovingStatus)
             .Set(r => r.LastUpdatedDate, now);
         return await Collection().FindOneAndUpdateAsync(filter, update,
             new FindOneAndUpdateOptions<IntegrationRequest> { ReturnDocument = ReturnDocument.After }, cancellationToken);
@@ -81,15 +83,15 @@ public sealed class IntegrationRequestRepository : IIntegrationRequestRepository
     {
         var filter = Builders<IntegrationRequest>.Filter.And(
             Builders<IntegrationRequest>.Filter.Eq(r => r.ItemId, requestId),
-            Builders<IntegrationRequest>.Filter.Eq(r => r.Status, "approving"));
+            Builders<IntegrationRequest>.Filter.Eq(r => r.Status, ApprovingStatus));
         await Collection().UpdateOneAsync(filter, Builders<IntegrationRequest>.Update
-            .Set(r => r.Status, "pending")
+            .Set(r => r.Status, PendingStatus)
             .Set(r => r.LastUpdatedDate, DateTime.UtcNow), cancellationToken: cancellationToken);
     }
 
     public async Task<bool> TryCompleteApprovalAsync(IntegrationRequest request, CancellationToken cancellationToken = default)
     {
-        var result = await Collection().ReplaceOneAsync(r => r.ItemId == request.ItemId && r.Status == "approving", request,
+        var result = await Collection().ReplaceOneAsync(r => r.ItemId == request.ItemId && r.Status == ApprovingStatus, request,
             cancellationToken: cancellationToken);
         return result.ModifiedCount == 1;
     }
@@ -154,7 +156,7 @@ public sealed class IntegrationRequestRepository : IIntegrationRequestRepository
         // indexes string values only. The old index is dropped first because Mongo refuses to
         // create a second index on the same key with different options.
         try { await indexes.DropOneAsync("CodeHash_unique_sparse", cancellationToken); }
-        catch (MongoCommandException ex) when (ex.CodeName == "IndexNotFound") { }
+        catch (MongoCommandException ex) when (ex.CodeName == "IndexNotFound") { /* The legacy index is already gone; nothing to drop. */ }
         await indexes.CreateOneAsync(new CreateIndexModel<IntegrationRequest>(
             Builders<IntegrationRequest>.IndexKeys.Ascending(r => r.CodeHash),
             new CreateIndexOptions<IntegrationRequest>

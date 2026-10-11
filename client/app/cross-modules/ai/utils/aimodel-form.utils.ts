@@ -62,7 +62,7 @@ export interface UniversalFormInput {
 
 export const transformToUniversal = (
   provider: string,
-  project_key: string,
+  projectKey: string,
   form: UniversalFormInput,
 ): ICreateModelPayload => {
   return {
@@ -77,7 +77,7 @@ export const transformToUniversal = (
     openai_project_id: form.projectId ?? "",
     api_version: form.apiVersion ?? "",
     deployment_name: form.deploymentName ?? "",
-    project_key: project_key,
+    project_key: projectKey,
     DefaultTemp: form.DefaultTemp ?? 0.3,
     MaxTokens: form.MaxTokens ?? 10922,
     custom_parameters: form.customParameters ?? {},

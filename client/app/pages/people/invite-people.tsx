@@ -223,7 +223,7 @@ export const InvitePeople = ({ existingEmails = [], canInvite = false }: InviteP
       <DialogContent className="flex max-h-[85vh] flex-col overflow-hidden sm:max-w-md md:min-w-[900px]">
         <DialogHeader>
           <DialogTitle>Invite people</DialogTitle>
-          <DialogDescription className="!mt-2 text-sm text-medium-emphasis">
+          <DialogDescription className="mt-2! text-sm text-medium-emphasis">
             They get an email invitation, and nothing is shared until they accept it. Each person
             gets the environments picked on their own row.
           </DialogDescription>

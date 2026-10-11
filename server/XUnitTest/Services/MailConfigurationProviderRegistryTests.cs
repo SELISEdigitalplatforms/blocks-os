@@ -21,7 +21,7 @@ namespace XUnitTest.Services
                 {
                     new AmazonSesMailConfigurationProvider(),
                     new ZohoMailConfigurationProvider(),
-                    new Office365SmtpMailConfigurationProvider(Mock.Of<Blocks.Secrets.ISecretService>()),
+                    new Office365SmtpMailConfigurationProvider(Mock.Of<Blocks.Secrets.ISecretService>(), Microsoft.Extensions.Logging.Abstractions.NullLogger<Office365SmtpMailConfigurationProvider>.Instance),
                     new GmailMailConfigurationProvider()
                 });
 
@@ -93,11 +93,11 @@ namespace XUnitTest.Services
             request.AuthenticationType.Should().Be(MailAuthenticationType.Password);
             request.SecurityMode.Should().Be(MailSecurityMode.Legacy);
 
-            definition.Validate(request, null).Should().BeEmpty();
+            definition.Validate(request, null, null).Should().BeEmpty();
             definition.DuplicateInheritsDefault.Should().BeTrue();
 
             var response = new MailConfigurationResponse();
-            definition.ProjectResponse(new MailServerConfiguration(), response);
+            definition.ProjectResponse(new MailServerConfiguration(), response, null);
             response.AccountPassword.Should().Be("********");
         }
 
@@ -126,7 +126,7 @@ namespace XUnitTest.Services
             request.AuthenticationType.Should().Be(MailAuthenticationType.Password);
             request.SenderUserName.Should().Be("someone@gmail.com");
             request.AccountPassword.Should().Be("abcdefghijklmnop");
-            definition.Validate(request, null).Should().BeEmpty();
+            definition.Validate(request, null, null).Should().BeEmpty();
         }
 
         [Fact]

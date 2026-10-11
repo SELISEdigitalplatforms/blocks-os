@@ -1,6 +1,6 @@
 import fs from "fs"
 import path from "path"
-import { expect, type Page } from "@playwright/test"
+import { expect, type Locator, type Page } from "@playwright/test"
 import { openNamedProjectDashboard } from "./create-and-delete-project"
 import { ensureAuthenticated, isLoginSurface } from "./login-helper"
 import {
@@ -135,11 +135,41 @@ export async function openProjectOverview(
   await expect(page).toHaveURL((url) => url.pathname.includes(`/app/project/${fixture.tenantGroupId}/${subpath}`), {
     timeout: 30_000,
   })
-  await expect(
-    page.getByRole("heading", { name: PROJECT_OVERVIEW_HEADING[subpath] }),
-  ).toBeVisible({ timeout: 30_000 })
+  const heading = page.getByRole("heading", { name: PROJECT_OVERVIEW_HEADING[subpath] })
+  await expect(heading).toBeVisible({ timeout: 30_000 })
+  await waitForProjectOverviewSettled(page, heading)
 
   await persistSuiteSession(page)
+}
+
+/**
+ * The dashboard visit above leaves the session impersonating an environment.
+ * Shortly after the overview page first renders, the layout's
+ * ImpersonationTerminator (genesis-os) swaps the page for a "Returning to the
+ * console…" spinner, ends the impersonation and invalidates every cached
+ * query, so the route shows its full-screen spinner and remounts the page.
+ * Anything a test opened meanwhile (e.g. the Invite dialog) is lost, and
+ * one-shot checks run against the spinner. Wait until `heading` (any locator
+ * that only shows on the settled page) has stayed up, with no terminator
+ * screen, for a few seconds in a row.
+ */
+export async function waitForProjectOverviewSettled(page: Page, heading: Locator) {
+  const terminator = page.getByText("Returning to the console…")
+  const deadline = Date.now() + 30_000
+  let settledSince = 0
+
+  while (Date.now() < deadline) {
+    const settled = (await heading.isVisible()) && !(await terminator.isVisible())
+    if (!settled) {
+      settledSince = 0
+    } else if (!settledSince) {
+      settledSince = Date.now()
+    } else if (Date.now() - settledSince >= 3_000) {
+      return
+    }
+    await page.waitForTimeout(250)
+  }
+  await expect(heading).toBeVisible()
 }
 
 export async function openIam(page: Page, subpath: string, headingName: string | RegExp) {

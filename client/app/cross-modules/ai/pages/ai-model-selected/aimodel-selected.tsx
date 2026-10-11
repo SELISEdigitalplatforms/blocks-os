@@ -39,7 +39,7 @@ type AIModelSelectedPageProps = {
 export const AIModelSelectedPage = ({ provider }: AIModelSelectedPageProps) => {
   const navigate = useNavigate();
   const scoped = useScopedPath();
-  const project_key = useProjectStore().selectedProject?.tenantId || "";
+  const projectKey = useProjectStore().selectedProject?.tenantId || "";
   const { data: providers } = useSeedProviders();
   const servicePlatform = ProviderToPlatformMap[provider.toLowerCase()] as ServicePlatform;
   const description =
@@ -58,7 +58,7 @@ export const AIModelSelectedPage = ({ provider }: AIModelSelectedPageProps) => {
       goodName: m.ModelGoodName ?? m.Model,
     })) ?? [];
   const {
-    queryParams: { search, page, page_size },
+    queryParams: { search, page, page_size: pageSize },
     setQueryParams,
   } = useAIModelsQueryParams();
   const {
@@ -70,9 +70,9 @@ export const AIModelSelectedPage = ({ provider }: AIModelSelectedPageProps) => {
       provider: provider.toLowerCase(),
       search: search || null,
       page,
-      page_size,
+      page_size: pageSize,
     },
-    project_key,
+    projectKey,
   );
   const loading = isModelsLoading || isModelsFetching;
   const totalCount: number = models?.total ?? 0;
@@ -133,12 +133,12 @@ export const AIModelSelectedPage = ({ provider }: AIModelSelectedPageProps) => {
               models={models?.models || []}
               isLoading={loading}
             />
-            {!loading && totalCount > page_size && (
+            {!loading && totalCount > pageSize && (
               <div className="mt-4 flex items-center justify-end">
                 <Pagination
                   page={currentPage - 1}
-                  pageSize={page_size}
-                  pageSizeOptions={[page_size]}
+                  pageSize={pageSize}
+                  pageSizeOptions={[pageSize]}
                   totalCount={totalCount}
                   onChange={(nextPageZeroBased) =>
                     setQueryParams((prev) => ({

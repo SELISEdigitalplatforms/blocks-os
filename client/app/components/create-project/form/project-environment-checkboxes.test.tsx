@@ -18,3 +18,13 @@ describe("ProjectEnvironmentCheckboxes compact variant", () => {
     expect(onToggle).toHaveBeenCalledWith("prod", true);
   });
 });
+
+describe("ProjectEnvironmentCheckboxes default variant", () => {
+  it("toggles an environment when its name is clicked", () => {
+    const onToggle = vi.fn();
+    render(<ProjectEnvironmentCheckboxes selected={[]} onToggle={onToggle} />);
+
+    fireEvent.click(screen.getByText("Development", { exact: true }));
+    expect(onToggle).toHaveBeenCalledWith("dev", true);
+  });
+});

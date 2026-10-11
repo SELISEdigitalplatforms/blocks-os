@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes } from "react-router";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
@@ -160,6 +160,114 @@ describe("EnvironmentsPage", () => {
     expect(screen.getByText("Shared with you")).toBeTruthy();
     expect(screen.getByText("Others")).toBeTruthy();
     expect(screen.getByText("Other Project")).toBeTruthy();
+  });
+
+  describe("Start Migration guard", () => {
+    const TOOLTIP = "Add another environment to start a migration.";
+
+    const LocationProbe = () => {
+      const location = useLocation();
+      return <div data-testid="location">{location.pathname}</div>;
+    };
+
+    const renderWithRoutes = () =>
+      render(
+        <MemoryRouter initialEntries={["/project/environments"]}>
+          <Routes>
+            <Route
+              path="/project/environments"
+              element={
+                <>
+                  <EnvironmentsPage />
+                  <LocationProbe />
+                </>
+              }
+            />
+            <Route path="/app/data-migration" element={<div>migration wizard route</div>} />
+          </Routes>
+        </MemoryRouter>,
+      );
+
+    const mockProjects = (count: number, nonShared: unknown[] = []) =>
+      h.useGetProjects.mockReturnValue({
+        data: [
+          {
+            projects: makeProjects(count),
+            isShared: nonShared.length > 0,
+            nonSharedProject: nonShared,
+          },
+        ],
+        isLoading: false,
+        isFetching: false,
+      });
+
+    it("enables Start Migration with two or more accessible environments and navigates", async () => {
+      const user = userEvent.setup();
+      mockProjects(2);
+      renderWithRoutes();
+      const btn = screen.getByRole("button", { name: "Start Migration" }) as HTMLButtonElement;
+      expect(btn.disabled).toBe(false);
+      expect(screen.queryByText(TOOLTIP)).toBeNull();
+      expect(screen.queryByTestId("start-migration-disabled-trigger")).toBeNull();
+      await user.click(btn);
+      expect(await screen.findByText("migration wizard route")).toBeTruthy();
+    });
+
+    it("disables Start Migration with exactly one accessible environment and explains why", () => {
+      mockProjects(1);
+      renderWithRoutes();
+      const btn = screen.getByRole("button", { name: "Start Migration" }) as HTMLButtonElement;
+      expect(btn.disabled).toBe(true);
+      expect(btn.hasAttribute("disabled")).toBe(true);
+      expect(screen.getByText(TOOLTIP)).toBeTruthy();
+      const wrapper = screen.getByTestId("start-migration-disabled-trigger");
+      expect(wrapper.getAttribute("tabindex")).toBe("0");
+      expect(wrapper.contains(btn)).toBe(true);
+    });
+
+    it("does not navigate when the disabled Start Migration is clicked", async () => {
+      const user = userEvent.setup();
+      mockProjects(1);
+      renderWithRoutes();
+      const btn = screen.getByRole("button", { name: "Start Migration" });
+      fireEvent.click(btn);
+      await user.click(screen.getByTestId("start-migration-disabled-trigger"));
+      expect(screen.getByTestId("location").textContent).toBe("/project/environments");
+      expect(screen.queryByText("migration wizard route")).toBeNull();
+    });
+
+    it("ignores greyed-out Others environments when counting", () => {
+      mockProjects(1, [
+        { itemId: "o-1", name: "Other A", tenantId: "t-a", environment: "dev" },
+        { itemId: "o-2", name: "Other B", tenantId: "t-b", environment: "stg" },
+      ]);
+      renderWithRoutes();
+      expect(screen.getByText("Others")).toBeTruthy();
+      const btn = screen.getByRole("button", { name: "Start Migration" }) as HTMLButtonElement;
+      expect(btn.disabled).toBe(true);
+    });
+
+    it("renders no Start Migration without the migrate grant, whatever the count", () => {
+      h.useProjectPermissions.mockReturnValue({ isOwner: true, can: () => false });
+      for (const count of [1, 2]) {
+        mockProjects(count);
+        const { unmount } = renderWithRoutes();
+        expect(screen.queryByRole("button", { name: "Start Migration" })).toBeNull();
+        expect(screen.queryByText(TOOLTIP)).toBeNull();
+        unmount();
+      }
+    });
+
+    it("keeps the accessible name when the visible label is hidden on small screens", () => {
+      for (const count of [1, 2]) {
+        mockProjects(count);
+        const { unmount } = renderWithRoutes();
+        const btn = screen.getByRole("button", { name: "Start Migration" });
+        expect(btn.getAttribute("aria-label")).toBe("Start Migration");
+        expect(btn.querySelector("span.hidden.sm\\:inline")?.textContent).toBe("Start Migration");
+        unmount();
+      }
+    });
   });
 
   it("registers a migration notification listener", () => {

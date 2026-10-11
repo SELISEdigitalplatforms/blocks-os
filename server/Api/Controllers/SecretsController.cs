@@ -1,5 +1,7 @@
 using Blocks.Genesis;
 using Blocks.Secrets;
+using Configuration.DomainService.Shared.Secrets;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BlocksOs.Api.Controllers;
@@ -20,6 +22,13 @@ namespace BlocksOs.Api.Controllers;
 [Route("[controller]")]
 public class SecretsController : ControllerBase
 {
+    /// <summary>
+    /// The reason code <c>ISecretService</c> attaches when a value read targets an archived secret.
+    /// </summary>
+    internal const string StatusDeletedReason = "STATUS_DELETED";
+
+    internal const string ArchivedValueMessage = "This secret is archived. Restore it to read its value.";
+
     private readonly ISecretService _secretService;
 
     public SecretsController(ISecretService secretService)
@@ -57,6 +66,35 @@ public class SecretsController : ControllerBase
         _secretService.FindAsync(filter, cancellationToken);
 
     /// <summary>
+    /// The CAPTCHA and Office 365 mail configurations that point at a secret, so the Archive and
+    /// Purge dialogs can warn before breaking them.
+    /// </summary>
+    /// <remarks>
+    /// Shares the metadata read permission: the answer names configurations, not values.
+    /// Advisory only — nothing refuses an archive or purge because of it. An unknown id, or one
+    /// from another tenant, answers an empty list rather than 404 so existence is not revealed.
+    /// </remarks>
+    [HttpGet("dependents")]
+    [Authorize]
+    [ProtectedEndPoint("blocks-os::secret::gets")]
+    public Task<SecretDependentsResult> Dependents(
+        [FromQuery] string? secretId,
+        [FromServices] ISecretDependentLookup lookup,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(lookup);
+
+        if (string.IsNullOrWhiteSpace(secretId))
+        {
+            // Raised as the domain's validation error so the existing exception filter shapes the
+            // 400 exactly like every other bad request on this controller.
+            throw new SecretValidationException("secretId is required.");
+        }
+
+        return lookup.FindAsync(secretId, cancellationToken);
+    }
+
+    /// <summary>
     /// The tenant's tag catalogue, for a tag picker or a tag filter.
     /// </summary>
     /// <remarks>
@@ -75,7 +113,7 @@ public class SecretsController : ControllerBase
     [ProtectedEndPoint("blocks-os::secret::get-value")]
     public async Task<SecretValueApiResponse> Value([FromQuery] string secretId, CancellationToken cancellationToken)
     {
-        var value = await _secretService.GetValueAsync(secretId, cancellationToken);
+        var value = await ReadArchivedAsBadRequest(() => _secretService.GetValueAsync(secretId, cancellationToken));
 
         // The response body carries plaintext, so keep it out of every cache between here and
         // the browser.
@@ -91,7 +129,7 @@ public class SecretsController : ControllerBase
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var values = await _secretService.GetValuesAsync(request.SecretIds, cancellationToken);
+        var values = await ReadArchivedAsBadRequest(() => _secretService.GetValuesAsync(request.SecretIds, cancellationToken));
 
         Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
         Response.Headers.Pragma = "no-cache";
@@ -191,4 +229,26 @@ public class SecretsController : ControllerBase
         _secretService.GetAuditLogsAsync(filter, cancellationToken);
 
     private static BaseResponse Success() => new() { IsSuccess = true };
+
+    /// <summary>
+    /// Re-raises a value read on an archived secret as a validation error, which the existing
+    /// <see cref="SecretExceptionFilter"/> turns into 400 with reason <c>STATUS_DELETED</c>.
+    /// </summary>
+    /// <remarks>
+    /// Done here rather than in the filter because the filter ships in the
+    /// <c>SeliseBlocks.Secrets.OS</c> package, and changing it would change status codes for every
+    /// service that consumes it. Every other state failure — locked included — keeps its 409, and
+    /// the read has already been audited by the service, so the audit trail is unchanged.
+    /// </remarks>
+    private static async Task<T> ReadArchivedAsBadRequest<T>(Func<Task<T>> read)
+    {
+        try
+        {
+            return await read();
+        }
+        catch (SecretStateException exception) when (exception.ReasonCode == StatusDeletedReason)
+        {
+            throw new SecretValidationException(ArchivedValueMessage, StatusDeletedReason);
+        }
+    }
 }

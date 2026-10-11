@@ -302,7 +302,49 @@ export const SECRET_ERROR_REASON = {
   DuplicateNameInBatch: "DUPLICATE_NAME_IN_BATCH",
   TagInvalid: "TAG_INVALID",
   TooManyTags: "TOO_MANY_TAGS",
+  /** A value read on an archived secret. Answered with 400; the row needs refreshing. */
+  StatusDeleted: "STATUS_DELETED",
 } as const;
+
+/**
+ * State of the secret a configuration points at, computed by the server on every read from
+ * secret metadata. Locked is shown exactly like active; only archived and missing are broken.
+ */
+export const LINKED_SECRET_STATUS = {
+  None: "none",
+  Active: "active",
+  Locked: "locked",
+  Archived: "archived",
+  Missing: "missing",
+  Unavailable: "unavailable",
+} as const;
+
+export type LinkedSecretStatus = (typeof LINKED_SECRET_STATUS)[keyof typeof LINKED_SECRET_STATUS];
+
+export type BrokenLinkedSecretStatus =
+  typeof LINKED_SECRET_STATUS.Archived | typeof LINKED_SECRET_STATUS.Missing;
+
+/**
+ * Whether the pointer is known to be dead, so the configuration cannot work until a new value
+ * is entered. Unavailable is deliberately not broken: an outage must not force re-entry.
+ */
+export const isBrokenLinkedSecretStatus = (
+  status: LinkedSecretStatus | null | undefined,
+): status is BrokenLinkedSecretStatus =>
+  status === LINKED_SECRET_STATUS.Archived || status === LINKED_SECRET_STATUS.Missing;
+
+/** A configuration that points at a secret, as `GET /secrets/dependents` names it. */
+export interface SecretDependent {
+  kind: "captcha" | "mail";
+  id: string;
+  /** The CAPTCHA provider, or the mail configuration's name. */
+  name: string;
+}
+
+export interface SecretDependentsResult {
+  secretId: string;
+  dependents: SecretDependent[];
+}
 
 /**
  * UTF-8 byte length of a candidate secret value. Key Vault's limit is on the encoded payload,

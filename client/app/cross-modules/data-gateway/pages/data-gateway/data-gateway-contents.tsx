@@ -360,7 +360,7 @@ export function DataGatewayContents() {
                               style={{
                                 width: `calc(${prefix.length > 0 ? prefix.length : 6}ch + 0.75rem)`,
                               }}
-                              className="min-w-0 bg-transparent py-2 pl-3 pr-0 text-sm text-foreground/80 outline-none disabled:opacity-50"
+                              className="min-w-0 bg-transparent py-2 pl-3 pr-0 text-sm text-foreground/80 outline-hidden disabled:opacity-50"
                               placeholder="prefix"
                               disabled={isSavePending}
                             />
@@ -375,7 +375,7 @@ export function DataGatewayContents() {
                                   `${prefix}${SCHEMA_NAME_PLACEHOLDER}${e.target.value}`,
                                 )
                               }
-                              className="flex-1 bg-transparent py-2 pl-0 pr-3 text-sm text-foreground/80 outline-none disabled:opacity-50"
+                              className="flex-1 bg-transparent py-2 pl-0 pr-3 text-sm text-foreground/80 outline-hidden disabled:opacity-50"
                               placeholder="postfix"
                               disabled={isSavePending}
                             />

@@ -49,6 +49,28 @@ export async function isLoginSurface(page: Page): Promise<boolean> {
   return false
 }
 
+/**
+ * page.goto that tolerates the app's own post-login redirects. Right after the
+ * OIDC callback the SPA still navigates (/login -> /app/console, or a silent
+ * /api/oidc/authorize round trip when a project opens), and Playwright reports
+ * the competing navigation as net::ERR_ABORTED. Let the app settle, then retry.
+ */
+export async function gotoSettled(page: Page, url: string, attempts = 3) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await page.goto(url, { waitUntil: "domcontentloaded" })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      const interrupted = /ERR_ABORTED|interrupted by another navigation|NS_BINDING_ABORTED/i.test(
+        message,
+      )
+      if (!interrupted || attempt >= attempts) throw error
+      await page.waitForLoadState("domcontentloaded").catch(() => {})
+      await page.waitForTimeout(1_000 * attempt)
+    }
+  }
+}
+
 async function fillCredentialsAndSubmit(page: Page) {
   const { email, password } = e2eCredentials()
   const emailField = oidcEmailField(page)
@@ -63,7 +85,7 @@ export async function loginThroughOidc(page: Page, options?: { loginPath?: strin
   const base = e2eBaseUrl()
   const loginPath = options?.loginPath ?? `${base}/login`
 
-  await page.goto(loginPath, { waitUntil: "domcontentloaded" })
+  await gotoSettled(page, loginPath)
 
   for (let attempt = 0; attempt < 3; attempt++) {
     if (await isAuthenticatedConsole(page)) {
@@ -76,7 +98,7 @@ export async function loginThroughOidc(page: Page, options?: { loginPath?: strin
         await loginButton.click({ timeout: 8_000 })
       } catch {
         if (await isAuthenticatedConsole(page)) return
-        await page.goto(`${base}/app/console`, { waitUntil: "domcontentloaded" })
+        await gotoSettled(page, `${base}/app/console`)
         continue
       }
 
@@ -97,14 +119,14 @@ export async function loginThroughOidc(page: Page, options?: { loginPath?: strin
         return
       }
 
-      await page.goto(`${base}/app/console`, { waitUntil: "domcontentloaded" })
+      await gotoSettled(page, `${base}/app/console`)
       continue
     }
 
-    await page.goto(`${base}/app/console`, { waitUntil: "domcontentloaded" })
+    await gotoSettled(page, `${base}/app/console`)
   }
 
-  await page.goto(`${base}/app/console`, { waitUntil: "domcontentloaded" })
+  await gotoSettled(page, `${base}/app/console`)
   await expect(signedInChrome(page).or(consoleHeading(page)).first()).toBeVisible({ timeout: 30_000 })
 }
 
@@ -114,7 +136,7 @@ export async function loginThroughOidc(page: Page, options?: { loginPath?: strin
  */
 export async function ensureAuthenticated(page: Page) {
   const base = e2eBaseUrl()
-  await page.goto(`${base}/app/console`, { waitUntil: "domcontentloaded" })
+  await gotoSettled(page, `${base}/app/console`)
 
   if (await isAuthenticatedConsole(page)) {
     return

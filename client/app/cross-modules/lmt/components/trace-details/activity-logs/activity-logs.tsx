@@ -25,7 +25,7 @@ const ActivityLogsContent = ({ trace }: { trace: TraceTree }) => {
         }}
       >
         <div
-          className={`flex cursor-pointer items-center justify-between rounded-lg p-2 hover:bg-blocks-primary-shades-300 ${isSelected ? "!bg-blocks-primary-50" : ""}`}
+          className={`flex cursor-pointer items-center justify-between rounded-lg p-2 hover:bg-blocks-primary-shades-300 ${isSelected ? "bg-blocks-primary-50!" : ""}`}
         >
           <div className="flex items-center space-x-2">
             <span className="text-[12px] font-medium text-medium-emphasis">

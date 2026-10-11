@@ -19,7 +19,7 @@ import {
 import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
 import { Switch } from "@/components/ui-kits/switch/switch";
-import { Plus, KeyRound } from "lucide-react";
+import { Plus } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { useProjectStore } from "@seliseblocks/genesis-os";

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import { Table } from "@tanstack/react-table";
 import { Filter } from "lucide-react";
@@ -49,9 +49,12 @@ export function MessagingTableToolbar<TData>({ table }: MessagingTableToolbarPro
   const [isSearchVisible, setIsSearchVisible] = useState(!isMobile);
   const activeFiltersCount = useActiveFiltersCount(table, undefined, "name");
   const isFiltered = activeFiltersCount > 0;
-  useEffect(() => {
+  // Switching between mobile and desktop resets the search box to that layout's default.
+  const [searchLayoutIsMobile, setSearchLayoutIsMobile] = useState(isMobile);
+  if (searchLayoutIsMobile !== isMobile) {
+    setSearchLayoutIsMobile(isMobile);
     setIsSearchVisible(!isMobile);
-  }, [isMobile]);
+  }
   const onSearchInputChange = useCallback(
     (text: string) => {
       setSearchValue(text);

@@ -63,7 +63,7 @@ namespace XUnitTest.Integration
                 .Setup(s => s.SetAsync(It.IsAny<SetSecretRequest>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync("sec-it-1");
 
-            var service = new CaptchaConfigService(store, secretService.Object, audit.Object, authorization.Object, new CaptchaConfigValidator());
+            var service = new CaptchaConfigService(store, secretService.Object, audit.Object, authorization.Object, new CaptchaConfigValidator(), Microsoft.Extensions.Logging.Abstractions.NullLogger<CaptchaConfigService>.Instance);
 
             // Create, no secret.
             var created = await service.SaveAsync(new SaveCaptchaConfigRequest

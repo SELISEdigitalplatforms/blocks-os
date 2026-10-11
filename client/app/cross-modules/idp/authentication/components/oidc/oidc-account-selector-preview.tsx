@@ -6,14 +6,14 @@ export const OidcAccountSelectorPreview = (props: OidcPagePreviewProps) => {
     <OidcPreviewShell {...props} pageLabel="Account Selector">
       <PreviewHeading>{copy.heading}</PreviewHeading>
       {copy.subheading && (
-        <p className="mb-4 text-sm text-[var(--muted)] sm:mb-5">{copy.subheading}</p>
+        <p className="mb-4 text-sm text-(--muted) sm:mb-5">{copy.subheading}</p>
       )}
-      <p className="mb-3 text-sm text-[var(--muted)]">{copy.bodyText}</p>
+      <p className="mb-3 text-sm text-(--muted)">{copy.bodyText}</p>
       <div className="space-y-3 sm:space-y-4">
         {["Work account", "Personal account"].map((account) => (
           <div
             key={account}
-            className="rounded-lg border border-[var(--border)] bg-[var(--accent-soft)] p-4 text-sm text-[var(--fg)]"
+            className="rounded-lg border border-(--border) bg-(--accent-soft) p-4 text-sm text-(--fg)"
           >
             {account}
           </div>

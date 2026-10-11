@@ -365,7 +365,7 @@ export function IdentityProviderFormDialog({
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               {/* Pre-fill confirmation banner - add mode + picked from the gallery only */}
               {showBanner && (
-                <div className="flex items-center gap-3.5 rounded-lg border border-primary/25 bg-primary/[0.04] p-3.5">
+                <div className="flex items-center gap-3.5 rounded-lg border border-primary/25 bg-primary/4 p-3.5">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border bg-background">
                     {pickedSocialMeta ? (
                       <img

@@ -9,6 +9,9 @@ namespace DomainService.Migration.Services
 {
     public class MigrationRepository : IMigrationRepository
     {
+        // Process documents in batches to optimize memory usage
+        private const int MigrationBatchSize = 1000;
+
         // Resolve for the current operation, not the singleton's first request/message.
         private IMongoCollection<MigrationTracker> Collection =>
             _dbContextProvider.GetCollection<MigrationTracker>(IdentifierConstants.MigrationTrackerCollectionName);
@@ -124,74 +127,89 @@ namespace DomainService.Migration.Services
                 return (0, 0); // No data to migrate
             }
 
-            const int batchSize = 1000; // Process documents in batches to optimize memory usage
-            var totalProcessed = 0;
             var totalDocuments = (int)sourceCount;
 
-            if (shouldOverwriteExistingData)
-            {
-                // Process documents in batches for upsert operations
-                using var cursor = await sourceCollection.FindAsync(new BsonDocument());
-
-                while (await cursor.MoveNextAsync())
-                {
-                    var batch = cursor.Current.Take(batchSize).ToList();
-                    if (!batch.Any()) break;
-
-                    var bulkOps = batch.Select(document =>
-                        new ReplaceOneModel<BsonDocument>(
-                            Builders<BsonDocument>.Filter.Eq("_id", document["_id"]),
-                            document)
-                        {
-                            IsUpsert = true
-                        } as WriteModel<BsonDocument>).ToList();
-
-                    if (bulkOps.Any())
-                    {
-                        await targetCollection.BulkWriteAsync(bulkOps, new BulkWriteOptions { IsOrdered = false });
-                        totalProcessed += bulkOps.Count;
-                    }
-                }
-            }
-            else
-            {
-                // Insert-only mode using UpdateOneModel with $setOnInsert
-                // This approach is more explicit and avoids exceptions
-                using var cursor = await sourceCollection.FindAsync(new BsonDocument());
-
-                while (await cursor.MoveNextAsync())
-                {
-                    var batch = cursor.Current.Take(batchSize).ToList();
-                    if (!batch.Any()) break;
-
-                    var bulkOps = batch.Select(document =>
-                    {
-                        var filter = Builders<BsonDocument>.Filter.Eq("_id", document["_id"]);
-
-                        // Build update with $setOnInsert for all fields
-                        var updateBuilder = Builders<BsonDocument>.Update;
-                        UpdateDefinition<BsonDocument>? update = null;
-
-                        foreach (var element in document.Elements)
-                        {
-                            if (update == null)
-                                update = updateBuilder.SetOnInsert(element.Name, element.Value);
-                            else
-                                update = update.SetOnInsert(element.Name, element.Value);
-                        }
-
-                        return new UpdateOneModel<BsonDocument>(filter, update!) { IsUpsert = true };
-                    }).ToList();
-
-                    if (bulkOps.Any())
-                    {
-                        var bulkResult = await targetCollection.BulkWriteAsync(bulkOps, new BulkWriteOptions { IsOrdered = false });
-                        totalProcessed += bulkResult.Upserts.Count; // Count actual upserts (inserts in this case)
-                    }
-                }
-            }
+            var totalProcessed = shouldOverwriteExistingData
+                ? await ReplaceAllDocumentsAsync(sourceCollection, targetCollection)
+                : await InsertMissingDocumentsAsync(sourceCollection, targetCollection);
 
             return (totalDocuments, totalProcessed);
+        }
+
+        private static async Task<int> ReplaceAllDocumentsAsync(IMongoCollection<BsonDocument> sourceCollection,
+            IMongoCollection<BsonDocument> targetCollection)
+        {
+            var totalProcessed = 0;
+
+            // Process documents in batches for upsert operations
+            using var cursor = await sourceCollection.FindAsync(new BsonDocument());
+
+            while (await cursor.MoveNextAsync())
+            {
+                var batch = cursor.Current.Take(MigrationBatchSize).ToList();
+                if (!batch.Any()) break;
+
+                var bulkOps = batch.Select(document =>
+                    new ReplaceOneModel<BsonDocument>(
+                        Builders<BsonDocument>.Filter.Eq("_id", document["_id"]),
+                        document)
+                    {
+                        IsUpsert = true
+                    } as WriteModel<BsonDocument>).ToList();
+
+                if (bulkOps.Any())
+                {
+                    await targetCollection.BulkWriteAsync(bulkOps, new BulkWriteOptions { IsOrdered = false });
+                    totalProcessed += bulkOps.Count;
+                }
+            }
+
+            return totalProcessed;
+        }
+
+        private static async Task<int> InsertMissingDocumentsAsync(IMongoCollection<BsonDocument> sourceCollection,
+            IMongoCollection<BsonDocument> targetCollection)
+        {
+            var totalProcessed = 0;
+
+            // Insert-only mode using UpdateOneModel with $setOnInsert
+            // This approach is more explicit and avoids exceptions
+            using var cursor = await sourceCollection.FindAsync(new BsonDocument());
+
+            while (await cursor.MoveNextAsync())
+            {
+                var batch = cursor.Current.Take(MigrationBatchSize).ToList();
+                if (!batch.Any()) break;
+
+                var bulkOps = batch.Select(BuildSetOnInsertModel).ToList();
+
+                if (bulkOps.Any())
+                {
+                    var bulkResult = await targetCollection.BulkWriteAsync(bulkOps, new BulkWriteOptions { IsOrdered = false });
+                    totalProcessed += bulkResult.Upserts.Count; // Count actual upserts (inserts in this case)
+                }
+            }
+
+            return totalProcessed;
+        }
+
+        private static UpdateOneModel<BsonDocument> BuildSetOnInsertModel(BsonDocument document)
+        {
+            var filter = Builders<BsonDocument>.Filter.Eq("_id", document["_id"]);
+
+            // Build update with $setOnInsert for all fields
+            var updateBuilder = Builders<BsonDocument>.Update;
+            UpdateDefinition<BsonDocument>? update = null;
+
+            foreach (var element in document.Elements)
+            {
+                if (update == null)
+                    update = updateBuilder.SetOnInsert(element.Name, element.Value);
+                else
+                    update = update.SetOnInsert(element.Name, element.Value);
+            }
+
+            return new UpdateOneModel<BsonDocument>(filter, update!) { IsUpsert = true };
         }
 
         public async Task<bool> CleanupCollectionAsync(string projectKey, string collectionName)

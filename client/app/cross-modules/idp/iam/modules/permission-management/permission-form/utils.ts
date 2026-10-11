@@ -10,7 +10,7 @@ export const BUILTIN_PERMISSION_READONLY_MESSAGE =
 
 export const isPermissionFormReadOnly = (isBuiltIn?: boolean): boolean => Boolean(isBuiltIn);
 
-export const permissionFormDefaultValue: permissionFormSchemaType = {
+export const permissionFormDefaultValue: PermissionFormSchemaType = {
   name: "",
   type: 0,
   tags: [],
@@ -27,7 +27,7 @@ const normalizeResourceType = (value: unknown): number => {
   return 0;
 };
 
-export const mapPermissionToFormValues = (permission: IPermission): permissionFormSchemaType => {
+export const mapPermissionToFormValues = (permission: IPermission): PermissionFormSchemaType => {
   const normalizedSeverity = normalizePermissionSeverity(permission.permissionSeverity);
   return {
     name: permission.name ?? "",
@@ -79,4 +79,4 @@ export const permissionFormSchema = z
     },
   );
 
-export type permissionFormSchemaType = z.infer<typeof permissionFormSchema>;
+export type PermissionFormSchemaType = z.infer<typeof permissionFormSchema>;

@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Blocks.Genesis;
 using Blocks.Secrets;
 using BlocksOs.Api.Controllers;
+using Configuration.DomainService.Shared.Secrets;
 
 
 using FluentAssertions;
@@ -85,6 +86,7 @@ namespace XUnitTest.Controllers
         [InlineData(nameof(SecretsController.SetMany), "blocks-os::secret::save")]
         [InlineData(nameof(SecretsController.Get), "blocks-os::secret::gets")]
         [InlineData(nameof(SecretsController.Gets), "blocks-os::secret::gets")]
+        [InlineData(nameof(SecretsController.Dependents), "blocks-os::secret::gets")]
         [InlineData(nameof(SecretsController.Value), "blocks-os::secret::get-value")]
         [InlineData(nameof(SecretsController.Values), "blocks-os::secret::get-value")]
         [InlineData(nameof(SecretsController.Update), "blocks-os::secret::update")]
@@ -111,6 +113,152 @@ namespace XUnitTest.Controllers
                 .ToList();
 
             unprotected.Should().BeEmpty();
+        }
+
+        // ---------- Dependents (H10, C9) ----------
+
+        [Fact]
+        public async Task Dependents_ReturnsExactlyWhatTheLookupFound()
+        {
+            var lookup = new Mock<ISecretDependentLookup>();
+            var expected = new SecretDependentsResult
+            {
+                SecretId = "s2",
+                Dependents = new[]
+                {
+                    new SecretDependent { Kind = SecretDependent.CaptchaKind, Id = "c1", Name = "reCAPTCHA" },
+                    new SecretDependent { Kind = SecretDependent.MailKind, Id = "m2", Name = "Support mailbox" }
+                }
+            };
+            lookup.Setup(l => l.FindAsync("s2", It.IsAny<CancellationToken>())).ReturnsAsync(expected);
+
+            var response = await Controller().Dependents("s2", lookup.Object, CancellationToken.None);
+
+            response.Should().BeSameAs(expected);
+        }
+
+        [Fact]
+        public async Task Dependents_UnknownId_ReturnsAnEmptyListRatherThan404()
+        {
+            var lookup = new Mock<ISecretDependentLookup>();
+            lookup.Setup(l => l.FindAsync("zzz", It.IsAny<CancellationToken>()))
+                  .ReturnsAsync(new SecretDependentsResult { SecretId = "zzz" });
+
+            var response = await Controller().Dependents("zzz", lookup.Object, CancellationToken.None);
+
+            response.SecretId.Should().Be("zzz");
+            response.Dependents.Should().BeEmpty();
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        public async Task Dependents_BlankId_Is400WithoutALookup(string? secretId)
+        {
+            var lookup = new Mock<ISecretDependentLookup>();
+
+            var thrown = await Assert.ThrowsAsync<SecretValidationException>(
+                () => Controller().Dependents(secretId, lookup.Object, CancellationToken.None));
+
+            var (status, body) = Filtered(thrown);
+            status.Should().Be(StatusCodes.Status400BadRequest);
+            body.IsSuccess.Should().BeFalse();
+            body.Errors.Should().Equal(new Dictionary<string, string> { ["invalid_request"] = "secretId is required." });
+            lookup.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public void Dependents_SerializedEntriesCarryKindIdAndNameOnly()
+        {
+            var json = JsonSerializer.Serialize(
+                new SecretDependent { Kind = SecretDependent.MailKind, Id = "m2", Name = "Support mailbox" },
+                new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+            JsonDocument.Parse(json).RootElement.EnumerateObject().Select(p => p.Name)
+                .Should().BeEquivalentTo("kind", "id", "name");
+        }
+
+        // ---------- Reveal of an archived secret (H11, C13) ----------
+
+        [Fact]
+        public async Task Value_ArchivedSecret_Is400WithTheStatusDeletedReason()
+        {
+            _service.Setup(s => s.GetValueAsync("s1", It.IsAny<CancellationToken>()))
+                    .ThrowsAsync(new SecretStateException(SecretStatuses.Deleted, "read value", "STATUS_DELETED"));
+
+            var thrown = await Assert.ThrowsAsync<SecretValidationException>(() => Controller().Value("s1", CancellationToken.None));
+
+            AssertArchivedReadResponse(thrown);
+        }
+
+        [Fact]
+        public async Task Values_ArchivedSecret_Is400WithTheStatusDeletedReason()
+        {
+            _service.Setup(s => s.GetValuesAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
+                    .ThrowsAsync(new SecretStateException(SecretStatuses.Deleted, "read value", "STATUS_DELETED"));
+
+            var thrown = await Assert.ThrowsAsync<SecretValidationException>(
+                () => Controller().Values(new GetSecretValuesApiRequest { SecretIds = new[] { "s1", "s2" } }, CancellationToken.None));
+
+            AssertArchivedReadResponse(thrown);
+        }
+
+        public static TheoryData<Exception, int, string?> UnchangedReadFailures => new()
+        {
+            { new SecretStateException(SecretStatuses.Locked, "read value", "STATUS_LOCKED"), StatusCodes.Status409Conflict, "STATUS_LOCKED" },
+            { new SecretNotFoundException("s1"), StatusCodes.Status404NotFound, null },
+            { new SecretAccessDeniedException("NOT_IN_ACCESS_LIST"), StatusCodes.Status403Forbidden, "NOT_IN_ACCESS_LIST" },
+            { new SecretVaultException("down", "Get", "s1"), StatusCodes.Status502BadGateway, SecretAuditReasons.VaultFailure }
+        };
+
+        [Theory]
+        [MemberData(nameof(UnchangedReadFailures))]
+        public async Task Value_EveryOtherReadFailure_KeepsItsStatusCode(Exception failure, int expectedStatus, string? expectedReason)
+        {
+            _service.Setup(s => s.GetValueAsync("s1", It.IsAny<CancellationToken>())).ThrowsAsync(failure);
+            _service.Setup(s => s.GetValuesAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>())).ThrowsAsync(failure);
+
+            var fromValue = await Assert.ThrowsAnyAsync<Exception>(() => Controller().Value("s1", CancellationToken.None));
+            var fromValues = await Assert.ThrowsAnyAsync<Exception>(
+                () => Controller().Values(new GetSecretValuesApiRequest { SecretIds = new[] { "s1" } }, CancellationToken.None));
+
+            foreach (var thrown in new[] { fromValue, fromValues })
+            {
+                thrown.Should().BeSameAs(failure);
+                var (status, body) = Filtered(thrown);
+                status.Should().Be(expectedStatus);
+                (body.Errors.TryGetValue("reason", out var reason) ? reason : null).Should().Be(expectedReason);
+            }
+        }
+
+        private static void AssertArchivedReadResponse(Exception thrown)
+        {
+            var (status, body) = Filtered(thrown);
+
+            status.Should().Be(StatusCodes.Status400BadRequest);
+            body.IsSuccess.Should().BeFalse();
+            body.Errors.Should().Equal(new Dictionary<string, string>
+            {
+                ["invalid_request"] = "This secret is archived. Restore it to read its value.",
+                ["reason"] = "STATUS_DELETED"
+            });
+        }
+
+        /// <summary>Runs an exception through the exception filter the API registers globally.</summary>
+        private static (int? Status, BaseResponse Body) Filtered(Exception exception)
+        {
+            var context = new ExceptionContext(
+                new ActionContext(new DefaultHttpContext(), new RouteData(), new ActionDescriptor()),
+                new List<IFilterMetadata>())
+            {
+                Exception = exception
+            };
+
+            new SecretExceptionFilter().OnException(context);
+
+            var result = (ObjectResult)context.Result!;
+            return (result.StatusCode, (BaseResponse)result.Value!);
         }
 
         [Fact]

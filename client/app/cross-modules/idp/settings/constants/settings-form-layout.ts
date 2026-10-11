@@ -12,7 +12,7 @@ export const SETTINGS_FORM_LAYOUT = {
   fieldGrid: "grid grid-cols-1 gap-4 sm:grid-cols-2",
   stackedFields: "space-y-4",
   inputFull: "w-full",
-  inputWithSuffix: "w-full pr-[5.5rem]",
+  inputWithSuffix: "w-full pr-22",
   inputSuffix: "text-xs font-normal text-muted-foreground sm:text-sm",
   toggleRow: "flex flex-col gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between",
   toggleLabelGroup: "min-w-0 flex-1 space-y-1",

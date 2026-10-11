@@ -134,7 +134,7 @@ describe("ConfigurationsList", () => {
     );
     expect(screen.getByText("Partner onboarding")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Edit configuration Partner onboarding" }));
-    expect((screen.getByTestId("update-dialog")).textContent).toContain("Editing Partner onboarding");
+    expect(screen.getByTestId("update-dialog").textContent).toContain("Editing Partner onboarding");
   });
 
   it("archives after confirmation and cancels without calling the API", async () => {
@@ -237,5 +237,53 @@ describe("ConfigurationsList", () => {
       />,
     );
     expect(screen.getByText("Archived")).toBeTruthy();
+  });
+});
+
+describe("ConfigurationsList max uses and existing-user password (#645)", () => {
+  const renderRows = (rows: ISignupLinkConfiguration[]) =>
+    render(
+      <ConfigurationsList
+        items={rows}
+        isLoading={false}
+        hasActiveFilters={false}
+        onClearFilters={vi.fn()}
+        isForbidden={false}
+        isError={false}
+        onRetry={vi.fn()}
+      />,
+    );
+
+  it("shows the two new column headers", () => {
+    renderRows([sample]);
+    expect(screen.getAllByText("Max uses").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Existing-user password").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it.each([
+    [null, "Single use"],
+    [1, "Single use"],
+    [0, "Unlimited"],
+    [5, "5 uses"],
+  ])("labels defaultMaxRedemptions %s as %j (H11)", (value, label) => {
+    renderRows([{ ...sample, defaultMaxRedemptions: value }]);
+    expect(screen.getByTestId("max-uses").textContent).toBe(label);
+  });
+
+  it.each([
+    [true, "Required"],
+    [false, "Not required"],
+    [null, "Required"],
+    [undefined, "Required"],
+  ])("labels requireExistingUserPassword %s as %j (H12, C10)", (value, label) => {
+    renderRows([{ ...sample, requireExistingUserPassword: value }]);
+    expect(screen.getByTestId("existing-user-password").textContent).toBe(label);
+  });
+
+  it("renders a response that lacks the field without error (C10)", () => {
+    const legacy = { ...sample } as Partial<ISignupLinkConfiguration>;
+    delete legacy.requireExistingUserPassword;
+    renderRows([legacy as ISignupLinkConfiguration]);
+    expect(screen.getByTestId("existing-user-password").textContent).toBe("Required");
   });
 });

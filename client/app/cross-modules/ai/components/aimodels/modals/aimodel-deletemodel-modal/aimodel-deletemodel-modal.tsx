@@ -10,7 +10,7 @@ type DeleteModelProps = {
   onOpenChange: (value: boolean) => void;
 };
 export const DeleteModel = ({ modelId, open, onOpenChange }: DeleteModelProps) => {
-  const project_key = useProjectStore().selectedProject?.tenantId || "";
+  const projectKey = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync } = useDeleteModel();
   const confirmHandler = async () => {
     try {
@@ -18,7 +18,7 @@ export const DeleteModel = ({ modelId, open, onOpenChange }: DeleteModelProps) =
         showErrorToast({ errors: "Something went wrong" });
         return onOpenChange(false);
       }
-      const res = await mutateAsync({ modelId, project_key });
+      const res = await mutateAsync({ modelId, project_key: projectKey });
       if (!res?.is_success) {
         return showErrorToast({
           errors:

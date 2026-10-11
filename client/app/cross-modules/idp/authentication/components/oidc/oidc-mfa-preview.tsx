@@ -14,7 +14,7 @@ export const OidcMfaPreview = (props: OidcPagePreviewProps) => {
         {Array.from({ length: 6 }, (_, index) => (
           <span
             key={index}
-            className="flex h-11 min-w-0 flex-1 items-center justify-center rounded border border-[var(--border)] text-[var(--fg)] sm:max-w-[2.75rem]"
+            className="flex h-11 min-w-0 flex-1 items-center justify-center rounded border border-(--border) text-(--fg) sm:max-w-11"
           >
             {index < 3 ? "•" : ""}
           </span>
@@ -22,7 +22,7 @@ export const OidcMfaPreview = (props: OidcPagePreviewProps) => {
       </div>
       <PreviewButton>{copy.submitButton}</PreviewButton>
       {copy.resendButton && (
-        <p className="mt-4 text-center text-xs text-[var(--accent)]">{copy.resendButton}</p>
+        <p className="mt-4 text-center text-xs text-(--accent)">{copy.resendButton}</p>
       )}
     </OidcPreviewShell>
   );

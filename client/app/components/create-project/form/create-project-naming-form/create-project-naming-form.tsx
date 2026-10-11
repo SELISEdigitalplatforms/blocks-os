@@ -43,7 +43,7 @@ export const CreateProjectNamingForm = () => {
                         form.setValue("name", e.target.value, { shouldValidate: true })
                       }
                       type="text"
-                      className="h-auto w-full !py-3 px-3 text-base"
+                      className="h-auto w-full py-3! px-3 text-base"
                       placeholder="Enter your project name"
                     />
                   </FormControl>

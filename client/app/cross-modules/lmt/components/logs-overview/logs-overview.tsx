@@ -28,7 +28,7 @@ const LogServiceCard = ({
       role="button"
       tabIndex={0}
       aria-label={`View logs for ${service.name}`}
-      className="group flex h-full cursor-pointer flex-col rounded-lg border border-border bg-card shadow-none transition-shadow duration-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="group flex h-full cursor-pointer flex-col rounded-lg border border-border bg-card shadow-none transition-shadow duration-200 hover:shadow-md focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
       onClick={() => onSelect(service.routeSlug)}
       onKeyDown={handleKeyDown}
     >

@@ -107,7 +107,7 @@ export async function fillAndSaveOffice365ConfigFlow(
   expect(saveBody.toLowerCase()).not.toContain("clientsecretreference")
   expect(JSON.parse(saveBody).itemId).toBeTruthy()
 
-  await expect(page.getByText("Configuration created successfully.")).toBeVisible({
+  await expect(page.getByText("Configuration created successfully.", { exact: true })).toBeVisible({
     timeout: 15000,
   })
 }
@@ -145,9 +145,23 @@ export async function expandOffice365RowAndVerifyFlow(
   await expect(panel.getByText("*********************")).toHaveCount(0)
 }
 
+/**
+ * Edit lives in the configuration's accordion header. The Default record has
+ * its own Edit (sender name only), so scope to the configuration under test.
+ */
+function editButtonFor(page: Page, configName: string) {
+  return page
+    .getByRole("button", { name: configName })
+    .getByRole("button", { name: "Edit", exact: true })
+}
+
 /** H4: a blank secret keeps the one on file. */
-export async function editOffice365KeepingSecretFlow(page: Page, newSenderName: string) {
-  await page.getByRole("button", { name: "Edit", exact: true }).first().click()
+export async function editOffice365KeepingSecretFlow(
+  page: Page,
+  configName: string,
+  newSenderName: string,
+) {
+  await editButtonFor(page, configName).click()
   await expect(page.getByRole("heading", { name: "Edit Configuration" })).toBeVisible()
 
   const secretField = page.getByPlaceholder("Leave blank to keep the current secret")
@@ -160,14 +174,14 @@ export async function editOffice365KeepingSecretFlow(page: Page, newSenderName: 
   await expect(updateButton).toBeEnabled({ timeout: 10000 })
   await updateButton.click()
 
-  await expect(page.getByText("Configuration updated successfully.")).toBeVisible({
+  await expect(page.getByText("Configuration updated successfully.", { exact: true })).toBeVisible({
     timeout: 15000,
   })
 }
 
 /** C2: whitespace is a mistake, not a preserve. */
-export async function verifyOffice365BlankSecretRejectedFlow(page: Page) {
-  await page.getByRole("button", { name: "Edit", exact: true }).first().click()
+export async function verifyOffice365BlankSecretRejectedFlow(page: Page, configName: string) {
+  await editButtonFor(page, configName).click()
   await expect(page.getByRole("heading", { name: "Edit Configuration" })).toBeVisible()
 
   await page.getByPlaceholder("Leave blank to keep the current secret").fill("   ")
@@ -178,8 +192,12 @@ export async function verifyOffice365BlankSecretRejectedFlow(page: Page) {
 }
 
 /** H4 / C3: a replacement rotates, and nothing in the response carries it. */
-export async function editOffice365RotatingSecretFlow(page: Page, replacementSecret: string) {
-  await page.getByRole("button", { name: "Edit", exact: true }).first().click()
+export async function editOffice365RotatingSecretFlow(
+  page: Page,
+  configName: string,
+  replacementSecret: string,
+) {
+  await editButtonFor(page, configName).click()
   await expect(page.getByRole("heading", { name: "Edit Configuration" })).toBeVisible()
 
   await page.getByPlaceholder("Leave blank to keep the current secret").fill(replacementSecret)
@@ -198,12 +216,12 @@ export async function editOffice365RotatingSecretFlow(page: Page, replacementSec
   expect(saveResponse.status()).toBe(200)
   expect(await saveResponse.text()).not.toContain(replacementSecret)
 
-  await expect(page.getByText("Configuration updated successfully.")).toBeVisible({
+  await expect(page.getByText("Configuration updated successfully.", { exact: true })).toBeVisible({
     timeout: 15000,
   })
 
   // Reopening proves the record still reports a secret on file after a rotation.
-  await page.getByRole("button", { name: "Edit", exact: true }).first().click()
+  await editButtonFor(page, configName).click()
   await expect(page.getByPlaceholder("Leave blank to keep the current secret")).toBeVisible()
   await page.getByRole("button", { name: "Cancel" }).click()
 }

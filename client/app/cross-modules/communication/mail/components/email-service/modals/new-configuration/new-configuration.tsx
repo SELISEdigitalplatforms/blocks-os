@@ -43,6 +43,12 @@ import {
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { showErrorToast, toast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
+import { Banner } from "@/components/ui-kits/banner/banner";
+import { isBrokenLinkedSecretStatus } from "@/cross-modules/secrets/models/secret.model";
+import {
+  LINKED_SECRET_REPAIR_NOTICE,
+  LINKED_SECRET_REPAIR_REQUIRED_MESSAGE,
+} from "@/cross-modules/secrets/components/linked-secret-status/linked-secret-status";
 interface NewConfigurationProps {
   dialogTitle: string;
   onClose: () => void;
@@ -57,7 +63,14 @@ const EMAIL_PATTERN = /^(?=.{1,320}$)[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{
  * has a client secret on file. Without that, an Office 365 edit would demand a
  * secret the user has no reason to retype.
  */
-const createSchema = ({ hasClientSecretOnFile }: { hasClientSecretOnFile: boolean }) =>
+const createSchema = ({
+  hasClientSecretOnFile,
+  needsNewClientSecret = false,
+}: {
+  hasClientSecretOnFile: boolean;
+  /** The linked secret is archived or missing, so the required-secret error explains a repair. */
+  needsNewClientSecret?: boolean;
+}) =>
   z
     .object({
       configurationName: z
@@ -166,7 +179,9 @@ const createSchema = ({ hasClientSecretOnFile }: { hasClientSecretOnFile: boolea
         if (!hasClientSecretOnFile) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: "Client secret is required",
+            message: needsNewClientSecret
+              ? LINKED_SECRET_REPAIR_REQUIRED_MESSAGE
+              : "Client secret is required",
             path: ["clientSecret"],
           });
         }
@@ -191,7 +206,23 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
   // Only an existing record can have a secret on file, and the API reports it
   // as a flag because the value and its reference never leave the server.
   const hasClientSecretOnFile = Boolean(isEdit && previousData?.isClientSecretConfigured);
-  const schema = useMemo(() => createSchema({ hasClientSecretOnFile }), [hasClientSecretOnFile]);
+  // Repair mode: the reference points at an archived or missing secret. There is nothing to
+  // keep, so a new value is required, and the server stores it as a new secret.
+  const clientSecretStatus = isEdit ? previousData?.clientSecretStatus : undefined;
+  const brokenClientSecretStatus = isBrokenLinkedSecretStatus(clientSecretStatus)
+    ? clientSecretStatus
+    : null;
+  const needsNewClientSecret = !!brokenClientSecretStatus;
+  const schema = useMemo(
+    () =>
+      createSchema({
+        // A broken secret is never "on file", whatever the flag says.
+        hasClientSecretOnFile: hasClientSecretOnFile && !needsNewClientSecret,
+        needsNewClientSecret,
+      }),
+    [hasClientSecretOnFile, needsNewClientSecret],
+  );
+  const keepsSecretOnFile = hasClientSecretOnFile && !needsNewClientSecret;
 
   const form = useForm<IEmailConfig>({
     defaultValues:
@@ -673,6 +704,11 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                         )}
                       />
                     </div>
+                    {brokenClientSecretStatus && (
+                      <Banner variant="warning" compact className="mb-0 mt-4">
+                        {LINKED_SECRET_REPAIR_NOTICE[brokenClientSecretStatus]}
+                      </Banner>
+                    )}
                     <div className="mt-4 grid grid-cols-2 gap-4">
                       <FormField
                         name="clientSecret"
@@ -681,7 +717,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                           <FormItem>
                             <FormLabel className="text-left font-medium text-high-emphasis">
                               Client Secret{" "}
-                              {hasClientSecretOnFile ? null : (
+                              {keepsSecretOnFile ? null : (
                                 <span className="text-destructive">*</span>
                               )}
                             </FormLabel>
@@ -689,9 +725,11 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                               <Input
                                 type="password"
                                 placeholder={
-                                  hasClientSecretOnFile
-                                    ? "Leave blank to keep the current secret"
-                                    : "Enter client secret"
+                                  needsNewClientSecret
+                                    ? "Enter a new client secret"
+                                    : keepsSecretOnFile
+                                      ? "Leave blank to keep the current secret"
+                                      : "Enter client secret"
                                 }
                                 className="border-default col-span-3 mt-1 border shadow-none"
                                 {...field}
@@ -754,7 +792,12 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                   Cancel
                 </Button>
               </DialogTrigger>
-              <Button disabled={isPending || !form.formState.isValid} size="default">
+              {/* In repair mode the button stays enabled so an empty submit can explain, inline,
+                  that a new secret is required — rather than sitting disabled with no reason. */}
+              <Button
+                disabled={isPending || (!needsNewClientSecret && !form.formState.isValid)}
+                size="default"
+              >
                 {isPending
                   ? isEdit
                     ? "Updating..."

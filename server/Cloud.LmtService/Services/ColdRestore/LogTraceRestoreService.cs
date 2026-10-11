@@ -14,6 +14,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -30,6 +31,7 @@ namespace Cloud.LmtService.Services.ColdRestore
         private const string IsoDate = "yyyy-MM-dd";
 
         private const string RequestIdRequired = "RequestId is required.";
+        private const string TenantMismatchMessage = "TenantId does not match the restore request.";
         private const string TraceDataType = "Trace";
         private readonly ILogger<LogTraceRestoreService> _logger;
         private readonly ILogTraceRestoreRepository _coldRestoreRepository;
@@ -44,6 +46,7 @@ namespace Cloud.LmtService.Services.ColdRestore
         private readonly ITenants _tenants;
         private readonly IArchiveRestoreRepository _archiveRestoreRepository;
         private readonly IRestoreUserRepository _userRepository;
+        [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "DI constructor: each parameter is an injected dependency.")]
         public LogTraceRestoreService(ILogger<LogTraceRestoreService> logger, ILogTraceRestoreRepository coldRestoreRepository, IMessageClient messageClient, ILogTraceRestoreResultRepository coldRestoreResultRepository,
     ILogTraceRestoreParquetReader coldRestoreParquetReader, IBlobStorage blobStorage, IConfiguration configuration,
     ILmtArchiveRestoreConfigurationRepository lmtArchiveRestoreConfigurationRepository, IMailDriverService mailDriverService,
@@ -156,7 +159,7 @@ namespace Cloud.LmtService.Services.ColdRestore
                 throw new KeyNotFoundException($"Restore request not found for RequestId {request.RequestId}");
 
             if (!string.Equals(record.TenantId, tenantId, StringComparison.OrdinalIgnoreCase))
-                throw new UnauthorizedAccessException("TenantId does not match the restore request.");
+                throw new UnauthorizedAccessException(TenantMismatchMessage);
 
             if (IsTerminal(record.Status))
             {
@@ -417,7 +420,7 @@ namespace Cloud.LmtService.Services.ColdRestore
             var tenantId = BlocksContext.GetContext()?.TenantId ?? string.Empty;
             if (!string.Equals(record.TenantId, tenantId, StringComparison.OrdinalIgnoreCase))
             {
-                throw new UnauthorizedAccessException("TenantId does not match the restore request.");
+                throw new UnauthorizedAccessException(TenantMismatchMessage);
             }
 
             return new GetColdRestoreStatusResponse
@@ -691,115 +694,7 @@ namespace Cloud.LmtService.Services.ColdRestore
                     return;
                 }
 
-                try
-                {
-                    await _coldRestoreRepository.UpdateFileProgressAsync(
-                        requestId: file.RequestId,
-                        dataType: file.DataType,
-                        fileDate: file.FileDate,
-                        status: RestoreFileProgressStatus.Processing,
-                        startedAt: DateTime.UtcNow,
-                        ct: fileCt);
-
-                    int restoredRowCount = file.DataType switch
-                    {
-                        RestoreDataType.Trace => await RestoreTraceFileAsync(file, fileCt),
-                        RestoreDataType.Log => await RestoreLogFileAsync(file, fileCt),
-                        _ => throw new InvalidOperationException($"Unsupported data type {file.DataType}")
-                    };
-
-                    await _coldRestoreRepository.UpdateFileProgressAsync(
-                        requestId: file.RequestId,
-                        dataType: file.DataType,
-                        fileDate: file.FileDate,
-                        status: RestoreFileProgressStatus.Completed,
-                        rowsRestored: restoredRowCount,
-                        completedAt: DateTime.UtcNow,
-                        ct: fileCt);
-
-                    await _coldRestoreRepository.IncrementRequestProgressAsync(
-                        requestId: file.RequestId,
-                        processedFilesIncrement: 1,
-                        failedFilesIncrement: 0,
-                        traceRowsIncrement: file.DataType == RestoreDataType.Trace ? restoredRowCount : 0,
-                        logRowsIncrement:   file.DataType == RestoreDataType.Log   ? restoredRowCount : 0,
-                        ct: fileCt);
-                }
-                catch (FileNotFoundException ex)
-                {
-                    _logger.LogWarning(
-                        ex,
-                        "Cold restore file not found for RequestId {RequestId}, DataType {DataType}, FileDate {FileDate}",
-                        file.RequestId, file.DataType, file.FileDate);
-
-                    await _coldRestoreRepository.UpdateFileProgressAsync(
-                        requestId: file.RequestId,
-                        dataType: file.DataType,
-                        fileDate: file.FileDate,
-                        status: RestoreFileProgressStatus.FileNotFound,
-                        rowsRestored: 0,
-                        errorMessage: ex.Message,
-                        completedAt: DateTime.UtcNow,
-                        ct: CancellationToken.None);
-
-                    await _coldRestoreRepository.IncrementRequestProgressAsync(
-                        requestId: file.RequestId,
-                        processedFilesIncrement: 1,
-                        failedFilesIncrement: 1,
-                        traceRowsIncrement: 0,
-                        logRowsIncrement: 0,
-                        ct: CancellationToken.None);
-                }
-                catch (RequestFailedException ex) when (ex.Status is 404 or 409)
-                {
-                    _logger.LogWarning(
-                        ex,
-                        "Blob not found for RequestId {RequestId}, DataType {DataType}, FileDate {FileDate}",
-                        file.RequestId, file.DataType, file.FileDate);
-
-                    await _coldRestoreRepository.UpdateFileProgressAsync(
-                        requestId: file.RequestId,
-                        dataType: file.DataType,
-                        fileDate: file.FileDate,
-                        status: RestoreFileProgressStatus.FileNotFound,
-                        rowsRestored: 0,
-                        errorMessage: ex.Message,
-                        completedAt: DateTime.UtcNow,
-                        ct: CancellationToken.None);
-
-                    await _coldRestoreRepository.IncrementRequestProgressAsync(
-                        requestId: file.RequestId,
-                        processedFilesIncrement: 1,
-                        failedFilesIncrement: 1,
-                        traceRowsIncrement: 0,
-                        logRowsIncrement: 0,
-                        ct: CancellationToken.None);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(
-                        ex,
-                        "Failed processing file for RequestId {RequestId}, DataType {DataType}, FileDate {FileDate}",
-                        file.RequestId, file.DataType, file.FileDate);
-
-                    await _coldRestoreRepository.UpdateFileProgressAsync(
-                        requestId: file.RequestId,
-                        dataType: file.DataType,
-                        fileDate: file.FileDate,
-                        status: RestoreFileProgressStatus.Failed,
-                        rowsRestored: 0,
-                        errorMessage: ex.Message,
-                        completedAt: DateTime.UtcNow,
-                        ct: CancellationToken.None);
-
-                    await _coldRestoreRepository.IncrementRequestProgressAsync(
-                        requestId: file.RequestId,
-                        processedFilesIncrement: 1,
-                        failedFilesIncrement: 1,
-                        traceRowsIncrement: 0,
-                        logRowsIncrement: 0,
-                        ct: CancellationToken.None);
-                }
+                await RestorePendingFileAsync(file, fileCt);
             });
 
             if (wasCancelled)
@@ -810,7 +705,135 @@ namespace Cloud.LmtService.Services.ColdRestore
                 await _coldRestoreResultRepository.DropResultCollectionsAsync(requestId, CancellationToken.None);
             }
         }
-        private List<DateTime> GenerateDateRange(DateTime startDate, DateTime endDate)
+
+        /// <summary>
+        /// Restores one pending file and records its outcome on the file-progress row and the
+        /// request counters. A failed restore is recorded on the row rather than thrown, so one bad file
+        /// does not stop the range.
+        /// </summary>
+        private async Task RestorePendingFileAsync(LogTraceRestoreFileProgressRecord file, CancellationToken fileCt)
+        {
+            try
+            {
+                await _coldRestoreRepository.UpdateFileProgressAsync(
+                    requestId: file.RequestId,
+                    dataType: file.DataType,
+                    fileDate: file.FileDate,
+                    update: new FileProgressUpdate(RestoreFileProgressStatus.Processing)
+                    {
+                        StartedAt = DateTime.UtcNow
+                    },
+                    ct: fileCt);
+
+                int restoredRowCount = file.DataType switch
+                {
+                    RestoreDataType.Trace => await RestoreTraceFileAsync(file, fileCt),
+                    RestoreDataType.Log => await RestoreLogFileAsync(file, fileCt),
+                    _ => throw new InvalidOperationException($"Unsupported data type {file.DataType}")
+                };
+
+                await _coldRestoreRepository.UpdateFileProgressAsync(
+                    requestId: file.RequestId,
+                    dataType: file.DataType,
+                    fileDate: file.FileDate,
+                    update: new FileProgressUpdate(RestoreFileProgressStatus.Completed)
+                    {
+                        RowsRestored = restoredRowCount,
+                        CompletedAt = DateTime.UtcNow
+                    },
+                    ct: fileCt);
+
+                await _coldRestoreRepository.IncrementRequestProgressAsync(
+                    requestId: file.RequestId,
+                    processedFilesIncrement: 1,
+                    failedFilesIncrement: 0,
+                    traceRowsIncrement: file.DataType == RestoreDataType.Trace ? restoredRowCount : 0,
+                    logRowsIncrement:   file.DataType == RestoreDataType.Log   ? restoredRowCount : 0,
+                    ct: fileCt);
+            }
+            catch (FileNotFoundException ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Cold restore file not found for RequestId {RequestId}, DataType {DataType}, FileDate {FileDate}",
+                    file.RequestId, file.DataType, file.FileDate);
+
+                await _coldRestoreRepository.UpdateFileProgressAsync(
+                    requestId: file.RequestId,
+                    dataType: file.DataType,
+                    fileDate: file.FileDate,
+                    update: new FileProgressUpdate(RestoreFileProgressStatus.FileNotFound)
+                    {
+                        RowsRestored = 0,
+                        ErrorMessage = ex.Message,
+                        CompletedAt = DateTime.UtcNow
+                    },
+                    ct: CancellationToken.None);
+
+                await _coldRestoreRepository.IncrementRequestProgressAsync(
+                    requestId: file.RequestId,
+                    processedFilesIncrement: 1,
+                    failedFilesIncrement: 1,
+                    traceRowsIncrement: 0,
+                    logRowsIncrement: 0,
+                    ct: CancellationToken.None);
+            }
+            catch (RequestFailedException ex) when (ex.Status is 404 or 409)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Blob not found for RequestId {RequestId}, DataType {DataType}, FileDate {FileDate}",
+                    file.RequestId, file.DataType, file.FileDate);
+
+                await _coldRestoreRepository.UpdateFileProgressAsync(
+                    requestId: file.RequestId,
+                    dataType: file.DataType,
+                    fileDate: file.FileDate,
+                    update: new FileProgressUpdate(RestoreFileProgressStatus.FileNotFound)
+                    {
+                        RowsRestored = 0,
+                        ErrorMessage = ex.Message,
+                        CompletedAt = DateTime.UtcNow
+                    },
+                    ct: CancellationToken.None);
+
+                await _coldRestoreRepository.IncrementRequestProgressAsync(
+                    requestId: file.RequestId,
+                    processedFilesIncrement: 1,
+                    failedFilesIncrement: 1,
+                    traceRowsIncrement: 0,
+                    logRowsIncrement: 0,
+                    ct: CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Failed processing file for RequestId {RequestId}, DataType {DataType}, FileDate {FileDate}",
+                    file.RequestId, file.DataType, file.FileDate);
+
+                await _coldRestoreRepository.UpdateFileProgressAsync(
+                    requestId: file.RequestId,
+                    dataType: file.DataType,
+                    fileDate: file.FileDate,
+                    update: new FileProgressUpdate(RestoreFileProgressStatus.Failed)
+                    {
+                        RowsRestored = 0,
+                        ErrorMessage = ex.Message,
+                        CompletedAt = DateTime.UtcNow
+                    },
+                    ct: CancellationToken.None);
+
+                await _coldRestoreRepository.IncrementRequestProgressAsync(
+                    requestId: file.RequestId,
+                    processedFilesIncrement: 1,
+                    failedFilesIncrement: 1,
+                    traceRowsIncrement: 0,
+                    logRowsIncrement: 0,
+                    ct: CancellationToken.None);
+            }
+        }
+        private static List<DateTime> GenerateDateRange(DateTime startDate, DateTime endDate)
         {
             var dates = new List<DateTime>();
 
@@ -1024,6 +1047,59 @@ namespace Cloud.LmtService.Services.ColdRestore
                 request.RequestId,
                 tenantId);
 
+            ValidateParquetDownloadRequest(request);
+
+            var restoreRequest = await _coldRestoreRepository.GetRequestByIdAsync(request.RequestId, ct);
+
+            if (restoreRequest == null)
+            {
+                throw new KeyNotFoundException($"Cold restore request not found for RequestId {request.RequestId}");
+            }
+
+            if (!string.Equals(restoreRequest.TenantId, tenantId, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new UnauthorizedAccessException(TenantMismatchMessage);
+            }
+
+            var normalizedStartDate = request.StartDate.Date;
+            var normalizedEndDate = request.EndDate.Date;
+
+            if (normalizedStartDate < restoreRequest.StartDate.Date ||
+                normalizedEndDate > restoreRequest.EndDate.Date)
+            {
+                throw new InvalidOperationException("Requested download range is outside the restore request range.");
+            }
+
+            var dates = GenerateDateRange(normalizedStartDate, normalizedEndDate);
+
+            var zipStream = new MemoryStream();
+            var addedFiles = 0;
+
+            using (var archive = new ZipArchive(zipStream, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                foreach (var date in dates)
+                {
+                    addedFiles += await AddDayBlobsToZipAsync(archive, request.DataType, tenantId, date, ct);
+                }
+            }
+
+            if (addedFiles == 0)
+            {
+                await zipStream.DisposeAsync();
+                throw new FileNotFoundException("No parquet files were found for the requested range.");
+            }
+
+            zipStream.Position = 0;
+
+            return new ColdRestoreDownloadResult
+            {
+                Content = zipStream,
+                ContentType = "application/zip",
+                FileName = BuildDownloadFileName(request, tenantId, normalizedStartDate, normalizedEndDate)
+            };
+        }
+        private static void ValidateParquetDownloadRequest(DownloadColdRestoreParquetRequest request)
+        {
             if (string.IsNullOrWhiteSpace(request.RequestId))
             {
                 throw new ArgumentException(RequestIdRequired);
@@ -1045,88 +1121,53 @@ namespace Cloud.LmtService.Services.ColdRestore
             {
                 throw new ArgumentException("DataType must be Trace, Log, or Both.");
             }
+        }
 
-            var restoreRequest = await _coldRestoreRepository.GetRequestByIdAsync(request.RequestId, ct);
-
-            if (restoreRequest == null)
-            {
-                throw new KeyNotFoundException($"Cold restore request not found for RequestId {request.RequestId}");
-            }
-
-            if (!string.Equals(restoreRequest.TenantId, tenantId, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new UnauthorizedAccessException("TenantId does not match the restore request.");
-            }
-
-            var normalizedStartDate = request.StartDate.Date;
-            var normalizedEndDate = request.EndDate.Date;
-
-            if (normalizedStartDate < restoreRequest.StartDate.Date ||
-                normalizedEndDate > restoreRequest.EndDate.Date)
-            {
-                throw new InvalidOperationException("Requested download range is outside the restore request range.");
-            }
-
-            var dates = GenerateDateRange(normalizedStartDate, normalizedEndDate);
-
-            var zipStream = new MemoryStream();
+        /// <summary>
+        /// Adds the day's trace and/or log parquet blobs (per <paramref name="dataType"/>) to the zip
+        /// and returns how many were added.
+        /// </summary>
+        private async Task<int> AddDayBlobsToZipAsync(ZipArchive archive, string dataType, string tenantId, DateTime date, CancellationToken ct)
+        {
             var addedFiles = 0;
 
-            using (var archive = new ZipArchive(zipStream, ZipArchiveMode.Create, leaveOpen: true))
+            if (string.Equals(dataType, TraceDataType, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(dataType, "Both", StringComparison.OrdinalIgnoreCase))
             {
-                foreach (var date in dates)
+                var traceBlobPath = RestoreBlobPath.ForTraces(tenantId, date);
+
+                var added = await AddBlobToZipIfExistsAsync(
+                    archive,
+                    traceBlobPath,
+                    $"traces/{Path.GetFileName(traceBlobPath)}",
+                    ct);
+
+                if (added)
                 {
-                    if (string.Equals(request.DataType, TraceDataType, StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(request.DataType, "Both", StringComparison.OrdinalIgnoreCase))
-                    {
-                        var traceBlobPath = RestoreBlobPath.ForTraces(tenantId, date);
-
-                        var added = await AddBlobToZipIfExistsAsync(
-                            archive,
-                            traceBlobPath,
-                            $"traces/{Path.GetFileName(traceBlobPath)}",
-                            ct);
-
-                        if (added)
-                        {
-                            addedFiles++;
-                        }
-                    }
-
-                    if (string.Equals(request.DataType, "Log", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(request.DataType, "Both", StringComparison.OrdinalIgnoreCase))
-                    {
-                        var logBlobPath = RestoreBlobPath.ForLogs(tenantId, date);
-
-                        var added = await AddBlobToZipIfExistsAsync(
-                            archive,
-                            logBlobPath,
-                            $"logs/{Path.GetFileName(logBlobPath)}",
-                            ct);
-
-                        if (added)
-                        {
-                            addedFiles++;
-                        }
-                    }
+                    addedFiles++;
                 }
             }
 
-            if (addedFiles == 0)
+            if (string.Equals(dataType, "Log", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(dataType, "Both", StringComparison.OrdinalIgnoreCase))
             {
-                zipStream.Dispose();
-                throw new FileNotFoundException("No parquet files were found for the requested range.");
+                var logBlobPath = RestoreBlobPath.ForLogs(tenantId, date);
+
+                var added = await AddBlobToZipIfExistsAsync(
+                    archive,
+                    logBlobPath,
+                    $"logs/{Path.GetFileName(logBlobPath)}",
+                    ct);
+
+                if (added)
+                {
+                    addedFiles++;
+                }
             }
 
-            zipStream.Position = 0;
-
-            return new ColdRestoreDownloadResult
-            {
-                Content = zipStream,
-                ContentType = "application/zip",
-                FileName = BuildDownloadFileName(request, tenantId, normalizedStartDate, normalizedEndDate)
-            };
+            return addedFiles;
         }
+
         private async Task<bool> AddBlobToZipIfExistsAsync(ZipArchive archive, string blobPath, string entryName, CancellationToken ct)
         {
             try
@@ -1140,7 +1181,7 @@ namespace Cloud.LmtService.Services.ColdRestore
 
                 var entry = archive.CreateEntry(entryName, CompressionLevel.Fastest);
 
-                await using var entryStream = entry.Open();
+                await using var entryStream = await entry.OpenAsync(ct);
                 await blobStream.CopyToAsync(entryStream, ct);
 
                 return true;
@@ -1192,7 +1233,7 @@ namespace Cloud.LmtService.Services.ColdRestore
 
             if (!string.Equals(restoreRequest.TenantId, tenantId, StringComparison.OrdinalIgnoreCase))
             {
-                throw new UnauthorizedAccessException("TenantId does not match the restore request.");
+                throw new UnauthorizedAccessException(TenantMismatchMessage);
             }
 
             var jsonOptions = new JsonSerializerOptions
@@ -1301,7 +1342,7 @@ namespace Cloud.LmtService.Services.ColdRestore
                     "traces.json",
                     CompressionLevel.Fastest);
 
-                await using (var entryStream = tracesEntry.Open())
+                await using (var entryStream = await tracesEntry.OpenAsync(ct))
                 {
                     var tracePayload = traceRows.Select(x => new
                     {
@@ -1338,7 +1379,7 @@ namespace Cloud.LmtService.Services.ColdRestore
                     "logs.json",
                     CompressionLevel.Fastest);
 
-                await using (var entryStream = logsEntry.Open())
+                await using (var entryStream = await logsEntry.OpenAsync(ct))
                 {
                     var logPayload = logRows.Select(x => new
                     {

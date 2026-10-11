@@ -279,7 +279,7 @@ export const ReviewConfirmForm = () => {
                     <Button
                       type="button"
                       variant="link"
-                      className="p-0 text-sm font-medium !no-underline"
+                      className="p-0 text-sm font-medium no-underline!"
                       disabled={!!remainingTime || isInitiating}
                       onClick={handleResendVerification}
                     >

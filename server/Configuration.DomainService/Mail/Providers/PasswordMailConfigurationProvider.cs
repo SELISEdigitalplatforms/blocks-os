@@ -32,7 +32,10 @@ namespace Configuration.DomainService.Mail.Providers
             // providers, and SecurityMode stays Legacy so EnableSSL remains authoritative.
         }
 
-        public IDictionary<string, string> Validate(MailConfiguration request, MailServerConfiguration? existing) =>
+        public IDictionary<string, string> Validate(
+            MailConfiguration request,
+            MailServerConfiguration? existing,
+            string? existingCredentialStatus) =>
             new Dictionary<string, string>();
 
         public IDictionary<string, string> ValidateDuplicate(
@@ -50,6 +53,7 @@ namespace Configuration.DomainService.Mail.Providers
         public Task<MailCredentialResult> SaveCredentialAsync(
             MailConfiguration request,
             MailServerConfiguration? existing,
+            string? existingCredentialStatus,
             CancellationToken cancellationToken = default) =>
             Task.FromResult(MailCredentialResult.None);
 
@@ -59,13 +63,17 @@ namespace Configuration.DomainService.Mail.Providers
             CancellationToken cancellationToken = default) =>
             Task.FromResult(MailCredentialResult.None);
 
-        public Task DeleteCredentialAsync(string? credentialReference, CancellationToken cancellationToken = default) =>
-            Task.CompletedTask;
+        public Task<bool> DeleteCredentialAsync(string? credentialReference, CancellationToken cancellationToken = default) =>
+            Task.FromResult(false);
 
         public Task RestoreCredentialAsync(string? credentialReference, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
 
-        public void ProjectResponse(MailServerConfiguration entity, MailConfigurationResponse response)
+        /// <summary>Null: the password lives in the document, so there is no linked secret to check.</summary>
+        public Task<string?> ResolveCredentialStatusAsync(MailServerConfiguration entity, CancellationToken cancellationToken = default) =>
+            Task.FromResult<string?>(null);
+
+        public void ProjectResponse(MailServerConfiguration entity, MailConfigurationResponse response, string? credentialStatus)
         {
             // The existing mask, byte for byte: the UI has always shown a fixed-width mask here
             // and the edit form has always posted a blank password to mean "unchanged".

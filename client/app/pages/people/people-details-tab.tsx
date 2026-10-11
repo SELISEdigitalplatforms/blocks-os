@@ -18,7 +18,7 @@ export const PeopleDetailsTab = ({
       <div className="w-full border-b bg-card px-5 py-5 sm:px-6">
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-[minmax(0,1.5fr)_minmax(11rem,1fr)_minmax(11rem,1fr)] md:items-center">
           <div className="flex min-w-0 items-center gap-4 sm:col-span-2 md:col-span-1">
-            <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-background bg-blocks-primary-100 text-xl font-semibold text-blocks-primary-700 shadow-sm">
+            <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-background bg-blocks-primary-100 text-xl font-semibold text-blocks-primary-700 shadow-xs">
               {user?.profileImageUrl ? (
                 <img
                   src={user.profileImageUrl}

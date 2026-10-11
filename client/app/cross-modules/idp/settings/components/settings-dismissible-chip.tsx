@@ -39,7 +39,7 @@ export const SettingsDismissibleChip = ({
       className={cn(
         variant === "badge"
           ? "relative inline-flex min-h-10 w-full max-w-full flex-col items-start justify-center rounded-xl border bg-muted/40 px-3 py-1.5 pr-8 sm:w-auto"
-          : "relative rounded-lg border bg-card p-4 pr-10 shadow-sm",
+          : "relative rounded-lg border bg-card p-4 pr-10 shadow-xs",
         className,
       )}
     >

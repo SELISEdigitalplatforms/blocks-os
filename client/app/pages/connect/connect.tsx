@@ -353,7 +353,7 @@ export default function ConnectPage() {
             <Plug className="h-4 w-4" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <p className="break-words text-sm font-semibold text-high-emphasis">{request.siteName || request.redirectHost}</p>
+            <p className="wrap-break-word text-sm font-semibold text-high-emphasis">{request.siteName || request.redirectHost}</p>
             <p className="mt-0.5 text-xs text-medium-emphasis">Requests access to Blocks Localization</p>
           </div>
         </div>
@@ -410,7 +410,7 @@ export default function ConnectPage() {
             /> : <p className="text-sm text-medium-emphasis" role="status">Loading projects…</p>}
             <button
               type="button"
-              className="mt-2 text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="mt-2 text-xs font-medium text-primary hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
               onClick={() => setShowCreateProject(true)}
             >
               Create new project
@@ -494,7 +494,7 @@ export default function ConnectPage() {
                         approvalStartedFor.current = null;
                         readiness.reset();
                       }}
-                      className={`relative w-full rounded-lg border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed ${isSelected ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/50 hover:bg-accent/30"}`}
+                      className={`relative w-full rounded-lg border p-4 text-left transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed ${isSelected ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/50 hover:bg-accent/30"}`}
                     >
                       <span className="block min-w-0">
                         <span className="flex flex-wrap items-center justify-between gap-2">
@@ -554,7 +554,7 @@ const ConnectShell = ({ title, children }: { title: string; children: React.Reac
         <img src="/blocks-logos/os_light_mode.svg" alt="Blocks OS" className="h-14 w-auto dark:hidden" />
         <img src="/blocks-logos/os_dark_mode.svg" alt="Blocks OS" className="hidden h-14 w-auto dark:block" />
       </div>
-      <div className="space-y-5 rounded-lg border border-border bg-card p-5 shadow-sm sm:p-8">
+      <div className="space-y-5 rounded-lg border border-border bg-card p-5 shadow-xs sm:p-8">
         <h1 className="text-lg font-semibold text-high-emphasis">{title}</h1>
         {children}
       </div>

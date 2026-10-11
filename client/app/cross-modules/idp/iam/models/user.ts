@@ -144,6 +144,8 @@ export interface ICreateUserPayload {
   projectKey?: string;
   organizationId?: string;
   organizationIds?: string[];
+  /** Server default is true. Only used when the email already has an account. */
+  notifyUser?: boolean;
 }
 export interface ICreateUserResponse {
   errors: unknown;
@@ -199,6 +201,8 @@ export interface IUpdateUserAccessControlPayload {
   roles: string[];
   permissions: string[];
   organizationId: string;
+  /** Server default is true. Mails only when this adds the user to the organization. */
+  notifyUser?: boolean;
 }
 export interface IUpdateUserAccessControlResponse {
   errors: unknown | null;
@@ -208,6 +212,8 @@ export interface IUpdateUserAccessControlResponse {
 export interface IRevokeAccessPayload {
   userId: string;
   organizationId: string;
+  /** Server default is true. Mails only when the user was a member. */
+  notifyUser?: boolean;
 }
 
 export interface IRevokeAccessResponse {

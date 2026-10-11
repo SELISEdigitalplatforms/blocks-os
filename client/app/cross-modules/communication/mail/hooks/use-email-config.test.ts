@@ -1,5 +1,6 @@
 import { createWrapper } from "@/test-utils/test-providers/query-client";
 import { renderHook, waitFor } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockProjectStoreFactory } from "@/test-utils/__mocks__";
 import {
@@ -109,6 +110,23 @@ describe("Email Config Hooks", () => {
         expect.anything(),
       );
       expect(result.current.data).toEqual(mockSuccessResponse);
+    });
+
+    it("refreshes the email list and the Secrets page list after a save", async () => {
+      // An Office 365 save can create, rotate or (on repair) replace its linked secret.
+      const invalidate = vi.spyOn(QueryClient.prototype, "invalidateQueries");
+      vi.mocked(emailService.saveMailConfig).mockResolvedValue(mockSuccessResponse);
+
+      const { result } = renderHook(() => useSaveEmailConfig(), {
+        wrapper: createWrapper(),
+      });
+
+      result.current.mutate(mockSaveConfigPayload);
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ["email-configs"] });
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ["secrets", "list"] });
+      invalidate.mockRestore();
     });
 
     it("should invalidate email-configs query on success", async () => {

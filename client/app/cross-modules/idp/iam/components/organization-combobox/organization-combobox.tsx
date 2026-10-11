@@ -153,14 +153,14 @@ export const OrganizationCombobox = ({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+      <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
         <div className="border-b px-3">
           <Input
             autoFocus
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
             placeholder="Search organizations..."
-            className="h-11 w-full border-0 bg-transparent px-0 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
+            className="h-11 w-full border-0 bg-transparent px-0 text-sm outline-hidden placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
           />
         </div>
         <div

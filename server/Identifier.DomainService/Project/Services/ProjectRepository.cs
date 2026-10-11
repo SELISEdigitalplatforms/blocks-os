@@ -23,6 +23,8 @@ namespace DomainService.Projects
         private const string _projectStatusTraceCollectionName = "ProjectStatusTracers";
         private const string _legacyDefaultUserRoleSlug = "user";
         private const string _cloudUserRoleSlug = "clouduser";
+        // Mongo field name; must match the stored documents exactly.
+        private const string LastUpdatedDateField = "LastUpdatedDate";
 
         public ProjectRepository(IDbContextProvider dbContextProvider,
                                  IConfiguration configuration,
@@ -575,7 +577,7 @@ namespace DomainService.Projects
                 resourceLimit["CreatedBy"] = userId;
                 resourceLimit["LastUpdatedBy"] = userId;
                 resourceLimit["CreatedDate"] = DateTime.UtcNow;
-                resourceLimit["LastUpdatedDate"] = DateTime.UtcNow;
+                resourceLimit[LastUpdatedDateField] = DateTime.UtcNow;
                 resourceLimit["Language"] = "en-US";
                 resourceLimit["TenantId"] = project.TenantId;
                 resourceLimit["Lifetime"] = DateTime.UtcNow.AddMonths(1);
@@ -661,7 +663,7 @@ namespace DomainService.Projects
                 .Set("RepoName", request.Resource.Name)
                 .Set("RepoUrl", request.Resource.Link)
                 .Set("IsArchived", false)
-                .Set("LastUpdatedDate", DateTime.UtcNow)
+                .Set(LastUpdatedDateField, DateTime.UtcNow)
                 .Set("LastUpdatedBy", BlocksContext.GetContext()?.UserId ?? string.Empty);
 
             await UpdateGroupReposAsync(request.TenantGroupId, request.Resource.ResourceId, update);
@@ -674,7 +676,7 @@ namespace DomainService.Projects
         {
             var update = Builders<BsonDocument>.Update
                 .Set("IsArchived", true)
-                .Set("LastUpdatedDate", DateTime.UtcNow)
+                .Set(LastUpdatedDateField, DateTime.UtcNow)
                 .Set("LastUpdatedBy", BlocksContext.GetContext()?.UserId ?? string.Empty);
 
             await UpdateGroupReposAsync(request.TenantGroupId, request.ResourceId, update);
@@ -705,7 +707,7 @@ namespace DomainService.Projects
                 ["RepoUrl"] = resource.Link,
                 ["IsArchived"] = false,
                 ["CreatedDate"] = DateTime.UtcNow,
-                ["LastUpdatedDate"] = DateTime.UtcNow,
+                [LastUpdatedDateField] = DateTime.UtcNow,
                 ["CreatedBy"] = BlocksContext.GetContext()?.UserId ?? string.Empty,
                 ["Branch"] = project.Environment == "prod" ? "main" : project.Environment,
                 ["ProjectId"] = project.TenantId,

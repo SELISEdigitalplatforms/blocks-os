@@ -347,7 +347,7 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
         )}
         <Link
           to={tracingHref}
-          className="ml-auto text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="ml-auto text-xs text-primary hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
         >
           View this request in Tracing
         </Link>

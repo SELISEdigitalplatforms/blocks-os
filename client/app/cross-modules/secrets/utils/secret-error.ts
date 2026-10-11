@@ -52,6 +52,17 @@ const REASON_MESSAGES: Record<string, string> = {
   [SECRET_ERROR_REASON.DuplicateNameInBatch]: "The batch contains the same name twice.",
 };
 
+/**
+ * Reason codes whose meaning depends on the status they arrive with. `STATUS_DELETED` on a
+ * value read (400) means "archived, restore to read"; on a lifecycle action it still arrives as
+ * a 409 and is a stale view, which the status-level copy already explains.
+ */
+const REASON_STATUS_MESSAGES: Record<string, Partial<Record<number, string>>> = {
+  [SECRET_ERROR_REASON.StatusDeleted]: {
+    400: "This secret is archived. Restore it to read its value.",
+  },
+};
+
 const statusOf = (error: unknown): number | undefined => {
   for (const status of [400, 403, 404, 409, 502]) {
     if (isHttpErrorStatus(error, status)) return status;
@@ -90,6 +101,7 @@ export const describeSecretError = (
     : undefined;
 
   const message =
+    (reason && status ? REASON_STATUS_MESSAGES[reason]?.[status] : undefined) ??
     (reason ? REASON_MESSAGES[reason] : undefined) ??
     (status ? STATUS_MESSAGES[status] : undefined) ??
     serverMessage ??
@@ -106,7 +118,16 @@ export const describeSecretError = (
 /** The row the user is looking at is out of date — refetch before letting them retry. */
 export const isStaleSecretError = (error: unknown): boolean => {
   const status = statusOf(error);
-  return status === 404 || status === 409;
+  if (status === 404 || status === 409) return true;
+
+  // A value read on an archived secret answers 400 rather than 409, but it means the same
+  // thing: the row still shows the secret as readable, and it is not any more.
+  if (status === 400) {
+    const errors = isErrorWithErrors(error) ? error.errors : undefined;
+    return firstString(errors?.reason) === SECRET_ERROR_REASON.StatusDeleted;
+  }
+
+  return false;
 };
 
 export const isSecretPermissionError = (error: unknown): boolean => statusOf(error) === 403;

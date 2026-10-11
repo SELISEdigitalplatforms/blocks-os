@@ -13,6 +13,7 @@ import { ToggleCaptchaStatusModal } from "@blocks-idp/captcha/modals/toggle-capt
 import { DeleteCaptchaModal } from "@blocks-idp/captcha/modals/delete-captcha-modal";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
 import { ReactNode } from "react";
+import { LinkedSecretStatusValue } from "@/cross-modules/secrets/components/linked-secret-status/linked-secret-status";
 
 const LoadingSkelton = () => (
   <Card>
@@ -140,10 +141,16 @@ const CaptchaConfigCard = ({ configuration }: { configuration: ICaptchaConfig })
             </CopyToClipboardButton>
           </Item>
           <Item label="Secret Key">
-            {/* The backend never returns the secret itself — only whether one is set. */}
-            <span className="text-muted-foreground">
-              {configuration.secretId ? "Configured" : "Not set"}
-            </span>
+            {/* The backend never returns the secret itself — only whether one is set and,
+                when one is, whether it still works. */}
+            <LinkedSecretStatusValue
+              status={configuration.secretStatus}
+              fallback={
+                <span className="text-muted-foreground">
+                  {configuration.secretId ? "Configured" : "Not set"}
+                </span>
+              }
+            />
           </Item>
         </div>
       </CardContent>

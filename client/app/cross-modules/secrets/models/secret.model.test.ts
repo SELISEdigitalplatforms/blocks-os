@@ -7,6 +7,7 @@ import {
   SECRET_TYPE_DESCRIPTION,
   SECRET_VALUE_MAX_BYTES,
   isApiSecret,
+  isBrokenLinkedSecretStatus,
   isDeleted,
   secretAuditActionLabel,
   looksLikeSecretId,
@@ -214,5 +215,20 @@ describe("secret model", () => {
       expect(secretTagLabel("iam", catalogue)).toBe("Blocks Iam");
       expect(secretTagLabel("payments", catalogue)).toBe("payments");
     });
+  });
+});
+
+describe("isBrokenLinkedSecretStatus", () => {
+  it.each([
+    ["archived", true],
+    ["missing", true],
+    ["active", false],
+    ["locked", false],
+    ["unavailable", false],
+    ["none", false],
+    [undefined, false],
+    [null, false],
+  ] as const)("treats %s as broken: %s", (status, expected) => {
+    expect(isBrokenLinkedSecretStatus(status)).toBe(expected);
   });
 });

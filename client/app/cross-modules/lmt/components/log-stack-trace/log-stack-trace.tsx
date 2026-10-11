@@ -21,7 +21,7 @@ export const LogStackTrace = ({ exception }: { exception?: string }) => {
         type="button"
         onClick={() => setIsOpen((open) => !open)}
         aria-expanded={isOpen}
-        className="inline-flex items-center gap-1 rounded-sm text-xs font-medium text-error hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="inline-flex items-center gap-1 rounded-sm text-xs font-medium text-error hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
       >
         <ChevronRight
           aria-hidden="true"
@@ -41,7 +41,7 @@ export const LogStackTrace = ({ exception }: { exception?: string }) => {
               </span>
             </CopyToClipboardButton>
           </div>
-          <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words px-3 py-2 font-sans text-xs leading-relaxed text-medium-emphasis">
+          <pre className="max-h-80 overflow-auto whitespace-pre-wrap wrap-break-word px-3 py-2 font-sans text-xs leading-relaxed text-medium-emphasis">
             {stackTrace}
           </pre>
         </div>

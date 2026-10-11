@@ -22,7 +22,7 @@ export const BulkActionBar = ({
           : "pointer-events-none translate-y-4 opacity-0",
       )}
     >
-      <div className="flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-2xl border border-border bg-card/95 px-3 py-2.5 shadow-xl backdrop-blur-sm sm:gap-3 sm:px-5 sm:py-3">
+      <div className="flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-2xl border border-border bg-card/95 px-3 py-2.5 shadow-xl backdrop-blur-xs sm:gap-3 sm:px-5 sm:py-3">
         <div className="flex shrink-0 items-center gap-2">
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
             {selectedCount}

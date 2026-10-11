@@ -58,11 +58,19 @@ export async function createRoleFlow(page: Page, roleName: string, roleSlug: str
 }
 
 export async function searchRoleByNameFlow(page: Page, roleName: string) {
+  // Creating a role invalidates the list, which shows skeletons while it
+  // refetches, and a slow or failed roles request on a shared dev backend
+  // then renders as "No roles found". Re-enter the search until the new role
+  // shows up, so one slow response doesn't fail the flow. (Not waiting for
+  // the role in the unfiltered list first: with enough roles it can sit on a
+  // later page.) A role that is really missing still fails after the budget.
   const searchInput = page.getByPlaceholder("Search...").first();
-  await searchInput.fill(roleName);
-  await expect(page.getByRole("button", { name: `Edit role ${roleName}` })).toBeVisible({
-    timeout: 8_000,
-  });
+  const editRoleButton = page.getByRole("button", { name: `Edit role ${roleName}` });
+  await expect(async () => {
+    await searchInput.fill("");
+    await searchInput.fill(roleName);
+    await expect(editRoleButton).toBeVisible({ timeout: 10_000 });
+  }).toPass({ timeout: 45_000 });
   await searchInput.fill("");
 }
 

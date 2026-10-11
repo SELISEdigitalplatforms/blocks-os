@@ -134,7 +134,7 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
                   openPermission(permission.itemId);
                 }
               }}
-              className="group flex cursor-pointer flex-col gap-3 rounded-xl border bg-card p-4 outline-none transition-colors hover:border-primary/30 focus-visible:border-primary/30 md:grid md:grid-cols-[minmax(220px,1fr)_110px_110px_110px_110px_88px] md:items-center md:gap-4"
+              className="group flex cursor-pointer flex-col gap-3 rounded-xl border bg-card p-4 outline-hidden transition-colors hover:border-primary/30 focus-visible:border-primary/30 md:grid md:grid-cols-[minmax(220px,1fr)_110px_110px_110px_110px_88px] md:items-center md:gap-4"
             >
               <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
