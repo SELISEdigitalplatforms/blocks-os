@@ -25,6 +25,9 @@ export const useSaveEmailConfig = () => {
     mutationFn: emailService.saveMailConfig,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["email-configs"] });
+      // An Office 365 save can create or rotate its linked secret — or, for a repair, create a
+      // new one — so the Secrets page list is stale too.
+      queryClient.invalidateQueries({ queryKey: ["secrets", "list"] });
     },
   });
 };

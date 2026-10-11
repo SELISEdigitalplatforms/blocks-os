@@ -1,3 +1,5 @@
+import type { LinkedSecretStatus } from "@/cross-modules/secrets/models/secret.model";
+
 export interface IEmailServiceData {
   id: string;
   name: string;
@@ -260,8 +262,16 @@ export interface IEmailConfig {
    * "keep the secret on file".
    */
   clientSecret?: string;
-  /** Whether a secret is on file. The read-side stand-in for the value. */
+  /**
+   * Whether a usable secret is on file. The read-side stand-in for the value. False when the
+   * linked secret was archived or no longer exists; true while its status is unavailable.
+   */
   isClientSecretConfigured?: boolean;
+  /**
+   * The linked client secret's state, computed by the server on every read. Present only for
+   * Office 365 OAuth configurations.
+   */
+  clientSecretStatus?: LinkedSecretStatus;
 }
 
 /**

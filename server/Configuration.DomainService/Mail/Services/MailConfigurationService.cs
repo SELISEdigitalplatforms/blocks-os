@@ -89,7 +89,13 @@ namespace Configuration.DomainService.Mail.Services
             configuration.ConfigurationName = configuration.ConfigurationName?.Trim();
             definition.Normalize(configuration);
 
-            var errors = definition.Validate(configuration, existing);
+            // Read once and handed to both validation and the credential step, so they cannot
+            // disagree about whether the stored secret is usable.
+            var existingCredentialStatus = existing is null
+                ? null
+                : await definition.ResolveCredentialStatusAsync(existing, cancellationToken).ConfigureAwait(false);
+
+            var errors = definition.Validate(configuration, existing, existingCredentialStatus);
 
             var sharedResult = await _validator.ValidateAsync(configuration, cancellationToken).ConfigureAwait(false);
             foreach (var failure in sharedResult.Errors)
@@ -120,7 +126,7 @@ namespace Configuration.DomainService.Mail.Services
             try
             {
                 credential = await definition
-                    .SaveCredentialAsync(configuration, existing, cancellationToken)
+                    .SaveCredentialAsync(configuration, existing, existingCredentialStatus, cancellationToken)
                     .ConfigureAwait(false);
             }
             catch (SecretVaultException exception)
@@ -160,14 +166,22 @@ namespace Configuration.DomainService.Mail.Services
                 .GetMailConfigurationByNameAsync(request.ConfigurationName)
                 .ConfigureAwait(false);
 
-            return configuration is null ? null : Project(configuration);
+            return configuration is null ? null : await ProjectAsync(configuration, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task<List<MailConfigurationResponse>> GetAllAsync(CancellationToken cancellationToken = default)
         {
             var configurations = await _configurationRepository.GetAllMailConfigurationsAsync().ConfigureAwait(false);
 
-            return configurations.Select(Project).ToList();
+            // Sequential on purpose: the provider resolves status through the scoped
+            // ISecretService, which is not documented as safe for concurrent use.
+            var responses = new List<MailConfigurationResponse>(configurations.Count);
+            foreach (var configuration in configurations)
+            {
+                responses.Add(await ProjectAsync(configuration, cancellationToken).ConfigureAwait(false));
+            }
+
+            return responses;
         }
 
         public async Task<MailConfigurationMutationResult> DeleteAsync(
@@ -190,12 +204,14 @@ namespace Configuration.DomainService.Mail.Services
 
             // The credential goes first. If it cannot be retired the configuration stays in
             // place, still pointing at it, rather than being deleted and stranding a live secret
-            // that nothing references any more.
+            // that nothing references any more. A credential that is already archived or purged
+            // is tolerated, and remembered as not retired by this call.
+            var retiredHere = false;
             if (hasDefinition)
             {
                 try
                 {
-                    await definition.DeleteCredentialAsync(config.ClientSecretReference, cancellationToken).ConfigureAwait(false);
+                    retiredHere = await definition.DeleteCredentialAsync(config.ClientSecretReference, cancellationToken).ConfigureAwait(false);
                 }
                 catch (SecretVaultException exception)
                 {
@@ -214,7 +230,13 @@ namespace Configuration.DomainService.Mail.Services
             }
             catch
             {
-                await RestoreAfterFailedDeleteAsync(hasDefinition ? definition : null, config, cancellationToken).ConfigureAwait(false);
+                // Only a secret this call archived is put back. One that was already archived
+                // before the delete stays archived: restoring it would revive a secret someone
+                // deliberately took out of service.
+                if (retiredHere)
+                {
+                    await RestoreAfterFailedDeleteAsync(definition, config, cancellationToken).ConfigureAwait(false);
+                }
                 throw;
             }
 
@@ -401,9 +423,10 @@ namespace Configuration.DomainService.Mail.Services
             };
 
         /// <summary>
-        /// Builds the browser-facing view of a stored record.
+        /// Builds the browser-facing view of a stored record, including the linked secret's
+        /// status for a provider that owns one.
         /// </summary>
-        private MailConfigurationResponse Project(MailServerConfiguration entity)
+        private async Task<MailConfigurationResponse> ProjectAsync(MailServerConfiguration entity, CancellationToken cancellationToken)
         {
             var response = new MailConfigurationResponse
             {
@@ -436,7 +459,8 @@ namespace Configuration.DomainService.Mail.Services
 
             if (_providers.TryGet(entity.Provider, out var definition))
             {
-                definition.ProjectResponse(entity, response);
+                var credentialStatus = await definition.ResolveCredentialStatusAsync(entity, cancellationToken).ConfigureAwait(false);
+                definition.ProjectResponse(entity, response, credentialStatus);
             }
 
             return response;
@@ -483,11 +507,11 @@ namespace Configuration.DomainService.Mail.Services
         /// Puts a retired credential back when the configuration delete that followed it failed.
         /// </summary>
         private async Task RestoreAfterFailedDeleteAsync(
-            IMailConfigurationProvider? definition,
+            IMailConfigurationProvider definition,
             MailServerConfiguration config,
             CancellationToken cancellationToken)
         {
-            if (definition is null || string.IsNullOrEmpty(config.ClientSecretReference))
+            if (string.IsNullOrEmpty(config.ClientSecretReference))
             {
                 return;
             }

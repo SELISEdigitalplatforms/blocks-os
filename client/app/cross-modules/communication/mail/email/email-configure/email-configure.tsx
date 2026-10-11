@@ -23,6 +23,7 @@ import { useGetEmailSecretConfigs } from "@blocks-communication/mail/hooks/use-e
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { EmptyState } from "@/components/ui-kits/empty-state";
 import { parseAsBoolean, useQueryState } from "nuqs";
+import { LinkedSecretStatusValue } from "@/cross-modules/secrets/components/linked-secret-status/linked-secret-status";
 interface EmailConfigurationProps {
   addConfigOpen?: boolean;
   onAddConfigOpenChange?: (open: boolean) => void;
@@ -251,9 +252,14 @@ export function EmailConfiguration({
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Client secret</p>
-                      <p className="text-base">
-                        {config.isClientSecretConfigured ? "Configured" : "Not configured"}
-                      </p>
+                      <LinkedSecretStatusValue
+                        status={config.clientSecretStatus}
+                        fallback={
+                          <p className="text-base">
+                            {config.isClientSecretConfigured ? "Configured" : "Not configured"}
+                          </p>
+                        }
+                      />
                     </div>
                   </div>
                 )}

@@ -229,6 +229,73 @@ describe("EmailConfiguration", () => {
     });
   });
 
+  describe("Office 365 client secret status", () => {
+    const office365 = (over: Record<string, unknown>) => ({
+      ...outbound,
+      itemId: "cfg-o365",
+      name: "Office Outbound",
+      provider: 2,
+      authenticationType: 1,
+      tenantId: "contoso-tenant",
+      clientId: "mailer-app",
+      mailboxAddress: "mailer@contoso.com",
+      ...over,
+    });
+
+    const renderExpanded = (over: Record<string, unknown>) => {
+      h.config = { isLoading: false, data: { configurations: [office365(over)] } };
+      // The first configuration renders expanded.
+      render(<EmailConfiguration />);
+      return screen.getByText("Client secret").parentElement as HTMLElement;
+    };
+
+    it.each(["active", "locked"])(
+      "shows exactly the existing 'Configured' text for a %s secret",
+      (clientSecretStatus) => {
+        const cell = renderExpanded({ clientSecretStatus, isClientSecretConfigured: true });
+
+        expect(cell.textContent).toBe("Client secretConfigured");
+        expect(screen.getByText("Configured").className).toBe("text-base");
+      },
+    );
+
+    it("shows the existing 'Not configured' text when there is no secret", () => {
+      const cell = renderExpanded({ clientSecretStatus: "none", isClientSecretConfigured: false });
+      expect(cell.textContent).toBe("Client secretNot configured");
+    });
+
+    it.each([
+      [
+        "archived",
+        "Archived",
+        "The linked secret was archived. Edit this configuration and enter a new secret to repair it.",
+      ],
+      [
+        "missing",
+        "Missing",
+        "The linked secret no longer exists. Edit this configuration and enter a new secret to repair it.",
+      ],
+    ])(
+      "shows a warning badge and the repair hint for a %s secret",
+      (clientSecretStatus, label, help) => {
+        renderExpanded({ clientSecretStatus, isClientSecretConfigured: false });
+
+        expect(screen.getByText(label).className).toContain("bg-warning-100");
+        expect(screen.getByText(help)).toBeTruthy();
+        expect(screen.queryByText("Not configured")).toBeNull();
+        expect(screen.queryByText("Configured")).toBeNull();
+      },
+    );
+
+    it("shows 'Status unavailable' with its explanation when the status could not be read", () => {
+      renderExpanded({ clientSecretStatus: "unavailable", isClientSecretConfigured: true });
+
+      expect(screen.getByText("Status unavailable")).toBeTruthy();
+      expect(screen.getByText("Couldn't check the linked secret right now.")).toBeTruthy();
+      expect(screen.queryByText("Configured")).toBeNull();
+    });
+  });
+
   it("renders the page wrapper that binds the add dialog to a query param", () => {
     render(<EmailConfigurationPage />);
     expect(screen.getByText("No email configurations found")).toBeTruthy();

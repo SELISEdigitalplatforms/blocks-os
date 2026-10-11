@@ -56,10 +56,24 @@ namespace Configuration.DomainService.Mail.ResponseModel
         public string? MailboxAddress { get; set; }
 
         /// <summary>
-        /// Whether a secret is on file. This is what the UI renders instead of the value: it
-        /// answers the only question the form needs — "must I supply one?" — without the
+        /// Whether a usable secret is on file. This is what the UI renders instead of the value:
+        /// it answers the only question the form needs — "must I supply one?" — without the
         /// plaintext or the reference crossing the wire.
         /// </summary>
+        /// <remarks>
+        /// False when the reference points at a secret that was archived or no longer exists:
+        /// such a configuration cannot authenticate, and saving it needs a new value. True while
+        /// the status is unavailable, so a secret-store outage does not force users to re-enter
+        /// secrets that may be perfectly healthy.
+        /// </remarks>
         public bool IsClientSecretConfigured { get; set; }
+
+        /// <summary>
+        /// The linked client secret's state — one of the <c>LinkedSecretStatus</c> values —
+        /// computed at read time. Only Office 365 OAuth configurations own a linked secret; null,
+        /// and therefore absent from the JSON, for every other provider and auth type.
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? ClientSecretStatus { get; set; }
     }
 }
