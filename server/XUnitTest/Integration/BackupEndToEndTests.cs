@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Blocks.Genesis;
 using Cloud.LmtService.Models.ArchiveAndDelete;
 using Cloud.LmtService.Models.Shared;
-using Cloud.LmtService.Repositories.ArchiveAndDelete;
 using Cloud.LmtService.Repositories.LogTraceBackup;
 using Cloud.LmtService.Repositories.Logs;
 using Cloud.LmtService.Repositories.Shared;
@@ -76,7 +75,6 @@ namespace XUnitTest.Integration
                 NullLogger<ArchiveService>.Instance,
                 new LogRepository(secret.Object, _fixture.DbContextProvider, NullLogger<LogRepository>.Instance, config),
                 new TraceRepository(secret.Object, _fixture.DbContextProvider, NullLogger<TraceRepository>.Instance, config),
-                new Mock<IArchiveRepository>().Object,
                 _backupRepository.Object,
                 _blobStorage.Object,
                 _configRepository.Object);
