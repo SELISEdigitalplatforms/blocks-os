@@ -18,14 +18,20 @@ namespace BlocksOs.Api.Controllers
         private readonly IProjectManagementService _projectManagementService;
         private readonly IValidator<CreateProjectRequest> _createProjectValidator;
         private readonly IValidator<UpdateProjectRequest> _updateProjectValidator;
+        private readonly IProjectCreationGuard _creationGuard;
+        private readonly IRepositoryDeploymentService _deployments;
 
         public ProjectController(IProjectManagementService projectManagementService,
                                  IValidator<CreateProjectRequest> createProjectValidator,
-                                 IValidator<UpdateProjectRequest> updateProjectValidator)
+                                 IValidator<UpdateProjectRequest> updateProjectValidator,
+                                 IProjectCreationGuard creationGuard,
+                                 IRepositoryDeploymentService deployments)
         {
             _projectManagementService = projectManagementService;
             _createProjectValidator = createProjectValidator;
             _updateProjectValidator = updateProjectValidator;
+            _creationGuard = creationGuard;
+            _deployments = deployments;
         }
 
         [HttpPost]
@@ -43,7 +49,46 @@ namespace BlocksOs.Api.Controllers
                 return new CreateProjectResponse { Errors = validationResult.Errors.ToDictionary(e => string.IsNullOrWhiteSpace(e.PropertyName) ? "validation_error" : e.PropertyName, e => e.ErrorMessage), IsSuccess = false };
             }
 
-            return await _projectManagementService.SaveProjectAsync(request);
+            // Create is not a purchase: past validation, only what is free may be made here.
+            // Everything else is bought through checkout, which is where it is paid for.
+            var refused = await _creationGuard.CheckAsync(request, HttpContext?.RequestAborted ?? default);
+
+            if (refused is not null)
+            {
+                return new CreateProjectResponse { IsSuccess = false, Errors = refused };
+            }
+
+            var created = await _projectManagementService.SaveProjectAsync(request);
+
+            if (created is { IsSuccess: true } && !string.IsNullOrWhiteSpace(created.TenantGroupId))
+            {
+                await _creationGuard.SeedFreeEnvironmentsAsync(request, created.TenantGroupId, HttpContext?.RequestAborted ?? default);
+            }
+
+            return created;
+        }
+
+        /// <summary>
+        /// Which repository deploys to which environment, with each environment's repo limit.
+        /// </summary>
+        [HttpGet]
+        [Authorize] // LOCAL-TEST: restore [ProtectedEndPoint("blocks-os::project::asset")] before push
+        [ProjectPolicy("repositories::view")]
+        public async Task<GetRepositoryDeploymentsResponse> GetRepositoryDeployments([FromQuery] GetRepositoryDeploymentsRequest request)
+        {
+            return await _deployments.GetAsync(request?.TenantGroupId ?? string.Empty, HttpContext?.RequestAborted ?? default);
+        }
+
+        /// <summary>
+        /// Replaces the repository → environments plan. Owner only: it decides what each paid
+        /// environment's repository slots are spent on.
+        /// </summary>
+        [HttpPost]
+        [Authorize] // LOCAL-TEST: restore [ProtectedEndPoint("blocks-os::project::add-asset")] before push
+        [ProjectPolicy(OwnerOnly = true)]
+        public async Task<SaveRepositoryDeploymentsResponse> SaveRepositoryDeployments([FromBody] SaveRepositoryDeploymentsRequest request)
+        {
+            return await _deployments.SaveAsync(request, HttpContext?.RequestAborted ?? default);
         }
 
 

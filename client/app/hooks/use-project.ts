@@ -1,6 +1,3 @@
-import { useCreateProjectFormState } from "@/components/create-project/utils";
-import { buildCreateProjectPayload } from "@/utils/create-project-payload";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import {
   IRestoreProjectPayload,
   IUpdateProjectPayload,
@@ -11,7 +8,6 @@ import { projectService as crossProjectService } from "@blocks-identifier/servic
 import { useImpersonateStore, useProjectStore } from "@seliseblocks/genesis-os";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { useNavigate } from "react-router";
 
 export const useGetProjects = ({
   tenantGroupId,
@@ -254,66 +250,4 @@ export const useVerifyMigration = () => {
       queryClient.invalidateQueries({ queryKey: ["identifier", "projects"] });
     },
   });
-};
-
-export const useProjectForm = () => {
-  const navigate = useNavigate();
-  const { isPending, mutateAsync } = useCreateProject();
-  const { formData, resetFormData } = useCreateProjectFormState();
-  const { setTenantGroup, setSelectedProject } = useProjectStore();
-  const queryClient = useQueryClient();
-
-  const saveProject = async () => {
-    try {
-      const environments = formData[2]?.environments || [];
-      const assets = formData[1]?.assets || [];
-
-      const response = await mutateAsync(
-        buildCreateProjectPayload({
-          name: formData[0].name,
-          isAcceptBlocksTerms: formData[0].isAcceptBlocksTerms,
-          isUseBlocksExclusively: formData[0].isUseBlocksExclusively,
-          environments,
-          assets,
-        }),
-      );
-      if (response?.isSuccess) {
-        showSuccessToast({ description: "Your project has been created." });
-        setTenantGroup(response.tenantGroupId);
-
-        try {
-          const projectGroups = await queryClient.fetchQuery({
-            queryKey: ["identifier", "projects", response.tenantGroupId],
-            queryFn: () => projectService.getProjects(0, 100, response.tenantGroupId),
-            staleTime: 0,
-          });
-
-          if (
-            projectGroups &&
-            projectGroups.length > 0 &&
-            projectGroups[0].projects &&
-            projectGroups[0].projects.length > 0
-          ) {
-            setSelectedProject(projectGroups[0].projects[0]);
-          }
-        } catch {
-          showErrorToast({ errors: response.errors });
-        }
-
-        navigate(`/app/project/${response.tenantGroupId}/environments`);
-        resetFormData();
-      } else {
-        showErrorToast({ errors: response.errors });
-      }
-    } catch (error: unknown) {
-      if (error && typeof error === "object" && "errors" in error) {
-        showErrorToast({ errors: (error as { errors: unknown }).errors });
-      }
-    }
-  };
-
-  return {
-    isPending,
-    saveProject,
-  };
 };

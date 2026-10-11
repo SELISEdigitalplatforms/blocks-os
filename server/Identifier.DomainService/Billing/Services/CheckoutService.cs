@@ -1,3 +1,4 @@
+using Blocks.Genesis;
 using DomainService.Billing.Entities;
 using DomainService.Billing.Models;
 using DomainService.Catalogue.Models;
@@ -62,21 +63,27 @@ public sealed class CheckoutService : ICheckoutService
     /// <summary>How long a started-but-unpaid order stays payable.</summary>
     public static readonly TimeSpan CheckoutLifetime = TimeSpan.FromHours(24);
 
+    /// <summary>The catalogue's <c>billing.onAdd</c> value that turns proration on.</summary>
+    public const string ProrateOnAdd = "prorateAndChargeNow";
+
     private readonly ISubscriptionOrderStore _orders;
     private readonly ICatalogueProvider _catalogue;
     private readonly ILogger<CheckoutService> _logger;
     private readonly TimeProvider _time;
+    private readonly IProjectInventory? _inventory;
 
     public CheckoutService(
         ISubscriptionOrderStore orders,
         ICatalogueProvider catalogue,
         ILogger<CheckoutService> logger,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        IProjectInventory? inventory = null)
     {
         _orders = orders;
         _catalogue = catalogue;
         _logger = logger;
         _time = timeProvider ?? TimeProvider.System;
+        _inventory = inventory;
     }
 
     public Task<StartCheckoutResult> QuoteAsync(
@@ -104,12 +111,19 @@ public sealed class CheckoutService : ICheckoutService
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        if (string.IsNullOrWhiteSpace(request.TenantGroupId))
+        // A blank project is a brand-new one, and only a quote may price that: there is nothing
+        // to write an order against until the project exists.
+        var isNewProject = string.IsNullOrWhiteSpace(request.TenantGroupId);
+
+        if (isNewProject && userId is not null)
         {
             return StartCheckoutResult.Failed(CheckoutFailures.NothingSelected);
         }
 
-        if (request.Environments.Count == 0 && request.TopUps.Count == 0)
+        request.Environments ??= [];
+        request.TopUps ??= [];
+
+        if (request.Environments.Count == 0 && request.TopUps.Count == 0 && !request.UpgradeFreeTier)
         {
             return StartCheckoutResult.Failed(CheckoutFailures.NothingSelected);
         }
@@ -123,30 +137,84 @@ public sealed class CheckoutService : ICheckoutService
             return StartCheckoutResult.Failed(CheckoutFailures.NoPrice);
         }
 
+        var utcNow = _time.GetUtcNow().UtcDateTime;
+
+        // A new project holds nothing, so there is nothing to read. An existing one is read once,
+        // and every rule below — already held, free tier taken, proration — answers from it.
+        var inventory = isNewProject || _inventory is null
+            ? new ProjectInventorySnapshot()
+            : await _inventory.GetAsync(request.TenantGroupId, request.OrderId, cancellationToken).ConfigureAwait(false);
+
+        var proration = Proration.For(inventory.Subscription, catalogue, utcNow);
+
         var lines = new List<CheckoutLine>();
         var orderLines = new List<OrderLine>();
+        var selected = request.Environments
+            .Where(e => !string.IsNullOrWhiteSpace(e))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
 
-        foreach (var environmentKey in request.Environments.Distinct(StringComparer.Ordinal))
+        // Which environments in this selection are taken free. Only one that offers a free tier
+        // can be; asking for it with none in the selection is a mistake worth saying out loud
+        // rather than silently charging full price.
+        var freeSelected = new HashSet<string>(StringComparer.Ordinal);
+
+        if (request.FreeTier)
+        {
+            foreach (var environmentKey in selected)
+            {
+                if (catalogue.Environments.TryGetValue(environmentKey, out var candidate) && candidate.FreeTierAvailable)
+                {
+                    freeSelected.Add(environmentKey);
+                }
+            }
+
+            if (freeSelected.Count == 0)
+            {
+                return StartCheckoutResult.Failed(CheckoutFailures.FreeTierUnavailable);
+            }
+        }
+
+        foreach (var environmentKey in selected)
         {
             if (!catalogue.Environments.TryGetValue(environmentKey, out var definition))
             {
                 return StartCheckoutResult.Failed(CheckoutFailures.UnknownEnvironment);
             }
 
-            var price = prices.PriceFor(environmentKey, market);
+            var free = freeSelected.Contains(environmentKey);
+
+            if (free && inventory.FreeHeld(environmentKey) + 1 > Math.Max(0, definition.MaxFreePerProject))
+            {
+                return StartCheckoutResult.Failed(CheckoutFailures.FreeTierTaken);
+            }
+
+            // One tenant per environment per project: the tenant id is the environment letter
+            // plus the group, so a second one cannot exist — and must not be charged for.
+            if (inventory.HasOrIsCreating(environmentKey))
+            {
+                return StartCheckoutResult.Failed(CheckoutFailures.EnvironmentExists);
+            }
+
+            var price = prices.PriceFor(environmentKey, market, free);
 
             if (price is null)
             {
                 return StartCheckoutResult.Failed(CheckoutFailures.NoPrice);
             }
 
+            // An environment is rent: it is on every invoice while it exists. Added mid-period it
+            // is charged today only for the days left, and in full from the next period on.
+            var (dueToday, label) = free
+                ? (0m, $"{definition.Label} (free)")
+                : proration.Apply(price.Value, definition.Label);
+
             lines.Add(new CheckoutLine
             {
                 Kind = "environment",
-                Label = definition.Label,
+                Label = label,
                 Environment = environmentKey,
-                Amount = price.Value,
-                // An environment is rent: it is on every invoice while it exists.
+                Amount = dueToday,
                 Billing = "rent",
             });
 
@@ -154,14 +222,101 @@ public sealed class CheckoutService : ICheckoutService
             {
                 Kind = "environment",
                 Environment = environmentKey,
-                Amount = price.Value,
+                Label = label,
+                Amount = dueToday,
+                RecurringAmount = free ? 0m : price.Value,
+                FreeTier = free,
                 Billing = "rent",
             });
         }
 
+        // Free environments moving to the paid tier in this order. Priced like adding them —
+        // prorated the same way, recurring in full — but nothing is created: the tenant exists.
+        var upgrading = new HashSet<string>(StringComparer.Ordinal);
+
+        if (request.UpgradeFreeTier)
+        {
+            var targets = inventory.FreeEnvironments
+                .Where(e => catalogue.Environments.TryGetValue(e, out var d) && d.FreeTierAvailable)
+                .OrderBy(e => catalogue.Environments[e].Rank)
+                .ToList();
+
+            if (targets.Count == 0)
+            {
+                return StartCheckoutResult.Failed(CheckoutFailures.NothingToUpgrade);
+            }
+
+            foreach (var environmentKey in targets)
+            {
+                // One upgrade at a time: a second would charge again for limits already rising.
+                if (inventory.UpgradesInFlight.Contains(environmentKey))
+                {
+                    return StartCheckoutResult.Failed(CheckoutFailures.EnvironmentExists);
+                }
+
+                var definition = catalogue.Environments[environmentKey];
+                var price = prices.PriceFor(environmentKey, market);
+
+                if (price is null)
+                {
+                    return StartCheckoutResult.Failed(CheckoutFailures.NoPrice);
+                }
+
+                var (dueToday, label) = proration.Apply(price.Value, $"{definition.Label} (paid tier)");
+
+                lines.Add(new CheckoutLine
+                {
+                    Kind = "upgrade",
+                    Label = label,
+                    Environment = environmentKey,
+                    Amount = dueToday,
+                    Billing = "rent",
+                });
+
+                orderLines.Add(new OrderLine
+                {
+                    Kind = "upgrade",
+                    Environment = environmentKey,
+                    Label = label,
+                    Amount = dueToday,
+                    RecurringAmount = price.Value,
+                    TenantId = inventory.TenantIds.GetValueOrDefault(environmentKey) ?? string.Empty,
+                    Billing = "rent",
+                });
+
+                upgrading.Add(environmentKey);
+            }
+        }
+
         foreach (var topUp in request.TopUps)
         {
-            var failure = PriceTopUp(topUp, catalogue, prices, market, lines, orderLines);
+            if (topUp is null)
+            {
+                return StartCheckoutResult.Failed(CheckoutFailures.NothingSelected);
+            }
+
+            // A top-up raises a ceiling the project holds. One for an environment it neither has
+            // nor is buying here would be charged and land on nothing.
+            var heldOrBuying = inventory.HasOrIsCreating(topUp.Environment)
+                || selected.Contains(topUp.Environment, StringComparer.Ordinal);
+
+            if (catalogue.Environments.ContainsKey(topUp.Environment ?? string.Empty) && !heldOrBuying)
+            {
+                return StartCheckoutResult.Failed(CheckoutFailures.EnvironmentNotHeld);
+            }
+
+            // An environment being upgraded in this same order is paid by the time the top-up
+            // lands, so it may be topped up.
+            var onFreeTier = freeSelected.Contains(topUp.Environment ?? string.Empty)
+                || (inventory.FreeEnvironments.Contains(topUp.Environment ?? string.Empty)
+                    && !upgrading.Contains(topUp.Environment ?? string.Empty));
+
+            if (onFreeTier && catalogue.Defaults.TopUp.RequiresPaidEnvironment)
+            {
+                return StartCheckoutResult.Failed(CheckoutFailures.FreeTierCannotTopUp);
+            }
+
+            var failure = PriceTopUp(topUp, catalogue, prices, market, proration, lines, orderLines);
 
             if (failure is not null)
             {
@@ -171,7 +326,12 @@ public sealed class CheckoutService : ICheckoutService
 
         var subtotal = lines.Sum(l => l.Amount);
         var vat = Math.Round(subtotal * VatRate, 2, MidpointRounding.AwayFromZero);
-        var utcNow = _time.GetUtcNow().UtcDateTime;
+
+        // What the subscription will charge each period from now on: the full price of every
+        // rent line, however little of it is due today.
+        var recurringMonthly = orderLines
+            .Where(l => l.Billing == "rent")
+            .Sum(l => l.RecurringAmount ?? l.Amount);
 
         if (userId is null)
         {
@@ -181,7 +341,7 @@ public sealed class CheckoutService : ICheckoutService
                 Subtotal = subtotal,
                 Vat = vat,
                 Total = subtotal + vat,
-                RecurringMonthly = lines.Where(l => l.Billing == "rent").Sum(l => l.Amount),
+                RecurringMonthly = recurringMonthly,
                 Lines = lines,
             };
         }
@@ -202,9 +362,7 @@ public sealed class CheckoutService : ICheckoutService
                 reuse.Vat = vat;
                 reuse.Total = subtotal + vat;
                 reuse.Lines = orderLines;
-                reuse.Progress = [.. request.Environments
-                    .Distinct(StringComparer.Ordinal)
-                    .Select(e => new OrderEnvironmentProgress { Environment = e })];
+                reuse.Progress = Progress(selected, upgrading, inventory);
                 reuse.UpdatedAtUtc = utcNow;
 
                 await _orders.UpdateAsync(reuse, cancellationToken).ConfigureAwait(false);
@@ -217,7 +375,7 @@ public sealed class CheckoutService : ICheckoutService
                     Subtotal = subtotal,
                     Vat = vat,
                     Total = subtotal + vat,
-                    RecurringMonthly = lines.Where(l => l.Billing == "rent").Sum(l => l.Amount),
+                    RecurringMonthly = recurringMonthly,
                     Lines = lines,
                 };
             }
@@ -231,15 +389,14 @@ public sealed class CheckoutService : ICheckoutService
             // would produce two keys and two charges.
             IdempotencyKey = Guid.NewGuid().ToString("N"),
             CreatedByUserId = userId ?? string.Empty,
+            NotifyTenantId = BlocksContext.GetContext()?.TenantId ?? string.Empty,
             State = OrderStates.Pending,
             Market = market,
             Subtotal = subtotal,
             Vat = vat,
             Total = subtotal + vat,
             Lines = orderLines,
-            Progress = [.. request.Environments
-                .Distinct(StringComparer.Ordinal)
-                .Select(e => new OrderEnvironmentProgress { Environment = e })],
+            Progress = Progress(selected, upgrading, inventory),
             CreatedAtUtc = utcNow,
             UpdatedAtUtc = utcNow,
             ExpiresAtUtc = utcNow.Add(CheckoutLifetime),
@@ -255,10 +412,28 @@ public sealed class CheckoutService : ICheckoutService
             Subtotal = subtotal,
             Vat = vat,
             Total = subtotal + vat,
-            RecurringMonthly = lines.Where(l => l.Billing == "rent").Sum(l => l.Amount),
+            RecurringMonthly = recurringMonthly,
             Lines = lines,
         };
     }
+
+    /// <summary>
+    /// One progress entry per environment the order works on: those it creates, and those it
+    /// upgrades — which already have their tenant, and only one step to go through.
+    /// </summary>
+    private static List<OrderEnvironmentProgress> Progress(
+        IEnumerable<string> created,
+        IEnumerable<string> upgraded,
+        ProjectInventorySnapshot inventory) =>
+    [
+        .. created.Select(e => new OrderEnvironmentProgress { Environment = e }),
+        .. upgraded.Select(e => new OrderEnvironmentProgress
+        {
+            Environment = e,
+            TenantId = inventory.TenantIds.GetValueOrDefault(e) ?? string.Empty,
+            Upgrade = true,
+        }),
+    ];
 
     /// <summary>Prices one top-up, or names why it cannot be bought. Null means it is fine.</summary>
     private static string? PriceTopUp(
@@ -266,6 +441,7 @@ public sealed class CheckoutService : ICheckoutService
         PlanCatalogue catalogue,
         PriceBook prices,
         string market,
+        Proration proration,
         List<CheckoutLine> lines,
         List<OrderLine> orderLines)
     {
@@ -274,12 +450,12 @@ public sealed class CheckoutService : ICheckoutService
             return CheckoutFailures.NothingSelected;
         }
 
-        if (!catalogue.Environments.TryGetValue(topUp.Environment, out var environment))
+        if (!catalogue.Environments.TryGetValue(topUp.Environment ?? string.Empty, out var environment))
         {
             return CheckoutFailures.UnknownEnvironment;
         }
 
-        var meter = catalogue.FindMeter(topUp.Meter);
+        var meter = catalogue.FindMeter(topUp.Meter ?? string.Empty);
 
         if (meter is null)
         {
@@ -328,14 +504,20 @@ public sealed class CheckoutService : ICheckoutService
             ? "rent"
             : "once";
 
+        // Rent is prorated like an environment; a one-off counter step is never — its units are
+        // bought outright and carry until spent, so there is no period to divide.
+        var (dueToday, label) = billing == "rent"
+            ? proration.Apply(amount, meter.Label)
+            : (amount, meter.Label);
+
         lines.Add(new CheckoutLine
         {
             Kind = "topup",
-            Label = meter.Label,
+            Label = label,
             Environment = topUp.Environment,
             Meter = topUp.Meter,
             Units = units,
-            Amount = amount,
+            Amount = dueToday,
             Billing = billing,
         });
 
@@ -344,9 +526,11 @@ public sealed class CheckoutService : ICheckoutService
             Kind = "topup",
             Environment = topUp.Environment,
             Meter = topUp.Meter,
+            Label = label,
             Steps = topUp.Steps,
             Units = units,
-            Amount = amount,
+            Amount = dueToday,
+            RecurringAmount = billing == "rent" ? amount : null,
             Billing = billing,
         });
 
@@ -408,13 +592,15 @@ public sealed class CheckoutService : ICheckoutService
         return new OrderView
         {
             OrderId = order.ItemId,
+            TenantGroupId = order.TenantGroupId,
+            NotifyTenantId = order.NotifyTenantId,
             State = order.State,
             Total = order.Total,
             Market = order.Market,
             StepsDone = order.StepsDone,
             StepsTotal = order.StepsTotal,
             CurrentEnvironment = running?.Environment ?? string.Empty,
-            CurrentStep = running is null ? string.Empty : ProvisioningSteps.FriendlyAt(running.StepsDone),
+            CurrentStep = running is null ? string.Empty : ProvisioningSteps.FriendlyAt(running),
             // Only worth showing once a step has actually been retried; the first attempt is just
             // "in progress" and saying "attempt 1 of 5" would invent a problem.
             Attempt = running is { Attempt: > 1 } ? running.Attempt : 0,
@@ -427,13 +613,65 @@ public sealed class CheckoutService : ICheckoutService
                 TenantId = p.TenantId,
                 Environment = p.Environment,
                 StepsDone = p.StepsDone,
-                StepsTotal = ProvisioningSteps.All.Count,
-                Step = p.IsComplete ? string.Empty : ProvisioningSteps.FriendlyAt(p.StepsDone),
+                StepsTotal = ProvisioningSteps.For(p).Count,
+                Step = p.IsComplete ? string.Empty : ProvisioningSteps.FriendlyAt(p),
                 Status = p.IsComplete ? "ready"
                     : p.Attempt > 1 ? "retrying"
                     : p.StartedAtUtc is null ? "queued" : "building",
                 Attempt = p.Attempt > 1 ? p.Attempt : 0,
             })],
         };
+    }
+}
+
+/// <summary>
+/// How much of a rent line is due today, when it joins a subscription part-way through a period.
+/// </summary>
+/// <remarks>
+/// Driven by the catalogue's <c>billing.onAdd</c>: only <c>prorateAndChargeNow</c> divides the
+/// price, anything else charges it in full. Days are counted up — a period with half a day left
+/// charges that day — and capped at the catalogue's usage period, so a stale anchor can never
+/// charge more than the full price.
+/// </remarks>
+public readonly record struct Proration(int RemainingDays, int PeriodDays)
+{
+    public static Proration None => new(0, 0);
+
+    public bool Applies => PeriodDays > 0 && RemainingDays > 0 && RemainingDays < PeriodDays;
+
+    public static Proration For(ProjectSubscription? subscription, PlanCatalogue catalogue, DateTime utcNow)
+    {
+        if (subscription is null
+            || subscription.State == SubscriptionStates.Cancelled
+            || !string.Equals(catalogue.Billing.OnAdd, CheckoutService.ProrateOnAdd, StringComparison.Ordinal))
+        {
+            return None;
+        }
+
+        var periodDays = catalogue.UsagePeriod.Days > 0 ? catalogue.UsagePeriod.Days : 30;
+
+        // A boundary already passed and not yet renewed: the renewal is about to charge a whole
+        // period, so this one is charged whole too rather than for a negative remainder.
+        if (subscription.NextChargeAtUtc <= utcNow)
+        {
+            return None;
+        }
+
+        var remaining = (int)Math.Ceiling((subscription.NextChargeAtUtc - utcNow).TotalDays);
+
+        return new Proration(Math.Clamp(remaining, 0, periodDays), periodDays);
+    }
+
+    /// <summary>The amount due today and the label that says why it is less than the price.</summary>
+    public (decimal Amount, string Label) Apply(decimal price, string label)
+    {
+        if (!Applies)
+        {
+            return (price, label);
+        }
+
+        var amount = Math.Round(price * RemainingDays / PeriodDays, 2, MidpointRounding.AwayFromZero);
+
+        return (amount, $"{label} (prorated, {RemainingDays} days)");
     }
 }

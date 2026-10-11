@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.stubGlobal("matchMedia", (query: string) => ({
@@ -22,14 +23,21 @@ vi.stubGlobal(
   },
 );
 
-const h = vi.hoisted(() => ({ nextStep: vi.fn() }));
+const h = vi.hoisted(() => ({ nextStep: vi.fn(), goToStep: vi.fn() }));
 
 vi.mock("@/components/stepper/stepper-provider", () => ({
-  useStepper: () => ({ nextStep: h.nextStep }),
+  useStepper: () => ({ nextStep: h.nextStep, goToStep: h.goToStep, currentStep: 1 }),
 }));
 
 import { CreateProjectNamingForm } from "./create-project-naming-form";
 import { useCreateProjectFormState } from "../../utils";
+
+const renderForm = () =>
+  render(
+    <MemoryRouter>
+      <CreateProjectNamingForm />
+    </MemoryRouter>,
+  );
 
 describe("CreateProjectNamingForm", () => {
   beforeEach(() => {
@@ -37,52 +45,61 @@ describe("CreateProjectNamingForm", () => {
     useCreateProjectFormState.getState().resetFormData();
   });
 
-  it("renders the heading, input and checkboxes with Continue disabled by default", () => {
-    render(<CreateProjectNamingForm />);
-    expect(screen.getByText("Name your project")).toBeTruthy();
-    expect(screen.getByPlaceholderText("Enter your project name")).toBeTruthy();
+  it("renders name, description and terms with Continue disabled by default", () => {
+    renderForm();
+    expect(screen.getByRole("heading", { name: "Name your project" })).toBeTruthy();
+    expect(screen.getByLabelText("Project name")).toBeTruthy();
+    expect(screen.getByPlaceholderText("What this project is for.")).toBeTruthy();
     expect(screen.getAllByRole("checkbox")).toHaveLength(2);
+    expect((screen.getByRole("button", { name: "Continue" }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+    expect(screen.getByText("Give the project a name to continue.")).toBeTruthy();
+  });
+
+  it("previews the identifier as the name is typed", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.type(screen.getByLabelText("Project name"), "Northwind Portal");
+    expect(screen.getByText("northwind-portal")).toBeTruthy();
+  });
+
+  it("stays disabled until both terms are accepted", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.type(screen.getByLabelText("Project name"), "My Project");
+    const [exclusive] = screen.getAllByRole("checkbox");
+    await user.click(exclusive);
     expect((screen.getByRole("button", { name: "Continue" }) as HTMLButtonElement).disabled).toBe(
       true,
     );
   });
 
-  it("updates the name field as the user types", async () => {
+  it("refuses a two-letter name", async () => {
     const user = userEvent.setup();
-    render(<CreateProjectNamingForm />);
-    const input = screen.getByPlaceholderText("Enter your project name") as HTMLInputElement;
-
-    await user.type(input, "My Project");
-    expect(input.value).toBe("My Project");
-  });
-
-  it("toggles the checkboxes", async () => {
-    const user = userEvent.setup();
-    render(<CreateProjectNamingForm />);
+    renderForm();
+    await user.type(screen.getByLabelText("Project name"), "ab");
     const [exclusive, terms] = screen.getAllByRole("checkbox");
-
-    expect(exclusive.getAttribute("aria-checked")).toBe("false");
     await user.click(exclusive);
-    expect(exclusive.getAttribute("aria-checked")).toBe("true");
-
     await user.click(terms);
-    expect(terms.getAttribute("aria-checked")).toBe("true");
+    expect((screen.getByRole("button", { name: "Continue" }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
   });
 
-  it("enables Continue and advances the stepper once the form is valid", async () => {
+  it("saves trimmed values and advances once valid", async () => {
     const user = userEvent.setup();
-    render(<CreateProjectNamingForm />);
-
-    await user.type(screen.getByPlaceholderText("Enter your project name"), "My Project");
+    renderForm();
+    await user.type(screen.getByLabelText("Project name"), "  My Project  ");
+    await user.type(screen.getByPlaceholderText("What this project is for."), " Billing portal ");
     const [exclusive, terms] = screen.getAllByRole("checkbox");
     await user.click(exclusive);
     await user.click(terms);
 
-    const continueBtn = screen.getByRole("button", { name: "Continue" }) as HTMLButtonElement;
-    expect(continueBtn.disabled).toBe(false);
-
-    await user.click(continueBtn);
+    await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(h.nextStep).toHaveBeenCalledTimes(1);
-    expect(useCreateProjectFormState.getState().formData[0].name).toBe("My Project");
+    const { naming } = useCreateProjectFormState.getState();
+    expect(naming.name).toBe("My Project");
+    expect(naming.description).toBe("Billing portal");
   });
 });

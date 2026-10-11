@@ -62,6 +62,10 @@ namespace DomainService.Shared
 
    // Register services
             services.AddSingleton<IProjectManagementService, ProjectManagementService>();
+            // Scoped, not singleton like the service above: both read billing state through
+            // scoped stores, and a singleton would capture one request's instances for ever.
+            services.AddScoped<IProjectCreationGuard, ProjectCreationGuard>();
+            services.AddScoped<IRepositoryDeploymentService, RepositoryDeploymentService>();
             services.AddSingleton<IProjectRepository, ProjectRepository>();
 
             services.AddSingleton<IDomainManagementService, DomainManagementService>();

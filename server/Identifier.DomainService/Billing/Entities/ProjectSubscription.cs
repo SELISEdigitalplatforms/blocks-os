@@ -42,6 +42,14 @@ public sealed class ProjectSubscription
     public int FailedAttempts { get; set; }
 
     public string LastFailureReason { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Environments dropped at a period boundary after the owner removed them. Kept for the audit
+    /// trail and for operations: an entry with <see cref="RemovedEnvironment.Disabled"/> false is
+    /// an environment that stopped being billed but could not be switched off.
+    /// </summary>
+    public List<RemovedEnvironment> RemovedEnvironments { get; set; } = [];
+
     public DateTime CreatedAtUtc { get; set; }
     public DateTime UpdatedAtUtc { get; set; }
 
@@ -64,6 +72,25 @@ public sealed class RecurringLine
     public string Label { get; set; } = string.Empty;
     public long Units { get; set; }
     public decimal Amount { get; set; }
+
+    /// <summary>
+    /// When this line stops being charged. Null while it simply continues.
+    /// </summary>
+    /// <remarks>
+    /// Set by a removal, to the end of the period already paid for — nothing is refunded and
+    /// nothing is cut short. The renewal at that boundary drops the line instead of charging it.
+    /// </remarks>
+    public DateTime? EndsAtUtc { get; set; }
+}
+
+public sealed class RemovedEnvironment
+{
+    public string Environment { get; set; } = string.Empty;
+    public string TenantId { get; set; } = string.Empty;
+    public DateTime RemovedAtUtc { get; set; }
+
+    /// <summary>Whether the tenant was actually switched off. False needs a person.</summary>
+    public bool Disabled { get; set; }
 }
 
 public static class SubscriptionStates

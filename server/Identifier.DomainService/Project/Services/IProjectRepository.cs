@@ -39,6 +39,13 @@ namespace DomainService.Projects
         Task<(TenantAsset assets, long totalCount)> GetTenantAssetAsync(GetAssetRequest request);
         Task<TenantAsset?> GetTenantAssetByGroupIdAsync(string tenantGroupId);
         Task SaveTenantAssetAsync(TenantAsset asset);
+
+        /// <summary>
+        /// Replaces only the group's repository → environment plan. A targeted write, so it cannot
+        /// undo a repository added at the same moment by a whole-document save.
+        /// </summary>
+        /// <returns>False when the group has no record.</returns>
+        Task<bool> UpdateRepositoryDeploymentsAsync(string tenantGroupId, List<RepositoryDeployment> deployments);
         Task UpdateRepoResourceAsync(AddAssetRequest request);
         Task UpdateRepoResourceInfoAsync(AddAssetRequest request);
         Task ArchiveRepoResourceAsync(DeleteAssetRequest request);

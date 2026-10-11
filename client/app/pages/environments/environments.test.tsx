@@ -42,8 +42,20 @@ vi.mock("@/components/environment-card/environment-card", () => ({
     <div data-testid="environment-card">{project.name}</div>
   ),
 }));
-vi.mock("@/components/environment-card/add-environment-modal", () => ({
-  AddEnvironmentModal: () => <div data-testid="add-environment-modal" />,
+vi.mock("@blocks-identifier/components/plan/plan-panel", () => ({
+  PlanPanel: ({
+    adding,
+    existingEnvironments,
+  }: {
+    adding: boolean;
+    existingEnvironments: string[];
+  }) => (
+    <div
+      data-testid="plan-panel"
+      data-adding={String(adding)}
+      data-envs={existingEnvironments.join(",")}
+    />
+  ),
 }));
 vi.mock("@/components/environment-migration/environment-migration-wizard", () => ({
   EnvironmentMigrationWizard: () => <div data-testid="migration-wizard" />,
@@ -95,12 +107,12 @@ describe("EnvironmentsPage", () => {
     expect(screen.getAllByTestId("environment-card")).toHaveLength(2);
   });
 
-  it("shows the New Environment action for an owner under the project cap", async () => {
+  it("New Environment opens the plan's add pane (a prorated purchase), not a free create", async () => {
     const user = userEvent.setup();
     renderPage();
-    const btn = screen.getByRole("button", { name: /New Environment/i });
-    await user.click(btn);
-    expect(await screen.findByTestId("add-environment-modal")).toBeTruthy();
+    expect(screen.getByTestId("plan-panel").getAttribute("data-adding")).toBe("false");
+    await user.click(screen.getByRole("button", { name: /New Environment/i }));
+    expect(screen.getByTestId("plan-panel").getAttribute("data-adding")).toBe("true");
   });
 
   it("hides the New Environment action when the viewer is not an owner", () => {
@@ -132,14 +144,14 @@ describe("EnvironmentsPage", () => {
     expect(screen.queryByRole("button", { name: /Start Migration/i })).toBeNull();
   });
 
-  it("hides the New Environment action once the project cap is reached", () => {
+  it("hands every environment the project holds to the plan, so none is offered again", () => {
     h.useGetProjects.mockReturnValue({
-      data: [{ projects: makeProjects(8), isShared: false, nonSharedProject: [] }],
+      data: [{ projects: makeProjects(3), isShared: false, nonSharedProject: [] }],
       isLoading: false,
       isFetching: false,
     });
     renderPage();
-    expect(screen.queryByRole("button", { name: /New Environment/i })).toBeNull();
+    expect(screen.getByTestId("plan-panel").getAttribute("data-envs")?.split(",")).toHaveLength(3);
   });
 
   it("renders shared and others sections when the group is shared", () => {

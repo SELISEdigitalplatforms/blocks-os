@@ -9,6 +9,10 @@ namespace DomainService.Projects
        // MAX_OWNED_PROJECT_GROUPS in @seliseblocks/genesis-os, which hides the console's add action.
        public const int MaxOwnedProjectGroups = 10;
 
+       public const int MaxDescriptionLength = 500;
+
+       public const int MaxRepositoryDeployments = 200;
+
        private readonly IProjectRepository _projectRepository;
 
         public CreateProjectRequestValidator(IProjectRepository projectRepository)
@@ -32,15 +36,28 @@ namespace DomainService.Projects
                .Equal(true)
                .WithMessage("You must accept the Blocks Terms to proceed.");
 
+            // A brand-new project may start with no environment at all: the group is created and
+            // owned, and environments are bought into it through checkout. Adding to an existing
+            // group (TenantGroupId set) still needs one — the rule below says so.
             RuleFor(x => x.applicationContexts)
                 .Cascade(CascadeMode.Stop)
-                .NotEmpty()
-                .NotNull()
-                .Must(ContainAtLestOneApplicationContext).WithMessage("Should contain atleast one application")
+                .Must(contexts => contexts.TrueForAll(c => c is not null)).WithMessage("One or more projects have unsupported environment.")
                 .Must(SupportedEnviromet).WithMessage("One or more projects have unsupported environment.")
                 .Must(ValidDomain).WithMessage("Application domain name must be a valid URL format.")
-                .Must(NotContainAnyDuplicateEnv).When(x => string.IsNullOrWhiteSpace(x.TenantGroupId)).WithMessage("Projects should not contain duplicate environments.");
+                .Must(NotContainAnyDuplicateEnv).When(x => string.IsNullOrWhiteSpace(x.TenantGroupId)).WithMessage("Projects should not contain duplicate environments.")
+                .When(x => x.applicationContexts is { Count: > 0 });
             //.MustAsync(IsUniqueDomain).WithMessage("Application domain name must be unique")
+
+            RuleFor(x => x.Description)
+                .MaximumLength(MaxDescriptionLength)
+                .WithMessage($"Description must be at most {MaxDescriptionLength} characters.");
+
+            // Shape only. Whether each repository belongs to the project and fits each
+            // environment's limit is checked against the catalogue when the plan is saved.
+            RuleFor(x => x.RepositoryDeployments)
+                .Must(d => d!.Count <= MaxRepositoryDeployments).WithMessage($"At most {MaxRepositoryDeployments} repository deployments.")
+                .Must(d => d!.TrueForAll(e => e is not null && !string.IsNullOrWhiteSpace(e.ResourceId))).WithMessage("Every repository deployment needs a ResourceId.")
+                .When(x => x.RepositoryDeployments is not null);
 
             RuleFor(x => x)
                .Cascade(CascadeMode.Stop)

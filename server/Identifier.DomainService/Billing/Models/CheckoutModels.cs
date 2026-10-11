@@ -13,6 +13,26 @@ public sealed class StartCheckoutRequest
     public string Market { get; set; } = "CHF";
 
     /// <summary>
+    /// Take the environment that offers a free tier — today only <c>dev</c> — at the free price.
+    /// </summary>
+    /// <remarks>
+    /// Applies to that environment in <see cref="Environments"/> and to nothing else; every other
+    /// environment in the same selection is priced as usual. Limited to the catalogue's
+    /// <c>maxFreePerProject</c>, and a free environment cannot be topped up.
+    /// </remarks>
+    public bool FreeTier { get; set; }
+
+    /// <summary>
+    /// Move the project's free environment — today only <c>dev</c> — to the paid tier.
+    /// </summary>
+    /// <remarks>
+    /// Nothing is created: the environment keeps its tenant, data and usage, and only its limits
+    /// rise. Priced like adding it (prorated the same way), and from then on it may be topped up,
+    /// in this same order if wanted. The environment is not named in <see cref="Environments"/>.
+    /// </remarks>
+    public bool UpgradeFreeTier { get; set; }
+
+    /// <summary>
     /// An order this checkout session already started, to re-price in place.
     /// </summary>
     /// <remarks>
@@ -85,6 +105,13 @@ public sealed class PayCheckoutRequest
 public sealed class OrderView
 {
     public string OrderId { get; set; } = string.Empty;
+
+    /// <summary>The project this order is for. The console filters pushed updates by it.</summary>
+    public string TenantGroupId { get; set; } = string.Empty;
+
+    /// <summary>Server-side only: the tenant order pushes are sent under. Never serialized out.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string NotifyTenantId { get; set; } = string.Empty;
     public string State { get; set; } = string.Empty;
     public decimal Total { get; set; }
     public string Market { get; set; } = "CHF";
@@ -130,4 +157,35 @@ public static class CheckoutFailures
     public const string OrderNotFound = "checkout_order_not_found";
     public const string OrderExpired = "checkout_order_expired";
     public const string KeyMismatch = "checkout_key_mismatch";
+
+    /// <summary>The project already holds as many free environments as the catalogue allows.</summary>
+    public const string FreeTierTaken = "checkout_free_tier_taken";
+
+    /// <summary>FreeTier was asked for, but nothing in the selection offers a free tier.</summary>
+    public const string FreeTierUnavailable = "checkout_free_tier_unavailable";
+
+    /// <summary>The project already has this environment, or an order is already creating it.</summary>
+    public const string EnvironmentExists = "checkout_environment_exists";
+
+    /// <summary>A top-up for an environment the project neither has nor is buying in this order.</summary>
+    public const string EnvironmentNotHeld = "checkout_environment_not_held";
+
+    /// <summary>UpgradeFreeTier was asked for, but the project holds no free environment.</summary>
+    public const string NothingToUpgrade = "checkout_nothing_to_upgrade";
+
+    /// <summary>The order failed at payment: the card was refused.</summary>
+    public const string Declined = "checkout_declined";
+}
+
+/// <summary>Reasons the billing endpoints refuse. Safe to show; they name no other project's data.</summary>
+public static class BillingFailures
+{
+    public const string EnvironmentNotFound = "billing_environment_not_found";
+    public const string NothingOwed = "billing_nothing_owed";
+    public const string InvoiceNotFound = "billing_invoice_not_found";
+    public const string NoCard = "billing_no_card_on_file";
+    public const string PaymentDeclined = "billing_payment_declined";
+
+    /// <summary>The provider gave no answer. Money may have moved; do not assume either way.</summary>
+    public const string PaymentPending = "billing_payment_pending";
 }

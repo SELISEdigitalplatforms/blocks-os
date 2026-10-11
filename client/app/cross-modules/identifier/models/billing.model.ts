@@ -39,6 +39,10 @@ export interface IStartCheckoutPayload {
   market?: string;
   /** An order this session already started, to re-price in place rather than start another. */
   orderId?: string;
+  /** Take the catalogue's free-tier environment at the free price (one per project). */
+  freeTier?: boolean;
+  /** Move the project's free-tier environment to its paid price (limits rise at once). */
+  upgradeFreeTier?: boolean;
 }
 
 export interface ICheckoutLine {
@@ -66,8 +70,14 @@ export interface IStartCheckoutResult {
   reason: string;
 }
 
+/**
+ * A refused checkout still answers 200: `isSuccess` false, the reason under `errors.checkout`
+ * and no `checkout`. Callers must check before reading it.
+ */
 export interface IStartCheckoutResponse {
-  checkout: IStartCheckoutResult;
+  isSuccess?: boolean;
+  errors?: Record<string, string>;
+  checkout: IStartCheckoutResult | null;
 }
 
 export interface IPayCheckoutPayload {
@@ -85,13 +95,7 @@ export interface IPayCheckoutPayload {
  * ever shown progress. `declined` happens before any charge, so nothing was created.
  */
 export type OrderState =
-  | "pending"
-  | "paid"
-  | "creating"
-  | "created"
-  | "declined"
-  | "expired"
-  | string;
+  "pending" | "paid" | "creating" | "created" | "declined" | "expired" | string;
 
 export interface IEnvironmentProgressView {
   tenantId: string;
@@ -107,6 +111,8 @@ export interface IEnvironmentProgressView {
 
 export interface IOrderView {
   orderId: string;
+  /** The project the order belongs to. Older servers leave it out. */
+  tenantGroupId?: string;
   state: OrderState;
   total: number;
   market: string;
@@ -123,8 +129,62 @@ export interface IOrderView {
 }
 
 export interface IOrderResponse {
+  isSuccess?: boolean;
+  /** A refused or declined payment: the reason under `errors.checkout`. */
+  errors?: Record<string, string>;
   order: IOrderView | null;
 }
+
+/** Plain words for every refusal code checkout and pay can return. */
+export const checkoutReasonMessage = (reason: string | undefined | null): string => {
+  switch (reason) {
+    case "checkout_nothing_selected":
+      return "Pick at least one environment or top-up.";
+    case "checkout_unknown_environment":
+    case "checkout_unknown_meter":
+      return "Something you picked is no longer offered. Go back and choose again.";
+    case "checkout_meter_not_purchasable":
+      return "One of the top-ups can't be bought.";
+    case "checkout_cap_exceeded":
+      return "A top-up goes past what that environment may hold. Lower it and try again.";
+    case "checkout_free_tier":
+      return "The free development environment can't be topped up. Switch it to Paid.";
+    case "checkout_free_tier_taken":
+      return "This project already has its free development environment.";
+    case "checkout_environment_exists":
+      return "This project already has one of these environments.";
+    case "checkout_no_price":
+      return "One of the items has no price yet. Please contact us.";
+    case "checkout_no_card_on_file":
+      return "Add a card before paying.";
+    case "checkout_order_not_found":
+    case "checkout_order_expired":
+    case "checkout_key_mismatch":
+      return "This checkout has expired. It has been opened again — please review the total.";
+    case "declined":
+    case "checkout_declined":
+      return "Your bank refused the payment. You have not been charged.";
+    case "checkout_nothing_to_upgrade":
+      return "There is no free environment to upgrade on this project.";
+    case "checkout_free_tier_unavailable":
+      return "No environment in this selection has a free tier.";
+    case "checkout_environment_not_held":
+      return "A top-up is for an environment this project doesn't have. Add the environment too.";
+    default:
+      return reason
+        ? `The payment could not be completed (${reason}).`
+        : "The payment could not be completed.";
+  }
+};
+
+/** The refusal code in a checkout or pay response, if it was refused. */
+export const checkoutRefusal = (response: {
+  isSuccess?: boolean;
+  errors?: Record<string, string>;
+}): string | null => {
+  if (response.isSuccess !== false) return null;
+  return response.errors?.checkout ?? Object.values(response.errors ?? {})[0] ?? "unknown";
+};
 
 /** True while the order is still doing something the screen should show. */
 export const isOrderInFlight = (state: OrderState): boolean =>
@@ -133,7 +193,6 @@ export const isOrderInFlight = (state: OrderState): boolean =>
 /** How far along, 0–100. Steps rather than environments, because that is what actually moves. */
 export const orderPercent = (order: IOrderView): number =>
   order.stepsTotal > 0 ? Math.round((order.stepsDone * 100) / order.stepsTotal) : 0;
-
 
 /** What the browser needs to open the provider's card form. Carries no secret of ours. */
 export interface ICardSessionView {
@@ -156,6 +215,12 @@ export interface ISubscriptionLineView {
   meter: string;
   units: number;
   amount: number;
+  kind?: "environment" | "topup" | string;
+  /** Always "rent" on the subscription: only recurring lines live here. */
+  billing?: "rent" | "once" | string;
+  /** When a removal takes effect (the next period boundary). Null while nothing is planned. */
+  endsAtUtc?: string | null;
+  pendingRemoval?: boolean;
 }
 
 /**
@@ -177,8 +242,56 @@ export interface ISubscriptionView {
 }
 
 export interface ISubscriptionResponse {
+  isSuccess?: boolean;
+  errors?: Record<string, string>;
   subscription: ISubscriptionView | null;
 }
+
+/** Remove / keep an environment. `effectiveUtc` is when billing for it stops. */
+export interface IEnvironmentBillingResponse {
+  isSuccess?: boolean;
+  errors?: Record<string, string>;
+  effectiveUtc?: string | null;
+}
+
+export interface IRetryPaymentResponse {
+  isSuccess?: boolean;
+  errors?: Record<string, string>;
+  state?: string;
+  carriedBalance?: number;
+}
+
+/** Plain words for billing refusal codes (`errors.billing`, `errors.invoice`). */
+export const billingReasonMessage = (reason: string | undefined | null): string => {
+  switch (reason) {
+    case "billing_environment_not_found":
+      return "That environment isn't billed on this project.";
+    case "billing_nothing_owed":
+      return "Nothing is owed right now.";
+    case "billing_no_card_on_file":
+      return "Add a card first.";
+    case "billing_payment_declined":
+      return "The bank refused the payment. Nothing was charged.";
+    case "billing_payment_pending":
+      return "The bank hasn't answered yet. Nothing has changed; check back in a few minutes.";
+    case "payment_method_not_found":
+      return "That card is no longer on this project.";
+    case "payment_method_secret_unavailable":
+    case "payment_method_invalid":
+      return "That card can't be used. Add it again.";
+    case "billing_invoice_not_found":
+      return "This invoice doesn't exist on this project.";
+    default:
+      return reason ? `That didn't work (${reason}).` : "That didn't work.";
+  }
+};
+
+/** The refusal code in a billing response, if refused. */
+export const billingRefusal = (response: {
+  isSuccess?: boolean;
+  errors?: Record<string, string>;
+}) =>
+  response.isSuccess === false ? (Object.values(response.errors ?? {})[0] ?? "unknown") : null;
 
 export interface IInvoiceLineView {
   label: string;
@@ -202,6 +315,21 @@ export interface IInvoiceView {
   issuedAtUtc: string;
   paidAtUtc?: string | null;
   lines: IInvoiceLineView[];
+  periodStartUtc?: string | null;
+  periodEndUtc?: string | null;
+  /** Set when the invoice was written for a checkout order rather than a renewal. */
+  orderId?: string | null;
+  paymentMethodBrand?: string | null;
+  paymentMethodLastFour?: string | null;
+  declinedAtUtc?: string | null;
+  /** Only while unpaid. */
+  nextRetryUtc?: string | null;
+}
+
+export interface IInvoiceResponse {
+  isSuccess?: boolean;
+  errors?: Record<string, string>;
+  invoice: IInvoiceView | null;
 }
 
 export interface IInvoiceListResponse {

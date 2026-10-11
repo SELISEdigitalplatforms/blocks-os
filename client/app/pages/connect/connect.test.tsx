@@ -25,7 +25,8 @@ vi.mock("@/cross-modules/integration/services/integration-connect.service", () =
 }));
 
 vi.mock("@tanstack/react-query", async () => {
-  const actual = await vi.importActual<typeof import("@tanstack/react-query")>("@tanstack/react-query");
+  const actual =
+    await vi.importActual<typeof import("@tanstack/react-query")>("@tanstack/react-query");
   return {
     ...actual,
     useQuery: (options: { queryKey: unknown[]; queryFn: () => Promise<unknown> }) => ({
@@ -33,7 +34,9 @@ vi.mock("@tanstack/react-query", async () => {
       error: null,
       isError: false,
       isLoading: false,
-      ...(options.queryKey[0] === "integration-connect" ? mocks.requestQueryResult : mocks.projectsQueryResult),
+      ...(options.queryKey[0] === "integration-connect"
+        ? mocks.requestQueryResult
+        : mocks.projectsQueryResult),
     }),
     useQueryClient: () => ({ invalidateQueries: vi.fn() }),
   };
@@ -74,14 +77,19 @@ describe("ConnectPage error states (P3-16)", () => {
     vi.clearAllMocks();
     mocks.requestQueryResult = undefined;
     mocks.projectsQueryResult = undefined;
-    mocks.approve.mockResolvedValue({ redirectUrl: "https://site.example.com/callback?code=code-1" });
+    mocks.approve.mockResolvedValue({
+      redirectUrl: "https://site.example.com/callback?code=code-1",
+    });
     mocks.startImpersonation.mockResolvedValue(undefined);
     setAuthenticated(true);
     window.history.replaceState(null, "", "/connect?request=req-1");
   });
 
   it("shows the expired screen with a back-to-site button when the pending entry has callback coordinates", () => {
-    mocks.requestQueryResult = { isError: true, error: httpError({ request_not_found_or_expired: "gone" }) };
+    mocks.requestQueryResult = {
+      isError: true,
+      error: httpError({ request_not_found_or_expired: "gone" }),
+    };
     window.localStorage.setItem(
       "blocks:pending-integration-request",
       JSON.stringify({
@@ -107,7 +115,10 @@ describe("ConnectPage error states (P3-16)", () => {
   });
 
   it("shows the expired screen without a button when nothing is known about the callback", () => {
-    mocks.requestQueryResult = { isError: true, error: httpError({ request_not_found_or_expired: "gone" }) };
+    mocks.requestQueryResult = {
+      isError: true,
+      error: httpError({ request_not_found_or_expired: "gone" }),
+    };
 
     mount();
 
@@ -116,7 +127,10 @@ describe("ConnectPage error states (P3-16)", () => {
   });
 
   it("explains when another user already holds the request", () => {
-    mocks.requestQueryResult = { isError: true, error: httpError({ request_claimed_by_other_user: "taken" }) };
+    mocks.requestQueryResult = {
+      isError: true,
+      error: httpError({ request_claimed_by_other_user: "taken" }),
+    };
 
     mount();
 
@@ -144,10 +158,14 @@ describe("ConnectPage error states (P3-16)", () => {
       },
     };
     mocks.projectsQueryResult = {
-      data: [{
-        tenantGroupId: "group-1",
-        projects: [{ itemId: "project-1", tenantId: "environment-1", environment: "dev", name: "Project" }],
-      }],
+      data: [
+        {
+          tenantGroupId: "group-1",
+          projects: [
+            { itemId: "project-1", tenantId: "environment-1", environment: "dev", name: "Project" },
+          ],
+        },
+      ],
     };
 
     mount();
@@ -174,17 +192,27 @@ describe("ConnectPage error states (P3-16)", () => {
       },
     };
     mocks.projectsQueryResult = { data: [] };
-    mocks.createProject.mockResolvedValue({ isSuccess: true, tenantGroupId: "new-group", errors: {} });
+    mocks.createProject.mockResolvedValue({
+      isSuccess: true,
+      tenantGroupId: "new-group",
+      errors: {},
+    });
 
     mount();
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("Project name"), "New project");
-    await user.click(screen.getByRole("button", { name: "Development, branch dev" }));
+    // Paid environments go through checkout; a project made here starts with the free one.
+    expect(screen.getByText(/starts with the free Development environment/)).toBeTruthy();
     await user.click(screen.getByRole("checkbox", { name: "Use Blocks exclusively" }));
     await user.click(screen.getByRole("checkbox", { name: "Accept the Terms of services" }));
     await user.click(screen.getByRole("button", { name: "Create project" }));
 
     await waitFor(() => expect(mocks.createProject).toHaveBeenCalledOnce());
+    expect(
+      mocks.createProject.mock.calls[0][0].applicationContexts.map(
+        (c: { environment: string }) => c.environment,
+      ),
+    ).toEqual(["dev"]);
     expect(await screen.findByText("Project created successfully")).toBeTruthy();
     expect(screen.getByText("Loading environments for New project…")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Create project" })).toBeNull();
@@ -202,19 +230,38 @@ describe("ConnectPage error states (P3-16)", () => {
         expiresAt: new Date(Date.now() + 60_000).toISOString(),
         suggestedTemplateKey: "localization-read",
         templates: [
-          { key: "localization-read", displayName: "Localization Read", description: "Read translations.", accessLevel: "read", permissionCount: 3 },
-          { key: "localization-full", displayName: "Localization Full", description: "Manage translations.", accessLevel: "full", permissionCount: 7 },
+          {
+            key: "localization-read",
+            displayName: "Localization Read",
+            description: "Read translations.",
+            accessLevel: "read",
+            permissionCount: 3,
+          },
+          {
+            key: "localization-full",
+            displayName: "Localization Full",
+            description: "Manage translations.",
+            accessLevel: "full",
+            permissionCount: 7,
+          },
         ],
       },
     };
     mocks.projectsQueryResult = {
-      data: [{
-        tenantGroupId: "group-1",
-        projects: [{ itemId: "project-1", tenantId: "environment-1", environment: "dev", name: "Project" }],
-      }],
+      data: [
+        {
+          tenantGroupId: "group-1",
+          projects: [
+            { itemId: "project-1", tenantId: "environment-1", environment: "dev", name: "Project" },
+          ],
+        },
+      ],
     };
     mocks.checkReadiness
-      .mockResolvedValueOnce({ ready: false, missingPermissions: ["blocks-localization::key::gets"] })
+      .mockResolvedValueOnce({
+        ready: false,
+        missingPermissions: ["blocks-localization::key::gets"],
+      })
       .mockResolvedValueOnce({ ready: true, missingPermissions: [] });
 
     mount();
@@ -231,31 +278,44 @@ describe("ConnectPage error states (P3-16)", () => {
     expect(screen.getByText("Connect options")).toBeTruthy();
     expect(screen.getByText("Read translations.")).toBeTruthy();
     expect(screen.getByText("Manage translations.")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Select Localization Read" }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByRole("button", { name: "Select Localization Full" }).getAttribute("aria-pressed")).toBe("false");
+    expect(
+      screen.getByRole("button", { name: "Select Localization Read" }).getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      screen.getByRole("button", { name: "Select Localization Full" }).getAttribute("aria-pressed"),
+    ).toBe("false");
     expect(screen.getAllByRole("button", { name: "Connect" })).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: "Cancel" })).toHaveLength(1);
     expect(mocks.checkReadiness).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Select Localization Full" }));
-    expect(screen.getByRole("button", { name: "Select Localization Full" }).getAttribute("aria-pressed")).toBe("true");
+    expect(
+      screen.getByRole("button", { name: "Select Localization Full" }).getAttribute("aria-pressed"),
+    ).toBe("true");
     expect(mocks.checkReadiness).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Connect" }));
     await waitFor(() => expect(mocks.checkReadiness).toHaveBeenCalledTimes(1));
-    expect((screen.getByRole("button", { name: "Select Localization Read" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      (screen.getByRole("button", { name: "Select Localization Read" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
     await waitFor(() => expect(mocks.checkReadiness).toHaveBeenCalledTimes(2), { timeout: 4_000 });
     await waitFor(() => expect(mocks.approve).toHaveBeenCalledWith("req-1", "localization-full"));
     expect(await screen.findByText("Connection successful")).toBeTruthy();
     expect(screen.getByText("Your site is connected to Blocks OS.")).toBeTruthy();
     expect(screen.getByText("Redirecting you to My Blog…")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Go to site now" }).getAttribute("href"))
-      .toBe("https://site.example.com/callback?code=code-1");
+    expect(screen.getByRole("link", { name: "Go to site now" }).getAttribute("href")).toBe(
+      "https://site.example.com/callback?code=code-1",
+    );
 
     // The redirect carries a one-time code: clicking "Go to site now" and then letting the
     // auto-redirect timer fire must still load it only once.
     const assign = vi.fn();
     const originalLocation = Object.getOwnPropertyDescriptor(window, "location");
-    Object.defineProperty(window, "location", { configurable: true, value: { ...window.location, assign } });
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: { ...window.location, assign },
+    });
     try {
       await user.click(screen.getByRole("link", { name: "Go to site now" }));
       // The click itself navigates, through the shared guard…
@@ -268,5 +328,4 @@ describe("ConnectPage error states (P3-16)", () => {
       if (originalLocation) Object.defineProperty(window, "location", originalLocation);
     }
   }, 9_000);
-
 });

@@ -318,6 +318,19 @@ namespace DomainService.Projects
             // Resolve all placements before creating assets, tenant records, or messages.
             // Existing tenants retain their stored connection; this only provisions new ones.
             var connections = new Dictionary<string, string>(StringComparer.Ordinal);
+
+            // A brand-new project with no environment yet: only the group is written. The caller
+            // owns it through the group record (ProjectAccessService reads it while the group has
+            // no tenant), and environments are bought into it through checkout.
+            if ((project.applicationContexts is null || project.applicationContexts.Count == 0)
+                && string.IsNullOrEmpty(project.TenantGroupId))
+            {
+                var emptyGroupId = Guid.NewGuid().ToString("n");
+                await _projectRepository.UpdateTenantAssetAsync(GetTenantAsset(project, emptyGroupId));
+
+                return new CreateProjectResponse { IsSuccess = true, TenantGroupId = emptyGroupId };
+            }
+
             if (project.applicationContexts is null || project.applicationContexts.Count == 0)
             {
                 return new CreateProjectResponse
@@ -378,7 +391,18 @@ namespace DomainService.Projects
 
             var isNewGroup = string.IsNullOrEmpty(project.TenantGroupId);
             var groupId = isNewGroup ? Guid.NewGuid().ToString("n") : project.TenantGroupId;
-            await ManageTenantAssetAsync(project, groupId);
+
+            // The first environment of a group created empty. Nobody holds a creator row yet —
+            // the group's owner is only on the group record — so the row is written here, for
+            // that owner, exactly as a brand-new group gets one below. Without it the owner is
+            // locked out from the moment the tenant exists until the worker catches up.
+            var groupAsset = await ManageTenantAssetAsync(project, groupId);
+
+            string? emptyGroupOwner = null;
+            if (!isNewGroup && await _projectRepository.GetProjectIdsByGroupId(groupId) is not { Count: > 0 })
+            {
+                emptyGroupOwner = groupAsset?.CreatedBy;
+            }
 
             foreach (var applicationContext in project.applicationContexts)
             {
@@ -398,6 +422,10 @@ namespace DomainService.Projects
                 if (isNewGroup)
                 {
                     await InsertCreatorRowAsync(tenant, tenant.CreatedBy, BlocksContext.GetContext()?.UserName ?? "");
+                }
+                else if (!string.IsNullOrWhiteSpace(emptyGroupOwner))
+                {
+                    await InsertCreatorRowAsync(tenant, emptyGroupOwner, BlocksContext.GetContext()?.UserName ?? "");
                 }
 
                 await Task.WhenAll(_messageClient.SendToConsumerAsync(new ConsumerMessage<Tenant> { ConsumerName = IdentifierConstants.IdentifierQueueName, Payload = tenant }));
@@ -438,13 +466,14 @@ namespace DomainService.Projects
             return domains;
         }
 
-        private async Task ManageTenantAssetAsync(CreateProjectRequest project, string customGroupId)
+        // Returns the group record it wrote or read, so the caller need not read it again.
+        private async Task<TenantAsset?> ManageTenantAssetAsync(CreateProjectRequest project, string customGroupId)
         {
             if (string.IsNullOrEmpty(project.TenantGroupId))
             {
                 var asset = GetTenantAsset(project, customGroupId);
                 await _projectRepository.UpdateTenantAssetAsync(asset);
-                return;
+                return asset;
             }
 
            // Unpaged: a new environment has to inherit every repository the group owns, not the
@@ -452,6 +481,7 @@ namespace DomainService.Projects
            var assets = await _projectRepository.GetTenantAssetByGroupIdAsync(project.TenantGroupId);
            project.Resources = assets?.Resources?.Where(r => !r.IsArchived).ToList() ?? [];
 
+           return assets;
         }
 
         private static TenantAsset GetTenantAsset(CreateProjectRequest createProjectRequest, string groupId)
@@ -461,6 +491,9 @@ namespace DomainService.Projects
                 ItemId = Guid.NewGuid().ToString(),
                 TenantGroupId = groupId,
                 Resources = createProjectRequest.Resources ?? [],
+                Name = createProjectRequest.Name,
+                Description = string.IsNullOrWhiteSpace(createProjectRequest.Description) ? null : createProjectRequest.Description.Trim(),
+                RepositoryDeployments = createProjectRequest.RepositoryDeployments ?? [],
                 CreatedDate = DateTime.UtcNow,
                 LastUpdatedDate = DateTime.UtcNow,
                 CreatedBy = BlocksContext.GetContext()?.UserId,

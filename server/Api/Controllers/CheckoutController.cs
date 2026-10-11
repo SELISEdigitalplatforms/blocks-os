@@ -1,6 +1,7 @@
 using Blocks.Genesis;
 using DomainService.Access;
 using DomainService.Access.Services;
+using DomainService.Billing.Entities;
 using DomainService.Billing.Models;
 using DomainService.Billing.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -48,6 +49,11 @@ public class CheckoutController : ControllerBase
     /// <remarks>
     /// What the screen calls while someone is still choosing. Pricing through <c>start</c> on every
     /// change would leave an abandoned order behind every tick of a checkbox.
+    /// <para>
+    /// A blank <c>TenantGroupId</c> prices a brand-new project: nothing held, nothing prorated,
+    /// nothing saved. The project filter lets a blank group through by design, so the only check
+    /// on that path is the endpoint permission — which is all a price list needs.
+    /// </para>
     /// </remarks>
     [HttpPost("quote")]
     [ProtectedEndPoint("blocks-os::billing::read")]
@@ -56,17 +62,20 @@ public class CheckoutController : ControllerBase
         [FromBody] StartCheckoutRequest request,
         CancellationToken cancellationToken)
     {
-        if (request is null || string.IsNullOrWhiteSpace(request.TenantGroupId))
+        if (request is null)
         {
             return Missing<StartCheckoutResponse>();
         }
 
-        await _access.ResolveAsync(request.TenantGroupId, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(request.TenantGroupId))
+        {
+            await _access.ResolveAsync(request.TenantGroupId, cancellationToken);
+        }
 
         var result = await _checkout.QuoteAsync(request, cancellationToken);
 
         return result.IsSuccess
-            ? new StartCheckoutResponse { Checkout = result }
+            ? new StartCheckoutResponse { IsSuccess = true, Checkout = result }
             : Failed<StartCheckoutResponse>("checkout", result.Reason);
     }
 
@@ -89,7 +98,7 @@ public class CheckoutController : ControllerBase
         var result = await _checkout.StartAsync(request, userId, cancellationToken);
 
         return result.IsSuccess
-            ? new StartCheckoutResponse { Checkout = result }
+            ? new StartCheckoutResponse { IsSuccess = true, Checkout = result }
             : Failed<StartCheckoutResponse>("checkout", result.Reason);
     }
 
@@ -100,6 +109,14 @@ public class CheckoutController : ControllerBase
     /// <remarks>
     /// Safe to call twice with the same key: the second call returns the first order rather than
     /// charging again.
+    /// <para>
+    /// A refusal is <c>IsSuccess = false</c> with the reason in <c>Errors["checkout"]</c> — the same
+    /// key start and quote use, and the one the console reads. The
+    /// reason is also left in <c>Order.State</c>, where earlier clients read it. A decline returns
+    /// the order itself (state <c>declined</c>, with its <c>DeclineReason</c>) and the reason
+    /// <c>checkout_declined</c>; an expired order returns <c>checkout_order_expired</c>. A charge
+    /// with no answer yet is not a failure: the order stays <c>pending</c> and is watched.
+    /// </para>
     /// </remarks>
     [HttpPost("pay")]
     [ProtectedEndPoint("blocks-os::billing::manage")]
@@ -115,8 +132,31 @@ public class CheckoutController : ControllerBase
 
         await _access.ResolveAsync(request.TenantGroupId, cancellationToken);
 
-        return new OrderResponse { Order = await _payments.PayAsync(request, cancellationToken) };
+        var order = await _payments.PayAsync(request, cancellationToken);
+        var failure = PayFailure(order);
+
+        return failure is null
+            ? new OrderResponse { IsSuccess = true, Order = order }
+            : new OrderResponse
+            {
+                IsSuccess = false,
+                Errors = new Dictionary<string, string> { { "checkout", failure } },
+                Order = order,
+            };
     }
+
+    /// <summary>
+    /// Why a payment did not go through, or null when it did — or may still. A refusal before
+    /// any charge comes back as a bare reason in <c>State</c>; the rest are real order states.
+    /// </summary>
+    public static string? PayFailure(OrderView? order) => order?.State switch
+    {
+        null => CheckoutFailures.OrderNotFound,
+        OrderStates.Declined => CheckoutFailures.Declined,
+        OrderStates.Expired => CheckoutFailures.OrderExpired,
+        var state when state.StartsWith("checkout_", StringComparison.Ordinal) => state,
+        _ => null,
+    };
 
     /// <summary>One order, for the screen that watches it.</summary>
     [HttpGet("order")]
@@ -138,7 +178,7 @@ public class CheckoutController : ControllerBase
 
         return order is null
             ? Failed<OrderResponse>("order", CheckoutFailures.OrderNotFound)
-            : new OrderResponse { Order = order };
+            : new OrderResponse { IsSuccess = true, Order = order };
     }
 
     /// <summary>
@@ -163,7 +203,7 @@ public class CheckoutController : ControllerBase
 
         await _access.ResolveAsync(tenantGroupId, cancellationToken);
 
-        return new OrderResponse { Order = await _checkout.GetActiveAsync(tenantGroupId, cancellationToken) };
+        return new OrderResponse { IsSuccess = true, Order = await _checkout.GetActiveAsync(tenantGroupId, cancellationToken) };
     }
 
     private static T Missing<T>() where T : BaseResponse, new() =>

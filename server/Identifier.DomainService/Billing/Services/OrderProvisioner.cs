@@ -151,7 +151,7 @@ public sealed class OrderProvisioner : IOrderProvisioner
                     order.ItemId,
                     environment.Environment,
                     CheckoutService.MaxAttempts,
-                    ProvisioningSteps.All[Math.Min(environment.StepsDone, ProvisioningSteps.All.Count - 1)]);
+                    ProvisioningSteps.For(environment)[Math.Min(environment.StepsDone, ProvisioningSteps.For(environment).Count - 1)]);
 
                 await _notifier
                     .PushStatusAsync(
@@ -192,11 +192,13 @@ public sealed class OrderProvisioner : IOrderProvisioner
     {
         environment.StartedAtUtc ??= _time.GetUtcNow().UtcDateTime;
 
-        while (environment.StepsDone < ProvisioningSteps.All.Count)
+        var steps = ProvisioningSteps.For(environment);
+
+        while (environment.StepsDone < steps.Count)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var step = ProvisioningSteps.All[environment.StepsDone];
+            var step = steps[environment.StepsDone];
             environment.Attempt++;
 
             if (environment.Attempt > CheckoutService.MaxAttempts)

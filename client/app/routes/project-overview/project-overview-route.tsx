@@ -185,18 +185,24 @@ function ProjectNotifications({
   basePath: string;
 }) {
   const navigate = useNavigate();
-  const { order, connected } = useOrderNotifications(tenantGroupId);
+  const { orders, connected } = useOrderNotifications(tenantGroupId);
 
   // Nothing to say and nothing to show: no bell, no empty popover, no dead pixel.
-  if (!order) return null;
+  if (orders.length === 0) return null;
 
   return (
     <div className="pointer-events-none sticky top-0 z-40 flex justify-end px-4 pt-2">
       <div className="pointer-events-auto">
         <OrderNotificationBell
-          order={order}
+          orders={orders}
           connected={connected}
-          onOpenOrder={() => navigate(`${basePath}/${tenantGroupId}/order`)}
+          onOpenOrder={(order) =>
+            navigate(
+              order.state === "created"
+                ? `${basePath}/${tenantGroupId}/environments`
+                : `${basePath}/${tenantGroupId}/order?order=${encodeURIComponent(order.orderId)}`,
+            )
+          }
         />
       </div>
     </div>

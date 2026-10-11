@@ -132,8 +132,15 @@ export const BILLING_ENDPOINTS = {
   INVOICES: `/api${BILLING_SUBPATH}/invoices`,
   /** One invoice as a PDF. */
   INVOICE_PDF: (invoiceId: string) => `/api${BILLING_SUBPATH}/invoices/${invoiceId}/pdf`,
+  /** One invoice with its lines. */
+  INVOICE: (invoiceId: string) => `/api${BILLING_SUBPATH}/invoices/${invoiceId}`,
   /** Stops the monthly charge. Leaves environments running. */
   UNSUBSCRIBE: `/api${BILLING_SUBPATH}/unsubscribe`,
+  /** Ends an environment's charge at the next boundary; `keep` undoes that before it happens. */
+  REMOVE_ENVIRONMENT: `/api${BILLING_SUBPATH}/environments/remove`,
+  KEEP_ENVIRONMENT: `/api${BILLING_SUBPATH}/environments/keep`,
+  /** Charges a past-due balance now, on the default card. */
+  RETRY_PAYMENT: `/api${BILLING_SUBPATH}/retry-payment`,
 } as const;
 
 const CHECKOUT_SUBPATH = "/Checkout";

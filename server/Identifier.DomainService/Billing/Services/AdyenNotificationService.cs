@@ -39,6 +39,7 @@ public sealed class AdyenNotificationService : IAdyenNotificationService
     private readonly IProcessedNotificationStore _processed;
     private readonly ILogger<AdyenNotificationService> _logger;
     private readonly TimeProvider _time;
+    private readonly IOrderInvoiceWriter? _invoices;
 
     public AdyenNotificationService(
         ISubscriptionOrderStore orders,
@@ -46,7 +47,8 @@ public sealed class AdyenNotificationService : IAdyenNotificationService
         IProvisioningQueue queue,
         IProcessedNotificationStore processed,
         ILogger<AdyenNotificationService> logger,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        IOrderInvoiceWriter? invoices = null)
     {
         _orders = orders;
         _paymentMethods = paymentMethods;
@@ -54,6 +56,7 @@ public sealed class AdyenNotificationService : IAdyenNotificationService
         _processed = processed;
         _logger = logger;
         _time = timeProvider ?? TimeProvider.System;
+        _invoices = invoices;
     }
 
     public async Task HandleAsync(IReadOnlyList<AdyenNotificationItem> items, CancellationToken cancellationToken = default)
@@ -147,6 +150,11 @@ public sealed class AdyenNotificationService : IAdyenNotificationService
             _logger.LogInformation(
                 "Order {OrderId} was resolved to paid by notification, not by our own call.",
                 order.ItemId);
+
+            if (_invoices is not null)
+            {
+                await _invoices.WriteAsync(order, cancellationToken).ConfigureAwait(false);
+            }
 
             await _queue.EnqueueAsync(order.TenantGroupId, order.ItemId, cancellationToken).ConfigureAwait(false);
         }

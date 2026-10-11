@@ -30,6 +30,7 @@ import {
   Ticket,
   Users,
   Zap,
+  Gauge,
 } from "lucide-react";
 
 export const navigationMenus: Menu[] = [
@@ -77,11 +78,18 @@ export const navigationMenus: Menu[] = [
   {
     id: "subscription-usage",
     type: "menu",
-    name: "Subscription Usage",
+    name: "Usage",
     path: "/app/project/subscription-usage",
+    icon: Gauge,
+    desc: "Every meter in every environment, against its limit",
+  },
+  {
+    id: "billing",
+    type: "menu",
+    name: "Billing",
+    path: "/app/project/billing",
     icon: CreditCard,
-    desc: "View subscription details and usage metrics",
-    disabled: true, // Temporarily disabled
+    desc: "Next charge, invoices and cards for this project",
   },
   { type: "separator", id: "separator-identity" },
   {

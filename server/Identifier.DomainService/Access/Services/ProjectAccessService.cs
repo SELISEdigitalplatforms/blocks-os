@@ -48,11 +48,26 @@ namespace DomainService.Access.Services
             var catalog = await GetCatalogAsync(cancellationToken).ConfigureAwait(false);
             var isOwner = rows.Exists(row => row.IsCreator);
 
+            // A project created with no environment has no tenant and so no membership rows; its
+            // owner is whoever created the group record. Only while the group has no tenant at
+            // all — once one exists (disabled ones included) ownership is the creator rows and
+            // nothing else, so a transferred project can never fall back to its first creator.
+            var ownsEmptyGroup = !isOwner
+                && tenantIds.Count == 0
+                && !string.IsNullOrWhiteSpace(projectGroupId)
+                && !string.IsNullOrWhiteSpace(userId)
+                && string.Equals(
+                    (await _projectRepository.GetTenantAssetByGroupIdAsync(projectGroupId))?.CreatedBy,
+                    userId,
+                    StringComparison.Ordinal);
+
+            isOwner = isOwner || ownsEmptyGroup;
+
             var context = new ProjectAccessContext
             {
                 ProjectGroupId = projectGroupId,
                 TenantIds = tenantIds,
-                IsMember = rows.Count > 0,
+                IsMember = rows.Count > 0 || ownsEmptyGroup,
                 UserId = userId,
                 RowCount = rows.Count,
                 OwnerRowCount = rows.Count(row => row.IsCreator),

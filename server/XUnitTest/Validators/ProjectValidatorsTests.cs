@@ -73,10 +73,47 @@ namespace XUnitTest.Validators
         }
 
         [Fact]
-        public async Task Validate_EmptyApplicationContexts_Fails()
+        public async Task Validate_EmptyApplicationContexts_OnANewProject_IsValid()
         {
+            // A new project may start with no environment; they are bought into it later.
             var request = ValidRequest();
             request.applicationContexts = new List<ApplicationContext>();
+
+            var result = await CreateValidator().ValidateAsync(request);
+
+            result.IsValid.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task Validate_EmptyApplicationContexts_OnAnExistingProject_Fails()
+        {
+            var request = ValidRequest();
+            request.TenantGroupId = "g1";
+            request.applicationContexts = new List<ApplicationContext>();
+
+            var result = await CreateValidator().ValidateAsync(request);
+
+            result.IsValid.Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task Validate_DescriptionOver500_Fails()
+        {
+            _repo.Setup(r => r.IsExistingEnviroment(It.IsAny<List<string>>(), It.IsAny<string>())).ReturnsAsync(false);
+            var request = ValidRequest();
+            request.Description = new string('x', 501);
+
+            var result = await CreateValidator().ValidateAsync(request);
+
+            result.IsValid.Should().BeFalse();
+            result.Errors.Should().Contain(e => e.PropertyName == "Description");
+        }
+
+        [Fact]
+        public async Task Validate_DeploymentWithoutResourceId_Fails()
+        {
+            var request = ValidRequest();
+            request.RepositoryDeployments = new List<DomainService.Shared.Entities.RepositoryDeployment> { new() { ResourceId = "" } };
 
             var result = await CreateValidator().ValidateAsync(request);
 

@@ -5,6 +5,9 @@ import {
 } from "@blocks-identifier/constants/endpoint.constant";
 import {
   ICardSessionResponse,
+  IEnvironmentBillingResponse,
+  IInvoiceResponse,
+  IRetryPaymentResponse,
   IInvoiceListResponse,
   IOrderResponse,
   IPayCheckoutPayload,
@@ -53,21 +56,19 @@ export class BillingService {
   /**
    * Downloads an invoice.
    *
-   * Goes through fetch rather than the shared client because the response is a file, not JSON,
-   * and opening the URL directly would lose the session headers the client attaches.
+   * Goes through the shared client like every other call, so it carries the same base URL, blocks
+   * key and session; the client hands back a Blob for an application/pdf response.
    */
   async downloadInvoice(tenantGroupId: string, invoiceId: string, number: string): Promise<void> {
-    const response = await fetch(
+    const file = await http.get<unknown>(
       `${BILLING_ENDPOINTS.INVOICE_PDF(invoiceId)}?tenantGroupId=${encodeURIComponent(tenantGroupId)}`,
-      { credentials: "include" },
     );
 
-    if (!response.ok) {
+    if (!(file instanceof Blob)) {
       throw new Error("The invoice could not be downloaded.");
     }
 
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(file);
 
     try {
       const link = document.createElement("a");
@@ -89,6 +90,31 @@ export class BillingService {
     return http.get(
       `${BILLING_ENDPOINTS.SUBSCRIPTION}?tenantGroupId=${encodeURIComponent(tenantGroupId)}`,
     );
+  }
+
+  getInvoice(tenantGroupId: string, invoiceId: string): Promise<IInvoiceResponse> {
+    return http.get(
+      `${BILLING_ENDPOINTS.INVOICE(encodeURIComponent(invoiceId))}?tenantGroupId=${encodeURIComponent(tenantGroupId)}`,
+    );
+  }
+
+  /** Billing for the environment stops at the next boundary; it keeps running until then. */
+  removeEnvironment(
+    tenantGroupId: string,
+    environment: string,
+  ): Promise<IEnvironmentBillingResponse> {
+    return http.post(BILLING_ENDPOINTS.REMOVE_ENVIRONMENT, { tenantGroupId, environment });
+  }
+
+  keepEnvironment(
+    tenantGroupId: string,
+    environment: string,
+  ): Promise<IEnvironmentBillingResponse> {
+    return http.post(BILLING_ENDPOINTS.KEEP_ENVIRONMENT, { tenantGroupId, environment });
+  }
+
+  retryPayment(tenantGroupId: string): Promise<IRetryPaymentResponse> {
+    return http.post(BILLING_ENDPOINTS.RETRY_PAYMENT, { tenantGroupId });
   }
 
   getInvoices(tenantGroupId: string): Promise<IInvoiceListResponse> {

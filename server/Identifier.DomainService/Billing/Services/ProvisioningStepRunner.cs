@@ -57,6 +57,7 @@ public sealed class ProvisioningStepRunner : IProvisioningStepRunner
             {
                 ProvisioningSteps.CreateTenant => await CreateTenantAsync(order, environment).ConfigureAwait(false),
                 ProvisioningSteps.SeedQuota => await SeedQuotaAsync(order, environment, cancellationToken).ConfigureAwait(false),
+                ProvisioningSteps.RaiseLimits => await RaiseLimitsAsync(order, environment, cancellationToken).ConfigureAwait(false),
                 _ => await ConfirmFromTracerAsync(environment, step).ConfigureAwait(false),
             };
         }
@@ -96,7 +97,9 @@ public sealed class ProvisioningStepRunner : IProvisioningStepRunner
     {
         var expectedTenantId = ExpectedTenantId(order.TenantGroupId, environment.Environment);
 
-        var existing = await FindTenantAsync(order.TenantGroupId, expectedTenantId).ConfigureAwait(false);
+        var tenants = await _projects.GetByGroupIdAsync(order.TenantGroupId).ConfigureAwait(false);
+        var existing = tenants?.FirstOrDefault(t =>
+            string.Equals(t.TenantId, expectedTenantId, StringComparison.OrdinalIgnoreCase))?.TenantId;
 
         if (existing is not null)
         {
@@ -126,13 +129,15 @@ public sealed class ProvisioningStepRunner : IProvisioningStepRunner
 
         try
         {
+            var name = await ProjectNameAsync(order.TenantGroupId, tenants).ConfigureAwait(false);
+
             var created = await _projectManagement
                 .SaveProjectAsync(new CreateProjectRequest
                 {
                     // Naming the existing group is what makes this an added environment rather
                     // than a new project: the flow skips the creator row and reuses the group.
                     TenantGroupId = order.TenantGroupId,
-                    Name = order.TenantGroupId,
+                    Name = name,
                     IsAcceptBlocksTerms = true,
                     applicationContexts =
                     [
@@ -218,6 +223,66 @@ public sealed class ProvisioningStepRunner : IProvisioningStepRunner
             : StepOutcome.Failed(string.IsNullOrWhiteSpace(tracer.ErrorMessage) ? "step_not_complete" : tracer.ErrorMessage);
     }
 
+    /// <summary>
+    /// Whether a line was bought at the free price. The flag decides; a zero amount only counts on
+    /// an order written before the flag existed, where it was the only way to say "free". A paid
+    /// line prorated to almost nothing carries its full price and is never read as free.
+    /// </summary>
+    public static bool IsFreeTier(OrderLine line) =>
+        line.FreeTier || (line.Amount == 0m && line.RecurringAmount is null);
+
+    /// <summary>
+    /// The project's name, for a new environment's tenant. Taken from an environment the group
+    /// already has, or from the group record when this is its first; the group id only as a last
+    /// resort, which is what every added environment used to be called.
+    /// </summary>
+    private async Task<string> ProjectNameAsync(string tenantGroupId, IEnumerable<Tenant>? tenants)
+    {
+        var named = tenants?.FirstOrDefault(t => !string.IsNullOrWhiteSpace(t.Name))?.Name;
+
+        if (!string.IsNullOrWhiteSpace(named))
+        {
+            return named;
+        }
+
+        var group = await _projects.GetTenantAssetByGroupIdAsync(tenantGroupId).ConfigureAwait(false);
+
+        return string.IsNullOrWhiteSpace(group?.Name) ? tenantGroupId : group.Name;
+    }
+
+    /// <summary>
+    /// The one step of an upgrade: the existing tenant's rows move to the paid limit set.
+    /// </summary>
+    /// <remarks>
+    /// Inside the current period, so usage is kept exactly where it is and only ceilings rise.
+    /// Safe to repeat: a second run finds the rows already on the paid set.
+    /// </remarks>
+    private async Task<StepOutcome> RaiseLimitsAsync(
+        SubscriptionOrder order,
+        OrderEnvironmentProgress environment,
+        CancellationToken cancellationToken)
+    {
+        var tenantId = environment.TenantId;
+
+        if (string.IsNullOrWhiteSpace(tenantId))
+        {
+            var tenants = await _projects.GetByGroupIdAsync(order.TenantGroupId).ConfigureAwait(false);
+            tenantId = tenants?.FirstOrDefault(t => string.Equals(t.Environment, environment.Environment, StringComparison.Ordinal))?.TenantId
+                ?? string.Empty;
+        }
+
+        if (string.IsNullOrWhiteSpace(tenantId))
+        {
+            return StepOutcome.Failed("tenant_unknown");
+        }
+
+        await _seeder
+            .ChangeTierAsync(tenantId, environment.Environment, freeTier: false, cancellationToken)
+            .ConfigureAwait(false);
+
+        return StepOutcome.Ok(tenantId);
+    }
+
     /// <summary>Gives the environment a row for every meter the catalogue defines.</summary>
     private async Task<StepOutcome> SeedQuotaAsync(
         SubscriptionOrder order,
@@ -232,7 +297,7 @@ public sealed class ProvisioningStepRunner : IProvisioningStepRunner
         var freeTier = order.Lines.Any(l =>
             string.Equals(l.Environment, environment.Environment, StringComparison.Ordinal)
             && l.Kind == "environment"
-            && l.Amount == 0m);
+            && IsFreeTier(l));
 
         var periodKey = order.ChargedAtUtc?.ToString("yyyy-MM-dd")
             ?? order.CreatedAtUtc.ToString("yyyy-MM-dd");

@@ -12,6 +12,15 @@ public interface IResourceLimitSeeder
     /// Brings one environment's limit rows in line with the catalogue. Safe to run repeatedly.
     /// </summary>
     Task<SeedOutcome> SyncAsync(string tenantId, string environmentKey, string periodKey, bool freeTier = false, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Moves an environment between its free and paid limit sets inside the period it is in.
+    /// </summary>
+    /// <remarks>
+    /// The rows keep their own period key, so nothing counts as a rollover: usage stays where it
+    /// is and only the ceilings move. A tenant with no rows yet is seeded for today's period.
+    /// </remarks>
+    Task<SeedOutcome> ChangeTierAsync(string tenantId, string environmentKey, bool freeTier, CancellationToken cancellationToken = default);
 }
 
 /// <param name="Added">Meters that had no row and now do — this is how a new catalogue entry reaches a live tenant.</param>
@@ -188,6 +197,24 @@ public sealed class ResourceLimitSeeder : IResourceLimitSeeder
         }
 
         return outcome;
+    }
+
+    public async Task<SeedOutcome> ChangeTierAsync(string tenantId, string environmentKey, bool freeTier, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(tenantId);
+
+        // The period the tenant is in now. Passing any other key to SyncAsync would read as a
+        // boundary and reset every counter — exactly what an upgrade must not do.
+        var current = await _collection
+            .Find(Builders<ResourceLimit>.Filter.Eq(r => r.TenantId, tenantId))
+            .SortByDescending(r => r.PeriodKey)
+            .Project(r => r.PeriodKey)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var periodKey = string.IsNullOrWhiteSpace(current) ? DateTime.UtcNow.ToString("yyyy-MM-dd") : current;
+
+        return await SyncAsync(tenantId, environmentKey, periodKey, freeTier, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

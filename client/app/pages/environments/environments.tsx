@@ -1,15 +1,7 @@
-import { AddEnvironmentModal } from "@/components/environment-card/add-environment-modal";
 import { EnvironmentCard } from "@/components/environment-card/environment-card";
 import { EnvironmentMigrationWizard } from "@/components/environment-migration/environment-migration-wizard";
 import { ProjectCardLoading } from "@/components/project-card/loading";
 import { Button } from "@/components/ui-kits/button/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui-kits/dialog/dialog";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import {
   Tooltip,
@@ -26,8 +18,9 @@ import {
 import { useProjectPermissions } from "@/hooks/use-project-access";
 import type { IMigrationStatusResponse } from "@blocks-identifier/models/project.model";
 import { useProjectStore } from "@seliseblocks/genesis-os";
-import { ArrowRightLeft, CircleHelp, Plus } from "lucide-react";
-import { useCallback, useState } from "react";
+import { ArrowRightLeft, Plus } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
+import { PlanPanel } from "@blocks-identifier/components/plan/plan-panel";
 import { Navigate, useNavigate } from "react-router";
 
 const isRecentMigrationForTarget = (
@@ -73,7 +66,9 @@ export const EnvironmentsPage = () => {
   // contributor granted only environments would have been 403'd on a page that has nothing to
   // do with People.
   const { isOwner, can } = useProjectPermissions(groupId ?? undefined);
-  const [addEnvModalOpen, setAddEnvModalOpen] = useState(false);
+  // Adding an environment is a purchase now: it opens the plan's add pane (prorated, checkout).
+  const [adding, setAdding] = useState(false);
+  const planRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { data: migrationStatus, refetch: refetchMigrationStatus } = useGetMigrationStatus(
     groupId as string,
@@ -85,16 +80,13 @@ export const EnvironmentsPage = () => {
     [refetchMigrationStatus],
   );
   useNotificationListener("EnvironmentDataMigration", handleMigrationNotification);
-  const handleAddEnvModalClose = () => {
-    setAddEnvModalOpen(false);
-  };
   if (isLoading || isFetching || !environmentList || !environmentList[0]?.projects[0]) {
     return <ProjectGroupLoading />;
   }
   // Creating an environment is owner-only and deliberately absent from the grant catalog:
   // provisioning one writes an owner row, so a contributor able to do it could widen their own
   // standing. Migration is delegable, so it is a grant like any other.
-  const canAddEnvironment = environmentList && environmentList[0]?.projects?.length < 8 && isOwner;
+  const canAddEnvironment = isOwner;
   const canMigrate = can("environments", "migrate");
   // Counts the environments this user can open (the same list the wizard offers), so greyed-out
   // "Others" never make a single accessible environment look migratable.
@@ -109,7 +101,8 @@ export const EnvironmentsPage = () => {
             {/* The eight-environment cap is already enforced by hiding New Environment;
                 saying so up front beats the button quietly disappearing. */}
             <p className="mt-0.5 text-sm text-medium-emphasis">
-              {environmentList[0]?.projects?.length ?? 0} of 8 environments used
+              {environmentList[0]?.projects?.length ?? 0}{" "}
+              {(environmentList[0]?.projects?.length ?? 0) === 1 ? "environment" : "environments"}
             </p>
           </div>
           <div className="flex gap-2 sm:gap-4">
@@ -158,7 +151,10 @@ export const EnvironmentsPage = () => {
               <Button
                 variant="default"
                 size="sm"
-                onClick={() => setAddEnvModalOpen(true)}
+                onClick={() => {
+                  setAdding(true);
+                  planRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+                }}
                 className="h-10 whitespace-nowrap text-sm"
               >
                 <Plus className="mr-2 h-4 w-4" />
@@ -209,38 +205,20 @@ export const EnvironmentsPage = () => {
           </>
         )}
       </div>
-      <Dialog open={addEnvModalOpen} onOpenChange={setAddEnvModalOpen}>
-        <DialogContent className="max-h-[90vh] w-[calc(100%-2rem)] overflow-y-auto rounded-lg border p-6 shadow-lg md:max-h-[85vh] md:w-[500px]">
-          <DialogHeader className="mb-4">
-            <DialogTitle className="text-lg md:text-xl">Add Environment</DialogTitle>
-            <DialogDescription className="flex flex-col gap-2 text-sm md:flex-row md:items-start md:gap-2">
-              <span className="flex flex-row items-start gap-2">
-                <span>Please add the environments you want to configure.</span>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger type="button" asChild>
-                      <CircleHelp className="mt-0.5 h-4 w-4 shrink-0" />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs text-xs font-normal md:max-w-96 md:text-sm">
-                      You must have the corresponding branch in your repository.
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </span>
-            </DialogDescription>
-          </DialogHeader>
-          <div className="max-h-[calc(90vh-160px)] overflow-y-auto md:max-h-[calc(85vh-160px)]">
-            <AddEnvironmentModal
-              tenantGroupId={groupId ?? undefined}
-              projectName={environmentList && environmentList[0]?.projects[0]?.name}
-              preSelectedEnvironments={environmentList
-                .map((env) => env.projects.map((p) => p.environment))
-                .flat()}
-              onClose={handleAddEnvModalClose}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
+      {groupId && (
+        <div ref={planRef} className="scroll-mt-4">
+          <PlanPanel
+            tenantGroupId={groupId}
+            isOwner={isOwner}
+            existingEnvironments={[
+              ...(environmentList[0]?.projects ?? []),
+              ...(environmentList[0]?.nonSharedProject ?? []),
+            ].map((p) => p.environment)}
+            adding={adding}
+            onAddingChange={setAdding}
+          />
+        </div>
+      )}
     </main>
   );
 };

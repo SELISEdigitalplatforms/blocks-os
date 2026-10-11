@@ -11,6 +11,16 @@ namespace DomainService.Projects
         public string? TenantGroupId { get; set; }
         public List<Resource>? Resources { get; set; }
         public List<ApplicationContext> applicationContexts { get; set; }
+
+        /// <summary>Optional, at most 500 characters. Stored on a new project group only.</summary>
+        public string? Description { get; set; }
+
+        /// <summary>
+        /// Optional repository → environments plan for a new project group. Every ResourceId must
+        /// be one of <see cref="Resources"/>; per environment the count is capped by the
+        /// catalogue's <c>release.repos</c>.
+        /// </summary>
+        public List<DomainService.Shared.Entities.RepositoryDeployment>? RepositoryDeployments { get; set; }
     }
 
     public class ApplicationContext

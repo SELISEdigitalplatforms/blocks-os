@@ -1,6 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { catalogueMock } from "@/test-utils/__mocks__/catalogue.mock";
 
 vi.stubGlobal("matchMedia", (query: string) => ({
   matches: false,
@@ -13,56 +15,118 @@ vi.stubGlobal("matchMedia", (query: string) => ({
   dispatchEvent: vi.fn(),
 }));
 
-vi.stubGlobal(
-  "ResizeObserver",
-  class {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  },
-);
+const h = vi.hoisted(() => ({
+  nextStep: vi.fn(),
+  previousStep: vi.fn(),
+  reload: vi.fn(),
+  catalogue: { data: null as unknown, loading: false, error: null as Error | null },
+}));
 
-const h = vi.hoisted(() => ({ saveProject: vi.fn() }));
+vi.mock("@/components/stepper/stepper-provider", () => ({
+  useStepper: () => ({
+    nextStep: h.nextStep,
+    previousStep: h.previousStep,
+    goToStep: vi.fn(),
+    currentStep: 2,
+  }),
+}));
 
-vi.mock("@/hooks/use-project", () => ({
-  useProjectForm: () => ({ isPending: false, saveProject: h.saveProject }),
+vi.mock("@blocks-identifier/hooks/use-catalogue", () => ({
+  useCatalogue: () => ({ ...h.catalogue, reload: h.reload }),
 }));
 
 import { CreateProjectEnvironmentsForm } from "./create-project-environments-form";
 import { useCreateProjectFormState } from "../../utils";
 
+const renderForm = () =>
+  render(
+    <MemoryRouter>
+      <CreateProjectEnvironmentsForm />
+    </MemoryRouter>,
+  );
+
 describe("CreateProjectEnvironmentsForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useCreateProjectFormState.getState().resetFormData();
+    h.catalogue = { data: catalogueMock(), loading: false, error: null };
   });
 
-  it("renders the heading and the environment options with Submit disabled", () => {
-    render(<CreateProjectEnvironmentsForm />);
-    expect(screen.getByText("Select environments")).toBeTruthy();
-    expect(screen.getByText("Development")).toBeTruthy();
-    expect(screen.getByText("Production")).toBeTruthy();
-    // 8 environment options -> 8 checkboxes
-    expect(screen.getAllByRole("checkbox")).toHaveLength(8);
-    expect((screen.getByRole("button", { name: "Submit" }) as HTMLButtonElement).disabled).toBe(
+  it("always includes the free-tier environment, locked, on the free tier", () => {
+    renderForm();
+    expect(useCreateProjectFormState.getState().selection.environments).toEqual(["dev"]);
+    // dev has no checkbox (locked); test and prod do.
+    expect(screen.queryByRole("checkbox", { name: /Development/ })).toBeNull();
+    expect((screen.getByLabelText(/Free/, { selector: "input" }) as HTMLInputElement).checked).toBe(
       true,
     );
+    expect(screen.getByText("1 of 3")).toBeTruthy();
   });
 
-  it("enables Submit after selecting an environment and saves the project", async () => {
+  it("ticking an environment adds it in catalogue order and updates the total", async () => {
     const user = userEvent.setup();
-    render(<CreateProjectEnvironmentsForm />);
-
-    // First checkbox corresponds to the "Development" (dev) option.
-    await user.click(screen.getAllByRole("checkbox")[0]);
-
-    const submit = screen.getByRole("button", { name: "Submit" }) as HTMLButtonElement;
-    expect(submit.disabled).toBe(false);
-
-    await user.click(submit);
-    expect(h.saveProject).toHaveBeenCalledTimes(1);
-    expect(useCreateProjectFormState.getState().formData[2].environments).toEqual([
-      { value: "dev" },
+    renderForm();
+    await user.click(screen.getByRole("checkbox", { name: /Production/ }));
+    await user.click(screen.getByRole("checkbox", { name: /Test/ }));
+    expect(useCreateProjectFormState.getState().selection.environments).toEqual([
+      "dev",
+      "test",
+      "prod",
     ]);
+    expect(screen.getAllByText("CHF 380").length).toBeGreaterThan(0);
+  });
+
+  it("free development cannot be topped up; paid can", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    // dev is focused by default
+    expect(screen.getAllByText(/Free development can.t be topped up/).length).toBeGreaterThan(0);
+
+    await user.click(screen.getByLabelText(/Paid/, { selector: "input" }));
+    expect(useCreateProjectFormState.getState().selection.devTier).toBe("paid");
+    const more = screen.getAllByRole("button", { name: "One step more API calls" })[0];
+    await user.click(more);
+    expect(useCreateProjectFormState.getState().selection.topUps.dev).toEqual({ "api.calls": 1 });
+    // dev paid includes 100,000 calls → ceiling one step
+    expect((more as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("moving back to free drops development top-ups", async () => {
+    const user = userEvent.setup();
+    useCreateProjectFormState.getState().setSelection({
+      environments: ["dev"],
+      devTier: "paid",
+      topUps: { dev: { "api.calls": 1 } },
+    });
+    renderForm();
+    await user.click(screen.getByLabelText(/Free/, { selector: "input" }));
+    expect(useCreateProjectFormState.getState().selection.topUps.dev).toBeUndefined();
+  });
+
+  it("shows every limit of the focused environment, with policy -1 as Never stops", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.click(screen.getByRole("button", { name: "Show what Production includes" }));
+    expect(screen.getAllByRole("heading", { name: "Production" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Never stops").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("1,200,000").length).toBeGreaterThan(0);
+  });
+
+  it("offers a retry when the catalogue cannot be loaded", async () => {
+    const user = userEvent.setup();
+    h.catalogue = { data: null, loading: false, error: new Error("offline") };
+    renderForm();
+    expect(screen.getByText("The environment list could not be loaded.")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    expect(h.reload).toHaveBeenCalled();
+  });
+
+  it("Continue advances, Back goes back", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    expect(h.nextStep).toHaveBeenCalledTimes(1);
+    expect(h.previousStep).toHaveBeenCalledTimes(1);
   });
 });

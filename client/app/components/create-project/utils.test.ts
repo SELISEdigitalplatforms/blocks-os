@@ -1,19 +1,18 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { shortGuidGenerator, useCreateProjectFormState } from "./utils";
-import { createProjectNamingFormDefaultValue } from "./form/create-project-naming-form/utils";
-import { CreateProjectResourcesFormDefaultValue } from "./form/create-project-resources-form/utils";
-import { createProjectEnvironmentFormDefaultValue } from "./form/create-project-environments-form/utils";
+import { repositoryKey, shortGuidGenerator, useCreateProjectFormState } from "./utils";
 
 describe("shortGuidGenerator", () => {
-  it("returns a string of the requested length", () => {
-    expect(shortGuidGenerator(8)).toHaveLength(8);
-    expect(shortGuidGenerator(0)).toHaveLength(0);
-    expect(shortGuidGenerator(20)).toHaveLength(20);
+  it("returns lowercase letters of the requested length", () => {
+    const id = shortGuidGenerator(5);
+    expect(id).toMatch(/^[a-z]{5}$/);
   });
+});
 
-  it("only produces lowercase a-z characters", () => {
-    const value = shortGuidGenerator(200);
-    expect(value).toMatch(/^[a-z]*$/);
+describe("repositoryKey", () => {
+  it("prefers the provider id and falls back to the full name", () => {
+    expect(repositoryKey({ id: 42, name: "web", full_name: "acme/web" })).toBe("42");
+    expect(repositoryKey({ id: 0, name: "web", full_name: "acme/web" })).toBe("acme/web");
+    expect(repositoryKey({ name: "web", full_name: "" })).toBe("web");
   });
 });
 
@@ -22,33 +21,38 @@ describe("useCreateProjectFormState store", () => {
     useCreateProjectFormState.getState().resetFormData();
   });
 
-  it("initializes with the three default form values", () => {
-    const { formData } = useCreateProjectFormState.getState();
-    expect(formData).toHaveLength(3);
-    expect(formData[0]).toEqual(createProjectNamingFormDefaultValue);
-    expect(formData[1]).toEqual(CreateProjectResourcesFormDefaultValue);
-    expect(formData[2]).toEqual(createProjectEnvironmentFormDefaultValue);
+  it("starts empty, free tier, no project", () => {
+    const s = useCreateProjectFormState.getState();
+    expect(s.naming.name).toBe("");
+    expect(s.selection).toEqual({ environments: [], devTier: "free", topUps: {} });
+    expect(s.repositories).toEqual({ assets: [], deployments: {} });
+    expect(s.createdTenantGroupId).toBeNull();
   });
 
-  it("updates a single slice with setFormData", () => {
-    const next = {
-      name: "My Project",
-      isAcceptBlocksTerms: true,
-      isUseBlocksExclusively: true,
-    };
-    useCreateProjectFormState.getState().setFormData(0, next);
-    expect(useCreateProjectFormState.getState().formData[0]).toEqual(next);
+  it("merges partial selection and repository updates", () => {
+    const s = useCreateProjectFormState.getState();
+    s.setSelection({ environments: ["dev"] });
+    s.setSelection({ devTier: "paid" });
+    s.setRepositories({ deployments: { "1": ["dev"] } });
+    const after = useCreateProjectFormState.getState();
+    expect(after.selection).toEqual({ environments: ["dev"], devTier: "paid", topUps: {} });
+    expect(after.repositories.deployments).toEqual({ "1": ["dev"] });
+    expect(after.repositories.assets).toEqual([]);
   });
 
-  it("restores defaults with resetFormData", () => {
-    useCreateProjectFormState.getState().setFormData(2, {
-      environments: [{ value: "dev" }],
-    });
-    expect(useCreateProjectFormState.getState().formData[2].environments).toHaveLength(1);
+  it("reset forgets everything, including a created project", () => {
+    const s = useCreateProjectFormState.getState();
+    s.setCreatedTenantGroupId("grp-1");
+    s.setSelection({ environments: ["dev", "prod"] });
+    s.resetFormData();
+    const after = useCreateProjectFormState.getState();
+    expect(after.createdTenantGroupId).toBeNull();
+    expect(after.selection.environments).toEqual([]);
+  });
 
+  it("reset does not share state objects between runs", () => {
+    const first = useCreateProjectFormState.getState().selection;
     useCreateProjectFormState.getState().resetFormData();
-    expect(useCreateProjectFormState.getState().formData[2]).toEqual(
-      createProjectEnvironmentFormDefaultValue,
-    );
+    expect(useCreateProjectFormState.getState().selection).not.toBe(first);
   });
 });

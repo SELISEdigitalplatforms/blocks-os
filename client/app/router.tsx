@@ -27,7 +27,10 @@ import { ConfigureCaptcha } from "@blocks-idp/captcha/pages/configure-captcha";
 import { Organizations } from "@blocks-idp/iam/modules/organization-management";
 import { Permissions } from "@blocks-idp/iam/modules/permission-management";
 import { Roles } from "@blocks-idp/iam/modules/role-management";
-import { SignupLinkActivity, SignupLinkConfigurations } from "@blocks-idp/iam/modules/signup-link-management";
+import {
+  SignupLinkActivity,
+  SignupLinkConfigurations,
+} from "@blocks-idp/iam/modules/signup-link-management";
 import { Users } from "@blocks-idp/iam/modules/user-management";
 import { ConfigureMFA } from "@blocks-idp/mfa/pages/configure-mfa/configure-mfa";
 import { IdpSettingsPage } from "@blocks-idp/settings/pages/settings-page";
@@ -48,7 +51,8 @@ import { SettingsPage } from "@/pages/settings/settings";
 // Temporarily disabled
 import { SubscriptionUsagePage } from "@/pages/subscription-usage/subscription-usage-page";
 import { BillingPage } from "@/pages/billing/billing-page";
-import { CheckoutPage } from "@/pages/checkout/checkout-page";
+import { InvoicePage } from "@/pages/billing/invoice-page";
+import { CardsPage } from "@/pages/billing/cards-page";
 import { OrderPage } from "@/pages/order/order-page";
 // Temporarily disabled
 // import AiModelSelectedRoute from "@/pages/dashboard/ai-model-selected";
@@ -167,6 +171,13 @@ export const router = createBrowserRouter([
                     path: "create-project",
                     element: <CreateProjectWrapper />,
                   },
+                  // A brand-new project has no environment until its order is paid and built, so
+                  // the project layout (which needs one) would bounce it. Its first order is
+                  // watched here instead.
+                  {
+                    path: "creating/:tenantGroupId",
+                    element: <OrderPage />,
+                  },
                   {
                     path: "data-migration",
                     element: <EnvironmentMigrationPage />,
@@ -221,8 +232,18 @@ export const router = createBrowserRouter([
                     element: <BillingPage />,
                   },
                   {
+                    path: "billing/invoices/:invoiceId",
+                    element: <InvoicePage />,
+                  },
+                  {
+                    path: "billing/cards",
+                    element: <CardsPage />,
+                  },
+                  // Buying happens on the Environments tab now (top-ups, adding, upgrading);
+                  // old links to the standalone checkout land there.
+                  {
                     path: "checkout",
-                    element: <CheckoutPage />,
+                    element: <Navigate to="../environments" relative="path" replace />,
                   },
                   {
                     path: "order",

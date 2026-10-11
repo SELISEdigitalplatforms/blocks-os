@@ -82,6 +82,35 @@
         <member name="M:BlocksOs.Api.Controllers.BillingController.GetInvoices(System.String,System.Threading.CancellationToken)">
             <summary>Past invoices, newest first.</summary>
         </member>
+        <member name="M:BlocksOs.Api.Controllers.BillingController.GetInvoice(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>One invoice, for its detail screen.</summary>
+            <remarks>
+            Scoped by project: an invoice id from another project answers exactly like one that does
+            not exist, so an id alone reveals nothing.
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.BillingController.RemoveEnvironment(BlocksOs.Api.Controllers.EnvironmentRemovalRequest,System.Threading.CancellationToken)">
+            <summary>
+            Stops paying for one environment at the end of the current period.
+            </summary>
+            <remarks>
+            Nothing stops now and nothing is refunded: the environment runs to the end of the period
+            already paid for, and the renewal at that boundary drops it and switches it off. Taken
+            back with <c>environments/keep</c> any time before then.
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.BillingController.KeepEnvironment(BlocksOs.Api.Controllers.EnvironmentRemovalRequest,System.Threading.CancellationToken)">
+            <summary>Takes back a pending removal.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.BillingController.RetryPayment(BlocksOs.Api.Controllers.RetryPaymentRequest,System.Threading.CancellationToken)">
+            <summary>
+            Charges what a past-due project owes now, rather than at the next renewal.
+            </summary>
+            <remarks>
+            Same card and same amount the renewal would use: the carried balance plus VAT. On success
+            the newest unpaid invoice is marked paid and the project is no longer past due.
+            </remarks>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.BillingController.GetInvoicePdf(System.String,System.String,System.Threading.CancellationToken)">
             <summary>The invoice as a PDF, for keeping or forwarding.</summary>
         </member>
@@ -97,6 +126,27 @@
         </member>
         <member name="P:BlocksOs.Api.Controllers.CardSessionRequest.ReturnUrl">
             <summary>Where the provider sends the browser back after a challenge.</summary>
+        </member>
+        <member name="P:BlocksOs.Api.Controllers.SubscriptionLineView.Kind">
+            <summary>"environment" or "topup".</summary>
+        </member>
+        <member name="P:BlocksOs.Api.Controllers.SubscriptionLineView.Billing">
+            <summary>"rent" or "once". Always "rent" today: only recurring lines are on a subscription.</summary>
+        </member>
+        <member name="P:BlocksOs.Api.Controllers.SubscriptionLineView.EndsAtUtc">
+            <summary>When billing for this line stops, after a removal. Null while it continues.</summary>
+        </member>
+        <member name="P:BlocksOs.Api.Controllers.InvoiceView.OrderId">
+            <summary>The order this bills; null for a renewal.</summary>
+        </member>
+        <member name="P:BlocksOs.Api.Controllers.InvoiceView.NextRetryUtc">
+            <summary>Set on an unpaid invoice only: when the next renewal will try the amount again.</summary>
+        </member>
+        <member name="P:BlocksOs.Api.Controllers.EnvironmentRemovalRequest.Environment">
+            <summary>Catalogue key: dev, test, stg, iat, uat, pre-prod, prod.</summary>
+        </member>
+        <member name="P:BlocksOs.Api.Controllers.EnvironmentRemovalResponse.EffectiveUtc">
+            <summary>When billing stops — the subscription's next charge. Null after a keep.</summary>
         </member>
         <member name="P:BlocksOs.Api.Controllers.UnsubscribeResponse.OutstandingBalance">
             <summary>Owed at the moment of cancelling. Cancelling does not forgive it.</summary>
@@ -192,6 +242,11 @@
             <remarks>
             What the screen calls while someone is still choosing. Pricing through <c>start</c> on every
             change would leave an abandoned order behind every tick of a checkbox.
+            <para>
+            A blank <c>TenantGroupId</c> prices a brand-new project: nothing held, nothing prorated,
+            nothing saved. The project filter lets a blank group through by design, so the only check
+            on that path is the endpoint permission — which is all a price list needs.
+            </para>
             </remarks>
         </member>
         <member name="M:BlocksOs.Api.Controllers.CheckoutController.Start(DomainService.Billing.Models.StartCheckoutRequest,System.Threading.CancellationToken)">
@@ -205,7 +260,21 @@
             <remarks>
             Safe to call twice with the same key: the second call returns the first order rather than
             charging again.
+            <para>
+            A refusal is <c>IsSuccess = false</c> with the reason in <c>Errors["checkout"]</c> — the same
+            key start and quote use, and the one the console reads. The
+            reason is also left in <c>Order.State</c>, where earlier clients read it. A decline returns
+            the order itself (state <c>declined</c>, with its <c>DeclineReason</c>) and the reason
+            <c>checkout_declined</c>; an expired order returns <c>checkout_order_expired</c>. A charge
+            with no answer yet is not a failure: the order stays <c>pending</c> and is watched.
+            </para>
             </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.CheckoutController.PayFailure(DomainService.Billing.Models.OrderView)">
+            <summary>
+            Why a payment did not go through, or null when it did — or may still. A refusal before
+            any charge comes back as a bare reason in <c>State</c>; the rest are real order states.
+            </summary>
         </member>
         <member name="M:BlocksOs.Api.Controllers.CheckoutController.GetOrder(System.String,System.String,System.Threading.CancellationToken)">
             <summary>One order, for the screen that watches it.</summary>
@@ -389,6 +458,17 @@
         </member>
         <member name="M:BlocksOs.Api.Controllers.PeopleController.SaveAccessPolicy(DomainService.Access.SaveAccessPolicyRequest)">
             <summary>Owner-only, always — a grant must never be able to widen itself.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.ProjectController.GetRepositoryDeployments(DomainService.Projects.GetRepositoryDeploymentsRequest)">
+            <summary>
+            Which repository deploys to which environment, with each environment's repo limit.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.ProjectController.SaveRepositoryDeployments(DomainService.Projects.SaveRepositoryDeploymentsRequest)">
+            <summary>
+            Replaces the repository → environments plan. Owner only: it decides what each paid
+            environment's repository slots are spent on.
+            </summary>
         </member>
         <member name="M:BlocksOs.Api.Controllers.ProjectController.GetThirdPartyJwtProviders">
             <summary>

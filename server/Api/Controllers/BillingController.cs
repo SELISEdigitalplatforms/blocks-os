@@ -3,6 +3,7 @@ using DomainService.Access;
 using DomainService.Access.Services;
 using DomainService.Billing.Models;
 using DomainService.Billing.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BlocksOs.Api.Controllers;
@@ -31,6 +32,7 @@ public class BillingController : ControllerBase
     private readonly IInvoiceStore _invoices;
     private readonly IInvoicePdfWriter _pdf;
     private readonly IRenewalService _renewals;
+    private readonly IEnvironmentRemovalService _removals;
 
     public BillingController(
         IPaymentMethodService paymentMethods,
@@ -39,8 +41,10 @@ public class BillingController : ControllerBase
         ISubscriptionStore subscriptions,
         IInvoiceStore invoices,
         IInvoicePdfWriter pdf,
-        IRenewalService renewals)
+        IRenewalService renewals,
+        IEnvironmentRemovalService removals)
     {
+        _removals = removals;
         _paymentMethods = paymentMethods;
         _access = access;
         _gateway = gateway;
@@ -69,6 +73,7 @@ public class BillingController : ControllerBase
 
         return new PaymentMethodListResponse
         {
+            IsSuccess = true,
             Cards = await _paymentMethods.ListAsync(tenantGroupId, cancellationToken)
         };
     }
@@ -102,7 +107,7 @@ public class BillingController : ControllerBase
             cancellationToken);
 
         return session.IsSuccess
-            ? new CardSessionResponse { Session = session }
+            ? new CardSessionResponse { IsSuccess = true, Session = session }
             : new CardSessionResponse
             {
                 IsSuccess = false,
@@ -170,13 +175,14 @@ public class BillingController : ControllerBase
 
         if (subscription is null)
         {
-            return new SubscriptionResponse();
+            return new SubscriptionResponse { IsSuccess = true };
         }
 
         var beforeTax = subscription.MonthlyBeforeTax;
 
         return new SubscriptionResponse
         {
+            IsSuccess = true,
             Subscription = new SubscriptionView
             {
                 TenantGroupId = subscription.TenantGroupId,
@@ -190,11 +196,16 @@ public class BillingController : ControllerBase
                 LastChargedAtUtc = subscription.LastChargedAtUtc,
                 Lines = [.. subscription.Lines.Select(l => new SubscriptionLineView
                 {
+                    Kind = l.Kind,
                     Environment = l.Environment,
                     Label = l.Label,
                     Meter = l.Meter,
                     Units = l.Units,
                     Amount = l.Amount,
+                    // Everything on a subscription recurs; one-off units never reach it.
+                    Billing = "rent",
+                    EndsAtUtc = l.EndsAtUtc,
+                    PendingRemoval = l.EndsAtUtc is not null,
                 })],
             },
         };
@@ -219,29 +230,159 @@ public class BillingController : ControllerBase
 
         return new InvoiceListResponse
         {
-            Invoices = [.. invoices.Select(i => new InvoiceView
-            {
-                InvoiceId = i.ItemId,
-                Number = i.Number,
-                Market = i.Market,
-                Subtotal = i.Subtotal,
-                Vat = i.Vat,
-                Total = i.Total,
-                CarriedIn = i.CarriedIn,
-                State = i.State,
-                IssuedAtUtc = i.IssuedAtUtc,
-                PaidAtUtc = i.PaidAtUtc,
-                Lines = [.. i.Lines.Select(l => new InvoiceLineView
-                {
-                    Label = l.Label,
-                    Environment = l.Environment,
-                    Units = l.Units,
-                    Amount = l.Amount,
-                    Billing = l.Billing,
-                })],
-            })],
+            IsSuccess = true,
+            Invoices = [.. invoices.Select(ToView)],
         };
     }
+
+    /// <summary>One invoice, for its detail screen.</summary>
+    /// <remarks>
+    /// Scoped by project: an invoice id from another project answers exactly like one that does
+    /// not exist, so an id alone reveals nothing.
+    /// </remarks>
+    [HttpGet("invoices/{invoiceId}")]
+    [Authorize] // LOCAL-TEST: restore [ProtectedEndPoint("blocks-os::billing::read")] before push
+    [ProjectPolicy("subscription::view")]
+    public async Task<InvoiceResponse> GetInvoice(
+        [FromQuery] string tenantGroupId,
+        [FromRoute] string invoiceId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(tenantGroupId))
+        {
+            return Missing<InvoiceResponse>();
+        }
+
+        await _access.ResolveAsync(tenantGroupId, cancellationToken);
+
+        var invoice = string.IsNullOrWhiteSpace(invoiceId)
+            ? null
+            : await _invoices.GetAsync(tenantGroupId, invoiceId, cancellationToken);
+
+        return invoice is null
+            ? new InvoiceResponse
+            {
+                IsSuccess = false,
+                Errors = new Dictionary<string, string> { { "invoice", BillingFailures.InvoiceNotFound } },
+            }
+            : new InvoiceResponse { IsSuccess = true, Invoice = ToView(invoice) };
+    }
+
+    private static InvoiceView ToView(DomainService.Billing.Entities.Invoice i) => new()
+    {
+        InvoiceId = i.ItemId,
+        Number = i.Number,
+        Market = i.Market,
+        Subtotal = i.Subtotal,
+        Vat = i.Vat,
+        Total = i.Total,
+        CarriedIn = i.CarriedIn,
+        State = i.State,
+        IssuedAtUtc = i.IssuedAtUtc,
+        PaidAtUtc = i.PaidAtUtc,
+        PeriodStartUtc = i.PeriodStartUtc,
+        PeriodEndUtc = i.PeriodEndUtc,
+        OrderId = string.IsNullOrWhiteSpace(i.OrderId) ? null : i.OrderId,
+        PaymentMethodBrand = string.IsNullOrWhiteSpace(i.PaymentMethodBrand) ? null : i.PaymentMethodBrand,
+        PaymentMethodLastFour = string.IsNullOrWhiteSpace(i.PaymentMethodLastFour) ? null : i.PaymentMethodLastFour,
+        DeclinedAtUtc = i.DeclinedAtUtc,
+        // Only an invoice still owed has a next attempt.
+        NextRetryUtc = i.State == DomainService.Billing.Entities.InvoiceStates.Unpaid ? i.NextRetryUtc : null,
+        Lines = [.. i.Lines.Select(l => new InvoiceLineView
+        {
+            Label = l.Label,
+            Environment = l.Environment,
+            Units = l.Units,
+            Amount = l.Amount,
+            Billing = l.Billing,
+        })],
+    };
+
+    /// <summary>
+    /// Stops paying for one environment at the end of the current period.
+    /// </summary>
+    /// <remarks>
+    /// Nothing stops now and nothing is refunded: the environment runs to the end of the period
+    /// already paid for, and the renewal at that boundary drops it and switches it off. Taken
+    /// back with <c>environments/keep</c> any time before then.
+    /// </remarks>
+    [HttpPost("environments/remove")]
+    [Authorize] // LOCAL-TEST: restore [ProtectedEndPoint("blocks-os::billing::manage")] before push
+    [ProjectPolicy(OwnerOnly = true)]
+    public async Task<EnvironmentRemovalResponse> RemoveEnvironment(
+        [FromBody] EnvironmentRemovalRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.TenantGroupId))
+        {
+            return Missing<EnvironmentRemovalResponse>();
+        }
+
+        await _access.ResolveAsync(request.TenantGroupId, cancellationToken);
+
+        return Respond(await _removals.RemoveAsync(request.TenantGroupId, request.Environment ?? string.Empty, cancellationToken));
+    }
+
+    /// <summary>Takes back a pending removal.</summary>
+    [HttpPost("environments/keep")]
+    [Authorize] // LOCAL-TEST: restore [ProtectedEndPoint("blocks-os::billing::manage")] before push
+    [ProjectPolicy(OwnerOnly = true)]
+    public async Task<EnvironmentRemovalResponse> KeepEnvironment(
+        [FromBody] EnvironmentRemovalRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.TenantGroupId))
+        {
+            return Missing<EnvironmentRemovalResponse>();
+        }
+
+        await _access.ResolveAsync(request.TenantGroupId, cancellationToken);
+
+        return Respond(await _removals.KeepAsync(request.TenantGroupId, request.Environment ?? string.Empty, cancellationToken));
+    }
+
+    /// <summary>
+    /// Charges what a past-due project owes now, rather than at the next renewal.
+    /// </summary>
+    /// <remarks>
+    /// Same card and same amount the renewal would use: the carried balance plus VAT. On success
+    /// the newest unpaid invoice is marked paid and the project is no longer past due.
+    /// </remarks>
+    [HttpPost("retry-payment")]
+    [Authorize] // LOCAL-TEST: restore [ProtectedEndPoint("blocks-os::billing::manage")] before push
+    [ProjectPolicy(OwnerOnly = true)]
+    public async Task<RetryPaymentResponse> RetryPayment(
+        [FromBody] RetryPaymentRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.TenantGroupId))
+        {
+            return Missing<RetryPaymentResponse>();
+        }
+
+        await _access.ResolveAsync(request.TenantGroupId, cancellationToken);
+
+        var result = await _renewals.RetryPaymentAsync(request.TenantGroupId, cancellationToken);
+
+        return new RetryPaymentResponse
+        {
+            IsSuccess = result.IsSuccess,
+            Errors = result.IsSuccess
+                ? new Dictionary<string, string>()
+                : new Dictionary<string, string> { { "billing", result.Reason } },
+            State = result.State,
+            CarriedBalance = result.CarriedBalance,
+        };
+    }
+
+    private static EnvironmentRemovalResponse Respond(EnvironmentRemovalResult result) =>
+        result.IsSuccess
+            ? new EnvironmentRemovalResponse { IsSuccess = true, EffectiveUtc = result.EffectiveUtc }
+            : new EnvironmentRemovalResponse
+            {
+                IsSuccess = false,
+                Errors = new Dictionary<string, string> { { "billing", result.Reason } },
+            };
 
     /// <summary>The invoice as a PDF, for keeping or forwarding.</summary>
     [HttpGet("invoices/{invoiceId}/pdf")]
@@ -299,6 +440,7 @@ public class BillingController : ControllerBase
         return result.IsSuccess
             ? new UnsubscribeResponse
             {
+                IsSuccess = true,
                 OutstandingBalance = result.OutstandingBalance,
                 EffectiveUtc = result.EffectiveUtc,
             }
@@ -311,7 +453,7 @@ public class BillingController : ControllerBase
 
     private static PaymentMethodResponse Respond(PaymentMethodResult result) =>
         result.IsSuccess
-            ? new PaymentMethodResponse { PaymentMethodId = result.PaymentMethodId }
+            ? new PaymentMethodResponse { IsSuccess = true, PaymentMethodId = result.PaymentMethodId }
             : new PaymentMethodResponse
             {
                 IsSuccess = false,
@@ -373,11 +515,21 @@ public sealed class SubscriptionView
 
 public sealed class SubscriptionLineView
 {
+    /// <summary>"environment" or "topup".</summary>
+    public string Kind { get; set; } = string.Empty;
     public string Environment { get; set; } = string.Empty;
     public string Label { get; set; } = string.Empty;
     public string Meter { get; set; } = string.Empty;
     public long Units { get; set; }
     public decimal Amount { get; set; }
+
+    /// <summary>"rent" or "once". Always "rent" today: only recurring lines are on a subscription.</summary>
+    public string Billing { get; set; } = "rent";
+
+    /// <summary>When billing for this line stops, after a removal. Null while it continues.</summary>
+    public DateTime? EndsAtUtc { get; set; }
+
+    public bool PendingRemoval { get; set; }
 }
 
 public sealed class InvoiceListResponse : BaseResponse
@@ -397,7 +549,50 @@ public sealed class InvoiceView
     public string State { get; set; } = string.Empty;
     public DateTime IssuedAtUtc { get; set; }
     public DateTime? PaidAtUtc { get; set; }
+    public DateTime? PeriodStartUtc { get; set; }
+    public DateTime? PeriodEndUtc { get; set; }
+
+    /// <summary>The order this bills; null for a renewal.</summary>
+    public string? OrderId { get; set; }
+
+    public string? PaymentMethodBrand { get; set; }
+    public string? PaymentMethodLastFour { get; set; }
+    public DateTime? DeclinedAtUtc { get; set; }
+
+    /// <summary>Set on an unpaid invoice only: when the next renewal will try the amount again.</summary>
+    public DateTime? NextRetryUtc { get; set; }
+
     public List<InvoiceLineView> Lines { get; set; } = [];
+}
+
+public sealed class InvoiceResponse : BaseResponse
+{
+    public InvoiceView? Invoice { get; set; }
+}
+
+public sealed class EnvironmentRemovalRequest
+{
+    public string TenantGroupId { get; set; } = string.Empty;
+
+    /// <summary>Catalogue key: dev, test, stg, iat, uat, pre-prod, prod.</summary>
+    public string Environment { get; set; } = string.Empty;
+}
+
+public sealed class EnvironmentRemovalResponse : BaseResponse
+{
+    /// <summary>When billing stops — the subscription's next charge. Null after a keep.</summary>
+    public DateTime? EffectiveUtc { get; set; }
+}
+
+public sealed class RetryPaymentRequest
+{
+    public string TenantGroupId { get; set; } = string.Empty;
+}
+
+public sealed class RetryPaymentResponse : BaseResponse
+{
+    public string State { get; set; } = string.Empty;
+    public decimal CarriedBalance { get; set; }
 }
 
 public sealed class InvoiceLineView

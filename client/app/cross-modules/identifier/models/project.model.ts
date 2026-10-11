@@ -55,6 +55,9 @@ export interface ICreateProjectPayload {
     cookieDomain: string;
   }[];
   tenantGroupId?: string;
+  description?: string;
+  /** Which environments deploy each connected repository (by its resourceId). */
+  repositoryDeployments?: { resourceId: string; environments: string[] }[];
 }
 export interface IGetProjectResponse {
   data: IProject;

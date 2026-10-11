@@ -5,7 +5,9 @@ import { ProjectEnvironmentCheckboxes } from "./project-environment-checkboxes";
 describe("ProjectEnvironmentCheckboxes compact variant", () => {
   it("shows environment and branch chips without the wizard descriptions", () => {
     const onToggle = vi.fn();
-    render(<ProjectEnvironmentCheckboxes variant="compact" selected={["dev"]} onToggle={onToggle} />);
+    render(
+      <ProjectEnvironmentCheckboxes variant="compact" selected={["dev"]} onToggle={onToggle} />,
+    );
 
     const development = screen.getByRole("button", { name: "Development, branch dev" });
     const production = screen.getByRole("button", { name: "Production, branch main" });
@@ -26,5 +28,38 @@ describe("ProjectEnvironmentCheckboxes default variant", () => {
 
     fireEvent.click(screen.getByText("Development", { exact: true }));
     expect(onToggle).toHaveBeenCalledWith("dev", true);
+  });
+});
+
+describe("ProjectEnvironmentCheckboxes catalogue options", () => {
+  it("shows the catalogue price and meter count when given", () => {
+    render(
+      <ProjectEnvironmentCheckboxes
+        selected={[]}
+        onToggle={vi.fn()}
+        options={[
+          {
+            label: "Development",
+            value: "dev",
+            subtext: "",
+            priceLabel: "BDT 500 · free tier available",
+            meterCount: 3,
+          },
+          { label: "Production", value: "prod", subtext: "", priceLabel: null, meterCount: 0 },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("BDT 500 · free tier available")).toBeTruthy();
+    expect(screen.getByText("3 metered limits")).toBeTruthy();
+    expect(screen.queryByText("0 metered limits")).toBeNull();
+    expect(screen.queryByText("Staging", { exact: true })).toBeNull();
+  });
+
+  it("falls back to the static list without prices", () => {
+    render(<ProjectEnvironmentCheckboxes selected={[]} onToggle={vi.fn()} />);
+
+    expect(screen.getByText("Development", { exact: true })).toBeTruthy();
+    expect(screen.queryByText(/metered limits/)).toBeNull();
   });
 });

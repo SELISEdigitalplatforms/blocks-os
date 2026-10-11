@@ -41,6 +41,16 @@ public static class BillingServiceCollectionExtensions
         services.TryAddScoped<IInvoiceStore, InvoiceStore>();
         services.TryAddScoped<IRenewalService, RenewalService>();
         services.TryAddScoped<IInvoiceMailer, InvoiceMailer>();
+        services.TryAddScoped<IOrderInvoiceWriter, OrderInvoiceWriter>();
+
+        // What a project already holds — read by checkout, payment and project creation alike, so
+        // all three agree on "already has dev" and "free tier taken".
+        services.TryAddScoped<IProjectInventory, ProjectInventory>();
+
+        // Removing an environment: the billing half here, the switch-off through the same path
+        // as the console's Disable.
+        services.TryAddScoped<IEnvironmentRemovalService, EnvironmentRemovalService>();
+        services.TryAddScoped<IEnvironmentDisabler, ProjectEnvironmentDisabler>();
         services.TryAddSingleton<IInvoicePdfWriter, InvoicePdfWriter>();
 
         // The payment provider's own notifications: the authority on whether money moved, and the

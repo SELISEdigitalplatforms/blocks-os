@@ -779,6 +779,19 @@ namespace DomainService.Projects
             await collection.ReplaceOneAsync(filter, asset, new ReplaceOptions { IsUpsert = true });
         }
 
+        public async Task<bool> UpdateRepositoryDeploymentsAsync(string tenantGroupId, List<RepositoryDeployment> deployments)
+        {
+            var collection = _clientDb.GetCollection<TenantAsset>(IdentifierConstants.TenantAssetCollectionName);
+            var result = await collection.UpdateOneAsync(
+                Builders<TenantAsset>.Filter.Eq(mc => mc.TenantGroupId, tenantGroupId),
+                Builders<TenantAsset>.Update
+                    .Set(mc => mc.RepositoryDeployments, deployments)
+                    .Set(mc => mc.LastUpdatedBy, BlocksContext.GetContext()?.UserId)
+                    .Set(mc => mc.LastUpdatedDate, DateTime.UtcNow));
+
+            return result.MatchedCount > 0;
+        }
+
         public async Task<BlocksGuid> GetBlocksGuidAsync(string tenantGroupId)
         {
             var collection = _clientDb.GetCollection<BlocksGuid>($"{nameof(BlocksGuid)}s");

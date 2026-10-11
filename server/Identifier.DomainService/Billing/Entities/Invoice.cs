@@ -8,7 +8,8 @@ namespace DomainService.Billing.Entities;
 /// <remarks>
 /// Root database, one per charge. Written when the money moves, never edited afterwards: an
 /// invoice is a record of what happened, and a correction is a new document rather than a change
-/// to this one.
+/// to this one. The one exception is settlement — an unpaid invoice collected by a retry is
+/// marked paid; its lines and amounts never change.
 /// </remarks>
 public sealed class Invoice
 {
@@ -39,9 +40,22 @@ public sealed class Invoice
     public DateTime IssuedAtUtc { get; set; }
     public DateTime? PaidAtUtc { get; set; }
 
-    /// <summary>The period this covers, for a renewal.</summary>
+    /// <summary>The period this covers: a renewal's whole period, or an order's remainder of one.</summary>
     public DateTime? PeriodStartUtc { get; set; }
     public DateTime? PeriodEndUtc { get; set; }
+
+    // The card that was charged, as printed on it. Display only; empty when no card was known.
+    public string PaymentMethodBrand { get; set; } = string.Empty;
+    public string PaymentMethodLastFour { get; set; } = string.Empty;
+
+    /// <summary>When collection failed, for an unpaid invoice.</summary>
+    public DateTime? DeclinedAtUtc { get; set; }
+
+    /// <summary>
+    /// When the amount is next tried on its own: the next renewal, which carries it. The owner can
+    /// also retry sooner from the billing screen.
+    /// </summary>
+    public DateTime? NextRetryUtc { get; set; }
 }
 
 public sealed class InvoiceLine

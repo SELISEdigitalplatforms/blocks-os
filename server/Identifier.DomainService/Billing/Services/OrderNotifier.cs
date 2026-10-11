@@ -70,6 +70,9 @@ public sealed class OrderNotifier : IOrderNotifier
         var payload = new
         {
             orderId = order.OrderId,
+            // The console has several projects open over one socket; this is how it knows which
+            // project's screen an update belongs to.
+            tenantGroupId = order.TenantGroupId,
             state = order.State,
             headline,
             stepsDone = order.StepsDone,
@@ -95,9 +98,18 @@ public sealed class OrderNotifier : IOrderNotifier
 
         try
         {
-            using var response = await _http
-                .PostAsJsonAsync("Notifier/Notify", request, cancellationToken)
-                .ConfigureAwait(false);
+            using var message = new HttpRequestMessage(HttpMethod.Post, "Notifier/Notify")
+            {
+                Content = JsonContent.Create(request),
+            };
+            // blocks-logic resolves the tenant from this key; without it the push lands in whichever
+            // tenant owns logic's host name (or is refused on localhost), not where the console listens.
+            if (!string.IsNullOrWhiteSpace(order.NotifyTenantId))
+            {
+                message.Headers.TryAddWithoutValidation("X-Blocks-Key", order.NotifyTenantId);
+            }
+
+            using var response = await _http.SendAsync(message, cancellationToken).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {

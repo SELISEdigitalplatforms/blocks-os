@@ -35,6 +35,13 @@ public sealed class SubscriptionOrder
 
     public string CreatedByUserId { get; set; } = string.Empty;
 
+    /// <summary>
+    /// The tenant the console made the purchase from (its x-blocks-key). Order pushes are sent to
+    /// blocks-logic under this tenant, because that is the tenant the console's hub connection
+    /// listens on; the worker has no request of its own to take it from.
+    /// </summary>
+    public string NotifyTenantId { get; set; } = string.Empty;
+
     public string State { get; set; } = OrderStates.Pending;
 
     // What was bought, priced at checkout so a later price change cannot alter a taken payment.
@@ -83,12 +90,12 @@ public sealed class SubscriptionOrder
     /// <summary>Steps finished across every environment — what the progress bar counts.</summary>
     public int StepsDone => Progress.Sum(p => p.StepsDone);
 
-    public int StepsTotal => Progress.Count * ProvisioningSteps.All.Count;
+    public int StepsTotal => Progress.Sum(p => ProvisioningSteps.For(p).Count);
 }
 
 public sealed class OrderLine
 {
-    /// <summary>"environment" or "topup".</summary>
+    /// <summary>"environment", "topup", or "upgrade" (a free environment moving to the paid tier).</summary>
     public string Kind { get; set; } = string.Empty;
     public string Environment { get; set; } = string.Empty;
 
@@ -100,6 +107,31 @@ public sealed class OrderLine
 
     /// <summary>"once" for counter units that carry, "rent" for a ceiling charged while held.</summary>
     public string Billing { get; set; } = "once";
+
+    /// <summary>What the customer saw at checkout, so the invoice says the same thing.</summary>
+    public string Label { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The full monthly price of a rent line, when <see cref="Amount"/> is only part of it.
+    /// </summary>
+    /// <remarks>
+    /// Added mid-period, a rent line is charged today only for the days left; the subscription
+    /// must still carry the whole price from the next period on. Null on a one-off line and on
+    /// orders written before proration, where <see cref="Amount"/> is the full price.
+    /// </remarks>
+    public decimal? RecurringAmount { get; set; }
+
+    /// <summary>
+    /// The environment is taken at the free price. Explicit rather than read from a zero amount:
+    /// a paid line prorated over very few days must never be mistaken for the free tier.
+    /// </summary>
+    public bool FreeTier { get; set; }
+
+    /// <summary>
+    /// The tenant an upgrade line raises. Known at checkout, because an upgrade is for an
+    /// environment that already exists; empty on every other kind of line.
+    /// </summary>
+    public string TenantId { get; set; } = string.Empty;
 }
 
 /// <summary>How far one environment has got, and how hard it has tried.</summary>
@@ -108,7 +140,13 @@ public sealed class OrderEnvironmentProgress
     public string TenantId { get; set; } = string.Empty;
     public string Environment { get; set; } = string.Empty;
 
-    /// <summary>Index into <see cref="ProvisioningSteps.All"/>; equals the count when finished.</summary>
+    /// <summary>
+    /// An existing free environment moving to the paid tier. Nothing is created: its one step
+    /// raises its limits, and <see cref="ProvisioningSteps.For"/> says so.
+    /// </summary>
+    public bool Upgrade { get; set; }
+
+    /// <summary>Index into <see cref="ProvisioningSteps.For"/>; equals the count when finished.</summary>
     public int StepsDone { get; set; }
 
     /// <summary>
@@ -124,7 +162,7 @@ public sealed class OrderEnvironmentProgress
     /// <summary>Kept for operations. The customer is told a step is retrying, never why.</summary>
     public string LastError { get; set; } = string.Empty;
 
-    public bool IsComplete => StepsDone >= ProvisioningSteps.All.Count;
+    public bool IsComplete => StepsDone >= ProvisioningSteps.For(this).Count;
 }
 
 public static class OrderStates
@@ -168,8 +206,18 @@ public static class ProvisioningSteps
     public const string ApplySettings = "IsProjectUpdated";
     public const string SeedQuota = "QuotaSeeded";
 
+    /// <summary>The only step of an upgrade: re-seed the existing tenant's limits on the paid set.</summary>
+    public const string RaiseLimits = "LimitsRaised";
+
     public static readonly IReadOnlyList<string> All =
         [CreateTenant, AddPeople, UploadCertificates, CopyConfiguration, ApplySettings, SeedQuota];
+
+    /// <summary>An upgrade creates nothing; it only raises the limits of a tenant that exists.</summary>
+    public static readonly IReadOnlyList<string> Upgrade = [RaiseLimits];
+
+    /// <summary>The steps one environment of an order goes through.</summary>
+    public static IReadOnlyList<string> For(OrderEnvironmentProgress progress) =>
+        progress is { Upgrade: true } ? Upgrade : All;
 
     /// <summary>What a customer is shown. The flag names above are for logs and operations.</summary>
     public static readonly IReadOnlyDictionary<string, string> Friendly =
@@ -181,10 +229,15 @@ public static class ProvisioningSteps
             [CopyConfiguration] = "Applying configuration",
             [ApplySettings] = "Applying settings",
             [SeedQuota] = "Setting your limits",
+            [RaiseLimits] = "Raising your limits",
         };
 
-    public static string FriendlyAt(int index) =>
-        index >= 0 && index < All.Count && Friendly.TryGetValue(All[index], out var label)
+    public static string FriendlyAt(int index) => FriendlyAt(All, index);
+
+    public static string FriendlyAt(OrderEnvironmentProgress progress) => FriendlyAt(For(progress), progress.StepsDone);
+
+    private static string FriendlyAt(IReadOnlyList<string> steps, int index) =>
+        index >= 0 && index < steps.Count && Friendly.TryGetValue(steps[index], out var label)
             ? label
             : string.Empty;
 }

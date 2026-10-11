@@ -20,7 +20,38 @@ namespace XUnitTest.Controllers
         private readonly Mock<IValidator<CreateProjectRequest>> _createValidator = new();
         private readonly Mock<IValidator<UpdateProjectRequest>> _updateValidator = new();
 
-        private ProjectController Controller() => new(_service.Object, _createValidator.Object, _updateValidator.Object);
+        private readonly Mock<IProjectCreationGuard> _guard = new();
+        private readonly Mock<IRepositoryDeploymentService> _deployments = new();
+
+        private ProjectController Controller() => new(_service.Object, _createValidator.Object, _updateValidator.Object, _guard.Object, _deployments.Object);
+
+        [Fact]
+        public async Task Create_RefusedByTheGuard_CreatesNothing()
+        {
+            _createValidator.Setup(v => v.ValidateAsync(It.IsAny<CreateProjectRequest>(), It.IsAny<CancellationToken>()))
+                            .ReturnsAsync(Valid());
+            _guard.Setup(g => g.CheckAsync(It.IsAny<CreateProjectRequest>(), It.IsAny<CancellationToken>()))
+                  .ReturnsAsync(new Dictionary<string, string> { ["Environments"] = ProjectCreationGuard.RequiresCheckout });
+
+            var response = await Controller().Create(new CreateProjectRequest());
+
+            response.IsSuccess.Should().BeFalse();
+            response.Errors.Should().Contain("Environments", ProjectCreationGuard.RequiresCheckout);
+            _service.Verify(s => s.SaveProjectAsync(It.IsAny<CreateProjectRequest>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Create_Succeeded_SeedsTheFreeEnvironments()
+        {
+            _createValidator.Setup(v => v.ValidateAsync(It.IsAny<CreateProjectRequest>(), It.IsAny<CancellationToken>()))
+                            .ReturnsAsync(Valid());
+            _service.Setup(s => s.SaveProjectAsync(It.IsAny<CreateProjectRequest>()))
+                    .ReturnsAsync(new CreateProjectResponse { IsSuccess = true, TenantGroupId = "g1" });
+
+            await Controller().Create(new CreateProjectRequest());
+
+            _guard.Verify(g => g.SeedFreeEnvironmentsAsync(It.IsAny<CreateProjectRequest>(), "g1", It.IsAny<CancellationToken>()), Times.Once);
+        }
 
         private static ValidationResult Valid() => new();
         private static ValidationResult Invalid() => new(new[] { new ValidationFailure("Name", "required") });

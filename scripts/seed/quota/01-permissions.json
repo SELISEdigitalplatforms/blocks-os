@@ -1,0 +1,134 @@
+[
+  {
+    "_id": "253b6e68-d056-5675-abfb-4260fe2322d2",
+    "Name": "Read Project Billing",
+    "Type": 1,
+    "Description": "Read a project's cards, subscription, invoices (incl. PDF) and checkout orders. Covers: GET /api/Billing/cards, /subscription, /invoices, /invoices/{id}, /invoices/{id}/pdf; POST /api/Checkout/quote; GET /api/Checkout/order, /active.",
+    "Resource": "blocks-os::billing::read",
+    "ResourceGroup": "os",
+    "IsBuiltIn": true,
+    "IsArchived": false,
+    "PermissionSeverity": 2,
+    "DependentPermissions": [],
+    "Roles": [],
+    "OrganizationId": "default",
+    "OrganizationIds": [],
+    "Tags": [
+      "quota"
+    ],
+    "Language": null,
+    "CreatedBy": "seed",
+    "LastUpdatedBy": "seed"
+  },
+  {
+    "_id": "384869b5-8cf1-5a13-a6f7-d8bb14edd998",
+    "Name": "Manage Project Billing",
+    "Type": 1,
+    "Description": "Buy and change what a project pays for: open and pay checkout orders, add/set default/remove cards, remove or keep an environment at the period boundary, retry a past-due payment, unsubscribe. Covers: POST /api/Checkout/start, /pay; POST /api/Billing/cards/session, /cards/default, /cards/remove, /environments/remove, /environments/keep, /retry-payment, /unsubscribe. Owner-only in addition.",
+    "Resource": "blocks-os::billing::manage",
+    "ResourceGroup": "os",
+    "IsBuiltIn": true,
+    "IsArchived": false,
+    "PermissionSeverity": 1,
+    "DependentPermissions": [
+      "blocks-os::billing::read"
+    ],
+    "Roles": [],
+    "OrganizationId": "default",
+    "OrganizationIds": [],
+    "Tags": [
+      "quota"
+    ],
+    "Language": null,
+    "CreatedBy": "seed",
+    "LastUpdatedBy": "seed"
+  },
+  {
+    "_id": "22e691fa-3caa-5f85-9243-a5b807b6f7ab",
+    "Name": "Read Project Usage",
+    "Type": 1,
+    "Description": "Read every quota meter of every environment of a project. Covers: GET /api/Usage.",
+    "Resource": "blocks-os::usage::read",
+    "ResourceGroup": "os",
+    "IsBuiltIn": true,
+    "IsArchived": false,
+    "PermissionSeverity": 4,
+    "DependentPermissions": [],
+    "Roles": [],
+    "OrganizationId": "default",
+    "OrganizationIds": [],
+    "Tags": [
+      "quota"
+    ],
+    "Language": null,
+    "CreatedBy": "seed",
+    "LastUpdatedBy": "seed"
+  },
+  {
+    "_id": "97f48cce-670d-5bc2-86ad-c7fbb3051439",
+    "Name": "Sync Project Usage",
+    "Type": 1,
+    "Description": "Create or update an environment's quota rows from the published catalogue. Covers: POST /api/Usage/sync.",
+    "Resource": "blocks-os::usage::save",
+    "ResourceGroup": "os",
+    "IsBuiltIn": true,
+    "IsArchived": false,
+    "PermissionSeverity": 3,
+    "DependentPermissions": [
+      "blocks-os::usage::read"
+    ],
+    "Roles": [],
+    "OrganizationId": "default",
+    "OrganizationIds": [],
+    "Tags": [
+      "quota"
+    ],
+    "Language": null,
+    "CreatedBy": "seed",
+    "LastUpdatedBy": "seed"
+  },
+  {
+    "_id": "97e0b208-8514-5d60-adcc-80bbd7889e64",
+    "Name": "Read Plan Catalogue",
+    "Type": 1,
+    "Description": "Read the published catalogue (environments, meters, limits, prices, top-up steps) and its history. Covers: GET /api/Catalogue, /api/Catalogue/history.",
+    "Resource": "blocks-os::catalogue::read",
+    "ResourceGroup": "os",
+    "IsBuiltIn": true,
+    "IsArchived": false,
+    "PermissionSeverity": 4,
+    "DependentPermissions": [],
+    "Roles": [],
+    "OrganizationId": "default",
+    "OrganizationIds": [],
+    "Tags": [
+      "quota"
+    ],
+    "Language": null,
+    "CreatedBy": "seed",
+    "LastUpdatedBy": "seed"
+  },
+  {
+    "_id": "ff97a202-4f09-5d0f-a0e2-f0f436660969",
+    "Name": "Publish Plan Catalogue",
+    "Type": 1,
+    "Description": "Publish a new catalogue and price book, or reload the active one. Changes what every project is sold and limited to. Covers: POST /api/Catalogue/publish, /api/Catalogue/reload.",
+    "Resource": "blocks-os::catalogue::save",
+    "ResourceGroup": "os",
+    "IsBuiltIn": true,
+    "IsArchived": false,
+    "PermissionSeverity": 1,
+    "DependentPermissions": [
+      "blocks-os::catalogue::read"
+    ],
+    "Roles": [],
+    "OrganizationId": "default",
+    "OrganizationIds": [],
+    "Tags": [
+      "quota"
+    ],
+    "Language": null,
+    "CreatedBy": "seed",
+    "LastUpdatedBy": "seed"
+  }
+]

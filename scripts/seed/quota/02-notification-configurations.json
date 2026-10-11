@@ -1,0 +1,32 @@
+[
+  {
+    "_id": "6f1c2a40-0b7e-4c1d-9a3e-5b8d2c7e1a01",
+    "Name": "subscription-order-progress",
+    "ChannelToNotify": 0,
+    "NotificationType": 2,
+    "NotifyMethod": "SubscriptionOrderProgress",
+    "EnablePersistence": false,
+    "OrganizationId": "default",
+    "Tags": [
+      "quota"
+    ],
+    "Language": null,
+    "CreatedBy": "seed",
+    "LastUpdatedBy": "seed"
+  },
+  {
+    "_id": "6f1c2a40-0b7e-4c1d-9a3e-5b8d2c7e1a02",
+    "Name": "subscription-order-status",
+    "ChannelToNotify": 0,
+    "NotificationType": 2,
+    "NotifyMethod": "SubscriptionOrderStatus",
+    "EnablePersistence": true,
+    "OrganizationId": "default",
+    "Tags": [
+      "quota"
+    ],
+    "Language": null,
+    "CreatedBy": "seed",
+    "LastUpdatedBy": "seed"
+  }
+]

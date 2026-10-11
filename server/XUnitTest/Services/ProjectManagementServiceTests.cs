@@ -142,6 +142,71 @@ namespace XUnitTest.Services
         }
 
         [Fact]
+        public async Task SaveProjectAsync_NoEnvironments_CreatesOnlyTheGroup()
+        {
+            using var _ = new BlocksTestContext(userId: "creator-1");
+            TenantAsset? written = null;
+            _repo.Setup(r => r.UpdateTenantAssetAsync(It.IsAny<TenantAsset>()))
+                 .Callback<TenantAsset>(a => written = a)
+                 .Returns(Task.CompletedTask);
+
+            var response = await Service().SaveProjectAsync(new CreateProjectRequest
+            {
+                Name = "Proj",
+                Description = "  A project  ",
+                applicationContexts = new List<ApplicationContext>()
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            written!.TenantGroupId.Should().Be(response.TenantGroupId);
+            written.CreatedBy.Should().Be("creator-1");
+            written.Name.Should().Be("Proj");
+            written.Description.Should().Be("A project");
+            _repo.Verify(r => r.InsertProjectAsync(It.IsAny<Tenant>()), Times.Never);
+            _messageClient.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<Tenant>>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task SaveProjectAsync_NoEnvironments_OnAnExistingGroup_Fails()
+        {
+            using var _ = new BlocksTestContext();
+
+            var response = await Service().SaveProjectAsync(new CreateProjectRequest
+            {
+                Name = "Proj",
+                TenantGroupId = "g1",
+                applicationContexts = new List<ApplicationContext>()
+            });
+
+            response.IsSuccess.Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task SaveProjectAsync_FirstEnvironmentOfAnEmptyGroup_RecordsTheGroupCreatorAsOwner()
+        {
+            // The order's worker runs as the buyer, but ownership belongs to whoever created the
+            // empty group; until this row exists nobody owns the new tenant.
+            using var _ = new BlocksTestContext(userId: "buyer-1");
+            _repo.Setup(r => r.GetProjectIdsByGroupId("g1")).ReturnsAsync(new List<string>());
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("g1"))
+                 .ReturnsAsync(new TenantAsset { TenantGroupId = "g1", CreatedBy = "creator-1", Resources = new List<Resource>() });
+            var written = new List<ProjectPeople>();
+            _repo.Setup(r => r.InsertPeopleAsync(It.IsAny<ProjectPeople>()))
+                 .Callback<ProjectPeople>(written.Add)
+                 .Returns(Task.CompletedTask);
+
+            var response = await Service().SaveProjectAsync(new CreateProjectRequest
+            {
+                Name = "Proj",
+                TenantGroupId = "g1",
+                applicationContexts = new List<ApplicationContext> { new() { Environment = "dev", Domain = "https://dev.example.com" } }
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            written.Should().ContainSingle(row => row.IsCreator && row.UserId == "creator-1");
+        }
+
+        [Fact]
         public async Task SaveProjectAsync_NewGroup_RecordsTheCreatorBeforeQueueingTheProject()
         {
             // Provisioning is asynchronous, so the creator row used to be written only once the

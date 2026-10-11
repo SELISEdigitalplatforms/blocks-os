@@ -25,6 +25,18 @@ public interface IInvoiceStore
 
     /// <summary>Next number for the month. Sequential per month, and gap-free enough to audit.</summary>
     Task<string> NextNumberAsync(DateTime issuedAtUtc, CancellationToken cancellationToken = default);
+
+    /// <summary>The invoice written for an order, if any. Scoped to its project.</summary>
+    Task<Invoice?> FindByOrderAsync(string tenantGroupId, string orderId, CancellationToken cancellationToken = default);
+
+    /// <summary>The newest invoice still unpaid, if any.</summary>
+    Task<Invoice?> FindLatestUnpaidAsync(string tenantGroupId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Settles an unpaid invoice once its amount is collected by a retry. The only change an
+    /// invoice ever takes: what it billed stays exactly as issued.
+    /// </summary>
+    Task MarkPaidAsync(string tenantGroupId, string invoiceId, string providerReference, DateTime paidAtUtc, CancellationToken cancellationToken = default);
 }
 
 public sealed class SubscriptionStore : ISubscriptionStore
@@ -121,6 +133,47 @@ public sealed class InvoiceStore : IInvoiceStore
             .InsertOneAsync(invoice, cancellationToken: cancellationToken)
             .ConfigureAwait(false);
     }
+
+    public async Task<Invoice?> FindByOrderAsync(string tenantGroupId, string orderId, CancellationToken cancellationToken = default) =>
+        string.IsNullOrWhiteSpace(tenantGroupId) || string.IsNullOrWhiteSpace(orderId)
+            ? null
+            : await _collection
+                .Find(Builders<Invoice>.Filter.And(
+                    Builders<Invoice>.Filter.Eq(i => i.TenantGroupId, tenantGroupId),
+                    Builders<Invoice>.Filter.Eq(i => i.OrderId, orderId)))
+                .FirstOrDefaultAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+    public async Task<Invoice?> FindLatestUnpaidAsync(string tenantGroupId, CancellationToken cancellationToken = default) =>
+        string.IsNullOrWhiteSpace(tenantGroupId)
+            ? null
+            : await _collection
+                .Find(Builders<Invoice>.Filter.And(
+                    Builders<Invoice>.Filter.Eq(i => i.TenantGroupId, tenantGroupId),
+                    Builders<Invoice>.Filter.Eq(i => i.State, InvoiceStates.Unpaid)))
+                .SortByDescending(i => i.IssuedAtUtc)
+                .FirstOrDefaultAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+    public async Task MarkPaidAsync(
+        string tenantGroupId,
+        string invoiceId,
+        string providerReference,
+        DateTime paidAtUtc,
+        CancellationToken cancellationToken = default) =>
+        await _collection
+            .UpdateOneAsync(
+                Builders<Invoice>.Filter.And(
+                    Builders<Invoice>.Filter.Eq(i => i.TenantGroupId, tenantGroupId),
+                    Builders<Invoice>.Filter.Eq(i => i.ItemId, invoiceId),
+                    Builders<Invoice>.Filter.Eq(i => i.State, InvoiceStates.Unpaid)),
+                Builders<Invoice>.Update
+                    .Set(i => i.State, InvoiceStates.Paid)
+                    .Set(i => i.PaidAtUtc, paidAtUtc)
+                    .Set(i => i.ProviderReference, providerReference)
+                    .Set(i => i.NextRetryUtc, null),
+                cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
 
     /// <remarks>
     /// Counts what the month already has. Good enough for a human-facing number and honest about

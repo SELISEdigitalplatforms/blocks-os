@@ -39,6 +39,9 @@ public sealed class OrderPaymentService : IOrderPaymentService
     private readonly IProvisioningQueue _queue;
     private readonly ILogger<OrderPaymentService> _logger;
     private readonly TimeProvider _time;
+    private readonly IProjectInventory? _inventory;
+    private readonly IOrderInvoiceWriter? _invoices;
+    private readonly DomainService.Catalogue.Services.ICatalogueProvider? _catalogue;
 
     public OrderPaymentService(
         ISubscriptionOrderStore orders,
@@ -46,7 +49,10 @@ public sealed class OrderPaymentService : IOrderPaymentService
         IPaymentGateway gateway,
         IProvisioningQueue queue,
         ILogger<OrderPaymentService> logger,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        IProjectInventory? inventory = null,
+        IOrderInvoiceWriter? invoices = null,
+        DomainService.Catalogue.Services.ICatalogueProvider? catalogue = null)
     {
         _orders = orders;
         _paymentMethods = paymentMethods;
@@ -54,6 +60,9 @@ public sealed class OrderPaymentService : IOrderPaymentService
         _queue = queue;
         _logger = logger;
         _time = timeProvider ?? TimeProvider.System;
+        _inventory = inventory;
+        _invoices = invoices;
+        _catalogue = catalogue;
     }
 
     public async Task<OrderView> PayAsync(PayCheckoutRequest request, CancellationToken cancellationToken = default)
@@ -90,6 +99,63 @@ public sealed class OrderPaymentService : IOrderPaymentService
             order.State = OrderStates.Expired;
             order.UpdatedAtUtc = utcNow;
             await _orders.UpdateAsync(order, cancellationToken).ConfigureAwait(false);
+            return CheckoutService.ToView(order);
+        }
+
+        // Checked again here, not only at start: two checkout tabs can each start an order for
+        // the same environment, and only the first one paid may go through. The second would be
+        // charged for a tenant provisioning then adopts rather than creates.
+        if (_inventory is not null)
+        {
+            var held = await _inventory
+                .GetAsync(order.TenantGroupId, order.ItemId, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (order.Lines.Any(l => l.Kind == "environment" && held.HasOrIsCreating(l.Environment)))
+            {
+                return Failed(CheckoutFailures.EnvironmentExists);
+            }
+
+            // An upgrade is for a free environment that is still free and that no other paid order
+            // is already upgrading.
+            foreach (var line in order.Lines.Where(l => l.Kind == "upgrade"))
+            {
+                if (held.UpgradesInFlight.Contains(line.Environment))
+                {
+                    return Failed(CheckoutFailures.EnvironmentExists);
+                }
+
+                if (!held.FreeEnvironments.Contains(line.Environment))
+                {
+                    return Failed(CheckoutFailures.NothingToUpgrade);
+                }
+            }
+
+            foreach (var line in order.Lines.Where(l => l.Kind == "environment" && l.FreeTier))
+            {
+                var max = FreeLimit(line.Environment);
+
+                if (held.FreeHeld(line.Environment) + 1 > max)
+                {
+                    return Failed(CheckoutFailures.FreeTierTaken);
+                }
+            }
+        }
+
+        // Nothing to charge — the free tier, alone. No card is needed and the provider is not
+        // called: there is no money to move and no answer to wait for. Everything after the
+        // charge is exactly what a paid order gets, so the free environment is built the same way.
+        if (order.Total <= 0m)
+        {
+            var paidAt = _time.GetUtcNow().UtcDateTime;
+            order.State = OrderStates.Paid;
+            order.ProviderName = "none";
+            order.ChargedAtUtc = paidAt;
+            order.UpdatedAtUtc = paidAt;
+
+            await _orders.UpdateAsync(order, cancellationToken).ConfigureAwait(false);
+            await _queue.EnqueueAsync(order.TenantGroupId, order.ItemId, cancellationToken).ConfigureAwait(false);
+
             return CheckoutService.ToView(order);
         }
 
@@ -167,6 +233,13 @@ public sealed class OrderPaymentService : IOrderPaymentService
 
         await _orders.UpdateAsync(order, cancellationToken).ConfigureAwait(false);
 
+        if (order.State == OrderStates.Paid && _invoices is not null)
+        {
+            // The record of the money, written before provisioning starts: the charge happened
+            // whether or not the environments ever finish.
+            await _invoices.WriteAsync(order, cancellationToken).ConfigureAwait(false);
+        }
+
         if (order.State == OrderStates.Paid)
         {
             // Enqueue for promptness only. The durable work item is the order row itself, sitting
@@ -179,4 +252,13 @@ public sealed class OrderPaymentService : IOrderPaymentService
     }
 
     private static OrderView Failed(string reason) => new() { State = reason };
+
+    /// <summary>
+    /// The free allowance for an environment, from the catalogue. One when no catalogue is at
+    /// hand: the order was priced with a free line, so the environment offered at least that.
+    /// </summary>
+    private int FreeLimit(string environment) =>
+        _catalogue?.Catalogue.Environments.TryGetValue(environment, out var definition) == true
+            ? Math.Max(0, definition.MaxFreePerProject)
+            : 1;
 }
