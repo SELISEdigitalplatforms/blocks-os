@@ -51,7 +51,7 @@ export const Activation = ({ code }: ActivationProps) => {
     const validateCode = async () => {
       try {
         const res = await activationCodeValidation({
-          projectKey: xBlocksKey as string,
+          projectKey: xBlocksKey,
           activationCode: code,
         });
         setResendMessage(null);
@@ -101,7 +101,7 @@ export const Activation = ({ code }: ActivationProps) => {
       setResendSuccess(false);
       const response = await resendActivationLink({
         userId: activationUserId,
-        projectKey: xBlocksKey as string,
+        projectKey: xBlocksKey,
       });
       if (response?.isSuccess) {
         setResendSuccess(true);
