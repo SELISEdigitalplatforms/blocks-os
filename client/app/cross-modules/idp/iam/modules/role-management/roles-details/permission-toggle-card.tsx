@@ -35,7 +35,7 @@ export const PermissionToggleCard = ({
   return (
     <div
       className={cn(
-        "flex items-center justify-between gap-3 rounded-md border p-3 cursor-pointer [&_*]:cursor-[inherit]",
+        "flex items-center justify-between gap-3 rounded-md border p-3 cursor-pointer **:cursor-[inherit]",
         !isEditMode && "cursor-not-allowed",
       )}
     >
@@ -44,7 +44,7 @@ export const PermissionToggleCard = ({
         onCheckedChange={onCheckedChange}
         id={id}
         disabled={!isEditMode}
-        className=" flex-shrink-0"
+        className=" shrink-0"
       />
       <label
         htmlFor={isEditMode ? id : undefined}

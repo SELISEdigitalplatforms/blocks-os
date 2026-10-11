@@ -169,7 +169,6 @@ namespace DomainService.People
                 // Ownership is no longer checked here: [ProjectPolicy("people::invite")] on the
                 // endpoint does it, before this method is reached, and grants a contributor the
                 // same ability when the owner has given it to them.
-                var userId = BlocksContext.GetContext()?.UserId ?? string.Empty;
 
                 // IAM stores every email lowercased, so an address typed with different casing would otherwise
                 // miss the lookup below and have a duplicate account created for it.
@@ -644,7 +643,6 @@ namespace DomainService.People
 
             // Ownership is no longer checked here: [ProjectPolicy("people::remove")] on the
             // endpoint does it, before this method is reached.
-            var userId = BlocksContext.GetContext()?.UserId ?? string.Empty;
 
             try
             {
@@ -947,7 +945,6 @@ namespace DomainService.People
 
                 // Ownership is no longer checked here: [ProjectPolicy("people::invite")] on the
                 // endpoint does it, before this method is reached.
-                var bc = BlocksContext.GetContext();
 
                 var existingUsers = await _peopleRepository.GetUsersByEmailAsync(new List<string> { request.Email });
                 var user = existingUsers?.FirstOrDefault(u => u.Email == request.Email);

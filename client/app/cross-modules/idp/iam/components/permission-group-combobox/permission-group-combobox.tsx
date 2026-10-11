@@ -81,8 +81,8 @@ export function PermissionGroupCombobox({
           disabled={disabled}
           aria-disabled={disabled}
           className={cn(
-            "flex h-10 w-full items-center gap-1 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm",
-            "ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+            "flex h-10 w-full items-center gap-1 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs",
+            "ring-offset-background focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
             disabled
               ? "cursor-not-allowed opacity-50"
               : "cursor-pointer disabled:cursor-not-allowed disabled:opacity-50",
@@ -106,7 +106,7 @@ export function PermissionGroupCombobox({
           <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+      <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
         <Command shouldFilter={false}>
           <CommandInput
             placeholder="Search or create a group..."

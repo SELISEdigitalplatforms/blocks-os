@@ -25,7 +25,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 type ActivationFormProps = {
   code: string;
 };
-const x_blocks_key = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
+const xBlocksKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
 export const ActivationForm = ({ code }: ActivationFormProps) => {
   const navigate = useNavigate();
   const form = useForm({
@@ -62,7 +62,7 @@ export const ActivationForm = ({ code }: ActivationFormProps) => {
       const res = await mutateAsync({
         code: code,
         preventPostEvent: true,
-        projectKey: x_blocks_key || "",
+        projectKey: xBlocksKey || "",
         password: values.password,
         firstname: values.firstname,
         lastname: values.lastname,

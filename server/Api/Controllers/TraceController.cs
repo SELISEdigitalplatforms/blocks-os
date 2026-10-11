@@ -6,12 +6,14 @@ using Cloud.LmtService.Services.Trace;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics.CodeAnalysis;
 
 namespace BlocksOs.Api.Controllers
 {
 
     [ApiController]
     [Route("[controller]/[action]")]
+    [SuppressMessage("Major Code Smell", "S6960:Controllers should not have mixed responsibilities", Justification = "Splitting would change controller names, Swagger grouping and operation ids that clients rely on.")]
     public class TraceController : ControllerBase
     {
         private readonly ITraceService _traceService;

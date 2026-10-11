@@ -5,7 +5,7 @@ import {
   openNamedProjectDashboard,
 } from "./support/create-and-delete-project"
 import { loginFresh } from "./support/login-helper"
-import { e2eDebugLog } from "./support/env"
+import { e2eBrowserLaunchArgs, e2eDebugLog } from "./support/env"
 import { clearOsProject, clearOsSession, readOsProject } from "./support/os-project"
 import { releaseRunLock } from "./support/run-lock"
 import { shouldDeleteSharedProject } from "./support/run-outcome"
@@ -44,7 +44,7 @@ async function runTeardown() {
     return
   }
 
-  const browser = await chromium.launch()
+  const browser = await chromium.launch({ args: e2eBrowserLaunchArgs() })
   try {
     const context = await browser.newContext({ ignoreHTTPSErrors: true })
     const page = await context.newPage()

@@ -7,15 +7,22 @@ export async function navigateToCaptchaFlow(page: Page) {
 }
 
 export async function clearLeftoverCaptchaConfigsFlow(page: Page) {
+  // isVisible() does not wait, so the old check ran before the list loaded and
+  // left earlier runs' configs behind (three disabled reCAPTCHA cards seen).
+  // Wait until the list settles on either a card or the empty state first.
+  const deleteButton = page.getByRole("button", { name: "Delete" }).first();
+  const emptyState = page.getByText("Captcha is not configured");
+  const settle = () =>
+    deleteButton.or(emptyState).first().waitFor({ state: "visible", timeout: 15000 }).catch(() => {});
   for (let guard = 0; guard < 10; guard++) {
-    const deleteButton = page.getByRole("button", { name: "Delete" }).first();
-    if (!(await deleteButton.isVisible({ timeout: 3000 }))) break;
+    await settle();
+    if (!(await deleteButton.isVisible())) break;
     await deleteButton.click();
     await expect(
       page.getByRole("heading", { name: "Delete CAPTCHA configuration?" }),
     ).toBeVisible();
     await page.getByRole("button", { name: "Yes, delete" }).click();
-    await expect(page.getByText(/configuration deleted successfully/)).toBeVisible({
+    await expect(page.getByText(/configuration deleted successfully/).first()).toBeVisible({
       timeout: 15000,
     });
     await page.reload({ waitUntil: "domcontentloaded" });
@@ -67,8 +74,8 @@ export async function fillAndSaveCaptchaFlow(page: Page, siteKey: string, secret
   await page.getByPlaceholder("Enter site key").fill(siteKey);
   await page.getByPlaceholder("Enter secret key").fill(secretKey);
   await page.getByRole("button", { name: "Save" }).click();
-  if (await page.getByText("Captcha added successfully").isVisible({ timeout: 15000 })) {
-    await expect(page.getByText("Captcha added successfully")).toBeVisible();
+  if (await page.getByText("Captcha added successfully", { exact: true }).isVisible({ timeout: 15000 })) {
+    await expect(page.getByText("Captcha added successfully", { exact: true })).toBeVisible();
   }
   await expect(page.getByRole("dialog")).toBeHidden({ timeout: 15000 });
 }
@@ -102,8 +109,8 @@ export async function editCaptchaFlow(page: Page, newSiteKey: string) {
   const updateButton = page.getByRole("button", { name: "Update Changes" });
   await expect(updateButton).toBeEnabled();
   await updateButton.click();
-  if (await page.getByText("Captcha updated successfully").isVisible({ timeout: 15000 })) {
-    await expect(page.getByText("Captcha updated successfully")).toBeVisible();
+  if (await page.getByText("Captcha updated successfully", { exact: true }).isVisible({ timeout: 15000 })) {
+    await expect(page.getByText("Captcha updated successfully", { exact: true })).toBeVisible();
   }
 }
 
@@ -113,8 +120,8 @@ export async function disableAndReenableCaptchaFlow(page: Page) {
   await disableButton.click();
   await expect(page.getByRole("heading", { name: "Disable CAPTCHA?" })).toBeVisible();
   await page.getByRole("button", { name: "Yes" }).click();
-  if (await page.getByText(/is disabled successfully/).isVisible({ timeout: 15000 })) {
-    await expect(page.getByText(/is disabled successfully/)).toBeVisible();
+  if (await page.getByText(/is disabled successfully/).first().isVisible({ timeout: 15000 })) {
+    await expect(page.getByText(/is disabled successfully/).first()).toBeVisible();
   }
 
   const enableButton = page.getByRole("button", { name: "Enable" }).first();
@@ -122,8 +129,8 @@ export async function disableAndReenableCaptchaFlow(page: Page) {
   await enableButton.click();
   await expect(page.getByRole("heading", { name: "Enable CAPTCHA?" })).toBeVisible();
   await page.getByRole("button", { name: "Yes" }).click();
-  if (await page.getByText(/is enabled successfully/).isVisible({ timeout: 15000 })) {
-    await expect(page.getByText(/is enabled successfully/)).toBeVisible();
+  if (await page.getByText(/is enabled successfully/).first().isVisible({ timeout: 15000 })) {
+    await expect(page.getByText(/is enabled successfully/).first()).toBeVisible();
   }
 }
 
@@ -143,8 +150,8 @@ export async function addSecondCaptchaProviderFlow(
   await page.getByPlaceholder("Enter site key").fill(siteKey);
   await page.getByPlaceholder("Enter secret key").fill(secretKey);
   await page.getByRole("button", { name: "Save" }).click();
-  if (await page.getByText("Captcha added successfully").isVisible({ timeout: 15000 })) {
-    await expect(page.getByText("Captcha added successfully")).toBeVisible();
+  if (await page.getByText("Captcha added successfully", { exact: true }).isVisible({ timeout: 15000 })) {
+    await expect(page.getByText("Captcha added successfully", { exact: true })).toBeVisible();
   }
 }
 
@@ -157,7 +164,7 @@ export async function deleteCaptchaConfigFlow(page: Page, position: "first" | "l
   await deleteButton.click();
   await expect(page.getByRole("heading", { name: "Delete CAPTCHA configuration?" })).toBeVisible();
   await page.getByRole("button", { name: "Yes, delete" }).click();
-  if (await page.getByText(/configuration deleted successfully/).isVisible({ timeout: 15000 })) {
-    await expect(page.getByText(/configuration deleted successfully/)).toBeVisible();
+  if (await page.getByText(/configuration deleted successfully/).first().isVisible({ timeout: 15000 })) {
+    await expect(page.getByText(/configuration deleted successfully/).first()).toBeVisible();
   }
 }

@@ -71,12 +71,10 @@ namespace Cloud.LmtService.Utilities
 
         private static string GetProvider(string messageConnectionString)
         {
-            if (Uri.TryCreate(messageConnectionString, UriKind.Absolute, out var uri))
-            {
-                if (uri.Scheme.Equals("amqp", StringComparison.OrdinalIgnoreCase) ||
-                    uri.Scheme.Equals("amqps", StringComparison.OrdinalIgnoreCase))
-                    return RabbitMqProvider;
-            }
+            if (Uri.TryCreate(messageConnectionString, UriKind.Absolute, out var uri) &&
+                (uri.Scheme.Equals("amqp", StringComparison.OrdinalIgnoreCase) ||
+                 uri.Scheme.Equals("amqps", StringComparison.OrdinalIgnoreCase)))
+                return RabbitMqProvider;
             return DefaultProvider;
         }
 

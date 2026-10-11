@@ -33,7 +33,7 @@ export const TraceProviderSetupGuideLine = ({
               <Button
                 variant="ghost"
                 onClick={() => onOpenChange(false)}
-                className="h-fit w-fit !p-2"
+                className="h-fit w-fit p-2!"
               >
                 <X className="aspect-square w-4" />
               </Button>

@@ -426,6 +426,95 @@ describe("NewConfiguration", () => {
       ).toBe(true);
     });
 
+    describe("repair state", () => {
+      const editOf = (over: Partial<IEmailConfig>): IEmailConfig => ({
+        configurationId: "cfg-o365",
+        configurationName: "Microsoft 365 Primary",
+        host: "smtp.office365.com",
+        port: 587,
+        enableSSL: false,
+        senderName: "Contoso Notifications",
+        senderAddress: "notifications@contoso.com",
+        senderUserName: "",
+        accountPassword: "",
+        itemId: "cfg-o365",
+        name: "Microsoft 365 Primary",
+        isDefault: false,
+        isInbound: false,
+        provider: MailServiceProvider.Office365Smtp,
+        tenantId: "contoso-tenant",
+        clientId: "mailer-app",
+        mailboxAddress: "mailer@contoso.com",
+        ...over,
+      });
+
+      it.each([
+        ["archived", "The linked secret was archived. Enter a new value to repair this configuration."],
+        ["missing", "The linked secret was removed. Enter a new value to repair this configuration."],
+      ] as const)("explains a %s secret and requires a new one", (clientSecretStatus, notice) => {
+        renderModal({
+          isEdit: true,
+          dialogTitle: "Edit Configuration",
+          previousData: editOf({ clientSecretStatus, isClientSecretConfigured: false }),
+        });
+
+        expect(screen.getByRole("alert").textContent).toBe(notice);
+        expect(screen.getByPlaceholderText("Enter a new client secret")).toBeTruthy();
+        expect(
+          screen.getByText("Client Secret").querySelector(".text-destructive")?.textContent,
+        ).toBe("*");
+      });
+
+      it("refuses an empty submit with an inline error and saves nothing", async () => {
+        const user = userEvent.setup();
+        renderModal({
+          isEdit: true,
+          dialogTitle: "Edit Configuration",
+          previousData: editOf({ clientSecretStatus: "missing", isClientSecretConfigured: false }),
+        });
+
+        await user.click(screen.getByRole("button", { name: "Update Changes" }));
+
+        expect(
+          await screen.findByText("A new secret is required to repair this configuration."),
+        ).toBeTruthy();
+        expect(h.mutateAsync).not.toHaveBeenCalled();
+      });
+
+      it("sends the new client secret, which repairs the configuration", async () => {
+        const user = userEvent.setup();
+        renderModal({
+          isEdit: true,
+          dialogTitle: "Edit Configuration",
+          previousData: editOf({ clientSecretStatus: "archived", isClientSecretConfigured: false }),
+        });
+
+        await user.type(screen.getByPlaceholderText("Enter a new client secret"), "v2");
+        await user.click(screen.getByRole("button", { name: "Update Changes" }));
+
+        await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+        expect(h.mutateAsync.mock.calls[0][0]).toMatchObject({
+          configurationId: "cfg-o365",
+          clientSecret: "v2",
+        });
+      });
+
+      it.each(["active", "locked", "unavailable"] as const)(
+        "leaves the edit form unchanged for a %s secret",
+        (clientSecretStatus) => {
+          renderModal({
+            isEdit: true,
+            dialogTitle: "Edit Configuration",
+            previousData: editOf({ clientSecretStatus, isClientSecretConfigured: true }),
+          });
+
+          expect(screen.getByPlaceholderText("Leave blank to keep the current secret")).toBeTruthy();
+          expect(screen.queryByRole("alert")).toBeNull();
+          expect(screen.getByText("Client Secret").querySelector(".text-destructive")).toBeNull();
+        },
+      );
+    });
+
     it("flags an invalid mailbox address", async () => {
       const user = userEvent.setup();
       renderModal();

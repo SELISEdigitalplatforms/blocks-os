@@ -52,7 +52,7 @@ function FederatedFlow() {
 
           <ArrowRight className="mx-auto h-4 w-4 shrink-0 rotate-90 text-border-medium-emphasis lg:rotate-0" />
 
-          <div className="flex-1 rounded-lg border border-primary/25 bg-primary/[0.04] px-4 py-3.5">
+          <div className="flex-1 rounded-lg border border-primary/25 bg-primary/4 px-4 py-3.5">
             <div className="flex items-center gap-2.5">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                 <Building2 className="h-4 w-4 text-primary" />
@@ -162,7 +162,7 @@ function ConfigurationStatus({
       aria-expanded={expanded}
       aria-controls={listId}
       onClick={onToggle}
-      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-medium-emphasis transition-colors hover:text-high-emphasis focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-medium-emphasis transition-colors hover:text-high-emphasis focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
       <ChevronRight
         className={cn(

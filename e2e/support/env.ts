@@ -33,6 +33,16 @@ export function e2eBaseUrl(): string {
   return stripTrailingSlash(requireEnv("E2E_BASE_URL"))
 }
 
+/**
+ * Chromium args for every browser the suite launches. `E2E_HOST_RESOLVER_RULES`
+ * (e.g. `MAP dev-os.blocksdevelopers.com 127.0.0.1`) points only the test
+ * browser at this machine, so a local run does not need the hosts-file entry.
+ */
+export function e2eBrowserLaunchArgs(): string[] {
+  const rules = process.env.E2E_HOST_RESOLVER_RULES?.trim()
+  return rules ? [`--host-resolver-rules=${rules}`] : []
+}
+
 export function e2eProjectId(): string | undefined {
   const value = process.env.E2E_PROJECT_ID?.trim()
   return value || undefined

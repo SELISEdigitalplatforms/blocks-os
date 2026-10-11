@@ -23,25 +23,25 @@ export const OidcSignupPreview = (props: OidcPagePreviewProps) => {
       <div className="mt-3 sm:mt-4">
         <PreviewField label={copy.organizationNameLabel} />
       </div>
-      <div className="mt-4 flex items-start gap-2 text-xs text-[var(--muted)] sm:mt-5">
+      <div className="mt-4 flex items-start gap-2 text-xs text-(--muted) sm:mt-5">
         <span
-          className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border border-[var(--border-strong)] text-[10px] text-[var(--accent)]"
+          className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border border-(--border-strong) text-[10px] text-(--accent)"
           aria-hidden
         >
           ✓
         </span>
         <p>
-          {copy.termsPrefix} <span className="text-[var(--accent)]">{copy.termsLinkText}</span>{" "}
+          {copy.termsPrefix} <span className="text-(--accent)">{copy.termsLinkText}</span>{" "}
           {copy.termsConjunction}{" "}
-          <span className="text-[var(--accent)]">{copy.privacyLinkText}</span>.
+          <span className="text-(--accent)">{copy.privacyLinkText}</span>.
         </p>
       </div>
       <PreviewButton>{copy.submitButton}</PreviewButton>
       <PreviewSsoSeparator text={copy.ssoSeparatorText} />
       {/* Its own top margin, so the spacing holds whether or not the divider above is
           rendered. */}
-      <p className="mt-3 text-xs text-[var(--muted)]">
-        {copy.loginPrompt} <span className="text-[var(--accent)]">{copy.loginLink}</span>
+      <p className="mt-3 text-xs text-(--muted)">
+        {copy.loginPrompt} <span className="text-(--accent)">{copy.loginLink}</span>
       </p>
       <PreviewSuccess title={copy.successTitle} subtitle={copy.successSubtitle} />
       <PreviewSuccess title={copy.emailSentTitle} subtitle={copy.emailSentSubtitle} />

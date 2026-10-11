@@ -46,7 +46,7 @@ const JsonSkeletonBlock = ({ content }: { content: string }) => {
           {content}
         </pre>
         <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent dark:via-white/5"
+          className="pointer-events-none absolute inset-0 bg-linear-to-r from-transparent via-white/40 to-transparent dark:via-white/5"
           style={{
             backgroundSize: "200% 100%",
             animation: "shimmer 1.5s infinite linear",

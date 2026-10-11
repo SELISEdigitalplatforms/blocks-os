@@ -22,25 +22,16 @@ namespace Cloud.LmtService.Repositories.ColdRestore
     {
         private readonly IMongoDatabase _database;
         private readonly ILogger<LogTraceRestoreResultRepository> _logger;
-        private readonly ILmtArchiveRestoreConfigurationRepository _lmtConfigRepository;
         private const string DefaultDatabaseName = "LogTraceRestore";
         public LogTraceRestoreResultRepository(
             IBlocksSecret blocksSecret,
             IDbContextProvider dbContextProvider,
             ILogger<LogTraceRestoreResultRepository> logger,
-            ILmtArchiveRestoreConfigurationRepository lmtConfigRepository,
             IConfiguration? configuration = null)
         {
 
             _database = dbContextProvider.GetDatabase(blocksSecret.TraceConnectionString, DefaultDatabaseName);
-            _lmtConfigRepository = lmtConfigRepository ?? throw new ArgumentNullException(nameof(lmtConfigRepository));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        }
-
-        private async Task<int> GetRetentionDaysAsync(CancellationToken ct = default)
-        {
-            var config = await _lmtConfigRepository.GetLmtArchiveRestoreConfigurationsAsync(ct);
-            return config.RetentionDay;
         }
 
         private IMongoCollection<RestoreTraceResultRecord> GetTraceResultsCollection(string requestId)

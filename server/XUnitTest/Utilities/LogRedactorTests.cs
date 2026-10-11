@@ -1,5 +1,6 @@
 using Cloud.LmtService.Utilities;
 using FluentAssertions;
+using System.Text.RegularExpressions;
 
 namespace XUnitTest.Utilities
 {
@@ -146,6 +147,42 @@ namespace XUnitTest.Utilities
             var result = LogRedactor.Redact(input);
 
             result.Should().Be(input);
+        }
+
+        // A pattern that hits its match timeout must never let the original text through, not
+        // even partially redacted: the whole value is replaced by the placeholder.
+        [Fact]
+        public void ApplyFailClosed_WhenAPatternTimesOut_ReturnsOnlyThePlaceholder()
+        {
+            var input = "password=hunter2 for jane.doe@example.com";
+
+            var result = LogRedactor.ApplyFailClosed(input, _ =>
+                throw new RegexMatchTimeoutException(input, ".*", TimeSpan.FromSeconds(1)));
+
+            result.Should().Be(LogRedactor.Placeholder);
+            result.Should().NotContain("hunter2");
+        }
+
+        [Fact]
+        public void ApplyFailClosed_WhenRedactionSucceeds_ReturnsTheRedactedText()
+        {
+            var result = LogRedactor.ApplyFailClosed("abc", text => text.ToUpperInvariant());
+
+            result.Should().Be("ABC");
+        }
+
+        // Real-world worst case: a large exception dump is still redacted within the timeout
+        // rather than collapsing to the fail-closed placeholder.
+        [Fact]
+        public void Redact_LargeInput_IsRedactedWithinTheMatchTimeout()
+        {
+            var filler = string.Concat(Enumerable.Repeat("at Some.Namespace.Type.Method() in /src/File.cs:line 42\n", 20_000));
+            var input = $"{filler}token Bearer abc123 for jane.doe@example.com";
+
+            var result = LogRedactor.Redact(input);
+
+            result.Should().EndWith("token ***REDACTED*** for ***REDACTED***");
+            result.Should().StartWith("at Some.Namespace.Type.Method()");
         }
     }
 }

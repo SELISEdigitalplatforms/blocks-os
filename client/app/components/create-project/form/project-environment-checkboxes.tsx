@@ -28,7 +28,7 @@ export const ProjectEnvironmentCheckboxes = ({
           aria-label={`${option.label}, branch ${option.value === "prod" ? "main" : option.value}`}
           disabled={disabled}
           onClick={() => onToggle(option.value, !checked)}
-          className={`flex min-h-12 items-center gap-2.5 rounded-md border px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 ${
+          className={`flex min-h-12 items-center gap-2.5 rounded-md border px-3 py-2 text-left text-sm transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 ${
             checked ? "border-primary bg-primary/5" : "border-border bg-background hover:border-primary/50 hover:bg-accent/40"
           }`}
         >
@@ -62,8 +62,9 @@ export const ProjectEnvironmentCheckboxes = ({
               onCheckedChange={(checked) => onToggle(option.value, checked === true)}
               disabled={disabled}
               aria-label={option.label}
+              id={`project-environment-${option.value}`}
             />
-            <label className="text-lg font-bold">
+            <label className="text-lg font-bold" htmlFor={`project-environment-${option.value}`}>
               <div className="flex flex-row items-center gap-2">
                 <span>{option.label}</span>
                 <div className="flex flex-row items-center">

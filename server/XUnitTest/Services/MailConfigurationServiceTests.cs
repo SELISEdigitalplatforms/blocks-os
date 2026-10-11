@@ -10,9 +10,11 @@ using Configuration.DomainService.Mail.RequestModel;
 using Configuration.DomainService.Mail.Services;
 using Configuration.DomainService.Mail.Validators;
 using Configuration.DomainService.Shared.Enums;
+using Configuration.DomainService.Shared.Secrets;
 using Configuration.DomainService.Shared.Services;
 using FluentAssertions;
 using FluentValidation;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using XUnitTest.TestSupport;
@@ -29,6 +31,7 @@ namespace XUnitTest.Services
     {
         private readonly Mock<IConfigurationRepository> _repo = new();
         private readonly Mock<ISecretService> _secrets = new();
+        private readonly RecordingLogger<Office365SmtpMailConfigurationProvider> _providerLogger = new();
 
         public MailConfigurationServiceTests()
         {
@@ -42,7 +45,16 @@ namespace XUnitTest.Services
                  .Returns(Task.CompletedTask);
             _secrets.Setup(s => s.SetAsync(It.IsAny<SetSecretRequest>(), It.IsAny<CancellationToken>()))
                     .ReturnsAsync("secret-1");
+
+            // Every linked secret is healthy unless a test says otherwise.
+            GivenSecretStatus(SecretStatuses.Active);
         }
+
+        /// <summary>Stubs the metadata read for any secret: a status, or null for "no such secret".</summary>
+        private void GivenSecretStatus(string? status) =>
+            _secrets.Setup(s => s.GetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync((string id, CancellationToken _) =>
+                        status is null ? null : new SecretResult { SecretId = id, Name = "office365-smtp", Status = status });
 
         private MailConfigurationService Service()
         {
@@ -52,7 +64,7 @@ namespace XUnitTest.Services
             {
                 new AmazonSesMailConfigurationProvider(),
                 new ZohoMailConfigurationProvider(),
-                new Office365SmtpMailConfigurationProvider(_secrets.Object)
+                new Office365SmtpMailConfigurationProvider(_secrets.Object, _providerLogger)
             });
 
             return new MailConfigurationService(
@@ -450,6 +462,9 @@ namespace XUnitTest.Services
 
             result.Response.Errors.Should().Contain(new KeyValuePair<string, string>(
                 "AuthenticationType", "The authentication method of an existing Office 365 configuration cannot be changed."));
+
+            // The stored secret's metadata may be read to judge the edit; nothing is written.
+            _secrets.Verify(s => s.GetAsync("secret-1", It.IsAny<CancellationToken>()), Times.AtMostOnce());
             _secrets.VerifyNoOtherCalls();
         }
 
@@ -808,6 +823,317 @@ namespace XUnitTest.Services
 
             result.Outcome.Should().Be(MailConfigurationOutcome.Success);
             _secrets.Verify(s => s.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        // ---------- Linked secret status (H2, C1, C12, C14) ----------
+
+        [Theory]
+        [InlineData(SecretStatuses.Active, LinkedSecretStatus.Active, true)]
+        [InlineData(SecretStatuses.Locked, LinkedSecretStatus.Locked, true)]
+        [InlineData(SecretStatuses.Deleted, LinkedSecretStatus.Archived, false)]
+        [InlineData(null, LinkedSecretStatus.Missing, false)]
+        public async Task GetAll_Office365_ReportsTheLinkedSecretStatus(string? secretStatus, string expected, bool configured)
+        {
+            GivenSecretStatus(secretStatus);
+            _repo.Setup(r => r.GetAllMailConfigurationsAsync())
+                 .ReturnsAsync(new List<MailServerConfiguration> { StoredOffice365() });
+
+            var response = (await Service().GetAllAsync()).Single();
+
+            response.ClientSecretStatus.Should().Be(expected);
+            response.IsClientSecretConfigured.Should().Be(configured);
+        }
+
+        [Fact]
+        public async Task GetAll_Office365WithoutAReference_ReportsNone()
+        {
+            var stored = StoredOffice365();
+            stored.ClientSecretReference = null;
+            _repo.Setup(r => r.GetAllMailConfigurationsAsync()).ReturnsAsync(new List<MailServerConfiguration> { stored });
+
+            var response = (await Service().GetAllAsync()).Single();
+
+            response.ClientSecretStatus.Should().Be(LinkedSecretStatus.None);
+            response.IsClientSecretConfigured.Should().BeFalse();
+            _secrets.Verify(s => s.GetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task GetAll_AFailedStatusRead_MarksOnlyThatConfigurationUnavailable()
+        {
+            var healthy = StoredOffice365("cfg-1");
+            var unreadable = StoredOffice365("cfg-2");
+            unreadable.ClientSecretReference = "secret-down";
+            _repo.Setup(r => r.GetAllMailConfigurationsAsync())
+                 .ReturnsAsync(new List<MailServerConfiguration> { healthy, unreadable });
+            _secrets.Setup(s => s.GetAsync("secret-down", It.IsAny<CancellationToken>()))
+                    .ThrowsAsync(new SecretVaultException("down", "get", "secret-down"));
+
+            var responses = await Service().GetAllAsync();
+
+            responses.Select(r => (r.ItemId, r.ClientSecretStatus, r.IsClientSecretConfigured)).Should().Equal(
+                ("cfg-1", LinkedSecretStatus.Active, true),
+                // A4: an outage keeps "configured" so nobody is forced to re-enter a secret.
+                ("cfg-2", LinkedSecretStatus.Unavailable, true));
+
+            // C1: the configuration id is logged; the reference never is.
+            var warning = _providerLogger.Entries.Should().ContainSingle(e => e.Level == LogLevel.Warning).Subject;
+            warning.Message.Should().Contain("cfg-2");
+            warning.Message.Should().NotContain("secret-down");
+        }
+
+        [Fact]
+        public async Task GetAll_PasswordProvidersAndOffice365PasswordMode_HaveNoStatusAndReadNoSecret()
+        {
+            var office365Password = StoredOffice365("cfg-pw");
+            office365Password.AuthenticationType = MailAuthenticationType.Password;
+            office365Password.ClientSecretReference = null;
+            _repo.Setup(r => r.GetAllMailConfigurationsAsync())
+                 .ReturnsAsync(new List<MailServerConfiguration>
+                 {
+                     new() { ItemId = "zoho", Provider = MailServiceProvider.Zoho, AccountPassword = "p" },
+                     office365Password
+                 });
+
+            var responses = await Service().GetAllAsync();
+
+            responses.Should().OnlyContain(r => r.ClientSecretStatus == null);
+            _secrets.Verify(s => s.GetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Get_ByName_ReportsTheLinkedSecretStatus()
+        {
+            GivenSecretStatus(SecretStatuses.Deleted);
+            _repo.Setup(r => r.GetMailConfigurationByNameAsync("Microsoft 365 Primary")).ReturnsAsync(StoredOffice365());
+
+            var response = await Service().GetAsync(new GetMailConfigurationRequest { ConfigurationName = "Microsoft 365 Primary" });
+
+            response!.ClientSecretStatus.Should().Be(LinkedSecretStatus.Archived);
+            response.IsClientSecretConfigured.Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task GetAll_SerializedResponse_CarriesTheStatusButNeverTheReference()
+        {
+            GivenSecretStatus(null);
+            _repo.Setup(r => r.GetAllMailConfigurationsAsync())
+                 .ReturnsAsync(new List<MailServerConfiguration>
+                 {
+                     StoredOffice365(),
+                     new() { ItemId = "zoho", Provider = MailServiceProvider.Zoho, AccountPassword = "p" }
+                 });
+
+            var responses = await Service().GetAllAsync();
+            var json = System.Text.Json.JsonSerializer.Serialize(
+                responses,
+                new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+
+            json.Should().NotContain("secret-1");
+            json.Should().NotContain("clientSecretReference", "the reference has no field to travel in");
+            json.Should().Contain("\"clientSecretStatus\":\"missing\"");
+
+            // Omitted, not null, for a provider that owns no linked secret.
+            System.Text.RegularExpressions.Regex.Matches(json, "clientSecretStatus").Should().HaveCount(1);
+        }
+
+        [Fact]
+        public async Task ReadsAndSaves_NeverReadASecretValue()
+        {
+            using var _ = new BlocksTestContext();
+            _repo.Setup(r => r.GetAllMailConfigurationsAsync()).ReturnsAsync(new List<MailServerConfiguration> { StoredOffice365() });
+            _repo.Setup(r => r.GetMailConfigurationByIdAsync("cfg-1")).ReturnsAsync(StoredOffice365());
+            var request = Office365Request();
+            request.ConfigurationId = "cfg-1";
+            request.ClientSecret = "";
+
+            await Service().GetAllAsync();
+            await Service().SaveAsync(request);
+
+            _secrets.Verify(s => s.GetValueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+            _secrets.Verify(s => s.GetValuesAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        // ---------- Repair (H6, C3, C4, C15, C16) ----------
+
+        [Theory]
+        [InlineData(SecretStatuses.Deleted)]
+        [InlineData(null)]
+        public async Task Save_EditWithEmptySecretAndABrokenReference_IsRejectedWithNoWrites(string? brokenStatus)
+        {
+            using var _ = new BlocksTestContext();
+            GivenSecretStatus(brokenStatus);
+            _repo.Setup(r => r.GetMailConfigurationByIdAsync("cfg-1")).ReturnsAsync(StoredOffice365());
+
+            var request = Office365Request();
+            request.ConfigurationId = "cfg-1";
+            request.ClientSecret = "";
+
+            var result = await Service().SaveAsync(request);
+
+            result.Outcome.Should().Be(MailConfigurationOutcome.Invalid);
+            result.Response.IsSuccess.Should().BeFalse();
+            result.Response.Errors.Should().Contain(new KeyValuePair<string, string>(
+                "ClientSecret", "The linked client secret was archived or removed. Enter a new client secret."));
+            _secrets.Verify(s => s.SetAsync(It.IsAny<SetSecretRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+            _repo.Verify(r => r.SaveMailConfigurationAsync(It.IsAny<MailServerConfiguration>()), Times.Never);
+        }
+
+        [Theory]
+        [InlineData(SecretStatuses.Deleted)]
+        [InlineData(null)]
+        public async Task Save_EditWithANewSecretAndABrokenReference_CreatesANewSecretAndRepoints(string? brokenStatus)
+        {
+            using var _ = new BlocksTestContext();
+            GivenSecretStatus(brokenStatus);
+            _repo.Setup(r => r.GetMailConfigurationByIdAsync("cfg-1")).ReturnsAsync(StoredOffice365());
+            _secrets.Setup(s => s.SetAsync(It.IsAny<SetSecretRequest>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync("secret-2");
+
+            var request = Office365Request();
+            request.ConfigurationId = "cfg-1";
+            request.ClientSecret = "replacement";
+
+            var result = await Service().SaveAsync(request);
+
+            result.Outcome.Should().Be(MailConfigurationOutcome.Success);
+            result.Response.IsSuccess.Should().BeTrue();
+            _secrets.Verify(
+                s => s.SetAsync(
+                    It.Is<SetSecretRequest>(r => r.Name == "office365-smtp" && r.Type == SecretTypes.Service && r.Value == "replacement"),
+                    It.IsAny<CancellationToken>()),
+                Times.Once);
+            _secrets.Verify(s => s.RotateAsync(It.IsAny<string>(), It.IsAny<RotateSecretRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+            _secrets.Verify(s => s.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+            _secrets.Verify(s => s.RestoreAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+            _repo.Verify(
+                r => r.SaveMailConfigurationAsync(It.Is<MailServerConfiguration>(m => m.ItemId == "cfg-1" && m.ClientSecretReference == "secret-2")),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task Save_RepairWhoseWriteFails_RetiresTheNewSecretOnly()
+        {
+            using var _ = new BlocksTestContext();
+            GivenSecretStatus(SecretStatuses.Deleted);
+            _repo.Setup(r => r.GetMailConfigurationByIdAsync("cfg-1")).ReturnsAsync(StoredOffice365());
+            _repo.Setup(r => r.SaveMailConfigurationAsync(It.IsAny<MailServerConfiguration>()))
+                 .ThrowsAsync(new InvalidOperationException("mongo down"));
+            _secrets.Setup(s => s.SetAsync(It.IsAny<SetSecretRequest>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync("secret-2");
+
+            var request = Office365Request();
+            request.ConfigurationId = "cfg-1";
+            request.ClientSecret = "replacement";
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() => Service().SaveAsync(request));
+
+            _secrets.Verify(s => s.DeleteAsync("secret-2", It.IsAny<CancellationToken>()), Times.Once);
+            _secrets.Verify(s => s.DeleteAsync("secret-1", It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Theory]
+        [InlineData(SecretStatuses.Locked)]
+        [InlineData("unreadable")]
+        public async Task Save_LockedOrUnavailableReference_KeepsTheExistingBehaviour(string status)
+        {
+            using var _ = new BlocksTestContext();
+            if (status == "unreadable")
+            {
+                _secrets.Setup(s => s.GetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                        .ThrowsAsync(new SecretVaultException("down", "get", "secret-1"));
+            }
+            else
+            {
+                GivenSecretStatus(status);
+            }
+
+            _repo.Setup(r => r.GetMailConfigurationByIdAsync("cfg-1")).ReturnsAsync(StoredOffice365());
+
+            var keep = Office365Request();
+            keep.ConfigurationId = "cfg-1";
+            keep.ClientSecret = "";
+            (await Service().SaveAsync(keep)).Outcome.Should().Be(MailConfigurationOutcome.Success);
+
+            var rotate = Office365Request();
+            rotate.ConfigurationId = "cfg-1";
+            rotate.ClientSecret = "v2";
+            (await Service().SaveAsync(rotate)).Outcome.Should().Be(MailConfigurationOutcome.Success);
+
+            _secrets.Verify(s => s.RotateAsync("secret-1", It.IsAny<RotateSecretRequest>(), It.IsAny<CancellationToken>()), Times.Once);
+            _secrets.Verify(s => s.SetAsync(It.IsAny<SetSecretRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Save_EditOfAnOffice365Default_KeepsTheSenderNameOnlyPathAndChecksNoSecret()
+        {
+            using var _ = new BlocksTestContext();
+            GivenSecretStatus(null);
+            var stored = StoredOffice365("default-o365");
+            stored.IsDefault = true;
+            _repo.Setup(r => r.GetMailConfigurationByIdAsync("default-o365")).ReturnsAsync(stored);
+
+            var result = await Service().SaveAsync(new MailConfiguration
+            {
+                ConfigurationId = "default-o365",
+                Provider = MailServiceProvider.Office365Smtp,
+                SenderName = "Contoso Mailer"
+            });
+
+            result.Outcome.Should().Be(MailConfigurationOutcome.Success);
+            _repo.Verify(r => r.UpdateMailSenderNameAsync("default-o365", "Contoso Mailer", It.IsAny<DateTime>(), It.IsAny<string>()), Times.Once);
+            _secrets.VerifyNoOtherCalls();
+        }
+
+        // ---------- Tolerant delete (H7, C5, C6, C7) ----------
+
+        public static TheoryData<Exception> AlreadyRetired => new()
+        {
+            new SecretStateException(SecretStatuses.Deleted, "delete", "STATUS_DELETED"),
+            new SecretNotFoundException("secret-1")
+        };
+
+        [Theory]
+        [MemberData(nameof(AlreadyRetired))]
+        public async Task Delete_SecretAlreadyArchivedOrPurged_StillDeletesTheConfiguration(Exception alreadyRetired)
+        {
+            _repo.Setup(r => r.GetMailConfigurationByIdAsync("cfg-1")).ReturnsAsync(StoredOffice365());
+            _secrets.Setup(s => s.DeleteAsync("secret-1", It.IsAny<CancellationToken>())).ThrowsAsync(alreadyRetired);
+
+            var result = await Service().DeleteAsync(new DeleteMailConfigurationRequest { ConfigurationId = "cfg-1" });
+
+            result.Outcome.Should().Be(MailConfigurationOutcome.Success);
+            _repo.Verify(r => r.DeleteMailConfigurationAsync("cfg-1"), Times.Once);
+            _secrets.Verify(s => s.RestoreAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+            _secrets.Verify(s => s.PurgeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Delete_SkippedAnAlreadyArchivedSecretThenTheWriteFails_DoesNotRestoreIt()
+        {
+            _repo.Setup(r => r.GetMailConfigurationByIdAsync("cfg-1")).ReturnsAsync(StoredOffice365());
+            _secrets.Setup(s => s.DeleteAsync("secret-1", It.IsAny<CancellationToken>()))
+                    .ThrowsAsync(new SecretStateException(SecretStatuses.Deleted, "delete", "STATUS_DELETED"));
+            _repo.Setup(r => r.DeleteMailConfigurationAsync("cfg-1"))
+                 .ThrowsAsync(new InvalidOperationException("mongo down"));
+
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                () => Service().DeleteAsync(new DeleteMailConfigurationRequest { ConfigurationId = "cfg-1" }));
+
+            _secrets.Verify(s => s.RestoreAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Delete_AccessDenied_KeepsTheConfigurationAndSurfacesTheError()
+        {
+            _repo.Setup(r => r.GetMailConfigurationByIdAsync("cfg-1")).ReturnsAsync(StoredOffice365());
+            _secrets.Setup(s => s.DeleteAsync("secret-1", It.IsAny<CancellationToken>()))
+                    .ThrowsAsync(new SecretAccessDeniedException("NOT_IN_ACCESS_LIST"));
+
+            await Assert.ThrowsAsync<SecretAccessDeniedException>(
+                () => Service().DeleteAsync(new DeleteMailConfigurationRequest { ConfigurationId = "cfg-1" }));
+
+            _repo.Verify(r => r.DeleteMailConfigurationAsync(It.IsAny<string>()), Times.Never);
         }
 
         [Fact]

@@ -211,6 +211,21 @@ namespace Configuration.DomainService.Shared.Services
             return await document.ToListAsync();
         }
 
+        public async Task<List<MailServerConfiguration>> GetMailConfigurationsByClientSecretReferenceAsync(string clientSecretReference)
+        {
+            if (string.IsNullOrWhiteSpace(clientSecretReference))
+            {
+                // An empty reference is what every configuration without a secret carries, so
+                // matching on it would report unrelated configurations as dependents.
+                return new List<MailServerConfiguration>();
+            }
+
+            var collection = _dbContextProvider.GetCollection<MailServerConfiguration>(_mailConfigurationCollectionName);
+            var filter = Builders<MailServerConfiguration>.Filter.Eq(mc => mc.ClientSecretReference, clientSecretReference);
+
+            return await collection.Find(filter).ToListAsync();
+        }
+
         public async Task DeleteMailConfigurationAsync(string configurationId)
         {
             var collection = _dbContextProvider.GetCollection<MailServerConfiguration>(_mailConfigurationCollectionName);

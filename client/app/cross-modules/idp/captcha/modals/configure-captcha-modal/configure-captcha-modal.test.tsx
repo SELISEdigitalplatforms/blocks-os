@@ -164,4 +164,73 @@ describe("ConfigureCaptchaModal", () => {
       expect(h.showErrorToast).toHaveBeenCalledWith({ errors: { captchaKey: "invalid" } }),
     );
   });
+
+  describe("repair state", () => {
+    const brokenConfiguration = (secretStatus: string) =>
+      ({
+        id: "cfg-1",
+        provider: "recaptcha",
+        isEnable: true,
+        captchaKey: "existing-key",
+        captchaGenerator: "EasyCaptchaGenerator",
+        secretId: "sec-old",
+        secretStatus,
+      }) as unknown as ICaptchaConfig;
+
+    it.each([
+      ["archived", "The linked secret was archived. Enter a new value to repair this configuration."],
+      ["missing", "The linked secret was removed. Enter a new value to repair this configuration."],
+    ])("explains a %s secret and requires a new one", async (secretStatus, notice) => {
+      const user = userEvent.setup();
+      renderModal({ configuration: brokenConfiguration(secretStatus) });
+      await openDialog(user);
+
+      expect((await screen.findByRole("alert")).textContent).toBe(notice);
+      const input = screen.getByPlaceholderText("Enter a new secret key");
+      expect(input).toBeTruthy();
+      // The required asterisk is shown, as on create.
+      expect(screen.getByText("Secret key").querySelector(".text-destructive")?.textContent).toBe(
+        "*",
+      );
+    });
+
+    it("refuses an empty submit with an inline error and saves nothing", async () => {
+      const user = userEvent.setup();
+      renderModal({ configuration: brokenConfiguration("archived") });
+      await openDialog(user);
+
+      await user.click(await screen.findByRole("button", { name: "Update Changes" }));
+
+      expect(
+        await screen.findByText("A new secret is required to repair this configuration."),
+      ).toBeTruthy();
+      expect(h.mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it("sends the new secret, which repairs the configuration", async () => {
+      const user = userEvent.setup();
+      renderModal({ configuration: brokenConfiguration("missing") });
+      await openDialog(user);
+
+      await user.type(await screen.findByPlaceholderText("Enter a new secret key"), "v2");
+      await user.click(screen.getByRole("button", { name: "Update Changes" }));
+
+      await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+      expect(h.mutateAsync.mock.calls[0][0]).toMatchObject({ id: "cfg-1", captchaSecret: "v2" });
+    });
+
+    it.each(["active", "locked", "unavailable", "none"])(
+      "leaves the edit form unchanged for a %s secret",
+      async (secretStatus) => {
+        const user = userEvent.setup();
+        renderModal({ configuration: brokenConfiguration(secretStatus) });
+        await openDialog(user);
+
+        expect(await screen.findByPlaceholderText("Leave blank to keep the current secret")).toBeTruthy();
+        expect(screen.queryByRole("alert")).toBeNull();
+        expect(screen.getByText("Secret key").querySelector(".text-destructive")).toBeNull();
+      },
+    );
+  });
 });
+

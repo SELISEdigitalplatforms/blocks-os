@@ -92,7 +92,7 @@ export const CreateProjectResourcesForm = () => {
               anytime after setup.
             </p>
           </div>
-          <div className="rounded-md border border-gray-200 bg-card p-6 shadow-sm">
+          <div className="rounded-md border border-gray-200 bg-card p-6 shadow-xs">
             <h4 className="mb-2 text-lg font-medium">Connect and select repositories</h4>
             <p className="mb-6 text-sm text-gray-500">
               We&apos;ll automatically detect and import resources from the repositories you select.

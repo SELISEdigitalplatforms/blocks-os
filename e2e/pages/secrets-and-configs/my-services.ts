@@ -7,13 +7,24 @@ export async function findServiceTriggerFlow(page: Page, name: string): Promise<
   // don't steal the accessible name match.
   const heading = page.getByRole("heading", { name, exact: true });
   const trigger = page.getByRole("button").filter({ has: heading });
-  const nextPageButton = page.locator("button:has(svg.lucide-chevron-right)").first();
+  // The list pages at 10 and the shared project keeps services from earlier
+  // runs. Use the pager's own labels: a bare chevron-right selector also hits
+  // the sidebar's collapsible arrows.
+  const firstPageButton = page.getByRole("button", { name: "Go to first page" });
+  const nextPageButton = page.getByRole("button", { name: "Go to next page" });
+
+  if (await trigger.waitFor({ state: "visible", timeout: 5000 }).then(() => true, () => false)) {
+    return trigger;
+  }
+  if ((await firstPageButton.isVisible()) && (await firstPageButton.isEnabled())) {
+    await firstPageButton.click();
+  }
 
   for (let attempt = 0; attempt < 10; attempt++) {
-    if (await trigger.isVisible({ timeout: 3000 })) {
+    if (await trigger.waitFor({ state: "visible", timeout: 3000 }).then(() => true, () => false)) {
       return trigger;
     }
-    if (!(await nextPageButton.isVisible({ timeout: 2000 }))) break;
+    if (!(await nextPageButton.isVisible())) break;
     if (await nextPageButton.isDisabled()) break;
     await nextPageButton.click();
   }
@@ -69,9 +80,9 @@ export async function registerServiceFlow(page: Page, serviceName: string, typeO
   await expect(saveButton).toBeEnabled({ timeout: 10000 });
   await saveButton.click();
   if (
-    await page.getByText("Service Registered successfully").isVisible({ timeout: 15000 })
+    await page.getByText("Service Registered successfully", { exact: true }).isVisible({ timeout: 15000 })
   ) {
-    await expect(page.getByText("Service Registered successfully")).toBeVisible();
+    await expect(page.getByText("Service Registered successfully", { exact: true })).toBeVisible();
   }
 }
 
@@ -184,9 +195,9 @@ export async function registerFrontendServiceFlow(page: Page, frontendServiceNam
   await expect(saveButton).toBeEnabled({ timeout: 10000 });
   await saveButton.click();
   if (
-    await page.getByText("Service Registered successfully").isVisible({ timeout: 15000 })
+    await page.getByText("Service Registered successfully", { exact: true }).isVisible({ timeout: 15000 })
   ) {
-    await expect(page.getByText("Service Registered successfully")).toBeVisible();
+    await expect(page.getByText("Service Registered successfully", { exact: true })).toBeVisible();
   }
 
   const frontendTrigger = await findServiceTriggerFlow(page, frontendServiceName);

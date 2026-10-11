@@ -2,7 +2,7 @@ import { CreatePermissionPayload } from "@blocks-idp/iam/models/permission";
 import { useAddPermission } from "@blocks-idp/iam/hooks/use-permission";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { PermissionForm } from "../permission-form";
-import { permissionFormSchemaType } from "../permission-form/utils";
+import { PermissionFormSchemaType } from "../permission-form/utils";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { useNavigate } from "react-router";
@@ -16,7 +16,7 @@ export const AddPermission = () => {
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const { isPending, mutateAsync } = useAddPermission();
-  const onSubmit = async (data: permissionFormSchemaType) => {
+  const onSubmit = async (data: PermissionFormSchemaType) => {
     // None is a valid severity (0), so only an unset value counts as missing.
     if (data.permissionSeverity === undefined || data.permissionSeverity === null) {
       showErrorToast({ errors: "Severity is required" });

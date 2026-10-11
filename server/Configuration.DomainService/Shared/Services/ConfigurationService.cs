@@ -10,7 +10,6 @@ using Configuration.DomainService.Storage.Enums;
 using Configuration.DomainService.DataGateway.RequestModel;
 using Configuration.DomainService.DataGateway.Entities;
 using System.Collections.Immutable;
-using Microsoft.Extensions.Logging;
 
 namespace Configuration.DomainService.Shared.Services
 {
@@ -23,22 +22,19 @@ namespace Configuration.DomainService.Shared.Services
         private readonly IValidator<SaveStorageConfigurationRequest> _storageConfigurationValidator;
         private readonly IValidator<SaveDataGatewayConfigurationRequest> _dataGatewayConfigurationValidator;
         private readonly IMessageClient _messageClient;
-        private readonly ILogger<ConfigurationService> _logger;
 
 
         public ConfigurationService(IConfigurationRepository configurationRepository,
                                     IValidator<SaveNotificationConfigurationRequest> notificatonConfigurationValidator,
                                     IValidator<SaveStorageConfigurationRequest> storageConfigurationValidator,
                                     IValidator<SaveDataGatewayConfigurationRequest> dataGatewayConfigurationValidator,
-                                    IMessageClient messageClient,
-                                    ILogger<ConfigurationService> logger)
+                                    IMessageClient messageClient)
         {
             _configurationRepository = configurationRepository;
             _notificatonConfigurationValidator = notificatonConfigurationValidator;
             _storageConfigurationValidator = storageConfigurationValidator;
             _dataGatewayConfigurationValidator = dataGatewayConfigurationValidator;
             _messageClient = messageClient;
-            _logger = logger;
         }
 
         #region Notification
@@ -186,6 +182,57 @@ namespace Configuration.DomainService.Shared.Services
             return repoConfiguration;
         }
 
+        private async Task<DataGatewayConfiguration> MappedIntoRepoConfigurationAsync(SaveDataGatewayConfigurationRequest request)
+        {
+            var repoConfiguration = request.UpdateRequest ?
+                                    await _configurationRepository.GetDataGatewayConfigurationByIdAsync(request.ItemId ?? "") :
+                                    null;
+
+            var isNewConfiguration = repoConfiguration == null;
+
+            if (repoConfiguration == null)
+            {
+                repoConfiguration = new DataGatewayConfiguration { ItemId = Guid.NewGuid().ToString(), CreatedDate = DateTime.UtcNow };
+                repoConfiguration.CreatedBy = BlocksContext.GetContext()?.UserId;
+                repoConfiguration.ProjectKey = request.ProjectKey ?? "";
+            }
+
+            repoConfiguration.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
+            repoConfiguration.LastUpdatedDate = DateTime.UtcNow;
+
+            repoConfiguration.DbConnectionString = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(request.ConnectionString ?? ""));
+            repoConfiguration.DatabaseName = request.DatabaseName ?? "";
+            repoConfiguration.IsCollectionNameEditable = request.IsCollectionNameEditable;
+            repoConfiguration.CollectionNamePattern = request.CollectionNamePattern ?? repoConfiguration.CollectionNamePattern;
+
+            if (request.EnableAnalytics.HasValue)
+            {
+                repoConfiguration.AnalyticsConfiguration ??= new AnalyticsConfiguration();
+                if (request.EnableAnalytics.Value
+                    && !repoConfiguration.AnalyticsConfiguration.EnableDate.HasValue
+                    && !repoConfiguration.AnalyticsConfiguration.ValidTill.HasValue)
+                {
+                    var enableDate = DateTime.UtcNow;
+                    repoConfiguration.AnalyticsConfiguration.EnableDate = enableDate;
+                    repoConfiguration.AnalyticsConfiguration.ValidTill = enableDate.AddDays(14);
+                }
+
+                repoConfiguration.AnalyticsConfiguration.EnableAnalytics = request.EnableAnalytics.Value;
+            }
+            else if (isNewConfiguration)
+            {
+                var enableDate = DateTime.UtcNow;
+                repoConfiguration.AnalyticsConfiguration = new AnalyticsConfiguration
+                {
+                    EnableAnalytics = true,
+                    EnableDate = enableDate,
+                    ValidTill = enableDate.AddDays(14)
+                };
+            }
+
+            return repoConfiguration;
+        }
+
         public static class StorageTypes
         {
             private static readonly ImmutableDictionary<string, StorageStrategyCategory> TypeToCategory =
@@ -264,57 +311,6 @@ namespace Configuration.DomainService.Shared.Services
             await _configurationRepository.SaveDataGatewayConfigurationAsync(repoConfiguration);
 
             return new BaseMutationResponse { IsSuccess = true, ItemId = repoConfiguration.ItemId };
-        }
-
-        private async Task<DataGatewayConfiguration> MappedIntoRepoConfigurationAsync(SaveDataGatewayConfigurationRequest request)
-        {
-            var repoConfiguration = request.UpdateRequest ?
-                                    await _configurationRepository.GetDataGatewayConfigurationByIdAsync(request.ItemId ?? "") :
-                                    null;
-
-            var isNewConfiguration = repoConfiguration == null;
-
-            if (repoConfiguration == null)
-            {
-                repoConfiguration = new DataGatewayConfiguration { ItemId = Guid.NewGuid().ToString(), CreatedDate = DateTime.UtcNow };
-                repoConfiguration.CreatedBy = BlocksContext.GetContext()?.UserId;
-                repoConfiguration.ProjectKey = request.ProjectKey ?? "";
-            }
-
-            repoConfiguration.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
-            repoConfiguration.LastUpdatedDate = DateTime.UtcNow;
-
-            repoConfiguration.DbConnectionString = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(request.ConnectionString ?? ""));
-            repoConfiguration.DatabaseName = request.DatabaseName ?? "";
-            repoConfiguration.IsCollectionNameEditable = request.IsCollectionNameEditable;
-            repoConfiguration.CollectionNamePattern = request.CollectionNamePattern ?? repoConfiguration.CollectionNamePattern;
-
-            if (request.EnableAnalytics.HasValue)
-            {
-                repoConfiguration.AnalyticsConfiguration ??= new AnalyticsConfiguration();
-                if (request.EnableAnalytics.Value
-                    && !repoConfiguration.AnalyticsConfiguration.EnableDate.HasValue
-                    && !repoConfiguration.AnalyticsConfiguration.ValidTill.HasValue)
-                {
-                    var enableDate = DateTime.UtcNow;
-                    repoConfiguration.AnalyticsConfiguration.EnableDate = enableDate;
-                    repoConfiguration.AnalyticsConfiguration.ValidTill = enableDate.AddDays(14);
-                }
-
-                repoConfiguration.AnalyticsConfiguration.EnableAnalytics = request.EnableAnalytics.Value;
-            }
-            else if (isNewConfiguration)
-            {
-                var enableDate = DateTime.UtcNow;
-                repoConfiguration.AnalyticsConfiguration = new AnalyticsConfiguration
-                {
-                    EnableAnalytics = true,
-                    EnableDate = enableDate,
-                    ValidTill = enableDate.AddDays(14)
-                };
-            }
-
-            return repoConfiguration;
         }
 
         public async Task<DataGatewayConfiguration> GetDataGatewayConfigurationAsync()

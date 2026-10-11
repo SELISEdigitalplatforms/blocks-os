@@ -12,6 +12,7 @@ import { Pencil, Ticket, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { UpdateConfiguration } from "../update-configuration/update-configuration";
 import { AddConfiguration } from "../add-configuration/add-configuration";
+import { existingUserPasswordLabel, maxRedemptionsLabel } from "../max-redemptions";
 
 type ConfigurationsListProps = {
   items: ISignupLinkConfiguration[];
@@ -95,8 +96,8 @@ export const ConfigurationsList = ({
           No signup link configurations yet
         </h2>
         <p className="max-w-md text-sm text-muted-foreground">
-          A configuration decides which roles, permissions and sign-in experience a one-click
-          signup link grants.
+          A configuration decides which roles, permissions and sign-in experience a one-click signup
+          link grants.
         </p>
         <AddConfiguration />
       </div>
@@ -126,12 +127,14 @@ export const ConfigurationsList = ({
   return (
     <>
       <div className="scrollbar-hidden-x overflow-x-hidden md:overflow-x-auto">
-        <div className="flex flex-col gap-3 md:min-w-[840px]">
-          <div className="hidden grid-cols-[minmax(180px,1.2fr)_140px_minmax(140px,1fr)_100px_100px_88px] items-center gap-4 px-4 md:grid">
+        <div className="flex flex-col gap-3 md:min-w-[1060px]">
+          <div className="hidden grid-cols-[minmax(180px,1.2fr)_140px_minmax(140px,1fr)_100px_100px_120px_100px_88px] items-center gap-4 px-4 md:grid">
             <span className="font-bold text-medium-emphasis">Name</span>
             <span className="font-bold text-medium-emphasis">Credential mode</span>
             <span className="font-bold text-medium-emphasis">Default roles</span>
             <span className="font-bold text-medium-emphasis">Lifetime</span>
+            <span className="font-bold text-medium-emphasis">Max uses</span>
+            <span className="font-bold text-medium-emphasis">Existing-user password</span>
             <span className="font-bold text-medium-emphasis">Status</span>
             <span />
           </div>
@@ -139,7 +142,7 @@ export const ConfigurationsList = ({
           {items.map((row) => (
             <div
               key={row.itemId}
-              className="flex flex-col gap-3 rounded-xl border bg-card p-4 md:grid md:grid-cols-[minmax(180px,1.2fr)_140px_minmax(140px,1fr)_100px_100px_88px] md:items-center md:gap-4"
+              className="flex flex-col gap-3 rounded-xl border bg-card p-4 md:grid md:grid-cols-[minmax(180px,1.2fr)_140px_minmax(140px,1fr)_100px_100px_120px_100px_88px] md:items-center md:gap-4"
               data-testid={`configuration-row-${row.itemId}`}
             >
               <div className="flex min-w-0 items-center gap-3">
@@ -165,6 +168,24 @@ export const ConfigurationsList = ({
               <div>
                 <span className="text-xs text-muted-foreground md:hidden">Lifetime</span>
                 <p className="text-sm text-muted-foreground">{row.defaultLifetimeMinutes}m</p>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground md:hidden">Max uses</span>
+                <p className="text-sm text-muted-foreground" data-testid="max-uses">
+                  {maxRedemptionsLabel(row.defaultMaxRedemptions)}
+                </p>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground md:hidden">
+                  Existing-user password
+                </span>
+                <Badge
+                  variant="secondary"
+                  className="font-normal"
+                  data-testid="existing-user-password"
+                >
+                  {existingUserPasswordLabel(row.requireExistingUserPassword)}
+                </Badge>
               </div>
               <div>
                 <span className="text-xs text-muted-foreground md:hidden">Status</span>
@@ -212,11 +233,7 @@ export const ConfigurationsList = ({
             if (!value) setSelected(null);
           }}
         >
-          <UpdateConfiguration
-            configuration={selected}
-            isOpen
-            onClose={() => setSelected(null)}
-          />
+          <UpdateConfiguration configuration={selected} isOpen onClose={() => setSelected(null)} />
         </Dialog>
       )}
 

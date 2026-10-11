@@ -22,7 +22,7 @@ import { useForm } from "react-hook-form";
 import {
   permissionFormDefaultValue,
   permissionFormSchema,
-  permissionFormSchemaType,
+  PermissionFormSchemaType,
   BUILTIN_PERMISSION_READONLY_MESSAGE,
   isPermissionFormReadOnly,
 } from "./utils";
@@ -32,9 +32,9 @@ import { PermissionGroupCombobox } from "@blocks-idp/iam/components/permission-g
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
 import { Banner } from "@/components/ui-kits/banner/banner";
 type PermissionFormProps = {
-  onSave: (data: permissionFormSchemaType) => void;
+  onSave: (data: PermissionFormSchemaType) => void;
   isPending: boolean;
-  values?: permissionFormSchemaType | null;
+  values?: PermissionFormSchemaType | null;
   isBuiltIn?: boolean;
   showTags?: boolean;
 };
@@ -50,7 +50,7 @@ export const PermissionForm = ({
     values: values || permissionFormDefaultValue,
     resolver: zodResolver(permissionFormSchema),
   });
-  const onSubmit = async (data: permissionFormSchemaType) => {
+  const onSubmit = async (data: PermissionFormSchemaType) => {
     onSave(data);
   };
   const resourceType = form.watch("type");
@@ -93,7 +93,7 @@ export const PermissionForm = ({
                       onValueChange={(val) => field.onChange(Number(val))}
                       disabled={isReadOnly}
                     >
-                      <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                      <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2">
                         <SelectValue placeholder="Select Type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -169,7 +169,7 @@ export const PermissionForm = ({
                       onValueChange={(val) => field.onChange(Number(val))}
                       disabled={isReadOnly}
                     >
-                      <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                      <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2">
                         <SelectValue placeholder="Select Severity" />
                       </SelectTrigger>
                       <SelectContent>

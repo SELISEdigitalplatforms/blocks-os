@@ -23,6 +23,7 @@ import { useGetEmailSecretConfigs } from "@blocks-communication/mail/hooks/use-e
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { EmptyState } from "@/components/ui-kits/empty-state";
 import { parseAsBoolean, useQueryState } from "nuqs";
+import { LinkedSecretStatusValue } from "@/cross-modules/secrets/components/linked-secret-status/linked-secret-status";
 interface EmailConfigurationProps {
   addConfigOpen?: boolean;
   onAddConfigOpenChange?: (open: boolean) => void;
@@ -63,12 +64,16 @@ export function EmailConfiguration({
   // }
   return (
     <div>
+      {/* The form lives only while its dialog is open, so Cancel drops unsaved
+          input and the next open starts from the stored record. */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <NewConfiguration
-          dialogTitle="Add Configuration"
-          onClose={() => setOpen(false)}
-          isEdit={false}
-        />
+        {open && (
+          <NewConfiguration
+            dialogTitle="Add Configuration"
+            onClose={() => setOpen(false)}
+            isEdit={false}
+          />
+        )}
       </Dialog>
       {data && data.length > 0 ? (
         <Accordion type="single" collapsible className="mt-6" defaultValue={data[0].itemId}>
@@ -105,12 +110,13 @@ export function EmailConfiguration({
                           </TooltipTrigger>
                           <TooltipContent>Edit</TooltipContent>
                         </Tooltip>
-                        {config.isDefault ? (
+                        {editingId === config.itemId && config.isDefault && (
                           <EditDefaultSenderName
                             config={config}
                             onClose={() => setEditingId(null)}
                           />
-                        ) : (
+                        )}
+                        {editingId === config.itemId && !config.isDefault && (
                           <NewConfiguration
                             dialogTitle="Edit Configuration"
                             previousData={config}
@@ -246,9 +252,14 @@ export function EmailConfiguration({
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Client secret</p>
-                      <p className="text-base">
-                        {config.isClientSecretConfigured ? "Configured" : "Not configured"}
-                      </p>
+                      <LinkedSecretStatusValue
+                        status={config.clientSecretStatus}
+                        fallback={
+                          <p className="text-base">
+                            {config.isClientSecretConfigured ? "Configured" : "Not configured"}
+                          </p>
+                        }
+                      />
                     </div>
                   </div>
                 )}

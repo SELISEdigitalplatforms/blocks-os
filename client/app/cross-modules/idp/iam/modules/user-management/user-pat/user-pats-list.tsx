@@ -65,7 +65,7 @@ export const UserPATList = ({ isLoading, data }: PATListProps) => {
                 <span
                   className={cn(
                     "block truncate",
-                    isMobile && "transition-all group-hover:blur-sm",
+                    isMobile && "transition-all group-hover:blur-xs",
                   )}
                   title={row.original.code}
                 >

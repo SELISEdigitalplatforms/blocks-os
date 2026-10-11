@@ -157,7 +157,8 @@ export async function openActionsMenuFlow(page: Page, secretName: string): Promi
   await expect(page.getByRole("menuitem", { name: "Edit" })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Rotate" })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Lock" })).toBeVisible();
-  await expect(page.getByRole("menuitem", { name: "Delete" })).toBeVisible();
+  // Soft delete is presented as "Archive"; Restore and Purge live on the archived row.
+  await expect(page.getByRole("menuitem", { name: "Archive" })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Audit" })).toBeVisible();
   await page.keyboard.press("Escape");
   return true;
@@ -240,27 +241,28 @@ export async function deleteSecretAndRestoreFlow(page: Page, secretRow: Locator,
   });
   if (!(await actionsButton.isVisible({ timeout: 5000 }))) return;
   await actionsButton.click();
-  await page.getByRole("menuitem", { name: "Delete" }).click();
-  await expect(page.getByRole("heading", { name: `Delete ${secretName}` })).toBeVisible();
-  if (await page.getByText("This is a soft delete").isVisible()) {
-    await expect(page.getByText("This is a soft delete")).toBeVisible();
-  }
-  await page.getByRole("button", { name: "Delete", exact: true }).click();
-  await expect(page.getByRole("heading", { name: `Delete ${secretName}` })).toBeHidden({
-    timeout: 15000,
-  });
-  if (await secretRow.isVisible({ timeout: 3000 })) {
-    await expect(secretRow).toBeHidden({ timeout: 10000 });
-  }
+  await page.getByRole("menuitem", { name: "Archive" }).click();
+  const archiveHeading = page.getByRole("heading", { name: `Archive ${secretName}?` });
+  await expect(archiveHeading).toBeVisible();
+  await expect(page.getByText("You can restore it later", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "Archive", exact: true }).click();
+  await expect(archiveHeading).toBeHidden({ timeout: 15000 });
+  await expect(secretRow).toBeHidden({ timeout: 10000 });
 
-  const statusFilter = page.getByRole("button", { name: /^Status$/i });
-  if (!(await statusFilter.isVisible({ timeout: 5000 }))) return;
-  await statusFilter.click();
-  await page.getByRole("radio", { name: "Deleted", exact: true }).click();
+  // Archived is its own toggle beside the filters; it shows the soft-deleted rows.
+  const archivedToggle = page.getByRole("button", { name: /^Archived/ });
+  await archivedToggle.click();
+  await expect(archivedToggle).toHaveAttribute("aria-pressed", "true");
   await expect(secretRow).toBeVisible({ timeout: 10000 });
 
-  await secretRow.getByRole("button", { name: `Actions for ${secretName}` }).click();
-  await page.getByRole("menuitem", { name: "Restore" }).click();
-  await expect(page.getByRole("heading", { name: `Restore ${secretName}` })).toBeVisible();
-  await page.getByRole("button", { name: "Restore", exact: true }).click();
+  await secretRow.getByRole("button", { name: "Restore", exact: true }).click();
+  const restoreHeading = page.getByRole("heading", { name: `Restore ${secretName}?` });
+  await expect(restoreHeading).toBeVisible();
+  await page.getByRole("dialog").getByRole("button", { name: "Restore", exact: true }).click();
+  await expect(restoreHeading).toBeHidden({ timeout: 15000 });
+  await expect(secretRow).toBeHidden({ timeout: 10000 });
+
+  await archivedToggle.click();
+  await expect(archivedToggle).toHaveAttribute("aria-pressed", "false");
+  await expect(secretRow).toBeVisible({ timeout: 10000 });
 }

@@ -1,4 +1,5 @@
 import { renderHook, waitFor } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createWrapper } from "@/test-utils/test-providers/query-client";
 import { mockProjectStoreFactory } from "@/test-utils/__mocks__";
@@ -11,6 +12,7 @@ import {
 } from "@/cross-modules/secrets/test-utils/secret.fixtures";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import {
+  SECRET_DEPENDENTS_TIMEOUT_MS,
   secretQueryKeys,
   useDeleteSecret,
   useFindSecrets,
@@ -21,6 +23,7 @@ import {
   useRevealSecret,
   useRotateSecret,
   useSecretAuditLogs,
+  useSecretDependents,
   useSetSecret,
   useUnlockSecret,
   useUpdateSecret,
@@ -43,6 +46,7 @@ vi.mock("@/cross-modules/secrets/services/secret-management.service", () => ({
     restore: vi.fn(),
     purge: vi.fn(),
     getAuditLogs: vi.fn(),
+    getDependents: vi.fn(),
   },
 }));
 vi.mock("@/hooks/use-toast", () => ({
@@ -272,6 +276,41 @@ describe("mutations", () => {
     });
   });
 
+  it.each([
+    ["archive", useDeleteSecret, "remove"],
+    ["restore", useRestoreSecret, "restore"],
+    ["purge", usePurgeSecret, "purge"],
+  ] as const)(
+    "%s refreshes the CAPTCHA and email configuration lists",
+    async (_label, hook, method) => {
+      // Their linked-secret status changes with the secret's lifecycle.
+      const invalidate = vi.spyOn(QueryClient.prototype, "invalidateQueries");
+      vi.mocked(secretManagementService[method]).mockResolvedValue({ isSuccess: true });
+      const { result } = renderHook(() => hook(), { wrapper: createWrapper() });
+
+      await result.current.mutateAsync(SECRET_ID);
+
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ["captcha-config"] });
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ["email-configs"] });
+      invalidate.mockRestore();
+    },
+  );
+
+  it.each([
+    ["lock", useLockSecret],
+    ["unlock", useUnlockSecret],
+  ] as const)("%s leaves the configuration lists alone", async (method, hook) => {
+    const invalidate = vi.spyOn(QueryClient.prototype, "invalidateQueries");
+    vi.mocked(secretManagementService[method]).mockResolvedValue({ isSuccess: true });
+    const { result } = renderHook(() => hook(), { wrapper: createWrapper() });
+
+    await result.current.mutateAsync(SECRET_ID);
+
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ["captcha-config"] });
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ["email-configs"] });
+    invalidate.mockRestore();
+  });
+
   it("toasts a readable message when a lifecycle call fails", async () => {
     vi.mocked(secretManagementService.lock).mockRejectedValue(new FakeHttpError(403, {}));
     const { result } = renderHook(() => useLockSecret(), { wrapper: createWrapper() });
@@ -303,5 +342,82 @@ describe("useSecretAuditLogs", () => {
       wrapper: createWrapper(),
     });
     expect(result.current.fetchStatus).toBe("idle");
+  });
+});
+
+describe("useSecretDependents", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("fetches the dependents of a secret under a tenant-scoped key", async () => {
+    const answer = {
+      secretId: SECRET_ID,
+      dependents: [{ kind: "mail" as const, id: "m2", name: "Support" }],
+    };
+    vi.mocked(secretManagementService.getDependents).mockResolvedValue(answer);
+
+    const { result } = renderHook(() => useSecretDependents(SECRET_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(secretManagementService.getDependents).toHaveBeenCalledWith(
+      SECRET_ID,
+      expect.any(AbortSignal),
+    );
+    expect(result.current.data).toEqual(answer);
+    expect(secretQueryKeys.dependents(TENANT, SECRET_ID)).toEqual([
+      "secrets",
+      "dependents",
+      TENANT,
+      SECRET_ID,
+    ]);
+  });
+
+  it("gives up on a lookup that never answers, so the dialog can stop waiting", async () => {
+    vi.useFakeTimers();
+    try {
+      let aborted: AbortSignal | undefined;
+      vi.mocked(secretManagementService.getDependents).mockImplementation(
+        (_id, signal) =>
+          new Promise((_resolve, reject) => {
+            aborted = signal;
+            signal?.addEventListener("abort", () => reject(new Error("aborted")));
+          }),
+      );
+
+      const { result } = renderHook(() => useSecretDependents(SECRET_ID), {
+        wrapper: createWrapper(),
+      });
+
+      await vi.advanceTimersByTimeAsync(SECRET_DEPENDENTS_TIMEOUT_MS - 1);
+      expect(result.current.isLoading).toBe(true);
+
+      await vi.advanceTimersByTimeAsync(1);
+      expect(aborted?.aborted).toBe(true);
+      await vi.waitFor(() => expect(result.current.isError).toBe(true));
+      expect(result.current.isLoading).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not fetch while disabled", () => {
+    const { result } = renderHook(() => useSecretDependents(SECRET_ID, false), {
+      wrapper: createWrapper(),
+    });
+
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(secretManagementService.getDependents).not.toHaveBeenCalled();
+  });
+
+  it("reports a failure at once, without retrying", async () => {
+    vi.mocked(secretManagementService.getDependents).mockRejectedValue(new FakeHttpError(502, {}));
+
+    const { result } = renderHook(() => useSecretDependents(SECRET_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(secretManagementService.getDependents).toHaveBeenCalledTimes(1);
   });
 });

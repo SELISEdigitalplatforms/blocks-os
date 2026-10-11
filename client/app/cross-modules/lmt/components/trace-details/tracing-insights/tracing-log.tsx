@@ -48,7 +48,7 @@ const columns: ColumnDef<ILog>[] = [
             {getLogLevelLabel(row.original.level)}
           </Badge>
         </div>
-        <div className="whitespace-pre-wrap break-words text-sm leading-relaxed text-high-emphasis">
+        <div className="whitespace-pre-wrap wrap-break-word text-sm leading-relaxed text-high-emphasis">
           {row.original.message}
         </div>
         <LogStackTrace exception={row.original.exception} />

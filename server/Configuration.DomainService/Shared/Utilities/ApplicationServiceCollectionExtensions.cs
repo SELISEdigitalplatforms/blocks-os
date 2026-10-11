@@ -23,6 +23,7 @@ using Configuration.DomainService.Mail.Services;
 using Configuration.DomainService.Integration.RequestModel;
 using Configuration.DomainService.Integration.Services;
 using Configuration.DomainService.Integration.Validators;
+using Configuration.DomainService.Shared.Secrets;
 
 namespace Configuration.DomainService.Shared.Utilities
 {
@@ -59,6 +60,10 @@ namespace Configuration.DomainService.Shared.Utilities
             serviceCollection.AddScoped<IMailConfigurationProvider, GmailMailConfigurationProvider>();
             serviceCollection.AddScoped<IMailConfigurationProviderRegistry, MailConfigurationProviderRegistry>();
             serviceCollection.AddScoped<IMailConfigurationService, MailConfigurationService>();
+
+            // Finds the CAPTCHA and mail configurations that point at a secret, for the warning
+            // shown before it is archived or purged.
+            serviceCollection.AddScoped<ISecretDependentLookup, SecretDependentLookup>();
 
             serviceCollection.AddSingleton<IValidator<SaveNotificationConfigurationRequest>, NotificationConfigurationValidator>();
             serviceCollection.AddSingleton<IValidator<SaveStorageConfigurationRequest>, StorageConfigurationValidator>();

@@ -32,6 +32,9 @@ namespace DomainService.Projects
         private readonly IHttpClientFactory _httpClientFactory;
 
         private const string _tenantTokenPublicCertificateCachePrefix = "tetocertpublic::";
+        private const string UpsertAction = "upsert";
+        // Error code clients match on; the value is part of the API contract.
+        private const string ProjectNotFoundErrorCode = "project_not_found";
 
 
         public ProjectManagementService(IProjectRepository projectRepository,
@@ -105,7 +108,7 @@ namespace DomainService.Projects
 
             await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
             {
-                Action = "upsert",
+                Action = UpsertAction,
                 TenantId = project.TenantId,
                 Tenant = project
             });
@@ -817,7 +820,7 @@ namespace DomainService.Projects
             // being reported as one.
             if (project == null)
             {
-                return new BaseResponse() { IsSuccess = false, Errors = new Dictionary<string, string> { { "project_not_found", $"No project found with id {blocksContext.TenantId}" } } };
+                return new BaseResponse() { IsSuccess = false, Errors = new Dictionary<string, string> { { ProjectNotFoundErrorCode, $"No project found with id {blocksContext.TenantId}" } } };
             }
 
             if(project.IsRootTenant)
@@ -840,31 +843,14 @@ namespace DomainService.Projects
             var previousCookieDomain = applicationBeforeUpdate?.CookieDomain;
             var previousDomainWasProvisioned = applicationBeforeUpdate is not null && IsSelfProvisioned(applicationBeforeUpdate);
 
-            switch (request.Action)
-            {
-                case ApplicationAction.Add:
-                    var addResult = AddApplication(project, request);
-                    if (!addResult.IsSuccess)
-                        return addResult;
-                    break;
-
-                case ApplicationAction.Edit:
-                    var editResult = EditApplication(project, request);
-                    if (!editResult.IsSuccess)
-                        return editResult;
-                    break;
-
-                case ApplicationAction.Delete:
-                    var deleteResult = DeleteApplication(project, request);
-                    if (!deleteResult.IsSuccess)
-                        return deleteResult;
-                    break;
-            }
+            var applicationActionFailure = ApplyApplicationAction(project, request);
+            if (applicationActionFailure != null)
+                return applicationActionFailure;
 
             await _projectRepository.UpdateProjectAsync(project);
             await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
             {
-                Action = "upsert",
+                Action = UpsertAction,
                 TenantId = project.TenantId,
                 Tenant = project
             });
@@ -889,6 +875,35 @@ namespace DomainService.Projects
             }
 
             return new BaseResponse { IsSuccess = true };
+        }
+
+        // Applies the requested add/edit/delete to the project in memory. Returns the failed
+        // response when the action was rejected, or null when the project is ready to be saved
+        // (including for an action this method does not recognise, which changes nothing).
+        private BaseResponse? ApplyApplicationAction(Tenant project, UpdateProjectRequest request)
+        {
+            switch (request.Action)
+            {
+                case ApplicationAction.Add:
+                    var addResult = AddApplication(project, request);
+                    if (!addResult.IsSuccess)
+                        return addResult;
+                    break;
+
+                case ApplicationAction.Edit:
+                    var editResult = EditApplication(project, request);
+                    if (!editResult.IsSuccess)
+                        return editResult;
+                    break;
+
+                case ApplicationAction.Delete:
+                    var deleteResult = DeleteApplication(project, request);
+                    if (!deleteResult.IsSuccess)
+                        return deleteResult;
+                    break;
+            }
+
+            return null;
         }
 
         // The API host serves every application under the same cookie domain, so
@@ -1055,7 +1070,7 @@ namespace DomainService.Projects
 
             if (project == null)
             {
-                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "project_not_found", $"No project exist with {projectId}" } } };
+                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { ProjectNotFoundErrorCode, $"No project exist with {projectId}" } } };
             }
 
             project.IsDisabled = true;
@@ -1067,7 +1082,7 @@ namespace DomainService.Projects
 
             await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
             {
-                Action = "upsert",
+                Action = UpsertAction,
                 TenantId = project.TenantId,
                 Tenant = project
             });
@@ -1218,7 +1233,7 @@ namespace DomainService.Projects
                 await _projectRepository.UpdateProjectAsync(project);
                 await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
                 {
-                    Action = "upsert",
+                    Action = UpsertAction,
                     TenantId = project.TenantId,
                     Tenant = project
                 });
@@ -1279,7 +1294,7 @@ namespace DomainService.Projects
 
             if (project == null)
             {
-                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "project_not_found", $"No project found with id {tenantId}" } } };
+                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { ProjectNotFoundErrorCode, $"No project found with id {tenantId}" } } };
             }
 
             project.ThirdPartyJwtTokenParameters ??= new();
@@ -1297,7 +1312,7 @@ namespace DomainService.Projects
 
             await Task.WhenAll( _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
             {
-                Action = "upsert",
+                Action = UpsertAction,
                 TenantId = project.TenantId,
                 Tenant = project
             }), _cacheClient.RemoveKeyAsync($"{_tenantTokenPublicCertificateCachePrefix}{tenantId}"));
@@ -1389,7 +1404,7 @@ namespace DomainService.Projects
 
             if (tenant == null)
             {
-                return Failed("project_not_found", $"No project found with id {tenantId}");
+                return Failed(ProjectNotFoundErrorCode, $"No project found with id {tenantId}");
             }
 
             var siblings = await _projectRepository.GetThirdPartyJwtProvidersAsync(tenantId);
@@ -1443,54 +1458,14 @@ namespace DomainService.Projects
 
             if (isSymmetric)
             {
-                provider.JwksUrl = string.Empty;
-
-                // Switching a provider to the HMAC family drops the certificate for the same
-                // reason the reverse drops the secret: an unused key source left behind is a
-                // dormant signing authority waiting for the algorithm to be switched back.
-                provider.PublicCertificatePath = string.Empty;
-                provider.PublicCertificatePasswordCipher = string.Empty;
-                provider.CertificateSubject = string.Empty;
-                provider.CertificateThumbprint = string.Empty;
-                provider.CertificateNotAfter = null;
-
-                // Empty means untouched, never cleared: a masked field round-trips as "" from most
-                // frontends, and treating that as a clear would silently break authentication.
-                if (!string.IsNullOrEmpty(request.SigningSecret))
-                {
-                    provider.SigningSecretCipher = _cryptoService.Encrypt(request.SigningSecret, tenant.TenantSalt);
-                }
+                ApplySymmetricKeySource(provider, request, tenant);
             }
             else
             {
-                // Switching a provider away from the HMAC family drops the stored secret. Leaving
-                // it would keep a dormant signing authority alive for the moment someone switches
-                // the algorithm back.
-                provider.SigningSecretCipher = string.Empty;
-
-                // Validation has already established exactly one of the two is set.
-                if (!string.IsNullOrWhiteSpace(request.PublicCertificatePath))
+                var rejection = await ApplyAsymmetricKeySourceAsync(provider, request, tenant);
+                if (rejection != null)
                 {
-                    ApplyCertificateKeySource(provider, request, tenant);
-
-                    var inspection = await InspectCertificateAsync(provider, tenant);
-                    if (inspection.Rejection != null)
-                    {
-                        return inspection.Rejection;
-                    }
-
-                    provider.CertificateSubject = inspection.Subject;
-                    provider.CertificateThumbprint = inspection.Thumbprint;
-                    provider.CertificateNotAfter = inspection.NotAfter;
-                }
-                else
-                {
-                    provider.JwksUrl = request.JwksUrl!.Trim();
-                    provider.PublicCertificatePath = string.Empty;
-                    provider.PublicCertificatePasswordCipher = string.Empty;
-                    provider.CertificateSubject = string.Empty;
-                    provider.CertificateThumbprint = string.Empty;
-                    provider.CertificateNotAfter = null;
+                    return rejection;
                 }
             }
 
@@ -1533,7 +1508,7 @@ namespace DomainService.Projects
                 return new BaseResponse
                 {
                     IsSuccess = false,
-                    Errors = new Dictionary<string, string> { { "project_not_found", $"No project found with id {tenantId}" } }
+                    Errors = new Dictionary<string, string> { { ProjectNotFoundErrorCode, $"No project found with id {tenantId}" } }
                 };
             }
 
@@ -1552,7 +1527,7 @@ namespace DomainService.Projects
                 return new BaseResponse
                 {
                     IsSuccess = false,
-                    Errors = new Dictionary<string, string> { { "project_not_found", $"No project found with id {tenantId}" } }
+                    Errors = new Dictionary<string, string> { { ProjectNotFoundErrorCode, $"No project found with id {tenantId}" } }
                 };
             }
 
@@ -1587,7 +1562,7 @@ namespace DomainService.Projects
             // that cache happened to expire.
             await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
             {
-                Action = "upsert",
+                Action = UpsertAction,
                 TenantId = project.TenantId,
                 Tenant = project
             });
@@ -1620,7 +1595,7 @@ namespace DomainService.Projects
 
                 await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
                 {
-                    Action = "upsert",
+                    Action = UpsertAction,
                     TenantId = tenant.TenantId,
                     Tenant = tenant
                 });
@@ -1641,6 +1616,69 @@ namespace DomainService.Projects
                     }
                 };
             }
+        }
+
+        private void ApplySymmetricKeySource(
+            ThirdPartyJwtProvider provider,
+            SaveThirdPartyJwtProviderRequest request,
+            Tenant tenant)
+        {
+            provider.JwksUrl = string.Empty;
+
+            // Switching a provider to the HMAC family drops the certificate for the same
+            // reason the reverse drops the secret: an unused key source left behind is a
+            // dormant signing authority waiting for the algorithm to be switched back.
+            provider.PublicCertificatePath = string.Empty;
+            provider.PublicCertificatePasswordCipher = string.Empty;
+            provider.CertificateSubject = string.Empty;
+            provider.CertificateThumbprint = string.Empty;
+            provider.CertificateNotAfter = null;
+
+            // Empty means untouched, never cleared: a masked field round-trips as "" from most
+            // frontends, and treating that as a clear would silently break authentication.
+            if (!string.IsNullOrEmpty(request.SigningSecret))
+            {
+                provider.SigningSecretCipher = _cryptoService.Encrypt(request.SigningSecret, tenant.TenantSalt);
+            }
+        }
+
+        // Returns the rejection when the uploaded certificate cannot be used, otherwise null.
+        private async Task<SaveThirdPartyJwtProviderResponse?> ApplyAsymmetricKeySourceAsync(
+            ThirdPartyJwtProvider provider,
+            SaveThirdPartyJwtProviderRequest request,
+            Tenant tenant)
+        {
+            // Switching a provider away from the HMAC family drops the stored secret. Leaving
+            // it would keep a dormant signing authority alive for the moment someone switches
+            // the algorithm back.
+            provider.SigningSecretCipher = string.Empty;
+
+            // Validation has already established exactly one of the two is set.
+            if (!string.IsNullOrWhiteSpace(request.PublicCertificatePath))
+            {
+                ApplyCertificateKeySource(provider, request, tenant);
+
+                var inspection = await InspectCertificateAsync(provider, tenant);
+                if (inspection.Rejection != null)
+                {
+                    return inspection.Rejection;
+                }
+
+                provider.CertificateSubject = inspection.Subject;
+                provider.CertificateThumbprint = inspection.Thumbprint;
+                provider.CertificateNotAfter = inspection.NotAfter;
+            }
+            else
+            {
+                provider.JwksUrl = request.JwksUrl!.Trim();
+                provider.PublicCertificatePath = string.Empty;
+                provider.PublicCertificatePasswordCipher = string.Empty;
+                provider.CertificateSubject = string.Empty;
+                provider.CertificateThumbprint = string.Empty;
+                provider.CertificateNotAfter = null;
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -1807,59 +1845,12 @@ namespace DomainService.Projects
             var hasJwksUrl = !string.IsNullOrWhiteSpace(request.JwksUrl);
             var hasCertificate = !string.IsNullOrWhiteSpace(request.PublicCertificatePath);
 
-            if (isSymmetric)
+            var keySourceFailure = isSymmetric
+                ? ValidateSymmetricKeySource(request, existing, hasJwksUrl, hasCertificate)
+                : ValidateAsymmetricKeySource(request, hasJwksUrl, hasCertificate);
+            if (keySourceFailure != null)
             {
-                var hasStoredSecret = !string.IsNullOrWhiteSpace(existing?.SigningSecretCipher);
-
-                if (string.IsNullOrEmpty(request.SigningSecret) && !hasStoredSecret)
-                {
-                    return Failed("signing_secret_required", "An HMAC provider needs a signing secret.");
-                }
-
-                if (hasJwksUrl)
-                {
-                    return Failed("unexpected_jwks_url", "An HMAC provider must not carry a JWKS URL.");
-                }
-
-                if (hasCertificate)
-                {
-                    return Failed(
-                        "unexpected_certificate",
-                        "An HMAC provider must not carry a public certificate. HMAC verifies with the shared " +
-                        "secret; a certificate would be a second, unrelated signing authority.");
-                }
-            }
-            else
-            {
-                if (!hasJwksUrl && !hasCertificate)
-                {
-                    return Failed(
-                        "key_source_required",
-                        "An asymmetric provider needs a key source: either a JWKS URL, or a public certificate " +
-                        "to pin a single key.");
-                }
-
-                // Which of the two got consulted would otherwise come down to the order this code
-                // happens to check them in, and the other would sit there looking configured.
-                if (hasJwksUrl && hasCertificate)
-                {
-                    return Failed(
-                        "ambiguous_key_source",
-                        "Configure a JWKS URL or a public certificate, not both. Two key sources for one " +
-                        "provider is two independent signing authorities behind a single claim mapping.");
-                }
-
-                if (!string.IsNullOrEmpty(request.SigningSecret))
-                {
-                    return Failed("unexpected_signing_secret", "An asymmetric provider must not carry a signing secret.");
-                }
-
-                if (hasJwksUrl && !string.IsNullOrEmpty(request.PublicCertificatePassword))
-                {
-                    return Failed(
-                        "unexpected_certificate_password",
-                        "A JWKS URL needs no passphrase; a passphrase only ever unlocks a PKCS#12 certificate.");
-                }
+                return keySourceFailure;
             }
 
             if (string.IsNullOrWhiteSpace(request.ClaimsMapping?.UserId))
@@ -1895,6 +1886,73 @@ namespace DomainService.Projects
                     "audiences_required_for_shared_issuer",
                     "Another active provider already uses this issuer, so both must declare audiences. " +
                     "Without them the two cannot be told apart and the caller chooses which mapping applies.");
+            }
+
+            return null;
+        }
+
+        private static SaveThirdPartyJwtProviderResponse? ValidateSymmetricKeySource(
+            SaveThirdPartyJwtProviderRequest request,
+            ThirdPartyJwtProvider? existing,
+            bool hasJwksUrl,
+            bool hasCertificate)
+        {
+            var hasStoredSecret = !string.IsNullOrWhiteSpace(existing?.SigningSecretCipher);
+
+            if (string.IsNullOrEmpty(request.SigningSecret) && !hasStoredSecret)
+            {
+                return Failed("signing_secret_required", "An HMAC provider needs a signing secret.");
+            }
+
+            if (hasJwksUrl)
+            {
+                return Failed("unexpected_jwks_url", "An HMAC provider must not carry a JWKS URL.");
+            }
+
+            if (hasCertificate)
+            {
+                return Failed(
+                    "unexpected_certificate",
+                    "An HMAC provider must not carry a public certificate. HMAC verifies with the shared " +
+                    "secret; a certificate would be a second, unrelated signing authority.");
+            }
+
+            return null;
+        }
+
+        private static SaveThirdPartyJwtProviderResponse? ValidateAsymmetricKeySource(
+            SaveThirdPartyJwtProviderRequest request,
+            bool hasJwksUrl,
+            bool hasCertificate)
+        {
+            if (!hasJwksUrl && !hasCertificate)
+            {
+                return Failed(
+                    "key_source_required",
+                    "An asymmetric provider needs a key source: either a JWKS URL, or a public certificate " +
+                    "to pin a single key.");
+            }
+
+            // Which of the two got consulted would otherwise come down to the order this code
+            // happens to check them in, and the other would sit there looking configured.
+            if (hasJwksUrl && hasCertificate)
+            {
+                return Failed(
+                    "ambiguous_key_source",
+                    "Configure a JWKS URL or a public certificate, not both. Two key sources for one " +
+                    "provider is two independent signing authorities behind a single claim mapping.");
+            }
+
+            if (!string.IsNullOrEmpty(request.SigningSecret))
+            {
+                return Failed("unexpected_signing_secret", "An asymmetric provider must not carry a signing secret.");
+            }
+
+            if (hasJwksUrl && !string.IsNullOrEmpty(request.PublicCertificatePassword))
+            {
+                return Failed(
+                    "unexpected_certificate_password",
+                    "A JWKS URL needs no passphrase; a passphrase only ever unlocks a PKCS#12 certificate.");
             }
 
             return null;
