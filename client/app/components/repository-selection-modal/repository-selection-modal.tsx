@@ -61,11 +61,13 @@ export const RepositorySelectionModal = ({
     };
   }, [searchTerm, debouncedSetSearch]);
   // Reset pagination when debounced search term changes
-  useEffect(() => {
+  const [searchTermForPaging, setSearchTermForPaging] = useState(debouncedSearchTerm);
+  if (searchTermForPaging !== debouncedSearchTerm) {
+    setSearchTermForPaging(debouncedSearchTerm);
     setCurrentPage(0);
     setAllRepositories([]);
     setHasMoreData(true);
-  }, [debouncedSearchTerm]);
+  }
   const itemsPerPage = 10;
   // Query only active while modal is open
   const {
@@ -78,47 +80,38 @@ export const RepositorySelectionModal = ({
     currentPage + 1, // API expects 1-based indexing
     itemsPerPage,
   );
-  // Update accumulated repositories when new data arrives
-  useEffect(() => {
-    // Early return if no data
-    if (!repositories?.data) {
-      return;
-    }
-    // Handle the wrapped response structure
-    const items = repositories.data.items;
-    const totalCount = repositories.data.total_count || 0;
-    // If total_count is 0, no repositories available
-    if (totalCount === 0) {
-      setAllRepositories([]);
-      setHasMoreData(false);
-      return;
-    }
-    // Check if items is a valid array
-    if (!Array.isArray(items)) {
-      setAllRepositories([]);
-      setHasMoreData(false);
-      return;
-    }
-    if (items.length > 0) {
-      if (currentPage === 0) {
-        // First page - replace all repositories
-        setAllRepositories(items);
-      } else {
-        // Subsequent pages - append to existing repositories
-        setAllRepositories((prev) => [...prev, ...items]);
-      }
-      // Check if there's more data to load
-      const totalLoadedItems = (currentPage + 1) * itemsPerPage;
-      const hasMore = totalLoadedItems < totalCount && items.length === itemsPerPage;
-      setHasMoreData(hasMore);
-    } else {
-      // Empty array returned - no more data
-      if (currentPage === 0) {
+  // Update accumulated repositories when new data (or a new page) arrives. Done while
+  // rendering, keyed on the response and page it was last applied for.
+  const [appliedResponse, setAppliedResponse] = useState<{
+    repositories: typeof repositories;
+    page: number;
+  }>({ repositories: undefined, page: 0 });
+  if (appliedResponse.repositories !== repositories || appliedResponse.page !== currentPage) {
+    setAppliedResponse({ repositories, page: currentPage });
+    // Nothing to apply until data arrives
+    if (repositories?.data) {
+      // Handle the wrapped response structure
+      const items = repositories.data.items;
+      const totalCount = repositories.data.total_count || 0;
+      if (totalCount === 0 || !Array.isArray(items)) {
+        // No repositories available, or not a valid array
         setAllRepositories([]);
+        setHasMoreData(false);
+      } else if (items.length > 0) {
+        // First page replaces the list; subsequent pages append to it
+        setAllRepositories(currentPage === 0 ? items : [...allRepositories, ...items]);
+        // Check if there's more data to load
+        const totalLoadedItems = (currentPage + 1) * itemsPerPage;
+        setHasMoreData(totalLoadedItems < totalCount && items.length === itemsPerPage);
+      } else {
+        // Empty array returned - no more data
+        if (currentPage === 0) {
+          setAllRepositories([]);
+        }
+        setHasMoreData(false);
       }
-      setHasMoreData(false);
     }
-  }, [repositories, currentPage, itemsPerPage]);
+  }
   // Scroll handler for infinite scrolling
   const handleScroll = useCallback(
     (e: React.UIEvent<HTMLDivElement>) => {
@@ -146,9 +139,11 @@ export const RepositorySelectionModal = ({
   }, [isPopoverOpen]);
 
   // Reset highlight when list changes
-  useEffect(() => {
+  const [highlightedList, setHighlightedList] = useState(allRepositories);
+  if (highlightedList !== allRepositories) {
+    setHighlightedList(allRepositories);
     setHighlightedIndex(allRepositories.length > 0 ? 0 : -1);
-  }, [allRepositories]);
+  }
 
   // Scroll highlighted item into view
   useEffect(() => {

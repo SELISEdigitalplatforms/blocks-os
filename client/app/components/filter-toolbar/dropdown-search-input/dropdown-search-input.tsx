@@ -45,14 +45,14 @@ export const DropdownSearchInput: React.FC<DropdownSearchInputProps> = ({
     setState(value);
   }
   const inputRef = useRef<HTMLInputElement>(null);
-  // See search-input.tsx: the debounced wrapper stays stable while the ref keeps the latest
+  // See search-input.tsx: the debounced wrapper stays stable and each call carries the current
   // onChange, so a caller passing a new inline callback each render is still called correctly.
-  const onChangeRef = useRef(onChange);
-  useEffect(() => {
-    onChangeRef.current = onChange;
-  });
   const debounced = useMemo(
-    () => debounce((val: ValueType) => onChangeRef.current(val), debounceMs),
+    () =>
+      debounce(
+        (callback: (params: ValueType) => void, val: ValueType) => callback(val),
+        debounceMs,
+      ),
     [debounceMs],
   );
   useEffect(() => {
@@ -67,7 +67,7 @@ export const DropdownSearchInput: React.FC<DropdownSearchInputProps> = ({
     // Only search once the term is long enough; below the minimum, clear the active search so the
     // list falls back to showing everything rather than filtering on one or two characters.
     const meetsMin = raw.trim().length >= minSearchLength;
-    debounced({ selected: state.selected, value: meetsMin ? raw : "" });
+    debounced(onChange, { selected: state.selected, value: meetsMin ? raw : "" });
   };
   const handleClear = (e: MouseEvent) => {
     e.stopPropagation();

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { Check, X } from "lucide-react";
 import { usePasswordStrength } from "@blocks-idp/authentication/hooks/use-password-strength";
 interface PasswordStrengthCheckerProps {
@@ -16,27 +16,15 @@ export const PasswordStrengthChecker: React.FC<PasswordStrengthCheckerProps> = (
   excludePasswordLabel,
 }) => {
   const { checks, requirements } = usePasswordStrength(password);
-  const [passwordsMatch, setPasswordsMatch] = useState(false);
-  const [isDifferentFromExcluded, setIsDifferentFromExcluded] = useState(true);
+  const passwordsMatch = password === confirmPassword && password !== "";
+  const isDifferentFromExcluded =
+    excludePassword && password !== "" ? password !== excludePassword : true;
+  const allMet =
+    Object.values(checks).every((check) => check) && passwordsMatch && isDifferentFromExcluded;
+  // Tell the parent whenever the overall result changes.
   useEffect(() => {
-    setPasswordsMatch(password === confirmPassword && password !== "");
-    if (excludePassword && password !== "") {
-      setIsDifferentFromExcluded(password !== excludePassword);
-    } else {
-      setIsDifferentFromExcluded(true);
-    }
-    const allMet =
-      Object.values(checks).every((check) => check) && passwordsMatch && isDifferentFromExcluded;
     onRequirementsMet(allMet);
-  }, [
-    password,
-    confirmPassword,
-    checks,
-    passwordsMatch,
-    excludePassword,
-    isDifferentFromExcluded,
-    onRequirementsMet,
-  ]);
+  }, [allMet, onRequirementsMet]);
   const getAdjustedStrength = () => {
     const basicRequirements = Object.values(checks).filter(Boolean).length;
     let totalRequirements = Object.keys(checks).length;
