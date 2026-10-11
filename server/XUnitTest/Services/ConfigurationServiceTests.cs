@@ -12,7 +12,6 @@ using Configuration.DomainService.DataGateway.RequestModel;
 using FluentAssertions;
 using FluentValidation;
 using FluentValidation.Results;
-using Microsoft.Extensions.Logging;
 using Moq;
 using XUnitTest.TestSupport;
 
@@ -25,15 +24,13 @@ namespace XUnitTest.Services
         private readonly Mock<IValidator<SaveStorageConfigurationRequest>> _storageValidator = new();
         private readonly Mock<IValidator<SaveDataGatewayConfigurationRequest>> _dataGatewayValidator = new();
         private readonly Mock<IMessageClient> _messageClient = new();
-        private readonly Mock<ILogger<ConfigurationService>> _logger = new();
 
         private ConfigurationService Service() => new(
             _repo.Object,
             _notifValidator.Object,
             _storageValidator.Object,
             _dataGatewayValidator.Object,
-            _messageClient.Object,
-            _logger.Object);
+            _messageClient.Object);
 
         private static ValidationResult Valid() => new();
         private static ValidationResult Invalid() => new(new[] { new ValidationFailure("Name", "bad") });

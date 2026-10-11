@@ -96,7 +96,7 @@ namespace Configuration.DomainService.Integration.Services
         private static async Task EnsureConnectionIndexesAsync(IMongoCollection<IntegrationSetup> setups)
         {
             try { await setups.Indexes.DropOneAsync("TemplateKey_unique"); }
-            catch (MongoCommandException ex) when (ex.CodeName == "IndexNotFound") { }
+            catch (MongoCommandException ex) when (ex.CodeName == "IndexNotFound") { /* The legacy index is already gone; nothing to drop. */ }
             await setups.Indexes.CreateOneAsync(new CreateIndexModel<IntegrationSetup>(Builders<IntegrationSetup>.IndexKeys.Ascending(s => s.ClientCredentialId), new CreateIndexOptions { Name = "ClientCredentialId_unique", Unique = true }));
             await setups.Indexes.CreateOneAsync(new CreateIndexModel<IntegrationSetup>(Builders<IntegrationSetup>.IndexKeys.Ascending(s => s.TemplateKey), new CreateIndexOptions { Name = "TemplateKey" }));
         }

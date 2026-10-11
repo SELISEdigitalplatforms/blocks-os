@@ -44,6 +44,9 @@ namespace Configuration.DomainService.Mail.Providers
 
         private const string MaskedSecretValue = "********";
 
+        /// <summary>The request field that client-secret validation errors are reported against.</summary>
+        private const string ClientSecretField = "ClientSecret";
+
         /// <summary>How a configuration is named in status warnings, alongside its id.</summary>
         private const string ConfigurationKind = "mail";
 
@@ -193,13 +196,13 @@ namespace Configuration.DomainService.Mail.Providers
 
             if (request.ClientSecret is { Length: > 0 } && request.ClientSecret.Trim().Length == 0)
             {
-                errors["ClientSecret"] = "Client secret must not be blank.";
+                errors[ClientSecretField] = "Client secret must not be blank.";
             }
             else if (string.IsNullOrEmpty(request.ClientSecret))
             {
                 // A copy cannot inherit the source's reference, so there is nothing to fall back
                 // to: the caller has to supply a value.
-                errors["ClientSecret"] = "A new client secret is required to duplicate an SMTP Office 365 configuration.";
+                errors[ClientSecretField] = "A new client secret is required to duplicate an SMTP Office 365 configuration.";
             }
 
             return errors;
@@ -386,7 +389,7 @@ namespace Configuration.DomainService.Mail.Providers
 
             if (isWhitespaceOnly)
             {
-                errors["ClientSecret"] = "Client secret must not be blank.";
+                errors[ClientSecretField] = "Client secret must not be blank.";
                 return;
             }
 
@@ -397,11 +400,11 @@ namespace Configuration.DomainService.Mail.Providers
 
             if (string.IsNullOrEmpty(existing?.ClientSecretReference))
             {
-                errors["ClientSecret"] = "Client secret is required for a new SMTP Office 365 configuration.";
+                errors[ClientSecretField] = "Client secret is required for a new SMTP Office 365 configuration.";
             }
             else if (LinkedSecretStatus.IsBroken(existingCredentialStatus))
             {
-                errors["ClientSecret"] = "The linked client secret was archived or removed. Enter a new client secret.";
+                errors[ClientSecretField] = "The linked client secret was archived or removed. Enter a new client secret.";
             }
         }
 

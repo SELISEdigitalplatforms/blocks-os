@@ -8,6 +8,9 @@ namespace Configuration.DomainService.Integration.Services
 {
     public class IntegrationService : IIntegrationService
     {
+        private const string IamErrorKey = "iam_error";
+        private const string ConnectionKey = "connection";
+
         private readonly IIntegrationRepository _integrationRepository;
         private readonly IValidator<RunIntegrationSetupRequest> _runValidator;
         private readonly IIamClient _iamClient;
@@ -37,6 +40,34 @@ namespace Configuration.DomainService.Integration.Services
             if (!validation.IsValid) return new RunIntegrationSetupResponse { IsSuccess = false, Errors = validation.Errors.GroupBy(e => e.PropertyName).ToDictionary(g => g.Key, g => g.First().ErrorMessage) };
             var template = await _integrationRepository.GetTemplateByKeyAsync(request.TemplateKey);
             if (template == null) return RunFailure("template_not_found", "No active Integration template exists for this key.");
+            var templateFailure = ValidateTemplateFamily(template);
+            if (templateFailure != null) return templateFailure;
+            var name = request.ConnectionName.Trim();
+            if (await _integrationRepository.HasActiveConnectionNamedAsync(name)) return RunFailure("connection_name", "An active connection already uses this name.");
+
+            var permissions = await _iamClient.GetPermissionsByResourcesAsync(template.Permissions);
+            if (!string.IsNullOrWhiteSpace(permissions.Error)) return RunFailure(IamErrorKey, "IAM is unavailable for integration setup.");
+            var ids = template.Permissions.Select(resource => permissions.Permissions.FirstOrDefault(p => string.Equals(p.Resource, resource, StringComparison.OrdinalIgnoreCase))?.ItemId).ToList();
+            if (ids.Any(string.IsNullOrWhiteSpace)) return RunFailure("permissions_missing", "One or more template permissions do not exist in this project.");
+
+            var (role, roleFailure) = await ResolveRoleAsync(template);
+            if (role == null) return roleFailure!;
+            var assigned = await _iamClient.AssignPermissionsAsync(role.Slug, ids!, role.OrganizationId);
+            if (!assigned.IsSuccess) return IamFailure(assigned);
+            var credentialName = $"{template.ClientCredentialName} - {name}";
+            var (credential, credentialFailure) = await ResolveCredentialAsync(template, role, credentialName);
+            if (credential == null) return credentialFailure!;
+            if (!credential.IsSuccess || string.IsNullOrWhiteSpace(credential.ItemId) || string.IsNullOrWhiteSpace(credential.ClientSecret)) return IamFailure(credential);
+
+            var context = BlocksContext.GetContext()!;
+            var setup = new IntegrationSetup { ItemId = Guid.NewGuid().ToString(), TemplateKey = template.Key, TemplateDisplayName = template.DisplayName, TemplateAccessLevel = template.AccessLevel, ConnectionName = name, RoleId = role.ItemId, RoleSlug = role.Slug, ClientCredentialId = credential.ItemId, Source = request.Source ?? "manual", SiteUrl = request.SiteUrl, Status = "active", CreatedBy = context.UserId, LastUpdatedBy = context.UserId, CreatedDate = DateTime.UtcNow, LastUpdatedDate = DateTime.UtcNow };
+            if (!await _integrationRepository.TryInsertSetupAsync(setup)) return RunFailure(ConnectionKey, "The connection could not be saved.");
+            return new RunIntegrationSetupResponse { IsSuccess = true, ItemId = setup.ItemId, ConnectionId = setup.ItemId, ClientId = credential.ItemId, ClientSecret = credential.ClientSecret, XBlocksKey = context.TenantId, BaseUrl = template.BaseUrl, Domain = _tenants?.GetTenantByID(context.TenantId)?.Applications?.FirstOrDefault()?.Domain };
+        }
+
+        /// <summary>Refuses a template whose permissions fall outside its own service family.</summary>
+        private RunIntegrationSetupResponse? ValidateTemplateFamily(IntegrationTemplate template)
+        {
             var prefix = $"blocks-{template.Family}::";
             var invalidPermissions = string.IsNullOrWhiteSpace(template.Family)
                 ? template.Permissions
@@ -46,42 +77,41 @@ namespace Configuration.DomainService.Integration.Services
                 _logger?.LogError("Integration template '{TemplateKey}' was refused: permissions {InvalidPermissions} are outside the '{Prefix}' service family.", template.Key, invalidPermissions, prefix);
                 return RunFailure("template_invalid", "The template contains permissions outside its service family.");
             }
-            var name = request.ConnectionName.Trim();
-            if (await _integrationRepository.HasActiveConnectionNamedAsync(name)) return RunFailure("connection_name", "An active connection already uses this name.");
+            return null;
+        }
 
-            var permissions = await _iamClient.GetPermissionsByResourcesAsync(template.Permissions);
-            if (!string.IsNullOrWhiteSpace(permissions.Error)) return RunFailure("iam_error", "IAM is unavailable for integration setup.");
-            var ids = template.Permissions.Select(resource => permissions.Permissions.FirstOrDefault(p => string.Equals(p.Resource, resource, StringComparison.OrdinalIgnoreCase))?.ItemId).ToList();
-            if (ids.Any(string.IsNullOrWhiteSpace)) return RunFailure("permissions_missing", "One or more template permissions do not exist in this project.");
-
+        /// <summary>Finds the template's role, creating it when missing. Exactly one of the results is null.</summary>
+        private async Task<(IamRole? Role, RunIntegrationSetupResponse? Failure)> ResolveRoleAsync(IntegrationTemplate template)
+        {
             var role = await _iamClient.FindRoleAsync(template.RoleSlug, template.RoleName);
             if (role == null)
             {
                 var created = await _iamClient.CreateRoleAsync(template.RoleName, template.RoleSlug, template.RoleDescription);
-                if (!created.IsSuccess || string.IsNullOrWhiteSpace(created.ItemId)) return IamFailure(created);
+                if (!created.IsSuccess || string.IsNullOrWhiteSpace(created.ItemId)) return (null, IamFailure(created));
                 role = await _iamClient.GetRoleAsync(created.ItemId);
-                if (role == null || string.IsNullOrWhiteSpace(role.Slug)) return RunFailure("iam_error", "IAM created the role but could not read it back.");
+                if (role == null || string.IsNullOrWhiteSpace(role.Slug)) return (null, RunFailure(IamErrorKey, "IAM created the role but could not read it back."));
             }
-            var assigned = await _iamClient.AssignPermissionsAsync(role.Slug, ids!, role.OrganizationId);
-            if (!assigned.IsSuccess) return IamFailure(assigned);
-            var credentialName = $"{template.ClientCredentialName} - {name}";
+            return (role, null);
+        }
+
+        /// <summary>
+        /// Reuses a credential left by an interrupted setup (rotating its secret) when its access is
+        /// exactly the role, otherwise creates one. Exactly one of the results is null.
+        /// </summary>
+        private async Task<(IamCreateCredentialResult? Credential, RunIntegrationSetupResponse? Failure)> ResolveCredentialAsync(IntegrationTemplate template, IamRole role, string credentialName)
+        {
             var existingCredential = await _iamClient.FindCredentialAsync(credentialName);
             IamCreateCredentialResult credential;
             if (existingCredential != null)
             {
                 var exactAccess = existingCredential.Roles.Count == 1 && string.Equals(existingCredential.Roles[0], role.Slug, StringComparison.OrdinalIgnoreCase) && existingCredential.Permissions.Count == 0;
-                if (!exactAccess) return RunFailure("iam_error", "A credential with this connection name already exists with different access.");
+                if (!exactAccess) return (null, RunFailure(IamErrorKey, "A credential with this connection name already exists with different access."));
                 var rotated = await _iamClient.RotateSecretAsync(existingCredential.ItemId);
-                if (!rotated.IsSuccess || string.IsNullOrWhiteSpace(rotated.ClientSecret)) return RunFailure("iam_error", rotated.Error ?? "IAM could not rotate the interrupted setup credential.");
+                if (!rotated.IsSuccess || string.IsNullOrWhiteSpace(rotated.ClientSecret)) return (null, RunFailure(IamErrorKey, rotated.Error ?? "IAM could not rotate the interrupted setup credential."));
                 credential = new IamCreateCredentialResult(true, existingCredential.ItemId, rotated.ClientSecret);
             }
             else credential = await _iamClient.CreateCredentialAsync(new { name = credentialName, isActive = true, accessTokenValidForNumberMinutes = template.AccessTokenValidForNumberMinutes, roles = new[] { role.Slug }, permissions = Array.Empty<string>() });
-            if (!credential.IsSuccess || string.IsNullOrWhiteSpace(credential.ItemId) || string.IsNullOrWhiteSpace(credential.ClientSecret)) return IamFailure(credential);
-
-            var context = BlocksContext.GetContext()!;
-            var setup = new IntegrationSetup { ItemId = Guid.NewGuid().ToString(), TemplateKey = template.Key, TemplateDisplayName = template.DisplayName, TemplateAccessLevel = template.AccessLevel, ConnectionName = name, RoleId = role.ItemId, RoleSlug = role.Slug, ClientCredentialId = credential.ItemId, Source = request.Source ?? "manual", SiteUrl = request.SiteUrl, Status = "active", CreatedBy = context.UserId, LastUpdatedBy = context.UserId, CreatedDate = DateTime.UtcNow, LastUpdatedDate = DateTime.UtcNow };
-            if (!await _integrationRepository.TryInsertSetupAsync(setup)) return RunFailure("connection", "The connection could not be saved.");
-            return new RunIntegrationSetupResponse { IsSuccess = true, ItemId = setup.ItemId, ConnectionId = setup.ItemId, ClientId = credential.ItemId, ClientSecret = credential.ClientSecret, XBlocksKey = context.TenantId, BaseUrl = template.BaseUrl, Domain = _tenants?.GetTenantByID(context.TenantId)?.Applications?.FirstOrDefault()?.Domain };
+            return (credential, null);
         }
 
         public async Task<BaseQueryResponse<List<IntegrationSetup>>> GetConnectionsAsync()
@@ -95,9 +125,9 @@ namespace Configuration.DomainService.Integration.Services
         public async Task<BaseMutationResponse> RevokeConnectionAsync(string connectionId)
         {
             if (!IsInProject()) return new BaseMutationResponse { IsSuccess = false, Errors = NotInProjectErrors() };
-            if (string.IsNullOrWhiteSpace(connectionId)) return Failure("connection", "ConnectionId must not be empty.");
+            if (string.IsNullOrWhiteSpace(connectionId)) return Failure(ConnectionKey, "ConnectionId must not be empty.");
             var changed = await _integrationRepository.RevokeConnectionAsync(connectionId, BlocksContext.GetContext()?.UserId);
-            return changed ? new BaseMutationResponse { IsSuccess = true } : Failure("connection", "Connection was not found.");
+            return changed ? new BaseMutationResponse { IsSuccess = true } : Failure(ConnectionKey, "Connection was not found.");
         }
 
         public async Task RevokeUndeliveredConnectionAsync(string environmentTenantId, string connectionId)
@@ -110,10 +140,10 @@ namespace Configuration.DomainService.Integration.Services
         {
             if (!IsInProject()) return new BaseMutationResponse { IsSuccess = false, Errors = NotInProjectErrors() };
             var connection = await _integrationRepository.GetConnectionAsync(connectionId);
-            if (connection == null) return Failure("connection", "Connection was not found.");
+            if (connection == null) return Failure(ConnectionKey, "Connection was not found.");
             if (connection.Status == "revoked") return new BaseMutationResponse { IsSuccess = true };
             var deleted = await _iamClient.DeleteCredentialAsync(connection.ClientCredentialId);
-            if (!deleted.IsSuccess) return Failure("iam_error", deleted.Error ?? "IAM could not delete the client credential.");
+            if (!deleted.IsSuccess) return Failure(IamErrorKey, deleted.Error ?? "IAM could not delete the client credential.");
             return await RevokeConnectionAsync(connectionId);
         }
 
@@ -121,11 +151,11 @@ namespace Configuration.DomainService.Integration.Services
         {
             if (!IsInProject()) return new RegenerateIntegrationSecretResponse { IsSuccess = false, Errors = NotInProjectErrors() };
             var connection = await _integrationRepository.GetConnectionAsync(connectionId);
-            if (connection == null || connection.Status == "revoked") return new RegenerateIntegrationSecretResponse { IsSuccess = false, Errors = new Dictionary<string, string> { ["connection"] = "An active connection was not found." } };
+            if (connection == null || connection.Status == "revoked") return new RegenerateIntegrationSecretResponse { IsSuccess = false, Errors = new Dictionary<string, string> { [ConnectionKey] = "An active connection was not found." } };
             var result = await _iamClient.RotateSecretAsync(connection.ClientCredentialId);
             return result.IsSuccess && !string.IsNullOrWhiteSpace(result.ClientSecret)
                 ? new RegenerateIntegrationSecretResponse { IsSuccess = true, ClientSecret = result.ClientSecret }
-                : new RegenerateIntegrationSecretResponse { IsSuccess = false, Errors = result.Errors?.ToDictionary(x => x.Key, x => x.Value) ?? new Dictionary<string, string> { ["iam_error"] = result.Error ?? "IAM could not rotate the client secret." } };
+                : new RegenerateIntegrationSecretResponse { IsSuccess = false, Errors = result.Errors?.ToDictionary(x => x.Key, x => x.Value) ?? new Dictionary<string, string> { [IamErrorKey] = result.Error ?? "IAM could not rotate the client secret." } };
         }
 
         public async Task<CheckIntegrationReadinessResponse> CheckReadinessAsync(string templateKey)
@@ -147,7 +177,7 @@ namespace Configuration.DomainService.Integration.Services
             if (!string.IsNullOrWhiteSpace(permissions.Error))
             {
                 var denied = permissions.Error.Contains("401", StringComparison.Ordinal) || permissions.Error.Contains("403", StringComparison.Ordinal) || permissions.Error.Contains("permission_denied", StringComparison.OrdinalIgnoreCase);
-                return new CheckIntegrationReadinessResponse { Ready = false, MissingPermissions = template.Permissions.ToList(), Error = denied ? "permission_denied" : "iam_error" };
+                return new CheckIntegrationReadinessResponse { Ready = false, MissingPermissions = template.Permissions.ToList(), Error = denied ? "permission_denied" : IamErrorKey };
             }
 
             var found = permissions.Permissions.Select(p => p.Resource).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -167,7 +197,7 @@ namespace Configuration.DomainService.Integration.Services
             new() { IsSuccess = false, Errors = new Dictionary<string, string> { { key, message } } };
 
         private static RunIntegrationSetupResponse RunFailure(string key, string message) => new() { IsSuccess = false, Errors = new Dictionary<string, string> { { key, message } } };
-        private static RunIntegrationSetupResponse IamFailure(IamMutationResult result) => new() { IsSuccess = false, Errors = result.Errors?.ToDictionary(x => x.Key, x => x.Value) ?? new Dictionary<string, string> { ["iam_error"] = result.Error ?? "IAM could not complete integration setup." } };
-        private static RunIntegrationSetupResponse IamFailure(IamCreateCredentialResult result) => new() { IsSuccess = false, Errors = result.Errors?.ToDictionary(x => x.Key, x => x.Value) ?? new Dictionary<string, string> { ["iam_error"] = result.Error ?? "IAM could not complete integration setup." } };
+        private static RunIntegrationSetupResponse IamFailure(IamMutationResult result) => new() { IsSuccess = false, Errors = result.Errors?.ToDictionary(x => x.Key, x => x.Value) ?? new Dictionary<string, string> { [IamErrorKey] = result.Error ?? "IAM could not complete integration setup." } };
+        private static RunIntegrationSetupResponse IamFailure(IamCreateCredentialResult result) => new() { IsSuccess = false, Errors = result.Errors?.ToDictionary(x => x.Key, x => x.Value) ?? new Dictionary<string, string> { [IamErrorKey] = result.Error ?? "IAM could not complete integration setup." } };
     }
 }

@@ -145,26 +145,7 @@ namespace Configuration.DomainService.Captcha.Services
             if (isUpdate)
             {
                 id = request.Id!;
-
-                // Always the same ItemId: blocks-iam picks the first enabled record ordered by
-                // ItemId, so a repair that re-created the record could change which one it uses.
-                bool updated;
-                try
-                {
-                    updated = await _store.UpdateByIdAsync(id, record, true, cancellationToken).ConfigureAwait(false);
-                }
-                catch
-                {
-                    await CompensateRepairAsync(repairedSecretId, id).ConfigureAwait(false);
-                    throw;
-                }
-
-                if (!updated)
-                {
-                    // Removed between the read above and this write.
-                    await CompensateRepairAsync(repairedSecretId, id).ConfigureAwait(false);
-                    throw new SecretValidationException($"Captcha configuration '{id}' was not found.", "NOT_FOUND");
-                }
+                await UpdateExistingAsync(id, record, repairedSecretId, cancellationToken).ConfigureAwait(false);
             }
             else
             {
@@ -178,6 +159,33 @@ namespace Configuration.DomainService.Captcha.Services
             await RecordAuditAsync(caller, auditAction, secretId, cancellationToken).ConfigureAwait(false);
 
             return record;
+        }
+
+        /// <summary>
+        /// Overwrites the stored record in place, retiring a secret this save created if the write
+        /// fails or the record was removed in the meantime.
+        /// </summary>
+        private async Task UpdateExistingAsync(string id, CaptchaConfigResult record, string? repairedSecretId, CancellationToken cancellationToken)
+        {
+            // Always the same ItemId: blocks-iam picks the first enabled record ordered by
+            // ItemId, so a repair that re-created the record could change which one it uses.
+            bool updated;
+            try
+            {
+                updated = await _store.UpdateByIdAsync(id, record, true, cancellationToken).ConfigureAwait(false);
+            }
+            catch
+            {
+                await CompensateRepairAsync(repairedSecretId, id).ConfigureAwait(false);
+                throw;
+            }
+
+            if (!updated)
+            {
+                // Removed between the read above and this write.
+                await CompensateRepairAsync(repairedSecretId, id).ConfigureAwait(false);
+                throw new SecretValidationException($"Captcha configuration '{id}' was not found.", "NOT_FOUND");
+            }
         }
 
         public async Task<CaptchaConfigResult?> GetAsync(string id, CancellationToken cancellationToken = default)

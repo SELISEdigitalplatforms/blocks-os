@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 using Blocks.Genesis;
 using Configuration.DomainService.Integration.Entities;
 using Configuration.DomainService.Integration.RequestModel;
@@ -7,6 +8,16 @@ namespace Configuration.DomainService.Integration.Services;
 
 public sealed class IntegrationConnectService : IIntegrationConnectService
 {
+    // Error keys are part of the connect flow's client contract; their values must not change.
+    private const string RequestNotFoundOrExpiredCode = "request_not_found_or_expired";
+    private const string RequestNotFoundOrExpiredMessage = "The connect request was not found or has expired.";
+    private const string RequestNotPendingCode = "request_not_pending";
+    private const string InvalidCodeCode = "invalid_code";
+    private const string InvalidCodeMessage = "The code is invalid, expired or already used.";
+
+    // A fixed-length character class cannot backtrack; the timeout only bounds the worst case.
+    private static readonly Regex CodeChallengePattern = new("^[A-Za-z0-9_-]{43}$", RegexOptions.None, TimeSpan.FromMilliseconds(250));
+
     private readonly IIntegrationRepository _templates;
     private readonly IIntegrationRequestRepository _requests;
     private readonly IIntegrationService _integration;
@@ -39,7 +50,7 @@ public sealed class IntegrationConnectService : IIntegrationConnectService
 
     public async Task<(GetIntegrationRequestResponse? Response, Dictionary<string, string>? Errors)> GetRequestAsync(string requestId, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(requestId)) return (null, Error("request_not_found_or_expired", "The connect request was not found or has expired."));
+        if (string.IsNullOrWhiteSpace(requestId)) return (null, Error(RequestNotFoundOrExpiredCode, RequestNotFoundOrExpiredMessage));
         var userId = BlocksContext.GetContext()?.UserId;
         if (string.IsNullOrWhiteSpace(userId)) return (null, Error("unauthorized", "You must be logged in to view a connect request."));
 
@@ -48,7 +59,7 @@ public sealed class IntegrationConnectService : IIntegrationConnectService
         var request = await _requests.TryClaimAsync(requestId, userId, cancellationToken)
             ?? await _requests.GetByIdAsync(requestId, cancellationToken);
         if (request == null || request.ExpiresAt <= DateTime.UtcNow)
-            return (null, Error("request_not_found_or_expired", "The connect request was not found or has expired."));
+            return (null, Error(RequestNotFoundOrExpiredCode, RequestNotFoundOrExpiredMessage));
         if (!string.Equals(request.ClaimedByUserId, userId, StringComparison.Ordinal))
             return (null, Error("request_claimed_by_other_user", "This connect request is already being handled by another user."));
 
@@ -71,7 +82,7 @@ public sealed class IntegrationConnectService : IIntegrationConnectService
 
     public async Task<(CancelIntegrationRequestResponse? Response, Dictionary<string, string>? Errors)> CancelRequestAsync(CancelIntegrationRequest request, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(request.RequestId)) return (null, Error("request_not_found_or_expired", "The connect request was not found or has expired."));
+        if (string.IsNullOrWhiteSpace(request.RequestId)) return (null, Error(RequestNotFoundOrExpiredCode, RequestNotFoundOrExpiredMessage));
         var userId = BlocksContext.GetContext()?.UserId;
         if (string.IsNullOrWhiteSpace(userId)) return (null, Error("unauthorized", "You must be logged in to cancel a connect request."));
 
@@ -79,17 +90,17 @@ public sealed class IntegrationConnectService : IIntegrationConnectService
         // (the code would still be redeemable). Claim-first keeps strangers from cancelling.
         var existing = await _requests.GetByIdAsync(request.RequestId, cancellationToken);
         if (existing == null || existing.ExpiresAt <= DateTime.UtcNow)
-            return (null, Error("request_not_found_or_expired", "The connect request was not found or has expired."));
+            return (null, Error(RequestNotFoundOrExpiredCode, RequestNotFoundOrExpiredMessage));
         if (!string.IsNullOrWhiteSpace(existing.ClaimedByUserId) && !string.Equals(existing.ClaimedByUserId, userId, StringComparison.Ordinal))
             return (null, Error("request_claimed_by_other_user", "This connect request is already being handled by another user."));
         if (existing.Status != "pending")
-            return (null, Error("request_not_pending", "Only a pending connect request can be cancelled."));
+            return (null, Error(RequestNotPendingCode, "Only a pending connect request can be cancelled."));
 
         if (string.IsNullOrEmpty(existing.ClaimedByUserId))
             await _requests.TryClaimAsync(request.RequestId, userId, cancellationToken);
         var cancelled = await _requests.TryTransitionFromPendingAsync(request.RequestId, userId, "cancelled", cancellationToken);
         if (cancelled == null)
-            return (null, Error("request_not_found_or_expired", "The connect request was not found or has expired."));
+            return (null, Error(RequestNotFoundOrExpiredCode, RequestNotFoundOrExpiredMessage));
 
         return (new CancelIntegrationRequestResponse { RedirectUrl = BuildRedirectUrl(existing, error: "access_denied") }, null);
     }
@@ -101,13 +112,13 @@ public sealed class IntegrationConnectService : IIntegrationConnectService
     public async Task<(ApproveIntegrationRequestResponse? Response, Dictionary<string, string>? Errors)> ApproveRequestAsync(ApproveIntegrationRequest request, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.RequestId) || string.IsNullOrWhiteSpace(request.TemplateKey))
-            return (null, Error("request_not_found_or_expired", "The connect request was not found or has expired."));
+            return (null, Error(RequestNotFoundOrExpiredCode, RequestNotFoundOrExpiredMessage));
         var userId = BlocksContext.GetContext()?.UserId;
         if (string.IsNullOrWhiteSpace(userId)) return (null, Error("unauthorized", "You must be logged in to approve a connect request."));
 
         var existing = await _requests.GetByIdAsync(request.RequestId, cancellationToken);
         if (existing == null || existing.ExpiresAt <= DateTime.UtcNow)
-            return (null, Error("request_not_found_or_expired", "The connect request was not found or has expired."));
+            return (null, Error(RequestNotFoundOrExpiredCode, RequestNotFoundOrExpiredMessage));
         if (!string.Equals(existing.ClaimedByUserId, userId, StringComparison.Ordinal))
             return (null, Error("request_claimed_by_other_user", "This connect request is already being handled by another user."));
 
@@ -116,7 +127,7 @@ public sealed class IntegrationConnectService : IIntegrationConnectService
         if (existing.Status == "approved")
             return await ReissueApprovedCodeAsync(existing, request.TemplateKey, userId, cancellationToken);
         if (existing.Status != "pending")
-            return (null, Error("request_not_pending", "Only a pending connect request can be approved."));
+            return (null, Error(RequestNotPendingCode, "Only a pending connect request can be approved."));
 
         // Reserve the request before calling IAM. This prevents two browser clicks from making
         // two client credentials and means a cancel cannot overwrite a completed setup.
@@ -126,13 +137,22 @@ public sealed class IntegrationConnectService : IIntegrationConnectService
             var current = await _requests.GetByIdAsync(request.RequestId, cancellationToken);
             if (current?.Status == "approved" && string.Equals(current.ClaimedByUserId, userId, StringComparison.Ordinal))
                 return await ReissueApprovedCodeAsync(current, request.TemplateKey, userId, cancellationToken);
-            return (null, Error("request_not_pending", "Only a pending connect request can be approved."));
+            return (null, Error(RequestNotPendingCode, "Only a pending connect request can be approved."));
         }
 
+        return await CompleteReservedApprovalAsync(existing, request.TemplateKey, cancellationToken);
+    }
+
+    /// <summary>
+    /// Runs the integration setup for a request already reserved by TryStartApprovalAsync. Every
+    /// failure path, including an unexpected exception, releases the reservation back to pending.
+    /// </summary>
+    private async Task<(ApproveIntegrationRequestResponse? Response, Dictionary<string, string>? Errors)> CompleteReservedApprovalAsync(IntegrationRequest existing, string templateKey, CancellationToken cancellationToken)
+    {
         try
         {
             var templates = await _templates.GetActiveTemplatesAsync(existing.Family);
-            var template = templates.FirstOrDefault(t => string.Equals(t.Key, request.TemplateKey, StringComparison.Ordinal));
+            var template = templates.FirstOrDefault(t => string.Equals(t.Key, templateKey, StringComparison.Ordinal));
             if (template == null)
             {
                 await _requests.ResetApprovalToPendingAsync(existing.ItemId, cancellationToken);
@@ -200,7 +220,7 @@ public sealed class IntegrationConnectService : IIntegrationConnectService
             {
                 await _integration.DisconnectAsync(setup.ConnectionId);
                 await _requests.ResetApprovalToPendingAsync(existing.ItemId, cancellationToken);
-                return (null, Error("request_not_pending", "The connect request is no longer pending."));
+                return (null, Error(RequestNotPendingCode, "The connect request is no longer pending."));
             }
 
             return (new ApproveIntegrationRequestResponse { RedirectUrl = BuildCodeRedirectUrl(approved, code) }, null);
@@ -215,7 +235,7 @@ public sealed class IntegrationConnectService : IIntegrationConnectService
     public async Task<(ExchangeIntegrationRequestResponse? Response, Dictionary<string, string>? Errors)> ExchangeAsync(ExchangeIntegrationRequest request, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.Code) || string.IsNullOrWhiteSpace(request.CodeVerifier) || string.IsNullOrWhiteSpace(request.RedirectUri))
-            return (null, Error("invalid_code", "The code, verifier and redirect URI are all required."));
+            return (null, Error(InvalidCodeCode, "The code, verifier and redirect URI are all required."));
 
         var codeHash = Hash(request.Code);
         var verifierHash = Base64Url(SHA256.HashData(System.Text.Encoding.ASCII.GetBytes(request.CodeVerifier)));
@@ -228,15 +248,15 @@ public sealed class IntegrationConnectService : IIntegrationConnectService
             var failed = await _requests.MarkFailedByCodeHashAsync(codeHash, cancellationToken);
             if (!string.IsNullOrWhiteSpace(failed?.EnvironmentTenantId) && !string.IsNullOrWhiteSpace(failed.ConnectionId))
                 await _integration.RevokeUndeliveredConnectionAsync(failed.EnvironmentTenantId, failed.ConnectionId);
-            return (null, Error("invalid_code", "The code is invalid, expired or already used."));
+            return (null, Error(InvalidCodeCode, InvalidCodeMessage));
         }
 
         var environmentTenant = _tenants.GetTenantByID(matched.EnvironmentTenantId!);
         if (string.IsNullOrWhiteSpace(environmentTenant?.TenantSalt) || string.IsNullOrWhiteSpace(matched.SecretCipher))
-            return (null, Error("invalid_code", "The code is invalid, expired or already used."));
+            return (null, Error(InvalidCodeCode, InvalidCodeMessage));
         var secret = _cryptoService.Decrypt(matched.SecretCipher, environmentTenant.TenantSalt);
         if (string.IsNullOrWhiteSpace(secret))
-            return (null, Error("invalid_code", "The code is invalid, expired or already used."));
+            return (null, Error(InvalidCodeCode, InvalidCodeMessage));
         var template = await _templates.GetTemplateByKeyAsync(matched.TemplateKey!, includeInactive: true);
         var domain = environmentTenant.Applications?.FirstOrDefault()?.Domain ?? string.Empty;
 
@@ -256,11 +276,11 @@ public sealed class IntegrationConnectService : IIntegrationConnectService
     private async Task<(ApproveIntegrationRequestResponse? Response, Dictionary<string, string>? Errors)> ReissueApprovedCodeAsync(IntegrationRequest existing, string templateKey, string userId, CancellationToken cancellationToken)
     {
         if (!string.Equals(existing.TemplateKey, templateKey, StringComparison.Ordinal))
-            return (null, Error("request_not_pending", "This request was already approved with a different template."));
+            return (null, Error(RequestNotPendingCode, "This request was already approved with a different template."));
         var code = Base64Url(RandomNumberGenerator.GetBytes(32));
         var renewed = await _requests.RotateApprovedCodeAsync(existing.ItemId, userId, templateKey, Hash(code), cancellationToken);
         if (renewed == null)
-            return (null, Error("request_not_pending", "The connect request is no longer available."));
+            return (null, Error(RequestNotPendingCode, "The connect request is no longer available."));
         return (new ApproveIntegrationRequestResponse { RedirectUrl = BuildCodeRedirectUrl(renewed, code) }, null);
     }
 
@@ -292,9 +312,23 @@ public sealed class IntegrationConnectService : IIntegrationConnectService
         if (string.IsNullOrWhiteSpace(request.Family)) return Error("family", "Family is required.");
         if (request.RedirectUri.Length > 2048 || !Uri.TryCreate(request.RedirectUri, UriKind.Absolute, out uri) || !string.IsNullOrEmpty(uri.Fragment) || (uri.Scheme != Uri.UriSchemeHttps && !(uri.Scheme == Uri.UriSchemeHttp && (uri.Host is "localhost" or "127.0.0.1")))) return Error("invalid_redirect_uri", "RedirectUri must be HTTPS (or HTTP localhost) without a fragment.");
         if (request.State.Length is < 16 or > 512) return Error("state", "State must be 16 to 512 characters.");
-        if (request.CodeChallengeMethod != "S256" || !System.Text.RegularExpressions.Regex.IsMatch(request.CodeChallenge, "^[A-Za-z0-9_-]{43}$")) return Error("code_challenge", "CodeChallenge must be a 43-character base64url S256 challenge.");
+        if (request.CodeChallengeMethod != "S256" || !IsValidCodeChallenge(request.CodeChallenge)) return Error("code_challenge", "CodeChallenge must be a 43-character base64url S256 challenge.");
         if (string.IsNullOrWhiteSpace(request.SiteName) || request.SiteName.Trim().Length > 100 || request.SiteName.Any(char.IsControl)) return Error("site_name", "SiteName must be plain text up to 100 characters.");
         return null;
     }
+
+    /// <summary>Fails closed: a match that times out is treated as an invalid challenge.</summary>
+    private static bool IsValidCodeChallenge(string codeChallenge)
+    {
+        try
+        {
+            return CodeChallengePattern.IsMatch(codeChallenge);
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            return false;
+        }
+    }
+
     private static Dictionary<string, string> Error(string key, string message) => new() { [key] = message };
 }

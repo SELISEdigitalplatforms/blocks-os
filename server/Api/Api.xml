@@ -372,6 +372,39 @@
             Returning 200 for VCS/backup probes makes OWASP ZAP report "Hidden File Found".
             </summary>
         </member>
+        <member name="T:BlocksOs.Api.ProgramStartup">
+            <summary>
+            Startup steps called from <c>Program.cs</c>, kept out of the top-level statements so the
+            host's registration and pipeline order stays readable there. Each method does exactly what
+            the inline code it replaced did, at the same point in the startup sequence.
+            </summary>
+        </member>
+        <member name="F:BlocksOs.Api.ProgramStartup.StyleNonceItemKey">
+            <summary>Key of the per-request style nonce in <see cref="P:Microsoft.AspNetCore.Http.HttpContext.Items"/>.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.ProgramStartup.AddKnownForwardedHeaders(Microsoft.Extensions.DependencyInjection.IServiceCollection,Microsoft.Extensions.Configuration.IConfiguration)">
+            <summary>
+            Trusts forwarded headers only from the configured ingress proxies/networks. Without
+            configuration nothing is registered, which keeps ASP.NET's default trusted-proxy behaviour.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.ProgramStartup.UseSecurityHeaders(Microsoft.AspNetCore.Builder.WebApplication,System.String,BlocksOs.Api.Security.StyleNonce)">
+            <summary>
+            Browser-facing security headers for the SPA and static assets, and the per-request style
+            nonce the SPA shell is rendered with.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.ProgramStartup.IsSpaShellRequest(Microsoft.AspNetCore.Http.HttpRequest)">
+            <summary>
+            A GET or HEAD for "/" or "/index.html", which the static file middleware would otherwise
+            serve verbatim with the nonce placeholder still in it.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.ProgramStartup.ApplyFrontendRuntimeSettings(Microsoft.Extensions.Configuration.IConfiguration,System.String)">
+            <summary>
+            Replaces the frontend runtime placeholders in the published SPA files with configured values.
+            </summary>
+        </member>
         <member name="T:BlocksOs.Api.Security.ContentSecurityPolicy">
             <summary>
             Builds the SPA's Content-Security-Policy from configuration.

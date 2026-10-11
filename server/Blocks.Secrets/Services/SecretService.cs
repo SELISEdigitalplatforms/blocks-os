@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
@@ -190,24 +191,24 @@ public sealed partial class SecretService : ISecretService
 
     private async Task CompensateAsync(SecretCallerContext caller, IReadOnlyList<Secret> created)
     {
-        foreach (var secret in created)
+        foreach (var secretId in created.Select(secret => secret.ItemId))
         {
             try
             {
-                await _repository.HardDeleteAsync(caller.TenantId, secret.ItemId, CancellationToken.None).ConfigureAwait(false);
-                await _valueStore.DeleteAsync(secret.ItemId, CancellationToken.None).ConfigureAwait(false);
+                await _repository.HardDeleteAsync(caller.TenantId, secretId, CancellationToken.None).ConfigureAwait(false);
+                await _valueStore.DeleteAsync(secretId, CancellationToken.None).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex,
-                    "Could not roll back secret {SecretId} after a failed batch. It may need manual removal.", secret.ItemId);
+                    "Could not roll back secret {SecretId} after a failed batch. It may need manual removal.", secretId);
 
                 await _audit.RecordAsync(
                     caller,
                     SecretAuditActions.VaultOrphan,
                     outcome: SecretAuditOutcomes.Failed,
                     reason: SecretAuditReasons.CleanupFailed,
-                    secretId: secret.ItemId,
+                    secretId: secretId,
                     cancellationToken: CancellationToken.None).ConfigureAwait(false);
             }
         }
@@ -400,6 +401,8 @@ public sealed partial class SecretService : ISecretService
         }
     }
 
+    [SuppressMessage("Major Code Smell", "S2139:Exceptions should be either logged or rethrown but not both",
+        Justification = "The log records that the vault value is already rotated while its metadata is not, with the secret id, for reconciliation; no outer handler knows that. The original exception type must reach callers unchanged (SecretExceptionFilter mapping, cancellation, tests).")]
     public async Task RotateAsync(string secretId, RotateSecretRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);

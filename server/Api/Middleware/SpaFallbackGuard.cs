@@ -21,13 +21,10 @@ public static class SpaFallbackGuard
             return false;
         }
 
-        foreach (var probe in Probes)
+        if (Probes.Any(probe => value.Equals(probe, StringComparison.OrdinalIgnoreCase)
+                || value.StartsWith(probe + "/", StringComparison.OrdinalIgnoreCase)))
         {
-            if (value.Equals(probe, StringComparison.OrdinalIgnoreCase)
-                || value.StartsWith(probe + "/", StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
+            return true;
         }
 
         var fileName = Path.GetFileName(value);

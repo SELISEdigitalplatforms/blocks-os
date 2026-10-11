@@ -109,8 +109,8 @@ public static class KeyVaultCredentialFactory
 
         // A developer machine has no IMDS endpoint, so the managed-identity probe burns six
         // retries against an unreachable link-local address (169.254.169.254) before the chain
-        // moves on — every vault call stalls for seconds first. Azure hosts keep it enabled;
-        // only Development opts out.
+        // moves on — every vault call stalls for seconds first. Azure hosts keep it enabled,
+        // and only Development opts out.
         if (string.Equals(
                 Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
                 "Development",

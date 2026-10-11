@@ -15,6 +15,7 @@ namespace Configuration.DomainService.Mail.Services
     {
         private const string MaskedSecretValue = "********";
         private const string ConfigurationNotFound = "Configuration not found";
+        private const string ConfigurationIdField = "ConfigurationId";
 
         private readonly IConfigurationRepository _configurationRepository;
         private readonly IMailConfigurationProviderRegistry _providers;
@@ -56,7 +57,7 @@ namespace Configuration.DomainService.Mail.Services
                 if (existing is null)
                 {
                     _logger.LogInformation("Saving mail configuration end -- Configuration not found");
-                    return MailConfigurationMutationResult.Invalid("ConfigurationId", ConfigurationNotFound);
+                    return MailConfigurationMutationResult.Invalid(ConfigurationIdField, ConfigurationNotFound);
                 }
 
                 // The default record is platform-provisioned and its credentials are never sent to
@@ -97,16 +98,7 @@ namespace Configuration.DomainService.Mail.Services
 
             var errors = definition.Validate(configuration, existing, existingCredentialStatus);
 
-            var sharedResult = await _validator.ValidateAsync(configuration, cancellationToken).ConfigureAwait(false);
-            foreach (var failure in sharedResult.Errors)
-            {
-                // Provider rules win a collision: they are the specific statement about this
-                // request, and the generic message would be the more confusing of the two.
-                if (!errors.ContainsKey(failure.PropertyName))
-                {
-                    errors[failure.PropertyName] = failure.ErrorMessage;
-                }
-            }
+            await AddSharedValidationErrorsAsync(configuration, errors, cancellationToken).ConfigureAwait(false);
 
             if (errors.Count > 0)
             {
@@ -197,7 +189,7 @@ namespace Configuration.DomainService.Mail.Services
             if (config is null)
             {
                 _logger.LogInformation("Deleting mail configuration end -- Configuration not found");
-                return MailConfigurationMutationResult.Invalid("ConfigurationId", ConfigurationNotFound);
+                return MailConfigurationMutationResult.Invalid(ConfigurationIdField, ConfigurationNotFound);
             }
 
             var hasDefinition = _providers.TryGet(config.Provider, out var definition);
@@ -257,7 +249,7 @@ namespace Configuration.DomainService.Mail.Services
             if (config is null)
             {
                 _logger.LogInformation("Duplicating mail configuration end -- Configuration not found");
-                return MailConfigurationMutationResult.Invalid("ConfigurationId", ConfigurationNotFound);
+                return MailConfigurationMutationResult.Invalid(ConfigurationIdField, ConfigurationNotFound);
             }
 
             if (!_providers.TryGet(config.Provider, out var definition))
@@ -307,6 +299,21 @@ namespace Configuration.DomainService.Mail.Services
         /// <summary>
         /// Updates the sender name of the default configuration and nothing else.
         /// </summary>
+        private async Task AddSharedValidationErrorsAsync(
+            MailConfiguration configuration,
+            IDictionary<string, string> errors,
+            CancellationToken cancellationToken)
+        {
+            var sharedResult = await _validator.ValidateAsync(configuration, cancellationToken).ConfigureAwait(false);
+
+            // Provider rules win a collision: they are the specific statement about this
+            // request, and the generic message would be the more confusing of the two.
+            foreach (var failure in sharedResult.Errors.Where(failure => !errors.ContainsKey(failure.PropertyName)))
+            {
+                errors[failure.PropertyName] = failure.ErrorMessage;
+            }
+        }
+
         private async Task<MailConfigurationMutationResult> SaveDefaultSenderNameAsync(
             MailServerConfiguration existing,
             string? senderName)
@@ -315,7 +322,7 @@ namespace Configuration.DomainService.Mail.Services
             {
                 _logger.LogInformation("Saving mail configuration end -- Default inbound configuration is read-only");
                 return MailConfigurationMutationResult.Invalid(
-                    "ConfigurationId",
+                    ConfigurationIdField,
                     "The default configuration cannot be changed.");
             }
 
