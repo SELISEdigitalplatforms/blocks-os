@@ -2,6 +2,15 @@ import { Check, GitBranch } from "lucide-react";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { environmentOptions } from "./create-project-environments-form/utils";
 
+export type ProjectEnvironmentOption = {
+  label: string;
+  value: string;
+  subtext: string;
+  /** Formatted price line from the catalogue; omitted when the catalogue is unreachable. */
+  priceLabel?: string | null;
+  meterCount?: number;
+};
+
 /**
  * The wizard's environment checkbox group: same options, same order, same branch-name hint.
  * Extracted so the /connect no-project branch offers an identical choice (AC3.4).
@@ -11,14 +20,16 @@ export const ProjectEnvironmentCheckboxes = ({
   onToggle,
   disabled = false,
   variant = "default",
+  options = environmentOptions,
 }: {
   selected: string[];
   onToggle: (environment: string, checked: boolean) => void;
   disabled?: boolean;
   variant?: "default" | "compact";
+  options?: ProjectEnvironmentOption[];
 }) => variant === "compact" ? (
   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" aria-label="Environments">
-    {environmentOptions.map((option) => {
+    {options.map((option) => {
       const checked = selected.includes(option.value);
       return (
         <button
@@ -53,7 +64,7 @@ export const ProjectEnvironmentCheckboxes = ({
       </span>
     </div>
     <div className="mt-8 text-sm">
-      {environmentOptions.map((option) => (
+      {options.map((option) => (
         <div key={option.value} className="mb-4 flex flex-col">
           <div className="flex items-center gap-2">
             <Checkbox
@@ -73,10 +84,16 @@ export const ProjectEnvironmentCheckboxes = ({
                     {option.value === "prod" ? "main" : option.value}
                   </span>
                 </div>
+                {option.priceLabel && (
+                  <span className="text-sm font-medium text-gray-500">{option.priceLabel}</span>
+                )}
               </div>
             </label>
           </div>
           <div className="ml-7 text-base font-normal">{option.subtext}</div>
+          {!!option.meterCount && (
+            <div className="ml-7 text-sm text-gray-400">{option.meterCount} metered limits</div>
+          )}
         </div>
       ))}
     </div>
