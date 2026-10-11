@@ -185,13 +185,15 @@ namespace DomainService.Shared
             var zone = IdentifierHelper.GetRegistrableDomain(host);
             item.IsApex = host == zone;
 
+            // An A record needs an address; if the target could not be resolved just
+            // now, an ALIAS to the target host is the only record that still works.
+            var apexRecordType = apexIpAddress is null ? "ALIAS" : "A";
+
             item.Records.Add(item.IsApex
                 ? new DnsRecordInstruction
                 {
                     Purpose = "app",
-                    // An A record needs an address; if the target could not be resolved just
-                    // now, an ALIAS to the target host is the only record that still works.
-                    Type = apexIpAddress is null ? "ALIAS" : "A",
+                    Type = apexRecordType,
                     Name = "@",
                     Host = host,
                     Value = apexIpAddress ?? cnameTarget,
