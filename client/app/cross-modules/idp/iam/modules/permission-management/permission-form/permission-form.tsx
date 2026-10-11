@@ -22,7 +22,7 @@ import { useForm } from "react-hook-form";
 import {
   permissionFormDefaultValue,
   permissionFormSchema,
-  permissionFormSchemaType,
+  PermissionFormSchemaType,
   BUILTIN_PERMISSION_READONLY_MESSAGE,
   isPermissionFormReadOnly,
 } from "./utils";
@@ -32,9 +32,9 @@ import { PermissionGroupCombobox } from "@blocks-idp/iam/components/permission-g
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
 import { Banner } from "@/components/ui-kits/banner/banner";
 type PermissionFormProps = {
-  onSave: (data: permissionFormSchemaType) => void;
+  onSave: (data: PermissionFormSchemaType) => void;
   isPending: boolean;
-  values?: permissionFormSchemaType | null;
+  values?: PermissionFormSchemaType | null;
   isBuiltIn?: boolean;
   showTags?: boolean;
 };
@@ -50,7 +50,7 @@ export const PermissionForm = ({
     values: values || permissionFormDefaultValue,
     resolver: zodResolver(permissionFormSchema),
   });
-  const onSubmit = async (data: permissionFormSchemaType) => {
+  const onSubmit = async (data: PermissionFormSchemaType) => {
     onSave(data);
   };
   const resourceType = form.watch("type");

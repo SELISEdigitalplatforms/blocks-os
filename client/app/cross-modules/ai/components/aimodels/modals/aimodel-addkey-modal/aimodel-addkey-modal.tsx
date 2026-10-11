@@ -49,7 +49,7 @@ export const ModelAddKeyModal = ({
   addKeyModalOpen,
   setAddKeyModalOpen,
 }: ModelAddKeyModalProps) => {
-  const project_key = useProjectStore().selectedProject?.tenantId || "";
+  const projectKey = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useCreateModel();
   const { schema, defaultValues, fields } = resolveModelConfig(
     provider,
@@ -81,7 +81,7 @@ export const ModelAddKeyModal = ({
     try {
       const payload = transformToUniversal(
         provider.toLowerCase(),
-        project_key,
+        projectKey,
         data as Record<string, unknown>,
       );
       payload.model_name = payload.model_name === "--" ? modelOptions[0].model : payload.model_name;

@@ -34,24 +34,24 @@ export const useCreateModel = () => {
 // models per project. It has to be part of the query key, otherwise switching
 // projects serves the previous project's cache until a reload. The two list hooks
 // also need distinct prefixes: they call different endpoints with the same payload.
-export const useGetModels = (payload: IModelListPayload, project_key: string) => {
+export const useGetModels = (payload: IModelListPayload, projectKey: string) => {
   return useQuery({
-    queryKey: ["models", "list", project_key, payload],
-    queryFn: () => modelService.getModels(payload, project_key),
+    queryKey: ["models", "list", projectKey, payload],
+    queryFn: () => modelService.getModels(payload, projectKey),
   });
 };
 
-export const useGetAllModels = (payload: IModelListPayload, project_key: string) => {
+export const useGetAllModels = (payload: IModelListPayload, projectKey: string) => {
   return useQuery({
-    queryKey: ["models", "all", project_key, payload],
-    queryFn: () => modelService.getAllModels(payload, project_key),
+    queryKey: ["models", "all", projectKey, payload],
+    queryFn: () => modelService.getAllModels(payload, projectKey),
   });
 };
 
-export const useGetModelById = (modelId: string, project_key: string) => {
+export const useGetModelById = (modelId: string, projectKey: string) => {
   return useQuery({
-    queryKey: ["model", project_key, modelId],
-    queryFn: () => modelService.getModelById(modelId, project_key),
+    queryKey: ["model", projectKey, modelId],
+    queryFn: () => modelService.getModelById(modelId, projectKey),
     enabled: !!modelId,
   });
 };
@@ -73,8 +73,8 @@ export const useDeleteModel = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: ["model", "delete"],
-    mutationFn: ({ modelId, project_key }: { modelId: string; project_key: string }) =>
-      modelService.deleteModel(modelId, project_key),
+    mutationFn: ({ modelId, project_key: projectKey }: { modelId: string; project_key: string }) =>
+      modelService.deleteModel(modelId, projectKey),
     onSuccess: (res) => {
       if (res?.is_success) {
         queryClient.invalidateQueries({ queryKey: ["models"] });
@@ -88,8 +88,8 @@ export const useValidateModel = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: ["model", "validate"],
-    mutationFn: ({ modelId, project_key }: { modelId: string; project_key: string }) =>
-      modelService.validateModel(modelId, project_key),
+    mutationFn: ({ modelId, project_key: projectKey }: { modelId: string; project_key: string }) =>
+      modelService.validateModel(modelId, projectKey),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["model"] });
       queryClient.invalidateQueries({ queryKey: ["models"] });

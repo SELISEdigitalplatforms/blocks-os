@@ -60,7 +60,7 @@ export const CustomModelEditKeyModal = ({
   setEditKeyModalOpen,
   model,
 }: CustomModelEditKeyModalProps) => {
-  const project_key = useProjectStore().selectedProject?.tenantId || "";
+  const projectKey = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useUpdateModel();
   const initialValues: FormSchema = useMemo(() => {
     const customParams = (model.CustomParameters ?? {}) as Record<string, unknown>;
@@ -108,7 +108,7 @@ export const CustomModelEditKeyModal = ({
           .map((h) => [h.key as string, h.value as string]),
       );
       const payload: IUpdateModelPayload & { model_name: string } = {
-        project_key,
+        project_key: projectKey,
         display_name: model.DisplayName || data.model,
         base_url: data.url || model.BaseUrl || "",
         is_active: model.IsActive,

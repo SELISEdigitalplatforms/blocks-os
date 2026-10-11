@@ -172,15 +172,17 @@ const BasicInformation = forwardRef(function Inner(
     [onSaveSuccess, saveTemplate, templateItemId, tenantId],
   );
 
+  const { isValid } = form.formState;
+
   useImperativeHandle(
     ref,
     () => ({
       submit() {
         form.handleSubmit(handleFormSubmit)();
       },
-      isValid: form.formState.isValid,
+      isValid,
     }),
-    [form.formState.isValid, form, handleFormSubmit],
+    [isValid, form, handleFormSubmit],
   );
 
   if (isLoading || isLanguageListLoading || !data) {

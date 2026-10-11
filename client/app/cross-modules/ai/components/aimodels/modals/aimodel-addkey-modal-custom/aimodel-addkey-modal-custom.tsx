@@ -72,7 +72,7 @@ export const CustomModelAddKeyModal = ({
   setAddKeyModalOpen,
 }: CustomModelAddKeyModalProps) => {
   const provider = "CUSTOM";
-  const project_key = useProjectStore().selectedProject?.tenantId || "";
+  const projectKey = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useCreateModel();
   const form = useForm<FormSchema>({
     defaultValues: CustomAddKeyFormDefaultValue,
@@ -89,7 +89,7 @@ export const CustomModelAddKeyModal = ({
       const headersObject = Object.fromEntries(
         (data.customHeaders || []).filter((h) => h.key && h.value).map((h) => [h.key!, h.value!]),
       );
-      const payload = transformToUniversal(provider.toLowerCase(), project_key, {
+      const payload = transformToUniversal(provider.toLowerCase(), projectKey, {
         ...data,
         customHeaders: headersObject,
       });
