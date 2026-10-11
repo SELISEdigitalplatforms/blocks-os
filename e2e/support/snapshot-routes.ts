@@ -92,6 +92,11 @@ export const SNAPSHOT_ROUTES: SnapshotRoute[] = [
     navigate: (page) => openSecretManagement(page, "identity-providers", "Identity Provider"),
   },
   {
+    id: "sso",
+    name: "Secrets & Configs — SSO",
+    navigate: (page) => openSecretManagement(page, "sso", "SSO"),
+  },
+  {
     id: "external-idp",
     name: "Secrets & Configs — External IdP",
     navigate: (page) => openSecretManagement(page, "external-idp", "External IdP"),
@@ -120,6 +125,16 @@ export const SNAPSHOT_ROUTES: SnapshotRoute[] = [
     id: "storage",
     name: "Secrets & Configs — Storage",
     navigate: (page) => openSecretManagement(page, "storage", "Storage"),
+  },
+  {
+    id: "data-gateway",
+    name: "Secrets & Configs — Data Gateway",
+    navigate: (page) => openSecretManagement(page, "data-gateway", "Data Gateway"),
+  },
+  {
+    id: "integration",
+    name: "Secrets & Configs — Integrations",
+    navigate: (page) => openSecretManagement(page, "integration", "Integrations"),
   },
   {
     id: "email-management",
