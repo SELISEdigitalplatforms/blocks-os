@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -35,7 +36,10 @@ namespace XUnitTest.Integration
         private readonly Mock<ILogTraceBackupRepository> _backupRepository = new();
         private readonly Mock<IBlobStorage> _blobStorage = new();
         private readonly Mock<ILmtArchiveRestoreConfigurationRepository> _configRepository = new();
-        private readonly Dictionary<string, byte[]> _uploads = [];
+        // The upload phase runs several collections at once (bounded by MongoQueryMaxConcurrency),
+        // so SaveAsync is called concurrently. A plain Dictionary can silently drop one of two
+        // concurrent inserts, which made the two-tenant test miss a file that was uploaded.
+        private readonly ConcurrentDictionary<string, byte[]> _uploads = new();
 
         public BackupEndToEndTests(MongoIntegrationFixture fixture)
         {
