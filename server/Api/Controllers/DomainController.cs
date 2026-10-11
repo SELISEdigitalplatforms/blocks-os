@@ -123,9 +123,9 @@ namespace BlocksOs.Api.Controllers
       }
      }
     }
-    catch (OperationCanceledException) when (aborted.IsCancellationRequested)
+    catch (OperationCanceledException ex) when (aborted.IsCancellationRequested)
     {
-     _logger.LogInformation("Client left the setup stream for {Domain}; setup continues in the background", request.CookieDomain);
+     _logger.LogInformation(ex, "Client left the setup stream for {Domain}; setup continues in the background", request.CookieDomain);
     }
   }
 

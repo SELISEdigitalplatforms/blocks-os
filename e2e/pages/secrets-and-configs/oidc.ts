@@ -13,10 +13,10 @@ function oidcClientHeader(page: Page) {
 }
 
 /**
- * OidcList renders a skeleton while isLoading || isFetching, the empty copy
- * when there are no credentials, and the Client column header only when there
- * is at least one row. Wait for either settled state so later steps do not
- * race the skeleton (neither empty copy nor Client exists during fetch).
+ * OidcList renders a skeleton on its first load, the empty copy when there are
+ * no credentials, and the Client column header only when there is at least one
+ * row. Wait for either settled state so later steps do not race the skeleton
+ * (neither empty copy nor Client exists during the first load).
  */
 export async function waitForOidcListSettledFlow(page: Page) {
   await expect(oidcEmptyState(page).or(oidcClientHeader(page))).toBeVisible({
@@ -98,6 +98,20 @@ export async function createOidcClientFlow(page: Page, clientName: string) {
   ) {
     await expect(page.getByText("OIDC Client created successfully", { exact: true })).toBeVisible();
   }
+  await waitForOidcListSettledFlow(page);
+}
+
+/** Creates a plain active OIDC client with one redirect URI, for specs that just need one. */
+export async function createBasicOidcClientFlow(page: Page, clientName: string) {
+  await openNewOidcClientDialogFlow(page);
+  await page.getByPlaceholder("Enter client name").fill(clientName);
+  await page.getByPlaceholder("https://example.com/oidc").first().fill("https://example.com/callback");
+  const addButton = page.getByRole("button", { name: "Add", exact: true });
+  await expect(addButton).toBeEnabled({ timeout: 10000 });
+  await addButton.click();
+  await expect(page.getByText("OIDC Client created successfully", { exact: true })).toBeVisible({
+    timeout: 15000,
+  });
   await waitForOidcListSettledFlow(page);
 }
 
@@ -347,72 +361,66 @@ export async function ensureOidcClientRowVisibleFlow(page: Page, clientRow: Loca
   }
 }
 
+/**
+ * The expanded details of a client are a separate table row right after the client's own row,
+ * and they do not repeat the client name, so they are never inside `clientRow`.
+ */
+async function clientDetailsFlow(clientRow: Locator): Promise<Locator> {
+  const details = clientRow.locator("xpath=following-sibling::tr[1]");
+  const clientId = details.getByText("Client Id", { exact: true });
+  if (!(await clientId.isVisible())) await clientRow.click();
+  await expect(clientId).toBeVisible({ timeout: 10000 });
+  return details;
+}
+
+/** Reveals the client secret in the details row (if hidden) and returns its value. */
+async function readClientSecretFlow(clientRow: Locator): Promise<string> {
+  const details = await clientDetailsFlow(clientRow);
+  const show = details.getByRole("button", { name: "Show value" });
+  if (await show.isVisible()) await show.click();
+  const hide = details.getByRole("button", { name: "Hide value" });
+  await expect(hide).toBeVisible();
+  const value = (await hide.locator("xpath=preceding-sibling::span[1]").textContent())?.trim() ?? "";
+  expect(value, "the client secret should be shown once revealed").not.toBe("");
+  return value;
+}
+
 export async function revealAndCopyClientSecretFlow(page: Page, clientRow: Locator) {
-  const showButton = clientRow.getByRole("button", { name: "Show value" }).first();
-  if (!(await showButton.isVisible({ timeout: 5000 }))) return;
-  await showButton.click();
-  await expect(clientRow.getByRole("button", { name: "Hide value" }).first()).toBeVisible();
+  await readClientSecretFlow(clientRow);
 
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"], {
     origin: new URL(page.url()).origin,
   });
-  const copyButtons = clientRow.getByRole("button", { name: "Copy value" });
-  const count = await copyButtons.count();
-  if (count > 0) {
-    await copyButtons.first().click();
-  }
+  const details = await clientDetailsFlow(clientRow);
+  await details.getByRole("button", { name: "Copy value" }).first().click();
 }
 
+/**
+ * Rotates the client's secret and checks it really changed: the secret shown in the details
+ * row before, against the one in the "New client secret" dialog and the details row after.
+ */
 export async function rotateClientSecretFlow(page: Page, clientRow: Locator, clientName: string) {
-  const rotateButton = clientRow.getByRole("button", { name: "Rotate client secret" });
-  if (!(await rotateButton.isVisible({ timeout: 8000 }))) return;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      await clientRow.getByRole("button", { name: "Rotate client secret" }).click({
-        timeout: 8000,
-        force: true,
-      });
-      break;
-    } catch {
-      if (attempt === 2) return;
-      if (/\/branding/.test(page.url())) {
-        await openSecretManagement(page, "oidc", "OIDC");
-        await waitForOidcListSettledFlow(page);
-        await expect(clientRow).toBeVisible({ timeout: 15000 });
-      }
-      await page.waitForTimeout(500);
-    }
-  }
-  await expect(page.getByRole("heading", { name: "Rotate client secret" })).toBeVisible();
-  if (
-    await page
-      .getByText(
-        `Do you want to rotate the client secret for ${clientName}`,
-      )
-      .isVisible()
-  ) {
-    await expect(
-      page.getByText(
-        `Do you want to rotate the client secret for ${clientName}`,
-      ),
-    ).toBeVisible();
-  }
-  await page.getByRole("button", { name: "Rotate Secret" }).click();
-  if (
-    await page.getByText("Client secret rotated successfully", { exact: true }).isVisible({ timeout: 15000 })
-  ) {
-    await expect(page.getByText("Client secret rotated successfully", { exact: true })).toBeVisible();
-  }
-  const revealHeading = page.getByRole("heading", { name: "New client secret" });
-  if (await revealHeading.isVisible({ timeout: 5000 })) {
-    if (
-      await page.getByText("The previous secret no longer works").isVisible()
-    ) {
-      await expect(page.getByText("The previous secret no longer works")).toBeVisible();
-    }
-    await page.getByRole("button", { name: "Done" }).click();
-    await expect(revealHeading).toBeHidden();
-  }
+  const before = await readClientSecretFlow(clientRow);
+
+  await clientRow.getByRole("button", { name: "Rotate client secret" }).click();
+  const confirm = page.getByRole("dialog", { name: "Rotate client secret" });
+  await expect(confirm).toBeVisible();
+  await expect(confirm).toContainText(`Do you want to rotate the client secret for ${clientName}`);
+  await confirm.getByRole("button", { name: "Rotate Secret" }).click();
+  await expect(page.getByText("Client secret rotated successfully", { exact: true })).toBeVisible({
+    timeout: 15000,
+  });
+
+  const reveal = page.getByRole("dialog", { name: "New client secret" });
+  await expect(reveal).toBeVisible();
+  await expect(reveal).toContainText("The previous secret no longer works");
+  const after = (await reveal.locator("code").textContent())?.trim() ?? "";
+  expect(after, "the rotated secret should be shown").not.toBe("");
+  expect(after, "rotating should issue a new secret").not.toBe(before);
+  await reveal.getByRole("button", { name: "Done" }).click();
+  await expect(reveal).toBeHidden();
+
+  expect(await readClientSecretFlow(clientRow)).toBe(after);
 }
 
 export async function openEditOidcAndCloseFlow(page: Page, clientRow: Locator) {

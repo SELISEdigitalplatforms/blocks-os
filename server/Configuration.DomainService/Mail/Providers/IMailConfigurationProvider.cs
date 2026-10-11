@@ -67,7 +67,15 @@ namespace Configuration.DomainService.Mail.Providers
         /// The stored record on edit, null on create — what distinguishes "a secret is required"
         /// from "a secret is already on file".
         /// </param>
-        IDictionary<string, string> Validate(MailConfiguration request, MailServerConfiguration? existing);
+        /// <param name="existingCredentialStatus">
+        /// <see cref="ResolveCredentialStatusAsync"/> for <paramref name="existing"/>, or null when
+        /// there is no stored record or it owns no linked secret. A reference whose secret is
+        /// archived or missing is not "on file": it cannot be kept, only replaced.
+        /// </param>
+        IDictionary<string, string> Validate(
+            MailConfiguration request,
+            MailServerConfiguration? existing,
+            string? existingCredentialStatus);
 
         /// <summary>
         /// Provider-specific field errors for a duplicate request. Empty means valid.
@@ -95,9 +103,14 @@ namespace Configuration.DomainService.Mail.Providers
         /// Creates or rotates whatever credential this provider owns, before the configuration
         /// is written.
         /// </summary>
+        /// <param name="existingCredentialStatus">
+        /// The status <see cref="Validate"/> was given. When it says the stored reference is
+        /// broken, a supplied value creates a new credential instead of rotating the dead one.
+        /// </param>
         Task<MailCredentialResult> SaveCredentialAsync(
             MailConfiguration request,
             MailServerConfiguration? existing,
+            string? existingCredentialStatus,
             CancellationToken cancellationToken = default);
 
         /// <summary>
@@ -112,16 +125,32 @@ namespace Configuration.DomainService.Mail.Providers
         /// Retires the owned credential. Called before the configuration is deleted, and as
         /// compensation for a credential this operation created but could not finish using.
         /// </summary>
-        Task DeleteCredentialAsync(string? credentialReference, CancellationToken cancellationToken = default);
+        /// <returns>
+        /// True only when this call retired a credential. A credential that was already archived
+        /// or no longer exists is tolerated and reported as false, so a failed delete afterwards
+        /// knows it has nothing of its own to restore.
+        /// </returns>
+        Task<bool> DeleteCredentialAsync(string? credentialReference, CancellationToken cancellationToken = default);
 
         /// <summary>Undoes <see cref="DeleteCredentialAsync"/> when the delete that followed it failed.</summary>
         Task RestoreCredentialAsync(string? credentialReference, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// The state of the linked secret <paramref name="entity"/> points at, or null when this
+        /// provider owns no linked secret for that record.
+        /// </summary>
+        /// <remarks>
+        /// One metadata read at most, never a value read. Never throws for a secret-store failure:
+        /// it answers <c>unavailable</c> instead, so one unreadable secret cannot fail a list.
+        /// </remarks>
+        Task<string?> ResolveCredentialStatusAsync(MailServerConfiguration entity, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Copies this provider's non-secret fields and "configured" flags onto the response.
         /// Never the plaintext and never the reference.
         /// </summary>
-        void ProjectResponse(MailServerConfiguration entity, MailConfigurationResponse response);
+        /// <param name="credentialStatus">What <see cref="ResolveCredentialStatusAsync"/> returned for <paramref name="entity"/>.</param>
+        void ProjectResponse(MailServerConfiguration entity, MailConfigurationResponse response, string? credentialStatus);
     }
 
     /// <summary>

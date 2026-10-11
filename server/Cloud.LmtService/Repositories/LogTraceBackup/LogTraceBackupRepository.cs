@@ -16,6 +16,21 @@ namespace Cloud.LmtService.Repositories.LogTraceBackup
         private const string LogBlobUploadCollection = "LogBlobUploadProgressTracker";
         private const string TraceProgressCollection = "TraceBackupFileProgressTracker";
 
+        // Nested stats objects and counter fields on the job document (see IncrementJobCounterAsync).
+        private const string LogArchivingStatsField = "LogArchivingStats";
+        private const string ServiceLogArchivingStatsField = "ServiceLogArchivingStats";
+        private const string LogBlobUploadStatsField = "LogBlobUploadStats";
+        private const string TraceStatsField = "TraceStats";
+        private const string TotalDiscoveredField = "TotalDiscovered";
+        private const string ArchivingCountField = "ArchivingCount";
+        private const string ArchiveSuccessCountField = "ArchiveSuccessCount";
+        private const string ArchiveFailedCountField = "ArchiveFailedCount";
+        private const string TotalFailedField = "TotalFailed";
+        private const string TotalSuccessfulField = "TotalSuccessful";
+        private const string UploadingCountField = "UploadingCount";
+        private const string UploadSuccessCountField = "UploadSuccessCount";
+        private const string UploadFailedCountField = "UploadFailedCount";
+
         public LogTraceBackupRepository(
             IBlocksSecret blocksSecret,
             IDbContextProvider dbContextProvider,
@@ -29,32 +44,26 @@ namespace Cloud.LmtService.Repositories.LogTraceBackup
 
         // ── Job lifecycle ────────────────────────────────────────────────────────
 
+        // Not caught here: a failure propagates through ArchiveService.StartBackupAsync to
+        // StartBackupConsumer, which logs it, so logging here as well only duplicated the entry.
         public async Task<string> CreateJobAsync(DateTime dataDateFrom, DateTime dataDateTo)
         {
-            try
+            var runId = Guid.NewGuid().ToString();
+            var job = new LogTraceBackupJob
             {
-                var runId = Guid.NewGuid().ToString();
-                var job = new LogTraceBackupJob
-                {
-                    RunId = runId,
-                    Status = LogTraceBackupJobStatus.Running,
-                    CurrentPhase = BackupPhase.Archiving,
-                    StartTime = DateTime.UtcNow,
-                    LastHeartbeatAt = DateTime.UtcNow,
-                    DataDateFrom = dataDateFrom,
-                    DataDateTo = dataDateTo
-                };
+                RunId = runId,
+                Status = LogTraceBackupJobStatus.Running,
+                CurrentPhase = BackupPhase.Archiving,
+                StartTime = DateTime.UtcNow,
+                LastHeartbeatAt = DateTime.UtcNow,
+                DataDateFrom = dataDateFrom,
+                DataDateTo = dataDateTo
+            };
 
-                await _rootDatabase.GetCollection<LogTraceBackupJob>(JobsCollection)
-                    .InsertOneAsync(job);
+            await _rootDatabase.GetCollection<LogTraceBackupJob>(JobsCollection)
+                .InsertOneAsync(job);
 
-                return runId;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to create backup job document");
-                throw;
-            }
+            return runId;
         }
 
         public async Task UpdateJobPhaseAsync(string runId, string phase)
@@ -180,8 +189,8 @@ namespace Cloud.LmtService.Repositories.LogTraceBackup
                 await _rootDatabase.GetCollection<LogBackupFileProgress>(LogProgressCollection)
                     .InsertOneAsync(doc);
 
-                await IncrementJobCounterAsync(runId, "LogArchivingStats", "TotalDiscovered", 1);
-                await IncrementJobCounterAsync(runId, "LogArchivingStats", "ArchivingCount", 1);
+                await IncrementJobCounterAsync(runId, LogArchivingStatsField, TotalDiscoveredField, 1);
+                await IncrementJobCounterAsync(runId, LogArchivingStatsField, ArchivingCountField, 1);
             }
             catch (Exception ex)
             {
@@ -202,8 +211,8 @@ namespace Cloud.LmtService.Repositories.LogTraceBackup
                 await _rootDatabase.GetCollection<LogBackupFileProgress>(LogProgressCollection)
                     .UpdateOneAsync(filter, update);
 
-                await IncrementJobCounterAsync(runId, "LogArchivingStats", "ArchivingCount", -1);
-                await IncrementJobCounterAsync(runId, "LogArchivingStats", "ArchiveSuccessCount", 1);
+                await IncrementJobCounterAsync(runId, LogArchivingStatsField, ArchivingCountField, -1);
+                await IncrementJobCounterAsync(runId, LogArchivingStatsField, ArchiveSuccessCountField, 1);
             }
             catch (Exception ex)
             {
@@ -232,9 +241,9 @@ namespace Cloud.LmtService.Repositories.LogTraceBackup
                 await _rootDatabase.GetCollection<LogBackupFileProgress>(LogProgressCollection)
                     .UpdateOneAsync(filter, update);
 
-                await IncrementJobCounterAsync(runId, "LogArchivingStats", "ArchivingCount", -1);
-                await IncrementJobCounterAsync(runId, "LogArchivingStats", "ArchiveFailedCount", 1);
-                await IncrementJobCounterAsync(runId, null, "TotalFailed", 1);
+                await IncrementJobCounterAsync(runId, LogArchivingStatsField, ArchivingCountField, -1);
+                await IncrementJobCounterAsync(runId, LogArchivingStatsField, ArchiveFailedCountField, 1);
+                await IncrementJobCounterAsync(runId, null, TotalFailedField, 1);
             }
             catch (Exception ex)
             {
@@ -261,8 +270,8 @@ namespace Cloud.LmtService.Repositories.LogTraceBackup
                 await _rootDatabase.GetCollection<ServiceLogBackupFileProgress>(ServiceLogProgressCollection)
                     .InsertOneAsync(doc);
 
-                await IncrementJobCounterAsync(runId, "ServiceLogArchivingStats", "TotalDiscovered", 1);
-                await IncrementJobCounterAsync(runId, "ServiceLogArchivingStats", "ArchivingCount", 1);
+                await IncrementJobCounterAsync(runId, ServiceLogArchivingStatsField, TotalDiscoveredField, 1);
+                await IncrementJobCounterAsync(runId, ServiceLogArchivingStatsField, ArchivingCountField, 1);
             }
             catch (Exception ex)
             {
@@ -300,8 +309,8 @@ namespace Cloud.LmtService.Repositories.LogTraceBackup
                 await _rootDatabase.GetCollection<ServiceLogBackupFileProgress>(ServiceLogProgressCollection)
                     .UpdateOneAsync(filter, update);
 
-                await IncrementJobCounterAsync(runId, "ServiceLogArchivingStats", "ArchivingCount", -1);
-                await IncrementJobCounterAsync(runId, "ServiceLogArchivingStats", "ArchiveSuccessCount", 1);
+                await IncrementJobCounterAsync(runId, ServiceLogArchivingStatsField, ArchivingCountField, -1);
+                await IncrementJobCounterAsync(runId, ServiceLogArchivingStatsField, ArchiveSuccessCountField, 1);
             }
             catch (Exception ex)
             {
@@ -330,9 +339,9 @@ namespace Cloud.LmtService.Repositories.LogTraceBackup
                 await _rootDatabase.GetCollection<ServiceLogBackupFileProgress>(ServiceLogProgressCollection)
                     .UpdateOneAsync(filter, update);
 
-                await IncrementJobCounterAsync(runId, "ServiceLogArchivingStats", "ArchivingCount", -1);
-                await IncrementJobCounterAsync(runId, "ServiceLogArchivingStats", "ArchiveFailedCount", 1);
-                await IncrementJobCounterAsync(runId, null, "TotalFailed", 1);
+                await IncrementJobCounterAsync(runId, ServiceLogArchivingStatsField, ArchivingCountField, -1);
+                await IncrementJobCounterAsync(runId, ServiceLogArchivingStatsField, ArchiveFailedCountField, 1);
+                await IncrementJobCounterAsync(runId, null, TotalFailedField, 1);
             }
             catch (Exception ex)
             {
@@ -360,8 +369,8 @@ namespace Cloud.LmtService.Repositories.LogTraceBackup
                 await _rootDatabase.GetCollection<LogBlobUploadProgress>(LogBlobUploadCollection)
                     .InsertOneAsync(doc);
 
-                await IncrementJobCounterAsync(runId, "LogBlobUploadStats", "TotalDiscovered", 1);
-                await IncrementJobCounterAsync(runId, "LogBlobUploadStats", "UploadingCount", 1);
+                await IncrementJobCounterAsync(runId, LogBlobUploadStatsField, TotalDiscoveredField, 1);
+                await IncrementJobCounterAsync(runId, LogBlobUploadStatsField, UploadingCountField, 1);
             }
             catch (Exception ex)
             {
@@ -382,9 +391,9 @@ namespace Cloud.LmtService.Repositories.LogTraceBackup
                 await _rootDatabase.GetCollection<LogBlobUploadProgress>(LogBlobUploadCollection)
                     .UpdateOneAsync(filter, update);
 
-                await IncrementJobCounterAsync(runId, "LogBlobUploadStats", "UploadingCount", -1);
-                await IncrementJobCounterAsync(runId, "LogBlobUploadStats", "UploadSuccessCount", 1);
-                await IncrementJobCounterAsync(runId, null, "TotalSuccessful", 1);
+                await IncrementJobCounterAsync(runId, LogBlobUploadStatsField, UploadingCountField, -1);
+                await IncrementJobCounterAsync(runId, LogBlobUploadStatsField, UploadSuccessCountField, 1);
+                await IncrementJobCounterAsync(runId, null, TotalSuccessfulField, 1);
             }
             catch (Exception ex)
             {
@@ -412,9 +421,9 @@ namespace Cloud.LmtService.Repositories.LogTraceBackup
                 await _rootDatabase.GetCollection<LogBlobUploadProgress>(LogBlobUploadCollection)
                     .UpdateOneAsync(filter, update);
 
-                await IncrementJobCounterAsync(runId, "LogBlobUploadStats", "UploadingCount", -1);
-                await IncrementJobCounterAsync(runId, "LogBlobUploadStats", "UploadFailedCount", 1);
-                await IncrementJobCounterAsync(runId, null, "TotalFailed", 1);
+                await IncrementJobCounterAsync(runId, LogBlobUploadStatsField, UploadingCountField, -1);
+                await IncrementJobCounterAsync(runId, LogBlobUploadStatsField, UploadFailedCountField, 1);
+                await IncrementJobCounterAsync(runId, null, TotalFailedField, 1);
             }
             catch (Exception ex)
             {
@@ -439,8 +448,8 @@ namespace Cloud.LmtService.Repositories.LogTraceBackup
                 await _rootDatabase.GetCollection<TraceBackupFileProgress>(TraceProgressCollection)
                     .InsertOneAsync(doc);
 
-                await IncrementJobCounterAsync(runId, "TraceStats", "TotalDiscovered", 1);
-                await IncrementJobCounterAsync(runId, "TraceStats", "ArchivingCount", 1);
+                await IncrementJobCounterAsync(runId, TraceStatsField, TotalDiscoveredField, 1);
+                await IncrementJobCounterAsync(runId, TraceStatsField, ArchivingCountField, 1);
             }
             catch (Exception ex)
             {
@@ -461,8 +470,8 @@ namespace Cloud.LmtService.Repositories.LogTraceBackup
                 await _rootDatabase.GetCollection<TraceBackupFileProgress>(TraceProgressCollection)
                     .UpdateOneAsync(filter, update);
 
-                await IncrementJobCounterAsync(runId, "TraceStats", "ArchivingCount", -1);
-                await IncrementJobCounterAsync(runId, "TraceStats", "ArchiveSuccessCount", 1);
+                await IncrementJobCounterAsync(runId, TraceStatsField, ArchivingCountField, -1);
+                await IncrementJobCounterAsync(runId, TraceStatsField, ArchiveSuccessCountField, 1);
             }
             catch (Exception ex)
             {
@@ -490,9 +499,9 @@ namespace Cloud.LmtService.Repositories.LogTraceBackup
                 await _rootDatabase.GetCollection<TraceBackupFileProgress>(TraceProgressCollection)
                     .UpdateOneAsync(filter, update);
 
-                await IncrementJobCounterAsync(runId, "TraceStats", "ArchivingCount", -1);
-                await IncrementJobCounterAsync(runId, "TraceStats", "ArchiveFailedCount", 1);
-                await IncrementJobCounterAsync(runId, null, "TotalFailed", 1);
+                await IncrementJobCounterAsync(runId, TraceStatsField, ArchivingCountField, -1);
+                await IncrementJobCounterAsync(runId, TraceStatsField, ArchiveFailedCountField, 1);
+                await IncrementJobCounterAsync(runId, null, TotalFailedField, 1);
             }
             catch (Exception ex)
             {
@@ -518,10 +527,10 @@ namespace Cloud.LmtService.Repositories.LogTraceBackup
                 await _rootDatabase.GetCollection<TraceBackupFileProgress>(TraceProgressCollection)
                     .UpdateOneAsync(filter, update, options);
 
-                await IncrementJobCounterAsync(runId, "TraceStats", "UploadingCount", 1);
+                await IncrementJobCounterAsync(runId, TraceStatsField, UploadingCountField, 1);
 
                 if (isCarryover)
-                    await IncrementJobCounterAsync(runId, "TraceStats", "TotalDiscovered", 1);
+                    await IncrementJobCounterAsync(runId, TraceStatsField, TotalDiscoveredField, 1);
             }
             catch (Exception ex)
             {
@@ -541,9 +550,9 @@ namespace Cloud.LmtService.Repositories.LogTraceBackup
                 await _rootDatabase.GetCollection<TraceBackupFileProgress>(TraceProgressCollection)
                     .UpdateOneAsync(filter, update);
 
-                await IncrementJobCounterAsync(runId, "TraceStats", "UploadingCount", -1);
-                await IncrementJobCounterAsync(runId, "TraceStats", "UploadSuccessCount", 1);
-                await IncrementJobCounterAsync(runId, null, "TotalSuccessful", 1);
+                await IncrementJobCounterAsync(runId, TraceStatsField, UploadingCountField, -1);
+                await IncrementJobCounterAsync(runId, TraceStatsField, UploadSuccessCountField, 1);
+                await IncrementJobCounterAsync(runId, null, TotalSuccessfulField, 1);
             }
             catch (Exception ex)
             {
@@ -571,9 +580,9 @@ namespace Cloud.LmtService.Repositories.LogTraceBackup
                 await _rootDatabase.GetCollection<TraceBackupFileProgress>(TraceProgressCollection)
                     .UpdateOneAsync(filter, update);
 
-                await IncrementJobCounterAsync(runId, "TraceStats", "UploadingCount", -1);
-                await IncrementJobCounterAsync(runId, "TraceStats", "UploadFailedCount", 1);
-                await IncrementJobCounterAsync(runId, null, "TotalFailed", 1);
+                await IncrementJobCounterAsync(runId, TraceStatsField, UploadingCountField, -1);
+                await IncrementJobCounterAsync(runId, TraceStatsField, UploadFailedCountField, 1);
+                await IncrementJobCounterAsync(runId, null, TotalFailedField, 1);
             }
             catch (Exception ex)
             {

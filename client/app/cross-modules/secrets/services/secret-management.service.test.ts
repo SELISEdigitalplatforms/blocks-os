@@ -98,6 +98,19 @@ describe("SecretManagementService", () => {
     expect(http.get).toHaveBeenCalledWith(`${SECRET_ENDPOINTS.GET}?secretId=s-1`);
   });
 
+  it("getDependents reads the dependents endpoint with the id as a query parameter", async () => {
+    vi.mocked(http.get).mockResolvedValue({ secretId: "s-1", dependents: [] });
+    const signal = new AbortController().signal;
+    const result = await service.getDependents("s-1", signal);
+    expect(SECRET_ENDPOINTS.DEPENDENTS).toBe("/api/secrets/dependents");
+    expect(http.get).toHaveBeenCalledWith(
+      `${SECRET_ENDPOINTS.DEPENDENTS}?secretId=s-1`,
+      undefined,
+      { signal },
+    );
+    expect(result.dependents).toEqual([]);
+  });
+
   it("getValue reads the plaintext through the audited endpoint", async () => {
     vi.mocked(http.get).mockResolvedValue({ secretId: "s-1", value: "shh" });
     const result = await service.getValue("s-1");

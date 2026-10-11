@@ -46,7 +46,7 @@ namespace Configuration.DomainService.Mail.Providers
     /// </remarks>
     public sealed class MailConfigurationProviderRegistry : IMailConfigurationProviderRegistry
     {
-        private readonly IReadOnlyDictionary<MailServiceProvider, IMailConfigurationProvider> _definitions;
+        private readonly Dictionary<MailServiceProvider, IMailConfigurationProvider> _definitions;
 
         public MailConfigurationProviderRegistry(IEnumerable<IMailConfigurationProvider> definitions)
         {
@@ -55,7 +55,7 @@ namespace Configuration.DomainService.Mail.Providers
             _definitions = definitions.ToDictionary(definition => definition.Provider);
         }
 
-        public IReadOnlyCollection<IMailConfigurationProvider> Definitions => _definitions.Values.ToList();
+        public IReadOnlyCollection<IMailConfigurationProvider> Definitions => _definitions.Values;
 
         public bool TryGet(MailServiceProvider provider, out IMailConfigurationProvider definition)
         {

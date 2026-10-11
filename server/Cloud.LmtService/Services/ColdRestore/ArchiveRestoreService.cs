@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -27,6 +28,7 @@ namespace Cloud.LmtService.Services.ColdRestore
         private readonly ILogTraceRestoreService _logTraceRestoreService;
         private readonly IRestoreUserRepository _userRepository;
 
+        [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "DI constructor: each parameter is an injected dependency.")]
         public ArchiveRestoreService(
             ILogger<ArchiveRestoreService> logger,
             IBlobStorage blobStorage,
@@ -154,7 +156,9 @@ namespace Cloud.LmtService.Services.ColdRestore
                     completedAt: DateTime.UtcNow,
                     ct: CancellationToken.None);
 
-                throw;
+                throw new InvalidOperationException(
+                    $"Failed to process archive restore request for RequestId {message.RequestId}",
+                    ex);
             }
         }
 
@@ -305,11 +309,13 @@ namespace Cloud.LmtService.Services.ColdRestore
             {
                 await _coldRestoreRepository.UpdateFileProgressStatusByObjectIdAsync(
                     progressId,
-                    RestoreFileProgressStatus.Processing,
-                    needsHydration: false,
-                    rowsRestored: 0,
-                    hydrationStatus: ArchiveHydrationStatus.Ready,
-                    startedAt: DateTime.UtcNow,
+                    new ArchiveFileProgressUpdate(RestoreFileProgressStatus.Processing)
+                    {
+                        NeedsHydration = false,
+                        RowsRestored = 0,
+                        HydrationStatus = ArchiveHydrationStatus.Ready,
+                        StartedAt = DateTime.UtcNow
+                    },
                     ct: ct);
 
                 int restoredRowCount = file.DataType switch
@@ -321,11 +327,13 @@ namespace Cloud.LmtService.Services.ColdRestore
 
                 await _coldRestoreRepository.UpdateFileProgressStatusByObjectIdAsync(
                     progressId,
-                    RestoreFileProgressStatus.Completed,
-                    needsHydration: false,
-                    rowsRestored: restoredRowCount,
-                    hydrationStatus: ArchiveHydrationStatus.Ready,
-                    completedAt: DateTime.UtcNow,
+                    new ArchiveFileProgressUpdate(RestoreFileProgressStatus.Completed)
+                    {
+                        NeedsHydration = false,
+                        RowsRestored = restoredRowCount,
+                        HydrationStatus = ArchiveHydrationStatus.Ready,
+                        CompletedAt = DateTime.UtcNow
+                    },
                     ct: ct);
 
                 await _coldRestoreRepository.IncrementRequestProgressAsync(
@@ -366,12 +374,14 @@ namespace Cloud.LmtService.Services.ColdRestore
         {
             await _coldRestoreRepository.UpdateFileProgressStatusByObjectIdAsync(
                 progressId,
-                status,
-                needsHydration: false,
-                rowsRestored: 0,
-                hydrationStatus: ArchiveHydrationStatus.Ready,
-                completedAt: DateTime.UtcNow,
-                errorMessage: errorMessage,
+                new ArchiveFileProgressUpdate(status)
+                {
+                    NeedsHydration = false,
+                    RowsRestored = 0,
+                    HydrationStatus = ArchiveHydrationStatus.Ready,
+                    CompletedAt = DateTime.UtcNow,
+                    ErrorMessage = errorMessage
+                },
                 ct: ct);
 
             await _coldRestoreRepository.IncrementRequestProgressAsync(
@@ -523,11 +533,13 @@ namespace Cloud.LmtService.Services.ColdRestore
             {
                 await _coldRestoreRepository.UpdateFileProgressStatusByObjectIdAsync(
                     progress.Id,
-                    RestoreFileProgressStatus.Processing,
-                    needsHydration: false,
-                    rowsRestored: 0,
-                    hydrationStatus: ArchiveHydrationStatus.Ready,
-                    startedAt: DateTime.UtcNow,
+                    new ArchiveFileProgressUpdate(RestoreFileProgressStatus.Processing)
+                    {
+                        NeedsHydration = false,
+                        RowsRestored = 0,
+                        HydrationStatus = ArchiveHydrationStatus.Ready,
+                        StartedAt = DateTime.UtcNow
+                    },
                     ct: ct);
 
                 int restoredRowCount = job.DataType switch
@@ -539,11 +551,13 @@ namespace Cloud.LmtService.Services.ColdRestore
 
                 await _coldRestoreRepository.UpdateFileProgressStatusByObjectIdAsync(
                     progress.Id,
-                    RestoreFileProgressStatus.Completed,
-                    needsHydration: false,
-                    rowsRestored: restoredRowCount,
-                    hydrationStatus: ArchiveHydrationStatus.Ready,
-                    completedAt: DateTime.UtcNow,
+                    new ArchiveFileProgressUpdate(RestoreFileProgressStatus.Completed)
+                    {
+                        NeedsHydration = false,
+                        RowsRestored = restoredRowCount,
+                        HydrationStatus = ArchiveHydrationStatus.Ready,
+                        CompletedAt = DateTime.UtcNow
+                    },
                     ct: ct);
 
                 await _coldRestoreRepository.IncrementRequestProgressAsync(
@@ -573,12 +587,14 @@ namespace Cloud.LmtService.Services.ColdRestore
 
                 await _coldRestoreRepository.UpdateFileProgressStatusByObjectIdAsync(
                     progress.Id,
-                    RestoreFileProgressStatus.Failed,
-                    needsHydration: false,
-                    rowsRestored: 0,
-                    hydrationStatus: ArchiveHydrationStatus.Failed,
-                    completedAt: DateTime.UtcNow,
-                    errorMessage: ex.Message,
+                    new ArchiveFileProgressUpdate(RestoreFileProgressStatus.Failed)
+                    {
+                        NeedsHydration = false,
+                        RowsRestored = 0,
+                        HydrationStatus = ArchiveHydrationStatus.Failed,
+                        CompletedAt = DateTime.UtcNow,
+                        ErrorMessage = ex.Message
+                    },
                     ct: CancellationToken.None);
 
                 await _coldRestoreRepository.IncrementRequestProgressAsync(
@@ -622,12 +638,14 @@ namespace Cloud.LmtService.Services.ColdRestore
 
                 await _coldRestoreRepository.UpdateFileProgressStatusByObjectIdAsync(
                     progress.Id,
-                    RestoreFileProgressStatus.Failed,
-                    needsHydration: true,
-                    rowsRestored: 0,
-                    hydrationStatus: ArchiveHydrationStatus.Failed,
-                    completedAt: DateTime.UtcNow,
-                    errorMessage: errorMessage,
+                    new ArchiveFileProgressUpdate(RestoreFileProgressStatus.Failed)
+                    {
+                        NeedsHydration = true,
+                        RowsRestored = 0,
+                        HydrationStatus = ArchiveHydrationStatus.Failed,
+                        CompletedAt = DateTime.UtcNow,
+                        ErrorMessage = errorMessage
+                    },
                     ct: ct);
 
                 await _coldRestoreRepository.IncrementRequestProgressAsync(

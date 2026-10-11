@@ -94,7 +94,7 @@ namespace DomainService.Access.Services
                     : Intersect(Union(rows), catalog),
             };
 
-            items?[cacheKey] = context;
+            if (items is not null) items[cacheKey] = context;
             return context;
         }
 
@@ -294,13 +294,13 @@ namespace DomainService.Access.Services
             // Union, not first-row: the rows should agree, and a union means they still behave
             // correctly on the day one of them does not.
             var union = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var row in rows)
+            var policies = rows
+                .Where(row => row.AccessPolicies is not null)
+                .SelectMany(row => row.AccessPolicies)
+                .Where(policy => !string.IsNullOrWhiteSpace(policy));
+            foreach (var policy in policies)
             {
-                if (row.AccessPolicies is null) continue;
-                foreach (var policy in row.AccessPolicies)
-                {
-                    if (!string.IsNullOrWhiteSpace(policy)) union.Add(policy.Trim());
-                }
+                union.Add(policy.Trim());
             }
             return union;
         }

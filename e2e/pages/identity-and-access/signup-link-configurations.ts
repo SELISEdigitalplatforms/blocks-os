@@ -2,6 +2,7 @@ import { expect, type Locator, type Page, type Request } from "@playwright/test"
 import { isLoginSurface } from "../../support/login-helper";
 import { openIam } from "../../support/os-helpers";
 import { refreshSuiteSession } from "../../support/session-lifecycle";
+import { createBasicOidcClientFlow, navigateToOidcFlow } from "../secrets-and-configs/oidc";
 
 /** The page heading is served by localization; dev currently shows "One-Click Signup". */
 export const SIGNUP_LINK_CONFIGURATIONS_HEADING = /^(One-Click Signup|Signup Link Configurations)$/;
@@ -36,6 +37,28 @@ export async function clientSideRequiredValidationFlow(page: Page) {
   await expect(page.getByText("Name is required")).toBeVisible();
   await expect(page.getByText("Client is required")).toBeVisible();
   await expect(page.getByText("Redirect URI is required")).toBeVisible();
+}
+
+let signupLinkClientReady = false;
+
+/**
+ * The Client select only offers active, non-device-flow OIDC clients, and a new project has
+ * none. Make sure one exists rather than relying on a client another spec happened to leave
+ * behind. Checked once per worker; the shared project is deleted at teardown.
+ */
+export async function ensureSignupLinkClientFlow(page: Page) {
+  if (signupLinkClientReady) return;
+  await navigateToOidcFlow(page);
+  // Case-sensitive, so the "Inactive" badge does not count.
+  const eligible = page
+    .getByRole("row")
+    .filter({ hasText: /Active/ })
+    .filter({ hasNotText: "Device Flow" });
+  if ((await eligible.count()) === 0) {
+    await createBasicOidcClientFlow(page, `E2E Signup Link Client ${Date.now()}`);
+    await expect(eligible.first()).toBeVisible({ timeout: 15_000 });
+  }
+  signupLinkClientReady = true;
 }
 
 /**

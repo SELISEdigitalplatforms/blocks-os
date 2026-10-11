@@ -49,10 +49,14 @@ describe("OidcList", () => {
     expect(screen.queryByText("Client")).toBeNull();
   });
 
-  it("renders the skeleton while refetching", () => {
+  it("keeps the rows mounted while refetching, so an open row dialog survives", () => {
     h.isFetching = true;
+    h.data = {
+      oIDCClientCredentials: [{ itemId: "1", clientId: "kept", createdDate: "2024-01-01" }],
+    };
     render(<OidcList />);
-    expect(screen.queryByText("Client")).toBeNull();
+    expect(screen.getByText("Client")).toBeTruthy();
+    expect(screen.getByText("kept")).toBeTruthy();
   });
 
   it("shows the empty state when there are no credentials", () => {

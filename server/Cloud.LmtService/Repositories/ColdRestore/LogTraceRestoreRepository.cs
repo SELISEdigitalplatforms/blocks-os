@@ -288,41 +288,37 @@ namespace Cloud.LmtService.Repositories.ColdRestore
             string requestId,
             RestoreDataType dataType,
             DateTime fileDate,
-            RestoreFileProgressStatus status,
-            int rowsRestored = 0,
-            string? errorMessage = null,
-            DateTime? startedAt = null,
-            DateTime? completedAt = null,
+            FileProgressUpdate update,
             CancellationToken ct = default)
         {
             try
             {
                 var collection = GetFileProgressCollection();
 
-                var update = Builders<LogTraceRestoreFileProgressRecord>.Update
-                    .Set(x => x.Status, status)
-                    .Set(x => x.RowsRestored, rowsRestored);
+                var mongoUpdate = Builders<LogTraceRestoreFileProgressRecord>.Update
+                    .Set(x => x.Status, update.Status)
+                    .Set(x => x.RowsRestored, update.RowsRestored);
 
-                if (!string.IsNullOrWhiteSpace(errorMessage))
+                if (!string.IsNullOrWhiteSpace(update.ErrorMessage))
                 {
-                    update = update.Set(x => x.ErrorMessage, errorMessage);
+                    mongoUpdate = mongoUpdate.Set(x => x.ErrorMessage, update.ErrorMessage);
                 }
 
-                if (startedAt.HasValue)
+                if (update.StartedAt.HasValue)
                 {
-                    update = update.Set(x => x.StartedAt, startedAt.Value);
+                    mongoUpdate = mongoUpdate.Set(x => x.StartedAt, update.StartedAt.Value);
                 }
 
-                if (completedAt.HasValue)
+                if (update.CompletedAt.HasValue)
                 {
-                    update = update.Set(x => x.CompletedAt, completedAt.Value);
+                    mongoUpdate = mongoUpdate.Set(x => x.CompletedAt, update.CompletedAt.Value);
                 }
 
                 await collection.UpdateOneAsync(
                     x => x.RequestId == requestId &&
                          x.DataType == dataType &&
                          x.FileDate == fileDate.Date,
-                    update,
+                    mongoUpdate,
                     cancellationToken: ct);
             }
             catch (Exception ex)
@@ -420,11 +416,14 @@ namespace Cloud.LmtService.Repositories.ColdRestore
                 return [];
 
             var collection = GetFileProgressCollection();
+            var filter = Builders<LogTraceRestoreFileProgressRecord>.Filter;
 
-            return await collection.Find(x =>
-                    x.RequestId == requestId &&
-                    x.Status == RestoreFileProgressStatus.Pending &&
-                    x.NeedsHydration == false)
+            // Explicit equality on NeedsHydration renders { NeedsHydration: false }; a negated
+            // boolean in the LINQ form would render $ne: true and also match rows missing the field.
+            return await collection.Find(
+                    filter.Eq(x => x.RequestId, requestId) &
+                    filter.Eq(x => x.Status, RestoreFileProgressStatus.Pending) &
+                    filter.Eq(x => x.NeedsHydration, false))
                 .ToListAsync(ct);
         }
         public async Task UpdateRequestCountersAsync(string requestId, int processedFiles, int failedFiles, int traceRowsRestored, int logRowsRestored, CancellationToken ct = default)
@@ -492,62 +491,50 @@ namespace Cloud.LmtService.Repositories.ColdRestore
         }
 
         public async Task UpdateFileProgressStatusByIdAsync(
-        string requestId, string blobPath, RestoreFileProgressStatus status,
-        bool? needsHydration = null, ArchiveHydrationStatus? hydrationStatus = null,
-        DateTime? startedAt = null, DateTime? completedAt = null,
-        string? errorMessage = null, CancellationToken ct = default)
+            string requestId, string blobPath, ArchiveFileProgressUpdate update, CancellationToken ct = default)
         {
             await UpdateFileProgressStatusInternalAsync(
                 x => x.RequestId == requestId && x.BlobPath == blobPath,
-                status, needsHydration, hydrationStatus, startedAt, completedAt, errorMessage, ct: ct);
+                update, ct);
         }
 
         public async Task UpdateFileProgressStatusByObjectIdAsync(
-            ObjectId id, RestoreFileProgressStatus status,
-            bool? needsHydration = null, int rowsRestored = 0,
-            ArchiveHydrationStatus? hydrationStatus = null,
-            DateTime? startedAt = null, DateTime? completedAt = null,
-            string? errorMessage = null, CancellationToken ct = default)
+            ObjectId id, ArchiveFileProgressUpdate update, CancellationToken ct = default)
         {
+            // This method has always written RowsRestored, defaulting it to 0 when not supplied.
             await UpdateFileProgressStatusInternalAsync(
                 x => x.Id == id,
-                status, needsHydration, hydrationStatus, startedAt, completedAt, errorMessage,
-                rowsRestored: rowsRestored, ct: ct);
+                update with { RowsRestored = update.RowsRestored ?? 0 },
+                ct);
         }
 
         private async Task UpdateFileProgressStatusInternalAsync(
             Expression<Func<LogTraceRestoreFileProgressRecord, bool>> filter,
-            RestoreFileProgressStatus status,
-            bool? needsHydration = null,
-            ArchiveHydrationStatus? hydrationStatus = null,
-            DateTime? startedAt = null,
-            DateTime? completedAt = null,
-            string? errorMessage = null,
-            int? rowsRestored = null,
-            CancellationToken ct = default)
+            ArchiveFileProgressUpdate update,
+            CancellationToken ct)
         {
-            var update = Builders<LogTraceRestoreFileProgressRecord>.Update
-                .Set(x => x.Status, status);
+            var mongoUpdate = Builders<LogTraceRestoreFileProgressRecord>.Update
+                .Set(x => x.Status, update.Status);
 
-            if (rowsRestored.HasValue)
-                update = update.Set(x => x.RowsRestored, rowsRestored.Value);
+            if (update.RowsRestored.HasValue)
+                mongoUpdate = mongoUpdate.Set(x => x.RowsRestored, update.RowsRestored.Value);
 
-            if (needsHydration.HasValue)
-                update = update.Set(x => x.NeedsHydration, needsHydration.Value);
+            if (update.NeedsHydration.HasValue)
+                mongoUpdate = mongoUpdate.Set(x => x.NeedsHydration, update.NeedsHydration.Value);
 
-            if (hydrationStatus.HasValue)
-                update = update.Set(x => x.HydrationStatus, hydrationStatus.Value);
+            if (update.HydrationStatus.HasValue)
+                mongoUpdate = mongoUpdate.Set(x => x.HydrationStatus, update.HydrationStatus.Value);
 
-            if (startedAt.HasValue)
-                update = update.Set(x => x.StartedAt, startedAt.Value);
+            if (update.StartedAt.HasValue)
+                mongoUpdate = mongoUpdate.Set(x => x.StartedAt, update.StartedAt.Value);
 
-            if (completedAt.HasValue)
-                update = update.Set(x => x.CompletedAt, completedAt.Value);
+            if (update.CompletedAt.HasValue)
+                mongoUpdate = mongoUpdate.Set(x => x.CompletedAt, update.CompletedAt.Value);
 
-            if (!string.IsNullOrWhiteSpace(errorMessage))
-                update = update.Set(x => x.ErrorMessage, errorMessage);
+            if (!string.IsNullOrWhiteSpace(update.ErrorMessage))
+                mongoUpdate = mongoUpdate.Set(x => x.ErrorMessage, update.ErrorMessage);
 
-            await GetFileProgressCollection().UpdateOneAsync(filter, update, cancellationToken: ct);
+            await GetFileProgressCollection().UpdateOneAsync(filter, mongoUpdate, cancellationToken: ct);
         }
     }
 }

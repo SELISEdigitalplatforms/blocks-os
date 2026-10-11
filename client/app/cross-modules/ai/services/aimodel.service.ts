@@ -23,15 +23,15 @@ export class ModelService {
     });
   }
 
-  getModels(payload: IModelListPayload, project_key: string): Promise<IModelListResponse> {
+  getModels(payload: IModelListPayload, projectKey: string): Promise<IModelListResponse> {
     return http.get(
-      `${agentsBase()}/api${AI_ENDPOINTS.MODELS}/?provider=${payload.provider}&search=${payload.search ?? ""}&page=${payload.page}&page_size=${payload.page_size}&project_key=${project_key}`,
+      `${agentsBase()}/api${AI_ENDPOINTS.MODELS}/?provider=${payload.provider}&search=${payload.search ?? ""}&page=${payload.page}&page_size=${payload.page_size}&project_key=${projectKey}`,
       undefined,
       { absoluteUrl: true },
     );
   }
 
-  getAllModels(payload: IModelListPayload, project_key: string): Promise<IModelListResponse> {
+  getAllModels(payload: IModelListPayload, projectKey: string): Promise<IModelListResponse> {
     const params = new URLSearchParams();
 
     if (payload.provider) params.append("provider", payload.provider);
@@ -47,7 +47,7 @@ export class ModelService {
     )
       params.append("status", payload.status);
 
-    params.append("project_key", project_key);
+    params.append("project_key", projectKey);
 
     const queryString = params.toString();
     const url = `${agentsBase()}/api${AI_ENDPOINTS.MODELS}/${queryString ? `?${queryString}` : ""}`;
@@ -55,9 +55,9 @@ export class ModelService {
     return http.get(url, undefined, { absoluteUrl: true });
   }
 
-  getModelById(modelId: string, project_key: string): Promise<IModelInfo> {
+  getModelById(modelId: string, projectKey: string): Promise<IModelInfo> {
     return http.get(
-      `${agentsBase()}/api${AI_ENDPOINTS.MODEL_BY_ID.replace(":id", modelId)}?project_key=${project_key}`,
+      `${agentsBase()}/api${AI_ENDPOINTS.MODEL_BY_ID.replace(":id", modelId)}?project_key=${projectKey}`,
       undefined,
       { absoluteUrl: true },
     );
@@ -72,17 +72,17 @@ export class ModelService {
     );
   }
 
-  deleteModel(modelId: string, project_key: string): Promise<IModelResponse> {
+  deleteModel(modelId: string, projectKey: string): Promise<IModelResponse> {
     return http.delete(
-      `${agentsBase()}/api${AI_ENDPOINTS.MODEL_BY_ID.replace(":id", modelId)}?project_key=${project_key}`,
+      `${agentsBase()}/api${AI_ENDPOINTS.MODEL_BY_ID.replace(":id", modelId)}?project_key=${projectKey}`,
       undefined,
       { absoluteUrl: true },
     );
   }
 
-  validateModel(modelId: string, project_key: string): Promise<IValidateModelResponse> {
+  validateModel(modelId: string, projectKey: string): Promise<IValidateModelResponse> {
     return http.post(
-      `${agentsBase()}/api${AI_ENDPOINTS.MODEL_VALIDATE.replace(":id", modelId)}?project_key=${project_key}`,
+      `${agentsBase()}/api${AI_ENDPOINTS.MODEL_VALIDATE.replace(":id", modelId)}?project_key=${projectKey}`,
       "",
       undefined,
       { absoluteUrl: true },

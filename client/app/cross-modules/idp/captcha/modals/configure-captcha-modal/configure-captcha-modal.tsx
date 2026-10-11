@@ -36,6 +36,7 @@ import {
 } from "@/components/ui-kits/select/select";
 import { Button } from "@/components/ui-kits/button/button";
 import { ReactNode, useState } from "react";
+import { isBrokenLinkedSecretStatus } from "@/cross-modules/secrets/models/secret.model";
 type ConfigureCaptchaModalProps = {
   configuration?: ICaptchaConfig | null;
   children: ReactNode;
@@ -43,6 +44,11 @@ type ConfigureCaptchaModalProps = {
 export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCaptchaModalProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const isEditing = !!configuration;
+  // Repair mode: the linked secret is archived or missing, so saving needs a new value, which
+  // the server stores as a new secret and points this configuration at.
+  const secretStatus = configuration?.secretStatus;
+  const brokenStatus = isBrokenLinkedSecretStatus(secretStatus) ? secretStatus : null;
+  const needsNewSecret = !!brokenStatus;
   const defaultValues: ConfigureCaptchaFormValues = configuration
     ? {
         provider: configuration.provider,
@@ -54,7 +60,7 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
     : ConfigureCaptchaFormDefaultValue;
   const form = useForm({
     defaultValues,
-    resolver: zodResolver(buildConfigureCaptchaFormSchema(isEditing)),
+    resolver: zodResolver(buildConfigureCaptchaFormSchema(isEditing, needsNewSecret)),
     mode: "onChange",
   });
   const {
@@ -131,7 +137,7 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
                   </FormItem>
                 )}
               />
-              <ConfigureFormField form={form} isEditing={isEditing} />
+              <ConfigureFormField form={form} isEditing={isEditing} brokenStatus={brokenStatus} />
               <ConfigureBlockCaptchaFormField form={form} />
               <DialogFooter className="mt-4">
                 <DialogTrigger asChild>
@@ -139,7 +145,13 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
                     Cancel
                   </Button>
                 </DialogTrigger>
-                <Button size="sm" disabled={isPending || !isDirty || !isValid} type="submit">
+                {/* In repair mode the button stays enabled so an empty submit can explain, inline,
+                    that a new secret is required — rather than sitting disabled with no reason. */}
+                <Button
+                  size="sm"
+                  disabled={isPending || (!needsNewSecret && (!isDirty || !isValid))}
+                  type="submit"
+                >
                   {isPending ? "Saving..." : configuration ? "Update Changes" : "Save"}
                 </Button>
               </DialogFooter>
