@@ -271,6 +271,22 @@
             </para>
             </remarks>
         </member>
+        <member name="F:BlocksOs.Api.Controllers.SecretsController.StatusDeletedReason">
+            <summary>
+            The reason code <c>ISecretService</c> attaches when a value read targets an archived secret.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.SecretsController.Dependents(System.String,Configuration.DomainService.Shared.Secrets.ISecretDependentLookup,System.Threading.CancellationToken)">
+            <summary>
+            The CAPTCHA and Office 365 mail configurations that point at a secret, so the Archive and
+            Purge dialogs can warn before breaking them.
+            </summary>
+            <remarks>
+            Shares the metadata read permission: the answer names configurations, not values.
+            Advisory only — nothing refuses an archive or purge because of it. An unknown id, or one
+            from another tenant, answers an empty list rather than 404 so existence is not revealed.
+            </remarks>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.SecretsController.Tags(System.Threading.CancellationToken)">
             <summary>
             The tenant's tag catalogue, for a tag picker or a tag filter.
@@ -294,6 +310,18 @@
             permission — it is the second half of the same capability, and only reaches secrets the
             soft delete has already taken out of service.
             </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.SecretsController.ReadArchivedAsBadRequest``1(System.Func{System.Threading.Tasks.Task{``0}})">
+            <summary>
+            Re-raises a value read on an archived secret as a validation error, which the existing
+            <see cref="T:Blocks.Secrets.SecretExceptionFilter"/> turns into 400 with reason <c>STATUS_DELETED</c>.
+            </summary>
+            <remarks>
+            Done here rather than in the filter because the filter ships in the
+            <c>SeliseBlocks.Secrets.OS</c> package, and changing it would change status codes for every
+            service that consumes it. Every other state failure — locked included — keeps its 409, and
+            the read has already been audited by the service, so the audit trail is unchanged.
+            </remarks>
         </member>
         <member name="T:BlocksOs.Api.Controllers.VersionController">
             <summary>

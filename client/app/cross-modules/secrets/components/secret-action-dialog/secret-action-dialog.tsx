@@ -14,10 +14,15 @@ import {
   useLockSecret,
   usePurgeSecret,
   useRestoreSecret,
+  useSecretDependents,
   useUnlockSecret,
 } from "@/cross-modules/secrets/hooks/use-secret-management";
 import { describeSecretError } from "@/cross-modules/secrets/utils/secret-error";
 import type { SecretResult } from "@/cross-modules/secrets/models/secret.model";
+import {
+  SecretDependentsNotice,
+  type SecretDependentsAction,
+} from "@/cross-modules/secrets/components/secret-dependents-notice/secret-dependents-notice";
 
 export type SecretLifecycleAction = "lock" | "unlock" | "delete" | "restore" | "purge";
 
@@ -65,6 +70,10 @@ const COPY: Record<SecretLifecycleAction, Copy> = {
   },
 };
 
+/** The actions that break a configuration still pointing at the secret. */
+const warnsAboutDependents = (action: SecretLifecycleAction): action is SecretDependentsAction =>
+  action === "delete" || action === "purge";
+
 interface SecretActionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -94,6 +103,12 @@ export function SecretActionDialog({
   const mutation = { lock, unlock, delete: remove, restore, purge }[action];
   const copy = COPY[action];
 
+  // Only Archive and Purge ask, and only while the dialog is open. The answer never blocks the
+  // action; confirm waits only for the lookup itself, so the warning is not skipped by a fast click.
+  const checksDependents = warnsAboutDependents(action);
+  const dependents = useSecretDependents(secret.secretId, open && checksDependents);
+  const isCheckingDependents = checksDependents && dependents.isLoading;
+
   const confirm = async () => {
     setError(null);
     try {
@@ -110,6 +125,14 @@ export function SecretActionDialog({
       <DialogContent className="w-[calc(100vw-1.5rem)] max-w-md sm:w-full">
         <DialogHeader>
           <DialogTitle className="text-left">{copy.title(secret.name)}</DialogTitle>
+          {checksDependents && (
+            <SecretDependentsNotice
+              action={action}
+              isLoading={dependents.isLoading}
+              isError={dependents.isError}
+              dependents={dependents.data?.dependents}
+            />
+          )}
           <DialogDescription className="text-left">{copy.body}</DialogDescription>
         </DialogHeader>
 
@@ -128,7 +151,7 @@ export function SecretActionDialog({
             type="button"
             variant={copy.destructive ? "destructive" : "default"}
             onClick={confirm}
-            disabled={mutation.isPending}
+            disabled={mutation.isPending || isCheckingDependents}
           >
             {mutation.isPending ? copy.pending : copy.confirm}
           </Button>

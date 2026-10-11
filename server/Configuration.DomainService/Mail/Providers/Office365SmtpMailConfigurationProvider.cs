@@ -3,6 +3,8 @@ using Configuration.DomainService.Mail.Entities;
 using Configuration.DomainService.Mail.RequestModel;
 using Configuration.DomainService.Mail.ResponseModel;
 using Configuration.DomainService.Shared.Enums;
+using Configuration.DomainService.Shared.Secrets;
+using Microsoft.Extensions.Logging;
 using System.Net.Mail;
 
 namespace Configuration.DomainService.Mail.Providers
@@ -42,11 +44,18 @@ namespace Configuration.DomainService.Mail.Providers
 
         private const string MaskedSecretValue = "********";
 
-        private readonly ISecretService _secretService;
+        /// <summary>How a configuration is named in status warnings, alongside its id.</summary>
+        private const string ConfigurationKind = "mail";
 
-        public Office365SmtpMailConfigurationProvider(ISecretService secretService)
+        private readonly ISecretService _secretService;
+        private readonly ILogger<Office365SmtpMailConfigurationProvider> _logger;
+
+        public Office365SmtpMailConfigurationProvider(
+            ISecretService secretService,
+            ILogger<Office365SmtpMailConfigurationProvider> logger)
         {
             _secretService = secretService;
+            _logger = logger;
         }
 
         public MailServiceProvider Provider => MailServiceProvider.Office365Smtp;
@@ -108,7 +117,10 @@ namespace Configuration.DomainService.Mail.Providers
             request.MailboxAddress = request.MailboxAddress?.Trim();
         }
 
-        public IDictionary<string, string> Validate(MailConfiguration request, MailServerConfiguration? existing)
+        public IDictionary<string, string> Validate(
+            MailConfiguration request,
+            MailServerConfiguration? existing,
+            string? existingCredentialStatus)
         {
             var errors = new Dictionary<string, string>();
 
@@ -147,7 +159,7 @@ namespace Configuration.DomainService.Mail.Providers
                 errors["MailboxAddress"] = "Mailbox address must be a valid email address.";
             }
 
-            AddClientSecretError(request.ClientSecret, existing, errors);
+            AddClientSecretError(request.ClientSecret, existing, existingCredentialStatus, errors);
 
             if (!string.IsNullOrEmpty(request.AccountPassword))
             {
@@ -203,6 +215,7 @@ namespace Configuration.DomainService.Mail.Providers
         public async Task<MailCredentialResult> SaveCredentialAsync(
             MailConfiguration request,
             MailServerConfiguration? existing,
+            string? existingCredentialStatus,
             CancellationToken cancellationToken = default)
         {
             if (request.AuthenticationType == MailAuthenticationType.Password)
@@ -219,7 +232,12 @@ namespace Configuration.DomainService.Mail.Providers
                 return new MailCredentialResult { Reference = reference, Created = false };
             }
 
-            if (string.IsNullOrEmpty(reference))
+            // A reference whose secret was archived or purged cannot be rotated — the secret
+            // service only rotates active or locked secrets — so it is replaced by a new one, the
+            // same way a first save creates one. The old secret is left as it is. Mail already
+            // queued in blocks-logic keeps the old reference; new sends use the new one at once,
+            // because blocks-logic caches tokens by reference.
+            if (string.IsNullOrEmpty(reference) || LinkedSecretStatus.IsBroken(existingCredentialStatus))
             {
                 var created = await _secretService.SetAsync(
                     new SetSecretRequest
@@ -268,12 +286,14 @@ namespace Configuration.DomainService.Mail.Providers
             return new MailCredentialResult { Reference = created, Created = true };
         }
 
-        public async Task DeleteCredentialAsync(string? credentialReference, CancellationToken cancellationToken = default)
+        public async Task<bool> DeleteCredentialAsync(string? credentialReference, CancellationToken cancellationToken = default)
         {
-            if (!string.IsNullOrEmpty(credentialReference))
+            if (string.IsNullOrEmpty(credentialReference))
             {
-                await _secretService.DeleteAsync(credentialReference, cancellationToken).ConfigureAwait(false);
+                return false;
             }
+
+            return await LinkedSecretRetirement.RetireAsync(_secretService, credentialReference, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task RestoreCredentialAsync(string? credentialReference, CancellationToken cancellationToken = default)
@@ -284,7 +304,19 @@ namespace Configuration.DomainService.Mail.Providers
             }
         }
 
-        public void ProjectResponse(MailServerConfiguration entity, MailConfigurationResponse response)
+        public async Task<string?> ResolveCredentialStatusAsync(MailServerConfiguration entity, CancellationToken cancellationToken = default)
+        {
+            if (entity.AuthenticationType == MailAuthenticationType.Password)
+            {
+                return null;
+            }
+
+            return await LinkedSecretStatus
+                .ResolveAsync(_secretService, entity.ClientSecretReference, _logger, ConfigurationKind, entity.ItemId, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        public void ProjectResponse(MailServerConfiguration entity, MailConfigurationResponse response, string? credentialStatus)
         {
             if (entity.AuthenticationType == MailAuthenticationType.Password)
             {
@@ -296,7 +328,13 @@ namespace Configuration.DomainService.Mail.Providers
             response.TenantId = entity.TenantId;
             response.ClientId = entity.ClientId;
             response.MailboxAddress = entity.MailboxAddress;
-            response.IsClientSecretConfigured = !string.IsNullOrEmpty(entity.ClientSecretReference);
+            // A caller that did not resolve a status gets what the reference alone can say: a
+            // stored reference of unknown health is reported as unavailable, never as active.
+            var status = credentialStatus
+                ?? (string.IsNullOrEmpty(entity.ClientSecretReference) ? LinkedSecretStatus.None : LinkedSecretStatus.Unavailable);
+
+            response.ClientSecretStatus = status;
+            response.IsClientSecretConfigured = status is LinkedSecretStatus.Active or LinkedSecretStatus.Locked or LinkedSecretStatus.Unavailable;
 
             // No mask. A password provider's fixed-width mask is harmless because a blank
             // submission means "unchanged" there too, but a mask in this field is something a
@@ -333,9 +371,15 @@ namespace Configuration.DomainService.Mail.Providers
         /// a space has supplied a value and meant to change it, and storing it would leave a
         /// configuration that authenticates with a blank credential.
         /// </summary>
+        /// <remarks>
+        /// A reference to an archived or missing secret is not "on file": keeping it would save a
+        /// configuration that cannot authenticate, so the caller is asked for a new value. An
+        /// unavailable status still counts as on file — an outage must not block an edit.
+        /// </remarks>
         private static void AddClientSecretError(
             string? clientSecret,
             MailServerConfiguration? existing,
+            string? existingCredentialStatus,
             IDictionary<string, string> errors)
         {
             var isWhitespaceOnly = clientSecret is { Length: > 0 } && clientSecret.Trim().Length == 0;
@@ -346,11 +390,18 @@ namespace Configuration.DomainService.Mail.Providers
                 return;
             }
 
-            var hasSecretOnFile = !string.IsNullOrEmpty(existing?.ClientSecretReference);
+            if (!string.IsNullOrEmpty(clientSecret))
+            {
+                return;
+            }
 
-            if (string.IsNullOrEmpty(clientSecret) && !hasSecretOnFile)
+            if (string.IsNullOrEmpty(existing?.ClientSecretReference))
             {
                 errors["ClientSecret"] = "Client secret is required for a new SMTP Office 365 configuration.";
+            }
+            else if (LinkedSecretStatus.IsBroken(existingCredentialStatus))
+            {
+                errors["ClientSecret"] = "The linked client secret was archived or removed. Enter a new client secret.";
             }
         }
 
