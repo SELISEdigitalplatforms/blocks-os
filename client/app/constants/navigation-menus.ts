@@ -6,6 +6,7 @@ import {
   BookMinus,
   BrainCircuit,
   Building2,
+  Coins,
   CreditCard,
   Database,
   Fingerprint,
@@ -353,5 +354,14 @@ export const navigationMenus: Menu[] = [
         type: "menu",
       },
     ],
+  },
+  { type: "separator", id: "separator-ai-credits" },
+  {
+    id: "ai-credits",
+    type: "menu",
+    name: "AI Credits",
+    path: "/app/ai-credits",
+    icon: Coins,
+    desc: "Agent credit balance for this project and coupon redemption",
   },
 ];
