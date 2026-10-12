@@ -109,6 +109,24 @@ describe("AiCreditsPage", () => {
     expect(screen.queryByRole("status")).toBeNull();
   });
 
+  it("clears the code and the error", async () => {
+    vi.mocked(aiCreditsService.createTopUp).mockRejectedValue(refusal(409, "coupon_expired"));
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByRole("button", { name: "Redeem" });
+    const clear = screen.getByRole("button", { name: "Clear" }) as HTMLButtonElement;
+    expect(clear.disabled).toBe(true);
+
+    await user.type(codeInput(), "EXPD2026");
+    await user.click(screen.getByRole("button", { name: "Redeem" }));
+    await screen.findByRole("alert");
+    await user.click(clear);
+
+    expect(codeInput().value).toBe("");
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(clear.disabled).toBe(true);
+  });
+
   it("offers a retry when the usage cannot be read", async () => {
     vi.mocked(aiCreditsService.getUsage).mockRejectedValue(new Error("down"));
     renderPage();

@@ -37,6 +37,12 @@ export const RedeemCouponCard = () => {
     setError(null);
   };
 
+  const onClear = () => {
+    setCode("");
+    setError(null);
+    setRedeemed(null);
+  };
+
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (isPending) return;
@@ -110,6 +116,15 @@ export const RedeemCouponCard = () => {
           <Button type="submit" disabled={isPending} className="h-12 px-6">
             {isPending && <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />}
             {isPending ? "Redeeming…" : "Redeem"}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClear}
+            disabled={isPending || (!code && !error && !redeemed)}
+            className="h-12 px-6"
+          >
+            Clear
           </Button>
         </div>
         {error && (
