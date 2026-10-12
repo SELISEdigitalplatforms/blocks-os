@@ -1,13 +1,14 @@
 import { Lock } from "lucide-react";
+import { PageHeader } from "@/components/page-header/page-header";
 import { Button } from "@/components/ui-kits/button/button";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { useGetAiCreditsUsage } from "../../hooks/use-ai-credits";
 import { UsageCard } from "../../components/usage-card";
 import { RedeemCouponCard } from "../../components/redeem-coupon-card";
 
-// The title and description come from the menu entry. The project is the impersonated environment
-// tenant in the token, so this page has to stay under the `:itemId` routes.
-export const AiCreditsPage = () => {
+// The project is the impersonated environment tenant in the token, so this page has to stay under
+// the `:itemId` routes.
+const AiCreditsContent = () => {
   const { data: usage, isLoading, isError, refetch } = useGetAiCreditsUsage();
 
   if (isLoading) {
@@ -52,3 +53,16 @@ export const AiCreditsPage = () => {
     </div>
   );
 };
+
+// Same frame as the IAM and Logs & Traces pages: a scrolling body with their padding and header.
+export const AiCreditsPage = () => (
+  <div className="flex h-full min-h-0 flex-col overflow-hidden">
+    <div className="flex-1 overflow-y-auto px-6 pb-6 pt-4">
+      <PageHeader
+        title="AI Credits"
+        description="Agent credit balance for this project and coupon redemption."
+      />
+      <AiCreditsContent />
+    </div>
+  </div>
+);

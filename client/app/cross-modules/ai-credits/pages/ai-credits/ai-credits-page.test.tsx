@@ -23,6 +23,7 @@ describe("AiCreditsPage", () => {
   it("shows the balance, both pools, the expiries and the last top-up", async () => {
     renderPage();
 
+    expect(screen.getByRole("heading", { level: 1, name: "AI Credits" })).toBeTruthy();
     expect(await screen.findByText("6,360")).toBeTruthy();
     expect(screen.getByText("Agents can run")).toBeTruthy();
     expect(screen.getByText("Free credits")).toBeTruthy();
