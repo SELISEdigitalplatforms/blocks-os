@@ -113,10 +113,6 @@ export const RedeemCouponCard = () => {
               ))}
             </InputOTPGroup>
           </InputOTP>
-          <Button type="submit" disabled={isPending} className="h-12 px-6">
-            {isPending && <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />}
-            {isPending ? "Redeeming…" : "Redeem"}
-          </Button>
           <Button
             type="button"
             variant="outline"
@@ -125,6 +121,10 @@ export const RedeemCouponCard = () => {
             className="h-12 px-6"
           >
             Clear
+          </Button>
+          <Button type="submit" disabled={isPending} className="h-12 px-6">
+            {isPending && <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />}
+            {isPending ? "Redeeming…" : "Redeem"}
           </Button>
         </div>
         {error && (

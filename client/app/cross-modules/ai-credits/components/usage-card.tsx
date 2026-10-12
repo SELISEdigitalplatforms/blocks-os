@@ -55,19 +55,19 @@ export const UsageCard = ({ usage }: { usage: IAgentCreditsUsage }) => (
     aria-labelledby="ai-credits-usage-title"
     className="overflow-hidden rounded-lg border border-border bg-card"
   >
-    <div className="flex flex-wrap items-end justify-between gap-4 bg-[#0B3B6E] px-6 py-5 text-white dark:bg-blocks-primary-100">
+    <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border px-6 py-5">
       <div className="flex flex-col gap-0.5">
         <h2
           id="ai-credits-usage-title"
-          className="text-xs font-semibold uppercase tracking-wider text-white/75"
+          className="text-xs font-semibold uppercase tracking-wider text-medium-emphasis"
         >
           Agent credits left
         </h2>
         <div className="flex items-baseline gap-2">
-          <span className="text-4xl font-bold tabular-nums leading-tight">
+          <span className="text-4xl font-bold tabular-nums leading-tight text-high-emphasis">
             {formatCredits(usage.remaining)}
           </span>
-          <span className="text-sm text-white/80">credits</span>
+          <span className="text-sm text-medium-emphasis">credits</span>
         </div>
       </div>
       <span
