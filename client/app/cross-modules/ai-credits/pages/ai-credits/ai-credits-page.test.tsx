@@ -82,6 +82,24 @@ describe("AiCreditsPage", () => {
     );
   });
 
+  it("confirms the redemption without a count or expiry the server left out", async () => {
+    vi.mocked(aiCreditsService.createTopUp).mockResolvedValue({
+      ...mockPaidTopUp,
+      creditsGranted: null,
+      validUntil: null,
+    });
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByRole("button", { name: "Redeem" });
+
+    await user.type(codeInput(), "zjwlgq7y");
+    await user.click(screen.getByRole("button", { name: "Redeem" }));
+
+    const status = await screen.findByRole("status");
+    expect(status.tagName).toBe("OUTPUT");
+    expect(status.textContent).toBe("Credits added. Coupon ZJWL-GQ7Y is redeemed.");
+  });
+
   it("shows the server's coupon refusal under the field", async () => {
     vi.mocked(aiCreditsService.createTopUp).mockRejectedValue(refusal(409, "coupon_expired"));
     const user = userEvent.setup();

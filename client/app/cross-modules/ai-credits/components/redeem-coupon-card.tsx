@@ -1,4 +1,4 @@
-import { FormEvent, useState } from "react";
+import { SubmitEvent, useState } from "react";
 import { REGEXP_ONLY_DIGITS_AND_CHARS } from "input-otp";
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -43,7 +43,7 @@ export const RedeemCouponCard = () => {
     setRedeemed(null);
   };
 
-  const onSubmit = async (event: FormEvent) => {
+  const onSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (isPending) return;
     if (code.length < COUPON_CODE_LENGTH) {
@@ -140,23 +140,20 @@ export const RedeemCouponCard = () => {
       </form>
 
       {redeemed && (
-        <div
-          role="status"
-          className="flex items-start gap-3 rounded-md border border-success/40 bg-success/10 px-4 py-3 text-sm text-high-emphasis"
-        >
+        <output className="flex items-start gap-3 rounded-md border border-success/40 bg-success/10 px-4 py-3 text-sm text-high-emphasis">
           <CheckCircle2 aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-success" />
-          <p>
+          <span>
             <strong className="font-semibold">
-              {redeemed.credits != null
-                ? `${formatCredits(redeemed.credits)} credits added.`
-                : "Credits added."}
+              {redeemed.credits == null
+                ? "Credits added."
+                : `${formatCredits(redeemed.credits)} credits added.`}
             </strong>{" "}
             Coupon {formatCouponCode(redeemed.code)} is redeemed.
             {redeemed.validUntil
               ? ` The credits are valid until ${formatLongDate(redeemed.validUntil)}.`
               : ""}
-          </p>
-        </div>
+          </span>
+        </output>
       )}
     </section>
   );
