@@ -53,24 +53,16 @@ export interface IAgentCreditsUsage {
   lastTopUp: ILastTopUp | null;
 }
 
-export interface ICreateTopUpPayload {
-  amountChf: number;
-  /** A new id per click: the same id always returns the same order. */
-  requestId: string;
+export interface IRedeemCouponPayload {
   couponCode: string;
+  /** Optional: without one the server makes its own, and the coupon's one use per project stops a repeat. */
+  requestId?: string;
 }
 
-export interface ICreateTopUpResponse {
+/** A redeemed coupon: the credits are already in the project's wallet. */
+export interface IRedeemCouponResponse {
   topUpId: string;
-  state: TopUpState;
-  flow: string;
-  creditsGranted: number | null;
+  creditsGranted: number;
   /** Null means the credits never expire. */
   validUntil: string | null;
-  checkoutUrl: string | null;
-  checkoutExpiresAtUtc: string | null;
-  listAmountMinor: number;
-  discountMinor: number;
-  payableMinor: number;
-  currencyCode: string;
 }

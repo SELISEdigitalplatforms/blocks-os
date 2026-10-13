@@ -362,6 +362,6 @@ export const navigationMenus: Menu[] = [
     name: "AI Credits",
     path: "/app/ai-credits",
     icon: Coins,
-    desc: "Agent credit balance for this project and coupon redemption",
+    desc: "Agent credit balance for this project and voucher redemption",
   },
 ];

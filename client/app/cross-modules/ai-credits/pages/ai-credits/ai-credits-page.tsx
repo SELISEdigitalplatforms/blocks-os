@@ -47,7 +47,7 @@ const AiCreditsContent = () => {
       ) : (
         <div className="flex items-center gap-3 rounded-lg border border-border bg-card px-6 py-4 text-sm text-medium-emphasis">
           <Lock aria-hidden="true" className="h-4 w-4 shrink-0" />
-          Only a project admin can redeem coupons.
+          Only a project admin can redeem vouchers.
         </div>
       )}
     </div>
@@ -60,7 +60,7 @@ export const AiCreditsPage = () => (
     <div className="flex-1 overflow-y-auto px-6 pb-6 pt-4">
       <PageHeader
         title="AI Credits"
-        description="Agent credit balance for this project and coupon redemption."
+        description="Agent credit balance for this project and voucher redemption."
       />
       <AiCreditsContent />
     </div>

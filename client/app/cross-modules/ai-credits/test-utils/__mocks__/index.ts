@@ -1,4 +1,4 @@
-import type { IAgentCreditsUsage, ICreateTopUpResponse } from "../../models/ai-credits.model";
+import type { IAgentCreditsUsage, IRedeemCouponResponse } from "../../models/ai-credits.model";
 
 // Mirrors the blocks-agents dev response of GET /api/agent-credits/usage/current.
 export const mockUsage: IAgentCreditsUsage = {
@@ -31,29 +31,10 @@ export const mockUsage: IAgentCreditsUsage = {
   },
 };
 
-export const mockPaidTopUp: ICreateTopUpResponse = {
+export const mockRedeemedCoupon: IRedeemCouponResponse = {
   topUpId: "b2d5c0b0",
-  state: "Paid",
-  flow: "Coupon",
   creditsGranted: 2500,
   validUntil: "2026-10-27T09:12:00Z",
-  checkoutUrl: null,
-  checkoutExpiresAtUtc: null,
-  listAmountMinor: 2500,
-  discountMinor: 2500,
-  payableMinor: 0,
-  currencyCode: "CHF",
-};
-
-export const mockCheckoutTopUp: ICreateTopUpResponse = {
-  ...mockPaidTopUp,
-  state: "CheckoutOpen",
-  flow: "Hosted",
-  creditsGranted: null,
-  validUntil: null,
-  checkoutUrl: "https://checkout.example/abc",
-  discountMinor: 1250,
-  payableMinor: 1250,
 };
 
 /** What genesis HttpClient throws for a FastAPI refusal. */

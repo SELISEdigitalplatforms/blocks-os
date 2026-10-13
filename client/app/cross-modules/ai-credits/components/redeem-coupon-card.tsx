@@ -9,12 +9,12 @@ import {
   InputOTPSeparator,
   InputOTPSlot,
 } from "@/components/ui-kits/input-otp/input-otp";
-import { COUPON_CODE_LENGTH, COUPON_TOP_UP_AMOUNT_CHF } from "../constants/endpoint.constant";
+import { COUPON_CODE_LENGTH } from "../constants/endpoint.constant";
 import { useRedeemCoupon } from "../hooks/use-ai-credits";
-import { getCouponErrorMessage, NOT_FULLY_COVERED_MESSAGE } from "../utils/coupon-error";
+import { getCouponErrorMessage } from "../utils/coupon-error";
 import { formatCouponCode, formatCredits, formatLongDate } from "../utils/format";
 
-type Redeemed = { code: string; credits: number | null; validUntil: string | null };
+type Redeemed = { code: string; credits: number; validUntil: string | null };
 
 const CodeSlot = ({ index, invalid }: { index: number; invalid: boolean }) => (
   <InputOTPSlot
@@ -47,23 +47,14 @@ export const RedeemCouponCard = () => {
     event.preventDefault();
     if (isPending) return;
     if (code.length < COUPON_CODE_LENGTH) {
-      setError(code ? "Enter all 8 characters of the code." : "Enter a coupon code.");
+      setError(code ? "Enter all 8 characters of the code." : "Enter a voucher code.");
       return;
     }
     setRedeemed(null);
     try {
-      const order = await redeem({
-        amountChf: COUPON_TOP_UP_AMOUNT_CHF,
-        requestId: crypto.randomUUID(),
-        couponCode: code,
-      });
-      if (order.state === "Paid") {
-        setRedeemed({ code, credits: order.creditsGranted, validUntil: order.validUntil });
-        setCode("");
-      } else {
-        // A payment would be needed. This page does not take payments, so it never opens checkout.
-        setError(NOT_FULLY_COVERED_MESSAGE);
-      }
+      const result = await redeem({ couponCode: code });
+      setRedeemed({ code, credits: result.creditsGranted, validUntil: result.validUntil });
+      setCode("");
     } catch (err) {
       setError(getCouponErrorMessage(err));
     }
@@ -76,14 +67,16 @@ export const RedeemCouponCard = () => {
     >
       <div className="flex flex-col gap-0.5">
         <h2 id="ai-credits-redeem-title" className="text-base font-semibold text-high-emphasis">
-          Redeem a coupon
+          Redeem a voucher
         </h2>
-        <p className="text-sm text-medium-emphasis">Enter the 8-character code from your coupon.</p>
+        <p className="text-sm text-medium-emphasis">
+          Enter the 8-character code from your voucher.
+        </p>
       </div>
 
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-2">
         <span id="ai-credits-code-label" className="text-sm font-semibold text-high-emphasis">
-          Coupon code
+          Voucher code
         </span>
         <div className="flex flex-wrap items-center gap-4">
           <InputOTP
@@ -144,11 +137,9 @@ export const RedeemCouponCard = () => {
           <CheckCircle2 aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-success" />
           <span>
             <strong className="font-semibold">
-              {redeemed.credits == null
-                ? "Credits added."
-                : `${formatCredits(redeemed.credits)} credits added.`}
+              {formatCredits(redeemed.credits)} credits added.
             </strong>{" "}
-            Coupon {formatCouponCode(redeemed.code)} is redeemed.
+            Voucher {formatCouponCode(redeemed.code)} is redeemed.
             {redeemed.validUntil
               ? ` The credits are valid until ${formatLongDate(redeemed.validUntil)}.`
               : ""}

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
 import { http } from "@/lib/http/http-client";
 import { AiCreditsService } from "./ai-credits.service";
-import { mockPaidTopUp, mockUsage } from "../test-utils/__mocks__";
+import { mockRedeemedCoupon, mockUsage } from "../test-utils/__mocks__";
 
 vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 vi.mock("@/lib/runtime-env", () => ({ getRuntimeEnv: () => "https://agents.test" }));
@@ -30,18 +30,18 @@ describe("AiCreditsService", () => {
     expect(result).toEqual(mockUsage);
   });
 
-  it("createTopUp posts the payload to the top-ups route", async () => {
-    vi.mocked(http.post).mockResolvedValue(mockPaidTopUp);
-    const payload = { amountChf: 25, requestId: "req-12345678", couponCode: "ZJWLGQ7Y" };
+  it("redeemCoupon posts the code to the coupon redeem route", async () => {
+    vi.mocked(http.post).mockResolvedValue(mockRedeemedCoupon);
+    const payload = { couponCode: "ZJWLGQ7Y" };
 
-    const result = await service.createTopUp(payload);
+    const result = await service.redeemCoupon(payload);
 
     expect(http.post).toHaveBeenCalledWith(
-      "https://agents.test/api/agent-credits/topups",
+      "https://agents.test/api/agent-credits/coupons/redeem",
       payload,
       undefined,
       ABS,
     );
-    expect(result).toEqual(mockPaidTopUp);
+    expect(result).toEqual(mockRedeemedCoupon);
   });
 });
