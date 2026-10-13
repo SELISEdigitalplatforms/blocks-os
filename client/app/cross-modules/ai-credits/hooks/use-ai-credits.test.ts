@@ -2,11 +2,11 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createWrapper } from "@/test-utils/test-providers/query-client";
 import { aiCreditsService } from "../services/ai-credits.service";
-import { mockPaidTopUp, mockUsage } from "../test-utils/__mocks__";
+import { mockRedeemedCoupon, mockUsage } from "../test-utils/__mocks__";
 import { useGetAiCreditsUsage, useRedeemCoupon } from "./use-ai-credits";
 
 vi.mock("../services/ai-credits.service", () => ({
-  aiCreditsService: { getUsage: vi.fn(), createTopUp: vi.fn() },
+  aiCreditsService: { getUsage: vi.fn(), redeemCoupon: vi.fn() },
 }));
 
 describe("AI credits hooks", () => {
@@ -23,9 +23,9 @@ describe("AI credits hooks", () => {
     expect(result.current.data).toEqual(mockUsage);
   });
 
-  it("useRedeemCoupon posts the top-up and re-reads the usage", async () => {
+  it("useRedeemCoupon redeems the coupon and re-reads the usage", async () => {
     vi.mocked(aiCreditsService.getUsage).mockResolvedValue(mockUsage);
-    vi.mocked(aiCreditsService.createTopUp).mockResolvedValue(mockPaidTopUp);
+    vi.mocked(aiCreditsService.redeemCoupon).mockResolvedValue(mockRedeemedCoupon);
     const wrapper = createWrapper();
     const { result } = renderHook(
       () => ({ usage: useGetAiCreditsUsage(), redeem: useRedeemCoupon() }),
@@ -34,10 +34,10 @@ describe("AI credits hooks", () => {
     await waitFor(() => expect(result.current.usage.isSuccess).toBe(true));
     expect(aiCreditsService.getUsage).toHaveBeenCalledTimes(1);
 
-    const payload = { amountChf: 25, requestId: "req-12345678", couponCode: "ZJWLGQ7Y" };
+    const payload = { couponCode: "ZJWLGQ7Y" };
     await result.current.redeem.mutateAsync(payload);
 
-    expect(aiCreditsService.createTopUp).toHaveBeenCalledWith(payload);
+    expect(aiCreditsService.redeemCoupon).toHaveBeenCalledWith(payload);
     await waitFor(() => expect(aiCreditsService.getUsage).toHaveBeenCalledTimes(2));
   });
 });

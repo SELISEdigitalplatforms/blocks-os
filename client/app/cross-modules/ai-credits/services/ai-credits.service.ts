@@ -3,8 +3,8 @@ import { getRuntimeEnv } from "@/lib/runtime-env";
 import { AI_CREDITS_ENDPOINTS } from "../constants/endpoint.constant";
 import {
   IAgentCreditsUsage,
-  ICreateTopUpPayload,
-  ICreateTopUpResponse,
+  IRedeemCouponPayload,
+  IRedeemCouponResponse,
 } from "../models/ai-credits.model";
 
 const agentsBase = () => getRuntimeEnv("BLOCKS_AGENTS_BASE_URL");
@@ -16,8 +16,8 @@ export class AiCreditsService {
     });
   }
 
-  createTopUp(payload: ICreateTopUpPayload): Promise<ICreateTopUpResponse> {
-    return http.post(`${agentsBase()}${AI_CREDITS_ENDPOINTS.TOP_UPS}`, payload, undefined, {
+  redeemCoupon(payload: IRedeemCouponPayload): Promise<IRedeemCouponResponse> {
+    return http.post(`${agentsBase()}${AI_CREDITS_ENDPOINTS.REDEEM_COUPON}`, payload, undefined, {
       absoluteUrl: true,
     });
   }

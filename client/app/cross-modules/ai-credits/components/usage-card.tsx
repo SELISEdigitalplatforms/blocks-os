@@ -61,7 +61,7 @@ export const UsageCard = ({ usage }: { usage: IAgentCreditsUsage }) => (
           id="ai-credits-usage-title"
           className="text-xs font-semibold uppercase tracking-wider text-medium-emphasis"
         >
-          Agent credits left
+          Available balance
         </h2>
         <div className="flex items-baseline gap-2">
           <span className="text-4xl font-bold tabular-nums leading-tight text-high-emphasis">
@@ -94,7 +94,7 @@ export const UsageCard = ({ usage }: { usage: IAgentCreditsUsage }) => (
         tone="free"
       />
       <PoolTile
-        title="Coupon credits"
+        title="Voucher credits"
         left={usage.paid.remaining}
         included={usage.paid.included}
         used={usage.paid.used}

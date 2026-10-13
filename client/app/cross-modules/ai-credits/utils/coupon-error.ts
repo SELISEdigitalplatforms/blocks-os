@@ -2,27 +2,21 @@
 // lives here. genesis HttpClient wraps the JSON body as `HttpError.errors`, so the code is at
 // `errors.detail.code`. Auth refusals are plain text: `{"detail": "..."}` with status 403.
 
-export const NOT_FULLY_COVERED_MESSAGE = "This coupon does not cover the full amount.";
 const GENERIC_MESSAGE = "Something went wrong. Try again.";
 
 const MESSAGES: Record<string, string> = {
-  coupon_not_found: "We could not find this coupon. Check the code and try again.",
-  coupon_expired: "This coupon has expired.",
-  coupon_not_started: "This coupon is not active yet.",
-  coupon_already_used: "This project has already used this coupon.",
-  coupon_exhausted: "This coupon has been fully used.",
-  coupon_not_applicable: "This coupon cannot be used for this top-up.",
-  coupon_in_use: "This coupon is already being redeemed. Try again in a few minutes.",
-  // A payment would be needed: the coupon leaves something to pay.
-  billing_profile_incomplete: NOT_FULLY_COVERED_MESSAGE,
-  payable_below_minimum: NOT_FULLY_COVERED_MESSAGE,
-  billing_unavailable: NOT_FULLY_COVERED_MESSAGE,
-  payment_provider_missing: NOT_FULLY_COVERED_MESSAGE,
-  payment_forbidden: NOT_FULLY_COVERED_MESSAGE,
-  payment_unavailable: "The service is not available right now. Try again.",
+  coupon_not_found: "We could not find this voucher. Check the code and try again.",
+  coupon_expired: "This voucher has expired.",
+  coupon_not_started: "This voucher is not active yet.",
+  coupon_already_used: "This project has already used this voucher.",
+  coupon_exhausted: "This voucher has been fully used.",
+  coupon_not_applicable: "This voucher cannot be used here.",
+  coupon_in_use: "This voucher is already being redeemed. Try again in a few minutes.",
+  // A discount voucher: it lowers the price of a paid top-up instead of adding credits.
+  coupon_lowers_price: "This voucher gives a discount on a top-up. It does not add credits here.",
 };
 
-const FORBIDDEN_MESSAGE = "You do not have permission to redeem coupons in this project.";
+const FORBIDDEN_MESSAGE = "You do not have permission to redeem vouchers in this project.";
 
 type ErrorLike = { status?: unknown; errors?: { detail?: unknown } };
 
