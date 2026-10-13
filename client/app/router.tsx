@@ -10,6 +10,7 @@ import { PendingConnectRedirect } from "@/components/pending-connect-redirect/pe
 import { EmailConfigurationPage, NewCommunication } from "@/cross-modules/communication/mail";
 import { NotificationConfigurationListPage } from "@/cross-modules/communication/notification/components/notification-configuration-list";
 import { DataGatewayContents } from "@/cross-modules/data-gateway/pages/data-gateway/data-gateway-contents";
+import { AiCreditsPage } from "@/cross-modules/ai-credits/pages/ai-credits/ai-credits-page";
 import { SecretList } from "@/cross-modules/secrets/components/secret-list/secret-list";
 import { StorageContents } from "@/cross-modules/storage/pages/storage/storage-contents";
 // Temporarily disabled
@@ -467,6 +468,10 @@ export const router = createBrowserRouter([
                         element: <EmailUsageDetailsPage />,
                       },
                     ],
+                  },
+                  {
+                    path: "ai-credits",
+                    element: <AiCreditsPage />,
                   },
                   {
                     path: "lmt",
