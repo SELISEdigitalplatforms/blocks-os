@@ -3,7 +3,7 @@ import * as SwitchPrimitive from "@radix-ui/react-switch";
 import { cn } from "@/lib/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 const switchVariants = cva(
-  "relative cursor-pointer rounded-full border border-solid transition-colors duration-200",
+  "relative shrink-0 cursor-pointer rounded-full border border-solid transition-colors duration-200",
   {
     variants: {
       size: {
