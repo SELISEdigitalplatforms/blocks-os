@@ -21,6 +21,39 @@ namespace Cloud.LmtService.Services.ColdRestore
             bool sendPhoneNumberAsEmail,
             IReadOnlyDictionary<string, string>? bodyDataContext = null)
         {
+            var argumentFailure = FindArgumentFailure(purpose, language, to, out var recipients);
+            if (argumentFailure != null)
+            {
+                return argumentFailure;
+            }
+
+            var template = await FindTemplateAsync(dbContextProvider, purpose!, language!);
+            if (template == null)
+            {
+                return "no email template for purpose and language";
+            }
+
+            if (!await HasMailServerConfigurationAsync(dbContextProvider, template))
+            {
+                return "no mail server configuration for the template";
+            }
+
+            if (IsPlaceholderMissing(template, bodyDataContext))
+            {
+                return "body data is missing a placeholder of the template";
+            }
+
+            if (!sendPhoneNumberAsEmail && !await HasRegisteredRecipientAsync(dbContextProvider, recipients!))
+            {
+                return "recipient is not a registered user";
+            }
+
+            return null;
+        }
+
+        private static string? FindArgumentFailure(string? purpose, string? language, IEnumerable<string>? to, out List<string>? recipients)
+        {
+            recipients = null;
             if (string.IsNullOrWhiteSpace(BlocksContext.GetContext()?.TenantId))
             {
                 return "no tenant context";
@@ -36,12 +69,17 @@ namespace Cloud.LmtService.Services.ColdRestore
                 return "language is required";
             }
 
-            var recipients = to?.ToList();
-            if (recipients == null || recipients.Count == 0 || recipients.Any(r => r == null))
+            recipients = to?.ToList();
+            if (recipients == null || recipients.Count == 0 || recipients.Contains(null!))
             {
                 return "no recipient";
             }
 
+            return null;
+        }
+
+        private static async Task<BsonDocument?> FindTemplateAsync(IDbContextProvider dbContextProvider, string purpose, string language)
+        {
             var templates = dbContextProvider.GetCollection<BsonDocument>("EmailTemplates");
             // Like the driver: a template for the caller's organization first, then any with purpose + language.
             var nameAndLanguage = Builders<BsonDocument>.Filter.Eq("Name", purpose) & Builders<BsonDocument>.Filter.Eq("Language", language);
@@ -56,51 +94,45 @@ namespace Cloud.LmtService.Services.ColdRestore
             template ??= await (await templates.FindAsync(
                 nameAndLanguage,
                 new FindOptions<BsonDocument> { Limit = 1 })).FirstOrDefaultAsync();
-            if (template == null)
-            {
-                return "no email template for purpose and language";
-            }
+            return template;
+        }
 
+        private static async Task<bool> HasMailServerConfigurationAsync(IDbContextProvider dbContextProvider, BsonDocument template)
+        {
             var configId = template.TryGetValue("MailConfigurationId", out var idValue) && idValue.IsString ? idValue.AsString : null;
             if (string.IsNullOrEmpty(configId))
             {
-                return "no mail server configuration for the template";
+                return false;
             }
 
             var configs = dbContextProvider.GetCollection<BsonDocument>("MailServerConfigurations");
             var config = await (await configs.FindAsync(
                 Builders<BsonDocument>.Filter.Eq("_id", configId),
                 new FindOptions<BsonDocument> { Limit = 1 })).FirstOrDefaultAsync();
-            if (config == null)
-            {
-                return "no mail server configuration for the template";
-            }
+            return config != null;
+        }
 
-            // The driver also failed when the body data lacked a {{key}} / {{x:key}} placeholder of the template body.
+        // The driver also failed when the body data lacked a {{key}} / {{x:key}} placeholder of the template body.
+        private static bool IsPlaceholderMissing(BsonDocument template, IReadOnlyDictionary<string, string>? bodyDataContext)
+        {
             var body = template.TryGetValue("TemplateBody", out var bodyValue) && bodyValue.IsString ? bodyValue.AsString : null;
-            if (!string.IsNullOrEmpty(body))
+            if (string.IsNullOrEmpty(body))
             {
-                var keys = Regex.Matches(body, "\\{{(?:.:)?(.*?)\\}}", RegexOptions.None, TimeSpan.FromMilliseconds(500))
-                    .Select(m => m.Groups[1].Value).Distinct().ToList();
-                if (keys.Count > 0 && (bodyDataContext == null || keys.Any(k => !bodyDataContext.ContainsKey(k))))
-                {
-                    return "body data is missing a placeholder of the template";
-                }
+                return false;
             }
 
-            if (!sendPhoneNumberAsEmail)
-            {
-                var users = dbContextProvider.GetCollection<BsonDocument>("Users");
-                var user = await (await users.FindAsync(
-                    Builders<BsonDocument>.Filter.In("Email", recipients),
-                    new FindOptions<BsonDocument> { Limit = 1 })).FirstOrDefaultAsync();
-                if (user == null)
-                {
-                    return "recipient is not a registered user";
-                }
-            }
+            var keys = Regex.Matches(body, "\\{{(?:.:)?(.*?)\\}}", RegexOptions.None, TimeSpan.FromMilliseconds(500))
+                .Select(m => m.Groups[1].Value).Distinct().ToList();
+            return keys.Count > 0 && (bodyDataContext == null || keys.Exists(k => !bodyDataContext.ContainsKey(k)));
+        }
 
-            return null;
+        private static async Task<bool> HasRegisteredRecipientAsync(IDbContextProvider dbContextProvider, List<string> recipients)
+        {
+            var users = dbContextProvider.GetCollection<BsonDocument>("Users");
+            var user = await (await users.FindAsync(
+                Builders<BsonDocument>.Filter.In("Email", recipients),
+                new FindOptions<BsonDocument> { Limit = 1 })).FirstOrDefaultAsync();
+            return user != null;
         }
     }
 }

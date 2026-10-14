@@ -464,7 +464,7 @@ namespace DomainService.Projects
             catch (MongoWriteException ex) when (ex.WriteError?.Category == ServerErrorCategory.DuplicateKey)
             {
                 // Resumed run, or a root doc made by the data Worker: keep the existing doc.
-                _logger.LogInformation("DataGateway step=root-default result=exists tenant={TenantId}", project.TenantId);
+                _logger.LogInformation(ex, "DataGateway step=root-default result=exists tenant={TenantId}", project.TenantId);
             }
         }
 

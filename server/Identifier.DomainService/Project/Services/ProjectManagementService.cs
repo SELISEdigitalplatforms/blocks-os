@@ -731,8 +731,6 @@ namespace DomainService.Projects
 
         public async Task<RestoreProjectResponse> RestoreProjectAsync(RestoreProjectRequest restoreProjectRequest)
         {
-           //await _messageClient.SendToConsumerAsync(new ConsumerMessage<RestoreProjectRequest> { ConsumerName = IdentifierConstants.IdentifierQueueName, Payload = restoreProjectRequest });
-
            var project = await _projectRepository.GetByIdAsync(restoreProjectRequest.ItemId);
            ProjectStatusTracer? projectStatusTracer = await _projectRepository.GetUnfinishedProjectByIdAsync(restoreProjectRequest.ItemId);
 

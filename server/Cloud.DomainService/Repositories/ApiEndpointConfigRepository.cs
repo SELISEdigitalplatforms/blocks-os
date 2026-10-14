@@ -88,7 +88,6 @@ namespace Cloud.DomainService.Repositories
 
         public async Task<bool> UpdateAsync(string itemId, bool isCaptchaRequired, bool isMfaRequired, string updatedBy)
         {
-           // var db = _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, _blocksSecret.RootDatabaseName);
             var collection = _dbContextProvider.GetCollection<Permission>(CollectionName);
 
             var filter = Builders<Permission>.Filter.Eq(x => x.ItemId, itemId);
@@ -104,7 +103,6 @@ namespace Cloud.DomainService.Repositories
 
         public async Task<long> BulkUpdateAsync(List<string> itemIds, bool isCaptchaRequired, bool isMfaRequired, string updatedBy)
         {
-           // var db = _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, _blocksSecret.RootDatabaseName);
             var collection = _dbContextProvider.GetCollection<Permission>(CollectionName);
 
             var filter = Builders<Permission>.Filter.In(x => x.ItemId, itemIds);

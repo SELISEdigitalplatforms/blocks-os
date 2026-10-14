@@ -35,7 +35,7 @@ namespace Configuration.DomainService.Shared.Utilities
         {
             serviceCollection.AddSingleton<IConfigurationService, ConfigurationService>();
             serviceCollection.AddSingleton<IConfigurationRepository, ConfigurationRepository>();
-            // os SPEC2 X-1: the DataGateway:RootConfigEnabled switch (read per call, no cache).
+            // os SPEC2 X-1 - the DataGateway RootConfigEnabled switch, read on each call and never cached.
             serviceCollection.AddSingleton<DataGatewayRootMode>();
             serviceCollection.AddSingleton<IMailTemplateService, MailTemplateService>();
             serviceCollection.AddSingleton<IMailTemplateRepository, MailTemplateRepository>();
