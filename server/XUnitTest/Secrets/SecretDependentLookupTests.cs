@@ -5,13 +5,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using Blocks.Genesis;
 using Configuration.DomainService.Captcha.ResponseModel;
-using Configuration.DomainService.Mail.Entities;
 using Configuration.DomainService.Shared.Secrets;
 using Configuration.DomainService.Shared.Services;
 using Configuration.DomainService.Shared.Utilities;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using Blocks.Genesis.Entities.Os;
 
 namespace XUnitTest.Secrets
 {

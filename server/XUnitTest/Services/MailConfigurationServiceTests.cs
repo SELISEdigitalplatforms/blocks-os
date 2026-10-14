@@ -4,12 +4,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Blocks.Secrets;
-using Configuration.DomainService.Mail.Entities;
 using Configuration.DomainService.Mail.Providers;
 using Configuration.DomainService.Mail.RequestModel;
 using Configuration.DomainService.Mail.Services;
 using Configuration.DomainService.Mail.Validators;
-using Configuration.DomainService.Shared.Enums;
 using Configuration.DomainService.Shared.Secrets;
 using Configuration.DomainService.Shared.Services;
 using FluentAssertions;
@@ -18,6 +16,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using XUnitTest.TestSupport;
+using Blocks.Genesis.Entities.Os;
 
 namespace XUnitTest.Services
 {

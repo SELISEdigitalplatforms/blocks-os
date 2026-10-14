@@ -5,6 +5,7 @@ using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Blocks.Genesis.Entities.Os;
 
 namespace Worker.Consumers.Identifier
 {

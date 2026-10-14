@@ -1,4 +1,5 @@
 using Configuration.DomainService.Integration.Entities;
+using Blocks.Genesis.Entities.Os;
 
 namespace Configuration.DomainService.Integration.Services
 {

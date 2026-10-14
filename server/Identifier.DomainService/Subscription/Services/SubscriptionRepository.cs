@@ -2,6 +2,7 @@
 using DomainService.Entities;
 using DomainService.Subscription.Services;
 using MongoDB.Driver;
+using Blocks.Genesis.Entities.Os;
 
 namespace DomainService.Subscription.Services
 {

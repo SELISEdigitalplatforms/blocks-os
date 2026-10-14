@@ -27,7 +27,7 @@ namespace BlocksOs.Api.Controllers
    _logger = logger;
   }
 
-  [Authorize]
+  [ProtectedEndPoint("blocks-os::project::mutate-domain")]
   [HttpPost]
   public async Task<BaseResponse> Configure([FromBody] ConfigureDomainRequest request)
   {
@@ -39,7 +39,7 @@ namespace BlocksOs.Api.Controllers
     return await _domainManagementService.ConfigureDomainAsync(request);
   }
 
-  [Authorize]
+  [ProtectedEndPoint("blocks-os::project::domain")]
   [HttpGet]
   public async Task<DomainSetupGuideResponse> SetupGuide()
   {
@@ -52,7 +52,7 @@ namespace BlocksOs.Api.Controllers
   /// event (<see cref="BaseResponse"/>). The run does not depend on the connection: a browser
   /// that goes away mid-run leaves it to finish, and the domain's status shows the outcome.
   /// </summary>
-  [Authorize]
+  [ProtectedEndPoint("blocks-os::project::mutate-domain")]
   [HttpPost]
   public async Task ConfigureStream([FromBody] ConfigureDomainRequest request)
   {

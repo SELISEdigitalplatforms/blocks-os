@@ -1,11 +1,10 @@
 ﻿using Blocks.Genesis;
 using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Notification.ResponseModel;
-using Configuration.DomainService.Notification.Entities;
 using Configuration.DomainService.Storage.RequestModel;
 using Configuration.DomainService.Storage.Entities;
-using Configuration.DomainService.DataGateway.RequestModel;
-using Configuration.DomainService.DataGateway.Entities;
+using Blocks.Genesis.Entities.Data;
+using Blocks.Genesis.Entities.Os;
 
 namespace Configuration.DomainService.Shared.Services
 {
@@ -29,12 +28,6 @@ namespace Configuration.DomainService.Shared.Services
 
         #endregion
 
-        #region DataGateway
-
-        Task<BaseMutationResponse> SaveDataGatewayConfigurationAsync(SaveDataGatewayConfigurationRequest request);
-        Task<DataGatewayConfiguration> GetDataGatewayConfigurationAsync();
-
-        #endregion
 
     }
 }

@@ -5,6 +5,7 @@ using Configuration.DomainService.Storage.RequestModel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Blocks.Genesis.Entities.Data;
 
 namespace BlocksOs.Api.Controllers
 {
@@ -29,16 +30,18 @@ namespace BlocksOs.Api.Controllers
 
         [HttpGet]
         [ProtectedEndPoint("blocks-os::storage::gets")]
-        public async Task<List<StorageConfiguration>> Gets([FromQuery] GetStorageConfigurationsRequest request)
+        public async Task<List<StorageConfigurationResponse>> Gets([FromQuery] GetStorageConfigurationsRequest request)
         {
-            return await _configurationService.GetStorageConfigurationsAsync();
+            var configurations = await _configurationService.GetStorageConfigurationsAsync();
+            return configurations.Select(x => StorageConfigurationResponse.From(x)!).ToList();
         }
 
         [HttpGet]
         [ProtectedEndPoint("blocks-os::storage::gets")]
-        public async Task<StorageConfiguration> Get([FromQuery] GetStorageConfigurationRequest request)
+        public async Task<StorageConfigurationResponse?> Get([FromQuery] GetStorageConfigurationRequest request)
         {
-            return await _configurationService.GetStorageConfigurationAsync(request?.ConfigurationName ?? string.Empty);
+            var configuration = await _configurationService.GetStorageConfigurationAsync(request?.ConfigurationName ?? string.Empty);
+            return StorageConfigurationResponse.From(configuration);
         }
 
         [HttpPost]

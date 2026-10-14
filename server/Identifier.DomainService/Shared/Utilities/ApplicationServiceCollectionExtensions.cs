@@ -62,7 +62,6 @@ namespace DomainService.Shared
             services.AddTransient<IValidator<UpdateFileRequest>, UpdateFileRequestValidator>();
 
             services.RegisterBlocksStorageServices();
-            services.RegisterBlocksMailService();
 
             // Registered after RegisterBlocksStorageServices: it resolves IStorageDriverService.
             services.AddSingleton<ICertificateUploadService, CertificateUploadService>();

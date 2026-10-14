@@ -103,7 +103,7 @@ namespace BlocksOs.Api.Controllers
 
         /// <summary>Owner-only, always — a grant must never be able to widen itself.</summary>
         [HttpPost]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::people::save-access-policy")]
         [ProjectPolicy(OwnerOnly = true)]
         public async Task<IActionResult> SaveAccessPolicy([FromBody] SaveAccessPolicyRequest request)
         {

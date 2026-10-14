@@ -5,6 +5,7 @@ using Configuration.DomainService.Integration.Validators;
 using FluentAssertions;
 using Moq;
 using XUnitTest.TestSupport;
+using Blocks.Genesis.Entities.Os;
 
 namespace XUnitTest.Services
 {

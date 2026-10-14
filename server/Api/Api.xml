@@ -4,18 +4,6 @@
         <name>Api</name>
     </assembly>
     <members>
-        <member name="M:BlocksOs.Api.Controllers.ArchiveController.EnqueueCleanup">
-            <summary>
-            Drives the expired-data sweep on demand. The scheduler normally publishes this daily; the
-            endpoint exists so the job can be exercised before that cron entry is in place.
-            </summary>
-        </member>
-        <member name="M:BlocksOs.Api.Controllers.ArchiveController.EnqueueHydrationCheck">
-            <summary>
-            Drives a rehydration poll on demand. The scheduler should publish this every 15-30 minutes:
-            this poll is what turns a finished rehydration into restored rows.
-            </summary>
-        </member>
         <member name="T:BlocksOs.Api.Controllers.CaptchaConfigController">
             <summary>
             Captcha configuration endpoints.

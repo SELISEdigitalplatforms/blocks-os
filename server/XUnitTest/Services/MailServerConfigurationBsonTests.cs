@@ -1,8 +1,7 @@
-using Configuration.DomainService.Mail.Entities;
-using Configuration.DomainService.Shared.Enums;
 using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
+using Blocks.Genesis.Entities.Os;
 
 namespace XUnitTest.Services
 {

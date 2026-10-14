@@ -1,9 +1,10 @@
 using Blocks.Genesis;
-using DomainService.Migration.Entities;
 using DomainService.People;
 using DomainService.Shared;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using Blocks.Genesis.Entities.Iam;
+using Blocks.Genesis.Entities.Os;
 
 namespace DomainService.Migration.Services
 {

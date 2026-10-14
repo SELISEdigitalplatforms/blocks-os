@@ -3,17 +3,18 @@ using Configuration.DomainService.Integration.Entities;
 using Configuration.DomainService.Integration.Services;
 using DomainService.Entities;
 using DomainService.ManagedService.Services;
-using DomainService.Migration.Entities;
 using DomainService.Migration.Services;
 using DomainService.Projects;
 using DomainService.Shared;
 using DomainService.Shared.Entities;
 using DomainService.Shared.Services;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Moq;
 using XUnitTest.TestSupport;
+using Blocks.Genesis.Entities.Os;
 
 namespace XUnitTest.Services;
 
@@ -149,7 +150,7 @@ public class DatabaseRoutingTests
     }
 
     [Fact]
-    public async Task ManagedServiceRepository_ReusedInstance_RoutesTenantsAndImpersonationSeparately()
+    public async Task ManagedServiceRepository_ReusedInstance_WritesRootAlwaysAndCopiesToEachOwnersTenantDb()
     {
         var provider = new Mock<IDbContextProvider>(MockBehavior.Strict);
         var secret = new BlocksSecret { DatabaseConnectionString = "mongodb://main", RootDatabaseName = "custom-root" };
@@ -159,12 +160,16 @@ public class DatabaseRoutingTests
             var collection = new Mock<IMongoCollection<BlocksManagedService>>();
             var database = new Mock<IMongoDatabase>();
             database.Setup(d => d.GetCollection<BlocksManagedService>("BlocksManagedServices", null)).Returns(collection.Object);
+            database.Setup(d => d.ListCollectionNames(It.IsAny<ListCollectionNamesOptions>(), default))
+                .Returns(() => Cursor(new[] { "BlocksManagedServices" }));
             destinations.Add(owner, collection);
             if (owner == "root") provider.Setup(p => p.GetDatabase("mongodb://main", "custom-root", false)).Returns(database.Object);
             else provider.Setup(p => p.GetDatabase(owner)).Returns(database.Object);
         }
-        var repository = new ServiceManagementRepository(provider.Object, secret);
+        var repository = new ServiceManagementRepository(
+            provider.Object, secret, new Mock<ITenants>().Object, NullLogger<ServiceManagementRepository>.Instance);
         var gate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        // "console" = tenant dev, impersonated: root only, no tenant copy.
         async Task Write(string owner)
         {
             using var context = new BlocksTestContext(tenantId: owner == "root" ? "dev" : owner, impersonated: owner == "root");
@@ -175,10 +180,16 @@ public class DatabaseRoutingTests
         gate.SetResult(true);
         await Task.WhenAll(tasks);
 
-        foreach (var (owner, collection) in destinations)
+        // Root receives every write exactly once.
+        foreach (var owner in destinations.Keys)
         {
-            collection.Verify(c => c.InsertOneAsync(It.Is<BlocksManagedService>(s => s.ItemId == owner), null, default), Times.Once);
-            collection.Verify(c => c.InsertOneAsync(It.Is<BlocksManagedService>(s => s.ItemId != owner), null, default), Times.Never);
+            destinations["root"].Verify(c => c.InsertOneAsync(It.Is<BlocksManagedService>(s => s.ItemId == owner), null, default), Times.Once);
+        }
+        // Each tenant DB only gets its own non-impersonated copy, never another owner's.
+        foreach (var owner in new[] { "dev", "stg" })
+        {
+            destinations[owner].Verify(c => c.InsertOneAsync(It.Is<BlocksManagedService>(s => s.ItemId == owner), null, default), Times.Once);
+            destinations[owner].Verify(c => c.InsertOneAsync(It.Is<BlocksManagedService>(s => s.ItemId != owner), null, default), Times.Never);
         }
     }
 

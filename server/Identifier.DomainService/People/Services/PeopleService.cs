@@ -7,6 +7,7 @@ using FluentValidation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using Blocks.Genesis.Entities.Iam;
 
 namespace DomainService.People
 {

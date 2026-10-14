@@ -1,7 +1,5 @@
 using Blocks.Genesis;
-using Blocks.MailDriver;
 using DomainService.Dtos;
-using DomainService.Migration.Entities;
 using DomainService.Migration.Services;
 using DomainService.Shared;
 using FluentValidation;
@@ -11,7 +9,7 @@ using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Text.Json;
-using SendMail = Blocks.MailDriver.SendMail;
+using Blocks.Genesis.Entities.Os;
 
 namespace DomainService.Migration
 {
@@ -22,8 +20,8 @@ namespace DomainService.Migration
         private const string RootTenantIdConfigKey = "RootTenantId";
 
         private readonly ICacheClient _cacheClient;
-        private readonly IMailDriverService _mailDriverService;
         private readonly IMessageClient _messageClient;
+        private readonly IDbContextProvider _dbContextProvider;
         private readonly IValidator<MigrationRequest> _migrationRequestValidator;
         private readonly IMigrationRepository _migrationRepository;
         private readonly IConfiguration _configuration;
@@ -35,8 +33,8 @@ namespace DomainService.Migration
         [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "DI constructor: each parameter is an injected dependency.")]
         public MigrationService(
             ICacheClient cacheClient,
-            IMailDriverService mailDriverService,
             IMessageClient messageClient,
+            IDbContextProvider dbContextProvider,
             IValidator<MigrationRequest> migrationRequestValidator,
             IMigrationRepository migrationRepository,
             IConfiguration configuration,
@@ -46,8 +44,8 @@ namespace DomainService.Migration
             ILogger<MigrationService> logger)
         {
             _cacheClient = cacheClient;
-            _mailDriverService = mailDriverService;
             _messageClient = messageClient;
+            _dbContextProvider = dbContextProvider;
             _migrationRequestValidator = migrationRequestValidator;
             _configuration = configuration;
             _migrationRepository = migrationRepository;
@@ -147,18 +145,33 @@ namespace DomainService.Migration
                 To = [email]
             };
 
-            var response = await _mailDriverService.SendAsync(sendMailCommand);
-
-            if (!response.IsSuccess)
+            // Same checks the retired mail driver ran in the request; a failure queues nothing.
+            var failedCheck = await MailPreCheck.FindFailureAsync(
+                _dbContextProvider, sendMailCommand.Purpose, sendMailCommand.Language, sendMailCommand.To, sendPhoneNumberAsEmail: false, sendMailCommand.BodyDataContext);
+            if (failedCheck != null)
             {
-                _logger.LogError("MailDriver failed to send MFA email. Email: {Email}, Purpose: {Purpose}", email, sendMailCommand.Purpose);
-            }
-            else
-            {
-                _logger.LogDebug("MFA email dispatched via MailDriver successfully. Email: {Email}", email);
+                _logger.LogError("MailDriver failed to send MFA email. Email: {Email}, Purpose: {Purpose}, FailedCheck: {FailedCheck}", email, sendMailCommand.Purpose, failedCheck);
+                return false;
             }
 
-            return response.IsSuccess;
+            try
+            {
+                await _messageClient.SendToConsumerAsync(
+                    new ConsumerMessage<SendMail>
+                    {
+                        ConsumerName = IdentifierConstants.MailQueue,
+                        Payload = sendMailCommand
+                    });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to queue MFA email. Email: {Email}, Purpose: {Purpose}", email, sendMailCommand.Purpose);
+                return false;
+            }
+
+            _logger.LogDebug("MFA email dispatched via MailDriver successfully. Email: {Email}", email);
+
+            return true;
         }
 
         public async Task<MigrationOtpVerificationResponse> VerifyAsync(MigrationVerifyOtpRequest request)

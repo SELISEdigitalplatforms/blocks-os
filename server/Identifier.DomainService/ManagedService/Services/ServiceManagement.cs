@@ -266,12 +266,45 @@ namespace DomainService.ManagedService.Services
                     tenantId, serviceList.Count);
             }
 
+            // After the move to the root DB, rows of one TenantId can carry two salts: the project salt
+            // (registered without impersonation) and the console salt (registered impersonated). If the caller's
+            // salt gives nothing, the root tenant's salt is tried. A wrong salt is safe (TryDecrypt returns false).
+            // Step 2 = the other salts: the context tenant's own salt (matters when impersonating, where step 1
+            // used the console's salt) and the root tenant's salt. Salts equal to step 1's are skipped.
+            var firstSalt = tenant?.TenantSalt ?? FallbackEncryptionKey;
+            List<string>? extraSalts = null;
+            List<string> ExtraSalts()
+            {
+                if (extraSalts != null) return extraSalts;
+                var list = new List<string>();
+                var contextTenantId = BlocksContext.GetContext()?.TenantId;
+                if (!string.IsNullOrEmpty(contextTenantId))
+                {
+                    list.Add(_tenants.GetTenantByID(contextTenantId)?.TenantSalt ?? string.Empty);
+                }
+                var rootTenantId = configuration["RootTenantId"];
+                if (!string.IsNullOrEmpty(rootTenantId))
+                {
+                    list.Add(_tenants.GetTenantByID(rootTenantId)?.TenantSalt ?? string.Empty);
+                }
+                return extraSalts = list.Where(x => !string.IsNullOrEmpty(x) && x != firstSalt).Distinct().ToList();
+            }
+
             foreach (var item in serviceList)
             {
                 var plainText = DecryptConnectionString(
                     item.ServiceBusConnectionString,
                     tenant?.TenantSalt ?? FallbackEncryptionKey
                 );
+
+                if (plainText.Length == 0 && !string.IsNullOrEmpty(item.ServiceBusConnectionString))
+                {
+                    foreach (var extraSalt in ExtraSalts())
+                    {
+                        plainText = DecryptConnectionString(item.ServiceBusConnectionString, extraSalt);
+                        if (plainText.Length > 0) break;
+                    }
+                }
 
                 if (plainText.Length == 0 && !string.IsNullOrEmpty(item.ServiceBusConnectionString))
                 {

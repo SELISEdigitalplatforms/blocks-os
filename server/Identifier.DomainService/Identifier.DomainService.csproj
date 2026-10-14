@@ -9,7 +9,6 @@
 	  <PackageReference Include="FluentValidation" />
 	  <PackageReference Include="MongoDB.Driver" />
 	  <PackageReference Include="SeliseBlocks.Genesis.OS" />
-	  <PackageReference Include="SeliseBlocks.MailDriver.OS" />
 	  <PackageReference Include="SeliseBlocks.StorageDriver.OS" />
    <PackageReference Include="MimeKit" />
    <PackageReference Include="MailKit" />
