@@ -56,7 +56,7 @@ export const SignupAutoJoinCard = ({
         checked={isEnabled}
         onCheckedChange={onEnabledChange}
         disabled={!isMultiOrgEnabled || disabled}
-        disabledTooltip={!isMultiOrgEnabled ? SIGNUP_AUTO_JOIN_COPY.disabledTooltip : undefined}
+        disabledTooltip={isMultiOrgEnabled ? undefined : SIGNUP_AUTO_JOIN_COPY.disabledTooltip}
       />
 
       {showPicker ? (
