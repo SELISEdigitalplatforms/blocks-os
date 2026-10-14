@@ -5,6 +5,7 @@ using Configuration.DomainService.Integration.RequestModel;
 using Configuration.DomainService.Integration.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Blocks.Genesis.Entities.Os;
 
 namespace BlocksOs.Api.Controllers
 {

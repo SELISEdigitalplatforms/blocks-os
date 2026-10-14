@@ -24,13 +24,16 @@ namespace XUnitTest.Integration
             _fixture = fixture;
         }
 
-        private ProjectRepository NewRepository()
+        private ProjectRepository NewRepository(bool? dataGatewayRootOn = null)
         {
             var secret = new Mock<IBlocksSecret>();
             secret.SetupGet(s => s.DatabaseConnectionString).Returns("mongodb://localhost:27017");
             secret.SetupGet(s => s.RootDatabaseName).Returns("BlocksRootDb");
             var config = new ConfigurationBuilder()
                 .AddInMemoryCollection(new Dictionary<string, string?> { { "KbtclIdentifier", ".blocks.dev" } })
+                .AddInMemoryCollection(dataGatewayRootOn.HasValue
+                    ? new Dictionary<string, string?> { { "DataGateway:RootConfigEnabled", dataGatewayRootOn.Value ? "true" : "false" } }
+                    : new Dictionary<string, string?>())
                 .Build();
             var encoding = new Mock<IEncodingService>();
             encoding.Setup(e => e.EncodeToBase26Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>()))
@@ -262,6 +265,148 @@ namespace XUnitTest.Integration
             (await (await target.ListCollectionNamesAsync()).ToListAsync()).Should().Contain(probe);
             // No document copy ran: the documents-copied flag was already set.
             (await target.GetCollection<BsonDocument>("MailServerConfigurations").CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(0);
+        }
+    
+        // ---------- os SPEC2 X-5 (R-X-PROJECT-CREATE, R-X-RESTORE-EXISTING, H9, H12, H13, C11, C24) ----------
+
+        private const string Dsc = "DataServiceConfigurations";
+
+        private IMongoCollection<BsonDocument> RootDsc() => _fixture.Database.GetCollection<BsonDocument>(Dsc);
+
+        private async Task SeedDscAsync(string suffix)
+        {
+            // The seed collection is shared by every test of the run; one seed doc is enough.
+            var seed = SourceDb().GetCollection<BsonDocument>(Dsc);
+            if (await seed.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty) == 0)
+            {
+                await seed.InsertOneAsync(new BsonDocument
+                {
+                    { "_id", "seed-dsc" }, { "DbConnectionString", Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("default")) },
+                    { "DatabaseName", "" }, { "IsCollectionNameEditable", false }, { "CollectionNamePattern", "sb_{SchemaName}s" },
+                    { "IsDeleted", false }
+                });
+            }
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData(false)]
+        public async Task CreateDefaultConfigurationAsync_SwitchOffOrUnset_CopiesSeedDscDoc_NoRootDoc(bool? on)
+        {
+            var suffix = Guid.NewGuid().ToString("N");
+            using var _ = new IntegrationContext(suffix);
+            var project = NewProject(suffix);
+            await SeedDscAsync(suffix);
+
+            await NewRepository(on).CreateDefaultConfigurationAsync(new ProjectStatusTracer { ProjectId = project.ItemId }, project);
+
+            (await TargetDb(project).GetCollection<BsonDocument>(Dsc).CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().BeGreaterThan(0);
+            (await RootDsc().CountDocumentsAsync(new BsonDocument("_id", project.TenantId))).Should().Be(0);
+        }
+
+        [Fact]
+        public async Task CreateDefaultConfigurationAsync_SwitchOn_InsertsRootDefaultDoc_NoTenantDocNoFlag()
+        {
+            var suffix = Guid.NewGuid().ToString("N");
+            using var _ = new IntegrationContext(suffix);
+            var project = NewProject(suffix);
+            await SeedDscAsync(suffix);
+
+            var tracer = new ProjectStatusTracer { ProjectId = project.ItemId };
+            await NewRepository(true).CreateDefaultConfigurationAsync(tracer, project);
+
+            tracer.IsDefaultConfigurationCopied.Should().BeTrue();
+            var root = await RootDsc().Find(new BsonDocument("_id", project.TenantId)).FirstOrDefaultAsync();
+            root.Should().NotBeNull();
+            root["ConfigItemId"].AsString.Should().Be(DataGatewayRootDefaults.ConfigItemId);
+            root["DbConnectionSecretId"].AsString.Should().Be("default");
+            root["CollectionNamePattern"].AsString.Should().Be(DataGatewayRootDefaults.CollectionNamePattern);
+            root["CreatedBy"].AsString.Should().Be(project.CreatedBy);
+            root["LastUpdatedBy"].AsString.Should().Be(project.CreatedBy);
+            root["IsDeleted"].AsBoolean.Should().BeFalse();
+            root.Contains("ValueChangedAfterDeploy").Should().BeFalse();
+            root.Contains("DbConnectionString").Should().BeFalse();
+            root.Contains("MigratedFrom").Should().BeFalse();
+            // An empty collection from SeedSchemaReplicator is expected until D36; no document.
+            (await TargetDb(project).GetCollection<BsonDocument>(Dsc).CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(0);
+        }
+
+        [Fact]
+        public async Task CreateDefaultConfigurationAsync_SwitchOn_ResumedRun_KeepsExistingRootDoc()
+        {
+            var suffix = Guid.NewGuid().ToString("N");
+            using var _ = new IntegrationContext(suffix);
+            var project = NewProject(suffix);
+            var existing = new BsonDocument { { "_id", project.TenantId }, { "ConfigItemId", "worker-made" }, { "DbConnectionSecretId", "abc" }, { "IsDeleted", false } };
+            await RootDsc().InsertOneAsync(existing);
+
+            await NewRepository(true).CreateDefaultConfigurationAsync(new ProjectStatusTracer { ProjectId = project.ItemId }, project);
+
+            (await RootDsc().Find(new BsonDocument("_id", project.TenantId)).FirstAsync()).Should().BeEquivalentTo(existing);
+        }
+
+        [Fact]
+        public async Task CreateDefaultConfigurationAsync_SwitchOn_ExistingLiveTenantDoc_SkipsRootInsert_TenantDocUnchanged()
+        {
+            var suffix = Guid.NewGuid().ToString("N");
+            using var _ = new IntegrationContext(suffix);
+            var project = NewProject(suffix);
+            var byo = new BsonDocument { { "_id", "byo-" + suffix }, { "DbConnectionString", "Y3VzdG9t" }, { "DatabaseName", "crm" }, { "IsDeleted", false } };
+            await TargetDb(project).GetCollection<BsonDocument>(Dsc).InsertOneAsync(byo);
+
+            // Api Project/Restore of an existing project with no tracer: a fresh tracer re-runs the defaults.
+            await NewRepository(true).CreateDefaultConfigurationAsync(new ProjectStatusTracer { ProjectId = project.ItemId }, project);
+
+            (await RootDsc().CountDocumentsAsync(new BsonDocument("_id", project.TenantId))).Should().Be(0);
+            (await TargetDb(project).GetCollection<BsonDocument>(Dsc).Find(new BsonDocument("_id", "byo-" + suffix)).FirstAsync())
+                .Should().BeEquivalentTo(byo);
+        }
+
+        [Fact]
+        public async Task CreateDefaultConfigurationAsync_SwitchOn_OnlySoftDeletedTenantDoc_InsertsRootDefault()
+        {
+            var suffix = Guid.NewGuid().ToString("N");
+            using var _ = new IntegrationContext(suffix);
+            var project = NewProject(suffix);
+            await TargetDb(project).GetCollection<BsonDocument>(Dsc)
+                .InsertOneAsync(new BsonDocument { { "_id", "old-" + suffix }, { "IsDeleted", true } });
+
+            await NewRepository(true).CreateDefaultConfigurationAsync(new ProjectStatusTracer { ProjectId = project.ItemId }, project);
+
+            (await RootDsc().CountDocumentsAsync(new BsonDocument("_id", project.TenantId))).Should().Be(1);
+        }
+
+        [Fact]
+        public async Task CreateDefaultConfigurationAsync_SwitchOn_StillCopiesTenantConfigurationsAndEmailTemplates()
+        {
+            var suffix = Guid.NewGuid().ToString("N");
+            using var _ = new IntegrationContext(suffix);
+            var project = NewProject(suffix);
+            var source = SourceDb();
+            if (await source.GetCollection<BsonDocument>("TenantConfigurations").CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty) == 0)
+                await source.GetCollection<BsonDocument>("TenantConfigurations").InsertOneAsync(new BsonDocument { { "_id", "tc-seed" }, { "DefaultRoles", new BsonArray { "clouduser" } } });
+            await source.GetCollection<BsonDocument>("EmailTemplates")
+                .InsertOneAsync(new BsonDocument { { "_id", "tpl-mfa-" + suffix }, { "Name", "MfaViaEmail" } });
+
+            await NewRepository(true).CreateDefaultConfigurationAsync(new ProjectStatusTracer { ProjectId = project.ItemId }, project);
+
+            var target = TargetDb(project);
+            // SPEC2 branch keeps the TenantConfigurations copy (X-7 is a separate PR after iam I15).
+            (await target.GetCollection<BsonDocument>("TenantConfigurations").CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().BeGreaterThan(0);
+            (await target.GetCollection<BsonDocument>("EmailTemplates").CountDocumentsAsync(new BsonDocument("Name", "MfaViaEmail"))).Should().BeGreaterThan(0);
+        }
+
+        [Fact]
+        public void DataGatewayRootDefaults_Build_HasTheRootContractFields_AndNoValue()
+        {
+            var now = DateTime.UtcNow;
+            var doc = DataGatewayRootDefaults.Build("t1", "creator", now);
+
+            doc["_id"].AsString.Should().Be("t1");
+            doc["ConfigItemId"].AsString.Should().Be(DataGatewayRootDefaults.ConfigItemId);
+            doc["DbConnectionSecretId"].AsString.Should().Be("default");
+            doc.Names.Should().NotContain(new[] { "DbConnectionString", "ValueChangedAfterDeploy", "MigratedFrom" });
+            doc.Names.Should().Contain(new[] { "DatabaseName", "IsCollectionNameEditable", "CollectionNamePattern", "ProjectKey", "ProjectShortKey", "CreatedDate", "LastUpdatedDate", "CreatedBy", "LastUpdatedBy", "IsDeleted" });
         }
     }
 }

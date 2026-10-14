@@ -1,7 +1,6 @@
-using Configuration.DomainService.Mail.Entities;
 using Configuration.DomainService.Mail.RequestModel;
 using Configuration.DomainService.Mail.ResponseModel;
-using Configuration.DomainService.Shared.Enums;
+using Blocks.Genesis.Entities.Os;
 
 namespace Configuration.DomainService.Mail.Providers
 {

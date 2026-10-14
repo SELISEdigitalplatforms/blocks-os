@@ -1,4 +1,4 @@
-using Configuration.DomainService.Mail.Enums;
+using Blocks.Genesis.Entities.Logic;
 
 namespace Configuration.DomainService.Mail.Mailbox.Services
 {

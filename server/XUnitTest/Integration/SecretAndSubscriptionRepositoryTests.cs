@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using DomainService.Entities;
 using DomainService.Subscription.Services;
 using FluentAssertions;
+using Blocks.Genesis.Entities.Os;
 
 namespace XUnitTest.Integration
 {

@@ -4,6 +4,7 @@ using DomainService.Dtos;
 using DomainService.Shared.Entities;
 using MongoDB.Driver;
 using DomainService.Shared;
+using Blocks.Genesis.Entities.Os;
 
 namespace DomainService.Projects
 {

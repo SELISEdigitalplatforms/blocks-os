@@ -1,5 +1,6 @@
-using DomainService.Migration.Entities;
 using DomainService.People;
+using Blocks.Genesis.Entities.Iam;
+using Blocks.Genesis.Entities.Os;
 
 namespace DomainService.Migration.Services
 {

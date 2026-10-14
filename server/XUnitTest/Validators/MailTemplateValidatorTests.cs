@@ -1,10 +1,10 @@
 using System.Threading.Tasks;
-using Configuration.DomainService.Mail.Entities;
 using Configuration.DomainService.Mail.Template;
 using Configuration.DomainService.Mail.Template.Services;
 using Configuration.DomainService.Mail.Template.Validators;
 using FluentAssertions;
 using Moq;
+using Blocks.Genesis.Entities.Os;
 
 namespace XUnitTest.Validators
 {

@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using Blocks.Genesis;
 using BlocksOs.Api.Controllers;
-using Configuration.DomainService.Mail.Entities;
 using Configuration.DomainService.Mail.Mailbox;
 using Configuration.DomainService.Mail.Mailbox.Services;
 using Configuration.DomainService.Mail.RequestModel;
@@ -10,7 +9,6 @@ using Configuration.DomainService.Mail.ResponseModel;
 using Configuration.DomainService.Mail.Services;
 using Configuration.DomainService.Mail.Template;
 using Configuration.DomainService.Mail.Template.Services;
-using Configuration.DomainService.Notification.Entities;
 using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Notification.ResponseModel;
 using Configuration.DomainService.Shared.Services;
@@ -19,6 +17,8 @@ using Configuration.DomainService.Storage.RequestModel;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
+using Blocks.Genesis.Entities.Data;
+using Blocks.Genesis.Entities.Os;
 
 namespace XUnitTest.Controllers
 {
@@ -392,7 +392,7 @@ namespace XUnitTest.Controllers
 
             var response = await Controller().Gets(new GetStorageConfigurationsRequest());
 
-            response.Should().BeSameAs(expected);
+            response.Should().HaveCount(1);
         }
 
         [Fact]
@@ -403,7 +403,26 @@ namespace XUnitTest.Controllers
 
             var response = await Controller().Get(new GetStorageConfigurationRequest { ConfigurationName = "az" });
 
-            response.Should().BeSameAs(expected);
+            response!.Name.Should().Be("az");
+            response.UploadCompletionRequiredFor.Should().BeNull();
+            var json = System.Text.Json.JsonSerializer.Serialize(response);
+            json.Should().Contain("\"Name\":\"az\"").And.Contain("\"UploadCompletionRequiredFor\":null");
+        }
+
+        [Fact]
+        public async Task Get_ReturnsUploadCompletionRequiredForAsStrings_AsBeforeTheMove()
+        {
+            var expected = new StorageConfiguration
+            {
+                Name = "az",
+                UploadCompletionRequiredFor = new List<AccessModifier> { AccessModifier.Public, AccessModifier.Private }
+            };
+            _service.Setup(s => s.GetStorageConfigurationAsync("az")).ReturnsAsync(expected);
+
+            var response = await Controller().Get(new GetStorageConfigurationRequest { ConfigurationName = "az" });
+
+            response!.UploadCompletionRequiredFor.Should().Equal("Public", "Private");
+            System.Text.Json.JsonSerializer.Serialize(response).Should().Contain("\"UploadCompletionRequiredFor\":[\"Public\",\"Private\"]");
         }
 
         [Fact]

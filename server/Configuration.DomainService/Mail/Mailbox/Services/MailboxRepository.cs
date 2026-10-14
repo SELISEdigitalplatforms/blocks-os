@@ -1,9 +1,8 @@
 using Blocks.Genesis;
-using Configuration.DomainService.Mail.Entities;
-using Configuration.DomainService.Mail.Enums;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using System.Globalization;
+using Blocks.Genesis.Entities.Logic;
 
 namespace Configuration.DomainService.Mail.Mailbox.Services
 {

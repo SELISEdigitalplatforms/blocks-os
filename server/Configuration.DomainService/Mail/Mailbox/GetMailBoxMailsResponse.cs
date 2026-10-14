@@ -1,9 +1,8 @@
 using System.Text.Json.Serialization;
 using Blocks.Genesis;
-using Configuration.DomainService.Mail.Entities;
-using Configuration.DomainService.Mail.Enums;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using Blocks.Genesis.Entities.Logic;
 
 namespace Configuration.DomainService.Mail.Mailbox
 {

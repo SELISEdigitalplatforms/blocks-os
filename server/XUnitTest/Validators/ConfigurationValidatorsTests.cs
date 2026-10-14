@@ -1,12 +1,9 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-using Configuration.DomainService.Mail.Entities;
 using Configuration.DomainService.Mail.RequestModel;
 using Configuration.DomainService.Mail.Validators;
-using Configuration.DomainService.Notification.Enums;
 using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Notification.Validators;
-using Configuration.DomainService.Shared.Enums;
 using Configuration.DomainService.Shared.Services;
 using Configuration.DomainService.Shared.Utilities;
 using Configuration.DomainService.Storage.Entities;
@@ -14,6 +11,8 @@ using Configuration.DomainService.Storage.RequestModel;
 using Configuration.DomainService.Storage.Validators;
 using FluentAssertions;
 using Moq;
+using Blocks.Genesis.Entities.Data;
+using Blocks.Genesis.Entities.Os;
 
 namespace XUnitTest.Validators
 {
@@ -599,7 +598,7 @@ namespace XUnitTest.Validators
         public async Task Validate_HappyPath_IsValid()
         {
             _repo.Setup(r => r.GetNotificationConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((Configuration.DomainService.Notification.Entities.NotificationConfiguration?)null);
+                 .ReturnsAsync((NotificationConfiguration?)null);
 
             var result = await Validator().ValidateAsync(Valid());
 
@@ -621,7 +620,7 @@ namespace XUnitTest.Validators
         public async Task Validate_DuplicateName_OnCreate_Fails()
         {
             _repo.Setup(r => r.GetNotificationConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync(new Configuration.DomainService.Notification.Entities.NotificationConfiguration());
+                 .ReturnsAsync(new NotificationConfiguration());
 
             var result = await Validator().ValidateAsync(Valid());
 
@@ -633,7 +632,7 @@ namespace XUnitTest.Validators
         public async Task Validate_UpdateRequest_SkipsUniquenessCheck()
         {
             _repo.Setup(r => r.GetNotificationConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync(new Configuration.DomainService.Notification.Entities.NotificationConfiguration());
+                 .ReturnsAsync(new NotificationConfiguration());
 
             var request = Valid();
             request.IsUpdateRequest = true;
@@ -647,7 +646,7 @@ namespace XUnitTest.Validators
         public async Task Validate_EmptyNotifyMethod_Fails()
         {
             _repo.Setup(r => r.GetNotificationConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((Configuration.DomainService.Notification.Entities.NotificationConfiguration?)null);
+                 .ReturnsAsync((NotificationConfiguration?)null);
 
             var request = Valid();
             request.NotifyMethod = "";

@@ -6,7 +6,6 @@ import {
   ICreateUserPayload,
   ICreateUserResponse,
   IDeviceSessionResponse,
-  IGeneratePATPayload,
   IGetHistoriesPayload,
   IGetSessionPayload,
   IGetUserByIdPayload,
@@ -18,7 +17,6 @@ import {
   IGetUsersPayload,
   IGetUsersResponse,
   IHistoriesResponse,
-  IPATResponse,
   ISaveRolesAndPermissionsPayload,
   ISaveRolesAndPermissionsResponse,
   IUpdateUserPayload,
@@ -294,18 +292,6 @@ export class UserService {
       totalCount: res.totalCount,
       errors: res.errors,
     };
-  }
-
-  async getPats(): Promise<IPATResponse> {
-    return http.get(USER_ENDPOINTS.GET_USER_CODES, undefined, {
-      absoluteUrl: true,
-    });
-  }
-
-  async generatePats(payload: IGeneratePATPayload): Promise<IPATResponse> {
-    return http.post(USER_ENDPOINTS.GENERATE_USER_CODE, payload, undefined, {
-      absoluteUrl: true,
-    });
   }
 }
 

@@ -5,6 +5,7 @@ using DomainService.Shared;
 using DomainService.Shared.Entities;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
+using Blocks.Genesis.Entities.Os;
 
 namespace DomainService.Projects
 {

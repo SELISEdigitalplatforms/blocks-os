@@ -1,7 +1,6 @@
 using Blocks.Genesis;
 using DomainService.Entities;
 using DomainService.Migration;
-using DomainService.Migration.Entities;
 using DomainService.Migration.Services;
 using DomainService.Shared;
 using DomainService.Subscription.Services;
@@ -9,6 +8,7 @@ using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Moq;
+using Blocks.Genesis.Entities.Os;
 
 namespace XUnitTest.Identifier
 {

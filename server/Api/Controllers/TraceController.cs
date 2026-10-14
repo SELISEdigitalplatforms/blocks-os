@@ -55,6 +55,7 @@ namespace BlocksOs.Api.Controllers
         }
 
         [HttpGet]
+        [ProtectedEndPoint("blocks-os::trace::gets")]
         public async Task<List<BlocksServiceItem>> GetBlocksServices ( )
         {
          return await _blocksServicesService.GetBlocksServicesAsync();

@@ -1,6 +1,5 @@
 using Azure;
 using Blocks.Genesis;
-using Blocks.MailDriver;
 using Cloud.LmtService.Models.ArchiveAndDelete;
 using Cloud.LmtService.Models.ColdRestore;
 using Cloud.LmtService.Models.Logs;
@@ -40,7 +39,7 @@ namespace Cloud.LmtService.Services.ColdRestore
         private readonly ILogTraceRestoreResultRepository _coldRestoreResultRepository;
         private readonly ILogTraceRestoreParquetReader _coldRestoreParquetReader;
         private readonly ILmtArchiveRestoreConfigurationRepository _lmtArchiveRestoreConfigurationRepository;
-        private readonly IMailDriverService _mailDriverService;
+        private readonly IDbContextProvider _dbContextProvider;
         private readonly IHttpService _httpService;
         private readonly ICryptoService _cryptoService;
         private readonly ITenants _tenants;
@@ -49,7 +48,7 @@ namespace Cloud.LmtService.Services.ColdRestore
         [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "DI constructor: each parameter is an injected dependency.")]
         public LogTraceRestoreService(ILogger<LogTraceRestoreService> logger, ILogTraceRestoreRepository coldRestoreRepository, IMessageClient messageClient, ILogTraceRestoreResultRepository coldRestoreResultRepository,
     ILogTraceRestoreParquetReader coldRestoreParquetReader, IBlobStorage blobStorage, IConfiguration configuration,
-    ILmtArchiveRestoreConfigurationRepository lmtArchiveRestoreConfigurationRepository, IMailDriverService mailDriverService,
+    ILmtArchiveRestoreConfigurationRepository lmtArchiveRestoreConfigurationRepository, IDbContextProvider dbContextProvider,
     IHttpService httpService, ICryptoService cryptoService, ITenants tenants, IArchiveRestoreRepository archiveRestoreRepository,
     IRestoreUserRepository userRepository)
         {
@@ -61,7 +60,7 @@ namespace Cloud.LmtService.Services.ColdRestore
             _blobStorage = blobStorage;
 
             _lmtArchiveRestoreConfigurationRepository = lmtArchiveRestoreConfigurationRepository;
-            _mailDriverService = mailDriverService;
+            _dbContextProvider = dbContextProvider;
             _httpService = httpService;
             _cryptoService = cryptoService;
             _tenants = tenants;
@@ -242,9 +241,23 @@ namespace Cloud.LmtService.Services.ColdRestore
                     SendPhoneNumberAsEmail = true
                 };
 
-                var response = await _mailDriverService.SendAsync(sendMailCommand);
-                _logger.LogInformation("Email notification sent to {Email} with tier {Tier} and status {Status}. Success: {IsSuccess}", email, tier, status, response.IsSuccess);
-                return response.IsSuccess;
+                // Same checks the retired mail driver ran in the request; a failure queues nothing.
+                var failedCheck = await MailPreCheck.FindFailureAsync(
+                    _dbContextProvider, sendMailCommand.Purpose, sendMailCommand.Language, sendMailCommand.To, sendMailCommand.SendPhoneNumberAsEmail, sendMailCommand.BodyDataContext);
+                if (failedCheck != null)
+                {
+                    _logger.LogError("Email notification to {Email} not queued: pre-check failed ({FailedCheck}).", email, failedCheck);
+                    return false;
+                }
+
+                await _messageClient.SendToConsumerAsync(
+                    new ConsumerMessage<SendMail>
+                    {
+                        ConsumerName = Constants.MailQueue,
+                        Payload = sendMailCommand
+                    });
+                _logger.LogInformation("Email notification sent to {Email} with tier {Tier} and status {Status}. Success: {IsSuccess}", email, tier, status, true);
+                return true;
             }
             catch (Exception ex)
             {
