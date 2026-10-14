@@ -11,7 +11,6 @@ using Configuration.DomainService.Mail.Template.Services;
 using FluentAssertions;
 using FluentValidation;
 using FluentValidation.Results;
-using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using XUnitTest.TestSupport;
 using Blocks.Genesis.Entities.Os;
@@ -24,7 +23,7 @@ namespace XUnitTest.Services
         private readonly Mock<IMailTemplateRepository> _repo = new();
 
         private MailTemplateService Service() =>
-            new(_validator.Object, _repo.Object, NullLogger<MailTemplateService>.Instance);
+            new(_validator.Object, _repo.Object);
 
         private void ValidationSucceeds() =>
             _validator.Setup(v => v.ValidateAsync(It.IsAny<SaveMailTemplateRequest>(), It.IsAny<CancellationToken>()))

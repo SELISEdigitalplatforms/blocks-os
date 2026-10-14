@@ -160,8 +160,8 @@ public class DatabaseRoutingTests
             var collection = new Mock<IMongoCollection<BlocksManagedService>>();
             var database = new Mock<IMongoDatabase>();
             database.Setup(d => d.GetCollection<BlocksManagedService>("BlocksManagedServices", null)).Returns(collection.Object);
-            database.Setup(d => d.ListCollectionNames(It.IsAny<ListCollectionNamesOptions>(), default))
-                .Returns(() => Cursor(new[] { "BlocksManagedServices" }));
+            database.Setup(d => d.ListCollectionNamesAsync(It.IsAny<ListCollectionNamesOptions>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(() => Cursor(new[] { "BlocksManagedServices" }));
             destinations.Add(owner, collection);
             if (owner == "root") provider.Setup(p => p.GetDatabase("mongodb://main", "custom-root", false)).Returns(database.Object);
             else provider.Setup(p => p.GetDatabase(owner)).Returns(database.Object);

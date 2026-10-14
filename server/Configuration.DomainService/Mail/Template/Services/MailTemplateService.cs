@@ -1,6 +1,5 @@
 using Blocks.Genesis;
 using FluentValidation;
-using Microsoft.Extensions.Logging;
 using Blocks.Genesis.Entities.Os;
 
 namespace Configuration.DomainService.Mail.Template.Services
@@ -9,16 +8,13 @@ namespace Configuration.DomainService.Mail.Template.Services
     {
         private readonly IValidator<SaveMailTemplateRequest> _validator;
         private readonly IMailTemplateRepository _templateRepository;
-        private readonly ILogger<MailTemplateService> _logger;
 
         public MailTemplateService(
             IValidator<SaveMailTemplateRequest> validator,
-            IMailTemplateRepository templateRepository,
-            ILogger<MailTemplateService> logger)
+            IMailTemplateRepository templateRepository)
         {
             _validator = validator;
             _templateRepository = templateRepository;
-            _logger = logger;
         }
 
         public async Task<BaseMutationResponse> SaveTemplateAsync(SaveMailTemplateRequest template)

@@ -23,7 +23,7 @@ namespace Configuration.DomainService.DataGateway.Entities
         [JsonIgnore]
         public string? DbConnectionSecretId { get; set; }
 
-        // Root doc only: the old tenant-copy _id (the API's ItemId). A doc that has it is a root doc;
+        // Root doc only: the old tenant-copy _id (the API's ItemId). A doc that has it is a root doc,
         // legacy tenant docs never have it (os SPEC2 §6.1a / §6.2).
         [BsonIgnoreIfNull]
         [JsonIgnore]

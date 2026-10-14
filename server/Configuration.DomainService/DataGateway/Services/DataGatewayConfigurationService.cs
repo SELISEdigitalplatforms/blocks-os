@@ -40,6 +40,7 @@ namespace Configuration.DomainService.DataGateway.Services
         public const string AlreadyExistsMessage = "A DataGateway configuration already exists. Use update instead.";
         public const string NotMigratedMessage = "Data source not migrated yet. Ask ops to run the data migration job.";
         public const string RedisFailedMessage = "The data source was saved but not activated. Save again.";
+        private const string ItemIdField = "ItemId";
 
         // Redis hash fields (blocks-data GqlDbRepository.HashField*): same names as the entity fields.
         public const string HashFieldSecretId = nameof(DataGatewayConfiguration.DbConnectionSecretId);
@@ -141,6 +142,7 @@ namespace Configuration.DomainService.DataGateway.Services
             catch (SecretException ex) when (ex is SecretStateException or SecretNotFoundException)
             {
                 _logger.LogWarning(
+                    ex,
                     "DataGateway step=get result=secret-unavailable error={ErrorType} tenant={TenantId} secretId={SecretId}",
                     ex.GetType().Name, tenantId, secretId);
                 return string.Empty;
@@ -186,7 +188,7 @@ namespace Configuration.DomainService.DataGateway.Services
             if (existing?.ConfigItemId != null)
             {
                 _logger.LogWarning("DataGateway step=off-save result=refused-root-doc itemId={ItemId}", request.ItemId);
-                return Refuse("ItemId", NotFoundMessage);
+                return Refuse(ItemIdField, NotFoundMessage);
             }
 
             var repoConfiguration = MapIntoRepoConfiguration(request, existing);
@@ -199,8 +201,8 @@ namespace Configuration.DomainService.DataGateway.Services
             {
                 // Second line of defence: the ReplaceOne filter excludes root docs, so an upsert onto a root doc's
                 // _id hits DuplicateKey. Nothing was replaced.
-                _logger.LogWarning("DataGateway step=off-save error=DuplicateKey itemId={ItemId}", repoConfiguration.ItemId);
-                return Refuse("ItemId", NotFoundMessage);
+                _logger.LogWarning(ex, "DataGateway step=off-save error=DuplicateKey itemId={ItemId}", repoConfiguration.ItemId);
+                return Refuse(ItemIdField, NotFoundMessage);
             }
 
             return new BaseMutationResponse { IsSuccess = true, ItemId = repoConfiguration.ItemId };
@@ -295,7 +297,7 @@ namespace Configuration.DomainService.DataGateway.Services
                 // A parallel create (or a soft-deleted root doc) won. The new secret stays unused (no
                 // compensation, CL-os-32 removed).
                 _logger.LogWarning("DataGateway step=create result=duplicate-key tenant={TenantId}", tenantId);
-                return Refuse("ItemId", AlreadyExistsMessage);
+                return Refuse(ItemIdField, AlreadyExistsMessage);
             }
 
             if (!await WriteRedisAsync(tenantId, secretId, root.DatabaseName))
@@ -321,7 +323,7 @@ namespace Configuration.DomainService.DataGateway.Services
             // One doc per tenant: a wrong ItemId used to create a second doc; now it is refused.
             if (!string.Equals(request.ItemId, root.ConfigItemId, StringComparison.Ordinal))
             {
-                return Refuse("ItemId", NotFoundMessage);
+                return Refuse(ItemIdField, NotFoundMessage);
             }
 
             var value = request.ConnectionString ?? string.Empty;
@@ -454,7 +456,7 @@ namespace Configuration.DomainService.DataGateway.Services
         private BaseMutationResponse RefuseNotMigrated(string tenantId)
         {
             _logger.LogWarning("DataGateway step=update result=refused-not-migrated tenant={TenantId}", tenantId);
-            return Refuse("ItemId", NotMigratedMessage);
+            return Refuse(ItemIdField, NotMigratedMessage);
         }
 
         private static BsonValue StringOrNull(string? value) => value == null ? BsonNull.Value : new BsonString(value);
@@ -512,7 +514,7 @@ namespace Configuration.DomainService.DataGateway.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError("DataGateway step=redis result=failed error={ErrorType} tenant={TenantId}", ex.GetType().Name, tenantId);
+                _logger.LogError(ex, "DataGateway step=redis result=failed error={ErrorType} tenant={TenantId}", ex.GetType().Name, tenantId);
                 return false;
             }
             finally

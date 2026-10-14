@@ -87,9 +87,9 @@ namespace DomainService.ManagedService.Services
                 }
 
                 var tenantDb = _dbContextProvider.GetDatabase(context.TenantId);
-                var exists = tenantDb
-                    .ListCollectionNames(new ListCollectionNamesOptions { Filter = new BsonDocument("name", CollectionName) })
-                    .Any();
+                var exists = await (await tenantDb
+                    .ListCollectionNamesAsync(new ListCollectionNamesOptions { Filter = new BsonDocument("name", CollectionName) }))
+                    .AnyAsync();
                 if (!exists)
                 {
                     return;
