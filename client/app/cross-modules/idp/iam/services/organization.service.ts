@@ -34,6 +34,10 @@ const toSaveApiPayload = (
   keepOrgRolesSameAsDefaultRoles: payload.keepOrgRolesSameAsDefaultRoles ?? true,
   keepOrgPermissionsSameAsDefaultPermissions:
     payload.keepOrgPermissionsSameAsDefaultPermissions ?? true,
+  isSignupAutoJoinEnabled: payload.isSignupAutoJoinEnabled ?? false,
+  ...(payload.isSignupAutoJoinEnabled
+    ? { signupAutoJoinOrganizationId: payload.signupAutoJoinOrganizationId ?? null }
+    : {}),
 });
 
 export class OrganizationService {
@@ -56,11 +60,9 @@ export class OrganizationService {
   }
 
   getOrganizationById(params: IGetOrganizationByIdParams): Promise<IGetOrganizationByIdResponse> {
-    return http.get(
-      `${ORGANIZATION_ENDPOINTS.GET_ORGANIZATION}/${params.itemId}`,
-      undefined,
-      { absoluteUrl: true },
-    );
+    return http.get(`${ORGANIZATION_ENDPOINTS.GET_ORGANIZATION}/${params.itemId}`, undefined, {
+      absoluteUrl: true,
+    });
   }
 
   // Creation has its own route; POSTing the collection root is a 405 because
