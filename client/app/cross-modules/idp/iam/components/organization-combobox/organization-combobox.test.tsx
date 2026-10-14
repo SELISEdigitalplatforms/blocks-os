@@ -115,4 +115,52 @@ describe("OrganizationCombobox", () => {
     expect(onValueChange).not.toHaveBeenCalled();
     expect(screen.getByRole("option", { name: "Organization 2" })).toBeTruthy();
   });
+
+  it("hides not-enabled organizations only when excludeNotEnabled is set", async () => {
+    h.responses.set("0:", {
+      organizations: [
+        organization(1),
+        { ...organization(2), isEnable: false },
+        { ...organization(3), isDisabled: true },
+      ],
+      totalCount: 3,
+    });
+    const user = userEvent.setup();
+    const { unmount } = render(
+      <OrganizationCombobox projectKey="tenant-1" value="" onValueChange={vi.fn()} />,
+    );
+    await user.click(screen.getByRole("combobox"));
+    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual([
+      "Default",
+      "Organization 1",
+      "Organization 2",
+    ]);
+    unmount();
+
+    render(
+      <OrganizationCombobox
+        projectKey="tenant-1"
+        value=""
+        onValueChange={vi.fn()}
+        excludeNotEnabled
+      />,
+    );
+    await user.click(screen.getByRole("combobox"));
+    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual([
+      "Default",
+      "Organization 1",
+    ]);
+  });
+
+  it("shows the raw id when the saved organization is not listed", () => {
+    render(
+      <OrganizationCombobox
+        projectKey="tenant-1"
+        value="org-gone"
+        onValueChange={vi.fn()}
+        excludeNotEnabled
+      />,
+    );
+    expect(screen.getByRole("combobox").textContent).toContain("org-gone");
+  });
 });
