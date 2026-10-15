@@ -45,9 +45,9 @@ export const useUpdateThirdPartyJwtEnabled = () => {
 
   return useMutation({
     mutationFn: projectService.updateThirdPartyJwtEnabled,
-    onSuccess: () => {
-      // Must match useGetProject's key prefix so the trust switch re-renders from server state.
-      queryClient.invalidateQueries({ queryKey: [...PROJECT_KEY] });
-    },
+    // Returned so the mutation stays pending until the project has been refetched: resolving
+    // earlier let the switch fall back to the old stored value for a moment before the new one
+    // arrived. Must match useGetProject's key prefix so the switch re-renders from server state.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [...PROJECT_KEY] }),
   });
 };

@@ -210,8 +210,10 @@ type TrustToggleProps = {
 };
 
 /**
- * Tenant-scoped trust switch. Renders server state only — never an optimistic mirror —
- * and stays disabled when enable would be rejected (no active provider).
+ * Tenant-scoped trust switch. Stays disabled when enable would be rejected (no active provider).
+ * While a change is saving it shows the requested position and ignores further clicks rather than
+ * greying out, so the thumb neither vanishes nor jumps back; a refused change returns it to the
+ * stored value.
  */
 function TrustToggle({
   checked,
@@ -221,7 +223,7 @@ function TrustToggle({
   isPending,
   onToggle,
 }: Readonly<TrustToggleProps>) {
-  const disabled = isLoading || isPending || isError || (!checked && !canEnable);
+  const disabled = isLoading || isError || (!checked && !canEnable);
   const helper =
     !isLoading && !isError && !checked && !canEnable
       ? "Add an active provider to enable third-party token trust."
@@ -257,9 +259,10 @@ function TrustToggle({
         size="sm"
         checked={checked}
         disabled={disabled}
+        aria-busy={isPending || undefined}
         aria-label="Accept tokens from external identity providers"
         onCheckedChange={(next) => {
-          if (disabled) return;
+          if (disabled || isPending) return;
           onToggle(next);
         }}
       />
@@ -292,24 +295,33 @@ export const Certificates = () => {
   // A query parameter rather than a path segment: the surrounding layout resolves its heading and
   // active nav item from the last path segment, which an id would take over.
   const [openItemId, setOpenItemId] = useQueryState("provider", parseAsString);
+  // The position the user asked for, held only until the save and the project refetch behind it
+  // settle; the switch then reads the stored value again.
+  const [requestedTrust, setRequestedTrust] = useState<boolean | null>(null);
 
   const list = providers ?? [];
-  const trustEnabled = projectResponse?.data?.isThirdPartyJwtEnabled === true;
+  const trustEnabled = requestedTrust ?? projectResponse?.data?.isThirdPartyJwtEnabled === true;
   const activeProviderCount = list.filter((p) => p.isActive).length;
   const canEnable = activeProviderCount > 0;
 
   const toggleTrust = async (next: boolean) => {
-    // Server state only — do not flip local UI ahead of the response (A1).
-    const result = await updateTrust(next);
-    if (!result.isSuccess) {
-      showErrorToast({ errors: result.errors ?? "Could not update third-party token trust" });
-      return;
+    setRequestedTrust(next);
+    try {
+      const result = await updateTrust(next);
+      if (!result.isSuccess) {
+        showErrorToast({ errors: result.errors ?? "Could not update third-party token trust" });
+        return;
+      }
+      showSuccessToast({
+        description: next
+          ? "External identity provider trust enabled"
+          : "External identity provider trust disabled",
+      });
+    } catch {
+      showErrorToast({ errors: "Could not update third-party token trust" });
+    } finally {
+      setRequestedTrust(null);
     }
-    showSuccessToast({
-      description: next
-        ? "External identity provider trust enabled"
-        : "External identity provider trust disabled",
-    });
   };
 
   const openAdd = () => {
@@ -344,8 +356,9 @@ export const Certificates = () => {
     }
 
     setStatusTarget(null);
+    // Named by provider, not key: the key comes back masked, so it read as "**** enabled".
     showSuccessToast({
-      description: `${statusTarget.key} ${willEnable ? "enabled" : "disabled"}`,
+      description: `${statusTarget.providerName} provider ${willEnable ? "enabled" : "disabled"}`,
     });
   };
 
@@ -362,7 +375,7 @@ export const Certificates = () => {
     }
 
     if (provider.itemId === openItemId) void setOpenItemId(null);
-    showSuccessToast({ description: `Removed ${provider.key}` });
+    showSuccessToast({ description: `${provider.providerName} provider removed` });
   };
 
   const trustToggle = (
@@ -402,7 +415,7 @@ export const Certificates = () => {
     );
   }
 
-    const ambiguous = list.filter((p) => p.isActive && requiresIdpHeader(p, list));
+  const ambiguous = list.filter((p) => p.isActive && requiresIdpHeader(p, list));
   const opened = openItemId ? list.find((p) => p.itemId === openItemId) : undefined;
 
   const modals = (
