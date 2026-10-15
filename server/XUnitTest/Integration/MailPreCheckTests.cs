@@ -33,8 +33,8 @@ namespace XUnitTest.Integration
 
         private Task<string?> Check(string impl, string? purpose, string? language, IEnumerable<string>? to, bool phoneAsEmail, IReadOnlyDictionary<string, string>? body = null) =>
             impl == "identifier"
-                ? IdentifierPreCheck.FindFailureAsync(_fixture.DbContextProvider, purpose, language, to, phoneAsEmail, body)
-                : LmtPreCheck.FindFailureAsync(_fixture.DbContextProvider, purpose, language, to, phoneAsEmail, body);
+                ? IdentifierPreCheck.FindFailureAsync(_fixture.DbContextProvider, new XUnitTest.TestHelpers.PassThroughOsDataAccess(), purpose, language, to, phoneAsEmail, body)
+                : LmtPreCheck.FindFailureAsync(_fixture.DbContextProvider, new XUnitTest.TestHelpers.PassThroughOsDataAccess(), purpose, language, to, phoneAsEmail, body);
 
         private sealed record Seed(string Purpose, string Email);
 

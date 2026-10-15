@@ -1356,8 +1356,8 @@ namespace DomainService.Projects
         public async Task<SaveThirdPartyJWTClaimsResponse> SaveThirdPartyJWTClaimsAsync(SaveThirdPartyJWTClaimsRequest request)
         {
             var claimsMapper = await MapJWTClaims(request);
-            await _projectRepository.SaveJWTClaimsAsync(claimsMapper);
-            return new SaveThirdPartyJWTClaimsResponse { IsSuccess = true , ItemId = claimsMapper.ItemId};
+            var saved = await _projectRepository.SaveJWTClaimsAsync(claimsMapper);
+            return new SaveThirdPartyJWTClaimsResponse { IsSuccess = saved.IsSuccess, ItemId = claimsMapper.ItemId };
         }
 
         public async Task<ThirdPartyJWTClaims?> GetThirdPartyJWTClaimsAsync()

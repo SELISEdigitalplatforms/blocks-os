@@ -96,7 +96,7 @@ namespace XUnitTest.Services
             _cryptoService.Object,
             _tenants.Object,
             _archiveRepository.Object,
-            _userRepository.Object);
+            _userRepository.Object, new XUnitTest.TestHelpers.PassThroughOsDataAccess());
 
         private ArchiveRestoreService ArchiveService() => new(
             _archiveLogger.Object,

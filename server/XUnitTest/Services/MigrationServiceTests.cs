@@ -53,7 +53,7 @@ namespace XUnitTest.Identifier
             _tenants.Object,
             _cryptoService.Object,
             _httpService.Object,
-            _logger.Object);
+            _logger.Object, new XUnitTest.TestHelpers.PassThroughOsDataAccess());
 
         private static MigrationRequest Request(params MigrationServiceNames[] services) => new()
         {

@@ -1,4 +1,6 @@
 ﻿using Cloud.LmtService.Repositories.ArchiveAndDelete;
+using Os.DataAccess;
+using Os.DataAccess;
 using Cloud.LmtService.Repositories.ColdRestore;
 using Cloud.LmtService.Repositories.LogTraceBackup;
 using Cloud.LmtService.Repositories.Logs;
@@ -20,6 +22,7 @@ namespace Cloud.LmtService.Utilities
     {
         public static void AddCloudLmtServices(this IServiceCollection services)
         {
+            services.AddOsDataAccess();
             services.AddSingleton<ILogService, LogService>();
             services.AddSingleton<ILogRepository, LogRepository>();
             services.AddSingleton<ITraceRepository, TraceRepository>();

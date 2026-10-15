@@ -52,7 +52,7 @@ namespace XUnitTest.Services
             _cryptoService.Object,
             _tenants.Object,
             _archiveRestoreRepository.Object,
-            _userRepository.Object);
+            _userRepository.Object, new XUnitTest.TestHelpers.PassThroughOsDataAccess());
 
         [Fact]
         public async Task GetStatusAsync_MissingRequestId_Throws()

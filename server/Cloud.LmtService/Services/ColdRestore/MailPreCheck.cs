@@ -2,6 +2,7 @@ using Blocks.Genesis;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using System.Text.RegularExpressions;
+using Os.DataAccess;
 
 namespace Cloud.LmtService.Services.ColdRestore
 {
@@ -15,6 +16,7 @@ namespace Cloud.LmtService.Services.ColdRestore
         /// <summary>Returns the name of the first failed check, or null when the mail may be queued.</summary>
         public static async Task<string?> FindFailureAsync(
             IDbContextProvider dbContextProvider,
+            IOsDataAccess dataAccess,
             string? purpose,
             string? language,
             IEnumerable<string>? to,
@@ -27,13 +29,13 @@ namespace Cloud.LmtService.Services.ColdRestore
                 return argumentFailure;
             }
 
-            var template = await FindTemplateAsync(dbContextProvider, purpose!, language!);
+            var template = await FindTemplateAsync(dbContextProvider, dataAccess, purpose!, language!);
             if (template == null)
             {
                 return "no email template for purpose and language";
             }
 
-            if (!await HasMailServerConfigurationAsync(dbContextProvider, template))
+            if (!await HasMailServerConfigurationAsync(dbContextProvider, dataAccess, template))
             {
                 return "no mail server configuration for the template";
             }
@@ -78,7 +80,7 @@ namespace Cloud.LmtService.Services.ColdRestore
             return null;
         }
 
-        private static async Task<BsonDocument?> FindTemplateAsync(IDbContextProvider dbContextProvider, string purpose, string language)
+        private static async Task<BsonDocument?> FindTemplateAsync(IDbContextProvider dbContextProvider, IOsDataAccess dataAccess, string purpose, string language)
         {
             var templates = dbContextProvider.GetCollection<BsonDocument>("EmailTemplates");
             // Like the driver: a template for the caller's organization first, then any with purpose + language.
@@ -87,17 +89,21 @@ namespace Cloud.LmtService.Services.ColdRestore
             var organizationId = BlocksContext.GetContext()?.OrganizationId;
             if (!string.IsNullOrWhiteSpace(organizationId))
             {
-                template = await (await templates.FindAsync(
-                    nameAndLanguage & Builders<BsonDocument>.Filter.In("OrganizationIds", new[] { organizationId }),
-                    new FindOptions<BsonDocument> { Limit = 1 })).FirstOrDefaultAsync();
+                var orgScope = await dataAccess.ReadAsync(OsSchemas.EmailTemplate,
+                    nameAndLanguage & Builders<BsonDocument>.Filter.In("OrganizationIds", new[] { organizationId }), "MailPreCheck.FindTemplateAsync(org)");
+                template = orgScope.Granted ? await orgScope.Apply(templates).Limit(1).FirstOrDefaultAsync() : null;
             }
-            template ??= await (await templates.FindAsync(
-                nameAndLanguage,
-                new FindOptions<BsonDocument> { Limit = 1 })).FirstOrDefaultAsync();
+
+            if (template == null)
+            {
+                var scope = await dataAccess.ReadAsync(OsSchemas.EmailTemplate, nameAndLanguage, "MailPreCheck.FindTemplateAsync");
+                template = scope.Granted ? await scope.Apply(templates).Limit(1).FirstOrDefaultAsync() : null;
+            }
+
             return template;
         }
 
-        private static async Task<bool> HasMailServerConfigurationAsync(IDbContextProvider dbContextProvider, BsonDocument template)
+        private static async Task<bool> HasMailServerConfigurationAsync(IDbContextProvider dbContextProvider, IOsDataAccess dataAccess, BsonDocument template)
         {
             var configId = template.TryGetValue("MailConfigurationId", out var idValue) && idValue.IsString ? idValue.AsString : null;
             if (string.IsNullOrEmpty(configId))
@@ -106,9 +112,14 @@ namespace Cloud.LmtService.Services.ColdRestore
             }
 
             var configs = dbContextProvider.GetCollection<BsonDocument>("MailServerConfigurations");
-            var config = await (await configs.FindAsync(
-                Builders<BsonDocument>.Filter.Eq("_id", configId),
-                new FindOptions<BsonDocument> { Limit = 1 })).FirstOrDefaultAsync();
+            var scope = await dataAccess.ReadAsync(OsSchemas.MailServerConfiguration,
+                Builders<BsonDocument>.Filter.Eq("_id", configId), "MailPreCheck.HasMailServerConfigurationAsync");
+            if (!scope.Granted)
+            {
+                return false;
+            }
+
+            var config = await scope.Apply(configs).Limit(1).FirstOrDefaultAsync();
             return config != null;
         }
 

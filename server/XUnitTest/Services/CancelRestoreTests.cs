@@ -79,7 +79,8 @@ namespace XUnitTest.Services
             _cryptoService.Object,
             _tenants.Object,
             _archiveRepository.Object,
-            _userRepository.Object);
+            _userRepository.Object,
+            new XUnitTest.TestHelpers.PassThroughOsDataAccess());
 
         [Fact]
         public async Task CancelRestoreAsync_StopsOutstandingWorkAndPurgesPartialResults()

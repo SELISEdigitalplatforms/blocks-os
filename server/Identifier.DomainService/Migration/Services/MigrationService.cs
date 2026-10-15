@@ -10,6 +10,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Blocks.Genesis.Entities.Os;
+using Os.DataAccess;
 
 namespace DomainService.Migration
 {
@@ -22,6 +23,7 @@ namespace DomainService.Migration
         private readonly ICacheClient _cacheClient;
         private readonly IMessageClient _messageClient;
         private readonly IDbContextProvider _dbContextProvider;
+        private readonly IOsDataAccess _dataAccess;
         private readonly IValidator<MigrationRequest> _migrationRequestValidator;
         private readonly IMigrationRepository _migrationRepository;
         private readonly IConfiguration _configuration;
@@ -41,8 +43,10 @@ namespace DomainService.Migration
             ITenants tenants,
             ICryptoService cryptoService,
             IHttpService httpService,
-            ILogger<MigrationService> logger)
+            ILogger<MigrationService> logger,
+            IOsDataAccess dataAccess)
         {
+            _dataAccess = dataAccess;
             _cacheClient = cacheClient;
             _messageClient = messageClient;
             _dbContextProvider = dbContextProvider;
@@ -147,7 +151,7 @@ namespace DomainService.Migration
 
             // Same checks the retired mail driver ran in the request; a failure queues nothing.
             var failedCheck = await MailPreCheck.FindFailureAsync(
-                _dbContextProvider, sendMailCommand.Purpose, sendMailCommand.Language, sendMailCommand.To, sendPhoneNumberAsEmail: false, sendMailCommand.BodyDataContext);
+                _dbContextProvider, _dataAccess, sendMailCommand.Purpose, sendMailCommand.Language, sendMailCommand.To, sendPhoneNumberAsEmail: false, sendMailCommand.BodyDataContext);
             if (failedCheck != null)
             {
                 _logger.LogError("MailDriver failed to send MFA email. Email: {Email}, Purpose: {Purpose}, FailedCheck: {FailedCheck}", email, sendMailCommand.Purpose, failedCheck);

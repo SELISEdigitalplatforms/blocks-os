@@ -24,7 +24,7 @@ namespace XUnitTest.Integration
             _fixture = fixture;
         }
 
-        private ConfigurationRepository NewRepository() => new(_fixture.DbContextProvider, new InMemoryKeyValueStore());
+        private ConfigurationRepository NewRepository() => new(_fixture.DbContextProvider, new InMemoryKeyValueStore(), new XUnitTest.TestHelpers.PassThroughOsDataAccess());
 
         [Fact]
         public async Task Notification_SaveGetByIdByNameListAndDelete()
@@ -90,7 +90,7 @@ namespace XUnitTest.Integration
             using var db = new TenantDb(_fixture);
             await db.CreateLegacyAsync();
             var kv = new InMemoryKeyValueStore();
-            var repo = new ConfigurationRepository(db.Provider, kv);
+            var repo = new ConfigurationRepository(db.Provider, kv, new XUnitTest.TestHelpers.PassThroughOsDataAccess());
 
             await repo.SaveNotificationConfigurationAsync(Config("n1", "alpha"));
 
@@ -113,7 +113,7 @@ namespace XUnitTest.Integration
             using var db = new TenantDb(_fixture);
             await db.CreateLegacyAsync();
             var kv = new InMemoryKeyValueStore();
-            var repo = new ConfigurationRepository(db.Provider, kv);
+            var repo = new ConfigurationRepository(db.Provider, kv, new XUnitTest.TestHelpers.PassThroughOsDataAccess());
             await repo.SaveNotificationConfigurationAsync(Config("n1", "alpha"));
             await repo.SaveNotificationConfigurationAsync(Config("n2", "beta"));
 
@@ -130,7 +130,7 @@ namespace XUnitTest.Integration
             using var db = new TenantDb(_fixture);
             await db.CreateLegacyAsync();
             var kv = new InMemoryKeyValueStore { FailOnSet = true };
-            var repo = new ConfigurationRepository(db.Provider, kv);
+            var repo = new ConfigurationRepository(db.Provider, kv, new XUnitTest.TestHelpers.PassThroughOsDataAccess());
 
             var act = async () => await repo.SaveNotificationConfigurationAsync(Config("n1", "alpha"));
 
@@ -143,7 +143,7 @@ namespace XUnitTest.Integration
         {
             using var db = new TenantDb(_fixture);
             var kv = new InMemoryKeyValueStore();
-            var repo = new ConfigurationRepository(db.Provider, kv);
+            var repo = new ConfigurationRepository(db.Provider, kv, new XUnitTest.TestHelpers.PassThroughOsDataAccess());
 
             await repo.SaveNotificationConfigurationAsync(Config("n1", "alpha"));
             await repo.SaveNotificationConfigurationAsync(Config("n1", "alpha")); // upsert, same key
@@ -166,7 +166,7 @@ namespace XUnitTest.Integration
         {
             using var db = new TenantDb(_fixture);
             var kv = new InMemoryKeyValueStore();
-            var repo = new ConfigurationRepository(db.Provider, kv);
+            var repo = new ConfigurationRepository(db.Provider, kv, new XUnitTest.TestHelpers.PassThroughOsDataAccess());
             var t0 = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             for (var i = 0; i < 5; i++)
             {
@@ -188,7 +188,7 @@ namespace XUnitTest.Integration
         public async Task Notification_LegacyGone_PageSizeZeroReturnsAllRows_LikeMongoLimitZero()
         {
             using var db = new TenantDb(_fixture);
-            var repo = new ConfigurationRepository(db.Provider, new InMemoryKeyValueStore());
+            var repo = new ConfigurationRepository(db.Provider, new InMemoryKeyValueStore(), new XUnitTest.TestHelpers.PassThroughOsDataAccess());
             for (var i = 0; i < 3; i++) await repo.SaveNotificationConfigurationAsync(Config("n" + i, "name" + i));
 
             var all = await repo.GetNotificationConfigurationsAsync(new GetNotificationConfigurationsRequest { Page = 0, PageSize = 0 });
@@ -203,7 +203,7 @@ namespace XUnitTest.Integration
             using var db = new TenantDb(_fixture);
             var secret = new BlocksSecret { DatabaseConnectionString = "mongodb://localhost:27017", RootDatabaseName = "BlocksRootDb" };
             var kv = new MongoKeyValueStore(db.Provider, secret);
-            var repo = new ConfigurationRepository(db.Provider, kv);
+            var repo = new ConfigurationRepository(db.Provider, kv, new XUnitTest.TestHelpers.PassThroughOsDataAccess());
             var created = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc);
 
             await repo.SaveNotificationConfigurationAsync(Config("n1", "alpha ", created));
@@ -228,7 +228,7 @@ namespace XUnitTest.Integration
         {
             using var db = new TenantDb(_fixture);
             var kv = new InMemoryKeyValueStore();
-            var repo = new ConfigurationRepository(db.Provider, kv);
+            var repo = new ConfigurationRepository(db.Provider, kv, new XUnitTest.TestHelpers.PassThroughOsDataAccess());
 
             await repo.SaveNotificationConfigurationAsync(Config("n1", "a"));
             (await repo.GetNotificationConfigurationByNameAsync("a "))!.ItemId.Should().Be("n1");
@@ -241,7 +241,7 @@ namespace XUnitTest.Integration
             var tag = Guid.NewGuid().ToString("N");
             using var db = new TenantDb(_fixture); // own DB: the old collection is created here only
             await db.CreateLegacyAsync();
-            var repo = new ConfigurationRepository(db.Provider, new InMemoryKeyValueStore());
+            var repo = new ConfigurationRepository(db.Provider, new InMemoryKeyValueStore(), new XUnitTest.TestHelpers.PassThroughOsDataAccess());
             await repo.SaveNotificationConfigurationAsync(new NotificationConfiguration { ItemId = "u-" + tag, Name = "before-" + tag });
             await repo.SaveNotificationConfigurationAsync(new NotificationConfiguration { ItemId = "u-" + tag, Name = "after-" + tag });
 

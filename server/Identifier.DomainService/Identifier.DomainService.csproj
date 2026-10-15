@@ -1,6 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <ProjectReference Include="..\Os.DataAccess\Os.DataAccess.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
 	  <!--<PackageReference Include="Azure.Identity" />-->
 	  <PackageReference Include="Azure.ResourceManager.ServiceBus" />
 	  <!-- Referenced directly by CertificateUploadService, which writes the uploaded certificate

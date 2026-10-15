@@ -94,7 +94,7 @@ public class DatabaseRoutingTests
         var encoding = new Mock<IEncodingService>();
         encoding.Setup(e => e.EncodeToBase26Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>())).ReturnsAsync("abc");
         var dataGatewayRoot = new Mock<IDataGatewayRootProvisioner>();
-        var repository = new ProjectRepository(provider.Object, new ConfigurationBuilder().Build(), secret, encoding.Object, dataGatewayRoot.Object);
+        var repository = new ProjectRepository(provider.Object, new ConfigurationBuilder().Build(), secret, encoding.Object, dataGatewayRoot.Object, new XUnitTest.TestHelpers.PassThroughOsDataAccess());
         var tenant = new Tenant
         {
             TenantId = "new-stg", TenantGroupId = "group", Environment = "stg", Name = "Placement test",
@@ -128,7 +128,7 @@ public class DatabaseRoutingTests
         var second = new Mock<IMongoCollection<MigrationTracker>>();
         provider.Setup(p => p.GetCollection<MigrationTracker>(IdentifierConstants.MigrationTrackerCollectionName))
             .Returns(() => BlocksContext.GetContext().TenantId == "dev" ? first.Object : second.Object);
-        var repository = new MigrationRepository(provider.Object, new BlocksSecret());
+        var repository = new MigrationRepository(provider.Object, new BlocksSecret(), new XUnitTest.TestHelpers.PassThroughOsDataAccess());
         provider.VerifyNoOtherCalls(); // Construction must not capture a tenant collection.
         var gate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         async Task Write(string tenant)

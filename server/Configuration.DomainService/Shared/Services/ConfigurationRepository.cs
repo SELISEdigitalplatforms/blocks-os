@@ -8,6 +8,7 @@ using Configuration.DomainService.Storage.Entities;
 using Configuration.DomainService.Mail.RequestModel;
 using Blocks.Genesis.Entities.Data;
 using Blocks.Genesis.Entities.Os;
+using Os.DataAccess;
 
 namespace Configuration.DomainService.Shared.Services
 {
@@ -15,6 +16,7 @@ namespace Configuration.DomainService.Shared.Services
     {
         private readonly IDbContextProvider _dbContextProvider;
         private readonly IKeyValueStore _keyValueStore;
+        private readonly IOsDataAccess _dataAccess;
 
         private const string NotificationKeyPrefix = "notification-config:";
         private const string _notificatonConfigurationCollectionName = "NotificationConfigurations";
@@ -23,10 +25,12 @@ namespace Configuration.DomainService.Shared.Services
 
         public ConfigurationRepository(
             IDbContextProvider dbContextProvider,
-            IKeyValueStore keyValueStore)
+            IKeyValueStore keyValueStore,
+            IOsDataAccess dataAccess)
         {
             _dbContextProvider = dbContextProvider;
             _keyValueStore = keyValueStore;
+            _dataAccess = dataAccess;
         }
 
         #region Notification
@@ -233,7 +237,12 @@ namespace Configuration.DomainService.Shared.Services
 
             var filter = Builders<MailServerConfiguration>.Filter.Eq(mc => mc.ItemId, configuration.ItemId);
 
-            await collection.ReplaceOneAsync(filter, configuration, new ReplaceOptions { IsUpsert = true });
+            // Upsert = update or insert: both gates apply. Denied is an error, not a silent no-op.
+            var editFilter = await _dataAccess.EditFilterAsync(OsSchemas.MailServerConfiguration, filter, "ConfigurationRepository.SaveMailConfigurationAsync");
+            if (editFilter is null || !await _dataAccess.InsertAllowedAsync(OsSchemas.MailServerConfiguration, "ConfigurationRepository.SaveMailConfigurationAsync"))
+                throw new UnauthorizedAccessException("Access to the mail configuration was denied by the data access policy.");
+
+            await collection.ReplaceOneAsync(editFilter, configuration, new ReplaceOptions { IsUpsert = true });
         }
 
         public async Task UpdateMailSenderNameAsync(string configurationId, string senderName, DateTime lastUpdatedDate, string lastUpdatedBy)
@@ -246,7 +255,13 @@ namespace Configuration.DomainService.Shared.Services
                 .Set(mc => mc.LastUpdatedDate, lastUpdatedDate)
                 .Set(mc => mc.LastUpdatedBy, lastUpdatedBy);
 
-            await collection.UpdateOneAsync(filter, update);
+            var editFilter = await _dataAccess.EditFilterAsync(OsSchemas.MailServerConfiguration, filter, "ConfigurationRepository.UpdateMailSenderNameAsync");
+            if (editFilter is null)
+            {
+                return;
+            }
+
+            await collection.UpdateOneAsync(editFilter, update);
         }
 
         public async Task<MailServerConfiguration> GetMailConfigurationByIdAsync(string configurationId)
@@ -254,7 +269,9 @@ namespace Configuration.DomainService.Shared.Services
             var collection = _dbContextProvider.GetCollection<MailServerConfiguration>(_mailConfigurationCollectionName);
             var filter = Builders<MailServerConfiguration>.Filter.Eq(mc => mc.ItemId, configurationId);
 
-            return await collection.Find(filter).FirstOrDefaultAsync();
+            // No projection: the result can be saved back as a whole document.
+            var scope = await _dataAccess.ReadAsync(OsSchemas.MailServerConfiguration, filter, "ConfigurationRepository.GetMailConfigurationByIdAsync", useProjection: false);
+            return scope.Granted ? await scope.Apply(collection).FirstOrDefaultAsync() : default!;
         }
 
         /// <summary>
@@ -271,15 +288,20 @@ namespace Configuration.DomainService.Shared.Services
             var collection = _dbContextProvider.GetCollection<MailServerConfiguration>(_mailConfigurationCollectionName);
             var filter = Builders<MailServerConfiguration>.Filter.Eq(mc => mc.Name, configurationName);
 
-            return await collection.Find(filter).FirstOrDefaultAsync();
+            var scope = await _dataAccess.ReadAsync(OsSchemas.MailServerConfiguration, filter, "ConfigurationRepository.GetMailConfigurationByNameAsync", useProjection: false);
+            return scope.Granted ? await scope.Apply(collection).FirstOrDefaultAsync() : default!;
         }
 
         public async Task<List<MailServerConfiguration>> GetAllMailConfigurationsAsync()
         {
             var collection = _dbContextProvider.GetCollection<MailServerConfiguration>(_mailConfigurationCollectionName);
-            var document = collection.Find(_ => true).SortByDescending(doc => doc.IsDefault);
+            var scope = await _dataAccess.ReadAsync(OsSchemas.MailServerConfiguration, FilterDefinition<MailServerConfiguration>.Empty, "ConfigurationRepository.GetAllMailConfigurationsAsync");
+            if (!scope.Granted)
+            {
+                return new List<MailServerConfiguration>();
+            }
 
-            return await document.ToListAsync();
+            return await scope.Apply(collection).SortByDescending(doc => doc.IsDefault).ToListAsync();
         }
 
         public async Task<List<MailServerConfiguration>> GetMailConfigurationsByClientSecretReferenceAsync(string clientSecretReference)
@@ -294,7 +316,8 @@ namespace Configuration.DomainService.Shared.Services
             var collection = _dbContextProvider.GetCollection<MailServerConfiguration>(_mailConfigurationCollectionName);
             var filter = Builders<MailServerConfiguration>.Filter.Eq(mc => mc.ClientSecretReference, clientSecretReference);
 
-            return await collection.Find(filter).ToListAsync();
+            var scope = await _dataAccess.ReadAsync(OsSchemas.MailServerConfiguration, filter, "ConfigurationRepository.GetMailConfigurationsByClientSecretReferenceAsync");
+            return scope.Granted ? await scope.Apply(collection).ToListAsync() : new List<MailServerConfiguration>();
         }
 
         public async Task DeleteMailConfigurationAsync(string configurationId)
@@ -302,7 +325,13 @@ namespace Configuration.DomainService.Shared.Services
             var collection = _dbContextProvider.GetCollection<MailServerConfiguration>(_mailConfigurationCollectionName);
             var filter = Builders<MailServerConfiguration>.Filter.Eq(mc => mc.ItemId, configurationId);
 
-            await collection.DeleteOneAsync(filter);
+            var deleteFilter = await _dataAccess.DeleteFilterAsync(OsSchemas.MailServerConfiguration, filter, "ConfigurationRepository.DeleteMailConfigurationAsync");
+            if (deleteFilter is null)
+            {
+                return;
+            }
+
+            await collection.DeleteOneAsync(deleteFilter);
         }
 
         #endregion

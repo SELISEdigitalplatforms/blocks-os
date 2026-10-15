@@ -1,6 +1,7 @@
 using Blocks.Genesis;
 using MongoDB.Driver;
 using Blocks.Genesis.Entities.Os;
+using Os.DataAccess;
 
 namespace Configuration.DomainService.Integration.Services
 {
@@ -12,11 +13,13 @@ namespace Configuration.DomainService.Integration.Services
 
         private readonly IDbContextProvider _dbContextProvider;
         private readonly IBlocksSecret _blocksSecret;
+        private readonly IOsDataAccess _dataAccess;
 
-        public IntegrationRepository(IDbContextProvider dbContextProvider, IBlocksSecret blocksSecret)
+        public IntegrationRepository(IDbContextProvider dbContextProvider, IBlocksSecret blocksSecret, IOsDataAccess dataAccess)
         {
             _dbContextProvider = dbContextProvider;
             _blocksSecret = blocksSecret;
+            _dataAccess = dataAccess;
         }
 
         public async Task<List<IntegrationTemplate>> GetActiveTemplatesAsync(string? family = null)
@@ -48,6 +51,9 @@ namespace Configuration.DomainService.Integration.Services
 
         public async Task<bool> TryInsertSetupAsync(IntegrationSetup setup)
         {
+            if (!await _dataAccess.InsertAllowedAsync(OsSchemas.IntegrationSetup, "IntegrationRepository.TryInsertSetupAsync"))
+                throw new UnauthorizedAccessException("Access to the integration connection was denied by the data access policy.");
+
             var setups = Setups();
 
             // Each tenant has its own database, so there is no startup hook to build this in; it
@@ -65,33 +71,61 @@ namespace Configuration.DomainService.Integration.Services
             }
         }
 
-        public async Task<bool> HasActiveConnectionNamedAsync(string connectionName) =>
-            await (await Setups().FindAsync(Builders<IntegrationSetup>.Filter.Eq(s => s.ConnectionName, connectionName)
+        public async Task<bool> HasActiveConnectionNamedAsync(string connectionName)
+        {
+            var filter = Builders<IntegrationSetup>.Filter.Eq(s => s.ConnectionName, connectionName)
                 & (Builders<IntegrationSetup>.Filter.Eq(s => s.Status, "active")
                     | Builders<IntegrationSetup>.Filter.Eq(s => s.Status, "")
-                    | Builders<IntegrationSetup>.Filter.Exists(s => s.Status, false)))).AnyAsync();
+                    | Builders<IntegrationSetup>.Filter.Exists(s => s.Status, false));
+            var scope = await _dataAccess.ReadAsync(OsSchemas.IntegrationSetup, filter, "IntegrationRepository.HasActiveConnectionNamedAsync");
+            return scope.Granted && await scope.Apply(Setups()).AnyAsync();
+        }
 
-        public async Task<List<IntegrationSetup>> GetConnectionsAsync() =>
-            await (await Setups().FindAsync(FilterDefinition<IntegrationSetup>.Empty,
-                new FindOptions<IntegrationSetup> { Sort = Builders<IntegrationSetup>.Sort.Descending(s => s.CreatedDate) })).ToListAsync();
+        public async Task<List<IntegrationSetup>> GetConnectionsAsync()
+        {
+            var scope = await _dataAccess.ReadAsync(OsSchemas.IntegrationSetup, FilterDefinition<IntegrationSetup>.Empty, "IntegrationRepository.GetConnectionsAsync");
+            return scope.Granted
+                ? await scope.Apply(Setups()).SortByDescending(s => s.CreatedDate).ToListAsync()
+                : new List<IntegrationSetup>();
+        }
 
         public async Task<bool> RevokeConnectionAsync(string connectionId, string? revokedBy)
         {
             var update = Builders<IntegrationSetup>.Update.Set(s => s.Status, "revoked")
                 .Set(s => s.RevokedBy, revokedBy).Set(s => s.RevokedDate, DateTime.UtcNow)
                 .Set(s => s.LastUpdatedBy, revokedBy).Set(s => s.LastUpdatedDate, DateTime.UtcNow);
-            var result = await Setups().UpdateOneAsync(Builders<IntegrationSetup>.Filter.Eq(s => s.ItemId, connectionId), update);
+            var editFilter = await _dataAccess.EditFilterAsync(OsSchemas.IntegrationSetup,
+                Builders<IntegrationSetup>.Filter.Eq(s => s.ItemId, connectionId), "IntegrationRepository.RevokeConnectionAsync");
+            if (editFilter is null)
+            {
+                return false;
+            }
+
+            var result = await Setups().UpdateOneAsync(editFilter, update);
             return result.MatchedCount == 1;
         }
 
         public async Task MarkConnectionNeverDeliveredAsync(string environmentTenantId, string connectionId)
         {
-            await Setups(environmentTenantId).UpdateOneAsync(Builders<IntegrationSetup>.Filter.Eq(s => s.ItemId, connectionId),
+            // Anonymous exchange path: no user, and the target is the recorded environment DB, so the
+            // data access helper takes its skip path here (no-user-context / other-tenant-db).
+            var editFilter = await _dataAccess.EditFilterAsync(OsSchemas.IntegrationSetup,
+                Builders<IntegrationSetup>.Filter.Eq(s => s.ItemId, connectionId), "IntegrationRepository.MarkConnectionNeverDeliveredAsync", environmentTenantId);
+            if (editFilter is null)
+            {
+                return;
+            }
+
+            await Setups(environmentTenantId).UpdateOneAsync(editFilter,
                 Builders<IntegrationSetup>.Update.Set(s => s.NeverDelivered, true).Set(s => s.LastUpdatedDate, DateTime.UtcNow));
         }
 
-        public async Task<IntegrationSetup?> GetConnectionAsync(string connectionId) =>
-            await (await Setups().FindAsync(Builders<IntegrationSetup>.Filter.Eq(s => s.ItemId, connectionId))).FirstOrDefaultAsync();
+        public async Task<IntegrationSetup?> GetConnectionAsync(string connectionId)
+        {
+            var scope = await _dataAccess.ReadAsync(OsSchemas.IntegrationSetup,
+                Builders<IntegrationSetup>.Filter.Eq(s => s.ItemId, connectionId), "IntegrationRepository.GetConnectionAsync");
+            return scope.Granted ? await scope.Apply(Setups()).FirstOrDefaultAsync() : null;
+        }
 
         private static async Task EnsureConnectionIndexesAsync(IMongoCollection<IntegrationSetup> setups)
         {

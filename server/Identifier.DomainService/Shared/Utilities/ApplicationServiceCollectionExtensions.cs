@@ -1,3 +1,5 @@
+using Os.DataAccess;
+using Os.DataAccess;
 using Blocks.Extension.DependencyInjection;
 using Blocks.Genesis;
 using DomainService.Access;
@@ -25,6 +27,8 @@ namespace DomainService.Shared
     {
         public static void AddApplicationServices(this IServiceCollection services)
         {
+            services.AddOsDataAccess();
+
             // Register validator
             services.AddTransient<IValidator<CreateProjectRequest>, CreateProjectRequestValidator>();
             services.AddTransient<IValidator<UpdateAuthConfigRequest>, UpdateAuthConfigRequestValidator>();

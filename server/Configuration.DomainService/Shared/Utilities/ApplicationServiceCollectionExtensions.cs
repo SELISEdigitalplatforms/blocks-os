@@ -1,4 +1,6 @@
 ﻿using FluentValidation;
+using Os.DataAccess;
+using Os.DataAccess;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Protocols;
@@ -32,6 +34,7 @@ namespace Configuration.DomainService.Shared.Utilities
     {
         public static void AddConfigurationServices(this IServiceCollection serviceCollection)
         {
+            serviceCollection.AddOsDataAccess();
             serviceCollection.AddSingleton<IConfigurationService, ConfigurationService>();
             serviceCollection.AddSingleton<IConfigurationRepository, ConfigurationRepository>();
             serviceCollection.AddSingleton<IMailTemplateService, MailTemplateService>();

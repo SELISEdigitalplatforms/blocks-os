@@ -10,6 +10,7 @@ using MongoDB.Driver;
 using Pipelines.Sockets.Unofficial.Arenas;
 using System.Collections;
 using Blocks.Genesis.Entities.Os;
+using Os.DataAccess;
 
 namespace DomainService.Projects
 {
@@ -21,6 +22,7 @@ namespace DomainService.Projects
         private readonly IEncodingService _urlEncodingService;
         private readonly IMongoDatabase _clientDb;
         private readonly IDataGatewayRootProvisioner _dataGatewayRoot;
+        private readonly IOsDataAccess _dataAccess;
 
         private const string _projectStatusTraceCollectionName = "ProjectStatusTracers";
         private const string _legacyDefaultUserRoleSlug = "user";
@@ -32,8 +34,10 @@ namespace DomainService.Projects
                                  IConfiguration configuration,
                                  IBlocksSecret blocksSecret,
                                  IEncodingService urlEncodingService,
-                                 IDataGatewayRootProvisioner dataGatewayRoot)
+                                 IDataGatewayRootProvisioner dataGatewayRoot,
+                                 IOsDataAccess dataAccess)
         {
+            _dataAccess = dataAccess;
             _dbContextProvider = dbContextProvider;
             _blocksSecret = blocksSecret;
             _configuration = configuration;
@@ -803,7 +807,15 @@ namespace DomainService.Projects
         {
             var collection = ResolveThirdPartyJWTClaimsCollection();
             var filter = Builders<ThirdPartyJWTClaims>.Filter.Eq(m => m.ItemId, mapper.ItemId);
-            await collection.ReplaceOneAsync(filter, mapper, new ReplaceOptions { IsUpsert = true });
+
+            // The collection is the caller's own tenant DB, so the resolver applies. Upsert = update or insert.
+            var editFilter = await _dataAccess.EditFilterAsync(OsSchemas.ThirdPartyJWTClaims, filter, "ProjectRepository.SaveJWTClaimsAsync");
+            if (editFilter is null || !await _dataAccess.InsertAllowedAsync(OsSchemas.ThirdPartyJWTClaims, "ProjectRepository.SaveJWTClaimsAsync"))
+            {
+                return new BaseResponse { IsSuccess = false };
+            }
+
+            await collection.ReplaceOneAsync(editFilter, mapper, new ReplaceOptions { IsUpsert = true });
 
             return new BaseResponse { IsSuccess = true };
         }
@@ -816,7 +828,9 @@ namespace DomainService.Projects
                          Builders<ThirdPartyJWTClaims>.Filter.Eq(mc => mc.ItemId, itemId) :
                          Builders<ThirdPartyJWTClaims>.Filter.Empty;
 
-            return await collection.Find(filter).FirstOrDefaultAsync();
+            // No projection: the claims are edited and saved back as a whole document.
+            var scope = await _dataAccess.ReadAsync(OsSchemas.ThirdPartyJWTClaims, filter, "ProjectRepository.GetThirdPartyJWTClaimsAsync", useProjection: false);
+            return scope.Granted ? await scope.Apply(collection).FirstOrDefaultAsync() : default!;
         }
 
         // Providers live in the root database beside Tenants, not in the tenant's own database:

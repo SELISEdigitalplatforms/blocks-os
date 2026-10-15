@@ -36,7 +36,7 @@ namespace XUnitTest.Integration
                 TenantId = "t-" + tag
             });
 
-            var repo = new SubscriptionRepository(_fixture.DbContextProvider);
+            var repo = new SubscriptionRepository(_fixture.DbContextProvider, new XUnitTest.TestHelpers.PassThroughOsDataAccess());
             var result = await repo.GetSubscriptionsAsync();
 
             result.Should().Contain(r => r.ItemId == "rl-" + tag);

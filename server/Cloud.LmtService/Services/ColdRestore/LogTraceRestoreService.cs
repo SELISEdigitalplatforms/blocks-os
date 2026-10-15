@@ -19,6 +19,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text.Json;
+using Os.DataAccess;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -40,6 +41,7 @@ namespace Cloud.LmtService.Services.ColdRestore
         private readonly ILogTraceRestoreParquetReader _coldRestoreParquetReader;
         private readonly ILmtArchiveRestoreConfigurationRepository _lmtArchiveRestoreConfigurationRepository;
         private readonly IDbContextProvider _dbContextProvider;
+        private readonly IOsDataAccess _dataAccess;
         private readonly IHttpService _httpService;
         private readonly ICryptoService _cryptoService;
         private readonly ITenants _tenants;
@@ -50,8 +52,9 @@ namespace Cloud.LmtService.Services.ColdRestore
     ILogTraceRestoreParquetReader coldRestoreParquetReader, IBlobStorage blobStorage, IConfiguration configuration,
     ILmtArchiveRestoreConfigurationRepository lmtArchiveRestoreConfigurationRepository, IDbContextProvider dbContextProvider,
     IHttpService httpService, ICryptoService cryptoService, ITenants tenants, IArchiveRestoreRepository archiveRestoreRepository,
-    IRestoreUserRepository userRepository)
+    IRestoreUserRepository userRepository, IOsDataAccess dataAccess)
         {
+            _dataAccess = dataAccess;
             _logger = logger;
             _coldRestoreRepository = coldRestoreRepository;
             _messageClient = messageClient;
@@ -243,7 +246,7 @@ namespace Cloud.LmtService.Services.ColdRestore
 
                 // Same checks the retired mail driver ran in the request; a failure queues nothing.
                 var failedCheck = await MailPreCheck.FindFailureAsync(
-                    _dbContextProvider, sendMailCommand.Purpose, sendMailCommand.Language, sendMailCommand.To, sendMailCommand.SendPhoneNumberAsEmail, sendMailCommand.BodyDataContext);
+                    _dbContextProvider, _dataAccess, sendMailCommand.Purpose, sendMailCommand.Language, sendMailCommand.To, sendMailCommand.SendPhoneNumberAsEmail, sendMailCommand.BodyDataContext);
                 if (failedCheck != null)
                 {
                     _logger.LogError("Email notification to {Email} not queued: pre-check failed ({FailedCheck}).", email, failedCheck);
