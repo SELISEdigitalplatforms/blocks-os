@@ -1,5 +1,4 @@
 using Blocks.Genesis;
-using Configuration.DomainService.Integration.Entities;
 using MongoDB.Driver;
 using Blocks.Genesis.Entities.Os;
 

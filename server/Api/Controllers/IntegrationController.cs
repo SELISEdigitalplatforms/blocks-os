@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using Blocks.Genesis;
-using Configuration.DomainService.Integration.Entities;
 using Configuration.DomainService.Integration.RequestModel;
 using Configuration.DomainService.Integration.Services;
 using Microsoft.AspNetCore.Authorization;

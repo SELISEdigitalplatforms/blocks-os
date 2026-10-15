@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using Blocks.Genesis;
-using Configuration.DomainService.Integration.Entities;
+using Blocks.Genesis.Entities.Os;
 using Configuration.DomainService.Integration.RequestModel;
 
 namespace Configuration.DomainService.Integration.Services;
