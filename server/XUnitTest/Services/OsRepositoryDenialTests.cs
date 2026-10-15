@@ -110,7 +110,7 @@ public class OsRepositoryDenialTests
         (await repo.GetMigrationTrackerAsync("1")).Should().BeNull();
         (await repo.GetMigrationsByTenantGroupIdAsync("g")).Should().BeEmpty();
         (await repo.UpdateServiceStatusAsync("1", MigrationServiceNames.IAM, true)).Should().BeFalse();
-        await FluentActions.Invoking(() => repo.CreateMigrationTrackerAsync(new MigrationTracker { ItemId = "1", TenantGroupId = "g" })).Should().ThrowAsync<UnauthorizedAccessException>();
+        await FluentActions.Invoking(() => repo.CreateMigrationTrackerAsync(new MigrationTracker { ItemId = "1", ProjectKey = "source", TargetedProjectKey = "target", TenantGroupId = "g" })).Should().ThrowAsync<UnauthorizedAccessException>();
     }
 
     [Fact]

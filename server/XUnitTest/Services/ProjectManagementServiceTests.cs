@@ -1262,6 +1262,8 @@ namespace XUnitTest.Services
         public async Task SaveThirdPartyJWTClaimsAsync_New_SavesAndReturnsItemId()
         {
             using var _ = new BlocksTestContext();
+            _repo.Setup(r => r.SaveJWTClaimsAsync(It.IsAny<ThirdPartyJWTClaims>()))
+                 .ReturnsAsync(new BaseResponse { IsSuccess = true });
 
             var response = await Service().SaveThirdPartyJWTClaimsAsync(new SaveThirdPartyJWTClaimsRequest
             {
@@ -1279,6 +1281,8 @@ namespace XUnitTest.Services
         public async Task SaveThirdPartyJWTClaimsAsync_Existing_LoadsThenSaves()
         {
             using var _ = new BlocksTestContext();
+            _repo.Setup(r => r.SaveJWTClaimsAsync(It.IsAny<ThirdPartyJWTClaims>()))
+                 .ReturnsAsync(new BaseResponse { IsSuccess = true });
             _repo.Setup(r => r.GetThirdPartyJWTClaimsAsync("c-1"))
                  .ReturnsAsync(new ThirdPartyJWTClaims { ItemId = "c-1" });
 
