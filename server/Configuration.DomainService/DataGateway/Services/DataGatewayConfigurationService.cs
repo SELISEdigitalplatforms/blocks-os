@@ -154,7 +154,7 @@ namespace Configuration.DomainService.DataGateway.Services
             }
             catch (SecretException ex) when (ex is SecretStateException or SecretNotFoundException)
             {
-                _logger.LogWarning("DataGateway step=get result=secret-unusable tenant={TenantId} state=value-missing", tenantId);
+                _logger.LogWarning(ex, "DataGateway step=get result=secret-unusable tenant={TenantId} state=value-missing", tenantId);
                 return true;
             }
         }
@@ -178,44 +178,12 @@ namespace Configuration.DomainService.DataGateway.Services
                 return Refuse("ItemId", NotFoundMessage);
 
             // null on an update = keep the saved data source; blank / "default" = Blocks DB; anything else = the real string.
-            string? value = request.ConnectionString is null && request.UpdateRequest
-                ? null
-                : IsCustom(request.ConnectionString) ? request.ConnectionString!.Trim() : DefaultValue;
-
-            var secretId = root.DbConnectionSecretId;
-            string? repairedSecretId = null;
-            if (value is not null)
-            {
-                var status = await SecretStatusAsync(secretId, failOnError: false);
-                if (string.IsNullOrEmpty(secretId) || LinkedSecretStatus.IsBroken(status))
-                {
-                    // A broken pointer cannot be rotated: new secret, same doc repointed at it (the old one is left as it is).
-                    var isRepair = !string.IsNullOrEmpty(secretId);
-                    secretId = await SetSecretAsync(value);
-                    repairedSecretId = isRepair ? secretId : null;
-                }
-                else
-                {
-                    await _secretService.RotateAsync(secretId, new RotateSecretRequest { Value = value });
-                }
-            }
+            var value = ResolveValue(request);
+            var (secretId, repairedSecretId) = await ApplySecretAsync(root.DbConnectionSecretId, value);
 
             var now = new DateTime(DataGatewayRootStore.VersionOf(DateTime.UtcNow), DateTimeKind.Utc);
             var databaseName = string.IsNullOrWhiteSpace(request.DatabaseName) ? root.DatabaseName : request.DatabaseName;
-            var userId = BlocksContext.GetContext()?.UserId;
-            var set = new BsonDocument
-            {
-                { nameof(DataGatewayConfiguration.DbConnectionSecretId), secretId },
-                { nameof(DataGatewayConfiguration.DatabaseName), databaseName },
-                { nameof(DataGatewayConfiguration.IsCollectionNameEditable), request.IsCollectionNameEditable },
-                { nameof(DataGatewayConfiguration.LastUpdatedDate), now },
-                { nameof(DataGatewayConfiguration.LastUpdatedBy), (BsonValue?)userId ?? BsonNull.Value },
-            };
-            if (!string.IsNullOrWhiteSpace(request.CollectionNamePattern))
-                set[nameof(DataGatewayConfiguration.CollectionNamePattern)] = request.CollectionNamePattern;
-            var analytics = ApplyAnalytics(root.AnalyticsConfiguration, request.EnableAnalytics);
-            if (analytics is not null)
-                set[nameof(DataGatewayConfiguration.AnalyticsConfiguration)] = analytics.ToBsonDocument();
+            var set = BuildRootUpdate(request, root, secretId, databaseName, now);
 
             bool matched;
             try
@@ -242,11 +210,57 @@ namespace Configuration.DomainService.DataGateway.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError("DataGateway step=redis result=failed error={ErrorType} tenant={TenantId}", ex.GetType().Name, tenantId);
+                _logger.LogError(ex, "DataGateway step=redis result=failed error={ErrorType} tenant={TenantId}", ex.GetType().Name, tenantId);
                 return Refuse("Redis", RedisFailedMessage);
             }
 
             return new BaseMutationResponse { IsSuccess = true, ItemId = tenantId };
+        }
+
+        /// <summary>The value to store: null on an update = keep the saved data source; blank / "default" = Blocks DB; anything else = the real string.</summary>
+        private static string? ResolveValue(SaveDataGatewayConfigurationRequest request)
+        {
+            if (request.ConnectionString is null && request.UpdateRequest)
+                return null;
+            return IsCustom(request.ConnectionString) ? request.ConnectionString!.Trim() : DefaultValue;
+        }
+
+        /// <summary>Writes the value to the linked secret. A broken or missing pointer gets a new secret (repaired id returned).</summary>
+        private async Task<(string SecretId, string? RepairedSecretId)> ApplySecretAsync(string secretId, string? value)
+        {
+            if (value is null)
+                return (secretId, null);
+
+            var status = await SecretStatusAsync(secretId, failOnError: false);
+            if (string.IsNullOrEmpty(secretId) || LinkedSecretStatus.IsBroken(status))
+            {
+                // A broken pointer cannot be rotated: new secret, same doc repointed at it (the old one is left as it is).
+                var isRepair = !string.IsNullOrEmpty(secretId);
+                var newSecretId = await SetSecretAsync(value);
+                return (newSecretId, isRepair ? newSecretId : null);
+            }
+
+            await _secretService.RotateAsync(secretId, new RotateSecretRequest { Value = value });
+            return (secretId, null);
+        }
+
+        private static BsonDocument BuildRootUpdate(SaveDataGatewayConfigurationRequest request, DataGatewayConfiguration root, string secretId, string databaseName, DateTime now)
+        {
+            var userId = BlocksContext.GetContext()?.UserId;
+            var set = new BsonDocument
+            {
+                { nameof(DataGatewayConfiguration.DbConnectionSecretId), secretId },
+                { nameof(DataGatewayConfiguration.DatabaseName), databaseName },
+                { nameof(DataGatewayConfiguration.IsCollectionNameEditable), request.IsCollectionNameEditable },
+                { nameof(DataGatewayConfiguration.LastUpdatedDate), now },
+                { nameof(DataGatewayConfiguration.LastUpdatedBy), (BsonValue?)userId ?? BsonNull.Value },
+            };
+            if (!string.IsNullOrWhiteSpace(request.CollectionNamePattern))
+                set[nameof(DataGatewayConfiguration.CollectionNamePattern)] = request.CollectionNamePattern;
+            var analytics = ApplyAnalytics(root.AnalyticsConfiguration, request.EnableAnalytics);
+            if (analytics is not null)
+                set[nameof(DataGatewayConfiguration.AnalyticsConfiguration)] = analytics.ToBsonDocument();
+            return set;
         }
 
         private static BaseMutationResponse Refuse(string key, string message) =>
@@ -298,7 +312,7 @@ namespace Configuration.DomainService.DataGateway.Services
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("DataGateway step=secret-status result=failed error={ErrorType}", ex.GetType().Name);
+                _logger.LogWarning(ex, "DataGateway step=secret-status result=failed error={ErrorType}", ex.GetType().Name);
                 if (failOnError)
                     throw;
                 return LinkedSecretStatus.Unavailable;
@@ -314,7 +328,7 @@ namespace Configuration.DomainService.DataGateway.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError("DataGateway step=own-secret-delete result=failed error={ErrorType}", ex.GetType().Name);
+                _logger.LogError(ex, "DataGateway step=own-secret-delete result=failed error={ErrorType}", ex.GetType().Name);
             }
         }
 

@@ -5,8 +5,6 @@ using DomainService.Shared;
 using DomainService.Shared.Entities;
 using DomainService.Shared.Services;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Pipelines.Sockets.Unofficial.Arenas;
@@ -23,7 +21,6 @@ namespace DomainService.Projects
         private readonly IEncodingService _urlEncodingService;
         private readonly IMongoDatabase _clientDb;
         private readonly IDataGatewayRootProvisioner _dataGatewayRoot;
-        private readonly ILogger<ProjectRepository> _logger;
 
         private const string _projectStatusTraceCollectionName = "ProjectStatusTracers";
         private const string _legacyDefaultUserRoleSlug = "user";
@@ -35,10 +32,8 @@ namespace DomainService.Projects
                                  IConfiguration configuration,
                                  IBlocksSecret blocksSecret,
                                  IEncodingService urlEncodingService,
-                                 IDataGatewayRootProvisioner dataGatewayRoot,
-                                 ILogger<ProjectRepository>? logger = null)
+                                 IDataGatewayRootProvisioner dataGatewayRoot)
         {
-            _logger = logger ?? NullLogger<ProjectRepository>.Instance;
             _dbContextProvider = dbContextProvider;
             _blocksSecret = blocksSecret;
             _configuration = configuration;

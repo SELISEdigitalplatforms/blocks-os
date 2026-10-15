@@ -81,7 +81,7 @@ namespace DomainService.Projects
             {
                 // Resumed run or a parallel GET created it first: keep that doc, drop our own secret.
                 await DeleteOwnSecretAsync(tenantId, secretId);
-                _logger.LogInformation("DataGateway step=root-default result=exists tenant={TenantId}", tenantId);
+                _logger.LogInformation(ex, "DataGateway step=root-default result=exists tenant={TenantId}", tenantId);
             }
             catch
             {
@@ -125,7 +125,7 @@ namespace DomainService.Projects
             }
             catch (Exception ex)
             {
-                _logger.LogError("DataGateway step=own-secret-delete result=failed error={ErrorType} tenant={TenantId}", ex.GetType().Name, tenantId);
+                _logger.LogError(ex, "DataGateway step=own-secret-delete result=failed error={ErrorType} tenant={TenantId}", ex.GetType().Name, tenantId);
             }
         }
 

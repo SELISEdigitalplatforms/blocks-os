@@ -109,14 +109,14 @@ export function DataGatewayContents() {
 
       const res = await saveConfiguration(payload);
 
-      if (!res.isSuccess) {
-        showErrorToast({ errors: res.errors });
-      } else {
+      if (res.isSuccess) {
         showSuccessToast({
           description: configuration
             ? "Configuration updated successfully"
             : "Configuration created successfully",
         });
+      } else {
+        showErrorToast({ errors: res.errors });
       }
       setIsConfirmDialogOpen(false);
     } catch (error) {

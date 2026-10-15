@@ -38,6 +38,9 @@
              </para>
              </remarks>
         </member>
+        <member name="M:BlocksOs.Api.Controllers.DataGatewayController.SaveConfig(Configuration.DomainService.DataGateway.RequestModel.SaveDataGatewayConfigurationRequest)">
+            <summary>A refused save (invalid input, unknown ItemId) answers 400 with the errors; ItemId not found answers 404.</summary>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.DomainController.ConfigureStream(DomainService.Shared.ConfigureDomainRequest)">
             <summary>
             Configures a domain like <see cref="M:BlocksOs.Api.Controllers.DomainController.Configure(DomainService.Shared.ConfigureDomainRequest)"/>, streaming each step as a server-sent
