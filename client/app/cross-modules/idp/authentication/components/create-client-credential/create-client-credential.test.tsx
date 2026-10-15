@@ -67,6 +67,20 @@ describe("CreateClientCredential", () => {
     expect(screen.getByRole("button", { name: "Add" }).hasAttribute("disabled")).toBe(true);
   });
 
+  it("opens without flagging untouched required fields", async () => {
+    // Regression: a validation pass on open painted every empty required field red before the
+    // user had typed anything. Errors now wait for the field to be edited, as in the OIDC dialog.
+    h.config = { data: { isMultiOrgEnabled: true }, isLoading: false };
+    render(<CreateClientCredential open hideTrigger />);
+
+    expect(await screen.findByRole("heading", { name: "Add Client Credential" })).toBeTruthy();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(screen.queryByText("Client name is required")).toBeNull();
+    expect(screen.queryByText("Please select an organization")).toBeNull();
+    expect(screen.queryByText("At least one role is required")).toBeNull();
+    expect(screen.getByRole("button", { name: "Add" }).hasAttribute("disabled")).toBe(true);
+  });
+
   it("creates a client credential with the entered details", async () => {
     const user = userEvent.setup();
     const onOpenChange = vi.fn();
