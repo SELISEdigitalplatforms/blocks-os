@@ -3,7 +3,6 @@ using Configuration.DomainService.Mail.RequestModel;
 using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Notification.ResponseModel;
 using Configuration.DomainService.Storage.Entities;
-using Configuration.DomainService.DataGateway.Entities;
 using MongoDB.Bson;
 using System.Linq.Expressions;
 using Blocks.Genesis.Entities.Data;
@@ -54,34 +53,6 @@ namespace Configuration.DomainService.Shared.Services
         /// </summary>
         Task<List<MailServerConfiguration>> GetMailConfigurationsByClientSecretReferenceAsync(string clientSecretReference);
         Task DeleteMailConfigurationAsync(string configurationId);
-
-        #endregion
-
-        #region DataGateway
-
-        Task SaveDataGatewayConfigurationAsync(DataGatewayConfiguration configuration);
-        Task<DataGatewayConfiguration> GetDataGatewayConfigurationAsync();
-        Task<DataGatewayConfiguration> GetDataGatewayConfigurationByIdAsync(string itemId);
-
-        // Switch on (os SPEC2 §6.3). Root doc = BlocksRootDb.DataServiceConfigurations, _id = TenantId.
-
-        /// <summary>The caller's root doc: <c>{_id: tenantId, ConfigItemId exists, IsDeleted: false}</c>.</summary>
-        Task<DataGatewayConfiguration?> GetDataGatewayRootAsync(string tenantId);
-
-        /// <summary>Live tenant copy in the context tenant DB; a doc with <c>ConfigItemId</c> is never one.</summary>
-        Task<DataGatewayConfiguration?> GetDataGatewayTenantCopyAsync();
-
-        /// <summary><c>InsertOne</c> into the root DB; <c>false</c> on DuplicateKey (the doc exists).</summary>
-        Task<bool> InsertDataGatewayRootAsync(DataGatewayConfiguration root);
-
-        /// <summary>Field <c>$set</c>/<c>$unset</c> on the caller's root doc, no upsert. Returns the matched count.</summary>
-        Task<long> SetDataGatewayRootFieldsAsync(string tenantId, BsonDocument set, IEnumerable<string>? unset = null);
-
-        /// <summary>
-        /// Field <c>$set</c> of non-secret fields on the tenant copy <c>_id = configItemId</c>, no upsert; never
-        /// <c>DbConnectionString</c>. Returns the matched count.
-        /// </summary>
-        Task<long> SetDataGatewayTenantCopyNonSecretAsync(string configItemId, BsonDocument set);
 
         #endregion
 

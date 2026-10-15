@@ -539,9 +539,9 @@ namespace XUnitTest.Identifier
 
             await CreateService().MigrateEnvironmentDataAsync("SOURCE-1", "TARGET-1", true, "tracker-1");
 
-            // DataGateway needs four collections, Email one.
+            // DataGateway needs three collections, Email one.
             _migrationRepository.Verify(r => r.MigrateCollectionAsync(
-                "SOURCE-1", "TARGET-1", It.IsAny<string>(), true), Times.Exactly(5));
+                "SOURCE-1", "TARGET-1", It.IsAny<string>(), true), Times.Exactly(4));
             _messageClient.Verify(m => m.SendToConsumerAsync(
                 It.Is<ConsumerMessage<MigrationCompletionEvent>>(c => c.Payload.IsSuccess)), Times.Exactly(2));
         }

@@ -13,10 +13,6 @@ using Configuration.DomainService.Mail.Template.Validators;
 using Configuration.DomainService.Mail.Validators;
 using Configuration.DomainService.Storage.RequestModel;
 using Configuration.DomainService.Storage.Validators;
-using Configuration.DomainService.DataGateway;
-using Configuration.DomainService.DataGateway.RequestModel;
-using Configuration.DomainService.DataGateway.Services;
-using Configuration.DomainService.DataGateway.Validators;
 using Configuration.DomainService.Captcha.RequestModel;
 using Configuration.DomainService.Captcha.Services;
 using Configuration.DomainService.Captcha.Validators;
@@ -35,8 +31,6 @@ namespace Configuration.DomainService.Shared.Utilities
         {
             serviceCollection.AddSingleton<IConfigurationService, ConfigurationService>();
             serviceCollection.AddSingleton<IConfigurationRepository, ConfigurationRepository>();
-            // os SPEC2 X-1 - the DataGateway RootConfigEnabled switch, read on each call and never cached.
-            serviceCollection.AddSingleton<DataGatewayRootMode>();
             serviceCollection.AddSingleton<IMailTemplateService, MailTemplateService>();
             serviceCollection.AddSingleton<IMailTemplateRepository, MailTemplateRepository>();
             serviceCollection.AddSingleton<IMailboxService, MailboxService>();
@@ -65,16 +59,12 @@ namespace Configuration.DomainService.Shared.Utilities
             serviceCollection.AddScoped<IMailConfigurationProviderRegistry, MailConfigurationProviderRegistry>();
             serviceCollection.AddScoped<IMailConfigurationService, MailConfigurationService>();
 
-            // Data-gateway page: scoped for the same reason (switch on = connection string via ISecretService).
-            serviceCollection.AddScoped<IDataGatewayConfigurationService, DataGatewayConfigurationService>();
-
             // Finds the CAPTCHA and mail configurations that point at a secret, for the warning
             // shown before it is archived or purged.
             serviceCollection.AddScoped<ISecretDependentLookup, SecretDependentLookup>();
 
             serviceCollection.AddSingleton<IValidator<SaveNotificationConfigurationRequest>, NotificationConfigurationValidator>();
             serviceCollection.AddSingleton<IValidator<SaveStorageConfigurationRequest>, StorageConfigurationValidator>();
-            serviceCollection.AddSingleton<IValidator<SaveDataGatewayConfigurationRequest>, DataGatewayConfigurationValidator>();
             serviceCollection.AddSingleton<IValidator<MailConfiguration>, MailConfigurationValidator>();
             serviceCollection.AddSingleton<IValidator<SaveMailTemplateRequest>, MailTemplateValidator>();
             serviceCollection.AddSingleton<IValidator<SaveCaptchaConfigRequest>, CaptchaConfigValidator>();

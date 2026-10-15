@@ -24,9 +24,6 @@ namespace DomainService.Projects
         private readonly IMongoDatabase _clientDb;
         private readonly ILogger<ProjectRepository> _logger;
 
-        // os SPEC2 X-1/X-5: same key as Configuration.DomainService DataGatewayRootMode (no project reference).
-        private const string DataGatewayRootConfigKey = "DataGateway:RootConfigEnabled";
-
         private const string _projectStatusTraceCollectionName = "ProjectStatusTracers";
         private const string _legacyDefaultUserRoleSlug = "user";
         private const string _cloudUserRoleSlug = "clouduser";
@@ -430,42 +427,8 @@ namespace DomainService.Projects
                 // CopyAndCustomizeResourceLimitsAsync(sourceDatabase, consumerDb, project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "LinkBasedActionConfigs", project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "FileDirectories", project),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "ObjectItems", project),
-                // Switch on: the root doc (BlocksRootDb, _id = TenantId) instead of the seed tenant copy.
-                // Read per call (env var, rolling restart); default off = today's copy.
-                _configuration.GetValue<bool>(DataGatewayRootConfigKey)
-                    ? InsertDataGatewayRootDefaultAsync(consumerDb, project)
-                    : CopyDocumentAsync(sourceDatabase, consumerDb, "DataServiceConfigurations", project));
+                CopyDocumentAsync(sourceDatabase, consumerDb, "ObjectItems", project));
 
-        }
-
-        // os SPEC2 §6.7. Runs for every caller of CreateDefaultConfigurationAsync (Worker create/restore, Api
-        // Project/Restore). No secret, no Redis hash (no hash = Blocks DB).
-        private async Task InsertDataGatewayRootDefaultAsync(IMongoDatabase consumerDb, Tenant project)
-        {
-            // An existing project (e.g. Api Restore of a project with no tracer) already has its own live tenant doc:
-            // a "default" root doc would hide a BYO data source. Leave it; the data Worker apply moves it.
-            var hasLiveTenantDoc = await consumerDb
-                .GetCollection<BsonDocument>(DataGatewayRootDefaults.CollectionName)
-                .Find(new BsonDocument("IsDeleted", false))
-                .AnyAsync();
-            if (hasLiveTenantDoc)
-            {
-                _logger.LogInformation("DataGateway step=root-default result=skipped-tenant-copy tenant={TenantId}", project.TenantId);
-                return;
-            }
-
-            try
-            {
-                await _clientDb
-                    .GetCollection<BsonDocument>(DataGatewayRootDefaults.CollectionName)
-                    .InsertOneAsync(DataGatewayRootDefaults.Build(project.TenantId, project.CreatedBy, DateTime.UtcNow));
-            }
-            catch (MongoWriteException ex) when (ex.WriteError?.Category == ServerErrorCategory.DuplicateKey)
-            {
-                // Resumed run, or a root doc made by the data Worker: keep the existing doc.
-                _logger.LogInformation(ex, "DataGateway step=root-default result=exists tenant={TenantId}", project.TenantId);
-            }
         }
 
         private async Task CopyDocumentAsync(IMongoDatabase sourceDb, IMongoDatabase targetDb, string collectionName, Tenant project)

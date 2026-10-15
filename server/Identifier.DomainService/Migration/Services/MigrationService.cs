@@ -557,7 +557,6 @@ namespace DomainService.Migration
             {
                 MigrationServiceNames.DataGateway => new List<string>
                 {
-                    "DataServiceConfigurations",
                     "SchemaDefinitions",
                     "DataAccessPolicys",
                     "DataValidations"

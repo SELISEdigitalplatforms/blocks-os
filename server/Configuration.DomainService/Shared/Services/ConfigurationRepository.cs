@@ -6,8 +6,6 @@ using Configuration.DomainService.Notification.ResponseModel;
 using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Storage.Entities;
 using Configuration.DomainService.Mail.RequestModel;
-using Configuration.DomainService.DataGateway;
-using Configuration.DomainService.DataGateway.Entities;
 using Blocks.Genesis.Entities.Data;
 using Blocks.Genesis.Entities.Os;
 
@@ -17,27 +15,18 @@ namespace Configuration.DomainService.Shared.Services
     {
         private readonly IDbContextProvider _dbContextProvider;
         private readonly IKeyValueStore _keyValueStore;
-        private readonly IBlocksSecret _blocksSecret;
-        private readonly DataGatewayRootMode _dataGatewayRootMode;
 
         private const string NotificationKeyPrefix = "notification-config:";
         private const string _notificatonConfigurationCollectionName = "NotificationConfigurations";
         private const string _storageCollectionName = "StorageConfigurations";
         private const string _mailConfigurationCollectionName = "MailServerConfigurations";
-        // Matches blocks-data's own DataServiceConfiguration collection name exactly (its DbRepository
-        // derives it as $"{typeof(T).Name}s") - both sides read/write the same document per tenant.
-        private const string _dataGatewayCollectionName = "DataServiceConfigurations";
 
         public ConfigurationRepository(
             IDbContextProvider dbContextProvider,
-            IKeyValueStore keyValueStore,
-            IBlocksSecret blocksSecret,
-            DataGatewayRootMode dataGatewayRootMode)
+            IKeyValueStore keyValueStore)
         {
             _dbContextProvider = dbContextProvider;
             _keyValueStore = keyValueStore;
-            _blocksSecret = blocksSecret;
-            _dataGatewayRootMode = dataGatewayRootMode;
         }
 
         #region Notification
@@ -314,150 +303,6 @@ namespace Configuration.DomainService.Shared.Services
             var filter = Builders<MailServerConfiguration>.Filter.Eq(mc => mc.ItemId, configurationId);
 
             await collection.DeleteOneAsync(filter);
-        }
-
-        #endregion
-
-        #region DataGateway
-
-        // Switch OFF path (today's code) with the two root-DB guards of os SPEC2 §6.1a: a doc with a
-        // ConfigItemId is a root doc (BlocksRootDb, _id = TenantId) and is never replaced from here. For a
-        // normal tenant DB (no such docs) the filter changes nothing; the root tenant (whose tenant DB is
-        // the root DB) gets DuplicateKey instead of overwriting another tenant's root doc.
-        public async Task SaveDataGatewayConfigurationAsync(DataGatewayConfiguration configuration)
-        {
-            var collection = _dbContextProvider.GetCollection<DataGatewayConfiguration>(_dataGatewayCollectionName);
-
-            var builder = Builders<DataGatewayConfiguration>.Filter;
-            var filter = builder.Eq(mc => mc.ItemId, configuration.ItemId)
-                         & builder.Exists(mc => mc.ConfigItemId, false);
-
-            await collection.ReplaceOneAsync(
-                filter,
-                configuration,
-                new ReplaceOptions { IsUpsert = true }
-            );
-        }
-
-        // There is at most one DataGateway configuration - mirrors blocks-data's own
-        // DataGatewayConfigurationService.GetConfiguration, which likewise takes no key and just
-        // filters on IsDeleted. Switch on: the caller's root doc, else the tenant copy (used by the
-        // validator's "exists" check). Never "the first live doc" of the root DB (os SPEC2 C9/C18).
-        public async Task<DataGatewayConfiguration> GetDataGatewayConfigurationAsync()
-        {
-            if (_dataGatewayRootMode.IsOn)
-            {
-                var root = await GetDataGatewayRootAsync(BlocksContext.GetContext()?.TenantId ?? string.Empty);
-                if (root != null)
-                {
-                    return root;
-                }
-            }
-
-            return (await GetDataGatewayTenantCopyAsync())!;
-        }
-
-        // No ConfigItemId filter on purpose (os SPEC2 §6.3): the off-path save must SEE a root doc so it can
-        // refuse; otherwise a crafted update would fall into "unknown ItemId -> new doc".
-        public async Task<DataGatewayConfiguration> GetDataGatewayConfigurationByIdAsync(string itemId)
-        {
-            var collection = _dbContextProvider.GetCollection<DataGatewayConfiguration>(_dataGatewayCollectionName);
-
-            var filter = Builders<DataGatewayConfiguration>.Filter.Eq(mc => mc.ItemId, itemId);
-            return await collection.Find(filter).FirstOrDefaultAsync();
-        }
-
-        private IMongoCollection<DataGatewayConfiguration> RootDataGatewayCollection() =>
-            _dbContextProvider
-                .GetDatabase(_blocksSecret.DatabaseConnectionString, _blocksSecret.RootDatabaseName)
-                .GetCollection<DataGatewayConfiguration>(_dataGatewayCollectionName);
-
-        private static FilterDefinition<DataGatewayConfiguration> RootFilter(string tenantId)
-        {
-            var builder = Builders<DataGatewayConfiguration>.Filter;
-            return builder.Eq(mc => mc.ItemId, tenantId) & builder.Exists(mc => mc.ConfigItemId);
-        }
-
-        public async Task<DataGatewayConfiguration?> GetDataGatewayRootAsync(string tenantId)
-        {
-            if (string.IsNullOrWhiteSpace(tenantId))
-            {
-                return null;
-            }
-
-            var filter = RootFilter(tenantId) & Builders<DataGatewayConfiguration>.Filter.Eq(mc => mc.IsDeleted, false);
-            return await RootDataGatewayCollection().Find(filter).FirstOrDefaultAsync();
-        }
-
-        public async Task<DataGatewayConfiguration?> GetDataGatewayTenantCopyAsync()
-        {
-            var collection = _dbContextProvider.GetCollection<DataGatewayConfiguration>(_dataGatewayCollectionName);
-
-            var builder = Builders<DataGatewayConfiguration>.Filter;
-            var filter = builder.Eq(mc => mc.IsDeleted, false) & builder.Exists(mc => mc.ConfigItemId, false);
-            return await collection.Find(filter).FirstOrDefaultAsync();
-        }
-
-        public async Task<bool> InsertDataGatewayRootAsync(DataGatewayConfiguration root)
-        {
-            try
-            {
-                await RootDataGatewayCollection().InsertOneAsync(root);
-                return true;
-            }
-            catch (MongoWriteException ex) when (ex.WriteError?.Category == ServerErrorCategory.DuplicateKey)
-            {
-                return false;
-            }
-        }
-
-        public async Task<long> SetDataGatewayRootFieldsAsync(string tenantId, BsonDocument set, IEnumerable<string>? unset = null)
-        {
-            var update = new BsonDocument("$set", set);
-            var unsetFields = unset?.ToList() ?? new List<string>();
-            if (unsetFields.Count > 0)
-            {
-                update.Add("$unset", new BsonDocument(unsetFields.Select(f => new BsonElement(f, ""))));
-            }
-
-            var result = await RootDataGatewayCollection().UpdateOneAsync(
-                RootFilter(tenantId),
-                new BsonDocumentUpdateDefinition<DataGatewayConfiguration>(update),
-                new UpdateOptions { IsUpsert = false });
-
-            return result.MatchedCount;
-        }
-
-        // The only fields new code may write into a tenant copy (owner "Stop writing": never the value).
-        internal static readonly IReadOnlySet<string> TenantCopyWritableFields = new HashSet<string>(StringComparer.Ordinal)
-        {
-            nameof(DataGatewayConfiguration.DatabaseName),
-            nameof(DataGatewayConfiguration.IsCollectionNameEditable),
-            nameof(DataGatewayConfiguration.CollectionNamePattern),
-            nameof(DataGatewayConfiguration.AnalyticsConfiguration),
-            nameof(DataGatewayConfiguration.LastUpdatedDate),
-            nameof(DataGatewayConfiguration.LastUpdatedBy),
-        };
-
-        public async Task<long> SetDataGatewayTenantCopyNonSecretAsync(string configItemId, BsonDocument set)
-        {
-            var notAllowed = set.Names.FirstOrDefault(n => !TenantCopyWritableFields.Contains(n));
-            if (notAllowed != null)
-            {
-                throw new ArgumentException($"Field '{notAllowed}' must not be written into the tenant copy.", nameof(set));
-            }
-
-            var collection = _dbContextProvider.GetCollection<DataGatewayConfiguration>(_dataGatewayCollectionName);
-
-            var builder = Builders<DataGatewayConfiguration>.Filter;
-            var filter = builder.Eq(mc => mc.ItemId, configItemId) & builder.Exists(mc => mc.ConfigItemId, false);
-
-            var result = await collection.UpdateOneAsync(
-                filter,
-                new BsonDocumentUpdateDefinition<DataGatewayConfiguration>(new BsonDocument("$set", set)),
-                new UpdateOptions { IsUpsert = false });
-
-            return result.MatchedCount;
         }
 
         #endregion
