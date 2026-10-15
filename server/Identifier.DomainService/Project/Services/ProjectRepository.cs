@@ -565,6 +565,13 @@ namespace DomainService.Projects
                 identityConfiguration["CreatedBy"] = userId;
                 identityConfiguration["LastUpdatedBy"] = userId;
 
+                // blocks-iam reads the tenant configuration from this document first since the collection
+                // cut. InitializeDefaultConfigurationsAsync still copies TenantConfigurations too, as the
+                // migration leaves it.
+                var seedTenantConfiguration = await sourceDb.GetCollection<BsonDocument>(TenantConfigurationEmbedding.LegacyCollection)
+                    .Find(FilterDefinition<BsonDocument>.Empty).FirstOrDefaultAsync();
+                TenantConfigurationEmbedding.Apply(identityConfiguration, seedTenantConfiguration, project.CreatedBy);
+
                 var targetCollection = targetDb.GetCollection<BsonDocument>("IdentityConfigurations");
                 await targetCollection.InsertOneAsync(identityConfiguration);
             }
