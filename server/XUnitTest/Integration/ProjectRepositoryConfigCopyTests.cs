@@ -276,8 +276,6 @@ namespace XUnitTest.Integration
             var source = SourceDb();
             await source.GetCollection<BsonDocument>(Dsc)
                 .InsertOneAsync(new BsonDocument { { "_id", "seed-dsc-" + suffix }, { "IsDeleted", false } });
-            if (await source.GetCollection<BsonDocument>("TenantConfigurations").CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty) == 0)
-                await source.GetCollection<BsonDocument>("TenantConfigurations").InsertOneAsync(new BsonDocument { { "_id", "tc-seed" }, { "DefaultRoles", new BsonArray { "clouduser" } } });
             await source.GetCollection<BsonDocument>("EmailTemplates")
                 .InsertOneAsync(new BsonDocument { { "_id", "tpl-mfa-" + suffix }, { "Name", "MfaViaEmail" } });
 
@@ -286,12 +284,11 @@ namespace XUnitTest.Integration
             var target = TargetDb(project);
             (await target.GetCollection<BsonDocument>(Dsc).CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(0);
             (await _fixture.Database.GetCollection<BsonDocument>(Dsc).CountDocumentsAsync(new BsonDocument("_id", project.TenantId))).Should().Be(0);
-            (await target.GetCollection<BsonDocument>("TenantConfigurations").CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().BeGreaterThan(0);
             (await target.GetCollection<BsonDocument>("EmailTemplates").CountDocumentsAsync(new BsonDocument("Name", "MfaViaEmail"))).Should().BeGreaterThan(0);
         }
 
         [Fact]
-        public async Task CreateDefaultConfigurationAsync_EmbedsSeedTenantConfigurationInIdentityConfiguration_AndStillCopiesTheCollection()
+        public async Task CreateDefaultConfigurationAsync_EmbedsSeedTenantConfigurationInIdentityConfiguration_AndCreatesNoTenantConfigurationsCollection()
         {
             var suffix = Guid.NewGuid().ToString("N");
             using var _ = new IntegrationContext(suffix);
@@ -314,8 +311,9 @@ namespace XUnitTest.Integration
             var embedded = identity[TenantConfigurationEmbedding.FieldName].AsBsonDocument;
             embedded["_id"].Should().Be(seedTenantConfiguration["_id"]);
             embedded["CreatedBy"].AsString.Should().Be(project.CreatedBy);
-            (await target.GetCollection<BsonDocument>(TenantConfigurationEmbedding.LegacyCollection)
-                .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().BeGreaterThan(0);
+            // Neither the document copy nor the seed schema step creates the old collection, not even empty.
+            (await (await target.ListCollectionNamesAsync()).ToListAsync())
+                .Should().NotContain(TenantConfigurationEmbedding.LegacyCollection);
         }
     }
 }

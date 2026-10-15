@@ -150,29 +150,6 @@ export async function openServiceScopedLogsFlow(page: Page, serviceName: string)
   await expect(page).toHaveURL(/[?&]service=/);
 }
 
-export async function openDocsInNewTabFlow(page: Page): Promise<boolean> {
-  if (!(await page.getByText("Service ID").first().isVisible({ timeout: 3000 }))) {
-    return false;
-  }
-  const menuButton = page
-    .locator(":is(button, div):has(svg.lucide-ellipsis-vertical)")
-    .first();
-  if (!(await menuButton.isVisible({ timeout: 5000 }))) return false;
-  await menuButton.click();
-  const docsItem = page.getByRole("menuitem", { name: "Docs" });
-  try {
-    const [popup] = await Promise.all([
-      page.waitForEvent("popup", { timeout: 10000 }),
-      docsItem.click(),
-    ]);
-    await expect(popup).toHaveURL(/docs\.seliseblocks\.com/, { timeout: 15000 });
-    await popup.close();
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 export async function openSetupGuideFlow(page: Page) {
   await page.getByRole("button", { name: "Setup Guide" }).click();
   if (

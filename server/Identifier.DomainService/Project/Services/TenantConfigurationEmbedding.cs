@@ -8,10 +8,9 @@ namespace DomainService.Projects
     /// first since the collection cut.
     /// </summary>
     /// <remarks>
-    /// The project still gets its own <c>TenantConfigurations</c> copy as well, so a new project ends up
-    /// in the same shape the collection-cut migration leaves an existing one in (data moved, old
-    /// collection kept until cleanup), and an older blocks-iam that reads only the old collection still
-    /// finds it.
+    /// This is a new project's only copy: it does not get a <c>TenantConfigurations</c> collection, which
+    /// the seed may still have until the collection-cut cleanup. A blocks-iam from before the collection cut
+    /// reads only that collection, so it finds no tenant configuration for projects created this way.
     /// </remarks>
     public static class TenantConfigurationEmbedding
     {
@@ -23,7 +22,7 @@ namespace DomainService.Projects
 
         /// <summary>
         /// Puts the tenant configuration into <paramref name="identityConfiguration"/>, stamped with
-        /// <paramref name="createdBy"/> the same way the copied <c>TenantConfigurations</c> document is.
+        /// <paramref name="createdBy"/> the way every copied seed document is.
         /// A seed that already carries the field (a migrated seed) keeps its own; otherwise a copy of
         /// <paramref name="seedTenantConfiguration"/> is used. Returns false, changing nothing, when
         /// there is neither.

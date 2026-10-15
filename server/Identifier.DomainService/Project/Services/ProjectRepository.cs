@@ -424,7 +424,7 @@ namespace DomainService.Projects
                 CopyDocumentAsync(sourceDatabase, consumerDb, "Roles", project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "Permissions", project),
                 // CopyDocumentAsync(sourceDatabase, consumerDb, "SchemaDefinitions", project),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "TenantConfigurations", project),
+                // Also carries the tenant configuration; TenantConfigurations itself is no longer copied.
                 CopyAndCustomizeIdentityConfigurationAsync(sourceDatabase, consumerDb, project),
                 // CopyAndCustomizeResourceLimitsAsync(sourceDatabase, consumerDb, project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "LinkBasedActionConfigs", project),
@@ -569,9 +569,8 @@ namespace DomainService.Projects
                 identityConfiguration["CreatedBy"] = userId;
                 identityConfiguration["LastUpdatedBy"] = userId;
 
-                // blocks-iam reads the tenant configuration from this document first since the collection
-                // cut. InitializeDefaultConfigurationsAsync still copies TenantConfigurations too, as the
-                // migration leaves it.
+                // Since the collection cut, blocks-iam reads the tenant configuration from this document. It is
+                // the project's only copy: the seed's TenantConfigurations collection is not copied.
                 var seedTenantConfiguration = await sourceDb.GetCollection<BsonDocument>(TenantConfigurationEmbedding.LegacyCollection)
                     .Find(FilterDefinition<BsonDocument>.Empty).FirstOrDefaultAsync();
                 TenantConfigurationEmbedding.Apply(identityConfiguration, seedTenantConfiguration, project.CreatedBy);

@@ -197,6 +197,8 @@ describe("Certificates", () => {
       jwksUrl: provider.jwksUrl,
       claimsMapping: provider.claimsMapping,
     });
+    // Named by provider: the key comes back masked, so a key-based toast read as "**** disabled".
+    expect(showSuccessToast).toHaveBeenCalledWith({ description: "Auth0 provider disabled" });
   });
 
   it("offers to enable a provider that is off", async () => {
@@ -219,6 +221,7 @@ describe("Certificates", () => {
     await userEvent.click(screen.getByRole("button", { name: "Delete auth0-web" }));
 
     await waitFor(() => expect(h.deleteProvider).toHaveBeenCalledWith("provider-1"));
+    expect(showSuccessToast).toHaveBeenCalledWith({ description: "Auth0 provider removed" });
   });
 
   describe("external IdP trust toggle", () => {
@@ -315,13 +318,32 @@ describe("Certificates", () => {
       expect(screen.getAllByText("auth0-web").length).toBeGreaterThan(0);
     });
 
-    it("disables the switch while the mutation is in flight (H6)", () => {
+    it("ignores further clicks while a change is saving, without greying out (H6)", async () => {
       h.providers = [provider];
       h.projectData = { data: { isThirdPartyJwtEnabled: false } };
       h.isTrustPending = true;
       render(<Certificates />);
 
-      expect(trustSwitch()).toHaveProperty("disabled", true);
+      const sw = trustSwitch();
+      expect(sw.getAttribute("aria-busy")).toBe("true");
+      await userEvent.click(sw);
+      expect(h.updateTrust).not.toHaveBeenCalled();
+    });
+
+    it("moves on click and returns to the stored value when the change is refused", async () => {
+      h.providers = [provider];
+      h.projectData = { data: { isThirdPartyJwtEnabled: false } };
+      let settle!: (value: unknown) => void;
+      h.updateTrust = vi.fn(() => new Promise((resolve) => (settle = resolve)));
+      render(<Certificates />);
+
+      await userEvent.click(trustSwitch());
+      // Shows the requested position straight away instead of sitting still until the response.
+      expect(trustSwitch().getAttribute("data-state")).toBe("checked");
+
+      settle({ isSuccess: false, errors: "Refused" });
+      await waitFor(() => expect(trustSwitch().getAttribute("data-state")).toBe("unchecked"));
+      expect(showSuccessToast).not.toHaveBeenCalled();
     });
   });
 });
