@@ -1,30 +1,22 @@
-import { getRuntimeEnv } from "@/lib/runtime-env";
 import { http } from "@/lib/http/http-client";
-import type { ApiResponse, PlatformSchema, Policy, PolicyPayload } from "./models";
+import type { ICreatePolicyPayload, ICreatePolicyResponse, IDeletePolicyResponse, IGetPolicyResponse, ISetDataAccessResponse, ISetRowColumnPermissionPayload, IUpdatePolicyPayload } from "./gateway/models/data-service";
 
-const dataApi = `${getRuntimeEnv("BLOCKS_DATA_BASE_URL").replace(/\/$/, "")}/api`;
+export type PlatformSchema = {
+  id: string;
+  schemaName: string;
+  collectionName: string;
+  service: "IAM" | "OS" | "Logic" | "Release";
+  editAccessLevel: number;
+  fields: Array<{ name: string; type: string; isArray: boolean; editAccessLevel: number }>;
+};
+
+type Response<T> = { isSuccess: boolean; data: T; errors?: unknown; message?: string };
 
 export const platformDataAccessService = {
-  getSchemas: () => http.get<ApiResponse<PlatformSchema[]>>(`${dataApi}/schemas/platform`),
-  getPolicies: (schemaName: string, schemaId: string) => {
-    const query = new URLSearchParams({ schemaName, schemaId });
-    return http.get<ApiResponse<Policy[]>>(`${dataApi}/data-access/policy/get?${query}`);
-  },
-  setCustomUpdateAccess: (schemaId: string, policyType: number, fieldNames: string[], projectKey: string) =>
-    http.post<ApiResponse<unknown>>(`${dataApi}/data-access/security/change`, {
-      schemaId,
-      operation: 2,
-      policyType,
-      fieldNames,
-      accessLevel: 3,
-      projectKey,
-    }),
-  createPolicy: (payload: PolicyPayload) =>
-    http.post<ApiResponse<unknown>>(`${dataApi}/data-access/policy/create`, payload),
-  updatePolicy: (payload: PolicyPayload) =>
-    http.post<ApiResponse<unknown>>(`${dataApi}/data-access/policy/update`, payload),
-  deletePolicy: (itemId: string) => {
-    const query = new URLSearchParams({ itemId });
-    return http.delete<ApiResponse<unknown>>(`${dataApi}/data-access/policy/delete?${query}`);
-  },
+  getSchemas: () => http.get<Response<PlatformSchema[]>>("/api/PlatformDataAccess/Schemas"),
+  getPolicies: (schemaId: string) => http.get<IGetPolicyResponse>(`/api/PlatformDataAccess/Policies?schemaId=${encodeURIComponent(schemaId)}`),
+  configure: (payload: ISetRowColumnPermissionPayload) => http.post<ISetDataAccessResponse>("/api/PlatformDataAccess/Configure", payload),
+  create: (payload: ICreatePolicyPayload) => http.post<ICreatePolicyResponse>("/api/PlatformDataAccess/Create", payload),
+  update: (payload: IUpdatePolicyPayload) => http.post<ICreatePolicyResponse>("/api/PlatformDataAccess/Update", payload),
+  delete: (itemId: string) => http.delete<IDeletePolicyResponse>(`/api/PlatformDataAccess/Delete?itemId=${encodeURIComponent(itemId)}`),
 };
