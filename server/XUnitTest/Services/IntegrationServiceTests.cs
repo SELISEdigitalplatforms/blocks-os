@@ -1,4 +1,3 @@
-using Configuration.DomainService.Integration.Entities;
 using Configuration.DomainService.Integration.RequestModel;
 using Configuration.DomainService.Integration.Services;
 using Configuration.DomainService.Integration.Validators;

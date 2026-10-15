@@ -1,5 +1,4 @@
 using Blocks.Genesis;
-using Configuration.DomainService.Integration.Entities;
 using Configuration.DomainService.Integration.RequestModel;
 using Blocks.Genesis.Entities.Os;
 

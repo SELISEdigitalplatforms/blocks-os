@@ -1,5 +1,5 @@
 using Blocks.Genesis;
-using Configuration.DomainService.Integration.Entities;
+using Blocks.Genesis.Entities.Os;
 using Configuration.DomainService.Integration.RequestModel;
 using Configuration.DomainService.Integration.Services;
 using FluentAssertions;
