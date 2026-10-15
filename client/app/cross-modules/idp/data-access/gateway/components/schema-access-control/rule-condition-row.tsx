@@ -753,7 +753,7 @@ export const RuleConditionRow = ({
   const renderCell = (cell: (typeof cellDefs)[number]) => {
       if (!cell.applicable) return null;
 
-      // Operand/operator columns are a fixed option list opened
+    // Operand/operator columns are a fixed option list opened
     // with a single click on a popover — renderOptionsChip
     // handles the "not reachable yet" (disabled) state itself,
     // so its Popover stays mounted rather than appearing only
@@ -762,69 +762,69 @@ export const RuleConditionRow = ({
     if (chip) return renderOptionsChip(cell, chip.options, chip.onPick);
 
     // Roles / users: the chip is the picker, like the other option chips — one
-      // click opens the list, no editor step in between.
-      if (cell.key === "compareValue" && showPrincipalSelector) {
-        return (
-          <PrincipalSelector
-            key={cell.key}
-            variant="chip"
-            entity={leftField === "roles" ? "role" : "user"}
-            userValueField={leftField === "email" ? "email" : "itemId"}
-            projectKey={projectKey}
-            value={compareValue}
-            onChange={(next) =>
-              form.setValue(path("compareValue"), next, {
-                shouldValidate: true,
-                shouldDirty: true,
-              })
-            }
-            multiple
-          />
-        );
-      }
-
-      if (!cell.reachable) {
-        return (
-          <div
-            key={cell.key}
-            aria-hidden="true"
-            className="flex h-8 min-w-0 max-w-full items-center justify-center truncate rounded-md border border-dashed border-border/40 px-3 text-center text-xs text-muted-foreground/40"
-          >
-            Not set
-          </div>
-        );
-      }
-
-      if (isCellActive(cell.key)) {
-        return (
-          <div key={cell.key} className="min-w-36 flex-1 rounded-md bg-muted/30 p-1">
-            {renderCellEditor(cell.key)}
-          </div>
-        );
-      }
-
-      // Only "field" and "compareValue" reach here — their editor
-      // shape varies too much (input, select, popover multi-select,
-      // the principal selector) for a single shared popover.
-      const isFilled = Boolean(cell.label);
-
+    // click opens the list, no editor step in between.
+    if (cell.key === "compareValue" && showPrincipalSelector) {
       return (
-        <button
+        <PrincipalSelector
           key={cell.key}
-          type="button"
-          aria-label={isFilled ? cell.label : `Set ${cell.title}`}
-          onClick={() => openCellFor(cell.key)}
-          title={`Edit ${cell.key}`}
-          className={cn(
-            "flex h-8 min-w-0 max-w-full items-center justify-center truncate rounded-md border px-3 text-center text-xs font-semibold transition-colors",
-            isFilled
-              ? "border-border/70 bg-muted/70 text-foreground hover:bg-muted"
-              : "border-dashed border-border/50 bg-background text-muted-foreground hover:bg-muted/30",
-          )}
-        >
-          <span className="block truncate">{isFilled ? cell.label : "Not set"}</span>
-        </button>
+          variant="chip"
+          entity={leftField === "roles" ? "role" : "user"}
+          userValueField={leftField === "email" ? "email" : "itemId"}
+          projectKey={projectKey}
+          value={compareValue}
+          onChange={(next) =>
+            form.setValue(path("compareValue"), next, {
+              shouldValidate: true,
+              shouldDirty: true,
+            })
+          }
+          multiple
+        />
       );
+    }
+
+    if (!cell.reachable) {
+      return (
+        <div
+          key={cell.key}
+          aria-hidden="true"
+          className="flex h-8 min-w-0 max-w-full items-center justify-center truncate rounded-md border border-dashed border-border/40 px-3 text-center text-xs text-muted-foreground/40"
+        >
+          Not set
+        </div>
+      );
+    }
+
+    if (isCellActive(cell.key)) {
+      return (
+        <div key={cell.key} className="min-w-36 flex-1 rounded-md bg-muted/30 p-1">
+          {renderCellEditor(cell.key)}
+        </div>
+      );
+    }
+
+    // Only "field" and "compareValue" reach here — their editor
+    // shape varies too much (input, select, popover multi-select,
+    // the principal selector) for a single shared popover.
+    const isFilled = Boolean(cell.label);
+
+    return (
+      <button
+        key={cell.key}
+        type="button"
+        aria-label={isFilled ? cell.label : `Set ${cell.title}`}
+        onClick={() => openCellFor(cell.key)}
+        title={`Edit ${cell.key}`}
+        className={cn(
+          "flex h-8 min-w-0 max-w-full items-center justify-center truncate rounded-md border px-3 text-center text-xs font-semibold transition-colors",
+          isFilled
+            ? "border-border/70 bg-muted/70 text-foreground hover:bg-muted"
+            : "border-dashed border-border/50 bg-background text-muted-foreground hover:bg-muted/30",
+        )}
+      >
+        <span className="block truncate">{isFilled ? cell.label : "Not set"}</span>
+      </button>
+    );
   };
 
   return (
