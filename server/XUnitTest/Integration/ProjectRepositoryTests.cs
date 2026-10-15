@@ -42,7 +42,7 @@ namespace XUnitTest.Integration
             var encoding = new Mock<IEncodingService>();
             encoding.Setup(e => e.EncodeToBase26Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>()))
                     .ReturnsAsync("abcde");
-            return new ProjectRepository(provider, config, secret.Object, encoding.Object);
+            return new ProjectRepository(provider, config, secret.Object, encoding.Object, Mock.Of<IDataGatewayRootProvisioner>());
         }
 
         private static string UserOf(string tenant) => "user-" + tenant;

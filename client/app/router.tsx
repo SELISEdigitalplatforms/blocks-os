@@ -9,6 +9,7 @@ import { PendingConnectRedirect } from "@/components/pending-connect-redirect/pe
 // import { AIModels } from "./cross-modules/ai/pages/ai-models";
 import { EmailConfigurationPage, NewCommunication } from "@/cross-modules/communication/mail";
 import { NotificationConfigurationListPage } from "@/cross-modules/communication/notification/components/notification-configuration-list";
+import { DataGatewayContents } from "@/cross-modules/data-gateway/pages/data-gateway/data-gateway-contents";
 import { AiCreditsPage } from "@/cross-modules/ai-credits/pages/ai-credits/ai-credits-page";
 import { SecretList } from "@/cross-modules/secrets/components/secret-list/secret-list";
 import { StorageContents } from "@/cross-modules/storage/pages/storage/storage-contents";
@@ -306,6 +307,10 @@ export const router = createBrowserRouter([
                       {
                         path: "storage",
                         element: <StorageContents />,
+                      },
+                      {
+                        path: "data-gateway",
+                        element: <DataGatewayContents />,
                       },
                       {
                         path: "email",

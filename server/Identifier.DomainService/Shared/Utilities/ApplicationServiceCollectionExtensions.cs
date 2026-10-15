@@ -34,6 +34,7 @@ namespace DomainService.Shared
 
    // Register services
             services.AddSingleton<IProjectManagementService, ProjectManagementService>();
+            services.AddSingleton<IDataGatewayRootProvisioner, DataGatewayRootProvisioner>();
             services.AddSingleton<IProjectRepository, ProjectRepository>();
 
             services.AddSingleton<IDomainManagementService, DomainManagementService>();

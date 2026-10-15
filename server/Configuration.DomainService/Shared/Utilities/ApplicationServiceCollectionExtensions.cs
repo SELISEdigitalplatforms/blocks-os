@@ -13,6 +13,9 @@ using Configuration.DomainService.Mail.Template.Validators;
 using Configuration.DomainService.Mail.Validators;
 using Configuration.DomainService.Storage.RequestModel;
 using Configuration.DomainService.Storage.Validators;
+using Configuration.DomainService.DataGateway.RequestModel;
+using Configuration.DomainService.DataGateway.Services;
+using Configuration.DomainService.DataGateway.Validators;
 using Configuration.DomainService.Captcha.RequestModel;
 using Configuration.DomainService.Captcha.Services;
 using Configuration.DomainService.Captcha.Validators;
@@ -59,12 +62,17 @@ namespace Configuration.DomainService.Shared.Utilities
             serviceCollection.AddScoped<IMailConfigurationProviderRegistry, MailConfigurationProviderRegistry>();
             serviceCollection.AddScoped<IMailConfigurationService, MailConfigurationService>();
 
+            // Data-source page: scoped (the connection string goes through ISecretService); the root store is a singleton.
+            serviceCollection.AddSingleton<IDataGatewayRootStore, DataGatewayRootStore>();
+            serviceCollection.AddScoped<IDataGatewayConfigurationService, DataGatewayConfigurationService>();
+
             // Finds the CAPTCHA and mail configurations that point at a secret, for the warning
             // shown before it is archived or purged.
             serviceCollection.AddScoped<ISecretDependentLookup, SecretDependentLookup>();
 
             serviceCollection.AddSingleton<IValidator<SaveNotificationConfigurationRequest>, NotificationConfigurationValidator>();
             serviceCollection.AddSingleton<IValidator<SaveStorageConfigurationRequest>, StorageConfigurationValidator>();
+            serviceCollection.AddSingleton<IValidator<SaveDataGatewayConfigurationRequest>, DataGatewayConfigurationValidator>();
             serviceCollection.AddSingleton<IValidator<MailConfiguration>, MailConfigurationValidator>();
             serviceCollection.AddSingleton<IValidator<SaveMailTemplateRequest>, MailTemplateValidator>();
             serviceCollection.AddSingleton<IValidator<SaveCaptchaConfigRequest>, CaptchaConfigValidator>();

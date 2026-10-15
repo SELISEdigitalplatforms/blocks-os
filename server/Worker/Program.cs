@@ -1,3 +1,4 @@
+using Blocks.Secrets;
 using Blocks.Genesis;
 using DomainService.Dtos;
 using DomainService.Projects;
@@ -41,6 +42,8 @@ IHostBuilder CreateHostBuilder(string[] args) =>
 
             #region Identifier Service Consumers
             services.AddApplicationServices();
+            // Project create makes the default data-source secret (Identifier DataGatewayRootProvisioner).
+            services.AddBlocksSecrets();
             services.AddSingleton<IConsumer<Tenant>, ConfigureProjectConsumer>();
             services.AddSingleton<IConsumer<DisableDomainBindingRequest>, DisableDomainBindingConsumer>();
             services.AddSingleton<IConsumer<RestoreProjectRequest>, RestoreProjectConsumer>();

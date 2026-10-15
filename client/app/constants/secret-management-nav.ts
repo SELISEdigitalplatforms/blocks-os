@@ -9,6 +9,7 @@ import {
   Layers,
   Link2,
   Mail,
+  Network,
   Plug,
   ShieldAlert,
   ShieldCheck,
@@ -140,6 +141,13 @@ export const SECRET_MANAGEMENT_NAV_GROUPS: NavGroup[] = [
         value: "storage",
         icon: Database,
         desc: "File and object storage",
+      },
+      {
+        id: "data-gateway",
+        label: "Data Gateway",
+        value: "data-gateway",
+        icon: Network,
+        desc: "Per-project data source configuration",
       },
       {
         id: "ai-models",

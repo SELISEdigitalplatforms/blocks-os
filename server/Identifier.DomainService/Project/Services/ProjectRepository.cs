@@ -22,6 +22,7 @@ namespace DomainService.Projects
         private readonly IConfiguration _configuration;
         private readonly IEncodingService _urlEncodingService;
         private readonly IMongoDatabase _clientDb;
+        private readonly IDataGatewayRootProvisioner _dataGatewayRoot;
         private readonly ILogger<ProjectRepository> _logger;
 
         private const string _projectStatusTraceCollectionName = "ProjectStatusTracers";
@@ -34,6 +35,7 @@ namespace DomainService.Projects
                                  IConfiguration configuration,
                                  IBlocksSecret blocksSecret,
                                  IEncodingService urlEncodingService,
+                                 IDataGatewayRootProvisioner dataGatewayRoot,
                                  ILogger<ProjectRepository>? logger = null)
         {
             _logger = logger ?? NullLogger<ProjectRepository>.Instance;
@@ -41,6 +43,7 @@ namespace DomainService.Projects
             _blocksSecret = blocksSecret;
             _configuration = configuration;
             _urlEncodingService = urlEncodingService;
+            _dataGatewayRoot = dataGatewayRoot;
             // Registry, memberships, assets, and provisioning metadata have one owner:
             // main/root. Never bind this singleton to the first caller's tenant.
             _clientDb = _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, _blocksSecret.RootDatabaseName);
@@ -427,7 +430,9 @@ namespace DomainService.Projects
                 // CopyAndCustomizeResourceLimitsAsync(sourceDatabase, consumerDb, project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "LinkBasedActionConfigs", project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "FileDirectories", project),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "ObjectItems", project));
+                CopyDocumentAsync(sourceDatabase, consumerDb, "ObjectItems", project),
+                // Data source: default root doc (BlocksRootDb, _id = TenantId) + secret, not a copy of a seed tenant doc.
+                _dataGatewayRoot.EnsureAsync(project.TenantId, project.CreatedBy));
 
         }
 

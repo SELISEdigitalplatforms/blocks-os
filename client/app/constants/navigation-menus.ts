@@ -19,6 +19,7 @@ import {
   Link2,
   Lock,
   Mail,
+  Network,
   Package,
   Plug,
   ScrollText,
@@ -189,6 +190,14 @@ export const navigationMenus: Menu[] = [
         path: "/app/secret-management/storage",
         icon: Database,
         desc: "File and object storage",
+        type: "menu",
+      },
+      {
+        id: "data-gateway",
+        name: "Data Gateway",
+        path: "/app/secret-management/data-gateway",
+        icon: Network,
+        desc: "Per-project data source configuration",
         type: "menu",
       },
       {

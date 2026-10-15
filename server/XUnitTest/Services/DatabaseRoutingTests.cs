@@ -94,7 +94,8 @@ public class DatabaseRoutingTests
             });
         var encoding = new Mock<IEncodingService>();
         encoding.Setup(e => e.EncodeToBase26Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>())).ReturnsAsync("abc");
-        var repository = new ProjectRepository(provider.Object, new ConfigurationBuilder().Build(), secret, encoding.Object);
+        var dataGatewayRoot = new Mock<IDataGatewayRootProvisioner>();
+        var repository = new ProjectRepository(provider.Object, new ConfigurationBuilder().Build(), secret, encoding.Object, dataGatewayRoot.Object);
         var tenant = new Tenant
         {
             TenantId = "new-stg", TenantGroupId = "group", Environment = "stg", Name = "Placement test",
@@ -107,6 +108,7 @@ public class DatabaseRoutingTests
         await repository.InsertProjectAsync(tenant);
         await repository.CreateDefaultConfigurationAsync(new ProjectStatusTracer { ProjectId = tenant.TenantId }, tenant);
 
+        dataGatewayRoot.Verify(r => r.EnsureAsync("new-stg", "creator"), Times.Once);
         Assert.Contains("Repos", writes);
         Assert.Contains("Roles", writes);
         Assert.Contains("Permissions", writes);

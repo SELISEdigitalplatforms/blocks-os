@@ -35,7 +35,7 @@ namespace XUnitTest.Integration
             var encoding = new Mock<IEncodingService>();
             encoding.Setup(e => e.EncodeToBase26Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>()))
                     .ReturnsAsync("abcde");
-            return new ProjectRepository(_fixture.DbContextProvider, config, secret.Object, encoding.Object);
+            return new ProjectRepository(_fixture.DbContextProvider, config, secret.Object, encoding.Object, Mock.Of<IDataGatewayRootProvisioner>());
         }
 
         private static Tenant NewProject(string suffix)
@@ -264,11 +264,11 @@ namespace XUnitTest.Integration
             (await target.GetCollection<BsonDocument>("MailServerConfigurations").CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(0);
         }
 
-        // blocks-data owns the data-source config: project create must not touch DataServiceConfigurations.
+        // The data-source root doc comes from IDataGatewayRootProvisioner, never from a copy of the seed tenant doc.
         private const string Dsc = "DataServiceConfigurations";
 
         [Fact]
-        public async Task CreateDefaultConfigurationAsync_DoesNothingForDataSource_AndStillCopiesOtherSeedData()
+        public async Task CreateDefaultConfigurationAsync_DoesNotCopySeedDataSourceDoc_AndStillCopiesOtherSeedData()
         {
             var suffix = Guid.NewGuid().ToString("N");
             using var _ = new IntegrationContext(suffix);
