@@ -24,10 +24,10 @@ const TITLES: Record<RequiredOn, string> = {
 export function RequiredBadge({
   requiredOn,
   className,
-}: {
+}: Readonly<{
   requiredOn?: RequiredOn | null;
   className?: string;
-}) {
+}>) {
   const value: RequiredOn = requiredOn ?? "None";
   const isNone = value === "None";
 

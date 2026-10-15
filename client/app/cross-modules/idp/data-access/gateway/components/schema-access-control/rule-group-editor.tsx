@@ -16,6 +16,12 @@ import { RuleConditionRow, useFocusNewRow, type RuleBuilderContext } from "./rul
 /** `nestedGroups.1` + `rules` → `nestedGroups.1.rules`; the root's path is empty. */
 const joinPath = (path: string, key: string) => (path ? `${path}.${key}` : key);
 
+/** What a rule does to the one before it: "When" for the first, then "And" / "Or". */
+const ruleLead = (position: number, operator: string): string => {
+  if (position === 0) return "When";
+  return operator === "OR" ? "Or" : "And";
+};
+
 /**
  * How a group combines what is directly inside it, shown between its items:
  * a centred rule at the top level, a small label inside a nested group.
@@ -95,7 +101,7 @@ export const RuleGroupChildren = ({
               basePath={joinPath(path, `rules.${child.index}`)}
               ruleId={child.id}
               conditionLabel={`${labelPrefix}Condition ${child.index + 1}`}
-              lead={position === 0 ? "When" : operator === "OR" ? "Or" : "And"}
+              lead={ruleLead(position, operator)}
               ctx={ctx}
               onRemove={() => onRemoveRule(child.index)}
             />
@@ -179,27 +185,30 @@ export const RuleGroupEditor = ({
           {MATCH_OPTIONS.map((option) => {
             const isSelected = operator === option.value;
             return (
-              <button
+              <label
                 key={option.value}
-                type="button"
-                role="radio"
-                aria-label={option.ariaLabel}
-                aria-checked={isSelected}
-                onClick={() =>
-                  form.setValue(`${path}.logicalOperator` as "logicalOperator", option.value, {
-                    shouldValidate: true,
-                    shouldDirty: true,
-                  })
-                }
                 className={cn(
-                  "rounded-sm px-2 py-0.5 text-[10.5px] font-semibold transition-colors",
+                  "rounded-sm px-2 py-0.5 text-[10.5px] font-semibold transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
                   isSelected
                     ? "bg-primary/15 text-primary"
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
+                <input
+                  type="radio"
+                  name={`${path}.logicalOperator`}
+                  className="sr-only"
+                  aria-label={option.ariaLabel}
+                  checked={isSelected}
+                  onChange={() =>
+                    form.setValue(`${path}.logicalOperator` as "logicalOperator", option.value, {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                />
                 {option.label}
-              </button>
+              </label>
             );
           })}
         </div>

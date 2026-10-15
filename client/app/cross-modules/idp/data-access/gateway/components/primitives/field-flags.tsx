@@ -36,7 +36,7 @@ export function flagsFromField(field: Pick<IField, "isArray" | "isPIIData" | "is
   return flags;
 }
 
-export function FieldFlagChip({ flag, className }: { flag: FieldFlag; className?: string }) {
+export function FieldFlagChip({ flag, className }: Readonly<{ flag: FieldFlag; className?: string }>) {
   return (
     <span
       title={FLAG_TITLES[flag]}
@@ -53,7 +53,7 @@ export function FieldFlagChip({ flag, className }: { flag: FieldFlag; className?
   );
 }
 
-export function FieldFlags({ flags, className }: { flags: FieldFlag[]; className?: string }) {
+export function FieldFlags({ flags, className }: Readonly<{ flags: FieldFlag[]; className?: string }>) {
   if (flags.length === 0) return null;
 
   return (
@@ -84,13 +84,13 @@ export function FlagToggleChip({
   disabled,
   onToggle,
   className,
-}: {
+}: Readonly<{
   flag: FieldFlag;
   active: boolean;
   disabled?: boolean;
   onToggle: () => void;
   className?: string;
-}) {
+}>) {
   return (
     <button
       type="button"

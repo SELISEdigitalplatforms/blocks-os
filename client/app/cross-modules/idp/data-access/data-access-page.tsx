@@ -4,7 +4,7 @@ import { Input } from "@/components/ui-kits/input/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronRight, Database, Loader2, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { platformDataAccessService } from "./data-access.service";
 import { SchemaAccessControlView } from "./gateway/components/schema-access-control/schema-access-control-view";
 import { POLICY_OPERATION } from "./gateway/constants/schema-access-control";
@@ -16,6 +16,7 @@ export function DataAccessPage() {
   const [selectedSchemaId, setSelectedSchemaId] = useState("");
   const [level, setLevel] = useState<"row" | "column">("row");
   const [selectedField, setSelectedField] = useState("");
+  const fieldSelectId = useId();
   const schemasQuery = useQuery({ queryKey: ["platform-data-access-schemas"], queryFn: platformDataAccessService.getSchemas });
   const schemas = useMemo(() => schemasQuery.data?.data ?? [], [schemasQuery.data?.data]);
   const selectedSchema = schemas.find((schema) => schema.id === selectedSchemaId) ?? schemas[0] ?? null;
@@ -27,6 +28,7 @@ export function DataAccessPage() {
 
   const effectiveField = selectedField || selectedSchema?.fields[0]?.name || "";
   const field = selectedSchema?.fields.find((item) => item.name === effectiveField);
+  const selectedFieldNames = level === "column" && effectiveField ? [effectiveField] : [];
 
   return (
     <div>
@@ -57,7 +59,7 @@ export function DataAccessPage() {
         </Card>
 
         <Card className="min-w-0">
-          {!selectedSchema ? <div className="grid h-full place-items-center text-sm text-muted-foreground">No platform collections are available.</div> : (
+          {selectedSchema ? (
             <>
               <div className="mb-4 border-b pb-4">
                 <h2 className="text-lg font-semibold">{selectedSchema.schemaName}</h2>
@@ -68,8 +70,8 @@ export function DataAccessPage() {
               </Tabs>
               {level === "column" && (
                 <div className="my-4">
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Field</label>
-                  <select value={effectiveField} onChange={(event) => setSelectedField(event.target.value)} className="h-10 w-full max-w-sm rounded-md border bg-background px-3 text-sm">
+                  <label htmlFor={fieldSelectId} className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Field</label>
+                  <select id={fieldSelectId} value={effectiveField} onChange={(event) => setSelectedField(event.target.value)} className="h-10 w-full max-w-sm rounded-md border bg-background px-3 text-sm">
                     {selectedSchema.fields.map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}
                   </select>
                 </div>
@@ -82,11 +84,13 @@ export function DataAccessPage() {
                   schemaId={selectedSchema.id}
                   level={level}
                   operation={POLICY_OPERATION.UPDATE}
-                  fieldNames={level === "row" ? [] : effectiveField ? [effectiveField] : []}
+                  fieldNames={selectedFieldNames}
                   defaultAccessLevel={level === "row" ? selectedSchema.editAccessLevel : field?.editAccessLevel}
                 />
               </div>
             </>
+          ) : (
+            <div className="grid h-full place-items-center text-sm text-muted-foreground">No platform collections are available.</div>
           )}
         </Card>
       </div>

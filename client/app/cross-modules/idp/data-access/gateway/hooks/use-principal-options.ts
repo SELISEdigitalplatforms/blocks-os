@@ -145,7 +145,7 @@ export const usePrincipalOptions = ({
       if (entity === "role") {
         const response = await roleService.getRoles({
           projectKey,
-          page: pageParam as number,
+          page: pageParam,
           pageSize: PRINCIPAL_PAGE_SIZE,
           filter: { search: normalizedSearch },
         });
@@ -158,7 +158,7 @@ export const usePrincipalOptions = ({
       }
       const response = await userService.getUsers({
         projectKey,
-        page: pageParam as number,
+        page: pageParam,
         pageSize: PRINCIPAL_PAGE_SIZE,
         filter: { name: normalizedSearch, email: normalizedSearch },
       });
@@ -207,7 +207,7 @@ export const useStoredPrincipals = ({
   const wanted = Array.from(new Set(values.filter(Boolean)));
 
   const query = useQuery({
-    queryKey: ["principal-stored", entity, userValueField, projectKey, [...wanted].sort()],
+    queryKey: ["principal-stored", entity, userValueField, projectKey, [...wanted].sort((a, b) => a.localeCompare(b))],
     enabled: Boolean(projectKey) && wanted.length > 0,
     queryFn: async (): Promise<Record<string, StoredValueState>> => {
       const states: Record<string, StoredValueState> = {};
@@ -278,12 +278,13 @@ export const useStoredPrincipals = ({
             // "resolved" (which would label a stored id with someone else's name) and never
             // "unavailable" (which would claim a live principal was deleted). Only an actually
             // absent user is unavailable.
-            states[value] =
-              user == null
-                ? { status: "unavailable" }
-                : user.itemId === value
-                  ? { status: "resolved", option: userToOption(user) }
-                  : { status: "unresolved" };
+            if (user == null) {
+              states[value] = { status: "unavailable" };
+            } else if (user.itemId === value) {
+              states[value] = { status: "resolved", option: userToOption(user) };
+            } else {
+              states[value] = { status: "unresolved" };
+            }
           } catch (error) {
             if (isNotFound(error)) {
               states[value] = { status: "unavailable" };

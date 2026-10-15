@@ -38,7 +38,7 @@ import type { RuleSetFormValues } from "@blocks-idp/data-access/gateway/utils/sc
 import { cn } from "@/lib/utils";
 import { CheckIcon } from "@radix-ui/react-icons";
 import { ChevronDown, X } from "lucide-react";
-import { useEffect, useRef, type MutableRefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { useFormContext } from "react-hook-form";
 
 export type RuleCellKey = "source" | "field" | "operator" | "compareSource" | "compareValue";
@@ -197,8 +197,8 @@ export interface RuleBuilderContext extends RuleBuilderHelpers {
   projectKey: string;
   openCell: { ruleId: string; key: RuleCellKey } | null;
   setOpenCellSynced: (value: { ruleId: string; key: RuleCellKey } | null) => void;
-  openCellRef: MutableRefObject<{ ruleId: string; key: RuleCellKey } | null>;
-  rowRefs: MutableRefObject<Map<string, HTMLDivElement>>;
+  openCellRef: RefObject<{ ruleId: string; key: RuleCellKey } | null>;
+  rowRefs: RefObject<Map<string, HTMLDivElement>>;
 }
 
 /**
@@ -209,18 +209,96 @@ export interface RuleBuilderContext extends RuleBuilderHelpers {
  */
 export const useFocusNewRow = (
   fields: { id: string }[],
-  rowRefs: MutableRefObject<Map<string, HTMLDivElement>>,
+  rowRefs: RefObject<Map<string, HTMLDivElement>>,
 ) => {
   const previousCountRef = useRef(fields.length);
   useEffect(() => {
     if (fields.length > previousCountRef.current) {
-      const newRow = fields[fields.length - 1];
+      const newRow = fields.at(-1);
       const rowEl = newRow && rowRefs.current.get(newRow.id);
       rowEl?.scrollIntoView({ behavior: "smooth", block: "nearest" });
       rowEl?.querySelector<HTMLElement>("button")?.focus();
     }
     previousCountRef.current = fields.length;
   }, [fields, rowRefs]);
+};
+
+const DIRECT_VALUE_PLACEHOLDERS: Record<string, string> = {
+  REGEX: "Enter regex pattern",
+  START_WITH: "Enter prefix",
+};
+
+/** Chip look shared by every cell: disabled, filled or still "Not set". */
+const optionsChipTone = (disabled: boolean, isFilled: boolean): string => {
+  if (disabled) return "cursor-not-allowed border-dashed border-border/40 text-muted-foreground/40";
+  // Every filled chip in a rule looks the same, whichever column it is.
+  if (isFilled) return "border-border/70 bg-muted/70 text-foreground hover:bg-muted";
+  return "border-dashed border-border/50 bg-background text-muted-foreground hover:bg-muted/30";
+};
+
+interface CompareFieldMultiSelectProps {
+  options: { value: string; label: string }[];
+  selectedValues: string[];
+  onChange: (next: string) => void;
+}
+
+/** Multi-select popover for the right side of an IN / NOT_IN rule that compares against fields. */
+const CompareFieldMultiSelect = ({
+  options,
+  selectedValues,
+  onChange,
+}: Readonly<CompareFieldMultiSelectProps>) => {
+  const toggleValue = (value: string, selected: boolean) => {
+    const updated = selected
+      ? selectedValues.filter((v) => v !== value)
+      : [...selectedValues, value];
+    onChange(updated.join(","));
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="flex h-9 w-full min-w-0 items-center justify-between rounded-md border border-input bg-background px-3 text-xs"
+        >
+          <span className="truncate text-left">
+            {selectedValues.length > 0 ? selectedValues.join(", ") : "Select fields"}
+          </span>
+          <ChevronDown className="ml-1 h-3.5 w-3.5 shrink-0 opacity-50" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-52 p-0" align="start">
+        <Command>
+          <CommandList>
+            <CommandGroup>
+              {options.map((option) => {
+                const selected = selectedValues.includes(option.value);
+                return (
+                  <CommandItem
+                    key={option.value}
+                    onSelect={() => toggleValue(option.value, selected)}
+                  >
+                    <div
+                      className={cn(
+                        "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                        selected
+                          ? "bg-primary text-primary-foreground"
+                          : "opacity-50 [&_svg]:invisible",
+                      )}
+                    >
+                      <CheckIcon className="h-4 w-4" />
+                    </div>
+                    <span>{option.label}</span>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
 };
 
 interface RuleConditionRowProps {
@@ -468,6 +546,8 @@ export const RuleConditionRow = ({
   ) => {
     const isFilled = Boolean(cell.label);
     const disabled = !cell.reachable;
+    let ariaLabel: string | undefined;
+    if (!disabled) ariaLabel = isFilled ? cell.label : `Set ${cell.title}`;
 
     return (
       <Popover
@@ -487,18 +567,13 @@ export const RuleConditionRow = ({
           <button
             type="button"
             disabled={disabled}
-            aria-label={disabled ? undefined : isFilled ? cell.label : `Set ${cell.title}`}
+            aria-label={ariaLabel}
             aria-hidden={disabled || undefined}
             onClick={() => openCellFor(cell.key)}
             title={disabled ? undefined : `Edit ${cell.key}`}
             className={cn(
               "flex h-8 min-w-0 max-w-full items-center justify-center truncate rounded-md border px-3 text-center text-xs font-semibold transition-colors",
-              disabled
-                ? "cursor-not-allowed border-dashed border-border/40 text-muted-foreground/40"
-                : isFilled
-                  ? // Every filled chip in a rule looks the same, whichever column it is.
-                    "border-border/70 bg-muted/70 text-foreground hover:bg-muted"
-                  : "border-dashed border-border/50 bg-background text-muted-foreground hover:bg-muted/30",
+              optionsChipTone(disabled, isFilled),
             )}
           >
             <span className="block truncate">{isFilled ? cell.label : "Not set"}</span>
@@ -588,12 +663,7 @@ export const RuleConditionRow = ({
         name={path("compareValue")}
         render={({ field }) => {
           if (isDirectValueOp) {
-            const placeholder =
-              operatorValue === "REGEX"
-                ? "Enter regex pattern"
-                : operatorValue === "START_WITH"
-                  ? "Enter prefix"
-                  : "Enter suffix";
+            const placeholder = DIRECT_VALUE_PLACEHOLDERS[operatorValue] ?? "Enter suffix";
             return (
               <Input
                 className="h-9 w-full min-w-0 rounded-md px-3 text-xs"
@@ -621,53 +691,11 @@ export const RuleConditionRow = ({
 
           if (isInOp && !isCompareStatic && compareSource) {
             return (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    className="flex h-9 w-full min-w-0 items-center justify-between rounded-md border border-input bg-background px-3 text-xs"
-                  >
-                    <span className="truncate text-left">
-                      {selectedInValues.length > 0 ? selectedInValues.join(", ") : "Select fields"}
-                    </span>
-                    <ChevronDown className="ml-1 h-3.5 w-3.5 shrink-0 opacity-50" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-52 p-0" align="start">
-                  <Command>
-                    <CommandList>
-                      <CommandGroup>
-                        {compareFieldOptions.map((option) => {
-                          const selected = selectedInValues.includes(option.value);
-                          return (
-                            <CommandItem
-                              key={option.value}
-                              onSelect={() => {
-                                const updated = selected
-                                  ? selectedInValues.filter((value) => value !== option.value)
-                                  : [...selectedInValues, option.value];
-                                field.onChange(updated.join(","));
-                              }}
-                            >
-                              <div
-                                className={cn(
-                                  "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                                  selected
-                                    ? "bg-primary text-primary-foreground"
-                                    : "opacity-50 [&_svg]:invisible",
-                                )}
-                              >
-                                <CheckIcon className="h-4 w-4" />
-                              </div>
-                              <span>{option.label}</span>
-                            </CommandItem>
-                          );
-                        })}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              <CompareFieldMultiSelect
+                options={compareFieldOptions}
+                selectedValues={selectedInValues}
+                onChange={field.onChange}
+              />
             );
           }
 
@@ -705,6 +733,100 @@ export const RuleConditionRow = ({
     );
   };
 
+  const optionsChipConfig = (cell: (typeof cellDefs)[number]) => {
+    switch (cell.key) {
+      case "source":
+        return { options: ruleSourceOptions, onPick: pickSource };
+      case "operator":
+        return { options: filteredOperators, onPick: pickOperator };
+      case "compareSource":
+        return { options: filteredCompareSourceOptions, onPick: pickCompareSource };
+      case "field":
+        return isStaticValue ? null : { options: fieldOptions, onPick: pickField };
+      default:
+        return isDirectValueOp || isCompareStatic || showPrincipalSelector || isInOp
+          ? null
+          : { options: compareFieldOptions, onPick: pickCompareValue };
+    }
+  };
+
+  const renderCell = (cell: (typeof cellDefs)[number]) => {
+      if (!cell.applicable) return null;
+
+      // Operand/operator columns are a fixed option list opened
+    // with a single click on a popover — renderOptionsChip
+    // handles the "not reachable yet" (disabled) state itself,
+    // so its Popover stays mounted rather than appearing only
+    // once the column opens.
+    const chip = optionsChipConfig(cell);
+    if (chip) return renderOptionsChip(cell, chip.options, chip.onPick);
+
+    // Roles / users: the chip is the picker, like the other option chips — one
+      // click opens the list, no editor step in between.
+      if (cell.key === "compareValue" && showPrincipalSelector) {
+        return (
+          <PrincipalSelector
+            key={cell.key}
+            variant="chip"
+            entity={leftField === "roles" ? "role" : "user"}
+            userValueField={leftField === "email" ? "email" : "itemId"}
+            projectKey={projectKey}
+            value={compareValue}
+            onChange={(next) =>
+              form.setValue(path("compareValue"), next, {
+                shouldValidate: true,
+                shouldDirty: true,
+              })
+            }
+            multiple
+          />
+        );
+      }
+
+      if (!cell.reachable) {
+        return (
+          <div
+            key={cell.key}
+            aria-hidden="true"
+            className="flex h-8 min-w-0 max-w-full items-center justify-center truncate rounded-md border border-dashed border-border/40 px-3 text-center text-xs text-muted-foreground/40"
+          >
+            Not set
+          </div>
+        );
+      }
+
+      if (isCellActive(cell.key)) {
+        return (
+          <div key={cell.key} className="min-w-36 flex-1 rounded-md bg-muted/30 p-1">
+            {renderCellEditor(cell.key)}
+          </div>
+        );
+      }
+
+      // Only "field" and "compareValue" reach here — their editor
+      // shape varies too much (input, select, popover multi-select,
+      // the principal selector) for a single shared popover.
+      const isFilled = Boolean(cell.label);
+
+      return (
+        <button
+          key={cell.key}
+          type="button"
+          aria-label={isFilled ? cell.label : `Set ${cell.title}`}
+          onClick={() => openCellFor(cell.key)}
+          title={`Edit ${cell.key}`}
+          className={cn(
+            "flex h-8 min-w-0 max-w-full items-center justify-center truncate rounded-md border px-3 text-center text-xs font-semibold transition-colors",
+            isFilled
+              ? "border-border/70 bg-muted/70 text-foreground hover:bg-muted"
+              : "border-dashed border-border/50 bg-background text-muted-foreground hover:bg-muted/30",
+          )}
+        >
+          <span className="block truncate">{isFilled ? cell.label : "Not set"}</span>
+        </button>
+      );
+  };
+
   return (
     <Card
       ref={(el) => {
@@ -732,101 +854,7 @@ export const RuleConditionRow = ({
         className="flex flex-wrap items-center gap-1.5"
         aria-label={`${conditionLabel} expression`}
       >
-        {cellDefs.map((cell) => {
-          if (!cell.applicable) return null;
-
-          // Operand/operator columns are a fixed option list opened
-          // with a single click on a popover — renderOptionsChip
-          // handles the "not reachable yet" (disabled) state itself,
-          // so its Popover stays mounted rather than appearing only
-          // once the column opens.
-          if (cell.key === "source") {
-            return renderOptionsChip(cell, ruleSourceOptions, pickSource);
-          }
-          if (cell.key === "operator") {
-            return renderOptionsChip(cell, filteredOperators, pickOperator);
-          }
-          if (cell.key === "compareSource") {
-            return renderOptionsChip(cell, filteredCompareSourceOptions, pickCompareSource);
-          }
-          if (cell.key === "field" && !isStaticValue) {
-            return renderOptionsChip(cell, fieldOptions, pickField);
-          }
-          if (
-            cell.key === "compareValue" &&
-            !isDirectValueOp &&
-            !isCompareStatic &&
-            !showPrincipalSelector &&
-            !isInOp
-          ) {
-            return renderOptionsChip(cell, compareFieldOptions, pickCompareValue);
-          }
-
-          // Roles / users: the chip is the picker, like the other option chips — one
-          // click opens the list, no editor step in between.
-          if (cell.key === "compareValue" && showPrincipalSelector) {
-            return (
-              <PrincipalSelector
-                key={cell.key}
-                variant="chip"
-                entity={leftField === "roles" ? "role" : "user"}
-                userValueField={leftField === "email" ? "email" : "itemId"}
-                projectKey={projectKey}
-                value={compareValue}
-                onChange={(next) =>
-                  form.setValue(path("compareValue"), next, {
-                    shouldValidate: true,
-                    shouldDirty: true,
-                  })
-                }
-                multiple
-              />
-            );
-          }
-
-          if (!cell.reachable) {
-            return (
-              <div
-                key={cell.key}
-                aria-hidden="true"
-                className="flex h-8 min-w-0 max-w-full items-center justify-center truncate rounded-md border border-dashed border-border/40 px-3 text-center text-xs text-muted-foreground/40"
-              >
-                Not set
-              </div>
-            );
-          }
-
-          if (isCellActive(cell.key)) {
-            return (
-              <div key={cell.key} className="min-w-36 flex-1 rounded-md bg-muted/30 p-1">
-                {renderCellEditor(cell.key)}
-              </div>
-            );
-          }
-
-          // Only "field" and "compareValue" reach here — their editor
-          // shape varies too much (input, select, popover multi-select,
-          // the principal selector) for a single shared popover.
-          const isFilled = Boolean(cell.label);
-
-          return (
-            <button
-              key={cell.key}
-              type="button"
-              aria-label={isFilled ? cell.label : `Set ${cell.title}`}
-              onClick={() => openCellFor(cell.key)}
-              title={`Edit ${cell.key}`}
-              className={cn(
-                "flex h-8 min-w-0 max-w-full items-center justify-center truncate rounded-md border px-3 text-center text-xs font-semibold transition-colors",
-                isFilled
-                  ? "border-border/70 bg-muted/70 text-foreground hover:bg-muted"
-                  : "border-dashed border-border/50 bg-background text-muted-foreground hover:bg-muted/30",
-              )}
-            >
-              <span className="block truncate">{isFilled ? cell.label : "Not set"}</span>
-            </button>
-          );
-        })}
+        {cellDefs.map(renderCell)}
       </div>
     </Card>
   );

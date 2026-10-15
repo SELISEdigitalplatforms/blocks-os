@@ -78,12 +78,12 @@ export const createBlankGroup = (): RuleGroupValues => ({
   nestedGroups: [],
 });
 
-const DIRECT_VALUE_OPERATORS = ["REGEX", "START_WITH", "END_WITH"];
+const DIRECT_VALUE_OPERATORS = new Set(["REGEX", "START_WITH", "END_WITH"]);
 
 /** Convert one form row into the API's policy rule. */
 export function formRowToPolicyRule(r: RuleRowValues): IPolicyRule {
   const isContain = IN_OPERATORS.includes(r.operator);
-  const isDirectValue = DIRECT_VALUE_OPERATORS.includes(r.operator);
+  const isDirectValue = DIRECT_VALUE_OPERATORS.has(r.operator);
   const isStatic = r.compareSource === RULE_SOURCE_TYPES.STATIC_VALUE;
 
   let rightOperand = "";
@@ -105,7 +105,7 @@ export function formRowToPolicyRule(r: RuleRowValues): IPolicyRule {
       rightOperand = rightOperands[0] ?? "";
     }
   } else {
-    rightOperand = !isStatic ? r.compareValue : "";
+    rightOperand = isStatic ? "" : r.compareValue;
     staticValue = isStatic ? r.compareValue || null : null;
   }
 

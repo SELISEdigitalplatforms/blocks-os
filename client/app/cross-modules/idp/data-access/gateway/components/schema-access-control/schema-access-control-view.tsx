@@ -1,5 +1,5 @@
 "use client";
-import { forwardRef, useEffect, useImperativeHandle, useState } from "react";
+import { forwardRef, useEffect, useId, useImperativeHandle, useState } from "react";
 import { Button } from "@/components/ui-kits/button/button";
 import {
   ACCESS_LEVEL_TO_TYPE,
@@ -70,6 +70,156 @@ const ACCESS_TIER_TILES = [
 /** Below this width the 4-tile grid can no longer fit a label beside every icon. */
 const NARROW_TILES_WIDTH = 420;
 
+/** Whether a policy belongs to the row/column scope this panel is showing. */
+const policyMatchesScope = (
+  policy: IPolicyItem,
+  operation: number,
+  isRowLevel: boolean,
+  fieldNames: string[],
+): boolean => {
+  if (policy.operation !== operation) return false;
+  if (isRowLevel) {
+    return !policy.fieldNames || policy.fieldNames.length === 0;
+  }
+  return policy.fieldNames?.some((f) => fieldNames.includes(f)) ?? false;
+};
+
+interface AccessTierTilesProps {
+  level: SchemaAccessControlViewProps["level"];
+  isRowLevel: boolean;
+  selectedType: string;
+  disabled: boolean;
+  onPick: (value: string) => void;
+}
+
+/** The "Who is allowed" tile grid: one native radio per tier, styled as a tile. */
+const AccessTierTiles = ({
+  level,
+  isRowLevel,
+  selectedType,
+  disabled,
+  onPick,
+}: Readonly<AccessTierTilesProps>) => {
+  const groupName = useId();
+  const { ref: tilesRef, isNarrow: tilesNarrow } = useNarrowContainer<HTMLDivElement>(
+    NARROW_TILES_WIDTH,
+  );
+  // Field tiles sit two to a row, wide enough to always carry their label;
+  // only the schema-level tiles ever collapse to icons in a narrow panel.
+  const iconOnlyTiles = isRowLevel && tilesNarrow;
+  const visibleTiers =
+    level === "column"
+      ? ACCESS_TIER_TILES
+      : ACCESS_TIER_TILES.filter((t) => t.type !== ACCESS_TYPES.INHERITED);
+
+  return (
+    <div
+      ref={tilesRef}
+      className={cn(
+        "grid gap-2",
+        isRowLevel ? "grid-cols-1 min-[380px]:grid-cols-2 sm:grid-cols-3" : "grid-cols-2",
+      )}
+      role="radiogroup"
+      aria-label="Who is allowed"
+    >
+      {visibleTiers.map(({ type, label }) => {
+        const tier = tierFromType(type);
+        const isSelected = type === selectedType;
+        const Icon = TIER_ICON[tier];
+        return (
+          <label
+            key={type}
+            title={label}
+            className={cn(
+              "flex h-11 min-w-0 items-center gap-2 rounded-md border px-3 text-left text-xs font-medium transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60",
+              iconOnlyTiles && "justify-center",
+              isSelected
+                ? cn(TIER_CONTAINER_CLASS[tier], TIER_VALUE_CLASS[tier])
+                : "border-border/40 text-muted-foreground hover:border-border hover:text-foreground",
+            )}
+          >
+            <input
+              type="radio"
+              name={groupName}
+              className="sr-only"
+              aria-label={label}
+              checked={isSelected}
+              disabled={disabled}
+              onChange={() => onPick(type)}
+            />
+            <span
+              className={cn(
+                "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border",
+                isSelected ? TIER_CONTAINER_CLASS[tier] : "border-border/60",
+              )}
+            >
+              <Icon
+                className={cn("h-3 w-3", isSelected ? TIER_VALUE_CLASS[tier] : "opacity-70")}
+                aria-hidden
+              />
+            </span>
+            {!iconOnlyTiles && <span className="min-w-0 flex-1 truncate">{label}</span>}
+          </label>
+        );
+      })}
+    </div>
+  );
+};
+
+interface PolicyListPaneProps {
+  isLoading: boolean;
+  policies: IPolicyItem[];
+  schemaFields: SchemaAccessControlViewProps["schemaFields"];
+  onApplyPreset: (preset: AccessPreset) => void;
+  onAddRuleSet: () => void;
+  onEditPolicy: (policy: IPolicyItem) => void;
+  onDeleteSuccess: () => void;
+  onDeleteError: (errors: unknown) => void;
+}
+
+/** The Custom tier's body: loading state, the sample presets, or the saved rule sets. */
+const PolicyListPane = ({
+  isLoading,
+  policies,
+  schemaFields,
+  onApplyPreset,
+  onAddRuleSet,
+  onEditPolicy,
+  onDeleteSuccess,
+  onDeleteError,
+}: Readonly<PolicyListPaneProps>) => {
+  if (isLoading) {
+    return (
+      <output
+        className="flex min-h-[200px] flex-col items-center justify-center gap-2 py-12"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <Loader className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden />
+        <span className="text-sm text-muted-foreground">Loading access rules…</span>
+      </output>
+    );
+  }
+  if (policies.length === 0) {
+    return (
+      <AccessPresetList
+        presets={accessPresets(schemaFields)}
+        onApply={onApplyPreset}
+        onStartBlank={onAddRuleSet}
+      />
+    );
+  }
+  return (
+    <SchemaAccessControlAccordion
+      policies={policies}
+      onAddRuleSet={onAddRuleSet}
+      onEditPolicy={onEditPolicy}
+      onDeleteSuccess={onDeleteSuccess}
+      onDeleteError={onDeleteError}
+    />
+  );
+};
+
 export const SchemaAccessControlView = forwardRef<
   SchemaAccessControlViewHandle,
   SchemaAccessControlViewProps
@@ -117,7 +267,7 @@ export const SchemaAccessControlView = forwardRef<
   // Fetch when access is custom, including first paint (selectedAccessType is still "" until useEffect).
   // Also fetch when defaultAccessLevel is unknown and we haven't yet determined the type.
   const defaultResolvedType =
-    defaultAccessLevel !== undefined ? ACCESS_LEVEL_TO_TYPE[defaultAccessLevel] : undefined;
+    defaultAccessLevel === undefined ? undefined : ACCESS_LEVEL_TO_TYPE[defaultAccessLevel];
   const defaultLevelUnmapped =
     defaultAccessLevel !== undefined && defaultResolvedType === undefined;
   const isPolicyFetchEnabled =
@@ -143,30 +293,18 @@ export const SchemaAccessControlView = forwardRef<
   const { mutateAsync: setRowColumnPermission, isPending: isUpdating } =
     useSetRowColumnPermission(schemaId);
 
-  const { ref: tilesRef, isNarrow: tilesNarrow } = useNarrowContainer<HTMLDivElement>(
-    NARROW_TILES_WIDTH,
-  );
-
   const allPolicies = policyResponse?.isSuccess ? policyResponse.data : [];
   const isRowLevel = fieldNames.length === 0;
-  // Field tiles sit two to a row, wide enough to always carry their label;
-  // only the schema-level tiles ever collapse to icons in a narrow panel.
-  const iconOnlyTiles = isRowLevel && tilesNarrow;
-  const policies = allPolicies.filter((p) => {
-    if (p.operation !== operation) return false;
-    if (isRowLevel) {
-      return !p.fieldNames || p.fieldNames.length === 0;
-    }
-    return (
-      p.fieldNames && p.fieldNames.length > 0 && p.fieldNames.some((f) => fieldNames.includes(f))
-    );
-  });
+  const policies = allPolicies.filter((p) =>
+    policyMatchesScope(p, operation, isRowLevel, fieldNames),
+  );
 
   // Server / parent field access level is source of truth whenever it is known (refetch after save).
   useEffect(() => {
     if (defaultAccessLevel === undefined) return;
     const resolved = ACCESS_LEVEL_TO_TYPE[defaultAccessLevel];
     if (!resolved) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- seeds local state from the server value once it is known
     setSelectedAccessType(resolved);
     setLastSavedAccessType(resolved);
     setInitialized(true);
@@ -186,6 +324,7 @@ export const SchemaAccessControlView = forwardRef<
     if (!policyResponse) return;
 
     const inferred = policies.length > 0 ? ACCESS_TYPES.CUSTOM : ACCESS_TYPES.LOGGED_IN;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- seeds local state from the server value once it is known
     setSelectedAccessType(inferred);
     setLastSavedAccessType(inferred);
     setInitialized(true);
@@ -340,10 +479,11 @@ export const SchemaAccessControlView = forwardRef<
     policies,
   });
 
-  const visibleTiers =
-    level === "column"
-      ? ACCESS_TIER_TILES
-      : ACCESS_TIER_TILES.filter((t) => t.type !== ACCESS_TYPES.INHERITED);
+  const openBlankRuleSetForm = () => {
+    setSeedRuleSet(undefined);
+    setQueuedRuleSet(undefined);
+    setShowRuleSetForm(true);
+  };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
@@ -359,55 +499,13 @@ export const SchemaAccessControlView = forwardRef<
               Choose the access level for this operation.
             </p>
           </div>
-          <div
-            ref={tilesRef}
-            className={cn(
-              "grid gap-2",
-              isRowLevel
-                ? "grid-cols-1 min-[380px]:grid-cols-2 sm:grid-cols-3"
-                : "grid-cols-2",
-            )}
-            role="radiogroup"
-            aria-label="Who is allowed"
-          >
-            {visibleTiers.map(({ type, label }) => {
-              const tier = tierFromType(type);
-              const isSelected = type === selectedAccessType;
-              const Icon = TIER_ICON[tier];
-              return (
-                <button
-                  key={type}
-                  type="button"
-                  role="radio"
-                  aria-checked={isSelected}
-                  aria-label={label}
-                  title={label}
-                  disabled={showRuleSetForm}
-                  onClick={() => handleTierPick(type)}
-                  className={cn(
-                    "flex h-11 min-w-0 items-center gap-2 rounded-md border px-3 text-left text-xs font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60",
-                    iconOnlyTiles && "justify-center",
-                    isSelected
-                      ? cn(TIER_CONTAINER_CLASS[tier], TIER_VALUE_CLASS[tier])
-                      : "border-border/40 text-muted-foreground hover:border-border hover:text-foreground",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border",
-                      isSelected ? TIER_CONTAINER_CLASS[tier] : "border-border/60",
-                    )}
-                  >
-                    <Icon
-                      className={cn("h-3 w-3", isSelected ? TIER_VALUE_CLASS[tier] : "opacity-70")}
-                      aria-hidden
-                    />
-                  </span>
-                  {!iconOnlyTiles && <span className="min-w-0 flex-1 truncate">{label}</span>}
-                </button>
-              );
-            })}
-          </div>
+          <AccessTierTiles
+            level={level}
+            isRowLevel={isRowLevel}
+            selectedType={selectedAccessType}
+            disabled={showRuleSetForm}
+            onPick={handleTierPick}
+          />
         </div>
         <AccessEffectLine effect={effect} />
       </div>
@@ -458,47 +556,24 @@ export const SchemaAccessControlView = forwardRef<
           </div>
         ) : (
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
-            {isPolicyListLoading ? (
-              <div
-                className="flex min-h-[200px] flex-col items-center justify-center gap-2 py-12"
-                role="status"
-                aria-live="polite"
-                aria-busy="true"
-              >
-                <Loader className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden />
-                <span className="text-sm text-muted-foreground">Loading access rules…</span>
-              </div>
-            ) : policies.length === 0 ? (
-              <AccessPresetList
-                presets={accessPresets(schemaFields)}
-                onApply={applyPreset}
-                onStartBlank={() => {
-                  setSeedRuleSet(undefined);
-                  setQueuedRuleSet(undefined);
-                  setShowRuleSetForm(true);
-                }}
-              />
-            ) : (
-              <SchemaAccessControlAccordion
-                policies={policies}
-                onAddRuleSet={() => {
-                  setSeedRuleSet(undefined);
-                  setQueuedRuleSet(undefined);
-                  setShowRuleSetForm(true);
-                }}
-                onEditPolicy={(policy) => {
-                  setSeedRuleSet(undefined);
-                  setQueuedRuleSet(undefined);
-                  setEditingPolicy(policy);
-                  setShowRuleSetForm(true);
-                }}
-                onDeleteSuccess={() => {
-                  setSuccess("Rule set deleted successfully");
-                  refetch();
-                }}
-                onDeleteError={setError}
-              />
-            )}
+            <PolicyListPane
+              isLoading={isPolicyListLoading}
+              policies={policies}
+              schemaFields={schemaFields}
+              onApplyPreset={applyPreset}
+              onAddRuleSet={openBlankRuleSetForm}
+              onEditPolicy={(policy) => {
+                setSeedRuleSet(undefined);
+                setQueuedRuleSet(undefined);
+                setEditingPolicy(policy);
+                setShowRuleSetForm(true);
+              }}
+              onDeleteSuccess={() => {
+                setSuccess("Rule set deleted successfully");
+                refetch();
+              }}
+              onDeleteError={setError}
+            />
           </div>
         ))}
       </div>

@@ -19,27 +19,27 @@ const DEFAULT_DURATION_MS = 4000;
  * idle-text slot (see `InlineStatusMessage`) instead of firing a toast.
  */
 export function useTransientStatus(duration = DEFAULT_DURATION_MS) {
-  const [status, setStatusState] = useState<TransientStatus | null>(null);
+  const [status, setStatus] = useState<TransientStatus | null>(null);
   // React 19 requires an explicit initial value; `useRef<T>()` no longer
   // implies `T | undefined`.
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => () => clearTimeout(timeoutRef.current), []);
 
-  const setStatus = useCallback(
+  const showStatus = useCallback(
     (next: TransientStatus | null) => {
       clearTimeout(timeoutRef.current);
-      setStatusState(next);
+      setStatus(next);
       if (next) {
-        timeoutRef.current = setTimeout(() => setStatusState(null), duration);
+        timeoutRef.current = setTimeout(() => setStatus(null), duration);
       }
     },
     [duration],
   );
 
   const setSuccess = useCallback(
-    (message: string) => setStatus({ kind: "success", message }),
-    [setStatus],
+    (message: string) => showStatus({ kind: "success", message }),
+    [showStatus],
   );
 
   /** Mirrors `showErrorToast`'s own `errors` normalization, so switching a
@@ -48,11 +48,11 @@ export function useTransientStatus(duration = DEFAULT_DURATION_MS) {
     (errors: unknown, fallback = "Something went wrong.") => {
       const normalized = handleErrorMessages(errors);
       const message = Array.isArray(normalized) ? normalized.join(" ") : normalized || fallback;
-      setStatus({ kind: "error", message });
+      showStatus({ kind: "error", message });
     },
-    [setStatus],
+    [showStatus],
   );
 
-  return { status, setStatus, setSuccess, setError } as const;
+  return { status, setStatus: showStatus, setSuccess, setError } as const;
 }
 

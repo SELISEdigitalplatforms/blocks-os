@@ -164,8 +164,8 @@ export const SchemaAccessControlAccordion = ({
               : "any rule may match";
             const rulesLabel = rulesCount === 1 ? "1 rule" : `${rulesCount} rules`;
             // Only mentioned once a set has groups, so a flat set reads as it always has.
-            const groupsLabel =
-              groupsCount === 0 ? "" : ` · ${groupsCount} ${groupsCount === 1 ? "group" : "groups"}`;
+            const groupsNoun = groupsCount === 1 ? "group" : "groups";
+            const groupsLabel = groupsCount === 0 ? "" : ` · ${groupsCount} ${groupsNoun}`;
             const matchModeLabel = matchesAll ? "match all" : "match any";
 
             return (
@@ -233,9 +233,9 @@ export const SchemaAccessControlAccordion = ({
                       Grants access when {logicalLabel}:
                     </p>
                     <ul className="mt-1.5 flex flex-col">
-                      {ruleSetLines(policy).map((line, ruleIdx) => (
+                      {ruleSetLines(policy).map((line) => (
                         <li
-                          key={ruleIdx}
+                          key={line.id}
                           className="relative flex gap-1.5 py-0.5 text-xs leading-relaxed"
                           style={{ paddingLeft: line.depth * RULE_GROUP_INDENT_PX }}
                         >

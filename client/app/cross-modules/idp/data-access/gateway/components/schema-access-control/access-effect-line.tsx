@@ -33,15 +33,14 @@ const RISK_ICON: Record<AccessRisk, typeof Info> = {
 export function AccessEffectLine({
   effect,
   className,
-}: {
+}: Readonly<{
   effect: AccessEffect;
   className?: string;
-}) {
+}>) {
   const Icon = RISK_ICON[effect.risk];
 
   return (
-    <div
-      role="status"
+    <output
       className={cn(
         "flex items-start gap-2.5 rounded-md border px-3 py-2.5",
         RISK_STYLE[effect.risk],
@@ -53,7 +52,7 @@ export function AccessEffectLine({
         <p className="text-xs font-semibold">{effect.heading}</p>
         <p className="mt-0.5 text-xs leading-relaxed opacity-90">{effect.text}</p>
       </div>
-    </div>
+    </output>
   );
 }
 

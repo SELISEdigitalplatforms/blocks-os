@@ -74,10 +74,13 @@ export function rulePhrase(rule: IPolicyRule): string {
     ? rule.rightOperands.join(", ")
     : rule.rightOperand;
   const rightSource = RIGHT_SOURCE_PHRASES[rule.rightSource] ?? "";
-  return `${left} ${operator} ${`${rightSource} ${rightOperand}`.trim()}`;
+  const rightPhrase = `${rightSource} ${rightOperand}`.trim();
+  return `${left} ${operator} ${rightPhrase}`;
 }
 
 export type RuleSetLine = {
+  /** Stable within a rule set: the line's position path, so lists can key on it. */
+  id: string;
   /** "when" opens the set; later lines carry the joiner of the group they sit in. */
   lead: string;
   text: string;
@@ -93,31 +96,33 @@ export type RuleSetLine = {
  * group line already says how they combine.
  */
 export function ruleSetLines(policy: IPolicyItem): RuleSetLine[] {
-  const walk = (group: IPolicyRuleGroup, depth: number): RuleSetLine[] => {
+  const walk = (group: IPolicyRuleGroup, depth: number, prefix: string): RuleSetLine[] => {
     const joiner = group.logicalOperator === LOGICAL_OPERATOR.AND ? "and" : "or";
     const items = [
       ...(group.rules ?? []).map((rule) => ({ rule })),
       ...(group.nestedGroups ?? []).map((nested) => ({ nested })),
     ];
     return items.flatMap((item, index): RuleSetLine[] => {
-      const lead = index === 0 ? (depth === 0 ? "when" : "") : joiner;
+      const id = `${prefix}${index}`;
+      let lead = joiner;
+      if (index === 0) lead = depth === 0 ? "when" : "";
       if ("rule" in item) {
-        return [{ lead, text: rulePhrase(item.rule), depth, kind: "rule" }];
+        return [{ id, lead, text: rulePhrase(item.rule), depth, kind: "rule" }];
       }
       const matchesAll = item.nested.logicalOperator === LOGICAL_OPERATOR.AND;
       return [
-        { lead, text: matchesAll ? "all of:" : "any of:", depth, kind: "group" },
-        ...walk(item.nested, depth + 1),
+        { id, lead, text: matchesAll ? "all of:" : "any of:", depth, kind: "group" },
+        ...walk(item.nested, depth + 1, `${id}.`),
       ];
     });
   };
-  return walk(policy.ruleGroup, 0);
+  return walk(policy.ruleGroup, 0, "");
 }
 
 const listNames = (policies: IPolicyItem[]) => {
   const names = policies.map((p) => p.policyName).filter(Boolean);
   if (names.length <= 1) return names.join("");
-  return `${names.slice(0, -1).join(", ")}, or ${names[names.length - 1]}`;
+  return `${names.slice(0, -1).join(", ")}, or ${names.at(-1)}`;
 };
 
 /**
