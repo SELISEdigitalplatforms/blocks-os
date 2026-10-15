@@ -149,6 +149,8 @@ describe("OrganizationService", () => {
         defaultPermissionOnOrgCreation: [],
         keepOrgRolesSameAsDefaultRoles: true,
         keepOrgPermissionsSameAsDefaultPermissions: true,
+        isSignupAutoJoinEnabled: false,
+        signupAutoJoinOrganizationId: null,
       });
     });
 
@@ -180,11 +182,36 @@ describe("OrganizationService", () => {
           defaultPermissionsOnOrgCreation: [],
           keepOrgRolesSameAsDefaultRoles: true,
           keepOrgPermissionsSameAsDefaultPermissions: true,
+          isSignupAutoJoinEnabled: false,
         },
         undefined,
         { absoluteUrl: true },
       );
       expect(result).toEqual(mockSuccessResponse);
+    });
+
+    it("should send the auto-join target only while auto-join is on", async () => {
+      vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
+
+      await service.saveOrganizationConfig({
+        ...mockSaveOrganizationConfigPayload,
+        isMultiOrgEnabled: true,
+        isSignupAutoJoinEnabled: true,
+        signupAutoJoinOrganizationId: "org-sales",
+      });
+      expect(vi.mocked(http.post).mock.calls[0][1]).toMatchObject({
+        isSignupAutoJoinEnabled: true,
+        signupAutoJoinOrganizationId: "org-sales",
+      });
+
+      await service.saveOrganizationConfig({
+        ...mockSaveOrganizationConfigPayload,
+        isSignupAutoJoinEnabled: false,
+        signupAutoJoinOrganizationId: "org-sales",
+      });
+      expect(vi.mocked(http.post).mock.calls[1][1]).not.toHaveProperty(
+        "signupAutoJoinOrganizationId",
+      );
     });
 
     it("should throw when the API call fails", async () => {

@@ -19,6 +19,9 @@ interface OrganizationComboboxProps {
   initialSelectedName?: string;
   emptyMessage?: string;
   disabled?: boolean;
+  /** Also hide organizations with `isEnable === false`. Defaults to false for existing callers. */
+  excludeNotEnabled?: boolean;
+  id?: string;
 }
 
 const mergeOrganizations = (
@@ -38,6 +41,8 @@ export const OrganizationCombobox = ({
   initialSelectedName,
   emptyMessage = "No organizations available",
   disabled = false,
+  excludeNotEnabled = false,
+  id,
 }: OrganizationComboboxProps) => {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -88,7 +93,9 @@ export const OrganizationCombobox = ({
   const options = useMemo(() => {
     const organizations = loadedOrganizations.filter(
       (organization) =>
-        organization.isDisabled !== true && organization.itemId !== DEFAULT_ORGANIZATION_ID,
+        organization.isDisabled !== true &&
+        !(excludeNotEnabled && organization.isEnable === false) &&
+        organization.itemId !== DEFAULT_ORGANIZATION_ID,
     );
     const defaultMatchesSearch = "default".includes(debouncedSearchTerm.toLowerCase());
     if (defaultMatchesSearch) {
@@ -98,7 +105,7 @@ export const OrganizationCombobox = ({
       ];
     }
     return organizations.map(({ itemId, name }) => ({ itemId, name }));
-  }, [debouncedSearchTerm, loadedOrganizations]);
+  }, [debouncedSearchTerm, excludeNotEnabled, loadedOrganizations]);
 
   const totalCount = data?.totalCount ?? loadedOrganizations.length;
   const hasMore = loadedOrganizations.length < totalCount;
@@ -140,6 +147,7 @@ export const OrganizationCombobox = ({
     <Popover open={open} onOpenChange={handleOpenChange} modal>
       <PopoverTrigger asChild>
         <Button
+          id={id}
           type="button"
           variant="outline"
           role="combobox"
