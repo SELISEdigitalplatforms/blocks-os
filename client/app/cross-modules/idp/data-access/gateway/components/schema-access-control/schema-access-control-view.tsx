@@ -205,6 +205,17 @@ const EmptyCustomConfirmDialog = ({
   </Dialog>
 );
 
+/** A yes/no question asked from async code: `ask()` resolves with whatever is passed to `answer`. */
+function useAsyncConfirm() {
+  const [resolver, setResolver] = useState<((confirmed: boolean) => void) | null>(null);
+  const ask = () => new Promise<boolean>((resolve) => setResolver(() => resolve));
+  const answer = (confirmed: boolean) => {
+    resolver?.(confirmed);
+    setResolver(null);
+  };
+  return { isAsking: resolver !== null, ask, answer };
+}
+
 interface PolicyListPaneProps {
   isLoading: boolean;
   policies: IPolicyItem[];
@@ -295,8 +306,7 @@ export const SchemaAccessControlView = forwardRef<
   const [seedRuleSet, setSeedRuleSet] = useState<PresetRuleSet | undefined>();
   const [queuedRuleSet, setQueuedRuleSet] = useState<PresetRuleSet | undefined>();
   const [isSavingRuleSet, setIsSavingRuleSet] = useState(false);
-  /** Set while the empty-Custom confirmation is open; called with the answer. */
-  const [answerEmptyCustom, setAnswerEmptyCustom] = useState<((confirmed: boolean) => void) | null>(null);
+  const emptyCustomConfirm = useAsyncConfirm();
   // Reported inline, in the footer's own status slot, instead of a toast —
   // the shared toast viewport docks bottom-right, right where this panel's
   // own Save button sits.
@@ -484,14 +494,8 @@ export const SchemaAccessControlView = forwardRef<
    *  here. */
   const handleFinalSave = async (): Promise<boolean> => {
     if (!isAccessTypeDirty) return true;
-    if (selectedAccessType === ACCESS_TYPES.CUSTOM && policies.length === 0) {
-      const confirmed = await new Promise<boolean>((resolve) =>
-        setAnswerEmptyCustom(() => (answer: boolean) => {
-          setAnswerEmptyCustom(null);
-          resolve(answer);
-        }),
-      );
-      if (!confirmed) return false;
+    if (selectedAccessType === ACCESS_TYPES.CUSTOM && policies.length === 0 && !(await emptyCustomConfirm.ask())) {
+      return false;
     }
     return handleSaveAccessType();
   };
@@ -537,8 +541,8 @@ export const SchemaAccessControlView = forwardRef<
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
-      {answerEmptyCustom && (
-        <EmptyCustomConfirmDialog verb={verbPhrase(tabForOperation)} subject={effectSubject} onAnswer={answerEmptyCustom} />
+      {emptyCustomConfirm.isAsking && (
+        <EmptyCustomConfirmDialog verb={verbPhrase(tabForOperation)} subject={effectSubject} onAnswer={emptyCustomConfirm.answer} />
       )}
       {/* Hidden while a rule set is being added or edited: the form is a
           focused sub-flow with its own header and Back button, and the tier
