@@ -211,6 +211,45 @@
         <member name="M:BlocksOs.Api.Controllers.PeopleController.SaveAccessPolicy(DomainService.Access.SaveAccessPolicyRequest)">
             <summary>Owner-only, always — a grant must never be able to widen itself.</summary>
         </member>
+        <member name="F:BlocksOs.Api.Controllers.PlatformDataAccessController.RulesEnabledSetting">
+            <summary>
+            Validation rules and default values on system schemas. Off until IAM, OS, Logic and Release all run a
+            Genesis that understands them: while off the rule endpoints answer 404 and Schemas carries no rule flags.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.Validation(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>The field's validation rules; null when it has none.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.SaveValidation(BlocksOs.Api.Controllers.SavePlatformValidationRequest,System.Threading.CancellationToken)">
+            <summary>
+            Replaces the field's validation rules; an empty list removes them. Only properties the Genesis allow-list
+            opens; Reference rules point at system Entity schemas; every rule is saved as version 1.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.FieldDefault(BlocksOs.Api.Controllers.SetPlatformFieldDefaultRequest,System.Threading.CancellationToken)">
+            <summary>Sets or (null) clears the field's default value. Only properties the Genesis allow-list opens.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.CheckRulesAsync(Blocks.Genesis.Entities.Data.SchemaDefinition,Blocks.Genesis.Entities.Data.FieldDefinition,System.Collections.Generic.List{Blocks.Genesis.Entities.Data.ValidationRule},System.Threading.CancellationToken)">
+            <summary>The same checks the Data Gateway makes when a rule is saved, with system schemas as Reference targets.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.IsValidPattern(System.String)">
+            <summary>Parses the pattern only (the timeout bounds the parse); nothing is matched here.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.LoadRulesSchemaAsync(System.String,System.Threading.CancellationToken)">
+            <summary>A platform schema the allow-list opens for rules, with its rule set; null otherwise.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.ToStorable(System.Object)">
+            <summary>JSON request values as stored values: text, numbers, booleans, and lists of them.</summary>
+        </member>
+        <member name="P:BlocksOs.Api.Controllers.SavePlatformValidationRequest.FieldName">
+            <summary>The property; a nested one by its dotted path, e.g. Read.Roles.</summary>
+        </member>
+        <member name="P:BlocksOs.Api.Controllers.SetPlatformFieldDefaultRequest.FieldName">
+            <summary>The property; a nested one by its dotted path, e.g. Read.Roles.</summary>
+        </member>
+        <member name="P:BlocksOs.Api.Controllers.SetPlatformFieldDefaultRequest.DefaultValue">
+            <summary>Null clears the default.</summary>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.ProjectController.GetThirdPartyJwtProviders">
             <summary>
             External identity providers this tenant accepts tokens from. Never returns a signing
@@ -326,6 +365,12 @@
         </member>
         <member name="M:BlocksOs.Api.GlobalApiRoutePrefixConvention.#ctor(System.String)">
             <summary>Prepends a segment (e.g. <c>api</c>) to every controller’s attribute route template.</summary>
+        </member>
+        <member name="T:BlocksOs.Api.Middleware.DataValidationExceptionFilter">
+            <summary>
+            A save refused by a system schema's validation rules (Os.DataAccess PrepareWriteAsync / CheckUpdateAsync)
+            is the caller's mistake, not a server error: 400 with one message per property, the field's path as key.
+            </summary>
         </member>
         <member name="T:BlocksOs.Api.Middleware.HostAccessCookieBearerMiddleware">
             <summary>

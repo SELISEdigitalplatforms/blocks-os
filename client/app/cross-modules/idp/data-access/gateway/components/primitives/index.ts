@@ -16,6 +16,7 @@ export {
   FieldFlags,
   FlagToggleChip,
   flagsFromField,
+  flagTitlesFromField,
   type FieldFlag,
 } from "./field-flags";
 export { TypeChip, categoryForType, type TypeCategory } from "./type-chip";

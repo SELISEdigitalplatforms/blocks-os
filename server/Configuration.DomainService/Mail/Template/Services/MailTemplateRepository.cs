@@ -29,6 +29,7 @@ namespace Configuration.DomainService.Mail.Template.Services
             if (editFilter is null || !await _dataAccess.InsertAllowedAsync(OsSchemas.EmailTemplate, "MailTemplateRepository.SaveAsync"))
                 throw new UnauthorizedAccessException("Access to the email template was denied by the data access policy.");
 
+            template = await _dataAccess.PrepareUpsertAsync(OsSchemas.EmailTemplate, template, collection, editFilter, "MailTemplateRepository.SaveAsync");
             await collection.ReplaceOneAsync(editFilter, template, new ReplaceOptions { IsUpsert = true });
         }
 

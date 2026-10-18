@@ -17,11 +17,33 @@ import {
 import { useDataAccessSearchParams, useIsLargeScreen, useLingeringValue } from "./explorer/explorer-hooks";
 import { MOTION, SHELL } from "./explorer/explorer-utils";
 import { SchemaExplorer, SchemaRail, filterSchemas } from "./explorer/schema-explorer";
+import type { OnOpenFieldRules } from "./explorer/field-rules-buttons";
 import { SchemaFieldsTable, SchemaFieldsTableSkeleton, type OnOpenFieldAccess } from "./explorer/schema-fields-table";
 import { SchemaHeader, SchemaHeaderSkeleton } from "./explorer/schema-header";
 import { SchemaPreviewDrawer } from "./explorer/schema-preview-drawer";
+import { RulesInspector, rulesInspectorKey, type RulesInspectorTarget } from "./rules/rules-inspector";
+import { variableFieldsOf } from "./rules/variable-syntax";
 
-const inspectorKey = (target: AccessInspectorTarget) => `${target.schemaId}:${target.level}:${target.fieldNames.join(",")}`;
+/** The docked slot holds a property's access, or its validations or default value. */
+type InspectorTarget = AccessInspectorTarget | RulesInspectorTarget;
+
+const isRulesTarget = (target: InspectorTarget): target is RulesInspectorTarget => "panel" in target;
+
+const accessInspectorKey = (target: AccessInspectorTarget) => `${target.schemaId}:${target.level}:${target.fieldNames.join(",")}`;
+const inspectorKey = (target: InspectorTarget) => (isRulesTarget(target) ? rulesInspectorKey(target) : accessInspectorKey(target));
+
+/** The access inspector (with its unsaved-changes handle), or the rules inspector. */
+function Inspector({
+  target,
+  inspectorRef,
+  onClose,
+}: Readonly<{ target: InspectorTarget; inspectorRef: RefObject<AccessInspectorHandle | null>; onClose: () => void }>) {
+  return isRulesTarget(target) ? (
+    <RulesInspector key={inspectorKey(target)} target={target} onClose={onClose} />
+  ) : (
+    <AccessInspector key={inspectorKey(target)} ref={inspectorRef} target={target} onClose={onClose} />
+  );
+}
 
 /** Inspector subject for the schema itself (row access), opened on `tab`. */
 const schemaAccessTarget = (schema: PlatformSchema, tab?: AccessTab): AccessInspectorTarget => ({
@@ -52,6 +74,28 @@ const fieldAccessTarget = (schema: PlatformSchema, path: string, field: Platform
   editAccessLevel: field.editAccessLevel,
 });
 
+/** Inspector subject for one property's validations or default value. Only rule-enabled schemas get here. */
+const fieldRulesTarget = (
+  schema: PlatformSchema,
+  path: string,
+  field: PlatformSchemaField,
+  panel: RulesInspectorTarget["panel"],
+): RulesInspectorTarget | null => {
+  const rules = schema.rules?.fields.find((f) => f.path === path);
+  if (!schema.rules || !rules) return null;
+  return {
+    panel,
+    schemaId: schema.id,
+    schemaName: schema.schemaName,
+    service: schema.service,
+    isWarnedSchema: schema.rules.level === "Warned",
+    path,
+    field,
+    rules,
+    variables: { schemaName: schema.schemaName, fields: variableFieldsOf(schema.fields) },
+  };
+};
+
 /** Header plus property table for the selected schema, or a placeholder while loading or when none is selected. */
 function SchemaPanel({
   isLoading,
@@ -60,6 +104,7 @@ function SchemaPanel({
   onOpenPreview,
   onOpenSchemaAccess,
   onOpenFieldAccess,
+  onOpenFieldRules,
 }: Readonly<{
   isLoading: boolean;
   schema: PlatformSchema | null;
@@ -67,6 +112,7 @@ function SchemaPanel({
   onOpenPreview: () => void;
   onOpenSchemaAccess: (tab?: AccessTab) => void;
   onOpenFieldAccess: OnOpenFieldAccess;
+  onOpenFieldRules: OnOpenFieldRules;
 }>) {
   if (isLoading) {
     return (
@@ -89,7 +135,13 @@ function SchemaPanel({
   return (
     <>
       <SchemaHeader schema={schema} isAccessPanelOpen={isAccessPanelOpen} onOpenPreview={onOpenPreview} onOpenSchemaAccess={onOpenSchemaAccess} />
-      <SchemaFieldsTable schemaName={schema.schemaName} fields={schema.fields} onOpenFieldAccess={onOpenFieldAccess} />
+      <SchemaFieldsTable
+        schemaName={schema.schemaName}
+        fields={schema.fields}
+        rules={schema.rules}
+        onOpenFieldAccess={onOpenFieldAccess}
+        onOpenFieldRules={onOpenFieldRules}
+      />
     </>
   );
 }
@@ -119,8 +171,8 @@ function InspectorColumn({
   onClose,
 }: Readonly<{
   isOpen: boolean;
-  inspector: AccessInspectorTarget | null;
-  lingeringInspector: AccessInspectorTarget | null;
+  inspector: InspectorTarget | null;
+  lingeringInspector: InspectorTarget | null;
   inspectorRef: RefObject<AccessInspectorHandle | null>;
   onClose: () => void;
 }>) {
@@ -140,7 +192,7 @@ function InspectorColumn({
     >
       {lingeringInspector && (
         <FadeLayer visible={Boolean(inspector)} className="absolute inset-y-0 right-0 flex min-h-0 w-(--dg-inspector-panel-w)">
-          <AccessInspector key={inspectorKey(lingeringInspector)} ref={inspectorRef} target={lingeringInspector} onClose={onClose} />
+          <Inspector target={lingeringInspector} inspectorRef={inspectorRef} onClose={onClose} />
         </FadeLayer>
       )}
     </div>
@@ -163,7 +215,7 @@ export function DataAccessPage() {
   const selectedSchema = schemas.find((schema) => schema.id === selectedSchemaId) ?? null;
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
-  const [inspector, setInspector] = useState<AccessInspectorTarget | null>(null);
+  const [inspector, setInspector] = useState<InspectorTarget | null>(null);
   // Docked beside the table on large screens; a sheet over it below that.
   const isLargeScreen = useIsLargeScreen();
   const isRightPanelOpen = Boolean(inspector) && isLargeScreen;
@@ -184,7 +236,7 @@ export function DataAccessPage() {
   }, []);
 
   const closeInspector = useCallback(() => guarded(() => setInspector(null)), [guarded]);
-  const openInspector = useCallback((target: AccessInspectorTarget) => guarded(() => setInspector(target)), [guarded]);
+  const openInspector = useCallback((target: InspectorTarget) => guarded(() => setInspector(target)), [guarded]);
 
   const selectSchema = useCallback(
     (schemaId: string | null) => guarded(() => void setQueryParams({ schemaId }, { history: "push" })),
@@ -269,6 +321,10 @@ export function DataAccessPage() {
               onOpenPreview={() => setIsPreviewOpen(true)}
               onOpenSchemaAccess={(tab) => selectedSchema && openInspector(schemaAccessTarget(selectedSchema, tab))}
               onOpenFieldAccess={({ path, field }) => selectedSchema && openInspector(fieldAccessTarget(selectedSchema, path, field))}
+              onOpenFieldRules={({ path, field, panel }) => {
+                const target = selectedSchema && fieldRulesTarget(selectedSchema, path, field, panel);
+                if (target) openInspector(target);
+              }}
             />
           </div>
         </div>
@@ -287,9 +343,13 @@ export function DataAccessPage() {
       {!isLargeScreen && (
         <Sheet open={Boolean(inspector)} onOpenChange={(open) => !open && closeInspector()}>
           <SheetContent side="right" hideClose className="flex w-full flex-col p-0 sm:max-w-[540px]">
-            <SheetTitle className="sr-only">Access</SheetTitle>
-            <SheetDescription className="sr-only">Who may view, create, edit or delete this schema or property.</SheetDescription>
-            {inspector && <AccessInspector key={inspectorKey(inspector)} ref={inspectorRef} target={inspector} onClose={closeInspector} />}
+            <SheetTitle className="sr-only">{inspector && isRulesTarget(inspector) ? "Rules" : "Access"}</SheetTitle>
+            <SheetDescription className="sr-only">
+              {inspector && isRulesTarget(inspector)
+                ? "Validation rules or the default value of this property."
+                : "Who may view, create, edit or delete this schema or property."}
+            </SheetDescription>
+            {inspector && <Inspector target={inspector} inspectorRef={inspectorRef} onClose={closeInspector} />}
           </SheetContent>
         </Sheet>
       )}

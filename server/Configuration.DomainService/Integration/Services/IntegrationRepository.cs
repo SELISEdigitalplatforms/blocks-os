@@ -54,6 +54,7 @@ namespace Configuration.DomainService.Integration.Services
             if (!await _dataAccess.InsertAllowedAsync(OsSchemas.IntegrationSetup, "IntegrationRepository.TryInsertSetupAsync"))
                 throw new UnauthorizedAccessException("Access to the integration connection was denied by the data access policy.");
 
+            setup = await _dataAccess.PrepareWriteAsync(OsSchemas.IntegrationSetup, setup, isInsert: true, "IntegrationRepository.TryInsertSetupAsync");
             var setups = Setups();
 
             // Each tenant has its own database, so there is no startup hook to build this in; it
@@ -101,6 +102,7 @@ namespace Configuration.DomainService.Integration.Services
                 return false;
             }
 
+            await _dataAccess.CheckUpdateAsync(OsSchemas.IntegrationSetup, update, "IntegrationRepository.RevokeConnectionAsync");
             var result = await Setups().UpdateOneAsync(editFilter, update);
             return result.MatchedCount == 1;
         }
@@ -116,8 +118,9 @@ namespace Configuration.DomainService.Integration.Services
                 return;
             }
 
-            await Setups(environmentTenantId).UpdateOneAsync(editFilter,
-                Builders<IntegrationSetup>.Update.Set(s => s.NeverDelivered, true).Set(s => s.LastUpdatedDate, DateTime.UtcNow));
+            var update = Builders<IntegrationSetup>.Update.Set(s => s.NeverDelivered, true).Set(s => s.LastUpdatedDate, DateTime.UtcNow);
+            await _dataAccess.CheckUpdateAsync(OsSchemas.IntegrationSetup, update, "IntegrationRepository.MarkConnectionNeverDeliveredAsync", environmentTenantId);
+            await Setups(environmentTenantId).UpdateOneAsync(editFilter, update);
         }
 
         public async Task<IntegrationSetup?> GetConnectionAsync(string connectionId)

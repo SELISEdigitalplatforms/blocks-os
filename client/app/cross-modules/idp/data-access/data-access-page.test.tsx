@@ -218,4 +218,45 @@ describe("DataAccessPage", () => {
     await waitFor(() => expect(screen.getByText("Role preview")).toBeTruthy());
     expect(document.body.textContent).toContain('"UserIds"');
   });
+
+  describe("validation rules and default values", () => {
+    const withRules: PlatformSchema = {
+      ...role,
+      rules: {
+        level: "Warned",
+        fields: [
+          { path: "Name", validation: "Allowed", default: "Blocked", defaultHasNoEffect: false },
+          { path: "Create.Roles", validation: "Warned", default: "Warned", defaultHasNoEffect: false },
+        ],
+      },
+    };
+
+    it("shows no rule buttons while rules are off (no flags in the schema list)", async () => {
+      renderPage("?schemaId=role-id");
+      await screen.findAllByText("Name");
+      expect(screen.queryByRole("button", { name: /Manage validations for/ })).toBeNull();
+      expect(screen.queryByRole("button", { name: /Default value for/ })).toBeNull();
+    });
+
+    it("offers only what the allow-list opens, and asks first on a warned schema", async () => {
+      const user = userEvent.setup();
+      h.schemas = [withRules, build];
+      renderPage("?schemaId=role-id");
+      await screen.findAllByText("Name");
+
+      // Name takes validations but no default; ItemId takes neither.
+      expect(screen.getAllByRole("button", { name: "Manage validations for Name" }).length).toBeGreaterThan(0);
+      expect(screen.queryByRole("button", { name: "Default value for Name" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Manage validations for ItemId" })).toBeNull();
+
+      await user.click(screen.getAllByRole("button", { name: "Manage validations for Name" })[0]);
+      const column = screen.getByTestId("inspector-column");
+      expect(within(column).getByRole("alert").textContent).toContain("Role is used by sign-in and the console");
+      expect(within(column).queryByRole("button", { name: /Add validation/ })).toBeNull();
+
+      await user.click(within(column).getByRole("button", { name: "I understand, continue" }));
+      expect(within(column).getByRole("button", { name: /Add validation/ })).toBeTruthy();
+    });
+  });
 });
+

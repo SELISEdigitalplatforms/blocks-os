@@ -242,6 +242,7 @@ namespace Configuration.DomainService.Shared.Services
             if (editFilter is null || !await _dataAccess.InsertAllowedAsync(OsSchemas.MailServerConfiguration, "ConfigurationRepository.SaveMailConfigurationAsync"))
                 throw new UnauthorizedAccessException("Access to the mail configuration was denied by the data access policy.");
 
+            configuration = await _dataAccess.PrepareUpsertAsync(OsSchemas.MailServerConfiguration, configuration, collection, editFilter, "ConfigurationRepository.SaveMailConfigurationAsync");
             await collection.ReplaceOneAsync(editFilter, configuration, new ReplaceOptions { IsUpsert = true });
         }
 
@@ -261,6 +262,7 @@ namespace Configuration.DomainService.Shared.Services
                 return;
             }
 
+            await _dataAccess.CheckUpdateAsync(OsSchemas.MailServerConfiguration, update, "ConfigurationRepository.UpdateMailSenderNameAsync");
             await collection.UpdateOneAsync(editFilter, update);
         }
 
