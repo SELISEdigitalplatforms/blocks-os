@@ -1,6 +1,8 @@
 import { cn } from "@/lib/utils";
 
 import type { IField } from "../../models/data-service";
+import type { IFieldDefaultValue } from "../../../rules/rules.types";
+import { formatDefaultSummary } from "../../../rules/default-value.util";
 
 /**
  * The three genuine booleans on a property, as one compact strip.
@@ -13,12 +15,13 @@ import type { IField } from "../../models/data-service";
  * fill, a hairline border and softened text. Solid multi-colour fills and bold
  * type made a column of badges louder than the property names.
  */
-export type FieldFlag = "ARR" | "PII" | "UQ";
+export type FieldFlag = "ARR" | "PII" | "UQ" | "DEF";
 
 const FLAG_TITLES: Record<FieldFlag, string> = {
   ARR: "Array",
   PII: "Personally identifiable data",
   UQ: "Unique",
+  DEF: "Default value",
 };
 
 /**
@@ -28,18 +31,26 @@ const FLAG_TITLES: Record<FieldFlag, string> = {
  */
 const FLAG_TINT = { bg: "bg-primary/5", fg: "text-primary/85", border: "border-primary/25" };
 
-export function flagsFromField(field: Pick<IField, "isArray" | "isPIIData" | "isUniqueData">) {
+export function flagsFromField(
+  field: Pick<IField, "isArray" | "isPIIData" | "isUniqueData"> & { defaultValue?: IFieldDefaultValue | null },
+) {
   const flags: FieldFlag[] = [];
   if (field.isArray) flags.push("ARR");
   if (field.isPIIData) flags.push("PII");
   if (field.isUniqueData) flags.push("UQ");
+  if (field.defaultValue) flags.push("DEF");
   return flags;
 }
 
-export function FieldFlagChip({ flag, className }: Readonly<{ flag: FieldFlag; className?: string }>) {
+/** Hover text per flag; DEF shows what the default is, e.g. "Default value: Now + 365 days". */
+export function flagTitlesFromField(field: { defaultValue?: IFieldDefaultValue | null }): Partial<Record<FieldFlag, string>> {
+  return field.defaultValue ? { DEF: `Default value: ${formatDefaultSummary(field.defaultValue)}` } : {};
+}
+
+export function FieldFlagChip({ flag, title, className }: Readonly<{ flag: FieldFlag; title?: string; className?: string }>) {
   return (
     <span
-      title={FLAG_TITLES[flag]}
+      title={title ?? FLAG_TITLES[flag]}
       className={cn(
         "inline-flex h-[20px] items-center rounded border px-1.5 text-[10px] font-medium tracking-wide",
         FLAG_TINT.bg,
@@ -53,13 +64,17 @@ export function FieldFlagChip({ flag, className }: Readonly<{ flag: FieldFlag; c
   );
 }
 
-export function FieldFlags({ flags, className }: Readonly<{ flags: FieldFlag[]; className?: string }>) {
+export function FieldFlags({
+  flags,
+  titles,
+  className,
+}: Readonly<{ flags: FieldFlag[]; titles?: Partial<Record<FieldFlag, string>>; className?: string }>) {
   if (flags.length === 0) return null;
 
   return (
     <span className={cn("flex items-center gap-1", className)}>
       {flags.map((flag) => (
-        <FieldFlagChip key={flag} flag={flag} />
+        <FieldFlagChip key={flag} flag={flag} title={titles?.[flag]} />
       ))}
     </span>
   );

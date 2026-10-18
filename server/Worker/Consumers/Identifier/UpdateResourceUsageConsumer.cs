@@ -34,6 +34,7 @@ namespace Worker.Consumers.Identifier
                 return;
             }
 
+            await _dataAccess.CheckUpdateAsync(OsSchemas.ResourceLimit, update, "UpdateResourceUsageConsumer.Consume", context.TenantId);
             await collection.UpdateOneAsync(editFilter, update);
         }
     }

@@ -33,6 +33,13 @@ public class OsRepositoryDenialTests
         public Task<FilterDefinition<T>?> DeleteFilterAsync<T>(string schema, FilterDefinition<T> filter, string callSite, string? tenantId = null) =>
             Task.FromResult<FilterDefinition<T>?>(null);
         public Task<bool> InsertAllowedAsync(string schema, string callSite, string? tenantId = null) => Task.FromResult(false);
+        // A denied write never gets as far as its rules.
+        public Task<T> PrepareWriteAsync<T>(string schema, T entity, bool isInsert, string callSite, string? tenantId = null) =>
+            throw new InvalidOperationException("Rules ran after a denial.");
+        public Task<T> PrepareUpsertAsync<T>(string schema, T entity, IMongoCollection<T> collection, FilterDefinition<T> filter, string callSite, string? tenantId = null) =>
+            throw new InvalidOperationException("Rules ran after a denial.");
+        public Task CheckUpdateAsync<T>(string schema, UpdateDefinition<T> update, string callSite, string? tenantId = null) =>
+            throw new InvalidOperationException("Rules ran after a denial.");
     }
 
     private static readonly IOsDataAccess Deny = new DenyAll();

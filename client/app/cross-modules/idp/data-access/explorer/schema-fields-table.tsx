@@ -8,7 +8,9 @@ import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronRight, Shield } from "lucide-react";
 import { Fragment, useState } from "react";
 import type { PlatformSchemaField } from "../data-access.service";
-import { FieldFlags, TypeChip, flagsFromField, tierFromLevel, ACCESS_TIER_LABELS } from "../gateway/components/primitives";
+import { FieldFlags, TypeChip, flagTitlesFromField, flagsFromField, tierFromLevel, ACCESS_TIER_LABELS } from "../gateway/components/primitives";
+import type { IPlatformSchemaRules } from "../rules/rules.types";
+import { FieldRulesButtons, FieldRulesProvider, type OnOpenFieldRules } from "./field-rules-buttons";
 import { useDefaultPropertiesExpanded } from "./explorer-hooks";
 import { hasNestedFields, isScalarField, orderFields } from "./explorer-utils";
 
@@ -178,7 +180,10 @@ function FieldRow({
         {field.type === "Enum" && <EnumValues values={field.enumValues ?? []} />}
       </TableCell>
       <TableCell className={CELL}>
-        <FieldFlags flags={flagsFromField({ isArray: field.isArray, isPIIData: Boolean(field.isPIIData), isUniqueData: Boolean(field.isUniqueData) })} />
+        <FieldFlags
+          flags={flagsFromField({ isArray: field.isArray, isPIIData: Boolean(field.isPIIData), isUniqueData: Boolean(field.isUniqueData), defaultValue: field.defaultValue })}
+          titles={flagTitlesFromField(field)}
+        />
       </TableCell>
       <TableCell className={cn(CELL, "px-3 md:px-3")}>
         <span
@@ -191,6 +196,7 @@ function FieldRow({
       <TableCell className={CELL}>
         <div className="flex h-9 items-center gap-1">
           <FieldAccessButton field={field} path={path} onOpenFieldAccess={onOpenFieldAccess} />
+          <FieldRulesButtons field={field} path={path} />
         </div>
       </TableCell>
     </TableRow>
@@ -319,11 +325,17 @@ function FieldCard({
     <div className="space-y-3 rounded-sm border border-border/40 bg-card p-4">
       <div className="flex items-center justify-between gap-2">
         <span className="min-w-0 truncate font-mono text-[13px] text-foreground">{field.name}</span>
-        <FieldAccessButton field={field} path={path} onOpenFieldAccess={onOpenFieldAccess} />
+        <div className="flex items-center gap-1">
+          <FieldAccessButton field={field} path={path} onOpenFieldAccess={onOpenFieldAccess} />
+          <FieldRulesButtons field={field} path={path} />
+        </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <TypeChip type={field.type} isArray={field.isArray} />
-        <FieldFlags flags={flagsFromField({ isArray: field.isArray, isPIIData: Boolean(field.isPIIData), isUniqueData: Boolean(field.isUniqueData) })} />
+        <FieldFlags
+          flags={flagsFromField({ isArray: field.isArray, isPIIData: Boolean(field.isPIIData), isUniqueData: Boolean(field.isUniqueData), defaultValue: field.defaultValue })}
+          titles={flagTitlesFromField(field)}
+        />
         {nested && (
           <button
             type="button"
@@ -351,22 +363,29 @@ function FieldCard({
 
 /**
  * The Data Gateway's field table (`SchemaStructureTable`) in view mode: no edit,
- * no add/duplicate/delete, no validation. Nested object properties expand in
+ * no add/duplicate/delete. Validation and default value buttons appear only where the
+ * Genesis allow-list opens a property (and only while rules are switched on). Nested object properties expand in
  * place like child schemas do there.
  */
 export function SchemaFieldsTable({
   schemaName,
   fields,
+  rules,
   onOpenFieldAccess,
+  onOpenFieldRules,
 }: Readonly<{
   schemaName: string;
   fields: PlatformSchemaField[];
+  /** The allow-list for validation rules and defaults; null when off or the schema takes none. */
+  rules?: IPlatformSchemaRules | null;
   onOpenFieldAccess: OnOpenFieldAccess;
+  onOpenFieldRules?: OnOpenFieldRules;
 }>) {
   const [isDefaultsExpanded, setIsDefaultsExpanded] = useDefaultPropertiesExpanded();
   const { defaults, own } = orderFields(fields);
 
   return (
+    <FieldRulesProvider rules={onOpenFieldRules ? rules : null} onOpen={onOpenFieldRules ?? (() => {})}>
     <Card className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-none border-t-0 shadow-none">
       <div className="-mx-5 flex shrink-0 items-center border-b border-border/40 px-5">
         <Tabs value="attribute">
@@ -416,6 +435,7 @@ export function SchemaFieldsTable({
         </>
       )}
     </Card>
+    </FieldRulesProvider>
   );
 }
 

@@ -25,6 +25,17 @@ export const useUpdatePolicy = () => {
   return useMutation({ mutationFn: platformDataAccessService.update, onSuccess: () => refreshAccessData(client) });
 };
 
+/** Rules and defaults live on the schema list's fields, so saving one refreshes the list. */
+export const useSavePlatformValidation = () => {
+  const client = useQueryClient();
+  return useMutation({ mutationFn: platformDataAccessService.saveValidation, onSuccess: () => client.invalidateQueries({ queryKey: ["platform-data-access-schemas"] }) });
+};
+
+export const useSetPlatformFieldDefault = () => {
+  const client = useQueryClient();
+  return useMutation({ mutationFn: platformDataAccessService.setFieldDefault, onSuccess: () => client.invalidateQueries({ queryKey: ["platform-data-access-schemas"] }) });
+};
+
 export const useDeletePolicy = () => {
   const client = useQueryClient();
   return useMutation({ mutationFn: (payload: IDeletePolicyPayload) => platformDataAccessService.delete(payload.itemId), onSuccess: () => client.invalidateQueries({ queryKey: ["platform-data-access-policies"] }) });
