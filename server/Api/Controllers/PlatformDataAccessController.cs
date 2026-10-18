@@ -44,7 +44,11 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
             x.SchemaName,
             x.CollectionName,
             service = Owners[x.SchemaName],
+            // All four levels, so the console can show View/Create/Delete next to the editable Edit.
+            readAccessLevel = (int)x.ReadAccessLevel,
+            writeAccessLevel = (int)x.WriteAccessLevel,
             editAccessLevel = (int)x.EditAccessLevel,
+            deleteAccessLevel = (int)x.DeleteAccessLevel,
             fields = FieldDefinitionMapper.GetFieldDefinitionResponses(x.Fields, [], [])
         }).OrderBy(x => x.service).ThenBy(x => x.SchemaName).ToList();
         return Ok(new { isSuccess = true, data = result });

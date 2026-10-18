@@ -1,13 +1,35 @@
 import { http } from "@/lib/http/http-client";
 import type { ICreatePolicyPayload, ICreatePolicyResponse, IDeletePolicyResponse, IGetPolicyResponse, ISetDataAccessResponse, ISetRowColumnPermissionPayload, IUpdatePolicyPayload } from "./gateway/models/data-service";
 
+export const PLATFORM_SERVICES = ["IAM", "OS", "Logic", "Release"] as const;
+export type PlatformService = (typeof PLATFORM_SERVICES)[number];
+
+/** One property of a platform schema. Nested object properties carry their own `fields`. */
+export type PlatformSchemaField = {
+  name: string;
+  type: string;
+  isArray: boolean;
+  enumValues?: string[];
+  isPIIData?: boolean;
+  isUniqueData?: boolean;
+  description?: string | null;
+  readAccessLevel?: number;
+  writeAccessLevel?: number;
+  editAccessLevel: number;
+  deleteAccessLevel?: number;
+  fields?: PlatformSchemaField[];
+};
+
 export type PlatformSchema = {
   id: string;
   schemaName: string;
   collectionName: string;
-  service: "IAM" | "OS" | "Logic" | "Release";
+  service: PlatformService;
+  readAccessLevel: number;
+  writeAccessLevel: number;
   editAccessLevel: number;
-  fields: Array<{ name: string; type: string; isArray: boolean; editAccessLevel: number }>;
+  deleteAccessLevel: number;
+  fields: PlatformSchemaField[];
 };
 
 type Response<T> = { isSuccess: boolean; data: T; errors?: unknown; message?: string };

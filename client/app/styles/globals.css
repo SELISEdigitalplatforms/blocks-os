@@ -20,6 +20,38 @@
 }
 
 @theme {
+  /* Data Gateway semantic tokens (see :root below) */
+  --color-access-public-bg: hsl(var(--access-public-bg));
+  --color-access-public-fg: hsl(var(--access-public-fg));
+  --color-access-public-border: hsl(var(--access-public-border));
+  --color-access-public-dot: hsl(var(--access-public-dot));
+  --color-access-user-bg: hsl(var(--access-user-bg));
+  --color-access-user-fg: hsl(var(--access-user-fg));
+  --color-access-user-border: hsl(var(--access-user-border));
+  --color-access-user-dot: hsl(var(--access-user-dot));
+  --color-access-custom-bg: hsl(var(--access-custom-bg));
+  --color-access-custom-fg: hsl(var(--access-custom-fg));
+  --color-access-custom-border: hsl(var(--access-custom-border));
+  --color-access-custom-dot: hsl(var(--access-custom-dot));
+  --color-access-inherited-bg: hsl(var(--access-inherited-bg));
+  --color-access-inherited-fg: hsl(var(--access-inherited-fg));
+  --color-access-inherited-border: hsl(var(--access-inherited-border));
+  --color-access-inherited-dot: hsl(var(--access-inherited-dot));
+  --color-flag-neutral-bg: hsl(var(--flag-neutral-bg));
+  --color-flag-neutral-fg: hsl(var(--flag-neutral-fg));
+  --color-flag-pii-bg: hsl(var(--flag-pii-bg));
+  --color-flag-pii-fg: hsl(var(--flag-pii-fg));
+  --color-type-string-bg: hsl(var(--type-string-bg));
+  --color-type-string-fg: hsl(var(--type-string-fg));
+  --color-type-numeric-bg: hsl(var(--type-numeric-bg));
+  --color-type-numeric-fg: hsl(var(--type-numeric-fg));
+  --color-type-boolean-bg: hsl(var(--type-boolean-bg));
+  --color-type-boolean-fg: hsl(var(--type-boolean-fg));
+  --color-type-temporal-bg: hsl(var(--type-temporal-bg));
+  --color-type-temporal-fg: hsl(var(--type-temporal-fg));
+  --color-type-ref-bg: hsl(var(--type-ref-bg));
+  --color-type-ref-fg: hsl(var(--type-ref-fg));
+
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
@@ -527,6 +559,42 @@
     --avatar-text-high-emphasis: #262626;
     --base-error: #ff3333;
     --loader-color: #262626;
+
+    /* Access tiers */
+    --access-public-bg: 0 86% 96%;
+    --access-public-fg: 0 72% 45%;
+    --access-public-border: 0 85% 89%;
+    --access-public-dot: 0 84% 55%;
+    --access-user-bg: 43 100% 94%;
+    --access-user-fg: 32 90% 40%;
+    --access-user-border: 43 90% 82%;
+    --access-user-dot: 38 92% 50%;
+    --access-custom-bg: 160 70% 94%;
+    --access-custom-fg: 162 72% 30%;
+    --access-custom-border: 160 60% 82%;
+    --access-custom-dot: 160 70% 40%;
+    --access-inherited-bg: 217.5 30.8% 94.9%;
+    --access-inherited-fg: 218.8 18.9% 35.3%;
+    --access-inherited-border: 214.3 31.8% 91.4%;
+    --access-inherited-dot: 216.0 22.2% 82.4%;
+
+    /* Field flags */
+    --flag-neutral-bg: 218.2 31.4% 93.1%;
+    --flag-neutral-fg: 218.8 18.9% 35.3%;
+    --flag-pii-bg: 43.5 100.0% 90.0%;
+    --flag-pii-fg: 37.3 100.0% 25.9%;
+
+    /* Property type chips */
+    --type-string-bg: 210.0 61.5% 94.9%;
+    --type-string-fg: 205.8 100.0% 31.0%;
+    --type-numeric-bg: 170.5 51.4% 92.7%;
+    --type-numeric-fg: 175.8 100.0% 19.4%;
+    --type-boolean-bg: 264.7 68.0% 95.1%;
+    --type-boolean-fg: 262.8 55.2% 41.2%;
+    --type-temporal-bg: 30.0 75.0% 93.7%;
+    --type-temporal-fg: 30.5 89.0% 28.6%;
+    --type-ref-bg: 217.5 30.8% 94.9%;
+    --type-ref-fg: 216.8 20.8% 29.2%;
   }
 
   :root[class~="dark"] {
@@ -617,6 +685,42 @@
     --avatar-text-high-emphasis: #262626;
     --base-error: #ff3333;
     --loader-color: #fff;
+
+    /* Access tiers */
+    --access-public-bg: 4.5 52.6% 14.9%;
+    --access-public-fg: 6.7 85.1% 81.6%;
+    --access-public-border: 5.2 51.8% 22.0%;
+    --access-public-dot: 4.9 68.4% 61.6%;
+    --access-user-bg: 42.4 67.2% 12.0%;
+    --access-user-fg: 43.0 80.0% 70.6%;
+    --access-user-border: 43.3 64.2% 18.6%;
+    --access-user-dot: 44.8 77.5% 60.0%;
+    --access-custom-bg: 175.1 64.9% 11.2%;
+    --access-custom-fg: 173.6 61.6% 61.2%;
+    --access-custom-border: 171.0 60.0% 19.6%;
+    --access-custom-dot: 173.7 66.1% 45.1%;
+    --access-inherited-bg: 220.0 25.7% 13.7%;
+    --access-inherited-fg: 216.0 17.4% 66.3%;
+    --access-inherited-border: 221.7 24.7% 18.2%;
+    --access-inherited-dot: 216.9 14.6% 34.9%;
+
+    /* Field flags */
+    --flag-neutral-bg: 220.0 27.3% 15.1%;
+    --flag-neutral-fg: 216.0 17.4% 66.3%;
+    --flag-pii-bg: 42.4 67.2% 12.0%;
+    --flag-pii-fg: 44.8 77.5% 60.0%;
+
+    /* Property type chips */
+    --type-string-bg: 206.5 64.2% 13.1%;
+    --type-string-fg: 203.8 72.5% 67.3%;
+    --type-numeric-bg: 174.4 61.5% 10.2%;
+    --type-numeric-fg: 173.9 57.1% 56.1%;
+    --type-boolean-bg: 256.9 38.1% 16.5%;
+    --type-boolean-fg: 261.6 65.2% 74.1%;
+    --type-temporal-bg: 31.0 50.8% 12.0%;
+    --type-temporal-fg: 33.1 66.8% 63.3%;
+    --type-ref-bg: 220.0 25.7% 13.7%;
+    --type-ref-fg: 216.0 17.4% 66.3%;
   }
 }
 
@@ -653,5 +757,88 @@
 
   ::-webkit-scrollbar-corner {
     background: transparent;
+  }
+}
+
+/* Data Gateway design system, carried over from blocks-data for the Data Access schema explorer. */
+/* ──────────────────────────────────────────────────────────────────────────
+   Motion system
+   ──────────────────────────────────────────────────────────────────────────
+   One set of durations and curves for every panel, drawer and hover in the
+   app, so nothing moves at a speed the rest of the UI does not also use.
+
+   The curves are "emphasized decelerate" shapes: they leave fast and settle
+   slowly, which reads as a panel that was pushed rather than one that was
+   tweened. `--ease-standard` is the default for anything that both enters and
+   leaves; `--ease-enter` for one-way reveals.
+   ────────────────────────────────────────────────────────────────────────── */
+@layer base {
+  :root {
+    --dg-duration-fast: 120ms;
+    --dg-duration-base: 180ms;
+    --dg-duration-panel: 260ms;
+    --dg-ease-standard: cubic-bezier(0.32, 0.72, 0, 1);
+    --dg-ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+    --dg-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  }
+}
+
+/* Panel columns that grow and shrink by width. `width` is a layout property,
+   so the browser reflows each frame — `contain` walls that reflow off from
+   the rest of the page, and the fixed-width child inside means the panel's
+   own content never re-wraps while the frame around it is moving. */
+@utility dg-panel-collapse {
+  transition:
+    width var(--dg-duration-panel) var(--dg-ease-standard),
+    opacity var(--dg-duration-base) var(--dg-ease-standard);
+  contain: layout paint;
+  will-change: width;
+}
+
+/* Cross-fade between two panels sharing one slot. The outgoing panel keeps
+   its box until the incoming one has faded up, so the column never collapses
+   to nothing between the two. */
+@utility dg-fade-layer {
+  transition:
+    opacity var(--dg-duration-base) var(--dg-ease-standard),
+    transform var(--dg-duration-base) var(--dg-ease-standard);
+  will-change: opacity, transform;
+}
+
+@utility dg-fade-in {
+  animation: dg-fade-in var(--dg-duration-base) var(--dg-ease-enter) both;
+}
+
+@utility dg-rise-in {
+  animation: dg-rise-in var(--dg-duration-panel) var(--dg-ease-enter) both;
+}
+
+/* Interactive surfaces: rows, chips, list items. Transitioning only the
+   paint-only properties keeps hover off the layout path entirely. */
+@utility dg-interactive {
+  transition:
+    background-color var(--dg-duration-fast) var(--dg-ease-standard),
+    color var(--dg-duration-fast) var(--dg-ease-standard),
+    border-color var(--dg-duration-fast) var(--dg-ease-standard),
+    box-shadow var(--dg-duration-fast) var(--dg-ease-standard);
+}
+
+@keyframes dg-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dg-rise-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
