@@ -2,6 +2,14 @@
 import { forwardRef, useEffect, useId, useImperativeHandle, useState } from "react";
 import { Button } from "@/components/ui-kits/button/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui-kits/dialog/dialog";
+import {
   ACCESS_LEVEL_TO_TYPE,
   ACCESS_TYPE_TO_LEVEL,
   ACCESS_TYPES,
@@ -25,7 +33,7 @@ import {
   useUpdatePolicy,
 } from "@blocks-idp/data-access/gateway/hooks/use-configuration";
 import { useProjectStore } from "@seliseblocks/genesis-os";
-import { accessEffect } from "@blocks-idp/data-access/gateway/utils/access-phrase";
+import { accessEffect, verbPhrase } from "@blocks-idp/data-access/gateway/utils/access-phrase";
 import {
   accessPresets,
   type AccessPreset,
@@ -166,6 +174,37 @@ const AccessTierTiles = ({
   );
 };
 
+/**
+ * Asked before saving Custom with no rule sets. On platform schemas that refuses
+ * every signed-in user of the project, and the platform's own services acting for
+ * them, so e.g. a Custom View on Role or User with nothing in it breaks sign-in.
+ */
+const EmptyCustomConfirmDialog = ({
+  verb,
+  subject,
+  onAnswer,
+}: Readonly<{ verb: string; subject: string; onAnswer: (confirmed: boolean) => void }>) => (
+  <Dialog open onOpenChange={(open) => !open && onAnswer(false)}>
+    <DialogContent className="mr-4 w-full max-w-[440px] rounded-md">
+      <DialogHeader>
+        <DialogTitle className="text-left text-lg font-semibold leading-7">Nobody will be able to {verb} {subject}</DialogTitle>
+        <DialogDescription className="mt-2 wrap-break-word text-left text-sm font-normal leading-5">
+          Custom with no rule sets allows nobody. Every signed-in user of this project, and the platform services
+          acting for them, will be refused until you add a rule set. Features that depend on {subject} can stop working.
+        </DialogDescription>
+      </DialogHeader>
+      <DialogFooter className="mt-4 flex flex-row justify-end gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={() => onAnswer(false)}>
+          Cancel
+        </Button>
+        <Button type="button" variant="destructive" size="sm" onClick={() => onAnswer(true)}>
+          Save anyway
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+);
+
 interface PolicyListPaneProps {
   isLoading: boolean;
   policies: IPolicyItem[];
@@ -256,6 +295,8 @@ export const SchemaAccessControlView = forwardRef<
   const [seedRuleSet, setSeedRuleSet] = useState<PresetRuleSet | undefined>();
   const [queuedRuleSet, setQueuedRuleSet] = useState<PresetRuleSet | undefined>();
   const [isSavingRuleSet, setIsSavingRuleSet] = useState(false);
+  /** Set while the empty-Custom confirmation is open; called with the answer. */
+  const [answerEmptyCustom, setAnswerEmptyCustom] = useState<((confirmed: boolean) => void) | null>(null);
   // Reported inline, in the footer's own status slot, instead of a toast —
   // the shared toast viewport docks bottom-right, right where this panel's
   // own Save button sits.
@@ -443,6 +484,15 @@ export const SchemaAccessControlView = forwardRef<
    *  here. */
   const handleFinalSave = async (): Promise<boolean> => {
     if (!isAccessTypeDirty) return true;
+    if (selectedAccessType === ACCESS_TYPES.CUSTOM && policies.length === 0) {
+      const confirmed = await new Promise<boolean>((resolve) =>
+        setAnswerEmptyCustom(() => (answer: boolean) => {
+          setAnswerEmptyCustom(null);
+          resolve(answer);
+        }),
+      );
+      if (!confirmed) return false;
+    }
     return handleSaveAccessType();
   };
 
@@ -487,6 +537,9 @@ export const SchemaAccessControlView = forwardRef<
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
+      {answerEmptyCustom && (
+        <EmptyCustomConfirmDialog verb={verbPhrase(tabForOperation)} subject={effectSubject} onAnswer={answerEmptyCustom} />
+      )}
       {/* Hidden while a rule set is being added or edited: the form is a
           focused sub-flow with its own header and Back button, and the tier
           picker above it is disabled then anyway. */}

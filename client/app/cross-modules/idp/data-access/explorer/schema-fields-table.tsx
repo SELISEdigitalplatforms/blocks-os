@@ -63,7 +63,7 @@ function EnumValues({ values }: Readonly<{ values: string[] }>) {
   );
 }
 
-/** The Rules column: the field's access, which opens the inspector (Edit is what can change here). */
+/** The Rules column: the field's View and Edit access (the two that apply to a property), which opens the inspector. */
 function FieldAccessButton({
   field,
   path,
@@ -87,12 +87,11 @@ function FieldAccessButton({
     );
   }
 
-  const isCustomised = tierFromLevel(field.editAccessLevel) !== "inherited";
   const levels = [
     { label: "View", level: field.readAccessLevel },
-    { label: "Create", level: field.writeAccessLevel },
     { label: "Edit", level: field.editAccessLevel },
   ];
+  const isCustomised = levels.some(({ level }) => tierFromLevel(level) !== "inherited");
 
   return (
     <Tooltip>
