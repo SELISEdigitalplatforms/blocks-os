@@ -13,10 +13,10 @@ namespace Configuration.DomainService.DataGateway.Services
     public interface IDataGatewayRootStore
     {
         /// <summary>The tenant's root doc, or null. Soft-deleted docs only when <paramref name="includeDeleted"/>.</summary>
-        Task<DataGatewayConfiguration?> GetRootAsync(string tenantId, bool includeDeleted = false);
+        Task<DataServiceConfiguration?> GetRootAsync(string tenantId, bool includeDeleted = false);
 
         /// <summary>Insert only. <c>false</c> when the doc already exists (DuplicateKey).</summary>
-        Task<bool> TryInsertRootAsync(DataGatewayConfiguration root);
+        Task<bool> TryInsertRootAsync(DataServiceConfiguration root);
 
         /// <summary>Field <c>$set</c> on the live root doc, never a whole-doc replace, no upsert. <c>false</c> = no such doc.</summary>
         Task<bool> SetRootFieldsAsync(string tenantId, BsonDocument set);
@@ -52,24 +52,24 @@ namespace Configuration.DomainService.DataGateway.Services
         public static long VersionOf(DateTime lastUpdatedUtc) =>
             lastUpdatedUtc.Ticks - lastUpdatedUtc.Ticks % TimeSpan.TicksPerMillisecond;
 
-        private IMongoCollection<DataGatewayConfiguration> Collection() =>
+        private IMongoCollection<DataServiceConfiguration> Collection() =>
             _dbContextProvider
                 .GetDatabase(_blocksSecret.DatabaseConnectionString, _blocksSecret.RootDatabaseName)
-                .GetCollection<DataGatewayConfiguration>(CollectionName);
+                .GetCollection<DataServiceConfiguration>(CollectionName);
 
-        public async Task<DataGatewayConfiguration?> GetRootAsync(string tenantId, bool includeDeleted = false)
+        public async Task<DataServiceConfiguration?> GetRootAsync(string tenantId, bool includeDeleted = false)
         {
             if (string.IsNullOrWhiteSpace(tenantId))
                 return null;
 
-            var builder = Builders<DataGatewayConfiguration>.Filter;
+            var builder = Builders<DataServiceConfiguration>.Filter;
             var filter = builder.Eq(x => x.ItemId, tenantId);
             if (!includeDeleted)
                 filter &= builder.Eq(x => x.IsDeleted, false);
             return await Collection().Find(filter).FirstOrDefaultAsync();
         }
 
-        public async Task<bool> TryInsertRootAsync(DataGatewayConfiguration root)
+        public async Task<bool> TryInsertRootAsync(DataServiceConfiguration root)
         {
             try
             {
@@ -84,10 +84,10 @@ namespace Configuration.DomainService.DataGateway.Services
 
         public async Task<bool> SetRootFieldsAsync(string tenantId, BsonDocument set)
         {
-            var builder = Builders<DataGatewayConfiguration>.Filter;
+            var builder = Builders<DataServiceConfiguration>.Filter;
             var result = await Collection().UpdateOneAsync(
                 builder.Eq(x => x.ItemId, tenantId) & builder.Eq(x => x.IsDeleted, false),
-                new BsonDocumentUpdateDefinition<DataGatewayConfiguration>(new BsonDocument("$set", set)),
+                new BsonDocumentUpdateDefinition<DataServiceConfiguration>(new BsonDocument("$set", set)),
                 new UpdateOptions { IsUpsert = false });
             return result.MatchedCount > 0;
         }

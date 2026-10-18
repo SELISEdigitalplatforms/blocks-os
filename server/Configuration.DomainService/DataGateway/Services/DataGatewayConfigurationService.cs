@@ -97,7 +97,7 @@ namespace Configuration.DomainService.DataGateway.Services
         /// The live root doc. No doc: creates the default doc and a secret with the value <c>default</c> (insert only; the
         /// loser of a parallel create deletes its own new secret). A soft-deleted doc answers null.
         /// </summary>
-        public async Task<DataGatewayConfiguration?> EnsureRootAsync(string tenantId)
+        public async Task<DataServiceConfiguration?> EnsureRootAsync(string tenantId)
         {
             if (string.IsNullOrWhiteSpace(tenantId))
                 throw new InvalidOperationException("Tenant ID is missing in the current context.");
@@ -244,22 +244,22 @@ namespace Configuration.DomainService.DataGateway.Services
             return (secretId, null);
         }
 
-        private static BsonDocument BuildRootUpdate(SaveDataGatewayConfigurationRequest request, DataGatewayConfiguration root, string secretId, string databaseName, DateTime now)
+        private static BsonDocument BuildRootUpdate(SaveDataGatewayConfigurationRequest request, DataServiceConfiguration root, string secretId, string databaseName, DateTime now)
         {
             var userId = BlocksContext.GetContext()?.UserId;
             var set = new BsonDocument
             {
-                { nameof(DataGatewayConfiguration.DbConnectionSecretId), secretId },
-                { nameof(DataGatewayConfiguration.DatabaseName), databaseName },
-                { nameof(DataGatewayConfiguration.IsCollectionNameEditable), request.IsCollectionNameEditable },
-                { nameof(DataGatewayConfiguration.LastUpdatedDate), now },
-                { nameof(DataGatewayConfiguration.LastUpdatedBy), (BsonValue?)userId ?? BsonNull.Value },
+                { nameof(DataServiceConfiguration.DbConnectionSecretId), secretId },
+                { nameof(DataServiceConfiguration.DatabaseName), databaseName },
+                { nameof(DataServiceConfiguration.IsCollectionNameEditable), request.IsCollectionNameEditable },
+                { nameof(DataServiceConfiguration.LastUpdatedDate), now },
+                { nameof(DataServiceConfiguration.LastUpdatedBy), (BsonValue?)userId ?? BsonNull.Value },
             };
             if (!string.IsNullOrWhiteSpace(request.CollectionNamePattern))
-                set[nameof(DataGatewayConfiguration.CollectionNamePattern)] = request.CollectionNamePattern;
+                set[nameof(DataServiceConfiguration.CollectionNamePattern)] = request.CollectionNamePattern;
             var analytics = ApplyAnalytics(root.AnalyticsConfiguration, request.EnableAnalytics);
             if (analytics is not null)
-                set[nameof(DataGatewayConfiguration.AnalyticsConfiguration)] = analytics.ToBsonDocument();
+                set[nameof(DataServiceConfiguration.AnalyticsConfiguration)] = analytics.ToBsonDocument();
             return set;
         }
 
@@ -341,11 +341,11 @@ namespace Configuration.DomainService.DataGateway.Services
         #endregion
 
         /// <summary>The default root doc of a new tenant: the seed doc values (contract).</summary>
-        internal static DataGatewayConfiguration Seed(string tenantId, string secretId)
+        internal static DataServiceConfiguration Seed(string tenantId, string secretId)
         {
             var now = new DateTime(DataGatewayRootStore.VersionOf(DateTime.UtcNow), DateTimeKind.Utc);
             var userId = BlocksContext.GetContext()?.UserId;
-            return new DataGatewayConfiguration
+            return new DataServiceConfiguration
             {
                 ItemId = tenantId,
                 TenantId = tenantId,

@@ -9,7 +9,7 @@ namespace Configuration.DomainService.DataGateway.Entities
     /// stored here: it lives in the Blocks <c>Service</c> secret <see cref="DbConnectionSecretId"/> points at.
     /// </summary>
     [BsonIgnoreExtraElements]
-    public class DataGatewayConfiguration : BaseEntity
+    public class DataServiceConfiguration : BaseEntity
     {
         /// <summary>Id of the secret that holds <c>default</c> (Blocks DB) or the plain connection string. Always set.</summary>
         public string DbConnectionSecretId { get; set; } = string.Empty;

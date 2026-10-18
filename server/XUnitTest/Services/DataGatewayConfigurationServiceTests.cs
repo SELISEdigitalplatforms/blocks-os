@@ -105,20 +105,20 @@ namespace XUnitTest.Services
     {
         private readonly List<string> _calls;
         public FakeRootStore(List<string> calls) => _calls = calls;
-        public DataGatewayConfiguration? Doc { get; set; }
+        public DataServiceConfiguration? Doc { get; set; }
         public int Inserts { get; private set; }
         public BsonDocument? LastSet { get; private set; }
         public (string Secret, string Db, bool Custom, DateTime Stamp)? Hash { get; private set; }
         public bool InsertLosesRace { get; set; }
-        public Func<DataGatewayConfiguration>? WinnerDoc { get; set; }
+        public Func<DataServiceConfiguration>? WinnerDoc { get; set; }
         public Exception? SetThrows { get; set; }
         public Exception? HashThrows { get; set; }
         public bool SetMatches { get; set; } = true;
 
-        public Task<DataGatewayConfiguration?> GetRootAsync(string tenantId, bool includeDeleted = false) =>
+        public Task<DataServiceConfiguration?> GetRootAsync(string tenantId, bool includeDeleted = false) =>
             Task.FromResult(Doc is null || (Doc.IsDeleted && !includeDeleted) ? null : Doc);
 
-        public Task<bool> TryInsertRootAsync(DataGatewayConfiguration root)
+        public Task<bool> TryInsertRootAsync(DataServiceConfiguration root)
         {
             _calls.Add("root.insert");
             Inserts++;
@@ -170,7 +170,7 @@ namespace XUnitTest.Services
         private DataGatewayConfigurationService Service() => new(
             _store, new DataGatewayConfigurationValidator(), _secrets, NullLogger<DataGatewayConfigurationService>.Instance);
 
-        private DataGatewayConfiguration Root(string secretId, string db = "crm") => new()
+        private DataServiceConfiguration Root(string secretId, string db = "crm") => new()
         {
             ItemId = Tenant, TenantId = Tenant, DbConnectionSecretId = secretId, DatabaseName = db,
             LastUpdatedDate = DateTime.UtcNow, AnalyticsConfiguration = new AnalyticsConfiguration { EnableAnalytics = true }
@@ -457,8 +457,8 @@ namespace XUnitTest.Services
         public async Task Get_NoRootDoc_InsertFails_DeletesOwnSecret_AndRethrows()
         {
             var failing = new Mock<IDataGatewayRootStore>();
-            failing.Setup(s => s.GetRootAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync((DataGatewayConfiguration?)null);
-            failing.Setup(s => s.TryInsertRootAsync(It.IsAny<DataGatewayConfiguration>())).ThrowsAsync(new InvalidOperationException("db"));
+            failing.Setup(s => s.GetRootAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync((DataServiceConfiguration?)null);
+            failing.Setup(s => s.TryInsertRootAsync(It.IsAny<DataServiceConfiguration>())).ThrowsAsync(new InvalidOperationException("db"));
             var service = new DataGatewayConfigurationService(failing.Object, new DataGatewayConfigurationValidator(), _secrets, NullLogger<DataGatewayConfigurationService>.Instance);
 
             var act = () => service.GetDataGatewayConfigurationAsync();
