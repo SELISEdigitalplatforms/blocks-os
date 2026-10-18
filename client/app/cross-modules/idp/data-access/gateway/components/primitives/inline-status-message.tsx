@@ -15,16 +15,15 @@ import type { TransientStatus } from "@blocks-idp/data-access/gateway/hooks/use-
 export function InlineStatusMessage({
   status,
   fallback,
-}: {
+}: Readonly<{
   status: TransientStatus | null;
   fallback: ReactNode;
-}) {
+}>) {
   if (!status) return <>{fallback}</>;
 
   const Icon = status.kind === "success" ? CheckCircle2 : AlertCircle;
   return (
-    <span
-      role="status"
+    <output
       aria-live="polite"
       className={cn(
         "flex min-w-0 items-center gap-1.5",
@@ -35,7 +34,7 @@ export function InlineStatusMessage({
     >
       <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
       <span className="truncate">{status.message}</span>
-    </span>
+    </output>
   );
 }
 

@@ -102,7 +102,7 @@ export function AccessTierBadge({
   children,
   className,
   title,
-}: AccessTierBadgeProps) {
+}: Readonly<AccessTierBadgeProps>) {
   const resolved = level === undefined || level === null ? (tier ?? "inherited") : tierFromLevel(level);
 
   return (
@@ -157,14 +157,14 @@ export function AccessVerbPill({
   className,
   /** Drops the tier's text label, keeping just its icon — for a narrow header. */
   compact = false,
-}: {
+}: Readonly<{
   level?: number | null;
   tier?: AccessTier;
   verb: string;
   onClick?: () => void;
   className?: string;
   compact?: boolean;
-}) {
+}>) {
   const resolved = level === undefined || level === null ? (tier ?? "inherited") : tierFromLevel(level);
   const Icon = TIER_ICON[resolved];
 
@@ -206,7 +206,7 @@ export function AccessTierDot({
   tier,
   className,
   title,
-}: Pick<AccessTierBadgeProps, "level" | "tier" | "className" | "title">) {
+}: Readonly<Pick<AccessTierBadgeProps, "level" | "tier" | "className" | "title">>) {
   const resolved = level === undefined || level === null ? (tier ?? "inherited") : tierFromLevel(level);
 
   return (

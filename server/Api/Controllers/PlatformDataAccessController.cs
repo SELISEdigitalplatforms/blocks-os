@@ -10,6 +10,8 @@ namespace BlocksOs.Api.Controllers;
 [Route("[controller]/[action]")]
 public sealed class PlatformDataAccessController(IDbContextProvider databaseProvider) : ControllerBase
 {
+    private const string LogicService = "Logic";
+
     private static readonly IReadOnlyDictionary<string, string> Owners = new Dictionary<string, string>
     {
         ["User"] = "IAM", ["Role"] = "IAM", ["Permission"] = "IAM", ["Organization"] = "IAM",
@@ -21,13 +23,13 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
         ["BlocksClientConfig"] = "IAM", ["Secret"] = "IAM",
         ["EmailTemplate"] = "OS", ["IntegrationSetup"] = "OS", ["ThirdPartyJWTClaims"] = "OS",
         ["MailServerConfiguration"] = "OS", ["ResourceLimit"] = "OS", ["MigrationTracker"] = "OS",
-        ["WorkflowEntity"] = "Logic", ["WorkflowVersionEntity"] = "Logic", ["WorkflowExecutionEntity"] = "Logic",
-        ["WorkflowItemExecutionEntity"] = "Logic", ["FunctionEntity"] = "Logic", ["FunctionVersionEntity"] = "Logic",
-        ["FunctionRunEntity"] = "Logic", ["FunctionRunLogEntity"] = "Logic", ["FunctionBuildEntity"] = "Logic",
-        ["FunctionAuditEventEntity"] = "Logic", ["ProxyDetailEntity"] = "Logic", ["ProxyVersionEntity"] = "Logic",
-        ["ProxyExecutionEntity"] = "Logic", ["Schedule"] = "Logic", ["MailBoxEntity"] = "Logic",
-        ["MailBoxSyncCursor"] = "Logic", ["NotificationConnection"] = "Logic", ["NotificationSubscription"] = "Logic",
-        ["OfflineNotification"] = "Logic", ["FirebaseConfiguration"] = "Logic",
+        ["WorkflowEntity"] = LogicService, ["WorkflowVersionEntity"] = LogicService, ["WorkflowExecutionEntity"] = LogicService,
+        ["WorkflowItemExecutionEntity"] = LogicService, ["FunctionEntity"] = LogicService, ["FunctionVersionEntity"] = LogicService,
+        ["FunctionRunEntity"] = LogicService, ["FunctionRunLogEntity"] = LogicService, ["FunctionBuildEntity"] = LogicService,
+        ["FunctionAuditEventEntity"] = LogicService, ["ProxyDetailEntity"] = LogicService, ["ProxyVersionEntity"] = LogicService,
+        ["ProxyExecutionEntity"] = LogicService, ["Schedule"] = LogicService, ["MailBoxEntity"] = LogicService,
+        ["MailBoxSyncCursor"] = LogicService, ["NotificationConnection"] = LogicService, ["NotificationSubscription"] = LogicService,
+        ["OfflineNotification"] = LogicService, ["FirebaseConfiguration"] = LogicService,
         ["Build"] = "Release", ["Repo"] = "Release", ["RepositoryWebhook"] = "Release"
     };
 
@@ -84,12 +86,13 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
     {
         var schema = await SchemaCollection.Find(x => x.ItemId == request.SchemaId && x.IsSystemEntity && !x.IsDeleted)
             .FirstOrDefaultAsync(cancellationToken);
-        if (schema is null || !Owners.ContainsKey(schema.SchemaName) || request.Operation != PolicyOperation.EDIT) return BadRequest();
-        if (request.PolicyType == PolicyType.RLS) schema.EditAccessLevel = request.AccessLevel;
+        if (schema is null || !Owners.ContainsKey(schema.SchemaName) || (request.Operation ?? default) != PolicyOperation.EDIT) return BadRequest();
+        var accessLevel = request.AccessLevel ?? default;
+        if ((request.PolicyType ?? default) == PolicyType.RLS) schema.EditAccessLevel = accessLevel;
         else
         {
             if (request.FieldNames.Length == 0 || request.FieldNames.Any(name => schema.Fields.All(field => field.Name != name))) return BadRequest();
-            foreach (var field in schema.Fields.Where(field => request.FieldNames.Contains(field.Name))) field.EditAccessLevel = request.AccessLevel;
+            foreach (var field in schema.Fields.Where(field => request.FieldNames.Contains(field.Name))) field.EditAccessLevel = accessLevel;
         }
         await SchemaCollection.ReplaceOneAsync(x => x.ItemId == schema.ItemId, schema, cancellationToken: cancellationToken);
         return Ok(new { isSuccess = true, data = new { acknowledged = true, itemId = schema.ItemId } });
@@ -115,40 +118,46 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
         var schema = await SchemaCollection.Find(x => x.ItemId == request.SchemaId && x.IsSystemEntity && !x.IsDeleted)
             .FirstOrDefaultAsync(cancellationToken);
         if (schema is null || !Owners.ContainsKey(schema.SchemaName)) return NotFound();
-        if (string.IsNullOrWhiteSpace(request.PolicyName)) return BadRequest();
-        if (request.PolicyType == PolicyType.RLS && request.FieldNames.Length != 0) return BadRequest();
-        if (request.PolicyType == PolicyType.CLS && (request.FieldNames.Length == 0 || request.FieldNames.Any(name => schema.Fields.All(field => field.Name != name)))) return BadRequest();
+        var policyType = request.PolicyType ?? default;
+        if (!IsValidPolicyRequest(request, policyType, schema)) return BadRequest();
 
-        DataAccessPolicy policy;
-        if (string.IsNullOrWhiteSpace(itemId))
-        {
-            policy = new DataAccessPolicy { ItemId = Guid.NewGuid().ToString(), CreatedDate = DateTime.UtcNow };
-        }
-        else
-        {
-            policy = await PolicyCollection.Find(x => x.ItemId == itemId && x.SchemaId == schema.ItemId && x.Operation == PolicyOperation.EDIT)
-                .FirstOrDefaultAsync(cancellationToken);
-            if (policy is null) return NotFound();
-        }
+        var policy = await LoadOrCreatePolicyAsync(itemId, schema, cancellationToken);
+        if (policy is null) return NotFound();
 
         policy.PolicyName = request.PolicyName.Trim();
         policy.PolicyDescription = request.PolicyDescription ?? string.Empty;
-        policy.PolicyType = request.PolicyType;
+        policy.PolicyType = policyType;
         policy.Operation = PolicyOperation.EDIT;
         policy.SchemaName = schema.SchemaName;
         policy.SchemaId = schema.ItemId;
         policy.FieldNames = request.FieldNames;
         policy.RuleGroup = request.RuleGroup;
-        policy.Priority = request.Priority;
-        policy.IsAllowPolicy = request.IsAllowPolicy;
+        policy.Priority = request.Priority ?? 1;
+        policy.IsAllowPolicy = request.IsAllowPolicy ?? true;
         policy.LastUpdatedDate = DateTime.UtcNow;
 
-        if (request.PolicyType == PolicyType.RLS) schema.EditAccessLevel = SchemaAccessLevel.Custom;
+        if (policyType == PolicyType.RLS) schema.EditAccessLevel = SchemaAccessLevel.Custom;
         else foreach (var field in schema.Fields.Where(field => request.FieldNames.Contains(field.Name))) field.EditAccessLevel = SchemaAccessLevel.Custom;
 
         await SchemaCollection.ReplaceOneAsync(x => x.ItemId == schema.ItemId, schema, cancellationToken: cancellationToken);
         await PolicyCollection.ReplaceOneAsync(x => x.ItemId == policy.ItemId, policy, new ReplaceOptions { IsUpsert = true }, cancellationToken);
         return Ok(new { isSuccess = true, data = new { acknowledged = true, itemId = policy.ItemId } });
+    }
+
+    private static bool IsValidPolicyRequest(SavePlatformPolicyRequest request, PolicyType policyType, SchemaDefinition schema)
+    {
+        if (string.IsNullOrWhiteSpace(request.PolicyName)) return false;
+        if (policyType == PolicyType.RLS) return request.FieldNames.Length == 0;
+        if (policyType == PolicyType.CLS) return request.FieldNames.Length != 0 && request.FieldNames.All(name => schema.Fields.Any(field => field.Name == name));
+        return true;
+    }
+
+    private async Task<DataAccessPolicy?> LoadOrCreatePolicyAsync(string? itemId, SchemaDefinition schema, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(itemId))
+            return new DataAccessPolicy { ItemId = Guid.NewGuid().ToString(), CreatedDate = DateTime.UtcNow };
+        return await PolicyCollection.Find(x => x.ItemId == itemId && x.SchemaId == schema.ItemId && x.Operation == PolicyOperation.EDIT)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     private async Task<bool> IsPlatformSchemaAsync(string schemaId, CancellationToken cancellationToken)
@@ -169,18 +178,18 @@ public sealed class SavePlatformPolicyRequest
     public string SchemaId { get; set; } = string.Empty;
     public string PolicyName { get; set; } = string.Empty;
     public string? PolicyDescription { get; set; }
-    public PolicyType PolicyType { get; set; }
+    public PolicyType? PolicyType { get; set; }
     public string[] FieldNames { get; set; } = [];
     public PolicyRuleGroup RuleGroup { get; set; } = new();
-    public int Priority { get; set; } = 1;
-    public bool IsAllowPolicy { get; set; } = true;
+    public int? Priority { get; set; }
+    public bool? IsAllowPolicy { get; set; }
 }
 
 public sealed class ConfigurePlatformAccessRequest
 {
     public string SchemaId { get; set; } = string.Empty;
-    public PolicyOperation Operation { get; set; }
-    public PolicyType PolicyType { get; set; }
+    public PolicyOperation? Operation { get; set; }
+    public PolicyType? PolicyType { get; set; }
     public string[] FieldNames { get; set; } = [];
-    public SchemaAccessLevel AccessLevel { get; set; }
+    public SchemaAccessLevel? AccessLevel { get; set; }
 }

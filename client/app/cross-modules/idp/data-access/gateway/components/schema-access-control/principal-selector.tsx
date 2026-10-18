@@ -48,6 +48,150 @@ const splitValue = (value: string): string[] =>
     .map((v) => v.trim())
     .filter(Boolean);
 
+const selectedValuesOf = (value: string, multiple: boolean): string[] => {
+  if (multiple) return splitValue(value);
+  const trimmed = value.trim();
+  return trimmed ? [trimmed] : [];
+};
+
+const emptyTriggerLabel = (entity: PrincipalEntity): string =>
+  entity === "role" ? "Select role" : "Select user";
+
+type BrowseState = ReturnType<typeof usePrincipalOptions>;
+
+interface PrincipalTriggerProps {
+  isChip: boolean;
+  hasSelection: boolean;
+  triggerLabel: string;
+}
+
+const PrincipalTrigger = ({ isChip, hasSelection, triggerLabel }: Readonly<PrincipalTriggerProps>) => {
+  if (isChip) {
+    return (
+      <button
+        type="button"
+        // Empty reads "Not set" like the row's other chips; the label keeps the
+        // control findable by what it picks.
+        aria-label={hasSelection ? undefined : triggerLabel}
+        className={cn(
+          "flex h-8 min-w-0 max-w-full items-center justify-center truncate rounded-md border px-3 text-center text-xs font-semibold transition-colors",
+          hasSelection
+            ? "border-border/70 bg-muted/70 text-foreground hover:bg-muted"
+            : "border-dashed border-border/50 bg-background text-muted-foreground hover:bg-muted/30",
+        )}
+      >
+        <span className="block truncate">{hasSelection ? triggerLabel : "Not set"}</span>
+      </button>
+    );
+  }
+  return (
+    <button
+      type="button"
+      className="flex h-10 w-full min-w-0 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background hover:bg-accent hover:text-accent-foreground lg:flex-1"
+    >
+      <span className="truncate text-left">{triggerLabel}</span>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="12"
+        height="12"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="ml-2 shrink-0 opacity-50"
+      >
+        <path d="m6 9 6 6 6-6" />
+      </svg>
+    </button>
+  );
+};
+
+interface BrowseResultsProps {
+  browse: BrowseState;
+  entity: PrincipalEntity;
+  multiple: boolean;
+  selectedValues: string[];
+  onToggle: (option: PrincipalOption) => void;
+}
+
+const BrowseResults = ({
+  browse,
+  entity,
+  multiple,
+  selectedValues,
+  onToggle,
+}: Readonly<BrowseResultsProps>) => {
+  if (browse.isForbidden) {
+    return <div className="p-3 text-sm text-destructive">{PRINCIPAL_MESSAGES.FORBIDDEN}</div>;
+  }
+  if (browse.error) {
+    return (
+      <div className="flex items-center justify-between gap-2 p-3 text-sm text-destructive">
+        <span>
+          {entity === "role" ? PRINCIPAL_MESSAGES.ROLES_FAILED : PRINCIPAL_MESSAGES.USERS_FAILED}
+        </span>
+        <button type="button" className="underline" onClick={() => browse.refetch()}>
+          Retry
+        </button>
+      </div>
+    );
+  }
+  if (browse.isLoading) {
+    return (
+      <div className="p-3 text-sm text-muted-foreground" aria-busy="true">
+        Loading…
+      </div>
+    );
+  }
+  if (browse.options.length === 0) {
+    return (
+      <div className="p-3 text-sm text-muted-foreground">
+        {entity === "role" ? PRINCIPAL_MESSAGES.NO_ROLES : PRINCIPAL_MESSAGES.NO_USERS}
+      </div>
+    );
+  }
+  return (
+    <CommandGroup>
+      {browse.options.map((option) => {
+        const isSelected = selectedValues.includes(option.value);
+        return (
+          <CommandItem
+            key={option.value}
+            value={option.value}
+            data-testid={`browse-option-${option.value}`}
+            onSelect={() => onToggle(option)}
+            className={cn(isSelected && "bg-accent")}
+          >
+            {multiple && (
+              <Checkbox
+                checked={isSelected}
+                tabIndex={-1}
+                aria-label={`${isSelected ? "Deselect" : "Select"} ${option.primaryLabel}`}
+                className="pointer-events-none mr-2 shrink-0"
+              />
+            )}
+            <div className="flex flex-col">
+              <span>{option.primaryLabel}</span>
+              <span className="text-xs text-muted-foreground">{option.secondaryLabel}</span>
+            </div>
+          </CommandItem>
+        );
+      })}
+      {browse.hasNextPage && (
+        <CommandItem
+          key="__load_more__"
+          value="__load_more__"
+          onSelect={() => browse.fetchNextPage()}
+        >
+          {browse.isFetchingNextPage ? "Loading…" : "Load more"}
+        </CommandItem>
+      )}
+    </CommandGroup>
+  );
+};
+
 /**
  * Inner selector. Remounted per tenant by the exported wrapper, so obsolete options cannot be
  * rendered even for the single commit before an effect could clear them.
@@ -65,7 +209,7 @@ const PrincipalSelectorInner = ({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
-  const selectedValues = multiple ? splitValue(value) : value.trim() ? [value.trim()] : [];
+  const selectedValues = selectedValuesOf(value, multiple);
 
   // Browsing is gated on the popover; resolving what is already stored is NOT - a closed selector
   // still has to show its labels and any Unavailable marker.
@@ -82,11 +226,6 @@ const PrincipalSelectorInner = ({
     values: selectedValues,
     userValueField,
   });
-
-  const failedMessage =
-    entity === "role" ? PRINCIPAL_MESSAGES.ROLES_FAILED : PRINCIPAL_MESSAGES.USERS_FAILED;
-  const emptyMessage =
-    entity === "role" ? PRINCIPAL_MESSAGES.NO_ROLES : PRINCIPAL_MESSAGES.NO_USERS;
 
   const labelFor = (storedValue: string): string => {
     const known = browse.options.find((o) => o.value === storedValue);
@@ -125,52 +264,16 @@ const PrincipalSelectorInner = ({
 
   const triggerLabel = selectedValues.length
     ? selectedValues.map(labelFor).join(", ")
-    : entity === "role"
-      ? "Select role"
-      : "Select user";
+    : emptyTriggerLabel(entity);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        {isChip ? (
-          <button
-            type="button"
-            // Empty reads "Not set" like the row's other chips; the label keeps the
-            // control findable by what it picks.
-            aria-label={selectedValues.length ? undefined : triggerLabel}
-            className={cn(
-              "flex h-8 min-w-0 max-w-full items-center justify-center truncate rounded-md border px-3 text-center text-xs font-semibold transition-colors",
-              selectedValues.length
-                ? "border-border/70 bg-muted/70 text-foreground hover:bg-muted"
-                : "border-dashed border-border/50 bg-background text-muted-foreground hover:bg-muted/30",
-            )}
-          >
-            <span className="block truncate">
-              {selectedValues.length ? triggerLabel : "Not set"}
-            </span>
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="flex h-10 w-full min-w-0 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background hover:bg-accent hover:text-accent-foreground lg:flex-1"
-          >
-            <span className="truncate text-left">{triggerLabel}</span>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="ml-2 shrink-0 opacity-50"
-            >
-              <path d="m6 9 6 6 6-6" />
-            </svg>
-          </button>
-        )}
+        <PrincipalTrigger
+          isChip={isChip}
+          hasSelection={selectedValues.length > 0}
+          triggerLabel={triggerLabel}
+        />
       </PopoverTrigger>
       <PopoverContent className={cn("p-0", isChip ? "w-52" : "w-64")} align="start">
         <div className="border-b p-2">
@@ -183,61 +286,13 @@ const PrincipalSelectorInner = ({
         </div>
         <Command shouldFilter={false}>
           <CommandList>
-            {browse.isForbidden ? (
-              <div className="p-3 text-sm text-destructive">{PRINCIPAL_MESSAGES.FORBIDDEN}</div>
-            ) : browse.error ? (
-              <div className="flex items-center justify-between gap-2 p-3 text-sm text-destructive">
-                <span>{failedMessage}</span>
-                <button type="button" className="underline" onClick={() => browse.refetch()}>
-                  Retry
-                </button>
-              </div>
-            ) : browse.isLoading ? (
-              <div className="p-3 text-sm text-muted-foreground" aria-busy="true">
-                Loading…
-              </div>
-            ) : browse.options.length === 0 ? (
-              <div className="p-3 text-sm text-muted-foreground">{emptyMessage}</div>
-            ) : (
-              <CommandGroup>
-                {browse.options.map((option) => {
-                  const isSelected = selectedValues.includes(option.value);
-                  return (
-                    <CommandItem
-                      key={option.value}
-                      value={option.value}
-                      data-testid={`browse-option-${option.value}`}
-                      onSelect={() => toggle(option)}
-                      className={cn(isSelected && "bg-accent")}
-                    >
-                      {multiple && (
-                        <Checkbox
-                          checked={isSelected}
-                          tabIndex={-1}
-                          aria-label={`${isSelected ? "Deselect" : "Select"} ${option.primaryLabel}`}
-                          className="pointer-events-none mr-2 shrink-0"
-                        />
-                      )}
-                      <div className="flex flex-col">
-                        <span>{option.primaryLabel}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {option.secondaryLabel}
-                        </span>
-                      </div>
-                    </CommandItem>
-                  );
-                })}
-                {browse.hasNextPage && (
-                  <CommandItem
-                    key="__load_more__"
-                    value="__load_more__"
-                    onSelect={() => browse.fetchNextPage()}
-                  >
-                    {browse.isFetchingNextPage ? "Loading…" : "Load more"}
-                  </CommandItem>
-                )}
-              </CommandGroup>
-            )}
+            <BrowseResults
+              browse={browse}
+              entity={entity}
+              multiple={multiple}
+              selectedValues={selectedValues}
+              onToggle={toggle}
+            />
           </CommandList>
         </Command>
       </PopoverContent>

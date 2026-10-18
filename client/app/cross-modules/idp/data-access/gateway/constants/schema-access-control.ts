@@ -63,7 +63,7 @@ export const AUTH_FIELD_OPTIONS = [
     value: "organizationId",
     category: FIELD_TYPE_CATEGORY.STRING,
   },
-  // TODO: we will need them later
+  // Left out of the selectable auth fields for now; add an entry back here to expose it.
   // { label: "TenantId", value: "tenantId", category: FIELD_TYPE_CATEGORY.STRING },
   // { label: "Custom Claims", value: "customClaims", category: FIELD_TYPE_CATEGORY.STRING },
 ];

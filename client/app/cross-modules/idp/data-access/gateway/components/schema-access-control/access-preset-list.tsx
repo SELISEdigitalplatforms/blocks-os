@@ -14,11 +14,11 @@ export function AccessPresetList({
   presets,
   onApply,
   onStartBlank,
-}: {
+}: Readonly<{
   presets: AccessPreset[];
   onApply: (preset: AccessPreset) => void;
   onStartBlank: () => void;
-}) {
+}>) {
   return (
     <div className="space-y-2">
       <p className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground/70">

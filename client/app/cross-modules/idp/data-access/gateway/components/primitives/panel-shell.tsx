@@ -27,14 +27,14 @@ export function PanelHeader({
   onClose,
   closeLabel,
   actions,
-}: {
+}: Readonly<{
   icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
   title: string;
   subtitle?: string;
   onClose: () => void;
   closeLabel: string;
   actions?: ReactNode;
-}) {
+}>) {
   return (
     <div className="flex min-h-11 shrink-0 items-start gap-2 border-b border-primary/20 bg-primary/10 px-3 py-2.5">
       <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
@@ -68,11 +68,11 @@ export function PanelShell({
   label,
   className,
   children,
-}: {
+}: Readonly<{
   label: string;
   className?: string;
   children: ReactNode;
-}) {
+}>) {
   return (
     <aside
       aria-label={label}

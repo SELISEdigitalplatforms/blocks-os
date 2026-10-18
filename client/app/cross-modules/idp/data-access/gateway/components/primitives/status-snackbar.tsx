@@ -13,7 +13,7 @@ import { InlineStatusMessage } from "./inline-status-message";
  * footer stays visible without covering anything, and without needing
  * whatever's below it to stay mounted the way inline footer text would.
  */
-export function StatusSnackbar({ status }: { status: TransientStatus | null }) {
+export function StatusSnackbar({ status }: Readonly<{ status: TransientStatus | null }>) {
   if (!status) return null;
 
   return (

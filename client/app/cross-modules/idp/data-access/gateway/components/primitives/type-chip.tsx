@@ -50,7 +50,7 @@ interface TypeChipProps {
   className?: string;
 }
 
-export function TypeChip({ type, isArray, className }: TypeChipProps) {
+export function TypeChip({ type, isArray, className }: Readonly<TypeChipProps>) {
   const category = categoryForType(type);
   const label = type?.trim() ? type : "—";
 

@@ -27,7 +27,7 @@ export interface IDataSourceResponse {
 }
 
 export interface IUnadaptedChangeLogsResponse {
-  errors: unknown | null;
+  errors: unknown;
   isSuccess: boolean;
   data: Array<{
     changeType: number;
@@ -48,7 +48,7 @@ export interface ISchemaVersionSummary {
 
 export interface ISchemaVersionHistoryResponse {
   isSuccess: boolean;
-  errors: unknown | null;
+  errors: unknown;
   data: {
     currentVersion: number;
     versions: ISchemaVersionSummary[];
@@ -58,25 +58,18 @@ export interface ISchemaVersionHistoryResponse {
 export interface ISchemaRollbackResponse {
   isSuccess: boolean;
   message: string;
-  errors: unknown | null;
+  errors: unknown;
   data: { version: number; previousVersion: number } | null;
 }
 
 export interface IDataServiceConfigurationResponse {
-  errors: unknown | null;
+  errors: unknown;
   isSuccess: boolean;
-  data:
-    | unknown
-    | null
-    | {
-        itemId: string;
-        projectKey: string;
-        projectShortKey: string;
-      };
+  data: unknown;
 }
 
 export interface ICreateSchemaResponse {
-  errors: unknown | null;
+  errors: unknown;
   isSuccess: boolean;
   data: {
     acknowledged: boolean;
@@ -315,7 +308,7 @@ export interface IExecuteGraphQLPayload {
 }
 
 export interface IMockDataResponse {
-  errors: unknown | null;
+  errors: unknown;
   isSuccess: boolean;
   data: {
     items: Array<{

@@ -117,7 +117,9 @@ public class OsRepositoryDenialTests
     public async Task UpdateResourceUsageConsumer_Denied_DoesNotWrite()
     {
         var consumer = new UpdateResourceUsageConsumer(StrictCollections(), Deny);
-        await consumer.Consume(new UpdateResourceUsageCommand_Identifier { TenantId = "t", Resource = "r", Amount = 1 });
+        // Collections are strict mocks: any write would throw, so a clean run proves no write happened.
+        await FluentActions.Invoking(() => consumer.Consume(new UpdateResourceUsageCommand_Identifier { TenantId = "t", Resource = "r", Amount = 1 }))
+            .Should().NotThrowAsync();
     }
 
     [Fact]

@@ -368,22 +368,25 @@ export const RuleSetForm = ({
                           ).map((option) => {
                             const isSelected = field.value === option.value;
                             return (
-                              <button
+                              <label
                                 key={option.value}
-                                type="button"
-                                role="radio"
-                                aria-label={option.label}
-                                aria-checked={isSelected}
-                                onClick={() => field.onChange(option.value)}
                                 className={cn(
-                                  "rounded-sm px-2.5 py-1 text-[11px] font-semibold transition-colors",
+                                  "rounded-sm px-2.5 py-1 text-[11px] font-semibold transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
                                   isSelected
                                     ? "bg-primary/15 text-primary"
                                     : "text-muted-foreground hover:text-foreground",
                                 )}
                               >
+                                <input
+                                  type="radio"
+                                  name={field.name}
+                                  className="sr-only"
+                                  aria-label={option.label}
+                                  checked={isSelected}
+                                  onChange={() => field.onChange(option.value)}
+                                />
                                 {option.label}
-                              </button>
+                              </label>
                             );
                           })}
                         </div>
