@@ -50,11 +50,62 @@ const newDraft = (fieldType: string): RuleDraft => ({
   isActive: true,
 });
 
+/** One saved rule: its type, summary and message, with edit and delete. */
+function RuleRow({
+  rule,
+  disabled,
+  onEdit,
+  onDelete,
+}: Readonly<{ rule: ISchemaFieldValidation; disabled: boolean; onEdit: () => void; onDelete: () => void }>) {
+  return (
+    <div className="flex items-start justify-between gap-3 rounded-sm border border-border/40 bg-card px-4 py-3">
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <span className="w-fit rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+          {ruleTypeLabel(rule.type)}
+        </span>
+        <p className={cn("break-all text-sm text-foreground", rule.type === VALIDATION_TYPE.Regex && "font-mono")}>{formatRuleSummary(rule)}</p>
+        {rule.errorMessage && <p className="text-xs text-muted-foreground">{rule.errorMessage}</p>}
+        {!rule.isActive && <span className="w-fit text-xs text-muted-foreground">Inactive</span>}
+      </div>
+      <div className="flex shrink-0 gap-1">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+          aria-label={`Edit ${ruleTypeLabel(rule.type)} rule`}
+          disabled={disabled}
+          onClick={onEdit}
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground hover:text-rose-500"
+          aria-label={`Delete ${ruleTypeLabel(rule.type)} rule`}
+          disabled={disabled}
+          onClick={onDelete}
+        >
+          <Trash className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/** The form's save button: what it does now. */
+function submitLabel(isPending: boolean, isEditing: boolean): string {
+  if (isPending) return "Saving…";
+  return isEditing ? "Update" : "Add";
+}
+
 /**
  * The Data Gateway's validation panel for a platform schema's property: the rules, an add/edit form,
  * delete. Every change saves the property's whole list, as the gateway does.
  */
-export function ValidationPanel({ schemaId, fieldName, fieldType, enumValues = [], initialRules, variables }: ValidationPanelProps) {
+export function ValidationPanel({ schemaId, fieldName, fieldType, enumValues = [], initialRules, variables }: Readonly<ValidationPanelProps>) {
   const [rules, setRules] = useState<ISchemaFieldValidation[]>(initialRules);
   const [form, setForm] = useState<(RuleDraft & { editingIndex?: number }) | null>(null);
   const [touched, setTouched] = useState(false);
@@ -103,43 +154,16 @@ export function ValidationPanel({ schemaId, fieldName, fieldType, enumValues = [
               </div>
             ) : (
               rules.map((rule, index) => (
-                <div key={`${rule.type}-${index}`} className="flex items-start justify-between gap-3 rounded-sm border border-border/40 bg-card px-4 py-3">
-                  <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <span className="w-fit rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
-                      {ruleTypeLabel(rule.type)}
-                    </span>
-                    <p className={cn("break-all text-sm text-foreground", rule.type === VALIDATION_TYPE.Regex && "font-mono")}>{formatRuleSummary(rule)}</p>
-                    {rule.errorMessage && <p className="text-xs text-muted-foreground">{rule.errorMessage}</p>}
-                    {!rule.isActive && <span className="w-fit text-xs text-muted-foreground">Inactive</span>}
-                  </div>
-                  <div className="flex shrink-0 gap-1">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                      aria-label={`Edit ${ruleTypeLabel(rule.type)} rule`}
-                      disabled={isPending}
-                      onClick={() => {
-                        setForm({ ...draftFromRule(rule), editingIndex: index });
-                        setTouched(false);
-                      }}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-rose-500"
-                      aria-label={`Delete ${ruleTypeLabel(rule.type)} rule`}
-                      disabled={isPending}
-                      onClick={() => void save(rules.filter((_, i) => i !== index), "Validation deleted")}
-                    >
-                      <Trash className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
+                <RuleRow
+                  key={`${rule.type}-${index}`}
+                  rule={rule}
+                  disabled={isPending}
+                  onEdit={() => {
+                    setForm({ ...draftFromRule(rule), editingIndex: index });
+                    setTouched(false);
+                  }}
+                  onDelete={() => void save(rules.filter((_, i) => i !== index), "Validation deleted")}
+                />
               ))
             )}
           </div>
@@ -214,7 +238,7 @@ export function ValidationPanel({ schemaId, fieldName, fieldType, enumValues = [
                 Cancel
               </Button>
               <Button type="button" size="sm" disabled={isPending || Boolean(touched && draftError)} onClick={submit}>
-                {isPending ? "Saving…" : isEditing ? "Update" : "Add"}
+                {submitLabel(isPending, isEditing)}
               </Button>
             </div>
           )}

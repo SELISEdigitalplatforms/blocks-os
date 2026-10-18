@@ -1,7 +1,7 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
 import { cn } from "@/lib/utils";
 import { Check, TextCursorInput } from "lucide-react";
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { PlatformSchemaField } from "../data-access.service";
 import { formatDefaultSummary } from "../rules/default-value.util";
 import type { IPlatformFieldRules, IPlatformSchemaRules } from "../rules/rules.types";
@@ -23,9 +23,13 @@ export function FieldRulesProvider({
   onOpen,
   children,
 }: Readonly<{ rules: IPlatformSchemaRules | null | undefined; onOpen: OnOpenFieldRules; children: ReactNode }>) {
-  if (!rules) return <>{children}</>;
-  const byPath = new Map(rules.fields.map((f) => [f.path, f]));
-  return <FieldRulesContext.Provider value={{ rulesFor: (path) => byPath.get(path), onOpen }}>{children}</FieldRulesContext.Provider>;
+  const value = useMemo<FieldRulesContextValue | null>(() => {
+    if (!rules) return null;
+    const byPath = new Map(rules.fields.map((f) => [f.path, f]));
+    return { rulesFor: (path) => byPath.get(path), onOpen };
+  }, [rules, onOpen]);
+  if (!value) return <>{children}</>;
+  return <FieldRulesContext.Provider value={value}>{children}</FieldRulesContext.Provider>;
 }
 
 const SHAPE = {
@@ -49,6 +53,7 @@ export function FieldRulesButtons({ field, path, wide = false }: Readonly<{ fiel
   const icon = wide ? "h-4 w-4 shrink-0" : "h-3.5 w-3.5";
   const ruleCount = field.validationRule?.validations.length ?? 0;
   const defaultValue = field.defaultValue ?? null;
+  const summary = defaultValue ? formatDefaultSummary(defaultValue) : null;
 
   return (
     <>
@@ -57,7 +62,7 @@ export function FieldRulesButtons({ field, path, wide = false }: Readonly<{ fiel
           type="button"
           onClick={() => context.onOpen({ path, field, panel: "validation" })}
           className={cn(shape, "transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40", ruleCount > 0 ? TINT_SET : TINT_IDLE)}
-          aria-label={`Manage validations for ${path}${ruleCount > 0 ? ` (${ruleCount})` : ""}`}
+          aria-label={ruleCount > 0 ? `Manage validations for ${path} (${ruleCount})` : `Manage validations for ${path}`}
         >
           <Check className={icon} strokeWidth={2.5} />
           {ruleCount > 0 && (
@@ -89,12 +94,12 @@ export function FieldRulesButtons({ field, path, wide = false }: Readonly<{ fiel
                 type="button"
                 onClick={() => context.onOpen({ path, field, panel: "default" })}
                 className={cn(shape, "transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40", defaultValue ? TINT_SET : TINT_IDLE)}
-                aria-label={`Default value for ${path}${defaultValue ? ` (${formatDefaultSummary(defaultValue)})` : ""}`}
+                aria-label={summary ? `Default value for ${path} (${summary})` : `Default value for ${path}`}
               >
                 <TextCursorInput className={icon} />
               </button>
             </TooltipTrigger>
-            <TooltipContent>{defaultValue ? `Default value: ${formatDefaultSummary(defaultValue)}` : "Set a default value"}</TooltipContent>
+            <TooltipContent>{summary ? `Default value: ${summary}` : "Set a default value"}</TooltipContent>
           </Tooltip>
         ))}
     </>

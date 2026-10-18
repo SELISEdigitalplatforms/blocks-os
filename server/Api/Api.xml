@@ -232,6 +232,12 @@
         <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.CheckRulesAsync(Blocks.Genesis.Entities.Data.SchemaDefinition,Blocks.Genesis.Entities.Data.FieldDefinition,System.Collections.Generic.List{Blocks.Genesis.Entities.Data.ValidationRule},System.Threading.CancellationToken)">
             <summary>The same checks the Data Gateway makes when a rule is saved, with system schemas as Reference targets.</summary>
         </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.CheckRuleShape(Blocks.Genesis.Entities.Data.ValidationRule)">
+            <summary>The rule on its own: a known type, the values it needs, a pattern that parses.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.CheckReferenceAsync(Blocks.Genesis.Entities.Data.FieldDefinition,Blocks.Genesis.Entities.Data.ValidationRule,System.Threading.CancellationToken)">
+            <summary>A Reference rule must point at a system Entity schema and one of its fields that fits.</summary>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.IsValidPattern(System.String)">
             <summary>Parses the pattern only (the timeout bounds the parse); nothing is matched here.</summary>
         </member>
@@ -240,6 +246,9 @@
         </member>
         <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.ToStorable(System.Object)">
             <summary>JSON request values as stored values: text, numbers, booleans, and lists of them.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.NumberOf(System.Text.Json.JsonElement)">
+            <summary>A whole number as a long, anything else as a double.</summary>
         </member>
         <member name="P:BlocksOs.Api.Controllers.SavePlatformValidationRequest.FieldName">
             <summary>The property; a nested one by its dotted path, e.g. Read.Roles.</summary>

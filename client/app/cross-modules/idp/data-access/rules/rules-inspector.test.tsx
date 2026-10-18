@@ -97,7 +97,7 @@ describe("RulesInspector", () => {
     renderInspector(target({ panel: "default" }));
 
     await user.click(screen.getByRole("radio", { name: "Template" }));
-    await user.type(screen.getByLabelText("Template"), literal("Welcome to {{EmailTemplate.Name}}"));
+    await user.type(screen.getByRole("textbox", { name: "Template" }), literal("Welcome to {{EmailTemplate.Name}}"));
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() =>

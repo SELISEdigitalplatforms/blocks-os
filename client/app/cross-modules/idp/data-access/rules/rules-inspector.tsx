@@ -37,6 +37,53 @@ export function rulesWarning(target: RulesInspectorTarget): string | null {
     : `${target.path} decides who can see or change ${target.schemaName} records. A wrong ${what} applies to every record ${target.service} saves.`;
 }
 
+/** Asks before the editor opens on a warned schema or property. */
+function WarningGate({ warning, onClose, onContinue }: Readonly<{ warning: string; onClose: () => void; onContinue: () => void }>) {
+  return (
+    <div className="flex flex-col gap-4 p-6">
+      <div role="alert" className="flex gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-foreground">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+        <p>{warning}</p>
+      </div>
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button type="button" size="sm" onClick={onContinue}>
+          I understand, continue
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/** The validation or default-value editor of the target property. */
+function RulesPanel({ target }: Readonly<{ target: RulesInspectorTarget }>) {
+  if (target.panel === "validation") {
+    return (
+      <ValidationPanel
+        schemaId={target.schemaId}
+        fieldName={target.path}
+        fieldType={target.field.type}
+        enumValues={target.field.enumValues}
+        initialRules={target.field.validationRule?.validations ?? []}
+        variables={target.variables}
+      />
+    );
+  }
+  return (
+    <DefaultValuePanel
+      schemaId={target.schemaId}
+      fieldName={target.path}
+      fieldType={target.field.type}
+      isArray={target.field.isArray}
+      enumValues={target.field.enumValues}
+      initialDefault={target.field.defaultValue ?? null}
+      variables={target.variables}
+    />
+  );
+}
+
 /**
  * The docked panel for a property's validations or default value, beside the access inspector's slot.
  * Warned schemas and properties ask before the editor opens.
@@ -56,41 +103,7 @@ export function RulesInspector({ target, onClose }: Readonly<{ target: RulesInsp
         onClose={onClose}
         closeLabel={`Close ${title.toLowerCase()} inspector`}
       />
-      {!confirmed && warning ? (
-        <div className="flex flex-col gap-4 p-6">
-          <div role="alert" className="flex gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-foreground">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-            <p>{warning}</p>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="button" size="sm" onClick={() => setConfirmed(true)}>
-              I understand, continue
-            </Button>
-          </div>
-        </div>
-      ) : isValidation ? (
-        <ValidationPanel
-          schemaId={target.schemaId}
-          fieldName={target.path}
-          fieldType={target.field.type}
-          enumValues={target.field.enumValues}
-          initialRules={target.field.validationRule?.validations ?? []}
-          variables={target.variables}
-        />
-      ) : (
-        <DefaultValuePanel
-          schemaId={target.schemaId}
-          fieldName={target.path}
-          fieldType={target.field.type}
-          isArray={target.field.isArray}
-          enumValues={target.field.enumValues}
-          initialDefault={target.field.defaultValue ?? null}
-          variables={target.variables}
-        />
-      )}
+      {!confirmed && warning ? <WarningGate warning={warning} onClose={onClose} onContinue={() => setConfirmed(true)} /> : <RulesPanel target={target} />}
     </PanelShell>
   );
 }
