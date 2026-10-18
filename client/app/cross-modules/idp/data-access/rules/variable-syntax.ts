@@ -35,8 +35,8 @@ export const AUTH_PREFIX = "Auth";
 export const AUTH_NAMES = ["UserId", "Email", "Roles", "Permissions", "OrganizationId"] as const;
 const AUTH_LIST_NAMES = new Set(["roles", "permissions"]);
 const SCALAR_TYPES = new Set(["String", "Int", "Float", "Boolean", "DateTime", "ID", "GeoJson", "Enum", "Json"]);
-const NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)+$/;
-const SEGMENT_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
+const NAME_PATTERN = /^[A-Za-z_]\w*(\.[A-Za-z_]\w*)+$/;
+const SEGMENT_PATTERN = /^[A-Za-z_]\w*$/;
 
 export const isVariable = (part: VariablePart) => part.prefix !== undefined;
 const isAuth = (part: VariablePart) => part.prefix?.toLowerCase() === AUTH_PREFIX.toLowerCase();
@@ -56,6 +56,67 @@ function checkNameShape(name: string, position: number, mode: VariableMode, sche
   return NAME_PATTERN.test(name) ? null : invalidName(name, position);
 }
 
+const at = (message: string, position: number): VariableError => ({ message, position });
+
+/** A "{" that doesn't start "{{", with the variable it most likely meant. */
+function singleOpenBrace(text: string, i: number, schema: string): VariableError {
+  const inner = text.slice(i + 1).split("}")[0].trim();
+  const example = inner.length > 0 ? `{{${inner}}}` : `{{${schema}.Property}}`;
+  return at(`Single "{" at position ${i + 1}: variables are written ${example}`, i + 1);
+}
+
+/** The variable starting at <paramref name="i"/> ("{{"): its part and where the text continues, or the error. */
+function readVariable(
+  text: string,
+  i: number,
+  mode: VariableMode,
+  schema: string,
+): { part: VariablePart; next: number } | { error: VariableError } {
+  const position = i + 1;
+  const close = text.indexOf("}}", i + 2);
+  const nextOpen = text.indexOf("{{", i + 2);
+  const unclosed = { error: at(`Unclosed variable at position ${position}: expected "}}"`, position) };
+  if (close < 0 || (nextOpen >= 0 && nextOpen < close)) return unclosed;
+
+  const name = text.slice(i + 2, close).trim();
+  if (name.length === 0) return { error: at(`Empty variable at position ${position}`, position) };
+  if (name.includes("{") || name.includes("}")) return unclosed;
+
+  const shapeError = checkNameShape(name, position, mode, schema);
+  if (shapeError) return { error: shapeError };
+
+  const dot = name.indexOf(".");
+  return { part: { prefix: name.slice(0, dot), path: name.slice(dot + 1), position }, next: close + 2 };
+}
+
+/** In single-variable mode the whole value is one variable, with no text around it. */
+function checkSingle(parts: VariablePart[]): VariableError | null {
+  const variable = parts.find(isVariable);
+  if (!variable || parts.length === 1) return null;
+  return at(`A validation value is either a fixed value or one variable, e.g. {{${nameOf(variable)}}}`, 1);
+}
+
+/** At a "{" or "}": the variable that starts there, or the syntax error. */
+function readBrace(
+  text: string,
+  i: number,
+  mode: VariableMode,
+  schema: string,
+): { part: VariablePart; next: number } | { error: VariableError } {
+  if (text[i] === "}") {
+    const message = text.startsWith("}}", i) ? `Unexpected "}}" at position ${i + 1}` : `Single "}" at position ${i + 1}`;
+    return { error: at(message, i + 1) };
+  }
+  if (text[i + 1] !== "{") return { error: singleOpenBrace(text, i, schema) };
+  return readVariable(text, i, mode, schema);
+}
+
+/** Where the plain text starting at <paramref name="i"/> ends: the next brace, or the end. */
+function textEnd(text: string, i: number): number {
+  const brace = text.slice(i).search(/[{}]/);
+  return brace < 0 ? text.length : i + brace;
+}
+
 /** Splits text into plain text and variables, checking the syntax only. */
 export function parseVariables(
   text: string,
@@ -64,59 +125,55 @@ export function parseVariables(
 ): { parts: VariablePart[]; error: VariableError | null } {
   const schema = schemaName?.trim() ? schemaName : "Schema";
   const parts: VariablePart[] = [];
-  let buffer = "";
-  let bufferStart = 0;
   let i = 0;
-
-  const flush = () => {
-    if (buffer.length > 0) parts.push({ text: buffer, position: bufferStart + 1 });
-    buffer = "";
-  };
-
   while (i < text.length) {
-    const c = text[i];
-    if (c === "{") {
-      if (text[i + 1] !== "{") {
-        const inner = text.slice(i + 1).split("}")[0].trim();
-        const example = inner.length > 0 ? `{{${inner}}}` : `{{${schema}.Property}}`;
-        return { parts, error: { message: `Single "{" at position ${i + 1}: variables are written ${example}`, position: i + 1 } };
-      }
-      const close = text.indexOf("}}", i + 2);
-      const nextOpen = text.indexOf("{{", i + 2);
-      if (close < 0 || (nextOpen >= 0 && nextOpen < close)) {
-        return { parts, error: { message: `Unclosed variable at position ${i + 1}: expected "}}"`, position: i + 1 } };
-      }
-      const name = text.slice(i + 2, close).trim();
-      if (name.length === 0) return { parts, error: { message: `Empty variable at position ${i + 1}`, position: i + 1 } };
-      if (name.includes("{") || name.includes("}")) {
-        return { parts, error: { message: `Unclosed variable at position ${i + 1}: expected "}}"`, position: i + 1 } };
-      }
-      const shapeError = checkNameShape(name, i + 1, mode, schema);
-      if (shapeError) return { parts, error: shapeError };
-
-      flush();
-      const dot = name.indexOf(".");
-      parts.push({ prefix: name.slice(0, dot), path: name.slice(dot + 1), position: i + 1 });
-      i = close + 2;
-      bufferStart = i;
+    const end = textEnd(text, i);
+    if (end > i) {
+      parts.push({ text: text.slice(i, end), position: i + 1 });
+      i = end;
       continue;
     }
-    if (c === "}") {
-      const message = text.startsWith("}}", i) ? `Unexpected "}}" at position ${i + 1}` : `Single "}" at position ${i + 1}`;
-      return { parts, error: { message, position: i + 1 } };
-    }
-    if (buffer.length === 0) bufferStart = i;
-    buffer += c;
-    i++;
+    const read = readBrace(text, i, mode, schema);
+    if ("error" in read) return { parts, error: read.error };
+    parts.push(read.part);
+    i = read.next;
   }
-  flush();
+  return { parts, error: mode === "single" ? checkSingle(parts) : null };
+}
 
-  if (mode === "single" && parts.some(isVariable) && (parts.length !== 1 || (parts[0].text ?? "").trim() !== "")) {
-    const example = parts.find(isVariable);
-    const name = example ? nameOf(example) : `${schema}.Property`;
-    return { parts, error: { message: `A validation value is either a fixed value or one variable, e.g. {{${name}}}`, position: 1 } };
+const AUTH_CHOICES = AUTH_NAMES.map((n) => `Auth.${n}`).join(", ");
+
+/** An {{Auth.X}} variable: allowed in templates only, a known name, a list only in a list property. */
+function checkAuthPart(part: VariablePart, mode: VariableMode, targetIsList: boolean): VariableError | null {
+  const { position } = part;
+  if (mode === "single") return at(`Auth values aren't available in validation rules at position ${position}: use an access policy`, position);
+  const authName = AUTH_NAMES.find((n) => n.toLowerCase() === part.path?.toLowerCase());
+  if (!authName) return at(`Unknown value "${nameOf(part)}" at position ${position}: use ${AUTH_CHOICES}`, position);
+  if (AUTH_LIST_NAMES.has(authName.toLowerCase()) && !targetIsList) {
+    return at(`Auth.${authName} is a list at position ${position}: use it in a list property`, position);
   }
-  return { parts, error: null };
+  return null;
+}
+
+/** A {{Schema.Path}} variable: the schema's own prefix, an existing property, a single value. */
+function checkFieldPart(part: VariablePart, mode: VariableMode, schemaName: string, fields: Record<string, VariableField>): VariableError | null {
+  const { position } = part;
+  if (part.prefix !== schemaName) {
+    const allowed = mode === "template" ? `${schemaName} or Auth` : schemaName;
+    return at(`Unknown prefix "${part.prefix}" at position ${position}: use ${allowed}`, position);
+  }
+  const field = fields[part.path!];
+  if (!field) {
+    const guess = closestName(part.path!, Object.keys(fields).filter((k) => !fields[k].isObject));
+    const hint = guess ? ` (did you mean ${schemaName}.${guess}?)` : "";
+    return at(`Unknown property "${nameOf(part)}" at position ${position}${hint}`, position);
+  }
+  if (field.isObject) {
+    const child = Object.keys(fields).find((k) => k.startsWith(`${part.path}.`) && !fields[k].isObject);
+    const example = child ? `, e.g. {{${schemaName}.${child}}}` : "";
+    return at(`"${nameOf(part)}" holds an object at position ${position}: use one of its properties${example}`, position);
+  }
+  return null;
 }
 
 /** Checks what each variable refers to: its prefix, and that the property exists and holds a single value. */
@@ -128,35 +185,8 @@ export function checkVariableReferences(
   targetIsList: boolean,
 ): VariableError | null {
   for (const part of parts.filter(isVariable)) {
-    const { position } = part;
-    if (isAuth(part)) {
-      if (mode === "single") {
-        return { message: `Auth values aren't available in validation rules at position ${position}: use an access policy`, position };
-      }
-      const authName = AUTH_NAMES.find((n) => n.toLowerCase() === part.path?.toLowerCase());
-      if (!authName) {
-        return { message: `Unknown value "${nameOf(part)}" at position ${position}: use ${AUTH_NAMES.map((n) => `Auth.${n}`).join(", ")}`, position };
-      }
-      if (AUTH_LIST_NAMES.has(authName.toLowerCase()) && !targetIsList) {
-        return { message: `Auth.${authName} is a list at position ${position}: use it in a list property`, position };
-      }
-      continue;
-    }
-    if (part.prefix !== schemaName) {
-      const allowed = mode === "template" ? `${schemaName} or Auth` : schemaName;
-      return { message: `Unknown prefix "${part.prefix}" at position ${position}: use ${allowed}`, position };
-    }
-    const field = fields[part.path!];
-    if (!field) {
-      const guess = closestName(part.path!, Object.keys(fields).filter((k) => !fields[k].isObject));
-      const hint = guess ? ` (did you mean ${schemaName}.${guess}?)` : "";
-      return { message: `Unknown property "${nameOf(part)}" at position ${position}${hint}`, position };
-    }
-    if (field.isObject) {
-      const child = Object.keys(fields).find((k) => k.startsWith(`${part.path}.`) && !fields[k].isObject);
-      const example = child ? `, e.g. {{${schemaName}.${child}}}` : "";
-      return { message: `"${nameOf(part)}" holds an object at position ${position}: use one of its properties${example}`, position };
-    }
+    const problem = isAuth(part) ? checkAuthPart(part, mode, targetIsList) : checkFieldPart(part, mode, schemaName, fields);
+    if (problem) return problem;
   }
   return null;
 }

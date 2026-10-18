@@ -121,8 +121,19 @@ export interface RuleVariableContext {
 }
 
 /** The server's kinds for comparing a variable with the property: Enum compares as text. */
-export const variableKind = (type: string) =>
-  type === "Int" || type === "Float" ? "number" : type === "DateTime" ? "date" : type === "Boolean" ? "boolean" : "text";
+export function variableKind(type: string): "number" | "date" | "boolean" | "text" {
+  switch (type) {
+    case "Int":
+    case "Float":
+      return "number";
+    case "DateTime":
+      return "date";
+    case "Boolean":
+      return "boolean";
+    default:
+      return "text";
+  }
+}
 
 const describeKind = (type: string, isArray: boolean) =>
   isArray ? "a list" : ({ number: "a number", date: "a date-time", boolean: "true or false", text: "text" } as const)[variableKind(type)];
@@ -151,52 +162,71 @@ const isWholeNumber = (text: string) => /^\d+$/.test(text.trim());
 const isNumber = (text: string) => text.trim() !== "" && Number.isFinite(Number(text));
 
 /**
+ * Comparison values written as variables: each must name a fitting property (with `variables`; without them
+ * the syntax is left to the server), and a fixed bound beside one is still checked for its type, since the
+ * order is known only at insert. Undefined when no slot is a variable, so the fixed-value checks apply.
+ */
+function checkVariableSlots(slots: string[], fieldType: string, variables?: RuleVariableContext): string | null | undefined {
+  if (!slots.some(looksLikeVariable)) return undefined;
+  if (slots.includes("")) return slots.length === 1 ? "Value is required" : "Both values are required";
+  for (const slot of slots.filter(looksLikeVariable)) {
+    const problem = variables?.schemaName ? checkRuleVariable(slot, fieldType, variables) : null;
+    if (problem) return problem;
+  }
+  const fixed = slots.filter((slot) => !looksLikeVariable(slot));
+  return valueKindForField(fieldType) === "number" && fixed.some((slot) => !isNumber(slot)) ? "Not a valid number" : null;
+}
+
+/** The pattern's syntax is checked by the server, which refuses an invalid one. */
+function checkRegex(value: string): string | null {
+  return value ? null : "Pattern is required";
+}
+
+function checkLengthRange(value: string, secondary: string): string | null {
+  if (!isWholeNumber(value) || !isWholeNumber(secondary)) return "Enter whole numbers of 0 or more";
+  return Number(value) <= Number(secondary) ? null : "Min must be ≤ max";
+}
+
+function checkValue(value: string, fieldType: string): string | null {
+  if (!value) return "Value is required";
+  return valueKindForField(fieldType) === "number" && !isNumber(value) ? "Not a valid number" : null;
+}
+
+function checkValueRange(value: string, secondary: string, fieldType: string): string | null {
+  if (!value || !secondary) return "Both values are required";
+  const kind = valueKindForField(fieldType);
+  if (kind === "number") {
+    if (!isNumber(value) || !isNumber(secondary)) return "Not a valid number";
+    return Number(value) <= Number(secondary) ? null : "Min must be ≤ max";
+  }
+  return kind === "date" && new Date(value) > new Date(secondary) ? "Min must be ≤ max" : null;
+}
+
+/** The fixed-value check for each kind of rule input. */
+const INPUT_CHECKS: Record<RuleInputKind, (value: string, secondary: string, fieldType: string) => string | null> = {
+  none: () => null,
+  regex: (value) => checkRegex(value),
+  length: (value) => (isWholeNumber(value) ? null : "Enter a whole number of 0 or more"),
+  lengthRange: (value, secondary) => checkLengthRange(value, secondary),
+  value: (value, _secondary, fieldType) => checkValue(value, fieldType),
+  valueRange: checkValueRange,
+  reference: (value) => (value ? null : "Choose the schema the value must exist in"),
+};
+
+/**
  * Why the draft cannot be saved yet, or null when it can. With `variables`, a comparison value written as
  * a variable is checked against the schema; without them its syntax is left to the server.
  */
 export function checkRuleDraft(draft: RuleDraft, fieldType: string, variables?: RuleVariableContext): string | null {
   const input = VALIDATION_TYPE_META[draft.type]?.input;
+  if (!input) return "Choose a rule type";
   const value = draft.value.trim();
   const secondary = draft.secondaryValue.trim();
   if (input === "value" || input === "valueRange") {
-    const slots = input === "value" ? [value] : [value, secondary];
-    if (slots.some(looksLikeVariable)) {
-      if (slots.some((slot) => slot === "")) return input === "value" ? "Value is required" : "Both values are required";
-      for (const slot of slots.filter(looksLikeVariable)) {
-        const problem = variables?.schemaName ? checkRuleVariable(slot, fieldType, variables) : null;
-        if (problem) return problem;
-      }
-      // A fixed bound next to a variable is still checked for its type; the order is known only at insert.
-      const fixed = slots.filter((slot) => !looksLikeVariable(slot));
-      return valueKindForField(fieldType) === "number" && fixed.some((slot) => !isNumber(slot)) ? "Not a valid number" : null;
-    }
+    const variableProblem = checkVariableSlots(input === "value" ? [value] : [value, secondary], fieldType, variables);
+    if (variableProblem !== undefined) return variableProblem;
   }
-  switch (input) {
-    case "none":
-      return null;
-    case "regex":
-      // The pattern's syntax is checked by the server, which refuses an invalid one.
-      return value ? null : "Pattern is required";
-    case "length":
-      return isWholeNumber(value) ? null : "Enter a whole number of 0 or more";
-    case "lengthRange":
-      if (!isWholeNumber(value) || !isWholeNumber(secondary)) return "Enter whole numbers of 0 or more";
-      return Number(value) <= Number(secondary) ? null : "Min must be ≤ max";
-    case "value":
-      if (!value) return "Value is required";
-      return valueKindForField(fieldType) === "number" && !isNumber(value) ? "Not a valid number" : null;
-    case "valueRange":
-      if (!value || !secondary) return "Both values are required";
-      if (valueKindForField(fieldType) === "number") {
-        if (!isNumber(value) || !isNumber(secondary)) return "Not a valid number";
-        return Number(value) <= Number(secondary) ? null : "Min must be ≤ max";
-      }
-      return valueKindForField(fieldType) === "date" && new Date(value) > new Date(secondary) ? "Min must be ≤ max" : null;
-    case "reference":
-      return value ? null : "Choose the schema the value must exist in";
-    default:
-      return "Choose a rule type";
-  }
+  return INPUT_CHECKS[input](value, secondary, fieldType);
 }
 
 /** Rules added or edited in the console; rules saved earlier keep their version until edited. */

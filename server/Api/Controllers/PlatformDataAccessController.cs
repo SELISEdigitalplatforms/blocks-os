@@ -242,20 +242,31 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
         var fields = VariableSyntax.FieldsOf(schema.Fields);
         foreach (var rule in rules)
         {
-            if (!Enum.IsDefined(rule.Type)) return "Validation_Type_Must_Be_Valid.";
-            if (rule.Type != ValidationType.NotEmpty && rule.Value is null) return "Value_Is_Required_For_This_Validation_Type.";
-            if (rule.Type is ValidationType.Range or ValidationType.LengthRange && rule.SecondaryValue is null) return "Secondary_Value_Is_Required_For_Range_Validation.";
-            if (rule.Type == ValidationType.Regex && !IsValidPattern(rule.Value?.ToString())) return "Invalid regex pattern";
-            if (ValidationVariableCheck.Check(rule, field.Type, schema.SchemaName, fields) is { } variableProblem) return variableProblem;
-            if (rule.Type == ValidationType.Reference)
-            {
-                var targetName = ReferenceTargets.TargetSchemaName(rule);
-                var target = await SchemaCollection.Find(x => x.SchemaName == targetName && x.IsSystemEntity && !x.IsDeleted).FirstOrDefaultAsync(cancellationToken);
-                var targetField = rule.SecondaryValue as string is { Length: > 0 } name ? name : ReferenceTargets.DefaultTargetField;
-                if (ReferenceRuleCompatibility.Check(field, target, targetField, systemSchemas: true) is { } referenceProblem) return referenceProblem;
-            }
+            var problem = CheckRuleShape(rule)
+                ?? ValidationVariableCheck.Check(rule, field.Type, schema.SchemaName, fields)
+                ?? await CheckReferenceAsync(field, rule, cancellationToken);
+            if (problem is not null) return problem;
         }
         return null;
+    }
+
+    /// <summary>The rule on its own: a known type, the values it needs, a pattern that parses.</summary>
+    private static string? CheckRuleShape(ValidationRule rule)
+    {
+        if (!Enum.IsDefined(rule.Type)) return "Validation_Type_Must_Be_Valid.";
+        if (rule.Type != ValidationType.NotEmpty && rule.Value is null) return "Value_Is_Required_For_This_Validation_Type.";
+        if (rule.Type is ValidationType.Range or ValidationType.LengthRange && rule.SecondaryValue is null) return "Secondary_Value_Is_Required_For_Range_Validation.";
+        if (rule.Type == ValidationType.Regex && !IsValidPattern(rule.Value?.ToString())) return "Invalid regex pattern";
+        return null;
+    }
+
+    /// <summary>A Reference rule must point at a system Entity schema and one of its fields that fits.</summary>
+    private async Task<string?> CheckReferenceAsync(FieldDefinition field, ValidationRule rule, CancellationToken cancellationToken)
+    {
+        if (rule.Type != ValidationType.Reference) return null;
+        var targetName = ReferenceTargets.TargetSchemaName(rule);
+        var target = await SchemaCollection.Find(x => x.SchemaName == targetName && x.IsSystemEntity && !x.IsDeleted).FirstOrDefaultAsync(cancellationToken);
+        return ReferenceRuleCompatibility.Check(field, target, ReferenceTargets.TargetFieldName(rule), systemSchemas: true);
     }
 
     /// <summary>Parses the pattern only (the timeout bounds the parse); nothing is matched here.</summary>
@@ -286,18 +297,23 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
     }
 
     /// <summary>JSON request values as stored values: text, numbers, booleans, and lists of them.</summary>
-    private static object? ToStorable(object? value) => value is JsonElement json
-        ? json.ValueKind switch
+    private static object? ToStorable(object? value)
+    {
+        if (value is not JsonElement json) return value;
+        return json.ValueKind switch
         {
             JsonValueKind.String => json.GetString(),
-            JsonValueKind.Number => json.TryGetInt64(out var whole) ? whole : json.GetDouble(),
+            JsonValueKind.Number => NumberOf(json),
             JsonValueKind.True => true,
             JsonValueKind.False => false,
             JsonValueKind.Array => json.EnumerateArray().Select(item => ToStorable(item)).ToArray(),
             JsonValueKind.Null or JsonValueKind.Undefined => null,
             _ => json.GetRawText(),
-        }
-        : value;
+        };
+    }
+
+    /// <summary>A whole number as a long, anything else as a double.</summary>
+    private static object NumberOf(JsonElement json) => json.TryGetInt64(out var whole) ? whole : json.GetDouble();
 
     private async Task<IActionResult> SaveAsync(SavePlatformPolicyRequest request, string? itemId, CancellationToken cancellationToken)
     {

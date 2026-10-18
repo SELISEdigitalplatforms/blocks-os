@@ -74,10 +74,15 @@ export const emptyDefaultDraft = (kind: DefaultValueKind = "Static"): DefaultDra
   offset: { days: "0", hours: "0", minutes: "0", seconds: "0" },
 });
 
+/** A stored value as the form's text items: a list item by item, a single value as one item. */
+function itemsOf(raw: IFieldDefaultValue["value"]): string[] {
+  if (Array.isArray(raw)) return raw.map(String);
+  return raw === null || raw === undefined ? [""] : [String(raw)];
+}
+
 export function draftFromDefault(value: IFieldDefaultValue | null | undefined): DefaultDraft {
   if (!value) return emptyDefaultDraft();
-  const raw = value.value;
-  const items = Array.isArray(raw) ? raw.map(String) : raw === null || raw === undefined ? [""] : [String(raw)];
+  const items = itemsOf(value.value);
   const offset = value.offset ?? { days: 0, hours: 0, minutes: 0, seconds: 0 };
   return {
     kind: value.kind,
@@ -96,34 +101,47 @@ export interface DefaultTarget {
   fields: Record<string, VariableField>;
 }
 
+/** The items a draft carries: every filled one for a list, the first for a single value. */
+const draftItems = (draft: DefaultDraft, target: DefaultTarget) =>
+  target.isArray ? draft.items.filter((item) => item.trim() !== "") : draft.items.slice(0, 1);
+
+function checkStaticDraft(items: string[], target: DefaultTarget): string | null {
+  if (items.length === 0 || (items[0] ?? "").trim() === "") {
+    // Only a single text property may default to empty text.
+    return target.fieldType === "String" && !target.isArray ? null : "A value is required";
+  }
+  for (const item of items) {
+    const problem = checkStaticItem(item, target.fieldType, target.enumValues);
+    if (problem) return problem;
+  }
+  return null;
+}
+
+function checkTemplateDraft(items: string[], target: DefaultTarget): string | null {
+  if (target.fieldType !== "String" && target.fieldType !== "ID") return "Templates can only be used on text properties";
+  if (items.every((item) => item.trim() === "")) return "A template is required";
+  for (const item of items) {
+    const problem = checkVariables(item, "template", target.schemaName, target.fields, target.isArray);
+    if (problem) return problem.message;
+  }
+  return null;
+}
+
+function checkNowDraft(offset: DefaultDraft["offset"], target: DefaultTarget): string | null {
+  if (target.fieldType !== "DateTime" || target.isArray) return "Now can only be used on single date-time properties";
+  const notWhole = (Object.keys(OFFSET_LABELS) as Array<keyof typeof OFFSET_LABELS>).find((key) => !/^[+-]?\d+$/.test(offset[key].trim()));
+  return notWhole ? `${OFFSET_LABELS[notWhole]} must be a whole number` : null;
+}
+
 /** Why the draft can't be saved yet, or null. Same messages as the server. */
 export function checkDefaultDraft(draft: DefaultDraft, target: DefaultTarget): string | null {
-  const items = target.isArray ? draft.items.filter((item) => item.trim() !== "") : draft.items.slice(0, 1);
   switch (draft.kind) {
-    case "Static": {
-      if (items.length === 0 || (items[0] ?? "").trim() === "") {
-        return target.fieldType === "String" && !target.isArray ? null : "A value is required";
-      }
-      for (const item of items) {
-        const problem = checkStaticItem(item, target.fieldType, target.enumValues);
-        if (problem) return problem;
-      }
-      return null;
-    }
+    case "Static":
+      return checkStaticDraft(draftItems(draft, target), target);
     case "Template":
-      if (target.fieldType !== "String" && target.fieldType !== "ID") return "Templates can only be used on text properties";
-      if (items.every((item) => item.trim() === "")) return "A template is required";
-      for (const item of items) {
-        const problem = checkVariables(item, "template", target.schemaName, target.fields, target.isArray);
-        if (problem) return problem.message;
-      }
-      return null;
+      return checkTemplateDraft(draftItems(draft, target), target);
     case "Now":
-      if (target.fieldType !== "DateTime" || target.isArray) return "Now can only be used on single date-time properties";
-      for (const [key, label] of Object.entries(OFFSET_LABELS)) {
-        if (!/^[+-]?\d+$/.test(draft.offset[key as keyof DefaultDraft["offset"]].trim())) return `${label} must be a whole number`;
-      }
-      return null;
+      return checkNowDraft(draft.offset, target);
     default:
       return "Choose Static, Template or Now";
   }
@@ -131,7 +149,7 @@ export function checkDefaultDraft(draft: DefaultDraft, target: DefaultTarget): s
 
 /** The payload to save. */
 export function defaultFromDraft(draft: DefaultDraft, target: DefaultTarget): IFieldDefaultValue {
-  const items = target.isArray ? draft.items.filter((item) => item.trim() !== "") : draft.items.slice(0, 1);
+  const items = draftItems(draft, target);
   if (draft.kind === "Now") {
     const n = (s: string) => Number.parseInt(s.trim(), 10) || 0;
     return {
@@ -159,6 +177,8 @@ export function formatDefaultSummary(value: IFieldDefaultValue | null | undefine
     return parts.length === 0 ? "Now" : `Now ${parts.join(" ")}`;
   }
   const raw = value.value;
-  if (Array.isArray(raw)) return `[${raw.map((item) => (typeof item === "string" && value.kind === "Static" ? `"${item}"` : String(item))).join(", ")}]`;
-  return String(raw ?? "");
+  if (!Array.isArray(raw)) return String(raw ?? "");
+  // Fixed text items are quoted, so ["admin", "app-user"] reads as a list of values.
+  const quote = (item: string | number | boolean) => (typeof item === "string" && value.kind === "Static" ? JSON.stringify(item) : String(item));
+  return "[" + raw.map(quote).join(", ") + "]";
 }

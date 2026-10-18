@@ -8,7 +8,10 @@ import { DEFAULT_REFERENCE_FIELD } from "./validation-rules.util";
 const TEXT_TYPES = ["String", "ID", "Enum"];
 const NUMBER_TYPES = ["Int", "Float"];
 
-const typeFamily = (type: string) => (TEXT_TYPES.includes(type) ? TEXT_TYPES : NUMBER_TYPES.includes(type) ? NUMBER_TYPES : []);
+function typeFamily(type: string): string[] {
+  if (TEXT_TYPES.includes(type)) return TEXT_TYPES;
+  return NUMBER_TYPES.includes(type) ? NUMBER_TYPES : [];
+}
 
 /**
  * Fields of the target a value of `sourceType` may be matched against: single values of the same kind
@@ -47,9 +50,10 @@ export function ReferenceTargetPicker({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1.5">
-        <label className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
+        {/* A heading, not a <label>: the select below names itself (aria-label). */}
+        <span className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
           Must exist in schema <span className="text-rose-500">*</span>
-        </label>
+        </span>
         <Select
           value={schemaName || undefined}
           onValueChange={(value) =>
@@ -71,7 +75,7 @@ export function ReferenceTargetPicker({
 
       {schemaName && (
         <div className="flex flex-col gap-1.5">
-          <label className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">Target field</label>
+          <span className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">Target field</span>
           {fieldOptions.length === 0 ? (
             <p className="text-xs text-rose-500">
               {schemaName} has no {NUMBER_TYPES.includes(sourceType) ? "number" : "text"} field to match.

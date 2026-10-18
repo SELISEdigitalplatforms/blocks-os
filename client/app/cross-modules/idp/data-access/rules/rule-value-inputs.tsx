@@ -4,7 +4,7 @@ import { Input } from "@/components/ui-kits/input/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui-kits/select/select";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
 import { cn } from "@/lib/utils";
-import { useState, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import {
   VALIDATION_TYPE,
   VALIDATION_TYPE_META,
@@ -91,6 +91,7 @@ function ComparisonValue({
   onChange: (value: string) => void;
 }>) {
   const [isVariable, setIsVariable] = useState(() => looksLikeVariable(value));
+  const groupName = useId();
   const switchTo = (variable: boolean) => {
     if (variable === isVariable) return;
     setIsVariable(variable);
@@ -100,25 +101,23 @@ function ComparisonValue({
   return (
     <div className="flex flex-col gap-1.5">
       {variableOptions && (
-        <div role="radiogroup" aria-label={`${label} source`} className="flex gap-1">
+        <fieldset className="flex gap-1">
+          <legend className="sr-only">{`${label} source`}</legend>
           {([false, true] as const).map((variable) => (
-            <button
+            <label
               key={String(variable)}
-              type="button"
-              role="radio"
-              aria-checked={isVariable === variable}
-              onClick={() => switchTo(variable)}
               className={cn(
-                "h-6 rounded border px-2 text-[11px] transition-colors",
+                "flex h-6 cursor-pointer items-center rounded border px-2 text-[11px] transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/40",
                 isVariable === variable
                   ? "border-primary/40 bg-primary/10 text-primary"
                   : "border-border text-muted-foreground hover:border-primary/40 hover:text-primary",
               )}
             >
+              <input type="radio" name={groupName} className="sr-only" checked={isVariable === variable} onChange={() => switchTo(variable)} />
               {variable ? "Variable" : "Fixed value"}
-            </button>
+            </label>
           ))}
-        </div>
+        </fieldset>
       )}
       {isVariable && variableOptions ? (
         <>
