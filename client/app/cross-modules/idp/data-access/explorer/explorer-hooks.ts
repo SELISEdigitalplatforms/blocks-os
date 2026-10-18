@@ -39,12 +39,12 @@ const LARGE_SCREEN_QUERY = "(min-width: 1024px)";
 /** True at Tailwind's `lg` and up, where the inspector docks beside the table instead of opening as a sheet. */
 export function useIsLargeScreen() {
   const [isLarge, setIsLarge] = useState(() =>
-    typeof window === "undefined" || typeof window.matchMedia !== "function" ? true : window.matchMedia(LARGE_SCREEN_QUERY).matches,
+    typeof globalThis.matchMedia === "function" ? globalThis.matchMedia(LARGE_SCREEN_QUERY).matches : true,
   );
 
   useEffect(() => {
-    if (typeof window.matchMedia !== "function") return;
-    const media = window.matchMedia(LARGE_SCREEN_QUERY);
+    if (typeof globalThis.matchMedia !== "function") return;
+    const media = globalThis.matchMedia(LARGE_SCREEN_QUERY);
     const onChange = () => setIsLarge(media.matches);
     onChange();
     media.addEventListener("change", onChange);

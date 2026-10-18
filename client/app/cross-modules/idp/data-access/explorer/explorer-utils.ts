@@ -27,19 +27,17 @@ export const DEFAULT_PROPERTY_NAMES = [
 ];
 
 /** Types a column access rule can be set on. Object properties are reached through their children. */
-const SCALAR_TYPES = ["String", "Int", "Float", "Boolean", "DateTime", "GeoJson", "Enum", "Json"];
+const SCALAR_TYPES = new Set(["String", "Int", "Float", "Boolean", "DateTime", "GeoJson", "Enum", "Json"]);
 
 export const isScalarField = (field: Pick<PlatformSchemaField, "type" | "fields">) =>
-  SCALAR_TYPES.includes(field.type) && !(field.fields && field.fields.length > 0);
+  SCALAR_TYPES.has(field.type) && !(field.fields && field.fields.length > 0);
 
 export const hasNestedFields = (field: Pick<PlatformSchemaField, "fields">) =>
   Boolean(field.fields && field.fields.length > 0);
 
 /** Default properties first, in their usual order, then the entity's own. */
 export function orderFields(fields: PlatformSchemaField[]) {
-  const defaults = DEFAULT_PROPERTY_NAMES.map((name) => fields.find((f) => f.name === name)).filter(
-    (f): f is PlatformSchemaField => Boolean(f),
-  );
+  const defaults = DEFAULT_PROPERTY_NAMES.flatMap((name) => fields.filter((f) => f.name === name));
   const own = fields.filter((f) => !DEFAULT_PROPERTY_NAMES.includes(f.name));
   return { defaults, own };
 }

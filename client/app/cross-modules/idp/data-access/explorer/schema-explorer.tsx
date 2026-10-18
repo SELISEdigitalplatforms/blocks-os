@@ -17,13 +17,81 @@ export function filterSchemas(schemas: PlatformSchema[], service: string, search
   );
 }
 
+const SKELETON_ROWS = Array.from({ length: 12 }, (_, row) => `schema-skeleton-${row}`);
+
 const SchemaListSkeleton = () => (
   <div className="space-y-1">
-    {Array.from({ length: 12 }).map((_, index) => (
-      <Skeleton key={index} className="h-[34px] w-full rounded-md" />
+    {SKELETON_ROWS.map((key) => (
+      <Skeleton key={key} className="h-[34px] w-full rounded-md" />
     ))}
   </div>
 );
+
+function SchemaRow({
+  schema,
+  isSelected,
+  onSelect,
+}: Readonly<{ schema: PlatformSchema; isSelected: boolean; onSelect: (id: string) => void }>) {
+  const exposure = schemaExposure(schema);
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(schema.id)}
+      aria-current={isSelected ? "true" : undefined}
+      title={`${schema.schemaName} · ${schema.collectionName}`}
+      className={cn(
+        "dg-interactive relative flex h-[34px] w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-left focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40",
+        isSelected ? "bg-primary/10 text-primary" : "text-foreground/80 hover:bg-muted/40 hover:text-foreground",
+      )}
+    >
+      {isSelected && <span className="absolute inset-y-2 left-0 w-[2.5px] rounded-r-sm bg-primary" />}
+      <span className={cn("min-w-0 flex-1 truncate text-[13px]", isSelected ? "font-semibold" : "font-normal")}>{schema.schemaName}</span>
+      {exposure && <AccessTierDot tier={exposure.tier} title={exposure.reason} />}
+      <span className={cn("shrink-0 text-[11px]", isSelected ? "text-primary/60" : "text-muted-foreground/70")}>{schema.service}</span>
+    </button>
+  );
+}
+
+/** The list area: skeleton while loading, the rows, or why there are none. */
+function SchemaList({
+  isLoading,
+  schemas,
+  isFilteredOrSearched,
+  selectedSchemaId,
+  onSelectSchema,
+}: Readonly<{
+  isLoading: boolean;
+  schemas: PlatformSchema[];
+  isFilteredOrSearched: boolean;
+  selectedSchemaId?: string | null;
+  onSelectSchema: (id: string) => void;
+}>) {
+  if (isLoading) return <SchemaListSkeleton />;
+  if (schemas.length > 0) {
+    return (
+      <>
+        {schemas.map((schema) => (
+          <SchemaRow key={schema.id} schema={schema} isSelected={schema.id === selectedSchemaId} onSelect={onSelectSchema} />
+        ))}
+      </>
+    );
+  }
+  if (isFilteredOrSearched) {
+    return <div className="flex h-full items-center justify-center py-8 text-sm text-muted-foreground/60">No schemas found</div>;
+  }
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-3 px-6 py-8 text-center">
+      <div className="flex h-10 w-10 items-center justify-center rounded-[11px] border border-dashed border-border/60 text-muted-foreground/40">
+        <Database className="h-[19px] w-[19px]" aria-hidden />
+      </div>
+      <p className="text-[12.5px] leading-relaxed text-muted-foreground/70">
+        No platform schemas yet.
+        <br />
+        They will be listed here once seeded.
+      </p>
+    </div>
+  );
+}
 
 /**
  * The explorer column: the Data Gateway's schema list, read-only. Filtering by
@@ -100,49 +168,13 @@ export function SchemaExplorer({
       </div>
 
       <div className="flex-1 overflow-auto px-2 py-1.5">
-        {isLoading ? (
-          <SchemaListSkeleton />
-        ) : visible.length > 0 ? (
-          visible.map((schema) => {
-            const isSelected = schema.id === selectedSchemaId;
-            const exposure = schemaExposure(schema);
-            return (
-              <button
-                key={schema.id}
-                type="button"
-                onClick={() => onSelectSchema(schema.id)}
-                aria-current={isSelected ? "true" : undefined}
-                title={`${schema.schemaName} · ${schema.collectionName}`}
-                className={cn(
-                  "dg-interactive relative flex h-[34px] w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-left focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40",
-                  isSelected ? "bg-primary/10 text-primary" : "text-foreground/80 hover:bg-muted/40 hover:text-foreground",
-                )}
-              >
-                {isSelected && <span className="absolute inset-y-2 left-0 w-[2.5px] rounded-r-sm bg-primary" />}
-                <span className={cn("min-w-0 flex-1 truncate text-[13px]", isSelected ? "font-semibold" : "font-normal")}>
-                  {schema.schemaName}
-                </span>
-                {exposure && <AccessTierDot tier={exposure.tier} title={exposure.reason} />}
-                <span className={cn("shrink-0 text-[11px]", isSelected ? "text-primary/60" : "text-muted-foreground/70")}>
-                  {schema.service}
-                </span>
-              </button>
-            );
-          })
-        ) : isFilteredOrSearched ? (
-          <div className="flex h-full items-center justify-center py-8 text-sm text-muted-foreground/60">No schemas found</div>
-        ) : (
-          <div className="flex h-full flex-col items-center justify-center gap-3 px-6 py-8 text-center">
-            <div className="flex h-10 w-10 items-center justify-center rounded-[11px] border border-dashed border-border/60 text-muted-foreground/40">
-              <Database className="h-[19px] w-[19px]" aria-hidden />
-            </div>
-            <p className="text-[12.5px] leading-relaxed text-muted-foreground/70">
-              No platform schemas yet.
-              <br />
-              They will be listed here once seeded.
-            </p>
-          </div>
-        )}
+        <SchemaList
+          isLoading={isLoading}
+          schemas={visible}
+          isFilteredOrSearched={isFilteredOrSearched}
+          selectedSchemaId={selectedSchemaId}
+          onSelectSchema={onSelectSchema}
+        />
       </div>
     </div>
   );

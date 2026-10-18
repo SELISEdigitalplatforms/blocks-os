@@ -171,8 +171,8 @@ export const SchemaHeaderSkeleton = () => (
     <div className="flex items-center gap-4 border-t border-border/40 px-5 py-3">
       <Skeleton className="h-[13px] w-[86px] rounded" />
       <div className="flex flex-wrap items-center gap-2">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-[26px] w-[104px] rounded-md" />
+        {["View", "Create", "Edit", "Delete"].map((verb) => (
+          <Skeleton key={verb} className="h-[26px] w-[104px] rounded-md" />
         ))}
       </div>
     </div>

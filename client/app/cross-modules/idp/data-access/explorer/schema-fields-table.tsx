@@ -16,8 +16,26 @@ import { hasNestedFields, isScalarField, orderFields } from "./explorer-utils";
 export type OnOpenFieldAccess = (target: { path: string; field: PlatformSchemaField }) => void;
 
 /** Property | Type | Flags | Description | Rules. */
-const COLUMN_WIDTHS = ["24%", "18%", "15%", "28%", "15%"];
-const COLUMN_COUNT = COLUMN_WIDTHS.length;
+const COLUMNS = [
+  { id: "property", width: "24%", skeleton: "w-20" },
+  { id: "type", width: "18%", skeleton: "w-12" },
+  { id: "flags", width: "15%", skeleton: "w-12" },
+  { id: "description", width: "28%", skeleton: "w-24" },
+  { id: "rules", width: "15%", skeleton: "w-10" },
+] as const;
+const COLUMN_COUNT = COLUMNS.length;
+const SKELETON_CARDS = ["card-1", "card-2", "card-3", "card-4"];
+const SKELETON_ROWS = Array.from({ length: 8 }, (_, row) => `row-${row}`);
+
+function ColumnWidths() {
+  return (
+    <colgroup>
+      {COLUMNS.map((column) => (
+        <col key={column.id} style={{ width: column.width }} />
+      ))}
+    </colgroup>
+  );
+}
 const CELL = "py-3 align-middle";
 
 const TAB_TRIGGER_CLASS =
@@ -34,8 +52,8 @@ function EnumValues({ values }: Readonly<{ values: string[] }>) {
         <p className="text-xs text-muted-foreground">No allowed values defined.</p>
       ) : (
         <div className="flex flex-wrap gap-1.5">
-          {values.map((value, i) => (
-            <span key={`${value}-${i}`} className={ENUM_CHIP_CLASS}>
+          {values.map((value) => (
+            <span key={value} className={ENUM_CHIP_CLASS}>
               {value}
             </span>
           ))}
@@ -246,11 +264,7 @@ function FieldsTable({
 
   return (
     <Table className="w-full table-fixed" wrapperClassName="overflow-visible">
-      <colgroup>
-        {COLUMN_WIDTHS.map((width, index) => (
-          <col key={index} style={{ width }} />
-        ))}
-      </colgroup>
+      <ColumnWidths />
       <TableHeader className={cn(!embedded && "sticky top-0 z-10 bg-card")}>
         <TableRow>
           <TableHead>Property</TableHead>
@@ -415,7 +429,7 @@ export const SchemaFieldsTableSkeleton = () => (
       </div>
     </div>
     <div className="mt-4 space-y-3 xl:hidden">
-      {Array.from({ length: 4 }).map((_, card) => (
+      {SKELETON_CARDS.map((card) => (
         <div key={card} className="space-y-3 rounded-sm border border-border/40 bg-card p-4">
           <Skeleton className="h-4 w-32 rounded" />
           <div className="flex flex-wrap items-center gap-2">
@@ -428,22 +442,18 @@ export const SchemaFieldsTableSkeleton = () => (
     </div>
     <div className="mt-4 hidden xl:block">
       <Table className="w-full table-fixed">
-        <colgroup>
-          {COLUMN_WIDTHS.map((width, index) => (
-            <col key={index} style={{ width }} />
-          ))}
-        </colgroup>
+        <ColumnWidths />
         <TableHeader>
           <TableRow>
-            {["w-20", "w-12", "w-12", "w-24", "w-10"].map((width, index) => (
-              <TableHead key={index}>
-                <Skeleton className={`h-3.5 ${width} rounded`} />
+            {COLUMNS.map((column) => (
+              <TableHead key={column.id}>
+                <Skeleton className={`h-3.5 ${column.skeleton} rounded`} />
               </TableHead>
             ))}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {Array.from({ length: 8 }).map((_, row) => (
+          {SKELETON_ROWS.map((row) => (
             <TableRow key={row}>
               <TableCell>
                 <Skeleton className="h-4 w-[70%] rounded" />

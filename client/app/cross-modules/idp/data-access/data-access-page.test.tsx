@@ -79,7 +79,7 @@ describe("DataAccessPage", () => {
     h.schemas = [role, build];
     h.viewProps = [];
     h.largeScreen = true;
-    Object.defineProperty(window, "matchMedia", {
+    Object.defineProperty(globalThis, "matchMedia", {
       configurable: true,
       writable: true,
       value: (query: string) => ({

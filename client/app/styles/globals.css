@@ -783,44 +783,46 @@
   }
 }
 
-/* Panel columns that grow and shrink by width. `width` is a layout property,
+@layer utilities {
+  /* Panel columns that grow and shrink by width. `width` is a layout property,
    so the browser reflows each frame — `contain` walls that reflow off from
    the rest of the page, and the fixed-width child inside means the panel's
    own content never re-wraps while the frame around it is moving. */
-@utility dg-panel-collapse {
-  transition:
-    width var(--dg-duration-panel) var(--dg-ease-standard),
-    opacity var(--dg-duration-base) var(--dg-ease-standard);
-  contain: layout paint;
-  will-change: width;
-}
+  .dg-panel-collapse {
+    transition:
+      width var(--dg-duration-panel) var(--dg-ease-standard),
+      opacity var(--dg-duration-base) var(--dg-ease-standard);
+    contain: layout paint;
+    will-change: width;
+  }
 
-/* Cross-fade between two panels sharing one slot. The outgoing panel keeps
+  /* Cross-fade between two panels sharing one slot. The outgoing panel keeps
    its box until the incoming one has faded up, so the column never collapses
    to nothing between the two. */
-@utility dg-fade-layer {
-  transition:
-    opacity var(--dg-duration-base) var(--dg-ease-standard),
-    transform var(--dg-duration-base) var(--dg-ease-standard);
-  will-change: opacity, transform;
-}
+  .dg-fade-layer {
+    transition:
+      opacity var(--dg-duration-base) var(--dg-ease-standard),
+      transform var(--dg-duration-base) var(--dg-ease-standard);
+    will-change: opacity, transform;
+  }
 
-@utility dg-fade-in {
-  animation: dg-fade-in var(--dg-duration-base) var(--dg-ease-enter) both;
-}
+  .dg-fade-in {
+    animation: dg-fade-in var(--dg-duration-base) var(--dg-ease-enter) both;
+  }
 
-@utility dg-rise-in {
-  animation: dg-rise-in var(--dg-duration-panel) var(--dg-ease-enter) both;
-}
+  .dg-rise-in {
+    animation: dg-rise-in var(--dg-duration-panel) var(--dg-ease-enter) both;
+  }
 
-/* Interactive surfaces: rows, chips, list items. Transitioning only the
+  /* Interactive surfaces: rows, chips, list items. Transitioning only the
    paint-only properties keeps hover off the layout path entirely. */
-@utility dg-interactive {
-  transition:
-    background-color var(--dg-duration-fast) var(--dg-ease-standard),
-    color var(--dg-duration-fast) var(--dg-ease-standard),
-    border-color var(--dg-duration-fast) var(--dg-ease-standard),
-    box-shadow var(--dg-duration-fast) var(--dg-ease-standard);
+  .dg-interactive {
+    transition:
+      background-color var(--dg-duration-fast) var(--dg-ease-standard),
+      color var(--dg-duration-fast) var(--dg-ease-standard),
+      border-color var(--dg-duration-fast) var(--dg-ease-standard),
+      box-shadow var(--dg-duration-fast) var(--dg-ease-standard);
+  }
 }
 
 @keyframes dg-fade-in {
