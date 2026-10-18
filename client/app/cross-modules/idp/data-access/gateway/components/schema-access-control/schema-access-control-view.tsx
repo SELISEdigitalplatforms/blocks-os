@@ -67,16 +67,25 @@ export interface SchemaAccessControlViewHandle {
   discard: () => void;
 }
 
-/** "Who is allowed" tile grid — Inherited is column-only (there is nothing to inherit from at row level). */
+/**
+ * "Who is allowed" tile grid. Platform data is never offered to the public, so
+ * there is no Public tile. Inherited is column-only (there is nothing to inherit
+ * from at row level).
+ */
 const ACCESS_TIER_TILES = [
   { type: ACCESS_TYPES.INHERITED, label: "Inherited" },
-  { type: ACCESS_TYPES.PUBLIC, label: "Public" },
   { type: ACCESS_TYPES.LOGGED_IN, label: "Signed-in users" },
   { type: ACCESS_TYPES.CUSTOM, label: "Custom" },
 ];
 
-/** Below this width the 4-tile grid can no longer fit a label beside every icon. */
+/** Below this width the three property tiles stack instead of sharing a row. */
 const NARROW_TILES_WIDTH = 420;
+
+/** Two schema tiles always fit side by side; three property tiles stack in a narrow panel. */
+const tileColumns = (isRowLevel: boolean, isNarrow: boolean) => {
+  if (isRowLevel) return "grid-cols-2";
+  return isNarrow ? "grid-cols-1" : "grid-cols-3";
+};
 
 /** Whether a policy belongs to the row/column scope this panel is showing. */
 const policyMatchesScope = (
@@ -112,9 +121,6 @@ const AccessTierTiles = ({
   const { ref: tilesRef, isNarrow: tilesNarrow } = useNarrowContainer<HTMLDivElement>(
     NARROW_TILES_WIDTH,
   );
-  // Field tiles sit two to a row, wide enough to always carry their label;
-  // only the schema-level tiles ever collapse to icons in a narrow panel.
-  const iconOnlyTiles = isRowLevel && tilesNarrow;
   const visibleTiers =
     level === "column"
       ? ACCESS_TIER_TILES
@@ -123,10 +129,7 @@ const AccessTierTiles = ({
   return (
     <div
       ref={tilesRef}
-      className={cn(
-        "grid gap-2",
-        isRowLevel ? "grid-cols-1 min-[380px]:grid-cols-2 sm:grid-cols-3" : "grid-cols-2",
-      )}
+      className={cn("grid gap-2", tileColumns(isRowLevel, tilesNarrow))}
       role="radiogroup"
       aria-label="Who is allowed"
     >
@@ -140,7 +143,6 @@ const AccessTierTiles = ({
             title={label}
             className={cn(
               "flex h-11 min-w-0 items-center gap-2 rounded-md border px-3 text-left text-xs font-medium transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60",
-              iconOnlyTiles && "justify-center",
               isSelected
                 ? cn(TIER_CONTAINER_CLASS[tier], TIER_VALUE_CLASS[tier])
                 : "border-border/40 text-muted-foreground hover:border-border hover:text-foreground",
@@ -166,7 +168,7 @@ const AccessTierTiles = ({
                 aria-hidden
               />
             </span>
-            {!iconOnlyTiles && <span className="min-w-0 flex-1 truncate">{label}</span>}
+            <span className="min-w-0 flex-1 truncate">{label}</span>
           </label>
         );
       })}
