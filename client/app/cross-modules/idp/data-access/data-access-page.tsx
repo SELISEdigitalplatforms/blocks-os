@@ -6,8 +6,14 @@ import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { useCallback, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from "react";
-import { platformDataAccessService, type PlatformSchema } from "./data-access.service";
-import { AccessInspector, UnsavedAccessChangesDialog, type AccessInspectorHandle, type AccessInspectorTarget } from "./explorer/access-inspector";
+import { platformDataAccessService, type PlatformSchema, type PlatformSchemaField } from "./data-access.service";
+import {
+  AccessInspector,
+  UnsavedAccessChangesDialog,
+  type AccessInspectorHandle,
+  type AccessInspectorTarget,
+  type AccessTab,
+} from "./explorer/access-inspector";
 import { useDataAccessSearchParams, useIsLargeScreen, useLingeringValue } from "./explorer/explorer-hooks";
 import { MOTION, SHELL } from "./explorer/explorer-utils";
 import { SchemaExplorer, SchemaRail, filterSchemas } from "./explorer/schema-explorer";
@@ -17,8 +23,8 @@ import { SchemaPreviewDrawer } from "./explorer/schema-preview-drawer";
 
 const inspectorKey = (target: AccessInspectorTarget) => `${target.schemaId}:${target.level}:${target.fieldNames.join(",")}`;
 
-/** Inspector subject for the schema itself (row access). */
-const schemaAccessTarget = (schema: PlatformSchema): AccessInspectorTarget => ({
+/** Inspector subject for the schema itself (row access), opened on `tab`. */
+const schemaAccessTarget = (schema: PlatformSchema, tab?: AccessTab): AccessInspectorTarget => ({
   subject: schema.schemaName,
   context: "Schema access",
   schemaId: schema.id,
@@ -26,11 +32,15 @@ const schemaAccessTarget = (schema: PlatformSchema): AccessInspectorTarget => ({
   fields: schema.fields,
   level: "row",
   fieldNames: [],
+  tab,
+  readAccessLevel: schema.readAccessLevel,
+  writeAccessLevel: schema.writeAccessLevel,
   editAccessLevel: schema.editAccessLevel,
+  deleteAccessLevel: schema.deleteAccessLevel,
 });
 
 /** Inspector subject for one property (column access), addressed by its dotted path. */
-const fieldAccessTarget = (schema: PlatformSchema, path: string, editAccessLevel: number): AccessInspectorTarget => ({
+const fieldAccessTarget = (schema: PlatformSchema, path: string, field: PlatformSchemaField): AccessInspectorTarget => ({
   subject: path,
   context: `Field on ${schema.schemaName}`,
   schemaId: schema.id,
@@ -38,7 +48,8 @@ const fieldAccessTarget = (schema: PlatformSchema, path: string, editAccessLevel
   fields: schema.fields,
   level: "column",
   fieldNames: [path],
-  editAccessLevel,
+  readAccessLevel: field.readAccessLevel,
+  editAccessLevel: field.editAccessLevel,
 });
 
 /** Header plus property table for the selected schema, or a placeholder while loading or when none is selected. */
@@ -54,7 +65,7 @@ function SchemaPanel({
   schema: PlatformSchema | null;
   isAccessPanelOpen: boolean;
   onOpenPreview: () => void;
-  onOpenSchemaAccess: () => void;
+  onOpenSchemaAccess: (tab?: AccessTab) => void;
   onOpenFieldAccess: OnOpenFieldAccess;
 }>) {
   if (isLoading) {
@@ -138,7 +149,7 @@ function InspectorColumn({
 
 /**
  * Data Access: the Data Gateway's Schemas tab for the platform's own schemas
- * (IAM, OS, Logic, Release), read-only except for Edit access. Explorer on the
+ * (IAM, OS, Logic, Release), read-only except for access. Explorer on the
  * left, schema in the middle, access inspector docked on the right; the explorer
  * folds to a rail while the inspector is open.
  */
@@ -210,7 +221,7 @@ export function DataAccessPage() {
 
   return (
     <div className="flex flex-col lg:h-[calc(100vh-8rem)] lg:min-h-0">
-      <PageHeader title="Data Access" description="Platform collections of IAM, OS, Logic and Release, and who may update them." />
+      <PageHeader title="Data Access" description="Platform collections of IAM, OS, Logic and Release, and who may view, create, edit and delete them." />
 
       <div className="flex flex-col gap-4 lg:min-h-0 lg:flex-1 lg:flex-row lg:items-stretch">
         {/* Explorer column: one box whose width moves between the full list and the rail. */}
@@ -256,8 +267,8 @@ export function DataAccessPage() {
               schema={selectedSchema}
               isAccessPanelOpen={isRightPanelOpen}
               onOpenPreview={() => setIsPreviewOpen(true)}
-              onOpenSchemaAccess={() => selectedSchema && openInspector(schemaAccessTarget(selectedSchema))}
-              onOpenFieldAccess={({ path, field }) => selectedSchema && openInspector(fieldAccessTarget(selectedSchema, path, field.editAccessLevel))}
+              onOpenSchemaAccess={(tab) => selectedSchema && openInspector(schemaAccessTarget(selectedSchema, tab))}
+              onOpenFieldAccess={({ path, field }) => selectedSchema && openInspector(fieldAccessTarget(selectedSchema, path, field))}
             />
           </div>
         </div>
@@ -277,7 +288,7 @@ export function DataAccessPage() {
         <Sheet open={Boolean(inspector)} onOpenChange={(open) => !open && closeInspector()}>
           <SheetContent side="right" hideClose className="flex w-full flex-col p-0 sm:max-w-[540px]">
             <SheetTitle className="sr-only">Access</SheetTitle>
-            <SheetDescription className="sr-only">Who may update this schema or property.</SheetDescription>
+            <SheetDescription className="sr-only">Who may view, create, edit or delete this schema or property.</SheetDescription>
             {inspector && <AccessInspector key={inspectorKey(inspector)} ref={inspectorRef} target={inspector} onClose={closeInspector} />}
           </SheetContent>
         </Sheet>

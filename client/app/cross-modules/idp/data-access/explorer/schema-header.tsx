@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { Database, Eye, MoreVertical, Shield } from "lucide-react";
 import { useState } from "react";
 import type { PlatformSchema } from "../data-access.service";
+import type { AccessTab } from "./access-inspector";
 import { AccessVerbPill } from "../gateway/components/primitives";
 import { useNarrowContainer } from "../gateway/hooks/use-narrow-container";
 import { DEFAULT_PROPERTY_NAMES } from "./explorer-utils";
@@ -19,8 +20,7 @@ const NARROW_HEADER_WIDTH = 560;
 
 /**
  * The schema header of the Data Gateway (`SchemaBasicInfo`), read-only: no
- * delete. Only Edit access can be changed here, so the Edit pill opens the
- * inspector and View / Create / Delete are shown as they are.
+ * delete. Each access pill opens the inspector on its own verb.
  */
 export function SchemaHeader({
   schema,
@@ -31,7 +31,7 @@ export function SchemaHeader({
   schema: PlatformSchema;
   isAccessPanelOpen?: boolean;
   onOpenPreview: () => void;
-  onOpenSchemaAccess: () => void;
+  onOpenSchemaAccess: (tab?: AccessTab) => void;
 }>) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { ref: headerRef, isNarrow } = useNarrowContainer<HTMLDivElement>(NARROW_HEADER_WIDTH);
@@ -42,10 +42,10 @@ export function SchemaHeader({
   const fieldsSummary = `${ownCount} ${ownCount === 1 ? "field" : "fields"} · ${systemCount} system`;
 
   const accessLevels = [
-    { label: "View", level: schema.readAccessLevel, editable: false },
-    { label: "Create", level: schema.writeAccessLevel, editable: false },
-    { label: "Edit", level: schema.editAccessLevel, editable: true },
-    { label: "Delete", level: schema.deleteAccessLevel, editable: false },
+    { label: "View", tab: "view", level: schema.readAccessLevel },
+    { label: "Create", tab: "create", level: schema.writeAccessLevel },
+    { label: "Edit", tab: "edit", level: schema.editAccessLevel },
+    { label: "Delete", tab: "delete", level: schema.deleteAccessLevel },
   ] as const;
 
   return (
@@ -93,7 +93,7 @@ export function SchemaHeader({
               "h-8 gap-1.5 border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary",
               isNarrow && "w-8 px-0",
             )}
-            onClick={onOpenSchemaAccess}
+            onClick={() => onOpenSchemaAccess()}
           >
             <Shield className="h-3.5 w-3.5" />
             {!isNarrow && "Schema Access"}
@@ -130,17 +130,14 @@ export function SchemaHeader({
       <div className="relative flex flex-col items-start gap-2.5 border-t border-border/40 px-3 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-5">
         <span className="shrink-0 text-[11px] font-medium uppercase tracking-widest text-muted-foreground/50">Access Control</span>
         <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
-          {accessLevels.map(({ label, level, editable }) => (
+          {accessLevels.map(({ label, tab, level }) => (
             <AccessVerbPill
               key={label}
               verb={label}
               level={level}
               compact={isNarrow || isAccessPanelOpen}
-              onClick={editable ? onOpenSchemaAccess : undefined}
-              className={cn(
-                "justify-center sm:justify-start",
-                !editable && "cursor-default hover:ring-0",
-              )}
+              onClick={() => onOpenSchemaAccess(tab)}
+              className="justify-center sm:justify-start"
             />
           ))}
         </div>

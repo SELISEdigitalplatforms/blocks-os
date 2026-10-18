@@ -12,6 +12,12 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
 {
     private const string LogicService = "Logic";
 
+    // View, Create, Edit and Delete, as the services check them. ALL is left out: services never ask for it.
+    private static readonly PolicyOperation[] Operations = [PolicyOperation.READ, PolicyOperation.WRITE, PolicyOperation.EDIT, PolicyOperation.DELETE];
+
+    // Field rules the services apply: Genesis derives column rules for READ and EDIT only.
+    private static readonly PolicyOperation[] FieldOperations = [PolicyOperation.READ, PolicyOperation.EDIT];
+
     private static readonly IReadOnlyDictionary<string, string> Owners = new Dictionary<string, string>
     {
         ["User"] = "IAM", ["Role"] = "IAM", ["Permission"] = "IAM", ["Organization"] = "IAM",
@@ -44,7 +50,7 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
             x.SchemaName,
             x.CollectionName,
             service = Owners[x.SchemaName],
-            // All four levels, so the console can show View/Create/Delete next to the editable Edit.
+            // All four levels, one per access tab in the console.
             readAccessLevel = (int)x.ReadAccessLevel,
             writeAccessLevel = (int)x.WriteAccessLevel,
             editAccessLevel = (int)x.EditAccessLevel,
@@ -59,7 +65,7 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
     public async Task<IActionResult> Policies([FromQuery] string schemaId, CancellationToken cancellationToken)
     {
         if (!await IsPlatformSchemaAsync(schemaId, cancellationToken)) return NotFound();
-        var policies = await PolicyCollection.Find(x => x.SchemaId == schemaId && !x.IsDeleted && x.Operation == PolicyOperation.EDIT)
+        var policies = await PolicyCollection.Find(x => x.SchemaId == schemaId && !x.IsDeleted && Operations.Contains(x.Operation))
             .ToListAsync(cancellationToken);
         var result = policies.Select(policy => new
         {
@@ -90,13 +96,14 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
     {
         var schema = await SchemaCollection.Find(x => x.ItemId == request.SchemaId && x.IsSystemEntity && !x.IsDeleted)
             .FirstOrDefaultAsync(cancellationToken);
-        if (schema is null || !Owners.ContainsKey(schema.SchemaName) || (request.Operation ?? default) != PolicyOperation.EDIT) return BadRequest();
+        if (schema is null || !Owners.ContainsKey(schema.SchemaName) || request.Operation is not { } operation || !Operations.Contains(operation)) return BadRequest();
         var accessLevel = request.AccessLevel ?? default;
-        if ((request.PolicyType ?? default) == PolicyType.RLS) schema.EditAccessLevel = accessLevel;
+        if ((request.PolicyType ?? default) == PolicyType.RLS) SetAccessLevel(schema, operation, accessLevel);
         else
         {
-            if (request.FieldNames.Length == 0 || request.FieldNames.Any(name => schema.Fields.All(field => field.Name != name))) return BadRequest();
-            foreach (var field in schema.Fields.Where(field => request.FieldNames.Contains(field.Name))) field.EditAccessLevel = accessLevel;
+            if (!FieldOperations.Contains(operation) || request.FieldNames.Length == 0
+                || request.FieldNames.Any(name => schema.Fields.All(field => field.Name != name))) return BadRequest();
+            foreach (var field in schema.Fields.Where(field => request.FieldNames.Contains(field.Name))) SetAccessLevel(field, operation, accessLevel);
         }
         await SchemaCollection.ReplaceOneAsync(x => x.ItemId == schema.ItemId, schema, cancellationToken: cancellationToken);
         return Ok(new { isSuccess = true, data = new { acknowledged = true, itemId = schema.ItemId } });
@@ -111,7 +118,7 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
     [ProtectedEndPoint("blocks-data::data-access::delete-data-access-policy")]
     public async Task<IActionResult> Delete([FromQuery] string itemId, CancellationToken cancellationToken)
     {
-        var policy = await PolicyCollection.Find(x => x.ItemId == itemId && x.Operation == PolicyOperation.EDIT).FirstOrDefaultAsync(cancellationToken);
+        var policy = await PolicyCollection.Find(x => x.ItemId == itemId && Operations.Contains(x.Operation)).FirstOrDefaultAsync(cancellationToken);
         if (policy is null || !await IsPlatformSchemaAsync(policy.SchemaId, cancellationToken)) return NotFound();
         await PolicyCollection.DeleteOneAsync(x => x.ItemId == itemId, cancellationToken);
         return Ok(new { isSuccess = true, data = new { acknowledged = true, itemId } });
@@ -123,7 +130,7 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
             .FirstOrDefaultAsync(cancellationToken);
         if (schema is null || !Owners.ContainsKey(schema.SchemaName)) return NotFound();
         var policyType = request.PolicyType ?? default;
-        if (!IsValidPolicyRequest(request, policyType, schema)) return BadRequest();
+        if (request.Operation is not { } operation || !IsValidPolicyRequest(request, operation, policyType, schema)) return BadRequest();
 
         var policy = await LoadOrCreatePolicyAsync(itemId, schema, cancellationToken);
         if (policy is null) return NotFound();
@@ -131,7 +138,7 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
         policy.PolicyName = request.PolicyName.Trim();
         policy.PolicyDescription = request.PolicyDescription ?? string.Empty;
         policy.PolicyType = policyType;
-        policy.Operation = PolicyOperation.EDIT;
+        policy.Operation = operation;
         policy.SchemaName = schema.SchemaName;
         policy.SchemaId = schema.ItemId;
         policy.FieldNames = request.FieldNames;
@@ -140,27 +147,46 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
         policy.IsAllowPolicy = request.IsAllowPolicy ?? true;
         policy.LastUpdatedDate = DateTime.UtcNow;
 
-        if (policyType == PolicyType.RLS) schema.EditAccessLevel = SchemaAccessLevel.Custom;
-        else foreach (var field in schema.Fields.Where(field => request.FieldNames.Contains(field.Name))) field.EditAccessLevel = SchemaAccessLevel.Custom;
+        if (policyType == PolicyType.RLS) SetAccessLevel(schema, operation, SchemaAccessLevel.Custom);
+        else foreach (var field in schema.Fields.Where(field => request.FieldNames.Contains(field.Name))) SetAccessLevel(field, operation, SchemaAccessLevel.Custom);
 
         await SchemaCollection.ReplaceOneAsync(x => x.ItemId == schema.ItemId, schema, cancellationToken: cancellationToken);
         await PolicyCollection.ReplaceOneAsync(x => x.ItemId == policy.ItemId, policy, new ReplaceOptions { IsUpsert = true }, cancellationToken);
         return Ok(new { isSuccess = true, data = new { acknowledged = true, itemId = policy.ItemId } });
     }
 
-    private static bool IsValidPolicyRequest(SavePlatformPolicyRequest request, PolicyType policyType, SchemaDefinition schema)
+    private static bool IsValidPolicyRequest(SavePlatformPolicyRequest request, PolicyOperation operation, PolicyType policyType, SchemaDefinition schema)
     {
-        if (string.IsNullOrWhiteSpace(request.PolicyName)) return false;
+        if (string.IsNullOrWhiteSpace(request.PolicyName) || !Operations.Contains(operation)) return false;
         if (policyType == PolicyType.RLS) return request.FieldNames.Length == 0;
-        if (policyType == PolicyType.CLS) return request.FieldNames.Length != 0 && request.FieldNames.All(name => schema.Fields.Any(field => field.Name == name));
+        if (policyType == PolicyType.CLS)
+            return FieldOperations.Contains(operation) && request.FieldNames.Length != 0
+                && request.FieldNames.All(name => schema.Fields.Any(field => field.Name == name));
         return true;
+    }
+
+    private static void SetAccessLevel(SchemaDefinition schema, PolicyOperation operation, SchemaAccessLevel level)
+    {
+        switch (operation)
+        {
+            case PolicyOperation.READ: schema.ReadAccessLevel = level; break;
+            case PolicyOperation.WRITE: schema.WriteAccessLevel = level; break;
+            case PolicyOperation.EDIT: schema.EditAccessLevel = level; break;
+            case PolicyOperation.DELETE: schema.DeleteAccessLevel = level; break;
+        }
+    }
+
+    private static void SetAccessLevel(FieldDefinition field, PolicyOperation operation, SchemaAccessLevel level)
+    {
+        if (operation == PolicyOperation.READ) field.ReadAccessLevel = level;
+        else if (operation == PolicyOperation.EDIT) field.EditAccessLevel = level;
     }
 
     private async Task<DataAccessPolicy?> LoadOrCreatePolicyAsync(string? itemId, SchemaDefinition schema, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(itemId))
             return new DataAccessPolicy { ItemId = Guid.NewGuid().ToString(), CreatedDate = DateTime.UtcNow };
-        return await PolicyCollection.Find(x => x.ItemId == itemId && x.SchemaId == schema.ItemId && x.Operation == PolicyOperation.EDIT)
+        return await PolicyCollection.Find(x => x.ItemId == itemId && x.SchemaId == schema.ItemId && Operations.Contains(x.Operation))
             .FirstOrDefaultAsync(cancellationToken);
     }
 
@@ -182,6 +208,7 @@ public sealed class SavePlatformPolicyRequest
     public string SchemaId { get; set; } = string.Empty;
     public string PolicyName { get; set; } = string.Empty;
     public string? PolicyDescription { get; set; }
+    public PolicyOperation? Operation { get; set; }
     public PolicyType? PolicyType { get; set; }
     public string[] FieldNames { get; set; } = [];
     public PolicyRuleGroup RuleGroup { get; set; } = new();

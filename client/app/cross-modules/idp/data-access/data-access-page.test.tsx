@@ -21,7 +21,7 @@ vi.mock("./data-access.service", () => ({
 vi.mock("./gateway/components/schema-access-control/schema-access-control-view", () => ({
   SchemaAccessControlView: forwardRef(function SchemaAccessControlView(props: Record<string, unknown>, _ref) {
     h.viewProps.push(props);
-    return <div data-testid="access-editor">{`${String(props.level)}:${(props.fieldNames as string[]).join(",")}`}</div>;
+    return <div data-testid="access-editor">{`${String(props.level)}:${String(props.operation)}:${(props.fieldNames as string[]).join(",")}`}</div>;
   }),
 }));
 
@@ -161,20 +161,24 @@ describe("DataAccessPage", () => {
     expect(screen.getAllByText("UserIds").length).toBeGreaterThan(0);
   });
 
-  it("opens schema access on Edit only", async () => {
+  it("opens schema access on the verb that was clicked, with all four operations", async () => {
     const user = userEvent.setup();
     renderPage("?schemaId=role-id");
     await screen.findAllByRole("heading", { name: "Role" });
 
     await user.click(screen.getByRole("button", { name: "View Custom" }));
-    expect(screen.queryByTestId("access-editor")).toBeNull();
+    const inspector = await screen.findByRole("complementary", { name: "Access for Role" });
+    expect(within(inspector).getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["View", "Create", "Edit", "Delete"]);
+    expect(within(inspector).getByRole("tab", { selected: true }).textContent).toBe("View");
+    // One editor per operation (READ 0, CREATE 1, UPDATE 2, DELETE 3), each seeded with that operation's level.
+    expect(within(inspector).getAllByTestId("access-editor").map((e) => e.textContent)).toEqual(["row:0:", "row:1:", "row:2:", "row:3:"]);
+    expect(h.viewProps.at(-4)).toMatchObject({ schemaId: "role-id", operation: 0, defaultAccessLevel: 3 });
 
-    await user.click(screen.getByRole("button", { name: "Edit Custom" }));
-    expect((await screen.findByTestId("access-editor")).textContent).toBe("row:");
-    expect(h.viewProps.at(-1)).toMatchObject({ schemaId: "role-id", operation: 2, defaultAccessLevel: 3 });
+    await user.click(screen.getByRole("button", { name: "Delete Custom" }));
+    expect(within(inspector).getByRole("tab", { selected: true }).textContent).toBe("Delete");
   });
 
-  it("opens a nested property's access with its full path", async () => {
+  it("opens a nested property's access with its full path, for View and Edit only", async () => {
     const user = userEvent.setup();
     renderPage("?schemaId=role-id");
 
@@ -182,7 +186,8 @@ describe("DataAccessPage", () => {
     await user.click(screen.getAllByRole("button", { name: "View access for Create.Roles" })[0]);
 
     const inspector = await screen.findByRole("complementary", { name: "Access for Create.Roles" });
-    expect(within(inspector).getByTestId("access-editor").textContent).toBe("column:Create.Roles");
+    expect(within(inspector).getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["View", "Edit"]);
+    expect(within(inspector).getAllByTestId("access-editor").map((e) => e.textContent)).toEqual(["column:0:Create.Roles", "column:2:Create.Roles"]);
   });
 
   it("does not offer access on an object property itself", async () => {
@@ -200,7 +205,7 @@ describe("DataAccessPage", () => {
     await user.click(screen.getByRole("button", { name: "Schema Access" }));
 
     const sheet = await screen.findByRole("dialog");
-    expect(within(sheet).getByTestId("access-editor").textContent).toBe("row:");
+    expect(within(sheet).getAllByTestId("access-editor")).toHaveLength(4);
   });
 
   it("previews the schema structure as JSON", async () => {
