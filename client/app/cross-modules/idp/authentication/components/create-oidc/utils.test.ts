@@ -14,16 +14,18 @@ import {
 
 describe("redirectUriSubmitSchema", () => {
   it("accepts https urls", () => {
-    expect(redirectUriSubmitSchema.safeParse([{ value: "https://app.example.com/cb" }]).success).toBe(
-      true,
-    );
+    expect(
+      redirectUriSubmitSchema.safeParse([{ value: "https://app.example.com/cb" }]).success,
+    ).toBe(true);
   });
 
   it("allows http only for localhost and 127.0.0.1", () => {
     expect(redirectUriSubmitSchema.safeParse([{ value: "http://localhost:3000/cb" }]).success).toBe(
       true,
     );
-    expect(redirectUriSubmitSchema.safeParse([{ value: "http://127.0.0.1/cb" }]).success).toBe(true);
+    expect(redirectUriSubmitSchema.safeParse([{ value: "http://127.0.0.1/cb" }]).success).toBe(
+      true,
+    );
   });
 
   it("rejects http for non-localhost hosts", () => {
@@ -65,7 +67,10 @@ describe("createOidcSchema", () => {
   });
 
   it("requires a client display name", () => {
-    const result = createOidcSchema.safeParse({ ...createOIDCFormDefaultValue, clientDisplayName: "" });
+    const result = createOidcSchema.safeParse({
+      ...createOIDCFormDefaultValue,
+      clientDisplayName: "",
+    });
     expect(result.success).toBe(false);
   });
 
@@ -108,6 +113,7 @@ describe("isAppSchemeRedirectUri (blocks-iam SPEC29 6.1)", () => {
     "com.example.app:/callback",
     "Com.Example-App+x://cb",
     "com.example.app://cb?state=1",
+    "com.a.app://cb",
   ])("accepts %s", (value) => {
     expect(isAppSchemeRedirectUri(value)).toBe(true);
   });
@@ -126,6 +132,9 @@ describe("isAppSchemeRedirectUri (blocks-iam SPEC29 6.1)", () => {
     ["http localhost", "http://localhost:3000/cb"],
     ["unparseable", "not a url"],
     ["scheme starting with a digit", "1com.example://cb"],
+    ["tab inside the scheme (URL parser would strip it)", "com.a\tpp.x://cb"],
+    ["leading control character (URL parser would strip it)", "\u0001com.a.app://cb"],
+    ["no scheme before the colon", "://cb"],
   ])("rejects %s", (_label, value) => {
     expect(isAppSchemeRedirectUri(value)).toBe(false);
   });

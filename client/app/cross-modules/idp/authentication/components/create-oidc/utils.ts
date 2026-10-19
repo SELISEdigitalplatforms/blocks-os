@@ -44,20 +44,22 @@ const BLOCKED_APP_SCHEMES = new Set([
 
 /**
  * The app-scheme redirect URI rule from blocks-iam SPEC29 §6.1: the value parses as a URL, its
- * scheme is a reverse-domain style scheme (contains a dot), it is not a browser or script
+ * scheme (read from the raw value before the first ':') is a reverse-domain style scheme (contains a dot), it is not a browser or script
  * scheme, and it carries no fragment.
  */
 export const isAppSchemeRedirectUri = (value: string) => {
-  let url: URL;
+  if (value.includes("#")) return false;
+  const colon = value.indexOf(":");
+  if (colon <= 0) return false;
+  const scheme = value.slice(0, colon);
+  if (!APP_SCHEME_PATTERN.test(scheme) || !scheme.includes(".")) return false;
+  if (BLOCKED_APP_SCHEMES.has(scheme.toLowerCase())) return false;
   try {
-    url = new URL(value);
+    new URL(value);
   } catch {
     return false;
   }
-  const scheme = url.protocol.replace(/:$/, "");
-  if (!APP_SCHEME_PATTERN.test(scheme) || !scheme.includes(".")) return false;
-  if (BLOCKED_APP_SCHEMES.has(scheme.toLowerCase())) return false;
-  return !value.includes("#");
+  return true;
 };
 
 /**

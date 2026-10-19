@@ -288,6 +288,19 @@ describe("CreateOIDC", () => {
       ).toBeTruthy();
     });
 
+    it("labels the Application type group and describes it with the helper text", async () => {
+      const user = userEvent.setup();
+      await openCreate(user);
+      const group = screen.getByRole("radiogroup", { name: /application type/i });
+      expect(screen.getByText("Application type").getAttribute("for")).toBe(group.id);
+      const describedBy = group.getAttribute("aria-describedby") ?? "";
+      const helper = screen.getByText(WEB_HELPER);
+      expect(helper.id).toBeTruthy();
+      expect(describedBy.split(" ")).toContain(helper.id);
+      await user.click(radio("Mobile app"));
+      expect(screen.getByText(MOBILE_HELPER).id).toBe(helper.id);
+    });
+
     it("H2: Mobile locks PKCE, hides Identity Provider, swaps placeholder and helper", async () => {
       const user = userEvent.setup();
       await openCreate(user);

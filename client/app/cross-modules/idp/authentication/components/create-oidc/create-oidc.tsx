@@ -10,6 +10,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -329,34 +330,36 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Application type</FormLabel>
-                      <RadioGroup
-                        aria-label="Application type"
-                        value={field.value}
-                        onValueChange={(value) =>
-                          handleApplicationTypeChange(value as ApplicationType)
-                        }
-                      >
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                          {APPLICATION_TYPE_OPTIONS.map((option) => (
-                            <div
-                              key={option.value}
-                              className={`flex items-center gap-2 rounded-md border p-3 ${
-                                field.value === option.value
-                                  ? "border-primary bg-primary/5"
-                                  : "border-input"
-                              }`}
-                            >
-                              <RadioGroupItem value={option.value} id={option.id} />
-                              <Label htmlFor={option.id} className="cursor-pointer text-sm">
-                                {option.label}
-                              </Label>
-                            </div>
-                          ))}
-                        </div>
-                      </RadioGroup>
-                      <p className="text-xs text-muted-foreground">
+                      <FormControl>
+                        <RadioGroup
+                          aria-label="Application type"
+                          value={field.value}
+                          onValueChange={(value) =>
+                            handleApplicationTypeChange(value as ApplicationType)
+                          }
+                        >
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            {APPLICATION_TYPE_OPTIONS.map((option) => (
+                              <div
+                                key={option.value}
+                                className={`flex items-center gap-2 rounded-md border p-3 ${
+                                  field.value === option.value
+                                    ? "border-primary bg-primary/5"
+                                    : "border-input"
+                                }`}
+                              >
+                                <RadioGroupItem value={option.value} id={option.id} />
+                                <Label htmlFor={option.id} className="cursor-pointer text-sm">
+                                  {option.label}
+                                </Label>
+                              </div>
+                            ))}
+                          </div>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormDescription className="text-xs">
                         {APPLICATION_TYPE_HELPER[field.value]}
-                      </p>
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
