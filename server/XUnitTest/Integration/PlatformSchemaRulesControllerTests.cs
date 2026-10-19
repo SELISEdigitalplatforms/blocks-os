@@ -206,4 +206,35 @@ public class PlatformSchemaRulesControllerTests
             .Should().BeOfType<OkObjectResult>();
         (await SchemaRowAsync(Controller(includeWarned: true), role)).GetProperty("rules").GetProperty("level").GetString().Should().Be("Warned");
     }
+
+    [Fact]
+    public async Task MonitorSchemas_AreListedUnderMonitor_AndOnlyTheConfigurationTakesRules()
+    {
+        var configuration = await InsertAsync("MonitorConfiguration", "Name", "ExpectedContent", "CustomHttpHeaders", "TenantId");
+        var incident = await InsertAsync("MonitorIncident", "MonitorId", "FailureReason");
+        var pingLog = await InsertAsync("MonitorPingLog", "MonitorId", "Url");
+        var safe = Controller(includeWarned: false);
+
+        var row = await SchemaRowAsync(safe, configuration);
+        row.GetProperty("service").GetString().Should().Be("Monitor");
+        var fields = row.GetProperty("rules").GetProperty("fields").EnumerateArray().ToList();
+        fields.Select(f => f.GetProperty("Path").GetString()).Should().Contain(["Name", "ExpectedContent"])
+            .And.NotContain("CustomHttpHeaders")   // warned: only offered with RulesIncludeWarned
+            .And.NotContain("TenantId");           // blocked
+        fields.Single(f => f.GetProperty("Path").GetString() == "Name").GetProperty("DefaultHasNoEffect").GetBoolean().Should().BeTrue();
+        (await safe.FieldDefault(new SetPlatformFieldDefaultRequest
+        {
+            SchemaId = configuration, FieldName = "ExpectedContent",
+            DefaultValue = new FieldDefaultValue { Kind = DefaultValueKind.Static, Value = "OK" },
+        }, CancellationToken.None)).Should().BeOfType<OkObjectResult>();
+
+        foreach (var accessOnly in new[] { incident, pingLog })
+        {
+            var schema = await SchemaRowAsync(safe, accessOnly);
+            schema.GetProperty("service").GetString().Should().Be("Monitor");
+            schema.GetProperty("rules").ValueKind.Should().Be(JsonValueKind.Null);
+        }
+        (await Controller().SaveValidation(Rules(incident, "FailureReason", new ValidationRule { Type = ValidationType.NotEmpty }), CancellationToken.None))
+            .Should().BeOfType<NotFoundResult>();
+    }
 }

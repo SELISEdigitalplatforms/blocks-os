@@ -14,7 +14,7 @@ const h = vi.hoisted(() => ({
 
 vi.mock("@/components/ui-kits/tooltip/tooltip", () => import("@/test-utils/__mocks__/tooltip.mock"));
 vi.mock("./data-access.service", () => ({
-  PLATFORM_SERVICES: ["IAM", "OS", "Logic", "Release"],
+  PLATFORM_SERVICES: ["IAM", "OS", "Logic", "Release", "Monitor"],
   platformDataAccessService: { getSchemas: () => Promise.resolve({ isSuccess: true, data: h.schemas }) },
 }));
 // The access editor is the existing component, covered on its own; here it only has to receive the right subject.

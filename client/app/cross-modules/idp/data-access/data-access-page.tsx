@@ -201,7 +201,7 @@ function InspectorColumn({
 
 /**
  * Data Access: the Data Gateway's Schemas tab for the platform's own schemas
- * (IAM, OS, Logic, Release), read-only except for access. Explorer on the
+ * (IAM, OS, Logic, Release, Monitor), read-only except for access. Explorer on the
  * left, schema in the middle, access inspector docked on the right; the explorer
  * folds to a rail while the inspector is open.
  */
@@ -273,7 +273,7 @@ export function DataAccessPage() {
 
   return (
     <div className="flex flex-col lg:h-[calc(100vh-8rem)] lg:min-h-0">
-      <PageHeader title="Data Access" description="Platform collections of IAM, OS, Logic and Release, and who may view, create, edit and delete them." />
+      <PageHeader title="Data Access" description="Platform collections of IAM, OS, Logic, Release and Monitor, and who may view, create, edit and delete them." />
 
       <div className="flex flex-col gap-4 lg:min-h-0 lg:flex-1 lg:flex-row lg:items-stretch">
         {/* Explorer column: one box whose width moves between the full list and the rail. */}
