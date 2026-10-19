@@ -1,6 +1,5 @@
 .tf-story {
   --tf-ink: hsl(var(--high-emphasis));
-  --tf-muted: hsl(var(--low-emphasis));
   --tf-line: hsl(var(--border));
   --tf-accent: hsl(var(--primary));
   color: var(--tf-ink);
@@ -9,6 +8,7 @@
   background: hsl(var(--card));
   overflow: hidden;
   font-family: inherit;
+  --tf-muted: hsl(var(--low-emphasis));
 }
 .tf-header {
   display: flex;
@@ -90,6 +90,7 @@
   overflow: auto;
   scrollbar-width: thin;
   scrollbar-color: hsl(var(--border)) transparent;
+  scroll-behavior: smooth;
 }
 .tf-chapter {
   position: relative;
@@ -101,7 +102,9 @@
   text-align: left;
   border-radius: 8px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition:
+    background 0.45s,
+    color 0.45s;
 }
 .tf-chapter:hover {
   background: hsl(var(--accent));
@@ -467,14 +470,15 @@
 }
 .tf-caption {
   padding: 20px;
-  min-height: 175px;
+  min-height: 285px;
+  padding-top: 24px;
 }
 .tf-caption h4 {
-  font-size: 18px;
   font-weight: 600;
   letter-spacing: normal;
   margin: 7px 0 8px;
   line-height: 1.25;
+  font-size: 18px;
 }
 .tf-caption p {
   color: hsl(var(--medium-emphasis));
@@ -652,6 +656,7 @@
   }
   .tf-caption {
     padding: 20px;
+    padding-top: 24px;
   }
   .tf-controls {
     gap: 10px;
@@ -767,6 +772,7 @@
   .tf-caption {
     padding: 20px;
     min-height: 170px;
+    padding-top: 24px;
   }
   .tf-caption h4 {
     font-size: 18px;
@@ -836,29 +842,11 @@
 .tf-actor .tf-island-base {
   transition: transform 0.65s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
-.tf-chapter {
-  transition:
-    background 0.45s,
-    color 0.45s;
-}
-.tf-chapter-list {
-  scroll-behavior: smooth;
-}
-.tf-story {
-  --tf-muted: hsl(var(--low-emphasis));
-}
 .tf-caption > p {
   color: hsl(var(--medium-emphasis));
   max-width: 720px;
   font-size: 13px;
   line-height: 1.9;
-}
-.tf-caption {
-  min-height: 285px;
-  padding-top: 24px;
-}
-.tf-caption h4 {
-  font-size: 18px;
 }
 .tf-event-result {
   display: flex;

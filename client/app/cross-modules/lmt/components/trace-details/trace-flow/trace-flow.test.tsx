@@ -44,6 +44,7 @@ vi.mock("@blocks-lmt/hooks/use-log", () => ({
 
 import { timelineContext } from "../trace-details";
 import { TraceFlowView } from "./trace-flow";
+import { formatTraceValue } from "./trace-flow-inspector";
 
 let seq = 0;
 const span = (overrides: Partial<TraceTree> = {}): TraceTree =>
@@ -277,6 +278,14 @@ describe("TraceFlowView story", () => {
     expect(screen.getByText(/No matching log records/)).toBeTruthy();
   });
 
+  it("announces evidence loading with a native output element", async () => {
+    h.normalLogs.mockReturnValue({ isLoading: true });
+    renderView(failingTrace());
+    await userEvent.click(screen.getByRole("button", { name: "View evidence" }));
+    expect(screen.getByRole("status").tagName).toBe("OUTPUT");
+    expect(screen.getByRole("status").textContent).toContain("Finding the records");
+  });
+
   it("uses restored evidence for a restored trace", async () => {
     renderView(failingTrace(), { requestId: "restored-42" });
     await userEvent.click(screen.getByRole("button", { name: "View evidence" }));
@@ -330,5 +339,32 @@ describe("TraceFlowView story", () => {
     expect(screen.getByText("Recorded count")).toBeTruthy();
     expect(screen.getByText("0")).toBeTruthy();
     expect(screen.queryByText("The operation reported success.")).toBeNull();
+  });
+});
+
+describe("Trace inspector value formatting", () => {
+  it.each([
+    [
+      { operation: "insert", result: { count: 1 } },
+      '{\n  "operation": "insert",\n  "result": {\n    "count": 1\n  }\n}',
+    ],
+    [[1, "record"], '[\n  1,\n  "record"\n]'],
+    [0, "0"],
+    [false, "false"],
+    [null, "Not captured"],
+    [undefined, "Not captured"],
+  ])("formats a captured value without default object stringification", (value, expected) => {
+    expect(formatTraceValue(value)).toBe(expected);
+  });
+
+  it("handles circular metadata without breaking the inspector", () => {
+    const value: { self?: unknown } = {};
+    value.self = value;
+    expect(formatTraceValue(value)).toBe("[Unable to display value]");
+  });
+
+  it("caps long values to keep the inspector responsive", () => {
+    expect(formatTraceValue("x".repeat(3000))).toHaveLength(2000);
+    expect(formatTraceValue({ value: "x".repeat(3000) })).toHaveLength(2000);
   });
 });

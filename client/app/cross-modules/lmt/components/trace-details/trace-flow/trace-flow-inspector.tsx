@@ -4,9 +4,90 @@ import type { FlowStep } from "@blocks-lmt/utils/trace-flow.util";
 import { formatDurationMs } from "@blocks-lmt/utils";
 
 const privateKey = /authorization|cookie|password|secret|token|api.?key|x.?blocks.?key/i;
-const display = (value: unknown) => {
+export const formatTraceValue = (value: unknown): string => {
   if (value === undefined || value === null || value === "") return "Not captured";
-  return String(value).slice(0, 2000);
+  if (typeof value === "object") {
+    try {
+      return (JSON.stringify(value, null, 2) ?? "Not captured").slice(0, 2000);
+    } catch {
+      return "[Unable to display value]";
+    }
+  }
+  switch (typeof value) {
+    case "string":
+    case "number":
+    case "boolean":
+    case "bigint":
+    case "symbol":
+      return String(value).slice(0, 2000);
+    default:
+      return "Not captured";
+  }
+};
+
+const transferLabel = (traffic: FlowStep["traffic"]) => {
+  if (traffic === "data") return "Database operation";
+  if (traffic === "message") return "Message transfer";
+  return `${traffic} request`;
+};
+
+const Field = ({ label, value }: { label: string; value: unknown }) => (
+  <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 border-b border-border/60 py-2 last:border-0">
+    <dt className="break-words text-[10px] uppercase tracking-wider text-low-emphasis">{label}</dt>
+    <dd className="break-words font-mono text-[12px] text-high-emphasis">
+      {formatTraceValue(value)}
+    </dd>
+  </div>
+);
+
+const TransferFields = ({ step }: { step: FlowStep }) => {
+  const span = step.span;
+  const attrs = span.attributes ?? {};
+  const fields: [string, unknown][] = [
+    ["Operation", span.operationName],
+    ["Service", span.serviceName],
+    [
+      "Request / destination",
+      span.request?.url ||
+        attrs["url.full"] ||
+        attrs["http.url"] ||
+        attrs["server.address"] ||
+        attrs["messaging.destination.name"],
+    ],
+    ["Method", span.entryPoint?.method || attrs["http.request.method"] || attrs["http.method"]],
+    [
+      "Response status",
+      span.response?.statusCode ||
+        attrs["http.response.status_code"] ||
+        attrs["response.status.code"],
+    ],
+    [
+      "Data store / collection",
+      attrs["db.collection.name"] ||
+        attrs["db.mongodb.collection"] ||
+        attrs["db.namespace"] ||
+        attrs["db.name"],
+    ],
+    ["Span ID", step.spanId],
+  ];
+  return fields.map(([label, value]) => <Field key={label} label={label} value={value} />);
+};
+
+const AttributeFields = ({ step }: { step: FlowStep }) => {
+  const entries = Object.entries(step.span.attributes ?? {});
+  if (entries.length === 0)
+    return (
+      <p className="py-4 text-[12px] text-low-emphasis">
+        No attributes were captured for this span.
+      </p>
+    );
+  return (
+    <>
+      {entries.slice(0, 100).map(([key, value]) => (
+        <Field key={key} label={key} value={privateKey.test(key) ? "[redacted]" : value} />
+      ))}
+    </>
+  );
 };
 
 export const TraceFlowInspector = ({
@@ -19,19 +100,6 @@ export const TraceFlowInspector = ({
   to: string;
 }) => {
   const [tab, setTab] = useState<"Transfer" | "Attributes">("Transfer");
-  const span = step.span;
-  const attrs = span.attributes ?? {};
-  const field = (label: string, value: unknown) => (
-    <div
-      className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 border-b border-border/60 py-2 last:border-0"
-      key={label}
-    >
-      <dt className="break-words text-[10px] uppercase tracking-wider text-low-emphasis">
-        {label}
-      </dt>
-      <dd className="break-words font-mono text-[12px] text-high-emphasis">{display(value)}</dd>
-    </div>
-  );
   return (
     <aside
       aria-label="Selected transfer"
@@ -59,11 +127,7 @@ export const TraceFlowInspector = ({
         <div className="my-2 ml-1 flex items-center gap-2 text-low-emphasis">
           <ArrowDown size={14} />
           <span className="text-[10px] uppercase tracking-wider">
-            {step.traffic === "data"
-              ? "Database operation"
-              : step.traffic === "message"
-                ? "Message transfer"
-                : `${step.traffic} request`}
+            {transferLabel(step.traffic)}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -92,46 +156,7 @@ export const TraceFlowInspector = ({
         ))}
       </div>
       <dl className="min-h-0 flex-1 overflow-auto pt-1" role="tabpanel" aria-label={tab}>
-        {tab === "Transfer" ? (
-          <>
-            {field("Operation", span.operationName)}
-            {field("Service", span.serviceName)}
-            {field(
-              "Request / destination",
-              span.request?.url ||
-                attrs["url.full"] ||
-                attrs["http.url"] ||
-                attrs["server.address"] ||
-                attrs["messaging.destination.name"],
-            )}
-            {field(
-              "Method",
-              span.entryPoint?.method || attrs["http.request.method"] || attrs["http.method"],
-            )}
-            {field(
-              "Response status",
-              span.response?.statusCode ||
-                attrs["http.response.status_code"] ||
-                attrs["response.status.code"],
-            )}
-            {field(
-              "Data store / collection",
-              attrs["db.collection.name"] ||
-                attrs["db.mongodb.collection"] ||
-                attrs["db.namespace"] ||
-                attrs["db.name"],
-            )}
-            {field("Span ID", step.spanId)}
-          </>
-        ) : Object.keys(attrs).length ? (
-          Object.entries(attrs)
-            .slice(0, 100)
-            .map(([key, value]) => field(key, privateKey.test(key) ? "[redacted]" : value))
-        ) : (
-          <p className="py-4 text-[12px] text-low-emphasis">
-            No attributes were captured for this span.
-          </p>
-        )}
+        {tab === "Transfer" ? <TransferFields step={step} /> : <AttributeFields step={step} />}
       </dl>
       <p className="mt-auto pt-3 text-[10px] leading-relaxed text-low-emphasis">
         Shows recorded trace metadata. Request and response bodies are not inferred.
