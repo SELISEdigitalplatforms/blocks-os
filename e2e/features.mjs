@@ -43,6 +43,12 @@ export const OS_FEATURES = [
     spec: "tests/02-secrets-and-configs/03-oidc-flow.spec.ts",
   },
   {
+    id: "oidc-mobile-app",
+    name: "Secrets & Configs — OIDC application type (Web / Mobile app, #680)",
+    enabled: true,
+    spec: "tests/02-secrets-and-configs/14-oidc-mobile-app-680.spec.ts",
+  },
+  {
     id: "client-credentials",
     name: "Secrets & Configs — Client Credentials",
     enabled: true,
