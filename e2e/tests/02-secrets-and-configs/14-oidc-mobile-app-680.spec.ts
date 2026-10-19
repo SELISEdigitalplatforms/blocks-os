@@ -162,8 +162,12 @@ test.describe("OIDC client application type (#680)", () => {
       });
 
       await test.step("C6: GET confirms P is still public with cookie delivery", async () => {
+        // IAM serves the client from a cache that can lag a just-saved edit by a few seconds;
+        // wait for the rename to be readable before checking the preserved fields.
+        await expect
+          .poll(async () => (await api!.get(id)).clientDisplayName, { timeout: 20_000 })
+          .toBe(renamed);
         const stored = await api!.get(id);
-        expect(stored.clientDisplayName).toBe(renamed);
         expect(String(stored.clientType).toLowerCase()).toBe("public");
         expect(stored.useTokensCookie).toBe(true);
       });
@@ -306,6 +310,10 @@ test.describe("OIDC client application type (#680)", () => {
         expect(body.useTokensCookie).toBe(true);
         expect(body.redirectUris).toEqual([WEB_URI]);
         await expect(updatedToast(page)).toBeVisible({ timeout: 15_000 });
+        // As above: wait out IAM's read-after-write cache before reading the stored client.
+        await expect
+          .poll(async () => String((await api!.get(id)).clientType).toLowerCase(), { timeout: 20_000 })
+          .toBe("confidential");
         const stored = await api!.get(id);
         expect(String(stored.clientType).toLowerCase()).toBe("confidential");
         expect(stored.useTokensCookie).toBe(true);
@@ -456,6 +464,8 @@ test.describe("OIDC client application type (#680)", () => {
         timeout: 15_000,
       });
 
+      // As above: wait out IAM's read-after-write cache before reading the stored client.
+      await expect.poll(async () => (await api!.get(id)).isActive, { timeout: 20_000 }).toBe(false);
       const stored = await api.get(id);
       expect(stored.isActive).toBe(false);
       expect(String(stored.clientType).toLowerCase()).toBe("public");
