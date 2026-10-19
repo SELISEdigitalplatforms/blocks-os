@@ -189,52 +189,58 @@ test.describe("OIDC client application type (#680)", () => {
   test("C1, C2, C3, C4, C5, H4: redirect URI validation per application type, with no POST for invalid entries", async ({
     page,
   }) => {
-    await navigateToOidcFlow(page);
-    await openNewOidcClientDialogFlow(page);
-    await nameInput(page).fill(uniqueName("e2e-negative"));
-    const counter = countOidcRequests(page);
+    const clientName = uniqueName("e2e-negative");
+    let api: OidcClientsApi | undefined;
+    try {
+      api = await oidcClientsApiFlow(page);
+      await openNewOidcClientDialogFlow(page);
+      await nameInput(page).fill(clientName);
+      const counter = countOidcRequests(page);
 
-    await test.step("C1: Web + app-scheme URI → 'needs the Mobile app application type', submit disabled", async () => {
-      await fillRedirect(page, "com.blocks.e2e.app://cb");
-      await expect(
-        page.getByText(OIDC_MOBILE_URI_NEEDS_MOBILE_TYPE, { exact: true }),
-      ).toBeVisible();
-      await expect(addButton(page)).toBeDisabled();
-    });
-
-    await selectApplicationTypeFlow(page, "mobile");
-    for (const [criterion, value] of [
-      ["C2", "myapp://cb"],
-      ["C3", "javascript:alert(1)"],
-      ["C4", "com.blocks.e2e.app://cb#x"],
-    ] as const) {
-      await test.step(`${criterion}: Mobile + ${value} → Mobile invalid message, no POST`, async () => {
-        await fillRedirect(page, value);
-        await expect(page.getByText(OIDC_MOBILE_URI_INVALID, { exact: true })).toBeVisible();
+      await test.step("C1: Web + app-scheme URI → 'needs the Mobile app application type', submit disabled", async () => {
+        await fillRedirect(page, "com.blocks.e2e.app://cb");
+        await expect(
+          page.getByText(OIDC_MOBILE_URI_NEEDS_MOBILE_TYPE, { exact: true }),
+        ).toBeVisible();
         await expect(addButton(page)).toBeDisabled();
-        // Implicit submit from the field must not reach the network either.
-        await oidcRedirectUriInputs(page).first().press("Enter");
-        await page.waitForTimeout(1_000);
-        expect(counter.saves(), `${criterion} sends no POST oidc-clients`).toBe(0);
       });
+
+      await selectApplicationTypeFlow(page, "mobile");
+      for (const [criterion, value] of [
+        ["C2", "myapp://cb"],
+        ["C3", "javascript:alert(1)"],
+        ["C4", "com.blocks.e2e.app://cb#x"],
+      ] as const) {
+        await test.step(`${criterion}: Mobile + ${value} → Mobile invalid message, no POST`, async () => {
+          await fillRedirect(page, value);
+          await expect(page.getByText(OIDC_MOBILE_URI_INVALID, { exact: true })).toBeVisible();
+          await expect(addButton(page)).toBeDisabled();
+          // Implicit submit from the field must not reach the network either.
+          await oidcRedirectUriInputs(page).first().press("Enter");
+          await page.waitForTimeout(1_000);
+          expect(counter.saves(), `${criterion} sends no POST oidc-clients`).toBe(0);
+        });
+      }
+
+      await test.step("H4: Mobile + https public-domain URI is accepted", async () => {
+        await fillRedirect(page, WEB_URI);
+        await expect(page.getByText(OIDC_MOBILE_URI_INVALID, { exact: true })).toHaveCount(0);
+        await expect(addButton(page)).toBeEnabled({ timeout: 10_000 });
+      });
+
+      await test.step("C5: Web + http non-localhost URI → existing HTTPS message", async () => {
+        await selectApplicationTypeFlow(page, "web");
+        await fillRedirect(page, "http://portal.example.com/cb");
+        await expect(page.getByText(OIDC_WEB_HTTPS_INVALID, { exact: true })).toBeVisible();
+        await expect(addButton(page)).toBeDisabled();
+        expect(counter.saves()).toBe(0);
+      });
+
+      counter.stop();
+      await closeOidcDialogFlow(page);
+    } finally {
+      await cleanup(api, [clientName]);
     }
-
-    await test.step("H4: Mobile + https public-domain URI is accepted", async () => {
-      await fillRedirect(page, WEB_URI);
-      await expect(page.getByText(OIDC_MOBILE_URI_INVALID, { exact: true })).toHaveCount(0);
-      await expect(addButton(page)).toBeEnabled({ timeout: 10_000 });
-    });
-
-    await test.step("C5: Web + http non-localhost URI → existing HTTPS message", async () => {
-      await selectApplicationTypeFlow(page, "web");
-      await fillRedirect(page, "http://portal.example.com/cb");
-      await expect(page.getByText(OIDC_WEB_HTTPS_INVALID, { exact: true })).toBeVisible();
-      await expect(addButton(page)).toBeDisabled();
-      expect(counter.saves()).toBe(0);
-    });
-
-    counter.stop();
-    await closeOidcDialogFlow(page);
   });
 
   test("C9, C10, H9: switching a Mobile client to Web flags app-scheme URIs, unlocks PKCE/IdP, then saves confidential", async ({
