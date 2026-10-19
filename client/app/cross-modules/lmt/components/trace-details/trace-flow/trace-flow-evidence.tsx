@@ -35,9 +35,7 @@ export const TraceFlowEvidence = ({ step, requestId }: { step: FlowStep; request
     );
   if (query.isLoading || query.isFetching)
     return (
-      <p className="tf-evidence-state" role="status">
-        Finding the records behind this moment…
-      </p>
+      <output className="tf-evidence-state block">Finding the records behind this moment…</output>
     );
   if (query.isError)
     return (

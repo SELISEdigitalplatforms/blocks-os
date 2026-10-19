@@ -64,16 +64,20 @@ const CALLER_ID = "caller";
 
 const text = (attributes: IAttributes | undefined, ...keys: string[]): string => {
   for (const key of keys) {
-    const value = attributes?.[key];
-    if (value === undefined || value === null) continue;
+    const value = attributes?.[key] ?? "";
     const str = String(value).trim();
     if (str) return str;
   }
   return "";
 };
 
+const stringValue = (value: unknown): string => {
+  if (typeof value === "string") return value.trim();
+  return "";
+};
+
 const isTruthyFlag = (value: unknown) =>
-  value === true || value === 1 || (typeof value === "string" && /^(true|1)$/i.test(value.trim()));
+  value === true || value === 1 || /^(true|1)$/i.test(stringValue(value));
 
 const hostOf = (url: string) => {
   try {
@@ -92,7 +96,7 @@ const pathOf = (url: string) => {
 };
 
 const timeOf = (value: string | undefined) => {
-  const ms = value ? Date.parse(value) : NaN;
+  const ms = value ? Date.parse(value) : Number.NaN;
   return Number.isFinite(ms) ? ms : Number.POSITIVE_INFINITY;
 };
 
@@ -111,13 +115,38 @@ const serviceComponent = (span: TraceTree) => {
   return { id: `svc:${name}`, label: name, kind: "service" as const };
 };
 
+const clientComponent = (span: TraceTree, op: string): Component => {
+  const attrs = span.attributes;
+  const url = text(attrs, "url.full", "http.url");
+  const host = text(attrs, "server.address") || hostOf(url);
+  const method = text(attrs, "http.request.method", "http.method", "method");
+  if (host || url || method || /http/i.test(op)) {
+    const label = host || "External HTTP";
+    const path = pathOf(url);
+    const tag = [method || "HTTP", path].filter(Boolean).join(" ");
+    return { id: `ext:${label}`, label, kind: "external", traffic: "http", tag };
+  }
+  if (/grpc/i.test(op)) {
+    return {
+      id: "ext:grpc",
+      label: "gRPC service",
+      kind: "external",
+      traffic: "http",
+      tag: "gRPC call",
+    };
+  }
+
+  const label = span.activitySourceName?.trim() || op;
+  return { id: `ext:${label}`, label, kind: "external", traffic: "call", tag: op };
+};
+
 /** Decides which component a span ran in and what kind of traffic reached it. */
 export const classifySpan = (span: TraceTree): Component => {
   const op = span.operationName?.trim() || span.activitySourceName?.trim() || "span";
   const kind = span.kind?.trim().toLowerCase() ?? "";
   const attrs = span.attributes;
 
-  const mongo = op.match(/^MongoDb::(.+)$/i);
+  const mongo = /^MongoDb::(.+)$/i.exec(op);
   if (mongo) {
     return {
       id: "db:mongodb",
@@ -128,7 +157,7 @@ export const classifySpan = (span: TraceTree): Component => {
     };
   }
 
-  const redis = op.match(/^Redis::(.+)$/i);
+  const redis = /^Redis::(.+)$/i.exec(op);
   if (redis) {
     if (kind === "consumer") {
       return {
@@ -172,28 +201,9 @@ export const classifySpan = (span: TraceTree): Component => {
     };
   }
 
-  if (kind === "client") {
-    const url = text(attrs, "url.full", "http.url");
-    const host = text(attrs, "server.address") || hostOf(url);
-    const method = text(attrs, "http.request.method", "http.method", "method");
-    if (host || url || method || /http/i.test(op)) {
-      const label = host || "External HTTP";
-      const path = pathOf(url);
-      const tag = [method || "HTTP", path].filter(Boolean).join(" ");
-      return { id: `ext:${label}`, label, kind: "external", traffic: "http", tag };
-    }
-    if (/grpc/i.test(op)) {
-      return {
-        id: "ext:grpc",
-        label: "gRPC service",
-        kind: "external",
-        traffic: "http",
-        tag: "gRPC call",
-      };
-    }
-  }
+  if (kind === "client") return clientComponent(span, op);
 
-  if (kind === "client" || kind === "producer") {
+  if (kind === "producer") {
     const label = span.activitySourceName?.trim() || op;
     return { id: `ext:${label}`, label, kind: "external", traffic: "call", tag: op };
   }
@@ -210,8 +220,8 @@ export const getSpanOutcome = (span: TraceTree) => {
   const status = getTraceStatus(span);
   const attrs = span.attributes ?? {};
   const errorAttr = attrs.error;
-  const hasErrorText =
-    typeof errorAttr === "string" && errorAttr.trim() !== "" && !/^false$/i.test(errorAttr.trim());
+  const errorText = stringValue(errorAttr);
+  const hasErrorText = errorText !== "" && !/^false$/i.test(errorText);
   const failed =
     status.variant === "error" ||
     span.status === "Error" ||
@@ -231,7 +241,7 @@ export const getSpanOutcome = (span: TraceTree) => {
     errorMessage =
       description ||
       text(attrs, "errorMessage", "exception.message", "error.message") ||
-      (hasErrorText ? String(errorAttr).trim() : "") ||
+      (hasErrorText ? errorText : "") ||
       (/^\d{3}$/.test(status.label) ? `HTTP ${status.label}` : "The span reported an error");
   }
 
@@ -271,6 +281,25 @@ const walk = (root: TraceTree): Visit[] => {
   return out;
 };
 
+const findErrorOrigins = (visits: Visit[], outcomes: ReturnType<typeof getSpanOutcome>[]) => {
+  // A failing span whose descendants all succeeded is where the error started. Visits are in
+  // pre-order, so walking backwards sees every child before its parent.
+  const errorBelow = new Array<number>(visits.length).fill(-1);
+  const originOf = new Array<number>(visits.length).fill(-1);
+  for (let i = visits.length - 1; i >= 0; i--) {
+    const failed = outcomes[i].state === "error";
+    if (failed) originOf[i] = errorBelow[i] >= 0 ? errorBelow[i] : i;
+    const parent = visits[i].parentIndex;
+    if (parent >= 0) {
+      const carried = failed ? originOf[i] : errorBelow[i];
+      if (carried >= 0 && (errorBelow[parent] < 0 || carried < errorBelow[parent]))
+        errorBelow[parent] = carried;
+    }
+  }
+
+  return originOf;
+};
+
 export const buildTraceFlow = (
   root: TraceTree | null | undefined,
   maxSteps = MAX_FLOW_STEPS,
@@ -289,20 +318,7 @@ export const buildTraceFlow = (
   const components = visits.map((v) => classifySpan(v.span));
   const outcomes = visits.map((v) => getSpanOutcome(v.span));
 
-  // A failing span whose descendants all succeeded is where the error started. Visits are in
-  // pre-order, so walking backwards sees every child before its parent.
-  const errorBelow = new Array<number>(visits.length).fill(-1);
-  const originOf = new Array<number>(visits.length).fill(-1);
-  for (let i = visits.length - 1; i >= 0; i--) {
-    const failed = outcomes[i].state === "error";
-    if (failed) originOf[i] = errorBelow[i] >= 0 ? errorBelow[i] : i;
-    const parent = visits[i].parentIndex;
-    if (parent >= 0) {
-      const carried = failed ? originOf[i] : errorBelow[i];
-      if (carried >= 0 && (errorBelow[parent] < 0 || carried < errorBelow[parent]))
-        errorBelow[parent] = carried;
-    }
-  }
+  const originOf = findErrorOrigins(visits, outcomes);
 
   // Cap long traces, but never drop a failing span or the path that leads to it.
   let keep = visits.map((_, i) => i);

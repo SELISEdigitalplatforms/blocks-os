@@ -215,7 +215,7 @@ export class TraceFlowScene {
   private readonly camTarget = new THREE.Vector3();
   private readonly camGoal = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
-  private center = new THREE.Vector3();
+  private readonly center = new THREE.Vector3();
   private extent = 10;
   private camRadius = 12;
   private camYaw = 0.42;
@@ -240,7 +240,7 @@ export class TraceFlowScene {
 
     // Throws when WebGL is unavailable; the caller shows its fallback in that case.
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    this.renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, 2));
     this.renderer.domElement.style.display = "block";
     this.renderer.domElement.style.width = "100%";
     this.renderer.domElement.style.height = "100%";
@@ -626,7 +626,7 @@ export class TraceFlowScene {
       label,
       labelY,
       firstStep,
-      phase: Math.random() * 6.28,
+      phase: firstStep * 2.4,
       animate,
       firstFailure: failures.length ? failures[0].index : -1,
       firstOrigin: origins.length ? origins[0].index : -1,
@@ -702,160 +702,194 @@ export class TraceFlowScene {
   }
 
   // ---------- frame ----------
-  private frame = (now: number) => {
-    if (this.disposed) return;
-    const dt = Math.min(0.05, (now - this.last) / 1000);
-    this.last = now;
-    this.clock += dt;
-    const reduced = Boolean(this.opts.reducedMotion);
-    const steps = this.flow.steps;
-    const n = steps.length;
-
-    if (this.playing && !this.ended && n) {
-      this.t += (dt * this.speed) / STEP_SECONDS;
-      if (this.t >= 1) {
-        if (this.step < n - 1) {
-          this.step++;
-          this.t = 0;
-          this.opts.onStepChange(this.step, false);
-        } else {
-          this.t = 1;
-          this.finish();
-        }
-      }
+  private advancePlayback(dt: number) {
+    if (!this.playing || this.ended || this.flow.steps.length === 0) return;
+    this.t += (dt * this.speed) / STEP_SECONDS;
+    if (this.t < 1) return;
+    if (this.step < this.flow.steps.length - 1) {
+      this.step++;
+      this.t = 0;
+      this.opts.onStepChange(this.step, false);
+    } else {
+      this.t = 1;
+      this.finish();
     }
+  }
 
-    const p = this.ended ? 1 : this.t;
-    const q = reduced ? (p > 0.3 ? 1 : 0) : easeInOut(clamp01((p - 0.2) / 0.5));
-    const cur = this.ended || !n ? null : steps[this.step];
+  private nodeScale(view: NodeView, id: string, p: number, reduced: boolean, cur: FlowStep | null) {
+    if (this.overview || this.ended || view.firstStep < this.step) return 1;
+    if (view.firstStep > this.step) return 0.001;
+    const start = cur?.fromId === id ? 0 : 0.08;
+    const progress = reduced ? 1 : clamp01((p - start) / 0.22);
+    return Math.max(0.001, easeOutBack(progress));
+  }
 
-    // nodes
-    this.nodes.forEach((view, id) => {
-      let scale: number;
-      if (this.overview || this.ended || view.firstStep < this.step) scale = 1;
-      else if (view.firstStep > this.step) scale = 0.001;
-      else {
-        const start = cur?.fromId === id ? 0 : 0.08;
-        scale = Math.max(0.001, easeOutBack(reduced ? 1 : clamp01((p - start) / 0.22)));
-      }
+  private reached(index: number, q: number) {
+    return (
+      index >= 0 &&
+      (this.overview || this.ended || index < this.step || (index === this.step && q >= 1))
+    );
+  }
+
+  private nodeColor(view: NodeView, origin: boolean, failure: boolean) {
+    if (origin) return ERROR_COLOR;
+    if (failure) return PROPAGATED_COLOR;
+    return NODE_COLORS[view.node.kind];
+  }
+
+  private emissiveIntensity(hit: boolean, active: boolean, origin: boolean) {
+    if (hit) return 0.45 + 0.25 * Math.sin(this.clock * 6);
+    if (active) return 0.3;
+    if (origin) return 0.3 + 0.15 * Math.sin(this.clock * 3);
+    return 0.12;
+  }
+
+  private updateNodeLabel(view: NodeView, origin: boolean, active: boolean) {
+    let border = "#27334f";
+    if (origin) border = css(ERROR_COLOR);
+    else if (active) border = "#ffc857";
+    view.label.style.borderColor = border;
+    const label = origin ? `✕ ${view.node.label} · error started here` : view.node.label;
+    if (label !== view.labelText) {
+      view.labelText = label;
+      view.label.textContent = label;
+    }
+  }
+
+  private updateNodes(p: number, q: number, cur: FlowStep | null, reduced: boolean) {
+    for (const [id, view] of this.nodes) {
+      const scale = this.nodeScale(view, id, p, reduced, cur);
       view.group.scale.setScalar(scale);
       view.group.rotation.y =
         this.camYaw + (reduced ? 0 : Math.sin(this.clock * 0.6 + view.phase) * 0.15);
       view.group.position.y = reduced ? 0 : Math.sin(this.clock * 1.2 + view.phase) * 0.05;
       if (!reduced) view.animate?.(this.clock + view.phase);
-
-      // Error colouring appears once the failing step has been reached, so playback reveals
-      // the failure at the moment it happened rather than giving it away up front.
-      const reached = (i: number) =>
-        i >= 0 && (this.overview || this.ended || i < this.step || (i === this.step && q >= 1));
-      const reachedFailure = reached(view.firstFailure);
-      const reachedOrigin = reached(view.firstOrigin);
+      // Failure colours are revealed when reached, or immediately in the overview.
+      const origin = this.reached(view.firstOrigin, q);
+      const failure = this.reached(view.firstFailure, q);
       const isTarget = cur?.toId === id;
-      const hit = isTarget && q >= 1;
-      const baseColor = reachedOrigin
-        ? ERROR_COLOR
-        : reachedFailure
-          ? PROPAGATED_COLOR
-          : NODE_COLORS[view.node.kind];
-      view.material.color.setHex(baseColor);
-      view.material.emissive.setHex(baseColor);
-      view.material.emissiveIntensity = hit
-        ? 0.45 + 0.25 * Math.sin(this.clock * 6)
-        : isTarget || cur?.fromId === id
-          ? 0.3
-          : reachedOrigin
-            ? 0.3 + 0.15 * Math.sin(this.clock * 3)
-            : 0.12;
-      const ringMat = view.ring.material as THREE.MeshBasicMaterial;
-      ringMat.opacity = reachedOrigin ? 0.55 + 0.35 * Math.sin(this.clock * 3) : 0;
-
-      const active = Boolean(isTarget || (cur?.fromId === id && q < 1));
-      view.label.style.borderColor = reachedOrigin
-        ? css(ERROR_COLOR)
-        : active
-          ? "#ffc857"
-          : "#27334f";
-      const labelText = reachedOrigin
-        ? `✕ ${view.node.label} · error started here`
-        : view.node.label;
-      if (labelText !== view.labelText) {
-        view.labelText = labelText;
-        view.label.textContent = labelText;
-      }
+      const isSource = cur?.fromId === id;
+      const color = this.nodeColor(view, origin, failure);
+      view.material.color.setHex(color);
+      view.material.emissive.setHex(color);
+      view.material.emissiveIntensity = this.emissiveIntensity(
+        isTarget && q >= 1,
+        isTarget || isSource,
+        origin,
+      );
+      const ring = view.ring.material as THREE.MeshBasicMaterial;
+      ring.opacity = origin ? 0.55 + 0.35 * Math.sin(this.clock * 3) : 0;
+      const active = Boolean(isTarget || (isSource && q < 1));
+      this.updateNodeLabel(view, origin, active);
       view.visible = scale > 0.2;
       view.active = active;
-    });
+    }
+  }
 
-    // edges
-    this.edges.forEach((edge, k) => {
-      if (!edge.line) return;
-      const frac = this.overview || this.ended || k < this.step ? 1 : k > this.step ? 0 : q;
-      edge.line.geometry.setDrawRange(0, Math.floor(frac * edge.count));
+  private edgeProgress(index: number, q: number) {
+    if (this.overview || this.ended || index < this.step) return 1;
+    if (index > this.step) return 0;
+    return q;
+  }
+
+  private edgeOpacity(index: number) {
+    if (!this.ended && index === this.step) return 1;
+    return this.overview ? 0.22 : 0.35;
+  }
+
+  private updateEdges(q: number) {
+    for (const [index, edge] of this.edges.entries()) {
+      if (!edge.line) continue;
+      const progress = this.edgeProgress(index, q);
+      edge.line.geometry.setDrawRange(0, Math.floor(progress * edge.count));
       if (edge.arrow) {
-        edge.arrow.visible = frac >= 0.7;
-        (edge.arrow.material as THREE.MeshBasicMaterial).opacity = k === this.step ? 1 : 0.4;
+        edge.arrow.visible = progress >= 0.7;
+        (edge.arrow.material as THREE.MeshBasicMaterial).opacity = index === this.step ? 1 : 0.4;
       }
-      (edge.line.material as THREE.LineBasicMaterial).opacity =
-        !this.ended && k === this.step ? 1 : this.overview ? 0.22 : 0.35;
-    });
+      (edge.line.material as THREE.LineBasicMaterial).opacity = this.edgeOpacity(index);
+    }
+  }
 
-    // packet, or a pulse for a span that stayed inside one component
-    let tagVisible = false;
-    Object.values(this.packets).forEach((m) => (m.visible = false));
-    this.burst.visible = false;
-    if (cur) {
-      const edge = this.edges[this.step];
-      const target = this.nodes.get(cur.toId);
-      const failing = cur.state === "error";
-      const color = failing
-        ? ERROR_COLOR
-        : cur.state === "warning"
-          ? WARNING_COLOR
-          : TRAFFIC_COLORS[cur.traffic];
-      if (edge?.curve && q > 0 && q < 1) {
-        const mesh = this.packets[cur.traffic];
-        mesh.visible = true;
-        edge.curve.getPoint(q, this.packet.position);
-        this.packet.rotation.set(
-          cur.traffic === "data" || cur.traffic === "cache" ? 0.5 : 0,
-          this.camYaw,
-          0,
-        );
-        this.packetLight.color.setHex(color);
-        tagVisible = true;
-      } else if (target && p > 0.2 && p < 0.95) {
-        this.packet.position.copy(target.group.position);
-        this.packet.position.y += target.labelY + 0.2;
-        if (!edge?.curve) {
-          this.packets.call.visible = true;
-          tagVisible = true;
-        }
-      }
-      // A failed step ends in a red burst at the component that failed.
-      if (failing && target && q >= 1 && !reduced) {
-        const b = clamp01((p - 0.7) / 0.3);
-        this.burst.visible = true;
-        this.burst.position.copy(target.group.position);
-        this.burst.lookAt(this.camera.position);
-        this.burst.scale.setScalar(1 + b * 4);
-        (this.burst.material as THREE.MeshBasicMaterial).opacity = 1 - b;
-        this.packets.error.visible = true;
-        this.packet.position.copy(target.group.position);
-        this.packet.position.y += target.labelY + 0.3;
-        this.packet.rotation.y = this.clock * 3;
-        tagVisible = true;
-      }
-      if (tagVisible) {
-        const tag = failing ? `✕ ${cur.tag} · ${cur.statusLabel}` : cur.tag;
-        if (this.packetTag.textContent !== tag) {
-          this.packetTag.textContent = tag;
-          this.packetTag.style.background = css(color);
-          this.packetTag.style.color = failing ? "#fff" : "#14110a";
-        }
+  private packetColor(cur: FlowStep) {
+    if (cur.state === "error") return ERROR_COLOR;
+    if (cur.state === "warning") return WARNING_COLOR;
+    return TRAFFIC_COLORS[cur.traffic];
+  }
+
+  private movePacket(
+    cur: FlowStep,
+    edge: EdgeView | undefined,
+    target: NodeView | undefined,
+    p: number,
+    q: number,
+    color: number,
+  ) {
+    if (edge?.curve && q > 0 && q < 1) {
+      this.packets[cur.traffic].visible = true;
+      edge.curve.getPoint(q, this.packet.position);
+      this.packet.rotation.set(
+        cur.traffic === "data" || cur.traffic === "cache" ? 0.5 : 0,
+        this.camYaw,
+        0,
+      );
+      this.packetLight.color.setHex(color);
+      return true;
+    }
+    if (target && p > 0.2 && p < 0.95) {
+      this.packet.position.copy(target.group.position);
+      this.packet.position.y += target.labelY + 0.2;
+      if (!edge?.curve) {
+        this.packets.call.visible = true;
+        return true;
       }
     }
+    return false;
+  }
 
-    // camera
+  private showFailureBurst(
+    target: NodeView | undefined,
+    p: number,
+    q: number,
+    reduced: boolean,
+    failing: boolean,
+  ) {
+    if (!failing || !target || q < 1 || reduced) return false;
+    const progress = clamp01((p - 0.7) / 0.3);
+    this.burst.visible = true;
+    this.burst.position.copy(target.group.position);
+    this.burst.lookAt(this.camera.position);
+    this.burst.scale.setScalar(1 + progress * 4);
+    (this.burst.material as THREE.MeshBasicMaterial).opacity = 1 - progress;
+    this.packets.error.visible = true;
+    this.packet.position.copy(target.group.position);
+    this.packet.position.y += target.labelY + 0.3;
+    this.packet.rotation.y = this.clock * 3;
+    return true;
+  }
+
+  private updatePacketTag(cur: FlowStep, color: number) {
+    const failing = cur.state === "error";
+    const tag = failing ? `✕ ${cur.tag} · ${cur.statusLabel}` : cur.tag;
+    if (this.packetTag.textContent === tag) return;
+    this.packetTag.textContent = tag;
+    this.packetTag.style.background = css(color);
+    this.packetTag.style.color = failing ? "#fff" : "#14110a";
+  }
+
+  private updatePacket(p: number, q: number, cur: FlowStep | null, reduced: boolean) {
+    for (const mesh of Object.values(this.packets)) mesh.visible = false;
+    this.burst.visible = false;
+    if (!cur) return false;
+    const edge = this.edges[this.step];
+    const target = this.nodes.get(cur.toId);
+    const color = this.packetColor(cur);
+    let tagVisible = this.movePacket(cur, edge, target, p, q, color);
+    if (this.showFailureBurst(target, p, q, reduced, cur.state === "error")) tagVisible = true;
+    if (tagVisible) this.updatePacketTag(cur, color);
+    return tagVisible;
+  }
+
+  private updateCamera(cur: FlowStep | null, reduced: boolean, dt: number) {
     let radiusGoal: number;
     const a = cur ? this.nodes.get(cur.fromId)?.group.position : undefined;
     const b = cur ? this.nodes.get(cur.toId)?.group.position : undefined;
@@ -868,9 +902,9 @@ export class TraceFlowScene {
     }
     if (this.camera.aspect < 1) radiusGoal *= 1.35;
     radiusGoal *= this.zoomFactor;
-    const k = reduced ? 1 : 1 - Math.pow(0.02, dt);
-    this.camTarget.lerp(this.camGoal, k);
-    this.camRadius += (radiusGoal - this.camRadius) * k;
+    const blend = reduced ? 1 : 1 - Math.pow(0.02, dt);
+    this.camTarget.lerp(this.camGoal, blend);
+    this.camRadius += (radiusGoal - this.camRadius) * blend;
     this.camYaw = 0.42 + this.userYaw + (reduced ? 0 : Math.sin(this.clock * 0.15) * 0.1);
     const pitch = 0.52;
     this.camera.position.set(
@@ -880,30 +914,54 @@ export class TraceFlowScene {
     );
     this.camera.lookAt(this.camTarget);
     this.renderer.render(this.scene, this.camera);
+  }
 
-    // HTML labels follow their nodes
-    const w = this.host.clientWidth;
-    const h = this.host.clientHeight;
-    this.nodes.forEach((view) => {
+  private positionLabel(label: HTMLElement, width: number, height: number, offset = 0) {
+    const x = (this.tmp.x * 0.5 + 0.5) * width;
+    const y = (-this.tmp.y * 0.5 + 0.5) * height;
+    label.style.transform = `translate(${x.toFixed(1)}px, ${(y - offset).toFixed(1)}px) translate(-50%, -100%)`;
+  }
+
+  private updateLabels(cur: FlowStep | null, tagVisible: boolean) {
+    const width = this.host.clientWidth;
+    const height = this.host.clientHeight;
+    for (const view of this.nodes.values()) {
       this.tmp.copy(view.group.position);
       this.tmp.y += view.labelY + 0.15;
       this.tmp.project(this.camera);
       const onScreen = view.visible && this.tmp.z < 1 && Math.abs(this.tmp.x) < 1.2;
       view.label.style.visibility = onScreen ? "visible" : "hidden";
-      view.label.style.opacity = onScreen ? (view.active || !cur ? "1" : "0.72") : "0";
-      const x = (this.tmp.x * 0.5 + 0.5) * w;
-      const y = (-this.tmp.y * 0.5 + 0.5) * h;
-      view.label.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%)`;
-    });
+      let opacity = "0";
+      if (onScreen) opacity = view.active || !cur ? "1" : "0.72";
+      view.label.style.opacity = opacity;
+      this.positionLabel(view.label, width, height);
+    }
     if (tagVisible) {
       this.tmp.copy(this.packet.position);
       this.tmp.project(this.camera);
-      const x = (this.tmp.x * 0.5 + 0.5) * w;
-      const y = (-this.tmp.y * 0.5 + 0.5) * h;
       this.packetTag.style.opacity = "1";
-      this.packetTag.style.transform = `translate(${x.toFixed(1)}px, ${(y - 20).toFixed(1)}px) translate(-50%, -100%)`;
-    } else this.packetTag.style.opacity = "0";
+      this.positionLabel(this.packetTag, width, height, 20);
+    } else {
+      this.packetTag.style.opacity = "0";
+    }
+  }
 
+  private readonly frame = (now: number) => {
+    if (this.disposed) return;
+    const dt = Math.min(0.05, (now - this.last) / 1000);
+    this.last = now;
+    this.clock += dt;
+    const reduced = Boolean(this.opts.reducedMotion);
+    this.advancePlayback(dt);
+    const p = this.ended ? 1 : this.t;
+    let q = easeInOut(clamp01((p - 0.2) / 0.5));
+    if (reduced) q = p > 0.3 ? 1 : 0;
+    const cur = this.ended || this.flow.steps.length === 0 ? null : this.flow.steps[this.step];
+    this.updateNodes(p, q, cur, reduced);
+    this.updateEdges(q);
+    const tagVisible = this.updatePacket(p, q, cur, reduced);
+    this.updateCamera(cur, reduced, dt);
+    this.updateLabels(cur, tagVisible);
     this.frameId = requestAnimationFrame(this.frame);
   };
 }
