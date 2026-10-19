@@ -2,7 +2,7 @@ import { http } from "@/lib/http/http-client";
 import type { ICreatePolicyPayload, ICreatePolicyResponse, IDeletePolicyResponse, IGetPolicyResponse, ISetDataAccessResponse, ISetRowColumnPermissionPayload, IUpdatePolicyPayload } from "./gateway/models/data-service";
 import type { IFieldDefaultValue, IFieldValidationRule, IPlatformSchemaRules, ISchemaFieldValidation } from "./rules/rules.types";
 
-export const PLATFORM_SERVICES = ["IAM", "OS", "Logic", "Release"] as const;
+export const PLATFORM_SERVICES = ["IAM", "OS", "Logic", "Release", "Monitor"] as const;
 export type PlatformService = (typeof PLATFORM_SERVICES)[number];
 
 /** One property of a platform schema. Nested object properties carry their own `fields`. */

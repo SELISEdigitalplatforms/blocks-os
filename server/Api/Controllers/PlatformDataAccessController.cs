@@ -14,6 +14,7 @@ namespace BlocksOs.Api.Controllers;
 public sealed class PlatformDataAccessController(IDbContextProvider databaseProvider, IConfiguration? configuration = null) : ControllerBase
 {
     private const string LogicService = "Logic";
+    private const string MonitorService = "Monitor";
 
     /// <summary>
     /// Validation rules and default values on system schemas. Off until IAM, OS, Logic and Release all run a
@@ -71,7 +72,8 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
         ["ProxyExecutionEntity"] = LogicService, ["Schedule"] = LogicService, ["MailBoxEntity"] = LogicService,
         ["MailBoxSyncCursor"] = LogicService, ["NotificationConnection"] = LogicService, ["NotificationSubscription"] = LogicService,
         ["OfflineNotification"] = LogicService, ["FirebaseConfiguration"] = LogicService,
-        ["Build"] = "Release", ["Repo"] = "Release", ["RepositoryWebhook"] = "Release"
+        ["Build"] = "Release", ["Repo"] = "Release", ["RepositoryWebhook"] = "Release",
+        ["MonitorConfiguration"] = MonitorService, ["MonitorIncident"] = MonitorService, ["MonitorPingLog"] = MonitorService
     };
 
     [HttpGet]
