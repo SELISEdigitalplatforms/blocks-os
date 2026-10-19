@@ -54,6 +54,15 @@ async function cleanup(api: OidcClientsApi | undefined, names: string[]) {
   for (const name of names) await api.removeByName(name);
 }
 
+// Radix radio groups select the item that receives focus only while an arrow key is still down;
+// focus moves asynchronously, so a press with an immediate key-up (Playwright's default) moves focus
+// without selecting. Hold the key briefly, as a person does.
+async function holdKey(page: Page, key: string) {
+  await page.keyboard.down(key);
+  await page.waitForTimeout(150);
+  await page.keyboard.up(key);
+}
+
 test.describe("OIDC client application type (#680)", () => {
   test("H1, H2, H3, H6, H11, H12: create a Mobile app client, then reopen it preselected", async ({
     page,
@@ -497,11 +506,11 @@ test.describe("OIDC client application type (#680)", () => {
         }
         expect(reached, "Tab from Client Name reaches the Application type radio group").toBe(true);
         await expect(applicationTypeRadio(page, "web")).toBeFocused();
-        await page.keyboard.press("ArrowDown");
+        await holdKey(page, "ArrowDown");
         await expect(applicationTypeRadio(page, "mobile")).toHaveAttribute("aria-checked", "true");
         await expect(applicationTypeRadio(page, "mobile")).toBeFocused();
         await expect(page.getByText(OIDC_APP_TYPE_HELPER.mobile, { exact: true })).toBeVisible();
-        await page.keyboard.press("ArrowUp");
+        await holdKey(page, "ArrowUp");
         await expect(applicationTypeRadio(page, "web")).toHaveAttribute("aria-checked", "true");
         await closeOidcDialogFlow(page);
       });

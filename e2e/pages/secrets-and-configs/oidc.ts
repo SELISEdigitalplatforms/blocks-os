@@ -119,13 +119,16 @@ export async function findOidcClientRowFlow(page: Page, clientName: string): Pro
   await waitForOidcListSettledFlow(page);
   const clientRow = page.getByRole("row").filter({ hasText: clientName });
   await expect(clientRow).toBeVisible({ timeout: 15000 });
-  const alreadyExpanded = await page.getByText("Client Id").isVisible({ timeout: 3000 });
+  // The details panel is the row right after the client's row. Scope to it: other clients in the
+  // shared project may be expanded too, so a page-wide "Client Id" can match more than once.
+  const details = clientRow.locator("xpath=following-sibling::tr[1]");
+  const alreadyExpanded = await details.getByText("Client Id").isVisible({ timeout: 3000 });
   if (!alreadyExpanded) {
     await clientRow.click();
   }
-  await expect(page.getByText("Client Id")).toBeVisible({ timeout: 10000 });
-  await expect(page.getByText("Redirect URI(s)")).toBeVisible();
-  await expect(page.getByText("Allowed Response Types")).toBeVisible();
+  await expect(details.getByText("Client Id")).toBeVisible({ timeout: 10000 });
+  await expect(details.getByText("Redirect URI(s)")).toBeVisible();
+  await expect(details.getByText("Allowed Response Types")).toBeVisible();
   return clientRow;
 }
 
@@ -453,7 +456,7 @@ export async function deleteOidcClientFlow(page: Page, clientRow: Locator, clien
   await deleteButton.click();
   await expect(page.getByRole("heading", { name: "Delete OIDC Client" })).toBeVisible();
   await expect(
-    page.getByText(`delete.*${escapeRegex(clientName)}`, { exact: false }),
+    page.getByText(new RegExp(`delete.*${escapeRegex(clientName)}`, "i")),
   ).toBeVisible();
   await page.getByRole("button", { name: "Delete", exact: true }).last().click();
   if (
