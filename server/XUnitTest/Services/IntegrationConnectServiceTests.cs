@@ -404,7 +404,7 @@ public class IntegrationConnectServiceTests : IDisposable
     public async Task Approve_SetupRefusedByAValidationRule_ReturnsItsFieldMessage_AndReleasesTheRequest()
     {
         using var _ = new BlocksTestContext(userId: "u1", impersonated: true);
-        Approvable(out var _unused);
+        Approvable(out IntegrationRequest _);
         var refused = new DataValidationResult();
         refused.AddError("ConnectionName", "ConnectionName must be at most 10 characters", "MaxLength");
         _integration.Setup(i => i.RunSetupAsync(It.IsAny<RunIntegrationSetupRequest>())).ThrowsAsync(new DataValidationException(refused));
@@ -421,7 +421,7 @@ public class IntegrationConnectServiceTests : IDisposable
     public async Task Approve_SetupDeniedByTheAccessPolicy_ReturnsTheDenial_AndReleasesTheRequest()
     {
         using var _ = new BlocksTestContext(userId: "u1", impersonated: true);
-        Approvable(out var _unused);
+        Approvable(out IntegrationRequest _);
         _integration.Setup(i => i.RunSetupAsync(It.IsAny<RunIntegrationSetupRequest>()))
             .ThrowsAsync(new UnauthorizedAccessException("Access to the integration connection was denied by the data access policy."));
 
