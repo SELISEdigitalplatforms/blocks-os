@@ -13,6 +13,7 @@ public sealed class IntegrationConnectService : IIntegrationConnectService
     private const string RequestNotFoundOrExpiredCode = "request_not_found_or_expired";
     private const string RequestNotFoundOrExpiredMessage = "The connect request was not found or has expired.";
     private const string RequestNotPendingCode = "request_not_pending";
+    private const string ApproveFailedCode = "approve_failed";
     private const string InvalidCodeCode = "invalid_code";
     private const string InvalidCodeMessage = "The code is invalid, expired or already used.";
 
@@ -177,7 +178,7 @@ public sealed class IntegrationConnectService : IIntegrationConnectService
             if (!setup.IsSuccess || string.IsNullOrWhiteSpace(setup.ClientSecret) || string.IsNullOrWhiteSpace(setup.ClientId))
             {
                 await _requests.ResetApprovalToPendingAsync(existing.ItemId, cancellationToken);
-                return (null, MergeErrors(setup.Errors as Dictionary<string, string> ?? setup.Errors?.ToDictionary(e => e.Key, e => e.Value), "approve_failed"));
+                return (null, MergeErrors(setup.Errors as Dictionary<string, string> ?? setup.Errors?.ToDictionary(e => e.Key, e => e.Value), ApproveFailedCode));
             }
 
             var environmentTenant = _tenants.GetTenantByID(context.TenantId);
@@ -185,7 +186,7 @@ public sealed class IntegrationConnectService : IIntegrationConnectService
             {
                 await _integration.DisconnectAsync(setup.ConnectionId);
                 await _requests.ResetApprovalToPendingAsync(existing.ItemId, cancellationToken);
-                return (null, Error("approve_failed", "The environment encryption key is unavailable."));
+                return (null, Error(ApproveFailedCode, "The environment encryption key is unavailable."));
             }
 
             // 32 random bytes, base64url: the one-time code. Only its hash is stored; the raw value
@@ -236,12 +237,12 @@ public sealed class IntegrationConnectService : IIntegrationConnectService
         {
             // The data access policy denied the write: say so instead of a generic failure.
             await _requests.ResetApprovalToPendingAsync(existing.ItemId, cancellationToken);
-            return (null, Error("approve_failed", ex.Message));
+            return (null, Error(ApproveFailedCode, ex.Message));
         }
         catch
         {
             await _requests.ResetApprovalToPendingAsync(existing.ItemId, cancellationToken);
-            return (null, Error("approve_failed", "The integration setup did not complete."));
+            return (null, Error(ApproveFailedCode, "The integration setup did not complete."));
         }
     }
 
