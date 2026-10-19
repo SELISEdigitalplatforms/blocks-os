@@ -22,10 +22,11 @@ public class PlatformSchemaRulesControllerTests
 
     public PlatformSchemaRulesControllerTests(MongoIntegrationFixture fixture) => _fixture = fixture;
 
-    private PlatformDataAccessController Controller(bool rulesEnabled = true) => new(_fixture.DbContextProvider,
+    private PlatformDataAccessController Controller(bool rulesEnabled = true, bool includeWarned = true) => new(_fixture.DbContextProvider,
         new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
             [PlatformDataAccessController.RulesEnabledSetting] = rulesEnabled.ToString(),
+            [PlatformDataAccessController.RulesIncludeWarnedSetting] = includeWarned.ToString(),
         }).Build());
 
     private IMongoCollection<SchemaDefinition> Schemas => _fixture.Collection<SchemaDefinition>("SchemaDefinitions");
@@ -177,5 +178,32 @@ public class PlatformSchemaRulesControllerTests
     {
         var body = JsonSerializer.SerializeToElement((await controller.Schemas(CancellationToken.None)).Should().BeOfType<OkObjectResult>().Subject.Value);
         return body.GetProperty("data").EnumerateArray().Single(s => s.GetProperty("id").GetString() == id);
+    }
+
+    [Fact]
+    public async Task WithoutWarned_OnlyNormalSchemasAndTheirAllowedPropertiesAreOffered()
+    {
+        var template = await InsertEmailTemplateAsync();
+        var role = await InsertAsync("Role", "Name", "Description");
+        var safe = Controller(includeWarned: false);
+        var notEmpty = new ValidationRule { Type = ValidationType.NotEmpty };
+
+        // EmailTemplate is a Normal schema: TemplateSubject (Allowed) is offered, Name (validation Warned) is not.
+        var flags = (await SchemaRowAsync(safe, template)).GetProperty("rules").GetProperty("fields").EnumerateArray()
+            .Select(f => f.GetProperty("Path").GetString()).ToList();
+        flags.Should().Contain("TemplateSubject").And.NotContain("Name");
+        (await safe.SaveValidation(Rules(template, "TemplateSubject", new ValidationRule { Type = ValidationType.MaxLength, Value = 80 }), CancellationToken.None))
+            .Should().BeOfType<OkObjectResult>();
+        Message(await safe.SaveValidation(Rules(template, "Name", notEmpty), CancellationToken.None))
+            .Should().Be("Validation rules can't be set on EmailTemplate.Name");
+
+        // Role is a Warned schema: no flags, and its endpoints answer 404.
+        (await SchemaRowAsync(safe, role)).GetProperty("rules").ValueKind.Should().Be(JsonValueKind.Null);
+        (await safe.SaveValidation(Rules(role, "Name", notEmpty), CancellationToken.None)).Should().BeOfType<NotFoundResult>();
+
+        // Switched on, both are offered again.
+        (await Controller(includeWarned: true).SaveValidation(Rules(template, "Name", notEmpty), CancellationToken.None))
+            .Should().BeOfType<OkObjectResult>();
+        (await SchemaRowAsync(Controller(includeWarned: true), role)).GetProperty("rules").GetProperty("level").GetString().Should().Be("Warned");
     }
 }

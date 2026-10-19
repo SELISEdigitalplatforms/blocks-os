@@ -217,6 +217,16 @@
             Genesis that understands them: while off the rule endpoints answer 404 and Schemas carries no rule flags.
             </summary>
         </member>
+        <member name="F:BlocksOs.Api.Controllers.PlatformDataAccessController.RulesIncludeWarnedSetting">
+            <summary>
+            Whether warned schemas (sign-in, the console: User, Role, mail configuration, …) and warned properties
+            (row access lists, template bodies, …) are offered too. Off by default: only Normal schemas and their
+            Allowed properties, the ones that cannot stop a service from saving or users from signing in.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.OfferedRules(System.String)">
+            <summary>The allow-list as this environment offers it: warned schemas and properties left out unless switched on.</summary>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.Validation(System.String,System.String,System.Threading.CancellationToken)">
             <summary>The field's validation rules; null when it has none.</summary>
         </member>

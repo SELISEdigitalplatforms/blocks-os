@@ -23,6 +23,30 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
 
     private bool RulesEnabled => configuration?.GetValue<bool>(RulesEnabledSetting) ?? false;
 
+    /// <summary>
+    /// Whether warned schemas (sign-in, the console: User, Role, mail configuration, …) and warned properties
+    /// (row access lists, template bodies, …) are offered too. Off by default: only Normal schemas and their
+    /// Allowed properties, the ones that cannot stop a service from saving or users from signing in.
+    /// </summary>
+    public const string RulesIncludeWarnedSetting = "PlatformDataAccess:RulesIncludeWarned";
+
+    private bool RulesIncludeWarned => configuration?.GetValue<bool>(RulesIncludeWarnedSetting) ?? false;
+
+    /// <summary>The allow-list as this environment offers it: warned schemas and properties left out unless switched on.</summary>
+    private SystemSchemaRuleSet? OfferedRules(string schemaName)
+    {
+        var rules = SystemSchemaRules.For(schemaName);
+        if (rules is null || RulesIncludeWarned) return rules;
+        if (rules.Level == RuleLevel.Warned) return null;
+
+        static RuleAccess AllowedOnly(RuleAccess access) => access == RuleAccess.Allowed ? RuleAccess.Allowed : RuleAccess.Blocked;
+        var fields = rules.Fields.Values
+            .Select(f => f with { Validation = AllowedOnly(f.Validation), Default = AllowedOnly(f.Default) })
+            .Where(f => f.Validation != RuleAccess.Blocked || f.Default != RuleAccess.Blocked)
+            .ToDictionary(f => f.Path, StringComparer.Ordinal);
+        return rules with { Fields = fields };
+    }
+
     // View, Create, Edit and Delete, as the services check them. ALL is left out: services never ask for it.
     private static readonly PolicyOperation[] Operations = [PolicyOperation.READ, PolicyOperation.WRITE, PolicyOperation.EDIT, PolicyOperation.DELETE];
 
@@ -220,8 +244,8 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
         return Ok(new { isSuccess = true, data = new { acknowledged = true, itemId = schema.ItemId } });
     }
 
-    private static object? RuleFlags(string schemaName) =>
-        SystemSchemaRules.For(schemaName) is { } rules
+    private object? RuleFlags(string schemaName) =>
+        OfferedRules(schemaName) is { } rules
             ? new
             {
                 level = rules.Level.ToString(),
@@ -291,7 +315,7 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
     private async Task<(SchemaDefinition Schema, SystemSchemaRuleSet Rules)?> LoadRulesSchemaAsync(string schemaId, CancellationToken cancellationToken)
     {
         var schema = await SchemaCollection.Find(x => x.ItemId == schemaId && x.IsSystemEntity && !x.IsDeleted).FirstOrDefaultAsync(cancellationToken);
-        return schema is not null && Owners.ContainsKey(schema.SchemaName) && SystemSchemaRules.For(schema.SchemaName) is { } rules
+        return schema is not null && Owners.ContainsKey(schema.SchemaName) && OfferedRules(schema.SchemaName) is { } rules
             ? (schema, rules)
             : null;
     }
