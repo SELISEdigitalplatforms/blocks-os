@@ -57,6 +57,11 @@ vi.mock("@blocks-lmt/hooks/use-log", () => ({
   useGetRestoredLogs: h.getRestoredLogs,
 }));
 
+// The 3D view is covered by its own tests; here it only needs to prove the switch mounts it.
+vi.mock("./trace-flow", () => ({
+  TraceFlowView: () => <div data-testid="trace-flow-view" />,
+}));
+
 import { TraceDetails } from "./trace-details";
 
 const childTrace = (): TraceTree =>
@@ -262,5 +267,30 @@ describe("TraceDetails", () => {
     await user.click(child);
     // still renders after selection change
     expect(screen.getByText("Timeline")).toBeTruthy();
+  });
+
+  it("switches between the waterfall and the Story", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByText("Timeline");
+    expect(screen.getByRole("tab", { name: "Waterfall" }).getAttribute("aria-selected")).toBe(
+      "true",
+    );
+    expect(screen.queryByTestId("trace-flow-view")).toBeNull();
+
+    await user.click(screen.getByRole("tab", { name: "Story" }));
+    expect(await screen.findByTestId("trace-flow-view")).toBeTruthy();
+    expect(screen.queryByRole("tab", { name: "Info" })).toBeNull();
+    expect(screen.queryByText("Timeline")).toBeNull();
+
+    await user.click(screen.getByRole("tab", { name: "Waterfall" }));
+    expect(await screen.findByRole("tab", { name: "Info" })).toBeTruthy();
+    await waitFor(() => expect(screen.queryByTestId("trace-flow-view")).toBeNull());
+  });
+
+  it("hides the view switch when there is no trace", () => {
+    h.trace = null;
+    renderPage();
+    expect(screen.queryByRole("tab", { name: "Story" })).toBeNull();
   });
 });

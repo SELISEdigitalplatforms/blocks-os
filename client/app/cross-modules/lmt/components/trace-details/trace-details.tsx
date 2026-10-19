@@ -11,6 +11,8 @@ import { TracingListBreadCrumb } from "./tracing-list-breadcrum/tracing-list-bre
 import { TracingInsights } from "./tracing-insights/tracing-insights";
 import { TracingDistributedTimeline } from "./tracing-distributed-timeline/tracing-distributed-timeline";
 import { ActivityLogs } from "./activity-logs/activity-logs";
+import { TraceFlowView } from "./trace-flow";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
 import { TraceTree } from "@blocks-lmt/models/trace.model";
 import { useSearchParams } from "react-router";
 export const timelineContext = createContext<{
@@ -32,6 +34,7 @@ export const timelineContext = createContext<{
   setSelectedTrace: React.Dispatch<React.SetStateAction<TraceTree | null>>;
   isPanelOpen: boolean;
   isLoading: boolean;
+  requestId?: string;
 }>({
   traceHistory: [],
   setTraceHistory: () => {},
@@ -54,9 +57,7 @@ const TraceDetailsEmptyState = ({ traceId, isError }: { traceId: string; isError
           ? "Something went wrong while fetching trace details. Please try again in a moment."
           : `No trace data exists for this ID in the current project. The trace may have expired, or it may not have been recorded yet.`}
       </p>
-      {traceId ? (
-        <p className="mt-4 break-all text-xs text-low-emphasis">{traceId}</p>
-      ) : null}
+      {traceId ? <p className="mt-4 break-all text-xs text-low-emphasis">{traceId}</p> : null}
     </CardContent>
   </Card>
 );
@@ -105,6 +106,7 @@ export const TraceDetails = ({
   );
   const { isLoading, isFetching, isError, data } = requestId ? restoredTrace : normalTrace;
   const [selectedTrace, setSelectedTrace] = useState<TraceTree | null>(null);
+  const [view, setView] = useState<"waterfall" | "flow">("waterfall");
   // A new trace (or trace id) resets the drill-down history to that trace's root.
   const [historySource, setHistorySource] = useState<{
     trace: TraceTree | undefined;
@@ -161,6 +163,7 @@ export const TraceDetails = ({
         setSelectedTrace,
         isPanelOpen,
         isLoading: showTimelineLoading,
+        requestId: requestId || undefined,
       }}
     >
       <div className="mb-4 flex items-center justify-between gap-4 sm:mb-6">
@@ -193,49 +196,68 @@ export const TraceDetails = ({
         <TraceDetailsEmptyState traceId={id} isError={isError} />
       ) : (
         <div className="flex w-full flex-col gap-6 md:flex-row">
-          <div className={`${isPanelOpen ? "w-full md:w-[68%]" : "w-full"}`}>
+          <div
+            className={`${view === "waterfall" && isPanelOpen ? "w-full md:w-[68%]" : "w-full"}`}
+          >
             <Card className="h-min rounded-sm shadow-none">
-              <CardHeader>
-                <div className="flex flex-col items-start justify-between sm:flex-row sm:items-center">
-                  {/* Sized as a panel heading rather than a page title: the breadcrumb above
+              {view === "waterfall" ? (
+                <CardHeader>
+                  <div className="flex flex-col items-start justify-between sm:flex-row sm:items-center">
+                    {/* Sized as a panel heading rather than a page title: the breadcrumb above
                       already names the trace, and at text-xl this competed with it while
                       dwarfing the 12px metadata sitting on the same row. Set to that same
                       12px so the row reads as one line of labels; weight, not size, is what
                       marks it as the heading. */}
-                  <CardTitle className="text-[12px]">
-                    {isPending ? <Skeleton className="h-4 w-20" /> : "Timeline"}
-                  </CardTitle>
-                  {isPending ? (
-                    <Skeleton className="h-6 w-64" />
-                  ) : (
-                    <div
-                      className={`mt-2 flex flex-col items-start gap-2 md:mt-0 md:flex-row md:items-center md:justify-end md:gap-10`}
-                    >
-                      <div className="flex flex-col items-start text-[12px] font-medium text-low-emphasis sm:items-center lg:flex-row">
-                        <span>Duration </span>
-                        <span className="ml-1 break-all text-high-emphasis">
-                          {selectedTraceHistory?.current?.duration.toFixed(2)}ms
-                        </span>
+                    <CardTitle className="text-[12px]">
+                      {isPending ? <Skeleton className="h-4 w-20" /> : "Timeline"}
+                    </CardTitle>
+                    {isPending ? (
+                      <Skeleton className="h-6 w-64" />
+                    ) : (
+                      <div
+                        className={`mt-2 flex flex-col items-start gap-2 md:mt-0 md:flex-row md:items-center md:justify-end md:gap-10`}
+                      >
+                        <div className="flex flex-col items-start text-[12px] font-medium text-low-emphasis sm:items-center lg:flex-row">
+                          <span>Duration </span>
+                          <span className="ml-1 break-all text-high-emphasis">
+                            {selectedTraceHistory?.current?.duration.toFixed(2)}ms
+                          </span>
+                        </div>
+                        <div className="flex flex-col items-start text-[12px] font-medium text-low-emphasis sm:items-center lg:flex-row">
+                          <span>Trace ID </span>
+                          <span className="ml-1 break-all text-high-emphasis">
+                            {data?.data?.traceId}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex flex-col items-start text-[12px] font-medium text-low-emphasis sm:items-center lg:flex-row">
-                        <span>Trace ID </span>
-                        <span className="ml-1 break-all text-high-emphasis">
-                          {data?.data?.traceId}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div></div>
-                <TracingListBreadCrumb />
-              </CardHeader>
+                    )}
+                  </div>
+                  <div></div>
+                  <TracingListBreadCrumb />
+                </CardHeader>
+              ) : null}
               <CardContent className="text-base">
                 <div className="flex flex-col">
+                  {hasTrace ? (
+                    <Tabs
+                      value={view}
+                      onValueChange={(v) => setView(v === "flow" ? "flow" : "waterfall")}
+                    >
+                      <TabsList className="mb-3 h-8" aria-label="Trace view">
+                        <TabsTrigger value="waterfall" className="px-3 py-1 text-[12px]">
+                          Waterfall
+                        </TabsTrigger>
+                        <TabsTrigger value="flow" className="px-3 py-1 text-[12px]">
+                          Story
+                        </TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                  ) : null}
                   <div className="mb-[16px]">
-                    <TracingDistributedTimeline />
+                    {view === "flow" ? <TraceFlowView /> : <TracingDistributedTimeline />}
                   </div>
                   <div className="mb-[16px] flex items-center justify-end">
-                    {!isMobile && (
+                    {view === "waterfall" && !isMobile && (
                       <Button
                         variant="outline"
                         className="h-10 w-10 p-0"
@@ -249,12 +271,12 @@ export const TraceDetails = ({
                       </Button>
                     )}
                   </div>
-                  <ActivityLogs />
+                  {view === "waterfall" ? <ActivityLogs /> : null}
                 </div>
               </CardContent>
             </Card>
           </div>
-          {isPanelOpen && (
+          {view === "waterfall" && isPanelOpen && (
             <div
               className={`w-full overflow-hidden transition-all duration-500 ease-in-out md:w-[32%] ${
                 isPanelOpen ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
