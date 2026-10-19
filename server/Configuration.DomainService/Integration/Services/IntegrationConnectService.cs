@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using Blocks.Genesis;
+using Blocks.Genesis.DataAccess.Rules;
 using Blocks.Genesis.Entities.Os;
 using Configuration.DomainService.Integration.RequestModel;
 
@@ -225,6 +226,18 @@ public sealed class IntegrationConnectService : IIntegrationConnectService
 
             return (new ApproveIntegrationRequestResponse { RedirectUrl = BuildCodeRedirectUrl(approved, code) }, null);
         }
+        catch (DataValidationException ex)
+        {
+            // A rule on IntegrationSetups refused the save: the caller gets its field messages, not a generic failure.
+            await _requests.ResetApprovalToPendingAsync(existing.ItemId, cancellationToken);
+            return (null, ValidationErrors(ex));
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            // The data access policy denied the write: say so instead of a generic failure.
+            await _requests.ResetApprovalToPendingAsync(existing.ItemId, cancellationToken);
+            return (null, Error("approve_failed", ex.Message));
+        }
         catch
         {
             await _requests.ResetApprovalToPendingAsync(existing.ItemId, cancellationToken);
@@ -331,4 +344,10 @@ public sealed class IntegrationConnectService : IIntegrationConnectService
     }
 
     private static Dictionary<string, string> Error(string key, string message) => new() { [key] = message };
+
+    /// <summary>One message per property, keyed by its path (several messages for a property joined), as the 400 filter answers.</summary>
+    private static Dictionary<string, string> ValidationErrors(DataValidationException exception) =>
+        exception.Result.Errors
+            .GroupBy(e => e.FieldName, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => string.Join("; ", g.Select(e => e.Message)), StringComparer.Ordinal);
 }
