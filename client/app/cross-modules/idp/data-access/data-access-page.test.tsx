@@ -133,10 +133,34 @@ describe("DataAccessPage", () => {
     expect(screen.getAllByText("Role name").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Allowed values").length).toBeGreaterThan(0);
 
-    // Nothing here edits, deletes, adds, validates or publishes.
-    for (const label of [/^Edit$/, /Delete schema/, /Add/, /validation/i, /Publish/]) {
+    // Nothing here edits, deletes, adds or publishes.
+    for (const label of [/^Edit$/, /Delete schema/, /Add/, /Publish/]) {
       expect(screen.queryByRole("button", { name: label })).toBeNull();
     }
+    // As in the Data Gateway, every property shows Validation and Default value; with no rules for this
+    // schema they are disabled and say why.
+    const validation = screen.getAllByRole("button", { name: "Validation rules can't be set on Name" });
+    expect(validation.every((button) => (button as HTMLButtonElement).disabled)).toBe(true);
+    expect(screen.getAllByRole("button", { name: "A default value can't be set on Name" })[0]).toHaveProperty("disabled", true);
+    expect(screen.getAllByRole("button", { name: "Validations are only available for primitive types" })[0]).toHaveProperty("disabled", true);
+    expect(screen.queryAllByRole("button", { name: /^Manage validations/ })).toHaveLength(0);
+  });
+
+  it("opens Validation and Default value only where the schema's rules allow, and shows Required", async () => {
+    h.schemas = [
+      {
+        ...role,
+        fields: role.fields.map((field) => (field.name === "Name" ? { ...field, requiredOn: "Insert" as const } : field)),
+        rules: { level: "Normal", fields: [{ path: "Name", validation: "Allowed", default: "Blocked", defaultHasNoEffect: false }] },
+      },
+      build,
+    ];
+    renderPage("?schemaId=role-id");
+
+    expect((await screen.findAllByRole("button", { name: "Manage validations for Name" }))[0]).toHaveProperty("disabled", false);
+    expect(screen.getAllByRole("button", { name: "A default value can't be set on Name" })[0]).toHaveProperty("disabled", true);
+    expect(screen.getAllByRole("button", { name: "Validation rules can't be set on Kind" })[0]).toHaveProperty("disabled", true);
+    expect(screen.getAllByTitle("Required when the record is created").length).toBeGreaterThan(0);
   });
 
   it("keeps the default properties folded until opened", async () => {

@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronRight, Shield } from "lucide-react";
 import { Fragment, useState } from "react";
 import type { PlatformSchemaField } from "../data-access.service";
-import { FieldFlags, TypeChip, flagTitlesFromField, flagsFromField, tierFromLevel, ACCESS_TIER_LABELS } from "../gateway/components/primitives";
+import { FieldFlags, RequiredBadge, TypeChip, flagTitlesFromField, flagsFromField, tierFromLevel, ACCESS_TIER_LABELS } from "../gateway/components/primitives";
 import type { IPlatformSchemaRules } from "../rules/rules.types";
 import { FieldRulesButtons, FieldRulesProvider, type OnOpenFieldRules } from "./field-rules-buttons";
 import { useDefaultPropertiesExpanded } from "./explorer-hooks";
@@ -17,13 +17,14 @@ import { hasNestedFields, isScalarField, orderFields } from "./explorer-utils";
 /** Opens the access inspector for one property; `path` is the dotted name (e.g. `Create.Roles`). */
 export type OnOpenFieldAccess = (target: { path: string; field: PlatformSchemaField }) => void;
 
-/** Property | Type | Flags | Description | Rules. */
+/** Property | Type | Required | Flags | Description | Rules, at the Data Gateway's view-mode widths. */
 const COLUMNS = [
-  { id: "property", width: "24%", skeleton: "w-20" },
-  { id: "type", width: "18%", skeleton: "w-12" },
-  { id: "flags", width: "15%", skeleton: "w-12" },
-  { id: "description", width: "28%", skeleton: "w-24" },
-  { id: "rules", width: "15%", skeleton: "w-10" },
+  { id: "property", width: "22%", skeleton: "w-20" },
+  { id: "type", width: "16%", skeleton: "w-12" },
+  { id: "required", width: "12%", skeleton: "w-10" },
+  { id: "flags", width: "14%", skeleton: "w-12" },
+  { id: "description", width: "21%", skeleton: "w-24" },
+  { id: "rules", width: "15%", skeleton: "w-16" },
 ] as const;
 const COLUMN_COUNT = COLUMNS.length;
 const SKELETON_CARDS = ["card-1", "card-2", "card-3", "card-4"];
@@ -179,6 +180,7 @@ function FieldRow({
         </div>
         {field.type === "Enum" && <EnumValues values={field.enumValues ?? []} />}
       </TableCell>
+      <TableCell className={CELL}>{isScalarField(field) && <RequiredBadge requiredOn={field.requiredOn} />}</TableCell>
       <TableCell className={CELL}>
         <FieldFlags
           flags={flagsFromField({ isArray: field.isArray, isPIIData: Boolean(field.isPIIData), isUniqueData: Boolean(field.isUniqueData), defaultValue: field.defaultValue })}
@@ -274,6 +276,7 @@ function FieldsTable({
         <TableRow>
           <TableHead>Property</TableHead>
           <TableHead>Type</TableHead>
+          <TableHead>Required</TableHead>
           <TableHead>Flags</TableHead>
           <TableHead className="px-3 text-left md:px-3">Description</TableHead>
           <TableHead>Rules</TableHead>
@@ -362,10 +365,10 @@ function FieldCard({
 }
 
 /**
- * The Data Gateway's field table (`SchemaStructureTable`) in view mode: no edit,
- * no add/duplicate/delete. Validation and default value buttons appear only where the
- * Genesis allow-list opens a property (and only while rules are switched on). Nested object properties expand in
- * place like child schemas do there.
+ * The Data Gateway's field table (`SchemaStructureTable`) in view mode: the same columns and Rules
+ * buttons, no edit, no add/duplicate/delete. Validation and Default value open only where the Genesis
+ * allow-list opens a property (and only while rules are switched on); elsewhere they are disabled with
+ * the reason. Nested object properties expand in place like child schemas do there.
  */
 export function SchemaFieldsTable({
   schemaName,
@@ -481,13 +484,20 @@ export const SchemaFieldsTableSkeleton = () => (
                 <Skeleton className="h-[22px] w-[74px] rounded-md" />
               </TableCell>
               <TableCell>
+                <Skeleton className="h-3.5 w-6 rounded" />
+              </TableCell>
+              <TableCell>
                 <Skeleton className="h-[22px] w-[56px] rounded-md" />
               </TableCell>
               <TableCell>
                 <Skeleton className="h-4 w-[85%] rounded" />
               </TableCell>
               <TableCell>
-                <Skeleton className="h-[26px] w-[26px] rounded-md" />
+                <div className="flex gap-1">
+                  <Skeleton className="h-[26px] w-[26px] rounded-md" />
+                  <Skeleton className="h-[26px] w-[28px] rounded-md" />
+                  <Skeleton className="h-[26px] w-[26px] rounded-md" />
+                </div>
               </TableCell>
             </TableRow>
           ))}
