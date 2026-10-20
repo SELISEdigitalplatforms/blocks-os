@@ -26,7 +26,7 @@ export const TraceStoryPins = ({
     {pins.length === 0 ? (
       <p className="flex items-center gap-2 text-xs text-low-emphasis">
         <Pin size={13} aria-hidden />
-        Pin a fact from a step to keep it here while you move through the story.
+        <span>Pin a fact from a step to keep it here while you move through the story.</span>
       </p>
     ) : (
       <>

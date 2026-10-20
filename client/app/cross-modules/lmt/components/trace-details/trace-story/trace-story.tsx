@@ -96,16 +96,16 @@ const Legend = () => (
     {(Object.keys(TRAFFIC_BAR) as (keyof typeof TRAFFIC_BAR)[]).map((traffic) => (
       <span key={traffic} className="inline-flex items-center gap-1.5">
         <span className={cn("h-2 w-2 rounded-full", TRAFFIC_BAR[traffic])} aria-hidden />
-        {TRAFFIC_LABEL[traffic]}
+        <span>{TRAFFIC_LABEL[traffic]}</span>
       </span>
     ))}
     <span className="inline-flex items-center gap-1.5">
       <span className="h-2 w-2 rounded-full bg-warning" aria-hidden />
-      Warning
+      <span>Warning</span>
     </span>
     <span className="inline-flex items-center gap-1.5">
       <span className="h-2 w-2 rounded-full bg-error" aria-hidden />
-      Failed
+      <span>Failed</span>
     </span>
   </div>
 );
@@ -270,7 +270,7 @@ const TraceStory = ({ root, flow }: { root: TraceTree; flow: TraceFlow }) => {
   }, [step, setSelectedTrace]);
 
   useEffect(() => {
-    if (!playing) return;
+    if (!playing) return undefined;
     const timer = globalThis.setTimeout(() => {
       const next = visible[position + 1];
       if (next) setIndex(next.index);

@@ -12,10 +12,11 @@ import {
 } from "./trace-story.util";
 
 let seq = 0;
-const span = (overrides: Partial<TraceTree> = {}): TraceTree =>
-  ({
+const span = (overrides: Partial<TraceTree> = {}): TraceTree => {
+  seq += 1;
+  return {
     traceId: "trace-1",
-    spanId: `span-${++seq}`,
+    spanId: `span-${seq}`,
     kind: "Internal",
     activitySourceName: "src",
     operationName: "op",
@@ -28,7 +29,8 @@ const span = (overrides: Partial<TraceTree> = {}): TraceTree =>
     serviceName: "blocks-iam",
     subEntries: [],
     ...overrides,
-  }) as TraceTree;
+  } as TraceTree;
+};
 
 const at = (ms: number) => new Date(Date.UTC(2024, 0, 1, 10, 0, 0, ms)).toISOString();
 
@@ -102,7 +104,9 @@ describe("trace story helpers", () => {
 
   it("collects only the failing steps and the steps that called them", () => {
     const flow = buildTraceFlow(failing());
-    expect([...getErrorPath(flow, getParentIndexes(flow.steps))].sort()).toEqual([0, 2, 3]);
+    expect([...getErrorPath(flow, getParentIndexes(flow.steps))].sort((a, b) => a - b)).toEqual([
+      0, 2, 3,
+    ]);
   });
 
   it("says where a failing trace broke and why", () => {

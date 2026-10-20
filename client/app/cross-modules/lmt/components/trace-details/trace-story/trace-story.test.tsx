@@ -23,13 +23,19 @@ import { TraceStoryView } from "./trace-story";
 import { LOG_PAGE_SIZE } from "./trace-story-logs";
 import { PLAY_STEP_MS } from "./trace-story";
 
+const PREVIOUS = "Previous step";
+const PLAY = "Play story";
+const FIRST_OF_THREE = "Step 1 / 3";
+const PINNED = "#3 Collection: Users";
+const WHOLE_TRACE = "Whole trace";
 let seq = 0;
 const at = (ms: number) => new Date(Date.UTC(2024, 0, 1, 10, 0, 0, ms)).toISOString();
-const span = (overrides: Partial<TraceTree> = {}): TraceTree =>
-  ({
+const span = (overrides: Partial<TraceTree> = {}): TraceTree => {
+  seq += 1;
+  return {
     timestamp: at(0),
     traceId: "trace-1",
-    spanId: `span-${++seq}`,
+    spanId: `span-${seq}`,
     parentSpanId: "",
     parentId: "",
     kind: "Internal",
@@ -52,7 +58,8 @@ const span = (overrides: Partial<TraceTree> = {}): TraceTree =>
     logs: [],
     subEntries: [],
     ...overrides,
-  }) as TraceTree;
+  } as TraceTree;
+};
 
 const failingTrace = () =>
   span({
@@ -116,6 +123,7 @@ const renderView = (
 
 // The log sheet is modal, so rows behind it are hidden from the accessibility tree.
 const row = (name: RegExp) => screen.getByRole("button", { name, hidden: true });
+const isSelected = (name: RegExp) => row(name).getAttribute("aria-pressed") === "true";
 const detail = () => within(screen.getByRole("complementary", { name: "Selected step" }));
 
 describe("TraceStoryView", () => {
@@ -148,7 +156,7 @@ describe("TraceStoryView", () => {
 
   it("opens on the step where the error started and keeps the span panel in sync", async () => {
     const { setSelectedTrace } = renderView(failingTrace());
-    expect(row(/^Step 3:/).getAttribute("aria-pressed")).toBe("true");
+    expect(isSelected(/^Step 3:/)).toBe(true);
     expect(detail().getByText("Error started here: E11000 duplicate key")).toBeTruthy();
     await userEvent.click(row(/^Step 2:/));
     expect(detail().getByText("Checking the cache")).toBeTruthy();
@@ -161,14 +169,14 @@ describe("TraceStoryView", () => {
     renderView(failingTrace());
     await userEvent.click(row(/^Step 1:/));
     await userEvent.click(detail().getByRole("button", { name: /Failed because of step 3/ }));
-    expect(row(/^Step 3:/).getAttribute("aria-pressed")).toBe("true");
+    expect(isSelected(/^Step 3:/)).toBe(true);
   });
 
   it("summarises a trace that finished and offers no error filter", () => {
     renderView(okTrace());
     expect(screen.getByText(/Finished without errors/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: /path to the error/ })).toBeNull();
-    expect(row(/^Step 1:/).getAttribute("aria-pressed")).toBe("true");
+    expect(isSelected(/^Step 1:/)).toBe(true);
   });
 
   it("filters to the path that leads to the error and back", async () => {
@@ -183,38 +191,38 @@ describe("TraceStoryView", () => {
   it("steps through the story and plays it to the end", () => {
     vi.useFakeTimers();
     renderView(failingTrace());
-    act(() => screen.getByRole("button", { name: "Previous step" }).click());
-    act(() => screen.getByRole("button", { name: "Previous step" }).click());
-    expect(screen.getByText("Step 1 / 3")).toBeTruthy();
-    expect(
-      (screen.getByRole("button", { name: "Previous step" }) as HTMLButtonElement).disabled,
-    ).toBe(true);
-    act(() => screen.getByRole("button", { name: "Play story" }).click());
+    act(() => screen.getByRole("button", { name: PREVIOUS }).click());
+    act(() => screen.getByRole("button", { name: PREVIOUS }).click());
+    expect(screen.getByText(FIRST_OF_THREE)).toBeTruthy();
+    expect((screen.getByRole("button", { name: PREVIOUS }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+    act(() => screen.getByRole("button", { name: PLAY }).click());
     act(() => vi.advanceTimersByTime(PLAY_STEP_MS));
     expect(screen.getByText("Step 2 / 3")).toBeTruthy();
     act(() => vi.advanceTimersByTime(PLAY_STEP_MS));
     expect(screen.getByText("Step 3 / 3")).toBeTruthy();
     act(() => vi.advanceTimersByTime(PLAY_STEP_MS));
-    expect(screen.getByRole("button", { name: "Play story" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: PLAY })).toBeTruthy();
     // Playing again from the last step starts over.
-    act(() => screen.getByRole("button", { name: "Play story" }).click());
-    expect(screen.getByText("Step 1 / 3")).toBeTruthy();
+    act(() => screen.getByRole("button", { name: PLAY }).click());
+    expect(screen.getByText(FIRST_OF_THREE)).toBeTruthy();
     act(() => screen.getByRole("button", { name: "Pause story" }).click());
     act(() => vi.advanceTimersByTime(PLAY_STEP_MS * 2));
-    expect(screen.getByText("Step 1 / 3")).toBeTruthy();
+    expect(screen.getByText(FIRST_OF_THREE)).toBeTruthy();
   });
 
   it("pins facts so they stay visible on other steps, and unpins them", async () => {
     renderView(failingTrace());
     await userEvent.click(detail().getByRole("button", { name: "Pin Collection" }));
     const tray = within(screen.getByRole("region", { name: "Pinned facts" }));
-    expect(tray.getByText("#3 Collection: Users")).toBeTruthy();
+    expect(tray.getByText(PINNED)).toBeTruthy();
     await userEvent.click(row(/^Step 1:/));
-    expect(tray.getByText("#3 Collection: Users")).toBeTruthy();
-    await userEvent.click(tray.getByText("#3 Collection: Users"));
-    expect(row(/^Step 3:/).getAttribute("aria-pressed")).toBe("true");
+    expect(tray.getByText(PINNED)).toBeTruthy();
+    await userEvent.click(tray.getByText(PINNED));
+    expect(isSelected(/^Step 3:/)).toBe(true);
     await userEvent.click(detail().getByRole("button", { name: "Unpin Collection" }));
-    expect(tray.queryByText("#3 Collection: Users")).toBeNull();
+    expect(tray.queryByText(PINNED)).toBeNull();
   });
 
   it("does not invent a cache hit or miss when it was not captured", async () => {
@@ -291,10 +299,10 @@ describe("TraceStoryView logs", () => {
     expect(sheet.getByText(/This is a database call/)).toBeTruthy();
     await userEvent.click(sheet.getByRole("button", { name: "Show logs of step 1" }));
     expect(screen.getByRole("dialog")).toBeTruthy();
-    expect(row(/^Step 1:/).getAttribute("aria-pressed")).toBe("true");
+    expect(isSelected(/^Step 1:/)).toBe(true);
 
     await userEvent.click(
-      within(screen.getByRole("dialog")).getByRole("button", { name: "Whole trace" }),
+      within(screen.getByRole("dialog")).getByRole("button", { name: WHOLE_TRACE }),
     );
     expect(h.normalLogs).toHaveBeenLastCalledWith(
       expect.objectContaining({ serviceNames: ["blocks-iam"], filter: { traceId: "trace-1" } }),
@@ -323,9 +331,9 @@ describe("TraceStoryView logs", () => {
     );
     renderView(trace);
     const sheet = await openLogs();
-    await userEvent.click(sheet.getByRole("button", { name: "Whole trace" }));
+    await userEvent.click(sheet.getByRole("button", { name: WHOLE_TRACE }));
     await userEvent.click(sheet.getByRole("button", { name: /Step 2 · Redis Get/ }));
-    expect(row(/^Step 2:/).getAttribute("aria-pressed")).toBe("true");
+    expect(isSelected(/^Step 2:/)).toBe(true);
     expect(
       within(screen.getByRole("dialog"))
         .getByRole("button", { name: "This step" })
@@ -360,8 +368,8 @@ describe("TraceStoryView logs", () => {
     renderView(failingTrace());
     const sheet = await openLogs();
     expect(sheet.getByRole("status").tagName).toBe("OUTPUT");
-    h.normalLogs.mockReturnValue(logsResult({ isError: true, refetch, data: undefined }));
-    await userEvent.click(sheet.getByRole("button", { name: "Whole trace" }));
+    h.normalLogs.mockReturnValue(logsResult({ isError: true, refetch, data: null }));
+    await userEvent.click(sheet.getByRole("button", { name: WHOLE_TRACE }));
     expect(sheet.getByRole("alert").textContent).toContain("could not be loaded");
     await userEvent.click(sheet.getByRole("button", { name: "Try again" }));
     expect(refetch).toHaveBeenCalledTimes(1);
