@@ -173,7 +173,7 @@ describe("TraceDetails", () => {
     renderPage();
     expect(await screen.findByRole("region", { name: "Trace story" })).toBeTruthy();
     expect(screen.getAllByText(/GetUser/).length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: /^Step 2:/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Open blocks-data · 1 step/ })).toBeTruthy();
     expect(screen.queryByRole("tab", { name: /Waterfall|Story/ })).toBeNull();
     expect(screen.getByRole("button", { name: /Download JSON/i })).toBeTruthy();
   });
@@ -198,15 +198,13 @@ describe("TraceDetails", () => {
   it("shows the selected span's technical details", async () => {
     const user = userEvent.setup();
     renderPage();
-    await user.click(await screen.findByRole("button", { name: /^Step 2:/ }));
+    await user.click(await screen.findByRole("button", { name: /^Open blocks-data/ }));
     await user.click(screen.getByText("Technical details"));
     expect(screen.getAllByText("blocks-data").length).toBeGreaterThan(0);
   });
 
-  it("opens the logs of the selected step from the right", async () => {
-    const user = userEvent.setup();
+  it("shows the logs of the selected step in the page", async () => {
     renderPage();
-    await user.click(await screen.findByRole("button", { name: /^Logs/ }));
     expect(await screen.findByText(/hello world/)).toBeTruthy();
     expect(h.getLogs).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -218,9 +216,8 @@ describe("TraceDetails", () => {
   });
 
   it("uses restored logs when a restored request id is present", async () => {
-    const user = userEvent.setup();
     renderRestoredPage();
-    await user.click(await screen.findByRole("button", { name: /^Logs/ }));
+    await screen.findByRole("region", { name: "Logs of blocks-iam" });
 
     expect(h.getRestoredLogs).toHaveBeenCalledWith(
       expect.objectContaining({ requestId: "request-1" }),

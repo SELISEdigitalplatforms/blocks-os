@@ -3,14 +3,19 @@ import type { TraceTree } from "@blocks-lmt/models/trace.model";
 import { buildTraceFlow } from "@blocks-lmt/utils/trace-flow.util";
 import {
   buildPlotLine,
+  buildServiceLevels,
   buildTimeline,
   getErrorPath,
+  getLevelPath,
   getParentIndexes,
+  getTraceOriginMs,
   getSlowestStep,
   logServiceOf,
   plural,
 } from "./trace-story.util";
 
+const IAM = "blocks-iam";
+const WORKER = "inventory-worker";
 let seq = 0;
 const span = (overrides: Partial<TraceTree> = {}): TraceTree => {
   seq += 1;
@@ -26,7 +31,7 @@ const span = (overrides: Partial<TraceTree> = {}): TraceTree => {
     attributes: {},
     status: "Ok",
     statusDescription: "",
-    serviceName: "blocks-iam",
+    serviceName: IAM,
     subEntries: [],
     ...overrides,
   } as TraceTree;
@@ -55,7 +60,7 @@ const failing = () =>
             statusDescription: "E11000 duplicate key",
             startTime: at(30),
             duration: 60,
-            serviceName: "inventory-worker",
+            serviceName: WORKER,
           }),
         ],
       }),
@@ -113,7 +118,7 @@ describe("trace story helpers", () => {
     const flow = buildTraceFlow(failing());
     const plot = buildPlotLine(flow, labelOf);
     expect(plot.tone).toBe("error");
-    expect(plot.headline).toBe("It broke at step 4.");
+    expect(plot.headline).toBe("It broke in inventory-worker.");
     expect(plot.detail).toContain("E11000 duplicate key");
     expect(plot.detail).toContain("2 other steps failed because of it.");
     expect(plot.stepIndex).toBe(3);
@@ -131,7 +136,7 @@ describe("trace story helpers", () => {
     const plot = buildPlotLine(flow, labelOf);
     expect(plot.tone).toBe("ok");
     expect(plot.headline).toContain("Finished without errors");
-    expect(plot.detail).toContain("slow");
+    expect(plot.detail).toContain("slow in blocks-iam");
     expect(getSlowestStep(flow)?.operationName).toBe("slow");
   });
 
@@ -146,11 +151,86 @@ describe("trace story helpers", () => {
 
   it("reads a step's logs from the service that ran it, not from the database", () => {
     const flow = buildTraceFlow(failing());
-    expect(logServiceOf(flow.steps[3])).toBe("inventory-worker");
+    expect(logServiceOf(flow.steps[3])).toBe(WORKER);
   });
 
   it("pluralises counts", () => {
     expect(plural(1, "step")).toBe("1 step");
     expect(plural(3, "step")).toBe("3 steps");
+  });
+
+  it("places a part of the trace on its own axis", () => {
+    const flow = buildTraceFlow(failing());
+    const parents = getParentIndexes(flow.steps);
+    const { originMs, totalMs, timings } = buildTimeline(flow, parents, [3]);
+    expect(originMs).toBe(Date.parse(at(30)));
+    expect(totalMs).toBe(60);
+    expect(timings).toEqual([
+      { offsetPercent: 0, widthPercent: 100, untimed: false, skewed: false },
+    ]);
+    expect(getTraceOriginMs(flow)).toBe(Date.parse(at(0)));
+    expect(getTraceOriginMs(buildTraceFlow(span({ startTime: "" })))).toBe(0);
+  });
+
+  it("splits the story by service and marks failures up the chain", () => {
+    const flow = buildTraceFlow(failing());
+    const { levels, levelOf, opens, services } = buildServiceLevels(
+      flow,
+      getParentIndexes(flow.steps),
+    );
+    expect(levels.map((l) => [l.service, l.steps, l.parentLevel, l.enteredFrom])).toEqual([
+      [IAM, [0, 1, 2], -1, -1],
+      [WORKER, [3], 0, 2],
+    ]);
+    expect(levelOf).toEqual([0, 0, 0, 1]);
+    expect(opens.get(2)).toEqual([1]);
+    expect(levels.map((l) => [l.hasError, l.totalSteps])).toEqual([
+      [true, 4],
+      [true, 1],
+    ]);
+    expect(services).toEqual([
+      { service: IAM, steps: 3, hasError: true, eventOnly: false, firstLevel: 0 },
+      { service: WORKER, steps: 1, hasError: true, eventOnly: false, firstLevel: 1 },
+    ]);
+    expect(getLevelPath(levels, 1).map((l) => l.id)).toEqual([0, 1]);
+  });
+
+  it("gives an event its delay and keeps unnamed steps with their caller", () => {
+    const messaging = { "messaging.system": "rabbitmq", "messaging.destination.name": "jobs" };
+    const flow = buildTraceFlow(
+      span({
+        kind: "Server",
+        subEntries: [
+          span({ serviceName: "", operationName: "unnamed", startTime: at(5), duration: 1 }),
+          span({
+            kind: "Producer",
+            startTime: at(10),
+            duration: 2,
+            attributes: messaging,
+            subEntries: [
+              span({
+                serviceName: "worker",
+                kind: "Consumer",
+                startTime: at(910),
+                attributes: messaging,
+              }),
+              span({
+                serviceName: "worker",
+                kind: "Consumer",
+                startTime: "",
+                attributes: messaging,
+              }),
+            ],
+          }),
+        ],
+      }),
+    );
+    const { levels, services } = buildServiceLevels(flow, getParentIndexes(flow.steps));
+    expect(levels[0].steps).toEqual([0, 1, 2]);
+    expect(levels.slice(1).map((l) => [l.isEvent, l.delayMs])).toEqual([
+      [true, 900],
+      [true, null],
+    ]);
+    expect(services[1]).toMatchObject({ service: "worker", steps: 2, eventOnly: true });
   });
 });

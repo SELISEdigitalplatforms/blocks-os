@@ -1,6 +1,6 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TraceTree } from "@blocks-lmt/models/trace.model";
 
 const h = vi.hoisted(() => ({
@@ -21,13 +21,11 @@ vi.mock("@blocks-lmt/hooks/use-log", () => ({
 import { timelineContext } from "../trace-details";
 import { TraceStoryView } from "./trace-story";
 import { LOG_PAGE_SIZE } from "./trace-story-logs";
-import { PLAY_STEP_MS } from "./trace-story";
 
-const PREVIOUS = "Previous step";
-const PLAY = "Play story";
-const FIRST_OF_THREE = "Step 1 / 3";
-const PINNED = "#3 Collection: Users";
-const WHOLE_TRACE = "Whole trace";
+const IAM = "blocks-iam";
+const UDS = "blocks-uds";
+const MAIL = "mail-svc";
+const ALL_OF_IAM = `All of ${IAM}`;
 let seq = 0;
 const at = (ms: number) => new Date(Date.UTC(2024, 0, 1, 10, 0, 0, ms)).toISOString();
 const span = (overrides: Partial<TraceTree> = {}): TraceTree => {
@@ -48,7 +46,7 @@ const span = (overrides: Partial<TraceTree> = {}): TraceTree => {
     status: "Ok",
     statusDescription: "",
     baggage: { TenantId: "tenant-123456789", IsFromCloud: "false" },
-    serviceName: "blocks-iam",
+    serviceName: IAM,
     entryPoint: { method: "POST", actionName: "/oidc/token" },
     issues: [],
     tags: { ecosystem: "", habitat: "", uriClient: "" },
@@ -121,10 +119,11 @@ const renderView = (
   return { ...utils, setSelectedTrace };
 };
 
-// The log sheet is modal, so rows behind it are hidden from the accessibility tree.
-const row = (name: RegExp) => screen.getByRole("button", { name, hidden: true });
+const row = (name: RegExp) => screen.getByRole("button", { name });
 const isSelected = (name: RegExp) => row(name).getAttribute("aria-pressed") === "true";
-const detail = () => within(screen.getByRole("complementary", { name: "Selected step" }));
+const detail = () => within(screen.getByRole("region", { name: "Selected step" }));
+const logs = (service = IAM) => within(screen.getByRole("region", { name: `Logs of ${service}` }));
+const servicePath = () => within(screen.getByRole("navigation", { name: "Service path" }));
 
 describe("TraceStoryView", () => {
   beforeEach(() => {
@@ -132,10 +131,6 @@ describe("TraceStoryView", () => {
     h.normalLogs.mockReturnValue(logsResult());
     h.restoredLogs.mockReturnValue(logsResult());
   });
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
   it("shows a placeholder while loading", () => {
     const { container } = renderView(null, { isLoading: true });
     expect(container.querySelector(".animate-pulse")).toBeTruthy();
@@ -145,13 +140,16 @@ describe("TraceStoryView", () => {
     renderView(failingTrace());
     expect(screen.getAllByText("/oidc/token").length).toBeGreaterThan(0);
     expect(screen.getAllByText("500").length).toBeGreaterThan(0);
-    expect(screen.getByText("It broke at step 3.")).toBeTruthy();
+    expect(screen.getByText("It broke in blocks-iam.")).toBeTruthy();
     expect(screen.getAllByText(/E11000 duplicate key/).length).toBeGreaterThan(0);
     expect(row(/^Step 1: The request arrives/)).toBeTruthy();
     expect(row(/^Step 2: Checking the cache/)).toBeTruthy();
     expect(row(/^Step 3: This is where it failed/)).toBeTruthy();
     expect(screen.queryByRole("tab", { name: /Waterfall|Story/ })).toBeNull();
     expect(screen.queryByText(/3D/)).toBeNull();
+    expect(screen.queryByRole("button", { name: /Play story|Previous step|Next step/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Pin / })).toBeNull();
+    expect(screen.queryByText(/tenant|Trace ID/i)).toBeNull();
   });
 
   it("opens on the step where the error started and keeps the span panel in sync", async () => {
@@ -168,7 +166,7 @@ describe("TraceStoryView", () => {
   it("links a propagated failure to the step that caused it", async () => {
     renderView(failingTrace());
     await userEvent.click(row(/^Step 1:/));
-    await userEvent.click(detail().getByRole("button", { name: /Failed because of step 3/ }));
+    await userEvent.click(detail().getByRole("button", { name: /Show where the error started/ }));
     expect(isSelected(/^Step 3:/)).toBe(true);
   });
 
@@ -181,48 +179,12 @@ describe("TraceStoryView", () => {
 
   it("filters to the path that leads to the error and back", async () => {
     renderView(failingTrace());
-    await userEvent.click(screen.getByRole("button", { name: "Show only the path to the error" }));
+    await userEvent.click(screen.getByRole("button", { name: "Only the path to the error" }));
     expect(screen.queryByRole("button", { name: /^Step 2:/ })).toBeNull();
-    expect(screen.getByText("Step 2 / 2")).toBeTruthy();
+    // Rows keep their numbers in the service while others are hidden.
+    expect(row(/^Step 3:/)).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "Show all steps" }));
     expect(row(/^Step 2:/)).toBeTruthy();
-  });
-
-  it("steps through the story and plays it to the end", () => {
-    vi.useFakeTimers();
-    renderView(failingTrace());
-    act(() => screen.getByRole("button", { name: PREVIOUS }).click());
-    act(() => screen.getByRole("button", { name: PREVIOUS }).click());
-    expect(screen.getByText(FIRST_OF_THREE)).toBeTruthy();
-    expect((screen.getByRole("button", { name: PREVIOUS }) as HTMLButtonElement).disabled).toBe(
-      true,
-    );
-    act(() => screen.getByRole("button", { name: PLAY }).click());
-    act(() => vi.advanceTimersByTime(PLAY_STEP_MS));
-    expect(screen.getByText("Step 2 / 3")).toBeTruthy();
-    act(() => vi.advanceTimersByTime(PLAY_STEP_MS));
-    expect(screen.getByText("Step 3 / 3")).toBeTruthy();
-    act(() => vi.advanceTimersByTime(PLAY_STEP_MS));
-    expect(screen.getByRole("button", { name: PLAY })).toBeTruthy();
-    // Playing again from the last step starts over.
-    act(() => screen.getByRole("button", { name: PLAY }).click());
-    expect(screen.getByText(FIRST_OF_THREE)).toBeTruthy();
-    act(() => screen.getByRole("button", { name: "Pause story" }).click());
-    act(() => vi.advanceTimersByTime(PLAY_STEP_MS * 2));
-    expect(screen.getByText(FIRST_OF_THREE)).toBeTruthy();
-  });
-
-  it("pins facts so they stay visible on other steps, and unpins them", async () => {
-    renderView(failingTrace());
-    await userEvent.click(detail().getByRole("button", { name: "Pin Collection" }));
-    const tray = within(screen.getByRole("region", { name: "Pinned facts" }));
-    expect(tray.getByText(PINNED)).toBeTruthy();
-    await userEvent.click(row(/^Step 1:/));
-    expect(tray.getByText(PINNED)).toBeTruthy();
-    await userEvent.click(tray.getByText(PINNED));
-    expect(isSelected(/^Step 3:/)).toBe(true);
-    await userEvent.click(detail().getByRole("button", { name: "Unpin Collection" }));
-    expect(tray.queryByText(PINNED)).toBeNull();
   });
 
   it("does not invent a cache hit or miss when it was not captured", async () => {
@@ -248,6 +210,120 @@ describe("TraceStoryView", () => {
   });
 });
 
+const multiServiceTrace = () =>
+  span({
+    kind: "Server",
+    operationName: "POST /oidc/token",
+    duration: 400,
+    attributes: { "response.status.code": 500 },
+    status: "Unset",
+    subEntries: [
+      span({
+        operationName: "GET /uds/profile",
+        kind: "Client",
+        startTime: at(10),
+        duration: 90,
+        subEntries: [
+          span({
+            serviceName: UDS,
+            kind: "Server",
+            operationName: "GET /uds/profile",
+            startTime: at(12),
+            duration: 80,
+            subEntries: [
+              span({
+                serviceName: UDS,
+                operationName: "MongoDb::find",
+                kind: "Client",
+                startTime: at(20),
+                duration: 30,
+              }),
+            ],
+          }),
+        ],
+      }),
+      span({
+        operationName: "publish iam.login",
+        kind: "Producer",
+        startTime: at(120),
+        duration: 4,
+        attributes: { "messaging.system": "rabbitmq", "messaging.destination.name": "iam.login" },
+        subEntries: [
+          span({
+            serviceName: MAIL,
+            kind: "Consumer",
+            operationName: "consume iam.login",
+            startTime: at(2520),
+            duration: 60,
+            status: "Error",
+            statusDescription: "SMTP refused",
+            attributes: {
+              "messaging.system": "rabbitmq",
+              "messaging.destination.name": "iam.login",
+            },
+          }),
+        ],
+      }),
+    ],
+  });
+
+describe("TraceStoryView services", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    h.normalLogs.mockReturnValue(logsResult());
+    h.restoredLogs.mockReturnValue(logsResult());
+  });
+
+  it("shows one service at a time and lists every service of the trace", () => {
+    renderView(multiServiceTrace());
+    const services = within(screen.getByRole("navigation", { name: "Services" }));
+    expect(services.getByRole("button", { name: /blocks-iam/ })).toBeTruthy();
+    expect(services.getByRole("button", { name: /blocks-uds/ })).toBeTruthy();
+    expect(services.getByRole("button", { name: /mail-svc.*event/ })).toBeTruthy();
+    // The error is in mail-svc, so the story opens there.
+    expect(servicePath().getByText("mail-svc (event)")).toBeTruthy();
+    expect(screen.getByText(/This event ran 2\.40 s after blocks-iam published it/)).toBeTruthy();
+  });
+
+  it("opens a called service in place of the list and goes back up", async () => {
+    renderView(multiServiceTrace());
+    await userEvent.click(servicePath().getByRole("button", { name: IAM }));
+    expect(screen.queryByRole("button", { name: /MongoDb|Looking up the data/ })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: /Open blocks-uds · 2 steps/ }));
+    expect(servicePath().getByText(UDS)).toBeTruthy();
+    expect(row(/^Step 2: Looking up the data/)).toBeTruthy();
+    expect(logs(UDS).getByRole("button", { name: "All of blocks-uds" })).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Back to the calling service" }));
+    expect(servicePath().getByText(IAM)).toBeTruthy();
+    // Coming back up selects the step that led down.
+    expect(isSelected(/^Step 2:/)).toBe(true);
+  });
+
+  it("marks an event with its delay and a failing service in red", async () => {
+    renderView(multiServiceTrace());
+    await userEvent.click(
+      within(screen.getByRole("navigation", { name: "Services" })).getByRole("button", {
+        name: /blocks-iam/,
+      }),
+    );
+    expect(screen.getByText("→ +2.40 s")).toBeTruthy();
+    const open = screen.getByRole("button", { name: /Open mail-svc · 1 step/ });
+    expect(open.className).toContain("text-error");
+    expect(open.className).toContain("border-dashed");
+    await userEvent.click(open);
+    expect(servicePath().getByText("mail-svc (event)")).toBeTruthy();
+  });
+
+  it("asks for the logs of the whole service, not the whole trace", async () => {
+    renderView(multiServiceTrace());
+    await userEvent.click(logs(MAIL).getByRole("button", { name: "All of mail-svc" }));
+    expect(h.normalLogs).toHaveBeenLastCalledWith(
+      { page: 0, pageSize: LOG_PAGE_SIZE, serviceName: MAIL, filter: { traceId: "trace-1" } },
+      { enabled: true },
+    );
+  });
+});
+
 describe("TraceStoryView logs", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -255,12 +331,9 @@ describe("TraceStoryView logs", () => {
     h.restoredLogs.mockReturnValue(logsResult());
   });
 
-  const openLogs = async () => {
-    await userEvent.click(detail().getByRole("button", { name: /^Logs/ }));
-    return within(screen.getByRole("dialog"));
-  };
+  const openLogs = async () => logs();
 
-  it("loads a step's logs only when asked, from the service that ran it", async () => {
+  it("shows a step's logs in the page, from the service that ran it", async () => {
     const trace = failingTrace();
     h.normalLogs.mockReturnValue(
       logsResult({
@@ -274,7 +347,6 @@ describe("TraceStoryView logs", () => {
       }),
     );
     renderView(trace);
-    expect(h.normalLogs).not.toHaveBeenCalled();
     const sheet = await openLogs();
     const mongo = trace.subEntries[1];
     expect(h.normalLogs).toHaveBeenCalledWith(
@@ -289,28 +361,30 @@ describe("TraceStoryView logs", () => {
     const messages = sheet.getAllByText(/Insert/).map((node) => node.textContent);
     // Oldest first, although the API answers newest first.
     expect(messages).toEqual(["Inserting", "Insert failed"]);
-    expect(sheet.getByText(/Matched by trace trace-1/)).toBeTruthy();
+    // Times count from the start of the trace.
+    expect(sheet.getByText("+30.00 ms")).toBeTruthy();
+    expect(sheet.getByText(/matched by trace trace-1/)).toBeTruthy();
   });
 
-  it("explains an empty step and offers the calling step and the whole trace", async () => {
+  it("explains an empty step and offers the calling step and the whole service", async () => {
     renderView(failingTrace());
     const sheet = await openLogs();
     expect(sheet.getByText("No logs were written during this step.")).toBeTruthy();
     expect(sheet.getByText(/This is a database call/)).toBeTruthy();
-    await userEvent.click(sheet.getByRole("button", { name: "Show logs of step 1" }));
-    expect(screen.getByRole("dialog")).toBeTruthy();
+    await userEvent.click(
+      sheet.getByRole("button", { name: "Show logs of the step that called it" }),
+    );
     expect(isSelected(/^Step 1:/)).toBe(true);
 
-    await userEvent.click(
-      within(screen.getByRole("dialog")).getByRole("button", { name: WHOLE_TRACE }),
-    );
+    await userEvent.click(logs().getByRole("button", { name: "Show all logs of blocks-iam" }));
     expect(h.normalLogs).toHaveBeenLastCalledWith(
-      expect.objectContaining({ serviceNames: ["blocks-iam"], filter: { traceId: "trace-1" } }),
+      expect.objectContaining({ serviceName: IAM, filter: { traceId: "trace-1" } }),
       { enabled: true },
     );
+    expect(logs().getByText("blocks-iam wrote no logs in this trace.")).toBeTruthy();
   });
 
-  it("links whole-trace records back to their step", async () => {
+  it("links a service's records back to their step", async () => {
     const trace = failingTrace();
     const redis = trace.subEntries[0];
     h.normalLogs.mockReturnValue(
@@ -331,20 +405,18 @@ describe("TraceStoryView logs", () => {
     );
     renderView(trace);
     const sheet = await openLogs();
-    await userEvent.click(sheet.getByRole("button", { name: WHOLE_TRACE }));
-    await userEvent.click(sheet.getByRole("button", { name: /Step 2 · Redis Get/ }));
+    await userEvent.click(sheet.getByRole("button", { name: ALL_OF_IAM }));
+    await userEvent.click(sheet.getByRole("button", { name: /Go to step: Redis Get/ }));
     expect(isSelected(/^Step 2:/)).toBe(true);
-    expect(
-      within(screen.getByRole("dialog"))
-        .getByRole("button", { name: "This step" })
-        .getAttribute("aria-pressed"),
-    ).toBe("true");
+    expect(logs().getByRole("button", { name: "This step" }).getAttribute("aria-pressed")).toBe(
+      "true",
+    );
   });
 
   it("filters to errors on the server", async () => {
     renderView(failingTrace());
     const sheet = await openLogs();
-    await userEvent.click(sheet.getByRole("button", { name: "Errors only" }));
+    await userEvent.click(sheet.getByRole("checkbox", { name: "Errors only" }));
     expect(h.normalLogs).toHaveBeenLastCalledWith(
       expect.objectContaining({ filter: expect.objectContaining({ level: "Error" }) }),
       { enabled: true },
@@ -369,7 +441,7 @@ describe("TraceStoryView logs", () => {
     const sheet = await openLogs();
     expect(sheet.getByRole("status").tagName).toBe("OUTPUT");
     h.normalLogs.mockReturnValue(logsResult({ isError: true, refetch, data: null }));
-    await userEvent.click(sheet.getByRole("button", { name: WHOLE_TRACE }));
+    await userEvent.click(sheet.getByRole("button", { name: ALL_OF_IAM }));
     expect(sheet.getByRole("alert").textContent).toContain("could not be loaded");
     await userEvent.click(sheet.getByRole("button", { name: "Try again" }));
     expect(refetch).toHaveBeenCalledTimes(1);

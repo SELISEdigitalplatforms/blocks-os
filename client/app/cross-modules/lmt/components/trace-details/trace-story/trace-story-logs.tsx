@@ -1,17 +1,12 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui-kits/sheet/sheet";
+import { cn } from "@/lib/utils";
 import { useGetLogs, useGetRestoredLogs } from "@blocks-lmt/hooks/use-log";
 import type { IGetLogsPayload, ILog } from "@blocks-lmt/models/log.model";
 import type { FlowStep } from "@blocks-lmt/utils/trace-flow.util";
 import {
+  formatDurationMs,
   getLogFormatTimestamp,
   getLogLevelBadgeVariant,
   getLogLevelLabel,
@@ -21,7 +16,7 @@ import { logServiceOf } from "./trace-story.util";
 
 export const LOG_PAGE_SIZE = 25;
 
-export type LogScope = "step" | "trace";
+export type LogScope = "step" | "service";
 
 interface LogsQuery {
   payload: IGetLogsPayload;
@@ -47,45 +42,63 @@ const emptyReason = (step: FlowStep) => {
   return `${logServiceOf(step) || "The service"} wrote nothing while this step ran.`;
 };
 
+/** "+176 ms" from the start of the trace; a record from a host whose clock runs early can
+ *  land before it. Falls back to the clock time when the timestamp cannot be read. */
+const logOffset = (timestamp: string, originMs: number) => {
+  const ms = Date.parse(timestamp);
+  if (!Number.isFinite(ms)) return getLogFormatTimestamp(timestamp);
+  const offset = ms - originMs;
+  return offset < 0 ? `−${formatDurationMs(-offset)}` : `+${formatDurationMs(offset)}`;
+};
+
 const LogRow = ({
   log,
+  originMs,
   stepOf,
   onSelectStep,
 }: {
   log: ILog;
+  originMs: number;
   stepOf?: (spanId?: string) => FlowStep | undefined;
   onSelectStep: (index: number) => void;
 }) => {
   const step = stepOf?.(log.spanId);
+  const failed = getLogLevelBadgeVariant(log.level) === "error";
   return (
-    <li className="flex flex-col gap-1.5 border-b border-border px-5 py-3">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+    <li
+      className={cn(
+        "grid grid-cols-[60px_minmax(0,1fr)] gap-x-3 border-b border-border px-5 py-3",
+        failed && "bg-error/5",
+      )}
+    >
+      <time
+        dateTime={log.timestamp}
+        title={getLogFormatTimestamp(log.timestamp)}
+        className="pt-0.5 font-mono text-[11px] tabular-nums text-low-emphasis"
+      >
+        {logOffset(log.timestamp, originMs)}
+      </time>
+      <div className="flex min-w-0 flex-col gap-1.5">
         <Badge
           variant={getLogLevelBadgeVariant(log.level)}
-          className="w-[64px] shrink-0 py-0 text-[10px] uppercase tracking-wider"
+          className="self-start py-0 text-[10px] uppercase tracking-wider"
         >
           {getLogLevelLabel(log.level)}
         </Badge>
-        <time dateTime={log.timestamp} className="text-xs tabular-nums text-medium-emphasis">
-          {getLogFormatTimestamp(log.timestamp)}
-        </time>
-        {log.serviceName ? (
-          <span className="text-xs text-low-emphasis">{log.serviceName}</span>
+        <p className="whitespace-pre-wrap wrap-break-word text-sm leading-relaxed text-high-emphasis">
+          {log.message}
+        </p>
+        <LogStackTrace exception={log.exception} />
+        {step ? (
+          <button
+            type="button"
+            className="self-start font-mono text-[11px] text-primary hover:underline"
+            onClick={() => onSelectStep(step.index)}
+          >
+            Go to step: {step.tag}
+          </button>
         ) : null}
       </div>
-      <p className="whitespace-pre-wrap wrap-break-word text-sm leading-relaxed text-high-emphasis">
-        {log.message}
-      </p>
-      <LogStackTrace exception={log.exception} />
-      {step ? (
-        <button
-          type="button"
-          className="self-start font-mono text-[11px] text-primary hover:underline"
-          onClick={() => onSelectStep(step.index)}
-        >
-          Step {step.index + 1} · {step.tag}
-        </button>
-      ) : null}
     </li>
   );
 };
@@ -93,7 +106,7 @@ const LogRow = ({
 const buildLogsPayload = (
   scope: LogScope,
   step: FlowStep,
-  serviceNames: string[],
+  service: string,
   errorsOnly: boolean,
   page: number,
 ): IGetLogsPayload => {
@@ -109,15 +122,20 @@ const buildLogsPayload = (
   return {
     page,
     pageSize: LOG_PAGE_SIZE,
-    serviceName: serviceNames[0] ?? logServiceOf(step),
-    serviceNames,
+    serviceName: service,
     filter: { traceId: span.traceId, ...level },
   };
 };
 
+const emptyTitle = (scope: LogScope, service: string) =>
+  scope === "step"
+    ? "No logs were written during this step."
+    : `${service} wrote no logs in this trace.`;
+
 const EmptyLogs = ({
   scope,
   step,
+  service,
   parent,
   errorsOnly,
   onSelectStep,
@@ -125,6 +143,7 @@ const EmptyLogs = ({
 }: {
   scope: LogScope;
   step: FlowStep;
+  service: string;
   parent?: FlowStep;
   errorsOnly: boolean;
   onSelectStep: (index: number) => void;
@@ -134,17 +153,17 @@ const EmptyLogs = ({
   return (
     <div className="flex flex-col items-start gap-3 px-5 py-6 text-sm">
       <p className="font-semibold text-high-emphasis">
-        {errorsOnly ? "No errors were logged here." : "No logs were written during this step."}
+        {errorsOnly ? "No errors were logged here." : emptyTitle(scope, service)}
       </p>
       {forStep && !errorsOnly ? <p className="text-medium-emphasis">{emptyReason(step)}</p> : null}
       {forStep && parent ? (
         <Button size="sm" type="button" onClick={() => onSelectStep(parent.index)}>
-          Show logs of step {parent.index + 1}
+          Show logs of the step that called it
         </Button>
       ) : null}
       {forStep ? (
-        <Button size="sm" variant="outline" type="button" onClick={() => onScopeChange("trace")}>
-          Show logs of the whole trace
+        <Button size="sm" variant="outline" type="button" onClick={() => onScopeChange("service")}>
+          Show all logs of {service}
         </Button>
       ) : null}
     </div>
@@ -186,8 +205,9 @@ const LogsPager = ({
 const LogsBody = ({
   scope,
   step,
+  service,
   parent,
-  serviceNames,
+  originMs,
   errorsOnly,
   requestId,
   stepOf,
@@ -196,8 +216,9 @@ const LogsBody = ({
 }: {
   scope: LogScope;
   step: FlowStep;
+  service: string;
   parent?: FlowStep;
-  serviceNames: string[];
+  originMs: number;
   errorsOnly: boolean;
   requestId?: string;
   stepOf: (spanId?: string) => FlowStep | undefined;
@@ -205,8 +226,8 @@ const LogsBody = ({
   onScopeChange: (scope: LogScope) => void;
 }) => {
   const [page, setPage] = useState(0);
-  const payload = buildLogsPayload(scope, step, serviceNames, errorsOnly, page);
-  const hasSpan = scope === "trace" || Boolean(step.span.spanId);
+  const payload = buildLogsPayload(scope, step, service, errorsOnly, page);
+  const hasSpan = scope === "service" || Boolean(step.span.spanId);
   const valid = Boolean(step.span.traceId && payload.serviceName) && hasSpan;
   const query = useTraceLogs({ payload, enabled: valid, requestId });
   // The API answers newest first; a story reads oldest first, so each page is turned around.
@@ -237,6 +258,7 @@ const LogsBody = ({
       <EmptyLogs
         scope={scope}
         step={step}
+        service={service}
         parent={parent}
         errorsOnly={errorsOnly}
         onSelectStep={onSelectStep}
@@ -250,7 +272,8 @@ const LogsBody = ({
           <LogRow
             key={`${log.timestamp}:${log.spanId ?? ""}:${page}:${index}`}
             log={log}
-            stepOf={scope === "trace" ? stepOf : undefined}
+            originMs={originMs}
+            stepOf={scope === "service" ? stepOf : undefined}
             onSelectStep={onSelectStep}
           />
         ))}
@@ -275,27 +298,31 @@ const ToggleButton = ({
     type="button"
     aria-pressed={pressed}
     onClick={onClick}
-    className={`rounded-md border px-2.5 py-1 text-xs ${pressed ? "border-primary bg-primary/10 text-high-emphasis" : "border-transparent text-medium-emphasis hover:bg-muted/50"}`}
+    className={cn(
+      "h-7 rounded-md px-3 text-xs",
+      pressed
+        ? "bg-card font-semibold text-high-emphasis shadow-sm"
+        : "font-medium text-medium-emphasis hover:text-high-emphasis",
+    )}
   >
     {children}
   </button>
 );
 
+/** The logs of the selected step, or of the whole service it ran in, inside the page. */
 export const TraceStoryLogs = ({
-  open,
-  onOpenChange,
   step,
+  service,
   parent,
-  serviceNames,
+  originMs,
   requestId,
   stepOf,
   onSelectStep,
 }: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   step: FlowStep;
+  service: string;
   parent?: FlowStep;
-  serviceNames: string[];
+  originMs: number;
   requestId?: string;
   stepOf: (spanId?: string) => FlowStep | undefined;
   onSelectStep: (index: number) => void;
@@ -306,54 +333,50 @@ export const TraceStoryLogs = ({
   const scopeLine =
     scope === "step"
       ? `trace ${span.traceId} · span ${span.spanId} · ${logServiceOf(step)}`
-      : `trace ${span.traceId} · ${serviceNames.join(", ")}`;
+      : `trace ${span.traceId} · ${service}`;
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
-        <SheetHeader className="border-b border-border px-5 py-4 pr-12 text-left">
-          <SheetTitle className="text-base">
-            {scope === "step" ? `Logs · step ${step.index + 1}` : "Logs · whole trace"}
-          </SheetTitle>
-          <SheetDescription className="break-words text-xs">
-            {scope === "step"
-              ? step.tag
-              : `Every record of this trace, from ${serviceNames.length} services`}
-          </SheetDescription>
-        </SheetHeader>
-        <div className="flex flex-wrap items-center gap-1 border-b border-border px-5 py-2">
+    <section aria-label={`Logs of ${service}`} className="flex min-h-0 flex-col">
+      <div className="flex flex-wrap items-center gap-2 border-b border-border px-5 py-2.5">
+        <fieldset className="inline-flex rounded-lg bg-muted p-0.5">
+          <legend className="sr-only">Which logs</legend>
           <ToggleButton pressed={scope === "step"} onClick={() => setScope("step")}>
             This step
           </ToggleButton>
-          <ToggleButton pressed={scope === "trace"} onClick={() => setScope("trace")}>
-            Whole trace
+          <ToggleButton pressed={scope === "service"} onClick={() => setScope("service")}>
+            All of {service}
           </ToggleButton>
-          <span className="ml-auto">
-            <ToggleButton pressed={errorsOnly} onClick={() => setErrorsOnly(!errorsOnly)}>
-              Errors only
-            </ToggleButton>
-          </span>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <LogsBody
-            key={`${scope}:${span.traceId}:${span.spanId}:${errorsOnly}:${requestId ?? ""}`}
-            scope={scope}
-            step={step}
-            parent={parent}
-            serviceNames={serviceNames}
-            errorsOnly={errorsOnly}
-            requestId={requestId}
-            stepOf={stepOf}
-            onSelectStep={(index) => {
-              setScope("step");
-              onSelectStep(index);
-            }}
-            onScopeChange={setScope}
+        </fieldset>
+        <label className="ml-auto inline-flex items-center gap-1.5 text-xs text-medium-emphasis">
+          <input
+            type="checkbox"
+            className="accent-primary"
+            checked={errorsOnly}
+            onChange={(event) => setErrorsOnly(event.target.checked)}
           />
-        </div>
-        <p className="break-all border-t border-border px-5 py-2 font-mono text-[10px] text-low-emphasis">
-          Matched by {scopeLine}
-        </p>
-      </SheetContent>
-    </Sheet>
+          <span>Errors only</span>
+        </label>
+      </div>
+      <div className="max-h-[560px] min-h-0 overflow-y-auto">
+        <LogsBody
+          key={`${scope}:${span.traceId}:${span.spanId}:${service}:${errorsOnly}:${requestId ?? ""}`}
+          scope={scope}
+          step={step}
+          service={service}
+          parent={parent}
+          originMs={originMs}
+          errorsOnly={errorsOnly}
+          requestId={requestId}
+          stepOf={stepOf}
+          onSelectStep={(index) => {
+            setScope("step");
+            onSelectStep(index);
+          }}
+          onScopeChange={setScope}
+        />
+      </div>
+      <p className="break-all border-t border-border px-5 py-2 font-mono text-[10px] text-low-emphasis">
+        Times are from the start of the trace · matched by {scopeLine}
+      </p>
+    </section>
   );
 };
