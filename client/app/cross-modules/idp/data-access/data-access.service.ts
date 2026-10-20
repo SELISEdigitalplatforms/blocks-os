@@ -1,6 +1,5 @@
 import { http } from "@/lib/http/http-client";
-import type { ICreatePolicyPayload, ICreatePolicyResponse, IDeletePolicyResponse, IGetPolicyResponse, ISetDataAccessResponse, ISetRowColumnPermissionPayload, IUpdatePolicyPayload } from "./gateway/models/data-service";
-import type { RequiredOn } from "./gateway/models/data-service";
+import type { ICreatePolicyPayload, ICreatePolicyResponse, IDeletePolicyResponse, IGetPolicyResponse, ISetDataAccessResponse, ISetRowColumnPermissionPayload, IUpdatePolicyPayload, RequiredOn } from "./gateway/models/data-service";
 import type { IFieldDefaultValue, IFieldValidationRule, IPlatformSchemaRules, ISchemaFieldValidation } from "./rules/rules.types";
 
 export const PLATFORM_SERVICES = ["IAM", "OS", "Logic", "Release", "Monitor"] as const;
