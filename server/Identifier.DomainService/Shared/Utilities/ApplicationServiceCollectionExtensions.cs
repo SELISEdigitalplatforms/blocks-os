@@ -11,6 +11,8 @@ using DomainService.ManagedService.Validator;
 using DomainService.Migration;
 using DomainService.Migration.Services;
 using DomainService.People;
+using DomainService.Preference;
+using DomainService.Preference.Services;
 using DomainService.Projects;
 using DomainService.Shared.Services;
 using DomainService.Shared.Utilities;
@@ -55,6 +57,10 @@ namespace DomainService.Shared
    // People
             services.AddSingleton<IPeopleService, PeopleService>();
             services.AddSingleton<IPeopleRepository, PeopleRepository>();
+
+            // User preferences (the caller's own settings, in the root key-value store)
+            services.AddTransient<IValidator<SaveUserPreferenceRequest>, SaveUserPreferenceRequestValidator>();
+            services.AddSingleton<IUserPreferenceService, UserPreferenceService>();
 
             // Project access (owner / contributor grants)
             // Scoped, not singleton: it caches the per-request access resolution through
