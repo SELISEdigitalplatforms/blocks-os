@@ -247,6 +247,9 @@
         <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.FieldDefault(BlocksOs.Api.Controllers.SetPlatformFieldDefaultRequest,System.Threading.CancellationToken)">
             <summary>Sets or (null) clears the field's default value. Only properties the Genesis allow-list opens.</summary>
         </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.PlanValidationWritesAsync(Blocks.Genesis.Entities.Data.SchemaDefinition,Blocks.Genesis.DataAccess.Rules.SystemSchemaRuleSet,BlocksOs.Api.Controllers.BulkPlatformValidationRequest,System.Collections.Generic.Dictionary{System.String,System.String},System.Collections.Generic.List{BlocksOs.Api.Controllers.PlatformDataAccessController.ValidationWrite},System.Threading.CancellationToken)">
+            <summary>One schema's share of a bulk validation: what each picked property would get, or why it can't.</summary>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.BulkFieldDefault(BlocksOs.Api.Controllers.BulkPlatformFieldDefaultRequest,System.Threading.CancellationToken)">
             <summary>
             Sets or (null) clears the same default value on several default properties of several system schemas.

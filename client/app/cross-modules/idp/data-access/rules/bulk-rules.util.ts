@@ -53,7 +53,10 @@ export type BulkShape = { type: string; isArray: boolean; enumValues?: string[] 
  * depend on the type; a default also on whether it is a list (Language is one text, Tags and Read.Roles lists).
  */
 export function bulkShape(schemas: PlatformSchema[], paths: string[], panel: BulkPanel): BulkShape | { problem: string } {
-  const fields = paths.map((path) => schemas.map((s) => fieldAt(s.fields, path)).find(Boolean)).filter((f): f is PlatformSchemaField => Boolean(f));
+  const fields = paths.flatMap((path) => {
+    const field = schemas.map((s) => fieldAt(s.fields, path)).find(Boolean);
+    return field ? [field] : [];
+  });
   if (fields.length === 0) return { problem: "Pick the properties to change" };
   const [first] = fields;
   const differs = fields.some((f) => f.type !== first.type || (panel === "default" && f.isArray !== first.isArray));

@@ -217,30 +217,13 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
         NormaliseRules(request.Validations);
 
         var errors = new Dictionary<string, string>();
-        var writes = new List<(string SchemaId, string FieldName, DataValidation? Existing, List<ValidationRule> Rules)>();
+        var writes = new List<ValidationWrite>();
         foreach (var schemaId in request.SchemaIds.Distinct())
         {
-            if (await LoadRulesSchemaAsync(schemaId, cancellationToken) is not { } loaded)
-            {
+            if (await LoadRulesSchemaAsync(schemaId, cancellationToken) is { } loaded)
+                await PlanValidationWritesAsync(loaded.Schema, loaded.Rules, request, errors, writes, cancellationToken);
+            else
                 errors[schemaId] = "This schema doesn't take validation rules";
-                continue;
-            }
-            var (schema, rules) = loaded;
-            var stored = await ValidationCollection.Find(x => x.SchemaId == schema.ItemId && !x.IsDeleted).ToListAsync(cancellationToken);
-            foreach (var fieldName in request.FieldNames.Distinct())
-            {
-                var key = $"{schema.SchemaName}.{fieldName}";
-                var field = schema.Fields.FirstOrDefault(f => f.Name == fieldName);
-                if (field is null || rules.ValidationFor(field.Name) == RuleAccess.Blocked)
-                {
-                    errors[key] = $"Validation rules can't be set on {key}";
-                    continue;
-                }
-                var existing = stored.FirstOrDefault(x => x.FieldName == field.Name);
-                List<ValidationRule> next = request.Replace == true || existing is null ? [.. request.Validations] : [.. existing.Validations, .. request.Validations];
-                if (await CheckRulesAsync(schema, field, next, cancellationToken) is { } problem) errors[key] = problem;
-                else writes.Add((schema.ItemId, field.Name, existing, next));
-            }
         }
         if (errors.Count > 0) return BadRequest(new BaseResponse { IsSuccess = false, Errors = errors });
 
@@ -266,6 +249,29 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
         field.DefaultValue = defaultValue;
         await SchemaCollection.ReplaceOneAsync(x => x.ItemId == schema.ItemId, schema, cancellationToken: cancellationToken);
         return Ok(new { isSuccess = true, data = new { acknowledged = true, itemId = schema.ItemId } });
+    }
+
+    private sealed record ValidationWrite(string SchemaId, string FieldName, DataValidation? Existing, List<ValidationRule> Rules);
+
+    /// <summary>One schema's share of a bulk validation: what each picked property would get, or why it can't.</summary>
+    private async Task PlanValidationWritesAsync(SchemaDefinition schema, SystemSchemaRuleSet rules, BulkPlatformValidationRequest request,
+        Dictionary<string, string> errors, List<ValidationWrite> writes, CancellationToken cancellationToken)
+    {
+        var stored = await ValidationCollection.Find(x => x.SchemaId == schema.ItemId && !x.IsDeleted).ToListAsync(cancellationToken);
+        foreach (var fieldName in request.FieldNames.Distinct())
+        {
+            var key = $"{schema.SchemaName}.{fieldName}";
+            var field = schema.Fields.FirstOrDefault(f => f.Name == fieldName);
+            if (field is null || rules.ValidationFor(field.Name) == RuleAccess.Blocked)
+            {
+                errors[key] = $"Validation rules can't be set on {key}";
+                continue;
+            }
+            var existing = stored.FirstOrDefault(x => x.FieldName == field.Name);
+            List<ValidationRule> next = request.Replace == true || existing is null ? [.. request.Validations] : [.. existing.Validations, .. request.Validations];
+            if (await CheckRulesAsync(schema, field, next, cancellationToken) is { } problem) errors[key] = problem;
+            else writes.Add(new ValidationWrite(schema.ItemId, field.Name, existing, next));
+        }
     }
 
     /// <summary>
