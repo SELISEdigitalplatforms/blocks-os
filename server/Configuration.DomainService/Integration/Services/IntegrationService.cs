@@ -1,8 +1,8 @@
 using Blocks.Genesis;
-using Configuration.DomainService.Integration.Entities;
 using Configuration.DomainService.Integration.RequestModel;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
+using Blocks.Genesis.Entities.Os;
 
 namespace Configuration.DomainService.Integration.Services
 {

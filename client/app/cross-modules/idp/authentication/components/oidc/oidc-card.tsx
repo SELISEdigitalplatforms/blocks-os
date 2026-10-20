@@ -145,6 +145,10 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
         isDeviceFlowClient: item.isDeviceFlowClient ?? false,
         allowedResponseTypes: item.isDeviceFlowClient ? [] : responseTypes,
         allowedServiceAccessResources: item.allowedServiceAccessResources,
+        // Resend the stored client type and token delivery so a status toggle never turns a
+        // public (for example Mobile app) client confidential or back to cookie delivery.
+        clientType: item.clientType,
+        useTokensCookie: item.useTokensCookie,
       };
       const res = await saveOidc(payload);
       if (!res.isSuccess) return showErrorToast({ errors: res.error });

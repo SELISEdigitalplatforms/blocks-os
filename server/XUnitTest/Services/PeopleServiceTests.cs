@@ -11,6 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using XUnitTest.TestSupport;
+using Blocks.Genesis.Entities.Iam;
 
 namespace XUnitTest.Services
 {
@@ -310,6 +311,29 @@ namespace XUnitTest.Services
 
             result.Should().BeTrue();
             _messageClient.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<DomainService.Dtos.SendMail>>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task SendProjectInvitationToNewUser_LegacyEventType_StillSendsWithCurrentPurpose()
+        {
+            using var _ = new BlocksTestContext();
+            _peopleRepo.Setup(r => r.GetProjectByIdAsync("t1")).ReturnsAsync(NewTenant());
+            _peopleRepo.Setup(r => r.GetUserByIdAsync("u1")).ReturnsAsync(new User { ItemId = "u1", Email = "u@x.com" });
+            _peopleRepo.Setup(r => r.InsertPeoplesAsync(It.IsAny<List<ProjectPeople>>())).ReturnsAsync(true);
+            _cache.Setup(c => c.AddStringValueAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<long>())).ReturnsAsync(true);
+
+            // A reply IAM queued before the purpose rename carries the old snake_case value.
+            var result = await Service().SendProjectInvitationToNewUser(new CreateUserByEmailPostEvent
+            {
+                UserId = "u1",
+                TenantId = "t1",
+                Key = "k1",
+                EventType = "project_invitation"
+            });
+
+            result.Should().BeTrue();
+            _messageClient.Verify(m => m.SendToConsumerAsync(It.Is<ConsumerMessage<DomainService.Dtos.SendMail>>(
+                c => c.Payload.Purpose == "ProjectInvitation")), Times.Once);
         }
 
         [Fact]

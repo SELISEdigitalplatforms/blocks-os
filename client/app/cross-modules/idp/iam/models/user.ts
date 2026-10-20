@@ -233,12 +233,6 @@ export interface IGetHistoriesPayload {
   projectKey: string;
 }
 
-export interface IGeneratePATPayload {
-  note?: string;
-  codeTtlInMinute: number;
-  clientId: string;
-}
-
 export interface IGetUserRolesPayload {
   userId: string;
 }
@@ -332,21 +326,6 @@ export interface IDeviceSessionResponse {
   totalCount: number;
   data: IDeviceSession[];
   errors: unknown;
-}
-
-export interface IPATResponse {
-  note: string;
-  itemId: string;
-  createdDate: Date;
-  expiryDate: Date;
-  createdBy: string;
-  language: string;
-  lastUpdatedBy: string;
-  organizationIds: string[];
-  tags: string[];
-  code: string;
-  userId: string;
-  clientId: string;
 }
 
 export const status = [

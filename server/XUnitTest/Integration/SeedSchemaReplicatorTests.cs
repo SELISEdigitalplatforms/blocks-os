@@ -120,5 +120,23 @@ namespace XUnitTest.Integration
             result.CollectionsCreated.Should().NotContain("IntegrationTemplates");
             (await (await target.ListCollectionNamesAsync()).ToListAsync()).Should().NotContain("IntegrationTemplates");
         }
+
+        [Theory]
+        [InlineData("TenantConfigurations")]
+        [InlineData("MfaConfigurations")]
+        [InlineData("IdpAuthorizationCodes")]
+        public async Task ApplyAsync_SkipsRetiredCollections(string collection)
+        {
+            var (seed, target) = NewDbs();
+            await seed.GetCollection<BsonDocument>(collection).InsertOneAsync(new BsonDocument("_id", "r1"));
+            await seed.GetCollection<BsonDocument>(collection).Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(
+                new BsonDocument("ItemId", 1), new CreateIndexOptions { Name = "blk_retired_itemid" }));
+
+            var result = await SeedSchemaReplicator.ApplyAsync(seed, target);
+
+            result.CollectionsCreated.Should().NotContain(collection);
+            result.IndexesCreated.Should().NotContain(i => i.StartsWith(collection + ".", StringComparison.Ordinal));
+            (await (await target.ListCollectionNamesAsync()).ToListAsync()).Should().NotContain(collection);
+        }
     }
 }

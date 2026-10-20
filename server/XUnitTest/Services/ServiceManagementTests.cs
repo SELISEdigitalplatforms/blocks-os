@@ -197,7 +197,7 @@ namespace XUnitTest.Services
                 {
                     ServiceId = "s1",
                     // Neither the current salt nor the fallback key opens this (rotated salt).
-                    ServiceBusConnectionString = EncryptionHelper.Encrypt("amqp://logs", "retired-salt")
+                    ServiceBusConnectionString = UnreadableCipher("amqp://logs", "salt-x", "LMT")
                 },
                 new()
                 {
@@ -214,6 +214,111 @@ namespace XUnitTest.Services
             var list = response.Data.ToList();
             list[0].ServiceBusConnectionString.Should().BeEmpty();
             list[1].ServiceBusConnectionString.Should().Be("amqp://traces");
+        }
+
+        // A wrong key can, by chance, yield valid padding and so "decrypt" to junk. Pick a cipher that
+        // none of the given salts opens, so the test is deterministic.
+        private static string UnreadableCipher(string plain, params string[] salts)
+        {
+            while (true)
+            {
+                var cipher = EncryptionHelper.Encrypt(plain, "retired-salt");
+                if (salts.All(salt => !EncryptionHelper.TryDecrypt(cipher, salt, out _))) return cipher;
+            }
+        }
+
+        private ServiceManagement ServiceWithRootTenant(Microsoft.Extensions.Logging.ILogger<ServiceManagement> logger) => new(
+            logger,
+            _repo.Object,
+            new RegisterServiceRequestValidator(),
+            _blocksSecret.Object,
+            _cache.Object,
+            _tenants.Object,
+            new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["RootTenantId"] = "root-t" }).Build());
+
+        [Fact]
+        public async Task GetAllServicesAsync_RowsOfBothSalts_AllDecrypt_AndNothingIsLogged()
+        {
+            // After the root move one TenantId has rows of the project salt and of the root (console) salt.
+            using var _ = new BlocksTestContext(tenantId: "project-p");
+            _tenants.Setup(t => t.GetTenantByID("project-p")).Returns(TenantWithSalt("project-salt"));
+            _tenants.Setup(t => t.GetTenantByID("root-t")).Returns(TenantWithSalt("root-salt"));
+
+            var services = new List<BlocksManagedService>
+            {
+                new() { ServiceId = "s1", ServiceBusConnectionString = EncryptionHelper.Encrypt("amqp://project", "project-salt") },
+                new() { ServiceId = "s2", ServiceBusConnectionString = EncryptionHelper.Encrypt("amqp://console", "root-salt") }
+            }.AsQueryable();
+            _repo.Setup(r => r.GetAllServicesAsync(It.IsAny<GetAllServiceRequest>())).ReturnsAsync((services, 2L));
+
+            var logger = new RecordingLogger<ServiceManagement>();
+            var response = await ServiceWithRootTenant(logger).GetAllServicesAsync(new GetAllServiceRequest());
+
+            var list = response.Data.ToList();
+            list[0].ServiceBusConnectionString.Should().Be("amqp://project");
+            list[1].ServiceBusConnectionString.Should().Be("amqp://console");
+            logger.Entries.Should().NotContain(e => e.Level == Microsoft.Extensions.Logging.LogLevel.Error);
+        }
+
+        [Fact]
+        public async Task GetAllServicesAsync_WhenBothSaltsFail_BlanksAndLogsTheError()
+        {
+            using var _ = new BlocksTestContext(tenantId: "project-p");
+            _tenants.Setup(t => t.GetTenantByID("project-p")).Returns(TenantWithSalt("project-salt"));
+            _tenants.Setup(t => t.GetTenantByID("root-t")).Returns(TenantWithSalt("root-salt"));
+
+            var services = new List<BlocksManagedService>
+            {
+                new() { ServiceId = "s1", ServiceBusConnectionString = UnreadableCipher("amqp://x", "project-salt", "root-salt", "LMT") }
+            }.AsQueryable();
+            _repo.Setup(r => r.GetAllServicesAsync(It.IsAny<GetAllServiceRequest>())).ReturnsAsync((services, 1L));
+
+            var logger = new RecordingLogger<ServiceManagement>();
+            var response = await ServiceWithRootTenant(logger).GetAllServicesAsync(new GetAllServiceRequest());
+
+            response.Data.Single().ServiceBusConnectionString.Should().BeEmpty();
+            logger.Entries.Count(e => e.Level == Microsoft.Extensions.Logging.LogLevel.Error).Should().Be(1);
+        }
+
+        [Fact]
+        public async Task GetAllServicesAsync_WithoutRootTenantConfig_BehavesAsBefore()
+        {
+            using var _ = new BlocksTestContext(tenantId: "project-p");
+            _tenants.Setup(t => t.GetTenantByID("project-p")).Returns(TenantWithSalt("project-salt"));
+
+            var services = new List<BlocksManagedService>
+            {
+                new() { ServiceId = "s1", ServiceBusConnectionString = EncryptionHelper.Encrypt("amqp://console", "root-salt") }
+            }.AsQueryable();
+            _repo.Setup(r => r.GetAllServicesAsync(It.IsAny<GetAllServiceRequest>())).ReturnsAsync((services, 1L));
+
+            var response = await Service().GetAllServicesAsync(new GetAllServiceRequest());
+
+            response.Data.Single().ServiceBusConnectionString.Should().BeEmpty();
+        }
+
+        [Fact]
+        public async Task GetAllServicesAsync_WhenImpersonating_ProjectSaltRowsAlsoDecrypt()
+        {
+            // Console view: step 1 = console (original tenant) salt, step 2 = the project's own salt.
+            using var _ = new BlocksTestContext(tenantId: "project-p", impersonated: true, originalTenantId: "root-t");
+            _tenants.Setup(t => t.GetTenantByID("root-t")).Returns(TenantWithSalt("root-salt"));
+            _tenants.Setup(t => t.GetTenantByID("project-p")).Returns(TenantWithSalt("project-salt"));
+
+            var services = new List<BlocksManagedService>
+            {
+                new() { ServiceId = "s1", ServiceBusConnectionString = EncryptionHelper.Encrypt("amqp://console", "root-salt") },
+                new() { ServiceId = "s2", ServiceBusConnectionString = EncryptionHelper.Encrypt("amqp://project", "project-salt") }
+            }.AsQueryable();
+            _repo.Setup(r => r.GetAllServicesAsync(It.IsAny<GetAllServiceRequest>())).ReturnsAsync((services, 2L));
+
+            var logger = new RecordingLogger<ServiceManagement>();
+            var response = await ServiceWithRootTenant(logger).GetAllServicesAsync(new GetAllServiceRequest());
+
+            var list = response.Data.ToList();
+            list[0].ServiceBusConnectionString.Should().Be("amqp://console");
+            list[1].ServiceBusConnectionString.Should().Be("amqp://project");
+            logger.Entries.Should().NotContain(e => e.Level == Microsoft.Extensions.Logging.LogLevel.Error);
         }
     }
 }

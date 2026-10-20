@@ -1,9 +1,9 @@
 using Blocks.Genesis;
-using Configuration.DomainService.Notification.Entities;
 using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Notification.ResponseModel;
 using Configuration.DomainService.Shared.Services;
 using Microsoft.AspNetCore.Mvc;
+using Blocks.Genesis.Entities.Os;
 
 namespace BlocksOs.Api.Controllers
 {

@@ -1,5 +1,5 @@
 import path from "path";
-import { type Locator, type Page, expect } from "@playwright/test";
+import { type Locator, type Page, type Request, type Route, expect } from "@playwright/test";
 import { openOidcTemplate, openSecretManagement } from "../../support/os-helpers";
 
 const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -119,13 +119,16 @@ export async function findOidcClientRowFlow(page: Page, clientName: string): Pro
   await waitForOidcListSettledFlow(page);
   const clientRow = page.getByRole("row").filter({ hasText: clientName });
   await expect(clientRow).toBeVisible({ timeout: 15000 });
-  const alreadyExpanded = await page.getByText("Client Id").isVisible({ timeout: 3000 });
+  // The details panel is the row right after the client's row. Scope to it: other clients in the
+  // shared project may be expanded too, so a page-wide "Client Id" can match more than once.
+  const details = clientRow.locator("xpath=following-sibling::tr[1]");
+  const alreadyExpanded = await details.getByText("Client Id").isVisible({ timeout: 3000 });
   if (!alreadyExpanded) {
     await clientRow.click();
   }
-  await expect(page.getByText("Client Id")).toBeVisible({ timeout: 10000 });
-  await expect(page.getByText("Redirect URI(s)")).toBeVisible();
-  await expect(page.getByText("Allowed Response Types")).toBeVisible();
+  await expect(details.getByText("Client Id")).toBeVisible({ timeout: 10000 });
+  await expect(details.getByText("Redirect URI(s)")).toBeVisible();
+  await expect(details.getByText("Allowed Response Types")).toBeVisible();
   return clientRow;
 }
 
@@ -453,7 +456,7 @@ export async function deleteOidcClientFlow(page: Page, clientRow: Locator, clien
   await deleteButton.click();
   await expect(page.getByRole("heading", { name: "Delete OIDC Client" })).toBeVisible();
   await expect(
-    page.getByText(`delete.*${escapeRegex(clientName)}`, { exact: false }),
+    page.getByText(new RegExp(`delete.*${escapeRegex(clientName)}`, "i")),
   ).toBeVisible();
   await page.getByRole("button", { name: "Delete", exact: true }).last().click();
   if (
@@ -461,4 +464,261 @@ export async function deleteOidcClientFlow(page: Page, clientRow: Locator, clien
   ) {
     await expect(page.getByText("OIDC credential deleted successfully", { exact: true })).toBeVisible();
   }
+}
+
+// ─── Application type (Web / Mobile app, #680) ──────────────────────────────
+
+export type OidcApplicationType = "web" | "mobile";
+
+export const OIDC_APP_TYPE_HELPER: Record<OidcApplicationType, string> = {
+  web: "For browser-based apps.",
+  mobile:
+    "For iOS and Android apps. Uses a public client with PKCE, and the app receives tokens in the token response.",
+};
+export const OIDC_REDIRECT_PLACEHOLDER: Record<OidcApplicationType, string> = {
+  web: "https://example.com/oidc",
+  mobile: "com.example.app://callback",
+};
+export const OIDC_MOBILE_URI_NEEDS_MOBILE_TYPE =
+  "Mobile app redirect URIs need the Mobile app application type.";
+export const OIDC_MOBILE_URI_INVALID =
+  "Enter an HTTPS URL or a mobile app URI such as com.example.app://callback.";
+export const OIDC_WEB_HTTPS_INVALID =
+  "Enter a valid HTTPS URL with a public domain (e.g. https://example.com/callback). Localhost may use HTTP.";
+
+export function applicationTypeRadio(page: Page, type: OidcApplicationType): Locator {
+  return page.locator(`#applicationType-${type}`);
+}
+
+/** Redirect URI inputs under either placeholder (it changes with the application type). */
+export function oidcRedirectUriInputs(page: Page): Locator {
+  return page.getByPlaceholder(/^(https:\/\/example\.com\/oidc|com\.example\.app:\/\/callback)$/);
+}
+
+export function oidcClientRow(page: Page, clientName: string): Locator {
+  return page.getByRole("row").filter({ hasText: clientName });
+}
+
+export async function selectApplicationTypeFlow(page: Page, type: OidcApplicationType) {
+  await applicationTypeRadio(page, type).click();
+  await expect(applicationTypeRadio(page, type)).toHaveAttribute("aria-checked", "true");
+}
+
+export async function expectApplicationTypeFlow(page: Page, type: OidcApplicationType) {
+  const other: OidcApplicationType = type === "web" ? "mobile" : "web";
+  await expect(applicationTypeRadio(page, type)).toHaveAttribute("aria-checked", "true", {
+    timeout: 10_000,
+  });
+  await expect(applicationTypeRadio(page, other)).toHaveAttribute("aria-checked", "false");
+  await expect(page.getByText(OIDC_APP_TYPE_HELPER[type], { exact: true })).toBeVisible();
+}
+
+/** Mobile: PKCE checked + disabled with the locked label, Identity Provider hidden, app placeholder. */
+export async function expectMobileLockedStateFlow(page: Page) {
+  const pkce = page.locator("#requirePkce");
+  await expect(pkce).toBeChecked();
+  await expect(pkce).toBeDisabled();
+  await expect(page.getByText("Required for mobile apps", { exact: true })).toBeVisible();
+  await expect(page.locator("#registerAsIdentityProvider")).toHaveCount(0);
+  await expect(page.getByPlaceholder(OIDC_REDIRECT_PLACEHOLDER.mobile).first()).toBeVisible();
+}
+
+export async function openEditOidcClientFlow(page: Page, clientName: string) {
+  await waitForOidcListSettledFlow(page);
+  const row = oidcClientRow(page, clientName);
+  await expect(row).toBeVisible({ timeout: 15_000 });
+  await row.getByRole("button", { name: "Edit" }).click();
+  await expect(page.getByRole("heading", { name: "Edit OIDC Client" })).toBeVisible();
+  return row;
+}
+
+export async function closeOidcDialogFlow(page: Page) {
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0, { timeout: 10_000 });
+}
+
+const oidcClientsPath = (req: Request) => new URL(req.url()).pathname;
+const isOidcSave = (req: Request) =>
+  req.method() === "POST" && /\/oidc-clients\/?$/.test(oidcClientsPath(req));
+const isOidcGetById = (req: Request) =>
+  req.method() === "GET" && /\/oidc-clients\/[^/]+\/?$/.test(oidcClientsPath(req));
+
+/** Resolves with the JSON body of the next POST oidc-clients (create or update). */
+export function nextOidcSave(page: Page): Promise<Record<string, unknown>> {
+  return page
+    .waitForRequest(isOidcSave, { timeout: 20_000 })
+    .then((req) => req.postDataJSON() as Record<string, unknown>);
+}
+
+/** Counts POST oidc-clients and GET oidc-clients/{id} sent from now on. */
+export function countOidcRequests(page: Page): {
+  saves: () => number;
+  getsById: () => number;
+  stop: () => void;
+} {
+  let saves = 0;
+  let gets = 0;
+  const onRequest = (req: Request) => {
+    if (isOidcSave(req)) saves += 1;
+    if (isOidcGetById(req)) gets += 1;
+  };
+  page.on("request", onRequest);
+  return { saves: () => saves, getsById: () => gets, stop: () => page.off("request", onRequest) };
+}
+
+/**
+ * Stubs POST oidc-clients with an IAM-style 400 until `unroute` is called. The IAM is on its own
+ * origin, so the stub carries CORS headers; the preflight still goes to the real IAM.
+ */
+export async function stubOidcSave400(page: Page): Promise<{ unroute: () => Promise<void> }> {
+  const matcher = (url: URL) => /\/oidc-clients\/?$/.test(url.pathname);
+  const handler = async (route: Route) => {
+    const req = route.request();
+    if (req.method() !== "POST") return route.continue();
+    const origin = (await req.headerValue("origin")) ?? new URL(page.url()).origin;
+    return route.fulfill({
+      status: 400,
+      contentType: "application/json",
+      headers: {
+        "access-control-allow-origin": origin,
+        "access-control-allow-credentials": "true",
+      },
+      body: JSON.stringify({
+        isSuccess: false,
+        errors: { RedirectUris: "Redirect URI is not allowed." },
+      }),
+    });
+  };
+  await page.route(matcher, handler);
+  return { unroute: () => page.unroute(matcher, handler) };
+}
+
+export type OidcCredential = {
+  itemId: string;
+  clientDisplayName?: string;
+  clientType?: string | null;
+  useTokensCookie?: boolean;
+  redirectUris?: string[];
+  isActive?: boolean;
+  requirePkce?: boolean;
+  registerAsIdentityProvider?: boolean;
+  isDeviceFlowClient?: boolean;
+};
+
+export type OidcClientsApi = {
+  list: () => Promise<OidcCredential[]>;
+  get: (itemId: string) => Promise<OidcCredential>;
+  /** Creates a client through POST oidc-clients and returns its itemId. */
+  create: (body: {
+    clientDisplayName: string;
+    redirectUris: string[];
+    clientType: string | null;
+    useTokensCookie: boolean;
+    requirePkce?: boolean;
+  }) => Promise<string>;
+  idByName: (clientDisplayName: string) => Promise<string | undefined>;
+  remove: (itemId: string) => Promise<void>;
+  /** Deletes every client with that display name; never throws (cleanup). */
+  removeByName: (clientDisplayName: string) => Promise<void>;
+};
+
+const DROPPED_HEADERS = /^(cookie|host|content-length|accept-encoding|connection|sec-.*|:.*)$/i;
+
+/**
+ * Opens the OIDC list and captures the URL + auth headers of its GET oidc-clients call, then
+ * returns an API helper that replays them through the context's request client (shares cookies;
+ * not subject to CORS, since the IAM is on its own origin). Headers are never logged.
+ */
+export async function oidcClientsApiFlow(page: Page): Promise<OidcClientsApi> {
+  const listRequest = page.waitForRequest(
+    (req) => req.method() === "GET" && /\/oidc-clients\/?$/.test(oidcClientsPath(req)),
+    { timeout: 30_000 },
+  );
+  await navigateToOidcFlow(page);
+  const req = await listRequest;
+  const base = req.url().split("?")[0].replace(/\/$/, "");
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  for (const [key, value] of Object.entries(await req.allHeaders())) {
+    if (!DROPPED_HEADERS.test(key)) headers[key] = value;
+  }
+
+  const list = async () => {
+    const res = await page.request.get(base, { headers });
+    expect(res.status(), `GET oidc-clients HTTP ${res.status()}`).toBe(200);
+    const json = (await res.json()) as { oIDCClientCredentials?: OidcCredential[] };
+    return json.oIDCClientCredentials ?? [];
+  };
+  const get = async (itemId: string) => {
+    const res = await page.request.get(`${base}/${itemId}`, { headers });
+    expect(res.status(), `GET oidc-clients/{id} HTTP ${res.status()}`).toBe(200);
+    const json = (await res.json()) as { oIDCClientCredential?: OidcCredential };
+    expect(json.oIDCClientCredential, "GET oidc-clients/{id} returns the client").toBeTruthy();
+    return json.oIDCClientCredential as OidcCredential;
+  };
+  const idByName = async (name: string) =>
+    (await list()).find((c) => c.clientDisplayName === name)?.itemId;
+  const remove = async (itemId: string) => {
+    const res = await page.request.delete(`${base}/${itemId}`, { headers });
+    expect(res.status(), `DELETE oidc-clients/{id} HTTP ${res.status()}`).toBeLessThan(300);
+  };
+  const create: OidcClientsApi["create"] = async (body) => {
+    const res = await page.request.post(base, {
+      headers,
+      data: {
+        itemId: "",
+        clientDisplayName: body.clientDisplayName,
+        redirectUris: body.redirectUris,
+        scope: "openid",
+        isAutoRedirect: false,
+        isActive: true,
+        requirePkce: body.requirePkce ?? true,
+        registerAsIdentityProvider: false,
+        isDeviceFlowClient: false,
+        allowedResponseTypes: ["code"],
+        clientType: body.clientType,
+        useTokensCookie: body.useTokensCookie,
+      },
+    });
+    const status = res.status();
+    const json = (await res.json().catch(() => ({}))) as { isSuccess?: boolean; errors?: unknown };
+    expect(status, `POST oidc-clients HTTP ${status}: ${JSON.stringify(json.errors ?? {})}`).toBe(200);
+    const id = await idByName(body.clientDisplayName);
+    expect(id, `fixture client "${body.clientDisplayName}" is listed after create`).toBeTruthy();
+    return id as string;
+  };
+  const removeByName = async (name: string) => {
+    try {
+      for (const c of await list()) {
+        if (c.clientDisplayName === name) await remove(c.itemId);
+      }
+    } catch (error) {
+      console.warn(`[oidc] cleanup of "${name}" failed: ${String(error)}`);
+    }
+  };
+
+  return { list, get, create, idByName, remove, removeByName };
+}
+
+/**
+ * Switches the console theme. Current genesis-os renders a "Change theme" dropdown with
+ * Auto / Light / Dark radio items; older builds had Light / Dark / Auto tabs (see
+ * pages/overview/topbar.ts). The emulated colour scheme is matched so "system" agrees.
+ */
+export async function setConsoleThemeFlow(page: Page, theme: "light" | "dark" | "system") {
+  await page.emulateMedia({ colorScheme: theme === "system" ? null : theme });
+  const label = { light: "Light", dark: "Dark", system: "Auto" }[theme];
+  const menuButton = page.getByRole("button", { name: "Change theme" }).first();
+  const tab = page.locator(`[id*="trigger-${theme}"]`).first();
+  if (await menuButton.isVisible({ timeout: 5_000 }).catch(() => false)) {
+    await menuButton.click();
+    await page.getByRole("menuitemradio", { name: label }).click();
+    await expect(page.getByRole("menu")).toHaveCount(0);
+  } else if (await tab.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    await tab.click();
+    await expect(tab).toHaveAttribute("aria-selected", "true");
+  } else if (theme !== "system") {
+    console.warn(`[oidc] no theme switcher visible; relying on emulated colour scheme (${theme})`);
+  }
+  if (theme === "dark") await expect.soft(page.locator("html")).toHaveClass(/\bdark\b/);
+  if (theme === "light") await expect.soft(page.locator("html")).not.toHaveClass(/\bdark\b/);
 }

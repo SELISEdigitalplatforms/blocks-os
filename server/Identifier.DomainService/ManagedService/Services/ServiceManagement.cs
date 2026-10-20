@@ -52,7 +52,6 @@ namespace DomainService.ManagedService.Services
             if (!isRabbitMq)
             {
                 _adminClient = new ServiceBusAdministrationClient(blocksSecret.LmtMessageConnectionString);
-                //var configuration = new ConfigurationBuilder().AddEnvironmentVariables().Build();
                 var azureTenantId = configuration["AZURE_TENANT_ID_LMT"];
                 var azureClientId = configuration["AZURE_CLIENT_ID_LMT"];
                 var azureClientSecret = configuration["AZURE_CLIENT_SECRET_LMT"];
@@ -266,23 +265,19 @@ namespace DomainService.ManagedService.Services
                     tenantId, serviceList.Count);
             }
 
+            // After the move to the root DB, rows of one TenantId can carry two salts: the project salt
+            // (registered without impersonation) and the console salt (registered impersonated). If the caller's
+            // salt gives nothing, the root tenant's salt is tried. A wrong salt is safe (TryDecrypt returns false).
+            // Step 2 = the other salts: the context tenant's own salt (matters when impersonating, where step 1
+            // used the console's salt) and the root tenant's salt. Salts equal to step 1's are skipped.
+            var firstSalt = tenant?.TenantSalt ?? FallbackEncryptionKey;
+            // Built at most once, and only when a row needs it.
+            var extraSalts = new Lazy<List<string>>(() => BuildExtraSalts(firstSalt));
+            var keySource = tenant is null ? "fallback" : "tenant salt";
+
             foreach (var item in serviceList)
             {
-                var plainText = DecryptConnectionString(
-                    item.ServiceBusConnectionString,
-                    tenant?.TenantSalt ?? FallbackEncryptionKey
-                );
-
-                if (plainText.Length == 0 && !string.IsNullOrEmpty(item.ServiceBusConnectionString))
-                {
-                    _logger.LogError(
-                        "Connection string for service {ServiceId} (tenant {TenantId}) could not be decrypted with " +
-                        "the {KeySource} key; returning it empty",
-                        item.ServiceId, tenantId, tenant is null ? "fallback" : "tenant salt");
-                }
-
-                item.ServiceBusConnectionString = plainText;
-                item.ServiceType = item.ServiceType ?? "backend";
+                DecryptServiceItem(item, firstSalt, extraSalts, tenantId, keySource);
             }
 
             return new GetAllServiceResponse
@@ -290,6 +285,55 @@ namespace DomainService.ManagedService.Services
                 Data = serviceList.AsQueryable(),
                 TotalCount = count
             };
+        }
+
+        private List<string> BuildExtraSalts(string firstSalt)
+        {
+            var list = new List<string>();
+            var contextTenantId = BlocksContext.GetContext()?.TenantId;
+            if (!string.IsNullOrEmpty(contextTenantId))
+            {
+                list.Add(_tenants.GetTenantByID(contextTenantId)?.TenantSalt ?? string.Empty);
+            }
+            var rootTenantId = configuration["RootTenantId"];
+            if (!string.IsNullOrEmpty(rootTenantId))
+            {
+                list.Add(_tenants.GetTenantByID(rootTenantId)?.TenantSalt ?? string.Empty);
+            }
+            return list.Where(x => !string.IsNullOrEmpty(x) && x != firstSalt).Distinct().ToList();
+        }
+
+        private void DecryptServiceItem(
+            BlocksManagedService item, string firstSalt, Lazy<List<string>> extraSalts, string tenantId, string keySource)
+        {
+            var plainText = DecryptConnectionString(item.ServiceBusConnectionString, firstSalt);
+
+            if (plainText.Length == 0 && !string.IsNullOrEmpty(item.ServiceBusConnectionString))
+            {
+                plainText = DecryptWithExtraSalts(item.ServiceBusConnectionString, extraSalts.Value);
+
+                if (plainText.Length == 0)
+                {
+                    _logger.LogError(
+                        "Connection string for service {ServiceId} (tenant {TenantId}) could not be decrypted with " +
+                        "the {KeySource} key; returning it empty",
+                        item.ServiceId, tenantId, keySource);
+                }
+            }
+
+            item.ServiceBusConnectionString = plainText;
+            item.ServiceType = item.ServiceType ?? "backend";
+        }
+
+        private static string DecryptWithExtraSalts(string cipherText, List<string> extraSalts)
+        {
+            foreach (var extraSalt in extraSalts)
+            {
+                var plainText = DecryptConnectionString(cipherText, extraSalt);
+                if (plainText.Length > 0) return plainText;
+            }
+
+            return string.Empty;
         }
 
         // Connection strings are keyed on the salt of the tenant the caller authenticated

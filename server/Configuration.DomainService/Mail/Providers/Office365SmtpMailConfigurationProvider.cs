@@ -1,11 +1,10 @@
 using Blocks.Secrets;
-using Configuration.DomainService.Mail.Entities;
 using Configuration.DomainService.Mail.RequestModel;
 using Configuration.DomainService.Mail.ResponseModel;
-using Configuration.DomainService.Shared.Enums;
 using Configuration.DomainService.Shared.Secrets;
 using Microsoft.Extensions.Logging;
 using System.Net.Mail;
+using Blocks.Genesis.Entities.Os;
 
 namespace Configuration.DomainService.Mail.Providers
 {

@@ -1,4 +1,4 @@
-using Configuration.DomainService.Mail.Entities;
+using Blocks.Genesis.Entities.Os;
 
 namespace Configuration.DomainService.Mail.Template.Services
 {
@@ -9,7 +9,6 @@ namespace Configuration.DomainService.Mail.Template.Services
         Task<EmailTemplate?> GetByNameAndLanguageAsync(string name, string language);
         Task<GetAllMailTemplatesResponse> GetsAsync(GetAllMailTemplatesRequest request);
         Task DeleteAsync(string itemId);
-        Task<TemplatePluginConfig?> GetPluginConfigAsync(string pluginProvider);
     }
 }
 

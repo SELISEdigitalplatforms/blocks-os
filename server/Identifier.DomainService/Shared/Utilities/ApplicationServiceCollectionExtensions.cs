@@ -1,3 +1,5 @@
+using Os.DataAccess;
+using Os.DataAccess;
 using Blocks.Extension.DependencyInjection;
 using Blocks.Genesis;
 using DomainService.Access;
@@ -25,6 +27,8 @@ namespace DomainService.Shared
     {
         public static void AddApplicationServices(this IServiceCollection services)
         {
+            services.AddOsDataAccess();
+
             // Register validator
             services.AddTransient<IValidator<CreateProjectRequest>, CreateProjectRequestValidator>();
             services.AddTransient<IValidator<UpdateAuthConfigRequest>, UpdateAuthConfigRequestValidator>();
@@ -34,6 +38,7 @@ namespace DomainService.Shared
 
    // Register services
             services.AddSingleton<IProjectManagementService, ProjectManagementService>();
+            services.AddSingleton<IDataGatewayRootProvisioner, DataGatewayRootProvisioner>();
             services.AddSingleton<IProjectRepository, ProjectRepository>();
 
             services.AddSingleton<IDomainManagementService, DomainManagementService>();
@@ -62,7 +67,6 @@ namespace DomainService.Shared
             services.AddTransient<IValidator<UpdateFileRequest>, UpdateFileRequestValidator>();
 
             services.RegisterBlocksStorageServices();
-            services.RegisterBlocksMailService();
 
             // Registered after RegisterBlocksStorageServices: it resolves IStorageDriverService.
             services.AddSingleton<ICertificateUploadService, CertificateUploadService>();

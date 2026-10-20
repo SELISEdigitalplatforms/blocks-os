@@ -1,12 +1,12 @@
 using Blocks.Genesis;
 using Blocks.Secrets;
-using Configuration.DomainService.Mail.Entities;
 using Configuration.DomainService.Mail.Providers;
 using Configuration.DomainService.Mail.RequestModel;
 using Configuration.DomainService.Mail.ResponseModel;
 using Configuration.DomainService.Shared.Services;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
+using Blocks.Genesis.Entities.Os;
 
 namespace Configuration.DomainService.Mail.Services
 {

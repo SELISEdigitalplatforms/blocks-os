@@ -75,7 +75,6 @@ public class SecretsController : ControllerBase
     /// from another tenant, answers an empty list rather than 404 so existence is not revealed.
     /// </remarks>
     [HttpGet("dependents")]
-    [Authorize]
     [ProtectedEndPoint("blocks-os::secret::gets")]
     public Task<SecretDependentsResult> Dependents(
         [FromQuery] string? secretId,

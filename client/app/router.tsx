@@ -73,6 +73,7 @@ import { EmailCommunicationDetailsPage } from "@/pages/email-management/email-co
 import { EmailTemplateEditPage } from "@/pages/email-management/email-template-edit";
 import { EmailUsageDetailsPage } from "@/pages/email-management/email-usage-details";
 import { EmailManagementLayout } from "@/layouts/email-management/email-management-layout";
+import { DataAccessPage } from "@blocks-idp/data-access/data-access-page";
 
 const redirectPaths: Record<string, string> = {
   "/app/iam/user-detail/*": "/app/iam/users",
@@ -412,6 +413,10 @@ export const router = createBrowserRouter([
                       {
                         path: "permissions",
                         element: <Permissions />,
+                      },
+                      {
+                        path: "data-access",
+                        element: <DataAccessPage />,
                       },
                       {
                         path: "signup-link-configurations",

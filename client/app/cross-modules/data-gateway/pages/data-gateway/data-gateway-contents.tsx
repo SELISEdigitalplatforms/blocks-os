@@ -44,9 +44,11 @@ import {
 import { IDataGatewayConfigurationSavePayload } from "@/cross-modules/data-gateway/models/data-gateway.model";
 import {
   DEFAULT_DATA_SOURCE_VALUE,
+  canOmitConnectionString,
   dataGatewayConfigurationFormDefaultValue,
   dataGatewayConfigurationFormSchema,
-  isDefaultConnection,
+  isCustomConnection,
+  toConnectionStringPayload,
   toDataGatewayConfigurationFormValues,
 } from "./utils";
 
@@ -76,8 +78,7 @@ export function DataGatewayContents() {
 
   useEffect(() => {
     if (!isLoading) {
-      const isBlocks = isDefaultConnection(configuration?.dbConnectionString);
-      setSelectedSource(isBlocks ? "blocks" : "others");
+      setSelectedSource(isCustomConnection(configuration) ? "others" : "blocks");
       form.reset(toDataGatewayConfigurationFormValues(configuration));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -88,9 +89,14 @@ export function DataGatewayContents() {
   const handleConfirmSave = async () => {
     try {
       const formData = form.getValues();
+      // Empty on a saved Custom config = omit the string (keep the stored secret); never "".
+      const connectionString = toConnectionStringPayload(
+        selectedSource,
+        formData.connectionString,
+        configuration,
+      );
       const mutableSettings = {
-        connectionString:
-          selectedSource === "others" ? formData.connectionString : DEFAULT_DATA_SOURCE_VALUE,
+        ...(connectionString === undefined ? {} : { connectionString }),
         databaseName:
           selectedSource === "others" ? formData.databaseName : DEFAULT_DATA_SOURCE_VALUE,
         isCollectionNameEditable: formData.isCollectionNameEditable,
@@ -103,14 +109,14 @@ export function DataGatewayContents() {
 
       const res = await saveConfiguration(payload);
 
-      if (!res.isSuccess) {
-        showErrorToast({ errors: res.errors });
-      } else {
+      if (res.isSuccess) {
         showSuccessToast({
           description: configuration
             ? "Configuration updated successfully"
             : "Configuration created successfully",
         });
+      } else {
+        showErrorToast({ errors: res.errors });
       }
       setIsConfirmDialogOpen(false);
     } catch (error) {
@@ -126,7 +132,8 @@ export function DataGatewayContents() {
   const isFormValid =
     selectedSource === "blocks" ||
     (form.formState.isValid &&
-      !!form.watch("connectionString") &&
+      (canOmitConnectionString(selectedSource, configuration) ||
+        !!form.watch("connectionString").trim()) &&
       !!form.watch("databaseName"));
 
   if (isLoading) {
@@ -241,7 +248,6 @@ export function DataGatewayContents() {
                     <FormField
                       control={form.control}
                       name="connectionString"
-                      rules={{ required: "Connection string is required" }}
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-xs font-medium uppercase tracking-widest text-muted-foreground/50">
@@ -249,12 +255,19 @@ export function DataGatewayContents() {
                           </FormLabel>
                           <FormControl>
                             <Input
+                              type="password"
+                              autoComplete="off"
                               placeholder="mongodb://<username>:<password>@host:27017/db"
                               className="border-border/40 bg-muted/10 focus-visible:border-primary/40 focus-visible:ring-primary/20"
                               {...field}
                               disabled={isSavePending}
                             />
                           </FormControl>
+                          {isCustomConnection(configuration) && (
+                            <FormDescription className="text-xs text-muted-foreground/50">
+                              Saved — enter a new value to replace it
+                            </FormDescription>
+                          )}
                           <FormMessage />
                         </FormItem>
                       )}

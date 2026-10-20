@@ -1,12 +1,12 @@
 ﻿using Blocks.Genesis;
-using Configuration.DomainService.Mail.Entities;
 using Configuration.DomainService.Mail.RequestModel;
-using Configuration.DomainService.Notification.Entities;
 using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Notification.ResponseModel;
 using Configuration.DomainService.Storage.Entities;
-using Configuration.DomainService.DataGateway.Entities;
+using MongoDB.Bson;
 using System.Linq.Expressions;
+using Blocks.Genesis.Entities.Data;
+using Blocks.Genesis.Entities.Os;
 
 namespace Configuration.DomainService.Shared.Services
 {
@@ -53,14 +53,6 @@ namespace Configuration.DomainService.Shared.Services
         /// </summary>
         Task<List<MailServerConfiguration>> GetMailConfigurationsByClientSecretReferenceAsync(string clientSecretReference);
         Task DeleteMailConfigurationAsync(string configurationId);
-
-        #endregion
-
-        #region DataGateway
-
-        Task SaveDataGatewayConfigurationAsync(DataGatewayConfiguration configuration);
-        Task<DataGatewayConfiguration> GetDataGatewayConfigurationAsync();
-        Task<DataGatewayConfiguration> GetDataGatewayConfigurationByIdAsync(string itemId);
 
         #endregion
 

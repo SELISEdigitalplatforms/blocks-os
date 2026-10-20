@@ -7,6 +7,7 @@ using FluentValidation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using Blocks.Genesis.Entities.Iam;
 
 namespace DomainService.People
 {
@@ -713,7 +714,8 @@ namespace DomainService.People
                 return false;
             }
 
-            if (!string.Equals(@event.EventType, IdentifierConstants.ProjectPeopleInvitationMailPurpose, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(@event.EventType, IdentifierConstants.ProjectPeopleInvitationMailPurpose, StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(@event.EventType, IdentifierConstants.LegacyProjectPeopleInvitationMailPurpose, StringComparison.OrdinalIgnoreCase))
             {
                 _logger.LogInformation("Ignoring CreateUserByEmailPostEvent with unrelated EventType: {EventType}", @event.EventType);
                 return false;

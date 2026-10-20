@@ -364,10 +364,11 @@ describe("Email Template Hooks", () => {
 
   describe("useSaveEmailTemplate", () => {
     it("should save email template successfully with custom state", async () => {
-      vi.mocked(emailService.saveMailTemplate).mockImplementation(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 50));
-        return mockSuccessResponse;
-      });
+      // Held open until the test has seen the pending state, so the check does not race a timer.
+      let finishSave: (value: typeof mockSuccessResponse) => void = () => {};
+      vi.mocked(emailService.saveMailTemplate).mockImplementation(
+        () => new Promise((resolve) => (finishSave = resolve)),
+      );
 
       const { result } = renderHook(() => useSaveEmailTemplate(), {
         wrapper: createWrapper(),
@@ -383,6 +384,7 @@ describe("Email Template Hooks", () => {
       // isPending should be true during save
       await waitFor(() => expect(result.current.isPending).toBe(true));
 
+      finishSave(mockSuccessResponse);
       await savePromise;
 
       // isPending should be false after save

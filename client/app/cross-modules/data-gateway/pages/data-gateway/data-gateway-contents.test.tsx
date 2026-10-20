@@ -36,11 +36,10 @@ const config = (
     itemId: "id-1",
     projectKey: "project-key-1",
     projectShortKey: "proj1",
-    dbConnectionString: "mongodb://localhost:27017",
+    connectionType: "Custom",
     databaseName: "project_one_db",
     isCollectionNameEditable: false,
     collectionNamePattern: "sb_{SchemaName}s",
-    isDeleted: false,
     analyticsConfiguration: { enableAnalytics: false, enableDate: null, validTill: null },
     ...over,
   }) as IDataGatewayConfiguration;
@@ -72,20 +71,25 @@ describe("DataGatewayContents", () => {
     ).toBe(false);
   });
 
-  it("selects My data sources and pre-fills the real connection details for a custom configuration", () => {
-    h.data = config({
-      dbConnectionString: "mongodb://custom-host:27017",
-      databaseName: "custom_db",
-    });
+  it("selects My data sources for a Custom configuration, never shows the string and hints it is saved", () => {
+    h.data = config({ connectionType: "Custom", databaseName: "custom_db" });
     render(<DataGatewayContents />);
 
     expect(
       (screen.getByPlaceholderText("mongodb://<username>:<password>@host:27017/db") as HTMLInputElement)
         .value,
-    ).toBe("mongodb://custom-host:27017");
+    ).toBe("");
     expect((screen.getByPlaceholderText("my-database") as HTMLInputElement).value).toBe(
       "custom_db",
     );
+    expect(screen.getByText("Saved — enter a new value to replace it")).toBeTruthy();
+  });
+
+  it("selects Blocks database for a Default configuration", () => {
+    h.data = config({ connectionType: "Default", databaseName: "default" });
+    render(<DataGatewayContents />);
+
+    expect(screen.queryByPlaceholderText("my-database")).toBeNull();
   });
 
   it("saves a brand new Blocks-managed configuration with the default sentinel", async () => {
@@ -124,9 +128,9 @@ describe("DataGatewayContents", () => {
     expect(h.mutateAsync).not.toHaveBeenCalled();
   });
 
-  it("submits an update payload identified by itemId when a configuration already exists", async () => {
+  it("omits the connection string when saving a Custom configuration with the field left empty", async () => {
     const user = userEvent.setup();
-    h.data = config({ itemId: "dg-5" });
+    h.data = config({ itemId: "dg-5", connectionType: "Custom" });
     render(<DataGatewayContents />);
 
     await user.click(screen.getByRole("button", { name: "Save Changes" }));
@@ -136,13 +140,70 @@ describe("DataGatewayContents", () => {
     const payload = h.mutateAsync.mock.calls[0][0];
     expect(payload).toMatchObject({
       itemId: "dg-5",
-      connectionString: "mongodb://localhost:27017",
       databaseName: "project_one_db",
       updateRequest: true,
     });
+    expect(payload).not.toHaveProperty("connectionString");
     expect(payload).not.toHaveProperty("projectKey");
     expect(h.showSuccessToast).toHaveBeenCalledWith({
       description: "Configuration updated successfully",
+    });
+  });
+
+  it("replaces the saved string when a new value is typed on a Custom configuration", async () => {
+    const user = userEvent.setup();
+    h.data = config({ itemId: "dg-5", connectionType: "Custom" });
+    render(<DataGatewayContents />);
+
+    await user.type(
+      screen.getByPlaceholderText("mongodb://<username>:<password>@host:27017/db"),
+      "mongodb://new-host:27017",
+    );
+    await user.click(screen.getByRole("button", { name: "Save Changes" }));
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(h.mutateAsync.mock.calls[0][0]).toMatchObject({
+      connectionString: "mongodb://new-host:27017",
+      updateRequest: true,
+    });
+  });
+
+  it("requires the string when switching a Default configuration to My data sources", async () => {
+    const user = userEvent.setup();
+    h.data = config({ connectionType: "Default", databaseName: "default" });
+    render(<DataGatewayContents />);
+
+    await user.click(screen.getByRole("radio", { name: /My data sources/i }));
+    await user.type(screen.getByPlaceholderText("my-database"), "own_db");
+
+    expect(
+      (screen.getByRole("button", { name: "Save Changes" }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+
+    await user.type(
+      screen.getByPlaceholderText("mongodb://<username>:<password>@host:27017/db"),
+      "mongodb://own:27017",
+    );
+    expect(
+      (screen.getByRole("button", { name: "Save Changes" }) as HTMLButtonElement).disabled,
+    ).toBe(false);
+  });
+
+  it("sends default when a Custom configuration is switched back to Blocks database", async () => {
+    const user = userEvent.setup();
+    h.data = config({ itemId: "dg-5", connectionType: "Custom" });
+    render(<DataGatewayContents />);
+
+    await user.click(screen.getByRole("radio", { name: /Blocks database/i }));
+    await user.click(screen.getByRole("button", { name: "Save Changes" }));
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(h.mutateAsync.mock.calls[0][0]).toMatchObject({
+      connectionString: "default",
+      databaseName: "default",
+      itemId: "dg-5",
     });
   });
 

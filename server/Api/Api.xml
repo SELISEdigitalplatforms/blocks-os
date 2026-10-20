@@ -4,18 +4,6 @@
         <name>Api</name>
     </assembly>
     <members>
-        <member name="M:BlocksOs.Api.Controllers.ArchiveController.EnqueueCleanup">
-            <summary>
-            Drives the expired-data sweep on demand. The scheduler normally publishes this daily; the
-            endpoint exists so the job can be exercised before that cron entry is in place.
-            </summary>
-        </member>
-        <member name="M:BlocksOs.Api.Controllers.ArchiveController.EnqueueHydrationCheck">
-            <summary>
-            Drives a rehydration poll on demand. The scheduler should publish this every 15-30 minutes:
-            this poll is what turns a finished rehydration into restored rows.
-            </summary>
-        </member>
         <member name="T:BlocksOs.Api.Controllers.CaptchaConfigController">
             <summary>
             Captcha configuration endpoints.
@@ -49,6 +37,9 @@
              be writable by someone who cannot edit the configuration pointing at it.
              </para>
              </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.DataGatewayController.SaveConfig(Configuration.DomainService.DataGateway.RequestModel.SaveDataGatewayConfigurationRequest)">
+            <summary>A refused save (invalid input, unknown ItemId) answers 400 with the errors; ItemId not found answers 404.</summary>
         </member>
         <member name="M:BlocksOs.Api.Controllers.DomainController.ConfigureStream(DomainService.Shared.ConfigureDomainRequest)">
             <summary>
@@ -220,6 +211,64 @@
         <member name="M:BlocksOs.Api.Controllers.PeopleController.SaveAccessPolicy(DomainService.Access.SaveAccessPolicyRequest)">
             <summary>Owner-only, always — a grant must never be able to widen itself.</summary>
         </member>
+        <member name="F:BlocksOs.Api.Controllers.PlatformDataAccessController.RulesEnabledSetting">
+            <summary>
+            Validation rules and default values on system schemas. Off until IAM, OS, Logic and Release all run a
+            Genesis that understands them: while off the rule endpoints answer 404 and Schemas carries no rule flags.
+            </summary>
+        </member>
+        <member name="F:BlocksOs.Api.Controllers.PlatformDataAccessController.RulesIncludeWarnedSetting">
+            <summary>
+            Whether warned schemas (sign-in, the console: User, Role, mail configuration, …) and warned properties
+            (row access lists, template bodies, …) are offered too. Off by default: only Normal schemas and their
+            Allowed properties, the ones that cannot stop a service from saving or users from signing in.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.OfferedRules(System.String)">
+            <summary>The allow-list as this environment offers it: warned schemas and properties left out unless switched on.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.Validation(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>The field's validation rules; null when it has none.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.SaveValidation(BlocksOs.Api.Controllers.SavePlatformValidationRequest,System.Threading.CancellationToken)">
+            <summary>
+            Replaces the field's validation rules; an empty list removes them. Only properties the Genesis allow-list
+            opens; Reference rules point at system Entity schemas; every rule is saved as version 1.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.FieldDefault(BlocksOs.Api.Controllers.SetPlatformFieldDefaultRequest,System.Threading.CancellationToken)">
+            <summary>Sets or (null) clears the field's default value. Only properties the Genesis allow-list opens.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.CheckRulesAsync(Blocks.Genesis.Entities.Data.SchemaDefinition,Blocks.Genesis.Entities.Data.FieldDefinition,System.Collections.Generic.List{Blocks.Genesis.Entities.Data.ValidationRule},System.Threading.CancellationToken)">
+            <summary>The same checks the Data Gateway makes when a rule is saved, with system schemas as Reference targets.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.CheckRuleShape(Blocks.Genesis.Entities.Data.ValidationRule)">
+            <summary>The rule on its own: a known type, the values it needs, a pattern that parses.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.CheckReferenceAsync(Blocks.Genesis.Entities.Data.FieldDefinition,Blocks.Genesis.Entities.Data.ValidationRule,System.Threading.CancellationToken)">
+            <summary>A Reference rule must point at a system Entity schema and one of its fields that fits.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.IsValidPattern(System.String)">
+            <summary>Parses the pattern only (the timeout bounds the parse); nothing is matched here.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.LoadRulesSchemaAsync(System.String,System.Threading.CancellationToken)">
+            <summary>A platform schema the allow-list opens for rules, with its rule set; null otherwise.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.ToStorable(System.Object)">
+            <summary>JSON request values as stored values: text, numbers, booleans, and lists of them.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.NumberOf(System.Text.Json.JsonElement)">
+            <summary>A whole number as a long, anything else as a double.</summary>
+        </member>
+        <member name="P:BlocksOs.Api.Controllers.SavePlatformValidationRequest.FieldName">
+            <summary>The property; a nested one by its dotted path, e.g. Read.Roles.</summary>
+        </member>
+        <member name="P:BlocksOs.Api.Controllers.SetPlatformFieldDefaultRequest.FieldName">
+            <summary>The property; a nested one by its dotted path, e.g. Read.Roles.</summary>
+        </member>
+        <member name="P:BlocksOs.Api.Controllers.SetPlatformFieldDefaultRequest.DefaultValue">
+            <summary>Null clears the default.</summary>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.ProjectController.GetThirdPartyJwtProviders">
             <summary>
             External identity providers this tenant accepts tokens from. Never returns a signing
@@ -335,6 +384,12 @@
         </member>
         <member name="M:BlocksOs.Api.GlobalApiRoutePrefixConvention.#ctor(System.String)">
             <summary>Prepends a segment (e.g. <c>api</c>) to every controller’s attribute route template.</summary>
+        </member>
+        <member name="T:BlocksOs.Api.Middleware.DataValidationExceptionFilter">
+            <summary>
+            A save refused by a system schema's validation rules (Os.DataAccess PrepareWriteAsync / CheckUpdateAsync)
+            is the caller's mistake, not a server error: 400 with one message per property, the field's path as key.
+            </summary>
         </member>
         <member name="T:BlocksOs.Api.Middleware.HostAccessCookieBearerMiddleware">
             <summary>

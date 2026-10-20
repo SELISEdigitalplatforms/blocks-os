@@ -2,18 +2,18 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Blocks.Genesis;
-using Configuration.DomainService.Notification.Entities;
 using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Notification.ResponseModel;
 using Configuration.DomainService.Shared.Services;
 using Configuration.DomainService.Storage.Entities;
 using Configuration.DomainService.Storage.RequestModel;
-using Configuration.DomainService.DataGateway.RequestModel;
 using FluentAssertions;
 using FluentValidation;
 using FluentValidation.Results;
 using Moq;
 using XUnitTest.TestSupport;
+using Blocks.Genesis.Entities.Data;
+using Blocks.Genesis.Entities.Os;
 
 namespace XUnitTest.Services
 {
@@ -22,14 +22,12 @@ namespace XUnitTest.Services
         private readonly Mock<IConfigurationRepository> _repo = new();
         private readonly Mock<IValidator<SaveNotificationConfigurationRequest>> _notifValidator = new();
         private readonly Mock<IValidator<SaveStorageConfigurationRequest>> _storageValidator = new();
-        private readonly Mock<IValidator<SaveDataGatewayConfigurationRequest>> _dataGatewayValidator = new();
         private readonly Mock<IMessageClient> _messageClient = new();
 
         private ConfigurationService Service() => new(
             _repo.Object,
             _notifValidator.Object,
             _storageValidator.Object,
-            _dataGatewayValidator.Object,
             _messageClient.Object);
 
         private static ValidationResult Valid() => new();
@@ -199,7 +197,7 @@ namespace XUnitTest.Services
             saved!.UploadUrlExpirySeconds.Should().Be(900);
             saved.DownloadUrlExpirySeconds.Should().Be(120);
             saved.MaxFileSizeInBytes.Should().Be(10_485_760);
-            saved.UploadCompletionRequiredFor.Should().BeEquivalentTo(new List<string> { "Public", "Private" });
+            saved.UploadCompletionRequiredFor.Should().BeEquivalentTo(new List<AccessModifier> { AccessModifier.Public, AccessModifier.Private });
         }
 
         [Fact]
@@ -215,7 +213,7 @@ namespace XUnitTest.Services
                 UploadUrlExpirySeconds = 900,
                 DownloadUrlExpirySeconds = 120,
                 MaxFileSizeInBytes = 10_485_760,
-                UploadCompletionRequiredFor = new List<string> { "Public" },
+                UploadCompletionRequiredFor = new List<AccessModifier> { AccessModifier.Public },
             };
             _repo.Setup(r => r.GetStorageConfigurationByIdAsync("existing-id")).ReturnsAsync(existing);
             _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))

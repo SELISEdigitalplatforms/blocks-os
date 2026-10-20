@@ -1,4 +1,4 @@
-using Configuration.DomainService.Notification.Enums;
+using Blocks.Genesis.Entities.Os;
 
 namespace Configuration.DomainService.Notification.RequestModel
 {

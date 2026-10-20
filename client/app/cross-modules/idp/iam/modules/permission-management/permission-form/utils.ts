@@ -23,7 +23,7 @@ export const permissionFormDefaultValue: PermissionFormSchemaType = {
 
 const normalizeResourceType = (value: unknown): number => {
   const numericValue = Number(value);
-  if ([1, 2, 3].includes(numericValue)) return numericValue;
+  if ([1, 2].includes(numericValue)) return numericValue;
   return 0;
 };
 

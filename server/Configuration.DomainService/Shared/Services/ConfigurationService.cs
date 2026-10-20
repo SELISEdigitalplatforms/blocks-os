@@ -3,13 +3,12 @@ using FluentValidation;
 using Configuration.DomainService.Shared.Utilities;
 using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Notification.ResponseModel;
-using Configuration.DomainService.Notification.Entities;
 using Configuration.DomainService.Storage.RequestModel;
 using Configuration.DomainService.Storage.Entities;
 using Configuration.DomainService.Storage.Enums;
-using Configuration.DomainService.DataGateway.RequestModel;
-using Configuration.DomainService.DataGateway.Entities;
 using System.Collections.Immutable;
+using Blocks.Genesis.Entities.Data;
+using Blocks.Genesis.Entities.Os;
 
 namespace Configuration.DomainService.Shared.Services
 {
@@ -20,20 +19,17 @@ namespace Configuration.DomainService.Shared.Services
         private readonly IConfigurationRepository _configurationRepository;
         private readonly IValidator<SaveNotificationConfigurationRequest> _notificatonConfigurationValidator;
         private readonly IValidator<SaveStorageConfigurationRequest> _storageConfigurationValidator;
-        private readonly IValidator<SaveDataGatewayConfigurationRequest> _dataGatewayConfigurationValidator;
         private readonly IMessageClient _messageClient;
 
 
         public ConfigurationService(IConfigurationRepository configurationRepository,
                                     IValidator<SaveNotificationConfigurationRequest> notificatonConfigurationValidator,
                                     IValidator<SaveStorageConfigurationRequest> storageConfigurationValidator,
-                                    IValidator<SaveDataGatewayConfigurationRequest> dataGatewayConfigurationValidator,
                                     IMessageClient messageClient)
         {
             _configurationRepository = configurationRepository;
             _notificatonConfigurationValidator = notificatonConfigurationValidator;
             _storageConfigurationValidator = storageConfigurationValidator;
-            _dataGatewayConfigurationValidator = dataGatewayConfigurationValidator;
             _messageClient = messageClient;
         }
 
@@ -142,7 +138,10 @@ namespace Configuration.DomainService.Shared.Services
             repoConfiguration.UploadUrlExpirySeconds = request.UploadUrlExpirySeconds;
             repoConfiguration.DownloadUrlExpirySeconds = request.DownloadUrlExpirySeconds;
             repoConfiguration.MaxFileSizeInBytes = request.MaxFileSizeInBytes;
-            repoConfiguration.UploadCompletionRequiredFor = request.UploadCompletionRequiredFor;
+            // The validator already limits the strings to "Public"/"Private"; the entity now holds the enum
+            // (stored as strings, same bytes as before).
+            repoConfiguration.UploadCompletionRequiredFor = request.UploadCompletionRequiredFor?
+                .Select(Enum.Parse<AccessModifier>).ToList();
 
             #endregion
 
@@ -178,57 +177,6 @@ namespace Configuration.DomainService.Shared.Services
             repoConfiguration.SftpSecretKey = category == StorageStrategyCategory.Local ? Helper.GenerateAesKey() : "";
 
             #endregion
-
-            return repoConfiguration;
-        }
-
-        private async Task<DataGatewayConfiguration> MappedIntoRepoConfigurationAsync(SaveDataGatewayConfigurationRequest request)
-        {
-            var repoConfiguration = request.UpdateRequest ?
-                                    await _configurationRepository.GetDataGatewayConfigurationByIdAsync(request.ItemId ?? "") :
-                                    null;
-
-            var isNewConfiguration = repoConfiguration == null;
-
-            if (repoConfiguration == null)
-            {
-                repoConfiguration = new DataGatewayConfiguration { ItemId = Guid.NewGuid().ToString(), CreatedDate = DateTime.UtcNow };
-                repoConfiguration.CreatedBy = BlocksContext.GetContext()?.UserId;
-                repoConfiguration.ProjectKey = request.ProjectKey ?? "";
-            }
-
-            repoConfiguration.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
-            repoConfiguration.LastUpdatedDate = DateTime.UtcNow;
-
-            repoConfiguration.DbConnectionString = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(request.ConnectionString ?? ""));
-            repoConfiguration.DatabaseName = request.DatabaseName ?? "";
-            repoConfiguration.IsCollectionNameEditable = request.IsCollectionNameEditable;
-            repoConfiguration.CollectionNamePattern = request.CollectionNamePattern ?? repoConfiguration.CollectionNamePattern;
-
-            if (request.EnableAnalytics.HasValue)
-            {
-                repoConfiguration.AnalyticsConfiguration ??= new AnalyticsConfiguration();
-                if (request.EnableAnalytics.Value
-                    && !repoConfiguration.AnalyticsConfiguration.EnableDate.HasValue
-                    && !repoConfiguration.AnalyticsConfiguration.ValidTill.HasValue)
-                {
-                    var enableDate = DateTime.UtcNow;
-                    repoConfiguration.AnalyticsConfiguration.EnableDate = enableDate;
-                    repoConfiguration.AnalyticsConfiguration.ValidTill = enableDate.AddDays(14);
-                }
-
-                repoConfiguration.AnalyticsConfiguration.EnableAnalytics = request.EnableAnalytics.Value;
-            }
-            else if (isNewConfiguration)
-            {
-                var enableDate = DateTime.UtcNow;
-                repoConfiguration.AnalyticsConfiguration = new AnalyticsConfiguration
-                {
-                    EnableAnalytics = true,
-                    EnableDate = enableDate,
-                    ValidTill = enableDate.AddDays(14)
-                };
-            }
 
             return repoConfiguration;
         }
@@ -297,40 +245,6 @@ namespace Configuration.DomainService.Shared.Services
 
         #endregion
 
-        #region DataGateway
-
-        public async Task<BaseMutationResponse> SaveDataGatewayConfigurationAsync(SaveDataGatewayConfigurationRequest request)
-        {
-            var validationResult = await _dataGatewayConfigurationValidator.ValidateAsync(request);
-
-            if (!validationResult.IsValid)
-                return new BaseMutationResponse { IsSuccess = false, Errors = validationResult.Errors.ToDictionary(e => e.PropertyName, e => e.ErrorMessage) };
-
-            var repoConfiguration = await MappedIntoRepoConfigurationAsync(request);
-
-            await _configurationRepository.SaveDataGatewayConfigurationAsync(repoConfiguration);
-
-            return new BaseMutationResponse { IsSuccess = true, ItemId = repoConfiguration.ItemId };
-        }
-
-        public async Task<DataGatewayConfiguration> GetDataGatewayConfigurationAsync()
-        {
-            var configuration = await _configurationRepository.GetDataGatewayConfigurationAsync();
-
-            // Unlike Storage's masked secrets, blocks-data's own DataGatewayConfigurationService.GetConfiguration
-            // returns the connection string decoded, not masked - the client needs the real value to
-            // tell a platform-managed ("default") configuration apart from a custom one and to let an
-            // admin edit an existing custom connection string.
-            if (configuration != null && !string.IsNullOrEmpty(configuration.DbConnectionString))
-            {
-                configuration.DbConnectionString = System.Text.Encoding.UTF8.GetString(
-                    Convert.FromBase64String(configuration.DbConnectionString));
-            }
-
-            return configuration;
-        }
-
-        #endregion
     }
 }
 

@@ -10,6 +10,7 @@ import {
   SettingsTabActions,
 } from "@blocks-idp/settings/components/settings-tab-actions";
 import { SettingsToggleCard } from "@blocks-idp/settings/components/settings-toggle-card";
+import { SignupAutoJoinCard } from "@blocks-idp/settings/components/signup-auto-join-card";
 import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout";
 import { useSaveSettingsOrganizationConfig } from "@blocks-idp/settings/hooks/use-settings-config";
 import type { ISettingsOrganizationConfig } from "@blocks-idp/settings/models/settings.model";
@@ -20,11 +21,18 @@ import {
   type OrganizationConfigFormValues,
 } from "@blocks-idp/settings/utils/organization-config-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useCallback, useId, useMemo, useState } from "react";
 import { useForm, useFormState } from "react-hook-form";
 
 type OrganizationConfigFormProps = {
   config: ISettingsOrganizationConfig;
+};
+
+export const SIGNUP_AUTO_JOIN_ERROR_MESSAGES: Record<string, string> = {
+  signup_auto_join_organization_required: "Choose the organization new sign-ups join.",
+  signup_organization_unavailable:
+    "That organization doesn't exist or is disabled. Choose another.",
 };
 
 const CREATION_WORKFLOWS = [
@@ -97,6 +105,7 @@ const CreationWorkflowTile = ({
 export const OrganizationConfigForm = ({ config }: OrganizationConfigFormProps) => {
   const { mutateAsync, isPending } = useSaveSettingsOrganizationConfig();
   const [enableDialogOpen, setEnableDialogOpen] = useState(false);
+  const projectKey = useProjectStore().selectedProject?.tenantId || "";
 
   const formValues = useMemo(() => toOrganizationConfigFormValues(config), [config]);
 
@@ -111,6 +120,8 @@ export const OrganizationConfigForm = ({ config }: OrganizationConfigFormProps) 
   // Save. Once persisted, multi-org can never be turned back off.
   const isMultiOrgEnabled = form.watch("isMultiOrgEnabled");
   const isMultiOrgLocked = config.isMultiOrgEnabled;
+  const isSignupAutoJoinEnabled = form.watch("isSignupAutoJoinEnabled");
+  const signupAutoJoinOrganizationId = form.watch("signupAutoJoinOrganizationId");
 
   const handleReset = useCallback(() => {
     form.reset(toOrganizationConfigFormValues(config));
@@ -120,10 +131,19 @@ export const OrganizationConfigForm = ({ config }: OrganizationConfigFormProps) 
     async (values: OrganizationConfigFormValues) => {
       try {
         const res = await mutateAsync(buildOrganizationConfigSavePayload(config, values));
-        if (!res.isSuccess) return showErrorToast({ errors: res.errors });
+        if (!res.isSuccess)
+          return showErrorToast({
+            errors: res.errors,
+            customMessages: SIGNUP_AUTO_JOIN_ERROR_MESSAGES,
+          });
         showSuccessToast({ description: "Organization configuration updated successfully" });
       } catch (error) {
-        if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
+        if (isErrorWithErrors(error)) {
+          return showErrorToast({
+            errors: error.errors,
+            customMessages: SIGNUP_AUTO_JOIN_ERROR_MESSAGES,
+          });
+        }
         showErrorToast({ errors: "Something went wrong" });
       }
     },
@@ -150,6 +170,24 @@ export const OrganizationConfigForm = ({ config }: OrganizationConfigFormProps) 
     setEnableDialogOpen(false);
   }, [form]);
 
+  const handleSignupAutoJoinToggle = useCallback(
+    (checked: boolean) => {
+      form.setValue("isSignupAutoJoinEnabled", checked, { shouldDirty: true });
+      if (!checked) form.clearErrors("signupAutoJoinOrganizationId");
+    },
+    [form],
+  );
+
+  const handleSignupAutoJoinOrganizationChange = useCallback(
+    (organizationId: string) => {
+      form.setValue("signupAutoJoinOrganizationId", organizationId, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    },
+    [form],
+  );
+
   const tabActions = useMemo(
     () => (
       <SettingsFormTabButtons
@@ -174,6 +212,17 @@ export const OrganizationConfigForm = ({ config }: OrganizationConfigFormProps) 
             onCheckedChange={handleMultiOrgToggle}
             disabled={isMultiOrgLocked || isPending}
             disabledTooltip="Multi-organization environment cannot be disabled once it has been enabled"
+          />
+
+          <SignupAutoJoinCard
+            control={form.control}
+            projectKey={projectKey}
+            isMultiOrgEnabled={isMultiOrgEnabled}
+            isEnabled={isSignupAutoJoinEnabled}
+            organizationId={signupAutoJoinOrganizationId}
+            disabled={isPending}
+            onEnabledChange={handleSignupAutoJoinToggle}
+            onOrganizationChange={handleSignupAutoJoinOrganizationChange}
           />
 
           {isMultiOrgEnabled ? (

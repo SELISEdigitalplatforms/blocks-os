@@ -100,6 +100,9 @@ namespace XUnitTest.Controllers
         public void EveryEndpointCarriesItsProtectedResource(string action, string expectedResource)
         {
             ResourceFor(action).Should().Be(expectedResource);
+            // Owner decision 2026-10-14: no plain [Authorize] next to [ProtectedEndPoint].
+            typeof(SecretsController).GetMethod(action)!.GetCustomAttributes<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>()
+                .Should().NotContain(a => a.GetType() == typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute));
         }
 
         [Fact]

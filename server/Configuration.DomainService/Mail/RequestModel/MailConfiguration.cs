@@ -1,5 +1,5 @@
-using Configuration.DomainService.Shared.Enums;
 using MongoDB.Bson.Serialization.Attributes;
+using Blocks.Genesis.Entities.Os;
 
 namespace Configuration.DomainService.Mail.RequestModel
 {

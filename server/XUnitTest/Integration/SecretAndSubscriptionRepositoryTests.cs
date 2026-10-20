@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using DomainService.Entities;
 using DomainService.Subscription.Services;
 using FluentAssertions;
+using Blocks.Genesis.Entities.Os;
 
 namespace XUnitTest.Integration
 {
@@ -35,7 +36,7 @@ namespace XUnitTest.Integration
                 TenantId = "t-" + tag
             });
 
-            var repo = new SubscriptionRepository(_fixture.DbContextProvider);
+            var repo = new SubscriptionRepository(_fixture.DbContextProvider, new XUnitTest.TestHelpers.PassThroughOsDataAccess());
             var result = await repo.GetSubscriptionsAsync();
 
             result.Should().Contain(r => r.ItemId == "rl-" + tag);

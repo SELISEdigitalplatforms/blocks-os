@@ -50,6 +50,9 @@ builder.Services.Configure<MvcOptions>(options =>
     // Blocks.Secrets so the package stays usable from workers with no HTTP pipeline.
     options.Filters.Add<SecretExceptionFilter>();
 
+    // A system schema's validation rules refusing a save: 400 with the failed properties.
+    options.Filters.Add<BlocksOs.Api.Middleware.DataValidationExceptionFilter>();
+
     // Project access grants. An action filter, so it always runs after the authorization
     // middleware has applied [Authorize]/[ProtectedEndPoint] — owner passes, contributor is
     // checked against what the owner granted them. An endpoint without [ProjectPolicy] is

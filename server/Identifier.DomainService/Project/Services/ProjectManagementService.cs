@@ -14,6 +14,7 @@ using Storage.DomainService.Enums;
 using StorageDriver;
 using System.Net.Http.Headers;
 using System.Security.Cryptography.X509Certificates;
+using Blocks.Genesis.Entities.Os;
 
 namespace DomainService.Projects
 {
@@ -730,8 +731,6 @@ namespace DomainService.Projects
 
         public async Task<RestoreProjectResponse> RestoreProjectAsync(RestoreProjectRequest restoreProjectRequest)
         {
-           //await _messageClient.SendToConsumerAsync(new ConsumerMessage<RestoreProjectRequest> { ConsumerName = IdentifierConstants.IdentifierQueueName, Payload = restoreProjectRequest });
-
            var project = await _projectRepository.GetByIdAsync(restoreProjectRequest.ItemId);
            ProjectStatusTracer? projectStatusTracer = await _projectRepository.GetUnfinishedProjectByIdAsync(restoreProjectRequest.ItemId);
 
@@ -1357,8 +1356,8 @@ namespace DomainService.Projects
         public async Task<SaveThirdPartyJWTClaimsResponse> SaveThirdPartyJWTClaimsAsync(SaveThirdPartyJWTClaimsRequest request)
         {
             var claimsMapper = await MapJWTClaims(request);
-            await _projectRepository.SaveJWTClaimsAsync(claimsMapper);
-            return new SaveThirdPartyJWTClaimsResponse { IsSuccess = true , ItemId = claimsMapper.ItemId};
+            var saved = await _projectRepository.SaveJWTClaimsAsync(claimsMapper);
+            return new SaveThirdPartyJWTClaimsResponse { IsSuccess = saved.IsSuccess, ItemId = claimsMapper.ItemId };
         }
 
         public async Task<ThirdPartyJWTClaims?> GetThirdPartyJWTClaimsAsync()

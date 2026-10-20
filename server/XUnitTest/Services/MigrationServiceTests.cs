@@ -1,8 +1,6 @@
 using Blocks.Genesis;
-using Blocks.MailDriver;
 using DomainService.Dtos;
 using DomainService.Migration;
-using DomainService.Migration.Entities;
 using DomainService.Migration.Services;
 using DomainService.People;
 using DomainService.Shared;
@@ -15,14 +13,15 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using System.Text.Json;
 using XUnitTest.TestHelpers;
-using SendMail = Blocks.MailDriver.SendMail;
+using Blocks.Genesis.Entities.Os;
+using Blocks.Genesis.Entities.Iam;
 
 namespace XUnitTest.Identifier
 {
     public class MigrationServiceTests : IDisposable
     {
         private readonly Mock<ICacheClient> _cacheClient = new();
-        private readonly Mock<IMailDriverService> _mailDriverService = new();
+        private readonly MailPreCheckDb _mailDb = new();
         private readonly Mock<IMessageClient> _messageClient = new();
         private readonly Mock<IValidator<MigrationRequest>> _validator = new();
         private readonly Mock<IMigrationRepository> _migrationRepository = new();
@@ -40,23 +39,21 @@ namespace XUnitTest.Identifier
             _configuration.Setup(c => c["RootTenantId"]).Returns("root-tenant");
             _configuration.Setup(c => c["NotificationServiceUrl"]).Returns("https://notify.test/send");
             _cryptoService.Setup(c => c.Hash(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).Returns("hashed");
-            _mailDriverService.Setup(m => m.SendAsync(It.IsAny<SendMail>()))
-                .ReturnsAsync(new BaseMutationResponse { IsSuccess = true });
         }
 
         public void Dispose() => TestBlocksContext.Clear();
 
         private MigrationService CreateService() => new(
             _cacheClient.Object,
-            _mailDriverService.Object,
             _messageClient.Object,
+            _mailDb.Object,
             _validator.Object,
             _migrationRepository.Object,
             _configuration.Object,
             _tenants.Object,
             _cryptoService.Object,
             _httpService.Object,
-            _logger.Object);
+            _logger.Object, new XUnitTest.TestHelpers.PassThroughOsDataAccess());
 
         private static MigrationRequest Request(params MigrationServiceNames[] services) => new()
         {
@@ -139,22 +136,89 @@ namespace XUnitTest.Identifier
             cached!.Code.Should().HaveLength(5);
             cached.Request.ProjectKey.Should().Be("SOURCE-1");
 
-            _mailDriverService.Verify(m => m.SendAsync(It.Is<SendMail>(
-                s => s.Purpose == "MfaViaEmail" && s.To.Contains("owner@example.com"))), Times.Once);
+            _messageClient.Verify(m => m.SendToConsumerAsync(It.Is<ConsumerMessage<SendMail>>(
+                s => s.ConsumerName == "blocks_email_listener" && s.Payload.Purpose == "MfaViaEmail" && s.Payload.To.Contains("owner@example.com"))), Times.Once);
         }
 
-        [Fact]
-        public async Task Migrate_MailFails_ReturnsUnsuccessfulResponse()
-        {
+        private void UserWithEmail() =>
             _migrationRepository.Setup(r => r.GetUserByIdAsync("user-123"))
                 .ReturnsAsync(new User { ItemId = "user-123", Email = "owner@example.com" });
-            _mailDriverService.Setup(m => m.SendAsync(It.IsAny<SendMail>()))
-                .ReturnsAsync(new BaseMutationResponse { IsSuccess = false });
+
+        private void AssertNothingQueued() =>
+            _messageClient.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<SendMail>>()), Times.Never);
+
+        [Fact]
+        public async Task Migrate_EnqueueThrows_ReturnsUnsuccessfulResponse()
+        {
+            UserWithEmail();
+            _messageClient.Setup(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<SendMail>>()))
+                .ThrowsAsync(new InvalidOperationException("queue down"));
 
             var result = await CreateService().Migrate(Request(MigrationServiceNames.IAM));
 
             result.IsSuccess.Should().BeFalse();
             result.VerificationId.Should().NotBeNullOrWhiteSpace();
+        }
+
+        [Fact]
+        public async Task Migrate_TemplateMissing_ReturnsUnsuccessfulAndQueuesNothing()
+        {
+            UserWithEmail();
+            _mailDb.TemplateExists = false;
+
+            var result = await CreateService().Migrate(Request(MigrationServiceNames.IAM));
+
+            result.IsSuccess.Should().BeFalse();
+            result.VerificationId.Should().NotBeNullOrWhiteSpace();
+            AssertNothingQueued();
+        }
+
+        [Fact]
+        public async Task Migrate_MailServerConfigMissing_ReturnsUnsuccessfulAndQueuesNothing()
+        {
+            UserWithEmail();
+            _mailDb.ConfigExists = false;
+
+            var result = await CreateService().Migrate(Request(MigrationServiceNames.IAM));
+
+            result.IsSuccess.Should().BeFalse();
+            AssertNothingQueued();
+        }
+
+        [Fact]
+        public async Task Migrate_RecipientNotARegisteredUser_ReturnsUnsuccessfulAndQueuesNothing()
+        {
+            UserWithEmail();
+            _mailDb.UserExists = false;
+
+            var result = await CreateService().Migrate(Request(MigrationServiceNames.IAM));
+
+            result.IsSuccess.Should().BeFalse();
+            AssertNothingQueued();
+        }
+
+        [Fact]
+        public async Task Migrate_TemplateNeedsAnUnsentPlaceholder_ReturnsUnsuccessfulAndQueuesNothing()
+        {
+            UserWithEmail();
+            _mailDb.TemplateBody = "{{TwoFactorCode}} {{ExtraKey}}";
+
+            var result = await CreateService().Migrate(Request(MigrationServiceNames.IAM));
+
+            result.IsSuccess.Should().BeFalse();
+            AssertNothingQueued();
+        }
+
+        [Fact]
+        public async Task Migrate_NoTenantContext_ReturnsUnsuccessfulAndQueuesNothing()
+        {
+            UserWithEmail();
+            TestBlocksContext.Set(tenantId: "");
+
+            var result = await CreateService().Migrate(Request(MigrationServiceNames.IAM));
+
+            result.IsSuccess.Should().BeFalse();
+            AssertNothingQueued();
         }
 
         [Fact]
@@ -475,9 +539,9 @@ namespace XUnitTest.Identifier
 
             await CreateService().MigrateEnvironmentDataAsync("SOURCE-1", "TARGET-1", true, "tracker-1");
 
-            // DataGateway needs four collections, Email one.
+            // DataGateway needs three collections, Email one.
             _migrationRepository.Verify(r => r.MigrateCollectionAsync(
-                "SOURCE-1", "TARGET-1", It.IsAny<string>(), true), Times.Exactly(5));
+                "SOURCE-1", "TARGET-1", It.IsAny<string>(), true), Times.Exactly(4));
             _messageClient.Verify(m => m.SendToConsumerAsync(
                 It.Is<ConsumerMessage<MigrationCompletionEvent>>(c => c.Payload.IsSuccess)), Times.Exactly(2));
         }

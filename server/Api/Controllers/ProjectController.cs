@@ -6,6 +6,7 @@ using DomainService.Projects;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Blocks.Genesis.Entities.Os;
 
 
 namespace BlocksOs.Api.Controllers
@@ -63,7 +64,7 @@ namespace BlocksOs.Api.Controllers
         }
 
         [HttpGet]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::project::projects")]
         public async Task<bool> GetProjectStatus([FromQuery] GetProjectStatusRequest request)
         {
             return await _projectManagementService.GetProjectStatusAsync(request.ItemId);

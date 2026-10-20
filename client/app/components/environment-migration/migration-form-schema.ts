@@ -77,7 +77,7 @@ export const MIGRATION_SERVICE_UI_CATALOG = [
   {
     id: "DataGateway",
     name: "Data Gateway",
-    chips: ["SchemaDefinitions", "DataServiceConfigurations"],
+    chips: ["SchemaDefinitions"],
     available: false,
   },
   { id: "Notifications", name: "Notifications", chips: ["Key", "Module"], available: false },

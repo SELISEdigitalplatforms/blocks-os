@@ -1,7 +1,6 @@
 using Blocks.Genesis;
 using DomainService.Entities;
 using DomainService.Migration;
-using DomainService.Migration.Entities;
 using DomainService.Migration.Services;
 using DomainService.Shared;
 using DomainService.Subscription.Services;
@@ -9,6 +8,7 @@ using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Moq;
+using Blocks.Genesis.Entities.Os;
 
 namespace XUnitTest.Identifier
 {
@@ -36,7 +36,7 @@ namespace XUnitTest.Identifier
             _targetDb.Setup(d => d.GetCollection<BsonDocument>(It.IsAny<string>(), null)).Returns(_targetCollection.Object);
         }
 
-        private MigrationRepository CreateRepository() => new(_dbContextProvider.Object, _blocksSecret.Object);
+        private MigrationRepository CreateRepository() => new(_dbContextProvider.Object, _blocksSecret.Object, new XUnitTest.TestHelpers.PassThroughOsDataAccess());
 
         private static IAsyncCursor<T> NewCursor<T>(List<T> items)
         {
@@ -360,7 +360,7 @@ namespace XUnitTest.Identifier
                     new() { Resource = "storage::files", Limit = 100 }
                 }));
 
-            var result = await new SubscriptionRepository(_dbContextProvider.Object).GetSubscriptionsAsync();
+            var result = await new SubscriptionRepository(_dbContextProvider.Object, new XUnitTest.TestHelpers.PassThroughOsDataAccess()).GetSubscriptionsAsync();
 
             result.Should().HaveCount(2);
         }
@@ -374,7 +374,7 @@ namespace XUnitTest.Identifier
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => NewCursor(new List<ResourceLimit>()));
 
-            var result = await new SubscriptionRepository(_dbContextProvider.Object).GetSubscriptionsAsync();
+            var result = await new SubscriptionRepository(_dbContextProvider.Object, new XUnitTest.TestHelpers.PassThroughOsDataAccess()).GetSubscriptionsAsync();
 
             result.Should().BeEmpty();
         }

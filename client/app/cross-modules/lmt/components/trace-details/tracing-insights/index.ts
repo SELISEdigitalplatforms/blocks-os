@@ -1,1 +1,1 @@
-export { TracingInsights } from "./tracing-insights";
+export { TracingInfo } from "./tracing-info";

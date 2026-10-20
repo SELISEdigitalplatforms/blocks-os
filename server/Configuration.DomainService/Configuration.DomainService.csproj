@@ -3,6 +3,10 @@
   <PropertyGroup>
   </PropertyGroup>
 	<ItemGroup>
+    <ProjectReference Include="..\Os.DataAccess\Os.DataAccess.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
 		<!--<PackageReference Include="MongoDB.Driver" />-->
 		<PackageReference Include="SeliseBlocks.Genesis.OS" />
 		<PackageReference Include="FluentValidation" />

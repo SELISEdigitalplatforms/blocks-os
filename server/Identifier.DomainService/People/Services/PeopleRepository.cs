@@ -6,6 +6,7 @@ using DomainService.Shared;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using System.Text.RegularExpressions;
+using Blocks.Genesis.Entities.Iam;
 
 namespace DomainService.People
 {

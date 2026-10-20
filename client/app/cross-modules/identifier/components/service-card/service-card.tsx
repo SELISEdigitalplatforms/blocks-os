@@ -1,19 +1,12 @@
 import { useState } from "react";
-import { getRuntimeEnv } from "@/lib/runtime-env";
 import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
 import { useNavigate } from "react-router";
 import { RegisteredService } from "@blocks-identifier/models/service.model";
 import { Button } from "@/components/ui-kits/button/button";
-import { Activity, BookOpen, Braces, Copy, EllipsisVertical, FileText } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui-kits/dropdown-menu/dropdown-menu";
+import { Activity, Copy, FileText } from "lucide-react";
 import { MaskedText } from "@/components/masked-text";
 import { useCopyToClipboard } from "@seliseblocks/genesis-os/hooks";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import { showSuccessToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { AccordionTrigger } from "@/components/ui-kits/accordion/accordion";
 import { AccordionContent } from "@radix-ui/react-accordion";
@@ -55,9 +48,6 @@ export const ServiceCard = ({ service }: { service: RegisteredService }) => {
   const LMT_BASE_PATH = useLmtBasePath();
   const [showAllTags, setShowAllTags] = useState(false);
   const navigate = useNavigate();
-  const blocksOsBaseUrl = getRuntimeEnv("BLOCKS_OS_BASE_URL");
-  const swaggerUrl = blocksOsBaseUrl ? `${blocksOsBaseUrl}/swagger/index.html` : "";
-  const docsUrl = "https://docs.seliseblocks.com/";
   return (
     <>
       <AccordionTrigger className="overflow-hidden p-4 hover:no-underline">
@@ -91,36 +81,6 @@ export const ServiceCard = ({ service }: { service: RegisteredService }) => {
               <Activity className="h-4 w-4" />
               <span className="sr-only sm:not-sr-only sm:ml-2">Traces</span>
             </LinkButton>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <div className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-sm p-0 hover:bg-accent hover:text-accent-foreground">
-                  <EllipsisVertical className="h-4 w-4" />
-                </div>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  disabled={!swaggerUrl}
-                  onClick={() => {
-                    if (!swaggerUrl) {
-                      showErrorToast({
-                        errors: "Swagger is not configured for this environment.",
-                      });
-                      return;
-                    }
-                    window.open(swaggerUrl, "_blank", "noopener,noreferrer");
-                  }}
-                >
-                  <Braces className="mr-2 aspect-square w-4" />
-                  Swagger
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => window.open(docsUrl, "_blank", "noopener,noreferrer")}
-                >
-                  <BookOpen className="mr-2 aspect-square w-4" />
-                  Docs
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </div>
       </AccordionTrigger>

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -169,16 +169,12 @@ describe("TraceDetails", () => {
     expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
   });
 
-  it("renders the timeline, insights and activity logs for a trace", async () => {
+  it("renders the trace as one story view", async () => {
     renderPage();
-    expect(await screen.findByText("Timeline")).toBeTruthy();
-    // trace id shown in the header
-    expect(screen.getAllByText("trace-1").length).toBeGreaterThan(0);
-    // insights info tab shows the entry point action
+    expect(await screen.findByRole("region", { name: "Trace story" })).toBeTruthy();
     expect(screen.getAllByText(/GetUser/).length).toBeGreaterThan(0);
-    // activity log lists the root activity source
-    expect(screen.getAllByText(/IAM/).length).toBeGreaterThan(0);
-    // download button available
+    expect(screen.getByRole("button", { name: /^Open blocks-data · 1 step/ })).toBeTruthy();
+    expect(screen.queryByRole("tab", { name: /Waterfall|Story/ })).toBeNull();
     expect(screen.getByRole("button", { name: /Download JSON/i })).toBeTruthy();
   });
 
@@ -199,31 +195,29 @@ describe("TraceDetails", () => {
     clickSpy.mockRestore();
   });
 
-  it("switches to the log tab and lists log entries", async () => {
+  it("shows the selected span's technical details", async () => {
     const user = userEvent.setup();
     renderPage();
-    await screen.findByText("Timeline");
-
-    await user.click(screen.getByRole("tab", { name: "Log" }));
-    expect(await screen.findByText(/hello world/)).toBeTruthy();
+    await user.click(await screen.findByRole("button", { name: /^Open blocks-data/ }));
+    await user.click(screen.getByText("Technical details"));
+    expect(screen.getAllByText("blocks-data").length).toBeGreaterThan(0);
   });
 
-  it("shows an empty log state when there are no logs", async () => {
-    const user = userEvent.setup();
-    h.logs = [];
+  it("shows the logs of the selected step in the page", async () => {
     renderPage();
-    await screen.findByText("Timeline");
-
-    await user.click(screen.getByRole("tab", { name: "Log" }));
-    expect(await screen.findByText("No data")).toBeTruthy();
+    expect(await screen.findByText(/hello world/)).toBeTruthy();
+    expect(h.getLogs).toHaveBeenCalledWith(
+      expect.objectContaining({
+        serviceName: "blocks-iam",
+        filter: { traceId: "trace-1", spanId: "span-root" },
+      }),
+      expect.objectContaining({ enabled: true }),
+    );
   });
 
   it("uses restored logs when a restored request id is present", async () => {
-    const user = userEvent.setup();
     renderRestoredPage();
-    await screen.findByText("Timeline");
-
-    await user.click(screen.getByRole("tab", { name: "Log" }));
+    await screen.findByRole("region", { name: "Logs of blocks-iam" });
 
     expect(h.getRestoredLogs).toHaveBeenCalledWith(
       expect.objectContaining({ requestId: "request-1" }),
@@ -233,34 +227,5 @@ describe("TraceDetails", () => {
       expect.any(Object),
       expect.objectContaining({ enabled: false }),
     );
-  });
-
-  it("collapses the insights panel when toggled", async () => {
-    const user = userEvent.setup();
-    const { container } = renderPage();
-    await screen.findByText("Timeline");
-
-    // Info/Log tabs are visible while the panel is open
-    expect(screen.getByRole("tab", { name: "Info" })).toBeTruthy();
-
-    // the panel toggle is the icon-only button rendering the PanelRightClose icon
-    const toggle = container
-      .querySelector(".lucide-panel-right-close")
-      ?.closest("button") as HTMLButtonElement;
-    await user.click(toggle);
-
-    await waitFor(() => expect(screen.queryByRole("tab", { name: "Info" })).toBeNull());
-  });
-
-  it("selects a sub-entry from the activity log", async () => {
-    const user = userEvent.setup();
-    renderPage();
-    await screen.findByText("Timeline");
-
-    // the child sub-entry activity source is clickable
-    const child = screen.getByText(/DB/);
-    await user.click(child);
-    // still renders after selection change
-    expect(screen.getByText("Timeline")).toBeTruthy();
   });
 });
