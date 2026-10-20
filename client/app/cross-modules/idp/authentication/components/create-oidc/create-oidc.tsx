@@ -10,13 +10,14 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui-kits/form/form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useFieldArray, useForm } from "react-hook-form";
 import { Info, Plus, Pencil, X } from "lucide-react";
@@ -27,16 +28,36 @@ import {
   useSaveAuthOidc,
 } from "@blocks-idp/authentication/hooks/use-auth-oidc";
 import {
+  ApplicationType,
   createOIDCFormDefaultValue,
   CreateOIDCFormValues,
   createOidcSchema,
-  redirectUriSubmitSchema,
+  deriveApplicationType,
+  getRedirectUriSchema,
 } from "./utils";
 import { Input } from "@/components/ui-kits/input/input";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
+import { Label } from "@/components/ui-kits/label/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui-kits/radio-group/radio-group";
 import { Button } from "@/components/ui-kits/button/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
 import { isErrorWithErrors } from "@/lib/error";
+
+const APPLICATION_TYPE_OPTIONS: { value: ApplicationType; id: string; label: string }[] = [
+  { value: "web", id: "applicationType-web", label: "Web application" },
+  { value: "mobile", id: "applicationType-mobile", label: "Mobile app" },
+];
+
+const APPLICATION_TYPE_HELPER: Record<ApplicationType, string> = {
+  web: "For browser-based apps.",
+  mobile:
+    "For iOS and Android apps. Uses a public client with PKCE, and the app receives tokens in the token response.",
+};
+
+const REDIRECT_URI_PLACEHOLDER: Record<ApplicationType, string> = {
+  web: "https://example.com/oidc",
+  mobile: "com.example.app://callback",
+};
 
 type CreateOIDCProps = {
   itemId?: string;
@@ -47,6 +68,8 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
   const [open, setOpen] = useState<boolean>(false);
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useSaveAuthOidc();
+  // Guards against a second POST while a save is still in flight (C12).
+  const submittingRef = useRef(false);
   const { data: existingOidc, isLoading: _isLoadingOidc } = useGetAuthOidcCredential(
     { projectKey: tenantId, clientId: itemId! },
     open && !!itemId,
@@ -59,7 +82,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
   });
 
   const {
-    formState: { isValid },
+    formState: { isValid, isSubmitting },
     control,
     register,
   } = form;
@@ -75,10 +98,28 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
     ? "Update OIDC client details"
     : "Enter details to generate a new key";
   const isDeviceFlowClient = form.watch("isDeviceFlowClient");
+  const applicationType = form.watch("applicationType");
+  const isMobile = applicationType === "mobile";
+
+  const handleApplicationTypeChange = (next: ApplicationType) => {
+    form.setValue("applicationType", next, { shouldDirty: true, shouldValidate: true });
+    if (next === "mobile") {
+      form.setValue("requirePkce", true, { shouldDirty: true });
+      form.setValue("registerAsIdentityProvider", false, { shouldDirty: true });
+    }
+    // Re-check the entries already typed so a type switch flags (or clears) them at once.
+    const filled = form
+      .getValues("redirectUris")
+      .map((entry, idx) => (entry.value.trim() ? idx : -1))
+      .filter((idx) => idx >= 0)
+      .map((idx) => `redirectUris.${idx}.value` as const);
+    if (filled.length) void form.trigger(filled);
+  };
 
   useEffect(() => {
     if (isEditMode && existingOidc?.oIDCClientCredential && open) {
       const credential = existingOidc.oIDCClientCredential;
+      const loadedApplicationType = deriveApplicationType(credential);
       const uris =
         credential.redirectUris && credential.redirectUris.length
           ? credential.redirectUris
@@ -101,17 +142,54 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
           : credential.allowedResponseTypes && credential.allowedResponseTypes.length
             ? credential.allowedResponseTypes
             : ["code"],
+        applicationType: loadedApplicationType,
+        storedClientType: credential.clientType ?? null,
+        storedUseTokensCookie: credential.useTokensCookie ?? true,
+        loadedApplicationType,
       });
     } else if (!isEditMode && open) {
       form.reset(createOIDCFormDefaultValue);
     }
   }, [existingOidc, isEditMode, open, form]);
 
+  const buildClientTypeFields = (
+    data: CreateOIDCFormValues,
+  ): Pick<
+    ISaveOidcCredentialPayload,
+    "clientType" | "useTokensCookie" | "requirePkce" | "registerAsIdentityProvider"
+  > => {
+    // Spec 6.4 payload mapping.
+    if (data.isDeviceFlowClient) {
+      return {
+        ...(isEditMode ? { clientType: data.storedClientType } : {}),
+        useTokensCookie: data.storedUseTokensCookie,
+        requirePkce: false,
+        registerAsIdentityProvider: false,
+      };
+    }
+    if (data.applicationType === "mobile") {
+      return {
+        clientType: "public",
+        useTokensCookie: false,
+        requirePkce: true,
+        registerAsIdentityProvider: false,
+      };
+    }
+    const keepStored = isEditMode && data.loadedApplicationType === "web";
+    return {
+      clientType: keepStored ? data.storedClientType : "confidential",
+      useTokensCookie: keepStored ? data.storedUseTokensCookie : true,
+      requirePkce: data.requirePkce,
+      registerAsIdentityProvider: data.registerAsIdentityProvider,
+    };
+  };
+
   const onSubmit = async (data: CreateOIDCFormValues) => {
+    if (submittingRef.current) return;
     const isDeviceFlowClient = data.isDeviceFlowClient;
     const redirectResult = isDeviceFlowClient
       ? ({ success: true } as const)
-      : redirectUriSubmitSchema.safeParse(data.redirectUris);
+      : getRedirectUriSchema(data.applicationType).safeParse(data.redirectUris);
     if (!redirectResult.success) {
       redirectResult.error.issues.forEach((issue) => {
         const path = issue.path as (string | number)[];
@@ -123,6 +201,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
       });
       return;
     }
+    submittingRef.current = true;
     try {
       const payload: ISaveOidcCredentialPayload = {
         redirectUris: isDeviceFlowClient
@@ -131,8 +210,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
         scope: data.scope,
         isAutoRedirect: isDeviceFlowClient ? false : data.isAutoRedirect,
         isActive: data.isActive,
-        requirePkce: isDeviceFlowClient ? false : data.requirePkce,
-        registerAsIdentityProvider: isDeviceFlowClient ? false : data.registerAsIdentityProvider,
+        ...buildClientTypeFields(data),
         isDeviceFlowClient,
         allowedResponseTypes: isDeviceFlowClient ? [] : data.allowedResponseTypes,
         itemId: isEditMode ? itemId : "",
@@ -155,6 +233,8 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
         return;
       }
       showErrorToast({ errors: "Something went wrong" });
+    } finally {
+      submittingRef.current = false;
     }
   };
 
@@ -241,6 +321,51 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                 )}
               />
 
+              {/* Application type — hidden for device flow, like Redirect URI(s). The value is
+                  kept while hidden, so unticking Device Flow restores the earlier choice. */}
+              {!isDeviceFlowClient && (
+                <FormField
+                  control={form.control}
+                  name="applicationType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Application type</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          aria-label="Application type"
+                          value={field.value}
+                          onValueChange={(value) =>
+                            handleApplicationTypeChange(value as ApplicationType)
+                          }
+                        >
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            {APPLICATION_TYPE_OPTIONS.map((option) => (
+                              <div
+                                key={option.value}
+                                className={`flex items-center gap-2 rounded-md border p-3 ${
+                                  field.value === option.value
+                                    ? "border-primary bg-primary/5"
+                                    : "border-input"
+                                }`}
+                              >
+                                <RadioGroupItem value={option.value} id={option.id} />
+                                <Label htmlFor={option.id} className="cursor-pointer text-sm">
+                                  {option.label}
+                                </Label>
+                              </div>
+                            ))}
+                          </div>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormDescription className="text-xs">
+                        {APPLICATION_TYPE_HELPER[field.value]}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
               {/* Redirect URI(s) - multi entry like identity provider */}
               {!isDeviceFlowClient && (
                 <div className="space-y-2">
@@ -251,7 +376,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                     <div key={fieldItem.id} className="flex items-start gap-2">
                       <div className="flex-1 space-y-1">
                         <Input
-                          placeholder="https://example.com/oidc"
+                          placeholder={REDIRECT_URI_PLACEHOLDER[applicationType]}
                           {...register(`redirectUris.${idx}.value` as const)}
                         />
                         <FormMessage>
@@ -345,19 +470,31 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>PKCE</FormLabel>
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            id="requirePkce"
-                            checked={!!field.value}
-                            onCheckedChange={(v) => field.onChange(!!v)}
-                          />
-                          <label
-                            htmlFor="requirePkce"
-                            className="cursor-pointer text-sm text-high-emphasis"
-                          >
-                            Enabled
-                          </label>
-                        </div>
+                        {isMobile ? (
+                          <div className="flex items-center gap-2">
+                            <Checkbox id="requirePkce" checked disabled />
+                            <label
+                              htmlFor="requirePkce"
+                              className="cursor-not-allowed text-sm text-muted-foreground"
+                            >
+                              Required for mobile apps
+                            </label>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              id="requirePkce"
+                              checked={!!field.value}
+                              onCheckedChange={(v) => field.onChange(!!v)}
+                            />
+                            <label
+                              htmlFor="requirePkce"
+                              className="cursor-pointer text-sm text-high-emphasis"
+                            >
+                              Enabled
+                            </label>
+                          </div>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}
@@ -398,8 +535,9 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                   explanation lives in the tooltip to keep the row compact.
                   Not offered for device-flow clients: federation hardcodes the
                   authorization_code grant and reuses redirect URIs, which
-                  device-flow clients don't have. */}
-              {!isDeviceFlowClient && (
+                  device-flow clients don't have. Mobile app clients are never registered as
+                  an identity provider either (blocks-iam SPEC29). */}
+              {!isDeviceFlowClient && !isMobile && (
                 <FormField
                   control={form.control}
                   name="registerAsIdentityProvider"
@@ -460,7 +598,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
           <Button
             form="oidc-form"
             type="submit"
-            disabled={!isValid || isPending}
+            disabled={!isValid || isPending || isSubmitting}
             className="w-full sm:w-auto"
           >
             {isEditMode ? "Update" : "Add"}

@@ -26,6 +26,8 @@ export interface IOidcConfig {
   allowedServiceAccessResources?: string[];
   tenantId: string;
   clientDisplayName: string;
+  clientType?: string | null;
+  useTokensCookie?: boolean;
 }
 export interface IGetOidcCredentialsResponse {
   oIDCClientCredentials: IOidcConfig[];
@@ -46,6 +48,8 @@ export interface ISaveOidcCredentialPayload {
   allowedResponseTypes: string[];
   allowedServiceAccessResources?: string[];
   clientDisplayName: string;
+  clientType?: string | null;
+  useTokensCookie?: boolean;
 }
 
 export interface ISaveOidcCredentialResponse {
