@@ -48,7 +48,7 @@ const role: PlatformSchema = {
     f("ItemId"),
     f("CreatedDate", { type: "DateTime" }),
     f("Name", { description: "Role name", isPIIData: true }),
-    f("Create", { type: "OperationAccess", fields: [f("Roles", { isArray: true }), f("UserIds", { isArray: true })] }),
+    f("Access", { type: "OperationAccess", fields: [f("Roles", { isArray: true }), f("UserIds", { isArray: true })] }),
     f("Kind", { type: "Enum", enumValues: ["System", "Custom"] }),
   ],
 };
@@ -150,6 +150,27 @@ describe("DataAccessPage", () => {
     expect(screen.getAllByText("ItemId").length).toBeGreaterThan(0);
   });
 
+  it("lists the base entity's access lists among the default properties, still expandable", async () => {
+    const user = userEvent.setup();
+    h.schemas = [{ ...role, fields: [...role.fields, f("Read", { type: "OperationAccess", fields: [f("Permissions", { isArray: true })] })] }, build];
+    renderPage("?schemaId=role-id");
+
+    // Read counts as a default property: the group holds ItemId, CreatedDate and Read.
+    const toggle = (await screen.findAllByRole("button", { name: /Default Properties \(3\)/ }))[0];
+    // The group's open state is shared by every table on the page and kept between renders.
+    if (toggle.getAttribute("aria-expanded") === "true") await user.click(toggle);
+    expect(screen.queryAllByText("Read")).toHaveLength(0);
+    const outside = screen.getAllByRole("button", { name: "Expand OperationAccess attributes" }).length;
+
+    await user.click(toggle);
+    expect(screen.getAllByText("Read").length).toBeGreaterThan(0);
+    const expands = screen.getAllByRole("button", { name: "Expand OperationAccess attributes" });
+    expect(expands.length).toBeGreaterThan(outside);
+
+    for (const expand of expands) await user.click(expand);
+    expect(screen.getAllByText("Permissions").length).toBeGreaterThan(0);
+  });
+
   it("expands an object property to show what is inside", async () => {
     const user = userEvent.setup();
     renderPage("?schemaId=role-id");
@@ -183,11 +204,11 @@ describe("DataAccessPage", () => {
     renderPage("?schemaId=role-id");
 
     await user.click((await screen.findAllByRole("button", { name: "Expand OperationAccess attributes" }))[0]);
-    await user.click(screen.getAllByRole("button", { name: "View access for Create.Roles" })[0]);
+    await user.click(screen.getAllByRole("button", { name: "View access for Access.Roles" })[0]);
 
-    const inspector = await screen.findByRole("complementary", { name: "Access for Create.Roles" });
+    const inspector = await screen.findByRole("complementary", { name: "Access for Access.Roles" });
     expect(within(inspector).getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["View", "Edit"]);
-    expect(within(inspector).getAllByTestId("access-editor").map((e) => e.textContent)).toEqual(["column:0:Create.Roles", "column:2:Create.Roles"]);
+    expect(within(inspector).getAllByTestId("access-editor").map((e) => e.textContent)).toEqual(["column:0:Access.Roles", "column:2:Access.Roles"]);
   });
 
   it("does not offer access on an object property itself", async () => {

@@ -14,7 +14,10 @@ export const SHELL = {
   inspectorWidthExpanded: 540,
 } as const;
 
-/** Properties every entity carries from the platform's base entity; listed apart as "Default Properties". */
+/**
+ * Properties every entity carries from the platform's base entity; listed apart as "Default Properties".
+ * Create/Read/Update/Delete are its per-record access lists (objects holding Roles, UserIds, Permissions).
+ */
 export const DEFAULT_PROPERTY_NAMES = [
   "ItemId",
   "CreatedDate",
@@ -24,6 +27,10 @@ export const DEFAULT_PROPERTY_NAMES = [
   "Language",
   "OrganizationId",
   "Tags",
+  "Create",
+  "Read",
+  "Update",
+  "Delete",
 ];
 
 /** Types a column access rule can be set on. Object properties are reached through their children. */
