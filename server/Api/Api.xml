@@ -372,6 +372,24 @@
             the read has already been audited by the service, so the audit trail is unchanged.
             </remarks>
         </member>
+        <member name="T:BlocksOs.Api.Controllers.UserPreferenceController">
+            <summary>
+            The signed-in user's own settings, by key (<see cref="T:DomainService.Preference.UserPreferenceKeys"/>), such as the
+            console sidebar's favourites and app order, so they follow the user across browsers.
+            </summary>
+            <remarks>
+            Deliberately <c>[Authorize]</c> only, with no resource name and no project policy, like
+            <see cref="M:BlocksOs.Api.Controllers.PeopleController.GetMyAccess(DomainService.Access.GetMyAccessRequest)"/>: every action reads or writes the caller's own
+            rows and no one else's, so there is nothing a grant could add. Routing and response mapping
+            only; the rules live in <see cref="T:DomainService.Preference.Services.IUserPreferenceService"/>.
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.UserPreferenceController.Get(DomainService.Preference.GetUserPreferenceRequest,System.Threading.CancellationToken)">
+            <summary>The caller's value for a key; <c>value</c> is null when never saved.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.UserPreferenceController.Save(DomainService.Preference.SaveUserPreferenceRequest,System.Threading.CancellationToken)">
+            <summary>Sets the caller's value for a key, replacing any earlier one.</summary>
+        </member>
         <member name="T:BlocksOs.Api.Controllers.VersionController">
             <summary>
             Reports the running API assembly version. Public by design (no auth) so health/deploy
