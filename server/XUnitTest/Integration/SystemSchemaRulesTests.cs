@@ -150,6 +150,46 @@ public sealed class SystemSchemaRulesTests : IDisposable
     }
 
     [Fact]
+    public async Task OnInsert_TheRequesterJoinsReadUpdateAndDeleteUserIds_KeepingIdsAlreadyThere()
+    {
+        var id = "tpl-" + Guid.NewGuid().ToString("N");
+        var template = Template(id);
+        template.Read = new OperationAccess { UserIds = ["user-9"], Roles = ["admin"] };
+        template.Update = new OperationAccess { UserIds = ["user-1"] };
+
+        await Templates().SaveAsync(template);
+
+        var stored = StoredTemplate(id);
+        stored["Read"]["UserIds"].AsBsonArray.Select(v => v.AsString).Should().Equal("user-9", "user-1");
+        stored["Read"]["Roles"].AsBsonArray.Select(v => v.AsString).Should().Equal("admin");
+        stored["Update"]["UserIds"].AsBsonArray.Select(v => v.AsString).Should().Equal("user-1");   // once
+        stored["Delete"]["UserIds"].AsBsonArray.Select(v => v.AsString).Should().Equal("user-1");
+        stored.Contains("Create").Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task OnReplace_TheAccessListsAreLeftAsSent()
+    {
+        var id = "tpl-" + Guid.NewGuid().ToString("N");
+        await Templates().SaveAsync(Template(id));
+
+        await Templates().SaveAsync(Template(id));
+
+        StoredTemplate(id).Contains("Read").Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task WithoutASignedInUser_NoRequesterIsAdded()
+    {
+        BlocksContext.ClearContext();
+        var id = "tpl-" + Guid.NewGuid().ToString("N");
+
+        await Templates().SaveAsync(Template(id));
+
+        StoredTemplate(id).Contains("Read").Should().BeFalse();
+    }
+
+    [Fact]
     public async Task WithoutASignedInUser_NoRulesRun()
     {
         Rule("EmailTemplate", "TemplateSubject", new ValidationRule { Type = ValidationType.MaxLength, Value = 5 });

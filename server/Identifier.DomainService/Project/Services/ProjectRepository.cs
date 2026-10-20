@@ -814,6 +814,7 @@ namespace DomainService.Projects
                 return new BaseResponse { IsSuccess = false };
             }
 
+            mapper = await _dataAccess.PrepareUpsertAsync(OsSchemas.ThirdPartyJWTClaims, mapper, collection, editFilter, "ProjectRepository.SaveJWTClaimsAsync");
             await collection.ReplaceOneAsync(editFilter, mapper, new ReplaceOptions { IsUpsert = true });
 
             return new BaseResponse { IsSuccess = true };

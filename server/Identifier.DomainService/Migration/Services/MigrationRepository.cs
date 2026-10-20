@@ -34,6 +34,7 @@ namespace DomainService.Migration.Services
             if (!await _dataAccess.InsertAllowedAsync(OsSchemas.MigrationTracker, "MigrationRepository.CreateMigrationTrackerAsync"))
                 throw new UnauthorizedAccessException("Access to the migration tracker was denied by the data access policy.");
 
+            await _dataAccess.PrepareWriteAsync(OsSchemas.MigrationTracker, migrationTracker, isInsert: true, "MigrationRepository.CreateMigrationTrackerAsync");
             await Collection.InsertOneAsync(migrationTracker);
             return migrationTracker.ItemId;
         }
