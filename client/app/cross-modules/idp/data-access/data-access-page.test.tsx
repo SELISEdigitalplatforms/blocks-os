@@ -343,6 +343,21 @@ describe("DataAccessPage", () => {
       expect(screen.getAllByRole("button", { name: "Validation rules can't be set on Create.UserIds" })[0]).toHaveProperty("disabled", true);
     });
 
+    it("offers Bulk rules only while rules are on", async () => {
+      renderPage();
+      await screen.findAllByText("Role");
+      expect(screen.queryByRole("button", { name: "Bulk rules" })).toBeNull();
+    });
+
+    it("opens Bulk rules for default properties", async () => {
+      const user = userEvent.setup();
+      h.schemas = [withRules, build];
+      renderPage();
+
+      await user.click(await screen.findByRole("button", { name: "Bulk rules" }));
+      expect(await screen.findByRole("dialog", { name: "Bulk rules for default properties" })).toBeTruthy();
+    });
+
     it("says so on every property of a schema kept out of rules", async () => {
       h.schemas = [withRules, build];
       renderPage("?schemaId=build-id");

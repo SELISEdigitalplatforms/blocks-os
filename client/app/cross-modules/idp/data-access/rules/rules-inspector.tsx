@@ -38,7 +38,7 @@ export function rulesWarning(target: RulesInspectorTarget): string | null {
 }
 
 /** Asks before the editor opens on a warned schema or property. */
-function WarningGate({ warning, onClose, onContinue }: Readonly<{ warning: string; onClose: () => void; onContinue: () => void }>) {
+export function WarningGate({ warning, onClose, onContinue }: Readonly<{ warning: string; onClose: () => void; onContinue: () => void }>) {
   return (
     <div className="flex flex-col gap-4 p-6">
       <div role="alert" className="flex gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-foreground">

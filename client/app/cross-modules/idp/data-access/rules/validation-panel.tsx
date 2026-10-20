@@ -38,6 +38,10 @@ export interface ValidationPanelProps {
   initialRules: ISchemaFieldValidation[];
   /** The schema's name and properties, for comparison values like {{EmailTemplate.Name}}. */
   variables: RuleVariableContext;
+  /** Replaces saving to the property: the bulk dialog keeps the list until it is applied. */
+  onSave?: (rules: ISchemaFieldValidation[]) => Promise<void>;
+  /** Heading of the rule list (default "Existing validations"). */
+  listLabel?: string;
 }
 
 const LABEL_CLASS = "text-[11px] font-medium uppercase tracking-widest text-muted-foreground";
@@ -105,7 +109,16 @@ function submitLabel(isPending: boolean, isEditing: boolean): string {
  * The Data Gateway's validation panel for a platform schema's property: the rules, an add/edit form,
  * delete. Every change saves the property's whole list, as the gateway does.
  */
-export function ValidationPanel({ schemaId, fieldName, fieldType, enumValues = [], initialRules, variables }: Readonly<ValidationPanelProps>) {
+export function ValidationPanel({
+  schemaId,
+  fieldName,
+  fieldType,
+  enumValues = [],
+  initialRules,
+  variables,
+  onSave,
+  listLabel = "Existing validations",
+}: Readonly<ValidationPanelProps>) {
   const [rules, setRules] = useState<ISchemaFieldValidation[]>(initialRules);
   const [form, setForm] = useState<(RuleDraft & { editingIndex?: number }) | null>(null);
   const [touched, setTouched] = useState(false);
@@ -119,7 +132,7 @@ export function ValidationPanel({ schemaId, fieldName, fieldType, enumValues = [
 
   const save = async (next: ISchemaFieldValidation[], message: string) => {
     try {
-      await saveValidation({ schemaId, fieldName, validations: next });
+      await (onSave ? onSave(next) : saveValidation({ schemaId, fieldName, validations: next }));
       setRules(next);
       setForm(null);
       setTouched(false);
@@ -147,7 +160,7 @@ export function ValidationPanel({ schemaId, fieldName, fieldType, enumValues = [
       <ScrollArea className="relative flex-1 overflow-auto">
         <div className="flex flex-col gap-5 p-6">
           <div className="flex flex-col gap-3">
-            <p className={LABEL_CLASS}>Existing validations</p>
+            <p className={LABEL_CLASS}>{listLabel}</p>
             {rules.length === 0 ? (
               <div className="flex items-center justify-center rounded-sm border border-dashed border-border/60 bg-muted/10 py-8 text-xs text-muted-foreground">
                 No validations added yet

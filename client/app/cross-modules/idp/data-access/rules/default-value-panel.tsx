@@ -34,6 +34,10 @@ export interface DefaultValuePanelProps {
   enumValues?: string[];
   /** The default as the schema response had it; null when none. */
   initialDefault?: IFieldDefaultValue | null;
+  /** Replaces saving to the property: the bulk dialog applies the value to every property it picked. */
+  onSave?: (value: IFieldDefaultValue | null) => Promise<void>;
+  /** Heading of the stored value (default "Current default"). */
+  savedLabel?: string;
 }
 
 const KIND_HINTS: Record<DefaultValueKind, string> = {
@@ -100,6 +104,8 @@ export function DefaultValuePanel({
   isArray,
   enumValues = [],
   initialDefault = null,
+  onSave,
+  savedLabel = "Current default",
 }: Readonly<DefaultValuePanelProps>) {
   const kinds = allowedDefaultKinds(fieldType, isArray);
   // What's stored now: the schema response's value, then whatever this panel last saved.
@@ -110,7 +116,9 @@ export function DefaultValuePanel({
   // Which template item the insert buttons write into.
   const [activeItem, setActiveItem] = useState(0);
   const { status, setSuccess, setError } = useTransientStatus();
-  const { mutateAsync: setFieldDefault, isPending } = useSetPlatformFieldDefault();
+  const { mutateAsync: setFieldDefault, isPending: isSaving } = useSetPlatformFieldDefault();
+  const [isApplying, setIsApplying] = useState(false);
+  const isPending = isSaving || isApplying;
   const editor = useDefaultDraft(initialDefault, kinds, () => {
     setTouched(true);
     setServerError(null);
@@ -132,8 +140,9 @@ export function DefaultValuePanel({
   };
 
   const save = async (value: IFieldDefaultValue | null) => {
+    setIsApplying(true);
     try {
-      await setFieldDefault({ schemaId, fieldName, defaultValue: value });
+      await (onSave ? onSave(value) : setFieldDefault({ schemaId, fieldName, defaultValue: value }));
       setSaved(value);
       setServerError(null);
       if (value === null) {
@@ -144,6 +153,8 @@ export function DefaultValuePanel({
     } catch (error) {
       if (isRefusal(error)) setServerError(serverMessage(error));
       else setError(serverMessage(error));
+    } finally {
+      setIsApplying(false);
     }
   };
 
@@ -158,7 +169,7 @@ export function DefaultValuePanel({
       <ScrollArea className="relative flex-1 overflow-auto">
         <div className="flex flex-col gap-5 p-6">
           <div className="flex flex-col gap-1.5">
-            <p className={LABEL_CLASS}>Current default</p>
+            <p className={LABEL_CLASS}>{savedLabel}</p>
             <p className={cn("break-all text-sm", saved ? "font-mono text-foreground" : "text-muted-foreground")}>
               {saved ? formatDefaultSummary(saved) : "None"}
             </p>

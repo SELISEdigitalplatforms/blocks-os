@@ -192,28 +192,61 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
         if (field is null || rules.ValidationFor(field.Name) == RuleAccess.Blocked)
             return Refused(request.FieldName, $"Validation rules can't be set on {schema.SchemaName}.{request.FieldName}");
 
-        foreach (var rule in request.Validations)
-        {
-            rule.Value = ToStorable(rule.Value);
-            rule.SecondaryValue = ToStorable(rule.SecondaryValue);
-            rule.EvaluationVersion = 1;
-        }
+        NormaliseRules(request.Validations);
         if (await CheckRulesAsync(schema, field, request.Validations, cancellationToken) is { } problem)
             return Refused(request.FieldName, problem);
 
         var existing = await ValidationCollection.Find(x => x.SchemaId == schema.ItemId && x.FieldName == field.Name && !x.IsDeleted)
             .FirstOrDefaultAsync(cancellationToken);
-        if (request.Validations.Count == 0)
-        {
-            if (existing is not null) await ValidationCollection.DeleteOneAsync(x => x.ItemId == existing.ItemId, cancellationToken);
-            return Ok(new { isSuccess = true, data = new { acknowledged = true, itemId = existing?.ItemId } });
-        }
+        var itemId = await WriteValidationAsync(schema.ItemId, field.Name, existing, request.Validations, cancellationToken);
+        return Ok(new { isSuccess = true, data = new { acknowledged = true, itemId } });
+    }
 
-        var validation = existing ?? new DataValidation { ItemId = Guid.NewGuid().ToString(), SchemaId = schema.ItemId, FieldName = field.Name, CreatedDate = DateTime.UtcNow };
-        validation.Validations = request.Validations;
-        validation.LastUpdatedDate = DateTime.UtcNow;
-        await ValidationCollection.ReplaceOneAsync(x => x.ItemId == validation.ItemId, validation, new ReplaceOptions { IsUpsert = true }, cancellationToken);
-        return Ok(new { isSuccess = true, data = new { acknowledged = true, itemId = validation.ItemId } });
+    /// <summary>
+    /// The same validation rules on several default properties (the base entity's own: Language, Tags, Read.Roles, …)
+    /// of several system schemas. <c>Replace</c> gives each property exactly these rules (an empty list removes
+    /// them); otherwise they are added after the ones it has. Every pair is checked first, as a single save would
+    /// be; if any is refused nothing is written, and each refusal is named by Schema.Property.
+    /// </summary>
+    [HttpPost]
+    [ProtectedEndPoint("blocks-data::data-validation::update-data-validation")]
+    public async Task<IActionResult> BulkValidation([FromBody] BulkPlatformValidationRequest request, CancellationToken cancellationToken)
+    {
+        if (!RulesEnabled) return NotFound();
+        if (BulkTargetsProblem(request.SchemaIds, request.FieldNames) is { } shape) return Refused("fieldNames", shape);
+        NormaliseRules(request.Validations);
+
+        var errors = new Dictionary<string, string>();
+        var writes = new List<(string SchemaId, string FieldName, DataValidation? Existing, List<ValidationRule> Rules)>();
+        foreach (var schemaId in request.SchemaIds.Distinct())
+        {
+            if (await LoadRulesSchemaAsync(schemaId, cancellationToken) is not { } loaded)
+            {
+                errors[schemaId] = "This schema doesn't take validation rules";
+                continue;
+            }
+            var (schema, rules) = loaded;
+            var stored = await ValidationCollection.Find(x => x.SchemaId == schema.ItemId && !x.IsDeleted).ToListAsync(cancellationToken);
+            foreach (var fieldName in request.FieldNames.Distinct())
+            {
+                var key = $"{schema.SchemaName}.{fieldName}";
+                var field = schema.Fields.FirstOrDefault(f => f.Name == fieldName);
+                if (field is null || rules.ValidationFor(field.Name) == RuleAccess.Blocked)
+                {
+                    errors[key] = $"Validation rules can't be set on {key}";
+                    continue;
+                }
+                var existing = stored.FirstOrDefault(x => x.FieldName == field.Name);
+                List<ValidationRule> next = request.Replace == true || existing is null ? [.. request.Validations] : [.. existing.Validations, .. request.Validations];
+                if (await CheckRulesAsync(schema, field, next, cancellationToken) is { } problem) errors[key] = problem;
+                else writes.Add((schema.ItemId, field.Name, existing, next));
+            }
+        }
+        if (errors.Count > 0) return BadRequest(new BaseResponse { IsSuccess = false, Errors = errors });
+
+        foreach (var (schemaId, fieldName, existing, next) in writes)
+            await WriteValidationAsync(schemaId, fieldName, existing, next, cancellationToken);
+        return Ok(new { isSuccess = true, data = new { acknowledged = true, count = writes.Count } });
     }
 
     /// <summary>Sets or (null) clears the field's default value. Only properties the Genesis allow-list opens.</summary>
@@ -227,24 +260,117 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
         if (field is null || rules.DefaultFor(field.Name) == RuleAccess.Blocked)
             return Refused(request.FieldName, $"A default value can't be set on {schema.SchemaName}.{request.FieldName}");
 
-        FieldDefaultValue? defaultValue = null;
-        if (request.DefaultValue is { } requested)
-        {
-            defaultValue = new FieldDefaultValue
-            {
-                Kind = requested.Kind,
-                Value = ToStorable(requested.Value),
-                Offset = requested.Kind == DefaultValueKind.Now ? requested.Offset : null,
-            };
-            var problem = FieldDefaultValueCheck.Check(field.Name, field.Type, field.IsArray, field.EnumValues, defaultValue,
-                schema.SchemaName, VariableSyntax.FieldsOf(schema.Fields));
-            if (problem is not null) return Refused(request.FieldName, problem);
-        }
+        var defaultValue = StorableDefault(request.DefaultValue);
+        if (CheckDefault(schema, field, defaultValue) is { } problem) return Refused(request.FieldName, problem);
 
         field.DefaultValue = defaultValue;
         await SchemaCollection.ReplaceOneAsync(x => x.ItemId == schema.ItemId, schema, cancellationToken: cancellationToken);
         return Ok(new { isSuccess = true, data = new { acknowledged = true, itemId = schema.ItemId } });
     }
+
+    /// <summary>
+    /// Sets or (null) clears the same default value on several default properties of several system schemas.
+    /// Every pair is checked first; if any is refused nothing is written, and each refusal is named by Schema.Property.
+    /// </summary>
+    [HttpPost]
+    [ProtectedEndPoint("blocks-data::schema::save-schema-fields")]
+    public async Task<IActionResult> BulkFieldDefault([FromBody] BulkPlatformFieldDefaultRequest request, CancellationToken cancellationToken)
+    {
+        if (!RulesEnabled) return NotFound();
+        if (BulkTargetsProblem(request.SchemaIds, request.FieldNames) is { } shape) return Refused("fieldNames", shape);
+        var defaultValue = StorableDefault(request.DefaultValue);
+
+        var errors = new Dictionary<string, string>();
+        var schemas = new List<(SchemaDefinition Schema, List<FieldDefinition> Fields)>();
+        foreach (var schemaId in request.SchemaIds.Distinct())
+        {
+            if (await LoadRulesSchemaAsync(schemaId, cancellationToken) is not { } loaded)
+            {
+                errors[schemaId] = "This schema doesn't take default values";
+                continue;
+            }
+            var (schema, rules) = loaded;
+            var fields = new List<FieldDefinition>();
+            foreach (var fieldName in request.FieldNames.Distinct())
+            {
+                var key = $"{schema.SchemaName}.{fieldName}";
+                var field = schema.Fields.FirstOrDefault(f => f.Name == fieldName);
+                if (field is null || rules.DefaultFor(field.Name) == RuleAccess.Blocked) errors[key] = $"A default value can't be set on {key}";
+                else if (CheckDefault(schema, field, defaultValue) is { } problem) errors[key] = problem;
+                else fields.Add(field);
+            }
+            schemas.Add((schema, fields));
+        }
+        if (errors.Count > 0) return BadRequest(new BaseResponse { IsSuccess = false, Errors = errors });
+
+        foreach (var (schema, fields) in schemas)
+        {
+            foreach (var field in fields) field.DefaultValue = defaultValue;
+            await SchemaCollection.ReplaceOneAsync(x => x.ItemId == schema.ItemId, schema, cancellationToken: cancellationToken);
+        }
+        return Ok(new { isSuccess = true, data = new { acknowledged = true, count = schemas.Sum(x => x.Fields.Count) } });
+    }
+
+    /// <summary>The base entity's own properties, which every system schema has: the only ones bulk changes may touch.</summary>
+    private static readonly HashSet<string> DefaultPropertyNames =
+        typeof(BaseEntity).GetProperties().Select(p => p.Name).ToHashSet(StringComparer.Ordinal);
+
+    private const int BulkLimit = 100;
+
+    /// <summary>Why a bulk request's schemas and properties can't be used, or null when they can.</summary>
+    private static string? BulkTargetsProblem(List<string> schemaIds, List<string> fieldNames)
+    {
+        if (schemaIds.Count == 0 || fieldNames.Count == 0) return "Pick at least one schema and one property";
+        if (schemaIds.Count > BulkLimit || fieldNames.Count > BulkLimit) return $"At most {BulkLimit} schemas and {BulkLimit} properties at once";
+        var other = fieldNames.FirstOrDefault(name => !DefaultPropertyNames.Contains(name.Split('.')[0]));
+        return other is null ? null : $"{other} isn't a default property; bulk changes only take the base entity's properties";
+    }
+
+    /// <summary>Rules as stored: request values as text, numbers and lists, every rule version 1.</summary>
+    private static void NormaliseRules(List<ValidationRule> rules)
+    {
+        foreach (var rule in rules)
+        {
+            rule.Value = ToStorable(rule.Value);
+            rule.SecondaryValue = ToStorable(rule.SecondaryValue);
+            rule.EvaluationVersion = 1;
+        }
+    }
+
+    /// <summary>Stores the property's rules, or removes its row when there are none; returns the row's id.</summary>
+    private async Task<string?> WriteValidationAsync(string schemaId, string fieldName, DataValidation? existing, List<ValidationRule> rules, CancellationToken cancellationToken)
+    {
+        if (rules.Count == 0)
+        {
+            if (existing is not null) await ValidationCollection.DeleteOneAsync(x => x.ItemId == existing.ItemId, cancellationToken);
+            return existing?.ItemId;
+        }
+
+        var validation = existing ?? new DataValidation { ItemId = Guid.NewGuid().ToString(), SchemaId = schemaId, FieldName = fieldName, CreatedDate = DateTime.UtcNow };
+        validation.Validations = rules;
+        validation.LastUpdatedDate = DateTime.UtcNow;
+        await ValidationCollection.ReplaceOneAsync(x => x.ItemId == validation.ItemId, validation, new ReplaceOptions { IsUpsert = true }, cancellationToken);
+        return validation.ItemId;
+    }
+
+    /// <summary>The requested default as stored; null clears it.</summary>
+    private static FieldDefaultValue? StorableDefault(FieldDefaultValue? requested)
+    {
+        if (requested is null) return null;
+        return new FieldDefaultValue
+        {
+            Kind = requested.Kind,
+            Value = ToStorable(requested.Value),
+            Offset = requested.Kind == DefaultValueKind.Now ? requested.Offset : null,
+        };
+    }
+
+    /// <summary>Why the default can't go on the field, or null when it can (clearing always can).</summary>
+    private static string? CheckDefault(SchemaDefinition schema, FieldDefinition field, FieldDefaultValue? defaultValue) =>
+        defaultValue is null
+            ? null
+            : FieldDefaultValueCheck.Check(field.Name, field.Type, field.IsArray, field.EnumValues, defaultValue,
+                schema.SchemaName, VariableSyntax.FieldsOf(schema.Fields));
 
     private object? RuleFlags(string schemaName) =>
         OfferedRules(schemaName) is { } rules
@@ -456,6 +582,25 @@ public sealed class SetPlatformFieldDefaultRequest
     public string SchemaId { get; set; } = string.Empty;
     /// <summary>The property; a nested one by its dotted path, e.g. Read.Roles.</summary>
     public string FieldName { get; set; } = string.Empty;
+    /// <summary>Null clears the default.</summary>
+    public FieldDefaultValue? DefaultValue { get; set; }
+}
+
+public sealed class BulkPlatformValidationRequest
+{
+    public List<string> SchemaIds { get; set; } = [];
+    /// <summary>Default properties only; nested ones by their dotted path, e.g. Read.Roles.</summary>
+    public List<string> FieldNames { get; set; } = [];
+    public List<ValidationRule> Validations { get; set; } = [];
+    /// <summary>True: each property gets exactly these rules. False or missing: they are added after its own.</summary>
+    public bool? Replace { get; set; }
+}
+
+public sealed class BulkPlatformFieldDefaultRequest
+{
+    public List<string> SchemaIds { get; set; } = [];
+    /// <summary>Default properties only; nested ones by their dotted path, e.g. Read.Roles.</summary>
+    public List<string> FieldNames { get; set; } = [];
     /// <summary>Null clears the default.</summary>
     public FieldDefaultValue? DefaultValue { get; set; }
 }

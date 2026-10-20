@@ -43,7 +43,12 @@ export type PlatformSchema = {
 
 export type SavePlatformValidationPayload = { schemaId: string; fieldName: string; validations: ISchemaFieldValidation[] };
 export type SetPlatformFieldDefaultPayload = { schemaId: string; fieldName: string; defaultValue: IFieldDefaultValue | null };
+/** The same rules on several default properties of several schemas; `replace` gives each exactly these, otherwise they are added. */
+export type BulkPlatformValidationPayload = { schemaIds: string[]; fieldNames: string[]; validations: ISchemaFieldValidation[]; replace: boolean };
+/** The same default value (null clears it) on several default properties of several schemas. */
+export type BulkPlatformFieldDefaultPayload = { schemaIds: string[]; fieldNames: string[]; defaultValue: IFieldDefaultValue | null };
 type Ack = Response<{ acknowledged: boolean; itemId?: string }>;
+type BulkAck = Response<{ acknowledged: boolean; count: number }>;
 
 type Response<T> = { isSuccess: boolean; data: T; errors?: unknown; message?: string };
 
@@ -58,4 +63,8 @@ export const platformDataAccessService = {
   saveValidation: (payload: SavePlatformValidationPayload) => http.post<Ack>("/api/PlatformDataAccess/SaveValidation", payload),
   /** Sets or (null) clears a property's default value. */
   setFieldDefault: (payload: SetPlatformFieldDefaultPayload) => http.post<Ack>("/api/PlatformDataAccess/FieldDefault", payload),
+  /** All or nothing: one refused schema/property pair and nothing is written. Default properties only. */
+  bulkValidation: (payload: BulkPlatformValidationPayload) => http.post<BulkAck>("/api/PlatformDataAccess/BulkValidation", payload),
+  /** All or nothing, as bulkValidation. */
+  bulkFieldDefault: (payload: BulkPlatformFieldDefaultPayload) => http.post<BulkAck>("/api/PlatformDataAccess/BulkFieldDefault", payload),
 };

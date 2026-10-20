@@ -4,7 +4,8 @@ import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui-kits/sheet/sheet";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui-kits/button/button";
+import { ArrowLeft, Layers } from "lucide-react";
 import { useCallback, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { platformDataAccessService, type PlatformSchema, type PlatformSchemaField } from "./data-access.service";
 import {
@@ -21,6 +22,7 @@ import type { OnOpenFieldRules } from "./explorer/field-rules-buttons";
 import { SchemaFieldsTable, SchemaFieldsTableSkeleton, type OnOpenFieldAccess } from "./explorer/schema-fields-table";
 import { SchemaHeader, SchemaHeaderSkeleton } from "./explorer/schema-header";
 import { SchemaPreviewDrawer } from "./explorer/schema-preview-drawer";
+import { BulkRulesDialog } from "./rules/bulk-rules-dialog";
 import { RulesInspector, rulesInspectorKey, type RulesInspectorTarget } from "./rules/rules-inspector";
 import { variableFieldsOf } from "./rules/variable-syntax";
 
@@ -217,6 +219,9 @@ export function DataAccessPage() {
   const [search, setSearch] = useState("");
   const selectedSchemaId = queryParams.schemaId;
   const selectedSchema = schemas.find((schema) => schema.id === selectedSchemaId) ?? null;
+  // Rules are switched on in this environment when some schema carries its allow-list.
+  const rulesEnabled = schemas.some((schema) => schema.rules);
+  const [isBulkOpen, setIsBulkOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const [inspector, setInspector] = useState<InspectorTarget | null>(null);
@@ -277,7 +282,21 @@ export function DataAccessPage() {
 
   return (
     <div className="flex flex-col lg:h-[calc(100vh-8rem)] lg:min-h-0">
-      <PageHeader title="Data Access" description="Platform collections of IAM, OS, Logic, Release and Monitor, and who may view, create, edit and delete them." />
+      <PageHeader
+        title="Data Access"
+        description="Platform collections of IAM, OS, Logic, Release and Monitor, and who may view, create, edit and delete them."
+        actions={
+          rulesEnabled ? (
+            <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => setIsBulkOpen(true)}>
+              <Layers className="h-4 w-4" />
+              Bulk rules
+            </Button>
+          ) : undefined
+        }
+      />
+      <Dialog open={isBulkOpen} onOpenChange={setIsBulkOpen}>
+        {isBulkOpen && <BulkRulesDialog schemas={schemas} onClose={() => setIsBulkOpen(false)} />}
+      </Dialog>
 
       <div className="flex flex-col gap-4 lg:min-h-0 lg:flex-1 lg:flex-row lg:items-stretch">
         {/* Explorer column: one box whose width moves between the full list and the rail. */}
@@ -321,7 +340,7 @@ export function DataAccessPage() {
             <SchemaPanel
               isLoading={schemasQuery.isLoading}
               schema={selectedSchema}
-              rulesEnabled={schemas.some((schema) => schema.rules)}
+              rulesEnabled={rulesEnabled}
               isAccessPanelOpen={isRightPanelOpen}
               onOpenPreview={() => setIsPreviewOpen(true)}
               onOpenSchemaAccess={(tab) => selectedSchema && openInspector(schemaAccessTarget(selectedSchema, tab))}

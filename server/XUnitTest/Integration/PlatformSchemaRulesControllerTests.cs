@@ -38,7 +38,8 @@ public class PlatformSchemaRulesControllerTests
         await Schemas.InsertOneAsync(new SchemaDefinition
         {
             ItemId = id, SchemaName = schemaName, CollectionName = schemaName + "s", SchemaType = SchemaType.Entity, IsSystemEntity = true,
-            Fields = fields.Select(f => new FieldDefinition { Name = f, Type = "String", IsArray = f == "Tags" }).ToList(),
+            // Tags and the access lists (Read.Roles, …) are lists of text, as the seed has them.
+            Fields = fields.Select(f => new FieldDefinition { Name = f, Type = "String", IsArray = f == "Tags" || f.Contains('.') }).ToList(),
         });
         return id;
     }
@@ -169,6 +170,75 @@ public class PlatformSchemaRulesControllerTests
 
         await controller.FieldDefault(Default("ImageUrl", null), CancellationToken.None);
         (await StoredFieldAsync(id, "ImageUrl")).DefaultValue.Should().BeNull();
+    }
+
+    private async Task<List<ValidationRule>> StoredRulesAsync(string schemaId, string field) =>
+        (await Validations.Find(v => v.SchemaId == schemaId && v.FieldName == field).SingleOrDefaultAsync())?.Validations ?? [];
+
+    [Fact]
+    public async Task BulkValidation_AddsToEachDefaultPropertysRules_OrReplacesThem()
+    {
+        var template = await InsertAsync("EmailTemplate", "Name", "Language", "Read.Roles");
+        var role = await InsertAsync("Role", "Name", "Language", "Read.Roles");
+        var controller = Controller();
+        await controller.SaveValidation(Rules(template, "Language", new ValidationRule { Type = ValidationType.MaxLength, Value = 5 }), CancellationToken.None);
+        BulkPlatformValidationRequest Bulk(bool replace, params ValidationRule[] rules) =>
+            new() { SchemaIds = [template, role], FieldNames = ["Language", "Read.Roles"], Validations = rules.ToList(), Replace = replace };
+
+        (await controller.BulkValidation(Bulk(false, new ValidationRule { Type = ValidationType.NotEmpty }), CancellationToken.None))
+            .Should().BeOfType<OkObjectResult>();
+        (await StoredRulesAsync(template, "Language")).Select(r => r.Type).Should().Equal(ValidationType.MaxLength, ValidationType.NotEmpty);
+        (await StoredRulesAsync(role, "Read.Roles")).Should().ContainSingle(r => r.Type == ValidationType.NotEmpty && r.EvaluationVersion == 1);
+
+        await controller.BulkValidation(Bulk(true, new ValidationRule { Type = ValidationType.MinLength, Value = 2 }), CancellationToken.None);
+        foreach (var (schema, field) in new[] { (template, "Language"), (template, "Read.Roles"), (role, "Language"), (role, "Read.Roles") })
+            (await StoredRulesAsync(schema, field)).Select(r => r.Type).Should().Equal(ValidationType.MinLength);
+
+        // Replacing with no rules removes them everywhere.
+        await controller.BulkValidation(Bulk(true), CancellationToken.None);
+        (await Validations.CountDocumentsAsync(v => v.SchemaId == template || v.SchemaId == role)).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task BulkValidation_TakesOnlyDefaultProperties_AndWritesNothingWhenAPairIsRefused()
+    {
+        var template = await InsertAsync("EmailTemplate", "Name", "Language");
+        var excluded = await InsertAsync("RefreshTokenModel", "Language");
+        var notEmpty = new ValidationRule { Type = ValidationType.NotEmpty };
+
+        Message(await Controller().BulkValidation(new BulkPlatformValidationRequest { SchemaIds = [template], FieldNames = ["Name"], Validations = [notEmpty] }, CancellationToken.None))
+            .Should().Be("Name isn't a default property; bulk changes only take the base entity's properties");
+
+        var refused = await Controller().BulkValidation(
+            new BulkPlatformValidationRequest { SchemaIds = [template, excluded], FieldNames = ["Language"], Validations = [notEmpty] }, CancellationToken.None);
+        refused.Should().BeOfType<BadRequestObjectResult>().Subject.Value.Should().BeOfType<BaseResponse>().Subject.Errors
+            .Should().ContainKey(excluded).WhoseValue.Should().Be("This schema doesn't take validation rules");
+        (await StoredRulesAsync(template, "Language")).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task BulkFieldDefault_SetsAndClearsAcrossSchemas_AndNamesEachRefusal()
+    {
+        var template = await InsertAsync("EmailTemplate", "Name", "Read.Roles", "Update.Roles");
+        var role = await InsertAsync("Role", "Name", "Read.Roles", "Update.Roles");
+        var controller = Controller();
+        BulkPlatformFieldDefaultRequest Bulk(FieldDefaultValue? value) =>
+            new() { SchemaIds = [template, role], FieldNames = ["Read.Roles", "Update.Roles"], DefaultValue = value };
+
+        var admins = new FieldDefaultValue { Kind = DefaultValueKind.Static, Value = new List<object> { "admin" } };
+        (await controller.BulkFieldDefault(Bulk(admins), CancellationToken.None)).Should().BeOfType<OkObjectResult>();
+        foreach (var (schema, field) in new[] { (template, "Read.Roles"), (template, "Update.Roles"), (role, "Read.Roles"), (role, "Update.Roles") })
+            (await StoredFieldAsync(schema, field)).DefaultValue!.Kind.Should().Be(DefaultValueKind.Static);
+
+        // A template naming one schema can't fit the other: each pair is named, and nothing changes.
+        var named = await controller.BulkFieldDefault(Bulk(new FieldDefaultValue { Kind = DefaultValueKind.Template, Value = new List<object> { "{{Role.Name}}" } }), CancellationToken.None);
+        named.Should().BeOfType<BadRequestObjectResult>().Subject.Value.Should().BeOfType<BaseResponse>().Subject.Errors!.Keys
+            .Should().BeEquivalentTo("EmailTemplate.Read.Roles", "EmailTemplate.Update.Roles");
+        (await StoredFieldAsync(role, "Read.Roles")).DefaultValue!.Kind.Should().Be(DefaultValueKind.Static);
+
+        await controller.BulkFieldDefault(Bulk(null), CancellationToken.None);
+        (await StoredFieldAsync(template, "Update.Roles")).DefaultValue.Should().BeNull();
+        (await StoredFieldAsync(role, "Read.Roles")).DefaultValue.Should().BeNull();
     }
 
     private async Task<FieldDefinition> StoredFieldAsync(string schemaId, string field) =>
