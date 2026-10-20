@@ -208,6 +208,29 @@ describe("DataAccessPage", () => {
     expect(screen.getAllByText("UserIds").length).toBeGreaterThan(0);
   });
 
+  it("opens object properties as a tree in the same table, several at once, with Expand all and Collapse all", async () => {
+    const user = userEvent.setup();
+    const owner = f("Owner", { type: "Person", fields: [f("Email"), f("Address", { type: "Address", fields: [f("City")] })] });
+    h.schemas = [{ ...role, fields: [...role.fields, owner] }, build];
+    renderPage("?schemaId=role-id");
+
+    const table = (await screen.findAllByText("Owner")).map((name) => name.closest("table")).find(Boolean) as HTMLElement;
+    expect(within(table).getAllByText("2 fields")).toHaveLength(2);
+
+    await user.click(within(table).getByRole("button", { name: "Expand OperationAccess attributes" }));
+    await user.click(within(table).getByRole("button", { name: "Expand Person attributes" }));
+    expect(within(table).getByText("UserIds")).toBeTruthy();
+    expect(within(table).getByText("Email")).toBeTruthy();
+    expect(within(table).queryByText("City")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Expand all" }));
+    expect(within(table).getByText("City").closest("tr")?.dataset.treeDepth).toBe("2");
+
+    await user.click(screen.getByRole("button", { name: "Collapse all" }));
+    expect(within(table).queryByText("UserIds")).toBeNull();
+    expect(within(table).queryByText("Email")).toBeNull();
+  });
+
   it("opens schema access on the verb that was clicked, with all four operations", async () => {
     const user = userEvent.setup();
     renderPage("?schemaId=role-id");

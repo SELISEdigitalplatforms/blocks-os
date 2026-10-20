@@ -5,7 +5,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
 import { cn } from "@/lib/utils";
-import { ChevronDown, ChevronRight, Shield } from "lucide-react";
+import { Button } from "@/components/ui-kits/button/button";
+import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Shield } from "lucide-react";
 import { Fragment, useState } from "react";
 import type { PlatformSchemaField } from "../data-access.service";
 import { FieldFlags, RequiredBadge, TypeChip, flagTitlesFromField, flagsFromField, tierFromLevel, ACCESS_TIER_LABELS } from "../gateway/components/primitives";
@@ -13,6 +14,20 @@ import type { IPlatformSchemaRules } from "../rules/rules.types";
 import { FieldRulesButtons, FieldRulesProvider, type OnOpenFieldRules } from "./field-rules-buttons";
 import { useDefaultPropertiesExpanded } from "./explorer-hooks";
 import { hasNestedFields, isScalarField, orderFields } from "./explorer-utils";
+import {
+  EVERYTHING_EXPANDED,
+  FieldCount,
+  NOTHING_EXPANDED,
+  TreeGuides,
+  TreeStem,
+  TreeToggle,
+  isPathExpanded,
+  nestedRows,
+  togglePath,
+  treeIndent,
+  type TreeExpansion,
+  type TreeGuide,
+} from "./property-tree";
 
 /** Opens the access inspector for one property; `path` is the dotted name (e.g. `Create.Roles`). */
 export type OnOpenFieldAccess = (target: { path: string; field: PlatformSchemaField }) => void;
@@ -132,6 +147,8 @@ function FieldRow({
   field,
   path,
   isDefault,
+  depth = 0,
+  guides = [],
   isExpanded,
   onToggleExpand,
   onOpenFieldAccess,
@@ -139,45 +156,42 @@ function FieldRow({
   field: PlatformSchemaField;
   path: string;
   isDefault: boolean;
+  /** 0 for the table's own rows; nested rows sit under their parent with guide lines. */
+  depth?: number;
+  guides?: TreeGuide[];
   isExpanded: boolean;
   onToggleExpand: () => void;
   onOpenFieldAccess: OnOpenFieldAccess;
 }>) {
   const nested = hasNestedFields(field);
+  const isTreeRow = depth > 0;
+  let toggleLabel = isExpanded ? `Collapse ${field.type}` : `Expand ${field.type} attributes`;
+  if (isTreeRow) toggleLabel = `${isExpanded ? "Collapse" : "Expand"} ${path}`;
   return (
-    <TableRow className={cn(isDefault && "bg-primary/5 hover:bg-primary/10")}>
-      <TableCell className={CELL}>
-        <span className="block truncate font-mono text-[13px] text-foreground" title={field.name}>
-          {field.name}
-        </span>
+    <TableRow
+      className={cn(isDefault && !isTreeRow && "bg-primary/5 hover:bg-primary/10", isTreeRow && "bg-muted/20 hover:bg-muted/30")}
+      data-tree-depth={isTreeRow ? depth : undefined}
+    >
+      {/* Property: the tree's chevron slot, the name, and an object's field count */}
+      <TableCell className={cn(CELL, "relative")} title={isTreeRow ? path : undefined}>
+        <TreeGuides guides={guides} />
+        {isExpanded && <TreeStem depth={depth} />}
+        <div className="flex min-w-0 items-center gap-1.5" style={treeIndent(depth)}>
+          <span className="flex w-5 shrink-0 items-center justify-center">
+            {nested && <TreeToggle expanded={isExpanded} label={toggleLabel} onToggle={onToggleExpand} />}
+            {!nested && isTreeRow && <span aria-hidden className="h-1 w-1 rounded-full bg-muted-foreground/40" />}
+          </span>
+          <span
+            className={cn("truncate pl-0.5 font-mono text-[13px]", isTreeRow ? "text-foreground/85" : "text-foreground")}
+            title={isTreeRow ? undefined : field.name}
+          >
+            {field.name}
+          </span>
+          {nested && <FieldCount count={field.fields?.length} />}
+        </div>
       </TableCell>
       <TableCell className={CELL}>
-        <div className="flex h-9 flex-col justify-center">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <TypeChip type={field.type} isArray={field.isArray} className="min-w-0 max-w-full truncate" />
-            {nested && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={onToggleExpand}
-                    className={cn(
-                      "flex shrink-0 rounded p-1 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40",
-                      isExpanded ? "bg-primary/10 text-primary" : "text-primary hover:bg-primary/10",
-                    )}
-                    aria-label={isExpanded ? `Collapse ${field.type}` : `Expand ${field.type} attributes`}
-                    aria-expanded={isExpanded}
-                  >
-                    {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {isExpanded ? "Collapse" : "Expand"} {field.type} attributes
-                </TooltipContent>
-              </Tooltip>
-            )}
-          </div>
-        </div>
+        <TypeChip type={field.type} isArray={field.isArray} className="min-w-0 max-w-full truncate" />
         {field.type === "Enum" && <EnumValues values={field.enumValues ?? []} />}
       </TableCell>
       <TableCell className={CELL}>{isScalarField(field) && <RequiredBadge requiredOn={field.requiredOn} />}</TableCell>
@@ -205,46 +219,51 @@ function FieldRow({
   );
 }
 
+type TreeState = { expansion: TreeExpansion; onToggle: (path: string) => void };
+
 /**
- * The rows of one level of properties, plus the expanded nested table under an
- * object property (one open at a time, as in the Data Gateway).
+ * The rows of the table's properties, each open object property followed by its nested properties as
+ * indented rows (any number open at once, as in the Data Gateway).
  */
 function FieldRows({
   fields,
-  parentPath,
   isDefault,
+  tree,
   onOpenFieldAccess,
 }: Readonly<{
   fields: PlatformSchemaField[];
-  parentPath: string;
   isDefault: boolean;
+  tree: TreeState;
   onOpenFieldAccess: OnOpenFieldAccess;
 }>) {
-  const [expanded, setExpanded] = useState<string | null>(null);
   return (
     <>
       {fields.map((field) => {
-        const path = parentPath ? `${parentPath}.${field.name}` : field.name;
-        const isExpanded = expanded === field.name;
+        const isExpanded = hasNestedFields(field) && isPathExpanded(tree.expansion, field.name);
         return (
-          <Fragment key={path}>
+          <Fragment key={field.name}>
             <FieldRow
               field={field}
-              path={path}
+              path={field.name}
               isDefault={isDefault}
               isExpanded={isExpanded}
-              onToggleExpand={() => setExpanded(isExpanded ? null : field.name)}
+              onToggleExpand={() => tree.onToggle(field.name)}
               onOpenFieldAccess={onOpenFieldAccess}
             />
-            {isExpanded && hasNestedFields(field) && (
-              <TableRow>
-                <TableCell colSpan={COLUMN_COUNT} className="bg-muted/30 p-4 align-top dark:bg-muted/25">
-                  <Card className="flex min-w-0 flex-col overflow-hidden shadow-none">
-                    <FieldsTable fields={field.fields ?? []} parentPath={path} onOpenFieldAccess={onOpenFieldAccess} embedded />
-                  </Card>
-                </TableCell>
-              </TableRow>
-            )}
+            {isExpanded &&
+              nestedRows({ path: field.name, field }, tree.expansion).map((row) => (
+                <FieldRow
+                  key={row.path}
+                  field={row.field}
+                  path={row.path}
+                  isDefault={isDefault}
+                  depth={row.depth}
+                  guides={row.guides}
+                  isExpanded={row.isExpanded}
+                  onToggleExpand={() => tree.onToggle(row.path)}
+                  onOpenFieldAccess={onOpenFieldAccess}
+                />
+              ))}
           </Fragment>
         );
       })}
@@ -254,25 +273,22 @@ function FieldRows({
 
 function FieldsTable({
   fields,
-  parentPath = "",
   schemaName,
-  embedded = false,
+  tree,
   onOpenFieldAccess,
 }: Readonly<{
   fields: PlatformSchemaField[];
-  parentPath?: string;
-  schemaName?: string;
-  embedded?: boolean;
+  schemaName: string;
+  tree: TreeState;
   onOpenFieldAccess: OnOpenFieldAccess;
 }>) {
   const [isDefaultsExpanded, setIsDefaultsExpanded] = useDefaultPropertiesExpanded();
-  // Only the entity itself splits off its default properties; nested objects list theirs as they are.
-  const { defaults, own } = embedded ? { defaults: [], own: fields } : orderFields(fields);
+  const { defaults, own } = orderFields(fields);
 
   return (
     <Table className="w-full table-fixed" wrapperClassName="overflow-visible">
       <ColumnWidths />
-      <TableHeader className={cn(!embedded && "sticky top-0 z-10 bg-card")}>
+      <TableHeader className="sticky top-0 z-10 bg-card">
         <TableRow>
           <TableHead>Property</TableHead>
           <TableHead>Type</TableHead>
@@ -298,19 +314,17 @@ function FieldsTable({
                 </button>
               </TableCell>
             </TableRow>
-            {isDefaultsExpanded && <FieldRows fields={defaults} parentPath={parentPath} isDefault onOpenFieldAccess={onOpenFieldAccess} />}
+            {isDefaultsExpanded && <FieldRows fields={defaults} isDefault tree={tree} onOpenFieldAccess={onOpenFieldAccess} />}
           </>
         )}
-        {!embedded && schemaName && (
-          <TableRow className="hover:bg-transparent">
-            <TableCell colSpan={COLUMN_COUNT} className="bg-muted/30 px-4 py-2">
-              <div className="text-sm font-medium text-foreground">
-                {schemaName} Properties ({own.length})
-              </div>
-            </TableCell>
-          </TableRow>
-        )}
-        <FieldRows fields={own} parentPath={parentPath} isDefault={false} onOpenFieldAccess={onOpenFieldAccess} />
+        <TableRow className="hover:bg-transparent">
+          <TableCell colSpan={COLUMN_COUNT} className="bg-muted/30 px-4 py-2">
+            <div className="text-sm font-medium text-foreground">
+              {schemaName} Properties ({own.length})
+            </div>
+          </TableCell>
+        </TableRow>
+        <FieldRows fields={own} isDefault={false} tree={tree} onOpenFieldAccess={onOpenFieldAccess} />
       </TableBody>
     </Table>
   );
@@ -368,7 +382,7 @@ function FieldCard({
  * The Data Gateway's field table (`SchemaStructureTable`) in view mode: the same columns and Rules
  * buttons, no edit, no add/duplicate/delete. Validation and Default value open only where the Genesis
  * allow-list opens a property (and only while rules are switched on); elsewhere they are disabled with
- * the reason. Nested object properties expand in place like child schemas do there.
+ * the reason. Object properties open in place as a tree of indented rows, as child schemas do there.
  */
 export function SchemaFieldsTable({
   schemaName,
@@ -386,11 +400,17 @@ export function SchemaFieldsTable({
 }>) {
   const [isDefaultsExpanded, setIsDefaultsExpanded] = useDefaultPropertiesExpanded();
   const { defaults, own } = orderFields(fields);
+  // The tree closes when another schema is selected.
+  const [treeState, setTreeState] = useState<{ schemaName: string; expansion: TreeExpansion }>({ schemaName, expansion: NOTHING_EXPANDED });
+  const expansion = treeState.schemaName === schemaName ? treeState.expansion : NOTHING_EXPANDED;
+  const setExpansion = (next: TreeExpansion) => setTreeState({ schemaName, expansion: next });
+  const tree: TreeState = { expansion, onToggle: (path) => setExpansion(togglePath(expansion, path)) };
+  const hasObjects = fields.some(hasNestedFields);
 
   return (
     <FieldRulesProvider rules={onOpenFieldRules ? rules : null} onOpen={onOpenFieldRules ?? (() => {})}>
     <Card className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-none border-t-0 shadow-none">
-      <div className="-mx-5 flex shrink-0 items-center border-b border-border/40 px-5">
+      <div className="-mx-5 flex shrink-0 items-center justify-between border-b border-border/40 px-5">
         <Tabs value="attribute">
           <TabsList className="h-8 gap-1 rounded-none bg-transparent p-0">
             <TabsTrigger value="attribute" className={TAB_TRIGGER_CLASS}>
@@ -398,6 +418,18 @@ export function SchemaFieldsTable({
             </TabsTrigger>
           </TabsList>
         </Tabs>
+        {hasObjects && (
+          <div className="hidden items-center xl:flex">
+            <Button type="button" variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs font-medium text-muted-foreground" onClick={() => setExpansion(EVERYTHING_EXPANDED)}>
+              <ChevronsUpDown className="h-3.5 w-3.5" aria-hidden />
+              Expand all
+            </Button>
+            <Button type="button" variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs font-medium text-muted-foreground" onClick={() => setExpansion(NOTHING_EXPANDED)}>
+              <ChevronsDownUp className="h-3.5 w-3.5" aria-hidden />
+              Collapse all
+            </Button>
+          </div>
+        )}
       </div>
 
       {fields.length === 0 ? (
@@ -407,7 +439,7 @@ export function SchemaFieldsTable({
       ) : (
         <>
           <ScrollArea className="mt-4 hidden min-h-0 flex-1 xl:block">
-            <FieldsTable fields={fields} schemaName={schemaName} onOpenFieldAccess={onOpenFieldAccess} />
+            <FieldsTable fields={fields} schemaName={schemaName} tree={tree} onOpenFieldAccess={onOpenFieldAccess} />
           </ScrollArea>
 
           <div className="mt-4 space-y-3 xl:hidden">
