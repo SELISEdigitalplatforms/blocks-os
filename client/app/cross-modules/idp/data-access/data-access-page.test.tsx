@@ -103,11 +103,13 @@ describe("DataAccessPage", () => {
     expect(list).toBeTruthy();
     expect(screen.getByRole("button", { name: /Build/ })).toBeTruthy();
 
+    // The service filter lives in the URL, which updates asynchronously.
     await user.click(screen.getByRole("button", { name: "Release", pressed: false }));
-    expect(screen.queryByRole("button", { name: /^Role/ })).toBeNull();
+    await waitFor(() => expect(screen.queryByRole("button", { name: /^Role/ })).toBeNull());
     expect(screen.getByRole("button", { name: /Build/ })).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "All" }));
+    await screen.findByRole("button", { name: "All", pressed: true });
     await user.type(screen.getByLabelText("Search schemas"), "rol");
     expect(screen.getByRole("button", { name: /Role/ })).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Build/ })).toBeNull();
