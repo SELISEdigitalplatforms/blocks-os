@@ -100,6 +100,7 @@ const fieldRulesTarget = (
 function SchemaPanel({
   isLoading,
   schema,
+  rulesEnabled,
   isAccessPanelOpen,
   onOpenPreview,
   onOpenSchemaAccess,
@@ -108,6 +109,8 @@ function SchemaPanel({
 }: Readonly<{
   isLoading: boolean;
   schema: PlatformSchema | null;
+  /** Rules are switched on in this environment (some schema carries its allow-list). */
+  rulesEnabled: boolean;
   isAccessPanelOpen: boolean;
   onOpenPreview: () => void;
   onOpenSchemaAccess: (tab?: AccessTab) => void;
@@ -139,6 +142,7 @@ function SchemaPanel({
         schemaName={schema.schemaName}
         fields={schema.fields}
         rules={schema.rules}
+        rulesExcluded={rulesEnabled && !schema.rules}
         onOpenFieldAccess={onOpenFieldAccess}
         onOpenFieldRules={onOpenFieldRules}
       />
@@ -317,6 +321,7 @@ export function DataAccessPage() {
             <SchemaPanel
               isLoading={schemasQuery.isLoading}
               schema={selectedSchema}
+              rulesEnabled={schemas.some((schema) => schema.rules)}
               isAccessPanelOpen={isRightPanelOpen}
               onOpenPreview={() => setIsPreviewOpen(true)}
               onOpenSchemaAccess={(tab) => selectedSchema && openInspector(schemaAccessTarget(selectedSchema, tab))}

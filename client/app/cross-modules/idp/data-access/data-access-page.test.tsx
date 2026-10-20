@@ -327,6 +327,30 @@ describe("DataAccessPage", () => {
       await user.click(within(column).getByRole("button", { name: "I understand, continue" }));
       expect(within(column).getByRole("button", { name: /Add validation/ })).toBeTruthy();
     });
+
+    it("opens validations and the default value on the base entity's access lists, inside the tree", async () => {
+      const user = userEvent.setup();
+      const create = f("Create", { type: "OperationAccess", fields: [f("Roles", { isArray: true }), f("UserIds", { isArray: true })] });
+      h.schemas = [{ ...withRules, fields: [...withRules.fields, create] }, build];
+      renderPage("?schemaId=role-id");
+
+      const toggle = (await screen.findAllByRole("button", { name: /Default Properties/ }))[0];
+      if (toggle.getAttribute("aria-expanded") !== "true") await user.click(toggle);
+      for (const expand of screen.getAllByRole("button", { name: "Expand OperationAccess attributes" })) await user.click(expand);
+
+      expect(screen.getAllByRole("button", { name: "Manage validations for Create.Roles" })[0]).toHaveProperty("disabled", false);
+      expect(screen.getAllByRole("button", { name: "Default value for Create.Roles" })[0]).toHaveProperty("disabled", false);
+      expect(screen.getAllByRole("button", { name: "Validation rules can't be set on Create.UserIds" })[0]).toHaveProperty("disabled", true);
+    });
+
+    it("says so on every property of a schema kept out of rules", async () => {
+      h.schemas = [withRules, build];
+      renderPage("?schemaId=build-id");
+
+      const reason = "Build doesn't take validation rules or default values: credentials, tokens, sessions, secrets and logs are kept out";
+      expect((await screen.findAllByRole("button", { name: reason })).length).toBeGreaterThan(0);
+      expect(screen.queryByRole("button", { name: "Validation rules can't be set on Status" })).toBeNull();
+    });
   });
 });
 

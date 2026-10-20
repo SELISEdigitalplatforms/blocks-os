@@ -388,6 +388,7 @@ export function SchemaFieldsTable({
   schemaName,
   fields,
   rules,
+  rulesExcluded = false,
   onOpenFieldAccess,
   onOpenFieldRules,
 }: Readonly<{
@@ -395,6 +396,8 @@ export function SchemaFieldsTable({
   fields: PlatformSchemaField[];
   /** The allow-list for validation rules and defaults; null when off or the schema takes none. */
   rules?: IPlatformSchemaRules | null;
+  /** Rules are on, but this schema is excluded: every Validation and Default value button says so. */
+  rulesExcluded?: boolean;
   onOpenFieldAccess: OnOpenFieldAccess;
   onOpenFieldRules?: OnOpenFieldRules;
 }>) {
@@ -408,7 +411,11 @@ export function SchemaFieldsTable({
   const hasObjects = fields.some(hasNestedFields);
 
   return (
-    <FieldRulesProvider rules={onOpenFieldRules ? rules : null} onOpen={onOpenFieldRules ?? (() => {})}>
+    <FieldRulesProvider
+      rules={onOpenFieldRules ? rules : null}
+      schemaReason={rulesExcluded ? `${schemaName} doesn't take validation rules or default values: credentials, tokens, sessions, secrets and logs are kept out` : null}
+      onOpen={onOpenFieldRules ?? (() => {})}
+    >
     <Card className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-none border-t-0 shadow-none">
       <div className="-mx-5 flex shrink-0 items-center justify-between border-b border-border/40 px-5">
         <Tabs value="attribute">

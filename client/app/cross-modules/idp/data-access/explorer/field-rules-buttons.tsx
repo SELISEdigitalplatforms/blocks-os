@@ -10,7 +10,12 @@ import { isScalarField } from "./explorer-utils";
 /** Opens a property's validations or default value; `path` is the dotted name (e.g. `Read.Roles`). */
 export type OnOpenFieldRules = (target: { path: string; field: PlatformSchemaField; panel: "validation" | "default" }) => void;
 
-type FieldRulesContextValue = { rulesFor: (path: string) => IPlatformFieldRules | undefined; onOpen: OnOpenFieldRules };
+type FieldRulesContextValue = {
+  rulesFor: (path: string) => IPlatformFieldRules | undefined;
+  /** Set when the whole schema takes no rules (excluded from the allow-list); it replaces the per-property reason. */
+  schemaReason: string | null;
+  onOpen: OnOpenFieldRules;
+};
 
 const FieldRulesContext = createContext<FieldRulesContextValue | null>(null);
 
@@ -21,13 +26,14 @@ const FieldRulesContext = createContext<FieldRulesContextValue | null>(null);
  */
 export function FieldRulesProvider({
   rules,
+  schemaReason = null,
   onOpen,
   children,
-}: Readonly<{ rules: IPlatformSchemaRules | null | undefined; onOpen: OnOpenFieldRules; children: ReactNode }>) {
+}: Readonly<{ rules: IPlatformSchemaRules | null | undefined; schemaReason?: string | null; onOpen: OnOpenFieldRules; children: ReactNode }>) {
   const value = useMemo<FieldRulesContextValue>(() => {
     const byPath = new Map((rules?.fields ?? []).map((f) => [f.path, f]));
-    return { rulesFor: (path) => byPath.get(path), onOpen };
-  }, [rules, onOpen]);
+    return { rulesFor: (path) => byPath.get(path), schemaReason, onOpen };
+  }, [rules, schemaReason, onOpen]);
   return <FieldRulesContext.Provider value={value}>{children}</FieldRulesContext.Provider>;
 }
 
@@ -43,15 +49,17 @@ const TINT_SET = "border-primary/30 bg-primary/10 text-primary";
 const TINT_IDLE = "border-border text-muted-foreground hover:border-primary/40 hover:text-primary";
 
 /** Why the Validation button can't be used on this property, or null when it can. */
-function validationUnavailable(field: PlatformSchemaField, path: string, rules: IPlatformFieldRules | undefined): string | null {
+function validationUnavailable(field: PlatformSchemaField, path: string, rules: IPlatformFieldRules | undefined, schemaReason: string | null): string | null {
   if (!isScalarField(field)) return "Validations are only available for primitive types";
+  if (schemaReason) return schemaReason;
   if (!rules || rules.validation === "Blocked") return `Validation rules can't be set on ${path}`;
   return null;
 }
 
 /** Why the Default value button can't be used on this property, or null when it can. */
-function defaultUnavailable(field: PlatformSchemaField, path: string, rules: IPlatformFieldRules | undefined): string | null {
+function defaultUnavailable(field: PlatformSchemaField, path: string, rules: IPlatformFieldRules | undefined, schemaReason: string | null): string | null {
   if (!isScalarField(field)) return "Default values are only available for text, number, true/false, date-time and enum properties";
+  if (schemaReason) return schemaReason;
   if (!rules || rules.default === "Blocked") return `A default value can't be set on ${path}`;
   if (rules.defaultHasNoEffect) return `${path} is never empty, so a default would never be used`;
   return null;
@@ -74,7 +82,7 @@ function UnavailableButton({ reason, shape, children }: Readonly<{ reason: strin
 type RuleButtonProps = Readonly<{ field: PlatformSchemaField; path: string; wide: boolean; context: FieldRulesContextValue | null }>;
 
 function ValidationButton({ field, path, wide, context }: RuleButtonProps) {
-  const reason = validationUnavailable(field, path, context?.rulesFor(path));
+  const reason = validationUnavailable(field, path, context?.rulesFor(path), context?.schemaReason ?? null);
   const shape = wide ? SHAPE.wide : SHAPE.validation;
   const icon = <Check className={wide ? "h-4 w-4 shrink-0" : "h-3.5 w-3.5"} strokeWidth={2.5} />;
   // Outside a provider there are no rules, so the reason is always set there.
@@ -105,7 +113,7 @@ function ValidationButton({ field, path, wide, context }: RuleButtonProps) {
 }
 
 function DefaultValueButton({ field, path, wide, context }: RuleButtonProps) {
-  const reason = defaultUnavailable(field, path, context?.rulesFor(path));
+  const reason = defaultUnavailable(field, path, context?.rulesFor(path), context?.schemaReason ?? null);
   const shape = wide ? SHAPE.wide : SHAPE.default;
   const icon = <RectangleEllipsis className={wide ? "h-4 w-4 shrink-0" : "h-3.5 w-3.5"} />;
   if (reason || !context) {
