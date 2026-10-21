@@ -756,4 +756,282 @@ describe("CreateOIDC", () => {
       expect(source).not.toMatch(/(?:bg|text|border)-(?:red|blue|green|gray|slate|emerald)-\d/);
     });
   });
+  describe("token lifetimes", () => {
+    const ACCESS = "Access token lifetime in minutes";
+    const IDLE = "Refresh token idle lifetime in minutes";
+    const MAXIMUM = "Refresh token maximum lifetime in minutes";
+    const lifetimeInput = (name: string) =>
+      screen.getByRole("spinbutton", { name }) as HTMLInputElement;
+
+    const mockClientWithLifetimes = (
+      tokenLifetimes: unknown,
+      credentialOverrides: Record<string, unknown> = {},
+    ) =>
+      h.useGetAuthOidcCredential.mockReturnValue({
+        data: {
+          oIDCClientCredential: {
+            clientDisplayName: "Existing",
+            redirectUris: ["https://existing.example.com/cb"],
+            scope: "openid",
+            isActive: true,
+            requirePkce: true,
+            isAutoRedirect: false,
+            isDeviceFlowClient: false,
+            registerAsIdentityProvider: true,
+            allowedResponseTypes: ["code"],
+            ...credentialOverrides,
+          },
+          ...(tokenLifetimes === undefined ? {} : { tokenLifetimes }),
+        },
+        isLoading: false,
+      });
+
+    const fillValidCreate = async (user: User) => {
+      await user.type(screen.getByPlaceholderText("Enter client name"), "My App");
+      await user.type(uriInput(), "https://app.example.com/callback");
+    };
+
+    it("shows the block with three optional inputs and the helper text (H1)", async () => {
+      const user = userEvent.setup();
+      await openCreate(user);
+
+      expect(screen.getByText("Token lifetimes")).toBeTruthy();
+      expect(screen.getByText("Leave a field empty to use the project setting.")).toBeTruthy();
+      for (const name of [ACCESS, IDLE, MAXIMUM]) {
+        const input = lifetimeInput(name);
+        expect(input.value).toBe("");
+        expect(input.placeholder).toBe("Project setting");
+      }
+      expect(screen.getByText("Access token (minutes)")).toBeTruthy();
+      expect(screen.getByText("Refresh token idle (minutes)")).toBeTruthy();
+      expect(screen.getByText("Refresh token maximum (minutes)")).toBeTruthy();
+    });
+
+    it("leaves tokenLifetimes out when the inputs are untouched (H2, C9)", async () => {
+      const user = userEvent.setup();
+      await openCreate(user);
+      await fillValidCreate(user);
+      await user.click(submitButton("Add"));
+
+      await waitFor(() => expect(h.saveOidc).toHaveBeenCalledTimes(1));
+      expect(lastPayload()).not.toHaveProperty("tokenLifetimes");
+    });
+
+    it("sends entered values as numbers on create (H3, H9)", async () => {
+      const user = userEvent.setup();
+      await openCreate(user);
+      await fillValidCreate(user);
+      await user.type(lifetimeInput(ACCESS), "30");
+      await user.type(lifetimeInput(IDLE), "1440");
+      await user.type(lifetimeInput(MAXIMUM), "43200");
+      await user.click(submitButton("Add"));
+
+      await waitFor(() => expect(h.saveOidc).toHaveBeenCalledTimes(1));
+      expect(lastPayload().tokenLifetimes).toEqual({
+        accessTokenValidForNumberMinutes: 30,
+        refreshTokenValidForNumberMinutes: 1440,
+        absoluteRefreshTokenValidForNumberMinutes: 43200,
+      });
+      expect(h.showSuccessToast).toHaveBeenCalledWith({
+        description: "OIDC Client created successfully",
+      });
+    });
+
+    it("shows stored values on edit and sends nothing new when unchanged (H4)", async () => {
+      const user = userEvent.setup();
+      mockClientWithLifetimes({
+        accessTokenValidForNumberMinutes: 30,
+        refreshTokenValidForNumberMinutes: null,
+        absoluteRefreshTokenValidForNumberMinutes: 43200,
+      });
+      await openEdit(user);
+
+      expect(lifetimeInput(ACCESS).value).toBe("30");
+      expect(lifetimeInput(IDLE).value).toBe("");
+      expect(lifetimeInput(MAXIMUM).value).toBe("43200");
+
+      await user.click(submitButton("Update"));
+      await waitFor(() => expect(h.saveOidc).toHaveBeenCalledTimes(1));
+      expect(lastPayload()).not.toHaveProperty("tokenLifetimes");
+    });
+
+    it("sends all three when one value changes on edit (H5)", async () => {
+      const user = userEvent.setup();
+      mockClientWithLifetimes({
+        accessTokenValidForNumberMinutes: 30,
+        refreshTokenValidForNumberMinutes: null,
+        absoluteRefreshTokenValidForNumberMinutes: 43200,
+      });
+      await openEdit(user);
+      await user.clear(lifetimeInput(ACCESS));
+      await user.type(lifetimeInput(ACCESS), "45");
+      await user.click(submitButton("Update"));
+
+      await waitFor(() => expect(h.saveOidc).toHaveBeenCalledTimes(1));
+      expect(lastPayload().tokenLifetimes).toEqual({
+        accessTokenValidForNumberMinutes: 45,
+        refreshTokenValidForNumberMinutes: null,
+        absoluteRefreshTokenValidForNumberMinutes: 43200,
+      });
+    });
+
+    it("sends three nulls when every value is cleared (H6)", async () => {
+      const user = userEvent.setup();
+      mockClientWithLifetimes({
+        accessTokenValidForNumberMinutes: 30,
+        refreshTokenValidForNumberMinutes: 1440,
+        absoluteRefreshTokenValidForNumberMinutes: 43200,
+      });
+      await openEdit(user);
+      for (const name of [ACCESS, IDLE, MAXIMUM]) await user.clear(lifetimeInput(name));
+      await user.click(submitButton("Update"));
+
+      await waitFor(() => expect(h.saveOidc).toHaveBeenCalledTimes(1));
+      expect(lastPayload().tokenLifetimes).toEqual({
+        accessTokenValidForNumberMinutes: null,
+        refreshTokenValidForNumberMinutes: null,
+        absoluteRefreshTokenValidForNumberMinutes: null,
+      });
+    });
+
+    it.each([undefined, null])(
+      "keeps working when the response has tokenLifetimes %s (H7)",
+      async (tokenLifetimes) => {
+        const user = userEvent.setup();
+        mockClientWithLifetimes(tokenLifetimes);
+        await openEdit(user);
+
+        for (const name of [ACCESS, IDLE, MAXIMUM]) expect(lifetimeInput(name).value).toBe("");
+        await user.click(submitButton("Update"));
+        await waitFor(() => expect(h.saveOidc).toHaveBeenCalledTimes(1));
+        expect(lastPayload()).not.toHaveProperty("tokenLifetimes");
+      },
+    );
+
+    it("shows and sends lifetimes for a device-flow client (H8)", async () => {
+      const user = userEvent.setup();
+      mockClientWithLifetimes(null, { isDeviceFlowClient: true, allowedResponseTypes: [] });
+      await openEdit(user);
+      await user.type(lifetimeInput(IDLE), "10080");
+      await user.click(submitButton("Update"));
+
+      await waitFor(() => expect(h.saveOidc).toHaveBeenCalledTimes(1));
+      expect(lastPayload().isDeviceFlowClient).toBe(true);
+      expect(lastPayload().tokenLifetimes).toEqual({
+        accessTokenValidForNumberMinutes: null,
+        refreshTokenValidForNumberMinutes: 10080,
+        absoluteRefreshTokenValidForNumberMinutes: null,
+      });
+    });
+
+    it.each([
+      [ACCESS, "0", "Access token lifetime must be between 1 and 1440 minutes."],
+      [ACCESS, "1441", "Access token lifetime must be between 1 and 1440 minutes."],
+      [IDLE, "525601", "Refresh token idle lifetime must be between 1 and 525600 minutes."],
+      [MAXIMUM, "0", "Refresh token maximum lifetime must be between 1 and 525600 minutes."],
+    ])("flags %s = %s and blocks saving (C1-C3)", async (name, value, message) => {
+      const user = userEvent.setup();
+      await openCreate(user);
+      await fillValidCreate(user);
+      await user.type(lifetimeInput(name), value);
+
+      expect(await screen.findByText(message)).toBeTruthy();
+      expect(submitButton("Add").disabled).toBe(true);
+      expect(h.saveOidc).not.toHaveBeenCalled();
+    });
+
+    it("flags a maximum below the idle lifetime (C4)", async () => {
+      const user = userEvent.setup();
+      await openCreate(user);
+      await fillValidCreate(user);
+      await user.type(lifetimeInput(IDLE), "600");
+      await user.type(lifetimeInput(MAXIMUM), "599");
+
+      expect(
+        await screen.findByText(
+          "Refresh token maximum lifetime must be at least the refresh token idle lifetime.",
+        ),
+      ).toBeTruthy();
+      expect(submitButton("Add").disabled).toBe(true);
+
+      await user.type(lifetimeInput(MAXIMUM), "0");
+      await waitFor(() => expect(submitButton("Add").disabled).toBe(false));
+    });
+
+    it("keeps the dialog and the values when the server rejects the save (C6)", async () => {
+      const user = userEvent.setup();
+      h.saveOidc.mockResolvedValue({
+        isSuccess: false,
+        error: {
+          "TokenLifetimes.RefreshTokenValidForNumberMinutes":
+            "Refresh token idle lifetime must not exceed the project's maximum refresh token lifetime (10080 minutes).",
+        },
+      });
+      await openCreate(user);
+      await fillValidCreate(user);
+      await user.type(lifetimeInput(IDLE), "20000");
+      await user.click(submitButton("Add"));
+
+      await waitFor(() => expect(h.showErrorToast).toHaveBeenCalledTimes(1));
+      expect(h.showErrorToast.mock.calls[0][0].errors).toHaveProperty(
+        "TokenLifetimes.RefreshTokenValidForNumberMinutes",
+      );
+      expect(screen.getByRole("heading", { name: "New OIDC Client" })).toBeTruthy();
+      expect(lifetimeInput(IDLE).value).toBe("20000");
+    });
+
+    it("resets the inputs when the create dialog is opened again (C7)", async () => {
+      const user = userEvent.setup();
+      await openCreate(user);
+      await user.type(lifetimeInput(ACCESS), "30");
+      await user.click(screen.getByRole("button", { name: "Cancel" }));
+      await user.click(screen.getByRole("button", { name: /Create/i }));
+      await screen.findByRole("heading", { name: "New OIDC Client" });
+
+      expect(lifetimeInput(ACCESS).value).toBe("");
+    });
+
+    it("shows a bad stored value and flags it (C11)", async () => {
+      const user = userEvent.setup();
+      mockClientWithLifetimes({
+        accessTokenValidForNumberMinutes: 0,
+        refreshTokenValidForNumberMinutes: null,
+        absoluteRefreshTokenValidForNumberMinutes: null,
+      });
+      await openEdit(user);
+
+      expect(lifetimeInput(ACCESS).value).toBe("0");
+      expect(
+        await screen.findByText("Access token lifetime must be between 1 and 1440 minutes."),
+      ).toBeTruthy();
+      expect(submitButton("Update").disabled).toBe(true);
+      await user.click(submitButton("Update"));
+      expect(h.saveOidc).not.toHaveBeenCalled();
+    });
+
+    it("reaches each input by keyboard with its accessible name (C10)", async () => {
+      const user = userEvent.setup();
+      await openCreate(user);
+      lifetimeInput(ACCESS).focus();
+      expect(document.activeElement).toBe(lifetimeInput(ACCESS));
+      await user.tab();
+      expect(document.activeElement).toBe(lifetimeInput(IDLE));
+      await user.tab();
+      expect(document.activeElement).toBe(lifetimeInput(MAXIMUM));
+    });
+
+    it("builds the block from the form kit inputs only (H10)", () => {
+      const source = readFileSync(
+        resolve(
+          process.cwd(),
+          "app/cross-modules/idp/authentication/components/create-oidc/create-oidc.tsx",
+        ),
+        "utf8",
+      );
+      expect(source).toContain('import { Input } from "@/components/ui-kits/input/input";');
+      expect(source).toContain('placeholder="Project setting"');
+      expect(source).toContain("Leave a field empty to use the project setting.");
+      expect(source.match(/grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-3/g)?.length).toBe(2);
+    });
+  });
 });

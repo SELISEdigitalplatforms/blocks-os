@@ -29,6 +29,23 @@ export interface IOidcConfig {
   clientType?: string | null;
   useTokensCookie?: boolean;
 }
+/**
+ * Optional token lifetimes of one OIDC client, in minutes. `null` means the project setting is used.
+ */
+export interface IOidcClientTokenLifetimes {
+  accessTokenValidForNumberMinutes: number | null;
+  refreshTokenValidForNumberMinutes: number | null;
+  absoluteRefreshTokenValidForNumberMinutes: number | null;
+}
+
+export interface IGetOidcCredentialResponse {
+  oIDCClientCredential: IOidcConfig;
+  /** Absent on servers without per-client lifetimes; `null` when the client uses the project settings. */
+  tokenLifetimes?: IOidcClientTokenLifetimes | null;
+  errors: Record<string, string> | null;
+  isSuccess: boolean;
+}
+
 export interface IGetOidcCredentialsResponse {
   oIDCClientCredentials: IOidcConfig[];
   errors: Record<string, string> | null;
@@ -50,6 +67,11 @@ export interface ISaveOidcCredentialPayload {
   clientDisplayName: string;
   clientType?: string | null;
   useTokensCookie?: boolean;
+  /**
+   * Sent only when a lifetime field was changed. Absent keeps the client's stored values; a `null`
+   * field means "use the project setting".
+   */
+  tokenLifetimes?: IOidcClientTokenLifetimes;
 }
 
 export interface ISaveOidcCredentialResponse {

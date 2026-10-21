@@ -29,11 +29,15 @@ import {
 } from "@blocks-idp/authentication/hooks/use-auth-oidc";
 import {
   ApplicationType,
+  buildTokenLifetimesPayload,
   createOIDCFormDefaultValue,
   CreateOIDCFormValues,
   createOidcSchema,
   deriveApplicationType,
   getRedirectUriSchema,
+  TOKEN_LIFETIME_LIMITS,
+  type TokenLifetimeFormValues,
+  tokenLifetimesToForm,
 } from "./utils";
 import { Input } from "@/components/ui-kits/input/input";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
@@ -58,6 +62,32 @@ const REDIRECT_URI_PLACEHOLDER: Record<ApplicationType, string> = {
   web: "https://example.com/oidc",
   mobile: "com.example.app://callback",
 };
+
+const TOKEN_LIFETIME_FIELDS: {
+  name: keyof TokenLifetimeFormValues;
+  label: string;
+  ariaLabel: string;
+  max: number;
+}[] = [
+  {
+    name: "accessTokenLifetime",
+    label: "Access token (minutes)",
+    ariaLabel: "Access token lifetime in minutes",
+    max: TOKEN_LIFETIME_LIMITS.access.max,
+  },
+  {
+    name: "refreshTokenLifetime",
+    label: "Refresh token idle (minutes)",
+    ariaLabel: "Refresh token idle lifetime in minutes",
+    max: TOKEN_LIFETIME_LIMITS.refresh.max,
+  },
+  {
+    name: "absoluteRefreshTokenLifetime",
+    label: "Refresh token maximum (minutes)",
+    ariaLabel: "Refresh token maximum lifetime in minutes",
+    max: TOKEN_LIFETIME_LIMITS.refresh.max,
+  },
+];
 
 type CreateOIDCProps = {
   itemId?: string;
@@ -120,6 +150,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
     if (isEditMode && existingOidc?.oIDCClientCredential && open) {
       const credential = existingOidc.oIDCClientCredential;
       const loadedApplicationType = deriveApplicationType(credential);
+      const loadedTokenLifetimes = tokenLifetimesToForm(existingOidc.tokenLifetimes);
       const uris =
         credential.redirectUris && credential.redirectUris.length
           ? credential.redirectUris
@@ -146,7 +177,17 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
         storedClientType: credential.clientType ?? null,
         storedUseTokensCookie: credential.useTokensCookie ?? true,
         loadedApplicationType,
+        ...loadedTokenLifetimes,
+        loadedTokenLifetimes,
       });
+      // A stored value the rules reject is flagged at once, not only after the user edits it.
+      if (Object.values(loadedTokenLifetimes).some((value) => value !== "")) {
+        void form.trigger([
+          "accessTokenLifetime",
+          "refreshTokenLifetime",
+          "absoluteRefreshTokenLifetime",
+        ]);
+      }
     } else if (!isEditMode && open) {
       form.reset(createOIDCFormDefaultValue);
     }
@@ -203,6 +244,8 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
     }
     submittingRef.current = true;
     try {
+      // Sent only when a lifetime input changed; otherwise the server keeps the stored values.
+      const tokenLifetimes = buildTokenLifetimesPayload(data, data.loadedTokenLifetimes);
       const payload: ISaveOidcCredentialPayload = {
         redirectUris: isDeviceFlowClient
           ? []
@@ -215,6 +258,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
         allowedResponseTypes: isDeviceFlowClient ? [] : data.allowedResponseTypes,
         itemId: isEditMode ? itemId : "",
         clientDisplayName: data.clientDisplayName,
+        ...(tokenLifetimes ? { tokenLifetimes } : {}),
       };
       const res = await mutateAsync(payload);
       if (!res.isSuccess) {
@@ -583,6 +627,43 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                   )}
                 />
               )}
+
+              {/* Token lifetimes — optional per-client values for every client type. Empty
+                  inputs keep the project setting. */}
+              <div className="space-y-2">
+                <FormLabel>Token lifetimes</FormLabel>
+                <FormDescription className="text-xs">
+                  Leave a field empty to use the project setting.
+                </FormDescription>
+                <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-3">
+                  {TOKEN_LIFETIME_FIELDS.map((lifetime) => (
+                    <FormField
+                      key={lifetime.name}
+                      control={form.control}
+                      name={lifetime.name}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{lifetime.label}</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              inputMode="numeric"
+                              autoComplete="off"
+                              min={1}
+                              max={lifetime.max}
+                              step={1}
+                              placeholder="Project setting"
+                              aria-label={lifetime.ariaLabel}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ))}
+                </div>
+              </div>
             </form>
           </Form>
         </div>
