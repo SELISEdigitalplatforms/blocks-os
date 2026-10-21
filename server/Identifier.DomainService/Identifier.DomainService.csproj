@@ -16,6 +16,7 @@
 	  <PackageReference Include="SeliseBlocks.StorageDriver.OS" />
    <PackageReference Include="MimeKit" />
    <PackageReference Include="MailKit" />
+   <PackageReference Include="System.Security.Cryptography.Pkcs" />
 	  <PackageReference Include="SixLabors.Fonts" />
     <PackageReference Include="SSH.NET" />
   </ItemGroup>

@@ -27,5 +27,7 @@
     <PackageVersion Include="SeliseBlocks.ConfigurationDriver" Version="10.0.0-preview.1" />
     <PackageVersion Include="MimeKit" Version="4.16.0" />
     <PackageVersion Include="MailKit" Version="4.16.0" />
+    <!-- MimeKit pulls Pkcs 10.0.0 (GHSA-846f-f764-76mx); referenced directly where MailKit/MimeKit is used. -->
+    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
   </ItemGroup>
 </Project>
