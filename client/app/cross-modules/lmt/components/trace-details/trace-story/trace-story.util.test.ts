@@ -118,10 +118,9 @@ describe("trace story helpers", () => {
     const flow = buildTraceFlow(failing());
     const plot = buildPlotLine(flow, labelOf);
     expect(plot.tone).toBe("error");
-    expect(plot.headline).toBe("It broke in inventory-worker.");
+    expect(plot.headline).toBe("Error started in inventory-worker:");
     expect(plot.detail).toContain("E11000 duplicate key");
     expect(plot.detail).toContain("2 other steps failed because of it.");
-    expect(plot.stepIndex).toBe(3);
   });
 
   it("names the slowest step of a trace that finished", () => {
@@ -135,7 +134,7 @@ describe("trace story helpers", () => {
     );
     const plot = buildPlotLine(flow, labelOf);
     expect(plot.tone).toBe("ok");
-    expect(plot.headline).toContain("Finished without errors");
+    expect(plot.headline).toBe("Slowest step:");
     expect(plot.detail).toContain("slow in blocks-iam");
     expect(getSlowestStep(flow)?.operationName).toBe("slow");
   });
@@ -145,7 +144,6 @@ describe("trace story helpers", () => {
     expect(getSlowestStep(flow)).toBeNull();
     expect(buildPlotLine(flow, labelOf)).toMatchObject({
       detail: "Only one step was recorded.",
-      stepIndex: null,
     });
   });
 

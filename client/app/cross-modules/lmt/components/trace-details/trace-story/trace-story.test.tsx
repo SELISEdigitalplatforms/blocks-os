@@ -140,7 +140,7 @@ describe("TraceStoryView", () => {
     renderView(failingTrace());
     expect(screen.getAllByText("/oidc/token").length).toBeGreaterThan(0);
     expect(screen.getAllByText("500").length).toBeGreaterThan(0);
-    expect(screen.getByText("It broke in blocks-iam.")).toBeTruthy();
+    expect(screen.getByText("Error started in blocks-iam:")).toBeTruthy();
     expect(screen.getAllByText(/E11000 duplicate key/).length).toBeGreaterThan(0);
     expect(row(/^Step 1: The request arrives/)).toBeTruthy();
     expect(row(/^Step 2: Checking the cache/)).toBeTruthy();
@@ -172,7 +172,9 @@ describe("TraceStoryView", () => {
 
   it("summarises a trace that finished and offers no error filter", () => {
     renderView(okTrace());
-    expect(screen.getByText(/Finished without errors/)).toBeTruthy();
+    expect(screen.getByText("Slowest step:")).toBeTruthy();
+    expect(screen.queryByText(/Finished without errors/)).toBeNull();
+    expect(screen.queryByRole("button", { name: /Go to the slowest step/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /path to the error/ })).toBeNull();
     expect(isSelected(/^Step 1:/)).toBe(true);
   });

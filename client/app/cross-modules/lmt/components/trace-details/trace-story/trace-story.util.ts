@@ -229,8 +229,6 @@ export interface PlotLine {
   tone: "error" | "ok";
   headline: string;
   detail: string;
-  /** The step the plot line points at, when there is one. */
-  stepIndex: number | null;
 }
 
 export const buildPlotLine = (flow: TraceFlow, labelOf: (id: string) => string): PlotLine => {
@@ -245,20 +243,19 @@ export const buildPlotLine = (flow: TraceFlow, labelOf: (id: string) => string):
     const spread = others > 0 ? ` ${plural(others, "other step")} failed because of it.` : "";
     return {
       tone: "error",
-      headline: `It broke in ${origin.serviceName || labelOf(origin.fromId)}.`,
+      headline: `Error started in ${origin.serviceName || labelOf(origin.fromId)}:`,
       detail: `${where}${reason}.${spread}`,
-      stepIndex: origin.index,
     };
   }
   const slowest = getSlowestStep(flow);
-  const total = formatDurationMs(flow.steps[0]?.durationMs ?? 0);
+  const totalMs = flow.steps[0]?.durationMs ?? 0;
+  if (!slowest) return { tone: "ok", headline: "", detail: "Only one step was recorded." };
+  const share =
+    totalMs > 0 ? ` · ${Math.round((slowest.durationMs / totalMs) * 100)}% of the request` : "";
   return {
     tone: "ok",
-    headline: `Finished without errors in ${total}.`,
-    detail: slowest
-      ? `The slowest step was ${slowest.tag} in ${slowest.serviceName || labelOf(slowest.fromId)} (${formatDurationMs(slowest.durationMs)}).`
-      : "Only one step was recorded.",
-    stepIndex: slowest?.index ?? null,
+    headline: "Slowest step:",
+    detail: `${slowest.tag} in ${slowest.serviceName || labelOf(slowest.fromId)} (${formatDurationMs(slowest.durationMs)}${share}).`,
   };
 };
 

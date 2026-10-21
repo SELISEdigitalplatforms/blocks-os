@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
+import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { cn } from "@/lib/utils";
 import { useGetLogs, useGetRestoredLogs } from "@blocks-lmt/hooks/use-log";
 import type { IGetLogsPayload, ILog } from "@blocks-lmt/models/log.model";
@@ -242,7 +243,19 @@ const LogsBody = ({
     );
   if (query.isLoading || query.isFetching)
     return (
-      <output className="block px-5 py-6 text-sm text-medium-emphasis">Loading the logs…</output>
+      <output className="flex flex-col gap-4 px-5 py-5">
+        <span className="sr-only">Loading the logs…</span>
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="flex flex-col gap-1.5" aria-hidden>
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-4 w-12" />
+              <Skeleton className="h-3 w-20" />
+            </div>
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-3/4" />
+          </div>
+        ))}
+      </output>
     );
   if (query.isError)
     return (
