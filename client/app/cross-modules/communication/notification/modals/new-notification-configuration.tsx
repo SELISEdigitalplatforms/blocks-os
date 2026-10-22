@@ -12,7 +12,6 @@ import {
   NOTIFICATION_PROPAGATION_NOT_QUEUED,
   PROPAGATION_WARNING_MESSAGE,
   canNotificationConfigBeDisabled,
-  channelsToNotify,
   notificationImportances,
   notificationKinds,
   notificationTypes,
@@ -21,7 +20,13 @@ import { Switch } from "@/components/ui-kits/switch/switch";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { ChevronDown } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui-kits/collapsible/collapsible";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { showErrorToast, toast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
@@ -192,6 +197,8 @@ const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> 
       form.reset(emptyFormValues);
     }
   }, [previousData, isEdit, form]);
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const [moreOpen, setMoreOpen] = useState(false);
   const watchedKind = form.watch("kind");
   const watchedBuiltIn = form.watch("isBuiltIn");
   const effectiveBuiltIn = isBuiltInConfig || watchedBuiltIn;
@@ -246,349 +253,296 @@ const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> 
       }
     }
   };
-  const idleLabel = isEdit ? "Update Changes" : "Save";
-  const pendingLabel = isEdit ? "Updating..." : "Saving...";
+  const idleLabel = isEdit ? "Save changes" : "Save";
+  const pendingLabel = "Saving...";
   const submitLabel = isPending ? pendingLabel : idleLabel;
 
   return (
-    <DialogContent className="max-h-[90vh] overflow-y-auto rounded-md sm:max-w-[700px]">
+    <DialogContent className="flex max-h-[90vh] flex-col gap-0 rounded-md p-0 sm:max-w-[560px]">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(formSubmitHandler)}>
-          <DialogHeader>
-            <DialogTitle className="mb-2 flex items-center gap-2 text-left">
+        <form
+          onSubmit={form.handleSubmit(formSubmitHandler)}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <DialogHeader className="border-b px-6 py-4">
+            <DialogTitle className="flex items-center gap-2 text-left">
               {dialogTitle}
-              {isBuiltInConfig && <Badge variant="info">Built-in</Badge>}
+              {isBuiltInConfig && (
+                <Badge variant="info" className="w-fit">
+                  Built-in
+                </Badge>
+              )}
             </DialogTitle>
-            <DialogDescription asChild>
-              <div className="pb-4 pt-4 text-left">
-                <div className="grid grid-cols-1 gap-4">
-                  <FormField
-                    name="name"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-left font-medium text-high-emphasis">
-                          Name <span className="text-destructive">*</span>
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            disabled={isEdit}
-                            id="configName"
-                            placeholder="Enter name"
-                            className="border-default col-span-3 mt-1 border shadow-none"
-                            {...field}
-                            onBlur={(e) => {
-                              field.onChange(e.target.value.trim());
-                              field.onBlur();
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="mt-4 grid grid-cols-2 gap-4">
-                  <FormField
-                    name="channelToNotify"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-left font-medium text-high-emphasis">
-                          Channel to Notify <span className="text-destructive">*</span>
-                        </FormLabel>
-                        <Select
-                          disabled={true}
-                          onValueChange={(val) => field.onChange(Number(val))}
-                          defaultValue={String(field.value)}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none">
-                              <SelectValue placeholder="Select Configuration" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {channelsToNotify.map((channel) => (
-                              <SelectItem key={channel.value} value={String(channel.value)}>
-                                {channel.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    name="notificationType"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-left font-medium text-high-emphasis">
-                          Notification Type <span className="text-destructive">*</span>
-                        </FormLabel>
-                        <Select
-                          onValueChange={(val) => field.onChange(Number(val))}
-                          defaultValue={String(field.value)}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none">
-                              <SelectValue placeholder="Select Notification Type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {notificationTypes.map((type) => (
-                              <SelectItem key={type.value} value={String(type.value)}>
-                                {type.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="mt-4 grid grid-cols-1 gap-4">
-                  <FormField
-                    name="notifyMethod"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-left font-medium text-high-emphasis">
-                          Notify Method <span className="text-destructive">*</span>
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            id="notifyMethod"
-                            placeholder="Enter notify method"
-                            className="border-default col-span-3 mt-1 border shadow-none"
-                            {...field}
-                            onBlur={(e) => {
-                              field.onChange(e.target.value.trim());
-                              field.onBlur();
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="mt-4">
-                  <FormField
-                    name="enablePersistence"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Checkbox
-                            className="mr-2"
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                        <FormLabel className="flex-start inline-flex">Enable Persistence</FormLabel>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="mt-4 grid grid-cols-1 gap-4">
-                  <FormField
-                    name="description"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-left font-medium text-high-emphasis">
-                          Description
-                        </FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="What this notification is for"
-                            className="border-default mt-1 border shadow-none"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="mt-4 grid grid-cols-2 gap-4">
-                  <FormField
-                    name="importance"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-left font-medium text-high-emphasis">
-                          Importance
-                        </FormLabel>
-                        <Select
-                          onValueChange={(val) => field.onChange(Number(val))}
-                          defaultValue={String(field.value)}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none">
-                              <SelectValue placeholder="Select importance" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {notificationImportances.map((item) => (
-                              <SelectItem key={item.value} value={String(item.value)}>
-                                {item.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    name="kind"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-left font-medium text-high-emphasis">
-                          Kind
-                        </FormLabel>
-                        <Select
-                          onValueChange={(val) => field.onChange(Number(val))}
-                          defaultValue={String(field.value)}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none">
-                              <SelectValue placeholder="Select kind" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {notificationKinds.map((item) => (
-                              <SelectItem key={item.value} value={String(item.value)}>
-                                {item.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="mt-4 grid grid-cols-1 gap-4">
-                  <FormField
-                    name="sourceService"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-left font-medium text-high-emphasis">
-                          Source service
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Service that sends it"
-                            className="border-default col-span-3 mt-1 border shadow-none"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    name="consumerAppRecommendation"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-left font-medium text-high-emphasis">
-                          Recommendation for apps
-                        </FormLabel>
-                        <FormControl>
-                          <Textarea className="border-default mt-1 border shadow-none" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    name="consumerAppNote"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-left font-medium text-high-emphasis">
-                          Note for apps that use Blocks without the portal
-                        </FormLabel>
-                        <FormControl>
-                          <Textarea className="border-default mt-1 border shadow-none" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                {!isEdit && (
-                  <div className="mt-4">
-                    <FormField
-                      name="isBuiltIn"
-                      control={form.control}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormControl>
-                            <Checkbox
-                              className="mr-2"
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <FormLabel className="flex-start inline-flex">
-                            Built-in (added to all tenants)
-                          </FormLabel>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                )}
-                {isEdit && (
-                  <div className="mt-4">
-                    <FormField
-                      name="isEnabled"
-                      control={form.control}
-                      render={({ field }) => (
-                        <FormItem>
-                          <div className="flex items-center gap-3">
-                            <FormControl>
-                              <Switch
-                                aria-label="Notification on or off"
-                                checked={field.value}
-                                disabled={!canBeDisabled}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                            <FormLabel className="m-0">{field.value ? "On" : "Off"}</FormLabel>
-                          </div>
-                          {!canBeDisabled && (
-                            <p className="text-sm text-medium-emphasis">{ALWAYS_ON_MESSAGE}</p>
-                          )}
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                )}
-              </div>
+            <DialogDescription className="sr-only">
+              Name, receiver and importance of the notification.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex justify-end">
-            <div className="flex flex-row justify-end gap-2">
-              <DialogTrigger asChild>
-                <Button variant="outline" size="default" disabled={isPending}>
-                  Cancel
-                </Button>
-              </DialogTrigger>
-              <Button disabled={isPending || !form.formState.isValid} size="default">
-                {submitLabel}
-              </Button>
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-4">
+            <FormField
+              name="name"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    Name <span className="text-destructive">*</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      disabled={isEdit}
+                      id="configName"
+                      placeholder="Enter name"
+                      {...field}
+                      onBlur={(e) => {
+                        field.onChange(e.target.value.trim());
+                        field.onBlur();
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FormField
+                name="notificationType"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Receiver <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <Select
+                      onValueChange={(val) => field.onChange(Number(val))}
+                      defaultValue={String(field.value)}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select receiver" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {notificationTypes.map((type) => (
+                          <SelectItem key={type.value} value={String(type.value)}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                name="notifyMethod"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Notify method <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        id="notifyMethod"
+                        placeholder="Enter notify method"
+                        {...field}
+                        onBlur={(e) => {
+                          field.onChange(e.target.value.trim());
+                          field.onBlur();
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
+            <FormField
+              name="description"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea rows={2} placeholder="What this notification is for" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                name="importance"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Importance</FormLabel>
+                    <Select
+                      onValueChange={(val) => field.onChange(Number(val))}
+                      defaultValue={String(field.value)}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select importance" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {notificationImportances.map((item) => (
+                          <SelectItem key={item.value} value={String(item.value)}>
+                            {item.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                name="kind"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Kind</FormLabel>
+                    <Select
+                      onValueChange={(val) => field.onChange(Number(val))}
+                      defaultValue={String(field.value)}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select kind" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {notificationKinds.map((item) => (
+                          <SelectItem key={item.value} value={String(item.value)}>
+                            {item.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+              <FormField
+                name="enablePersistence"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2 space-y-0">
+                    <FormControl>
+                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    <FormLabel className="m-0 font-normal">Save to inbox</FormLabel>
+                  </FormItem>
+                )}
+              />
+              {!isEdit && (
+                <FormField
+                  name="isBuiltIn"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem className="flex items-center gap-2 space-y-0">
+                      <FormControl>
+                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                      <FormLabel className="m-0 font-normal">Built-in (all tenants)</FormLabel>
+                    </FormItem>
+                  )}
+                />
+              )}
+              {isEdit && (
+                <FormField
+                  name="isEnabled"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem className="flex items-center gap-2 space-y-0">
+                      <FormControl>
+                        <Switch
+                          aria-label="Notification on or off"
+                          checked={field.value}
+                          disabled={!canBeDisabled}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormLabel className="m-0 font-normal">
+                        {field.value ? "On" : "Off"}
+                      </FormLabel>
+                    </FormItem>
+                  )}
+                />
+              )}
+            </div>
+            {isEdit && !canBeDisabled && (
+              <p className="-mt-2 text-xs text-medium-emphasis">{ALWAYS_ON_MESSAGE}</p>
+            )}
+            <Collapsible open={moreOpen} onOpenChange={setMoreOpen}>
+              <CollapsibleTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="-ml-2 h-8 gap-1 px-2 text-medium-emphasis"
+                >
+                  <ChevronDown
+                    className={`h-4 w-4 transition-transform ${moreOpen ? "rotate-180" : ""}`}
+                  />
+                  More options
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-3 flex flex-col gap-4">
+                <FormField
+                  name="sourceService"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Source service</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Service that sends it" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  name="consumerAppRecommendation"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Recommendation for apps</FormLabel>
+                      <FormControl>
+                        <Textarea rows={2} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  name="consumerAppNote"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Note for apps without the portal</FormLabel>
+                      <FormControl>
+                        <Textarea rows={2} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+          <div className="flex justify-end gap-2 border-t px-6 py-4">
+            <DialogTrigger asChild>
+              <Button type="button" variant="outline" disabled={isPending}>
+                Cancel
+              </Button>
+            </DialogTrigger>
+            <Button type="submit" disabled={isPending || !form.formState.isValid}>
+              {submitLabel}
+            </Button>
           </div>
         </form>
       </Form>

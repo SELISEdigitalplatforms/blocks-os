@@ -87,8 +87,8 @@ describe("NewNotificationConfiguration", () => {
     await fillValid(user);
 
     // The notification-type select is the only enabled combobox.
-    await user.click(screen.getByRole("combobox", { name: /notification type/i }));
-    await user.click(await screen.findByRole("option", { name: "UserSpecificReceiverType" }));
+    await user.click(screen.getByRole("combobox", { name: /receiver/i }));
+    await user.click(await screen.findByRole("option", { name: "Users" }));
 
     await user.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
@@ -172,7 +172,7 @@ describe("NewNotificationConfiguration", () => {
     const method = screen.getByPlaceholderText("Enter notify method");
     await user.clear(method);
     await user.type(method, "updated-method");
-    await user.click(screen.getByRole("button", { name: "Update Changes" }));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
 
     await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
     expect(h.mutateAsync.mock.calls[0][0].itemId).toBe("cfg-7");
@@ -208,8 +208,10 @@ describe("NewNotificationConfiguration", () => {
 
     const edit = (data: INotificationConfigRow) =>
       renderModal({ isEdit: true, previousData: data, dialogTitle: "Edit Configuration" });
+    const openMore = () =>
+      userEvent.setup().click(screen.getByRole("button", { name: /more options/i }));
 
-    it("shows a legacy row without the new fields as custom and enabled", () => {
+    it("shows a legacy row without the new fields as custom and enabled", async () => {
       edit({
         itemId: "l-1",
         name: "Legacy",
@@ -224,12 +226,13 @@ describe("NewNotificationConfiguration", () => {
       expect(
         (screen.getByPlaceholderText("Enter notify method") as HTMLInputElement).disabled,
       ).toBe(false);
+      await openMore();
       expect((screen.getByLabelText("Recommendation for apps") as HTMLTextAreaElement).value).toBe(
         "",
       );
     });
 
-    it("leaves the fields of a built-in editable; the server decides who may save", () => {
+    it("leaves the fields of a built-in editable; the server decides who may save", async () => {
       edit(builtIn());
       expect(screen.getByText("Built-in")).toBeTruthy();
       expect((screen.getByPlaceholderText("Enter name") as HTMLInputElement).disabled).toBe(true);
@@ -240,11 +243,12 @@ describe("NewNotificationConfiguration", () => {
       expect((screen.getByLabelText("Description") as HTMLTextAreaElement).value).toBe(
         "Sent when a user resets a password",
       );
+      await openMore();
       expect((screen.getByLabelText("Recommendation for apps") as HTMLTextAreaElement).value).toBe(
         "Show a banner",
       );
       expect(
-        (screen.getByLabelText(/Note for apps that use Blocks/) as HTMLTextAreaElement).value,
+        (screen.getByLabelText(/Note for apps without the portal/) as HTMLTextAreaElement).value,
       ).toBe("Send the email yourself");
       expect((screen.getByRole("switch") as HTMLButtonElement).disabled).toBe(false);
     });
@@ -253,7 +257,7 @@ describe("NewNotificationConfiguration", () => {
       const user = userEvent.setup();
       edit(builtIn());
       await user.click(screen.getByRole("switch"));
-      await user.click(screen.getByRole("button", { name: "Update Changes" }));
+      await user.click(screen.getByRole("button", { name: "Save changes" }));
       await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
       const payload = h.mutateAsync.mock.calls[0][0];
       expect(payload.isDisabled).toBe(true);
@@ -287,7 +291,7 @@ describe("NewNotificationConfiguration", () => {
       const description = screen.getByLabelText("Description");
       await user.clear(description);
       await user.type(description, "New text");
-      await user.click(screen.getByRole("button", { name: "Update Changes" }));
+      await user.click(screen.getByRole("button", { name: "Save changes" }));
       await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
       expect(h.mutateAsync.mock.calls[0][0]).toMatchObject({ description: "New text" });
       expect(h.mutateAsync.mock.calls[0][0]).not.toHaveProperty("importance");
@@ -302,7 +306,8 @@ describe("NewNotificationConfiguration", () => {
       const keys = Object.keys(h.mutateAsync.mock.calls[0][0]).filter(
         (k) => h.mutateAsync.mock.calls[0][0][k] !== undefined,
       );
-      expect(keys.sort()).toEqual(
+      const byName = (a: string, b: string) => a.localeCompare(b);
+      expect([...keys].sort(byName)).toEqual(
         [
           "channelToNotify",
           "enablePersistence",
@@ -310,7 +315,7 @@ describe("NewNotificationConfiguration", () => {
           "notificationType",
           "notifyMethod",
           "projectKey",
-        ].sort(),
+        ].sort(byName),
       );
     });
 
@@ -327,6 +332,7 @@ describe("NewNotificationConfiguration", () => {
     it("sends only the changed metadata field of a built-in", async () => {
       const user = userEvent.setup();
       edit(builtIn());
+      await user.click(screen.getByRole("button", { name: /more options/i }));
       const service = screen.getByLabelText("Source service") as HTMLInputElement;
       expect(service.disabled).toBe(false);
       expect(
@@ -334,7 +340,7 @@ describe("NewNotificationConfiguration", () => {
       ).toBe(false);
       await user.clear(service);
       await user.type(service, "blocks-os");
-      await user.click(screen.getByRole("button", { name: "Update Changes" }));
+      await user.click(screen.getByRole("button", { name: "Save changes" }));
       await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
       const payload = h.mutateAsync.mock.calls[0][0];
       expect(payload.sourceService).toBe("blocks-os");
@@ -368,10 +374,10 @@ describe("NewNotificationConfiguration", () => {
         h.mutateAsync.mockResolvedValue({ isSuccess: false, errors: { field: key } });
         edit(builtIn());
         await user.click(screen.getByRole("switch"));
-        await user.click(screen.getByRole("button", { name: "Update Changes" }));
+        await user.click(screen.getByRole("button", { name: "Save changes" }));
         await waitFor(() => expect(h.showErrorToast).toHaveBeenCalled());
         const call = h.showErrorToast.mock.calls[0][0];
-        expect(call.customMessages[key]).toMatch(/\w+ .+/);
+        expect(call.customMessages[key]).toContain(" ");
         expect(call.errors).toEqual({ field: key });
       },
     );

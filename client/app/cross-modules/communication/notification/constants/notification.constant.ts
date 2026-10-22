@@ -4,10 +4,10 @@ export const channelsToNotify = [
 ];
 
 export const notificationTypes = [
-  { label: "NoReceiverType", value: 0 },
-  { label: "BroadcastReceiverType", value: 1 },
-  { label: "UserSpecificReceiverType", value: 2 },
-  { label: "FilterSpecificReceiverType", value: 3 },
+  { label: "None", value: 0 },
+  { label: "Broadcast", value: 1 },
+  { label: "Users", value: 2 },
+  { label: "Filter", value: 3 },
 ];
 
 export const notificationImportances = [

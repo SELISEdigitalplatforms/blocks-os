@@ -63,7 +63,7 @@ export function NotificationConfigsFilterToolBar({
   return (
     <FilterToolbar<NotificationConfigFilter>
       filters={[
-        { key: "search", type: "SearchInput", label: "" },
+        { key: "search", type: "SearchInput", label: "", props: { placeholder: "Search by name" } },
         {
           key: "importance",
           type: "Radio",
@@ -81,7 +81,10 @@ export function NotificationConfigsFilterToolBar({
                 type: "Radio" as const,
                 label: "Service",
                 props: {
-                  options: serviceOptions.map((service) => ({ label: service, value: service })),
+                  options: serviceOptions.map((service) => ({
+                    label: service.replace(/^blocks-/, ""),
+                    value: service,
+                  })),
                 },
               },
             ]

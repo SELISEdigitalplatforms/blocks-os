@@ -89,14 +89,12 @@ describe("NotificationConfigurationList", () => {
     expect(document.body.querySelectorAll("[class*='animate-pulse']").length).toBeGreaterThan(0);
   });
 
-  it("renders configuration rows with resolved channel and type labels", () => {
+  it("renders configuration rows with short receiver labels and status", () => {
     render(<NotificationConfigurationList />, { wrapper });
     expect(screen.getByText("Realtime alerts")).toBeTruthy();
-    expect(screen.getByText("SignalR")).toBeTruthy();
-    expect(screen.getByText("BroadcastReceiverType")).toBeTruthy();
-    // enablePersistence booleans render as Yes/No.
-    expect(screen.getByText("Yes")).toBeTruthy();
-    expect(screen.getByText("No")).toBeTruthy();
+    expect(screen.getByText("Broadcast")).toBeTruthy();
+    expect(screen.getByText("Users")).toBeTruthy();
+    expect(screen.getAllByText("On")).toHaveLength(2);
   });
 
   it("opens the edit modal from the row actions", async () => {
@@ -105,7 +103,7 @@ describe("NotificationConfigurationList", () => {
     const rowMenus = screen.getAllByRole("button").filter((b) => b.className.includes("h-5 w-5"));
     await user.click(rowMenus[0]);
     await user.click(await screen.findByText("Edit"));
-    expect(await screen.findByText("Edit Configuration")).toBeTruthy();
+    expect(await screen.findByText("Edit notification")).toBeTruthy();
   });
 
   it("deletes a configuration after confirmation", async () => {
@@ -122,7 +120,7 @@ describe("NotificationConfigurationList", () => {
     expect(h.toast).toHaveBeenCalledWith(
       expect.objectContaining({
         variant: "success",
-        description: "Configuration deleted successfully",
+        description: "Notification deleted.",
       }),
     );
   });
@@ -154,7 +152,7 @@ describe("NotificationConfigurationListPage", () => {
       isFetching: false,
     });
     render(<NotificationConfigurationListPage />, { wrapper });
-    expect(screen.getByText("No notification configurations found")).toBeTruthy();
+    expect(screen.getByText("No notifications yet")).toBeTruthy();
   });
 
   it("renders the configuration list when configurations exist", () => {
@@ -221,7 +219,7 @@ describe("NotificationConfigurationList built-in metadata", () => {
     expect(screen.getByText("Low")).toBeTruthy();
     expect(screen.getByText("Security")).toBeTruthy();
     expect(screen.getByText("Job")).toBeTruthy();
-    expect(screen.getByText("blocks-iam")).toBeTruthy();
+    expect(screen.getByText("iam")).toBeTruthy();
     expect(screen.getByText("Sent on reset")).toBeTruthy();
   });
 

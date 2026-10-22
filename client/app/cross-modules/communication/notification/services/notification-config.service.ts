@@ -39,6 +39,17 @@ const filterBySearch = (
   );
 };
 
+/** The list endpoint answers either wrapped in `data` or as the bare response. */
+const toConfigsResponse = (
+  response: INotificationGetsApiResponse | IAPIResponse<INotificationGetsApiResponse>,
+): INotificationGetsApiResponse => {
+  const wrapped = (response as IAPIResponse<INotificationGetsApiResponse>).data;
+  if (Array.isArray(wrapped)) return wrapped;
+  const bare = response as INotificationGetsApiResponse;
+  if (bare.configurations !== undefined) return bare;
+  return { configurations: [], totalCount: 0 };
+};
+
 const BUILT_IN_FIELD_KEYS = [
   "isBuiltIn",
   "isDisabled",
@@ -77,13 +88,7 @@ export class NotificationConfigService {
         `${NOTIFICATION_ENDPOINTS.GET_CONFIGS}?${params.toString()}`,
       )
       .then((response) => {
-        const data: INotificationGetsApiResponse = Array.isArray(
-          (response as IAPIResponse<INotificationGetsApiResponse>).data,
-        )
-          ? (response as IAPIResponse<INotificationGetsApiResponse>).data
-          : (response as INotificationGetsApiResponse).configurations !== undefined
-            ? (response as INotificationGetsApiResponse)
-            : { configurations: [], totalCount: 0 };
+        const data = toConfigsResponse(response);
 
         const configurations = data.configurations ?? [];
         const filtered = filterBySearch(configurations, payload.searchText);
