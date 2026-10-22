@@ -486,7 +486,7 @@ const TraceStorySkeleton = () => (
           <Skeleton className="h-3 w-full" />
         </div>
         {[60, 20, 45, 30].map((bar, i) => (
-          <div key={i} className={cn(ROW_GRID, "items-center border-b border-border px-3 py-3")}>
+          <div key={bar} className={cn(ROW_GRID, "items-center border-b border-border px-3 py-3")}>
             <div className="flex flex-col gap-1.5">
               <Skeleton className="h-4 w-36" />
               <Skeleton className="h-3 w-52" />
