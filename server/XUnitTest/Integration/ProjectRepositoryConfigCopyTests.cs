@@ -264,6 +264,51 @@ namespace XUnitTest.Integration
             (await target.GetCollection<BsonDocument>("MailServerConfigurations").CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(0);
         }
 
+        [Fact]
+        public async Task CreateDefaultConfigurationAsync_CopiesOnlyLiveSystemSchemasUnchanged()
+        {
+            var suffix = Guid.NewGuid().ToString("N");
+            using var _ = new IntegrationContext(suffix);
+            var project = NewProject(suffix);
+            await SourceDb().GetCollection<BsonDocument>("SchemaDefinitions").InsertManyAsync(new[]
+            {
+                new BsonDocument { { "_id", "sys-" + suffix }, { "SchemaName", "User" }, { "IsSystemEntity", true }, { "IsDeleted", false }, { "CreatedBy", "system" } },
+                new BsonDocument { { "_id", "sysdel-" + suffix }, { "SchemaName", "Old" }, { "IsSystemEntity", true }, { "IsDeleted", true } },
+                new BsonDocument { { "_id", "app-" + suffix }, { "SchemaName", "Student" }, { "IsSystemEntity", false }, { "IsDeleted", false } }
+            });
+
+            await NewRepository().CreateDefaultConfigurationAsync(new ProjectStatusTracer { ProjectId = project.ItemId }, project);
+
+            var copied = await TargetDb(project).GetCollection<BsonDocument>("SchemaDefinitions")
+                .Find(Builders<BsonDocument>.Filter.In("_id", new[] { "sys-" + suffix, "sysdel-" + suffix, "app-" + suffix })).ToListAsync();
+            copied.Should().ContainSingle();
+            copied[0]["_id"].AsString.Should().Be("sys-" + suffix);
+            copied[0]["CreatedBy"].AsString.Should().Be("system");
+        }
+
+        [Fact]
+        public async Task CreateDefaultConfigurationAsync_RetryAfterPartialSchemaCopy_AddsMissingAndKeepsExisting()
+        {
+            var suffix = Guid.NewGuid().ToString("N");
+            using var _ = new IntegrationContext(suffix);
+            var project = NewProject(suffix);
+            await SourceDb().GetCollection<BsonDocument>("SchemaDefinitions").InsertManyAsync(new[]
+            {
+                new BsonDocument { { "_id", "sysa-" + suffix }, { "SchemaName", "A" }, { "IsSystemEntity", true }, { "ReadAccessLevel", 1 } },
+                new BsonDocument { { "_id", "sysb-" + suffix }, { "SchemaName", "B" }, { "IsSystemEntity", true }, { "ReadAccessLevel", 1 } }
+            });
+            // An interrupted run already wrote one schema, and an admin changed it.
+            await TargetDb(project).GetCollection<BsonDocument>("SchemaDefinitions")
+                .InsertOneAsync(new BsonDocument { { "_id", "sysa-" + suffix }, { "SchemaName", "A" }, { "IsSystemEntity", true }, { "ReadAccessLevel", 3 } });
+
+            await NewRepository().CreateDefaultConfigurationAsync(new ProjectStatusTracer { ProjectId = project.ItemId }, project);
+
+            var copied = await TargetDb(project).GetCollection<BsonDocument>("SchemaDefinitions")
+                .Find(Builders<BsonDocument>.Filter.In("_id", new[] { "sysa-" + suffix, "sysb-" + suffix })).ToListAsync();
+            copied.Should().HaveCount(2);
+            copied.Single(d => d["_id"] == "sysa-" + suffix)["ReadAccessLevel"].AsInt32.Should().Be(3);
+        }
+
         // The data-source root doc comes from IDataGatewayRootProvisioner, never from a copy of the seed tenant doc.
         private const string Dsc = "DataServiceConfigurations";
 

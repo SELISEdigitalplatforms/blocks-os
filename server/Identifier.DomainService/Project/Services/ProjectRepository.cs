@@ -423,7 +423,8 @@ namespace DomainService.Projects
                 // copies them from BlocksConfiguration on demand.
                 CopyDocumentAsync(sourceDatabase, consumerDb, "Roles", project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "Permissions", project),
-                // CopyDocumentAsync(sourceDatabase, consumerDb, "SchemaDefinitions", project),
+                // Only the platform (system entity) schemas: the seed's own app schemas stay in the seed.
+                CopySystemSchemasAsync(sourceDatabase, consumerDb),
                 // Also carries the tenant configuration; TenantConfigurations itself is no longer copied.
                 CopyAndCustomizeIdentityConfigurationAsync(sourceDatabase, consumerDb, project),
                 // CopyAndCustomizeResourceLimitsAsync(sourceDatabase, consumerDb, project),
@@ -433,6 +434,29 @@ namespace DomainService.Projects
                 // Data source: default root doc (BlocksRootDb, _id = TenantId) + secret, not a copy of a seed tenant doc.
                 _dataGatewayRoot.EnsureAsync(project.TenantId, project.CreatedBy));
 
+        }
+
+        /// <summary>
+        /// Copies the system entity schemas (IAM, OS, Logic, Release, Monitor) of the seed into the project, unchanged:
+        /// same _id and CreatedBy "system", as the schema seed script writes them into existing tenants.
+        /// Insert-only and safe to re-run: a schema the project already has (same _id) is left as it is.
+        /// </summary>
+        private static async Task CopySystemSchemasAsync(IMongoDatabase sourceDb, IMongoDatabase targetDb)
+        {
+            const string collectionName = "SchemaDefinitions";
+            var filter = Builders<BsonDocument>.Filter.Eq("IsSystemEntity", true) & Builders<BsonDocument>.Filter.Ne("IsDeleted", true);
+            var schemas = await (await sourceDb.GetCollection<BsonDocument>(collectionName).FindAsync(filter)).ToListAsync();
+            if (schemas.Count == 0) return;
+
+            try
+            {
+                await targetDb.GetCollection<BsonDocument>(collectionName)
+                    .InsertManyAsync(schemas, new InsertManyOptions { IsOrdered = false });
+            }
+            catch (MongoBulkWriteException<BsonDocument> ex) when (ex.WriteErrors.All(e => e.Category == ServerErrorCategory.DuplicateKey) && ex.WriteConcernError is null)
+            {
+                // Already there from an earlier, interrupted run: that is the goal.
+            }
         }
 
         private async Task CopyDocumentAsync(IMongoDatabase sourceDb, IMongoDatabase targetDb, string collectionName, Tenant project)
