@@ -31,6 +31,7 @@ import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { normalizeSearchQueryText } from "@blocks-idp/iam/utils/normalize-search-query";
 import { toAccountStatesFilter } from "@blocks-idp/iam/utils/user-account-state";
+import { useUserManageability } from "@blocks-idp/iam/hooks/use-user-manageability";
 import { useMemo, useState } from "react";
 
 const DEFAULT_ORGANIZATION_ID = "default";
@@ -40,6 +41,7 @@ export const Users = () => {
   const { queryParams, setQueryParams } = useUsersFilterQueryParams();
   const { sortQueryParams } = useUsersSortQueryParams();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
+  const { isSelf, canManage } = useUserManageability();
   const { data: orgConfig } = useGetOrganizationConfig(tenantId);
   const { data: organizationsData, hasNextPage: hasMoreOrganizations } =
     useGetEnabledOrganizationsInfinite(tenantId, {
@@ -189,7 +191,8 @@ export const Users = () => {
 
   const toggleAllOnPage = (checked: boolean) => {
     setIsAllMatchingSelected(false);
-    setSelectedUserIds(checked ? new Set(users.map((user) => user.itemId)) : new Set());
+    const selectable = users.filter((user) => !isSelf(user.itemId) && canManage(user));
+    setSelectedUserIds(checked ? new Set(selectable.map((user) => user.itemId)) : new Set());
   };
 
   /**

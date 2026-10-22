@@ -1,5 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@blocks-idp/iam/hooks/use-delegation-scope", () => import("@/test-utils/__mocks__/delegation-scope.mock"));
+vi.mock("@blocks-idp/iam/hooks/use-user-manageability", () => import("@/test-utils/__mocks__/user-manageability.mock"));
 
 vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
@@ -84,8 +86,10 @@ vi.mock("./users-filter-toolbar", () => ({
 }));
 
 import { Users } from "./users";
+import { manageability, resetManageability } from "@/test-utils/__mocks__/user-manageability.mock";
 
 beforeEach(() => {
+  resetManageability();
   vi.clearAllMocks();
   h.isLoading = false;
   h.isFetching = false;
@@ -361,6 +365,17 @@ describe("Users — selection lifecycle", () => {
     expect(screen.getByTestId("users-selection-organization").textContent).toContain(
       "Default organization",
     );
+  });
+
+  it("ticks only the users a limited caller may manage when selecting the page", () => {
+    manageability.blockedIds.add("u2");
+    manageability.selfId = "u3";
+    h.data = { data: [mkUser("u1"), mkUser("u2"), mkUser("u3")], totalCount: 3 };
+    render(<Users />);
+    enterSelection();
+    toggleAllOnPage(true);
+
+    expect(screen.getByTestId("users-selection-bar").textContent).toContain("1 selected");
   });
 
   it("offers the whole matching set once every row on the page is ticked", () => {

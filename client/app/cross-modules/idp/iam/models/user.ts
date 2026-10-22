@@ -1,6 +1,18 @@
 import { IPermission } from "./permission";
 import { IRole } from "./role";
 
+/** An org's access attributes: attribute name to its values (`Auth.Attributes.<name>` in policies). */
+export type AccessAttributes = Record<string, string[]>;
+
+/**
+ * Free-form user attributes. Only `access` is read by the console: organization id, then
+ * attribute name, then values. Other keys belong to other features and are carried untouched.
+ */
+export interface UserAttributes {
+  access?: Record<string, AccessAttributes>;
+  [key: string]: unknown;
+}
+
 export interface User {
   itemId: string;
   createdDate: string;
@@ -47,6 +59,7 @@ export interface User {
   organizations: IMembership[];
   OrganizationsRoles?: Record<string, string[]>;
   OrganizationsPermissions?: Record<string, string[]>;
+  attributes?: UserAttributes;
 }
 
 export interface IMembership {
@@ -177,6 +190,8 @@ export interface IUpdateUserPayload {
   organizations?: string[] | IMembership[];
   profileImageId?: string | null;
   profileImageUrl?: string | null;
+  /** The whole attributes object: the update replaces it, so keep the keys you did not change. */
+  attributes?: UserAttributes;
 }
 
 export interface IUpdateUserResponse {

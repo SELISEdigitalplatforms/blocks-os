@@ -11,9 +11,10 @@ import {
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
-import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
+import { useGetAssignableRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { Lock } from "lucide-react";
 import { useMemo, useState } from "react";
+import { DelegationHint } from "@blocks-idp/iam/components/delegation-hint";
 
 export type BulkRolesMode = "add" | "remove";
 
@@ -90,7 +91,7 @@ export const BulkRolesDialog = ({
    */
   const isHeldScoped = mode === "remove" && heldSlugs !== null;
 
-  const { data, isLoading } = useGetRoles(
+  const { data, isLoading } = useGetAssignableRoles(
     isHeldScoped
       ? {
           page: 0,
@@ -132,6 +133,7 @@ export const BulkRolesDialog = ({
           <DialogTitle className="text-left">{title}</DialogTitle>
           <DialogDescription className="text-left">{subtitle}</DialogDescription>
         </DialogHeader>
+        {mode !== "remove" && <DelegationHint kind="roles" />}
 
         {/* Read-only by design: the organization comes from the page filter, which is
             also what made the selection possible. Offering a choice here would let

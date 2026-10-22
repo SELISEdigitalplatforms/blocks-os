@@ -1,5 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@blocks-idp/iam/hooks/use-delegation-scope", () => import("@/test-utils/__mocks__/delegation-scope.mock"));
+vi.mock("@/components/ui-kits/tooltip/tooltip", () => import("@/test-utils/__mocks__/tooltip.mock"));
+vi.mock("../user-access-attributes", () => ({
+  UserAccessAttributes: () => <div data-testid="access-attributes" />,
+}));
+vi.mock("@blocks-idp/iam/hooks/use-user-manageability", () => import("@/test-utils/__mocks__/user-manageability.mock"));
 
 const h = vi.hoisted(() => ({
   config: undefined as { isMultiOrgEnabled: boolean } | undefined,
@@ -22,9 +28,14 @@ vi.mock("./multi-org-access", () => ({
 }));
 
 import { UserAccessTab } from "./user-access-tab";
+import { manageability, resetManageability } from "@/test-utils/__mocks__/user-manageability.mock";
+
+
+const LOCKED_ID = "user-access-locked";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetManageability();
   h.config = { isMultiOrgEnabled: false };
   h.isConfigLoading = false;
   h.user = { data: { organizationIds: [] } };
@@ -117,5 +128,28 @@ describe("UserAccessTab", () => {
     render(<UserAccessTab userId="u1" projectKey="p1" />);
     expect(screen.getByTestId("single-org")).toBeTruthy();
     expect(screen.queryByTestId("multi-org")).toBeNull();
+  });
+
+  it("shows the Access attributes section under the access editor", () => {
+    render(<UserAccessTab userId="u1" projectKey="p1" />);
+    expect(screen.getByTestId("single-org")).toBeTruthy();
+    expect(screen.getByTestId("access-attributes")).toBeTruthy();
+    expect(screen.queryByTestId(LOCKED_ID)).toBeNull();
+  });
+
+  it("locks the whole tab, with the reason, for a user the caller cannot manage", () => {
+    manageability.blockedIds.add("u1");
+    h.user = { data: { itemId: "u1", organizationIds: [] } };
+    render(<UserAccessTab userId="u1" projectKey="p1" />);
+    const locked = screen.getByTestId(LOCKED_ID);
+    expect(locked.querySelector("fieldset")?.disabled).toBe(true);
+    expect(screen.getAllByText("You can't manage this user.").length).toBeGreaterThan(0);
+  });
+
+  it("locks the tab on the caller's own row, where role edits are not allowed", () => {
+    manageability.selfId = "u1";
+    render(<UserAccessTab userId="u1" projectKey="p1" />);
+    expect(screen.getAllByText("You can't change your own roles.").length).toBeGreaterThan(0);
+    expect(screen.getByTestId(LOCKED_ID).querySelector("fieldset")?.disabled).toBe(true);
   });
 });

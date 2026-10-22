@@ -1,5 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@blocks-idp/iam/hooks/use-delegation-scope", () => import("@/test-utils/__mocks__/delegation-scope.mock"));
+vi.mock("@blocks-idp/iam/hooks/use-user-manageability", () => import("@/test-utils/__mocks__/user-manageability.mock"));
 import { MemoryRouter } from "react-router";
 
 const h = vi.hoisted(() => ({ navigate: vi.fn() }));
@@ -25,6 +27,8 @@ vi.mock("@/components/copy-to-clipboard-button", () => ({
 }));
 
 import { UsersTable } from "./users-table";
+import { manageability, resetManageability } from "@/test-utils/__mocks__/user-manageability.mock";
+
 
 const user = (over: Record<string, unknown> = {}) =>
   ({
@@ -49,6 +53,7 @@ const renderTable = (props: Partial<Parameters<typeof UsersTable>[0]> = {}) =>
 beforeEach(() => vi.clearAllMocks());
 
 describe("UsersTable", () => {
+  beforeEach(() => resetManageability());
   it("renders a row per user with name and status", () => {
     renderTable({ users: [user({ active: true })] });
     expect(screen.getByText("Ada Lovelace")).toBeTruthy();
@@ -282,5 +287,27 @@ describe("UsersTable — selection mode", () => {
     renderTable({ users: [], isLoading: false, selectionMode: true });
     expect(screen.getByText("No users found.")).toBeTruthy();
     expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+  });
+
+  describe("selection for a limited caller", () => {
+    const ada = user({ itemId: "u1" });
+    const grace = user({ itemId: "u2", firstName: "Grace", email: "grace@example.com" });
+
+    it("cannot tick a user the caller cannot manage, and says why", () => {
+      manageability.blockedIds.add("u2");
+      renderTable({ users: [ada, grace], selectionMode: true, selectedUserIds: new Set() });
+      expect((screen.getByTestId("users-select-u1") as HTMLButtonElement).disabled).toBe(false);
+      const blocked = screen.getByTestId("users-select-u2") as HTMLButtonElement;
+      expect(blocked.disabled).toBe(true);
+      expect(blocked.title).toBe("You can't manage this user.");
+    });
+
+    it("cannot tick their own row", () => {
+      manageability.selfId = "u1";
+      renderTable({ users: [ada, grace], selectionMode: true, selectedUserIds: new Set() });
+      const own = screen.getByTestId("users-select-u1") as HTMLButtonElement;
+      expect(own.disabled).toBe(true);
+      expect(own.title).toBe("You can't change your own roles.");
+    });
   });
 });
