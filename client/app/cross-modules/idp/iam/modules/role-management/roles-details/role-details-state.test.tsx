@@ -3,9 +3,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { useGetRoleById, getPermissions } = vi.hoisted(() => ({
+const { useGetRoleById, getPermissions, scope } = vi.hoisted(() => ({
   useGetRoleById: vi.fn(),
   getPermissions: vi.fn(),
+  scope: { isRestricted: false, heldPermissions: [] as string[] },
+}));
+
+vi.mock("@blocks-idp/iam/hooks/use-delegation-scope", () => ({
+  useDelegationScope: () => scope,
 }));
 
 vi.mock("@blocks-idp/iam/hooks/use-roles", () => ({ useGetRoleById }));
@@ -57,6 +62,8 @@ const renderStore = () =>
 describe("role-details-state store", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    scope.isRestricted = false;
+    scope.heldPermissions = [];
     useGetRoleById.mockReturnValue({ data: { data: { slug: "admin", organizationId: "org-1" } } });
     getPermissions.mockResolvedValue({ data: permissions });
   });
@@ -158,5 +165,47 @@ describe("role-details-state store", () => {
     expect(getPermissions).toHaveBeenCalledWith(
       expect.objectContaining({ organizationId: "org-1", projectKey: "t1" }),
     );
+  });
+
+  describe("a caller limited to the permissions they hold", () => {
+    it("changes only the permissions they hold", async () => {
+      scope.isRestricted = true;
+      scope.heldPermissions = ["users:view"];
+      const { result } = renderStore();
+      await waitFor(() => expect(result.current.isInitialized).toBe(true));
+      await waitFor(() => expect(result.current.grantableResources?.has("users:view")).toBe(true));
+      act(() => result.current.changeEditMode(true));
+      act(() =>
+        result.current.changePermissionSelection([
+          { permissionResource: "users:view", isChecked: true },
+          // Already on the role, but not held: removing it is refused too.
+          { permissionResource: "users:manage", isChecked: false },
+        ]),
+      );
+      expect(result.current.permissionMap.get("users:view")?.changeState).toBe("added");
+      expect(result.current.permissionMap.get("users:manage")?.modified).toBe(false);
+    });
+
+    it("skips unheld permissions in a group change", async () => {
+      scope.isRestricted = true;
+      scope.heldPermissions = [];
+      const { result } = renderStore();
+      await waitFor(() => expect(result.current.isInitialized).toBe(true));
+      await waitFor(() => expect(result.current.grantableResources).not.toBeNull());
+      act(() => result.current.changeEditMode(true));
+      act(() =>
+        result.current.changePermissionGroupSelection(
+          Array.from(result.current.permissionMap.values()),
+          true,
+        ),
+      );
+      expect(result.current.permissionMap.get("users:view")?.modified).toBe(false);
+    });
+
+    it("leaves the system user unlimited", async () => {
+      const { result } = renderStore();
+      await waitFor(() => expect(result.current.isInitialized).toBe(true));
+      expect(result.current.grantableResources).toBeNull();
+    });
   });
 });

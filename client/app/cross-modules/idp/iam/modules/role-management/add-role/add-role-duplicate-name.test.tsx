@@ -1,6 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@blocks-idp/iam/hooks/use-delegation-scope", () => import("@/test-utils/__mocks__/delegation-scope.mock"));
 
 const h = vi.hoisted(() => ({
   mutateAsync: vi.fn(),
@@ -12,6 +13,7 @@ const h = vi.hoisted(() => ({
 vi.mock("@blocks-idp/iam/hooks/use-roles", () => ({
   useAddRole: () => ({ mutateAsync: h.mutateAsync, isPending: h.isPending }),
 }));
+vi.mock("../managed-by-select", () => ({ ManagedBySelect: () => null }));
 vi.mock("@/hooks/use-toast", () => ({
   showErrorToast: h.showErrorToast,
   showSuccessToast: h.showSuccessToast,

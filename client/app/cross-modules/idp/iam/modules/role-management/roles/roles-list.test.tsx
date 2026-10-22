@@ -1,6 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+const delegation = vi.hoisted(() => ({ isRestricted: false }));
+vi.mock("@blocks-idp/iam/hooks/use-delegation-scope", () => ({
+  useDelegationScope: () => ({ isRestricted: delegation.isRestricted }),
+}));
 
 // See the mock for why the tooltip barrel cannot be imported under jsdom.
 vi.mock(
@@ -120,9 +124,39 @@ const role = {
   tags: [],
 } as IRole;
 
+const MANAGED_BY = "Managed by";
+
 describe("RolesList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    delegation.isRestricted = false;
+  });
+
+  describe("Managed by column", () => {
+    const child = { ...role, itemId: "role-child", name: "Member", slug: "member", parentRoleSlug: "administrator" } as IRole;
+
+    it("is left out for the system user while no role has a parent", () => {
+      render(<RolesList roles={[role]} isLoading={false} />);
+      expect(screen.queryByText(MANAGED_BY)).toBeNull();
+    });
+
+    it("appears for the system user once a role has a parent, naming it", () => {
+      render(<RolesList roles={[role, child]} isLoading={false} />);
+      expect(screen.getAllByText(MANAGED_BY).length).toBeGreaterThan(0);
+      const cells = screen.getAllByTestId("managed-by-cell").map((cell) => cell.textContent);
+      expect(cells).toEqual(["-", "Administrator"]);
+    });
+
+    it("always appears for a limited caller", () => {
+      delegation.isRestricted = true;
+      render(<RolesList roles={[role]} isLoading={false} />);
+      expect(screen.getAllByText(MANAGED_BY).length).toBeGreaterThan(0);
+    });
+
+    it("falls back to the slug when the parent is not on this page", () => {
+      render(<RolesList roles={[child]} isLoading={false} />);
+      expect(screen.getByTestId("managed-by-cell").textContent).toBe("administrator");
+    });
   });
 
   describe("default-origin badge", () => {
