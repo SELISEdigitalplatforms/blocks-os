@@ -77,7 +77,9 @@ const IMPORTANCE_VARIANTS = {
 } as const;
 
 export const distinctServices = (rows: INotificationConfigRow[] = []): string[] =>
-  Array.from(new Set(rows.map((row) => row.sourceService).filter((x): x is string => !!x))).sort();
+  Array.from(new Set(rows.map((row) => row.sourceService).filter((x): x is string => !!x))).sort(
+    (a, b) => a.localeCompare(b),
+  );
 
 /** Importance and service are filtered over the loaded rows: the list API has no such filter. */
 export const filterConfigRows = (

@@ -123,8 +123,10 @@ export class NotificationConfigService {
       )
       .then((response) => {
         // A refusal (for example a built-in config deleted by a non-root user) can arrive as a 200.
-        if (response && response.isSuccess === false) {
-          throw { errors: response.errors ?? { itemId: "Delete failed" } };
+        if (response?.isSuccess === false) {
+          throw Object.assign(new Error("Delete failed"), {
+            errors: response.errors ?? { itemId: "Delete failed" },
+          });
         }
       });
   }

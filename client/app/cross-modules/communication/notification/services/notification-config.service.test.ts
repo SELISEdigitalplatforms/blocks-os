@@ -177,7 +177,9 @@ describe("NotificationConfigService", () => {
         isSuccess: false,
         errors: { ItemId: "Only_Root_Tenant_Can_Manage_Built_In_Notification_Configuration" },
       });
-      await expect(service.deleteNotificationConfig("cfg-1")).rejects.toEqual({
+      const refusal = service.deleteNotificationConfig("cfg-1");
+      await expect(refusal).rejects.toBeInstanceOf(Error);
+      await expect(refusal).rejects.toMatchObject({
         errors: { ItemId: "Only_Root_Tenant_Can_Manage_Built_In_Notification_Configuration" },
       });
     });

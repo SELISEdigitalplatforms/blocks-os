@@ -238,7 +238,7 @@ const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> 
     } catch (error) {
       if (isErrorWithErrors(error)) {
         showErrorToast({
-          errors: error.errors as Record<string, string | string[]>,
+          errors: error.errors,
           customMessages: NOTIFICATION_CONFIG_ERROR_MESSAGES,
         });
       } else {
@@ -246,6 +246,10 @@ const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> 
       }
     }
   };
+  const idleLabel = isEdit ? "Update Changes" : "Save";
+  const pendingLabel = isEdit ? "Updating..." : "Saving...";
+  const submitLabel = isPending ? pendingLabel : idleLabel;
+
   return (
     <DialogContent className="max-h-[90vh] overflow-y-auto rounded-md sm:max-w-[700px]">
       <Form {...form}>
@@ -411,125 +415,117 @@ const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> 
                     )}
                   />
                 </div>
-                <>
-                  <div className="mt-4 grid grid-cols-2 gap-4">
-                    <FormField
-                      name="importance"
-                      control={form.control}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-left font-medium text-high-emphasis">
-                            Importance
-                          </FormLabel>
-                          <Select
-                            onValueChange={(val) => field.onChange(Number(val))}
-                            defaultValue={String(field.value)}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none">
-                                <SelectValue placeholder="Select importance" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {notificationImportances.map((item) => (
-                                <SelectItem key={item.value} value={String(item.value)}>
-                                  {item.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      name="kind"
-                      control={form.control}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-left font-medium text-high-emphasis">
-                            Kind
-                          </FormLabel>
-                          <Select
-                            onValueChange={(val) => field.onChange(Number(val))}
-                            defaultValue={String(field.value)}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none">
-                                <SelectValue placeholder="Select kind" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {notificationKinds.map((item) => (
-                                <SelectItem key={item.value} value={String(item.value)}>
-                                  {item.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <div className="mt-4 grid grid-cols-1 gap-4">
-                    <FormField
-                      name="sourceService"
-                      control={form.control}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-left font-medium text-high-emphasis">
-                            Source service
-                          </FormLabel>
+                <div className="mt-4 grid grid-cols-2 gap-4">
+                  <FormField
+                    name="importance"
+                    control={form.control}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-left font-medium text-high-emphasis">
+                          Importance
+                        </FormLabel>
+                        <Select
+                          onValueChange={(val) => field.onChange(Number(val))}
+                          defaultValue={String(field.value)}
+                        >
                           <FormControl>
-                            <Input
-                              placeholder="Service that sends it"
-                              className="border-default col-span-3 mt-1 border shadow-none"
-                              {...field}
-                            />
+                            <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none">
+                              <SelectValue placeholder="Select importance" />
+                            </SelectTrigger>
                           </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      name="consumerAppRecommendation"
-                      control={form.control}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-left font-medium text-high-emphasis">
-                            Recommendation for apps
-                          </FormLabel>
+                          <SelectContent>
+                            {notificationImportances.map((item) => (
+                              <SelectItem key={item.value} value={String(item.value)}>
+                                {item.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    name="kind"
+                    control={form.control}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-left font-medium text-high-emphasis">
+                          Kind
+                        </FormLabel>
+                        <Select
+                          onValueChange={(val) => field.onChange(Number(val))}
+                          defaultValue={String(field.value)}
+                        >
                           <FormControl>
-                            <Textarea
-                              className="border-default mt-1 border shadow-none"
-                              {...field}
-                            />
+                            <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none">
+                              <SelectValue placeholder="Select kind" />
+                            </SelectTrigger>
                           </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      name="consumerAppNote"
-                      control={form.control}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-left font-medium text-high-emphasis">
-                            Note for apps that use Blocks without the portal
-                          </FormLabel>
-                          <FormControl>
-                            <Textarea
-                              className="border-default mt-1 border shadow-none"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </>
+                          <SelectContent>
+                            {notificationKinds.map((item) => (
+                              <SelectItem key={item.value} value={String(item.value)}>
+                                {item.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="mt-4 grid grid-cols-1 gap-4">
+                  <FormField
+                    name="sourceService"
+                    control={form.control}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-left font-medium text-high-emphasis">
+                          Source service
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Service that sends it"
+                            className="border-default col-span-3 mt-1 border shadow-none"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    name="consumerAppRecommendation"
+                    control={form.control}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-left font-medium text-high-emphasis">
+                          Recommendation for apps
+                        </FormLabel>
+                        <FormControl>
+                          <Textarea className="border-default mt-1 border shadow-none" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    name="consumerAppNote"
+                    control={form.control}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-left font-medium text-high-emphasis">
+                          Note for apps that use Blocks without the portal
+                        </FormLabel>
+                        <FormControl>
+                          <Textarea className="border-default mt-1 border shadow-none" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
                 {!isEdit && (
                   <div className="mt-4">
                     <FormField
@@ -590,13 +586,7 @@ const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> 
                 </Button>
               </DialogTrigger>
               <Button disabled={isPending || !form.formState.isValid} size="default">
-                {isPending
-                  ? isEdit
-                    ? "Updating..."
-                    : "Saving..."
-                  : isEdit
-                    ? "Update Changes"
-                    : "Save"}
+                {submitLabel}
               </Button>
             </div>
           </div>

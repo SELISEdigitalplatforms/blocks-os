@@ -26,7 +26,7 @@ interface NotificationConfigsFilterToolBarProps {
 
 export function NotificationConfigsFilterToolBar({
   serviceOptions = [],
-}: NotificationConfigsFilterToolBarProps) {
+}: Readonly<NotificationConfigsFilterToolBarProps>) {
   const { queryParams, setQueryParams } = useNotificationConfigsFilterQueryParams();
 
   const changeHandler = (key: string, value: unknown) => {

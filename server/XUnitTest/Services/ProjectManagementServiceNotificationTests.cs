@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Blocks.Genesis;
+using DomainService.Entities;
 using DomainService.Projects;
 using DomainService.Shared.Entities;
 using FluentAssertions;
