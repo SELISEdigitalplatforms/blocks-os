@@ -24,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui-kits/table/table";
 import { useProjectStore } from "@seliseblocks/genesis-os";
-import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
+import { useGetGrantablePermissions } from "@blocks-idp/iam/hooks/use-permission";
 import { IPermission, RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
 import { Plus, KeyRound } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -38,6 +38,7 @@ import {
   shouldDisablePermissionCheckbox,
   togglePermissionSelection,
 } from "./permission-selection.utils";
+import { DelegationHint } from "@blocks-idp/iam/components/delegation-hint";
 
 type AddOrganizationPermissionProps = {
   permissions: IPermission[];
@@ -69,7 +70,7 @@ export const AddOrganizationPermission = ({
     search: "",
   });
 
-  const { data, isLoading } = useGetPermissions(
+  const { data, isLoading } = useGetGrantablePermissions(
     {
       ...filter,
       projectKey: scopeKey,
@@ -171,6 +172,7 @@ export const AddOrganizationPermission = ({
             You can assign a maximum of {MAX_PERMISSIONS_PER_USER} permissions per user.
           </DialogDescription>
         </DialogHeader>
+        <DelegationHint kind="permissions" />
         <div>
           <FilterControls.SearchInput
             placeholder="Search by permission name"

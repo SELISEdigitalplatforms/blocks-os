@@ -25,10 +25,11 @@ import {
 } from "@/components/ui-kits/table/table";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@seliseblocks/genesis-os";
-import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
+import { useGetGrantablePermissions } from "@blocks-idp/iam/hooks/use-permission";
 import { IPermission, RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
 import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
+import { DelegationHint } from "@blocks-idp/iam/components/delegation-hint";
 type AddSSOPermissionProps = {
   permissions: IPermission[];
   onAdd: (data: IPermission[]) => void;
@@ -44,7 +45,7 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
     roles: [],
     search: "",
   });
-  const { data, isLoading } = useGetPermissions(
+  const { data, isLoading } = useGetGrantablePermissions(
     {
       ...filter,
       projectKey: tenantId,
@@ -111,6 +112,7 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
           <DialogTitle className="text-left">Assign Permissions</DialogTitle>
           <DialogDescription></DialogDescription>
         </DialogHeader>
+        <DelegationHint kind="permissions" />
         <div>
           <FilterControls.SearchInput
             placeholder="Search by permission name"

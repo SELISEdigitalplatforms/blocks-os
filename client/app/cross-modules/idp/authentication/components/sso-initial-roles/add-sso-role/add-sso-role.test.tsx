@@ -1,6 +1,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@blocks-idp/iam/hooks/use-delegation-scope", () => import("@/test-utils/__mocks__/delegation-scope.mock"));
 import type { IRole } from "@blocks-idp/iam/models/role";
 
 // blocks-kit's theme store reads matchMedia at import time, which jsdom does not provide.
@@ -43,7 +44,7 @@ vi.mock("@seliseblocks/genesis-os", () => ({
 }));
 
 vi.mock("@blocks-idp/iam/hooks/use-roles", () => ({
-  useGetRoles: () => rolesResult,
+  useGetAssignableRoles: () => rolesResult,
 }));
 
 vi.mock("@/components/filter-toolbar", () => ({

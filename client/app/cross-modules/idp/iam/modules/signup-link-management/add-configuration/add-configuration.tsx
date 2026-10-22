@@ -14,6 +14,7 @@ import {
 import { Form } from "@/components/ui-kits/form/form";
 import { PrimaryButton } from "@/components/action-buttons/primary-button";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import { isAccessGrantRefused } from "@/lib/error";
 import { isHttpErrorStatus } from "@/lib/http/http-error.util";
 import { useCreateSignupLinkConfiguration } from "@blocks-idp/iam/hooks/use-signup-link-configurations";
 import { useQueryClient } from "@tanstack/react-query";
@@ -91,6 +92,10 @@ export const AddConfiguration = ({ triggerLabel = "Add Configuration" }: AddConf
       showSuccessToast({ description: "Configuration created" });
       close();
     } catch (error: unknown) {
+      if (isAccessGrantRefused(error)) {
+        showErrorToast({ errors: (error as { errors: unknown }).errors });
+        return;
+      }
       if (isHttpErrorStatus(error, 403)) {
         // Screen-level 403 is handled by the list; keep dialog quiet (C3).
         return;

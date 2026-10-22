@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { isErrorWithErrors, hasErrorCode, getErrorMessage, handleErrorMessages } from "./error";
+import {
+  ACCESS_GRANT_NOT_ALLOWED,
+  ACCESS_GRANT_NOT_ALLOWED_MESSAGE,
+  isErrorWithErrors,
+  isAccessGrantRefused,
+  hasErrorCode,
+  getErrorMessage,
+  handleErrorMessages,
+} from "./error";
 
 describe("lib/error", () => {
   describe("isErrorWithErrors", () => {
@@ -127,5 +135,35 @@ describe("getErrorMessage value-first lookup", () => {
   it("drops blank array elements", () => {
     expect(getErrorMessage({ dependency: ["", "  ", "real"] })).toEqual(["real"]);
     expect(getErrorMessage({ dependency: ["", "  "] })).toBe("Something went wrong.");
+  });
+
+  describe("Access_Grant_Not_Allowed", () => {
+    it("shows the grant refusal as a plain sentence, whether it is the key or the value", () => {
+      expect(handleErrorMessages({ [ACCESS_GRANT_NOT_ALLOWED]: "x" })).toEqual([
+        ACCESS_GRANT_NOT_ALLOWED_MESSAGE,
+      ]);
+      expect(handleErrorMessages({ forbidden: ACCESS_GRANT_NOT_ALLOWED })).toEqual([
+        ACCESS_GRANT_NOT_ALLOWED_MESSAGE,
+      ]);
+      expect(handleErrorMessages({ forbidden: [ACCESS_GRANT_NOT_ALLOWED] })).toEqual([
+        ACCESS_GRANT_NOT_ALLOWED_MESSAGE,
+      ]);
+    });
+    it("lets a caller's own message win", () => {
+      expect(
+        handleErrorMessages({ forbidden: ACCESS_GRANT_NOT_ALLOWED }, { [ACCESS_GRANT_NOT_ALLOWED]: "Mine" }),
+      ).toEqual(["Mine"]);
+    });
+    it("recognises the refusal on a rejected request", () => {
+      expect(isAccessGrantRefused({ errors: { [ACCESS_GRANT_NOT_ALLOWED]: "" } })).toBe(true);
+      expect(isAccessGrantRefused({ errors: { forbidden: ACCESS_GRANT_NOT_ALLOWED } })).toBe(true);
+      expect(isAccessGrantRefused({ errors: { forbidden: [ACCESS_GRANT_NOT_ALLOWED] } })).toBe(true);
+    });
+    it("does not mistake other errors for it", () => {
+      expect(isAccessGrantRefused({ errors: { forbidden: "other" } })).toBe(false);
+      expect(isAccessGrantRefused({ errors: { forbidden: ["other"] } })).toBe(false);
+      expect(isAccessGrantRefused(new Error("x"))).toBe(false);
+      expect(isAccessGrantRefused(null)).toBe(false);
+    });
   });
 });

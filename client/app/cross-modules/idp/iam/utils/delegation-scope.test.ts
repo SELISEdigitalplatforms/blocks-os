@@ -1,0 +1,55 @@
+import { describe, expect, it } from "vitest";
+import { IDelegationScope } from "@blocks-idp/iam/models/delegation-scope";
+import {
+  canManageUserAccess,
+  getManagedByCandidates,
+  isScopeRestricted,
+} from "./delegation-scope";
+
+const scope = (overrides: Partial<IDelegationScope> = {}): IDelegationScope => ({
+  isSystemUser: false,
+  mode: "Enforce",
+  heldRoles: ["lead"],
+  managedRoles: ["member", "lead"],
+  assignableRoles: ["member"],
+  heldPermissions: ["read"],
+  ...overrides,
+});
+
+describe("delegation-scope utils", () => {
+  describe("isScopeRestricted", () => {
+    it("is false until the scope is known", () => {
+      expect(isScopeRestricted(undefined)).toBe(false);
+    });
+    it("is false for the system user", () => {
+      expect(isScopeRestricted(scope({ isSystemUser: true }))).toBe(false);
+    });
+    it("is false in Audit mode, where the server only logs", () => {
+      expect(isScopeRestricted(scope({ mode: "Audit" }))).toBe(false);
+    });
+    it("is true for a non-system caller in Enforce mode", () => {
+      expect(isScopeRestricted(scope())).toBe(true);
+    });
+  });
+
+  describe("getManagedByCandidates", () => {
+    it("joins held and managed roles without duplicates", () => {
+      expect(getManagedByCandidates(scope())).toEqual(["lead", "member"]);
+    });
+  });
+
+  describe("canManageUserAccess", () => {
+    it("allows everyone when not restricted", () => {
+      expect(canManageUserAccess(undefined, { roles: ["x"], permissions: ["y"] })).toBe(true);
+    });
+    it("allows a user whose roles are assignable and permissions are held", () => {
+      expect(canManageUserAccess(scope(), { roles: ["member"], permissions: ["read"] })).toBe(true);
+    });
+    it("refuses a user holding a role the caller cannot assign", () => {
+      expect(canManageUserAccess(scope(), { roles: ["admin"], permissions: [] })).toBe(false);
+    });
+    it("refuses a user holding a direct permission the caller does not hold", () => {
+      expect(canManageUserAccess(scope(), { roles: [], permissions: ["write"] })).toBe(false);
+    });
+  });
+});

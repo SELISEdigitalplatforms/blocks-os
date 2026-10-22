@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@blocks-idp/iam/hooks/use-delegation-scope", () => import("@/test-utils/__mocks__/delegation-scope.mock"));
 import type { ISettingsSignupConfig } from "@blocks-idp/settings/models/settings.model";
 
 // blocks-kit's theme store reads matchMedia at import time, which jsdom does not provide.
@@ -38,20 +39,25 @@ vi.mock("@blocks-idp/settings/hooks/use-settings-tenant-id", () => ({
   useSettingsTenantId: () => "tenant-1",
 }));
 
+const rolesResult = () => ({
+  data: {
+    data: [
+      { itemId: "1", name: "Cloud Admin", slug: "cloudadmin" },
+      { itemId: "2", name: "Test Deploy", slug: "test_deploy" },
+    ],
+    totalCount: 2,
+  },
+});
+const permissionsResult = () => ({ data: { data: [], totalCount: 0 } });
+
 vi.mock("@blocks-idp/iam/hooks/use-roles", () => ({
-  useGetRoles: () => ({
-    data: {
-      data: [
-        { itemId: "1", name: "Cloud Admin", slug: "cloudadmin" },
-        { itemId: "2", name: "Test Deploy", slug: "test_deploy" },
-      ],
-      totalCount: 2,
-    },
-  }),
+  useGetRoles: () => rolesResult(),
+  useGetAssignableRoles: () => rolesResult(),
 }));
 
 vi.mock("@blocks-idp/iam/hooks/use-permission", () => ({
-  useGetPermissions: () => ({ data: { data: [], totalCount: 0 } }),
+  useGetPermissions: () => permissionsResult(),
+  useGetGrantablePermissions: () => permissionsResult(),
 }));
 
 vi.mock("@/hooks/use-toast", () => ({

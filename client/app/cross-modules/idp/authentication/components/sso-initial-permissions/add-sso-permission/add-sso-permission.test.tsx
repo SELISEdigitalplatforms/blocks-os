@@ -1,17 +1,18 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@blocks-idp/iam/hooks/use-delegation-scope", () => import("@/test-utils/__mocks__/delegation-scope.mock"));
 import type { IPermission } from "@blocks-idp/iam/models/permission";
 
 const h = vi.hoisted(() => ({
-  useGetPermissions: vi.fn(),
+  useGetGrantablePermissions: vi.fn(),
 }));
 
 vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 vi.mock("@blocks-idp/iam/hooks/use-permission", () => ({
-  useGetPermissions: (...args: unknown[]) => h.useGetPermissions(...args),
+  useGetGrantablePermissions: (...args: unknown[]) => h.useGetGrantablePermissions(...args),
 }));
 
 import { AddSSOPermission } from "./add-sso-permission";
@@ -25,7 +26,7 @@ const makePermission = (i: number) =>
   }) as IPermission;
 
 const setPermissions = (count: number, totalCount = count, isLoading = false) => {
-  h.useGetPermissions.mockReturnValue({
+  h.useGetGrantablePermissions.mockReturnValue({
     data: {
       data: Array.from({ length: count }, (_, i) => makePermission(i + 1)),
       totalCount,
@@ -132,7 +133,7 @@ describe("AddSSOPermission", () => {
 
     await user.type(screen.getByPlaceholderText("Search by permission name"), "user");
     await waitFor(() =>
-      expect(h.useGetPermissions).toHaveBeenLastCalledWith(
+      expect(h.useGetGrantablePermissions).toHaveBeenLastCalledWith(
         expect.objectContaining({ search: "user", projectKey: "tenant-1" }),
         expect.anything(),
       ),

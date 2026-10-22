@@ -7,6 +7,7 @@ import {
   IPermissionFilter,
 } from "@blocks-idp/iam/models/permission";
 import { iamService } from "@blocks-idp/iam/services/iam.service";
+import { useDelegationScope } from "@blocks-idp/iam/hooks/use-delegation-scope";
 
 export const useGetPermissions = (
   options: IPermissionFilter,
@@ -40,6 +41,32 @@ export const useGetPermissions = (
     placeholderData: keepPreviousData,
     enabled,
   });
+};
+
+const NO_PERMISSIONS = { data: [], errors: null, totalCount: 0 };
+
+/**
+ * The permissions the caller may grant (the ones they hold). Same query as `useGetPermissions`;
+ * for a limited caller the list is narrowed to the held resources on the server side.
+ */
+export const useGetGrantablePermissions = (
+  options: IPermissionFilter,
+  { enabled = true }: { enabled?: boolean } = {},
+) => {
+  const { isLoading: isScopeLoading, isRestricted, heldPermissions } = useDelegationScope();
+  // An empty list means "no filter" to the server, so "nothing to grant" must not be sent.
+  const nothingToGrant = isRestricted && heldPermissions.length === 0;
+  const scoped: IPermissionFilter = isRestricted
+    ? { ...options, resources: heldPermissions }
+    : options;
+  const query = useGetPermissions(scoped, {
+    enabled: enabled && !isScopeLoading && !nothingToGrant,
+  });
+
+  if (nothingToGrant) {
+    return { ...query, data: NO_PERMISSIONS, isLoading: false };
+  }
+  return { ...query, isLoading: query.isLoading || (enabled && isScopeLoading) };
 };
 
 export const useGetPermissionById = (options: IGetPermissionByIdPayload) => {
