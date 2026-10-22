@@ -119,8 +119,8 @@ namespace DomainService.Projects
         }
 
         /// <summary>
-        /// Broadcasts the provisioned tenant so every service replaces the copy it may have
-        /// cached while the certificate was still being generated.
+        /// Broadcasts the provisioned tenant, as stored, so every service replaces the copy it
+        /// may have cached while the certificate was still being generated.
         /// </summary>
         /// <remarks>
         /// Provisioning is the only write that sets <c>JwtTokenParameters.PublicCertificatePath</c>,
@@ -130,10 +130,16 @@ namespace DomainService.Projects
         /// </remarks>
         private async Task AnnounceTenantUpdateIfNeeded(Tenant project)
         {
-            // A resumed run whose certificates were already marked uploaded never re-assigns the
-            // path, so the in-memory project can still be blank here. Broadcasting that would
-            // replace good cached copies with a useless one, which is worse than staying quiet.
-            if (string.IsNullOrWhiteSpace(project.JwtTokenParameters?.PublicCertificatePath))
+            // The stored row, not the copy this run was handed at creation. Provisioning takes
+            // long enough for the tenant to change underneath it — adding a repository registers
+            // its host and broadcasts — and announcing the creation-time copy afterwards put every
+            // service's cache back to before that change.
+            var stored = await _projectRepository.GetByIdAsync(project.ItemId);
+
+            // A resumed run can find the certificates marked uploaded and the path never saved.
+            // Broadcasting that would replace good cached copies with a useless one, which is
+            // worse than staying quiet.
+            if (string.IsNullOrWhiteSpace(stored?.JwtTokenParameters?.PublicCertificatePath))
             {
                 return;
             }
@@ -141,8 +147,8 @@ namespace DomainService.Projects
             await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
             {
                 Action = UpsertAction,
-                TenantId = project.TenantId,
-                Tenant = project
+                TenantId = stored.TenantId,
+                Tenant = stored
             });
         }
 
@@ -219,7 +225,9 @@ namespace DomainService.Projects
         {
             if (statusTracer.IsProjectUpdated) return;
 
-            await _projectRepository.UpdateProjectAsync(project);
+            // The certificate path is the only thing provisioning changes on the tenant. Replacing
+            // the whole document with this run's copy undid anything saved since creation.
+            await _projectRepository.SetPublicCertificatePathAsync(project.ItemId, project.JwtTokenParameters.PublicCertificatePath);
             statusTracer.IsProjectUpdated = true;
         }
 

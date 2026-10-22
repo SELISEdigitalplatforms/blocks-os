@@ -179,6 +179,18 @@ namespace DomainService.Projects
             await collection.ReplaceOneAsync(filter, project);
         }
 
+        // Provisioning owns this one field. Setting it alone, rather than replacing the document
+        // with the copy the worker was handed at creation, keeps whatever changed on the tenant
+        // while provisioning ran, such as the host of a repository added in the meantime.
+        public async Task SetPublicCertificatePathAsync(string itemId, string publicCertificatePath)
+        {
+            var collection = _clientDb.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
+
+            await collection.UpdateOneAsync(
+                Builders<Tenant>.Filter.Eq(mc => mc.ItemId, itemId),
+                Builders<Tenant>.Update.Set(mc => mc.JwtTokenParameters.PublicCertificatePath, publicCertificatePath));
+        }
+
         // ProjectPeople.IsCreator is the single source of truth for project ownership — see
         // docs/specs/transfer-ownership-createdby-decoupling.md. Project.CreatedBy is a
         // creation-time audit stamp only and must not be read here.

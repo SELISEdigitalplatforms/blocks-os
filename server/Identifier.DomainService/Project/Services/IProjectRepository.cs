@@ -18,6 +18,7 @@ namespace DomainService.Projects
         Task<Tenant> GetByIdAsync(string itemId);
         Task InsertProjectAsync(Tenant project);
         Task UpdateProjectAsync(Tenant project);
+        Task SetPublicCertificatePathAsync(string itemId, string publicCertificatePath);
         Task<List<GroupedProjectsDto>> GetAllByLastModifiedDateAsync(GetProjectsRequest request);
         Task SaveStatusTracerAsync(ProjectStatusTracer statusTrace);
         Task<List<ProjectStatusTracer>> GetAllUnfinishedProjectAsync();

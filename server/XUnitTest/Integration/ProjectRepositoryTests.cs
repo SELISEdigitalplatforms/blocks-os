@@ -90,6 +90,26 @@ namespace XUnitTest.Integration
             loaded.ItemId.Should().Be(project.ItemId);
         }
 
+        // The worker holds the tenant as it was at creation. Saving the certificate path must
+        // not put back the host list from then.
+        [Fact]
+        public async Task SetPublicCertificatePathAsync_SetsThePathAndKeepsLaterChanges()
+        {
+            var tenant = MongoIntegrationFixture.NewTenantId();
+            using var _ = new IntegrationContext(tenant);
+            var repo = NewRepository();
+            var stored = NewTenant("cert-" + tenant, "grp-" + tenant, UserOf(tenant), domain: "https://app.example.com");
+            await repo.InsertProjectAsync(stored);
+            stored.Applications.Add(new Applications { Domain = "https://app-repo.example.com" });
+            await repo.UpdateProjectAsync(stored);
+
+            await repo.SetPublicCertificatePathAsync(stored.ItemId, "https://download/cert");
+
+            var loaded = await repo.GetByIdAsync(stored.ItemId);
+            loaded.JwtTokenParameters.PublicCertificatePath.Should().Be("https://download/cert");
+            loaded.Applications.Select(a => a.Domain).Should().Equal("https://app.example.com", "https://app-repo.example.com");
+        }
+
         [Fact]
         public async Task GetByGroupIdAsync_ReturnsAllInGroup()
         {
