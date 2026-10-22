@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import { forwardRef } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@blocks-idp/iam/hooks/use-delegation-scope", () => import("@/test-utils/__mocks__/delegation-scope.mock"));
 import type { PlatformSchema } from "./data-access.service";
 
 const h = vi.hoisted(() => ({

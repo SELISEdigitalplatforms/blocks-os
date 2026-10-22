@@ -48,6 +48,32 @@ describe("variable syntax: templates", () => {
     expect(templateError("{{Auth.Roles}}", true)).toBeNull();
   });
 
+  describe("access attributes (Auth.Attributes.<name>)", () => {
+    const REGION = "{{Auth.Attributes.region}}";
+
+    it("accepts one in a list property, in any letter case", () => {
+      expect(templateError(REGION, true)).toBeNull();
+      expect(templateError("{{ auth.attributes.Region_2 }}", true)).toBeNull();
+    });
+
+    it("refuses one in a single-value property, like Auth.Roles", () => {
+      expect(templateError(REGION)).toBe(
+        "Auth.Attributes.region is a list at position 1: use it in a list property",
+      );
+    });
+
+    it("refuses a missing or malformed attribute name", () => {
+      expect(templateError("{{Auth.Attributes}}", true)).toMatch(/^Unknown value "Auth.Attributes"/);
+      expect(templateError("{{Auth.Attributes.a.b}}", true)).toMatch(/^Unknown value/);
+    });
+
+    it("is not available in validation rules", () => {
+      expect(singleError(REGION)).toBe(
+        "Auth values aren't available in validation rules at position 1: use an access policy",
+      );
+    });
+  });
+
   it("splits text and variables with positions", () => {
     const { parts, error } = parseVariables("Dear {{Employee.FirstName}}!", "template", SCHEMA);
     expect(error).toBeNull();

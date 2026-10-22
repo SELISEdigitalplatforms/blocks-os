@@ -20,7 +20,9 @@ import {
 } from "@/components/ui-kits/select/select";
 import { PrincipalSelector } from "@blocks-idp/data-access/gateway/components/schema-access-control/principal-selector";
 import {
+  AUTH_ATTRIBUTE_OPTION,
   AUTH_FIELD_OPTIONS,
+  AUTH_LEFT_FIELD_OPTIONS,
   AUTH_STRING_FIELDS,
   COMPARE_SOURCE_OPTIONS,
   FIELD_TYPE_CATEGORY,
@@ -31,7 +33,9 @@ import {
   RULE_OPERATORS,
   RULE_SOURCE_OPTIONS,
   RULE_SOURCE_TYPES,
+  getAuthAttributeName,
   getFieldTypeCategory,
+  isAuthAttributeField,
   type FieldTypeCategory,
 } from "@blocks-idp/data-access/gateway/constants/schema-access-control";
 import type { RuleSetFormValues } from "@blocks-idp/data-access/gateway/utils/schema-access-control.utils";
@@ -87,7 +91,7 @@ export const createRuleBuilderHelpers = (schemaFields: SchemaField[], schemaName
   const schemaFieldOptions = flattenSchemaFields(schemaFields);
 
   const getFieldOptions = (source: string) => {
-    if (source === RULE_SOURCE_TYPES.AUTH) return AUTH_FIELD_OPTIONS;
+    if (source === RULE_SOURCE_TYPES.AUTH) return AUTH_LEFT_FIELD_OPTIONS;
     if (source === RULE_SOURCE_TYPES.SCHEMA_FIELD) return schemaFieldOptions;
     return [];
   };
@@ -99,6 +103,7 @@ export const createRuleBuilderHelpers = (schemaFields: SchemaField[], schemaName
   ): FieldTypeCategory | undefined => {
     if (!source || !fieldName) return undefined;
     if (source === RULE_SOURCE_TYPES.AUTH) {
+      if (isAuthAttributeField(fieldName)) return AUTH_ATTRIBUTE_OPTION.category;
       return AUTH_FIELD_OPTIONS.find((o) => o.value === fieldName)?.category;
     }
     if (source === RULE_SOURCE_TYPES.SCHEMA_FIELD) {
@@ -385,8 +390,9 @@ export const RuleConditionRow = ({
       : [];
 
   const sourceLabel = ruleSourceOptions.find((option) => option.value === source)?.label;
-  const leftFieldLabel =
-    fieldOptions.find((option) => option.value === leftField)?.label ?? leftField;
+  const leftFieldLabel = isAuthAttributeField(leftField)
+    ? `Attributes.${getAuthAttributeName(leftField)}`
+    : (fieldOptions.find((option) => option.value === leftField)?.label ?? leftField);
   const operatorLabel = RULE_OPERATORS.find((option) => option.value === operatorValue)?.label;
   const compareSourceLabel = filteredCompareSourceOptions.find(
     (option) => option.value === compareSource,
@@ -613,10 +619,13 @@ export const RuleConditionRow = ({
                 autoFocus
               />
             ) : (
+<>
               <Select
-                value={field.value || undefined}
+                value={(isAuthAttributeField(field.value) ? AUTH_ATTRIBUTE_OPTION.value : field.value) || undefined}
                 onValueChange={(value) => {
-                  field.onChange(value);
+                  // An access attribute still needs its name, so the cell stays open for it.
+                  const isAttribute = isAuthAttributeField(value);
+                  field.onChange(isAttribute ? `${AUTH_ATTRIBUTE_OPTION.value}.` : value);
                   const newCategory = getLeftFieldCategory(source, value);
                   const allowedOperators = newCategory ? OPERATORS_BY_CATEGORY[newCategory] : null;
                   const currentOperator = form.getValues(path("operator"));
@@ -637,7 +646,7 @@ export const RuleConditionRow = ({
                   });
                   // Not auto-opened, same reasoning as the operator ->
                   // compareSource handoff below.
-                  openCellFor(null);
+                  if (!isAttribute) openCellFor(null);
                 }}
               >
                 <SelectTrigger className="h-9 w-full min-w-0 rounded-md px-3 text-xs">
@@ -651,6 +660,21 @@ export const RuleConditionRow = ({
                   ))}
                 </SelectContent>
               </Select>
+              {isAuthAttributeField(field.value) && (
+                <Input
+                  className="mt-1 h-9 w-full min-w-0 rounded-md px-3 text-xs"
+                  placeholder="Attribute name"
+                  aria-label="Attribute name"
+                  value={getAuthAttributeName(field.value)}
+                  onChange={(event) =>
+                    field.onChange(
+                      `${AUTH_ATTRIBUTE_OPTION.value}.${event.target.value.replaceAll(/\W/g, "")}`,
+                    )
+                  }
+                  onBlur={() => openCellFor(getAuthAttributeName(field.value) ? "operator" : null)}
+                />
+              )}
+            </>
             )
           }
         />

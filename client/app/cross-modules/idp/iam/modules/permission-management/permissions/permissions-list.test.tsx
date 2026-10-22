@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@blocks-idp/iam/hooks/use-delegation-scope", () => import("@/test-utils/__mocks__/delegation-scope.mock"));
 
 // blocks-kit's theme store reads matchMedia at import time, which jsdom does not provide.
 vi.stubGlobal("matchMedia", (query: string) => ({
@@ -97,6 +98,7 @@ vi.mock("@/components/filter-toolbar", () => ({
 }));
 
 import { PermissionsList } from "./permissions-list";
+import { delegation, resetDelegation } from "@/test-utils/__mocks__/delegation-scope.mock";
 import { IPermission, PermissionSeverityLevel } from "@blocks-idp/iam/models/permission";
 
 const customPermission = {
@@ -221,8 +223,19 @@ describe("PermissionsList archive action", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    resetDelegation();
     archivePending.value = false;
     archivePermission.mockResolvedValue({ isSuccess: true });
+  });
+
+  it("explains a custom row's archive action to a caller who is not the system user", async () => {
+    const user = userEvent.setup();
+    delegation.systemOnlyReason = "Only the system user can change this.";
+    renderList([customPermission]);
+    expect((trash() as HTMLButtonElement).getAttribute("aria-disabled")).toBe("true");
+    await user.click(trash());
+    expect(screen.getAllByText("Only the system user can change this.").length).toBeGreaterThan(0);
+    expect(archivePermission).not.toHaveBeenCalled();
   });
 
   it("renders an archive action for every permission, built-in included", () => {
