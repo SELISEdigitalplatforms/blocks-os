@@ -72,11 +72,15 @@ namespace DomainService.Projects
             return await collection.Find(filter).FirstOrDefaultAsync();
         }
 
+        // Live environments only. Deleting an environment just disables its row, so a group keeps
+        // it, and adding that environment back inserts a second row under the same TenantId.
+        // Ne(true) rather than Eq(false): a row without the flag is live, which is how Genesis reads it.
         public async Task<List<Tenant>> GetByGroupIdAsync(string tenantGroupId)
         {
             var collection = _clientDb.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
 
-            var filter = Builders<Tenant>.Filter.Eq(mc => mc.TenantGroupId, tenantGroupId);
+            var filter = Builders<Tenant>.Filter.Eq(mc => mc.TenantGroupId, tenantGroupId)
+                       & Builders<Tenant>.Filter.Ne(mc => mc.IsDisabled, true);
             return await collection.Find(filter).ToListAsync();
         }
 
@@ -681,7 +685,9 @@ namespace DomainService.Projects
             var projects = await GetByGroupIdAsync(request.TenantGroupId);
             var repoSlug = await _urlEncodingService.EncodeToBase26Async(request.Resource.ResourceId, request.TenantGroupId, 5);
 
-            foreach (var project in projects)
+            // One copy per tenant database. GetDatabase resolves by TenantId, so two live rows under
+            // one TenantId (an environment registered twice) would each insert into the same database.
+            foreach (var project in projects.DistinctBy(p => p.TenantId))
             {
                 var tenantSlug = await _urlEncodingService.EncodeToBase26Async(project.TenantGroupId, request.TenantGroupId, 5);
                 var targetedDb = _dbContextProvider.GetDatabase(project.TenantId);

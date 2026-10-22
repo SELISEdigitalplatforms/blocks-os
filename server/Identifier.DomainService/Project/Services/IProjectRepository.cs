@@ -12,7 +12,7 @@ namespace DomainService.Projects
     {
         Task<Tenant> GetByDomainAsync(string name);
 
-        /// <summary>Every environment in a project group, including disabled ones.</summary>
+        /// <summary>The live environments in a project group; deleted (disabled) ones are left out.</summary>
         Task<List<Tenant>> GetByGroupIdAsync(string tenantGroupId);
 
         Task<Tenant> GetByIdAsync(string itemId);
