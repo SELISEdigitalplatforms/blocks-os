@@ -19,7 +19,7 @@ describe("rule builder: Auth > Attributes", () => {
 
   it("offers Attributes on the right for a single value, e.g. DepartmentId IN Auth Attributes", () => {
     expect(rightValues(FIELD_TYPE_CATEGORY.STRING)).toContain("attributes");
-    expect(rightValues(undefined)).toContain("attributes");
+    expect(rightValues()).toContain("attributes");
   });
 
   it("does not offer Attributes on the right for a list or a number", () => {
