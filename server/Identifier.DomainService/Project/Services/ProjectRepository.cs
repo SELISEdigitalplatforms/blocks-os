@@ -844,6 +844,15 @@ namespace DomainService.Projects
             return new BaseResponse { IsSuccess = true };
         }
 
+        public async Task<ThirdPartyJWTClaims> GetThirdPartyJWTClaimsForViewAsync()
+        {
+            var collection = ResolveThirdPartyJWTClaimsCollection();
+
+            // Masked: View column (property) rules clear what the caller may not see.
+            var scope = await _dataAccess.ReadAsync(OsSchemas.ThirdPartyJWTClaims, Builders<ThirdPartyJWTClaims>.Filter.Empty, "ProjectRepository.GetThirdPartyJWTClaimsForViewAsync");
+            return scope.Granted ? scope.ForView(await scope.Apply(collection).FirstOrDefaultAsync()) : default!;
+        }
+
         public async Task<ThirdPartyJWTClaims> GetThirdPartyJWTClaimsAsync(string itemId)
         {
             var collection = ResolveThirdPartyJWTClaimsCollection();

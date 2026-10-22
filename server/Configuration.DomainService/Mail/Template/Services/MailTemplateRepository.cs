@@ -43,6 +43,16 @@ namespace Configuration.DomainService.Mail.Template.Services
             return scope.Granted ? await scope.Apply(collection).FirstOrDefaultAsync() : null;
         }
 
+        public async Task<EmailTemplate?> GetForViewAsync(string itemId)
+        {
+            var collection = _dbContextProvider.GetCollection<EmailTemplate>(CollectionName);
+            var filter = Builders<EmailTemplate>.Filter.Eq(t => t.ItemId, itemId);
+
+            // Masked: View column (property) rules clear what the caller may not see.
+            var scope = await _dataAccess.ReadAsync(OsSchemas.EmailTemplate, filter, "MailTemplateRepository.GetForViewAsync");
+            return scope.Granted ? scope.ForView(await scope.Apply(collection).FirstOrDefaultAsync()) : null;
+        }
+
         public async Task<EmailTemplate?> GetByNameAndLanguageAsync(string name, string language)
         {
             var collection = _dbContextProvider.GetCollection<EmailTemplate>(CollectionName);
@@ -104,7 +114,7 @@ namespace Configuration.DomainService.Mail.Template.Services
 
             return new GetAllMailTemplatesResponse
             {
-                Templates = templates,
+                Templates = scope.ForView(templates),
                 TotalCount = totalCount
             };
         }

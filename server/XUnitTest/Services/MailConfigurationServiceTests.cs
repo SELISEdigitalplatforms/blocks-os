@@ -683,7 +683,7 @@ namespace XUnitTest.Services
         [Fact]
         public async Task Get_ByName_ReadsTheStoredRecord()
         {
-            _repo.Setup(r => r.GetMailConfigurationByNameAsync("Microsoft 365 Primary")).ReturnsAsync(StoredOffice365());
+            _repo.Setup(r => r.GetMailConfigurationByNameForViewAsync("Microsoft 365 Primary")).ReturnsAsync(StoredOffice365());
 
             var response = await Service().GetAsync(new GetMailConfigurationRequest { ConfigurationName = "Microsoft 365 Primary" });
 
@@ -904,7 +904,7 @@ namespace XUnitTest.Services
         public async Task Get_ByName_ReportsTheLinkedSecretStatus()
         {
             GivenSecretStatus(SecretStatuses.Deleted);
-            _repo.Setup(r => r.GetMailConfigurationByNameAsync("Microsoft 365 Primary")).ReturnsAsync(StoredOffice365());
+            _repo.Setup(r => r.GetMailConfigurationByNameForViewAsync("Microsoft 365 Primary")).ReturnsAsync(StoredOffice365());
 
             var response = await Service().GetAsync(new GetMailConfigurationRequest { ConfigurationName = "Microsoft 365 Primary" });
 

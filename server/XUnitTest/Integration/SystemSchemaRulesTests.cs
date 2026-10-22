@@ -190,6 +190,43 @@ public sealed class SystemSchemaRulesTests : IDisposable
     }
 
     [Fact]
+    public async Task AViewColumnRule_HidesThePropertyFromTheTemplateRead_ButTheSavePathStillGetsIt()
+    {
+        // EmailTemplate > TemplateBody > View > Custom: roles contain "test".
+        var definition = Schemas.Find(s => s.SchemaName == "EmailTemplate").Single();
+        definition.Fields.Single(f => f.Name == "TemplateBody").ReadAccessLevel = SchemaAccessLevel.Custom;
+        Schemas.ReplaceOne(s => s.ItemId == definition.ItemId, definition);
+        _fixture.Collection<DataAccessPolicy>("DataAccessPolicys").InsertOne(new DataAccessPolicy
+        {
+            ItemId = Guid.NewGuid().ToString(), PolicyName = "Testers only", PolicyType = PolicyType.CLS, Operation = PolicyOperation.READ,
+            SchemaName = "EmailTemplate", SchemaId = definition.ItemId, FieldNames = ["TemplateBody"], IsAllowPolicy = true, Priority = 1,
+            RuleGroup = new PolicyRuleGroup
+            {
+                Rules = [new PolicyRule { LeftSource = ConditionSource.AUTH, LeftOperand = "roles", Operator = PolicyOperator.CONTAIN, RightSource = ConditionSource.STATIC_VALUE, StaticValue = "test" }],
+            },
+        });
+        var id = "tpl-" + Guid.NewGuid().ToString("N");
+        await Templates().SaveAsync(Template(id));
+
+        // A caller without the role: GET /api/Mail/GetTemplate leaves the body out; the whole-document read
+        // used to edit, clone and save keeps it, so saving never wipes it.
+        (await Templates().GetForViewAsync(id))!.TemplateBody.Should().BeNull();
+        (await Templates().GetForViewAsync(id))!.Name.Should().Be("Welcome");
+        (await Templates().GetByIdAsync(id))!.TemplateBody.Should().Be("Hi");
+
+        // Saving what that caller read (body null) after changing the subject keeps the stored body.
+        var edited = (await Templates().GetForViewAsync(id))!;
+        edited.TemplateSubject = "Welcome, again";
+        await Templates().SaveAsync(edited);
+        StoredTemplate(id)["TemplateBody"].AsString.Should().Be("Hi");
+        StoredTemplate(id)["TemplateSubject"].AsString.Should().Be("Welcome, again");
+
+        BlocksContext.SetContext(BlocksContext.Create("tenant-1", ["test"], "user-2", true, "https://console.blocks.com/test", "org-1",
+            DateTime.UtcNow.AddHours(1), "tester@blocks.com", [], "tester", "0", "Tester", string.Empty, "tenant-1"));
+        (await Templates().GetForViewAsync(id))!.TemplateBody.Should().Be("Hi");
+    }
+
+    [Fact]
     public async Task WithoutASignedInUser_NoRulesRun()
     {
         Rule("EmailTemplate", "TemplateSubject", new ValidationRule { Type = ValidationType.MaxLength, Value = 5 });

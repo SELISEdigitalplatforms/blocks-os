@@ -23,7 +23,8 @@ namespace DomainService.Subscription.Services
         {
             var collection = _dbContextProvider.GetCollection<ResourceLimit>("ResourceLimits");
             var scope = await _dataAccess.ReadAsync(OsSchemas.ResourceLimit, FilterDefinition<ResourceLimit>.Empty, "SubscriptionRepository.GetSubscriptionsAsync");
-            return scope.Granted ? await scope.Apply(collection).ToListAsync() : new List<ResourceLimit>();
+            // Only the API lists these: View column (property) rules clear what the caller may not see.
+            return scope.Granted ? scope.ForView(await scope.Apply(collection).ToListAsync()) : new List<ResourceLimit>();
         }
     }
 }

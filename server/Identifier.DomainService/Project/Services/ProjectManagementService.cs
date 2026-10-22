@@ -1430,7 +1430,7 @@ namespace DomainService.Projects
 
         public async Task<ThirdPartyJWTClaims?> GetThirdPartyJWTClaimsAsync()
         {
-            return await _projectRepository.GetThirdPartyJWTClaimsAsync(string.Empty);
+            return await _projectRepository.GetThirdPartyJWTClaimsForViewAsync();
         }
 
         private async Task<ThirdPartyJWTClaims> MapJWTClaims(SaveThirdPartyJWTClaimsRequest request)

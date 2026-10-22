@@ -48,6 +48,8 @@ namespace DomainService.Projects
         Task<BlocksGuid> GetBlocksGuidAsync(string tenantGroupId);
         Task<BaseResponse> SaveJWTClaimsAsync(ThirdPartyJWTClaims mapper);
         Task<ThirdPartyJWTClaims> GetThirdPartyJWTClaimsAsync(string itemId);
+        /// <summary>The claims as the caller may see them: properties a column rule hides are left out. Never save them back.</summary>
+        Task<ThirdPartyJWTClaims> GetThirdPartyJWTClaimsForViewAsync();
 
         Task<List<ThirdPartyJwtProvider>> GetThirdPartyJwtProvidersAsync(string tenantId);
         Task<ThirdPartyJwtProvider?> GetThirdPartyJwtProviderAsync(string tenantId, string itemId);

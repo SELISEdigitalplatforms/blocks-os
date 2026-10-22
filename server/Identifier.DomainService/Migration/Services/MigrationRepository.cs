@@ -97,7 +97,8 @@ namespace DomainService.Migration.Services
                 .ToListAsync();
 
             // Filter to only include trackers with at least one incomplete service
-            return trackers.Where(HasIncompleteServices).ToList();
+            // The API lists these: View column (property) rules clear what the caller may not see.
+            return scope.ForView(trackers.Where(HasIncompleteServices).ToList());
         }
 
         private static string GetServicePropertyName(MigrationServiceNames serviceName)

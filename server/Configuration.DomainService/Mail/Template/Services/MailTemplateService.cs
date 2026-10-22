@@ -55,7 +55,7 @@ namespace Configuration.DomainService.Mail.Template.Services
 
         public async Task<EmailTemplate?> GetAsync(GetMailTemplateRequest request)
         {
-            return await _templateRepository.GetByIdAsync(request.ItemId);
+            return await _templateRepository.GetForViewAsync(request.ItemId);
         }
 
         public async Task<BaseMutationResponse> CloneTemplateAsync(CloneMailTemplateRequest request)

@@ -38,6 +38,8 @@ public class OsRepositoryDenialTests
             throw new InvalidOperationException("Rules ran after a denial.");
         public Task<T> PrepareUpsertAsync<T>(string schema, T entity, IMongoCollection<T> collection, FilterDefinition<T> filter, string callSite, string? tenantId = null) =>
             throw new InvalidOperationException("Rules ran after a denial.");
+        public Task<T> PrepareReplaceAsync<T>(string schema, T entity, IMongoCollection<T> collection, FilterDefinition<T> filter, string callSite, string? tenantId = null) =>
+            throw new InvalidOperationException("Rules ran after a denial.");
         public Task CheckUpdateAsync<T>(string schema, UpdateDefinition<T> update, string callSite, string? tenantId = null) =>
             throw new InvalidOperationException("Rules ran after a denial.");
     }

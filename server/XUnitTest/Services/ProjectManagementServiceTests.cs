@@ -1300,7 +1300,7 @@ namespace XUnitTest.Services
         public async Task GetThirdPartyJWTClaimsAsync_DelegatesToRepository()
         {
             var claims = new ThirdPartyJWTClaims { ItemId = "c-1" };
-            _repo.Setup(r => r.GetThirdPartyJWTClaimsAsync(string.Empty)).ReturnsAsync(claims);
+            _repo.Setup(r => r.GetThirdPartyJWTClaimsForViewAsync()).ReturnsAsync(claims);
 
             var result = await Service().GetThirdPartyJWTClaimsAsync();
 
