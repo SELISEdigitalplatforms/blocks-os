@@ -3,7 +3,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
   setQueryParams: vi.fn(),
-  queryParams: { notificationSearch: "", notificationPage: 0, notificationPageSize: 10 },
+  queryParams: {
+    notificationSearch: "",
+    notificationImportance: "",
+    notificationService: "",
+    notificationPage: 0,
+    notificationPageSize: 10,
+  },
+  lastProps: undefined as Record<string, unknown> | undefined,
 }));
 
 vi.mock("nuqs", () => {
@@ -16,25 +23,42 @@ vi.mock("nuqs", () => {
 });
 
 vi.mock("@/components/filter-toolbar", () => ({
-  FilterToolbar: (props: Record<string, unknown>) => (
-    <div>
-      <button
-        data-testid="change-search"
-        onClick={() => (props.onChange as (k: string, v: unknown) => void)("search", "hi")}
-      >
-        change search
-      </button>
-      <button
-        data-testid="change-other"
-        onClick={() => (props.onChange as (k: string, v: unknown) => void)("other", "y")}
-      >
-        change other
-      </button>
-      <button data-testid="reset" onClick={() => (props.onReset as () => void)()}>
-        reset
-      </button>
-    </div>
-  ),
+  FilterToolbar: (props: Record<string, unknown>) => {
+    h.lastProps = props;
+    return (
+      <div>
+        <button
+          data-testid="change-search"
+          onClick={() => (props.onChange as (k: string, v: unknown) => void)("search", "hi")}
+        >
+          change search
+        </button>
+        <button
+          data-testid="change-other"
+          onClick={() => (props.onChange as (k: string, v: unknown) => void)("other", "y")}
+        >
+          change other
+        </button>
+        <button
+          data-testid="change-importance"
+          onClick={() => (props.onChange as (k: string, v: unknown) => void)("importance", "3")}
+        >
+          change importance
+        </button>
+        <button
+          data-testid="change-service"
+          onClick={() =>
+            (props.onChange as (k: string, v: unknown) => void)("service", "blocks-iam")
+          }
+        >
+          change service
+        </button>
+        <button data-testid="reset" onClick={() => (props.onReset as () => void)()}>
+          reset
+        </button>
+      </div>
+    );
+  },
 }));
 
 import { NotificationConfigsFilterToolBar } from "./notification-configs-filter-toolbar";
@@ -60,5 +84,30 @@ describe("NotificationConfigsFilterToolBar", () => {
     fireEvent.click(screen.getByTestId("reset"));
     const updater = h.setQueryParams.mock.calls[0][0] as (p: object) => object;
     expect(updater({})).toMatchObject({ notificationSearch: "", notificationPage: 0 });
+  });
+
+  it("maps importance and service changes onto their query params and resets the page", () => {
+    render(<NotificationConfigsFilterToolBar />);
+    fireEvent.click(screen.getByTestId("change-importance"));
+    fireEvent.click(screen.getByTestId("change-service"));
+    const first = h.setQueryParams.mock.calls[0][0] as (p: object) => object;
+    const second = h.setQueryParams.mock.calls[1][0] as (p: object) => object;
+    expect(first({})).toMatchObject({ notificationImportance: "3", notificationPage: 0 });
+    expect(second({})).toMatchObject({ notificationService: "blocks-iam", notificationPage: 0 });
+  });
+
+  it("clears importance and service on reset", () => {
+    render(<NotificationConfigsFilterToolBar />);
+    fireEvent.click(screen.getByTestId("reset"));
+    const updater = h.setQueryParams.mock.calls[0][0] as (p: object) => object;
+    expect(updater({})).toMatchObject({ notificationImportance: "", notificationService: "" });
+  });
+
+  it("offers the service filter only when services are known", () => {
+    const keys = () => (h.lastProps?.filters as { key: string }[]).map((f) => f.key);
+    render(<NotificationConfigsFilterToolBar />);
+    expect(keys()).toEqual(["search", "importance"]);
+    render(<NotificationConfigsFilterToolBar serviceOptions={["blocks-iam"]} />);
+    expect(keys()).toEqual(["search", "importance", "service"]);
   });
 });

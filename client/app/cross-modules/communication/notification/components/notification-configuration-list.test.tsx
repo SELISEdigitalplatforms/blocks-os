@@ -10,6 +10,8 @@ const h = vi.hoisted(() => ({
   isDeletePending: false,
   toast: vi.fn(),
   setQueryParams: vi.fn(),
+  importance: "",
+  service: "",
 }));
 
 vi.mock("@seliseblocks/genesis-os", () => ({
@@ -24,9 +26,16 @@ vi.mock("../hooks/use-notification-config", () => ({
 }));
 vi.mock("./notification-configs-filter-toolbar", () => ({
   useNotificationConfigsFilterQueryParams: () => ({
-    queryParams: { notificationPage: 0, notificationPageSize: 10, notificationSearch: "" },
+    queryParams: {
+      notificationPage: 0,
+      notificationPageSize: 10,
+      notificationSearch: "",
+      notificationImportance: h.importance,
+      notificationService: h.service,
+    },
     setQueryParams: h.setQueryParams,
   }),
+  NotificationConfigsFilterToolBar: () => <div data-testid="filter-toolbar" />,
 }));
 vi.mock("../modals/new-notification-configuration", () => ({
   default: ({ dialogTitle }: { dialogTitle: string }) => (
@@ -65,6 +74,8 @@ describe("NotificationConfigurationList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     h.isDeletePending = false;
+    h.importance = "";
+    h.service = "";
     h.useGetNotificationConfigs.mockReturnValue({
       data: { configurations, totalCount: 2 },
       isLoading: false,
@@ -154,5 +165,132 @@ describe("NotificationConfigurationListPage", () => {
     });
     render(<NotificationConfigurationListPage />, { wrapper });
     expect(screen.getByText("Realtime alerts")).toBeTruthy();
+  });
+});
+
+describe("NotificationConfigurationList built-in metadata", () => {
+  const rows = [
+    {
+      itemId: "b-1",
+      name: "Password reset",
+      channelToNotify: 0,
+      notificationType: 1,
+      enablePersistence: true,
+      isBuiltIn: true,
+      isDisabled: true,
+      description: "Sent on reset",
+      importance: 3,
+      kind: 4,
+      sourceService: "blocks-iam",
+    },
+    {
+      itemId: "b-2",
+      name: "Export ready",
+      channelToNotify: 0,
+      notificationType: 1,
+      enablePersistence: true,
+      isBuiltIn: true,
+      importance: 1,
+      kind: 1,
+      sourceService: "blocks-os",
+    },
+    {
+      itemId: "c-1",
+      name: "Legacy custom",
+      channelToNotify: 1,
+      notificationType: 2,
+      enablePersistence: false,
+    },
+  ] as unknown as INotificationConfigRow[];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    h.importance = "";
+    h.service = "";
+    h.useGetNotificationConfigs.mockReturnValue({
+      data: { configurations: rows, totalCount: 3 },
+      isLoading: false,
+      isFetching: false,
+    });
+  });
+
+  it("marks built-in rows and shows importance, kind, service and description", () => {
+    render(<NotificationConfigurationList />, { wrapper });
+    expect(screen.getAllByText("Built-in")).toHaveLength(2);
+    expect(screen.getByText("High")).toBeTruthy();
+    expect(screen.getByText("Low")).toBeTruthy();
+    expect(screen.getByText("Security")).toBeTruthy();
+    expect(screen.getByText("Job")).toBeTruthy();
+    expect(screen.getByText("blocks-iam")).toBeTruthy();
+    expect(screen.getByText("Sent on reset")).toBeTruthy();
+  });
+
+  it("marks only the disabled row as Off", () => {
+    render(<NotificationConfigurationList />, { wrapper });
+    expect(screen.getAllByText("Off")).toHaveLength(1);
+  });
+
+  it("shows a legacy row without the new fields as a plain custom row", () => {
+    render(<NotificationConfigurationList />, { wrapper });
+    const row = screen.getByText("Legacy custom").closest("tr") as HTMLElement;
+    expect(within(row).queryByText("Built-in")).toBeNull();
+    expect(within(row).queryByText("Off")).toBeNull();
+  });
+
+  it("filters by importance over the loaded rows", () => {
+    h.importance = "3";
+    render(<NotificationConfigurationList />, { wrapper });
+    expect(screen.getByText("Password reset")).toBeTruthy();
+    expect(screen.queryByText("Export ready")).toBeNull();
+    expect(screen.queryByText("Legacy custom")).toBeNull();
+  });
+
+  it("filters by service and shows a message when nothing matches", () => {
+    h.service = "blocks-os";
+    const { unmount } = render(<NotificationConfigurationList />, { wrapper });
+    expect(screen.getByText("Export ready")).toBeTruthy();
+    expect(screen.queryByText("Password reset")).toBeNull();
+    unmount();
+    h.service = "nope";
+    render(<NotificationConfigurationList />, { wrapper });
+    expect(screen.getByText("No configurations match the current filters.")).toBeTruthy();
+  });
+
+  it("offers Edit and Delete for a built-in row; the server decides who may use them", async () => {
+    const user = userEvent.setup();
+    render(<NotificationConfigurationList />, { wrapper });
+    const row = screen.getByText("Password reset").closest("tr") as HTMLElement;
+    await user.click(within(row).getByRole("button"));
+    expect(await screen.findByText("Edit")).toBeTruthy();
+    expect(screen.getByText("Delete")).toBeTruthy();
+  });
+
+  it("keeps Delete for a custom row", async () => {
+    const user = userEvent.setup();
+    render(<NotificationConfigurationList />, { wrapper });
+    const row = screen.getByText("Legacy custom").closest("tr") as HTMLElement;
+    await user.click(within(row).getByRole("button"));
+    expect(await screen.findByText("Delete")).toBeTruthy();
+  });
+
+  it("shows readable copy when a built-in delete is refused", async () => {
+    h.deleteConfig.mockRejectedValue({
+      errors: { ItemId: "Only_Root_Tenant_Can_Manage_Built_In_Notification_Configuration" },
+    });
+    const user = userEvent.setup();
+    render(<NotificationConfigurationList />, { wrapper });
+    const row = screen.getByText("Password reset").closest("tr") as HTMLElement;
+    await user.click(within(row).getByRole("button"));
+    await user.click(await screen.findByText("Delete"));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Yes" }));
+    await waitFor(() =>
+      expect(h.toast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variant: "destructive",
+          description: expect.stringContaining("root-tenant administrator"),
+        }),
+      ),
+    );
   });
 });

@@ -49,6 +49,12 @@
             that goes away mid-run leaves it to finish, and the domain's status shows the outcome.
             </summary>
         </member>
+        <member name="M:BlocksOs.Api.Controllers.DomainController.NotifyDomainStatusAsync(System.String,Blocks.Genesis.BaseResponse)">
+            <summary>
+            Tells the caller how the custom domain setup ended. Only the final result is sent, not each step,
+            and no error text: the domain's status shows the details.
+            </summary>
+        </member>
         <member name="T:BlocksOs.Api.Controllers.IntegrationClientIp">
             <summary>Gets the caller address after trusted forwarded-header processing has run.</summary>
         </member>
@@ -333,6 +339,12 @@
             Removes a provider and, with it, the encrypted signing secret it carried.
             </summary>
         </member>
+        <member name="M:BlocksOs.Api.Controllers.ProjectController.NotifyCertificateChangedAsync(Blocks.Genesis.BaseResponse,System.String,System.String,System.String)">
+            <summary>
+            Tells the project owner and the caller that what decides accepted tokens changed. Only
+            after success; no issuer, certificate, password or secret is sent.
+            </summary>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.ProjectController.UpdateThirdPartyJwtEnabled(DomainService.Projects.UpdateThirdPartyJwtEnabledRequest)">
             <summary>
             Turns third-party token trust on or off for the tenant. Off means such tokens are not
@@ -405,6 +417,13 @@
             Permanently deletes an already-deleted secret: metadata and vault value. Shares the delete
             permission — it is the second half of the same capability, and only reaches secrets the
             soft delete has already taken out of service.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.SecretsController.NotifySecretChangedAsync(System.String,System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Tells the project owner and the caller, after the change succeeded. Only the secret id is
+            sent, never its name or value. Done here, not in the service, so in-process secret writes
+            (mail and captcha configurations) do not notify.
             </summary>
         </member>
         <member name="M:BlocksOs.Api.Controllers.SecretsController.ReadArchivedAsBadRequest``1(System.Func{System.Threading.Tasks.Task{``0}})">

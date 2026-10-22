@@ -28,7 +28,9 @@ namespace XUnitTest.Services
             _repo.Object,
             _notifValidator.Object,
             _storageValidator.Object,
-            _messageClient.Object);
+            _messageClient.Object,
+            new Mock<ITenants>().Object,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<ConfigurationService>.Instance);
 
         private static ValidationResult Valid() => new();
         private static ValidationResult Invalid() => new(new[] { new ValidationFailure("Name", "bad") });

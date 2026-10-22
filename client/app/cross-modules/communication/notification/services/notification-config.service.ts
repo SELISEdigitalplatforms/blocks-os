@@ -39,6 +39,26 @@ const filterBySearch = (
   );
 };
 
+const BUILT_IN_FIELD_KEYS = [
+  "isBuiltIn",
+  "isDisabled",
+  "description",
+  "importance",
+  "kind",
+  "sourceService",
+  "consumerAppRecommendation",
+  "consumerAppNote",
+] as const;
+
+/** Only fields the caller set are sent, so an unchanged config keeps the old payload shape. */
+const pickBuiltInFields = (payload: ISaveNotificationConfigPayload) => {
+  const picked: Partial<Record<(typeof BUILT_IN_FIELD_KEYS)[number], unknown>> = {};
+  for (const key of BUILT_IN_FIELD_KEYS) {
+    if (payload[key] !== undefined) picked[key] = payload[key];
+  }
+  return picked;
+};
+
 export class NotificationConfigService {
   getNotificationConfigs(
     payload: IGetNotificationConfigsPayload,
@@ -87,6 +107,7 @@ export class NotificationConfigService {
         notifyMethod: payload.notifyMethod,
         itemId: payload.itemId ?? "",
         isUpdateRequest: !!payload.itemId,
+        ...pickBuiltInFields(payload),
       })
       .then((response): ISaveNotificationConfigResponse => ({
         isSuccess: !!response?.isSuccess,
@@ -100,7 +121,12 @@ export class NotificationConfigService {
       .delete<INotificationDeleteApiResponse>(
         `${NOTIFICATION_ENDPOINTS.DELETE_CONFIG}?itemId=${encodeURIComponent(itemId)}`,
       )
-      .then(() => undefined);
+      .then((response) => {
+        // A refusal (for example a built-in config deleted by a non-root user) can arrive as a 200.
+        if (response && response.isSuccess === false) {
+          throw { errors: response.errors ?? { itemId: "Delete failed" } };
+        }
+      });
   }
 
   getNotificationConfig(itemId: string): Promise<INotificationConfigRow> {

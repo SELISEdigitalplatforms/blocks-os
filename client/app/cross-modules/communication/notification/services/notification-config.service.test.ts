@@ -116,6 +116,73 @@ describe("NotificationConfigService", () => {
     });
   });
 
+  describe("saveNotificationConfig built-in fields", () => {
+    const base = {
+      projectKey: "proj-1",
+      name: "Test",
+      channelToNotify: 0,
+      notificationType: 1,
+      enablePersistence: true,
+      notifyMethod: "SendAsync",
+      itemId: "cfg-1",
+    };
+
+    it("sends only the new fields the caller set", async () => {
+      vi.mocked(http.post).mockResolvedValue({ isSuccess: true, errors: null });
+      await service.saveNotificationConfig({
+        ...base,
+        isDisabled: false,
+        description: null,
+        importance: 2,
+      });
+      const body = vi.mocked(http.post).mock.calls[0][1] as Record<string, unknown>;
+      expect(body).toMatchObject({ isDisabled: false, description: null, importance: 2 });
+      expect(body).not.toHaveProperty("kind");
+      expect(body).not.toHaveProperty("isBuiltIn");
+      expect(body).not.toHaveProperty("sourceService");
+    });
+
+    it("returns the server refusal keys unchanged", async () => {
+      vi.mocked(http.post).mockResolvedValue({
+        isSuccess: false,
+        errors: { field: "Built_In_Notification_Configuration_Is_Read_Only" },
+      });
+      const result = await service.saveNotificationConfig(base);
+      expect(result.isSuccess).toBe(false);
+      expect(result.errors).toEqual({ field: "Built_In_Notification_Configuration_Is_Read_Only" });
+    });
+
+    it("keeps rows with and without the new fields as the server sent them", async () => {
+      vi.mocked(http.get).mockResolvedValue({
+        isSuccess: true,
+        totalCount: 2,
+        configurations: [
+          { itemId: "a", name: "Old", notifyMethod: "m" },
+          { itemId: "b", name: "New", notifyMethod: "m", isBuiltIn: true, kind: 1, importance: 3 },
+        ],
+      });
+      const result = await service.getNotificationConfigs({
+        projectKey: "p",
+        page: 0,
+        pageSize: 10,
+      });
+      expect(result.configurations[0].isBuiltIn).toBeUndefined();
+      expect(result.configurations[1]).toMatchObject({ isBuiltIn: true, kind: 1, importance: 3 });
+    });
+  });
+
+  describe("deleteNotificationConfig refusal", () => {
+    it("throws the errors when the server answers 200 with isSuccess false", async () => {
+      vi.mocked(http.delete).mockResolvedValue({
+        isSuccess: false,
+        errors: { ItemId: "Only_Root_Tenant_Can_Manage_Built_In_Notification_Configuration" },
+      });
+      await expect(service.deleteNotificationConfig("cfg-1")).rejects.toEqual({
+        errors: { ItemId: "Only_Root_Tenant_Can_Manage_Built_In_Notification_Configuration" },
+      });
+    });
+  });
+
   describe("getNotificationConfig", () => {
     it("should GET Notification/Get with itemId", async () => {
       vi.mocked(http.get).mockResolvedValue({

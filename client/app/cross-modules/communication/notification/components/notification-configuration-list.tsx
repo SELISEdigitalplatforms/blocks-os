@@ -16,7 +16,15 @@ import { EmptyState } from "@/components/ui-kits/empty-state";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Bell, EllipsisVertical, Pencil, Trash } from "lucide-react";
 import NewNotificationConfiguration from "../modals/new-notification-configuration";
-import { channelsToNotify, notificationTypes } from "../constants/notification.constant";
+import {
+  channelsToNotify,
+  NOTIFICATION_CONFIG_ERROR_MESSAGES,
+  notificationImportances,
+  notificationKinds,
+  notificationTypes,
+} from "../constants/notification.constant";
+import { getErrorMessage, isErrorWithErrors } from "@/lib/error";
+import { Badge } from "@/components/ui-kits/badge/badge";
 import type { INotificationConfigRow } from "../models/notification-config.model";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
@@ -30,11 +38,17 @@ import { toast } from "@/hooks/use-toast";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { Button } from "@/components/ui-kits/button/button";
 import { useProjectStore } from "@seliseblocks/genesis-os";
-import { useNotificationConfigsFilterQueryParams } from "./notification-configs-filter-toolbar";
+import {
+  NotificationConfigsFilterToolBar,
+  useNotificationConfigsFilterQueryParams,
+} from "./notification-configs-filter-toolbar";
 import { useQueryState, parseAsBoolean } from "nuqs";
 
 const columns = [
   { key: "name", label: "Name" },
+  { key: "importance", label: "Importance" },
+  { key: "kind", label: "Kind" },
+  { key: "sourceService", label: "Service" },
   { key: "channelToNotify", label: "Channel" },
   { key: "notificationType", label: "Type" },
   { key: "enablePersistence", label: "Persistence" },
@@ -47,6 +61,35 @@ interface NotificationConfigurationListProps {
   isLoading?: boolean;
   configurationsLength?: number;
 }
+
+const describeDeleteError = (error: unknown): string => {
+  if (isErrorWithErrors(error)) {
+    const message = getErrorMessage(error.errors, NOTIFICATION_CONFIG_ERROR_MESSAGES);
+    return Array.isArray(message) ? message.join(" ") : message;
+  }
+  return JSON.stringify(error);
+};
+
+const IMPORTANCE_VARIANTS = {
+  1: "secondary",
+  2: "warning",
+  3: "error",
+} as const;
+
+export const distinctServices = (rows: INotificationConfigRow[] = []): string[] =>
+  Array.from(new Set(rows.map((row) => row.sourceService).filter((x): x is string => !!x))).sort();
+
+/** Importance and service are filtered over the loaded rows: the list API has no such filter. */
+export const filterConfigRows = (
+  rows: INotificationConfigRow[],
+  importance: string,
+  service: string,
+): INotificationConfigRow[] =>
+  rows.filter(
+    (row) =>
+      (!importance || String(row.importance ?? 0) === importance) &&
+      (!service || row.sourceService === service),
+  );
 
 const NotificationConfigurationList: React.FC<NotificationConfigurationListProps> = ({
   addConfigOpen,
@@ -62,6 +105,11 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
     searchText: queryParams.notificationSearch || undefined,
   });
   const loading = isLoadingProp ?? (isLoading || isFetching);
+  const visibleRows = filterConfigRows(
+    data?.configurations ?? [],
+    queryParams.notificationImportance,
+    queryParams.notificationService,
+  );
 
   const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -100,7 +148,7 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
       toast({
         variant: "destructive",
         title: "Error",
-        description: JSON.stringify(error),
+        description: describeDeleteError(error),
       });
     }
   };
@@ -157,9 +205,44 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data?.configurations?.map((config) => (
+              {visibleRows.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="text-center text-medium-emphasis">
+                    No configurations match the current filters.
+                  </TableCell>
+                </TableRow>
+              )}
+              {visibleRows.map((config) => (
                 <TableRow key={config.itemId}>
-                  <TableCell>{config.name}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span>{config.name}</span>
+                      {config.isBuiltIn && <Badge variant="info">Built-in</Badge>}
+                      {config.isDisabled && <Badge variant="outline">Off</Badge>}
+                    </div>
+                    {config.description && (
+                      <div className="text-sm text-medium-emphasis">{config.description}</div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {config.importance ? (
+                      <Badge
+                        variant={
+                          IMPORTANCE_VARIANTS[
+                            config.importance as keyof typeof IMPORTANCE_VARIANTS
+                          ] ?? "outline"
+                        }
+                      >
+                        {notificationImportances.find((x) => x.value === config.importance)?.label}
+                      </Badge>
+                    ) : null}
+                  </TableCell>
+                  <TableCell>
+                    {config.kind
+                      ? notificationKinds.find((x) => x.value === config.kind)?.label
+                      : null}
+                  </TableCell>
+                  <TableCell>{config.sourceService}</TableCell>
                   <TableCell>
                     {channelsToNotify.find((x) => x.value === config.channelToNotify)?.label}
                   </TableCell>
@@ -250,9 +333,11 @@ export function NotificationConfigurationListPage() {
   const loading = isLoading || isFetching;
   const configurations = data?.configurations ?? [];
   const isEmpty = !loading && configurations.length === 0;
+  const serviceOptions = distinctServices(configurations);
 
   return (
     <>
+      <NotificationConfigsFilterToolBar serviceOptions={serviceOptions} />
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <NewNotificationConfiguration
           key={addOpen ? "open" : "closed"}

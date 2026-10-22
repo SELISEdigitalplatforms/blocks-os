@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using Blocks.Genesis.Entities.Iam;
+using Os.DataAccess.Notifications;
 
 namespace DomainService.People
 {
@@ -37,6 +38,7 @@ namespace DomainService.People
         private readonly ICacheClient _cacheClient;
         private readonly IProjectRepository _projectRepository;
         private readonly ITenants _tenants;
+        private readonly IBuiltInNotificationSender? _notificationSender;
 
         public PeopleService(
             ILogger<PeopleService> logger,
@@ -45,7 +47,8 @@ namespace DomainService.People
             IConfiguration configuration,
             ICacheClient cacheClient,
             IProjectRepository projectRepository,
-            ITenants tenants)
+            ITenants tenants,
+            IBuiltInNotificationSender? notificationSender = null)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _peopleRepository = peopleRepository ?? throw new ArgumentNullException(nameof(peopleRepository));
@@ -54,6 +57,7 @@ namespace DomainService.People
             _cacheClient = cacheClient ?? throw new ArgumentNullException(nameof(cacheClient));
             _projectRepository = projectRepository;
             _tenants = tenants;
+            _notificationSender = notificationSender;
         }
 
         public async Task<GetPeoplesResponse> GetPeoplesAsync(GetPeoplesRequest request)
@@ -680,6 +684,24 @@ namespace DomainService.People
 
                 _logger.LogInformation("Access removed for Email: {Email}, Result: {Result}", request.Email, result);
 
+                if (result && _notificationSender is not null)
+                {
+                    await _notificationSender.SendAsync(new BuiltInNotification
+                    {
+                        ConfigurationName = BuiltInNotificationNames.ProjectMemberRemoved,
+                        Event = "project-member-removed",
+                        Title = "Removed from a project",
+                        Description = "You no longer have access to one or more environments of a project.",
+                        Ids = new Dictionary<string, string?>
+                        {
+                            ["tenantGroupId"] = request.GroupId,
+                            ["projectKeys"] = string.Join(",", request.TenantIds)
+                        },
+                        UserIds = [user.ItemId],
+                        ConnectionId = request.GroupId
+                    });
+                }
+
                 return new RemoveAccessResponse { IsSuccess = result };
             }
             catch (Exception ex)
@@ -1094,6 +1116,25 @@ namespace DomainService.People
 
             if (projectPeopleIds.Count > 0)
                 await _peopleRepository.UpdateProjectPeopleOwnerShipAsync(projectPeopleIds, true);
+
+            if (_notificationSender is not null)
+            {
+                await _notificationSender.SendAsync(new BuiltInNotification
+                {
+                    ConfigurationName = BuiltInNotificationNames.ProjectOwnershipTransferred,
+                    Event = "project-ownership-transferred",
+                    Title = "Project ownership transferred",
+                    Description = "The ownership of a project moved to another user.",
+                    Ids = new Dictionary<string, string?>
+                    {
+                        ["tenantGroupId"] = request.TenantGroupId,
+                        ["previousOwnerId"] = bc.UserId,
+                        ["newOwnerId"] = user.ItemId
+                    },
+                    UserIds = [bc.UserId, user.ItemId],
+                    ConnectionId = request.TenantGroupId
+                });
+            }
 
             return new BaseResponse { IsSuccess = true };
         }

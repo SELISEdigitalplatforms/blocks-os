@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Os.DataAccess.Notifications;
 
 namespace BlocksOs.Api.Controllers
 {
@@ -20,11 +21,13 @@ namespace BlocksOs.Api.Controllers
 
   private readonly IDomainManagementService _domainManagementService;
   private readonly ILogger<DomainController> _logger;
+  private readonly IBuiltInNotificationSender? _notificationSender;
 
-  public DomainController(IDomainManagementService domainManagementService, ILogger<DomainController> logger)
+  public DomainController(IDomainManagementService domainManagementService, ILogger<DomainController> logger, IBuiltInNotificationSender? notificationSender = null)
   {
    _domainManagementService = domainManagementService;
    _logger = logger;
+   _notificationSender = notificationSender;
   }
 
   [ProtectedEndPoint("blocks-os::project::mutate-domain")]
@@ -36,7 +39,9 @@ namespace BlocksOs.Api.Controllers
      return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "missing_required_fields", "domain name is missing" } } };
     }
 
-    return await _domainManagementService.ConfigureDomainAsync(request);
+    var result = await _domainManagementService.ConfigureDomainAsync(request);
+    await NotifyDomainStatusAsync(request.CookieDomain, result);
+    return result;
   }
 
   [ProtectedEndPoint("blocks-os::project::domain")]
@@ -76,6 +81,7 @@ namespace BlocksOs.Api.Controllers
     // the proxy with a vhost and no certificate. Events queue up whether or not anyone reads.
     _ = Task.Run(async () =>
     {
+     BaseResponse final;
      try
      {
       var result = await _domainManagementService.ConfigureDomainWithProgressAsync(
@@ -83,16 +89,21 @@ namespace BlocksOs.Api.Controllers
        progress => events.Writer.WriteAsync(("step", progress)).AsTask());
 
       events.Writer.TryWrite(("result", result));
+      final = result;
      }
      catch (Exception ex)
      {
       _logger.LogError(ex, "Guided setup failed unexpectedly for {Domain}", request.CookieDomain);
-      events.Writer.TryWrite(("result", new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "setup_failed", "Domain setup failed unexpectedly. Please try again." } } }));
+      final = new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "setup_failed", "Domain setup failed unexpectedly. Please try again." } } };
+      events.Writer.TryWrite(("result", final));
      }
      finally
      {
       events.Writer.TryComplete();
      }
+
+     // After the stream has its result, so the open page is never held up by the send.
+     await NotifyDomainStatusAsync(request.CookieDomain, final);
     });
 
     try
@@ -127,6 +138,29 @@ namespace BlocksOs.Api.Controllers
     {
      _logger.LogInformation(ex, "Client left the setup stream for {Domain}; setup continues in the background", request.CookieDomain);
     }
+  }
+
+  /// <summary>
+  /// Tells the caller how the custom domain setup ended. Only the final result is sent, not each step,
+  /// and no error text: the domain's status shows the details.
+  /// </summary>
+  private Task NotifyDomainStatusAsync(string? domain, BaseResponse? result)
+  {
+   if (_notificationSender is null) return Task.CompletedTask;
+
+   var succeeded = result?.IsSuccess == true;
+   return _notificationSender.SendAsync(new BuiltInNotification
+   {
+    ConfigurationName = BuiltInNotificationNames.CustomDomainStatus,
+    Event = succeeded ? "domain-setup-finished" : "domain-setup-failed",
+    Title = succeeded ? "Custom domain is ready" : "Custom domain setup failed",
+    Description = succeeded
+     ? "Your custom domain was set up."
+     : "Your custom domain could not be set up. Open the domain settings to see why and try again.",
+    IsSuccess = succeeded,
+    Ids = new Dictionary<string, string?> { ["domain"] = domain },
+    UserIds = [BlocksContext.GetContext()?.UserId]
+   });
   }
 
   private Task WriteEventAsync(string name, object data, CancellationToken cancellationToken) =>

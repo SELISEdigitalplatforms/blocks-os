@@ -15,6 +15,7 @@ using StorageDriver;
 using System.Net.Http.Headers;
 using System.Security.Cryptography.X509Certificates;
 using Blocks.Genesis.Entities.Os;
+using Os.DataAccess.Notifications;
 
 namespace DomainService.Projects
 {
@@ -31,6 +32,7 @@ namespace DomainService.Projects
         private readonly ICacheClient _cacheClient;
         private readonly ICryptoService _cryptoService;
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IBuiltInNotificationSender? _notificationSender;
 
         private const string _tenantTokenPublicCertificateCachePrefix = "tetocertpublic::";
         private const string UpsertAction = "upsert";
@@ -48,7 +50,8 @@ namespace DomainService.Projects
                                         IEncodingService urlEncodingService,
                                         ICacheClient cacheClient,
                                         ICryptoService cryptoService,
-                                        IHttpClientFactory httpClientFactory)
+                                        IHttpClientFactory httpClientFactory,
+                                        IBuiltInNotificationSender? notificationSender = null)
         {
             _projectRepository = projectRepository;
             _blocksSecret = blocksSecret;
@@ -61,6 +64,7 @@ namespace DomainService.Projects
             _cacheClient = cacheClient;
             _cryptoService = cryptoService;
             _httpClientFactory = httpClientFactory;
+            _notificationSender = notificationSender;
         }
 
         public async Task ConfigureProjectAsync(Tenant project, ProjectStatusTracer? projectStatus = null)
@@ -84,7 +88,34 @@ namespace DomainService.Projects
             catch (Exception ex)
             {
                 await HandleConfigurationErrorAsync(projectStatus, ex.Message);
+                await NotifyProjectSetupFailedAsync(project);
             }
+        }
+
+        /// <summary>
+        /// Tells the project creator that setup failed. Sent only after the error is saved on the
+        /// status tracer; the error text itself is not sent.
+        /// </summary>
+        private Task NotifyProjectSetupFailedAsync(Tenant project)
+        {
+            if (_notificationSender is null) return Task.CompletedTask;
+
+            return _notificationSender.SendAsync(new BuiltInNotification
+            {
+                ConfigurationName = BuiltInNotificationNames.ProjectSetupFailed,
+                Event = "project-setup-failed",
+                Title = "Project setup failed",
+                Description = "Setting up the project or environment did not finish. You can retry it from the project page.",
+                IsSuccess = false,
+                Ids = new Dictionary<string, string?>
+                {
+                    ["projectId"] = project.ItemId,
+                    ["projectKey"] = project.TenantId,
+                    ["tenantGroupId"] = project.TenantGroupId
+                },
+                UserIds = [project.CreatedBy],
+                ConnectionId = project.TenantId
+            });
         }
 
         /// <summary>
@@ -1077,6 +1108,9 @@ namespace DomainService.Projects
             project.LastUpdatedDate = DateTime.UtcNow;
 
             await _projectRepository.UpdateProjectAsync(project);
+
+            // Read before the member rows go: afterwards nobody owns the environment any more.
+            var ownerUserId = await TryGetOwnerUserIdAsync(project.TenantId);
             await _projectRepository.DeletePrjectPeopleAsync(project.TenantId);
 
             await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
@@ -1109,7 +1143,41 @@ namespace DomainService.Projects
                 ProjectId = project.TenantId
             });
 
+            if (_notificationSender is not null)
+            {
+                // Owner + caller: there is no cheap lookup of every member (SPEC5 D4).
+                await _notificationSender.SendAsync(new BuiltInNotification
+                {
+                    ConfigurationName = BuiltInNotificationNames.ProjectDisabledOrDeleted,
+                    Event = "project-disabled",
+                    Title = "Project disabled",
+                    Description = "A project you belong to was disabled.",
+                    Ids = new Dictionary<string, string?>
+                    {
+                        ["projectKey"] = project.TenantId,
+                        ["tenantGroupId"] = project.TenantGroupId
+                    },
+                    UserIds = [ownerUserId, BlocksContext.GetContext()?.UserId],
+                    ConnectionId = project.TenantId
+                });
+            }
+
             return new BaseResponse { IsSuccess = true };
+        }
+
+        private async Task<string?> TryGetOwnerUserIdAsync(string tenantId)
+        {
+            if (_notificationSender is null) return null;
+
+            try
+            {
+                return await _projectRepository.GetOwnerUserIdAsync(tenantId);
+            }
+            catch (Exception)
+            {
+                // Only the notification recipient is lost; disabling goes on.
+                return null;
+            }
         }
 
         public async Task<GetAssetResponse> GetAssetAsync(GetAssetRequest request)

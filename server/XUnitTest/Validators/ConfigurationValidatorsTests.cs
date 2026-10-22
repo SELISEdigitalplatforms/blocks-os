@@ -606,6 +606,52 @@ namespace XUnitTest.Validators
         }
 
         [Fact]
+        public async Task Validate_BuiltInFieldsInRange_IsValid()
+        {
+            _repo.Setup(r => r.GetNotificationConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync((NotificationConfiguration?)null);
+            var request = Valid();
+            request.IsBuiltIn = true;
+            request.IsDisabled = false;
+            request.Importance = NotificationImportance.High;
+            request.Kind = NotificationKind.Security;
+            request.Description = new string('d', 1000);
+            request.SourceService = "blocks-iam";
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeTrue();
+        }
+
+        [Theory]
+        [InlineData("Importance")]
+        [InlineData("Kind")]
+        [InlineData("Description")]
+        [InlineData("SourceService")]
+        [InlineData("ConsumerAppRecommendation")]
+        [InlineData("ConsumerAppNote")]
+        public async Task Validate_BuiltInFieldOutOfRange_Fails(string field)
+        {
+            _repo.Setup(r => r.GetNotificationConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync((NotificationConfiguration?)null);
+            var request = Valid();
+            switch (field)
+            {
+                case "Importance": request.Importance = (NotificationImportance)99; break;
+                case "Kind": request.Kind = (NotificationKind)99; break;
+                case "Description": request.Description = new string('d', 1001); break;
+                case "SourceService": request.SourceService = new string('s', 101); break;
+                case "ConsumerAppRecommendation": request.ConsumerAppRecommendation = new string('r', 2001); break;
+                case "ConsumerAppNote": request.ConsumerAppNote = new string('n', 2001); break;
+            }
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeFalse();
+            result.Errors.Should().Contain(e => e.PropertyName == field);
+        }
+
+        [Fact]
         public async Task Validate_EmptyName_Fails()
         {
             var request = Valid();
