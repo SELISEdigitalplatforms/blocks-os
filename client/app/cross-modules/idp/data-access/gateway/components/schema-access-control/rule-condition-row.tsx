@@ -155,7 +155,8 @@ export const createRuleBuilderHelpers = (schemaFields: SchemaField[], schemaName
   /** Filter right-side field options based on left operand category */
   const getRightFieldOptions = (cmpSource: string, category: FieldTypeCategory | undefined) => {
     if (cmpSource === RULE_SOURCE_TYPES.AUTH) {
-      if (!category) return AUTH_FIELD_OPTIONS;
+      // A single value (e.g. DepartmentId) may be matched against an access attribute list.
+      if (!category || category === FIELD_TYPE_CATEGORY.STRING) return AUTH_LEFT_FIELD_OPTIONS;
       // Array left → only string auth fields (userId, email)
       if (category === FIELD_TYPE_CATEGORY.ARRAY) return AUTH_STRING_FIELDS;
       return AUTH_FIELD_OPTIONS;
@@ -358,6 +359,9 @@ export const RuleConditionRow = ({
   const isStaticValue = source === RULE_SOURCE_TYPES.STATIC_VALUE;
   const isNullOperator = NULL_OPERATORS.includes(operatorValue);
   const isCompareStatic = compareSource === RULE_SOURCE_TYPES.STATIC_VALUE;
+  /** Right side is `Auth.Attributes.<name>`: the name is typed, like on the left. */
+  const isCompareAttribute =
+    compareSource === RULE_SOURCE_TYPES.AUTH && isAuthAttributeField(compareValue);
   const isInOp = IN_OPERATORS.includes(operatorValue);
   const isDirectValueOp = ["REGEX", "START_WITH", "END_WITH"].includes(operatorValue);
   /**
@@ -397,8 +401,9 @@ export const RuleConditionRow = ({
   const compareSourceLabel = filteredCompareSourceOptions.find(
     (option) => option.value === compareSource,
   )?.label;
-  const compareValueLabel =
-    compareFieldOptions.find((option) => option.value === compareValue)?.label ?? compareValue;
+  const compareValueLabel = isCompareAttribute
+    ? `Attributes.${getAuthAttributeName(compareValue)}`
+    : (compareFieldOptions.find((option) => option.value === compareValue)?.label ?? compareValue);
 
   const isCellActive = (key: RuleCellKey) => openCell?.ruleId === ruleId && openCell.key === key;
 
@@ -532,10 +537,12 @@ export const RuleConditionRow = ({
   };
 
   const pickCompareValue = (value: string) => {
-    form.setValue(path("compareValue"), value, {
+    // An access attribute still needs its name, so the cell stays open for it.
+    const isAttribute = compareSource === RULE_SOURCE_TYPES.AUTH && isAuthAttributeField(value);
+    form.setValue(path("compareValue"), isAttribute ? `${AUTH_ATTRIBUTE_OPTION.value}.` : value, {
       shouldValidate: true,
     });
-    openCellFor(null);
+    openCellFor(isAttribute ? "compareValue" : null);
   };
 
   /**
@@ -686,6 +693,23 @@ export const RuleConditionRow = ({
         control={form.control}
         name={path("compareValue")}
         render={({ field }) => {
+          if (isCompareAttribute) {
+            return (
+              <Input
+                className="h-9 w-full min-w-0 rounded-md px-3 text-xs"
+                placeholder="Attribute name"
+                aria-label="Attribute name"
+                value={getAuthAttributeName(field.value)}
+                onChange={(event) =>
+                  field.onChange(
+                    `${AUTH_ATTRIBUTE_OPTION.value}.${event.target.value.replaceAll(/\W/g, "")}`,
+                  )
+                }
+                onBlur={() => openCellFor(null)}
+                autoFocus
+              />
+            );
+          }
           if (isDirectValueOp) {
             const placeholder = DIRECT_VALUE_PLACEHOLDERS[operatorValue] ?? "Enter suffix";
             return (
@@ -718,7 +742,14 @@ export const RuleConditionRow = ({
               <CompareFieldMultiSelect
                 options={compareFieldOptions}
                 selectedValues={selectedInValues}
-                onChange={field.onChange}
+                // Attributes stand alone: picking them replaces the other fields.
+                onChange={(next) =>
+                  field.onChange(
+                    next.split(",").includes(AUTH_ATTRIBUTE_OPTION.value)
+                      ? `${AUTH_ATTRIBUTE_OPTION.value}.`
+                      : next,
+                  )
+                }
               />
             );
           }
@@ -768,7 +799,11 @@ export const RuleConditionRow = ({
       case "field":
         return isStaticValue ? null : { options: fieldOptions, onPick: pickField };
       default:
-        return isDirectValueOp || isCompareStatic || showPrincipalSelector || isInOp
+        return isDirectValueOp ||
+          isCompareStatic ||
+          showPrincipalSelector ||
+          isInOp ||
+          isCompareAttribute
           ? null
           : { options: compareFieldOptions, onPick: pickCompareValue };
     }

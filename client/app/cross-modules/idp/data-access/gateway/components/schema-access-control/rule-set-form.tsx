@@ -16,6 +16,7 @@ import {
   NULL_OPERATORS,
   POLICY_OPERATION,
   POLICY_TYPE,
+  RULE_SOURCE_TYPES,
 } from "@blocks-idp/data-access/gateway/constants/schema-access-control";
 import type { PresetRuleSet } from "@blocks-idp/data-access/gateway/utils/access-presets";
 import type {
@@ -69,6 +70,18 @@ const ruleRowSchema = z
       });
     }
     if (NULL_OPERATORS.includes(data.operator)) return;
+
+    if (
+      data.compareSource === RULE_SOURCE_TYPES.AUTH &&
+      isAuthAttributeField(data.compareValue) &&
+      !ATTRIBUTE_NAME_PATTERN.test(getAuthAttributeName(data.compareValue))
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Attribute name is required (letters, digits and _)",
+        path: ["compareValue"],
+      });
+    }
 
     const directValueOps = ["REGEX", "START_WITH", "END_WITH"];
     if (directValueOps.includes(data.operator)) {

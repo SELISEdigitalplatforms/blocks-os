@@ -14,11 +14,17 @@ describe("rule builder: Auth > Attributes", () => {
     expect(values).toContain("roles");
   });
 
-  it("does not offer Attributes on the right side, where no name can be typed", () => {
-    const values = helpers
-      .getRightFieldOptions(RULE_SOURCE_TYPES.AUTH, FIELD_TYPE_CATEGORY.STRING)
-      .map((option) => option.value);
-    expect(values).not.toContain("attributes");
+  const rightValues = (category?: (typeof FIELD_TYPE_CATEGORY)[keyof typeof FIELD_TYPE_CATEGORY]) =>
+    helpers.getRightFieldOptions(RULE_SOURCE_TYPES.AUTH, category).map((option) => option.value);
+
+  it("offers Attributes on the right for a single value, e.g. DepartmentId IN Auth Attributes", () => {
+    expect(rightValues(FIELD_TYPE_CATEGORY.STRING)).toContain("attributes");
+    expect(rightValues(undefined)).toContain("attributes");
+  });
+
+  it("does not offer Attributes on the right for a list or a number", () => {
+    expect(rightValues(FIELD_TYPE_CATEGORY.ARRAY)).not.toContain("attributes");
+    expect(rightValues(FIELD_TYPE_CATEGORY.NUMERIC)).not.toContain("attributes");
   });
 
   it("treats a named attribute as a list, like Roles", () => {

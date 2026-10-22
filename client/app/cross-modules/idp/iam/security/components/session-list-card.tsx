@@ -109,9 +109,11 @@ type SessionListCardProps = {
   limit?: number;
   showSignOut?: boolean;
   userId?: string;
+  /** When set, signing devices out is off, for this reason (e.g. a user the caller cannot manage). */
+  readOnlyReason?: string;
 };
 
-export const SessionListCard = ({ showSignOut = true, userId }: SessionListCardProps) => {
+export const SessionListCard = ({ showSignOut = true, userId, readOnlyReason }: SessionListCardProps) => {
   const { isLoading, isFetching, data, refetch } = useUserSessions(userId);
   const { mutateAsync, isPending } = useRevokeSession(userId);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
@@ -122,6 +124,11 @@ export const SessionListCard = ({ showSignOut = true, userId }: SessionListCardP
   return (
     <Card className="flex h-full min-h-0 flex-col">
       <CardContent className="flex-1 overflow-y-auto">
+        {readOnlyReason ? (
+          <p className="mb-2 text-sm text-muted-foreground" data-testid="sessions-read-only">
+            {readOnlyReason}
+          </p>
+        ) : null}
         {loading ? (
           <LoadingSkeleton />
         ) : cards.length === 0 ? (
@@ -158,7 +165,7 @@ export const SessionListCard = ({ showSignOut = true, userId }: SessionListCardP
                         This device
                       </span>
                     ) : null}
-                    {showSignOut ? (
+                    {showSignOut && !readOnlyReason ? (
                       <SignOutButton
                         card={card}
                         onRevoked={() => refetch()}
@@ -179,6 +186,7 @@ export const SessionListCard = ({ showSignOut = true, userId }: SessionListCardP
         onOpenChange={(open) => !open && setSelectedSessionId(null)}
         onRevoked={() => refetch()}
         userId={userId}
+        readOnlyReason={readOnlyReason}
       />
     </Card>
   );
