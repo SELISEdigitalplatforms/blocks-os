@@ -105,8 +105,8 @@ namespace XUnitTest.Notifications
         private readonly RecordingSender _sender = new();
 
         private PeopleService Service(IBuiltInNotificationSender? sender = null) => new(
-            Mock.Of<ILogger<PeopleService>>(), _peopleRepo.Object, Mock.Of<IMessageClient>(),
-            new ConfigurationBuilder().Build(), Mock.Of<ICacheClient>(), _projectRepo.Object, _tenants.Object,
+            Mock.Of<ILogger<PeopleService>>(), _peopleRepo.Object, Mock.Of<IPeopleInvitationMessenger>(),
+            Mock.Of<ICacheClient>(), _projectRepo.Object, _tenants.Object,
             sender ?? _sender);
 
         private void GivenRemovable(bool removed = true)

@@ -56,6 +56,7 @@ namespace DomainService.Shared
             services.AddSingleton<IMigrationNotificationService, MigrationNotificationService>();
    // People
             services.AddSingleton<IPeopleService, PeopleService>();
+            services.AddSingleton<IPeopleInvitationMessenger, PeopleInvitationMessenger>();
             services.AddSingleton<IPeopleRepository, PeopleRepository>();
             // Built-in notifications to project owner + caller
             services.AddSingleton<IProjectChangeNotifier, ProjectChangeNotifier>();

@@ -14,12 +14,6 @@ namespace DomainService.People
 {
     public class PeopleService : IPeopleService
     {
-        private static class CacheConstants
-        {
-            /// <summary>Used when People:InvitationLifetimeInMinutes is unset. Matches IAM's own default activation lifetime.</summary>
-            public const int DefaultInvitationLifetimeInMinutes = 60 * 24;
-        }
-
         private static class ErrorCodes
         {
             public const string EmptyGroupId = "empty_group_id";
@@ -33,8 +27,7 @@ namespace DomainService.People
 
         private readonly ILogger<PeopleService> _logger;
         private readonly IPeopleRepository _peopleRepository;
-        private readonly IMessageClient _messageClient;
-        private readonly IConfiguration _configuration;
+        private readonly IPeopleInvitationMessenger _invitationMessenger;
         private readonly ICacheClient _cacheClient;
         private readonly IProjectRepository _projectRepository;
         private readonly ITenants _tenants;
@@ -43,8 +36,7 @@ namespace DomainService.People
         public PeopleService(
             ILogger<PeopleService> logger,
             IPeopleRepository peopleRepository,
-            IMessageClient messageClient,
-            IConfiguration configuration,
+            IPeopleInvitationMessenger invitationMessenger,
             ICacheClient cacheClient,
             IProjectRepository projectRepository,
             ITenants tenants,
@@ -52,8 +44,7 @@ namespace DomainService.People
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _peopleRepository = peopleRepository ?? throw new ArgumentNullException(nameof(peopleRepository));
-            _messageClient = messageClient ?? throw new ArgumentNullException(nameof(messageClient));
-            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+            _invitationMessenger = invitationMessenger ?? throw new ArgumentNullException(nameof(invitationMessenger));
             _cacheClient = cacheClient ?? throw new ArgumentNullException(nameof(cacheClient));
             _projectRepository = projectRepository;
             _tenants = tenants;
@@ -409,7 +400,7 @@ namespace DomainService.People
             await _cacheClient.AddStringValueAsync(
                 InvitationRolesCacheKey(email),
                 JsonSerializer.Serialize(rolesByTenant),
-                ResolveInvitationLifetimeSeconds(null));
+                _invitationMessenger.ResolveInvitationLifetimeSeconds(null));
         }
 
         private async Task<Dictionary<string, List<string>>> GetCachedInvitationRolesAsync(string email)
@@ -462,13 +453,7 @@ namespace DomainService.People
                     ForceInvitation = forceInvitation
                 };
 
-                await _messageClient.SendToConsumerAsync(
-                    new ConsumerMessage<CreateUserByEmailEvent>
-                    {
-                        ConsumerName = IdentifierConstants.IamQueue,
-                        Payload = createUserCommand
-                    }
-                );
+                await _invitationMessenger.SendInvitationRequestToIamAsync(createUserCommand);
 
                 _logger.LogInformation("Invitation request sent to IAM for email: {Email}, ForceInvitation: {ForceInvitation}", email, forceInvitation);
                 return true;
@@ -494,7 +479,7 @@ namespace DomainService.People
                 return false;
             }
 
-            var invitationLifetimeSeconds = ResolveInvitationLifetimeSeconds(keyExpiresAtUtc);
+            var invitationLifetimeSeconds = _invitationMessenger.ResolveInvitationLifetimeSeconds(keyExpiresAtUtc);
 
             // The link must never outlive the activation key it carries: confirming against a dead key leaves the
             // person looking like a member while being unable to sign in, and that cannot be undone from the UI.
@@ -520,80 +505,8 @@ namespace DomainService.People
             }
         }
 
-        /// <summary>
-        /// How long the invitation link stays valid. IAM owns the activation key's lifetime, so when the mail
-        /// carries a key we never outlive it; otherwise the link is ours alone and takes the configured lifetime.
-        /// </summary>
-        private int ResolveInvitationLifetimeSeconds(DateTime? keyExpiresAtUtc)
-        {
-            var configuredMinutes = int.TryParse(_configuration["InvitationLifetimeInMinutes"], out var minutes) && minutes > 0
-                ? minutes
-                : CacheConstants.DefaultInvitationLifetimeInMinutes;
-
-            var configuredSeconds = configuredMinutes * 60;
-
-            if (!keyExpiresAtUtc.HasValue) return configuredSeconds;
-
-            var keyLifetimeSeconds = (int)(keyExpiresAtUtc.Value - DateTime.UtcNow).TotalSeconds;
-
-            return Math.Min(configuredSeconds, keyLifetimeSeconds);
-        }
-
-        public async Task<string> SendInvitationEmail(User user, Tenant project)
-        {
-            var invitationCode = Guid.NewGuid().ToString("n");
-            var invitationLink = GenerateInvitationLink(invitationCode);
-            var sendMailCommand = CreateSendMailCommand(user, project, invitationLink);
-
-            await _messageClient.SendToConsumerAsync(
-                new ConsumerMessage<SendMail>
-                {
-                    ConsumerName = IdentifierConstants.MailQueue,
-                    Payload = sendMailCommand
-                }
-            );
-
-            _logger.LogInformation("Invitation email queued for {Email}", user.Email);
-            return invitationCode;
-        }
-
-        // The code redeems an invitation and, for an account that was never activated, yields the key that sets its
-        // password. It is a bearer credential: never write it, or the link containing it, to the logs.
-        private string GenerateInvitationLink(string code)
-        {
-            var blocksAppHost = _configuration["FrontendRuntime:BLOCKS_OS_URL"];
-            if (string.IsNullOrWhiteSpace(blocksAppHost))
-            {
-                _logger.LogWarning("BlocksAppHost configuration is missing");
-                blocksAppHost = "https://app.blocks.com";
-            }
-
-            return $"{blocksAppHost}/invitation?code={code}";
-        }
-
-        private SendMail CreateSendMailCommand(User user, Tenant project, string invitationLink)
-        {
-            var displayName = string.IsNullOrWhiteSpace(user.FirstName)
-                ? user.Email
-                : $"{user.FirstName} {user.LastName}".Trim();
-
-            var projectName = project.Name;
-
-            return new SendMail
-            {
-                Cc = Array.Empty<string>(),
-                Bcc = Array.Empty<string>(),
-                BodyDataContext = new Dictionary<string, string>
-                {
-                    { "ProjectInvitationLink", invitationLink },
-                    { "DisplayName", displayName },
-                    { "ProjectName", projectName }
-                },
-                Language = "en-US",
-                Purpose = IdentifierConstants.ProjectPeopleInvitationMailPurpose,
-                To = new[] { user.Email.ToLowerInvariant() }
-            };
-        }
+        public Task<string> SendInvitationEmail(User user, Tenant project)
+            => _invitationMessenger.SendInvitationEmailAsync(user, project);
 
         private async Task CacheInvitation(List<string> ids, string activationKey, string invitationCode, string userId, string tenantGroupId, int lifetimeSeconds)
         {

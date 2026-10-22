@@ -49,7 +49,7 @@ namespace DomainService.Shared.Services
             catch (Exception ex)
             {
                 // The caller is still told; only the owner lookup is lost.
-                _logger.LogWarning("Owner lookup for built-in notification {ConfigurationName} failed for tenant {TenantId}: {Status}",
+                _logger.LogWarning(ex, "Owner lookup for built-in notification {ConfigurationName} failed for tenant {TenantId}: {Status}",
                     configurationName, projectKey, ex.GetType().Name);
             }
 

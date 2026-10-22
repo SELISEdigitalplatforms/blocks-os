@@ -200,8 +200,8 @@ namespace Configuration.DomainService.Notification.Propagation
             }
             catch (Exception ex)
             {
-                // Exception type only: messages from the driver can carry server addresses.
                 _logger.LogWarning(
+                    ex,
                     "Notification config propagation failed for a target. TargetId={TargetId} Name={Name} ErrorType={ErrorType}",
                     target.TargetId, name, ex.GetType().Name);
                 results.Add(new NotificationPropagationResult

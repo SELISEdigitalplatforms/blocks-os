@@ -59,6 +59,7 @@ public sealed class BuiltInNotificationSender : IBuiltInNotificationSender
 {
     /// <summary>Config key holding the Notifier send URL (the same key the migration notifications read).</summary>
     public const string UrlConfigKey = "NotificationServiceUrl";
+    private const string NotSentMessage = "Built-in notification {ConfigurationName} for tenant {TenantId} not sent: {Status}";
 
     /// <summary>Longest time an action waits for the Notifier.</summary>
     public static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);
@@ -116,14 +117,14 @@ public sealed class BuiltInNotificationSender : IBuiltInNotificationSender
             var url = _configuration[UrlConfigKey];
             if (string.IsNullOrWhiteSpace(url))
             {
-                _logger.LogWarning("Built-in notification {ConfigurationName} for tenant {TenantId} not sent: {Status}", name, tenantId, "url-not-configured");
+                _logger.LogWarning(NotSentMessage, name, tenantId, "url-not-configured");
                 return false;
             }
 
             var tenant = _tenants.GetTenantByID(tenantId);
             if (tenant is null)
             {
-                _logger.LogWarning("Built-in notification {ConfigurationName} for tenant {TenantId} not sent: {Status}", name, tenantId, "unknown-tenant");
+                _logger.LogWarning(NotSentMessage, name, tenantId, "unknown-tenant");
                 return false;
             }
 
@@ -154,7 +155,7 @@ public sealed class BuiltInNotificationSender : IBuiltInNotificationSender
             if (finished != sendTask)
             {
                 ObserveLater(sendTask);
-                _logger.LogWarning("Built-in notification {ConfigurationName} for tenant {TenantId} not sent: {Status}", name, tenantId, "timeout");
+                _logger.LogWarning(NotSentMessage, name, tenantId, "timeout");
                 return false;
             }
 
@@ -165,18 +166,17 @@ public sealed class BuiltInNotificationSender : IBuiltInNotificationSender
                 return true;
             }
 
-            _logger.LogWarning("Built-in notification {ConfigurationName} for tenant {TenantId} not sent: {Status}", name, tenantId, "rejected");
+            _logger.LogWarning(NotSentMessage, name, tenantId, "rejected");
             return false;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
-            _logger.LogWarning("Built-in notification {ConfigurationName} for tenant {TenantId} not sent: {Status}", name, tenantId, "timeout");
+            _logger.LogWarning(ex, NotSentMessage, name, tenantId, "timeout");
             return false;
         }
         catch (Exception ex)
         {
-            // Type only: a message could carry request details.
-            _logger.LogWarning("Built-in notification {ConfigurationName} for tenant {TenantId} not sent: {Status}", name, tenantId, ex.GetType().Name);
+            _logger.LogWarning(ex, NotSentMessage, name, tenantId, ex.GetType().Name);
             return false;
         }
     }

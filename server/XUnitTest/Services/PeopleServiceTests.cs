@@ -36,8 +36,9 @@ namespace XUnitTest.Services
         }
 
         private PeopleService Service() => new(
-            _logger.Object, _peopleRepo.Object, _messageClient.Object,
-            _configuration, _cache.Object, _projectRepo.Object, _tenants.Object);
+            _logger.Object, _peopleRepo.Object,
+            new PeopleInvitationMessenger(Mock.Of<ILogger<PeopleInvitationMessenger>>(), _messageClient.Object, _configuration),
+            _cache.Object, _projectRepo.Object, _tenants.Object);
 
         // ---------- GetPeoplesAsync ----------
 

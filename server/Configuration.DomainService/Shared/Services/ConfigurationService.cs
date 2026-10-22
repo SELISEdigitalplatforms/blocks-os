@@ -200,7 +200,7 @@ namespace Configuration.DomainService.Shared.Services
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("Tenant lookup failed while checking the root tenant. ErrorType={ErrorType}", ex.GetType().Name);
+                _logger.LogWarning(ex, "Tenant lookup failed while checking the root tenant. ErrorType={ErrorType}", ex.GetType().Name);
                 return false;
             }
         }
@@ -230,6 +230,7 @@ namespace Configuration.DomainService.Shared.Services
             catch (Exception ex)
             {
                 _logger.LogError(
+                    ex,
                     "Built-in notification config saved but its copy to other tenants was not queued. Name={Name} Action={Action} ErrorType={ErrorType}",
                     configuration.Name, action, ex.GetType().Name);
 

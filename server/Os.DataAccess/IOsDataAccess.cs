@@ -163,12 +163,20 @@ internal static class ColumnMask
             }
             else if (element.Value is BsonArray array && masked is System.Collections.IList items && items.Count == array.Count)
             {
-                for (var i = 0; i < array.Count; i++)
-                {
-                    if (array[i] is BsonDocument item && items[i] is IDictionary<string, object> itemRow)
-                        changed |= RemoveHidden(item, itemRow);
-                }
+                changed |= RemoveHiddenInArray(array, items);
             }
+        }
+        return changed;
+    }
+
+    /// <summary><see cref="RemoveHidden"/> for each document of an array, paired by position with the masked items.</summary>
+    private static bool RemoveHiddenInArray(BsonArray array, System.Collections.IList items)
+    {
+        var changed = false;
+        for (var i = 0; i < array.Count; i++)
+        {
+            if (array[i] is BsonDocument item && items[i] is IDictionary<string, object> itemRow)
+                changed |= RemoveHidden(item, itemRow);
         }
         return changed;
     }
