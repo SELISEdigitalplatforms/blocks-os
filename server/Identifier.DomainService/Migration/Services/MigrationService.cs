@@ -376,7 +376,7 @@ namespace DomainService.Migration
                 DenormalizedPayload = JsonSerializer.Serialize(new
                 {
                     IsSuccess = response,
-                    title = "Migration Completed",
+                    title = response ? "Migration Completed" : "Migration failed",
                     description = $"Migration {(response ? "completed successfully" : "failed")}",
                     projectKey = projectKey,
                     targetedProjectKey = targetedProjectKey

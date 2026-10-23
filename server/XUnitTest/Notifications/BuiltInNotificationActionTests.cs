@@ -260,6 +260,36 @@ namespace XUnitTest.Notifications
         }
 
         [Fact]
+        public async Task An_inactive_member_is_refused_and_nothing_is_written()
+        {
+            using var _ = new BlocksTestContext(userId: "owner");
+            GivenMember();
+            _peopleRepo.Setup(r => r.GetUserByIdAsync("member")).ReturnsAsync(new User
+            {
+                ItemId = "member", Email = "member@x.com", Active = false, IsVerified = true, Status = UserLifecycleStatus.Disabled
+            });
+
+            var response = await Service().SaveAccessPolicyAsync(new SaveAccessPolicyRequest { ProjectGroupId = "grp", UserId = "member" });
+
+            response.IsSuccess.Should().BeFalse();
+            response.Errors.Should().ContainKey(UserAccountStatus.InactiveErrorCode);
+            _sender.Sent.Should().BeEmpty();
+            _peopleRepo.Verify(r => r.UpdateAccessPoliciesAsync(It.IsAny<List<string>>(), It.IsAny<List<string>>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task A_pending_invitee_can_still_be_given_access()
+        {
+            using var _ = new BlocksTestContext(userId: "owner");
+            GivenMember();
+            _peopleRepo.Setup(r => r.GetUserByIdAsync("member")).ReturnsAsync(new User { ItemId = "member", Active = false, IsVerified = false });
+
+            var response = await Service().SaveAccessPolicyAsync(new SaveAccessPolicyRequest { ProjectGroupId = "grp", UserId = "member" });
+
+            response.IsSuccess.Should().BeTrue();
+        }
+
+        [Fact]
         public async Task A_non_member_is_refused_and_sends_nothing()
         {
             using var _ = new BlocksTestContext(userId: "owner");

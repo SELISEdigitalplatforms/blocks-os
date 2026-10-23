@@ -196,6 +196,25 @@ namespace DomainService.People
                 }
 
                 var callerEmail = NormalizeEmail(BlocksContext.GetContext()?.UserName);
+
+                // Checked for the whole request before anything is written, so a mixed request never
+                // half-applies. Pending invitees (never activated) are not inactive and pass.
+                var inactiveEmails = await FindInactiveInviteesAsync(request.Invitations, callerEmail);
+                if (inactiveEmails.Count > 0)
+                {
+                    _logger.LogWarning("InvitePeoplesAsync rejected for GroupId: {GroupId}: inactive users {Emails}",
+                        request.GroupId, string.Join(", ", inactiveEmails));
+
+                    return new InviteResponse
+                    {
+                        IsSuccess = false,
+                        Errors = new Dictionary<string, string>
+                        {
+                            { UserAccountStatus.InactiveErrorCode, UserAccountStatus.InactiveMessage(string.Join(", ", inactiveEmails)) }
+                        }
+                    };
+                }
+
                 var results = new Dictionary<string, string>();
 
                 foreach (var (email, envDetails) in request.Invitations)
@@ -230,6 +249,42 @@ namespace DomainService.People
         }
 
         private static string NormalizeEmail(string? email) => email?.Trim().ToLowerInvariant() ?? string.Empty;
+
+        /// <summary>
+        /// The addresses in this request that belong to a deactivated account. Only addresses that
+        /// would really be processed are looked up (not the caller, not ones without environments).
+        /// </summary>
+        private async Task<List<string>> FindInactiveInviteesAsync(Dictionary<string, List<EnviromentDetails>> invitations, string callerEmail)
+        {
+            var emails = invitations
+                .Where(entry => entry.Key != callerEmail && entry.Value is { Count: > 0 })
+                .Select(entry => entry.Key)
+                .ToList();
+
+            if (emails.Count == 0) return [];
+
+            var users = await _peopleRepository.GetUsersByEmailAsync(emails) ?? [];
+
+            return [.. users
+                .Where(UserAccountStatus.IsDeactivated)
+                .Select(user => NormalizeEmail(user.Email))
+                .Where(email => emails.Contains(email))
+                .Distinct()
+                .OrderBy(email => email, StringComparer.Ordinal)];
+        }
+
+        private BaseResponse InactiveUserResponse(string operation, string? email)
+        {
+            _logger.LogWarning("{Operation} rejected: user {Email} is inactive", operation, email);
+            return new BaseResponse
+            {
+                IsSuccess = false,
+                Errors = new Dictionary<string, string>
+                {
+                    { UserAccountStatus.InactiveErrorCode, UserAccountStatus.InactiveMessage(email) }
+                }
+            };
+        }
 
         /// <summary>
         /// Lowercases the addresses and merges any that differed only by casing, so a person cannot be
@@ -593,6 +648,11 @@ namespace DomainService.People
                     };
                 }
 
+                if (UserAccountStatus.IsDeactivated(user))
+                {
+                    return InactiveUserResponse(nameof(RemoveAccessFromProjectAsync), request.Email);
+                }
+
                 var result = await _peopleRepository.RemovePeoplesAsync(request.Email, request.TenantIds);
 
                 _logger.LogInformation("Access removed for Email: {Email}, Result: {Result}", request.Email, result);
@@ -899,6 +959,11 @@ namespace DomainService.People
                     };
                 }
 
+                if (UserAccountStatus.IsDeactivated(user))
+                {
+                    return InactiveUserResponse(nameof(ResendInvitationAsync), request.Email);
+                }
+
                 var existingPeople = await _peopleRepository.GetProjectPeoplesAsync(user.ItemId, tenants);
 
                 if (existingPeople == null || existingPeople.Count == 0)
@@ -986,7 +1051,13 @@ namespace DomainService.People
             {
                 return new BaseResponse { Errors = new Dictionary<string, string> {{"TransferToUserEmail", "Must be an existing user"}} };
             }
-            
+
+            // Handing a project to a deactivated account would leave it with an owner who cannot sign in.
+            if (UserAccountStatus.IsDeactivated(user))
+            {
+                return InactiveUserResponse(nameof(TransferOwnershipAsync), request.TransferToUserEmail);
+            }
+
 
             var tenantids = await _projectRepository.GetProjectIdsByGroupId(request.TenantGroupId);
             var bc = BlocksContext.GetContext();

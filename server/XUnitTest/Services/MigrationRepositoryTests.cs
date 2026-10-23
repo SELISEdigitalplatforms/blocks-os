@@ -143,6 +143,20 @@ namespace XUnitTest.Identifier
             await act.Should().ThrowAsync<ArgumentException>();
         }
 
+        // A failed service differs from a running one only by its error message, so a failure
+        // must always store one, or the status page shows it "in progress" forever.
+        [Theory]
+        [InlineData(false, null, MigrationRepository.DefaultFailureMessage)]
+        [InlineData(false, "", MigrationRepository.DefaultFailureMessage)]
+        [InlineData(false, "   ", MigrationRepository.DefaultFailureMessage)]
+        [InlineData(false, "copy failed", "copy failed")]
+        [InlineData(true, null, null)]
+        [InlineData(true, "stale error", null)]
+        public void FinalErrorMessage_FailureAlwaysCarriesAMessage_SuccessClearsIt(bool isCompleted, string? errorMessage, string? expected)
+        {
+            MigrationRepository.FinalErrorMessage(isCompleted, errorMessage).Should().Be(expected);
+        }
+
         [Fact]
         public async Task GetMigrationsByProjectKeysAsync_KeepsOnlyTrackersWithIncompleteServices()
         {

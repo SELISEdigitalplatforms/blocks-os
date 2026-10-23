@@ -91,6 +91,29 @@ namespace XUnitTest.Services
             RecordingSender.Recipients(sent).Should().BeEquivalentTo("owner", "caller");
             sent.Ids["projectKey"].Should().Be("t1");
             sent.Ids["tenantGroupId"].Should().Be("grp");
+            sent.Title.Should().Be("Environment deleted");
+        }
+
+        // One disable call removes one environment, so the text names the environment, not the project.
+        [Theory]
+        [InlineData("dev", "Shop", "An environment you belong to (dev of Shop) was deleted.")]
+        [InlineData("dev", null, "An environment you belong to (dev) was deleted.")]
+        [InlineData("dev", "  ", "An environment you belong to (dev) was deleted.")]
+        [InlineData("", "Shop", "An environment you belong to was deleted.")]
+        public async Task DisableProjectAsync_DescribesTheDeletedEnvironment(string environment, string? name, string expected)
+        {
+            using var _ = new BlocksTestContext(userId: "caller");
+            var tenant = TenantWith();
+            tenant.Environment = environment;
+            tenant.Name = name;
+            _tenants.Setup(t => t.GetTenantByID("t1")).Returns(tenant);
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+
+            await ServiceWithNotifications().DisableProjectAsync("t1");
+
+            var sent = _notifications.Single(BuiltInNotificationNames.ProjectDisabledOrDeleted);
+            sent.Title.Should().Be("Environment deleted");
+            sent.Description.Should().Be(expected);
         }
 
         [Fact]

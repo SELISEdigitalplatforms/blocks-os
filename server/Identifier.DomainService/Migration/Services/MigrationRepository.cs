@@ -54,7 +54,7 @@ namespace DomainService.Migration.Services
             var update = Builders<MigrationTracker>.Update
                 .Set($"{propertyName}.IsCompleted", isCompleted)
                 .Set($"{propertyName}.CompletedAt", isCompleted ? DateTime.UtcNow : (DateTime?)null)
-                .Set($"{propertyName}.ErrorMessage", errorMessage)
+                .Set($"{propertyName}.ErrorMessage", FinalErrorMessage(isCompleted, errorMessage))
                 .Set(m => m.LastUpdatedDate, DateTime.UtcNow);
 
             var editFilter = await _dataAccess.EditFilterAsync(OsSchemas.MigrationTracker, filter, "MigrationRepository.UpdateServiceStatusAsync");
@@ -100,6 +100,19 @@ namespace DomainService.Migration.Services
             // The API lists these: View column (property) rules clear what the caller may not see.
             return scope.ForView(trackers.Where(HasIncompleteServices).ToList());
         }
+
+        /// <summary>
+        /// A failed service is told apart from a running one only by its error message
+        /// (IsCompleted is false for both). A failure reported without a message would look
+        /// "in progress" forever, so it gets a default one. Success clears the message.
+        /// </summary>
+        public static string? FinalErrorMessage(bool isCompleted, string? errorMessage)
+        {
+            if (isCompleted) return null;
+            return string.IsNullOrWhiteSpace(errorMessage) ? DefaultFailureMessage : errorMessage;
+        }
+
+        public const string DefaultFailureMessage = "Migration failed";
 
         private static string GetServicePropertyName(MigrationServiceNames serviceName)
         {

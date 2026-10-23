@@ -193,7 +193,10 @@ namespace DomainService.People
                         projectPeople.peopleDetails.LastName = user.LastName;
                         projectPeople.peopleDetails.Salutation = user.Salutation;
                         projectPeople.peopleDetails.ProfileImageUrl = user.ProfileImageUrl;
-                        projectPeople.peopleDetails.AllowResendActivation = !user.Active || !user.IsVerified;
+                        var isDeactivated = UserAccountStatus.IsDeactivated(user);
+                        projectPeople.peopleDetails.IsActive = !isDeactivated;
+                        // A deactivated account cannot be re-invited; only an administrator can turn it back on.
+                        projectPeople.peopleDetails.AllowResendActivation = !isDeactivated && (!user.Active || !user.IsVerified);
                     }
                     return projectPeople;
                 });
