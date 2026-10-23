@@ -49,10 +49,15 @@ import NotificationConfigurationList, {
 } from "./notification-configuration-list";
 import type { INotificationConfigRow } from "../models/notification-config.model";
 
+const REALTIME_ALERTS = "Realtime alerts";
+const PASSWORD_RESET = "Password reset";
+const EXPORT_READY = "Export ready";
+const LEGACY_CUSTOM = "Legacy custom";
+
 const configurations = [
   {
     itemId: "c-1",
-    name: "Realtime alerts",
+    name: REALTIME_ALERTS,
     channelToNotify: 0,
     notificationType: 1,
     enablePersistence: true,
@@ -91,7 +96,7 @@ describe("NotificationConfigurationList", () => {
 
   it("renders configuration rows with short receiver labels and status", () => {
     render(<NotificationConfigurationList />, { wrapper });
-    expect(screen.getByText("Realtime alerts")).toBeTruthy();
+    expect(screen.getByText(REALTIME_ALERTS)).toBeTruthy();
     expect(screen.getByText("Broadcast")).toBeTruthy();
     expect(screen.getByText("Users")).toBeTruthy();
     expect(screen.getAllByText("On")).toHaveLength(2);
@@ -162,7 +167,7 @@ describe("NotificationConfigurationListPage", () => {
       isFetching: false,
     });
     render(<NotificationConfigurationListPage />, { wrapper });
-    expect(screen.getByText("Realtime alerts")).toBeTruthy();
+    expect(screen.getByText(REALTIME_ALERTS)).toBeTruthy();
   });
 });
 
@@ -170,7 +175,7 @@ describe("NotificationConfigurationList built-in metadata", () => {
   const rows = [
     {
       itemId: "b-1",
-      name: "Password reset",
+      name: PASSWORD_RESET,
       channelToNotify: 0,
       notificationType: 1,
       enablePersistence: true,
@@ -183,7 +188,7 @@ describe("NotificationConfigurationList built-in metadata", () => {
     },
     {
       itemId: "b-2",
-      name: "Export ready",
+      name: EXPORT_READY,
       channelToNotify: 0,
       notificationType: 1,
       enablePersistence: true,
@@ -194,7 +199,7 @@ describe("NotificationConfigurationList built-in metadata", () => {
     },
     {
       itemId: "c-1",
-      name: "Legacy custom",
+      name: LEGACY_CUSTOM,
       channelToNotify: 1,
       notificationType: 2,
       enablePersistence: false,
@@ -230,7 +235,7 @@ describe("NotificationConfigurationList built-in metadata", () => {
 
   it("shows a legacy row without the new fields as a plain custom row", () => {
     render(<NotificationConfigurationList />, { wrapper });
-    const row = screen.getByText("Legacy custom").closest("tr") as HTMLElement;
+    const row = screen.getByText(LEGACY_CUSTOM).closest("tr") as HTMLElement;
     expect(within(row).queryByText("Built-in")).toBeNull();
     expect(within(row).queryByText("Off")).toBeNull();
   });
@@ -238,16 +243,16 @@ describe("NotificationConfigurationList built-in metadata", () => {
   it("filters by importance over the loaded rows", () => {
     h.importance = "3";
     render(<NotificationConfigurationList />, { wrapper });
-    expect(screen.getByText("Password reset")).toBeTruthy();
-    expect(screen.queryByText("Export ready")).toBeNull();
-    expect(screen.queryByText("Legacy custom")).toBeNull();
+    expect(screen.getByText(PASSWORD_RESET)).toBeTruthy();
+    expect(screen.queryByText(EXPORT_READY)).toBeNull();
+    expect(screen.queryByText(LEGACY_CUSTOM)).toBeNull();
   });
 
   it("filters by service and shows a message when nothing matches", () => {
     h.service = "blocks-os";
     const { unmount } = render(<NotificationConfigurationList />, { wrapper });
-    expect(screen.getByText("Export ready")).toBeTruthy();
-    expect(screen.queryByText("Password reset")).toBeNull();
+    expect(screen.getByText(EXPORT_READY)).toBeTruthy();
+    expect(screen.queryByText(PASSWORD_RESET)).toBeNull();
     unmount();
     h.service = "nope";
     render(<NotificationConfigurationList />, { wrapper });
@@ -257,7 +262,7 @@ describe("NotificationConfigurationList built-in metadata", () => {
   it("offers Edit and Delete for a built-in row; the server decides who may use them", async () => {
     const user = userEvent.setup();
     render(<NotificationConfigurationList />, { wrapper });
-    const row = screen.getByText("Password reset").closest("tr") as HTMLElement;
+    const row = screen.getByText(PASSWORD_RESET).closest("tr") as HTMLElement;
     await user.click(within(row).getByRole("button"));
     expect(await screen.findByText("Edit")).toBeTruthy();
     expect(screen.getByText("Delete")).toBeTruthy();
@@ -266,7 +271,7 @@ describe("NotificationConfigurationList built-in metadata", () => {
   it("keeps Delete for a custom row", async () => {
     const user = userEvent.setup();
     render(<NotificationConfigurationList />, { wrapper });
-    const row = screen.getByText("Legacy custom").closest("tr") as HTMLElement;
+    const row = screen.getByText(LEGACY_CUSTOM).closest("tr") as HTMLElement;
     await user.click(within(row).getByRole("button"));
     expect(await screen.findByText("Delete")).toBeTruthy();
   });
@@ -277,7 +282,7 @@ describe("NotificationConfigurationList built-in metadata", () => {
     });
     const user = userEvent.setup();
     render(<NotificationConfigurationList />, { wrapper });
-    const row = screen.getByText("Password reset").closest("tr") as HTMLElement;
+    const row = screen.getByText(PASSWORD_RESET).closest("tr") as HTMLElement;
     await user.click(within(row).getByRole("button"));
     await user.click(await screen.findByText("Delete"));
     const dialog = await screen.findByRole("dialog");

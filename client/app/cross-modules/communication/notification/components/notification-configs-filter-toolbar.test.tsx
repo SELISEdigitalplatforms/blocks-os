@@ -48,7 +48,7 @@ vi.mock("@/components/filter-toolbar", () => ({
         <button
           data-testid="change-service"
           onClick={() =>
-            (props.onChange as (k: string, v: unknown) => void)("service", "blocks-iam")
+            (props.onChange as (k: string, v: unknown) => void)("service", IAM_SERVICE)
           }
         >
           change service
@@ -62,6 +62,8 @@ vi.mock("@/components/filter-toolbar", () => ({
 }));
 
 import { NotificationConfigsFilterToolBar } from "./notification-configs-filter-toolbar";
+
+const IAM_SERVICE = "blocks-iam";
 
 describe("NotificationConfigsFilterToolBar", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -93,7 +95,7 @@ describe("NotificationConfigsFilterToolBar", () => {
     const first = h.setQueryParams.mock.calls[0][0] as (p: object) => object;
     const second = h.setQueryParams.mock.calls[1][0] as (p: object) => object;
     expect(first({})).toMatchObject({ notificationImportance: "3", notificationPage: 0 });
-    expect(second({})).toMatchObject({ notificationService: "blocks-iam", notificationPage: 0 });
+    expect(second({})).toMatchObject({ notificationService: IAM_SERVICE, notificationPage: 0 });
   });
 
   it("clears importance and service on reset", () => {
@@ -107,7 +109,7 @@ describe("NotificationConfigsFilterToolBar", () => {
     const keys = () => (h.lastProps?.filters as { key: string }[]).map((f) => f.key);
     render(<NotificationConfigsFilterToolBar />);
     expect(keys()).toEqual(["search", "importance"]);
-    render(<NotificationConfigsFilterToolBar serviceOptions={["blocks-iam"]} />);
+    render(<NotificationConfigsFilterToolBar serviceOptions={[IAM_SERVICE]} />);
     expect(keys()).toEqual(["search", "importance", "service"]);
   });
 });

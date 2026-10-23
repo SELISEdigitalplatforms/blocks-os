@@ -53,6 +53,8 @@ const columns = [
   { key: "actions", label: "" },
 ];
 
+const SKELETON_ROWS = ["s1", "s2", "s3", "s4", "s5"];
+
 interface NotificationConfigurationListProps {
   isLoading?: boolean;
 }
@@ -176,8 +178,8 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
               </TableRow>
             </TableHeader>
             <TableBody>
-              {Array.from({ length: 5 }).map((_, idx) => (
-                <TableRow key={idx}>
+              {SKELETON_ROWS.map((row) => (
+                <TableRow key={row}>
                   {columns.map((col) => (
                     <TableCell key={col.key}>
                       <Skeleton className="h-6 w-full rounded" />
