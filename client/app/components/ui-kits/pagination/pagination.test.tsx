@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { DEFAULT_PAGE_SIZE_OPTIONS, Pagination } from "./pagination";
+import { DEFAULT_PAGE_SIZE_OPTIONS, getSizeChoices, Pagination } from "./pagination";
 
 vi.stubGlobal(
   "ResizeObserver",
@@ -70,5 +70,30 @@ describe("Pagination", () => {
     await user.click(screen.getByRole("combobox"));
     await user.click(screen.getByRole("option", { name: "25" }));
     expect(onPageSizeChange).toHaveBeenCalledWith(25);
+  });
+  it("offers only sizes that change what is shown", () => {
+    expect(getSizeChoices([10, 25, 50], 10, 12)).toEqual([10, 25]);
+    expect(getSizeChoices([10, 25, 50], 10, 30)).toEqual([10, 25, 50]);
+    expect(getSizeChoices([10, 25, 50], 25, 12)).toEqual([10, 25]);
+    expect(getSizeChoices([10, 25, 50], 5, 12)).toEqual([5, 10, 25]);
+  });
+
+  it("offers no size when the smallest one fits every row", () => {
+    expect(getSizeChoices([10, 25, 50], 10, 1)).toEqual([]);
+    expect(getSizeChoices([], 10, 100)).toEqual([]);
+  });
+
+  it("hides the size picker for a single record but keeps the page info", () => {
+    render(
+      <Pagination
+        page={0}
+        pageSize={10}
+        totalCount={1}
+        onChange={vi.fn()}
+        onPageSizeChange={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText("Rows per page")).toBeNull();
+    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
   });
 });

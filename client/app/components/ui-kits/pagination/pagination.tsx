@@ -24,6 +24,18 @@ interface PaginationProps {
 }
 const COMPACT_BUTTON = "h-7 w-7 md:h-8 md:w-8";
 
+/**
+ * Offer only sizes that change what is shown: every size below the total plus the first one
+ * that fits it all. When even the smallest size fits every row, there is nothing to choose.
+ * A size from an old link or a saved filter stays listed, so the select shows what is on screen.
+ */
+export function getSizeChoices(options: number[], pageSize: number, totalCount: number): number[] {
+  if (options.length === 0 || totalCount <= Math.min(...options)) return [];
+  const firstFitAll = options.find((size) => size >= totalCount);
+  const choices = options.filter((size) => size < totalCount || size === firstFitAll);
+  return choices.includes(pageSize) ? choices : [...choices, pageSize].sort((x, y) => x - y);
+}
+
 export function Pagination({
   page,
   onChange,
@@ -39,11 +51,7 @@ export function Pagination({
   const canGoPreviousPage = !!page;
   const totalPage = Math.max(1, Math.ceil(totalCount / pageSize) || 0);
   const canGoNextPage = page < totalPage - 1;
-  // A size from an old link or a saved filter may not be one of the choices; keep it listed so
-  // the select still shows what is on screen.
-  const sizeChoices = pageSizeOptions.includes(pageSize)
-    ? pageSizeOptions
-    : [...pageSizeOptions, pageSize].sort((a, b) => a - b);
+  const sizeChoices = getSizeChoices(pageSizeOptions, pageSize, totalCount);
   const onPageSizeChangeHandler = (value: string) => {
     if (onPageSizeChange) onPageSizeChange(+value);
   };
@@ -54,7 +62,7 @@ export function Pagination({
         compact && "flex-row items-center gap-2",
       )}
     >
-      {onPageSizeChange && sizeChoices.length > 0 ? (
+      {onPageSizeChange && sizeChoices.length > 1 ? (
         <div className={cn("flex items-center space-x-2", compact && "shrink-0 space-x-1.5")}>
           <p className={cn("text-sm font-medium", compact && "hidden md:block")}>Rows per page</p>
           <Select value={`${pageSize}`} onValueChange={onPageSizeChangeHandler}>
