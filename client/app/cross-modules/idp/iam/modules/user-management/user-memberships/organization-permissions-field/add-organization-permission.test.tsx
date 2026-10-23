@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => import("@/test-utils/__mocks__/grant-scope.mock"));
 import { createWrapper } from "@/test-utils/test-providers/query-client";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 
@@ -27,7 +28,7 @@ const h = vi.hoisted(() => {
 });
 
 vi.mock("@blocks-idp/iam/hooks/use-permission", () => ({
-  useGetPermissions: (filter: { page: number }) => {
+  useGetGrantablePermissions: (filter: { page: number }) => {
     const start = filter.page * 5;
     return {
       data: {

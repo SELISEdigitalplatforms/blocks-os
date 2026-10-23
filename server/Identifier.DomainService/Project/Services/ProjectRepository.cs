@@ -72,11 +72,15 @@ namespace DomainService.Projects
             return await collection.Find(filter).FirstOrDefaultAsync();
         }
 
+        // Live environments only. Deleting an environment just disables its row, so a group keeps
+        // it, and adding that environment back inserts a second row under the same TenantId.
+        // Ne(true) rather than Eq(false): a row without the flag is live, which is how Genesis reads it.
         public async Task<List<Tenant>> GetByGroupIdAsync(string tenantGroupId)
         {
             var collection = _clientDb.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
 
-            var filter = Builders<Tenant>.Filter.Eq(mc => mc.TenantGroupId, tenantGroupId);
+            var filter = Builders<Tenant>.Filter.Eq(mc => mc.TenantGroupId, tenantGroupId)
+                       & Builders<Tenant>.Filter.Ne(mc => mc.IsDisabled, true);
             return await collection.Find(filter).ToListAsync();
         }
 
@@ -173,6 +177,18 @@ namespace DomainService.Projects
             var filter = Builders<Tenant>.Filter.Eq(mc => mc.ItemId, project.ItemId);
 
             await collection.ReplaceOneAsync(filter, project);
+        }
+
+        // Provisioning owns this one field. Setting it alone, rather than replacing the document
+        // with the copy the worker was handed at creation, keeps whatever changed on the tenant
+        // while provisioning ran, such as the host of a repository added in the meantime.
+        public async Task SetPublicCertificatePathAsync(string itemId, string publicCertificatePath)
+        {
+            var collection = _clientDb.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
+
+            await collection.UpdateOneAsync(
+                Builders<Tenant>.Filter.Eq(mc => mc.ItemId, itemId),
+                Builders<Tenant>.Update.Set(mc => mc.JwtTokenParameters.PublicCertificatePath, publicCertificatePath));
         }
 
         // ProjectPeople.IsCreator is the single source of truth for project ownership — see
@@ -423,7 +439,8 @@ namespace DomainService.Projects
                 // copies them from BlocksConfiguration on demand.
                 CopyDocumentAsync(sourceDatabase, consumerDb, "Roles", project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "Permissions", project),
-                // CopyDocumentAsync(sourceDatabase, consumerDb, "SchemaDefinitions", project),
+                // Only the platform (system entity) schemas: the seed's own app schemas stay in the seed.
+                CopySystemSchemasAsync(sourceDatabase, consumerDb),
                 // Also carries the tenant configuration; TenantConfigurations itself is no longer copied.
                 CopyAndCustomizeIdentityConfigurationAsync(sourceDatabase, consumerDb, project),
                 // CopyAndCustomizeResourceLimitsAsync(sourceDatabase, consumerDb, project),
@@ -433,6 +450,29 @@ namespace DomainService.Projects
                 // Data source: default root doc (BlocksRootDb, _id = TenantId) + secret, not a copy of a seed tenant doc.
                 _dataGatewayRoot.EnsureAsync(project.TenantId, project.CreatedBy));
 
+        }
+
+        /// <summary>
+        /// Copies the system entity schemas (IAM, OS, Logic, Release, Monitor) of the seed into the project, unchanged:
+        /// same _id and CreatedBy "system", as the schema seed script writes them into existing tenants.
+        /// Insert-only and safe to re-run: a schema the project already has (same _id) is left as it is.
+        /// </summary>
+        private static async Task CopySystemSchemasAsync(IMongoDatabase sourceDb, IMongoDatabase targetDb)
+        {
+            const string collectionName = "SchemaDefinitions";
+            var filter = Builders<BsonDocument>.Filter.Eq("IsSystemEntity", true) & Builders<BsonDocument>.Filter.Ne("IsDeleted", true);
+            var schemas = await (await sourceDb.GetCollection<BsonDocument>(collectionName).FindAsync(filter)).ToListAsync();
+            if (schemas.Count == 0) return;
+
+            try
+            {
+                await targetDb.GetCollection<BsonDocument>(collectionName)
+                    .InsertManyAsync(schemas, new InsertManyOptions { IsOrdered = false });
+            }
+            catch (MongoBulkWriteException<BsonDocument> ex) when (ex.WriteErrors.All(e => e.Category == ServerErrorCategory.DuplicateKey) && ex.WriteConcernError is null)
+            {
+                // Already there from an earlier, interrupted run: that is the goal.
+            }
         }
 
         private async Task CopyDocumentAsync(IMongoDatabase sourceDb, IMongoDatabase targetDb, string collectionName, Tenant project)
@@ -657,7 +697,9 @@ namespace DomainService.Projects
             var projects = await GetByGroupIdAsync(request.TenantGroupId);
             var repoSlug = await _urlEncodingService.EncodeToBase26Async(request.Resource.ResourceId, request.TenantGroupId, 5);
 
-            foreach (var project in projects)
+            // One copy per tenant database. GetDatabase resolves by TenantId, so two live rows under
+            // one TenantId (an environment registered twice) would each insert into the same database.
+            foreach (var project in projects.DistinctBy(p => p.TenantId))
             {
                 var tenantSlug = await _urlEncodingService.EncodeToBase26Async(project.TenantGroupId, request.TenantGroupId, 5);
                 var targetedDb = _dbContextProvider.GetDatabase(project.TenantId);
@@ -814,9 +856,19 @@ namespace DomainService.Projects
                 return new BaseResponse { IsSuccess = false };
             }
 
+            mapper = await _dataAccess.PrepareUpsertAsync(OsSchemas.ThirdPartyJWTClaims, mapper, collection, editFilter, "ProjectRepository.SaveJWTClaimsAsync");
             await collection.ReplaceOneAsync(editFilter, mapper, new ReplaceOptions { IsUpsert = true });
 
             return new BaseResponse { IsSuccess = true };
+        }
+
+        public async Task<ThirdPartyJWTClaims> GetThirdPartyJWTClaimsForViewAsync()
+        {
+            var collection = ResolveThirdPartyJWTClaimsCollection();
+
+            // Masked: View column (property) rules clear what the caller may not see.
+            var scope = await _dataAccess.ReadAsync(OsSchemas.ThirdPartyJWTClaims, Builders<ThirdPartyJWTClaims>.Filter.Empty, "ProjectRepository.GetThirdPartyJWTClaimsForViewAsync");
+            return scope.Granted ? scope.ForView(await scope.Apply(collection).FirstOrDefaultAsync()) : default!;
         }
 
         public async Task<ThirdPartyJWTClaims> GetThirdPartyJWTClaimsAsync(string itemId)

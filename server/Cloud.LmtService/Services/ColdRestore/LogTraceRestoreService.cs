@@ -20,6 +20,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Text.Json;
 using Os.DataAccess;
+using Os.DataAccess.Notifications;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -47,12 +48,13 @@ namespace Cloud.LmtService.Services.ColdRestore
         private readonly ITenants _tenants;
         private readonly IArchiveRestoreRepository _archiveRestoreRepository;
         private readonly IRestoreUserRepository _userRepository;
+        private readonly IBuiltInNotificationSender? _notificationSender;
         [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "DI constructor: each parameter is an injected dependency.")]
         public LogTraceRestoreService(ILogger<LogTraceRestoreService> logger, ILogTraceRestoreRepository coldRestoreRepository, IMessageClient messageClient, ILogTraceRestoreResultRepository coldRestoreResultRepository,
     ILogTraceRestoreParquetReader coldRestoreParquetReader, IBlobStorage blobStorage, IConfiguration configuration,
     ILmtArchiveRestoreConfigurationRepository lmtArchiveRestoreConfigurationRepository, IDbContextProvider dbContextProvider,
     IHttpService httpService, ICryptoService cryptoService, ITenants tenants, IArchiveRestoreRepository archiveRestoreRepository,
-    IRestoreUserRepository userRepository, IOsDataAccess dataAccess)
+    IRestoreUserRepository userRepository, IOsDataAccess dataAccess, IBuiltInNotificationSender? notificationSender = null)
         {
             _dataAccess = dataAccess;
             _logger = logger;
@@ -69,6 +71,7 @@ namespace Cloud.LmtService.Services.ColdRestore
             _tenants = tenants;
             _archiveRestoreRepository = archiveRestoreRepository;
             _userRepository = userRepository;
+            _notificationSender = notificationSender;
         }
 
 
@@ -140,6 +143,12 @@ namespace Cloud.LmtService.Services.ColdRestore
                     ConsumerName = Constants.ColdRestoreQueue,
                     Payload = message
                 });
+
+            if (_notificationSender is not null)
+            {
+                await _notificationSender.SendAsync(RestoreProgressNotification.Accepted(
+                    requestId, nameof(RestoreSourceType.Cold), userId, tenantId));
+            }
 
             return new StartColdRestoreResponse
             {
@@ -553,7 +562,7 @@ namespace Cloud.LmtService.Services.ColdRestore
                 return;
             }
 
-            await ExtendRetentionFromCompletionAsync(requestId, ct);
+            var extendedUntil = await ExtendRetentionFromCompletionAsync(requestId, ct);
 
             if (!string.IsNullOrEmpty(requestRecord.UserEmail))
             {
@@ -570,6 +579,12 @@ namespace Cloud.LmtService.Services.ColdRestore
                 requestRecord.TenantId,
                 requestRecord.UserId,
                 ct);
+
+            if (extendedUntil.HasValue && _notificationSender is not null)
+            {
+                await _notificationSender.SendAsync(RestoreProgressNotification.RetentionExtended(
+                    requestId, requestRecord.SourceType.ToString(), requestRecord.UserId, requestRecord.TenantId, extendedUntil.Value), ct);
+            }
         }
 
         private static bool IsTerminal(RestoreRequestStatus status) =>
@@ -589,17 +604,20 @@ namespace Cloud.LmtService.Services.ColdRestore
         /// mid-flight, which for archive restores (hours of rehydration) deletes the request record
         /// out from under the job that is still working on it.
         /// </summary>
-        private async Task ExtendRetentionFromCompletionAsync(string requestId, CancellationToken ct)
+        /// <returns>The new expiry, or null when it could not be extended.</returns>
+        private async Task<DateTime?> ExtendRetentionFromCompletionAsync(string requestId, CancellationToken ct)
         {
             try
             {
                 var retentionDays = await GetRetentionDaysAsync(ct);
-                await _coldRestoreRepository.ExtendRequestExpiryAsync(
-                    requestId, DateTime.UtcNow.AddDays(retentionDays), ct);
+                var expireAt = DateTime.UtcNow.AddDays(retentionDays);
+                await _coldRestoreRepository.ExtendRequestExpiryAsync(requestId, expireAt, ct);
+                return expireAt;
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Could not extend retention for RequestId {RequestId}", requestId);
+                return null;
             }
         }
         private async Task PrepareRestorePlanAsync(ColdRestoreMessage message, CancellationToken ct = default)

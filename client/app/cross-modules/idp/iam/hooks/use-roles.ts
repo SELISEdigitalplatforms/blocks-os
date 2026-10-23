@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { normalizeArchiveErrors } from "../constants/archive-error-messages";
 import { roleService } from "@blocks-idp/iam/services/role.service";
-import { GetRolesPayload, IRole } from "@blocks-idp/iam/models/role";
+import { GetRolesPayload, GetRolesResponse, IRole } from "@blocks-idp/iam/models/role";
+import { useGrantScope } from "@blocks-idp/iam/hooks/use-grant-scope";
 
 const DEFAULT_ORGANIZATION_ID = "default";
 const ROLE_OPTIONS_PAGE_SIZE = 100;
@@ -15,6 +16,37 @@ export const useGetRoles = (
     queryFn: () => roleService.getRoles(option),
     enabled,
   });
+};
+
+const NO_ROLES: GetRolesResponse = { data: [], errors: null, totalCount: 0 };
+
+/**
+ * The roles the caller may give ("Assignable roles"). Same query as `useGetRoles`, but for a
+ * limited caller the list is narrowed to the assignable slugs on the server side, so paging and
+ * totals stay right. The system user (and a tenant that only audits) gets today's list.
+ */
+export const useGetAssignableRoles = (
+  option: GetRolesPayload,
+  { enabled = true }: { enabled?: boolean } = {},
+) => {
+  const { isLoading: isScopeLoading, isRestricted, assignableRoles } = useGrantScope();
+  // A caller that already narrows by slugs (the bulk "remove" list) keeps only the assignable ones.
+  const requested = option.filter?.slugs ?? [];
+  const slugs =
+    requested.length > 0 ? requested.filter((slug) => assignableRoles.includes(slug)) : assignableRoles;
+  // An empty slug list means "no filter" to the server, so "nothing assignable" must not be sent.
+  const nothingToAssign = isRestricted && slugs.length === 0;
+  const scoped: GetRolesPayload = isRestricted
+    ? { ...option, filter: { ...option.filter, slugs } }
+    : option;
+  const query = useGetRoles(scoped, {
+    enabled: enabled && !isScopeLoading && !nothingToAssign,
+  });
+
+  if (nothingToAssign) {
+    return { ...query, data: NO_ROLES, isLoading: false };
+  }
+  return { ...query, isLoading: query.isLoading || (enabled && isScopeLoading) };
 };
 
 export const useGetRoleFilterOptions = (

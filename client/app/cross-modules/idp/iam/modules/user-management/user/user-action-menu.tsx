@@ -9,6 +9,9 @@ import { RotateCcw, Send } from "lucide-react";
 import { useState } from "react";
 import { UserResetPassword } from "./user-reset-password";
 import { UserResendActivationMail } from "./user-resend-activation/user-resend-activation";
+import { DisabledReason } from "@blocks-idp/iam/components/disabled-reason";
+import { useUserManageability } from "@blocks-idp/iam/hooks/use-user-manageability";
+import { CANNOT_MANAGE_USER_TOOLTIP } from "@blocks-idp/iam/utils/grant-scope";
 import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
 
 type UserActionMenuProps = {
@@ -21,7 +24,19 @@ export const UserActionMenu = ({ id, projectKey }: UserActionMenuProps) => {
   const [isResendActivationModalOpen, setIsResendActivationModalOpen] = useState<boolean>(false);
   const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState<boolean>(false);
 
+  const { canManage } = useUserManageability();
+  const blockedReason = canManage(data?.data) ? null : CANNOT_MANAGE_USER_TOOLTIP;
   const isActive = data?.data?.active === true;
+
+  if (blockedReason) {
+    return (
+      <DisabledReason reason={blockedReason}>
+        <Button variant="outline" size="sm" className="gap-1.5" disabled>
+          {isActive ? "Reset Password" : "Resend Activation"}
+        </Button>
+      </DisabledReason>
+    );
+  }
 
   return (
     <>

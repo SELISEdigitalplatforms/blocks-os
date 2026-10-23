@@ -44,6 +44,8 @@ namespace Configuration.DomainService.Shared.Services
         Task UpdateMailSenderNameAsync(string configurationId, string senderName, DateTime lastUpdatedDate, string lastUpdatedBy);
         Task<MailServerConfiguration> GetMailConfigurationByIdAsync(string configurationId);
         Task<MailServerConfiguration> GetMailConfigurationByNameAsync(string configurationName);
+        /// <summary>The configuration as the caller may see it: properties a column rule hides are left out. Never save it back.</summary>
+        Task<MailServerConfiguration> GetMailConfigurationByNameForViewAsync(string configurationName);
         Task<List<MailServerConfiguration>> GetAllMailConfigurationsAsync();
 
         /// <summary>

@@ -11,9 +11,12 @@ import {
 } from "@/components/ui-kits/form/form";
 import { Input } from "@/components/ui-kits/input/input";
 import {
+  getAuthAttributeName,
+  isAuthAttributeField,
   NULL_OPERATORS,
   POLICY_OPERATION,
   POLICY_TYPE,
+  RULE_SOURCE_TYPES,
 } from "@blocks-idp/data-access/gateway/constants/schema-access-control";
 import type { PresetRuleSet } from "@blocks-idp/data-access/gateway/utils/access-presets";
 import type {
@@ -47,6 +50,8 @@ import {
 } from "./rule-condition-row";
 import { RuleGroupChildren } from "./rule-group-editor";
 
+const ATTRIBUTE_NAME_PATTERN = /^[A-Za-z_]\w*$/;
+
 const ruleRowSchema = z
   .object({
     source: z.string().min(1, "Source is required"),
@@ -56,7 +61,27 @@ const ruleRowSchema = z
     compareValue: z.string().default(""),
   })
   .superRefine((data, ctx) => {
+    // An access attribute is `attributes.<name>`; the name must be typed and a plain identifier.
+    if (isAuthAttributeField(data.field) && !ATTRIBUTE_NAME_PATTERN.test(getAuthAttributeName(data.field))) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Attribute name is required (letters, digits and _)",
+        path: ["field"],
+      });
+    }
     if (NULL_OPERATORS.includes(data.operator)) return;
+
+    if (
+      data.compareSource === RULE_SOURCE_TYPES.AUTH &&
+      isAuthAttributeField(data.compareValue) &&
+      !ATTRIBUTE_NAME_PATTERN.test(getAuthAttributeName(data.compareValue))
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Attribute name is required (letters, digits and _)",
+        path: ["compareValue"],
+      });
+    }
 
     const directValueOps = ["REGEX", "START_WITH", "END_WITH"];
     if (directValueOps.includes(data.operator)) {

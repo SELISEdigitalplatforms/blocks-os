@@ -49,6 +49,12 @@
             that goes away mid-run leaves it to finish, and the domain's status shows the outcome.
             </summary>
         </member>
+        <member name="M:BlocksOs.Api.Controllers.DomainController.NotifyDomainStatusAsync(System.String,Blocks.Genesis.BaseResponse)">
+            <summary>
+            Tells the caller how the custom domain setup ended. Only the final result is sent, not each step,
+            and no error text: the domain's status shows the details.
+            </summary>
+        </member>
         <member name="T:BlocksOs.Api.Controllers.IntegrationClientIp">
             <summary>Gets the caller address after trusted forwarded-header processing has run.</summary>
         </member>
@@ -236,8 +242,43 @@
             opens; Reference rules point at system Entity schemas; every rule is saved as version 1.
             </summary>
         </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.BulkValidation(BlocksOs.Api.Controllers.BulkPlatformValidationRequest,System.Threading.CancellationToken)">
+            <summary>
+            The same validation rules on several default properties (the base entity's own: Language, Tags, Read.Roles, …)
+            of several system schemas. <c>Replace</c> gives each property exactly these rules (an empty list removes
+            them); otherwise they are added after the ones it has. Every pair is checked first, as a single save would
+            be; if any is refused nothing is written, and each refusal is named by Schema.Property.
+            </summary>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.FieldDefault(BlocksOs.Api.Controllers.SetPlatformFieldDefaultRequest,System.Threading.CancellationToken)">
             <summary>Sets or (null) clears the field's default value. Only properties the Genesis allow-list opens.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.PlanValidationWritesAsync(Blocks.Genesis.Entities.Data.SchemaDefinition,Blocks.Genesis.DataAccess.Rules.SystemSchemaRuleSet,BlocksOs.Api.Controllers.BulkPlatformValidationRequest,System.Collections.Generic.Dictionary{System.String,System.String},System.Collections.Generic.List{BlocksOs.Api.Controllers.PlatformDataAccessController.ValidationWrite},System.Threading.CancellationToken)">
+            <summary>One schema's share of a bulk validation: what each picked property would get, or why it can't.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.BulkFieldDefault(BlocksOs.Api.Controllers.BulkPlatformFieldDefaultRequest,System.Threading.CancellationToken)">
+            <summary>
+            Sets or (null) clears the same default value on several default properties of several system schemas.
+            Every pair is checked first; if any is refused nothing is written, and each refusal is named by Schema.Property.
+            </summary>
+        </member>
+        <member name="F:BlocksOs.Api.Controllers.PlatformDataAccessController.DefaultPropertyNames">
+            <summary>The base entity's own properties, which every system schema has: the only ones bulk changes may touch.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.BulkTargetsProblem(System.Collections.Generic.List{System.String},System.Collections.Generic.List{System.String})">
+            <summary>Why a bulk request's schemas and properties can't be used, or null when they can.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.NormaliseRules(System.Collections.Generic.List{Blocks.Genesis.Entities.Data.ValidationRule})">
+            <summary>Rules as stored: request values as text, numbers and lists, every rule version 1.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.WriteValidationAsync(System.String,System.String,Blocks.Genesis.Entities.Data.DataValidation,System.Collections.Generic.List{Blocks.Genesis.Entities.Data.ValidationRule},System.Threading.CancellationToken)">
+            <summary>Stores the property's rules, or removes its row when there are none; returns the row's id.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.StorableDefault(Blocks.Genesis.Entities.Data.FieldDefaultValue)">
+            <summary>The requested default as stored; null clears it.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.CheckDefault(Blocks.Genesis.Entities.Data.SchemaDefinition,Blocks.Genesis.Entities.Data.FieldDefinition,Blocks.Genesis.Entities.Data.FieldDefaultValue)">
+            <summary>Why the default can't go on the field, or null when it can (clearing always can).</summary>
         </member>
         <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.CheckRulesAsync(Blocks.Genesis.Entities.Data.SchemaDefinition,Blocks.Genesis.Entities.Data.FieldDefinition,System.Collections.Generic.List{Blocks.Genesis.Entities.Data.ValidationRule},System.Threading.CancellationToken)">
             <summary>The same checks the Data Gateway makes when a rule is saved, with system schemas as Reference targets.</summary>
@@ -269,6 +310,18 @@
         <member name="P:BlocksOs.Api.Controllers.SetPlatformFieldDefaultRequest.DefaultValue">
             <summary>Null clears the default.</summary>
         </member>
+        <member name="P:BlocksOs.Api.Controllers.BulkPlatformValidationRequest.FieldNames">
+            <summary>Default properties only; nested ones by their dotted path, e.g. Read.Roles.</summary>
+        </member>
+        <member name="P:BlocksOs.Api.Controllers.BulkPlatformValidationRequest.Replace">
+            <summary>True: each property gets exactly these rules. False or missing: they are added after its own.</summary>
+        </member>
+        <member name="P:BlocksOs.Api.Controllers.BulkPlatformFieldDefaultRequest.FieldNames">
+            <summary>Default properties only; nested ones by their dotted path, e.g. Read.Roles.</summary>
+        </member>
+        <member name="P:BlocksOs.Api.Controllers.BulkPlatformFieldDefaultRequest.DefaultValue">
+            <summary>Null clears the default.</summary>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.ProjectController.GetThirdPartyJwtProviders">
             <summary>
             External identity providers this tenant accepts tokens from. Never returns a signing
@@ -284,6 +337,12 @@
         <member name="M:BlocksOs.Api.Controllers.ProjectController.DeleteThirdPartyJwtProvider(DomainService.Projects.DeleteThirdPartyJwtProviderRequest)">
             <summary>
             Removes a provider and, with it, the encrypted signing secret it carried.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.ProjectController.NotifyCertificateChangedAsync(Blocks.Genesis.BaseResponse,System.String,System.String,System.String)">
+            <summary>
+            Tells the project owner and the caller that what decides accepted tokens changed. Only
+            after success; no issuer, certificate, password or secret is sent.
             </summary>
         </member>
         <member name="M:BlocksOs.Api.Controllers.ProjectController.UpdateThirdPartyJwtEnabled(DomainService.Projects.UpdateThirdPartyJwtEnabledRequest)">
@@ -360,6 +419,13 @@
             soft delete has already taken out of service.
             </summary>
         </member>
+        <member name="M:BlocksOs.Api.Controllers.SecretsController.NotifySecretChangedAsync(System.String,System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Tells the project owner and the caller, after the change succeeded. Only the secret id is
+            sent, never its name or value. Done here, not in the service, so in-process secret writes
+            (mail and captcha configurations) do not notify.
+            </summary>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.SecretsController.ReadArchivedAsBadRequest``1(System.Func{System.Threading.Tasks.Task{``0}})">
             <summary>
             Re-raises a value read on an archived secret as a validation error, which the existing
@@ -371,6 +437,24 @@
             service that consumes it. Every other state failure — locked included — keeps its 409, and
             the read has already been audited by the service, so the audit trail is unchanged.
             </remarks>
+        </member>
+        <member name="T:BlocksOs.Api.Controllers.UserPreferenceController">
+            <summary>
+            The signed-in user's own settings, by key (<see cref="T:DomainService.Preference.UserPreferenceKeys"/>), such as the
+            console sidebar's favourites and app order, so they follow the user across browsers.
+            </summary>
+            <remarks>
+            Deliberately <c>[Authorize]</c> only, with no resource name and no project policy, like
+            <see cref="M:BlocksOs.Api.Controllers.PeopleController.GetMyAccess(DomainService.Access.GetMyAccessRequest)"/>: every action reads or writes the caller's own
+            rows and no one else's, so there is nothing a grant could add. Routing and response mapping
+            only; the rules live in <see cref="T:DomainService.Preference.Services.IUserPreferenceService"/>.
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.UserPreferenceController.Get(DomainService.Preference.GetUserPreferenceRequest,System.Threading.CancellationToken)">
+            <summary>The caller's value for a key; <c>value</c> is null when never saved.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.UserPreferenceController.Save(DomainService.Preference.SaveUserPreferenceRequest,System.Threading.CancellationToken)">
+            <summary>Sets the caller's value for a key, replacing any earlier one.</summary>
         </member>
         <member name="T:BlocksOs.Api.Controllers.VersionController">
             <summary>

@@ -34,6 +34,8 @@ export interface VariableField {
 export const AUTH_PREFIX = "Auth";
 export const AUTH_NAMES = ["UserId", "Email", "Roles", "Permissions", "OrganizationId"] as const;
 const AUTH_LIST_NAMES = new Set(["roles", "permissions"]);
+/** `Auth.Attributes.<name>`: an org-scoped access attribute, a list of strings like Roles. */
+const ATTRIBUTE_PATH_PATTERN = /^attributes\.[a-z_]\w*$/i;
 const SCALAR_TYPES = new Set(["String", "Int", "Float", "Boolean", "DateTime", "ID", "GeoJson", "Enum", "Json"]);
 const NAME_PATTERN = /^[A-Za-z_]\w*(\.[A-Za-z_]\w*)+$/;
 const SEGMENT_PATTERN = /^[A-Za-z_]\w*$/;
@@ -147,6 +149,11 @@ const AUTH_CHOICES = AUTH_NAMES.map((n) => `Auth.${n}`).join(", ");
 function checkAuthPart(part: VariablePart, mode: VariableMode, targetIsList: boolean): VariableError | null {
   const { position } = part;
   if (mode === "single") return at(`Auth values aren't available in validation rules at position ${position}: use an access policy`, position);
+  if (ATTRIBUTE_PATH_PATTERN.test(String(part.path))) {
+    return targetIsList
+      ? null
+      : at(`Auth.${part.path} is a list at position ${position}: use it in a list property`, position);
+  }
   const authName = AUTH_NAMES.find((n) => n.toLowerCase() === part.path?.toLowerCase());
   if (!authName) return at(`Unknown value "${nameOf(part)}" at position ${position}: use ${AUTH_CHOICES}`, position);
   if (AUTH_LIST_NAMES.has(authName.toLowerCase()) && !targetIsList) {

@@ -1,7 +1,9 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => import("@/test-utils/__mocks__/grant-scope.mock"));
 import { mockProjectStoreFactory } from "@/test-utils/__mocks__";
+import { grant, resetGrant } from "@/test-utils/__mocks__/grant-scope.mock";
 import type { IPolicyItem } from "../../models/data-service";
 
 const h = vi.hoisted(() => ({
@@ -55,6 +57,33 @@ describe("SchemaAccessControlView: who is allowed", () => {
   it("adds Inherited on a property", () => {
     renderView({ level: "column", defaultAccessLevel: 0 });
     expect(tierOptions()).toEqual(["Inherited", "Signed-in users", "Custom"]);
+  });
+});
+
+describe("SchemaAccessControlView: read-only for a caller who is not the system user", () => {
+  beforeEach(() => {
+    h.policies = [];
+    resetGrant();
+  });
+
+  it("switches every control off inside a disabled fieldset, with the reason", () => {
+    grant.systemOnlyReason = "Only the system user can change this.";
+    const { container } = renderView();
+    expect(container.querySelector("fieldset")?.disabled).toBe(true);
+    expect(screen.getByTestId("data-access-read-only").textContent).toContain(
+      "Only the system user can change this.",
+    );
+    for (const radio of screen.getAllByRole("radio")) {
+      // `:disabled` also counts the disabled fieldset around the control.
+      expect(radio.matches(":disabled")).toBe(true);
+    }
+    expect(screen.getByRole("button", { name: "Save" }).matches(":disabled")).toBe(true);
+  });
+
+  it("changes nothing for the system user", () => {
+    const { container } = renderView();
+    expect(container.querySelector("fieldset")?.disabled).toBe(false);
+    expect(screen.queryByTestId("data-access-read-only")).toBeNull();
   });
 });
 

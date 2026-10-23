@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => import("@/test-utils/__mocks__/grant-scope.mock"));
 
 vi.stubGlobal("matchMedia", (query: string) => ({
   matches: false,
@@ -231,6 +232,21 @@ describe("AddConfiguration", () => {
     expect((await screen.findByTestId("form-level-error")).textContent).toContain(
       "Unexpected rejection",
     );
+  });
+
+  it("toasts the refusal and keeps the dialog open when a grant the caller does not hold is refused", async () => {
+    const errors = { Access_Grant_Not_Allowed: "refused" };
+    h.mutateAsync.mockRejectedValue({ status: 403, errors });
+    const user = userEvent.setup();
+    render(<AddConfiguration />);
+    await user.click(screen.getByRole("button", { name: "Add Configuration" }));
+    await user.type(screen.getByPlaceholderText("Partner onboarding"), "Partner onboarding");
+    await selectClient(user);
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(h.showErrorToast).toHaveBeenCalledWith({ errors }));
+    expect(screen.getByRole("heading", { name: "Add Configuration" })).toBeTruthy();
+    expect(h.showSuccessToast).not.toHaveBeenCalled();
   });
 
   describe("existing-user password and max redemptions (#645)", () => {

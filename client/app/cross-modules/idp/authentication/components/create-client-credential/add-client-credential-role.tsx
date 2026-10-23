@@ -14,10 +14,11 @@ import {
 } from "@/components/ui-kits/dialog/dialog";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { useProjectStore } from "@seliseblocks/genesis-os";
-import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
+import { useGetAssignableRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
+import { GrantHint } from "@blocks-idp/iam/components/grant-hint";
 
 type AddClientCredentialRoleProps = {
   selectedSlugs: string[];
@@ -30,7 +31,7 @@ export const AddClientCredentialRole = ({ onAdd, selectedSlugs }: AddClientCrede
   const [pendingRoles, setPendingRoles] = useState<IRole[]>([]);
   const [filter, setFilter] = useState({ page: 0, pageSize: 10, search: "" });
 
-  const { data, isLoading } = useGetRoles(
+  const { data, isLoading } = useGetAssignableRoles(
     {
       page: filter.page,
       pageSize: filter.pageSize,
@@ -76,6 +77,7 @@ export const AddClientCredentialRole = ({ onAdd, selectedSlugs }: AddClientCrede
           <DialogTitle className="text-left">Assign roles</DialogTitle>
           <DialogDescription />
         </DialogHeader>
+        <GrantHint kind="roles" />
         <div>
           <FilterControls.SearchInput
             value={filter.search}

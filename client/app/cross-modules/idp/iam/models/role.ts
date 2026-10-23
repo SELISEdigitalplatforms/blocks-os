@@ -76,6 +76,8 @@ export interface CreateRolePayload {
   name: string;
   description: string;
   slug: string;
+  /** "Managed by": the role above this one. Empty or absent means a top-level role. */
+  parentRoleSlug?: string | null;
   /**
    * Acknowledges that other organizations already have a role with this name, and that creating
    * this one gives them a second role sharing it. Sent only on the second attempt, after the

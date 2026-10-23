@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ComponentProps } from "react";
 import {
   Command,
   CommandGroup,
@@ -59,16 +59,21 @@ const emptyTriggerLabel = (entity: PrincipalEntity): string =>
 
 type BrowseState = ReturnType<typeof usePrincipalOptions>;
 
-interface PrincipalTriggerProps {
+/**
+ * `PopoverTrigger asChild` hands its click handler, aria state and ref to this component, so they must
+ * reach the button: without them the trigger renders but never opens the list.
+ */
+interface PrincipalTriggerProps extends ComponentProps<"button"> {
   isChip: boolean;
   hasSelection: boolean;
   triggerLabel: string;
 }
 
-const PrincipalTrigger = ({ isChip, hasSelection, triggerLabel }: Readonly<PrincipalTriggerProps>) => {
+const PrincipalTrigger = ({ isChip, hasSelection, triggerLabel, className, ...buttonProps }: Readonly<PrincipalTriggerProps>) => {
   if (isChip) {
     return (
       <button
+        {...buttonProps}
         type="button"
         // Empty reads "Not set" like the row's other chips; the label keeps the
         // control findable by what it picks.
@@ -78,6 +83,7 @@ const PrincipalTrigger = ({ isChip, hasSelection, triggerLabel }: Readonly<Princ
           hasSelection
             ? "border-border/70 bg-muted/70 text-foreground hover:bg-muted"
             : "border-dashed border-border/50 bg-background text-muted-foreground hover:bg-muted/30",
+          className,
         )}
       >
         <span className="block truncate">{hasSelection ? triggerLabel : "Not set"}</span>
@@ -86,8 +92,12 @@ const PrincipalTrigger = ({ isChip, hasSelection, triggerLabel }: Readonly<Princ
   }
   return (
     <button
+      {...buttonProps}
       type="button"
-      className="flex h-10 w-full min-w-0 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background hover:bg-accent hover:text-accent-foreground lg:flex-1"
+      className={cn(
+        "flex h-10 w-full min-w-0 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background hover:bg-accent hover:text-accent-foreground lg:flex-1",
+        className,
+      )}
     >
       <span className="truncate text-left">{triggerLabel}</span>
       <svg

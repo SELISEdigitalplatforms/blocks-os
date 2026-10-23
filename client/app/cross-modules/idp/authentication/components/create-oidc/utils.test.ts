@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildTokenLifetimesPayload,
+  EMPTY_TOKEN_LIFETIMES,
   redirectUriSubmitSchema,
   createOidcSchema,
   createOIDCFormDefaultValue,
@@ -10,6 +12,9 @@ import {
   isAppSchemeRedirectUri,
   MOBILE_INVALID_REDIRECT_URI_MESSAGE,
   WEB_APP_SCHEME_REDIRECT_URI_MESSAGE,
+  TOKEN_LIFETIME_MESSAGES,
+  type TokenLifetimeFormValues,
+  tokenLifetimesToForm,
 } from "./utils";
 
 describe("redirectUriSubmitSchema", () => {
@@ -281,5 +286,174 @@ describe("deriveApplicationType (spec 6.2)", () => {
     [{ clientType: "public", useTokensCookie: false, isDeviceFlowClient: true }],
   ])("is Web for %j", (credential) => {
     expect(deriveApplicationType(credential)).toBe("web");
+  });
+});
+
+// ---------- per-client token lifetimes (blocks-os SPEC3) ----------
+
+const validWebValues = {
+  ...createOIDCFormDefaultValue,
+  clientDisplayName: "App",
+  redirectUris: [{ value: "https://app.example.com/cb" }],
+};
+
+const lifetimeErrors = (
+  overrides: Partial<Record<keyof TokenLifetimeFormValues, string>>,
+  base: Record<string, unknown> = validWebValues,
+) => {
+  const result = createOidcSchema.safeParse({ ...base, ...overrides });
+  return result.success
+    ? []
+    : result.error.issues.map((issue) => ({ path: issue.path.join("."), message: issue.message }));
+};
+
+describe("token lifetime rules", () => {
+  it("accepts empty inputs (project setting)", () => {
+    expect(lifetimeErrors({})).toEqual([]);
+  });
+
+  it.each([
+    ["1", "1", "1"],
+    ["1440", "525600", "525600"],
+    ["30", "1440", "43200"],
+    ["", "600", "600"],
+    [" 30 ", "", ""],
+  ])("accepts %s / %s / %s", (access, refresh, absolute) => {
+    expect(
+      lifetimeErrors({
+        accessTokenLifetime: access,
+        refreshTokenLifetime: refresh,
+        absoluteRefreshTokenLifetime: absolute,
+      }),
+    ).toEqual([]);
+  });
+
+  it.each(["0", "1441", "99999"])("rejects access %s with the server message", (value) => {
+    expect(lifetimeErrors({ accessTokenLifetime: value })).toEqual([
+      { path: "accessTokenLifetime", message: TOKEN_LIFETIME_MESSAGES.access },
+    ]);
+  });
+
+  it.each(["0", "525601"])("rejects idle and maximum %s", (value) => {
+    expect(lifetimeErrors({ refreshTokenLifetime: value })).toEqual([
+      { path: "refreshTokenLifetime", message: TOKEN_LIFETIME_MESSAGES.refresh },
+    ]);
+    expect(lifetimeErrors({ absoluteRefreshTokenLifetime: value })).toEqual([
+      { path: "absoluteRefreshTokenLifetime", message: TOKEN_LIFETIME_MESSAGES.absolute },
+    ]);
+  });
+
+  it("rejects a maximum below the idle lifetime on the maximum field", () => {
+    expect(
+      lifetimeErrors({ refreshTokenLifetime: "600", absoluteRefreshTokenLifetime: "599" }),
+    ).toEqual([
+      {
+        path: "absoluteRefreshTokenLifetime",
+        message: TOKEN_LIFETIME_MESSAGES.absoluteBelowRefresh,
+      },
+    ]);
+  });
+
+  it.each(["1.5", "-3", "abc", "1e3"])("rejects %s as not a whole number", (value) => {
+    expect(lifetimeErrors({ accessTokenLifetime: value })).toEqual([
+      { path: "accessTokenLifetime", message: TOKEN_LIFETIME_MESSAGES.wholeNumber },
+    ]);
+  });
+
+  it("checks lifetimes for device-flow clients too", () => {
+    expect(
+      lifetimeErrors(
+        { accessTokenLifetime: "0" },
+        { ...createOIDCFormDefaultValue, clientDisplayName: "Cli", isDeviceFlowClient: true },
+      ),
+    ).toEqual([{ path: "accessTokenLifetime", message: TOKEN_LIFETIME_MESSAGES.access }]);
+  });
+});
+
+describe("tokenLifetimesToForm", () => {
+  it("maps stored values and leaves unset ones empty", () => {
+    expect(
+      tokenLifetimesToForm({
+        accessTokenValidForNumberMinutes: 30,
+        refreshTokenValidForNumberMinutes: null,
+        absoluteRefreshTokenValidForNumberMinutes: 43200,
+      }),
+    ).toEqual({
+      accessTokenLifetime: "30",
+      refreshTokenLifetime: "",
+      absoluteRefreshTokenLifetime: "43200",
+    });
+  });
+
+  it.each([null, undefined])("maps %s to empty inputs", (value) => {
+    expect(tokenLifetimesToForm(value)).toEqual(EMPTY_TOKEN_LIFETIMES);
+  });
+
+  it("keeps a bad stored value visible", () => {
+    expect(
+      tokenLifetimesToForm({
+        accessTokenValidForNumberMinutes: 0,
+        refreshTokenValidForNumberMinutes: null,
+        absoluteRefreshTokenValidForNumberMinutes: null,
+      }).accessTokenLifetime,
+    ).toBe("0");
+  });
+});
+
+describe("buildTokenLifetimesPayload", () => {
+  it("returns undefined when nothing changed", () => {
+    expect(
+      buildTokenLifetimesPayload(EMPTY_TOKEN_LIFETIMES, EMPTY_TOKEN_LIFETIMES),
+    ).toBeUndefined();
+    const loaded = {
+      accessTokenLifetime: "30",
+      refreshTokenLifetime: "",
+      absoluteRefreshTokenLifetime: "43200",
+    };
+    expect(buildTokenLifetimesPayload({ ...loaded }, loaded)).toBeUndefined();
+  });
+
+  it("treats whitespace-only edits as unchanged", () => {
+    expect(
+      buildTokenLifetimesPayload(
+        { ...EMPTY_TOKEN_LIFETIMES, accessTokenLifetime: "  " },
+        EMPTY_TOKEN_LIFETIMES,
+      ),
+    ).toBeUndefined();
+  });
+
+  it("sends all three as numbers or null when one changed", () => {
+    expect(
+      buildTokenLifetimesPayload(
+        {
+          accessTokenLifetime: "45",
+          refreshTokenLifetime: "",
+          absoluteRefreshTokenLifetime: "43200",
+        },
+        {
+          accessTokenLifetime: "30",
+          refreshTokenLifetime: "",
+          absoluteRefreshTokenLifetime: "43200",
+        },
+      ),
+    ).toEqual({
+      accessTokenValidForNumberMinutes: 45,
+      refreshTokenValidForNumberMinutes: null,
+      absoluteRefreshTokenValidForNumberMinutes: 43200,
+    });
+  });
+
+  it("sends three nulls when all were cleared", () => {
+    expect(
+      buildTokenLifetimesPayload(EMPTY_TOKEN_LIFETIMES, {
+        accessTokenLifetime: "30",
+        refreshTokenLifetime: "1440",
+        absoluteRefreshTokenLifetime: "43200",
+      }),
+    ).toEqual({
+      accessTokenValidForNumberMinutes: null,
+      refreshTokenValidForNumberMinutes: null,
+      absoluteRefreshTokenValidForNumberMinutes: null,
+    });
   });
 });

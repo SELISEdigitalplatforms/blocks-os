@@ -68,6 +68,13 @@ export const ROLE_ENDPOINTS = {
   GET_ALL_ASSIGNED_ROLES: `${API_BASES.IAM}${IAM_SUBPATH}/roles/assignable`,
 } as const;
 
+// ─── Access grant (grant-scope.service) ──────────────────────────
+
+export const GRANT_ENDPOINTS = {
+  // What the token's user may grant in the token's organization. Read-only.
+  SCOPE: `${API_BASES.IAM}${IAM_SUBPATH}/grant-scope`,
+} as const;
+
 // ─── Permission endpoints (permission.service) ─────────────────────────────
 
 export const PERMISSION_ENDPOINTS = {

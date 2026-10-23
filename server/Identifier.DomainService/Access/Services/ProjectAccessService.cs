@@ -3,6 +3,7 @@ using DomainService.Entities;
 using DomainService.People;
 using DomainService.Projects;
 using Microsoft.AspNetCore.Http;
+using Os.DataAccess.Notifications;
 
 namespace DomainService.Access.Services
 {
@@ -12,16 +13,19 @@ namespace DomainService.Access.Services
         private readonly IPeopleRepository _peopleRepository;
         private readonly IKeyValueStore _store;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IBuiltInNotificationSender? _notificationSender;
 
         public ProjectAccessService(IProjectRepository projectRepository,
                                     IPeopleRepository peopleRepository,
                                     IKeyValueStore store,
-                                    IHttpContextAccessor httpContextAccessor)
+                                    IHttpContextAccessor httpContextAccessor,
+                                    IBuiltInNotificationSender? notificationSender = null)
         {
             _projectRepository = projectRepository;
             _peopleRepository = peopleRepository;
             _store = store;
             _httpContextAccessor = httpContextAccessor;
+            _notificationSender = notificationSender;
         }
 
         // ── Resolution ──────────────────────────────────────────────────────────
@@ -248,6 +252,24 @@ namespace DomainService.Access.Services
             // the membership rows are per-environment, so a single-row write would leave the
             // rows disagreeing with each other.
             await _peopleRepository.UpdateAccessPoliciesAsync([.. rows.Select(row => row.ItemId)], submitted);
+
+            if (_notificationSender is not null)
+            {
+                await _notificationSender.SendAsync(new BuiltInNotification
+                {
+                    ConfigurationName = BuiltInNotificationNames.ProjectAccessChanged,
+                    Event = "project-access-changed",
+                    Title = "Your project access changed",
+                    Description = "What you can see and do in a project was updated.",
+                    Ids = new Dictionary<string, string?>
+                    {
+                        ["projectGroupId"] = request.ProjectGroupId,
+                        ["userId"] = request.UserId
+                    },
+                    UserIds = [request.UserId],
+                    ConnectionId = request.ProjectGroupId
+                }, cancellationToken);
+            }
 
             return new SaveAccessPolicyResponse { IsSuccess = true, AccessPolicies = submitted };
         }

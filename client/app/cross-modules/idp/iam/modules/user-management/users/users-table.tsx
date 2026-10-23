@@ -2,6 +2,11 @@ import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { User } from "@blocks-idp/iam/models/user";
+import { useUserManageability } from "@blocks-idp/iam/hooks/use-user-manageability";
+import {
+  CANNOT_MANAGE_USER_TOOLTIP,
+  OWN_ROLES_TOOLTIP,
+} from "@blocks-idp/iam/utils/grant-scope";
 import { useNavigate } from "react-router";
 import { useUsersSortQueryParams } from "./users-filter-toolbar";
 import { FilterControls } from "@/components/filter-toolbar";
@@ -44,6 +49,11 @@ const GRID_COLUMNS_SELECTING =
 const INDETERMINATE_BOX =
   "relative data-[state=indeterminate]:border-blocks-primary-500 data-[state=indeterminate]:bg-blocks-primary-500 data-[state=indeterminate]:text-primary-foreground [&[data-state=indeterminate]_svg]:hidden after:absolute after:left-1/2 after:top-1/2 after:hidden after:h-[2px] after:w-2 after:-translate-x-1/2 after:-translate-y-1/2 after:rounded-full after:bg-current data-[state=indeterminate]:after:block";
 
+const getSelectionBlockedReason = (isSelf: boolean, canManage: boolean): string | undefined => {
+  if (isSelf) return OWN_ROLES_TOOLTIP;
+  return canManage ? undefined : CANNOT_MANAGE_USER_TOOLTIP;
+};
+
 const LoadingSkelton = () => (
   <div className="flex flex-col gap-3">
     {Array.from({ length: 8 }).map((_, index) => (
@@ -63,6 +73,7 @@ export const UsersTable = ({
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const { sortQueryParams, setSortQueryParams } = useUsersSortQueryParams();
+  const { isSelf, canManage } = useUserManageability();
 
   const handleRowClick = (itemId: string) => {
     // Navigating mid-selection would throw away what the operator has ticked, so
@@ -186,6 +197,8 @@ export const UsersTable = ({
                     aria-label={`Select ${fullName}`}
                     data-testid={`users-select-${user.itemId}`}
                     checked={selectedUserIds?.has(user.itemId) ?? false}
+                    disabled={isSelf(user.itemId) || !canManage(user)}
+                    title={getSelectionBlockedReason(isSelf(user.itemId), canManage(user))}
                     onCheckedChange={(value) => onToggleUser?.(user.itemId, value === true)}
                   />
                 </div>

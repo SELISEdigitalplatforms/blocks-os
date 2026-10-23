@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { IOidcClientTokenLifetimes } from "@blocks-idp/authentication/models/auth.oidc.model";
 
 const PUBLIC_TLD_PATTERN = /^([a-z0-9-]+\.)+[a-z]{2,}$/i;
 
@@ -136,6 +137,123 @@ export const deriveApplicationType = (credential: {
     ? "mobile"
     : "web";
 
+/** Same bounds and messages as the server (blocks-iam SPEC5 6.2). */
+export const TOKEN_LIFETIME_LIMITS = {
+  access: { min: 1, max: 1440 },
+  refresh: { min: 1, max: 525600 },
+} as const;
+
+export const TOKEN_LIFETIME_MESSAGES = {
+  wholeNumber: "Enter a whole number of minutes.",
+  access: "Access token lifetime must be between 1 and 1440 minutes.",
+  refresh: "Refresh token idle lifetime must be between 1 and 525600 minutes.",
+  absolute: "Refresh token maximum lifetime must be between 1 and 525600 minutes.",
+  absoluteBelowRefresh:
+    "Refresh token maximum lifetime must be at least the refresh token idle lifetime.",
+} as const;
+
+/** The three lifetime inputs as typed. An empty string means "use the project setting". */
+export type TokenLifetimeFormValues = {
+  accessTokenLifetime: string;
+  refreshTokenLifetime: string;
+  absoluteRefreshTokenLifetime: string;
+};
+
+export const EMPTY_TOKEN_LIFETIMES: TokenLifetimeFormValues = {
+  accessTokenLifetime: "",
+  refreshTokenLifetime: "",
+  absoluteRefreshTokenLifetime: "",
+};
+
+const toInput = (value: number | null | undefined) =>
+  value === null || value === undefined ? "" : String(value);
+
+/** Maps the server's stored lifetimes (or their absence) to the form inputs. */
+export const tokenLifetimesToForm = (
+  lifetimes?: IOidcClientTokenLifetimes | null,
+): TokenLifetimeFormValues => ({
+  accessTokenLifetime: toInput(lifetimes?.accessTokenValidForNumberMinutes),
+  refreshTokenLifetime: toInput(lifetimes?.refreshTokenValidForNumberMinutes),
+  absoluteRefreshTokenLifetime: toInput(lifetimes?.absoluteRefreshTokenValidForNumberMinutes),
+});
+
+const WHOLE_NUMBER = /^\d+$/;
+
+/** "" -> null, digits -> number, anything else -> NaN (flagged by the schema). */
+const parseMinutes = (raw: string): number | null => {
+  const value = raw.trim();
+  if (value === "") return null;
+  return WHOLE_NUMBER.test(value) ? Number(value) : Number.NaN;
+};
+
+/**
+ * The save payload's `tokenLifetimes`, or undefined when no lifetime input changed — then the
+ * property is left out and the server keeps the stored values.
+ */
+export const buildTokenLifetimesPayload = (
+  current: TokenLifetimeFormValues,
+  loaded: TokenLifetimeFormValues,
+): IOidcClientTokenLifetimes | undefined => {
+  const changed = (Object.keys(EMPTY_TOKEN_LIFETIMES) as (keyof TokenLifetimeFormValues)[]).some(
+    (key) => current[key].trim() !== loaded[key].trim(),
+  );
+  if (!changed) return undefined;
+  return {
+    accessTokenValidForNumberMinutes: parseMinutes(current.accessTokenLifetime),
+    refreshTokenValidForNumberMinutes: parseMinutes(current.refreshTokenLifetime),
+    absoluteRefreshTokenValidForNumberMinutes: parseMinutes(current.absoluteRefreshTokenLifetime),
+  };
+};
+
+const addTokenLifetimeIssues = (value: TokenLifetimeFormValues, ctx: z.RefinementCtx) => {
+  const check = (
+    key: keyof TokenLifetimeFormValues,
+    limits: { min: number; max: number },
+    rangeMessage: string,
+  ): number | null => {
+    const parsed = parseMinutes(value[key]);
+    if (parsed === null) return null;
+    if (Number.isNaN(parsed)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [key],
+        message: TOKEN_LIFETIME_MESSAGES.wholeNumber,
+      });
+      return null;
+    }
+    if (parsed < limits.min || parsed > limits.max) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: [key], message: rangeMessage });
+      return null;
+    }
+    return parsed;
+  };
+
+  check("accessTokenLifetime", TOKEN_LIFETIME_LIMITS.access, TOKEN_LIFETIME_MESSAGES.access);
+  const refresh = check(
+    "refreshTokenLifetime",
+    TOKEN_LIFETIME_LIMITS.refresh,
+    TOKEN_LIFETIME_MESSAGES.refresh,
+  );
+  const absolute = check(
+    "absoluteRefreshTokenLifetime",
+    TOKEN_LIFETIME_LIMITS.refresh,
+    TOKEN_LIFETIME_MESSAGES.absolute,
+  );
+  if (refresh !== null && absolute !== null && absolute < refresh) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["absoluteRefreshTokenLifetime"],
+      message: TOKEN_LIFETIME_MESSAGES.absoluteBelowRefresh,
+    });
+  }
+};
+
+const tokenLifetimeInputs = z.object({
+  accessTokenLifetime: z.string(),
+  refreshTokenLifetime: z.string(),
+  absoluteRefreshTokenLifetime: z.string(),
+});
+
 export const createOidcSchema = z
   .object({
     redirectUris: redirectUriEntry.array(),
@@ -151,8 +269,15 @@ export const createOidcSchema = z
     storedClientType: z.string().nullable(),
     storedUseTokensCookie: z.boolean(),
     loadedApplicationType: z.enum(["web", "mobile"]).nullable(),
+    accessTokenLifetime: z.string(),
+    refreshTokenLifetime: z.string(),
+    absoluteRefreshTokenLifetime: z.string(),
+    loadedTokenLifetimes: tokenLifetimeInputs,
   })
   .superRefine((value, ctx) => {
+    // Lifetimes apply to every client type, device flow included, so they are checked first.
+    addTokenLifetimeIssues(value, ctx);
+
     if (value.isDeviceFlowClient) {
       return;
     }
@@ -195,4 +320,6 @@ export const createOIDCFormDefaultValue: CreateOIDCFormValues = {
   storedClientType: null,
   storedUseTokensCookie: true,
   loadedApplicationType: null,
+  ...EMPTY_TOKEN_LIFETIMES,
+  loadedTokenLifetimes: EMPTY_TOKEN_LIFETIMES,
 };

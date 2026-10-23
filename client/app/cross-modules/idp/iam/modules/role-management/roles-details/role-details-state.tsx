@@ -1,3 +1,4 @@
+import { useGrantScope } from "@blocks-idp/iam/hooks/use-grant-scope";
 import { useGetRoleById } from "@blocks-idp/iam/hooks/use-roles";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import { IRole } from "@blocks-idp/iam/models/role";
@@ -24,6 +25,9 @@ interface RoleDetailsState {
   permissionMap: PermissionMap;
   isInitialized: boolean;
   isEditMode: boolean;
+  /** Resources the caller may grant; `null` means no limit (the system user). */
+  grantableResources: ReadonlySet<string> | null;
+  setGrantableResources: (resources: ReadonlySet<string> | null) => void;
   initializeStore: (permissions: IPermission[]) => void;
   changePermissionSelection: (
     changes: { permissionResource: string; isChecked: boolean }[],
@@ -41,6 +45,8 @@ const createRoleDetailsStore = () => {
     permissionMap: new Map<string, PermissionState>(),
     isInitialized: false,
     isEditMode: false,
+    grantableResources: null,
+    setGrantableResources: (grantableResources) => set({ grantableResources }),
     initializeStore: (permissions: IPermission[]) => {
       const { role } = get();
       const permissionMap: PermissionMap = new Map();
@@ -75,10 +81,12 @@ const createRoleDetailsStore = () => {
     },
     changePermissionSelection(changes: { permissionResource: string; isChecked: boolean }[]) {
       if (!get().isEditMode) return;
-      const { permissionMap } = get();
+      const { permissionMap, grantableResources } = get();
       for (const { permissionResource, isChecked: checked } of changes) {
         const permission = permissionMap.get(permissionResource);
         if (!permission) continue;
+        // Adding or removing a permission the caller does not hold would be refused by the server.
+        if (grantableResources && !grantableResources.has(permissionResource)) continue;
         const modified = checked !== permission.isInitiallyAssigned;
         const changeState = checked ? (modified ? "added" : null) : modified ? "removed" : null;
         permission.modified = modified;
@@ -136,6 +144,7 @@ export const RoleDetailsProvider = ({
 }) => {
   const [store] = useState(() => createRoleDetailsStore());
   const { data: role } = useGetRoleById({ id, projectKey });
+  const { isRestricted, heldPermissions } = useGrantScope();
   const organizationId = role?.data?.organizationId;
   const { data: permissionsData } = useQuery({
     queryKey: ["permissions", projectKey, organizationId],
@@ -153,6 +162,10 @@ export const RoleDetailsProvider = ({
       }),
     enabled: !!organizationId,
   });
+
+  useEffect(() => {
+    store.setState({ grantableResources: isRestricted ? new Set(heldPermissions) : null });
+  }, [isRestricted, heldPermissions, store]);
 
   useEffect(() => {
     store.setState({ isEditMode: false, isInitialized: false });

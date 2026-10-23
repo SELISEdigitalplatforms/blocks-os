@@ -155,7 +155,7 @@ namespace Configuration.DomainService.Mail.Services
             CancellationToken cancellationToken = default)
         {
             var configuration = await _configurationRepository
-                .GetMailConfigurationByNameAsync(request.ConfigurationName)
+                .GetMailConfigurationByNameForViewAsync(request.ConfigurationName)
                 .ConfigureAwait(false);
 
             return configuration is null ? null : await ProjectAsync(configuration, cancellationToken).ConfigureAwait(false);

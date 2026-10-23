@@ -36,6 +36,16 @@ export const useSetPlatformFieldDefault = () => {
   return useMutation({ mutationFn: platformDataAccessService.setFieldDefault, onSuccess: () => client.invalidateQueries({ queryKey: ["platform-data-access-schemas"] }) });
 };
 
+export const useBulkPlatformValidation = () => {
+  const client = useQueryClient();
+  return useMutation({ mutationFn: platformDataAccessService.bulkValidation, onSuccess: () => client.invalidateQueries({ queryKey: ["platform-data-access-schemas"] }) });
+};
+
+export const useBulkPlatformFieldDefault = () => {
+  const client = useQueryClient();
+  return useMutation({ mutationFn: platformDataAccessService.bulkFieldDefault, onSuccess: () => client.invalidateQueries({ queryKey: ["platform-data-access-schemas"] }) });
+};
+
 export const useDeletePolicy = () => {
   const client = useQueryClient();
   return useMutation({ mutationFn: (payload: IDeletePolicyPayload) => platformDataAccessService.delete(payload.itemId), onSuccess: () => client.invalidateQueries({ queryKey: ["platform-data-access-policies"] }) });

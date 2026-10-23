@@ -155,10 +155,10 @@ namespace XUnitTest.Services
         }
 
         [Fact]
-        public async Task GetAsync_DelegatesToRepository()
+        public async Task GetAsync_ReadsTheTemplateAsTheCallerMayView()
         {
             var template = new EmailTemplate { ItemId = "t1" };
-            _repo.Setup(r => r.GetByIdAsync("t1")).ReturnsAsync(template);
+            _repo.Setup(r => r.GetForViewAsync("t1")).ReturnsAsync(template);
 
             var response = await Service().GetAsync(new GetMailTemplateRequest { ItemId = "t1" });
 

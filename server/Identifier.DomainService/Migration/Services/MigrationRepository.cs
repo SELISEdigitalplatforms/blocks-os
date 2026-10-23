@@ -34,6 +34,7 @@ namespace DomainService.Migration.Services
             if (!await _dataAccess.InsertAllowedAsync(OsSchemas.MigrationTracker, "MigrationRepository.CreateMigrationTrackerAsync"))
                 throw new UnauthorizedAccessException("Access to the migration tracker was denied by the data access policy.");
 
+            await _dataAccess.PrepareWriteAsync(OsSchemas.MigrationTracker, migrationTracker, isInsert: true, "MigrationRepository.CreateMigrationTrackerAsync");
             await Collection.InsertOneAsync(migrationTracker);
             return migrationTracker.ItemId;
         }
@@ -96,7 +97,8 @@ namespace DomainService.Migration.Services
                 .ToListAsync();
 
             // Filter to only include trackers with at least one incomplete service
-            return trackers.Where(HasIncompleteServices).ToList();
+            // The API lists these: View column (property) rules clear what the caller may not see.
+            return scope.ForView(trackers.Where(HasIncompleteServices).ToList());
         }
 
         private static string GetServicePropertyName(MigrationServiceNames serviceName)

@@ -5,6 +5,7 @@ import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { ArchiveAction } from "@blocks-idp/iam/components/archive-action";
 import { useDeleteRole } from "@blocks-idp/iam/hooks/use-roles";
+import { useGrantScope } from "@blocks-idp/iam/hooks/use-grant-scope";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { Pencil, ShieldCheck } from "lucide-react";
@@ -18,6 +19,10 @@ type RolesTableProps = {
   isLoading: boolean;
   showDefaultOriginBadge?: boolean;
 };
+
+const BASE_GRID = "md:grid-cols-[minmax(200px,1fr)_140px_120px_minmax(200px,1fr)_88px]";
+const MANAGED_BY_GRID =
+  "md:grid-cols-[minmax(200px,1fr)_140px_120px_minmax(140px,0.8fr)_minmax(200px,1fr)_88px]";
 
 const LoadingSkelton = () => (
   <div className="flex flex-col gap-3">
@@ -71,6 +76,11 @@ export const RolesList = ({
     (value: SortValue) => setSortQueryParams(value),
     [setSortQueryParams],
   );
+  const { isRestricted } = useGrantScope();
+  // The column is for people who work with the tree; the system user sees it only once a role has one.
+  const showManagedBy = isRestricted || roles.some((role) => Boolean(role.parentRoleSlug));
+  const gridColumns = showManagedBy ? MANAGED_BY_GRID : BASE_GRID;
+  const nameBySlug = new Map(roles.map((role) => [role.slug, role.name]));
   const openRole = (itemId: string) => navigate(scoped(`iam/role-detail/${itemId}`));
 
   if (isLoading) return <LoadingSkelton />;
@@ -87,7 +97,9 @@ export const RolesList = ({
     <>
       <div className="scrollbar-hidden-x overflow-x-hidden md:overflow-x-auto">
         <div className="flex flex-col gap-3 md:min-w-[840px]">
-          <div className="hidden grid-cols-[minmax(200px,1fr)_140px_120px_minmax(200px,1fr)_88px] items-center gap-4 px-4 md:grid">
+          <div
+            className={`hidden items-center gap-4 px-4 md:grid ${gridColumns}`}
+          >
             <FilterControls.SortHeader
               id="Name"
               label="Name"
@@ -106,6 +118,7 @@ export const RolesList = ({
               value={sortQueryParams}
               onChange={sortHandler}
             />
+            {showManagedBy && <span className="font-bold text-medium-emphasis">Managed by</span>}
             <span className="font-bold text-medium-emphasis">Description</span>
             <span />
           </div>
@@ -123,7 +136,7 @@ export const RolesList = ({
                   openRole(role.itemId);
                 }
               }}
-              className="group flex cursor-pointer flex-col gap-3 rounded-xl border bg-card p-4 outline-hidden transition-colors hover:border-primary/30 focus-visible:border-primary/30 md:grid md:grid-cols-[minmax(200px,1fr)_140px_120px_minmax(200px,1fr)_88px] md:items-center md:gap-4"
+              className={`group flex cursor-pointer flex-col gap-3 rounded-xl border bg-card p-4 outline-hidden transition-colors hover:border-primary/30 focus-visible:border-primary/30 md:grid md:items-center md:gap-4 ${gridColumns}`}
             >
               <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -157,6 +170,14 @@ export const RolesList = ({
                   <span>{role.count}</span>&nbsp;{role.count === 1 ? "permission" : "permissions"}
                 </Badge>
               </div>
+              {showManagedBy && (
+                <div className="min-w-0">
+                  <span className="text-xs text-muted-foreground md:hidden">Managed by</span>
+                  <p className="truncate text-sm text-muted-foreground" data-testid="managed-by-cell">
+                    {role.parentRoleSlug ? (nameBySlug.get(role.parentRoleSlug) ?? role.parentRoleSlug) : "-"}
+                  </p>
+                </div>
+              )}
               <div className="min-w-0">
                 <span className="text-xs text-muted-foreground md:hidden">Description</span>
                 <p className="truncate text-sm text-muted-foreground" title={role.description}>

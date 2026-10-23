@@ -86,7 +86,7 @@ namespace Configuration.DomainService.Integration.Services
         {
             var scope = await _dataAccess.ReadAsync(OsSchemas.IntegrationSetup, FilterDefinition<IntegrationSetup>.Empty, "IntegrationRepository.GetConnectionsAsync");
             return scope.Granted
-                ? await scope.Apply(Setups()).SortByDescending(s => s.CreatedDate).ToListAsync()
+                ? scope.ForView(await scope.Apply(Setups()).SortByDescending(s => s.CreatedDate).ToListAsync())
                 : new List<IntegrationSetup>();
         }
 

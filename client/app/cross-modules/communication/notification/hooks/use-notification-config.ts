@@ -5,9 +5,11 @@ import {
   ISaveNotificationConfigPayload,
 } from "../models/notification-config.model";
 
+const CONFIGS_QUERY_KEY = "notification-configs";
+
 export const notificationConfigsQueryKey = (options: IGetNotificationConfigsPayload) =>
   [
-    "notification-configs",
+    CONFIGS_QUERY_KEY,
     options.projectKey,
     options.page,
     options.pageSize,
@@ -32,7 +34,7 @@ export const useSaveNotificationConfig = () => {
     mutationFn: (payload: ISaveNotificationConfigPayload) =>
       notificationConfigService.saveNotificationConfig(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notification-configs"] });
+      queryClient.invalidateQueries({ queryKey: [CONFIGS_QUERY_KEY] });
     },
   });
 };
@@ -43,7 +45,7 @@ export const useDeleteNotificationConfig = () => {
     mutationKey: ["notification-config", "delete"],
     mutationFn: (itemId: string) => notificationConfigService.deleteNotificationConfig(itemId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notification-configs"] });
+      queryClient.invalidateQueries({ queryKey: [CONFIGS_QUERY_KEY] });
     },
   });
 };

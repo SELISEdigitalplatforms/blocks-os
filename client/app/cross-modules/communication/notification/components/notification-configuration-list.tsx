@@ -16,7 +16,14 @@ import { EmptyState } from "@/components/ui-kits/empty-state";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Bell, EllipsisVertical, Pencil, Trash } from "lucide-react";
 import NewNotificationConfiguration from "../modals/new-notification-configuration";
-import { channelsToNotify, notificationTypes } from "../constants/notification.constant";
+import {
+  NOTIFICATION_CONFIG_ERROR_MESSAGES,
+  notificationImportances,
+  notificationKinds,
+  notificationTypes,
+} from "../constants/notification.constant";
+import { getErrorMessage, isErrorWithErrors } from "@/lib/error";
+import { Badge } from "@/components/ui-kits/badge/badge";
 import type { INotificationConfigRow } from "../models/notification-config.model";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
@@ -30,27 +37,67 @@ import { toast } from "@/hooks/use-toast";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { Button } from "@/components/ui-kits/button/button";
 import { useProjectStore } from "@seliseblocks/genesis-os";
-import { useNotificationConfigsFilterQueryParams } from "./notification-configs-filter-toolbar";
+import {
+  NotificationConfigsFilterToolBar,
+  useNotificationConfigsFilterQueryParams,
+} from "./notification-configs-filter-toolbar";
 import { useQueryState, parseAsBoolean } from "nuqs";
 
 const columns = [
   { key: "name", label: "Name" },
-  { key: "channelToNotify", label: "Channel" },
-  { key: "notificationType", label: "Type" },
-  { key: "enablePersistence", label: "Persistence" },
+  { key: "importance", label: "Importance" },
+  { key: "kind", label: "Kind" },
+  { key: "sourceService", label: "Service" },
+  { key: "notificationType", label: "Receiver" },
+  { key: "status", label: "Status" },
   { key: "actions", label: "" },
 ];
 
+const SKELETON_ROWS = ["s1", "s2", "s3", "s4", "s5"];
+
 interface NotificationConfigurationListProps {
-  addConfigOpen?: boolean;
-  onAddConfigOpenChange?: (open: boolean) => void;
   isLoading?: boolean;
-  configurationsLength?: number;
 }
 
+/** "blocks-iam" reads as "iam": every built-in service carries the same prefix. */
+export const serviceLabel = (service?: string | null): string =>
+  (service ?? "").replace(/^blocks-/, "");
+
+const labelOf = (items: { label: string; value: number }[], value?: number) =>
+  items.find((x) => x.value === value)?.label;
+
+const describeDeleteError = (error: unknown): string => {
+  if (isErrorWithErrors(error)) {
+    const message = getErrorMessage(error.errors, NOTIFICATION_CONFIG_ERROR_MESSAGES);
+    return Array.isArray(message) ? message.join(" ") : message;
+  }
+  return JSON.stringify(error);
+};
+
+const IMPORTANCE_VARIANTS = {
+  1: "secondary",
+  2: "warning",
+  3: "error",
+} as const;
+
+export const distinctServices = (rows: INotificationConfigRow[] = []): string[] =>
+  Array.from(new Set(rows.map((row) => row.sourceService).filter((x): x is string => !!x))).sort(
+    (a, b) => a.localeCompare(b),
+  );
+
+/** Importance and service are filtered over the loaded rows: the list API has no such filter. */
+export const filterConfigRows = (
+  rows: INotificationConfigRow[],
+  importance: string,
+  service: string,
+): INotificationConfigRow[] =>
+  rows.filter(
+    (row) =>
+      (!importance || String(row.importance ?? 0) === importance) &&
+      (!service || row.sourceService === service),
+  );
+
 const NotificationConfigurationList: React.FC<NotificationConfigurationListProps> = ({
-  addConfigOpen,
-  onAddConfigOpenChange,
   isLoading: isLoadingProp,
 }) => {
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
@@ -62,12 +109,15 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
     searchText: queryParams.notificationSearch || undefined,
   });
   const loading = isLoadingProp ?? (isLoading || isFetching);
+  const visibleRows = filterConfigRows(
+    data?.configurations ?? [],
+    queryParams.notificationImportance,
+    queryParams.notificationService,
+  );
 
   const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedConfigData, setSelectedConfigData] = useState<INotificationConfigRow | null>(null);
-  const internalOpen = addConfigOpen ?? false;
-  const setOpen = onAddConfigOpenChange ?? (() => {});
 
   const { isPending: isDeletePending, mutateAsync: deleteNotificationConfig } =
     useDeleteNotificationConfig();
@@ -93,28 +143,20 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
       toast({
         variant: "success",
         title: "Success",
-        description: "Configuration deleted successfully",
+        description: "Notification deleted.",
       });
       setIsDeleteDialogOpen(false);
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: JSON.stringify(error),
+        description: describeDeleteError(error),
       });
     }
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <Dialog open={internalOpen} onOpenChange={setOpen}>
-        <NewNotificationConfiguration
-          key={internalOpen ? "open" : "closed"}
-          dialogTitle="Add Configuration"
-          onClose={setOpen}
-          isEdit={false}
-        />
-      </Dialog>
+    <>
       <ConfigsTableShell
         footer={
           <Pagination
@@ -136,8 +178,8 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
               </TableRow>
             </TableHeader>
             <TableBody>
-              {Array.from({ length: 5 }).map((_, idx) => (
-                <TableRow key={idx}>
+              {SKELETON_ROWS.map((row) => (
+                <TableRow key={row}>
                   {columns.map((col) => (
                     <TableCell key={col.key}>
                       <Skeleton className="h-6 w-full rounded" />
@@ -157,16 +199,74 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data?.configurations?.map((config) => (
+              {visibleRows.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="text-center text-medium-emphasis">
+                    No configurations match the current filters.
+                  </TableCell>
+                </TableRow>
+              )}
+              {visibleRows.map((config) => (
                 <TableRow key={config.itemId}>
-                  <TableCell>{config.name}</TableCell>
-                  <TableCell>
-                    {channelsToNotify.find((x) => x.value === config.channelToNotify)?.label}
+                  <TableCell className="max-w-[420px]">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate font-medium">{config.name}</span>
+                      {config.isBuiltIn && (
+                        <Badge variant="info" className="w-fit shrink-0 px-1.5 py-0">
+                          Built-in
+                        </Badge>
+                      )}
+                    </div>
+                    {config.description && (
+                      <div
+                        className="truncate text-xs text-medium-emphasis"
+                        title={config.description}
+                      >
+                        {config.description}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell>
-                    {notificationTypes.find((x) => x.value === config.notificationType)?.label}
+                    {config.importance ? (
+                      <Badge
+                        className="w-fit px-1.5 py-0"
+                        variant={
+                          IMPORTANCE_VARIANTS[
+                            config.importance as keyof typeof IMPORTANCE_VARIANTS
+                          ] ?? "outline"
+                        }
+                      >
+                        {labelOf(notificationImportances, config.importance)}
+                      </Badge>
+                    ) : (
+                      <span className="text-low-emphasis">—</span>
+                    )}
                   </TableCell>
-                  <TableCell>{config.enablePersistence ? "Yes" : "No"}</TableCell>
+                  <TableCell>
+                    {config.kind ? (
+                      labelOf(notificationKinds, config.kind)
+                    ) : (
+                      <span className="text-low-emphasis">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {config.sourceService ? (
+                      serviceLabel(config.sourceService)
+                    ) : (
+                      <span className="text-low-emphasis">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>{labelOf(notificationTypes, config.notificationType)}</TableCell>
+                  <TableCell>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span
+                        className={`h-2 w-2 rounded-full ${
+                          config.isDisabled ? "bg-low-emphasis" : "bg-success"
+                        }`}
+                      />
+                      {config.isDisabled ? "Off" : "On"}
+                    </span>
+                  </TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -210,8 +310,8 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
             onCancel={() => setIsDeleteDialogOpen(false)}
             onConfirm={() => onConfirmDeleteConfig()}
             data={{
-              dialogTitle: "Confirmation",
-              dialogSubtitle: `Are you sure you want to delete the ${selectedConfigData?.name} configuration?`,
+              dialogTitle: "Delete notification?",
+              dialogSubtitle: `"${selectedConfigData?.name}" will be deleted.`,
             }}
             buttonState={{ confirm: { disable: isDeletePending } }}
           />
@@ -221,14 +321,14 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
         {selectedConfigData && (
           <NewNotificationConfiguration
             key={`${selectedConfigData.itemId}-${isEditOpen}`}
-            dialogTitle="Edit Configuration"
+            dialogTitle="Edit notification"
             previousData={selectedConfigData}
             isEdit={true}
             onClose={setIsEditOpen}
           />
         )}
       </Dialog>
-    </div>
+    </>
   );
 };
 
@@ -249,14 +349,19 @@ export function NotificationConfigurationListPage() {
   });
   const loading = isLoading || isFetching;
   const configurations = data?.configurations ?? [];
-  const isEmpty = !loading && configurations.length === 0;
+  const hasFilters =
+    !!queryParams.notificationSearch ||
+    !!queryParams.notificationImportance ||
+    !!queryParams.notificationService;
+  const isEmpty = !loading && configurations.length === 0 && !hasFilters;
+  const serviceOptions = distinctServices(configurations);
 
   return (
-    <>
+    <div className="flex flex-col gap-4">
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <NewNotificationConfiguration
           key={addOpen ? "open" : "closed"}
-          dialogTitle="Add Configuration"
+          dialogTitle="Add notification"
           onClose={() => setAddOpen(false)}
           isEdit={false}
         />
@@ -264,17 +369,15 @@ export function NotificationConfigurationListPage() {
       {isEmpty ? (
         <EmptyState
           icon={Bell}
-          title="No notification configurations found"
+          title="No notifications yet"
           description="Use Add Configuration to create one."
         />
       ) : (
-        <NotificationConfigurationList
-          addConfigOpen={false}
-          onAddConfigOpenChange={() => {}}
-          isLoading={loading}
-          configurationsLength={configurations.length}
-        />
+        <>
+          <NotificationConfigsFilterToolBar serviceOptions={serviceOptions} />
+          <NotificationConfigurationList isLoading={loading} />
+        </>
       )}
-    </>
+    </div>
   );
 }

@@ -20,7 +20,9 @@ import {
 } from "@/components/ui-kits/select/select";
 import { PrincipalSelector } from "@blocks-idp/data-access/gateway/components/schema-access-control/principal-selector";
 import {
+  AUTH_ATTRIBUTE_OPTION,
   AUTH_FIELD_OPTIONS,
+  AUTH_LEFT_FIELD_OPTIONS,
   AUTH_STRING_FIELDS,
   COMPARE_SOURCE_OPTIONS,
   FIELD_TYPE_CATEGORY,
@@ -31,7 +33,9 @@ import {
   RULE_OPERATORS,
   RULE_SOURCE_OPTIONS,
   RULE_SOURCE_TYPES,
+  getAuthAttributeName,
   getFieldTypeCategory,
+  isAuthAttributeField,
   type FieldTypeCategory,
 } from "@blocks-idp/data-access/gateway/constants/schema-access-control";
 import type { RuleSetFormValues } from "@blocks-idp/data-access/gateway/utils/schema-access-control.utils";
@@ -87,7 +91,7 @@ export const createRuleBuilderHelpers = (schemaFields: SchemaField[], schemaName
   const schemaFieldOptions = flattenSchemaFields(schemaFields);
 
   const getFieldOptions = (source: string) => {
-    if (source === RULE_SOURCE_TYPES.AUTH) return AUTH_FIELD_OPTIONS;
+    if (source === RULE_SOURCE_TYPES.AUTH) return AUTH_LEFT_FIELD_OPTIONS;
     if (source === RULE_SOURCE_TYPES.SCHEMA_FIELD) return schemaFieldOptions;
     return [];
   };
@@ -99,6 +103,7 @@ export const createRuleBuilderHelpers = (schemaFields: SchemaField[], schemaName
   ): FieldTypeCategory | undefined => {
     if (!source || !fieldName) return undefined;
     if (source === RULE_SOURCE_TYPES.AUTH) {
+      if (isAuthAttributeField(fieldName)) return AUTH_ATTRIBUTE_OPTION.category;
       return AUTH_FIELD_OPTIONS.find((o) => o.value === fieldName)?.category;
     }
     if (source === RULE_SOURCE_TYPES.SCHEMA_FIELD) {
@@ -150,7 +155,8 @@ export const createRuleBuilderHelpers = (schemaFields: SchemaField[], schemaName
   /** Filter right-side field options based on left operand category */
   const getRightFieldOptions = (cmpSource: string, category: FieldTypeCategory | undefined) => {
     if (cmpSource === RULE_SOURCE_TYPES.AUTH) {
-      if (!category) return AUTH_FIELD_OPTIONS;
+      // A single value (e.g. DepartmentId) may be matched against an access attribute list.
+      if (!category || category === FIELD_TYPE_CATEGORY.STRING) return AUTH_LEFT_FIELD_OPTIONS;
       // Array left → only string auth fields (userId, email)
       if (category === FIELD_TYPE_CATEGORY.ARRAY) return AUTH_STRING_FIELDS;
       return AUTH_FIELD_OPTIONS;
@@ -353,6 +359,9 @@ export const RuleConditionRow = ({
   const isStaticValue = source === RULE_SOURCE_TYPES.STATIC_VALUE;
   const isNullOperator = NULL_OPERATORS.includes(operatorValue);
   const isCompareStatic = compareSource === RULE_SOURCE_TYPES.STATIC_VALUE;
+  /** Right side is `Auth.Attributes.<name>`: the name is typed, like on the left. */
+  const isCompareAttribute =
+    compareSource === RULE_SOURCE_TYPES.AUTH && isAuthAttributeField(compareValue);
   const isInOp = IN_OPERATORS.includes(operatorValue);
   const isDirectValueOp = ["REGEX", "START_WITH", "END_WITH"].includes(operatorValue);
   /**
@@ -385,14 +394,16 @@ export const RuleConditionRow = ({
       : [];
 
   const sourceLabel = ruleSourceOptions.find((option) => option.value === source)?.label;
-  const leftFieldLabel =
-    fieldOptions.find((option) => option.value === leftField)?.label ?? leftField;
+  const leftFieldLabel = isAuthAttributeField(leftField)
+    ? `Attributes.${getAuthAttributeName(leftField)}`
+    : (fieldOptions.find((option) => option.value === leftField)?.label ?? leftField);
   const operatorLabel = RULE_OPERATORS.find((option) => option.value === operatorValue)?.label;
   const compareSourceLabel = filteredCompareSourceOptions.find(
     (option) => option.value === compareSource,
   )?.label;
-  const compareValueLabel =
-    compareFieldOptions.find((option) => option.value === compareValue)?.label ?? compareValue;
+  const compareValueLabel = isCompareAttribute
+    ? `Attributes.${getAuthAttributeName(compareValue)}`
+    : (compareFieldOptions.find((option) => option.value === compareValue)?.label ?? compareValue);
 
   const isCellActive = (key: RuleCellKey) => openCell?.ruleId === ruleId && openCell.key === key;
 
@@ -469,7 +480,9 @@ export const RuleConditionRow = ({
   };
 
   const pickField = (value: string) => {
-    form.setValue(path("field"), value, {
+    // An access attribute still needs its name, so the cell stays open for it.
+    const isAttribute = source === RULE_SOURCE_TYPES.AUTH && isAuthAttributeField(value);
+    form.setValue(path("field"), isAttribute ? `${AUTH_ATTRIBUTE_OPTION.value}.` : value, {
       shouldValidate: true,
     });
     const newCategory = getLeftFieldCategory(source, value);
@@ -486,7 +499,7 @@ export const RuleConditionRow = ({
     form.setValue(path("compareValue"), "", {
       shouldValidate: true,
     });
-    openCellFor(null);
+    openCellFor(isAttribute ? "field" : null);
   };
 
   const pickOperator = (value: string) => {
@@ -526,10 +539,12 @@ export const RuleConditionRow = ({
   };
 
   const pickCompareValue = (value: string) => {
-    form.setValue(path("compareValue"), value, {
+    // An access attribute still needs its name, so the cell stays open for it.
+    const isAttribute = compareSource === RULE_SOURCE_TYPES.AUTH && isAuthAttributeField(value);
+    form.setValue(path("compareValue"), isAttribute ? `${AUTH_ATTRIBUTE_OPTION.value}.` : value, {
       shouldValidate: true,
     });
-    openCellFor(null);
+    openCellFor(isAttribute ? "compareValue" : null);
   };
 
   /**
@@ -613,44 +628,20 @@ export const RuleConditionRow = ({
                 autoFocus
               />
             ) : (
-              <Select
-                value={field.value || undefined}
-                onValueChange={(value) => {
-                  field.onChange(value);
-                  const newCategory = getLeftFieldCategory(source, value);
-                  const allowedOperators = newCategory ? OPERATORS_BY_CATEGORY[newCategory] : null;
-                  const currentOperator = form.getValues(path("operator"));
-                  if (
-                    allowedOperators &&
-                    currentOperator &&
-                    !allowedOperators.includes(currentOperator)
-                  ) {
-                    form.setValue(path("operator"), "", {
-                      shouldValidate: true,
-                    });
-                  }
-                  form.setValue(path("compareSource"), "", {
-                    shouldValidate: true,
-                  });
-                  form.setValue(path("compareValue"), "", {
-                    shouldValidate: true,
-                  });
-                  // Not auto-opened, same reasoning as the operator ->
-                  // compareSource handoff below.
-                  openCellFor(null);
-                }}
-              >
-                <SelectTrigger className="h-9 w-full min-w-0 rounded-md px-3 text-xs">
-                  <SelectValue placeholder="Select field" />
-                </SelectTrigger>
-                <SelectContent>
-                  {fieldOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              // Only an access attribute reaches here: the other left fields are picked from the chip.
+              <Input
+                className="h-9 w-full min-w-0 rounded-md px-3 text-xs"
+                placeholder="Attribute name"
+                aria-label="Attribute name"
+                value={getAuthAttributeName(field.value)}
+                onChange={(event) =>
+                  field.onChange(
+                    `${AUTH_ATTRIBUTE_OPTION.value}.${event.target.value.replaceAll(/\W/g, "")}`,
+                  )
+                }
+                onBlur={() => openCellFor(getAuthAttributeName(field.value) ? "operator" : null)}
+                autoFocus
+              />
             )
           }
         />
@@ -662,6 +653,23 @@ export const RuleConditionRow = ({
         control={form.control}
         name={path("compareValue")}
         render={({ field }) => {
+          if (isCompareAttribute) {
+            return (
+              <Input
+                className="h-9 w-full min-w-0 rounded-md px-3 text-xs"
+                placeholder="Attribute name"
+                aria-label="Attribute name"
+                value={getAuthAttributeName(field.value)}
+                onChange={(event) =>
+                  field.onChange(
+                    `${AUTH_ATTRIBUTE_OPTION.value}.${event.target.value.replaceAll(/\W/g, "")}`,
+                  )
+                }
+                onBlur={() => openCellFor(null)}
+                autoFocus
+              />
+            );
+          }
           if (isDirectValueOp) {
             const placeholder = DIRECT_VALUE_PLACEHOLDERS[operatorValue] ?? "Enter suffix";
             return (
@@ -694,7 +702,14 @@ export const RuleConditionRow = ({
               <CompareFieldMultiSelect
                 options={compareFieldOptions}
                 selectedValues={selectedInValues}
-                onChange={field.onChange}
+                // Attributes stand alone: picking them replaces the other fields.
+                onChange={(next) =>
+                  field.onChange(
+                    next.split(",").includes(AUTH_ATTRIBUTE_OPTION.value)
+                      ? `${AUTH_ATTRIBUTE_OPTION.value}.`
+                      : next,
+                  )
+                }
               />
             );
           }
@@ -742,9 +757,16 @@ export const RuleConditionRow = ({
       case "compareSource":
         return { options: filteredCompareSourceOptions, onPick: pickCompareSource };
       case "field":
-        return isStaticValue ? null : { options: fieldOptions, onPick: pickField };
+        // While its name is typed, an access attribute shows the name editor instead of the chip.
+        return isStaticValue || (isCellActive("field") && isAuthAttributeField(leftField))
+          ? null
+          : { options: fieldOptions, onPick: pickField };
       default:
-        return isDirectValueOp || isCompareStatic || showPrincipalSelector || isInOp
+        return isDirectValueOp ||
+          isCompareStatic ||
+          showPrincipalSelector ||
+          isInOp ||
+          isCompareAttribute
           ? null
           : { options: compareFieldOptions, onPick: pickCompareValue };
     }

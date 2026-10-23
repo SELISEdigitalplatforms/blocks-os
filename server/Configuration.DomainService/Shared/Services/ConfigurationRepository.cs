@@ -294,6 +294,16 @@ namespace Configuration.DomainService.Shared.Services
             return scope.Granted ? await scope.Apply(collection).FirstOrDefaultAsync() : default!;
         }
 
+        public async Task<MailServerConfiguration> GetMailConfigurationByNameForViewAsync(string configurationName)
+        {
+            var collection = _dbContextProvider.GetCollection<MailServerConfiguration>(_mailConfigurationCollectionName);
+            var filter = Builders<MailServerConfiguration>.Filter.Eq(mc => mc.Name, configurationName);
+
+            // Masked: View column (property) rules clear what the caller may not see.
+            var scope = await _dataAccess.ReadAsync(OsSchemas.MailServerConfiguration, filter, "ConfigurationRepository.GetMailConfigurationByNameForViewAsync");
+            return scope.Granted ? scope.ForView(await scope.Apply(collection).FirstOrDefaultAsync()) : default!;
+        }
+
         public async Task<List<MailServerConfiguration>> GetAllMailConfigurationsAsync()
         {
             var collection = _dbContextProvider.GetCollection<MailServerConfiguration>(_mailConfigurationCollectionName);
@@ -303,7 +313,8 @@ namespace Configuration.DomainService.Shared.Services
                 return new List<MailServerConfiguration>();
             }
 
-            return await scope.Apply(collection).SortByDescending(doc => doc.IsDefault).ToListAsync();
+            // Only the API lists these: View column (property) rules clear what the caller may not see.
+            return scope.ForView(await scope.Apply(collection).SortByDescending(doc => doc.IsDefault).ToListAsync());
         }
 
         public async Task<List<MailServerConfiguration>> GetMailConfigurationsByClientSecretReferenceAsync(string clientSecretReference)

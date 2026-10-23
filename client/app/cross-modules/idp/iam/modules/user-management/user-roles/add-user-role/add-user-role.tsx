@@ -21,10 +21,11 @@ import {
 } from "@/components/ui-kits/tooltip/tooltip";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
-import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
+import { useGetAssignableRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { useUserRoles } from "@blocks-idp/iam/hooks/use-user";
 import { CirclePlus, Info } from "lucide-react";
 import { useState } from "react";
+import { GrantHint } from "@blocks-idp/iam/components/grant-hint";
 
 type AddUserRoleProps = {
   userId: string;
@@ -36,7 +37,7 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
   const [selectedRolos, setSelectedRoles] = useState<string[]>([]);
   const [filter, setFilter] = useState({ page: 0, pageSize: 10, search: "" });
 
-  const { data, isLoading } = useGetRoles({
+  const { data, isLoading } = useGetAssignableRoles({
     page: filter.page,
     pageSize: filter.pageSize,
     projectKey,
@@ -133,6 +134,7 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
           </div>
           <DialogDescription></DialogDescription>
         </DialogHeader>
+        <GrantHint kind="roles" />
         <div>
           <FilterControls.SearchInput
             value={filter.search}

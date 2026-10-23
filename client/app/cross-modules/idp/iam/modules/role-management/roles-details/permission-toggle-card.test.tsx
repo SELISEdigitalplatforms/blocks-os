@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const h = vi.hoisted(() => ({ isEditMode: true }));
+const h = vi.hoisted(() => ({ isEditMode: true, grantable: null as Set<string> | null }));
 
 // Tooltip re-exports blocks-kit (process.env at load); passthrough keeps it renderable.
 vi.mock("@/components/ui-kits/tooltip/tooltip", () => ({
@@ -12,8 +12,9 @@ vi.mock("@/components/ui-kits/tooltip/tooltip", () => ({
   TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 vi.mock("./role-details-state", () => ({
-  useRoleDetailsStore: (selector: (s: { isEditMode: boolean }) => unknown) =>
-    selector({ isEditMode: h.isEditMode }),
+  useRoleDetailsStore: (
+    selector: (s: { isEditMode: boolean; grantableResources: Set<string> | null }) => unknown,
+  ) => selector({ isEditMode: h.isEditMode, grantableResources: h.grantable }),
 }));
 
 import { PermissionToggleCard } from "./permission-toggle-card";
@@ -21,16 +22,20 @@ import { PermissionToggleCard } from "./permission-toggle-card";
 const permission = (over: Record<string, unknown> = {}) =>
   ({
     name: "Read users",
+    resource: "users:read",
     description: "Allows reading users",
     permissionSeverity: 1,
     type: 1,
     ...over,
   }) as never;
 
+const GRANT_REASON = "You can grant only permissions you hold.";
+
 describe("PermissionToggleCard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     h.isEditMode = true;
+    h.grantable = null;
   });
 
   it("renders the permission name and description", () => {
@@ -89,5 +94,34 @@ describe("PermissionToggleCard", () => {
       />,
     );
     expect(screen.getByText("One or more dependent permissions are missing")).toBeTruthy();
+  });
+
+  describe("a permission the caller does not hold", () => {
+    it("is locked in edit mode with the reason shown", () => {
+      h.grantable = new Set(["other:read"]);
+      render(<PermissionToggleCard permission={permission()} checked={false} id="p1" />);
+      expect((screen.getByRole("checkbox") as HTMLButtonElement).disabled).toBe(true);
+      expect(screen.getByText(GRANT_REASON)).toBeTruthy();
+    });
+
+    it("stays locked when it is already checked, because removing it is a grant too", () => {
+      h.grantable = new Set();
+      render(<PermissionToggleCard permission={permission()} checked id="p1" />);
+      expect((screen.getByRole("checkbox") as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    it("can be toggled when the caller holds it", () => {
+      h.grantable = new Set(["users:read"]);
+      render(<PermissionToggleCard permission={permission()} checked={false} id="p1" />);
+      expect((screen.getByRole("checkbox") as HTMLButtonElement).disabled).toBe(false);
+      expect(screen.queryByText(GRANT_REASON)).toBeNull();
+    });
+
+    it("shows no reason outside edit mode", () => {
+      h.isEditMode = false;
+      h.grantable = new Set();
+      render(<PermissionToggleCard permission={permission()} checked id="p1" />);
+      expect(screen.queryByText(GRANT_REASON)).toBeNull();
+    });
   });
 });

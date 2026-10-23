@@ -129,8 +129,9 @@ export class UserService {
     });
   }
 
+  /** The address goes in the body, not the URL (CWE-598); IAM's GET form is deprecated. */
   isUserExist(email: string): Promise<{ userId?: string; organizationIds?: string[] }> {
-    return http.get(`${USER_ENDPOINTS.EXISTS}?email=${encodeURIComponent(email)}`, undefined, {
+    return http.post(USER_ENDPOINTS.EXISTS, { email }, undefined, {
       absoluteUrl: true,
     });
   }

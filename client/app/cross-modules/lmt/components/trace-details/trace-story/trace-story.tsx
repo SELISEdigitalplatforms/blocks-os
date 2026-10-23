@@ -1,5 +1,5 @@
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, CircleAlert, CircleCheck } from "lucide-react";
+import { ChevronLeft, ChevronRight, Info } from "lucide-react";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
@@ -163,38 +163,18 @@ const Legend = () => (
   </div>
 );
 
-const PlotLineBar = ({ plot, onSelect }: { plot: PlotLine; onSelect: (index: number) => void }) => {
-  const failed = plot.tone === "error";
-  const target = plot.stepIndex;
-  return (
-    <div
-      className={cn(
-        "flex flex-wrap items-start gap-x-3 gap-y-1 rounded-lg border px-4 py-3 text-sm",
-        failed ? "border-error/25 bg-error/5" : "border-success/25 bg-success/10",
-      )}
-    >
-      {failed ? (
-        <CircleAlert size={16} className="mt-0.5 shrink-0 text-error" aria-hidden />
-      ) : (
-        <CircleCheck size={16} className="mt-0.5 shrink-0 text-success" aria-hidden />
-      )}
-      <p className="min-w-0 flex-1 break-words text-high-emphasis">
-        <strong className={failed ? "text-error" : undefined}>{plot.headline}</strong> {plot.detail}
-      </p>
-      {target === null ? null : (
-        <Button
-          variant="link"
-          size="sm"
-          type="button"
-          className="h-auto p-0"
-          onClick={() => onSelect(target)}
-        >
-          {failed ? "Go to the error" : "Go to the slowest step"}
-        </Button>
-      )}
-    </div>
-  );
-};
+/** One neutral line that points the reader at what matters, without a pass/fail banner. */
+const PlotLineNote = ({ plot }: { plot: PlotLine }) => (
+  <p className="flex items-start gap-2 text-sm text-medium-emphasis">
+    <Info size={15} className="mt-0.5 shrink-0 text-low-emphasis" aria-hidden />
+    <span className="min-w-0 break-words">
+      {plot.headline ? (
+        <span className="font-medium text-high-emphasis">{plot.headline}</span>
+      ) : null}{" "}
+      {plot.detail}
+    </span>
+  </p>
+);
 
 const StoryNotes = ({ flow, skewCount }: { flow: TraceFlow; skewCount: number }) => {
   if (!flow.truncated && skewCount === 0) return null;
@@ -387,7 +367,7 @@ const TraceStory = ({ root, flow }: { root: TraceTree; flow: TraceFlow }) => {
     >
       <div className="flex flex-col gap-4 px-5 py-5 md:px-7">
         <TraceHeader root={root} flow={flow} services={levels.services.length} />
-        <PlotLineBar plot={buildPlotLine(flow, labelOf)} onSelect={pick} />
+        <PlotLineNote plot={buildPlotLine(flow, labelOf)} />
         <ServiceChips
           services={levels.services}
           current={level.service}
@@ -469,11 +449,71 @@ const TraceStory = ({ root, flow }: { root: TraceTree; flow: TraceFlow }) => {
   );
 };
 
+/** Mirrors the loaded layout so the page does not jump when the trace arrives. */
+const TraceStorySkeleton = () => (
+  <section
+    aria-busy="true"
+    aria-label="Loading the trace"
+    className="overflow-hidden rounded-xl border border-border bg-card shadow-sm dark:bg-muted/40"
+  >
+    <div className="flex flex-col gap-4 px-5 py-5 md:px-7">
+      <div className="flex items-start justify-between gap-6">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2.5">
+            <Skeleton className="h-5 w-10" />
+            <Skeleton className="h-6 w-64" />
+          </div>
+          <Skeleton className="h-4 w-80" />
+        </div>
+        <div className="flex items-center gap-2.5">
+          <Skeleton className="h-6 w-10" />
+          <Skeleton className="h-4 w-20" />
+        </div>
+      </div>
+      <Skeleton className="h-4 w-3/5" />
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-3 w-14" />
+        <Skeleton className="h-7 w-24 rounded-full" />
+      </div>
+    </div>
+    <div className="grid grid-cols-1 border-t border-border lg:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="min-w-0">
+        <div className="flex items-center gap-3 border-b border-border px-5 py-2.5">
+          <Skeleton className="h-8 w-8" />
+          <Skeleton className="h-4 w-40" />
+        </div>
+        <div className="border-b border-border bg-muted/30 px-3 py-2">
+          <Skeleton className="h-3 w-full" />
+        </div>
+        {[60, 20, 45, 30].map((bar, i) => (
+          <div key={bar} className={cn(ROW_GRID, "items-center border-b border-border px-3 py-3")}>
+            <div className="flex flex-col gap-1.5">
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-3 w-52" />
+            </div>
+            <div className="hidden md:block">
+              <Skeleton className="h-2.5" style={{ width: `${bar}%`, marginLeft: `${i * 12}%` }} />
+            </div>
+            <Skeleton className="ml-auto h-3 w-14" />
+          </div>
+        ))}
+      </div>
+      <div className="flex min-w-0 flex-col gap-3 border-t border-border px-5 py-5 lg:border-l lg:border-t-0">
+        <Skeleton className="h-3 w-32" />
+        <Skeleton className="h-5 w-48" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-4/5" />
+        <Skeleton className="mt-2 h-10 w-full" />
+      </div>
+    </div>
+  </section>
+);
+
 export const TraceStoryView = () => {
   const { traceHistory, isLoading } = useContext(timelineContext);
   const current = traceHistory.at(-1)?.current ?? null;
   const flow = useMemo(() => buildTraceFlow(current), [current]);
-  if (isLoading || !current) return <Skeleton className="h-96 w-full" />;
+  if (isLoading || !current) return <TraceStorySkeleton />;
   if (!flow.steps.length) return <p className="text-sm">This trace has no recorded steps.</p>;
   return <TraceStory key={`${current.traceId}:${current.spanId}`} root={current} flow={flow} />;
 };

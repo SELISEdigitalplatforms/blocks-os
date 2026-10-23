@@ -1,5 +1,6 @@
 "use client";
 import { forwardRef, useEffect, useId, useImperativeHandle, useState } from "react";
+import { useSystemOnlyReason } from "@blocks-idp/iam/hooks/use-grant-scope";
 import { Button } from "@/components/ui-kits/button/button";
 import {
   Dialog,
@@ -316,6 +317,7 @@ export const SchemaAccessControlView = forwardRef<
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync: createPolicy } = useCreatePolicy();
   const { mutateAsync: updatePolicy } = useUpdatePolicy();
+  const systemOnlyReason = useSystemOnlyReason();
 
   // Fetch when access is custom, including first paint (selectedAccessType is still "" until useEffect).
   // Also fetch when defaultAccessLevel is unknown and we haven't yet determined the type.
@@ -542,7 +544,17 @@ export const SchemaAccessControlView = forwardRef<
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4">
+    // Policies and security levels are system-user only. A disabled fieldset switches off every
+    // button and field inside it, so a limited caller can read the rules but not change them.
+    <fieldset
+      disabled={Boolean(systemOnlyReason)}
+      className="m-0 flex min-h-0 min-w-0 flex-1 flex-col gap-4 border-0 p-0"
+    >
+      {systemOnlyReason && (
+        <p className="text-xs text-muted-foreground" data-testid="data-access-read-only">
+          Read-only. {systemOnlyReason}
+        </p>
+      )}
       {emptyCustomConfirm.isAsking && (
         <EmptyCustomConfirmDialog verb={verbPhrase(tabForOperation)} subject={effectSubject} onAnswer={emptyCustomConfirm.answer} />
       )}
@@ -664,7 +676,7 @@ export const SchemaAccessControlView = forwardRef<
           </div>
         </div>
       )}
-    </div>
+    </fieldset>
   );
 });
 

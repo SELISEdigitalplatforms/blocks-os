@@ -122,6 +122,18 @@ describe("UserService", () => {
   });
 
   // ─── addUser ──────────────────────────────────────────────────────────────
+  describe("isUserExist", () => {
+    it("should POST the address in the body, never in the URL", async () => {
+      vi.mocked(http.post).mockResolvedValue({ userId: "u1", organizationIds: ["org-a"] });
+
+      const result = await service.isUserExist("a+b@test.com");
+
+      expect(http.post).toHaveBeenCalledWith(USER_ENDPOINTS.EXISTS, { email: "a+b@test.com" }, undefined, { absoluteUrl: true });
+      expect(http.get).not.toHaveBeenCalled();
+      expect(result).toEqual({ userId: "u1", organizationIds: ["org-a"] });
+    });
+  });
+
   describe("addUser", () => {
     it("should POST to the correct endpoint with payload", async () => {
       vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);

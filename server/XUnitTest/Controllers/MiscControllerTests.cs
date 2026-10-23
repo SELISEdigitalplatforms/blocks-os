@@ -286,6 +286,9 @@ namespace XUnitTest.Controllers
         [InlineData(typeof(PeopleController), nameof(PeopleController.GetMyAccess))]
         [InlineData(typeof(IntegrationController), nameof(IntegrationController.GetRequest))]
         [InlineData(typeof(IntegrationController), nameof(IntegrationController.Cancel))]
+        // The caller's own settings: no grant could add anything to reading or writing your own row.
+        [InlineData(typeof(UserPreferenceController), nameof(UserPreferenceController.Get))]
+        [InlineData(typeof(UserPreferenceController), nameof(UserPreferenceController.Save))]
         public void ActionStaysOnPlainAuthorize(System.Type controller, string action)
         {
             var method = Action(controller, action);

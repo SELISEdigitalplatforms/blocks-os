@@ -1,5 +1,6 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => import("@/test-utils/__mocks__/grant-scope.mock"));
 
 const h = vi.hoisted(() => ({
   data: undefined as unknown,
@@ -10,7 +11,7 @@ vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 vi.mock("@blocks-idp/iam/hooks/use-permission", () => ({
-  useGetPermissions: () => ({ data: h.data, isLoading: h.isLoading }),
+  useGetGrantablePermissions: () => ({ data: h.data, isLoading: h.isLoading }),
 }));
 
 import { AssignSignupPermissionsDialog } from "./assign-signup-permissions-dialog";

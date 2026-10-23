@@ -68,6 +68,29 @@ export const AUTH_FIELD_OPTIONS = [
   // { label: "Custom Claims", value: "customClaims", category: FIELD_TYPE_CATEGORY.STRING },
 ];
 
+/**
+ * An org-scoped access attribute ("Access attributes"), read as `Auth.Attributes.<name>`. The name is
+ * typed by the policy author, so the choice is stored as `attributes.<name>` (see
+ * `isAuthAttributeField`). Offered on the left side of a rule only; a list of strings, like Roles.
+ */
+export const AUTH_ATTRIBUTE_PREFIX = "attributes";
+export const AUTH_ATTRIBUTE_OPTION = {
+  label: "Attributes",
+  value: AUTH_ATTRIBUTE_PREFIX,
+  category: FIELD_TYPE_CATEGORY.ARRAY,
+};
+
+/** Auth fields offered on the left side of a rule: the fixed ones plus access attributes. */
+export const AUTH_LEFT_FIELD_OPTIONS = [...AUTH_FIELD_OPTIONS, AUTH_ATTRIBUTE_OPTION];
+
+/** True for `attributes` and `attributes.<name>`. */
+export const isAuthAttributeField = (field: string | undefined): boolean =>
+  field === AUTH_ATTRIBUTE_PREFIX || field?.startsWith(`${AUTH_ATTRIBUTE_PREFIX}.`) === true;
+
+/** The attribute name inside `attributes.<name>`, or "" while it is not typed yet. */
+export const getAuthAttributeName = (field: string | undefined): string =>
+  field?.startsWith(`${AUTH_ATTRIBUTE_PREFIX}.`) ? field.slice(AUTH_ATTRIBUTE_PREFIX.length + 1) : "";
+
 export const RULE_OPERATORS = [
   { label: "Equal", value: "EQUAL" },
   { label: "Not Equal", value: "NOT_EQUAL" },

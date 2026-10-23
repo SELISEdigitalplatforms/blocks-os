@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => import("@/test-utils/__mocks__/grant-scope.mock"));
 
 const h = vi.hoisted(() => ({
   roles: {
@@ -20,7 +21,7 @@ vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 vi.mock("@blocks-idp/iam/hooks/use-roles", () => ({
-  useGetRoles: (args: unknown) => {
+  useGetAssignableRoles: (args: unknown) => {
     h.lastArgs = args;
     return h.roles;
   },
