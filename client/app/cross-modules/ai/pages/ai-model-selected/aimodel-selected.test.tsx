@@ -95,8 +95,8 @@ describe("AIModelSelectedPage", () => {
   it("shows pagination when the total exceeds the page size", () => {
     h.models = { models: [{}], total: 25, page: 1 };
     render(<AIModelSelectedPage provider="openai" />);
-    // Pagination renders its controls once total > page_size.
-    expect(screen.getByText("Rows per page")).toBeTruthy();
+    // Pagination renders its controls once total > page_size; one fixed size leaves nothing to choose.
+    expect(screen.queryByText("Rows per page")).toBeNull();
     expect(screen.getByText(/Page 1 of/)).toBeTruthy();
   });
 });

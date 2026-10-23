@@ -22,6 +22,8 @@ interface PaginationProps {
   /** Tightens spacing and control sizes for placement inside a card footer or side panel. */
   compact?: boolean;
 }
+const COMPACT_BUTTON = "h-7 w-7 md:h-8 md:w-8";
+
 export function Pagination({
   page,
   onChange,
@@ -30,7 +32,7 @@ export function Pagination({
   pageSize,
   onPageSizeChange,
   compact,
-}: PaginationProps) {
+}: Readonly<PaginationProps>) {
   const pageChangeHandler = (page: number) => {
     onChange(page);
   };
@@ -91,7 +93,7 @@ export function Pagination({
             variant="outline"
             className={cn(
               "flex h-8 w-8 p-0 disabled:cursor-not-allowed",
-              compact && "h-7 w-7 md:h-8 md:w-8",
+              compact && COMPACT_BUTTON,
             )}
             onClick={() => {
               pageChangeHandler(0);
@@ -103,7 +105,7 @@ export function Pagination({
           <Button
             aria-label="Go to previous page"
             variant="outline"
-            className={cn("h-8 w-8 p-0", compact && "h-7 w-7 md:h-8 md:w-8")}
+            className={cn("h-8 w-8 p-0", compact && COMPACT_BUTTON)}
             onClick={() => {
               pageChangeHandler(page - 1);
             }}
@@ -114,7 +116,7 @@ export function Pagination({
           <Button
             aria-label="Go to next page"
             variant="outline"
-            className={cn("h-8 w-8 p-0", compact && "h-7 w-7 md:h-8 md:w-8")}
+            className={cn("h-8 w-8 p-0", compact && COMPACT_BUTTON)}
             onClick={() => {
               pageChangeHandler(page + 1);
             }}
@@ -125,7 +127,7 @@ export function Pagination({
           <Button
             aria-label="Go to last page"
             variant="outline"
-            className={cn("flex h-8 w-8 p-0", compact && "h-7 w-7 md:h-8 md:w-8")}
+            className={cn("flex h-8 w-8 p-0", compact && COMPACT_BUTTON)}
             onClick={() => {
               pageChangeHandler(totalPage - 1);
             }}
