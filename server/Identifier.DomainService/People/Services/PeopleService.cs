@@ -202,8 +202,7 @@ namespace DomainService.People
                 var inactiveEmails = await FindInactiveInviteesAsync(request.Invitations, callerEmail);
                 if (inactiveEmails.Count > 0)
                 {
-                    _logger.LogWarning("InvitePeoplesAsync rejected for GroupId: {GroupId}: inactive users {Emails}",
-                        request.GroupId, string.Join(", ", inactiveEmails));
+                    _logger.LogWarning("InvitePeoplesAsync rejected: {Count} inactive user(s) in the request", inactiveEmails.Count);
 
                     return new InviteResponse
                     {
@@ -275,7 +274,7 @@ namespace DomainService.People
 
         private BaseResponse InactiveUserResponse(string operation, string? email)
         {
-            _logger.LogWarning("{Operation} rejected: user {Email} is inactive", operation, email);
+            _logger.LogWarning("{Operation} rejected: the user is inactive", operation);
             return new BaseResponse
             {
                 IsSuccess = false,
