@@ -19,6 +19,8 @@ interface PaginationProps {
   /** Tightens spacing and control sizes for placement inside a card footer or side panel. */
   compact?: boolean;
 }
+const COMPACT_BUTTON = "h-7 w-7 md:h-8 md:w-8";
+
 export function Pagination({
   page,
   onChange,
@@ -27,13 +29,23 @@ export function Pagination({
   pageSize,
   onPageSizeChange,
   compact,
-}: PaginationProps) {
+}: Readonly<PaginationProps>) {
   const pageChangeHandler = (page: number) => {
     onChange(page);
   };
   const canGoPreviousPage = !!page;
   const totalPage = Math.max(1, Math.ceil(totalCount / pageSize) || 0);
   const canGoNextPage = page < totalPage - 1;
+  // Offer only sizes that change what is shown: every size below the total plus the
+  // first one that fits it all. The current size always stays listed. When even the
+  // smallest size fits every row, there is nothing to choose.
+  const firstFitAll = pageSizeOptions?.find((size) => size >= totalCount);
+  const sizeChoices =
+    totalCount > Math.min(...(pageSizeOptions ?? [0]))
+      ? (pageSizeOptions ?? []).filter(
+          (size) => size < totalCount || size === firstFitAll || size === pageSize,
+        )
+      : [];
   const onPageSizeChangeHandler = (value: string) => {
     if (onPageSizeChange) onPageSizeChange(+value);
   };
@@ -44,7 +56,7 @@ export function Pagination({
         compact && "flex-row items-center gap-2",
       )}
     >
-      {pageSizeOptions && pageSizeOptions?.length > 0 ? (
+      {sizeChoices.length > 1 ? (
         <div className={cn("flex items-center space-x-2", compact && "shrink-0 space-x-1.5")}>
           <p className={cn("text-sm font-medium", compact && "hidden md:block")}>Rows per page</p>
           <Select value={`${pageSize}`} onValueChange={onPageSizeChangeHandler}>
@@ -57,7 +69,7 @@ export function Pagination({
               <SelectValue placeholder={pageSize} />
             </SelectTrigger>
             <SelectContent side="top">
-              {pageSizeOptions?.map((pageSize) => (
+              {sizeChoices.map((pageSize) => (
                 <SelectItem key={pageSize} value={`${pageSize}`}>
                   {pageSize}
                 </SelectItem>
@@ -83,7 +95,7 @@ export function Pagination({
             variant="outline"
             className={cn(
               "flex h-8 w-8 p-0 disabled:cursor-not-allowed",
-              compact && "h-7 w-7 md:h-8 md:w-8",
+              compact && COMPACT_BUTTON,
             )}
             onClick={() => {
               pageChangeHandler(0);
@@ -95,7 +107,7 @@ export function Pagination({
           <Button
             aria-label="Go to previous page"
             variant="outline"
-            className={cn("h-8 w-8 p-0", compact && "h-7 w-7 md:h-8 md:w-8")}
+            className={cn("h-8 w-8 p-0", compact && COMPACT_BUTTON)}
             onClick={() => {
               pageChangeHandler(page - 1);
             }}
@@ -106,7 +118,7 @@ export function Pagination({
           <Button
             aria-label="Go to next page"
             variant="outline"
-            className={cn("h-8 w-8 p-0", compact && "h-7 w-7 md:h-8 md:w-8")}
+            className={cn("h-8 w-8 p-0", compact && COMPACT_BUTTON)}
             onClick={() => {
               pageChangeHandler(page + 1);
             }}
@@ -117,7 +129,7 @@ export function Pagination({
           <Button
             aria-label="Go to last page"
             variant="outline"
-            className={cn("flex h-8 w-8 p-0", compact && "h-7 w-7 md:h-8 md:w-8")}
+            className={cn("flex h-8 w-8 p-0", compact && COMPACT_BUTTON)}
             onClick={() => {
               pageChangeHandler(totalPage - 1);
             }}
