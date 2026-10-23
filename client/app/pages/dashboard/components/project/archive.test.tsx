@@ -47,13 +47,16 @@ describe("ArchiveProject", () => {
     h.isPending = false;
   });
 
-  it("deletes the project and navigates to the console on success", async () => {
+  it("deletes the environment and navigates to the console on success", async () => {
     h.mutateAsync.mockResolvedValue({ isSuccess: true });
     const user = userEvent.setup();
     await open(user);
     await user.click(screen.getByRole("button", { name: "Delete" }));
     await waitFor(() => expect(h.mutateAsync).toHaveBeenCalled());
-    expect(h.showSuccessToast).toHaveBeenCalled();
+    expect(h.showSuccessToast).toHaveBeenCalledWith({
+      title: "Environment deleted",
+      description: "Environment deleted successfully.",
+    });
     expect(h.navigate).toHaveBeenCalledWith("/app/console");
   });
 

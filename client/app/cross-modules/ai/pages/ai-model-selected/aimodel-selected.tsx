@@ -138,7 +138,6 @@ export const AIModelSelectedPage = ({ provider }: AIModelSelectedPageProps) => {
                 <Pagination
                   page={currentPage - 1}
                   pageSize={pageSize}
-                  pageSizeOptions={[pageSize]}
                   totalCount={totalCount}
                   onChange={(nextPageZeroBased) =>
                     setQueryParams((prev) => ({

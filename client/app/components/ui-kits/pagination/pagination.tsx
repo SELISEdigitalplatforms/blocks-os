@@ -9,6 +9,9 @@ import {
 } from "@/components/ui-kits/select/select";
 import { Button } from "@/components/ui-kits/button/button";
 import { cn } from "@/lib/utils";
+/** Rows-per-page choices every table offers, so tables do not each pick their own. */
+export const DEFAULT_PAGE_SIZE_OPTIONS = [10, 25, 50];
+
 interface PaginationProps {
   onChange: (pageIndex: number) => void;
   totalCount: number;
@@ -23,7 +26,7 @@ export function Pagination({
   page,
   onChange,
   totalCount,
-  pageSizeOptions,
+  pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
   pageSize,
   onPageSizeChange,
   compact,
@@ -34,6 +37,11 @@ export function Pagination({
   const canGoPreviousPage = !!page;
   const totalPage = Math.max(1, Math.ceil(totalCount / pageSize) || 0);
   const canGoNextPage = page < totalPage - 1;
+  // A size from an old link or a saved filter may not be one of the choices; keep it listed so
+  // the select still shows what is on screen.
+  const sizeChoices = pageSizeOptions.includes(pageSize)
+    ? pageSizeOptions
+    : [...pageSizeOptions, pageSize].sort((a, b) => a - b);
   const onPageSizeChangeHandler = (value: string) => {
     if (onPageSizeChange) onPageSizeChange(+value);
   };
@@ -44,7 +52,7 @@ export function Pagination({
         compact && "flex-row items-center gap-2",
       )}
     >
-      {pageSizeOptions && pageSizeOptions?.length > 0 ? (
+      {onPageSizeChange && sizeChoices.length > 0 ? (
         <div className={cn("flex items-center space-x-2", compact && "shrink-0 space-x-1.5")}>
           <p className={cn("text-sm font-medium", compact && "hidden md:block")}>Rows per page</p>
           <Select value={`${pageSize}`} onValueChange={onPageSizeChangeHandler}>
@@ -57,7 +65,7 @@ export function Pagination({
               <SelectValue placeholder={pageSize} />
             </SelectTrigger>
             <SelectContent side="top">
-              {pageSizeOptions?.map((pageSize) => (
+              {sizeChoices.map((pageSize) => (
                 <SelectItem key={pageSize} value={`${pageSize}`}>
                   {pageSize}
                 </SelectItem>

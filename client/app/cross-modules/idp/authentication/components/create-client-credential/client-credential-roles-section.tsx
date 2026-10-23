@@ -100,7 +100,6 @@ export const ClientCredentialRolesSection = ({
                 page={filter.page}
                 onChange={(page) => setFilter((prev) => ({ ...prev, page }))}
                 totalCount={roles.length}
-                pageSizeOptions={[filter.pageSize]}
                 pageSize={filter.pageSize}
               />
             </div>

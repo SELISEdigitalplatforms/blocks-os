@@ -98,7 +98,6 @@ export const OrganizationPermissionsField = ({
                 page={filter.page}
                 onChange={onPageChangeHandler}
                 totalCount={permissions.length || 0}
-                pageSizeOptions={[filter.pageSize]}
                 pageSize={filter.pageSize}
               />
             </div>

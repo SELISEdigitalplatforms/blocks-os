@@ -192,6 +192,11 @@ export interface IMigrationVerificationResponse {
   errors: unknown | null;
 }
 
+/**
+ * One tracker per migration. Besides these fields it carries one status object per service
+ * ({ isCompleted, errorMessage, ... }); a service that failed keeps isCompleted false with an
+ * errorMessage.
+ */
 export type IMigrationStatusResponse = Array<{
   targetedProjectKey: string;
   createdDate?: string;

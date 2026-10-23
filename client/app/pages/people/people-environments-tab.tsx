@@ -64,6 +64,10 @@ export const PeopleEnvironmentsTab = ({
     userEnvironmentData?.role?.toLowerCase() === "owner" ||
     sharedEnvironments.some((env) => env.isCreator);
 
+  // A deactivated account cannot be given or lose access. Pending invitees stay active.
+  const isInactive = userEnvironmentData?.peopleDetails?.isActive === false;
+  const canChangeAccess = !isProfileUserOwner && !isInactive;
+
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
 
@@ -184,6 +188,11 @@ export const PeopleEnvironmentsTab = ({
           <CardTitle>Environment Access</CardTitle>
         </CardHeader>
         <CardContent className="px-5 py-5 sm:px-6">
+          {isInactive && (
+            <p className="mb-4 text-sm text-muted-foreground">
+              This account is inactive, so its environment access cannot be changed.
+            </p>
+          )}
           <div className="grid grid-cols-1 gap-7 lg:grid-cols-2 lg:gap-10">
             <section className="min-w-0 space-y-4 lg:border-r lg:pr-10">
               <h3 className="text-sm font-semibold text-foreground">With access to</h3>
@@ -195,7 +204,7 @@ export const PeopleEnvironmentsTab = ({
                     className="flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 shadow-xs transition-colors hover:bg-muted/50"
                   >
                     <span className="text-sm font-medium">{getEnvironmentLabel(envValue)}</span>
-                    {canRemove && !isProfileUserOwner && (
+                    {canRemove && canChangeAccess && (
                       <button
                         type="button"
                         onClick={() => {
@@ -229,7 +238,7 @@ export const PeopleEnvironmentsTab = ({
                       className="flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 shadow-xs transition-colors hover:bg-muted/50"
                     >
                       <span className="text-sm font-medium">{getEnvironmentLabel(envValue)}</span>
-                      {canInvite && !isProfileUserOwner && (
+                      {canInvite && canChangeAccess && (
                         <button
                           type="button"
                           onClick={() => {

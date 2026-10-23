@@ -389,7 +389,6 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
             <Pagination
               page={page}
               pageSize={rowsPerPage}
-              pageSizeOptions={[10, 20, 50]}
               onChange={setPage}
               onPageSizeChange={(next: number) => {
                 setRowsPerPage(next);

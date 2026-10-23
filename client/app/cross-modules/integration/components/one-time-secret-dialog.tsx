@@ -64,18 +64,19 @@ export function OneTimeSecretDialog({ secret, onClose }: Readonly<OneTimeSecretD
             {secret?.clientSecret && <CopyToClipboardButton textToCopy={secret.clientSecret} label="Copy Client Secret">{null}</CopyToClipboardButton>}
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="gap-2 sm:gap-2">
           <Button
             type="button"
             size="sm"
             variant="outline"
+            className="whitespace-nowrap"
             onClick={() => secret && copyJson(secret)}
             disabled={!secret?.clientSecret}
           >
             <Braces className="h-4 w-4" />
             <span className="ml-2">Copy as JSON</span>
           </Button>
-          <Button type="button" size="sm" onClick={onClose}>
+          <Button type="button" size="sm" className="whitespace-nowrap" onClick={onClose}>
             Done
           </Button>
         </DialogFooter>

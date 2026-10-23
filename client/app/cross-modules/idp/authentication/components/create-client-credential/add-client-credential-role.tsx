@@ -13,6 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
+import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useGetAssignableRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { IRole } from "@blocks-idp/iam/models/role";
@@ -90,11 +91,11 @@ export const AddClientCredentialRole = ({ onAdd, selectedSlugs }: AddClientCrede
           <CardContent className="max-h-[min(50vh,360px)] overflow-y-auto">
             <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
               {isLoading ? (
-                Array.from({ length: filter.pageSize }).map((_, idx) => (
-                  <div key={idx} className="flex animate-pulse items-center space-x-2 py-2">
-                    <div className="h-4 w-4 rounded bg-gray-200" />
-                    <div className="h-4 w-24 rounded bg-gray-200" />
-                    <div className="h-4 w-20 rounded bg-gray-200" />
+                Array.from({ length: filter.pageSize }, (_, idx) => `skeleton-${idx}`).map((id) => (
+                  <div key={id} className="flex items-center space-x-2 py-2">
+                    <Skeleton className="h-4 w-4 rounded" />
+                    <Skeleton className="h-4 w-24 rounded" />
+                    <Skeleton className="h-4 w-20 rounded" />
                   </div>
                 ))
               ) : data?.data?.length ? (

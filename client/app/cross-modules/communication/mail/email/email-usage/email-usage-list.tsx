@@ -328,7 +328,6 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
                   page={page}
                   pageSize={pageSize}
                   totalCount={totalCount}
-                  pageSizeOptions={[pageSize]}
                   onChange={(page) => setQueryParams({ page })}
                 />
               )}

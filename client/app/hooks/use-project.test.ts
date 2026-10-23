@@ -1,4 +1,6 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createWrapper } from "@/test-utils/test-providers/query-client";
 import { projectService } from "@/services/project.service";
@@ -16,6 +18,7 @@ import {
   useValidateCNameProject,
   useDisableProject,
   useCreateProject,
+  PROJECT_LATE_REFETCH_MS,
   useGetMigrationStatus,
   useInitiateMigration,
   useVerifyMigration,
@@ -242,6 +245,59 @@ describe("use-project hooks", () => {
         name: "n",
         tenantGroupId: "tg",
       });
+    });
+  });
+  describe("cache invalidation", () => {
+    const setup = () => {
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+      });
+      const spy = vi.spyOn(queryClient, "invalidateQueries");
+      const wrapper = ({ children }: { children: React.ReactNode }) =>
+        React.createElement(QueryClientProvider, { client: queryClient }, children);
+      return { spy, wrapper };
+    };
+
+    it("useDisableProject invalidates the project prefix and everything an environment feeds", async () => {
+      vi.mocked(crossProjectService.disableProject).mockResolvedValue({ isSuccess: true } as never);
+      const { spy, wrapper } = setup();
+      const { result } = renderHook(() => useDisableProject({ projectKey: "pk" }), { wrapper });
+      await act(async () => {
+        await result.current.mutateAsync();
+      });
+      const keys = spy.mock.calls.map(([filter]) => filter?.queryKey);
+      expect(keys).toEqual(
+        expect.arrayContaining([
+          ["identifier", "project"],
+          ["identifier", "projects"],
+          ["people"],
+          ["subscription-usage"],
+          ["env-repositories"],
+        ]),
+      );
+    });
+
+    it("useCreateProject refetches the project list once more after provisioning had time", async () => {
+      vi.useFakeTimers();
+      try {
+        vi.mocked(crossProjectService.createProject).mockResolvedValue({ isSuccess: true } as never);
+        const { spy, wrapper } = setup();
+        const { result } = renderHook(() => useCreateProject(), { wrapper });
+        await act(async () => {
+          await result.current.mutateAsync({} as never);
+        });
+        const listCalls = () =>
+          spy.mock.calls.filter(
+            ([filter]) => JSON.stringify(filter?.queryKey) === '["identifier","projects"]',
+          ).length;
+        expect(listCalls()).toBe(1);
+        act(() => {
+          vi.advanceTimersByTime(PROJECT_LATE_REFETCH_MS);
+        });
+        expect(listCalls()).toBe(2);
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });
