@@ -198,6 +198,24 @@ it("toasts and closes on 404", async () => {
   expect(onClose).toHaveBeenCalled();
 });
 
+it("toasts the refusal and keeps the dialog open when a grant the caller does not hold is refused", async () => {
+  const errors = { Access_Grant_Not_Allowed: "refused" };
+  h.mutateAsync.mockRejectedValue({ status: 403, errors });
+  const user = userEvent.setup();
+  const onClose = vi.fn();
+  render(
+    <Dialog open>
+      <UpdateConfiguration configuration={configuration} isOpen onClose={onClose} />
+    </Dialog>,
+  );
+  const description = screen.getByPlaceholderText("Optional description");
+  await user.clear(description);
+  await user.type(description, "x");
+  await user.click(screen.getByRole("button", { name: "Update" }));
+  await waitFor(() => expect(h.showErrorToast).toHaveBeenCalledWith({ errors }));
+  expect(onClose).not.toHaveBeenCalled();
+});
+
 describe("UpdateConfiguration existing-user password and max redemptions (#645)", () => {
   beforeEach(() => {
     vi.clearAllMocks();

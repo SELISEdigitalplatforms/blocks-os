@@ -27,7 +27,7 @@ vi.mock("@/hooks/use-toast", () => ({
   showSuccessToast: h.showSuccessToast,
 }));
 
-import { UserAccessAttributes } from "./user-access-attributes";
+import { UserAccessAttributes } from ".";
 
 const ATTRIBUTE_NAME = "Attribute name";
 const ATTRIBUTE_VALUE = "Attribute value";
@@ -102,6 +102,32 @@ describe("UserAccessAttributes", () => {
     await user.type(screen.getByLabelText(ATTRIBUTE_NAME), "a.b");
     await user.type(screen.getByLabelText(ATTRIBUTE_VALUE), "v");
     expect((screen.getByRole("button", { name: "Add" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("adds the value on Enter, and ignores Enter while the name or value is missing", async () => {
+    const user = userEvent.setup();
+    render(<UserAccessAttributes userId="target" projectKey="pk" />);
+
+    await user.type(screen.getByLabelText(ATTRIBUTE_VALUE), "blue{Enter}");
+    expect(screen.queryByText("blue")).toBeNull();
+
+    await user.type(screen.getByLabelText(ATTRIBUTE_NAME), "team");
+    await user.clear(screen.getByLabelText(ATTRIBUTE_VALUE));
+    await user.type(screen.getByLabelText(ATTRIBUTE_VALUE), "{Enter}");
+    expect(screen.queryByRole("button", { name: "Remove blue from team" })).toBeNull();
+
+    await user.type(screen.getByLabelText(ATTRIBUTE_VALUE), "blue{Enter}");
+    expect(screen.getByRole("button", { name: "Remove blue from team" })).toBeTruthy();
+  });
+
+  it("shows Saving... and locks Save and Cancel while the save runs", async () => {
+    h.isPending = true;
+    const user = userEvent.setup();
+    render(<UserAccessAttributes userId="target" projectKey="pk" />);
+    await user.click(screen.getByRole("button", { name: REMOVE_EU }));
+
+    expect((screen.getByRole("button", { name: "Saving..." }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "Cancel" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("limits a non-system caller to the names they hold", async () => {

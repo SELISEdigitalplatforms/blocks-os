@@ -378,6 +378,17 @@ describe("Users — selection lifecycle", () => {
     expect(screen.getByTestId("users-selection-bar").textContent).toContain("1 selected");
   });
 
+  it("clears the page selection when the page is unticked", () => {
+    h.data = { data: [mkUser("u1"), mkUser("u2")], totalCount: 2 };
+    render(<Users />);
+    enterSelection();
+    toggleAllOnPage(true);
+    expect(screen.getByTestId("users-selection-bar").textContent).toContain("2 selected");
+
+    toggleAllOnPage(false);
+    expect(screen.queryByTestId("users-selection-bar")).toBeNull();
+  });
+
   it("offers the whole matching set once every row on the page is ticked", () => {
     h.data = { data: [mkUser("u1"), mkUser("u2")], totalCount: 312 };
     render(<Users />);

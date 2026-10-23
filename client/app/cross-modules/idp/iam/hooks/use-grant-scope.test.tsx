@@ -4,11 +4,16 @@ import { createWrapper } from "@/test-utils/test-providers/query-client";
 import { mockProjectStoreFactory } from "@/test-utils/__mocks__";
 import { grantScopeService } from "@blocks-idp/iam/services/grant-scope.service";
 import { IGrantScope } from "@blocks-idp/iam/models/grant-scope";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useGrantScope, useSystemOnlyReason } from "./use-grant-scope";
+
+const h = vi.hoisted(() => ({
+  user: { sub: "me", org_id: "org-1" } as { sub: string; org_id?: string } | null,
+}));
 
 vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
 vi.mock("@seliseblocks/genesis-os/store", () => ({
-  useAuthStore: () => ({ user: { sub: "me", org_id: "org-1" } }),
+  useAuthStore: () => ({ user: h.user }),
 }));
 vi.mock("@blocks-idp/iam/services/grant-scope.service", () => ({
   grantScopeService: { getScope: vi.fn() },
@@ -23,7 +28,10 @@ const limited: IGrantScope = {
 };
 
 describe("useGrantScope", () => {
-  beforeEach(() => vi.resetAllMocks());
+  beforeEach(() => {
+    vi.resetAllMocks();
+    h.user = { sub: "me", org_id: "org-1" };
+  });
 
   it("limits a non-system caller", async () => {
     vi.mocked(grantScopeService.getScope).mockResolvedValue(limited);
@@ -58,6 +66,23 @@ describe("useGrantScope", () => {
 
     expect(result.current.isRestricted).toBe(false);
     expect(result.current.canAssignRole("anything")).toBe(true);
+  });
+
+  it("still loads the scope when the token names no organization or there is no user", async () => {
+    vi.mocked(grantScopeService.getScope).mockResolvedValue(limited);
+    for (const user of [{ sub: "me" }, null]) {
+      h.user = user;
+      const { result } = renderHook(() => useGrantScope(), { wrapper: createWrapper() });
+      await waitFor(() => expect(result.current.isRestricted).toBe(true));
+    }
+  });
+
+  it("asks nothing and limits nothing while no project is selected", async () => {
+    vi.mocked(useProjectStore).mockReturnValue({ selectedProject: undefined } as never);
+    const { result } = renderHook(() => useGrantScope(), { wrapper: createWrapper() });
+
+    expect(result.current.isRestricted).toBe(false);
+    expect(grantScopeService.getScope).not.toHaveBeenCalled();
   });
 
   it("asks IAM once for several readers", async () => {

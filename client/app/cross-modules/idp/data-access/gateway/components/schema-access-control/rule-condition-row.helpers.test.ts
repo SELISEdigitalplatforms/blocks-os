@@ -43,4 +43,9 @@ describe("rule builder: Auth > Attributes", () => {
     expect(operators).toContain("CONTAIN");
     expect(operators).not.toContain("EQUAL");
   });
+
+  it("offers no field options for a static value, and a plain Auth field keeps its own category", () => {
+    expect(helpers.getFieldOptions(RULE_SOURCE_TYPES.STATIC_VALUE)).toEqual([]);
+    expect(helpers.getLeftFieldCategory(RULE_SOURCE_TYPES.AUTH, "userId")).toBe(FIELD_TYPE_CATEGORY.STRING);
+  });
 });

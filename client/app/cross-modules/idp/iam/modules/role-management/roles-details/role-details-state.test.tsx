@@ -84,6 +84,16 @@ describe("role-details-state store", () => {
     expect(result.current.permissionMap.get("users:view")?.parents).toContain("users:manage");
   });
 
+  it("keeps the grantable resources it is given, and clears them with null", async () => {
+    const { result } = renderStore();
+    await waitFor(() => expect(result.current.isInitialized).toBe(true));
+    act(() => result.current.setGrantableResources(new Set(["users:view"])));
+    expect(result.current.grantableResources?.has("users:view")).toBe(true);
+
+    act(() => result.current.setGrantableResources(null));
+    expect(result.current.grantableResources).toBeNull();
+  });
+
   it("ignores selection changes outside edit mode", async () => {
     const { result } = renderStore();
     await waitFor(() => expect(result.current.isInitialized).toBe(true));

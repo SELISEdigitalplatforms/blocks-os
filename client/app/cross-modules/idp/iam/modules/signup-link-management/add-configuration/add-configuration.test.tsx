@@ -234,6 +234,21 @@ describe("AddConfiguration", () => {
     );
   });
 
+  it("toasts the refusal and keeps the dialog open when a grant the caller does not hold is refused", async () => {
+    const errors = { Access_Grant_Not_Allowed: "refused" };
+    h.mutateAsync.mockRejectedValue({ status: 403, errors });
+    const user = userEvent.setup();
+    render(<AddConfiguration />);
+    await user.click(screen.getByRole("button", { name: "Add Configuration" }));
+    await user.type(screen.getByPlaceholderText("Partner onboarding"), "Partner onboarding");
+    await selectClient(user);
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(h.showErrorToast).toHaveBeenCalledWith({ errors }));
+    expect(screen.getByRole("heading", { name: "Add Configuration" })).toBeTruthy();
+    expect(h.showSuccessToast).not.toHaveBeenCalled();
+  });
+
   describe("existing-user password and max redemptions (#645)", () => {
     const WARNING =
       "Anyone who can generate links from this configuration will be able to sign in as an existing user without their password.";

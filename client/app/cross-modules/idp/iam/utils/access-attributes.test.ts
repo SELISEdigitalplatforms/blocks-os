@@ -37,12 +37,14 @@ describe("access-attributes utils", () => {
     expect(addAttributeValue(added, "a", "y")).toBe(added);
     expect(addAttributeValue({}, "b", "z")).toEqual({ b: ["z"] });
     expect(removeAttributeValue(added, "a", "x")).toEqual({ a: ["y"] });
+    expect(removeAttributeValue(added, "missing", "x")).toEqual({ a: ["x", "y"], missing: [] });
   });
 
   it("compares attributes ignoring order", () => {
     expect(sameAccessAttributes({ a: ["x", "y"] }, { a: ["y", "x"] })).toBe(true);
     expect(sameAccessAttributes({ a: ["x"] }, { a: ["x", "y"] })).toBe(false);
     expect(sameAccessAttributes({ a: ["x"] }, {})).toBe(false);
+    expect(sameAccessAttributes({}, { a: ["x"] })).toBe(false);
     expect(sameAccessAttributes({}, {})).toBe(true);
   });
 

@@ -16,7 +16,7 @@ vi.mock("@blocks-idp/iam/hooks/use-roles", () => ({
   useGetRoles: (...args: unknown[]) => h.getRoles(...args),
 }));
 
-import { ManagedBySelect } from "./managed-by-select";
+import { ManagedBySelect } from ".";
 
 vi.stubGlobal(
   "ResizeObserver",
@@ -107,5 +107,11 @@ describe("ManagedBySelect", () => {
   it("still shows a parent the caller could not pick", () => {
     render(<Harness value="boss" />);
     expect(screen.getByTestId(TRIGGER_ID).textContent).toContain("boss");
+  });
+
+  it("shows the slug while the role names are still loading", () => {
+    h.getRoles.mockReturnValue({ data: undefined });
+    render(<Harness value="lead" />);
+    expect(screen.getByTestId(TRIGGER_ID).textContent).toContain("lead");
   });
 });
