@@ -18,8 +18,8 @@ export const ArchiveProject = () => {
       const res = await mutateAsync();
       if (res.isSuccess) {
         showSuccessToast({
-          title: "Project delete",
-          description: "Successfully deleted",
+          title: "Environment deleted",
+          description: "Environment deleted successfully.",
         });
         navigate("/app/console");
       } else {

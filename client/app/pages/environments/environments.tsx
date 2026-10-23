@@ -18,28 +18,14 @@ import {
   TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
 import { useNotificationListener } from "@/cross-modules/communication/hooks/use-notification-listener";
-import {
-  MIGRATION_ONGOING_WINDOW_MS,
-  useGetMigrationStatus,
-  useGetProjects,
-} from "@/hooks/use-project";
+import { useGetMigrationStatus, useGetProjects } from "@/hooks/use-project";
+import { showErrorToast } from "@/hooks/use-toast";
+import { getMigrationNotificationOutcome, getMigrationStateForTarget } from "@/utils/migration-status";
 import { useProjectPermissions } from "@/hooks/use-project-access";
-import type { IMigrationStatusResponse } from "@blocks-identifier/models/project.model";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { ArrowRightLeft, CircleHelp, Plus } from "lucide-react";
 import { useCallback, useState } from "react";
 import { Navigate, useNavigate } from "react-router";
-
-const isRecentMigrationForTarget = (
-  data: IMigrationStatusResponse[number],
-  tenantId: string,
-): boolean => {
-  if (data.targetedProjectKey !== tenantId || !data.createdDate) {
-    return false;
-  }
-  const createdDate = new Date(data.createdDate);
-  return createdDate.getTime() > Date.now() - MIGRATION_ONGOING_WINDOW_MS;
-};
 
 const ProjectGroupLoading = () => (
   <main className="flex flex-1 flex-col gap-4 p-4 sm:mx-10 md:gap-6">
@@ -79,8 +65,14 @@ export const EnvironmentsPage = () => {
     groupId as string,
   );
   const handleMigrationNotification = useCallback(
-    (_: unknown) => {
+    (detail: unknown) => {
+      // A push means the tracker changed, so re-read it. The spinner follows the tracker, and
+      // a failed run also gets a toast, since nothing else tells the user it ended badly.
       void refetchMigrationStatus();
+      const outcome = getMigrationNotificationOutcome(detail);
+      if (outcome && !outcome.isSuccess) {
+        showErrorToast({ errors: outcome.description ?? "Environment data migration failed." });
+      }
     },
     [refetchMigrationStatus],
   );
@@ -178,8 +170,10 @@ export const EnvironmentsPage = () => {
               key={`shared-${project.itemId}`}
               project={project}
               isMigrationOngoing={
-                Array.isArray(migrationStatus) &&
-                migrationStatus.some((data) => isRecentMigrationForTarget(data, project.tenantId))
+                getMigrationStateForTarget(migrationStatus, project.tenantId) === "in-progress"
+              }
+              isMigrationFailed={
+                getMigrationStateForTarget(migrationStatus, project.tenantId) === "failed"
               }
             />
           ))}
@@ -196,10 +190,11 @@ export const EnvironmentsPage = () => {
                     key={`others-${project.itemId}`}
                     project={project}
                     isMigrationOngoing={
-                      Array.isArray(migrationStatus) &&
-                      migrationStatus.some((data) =>
-                        isRecentMigrationForTarget(data, project.tenantId),
-                      )
+                      getMigrationStateForTarget(migrationStatus, project.tenantId) ===
+                      "in-progress"
+                    }
+                    isMigrationFailed={
+                      getMigrationStateForTarget(migrationStatus, project.tenantId) === "failed"
                     }
                     className="bg-muted"
                   />

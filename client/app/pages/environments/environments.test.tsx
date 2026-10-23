@@ -10,6 +10,7 @@ const h = vi.hoisted(() => ({
   useGetMigrationStatus: vi.fn(),
   useProjectPermissions: vi.fn(),
   notificationListener: vi.fn(),
+  showErrorToast: vi.fn(),
 }));
 
 vi.mock("@seliseblocks/genesis-os", () => {
@@ -37,9 +38,26 @@ vi.mock("@/hooks/use-project-access", () => ({
 vi.mock("@/cross-modules/communication/hooks/use-notification-listener", () => ({
   useNotificationListener: (...args: unknown[]) => h.notificationListener(...args),
 }));
+vi.mock("@/hooks/use-toast", () => ({
+  showErrorToast: (...args: unknown[]) => h.showErrorToast(...args),
+}));
 vi.mock("@/components/environment-card/environment-card", () => ({
-  EnvironmentCard: ({ project }: { project: { name: string } }) => (
-    <div data-testid="environment-card">{project.name}</div>
+  EnvironmentCard: ({
+    project,
+    isMigrationOngoing,
+    isMigrationFailed,
+  }: {
+    project: { name: string };
+    isMigrationOngoing?: boolean;
+    isMigrationFailed?: boolean;
+  }) => (
+    <div
+      data-testid="environment-card"
+      data-ongoing={String(!!isMigrationOngoing)}
+      data-failed={String(!!isMigrationFailed)}
+    >
+      {project.name}
+    </div>
   ),
 }));
 vi.mock("@/components/environment-card/add-environment-modal", () => ({
@@ -160,6 +178,53 @@ describe("EnvironmentsPage", () => {
     expect(screen.getByText("Shared with you")).toBeTruthy();
     expect(screen.getByText("Others")).toBeTruthy();
     expect(screen.getByText("Other Project")).toBeTruthy();
+  });
+
+  describe("migration state on the cards", () => {
+    const tracker = (overrides: Record<string, unknown>) => ({
+      targetedProjectKey: "tenant-1",
+      createdDate: new Date().toISOString(),
+      ...overrides,
+    });
+    const cardFor = (name: string) =>
+      screen.getAllByTestId("environment-card").find((card) => card.textContent === name)!;
+
+    it("spins only for a migration that is still running", () => {
+      h.useGetMigrationStatus.mockReturnValue({
+        data: [tracker({ iam: { isCompleted: false, errorMessage: null } })],
+        refetch: vi.fn(),
+      });
+      renderPage();
+      expect(cardFor("Project 1").dataset.ongoing).toBe("true");
+      expect(cardFor("Project 1").dataset.failed).toBe("false");
+      expect(cardFor("Project 0").dataset.ongoing).toBe("false");
+    });
+
+    it("stops the spinner and marks the card failed once every unfinished service has failed", () => {
+      h.useGetMigrationStatus.mockReturnValue({
+        data: [tracker({ iam: { isCompleted: false, errorMessage: "boom" } })],
+        refetch: vi.fn(),
+      });
+      renderPage();
+      expect(cardFor("Project 1").dataset.ongoing).toBe("false");
+      expect(cardFor("Project 1").dataset.failed).toBe("true");
+    });
+
+    it("refetches on a push and shows a toast when the push reports failure", () => {
+      const refetch = vi.fn();
+      h.useGetMigrationStatus.mockReturnValue({ data: [], refetch });
+      renderPage();
+      const [name, listener] = h.notificationListener.mock.calls.at(-1)!;
+      expect(name).toBe("EnvironmentDataMigration");
+
+      listener({ message: { IsSuccess: true } });
+      expect(refetch).toHaveBeenCalledTimes(1);
+      expect(h.showErrorToast).not.toHaveBeenCalled();
+
+      listener({ message: { IsSuccess: false, description: "Migration failed" } });
+      expect(refetch).toHaveBeenCalledTimes(2);
+      expect(h.showErrorToast).toHaveBeenCalledWith({ errors: "Migration failed" });
+    });
   });
 
   describe("Start Migration guard", () => {

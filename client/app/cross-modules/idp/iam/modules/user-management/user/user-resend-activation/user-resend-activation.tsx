@@ -24,6 +24,12 @@ export const UserResendActivationMail = ({
           title: "Success",
           description: `Activation email has been resent successfully`,
         });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: `Could not resend the activation email | ${JSON.stringify(res.errors)}`,
+        });
       }
     } catch (error) {
       toast({

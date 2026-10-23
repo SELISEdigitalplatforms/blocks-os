@@ -12,7 +12,7 @@ type OrganizationUsersFilter = {
 export const useOrganizationUsersFilterQueryParams = () => {
   const [queryParams, setQueryParams] = useQueryStates({
     page: parseAsInteger.withDefault(0),
-    pageSize: parseAsInteger.withDefault(5),
+    pageSize: parseAsInteger.withDefault(10),
     "selected-filter": parseAsString.withDefault("name"),
     name: parseAsString.withDefault(""),
     email: parseAsString.withDefault(""),

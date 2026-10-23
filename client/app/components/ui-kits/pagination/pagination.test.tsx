@@ -1,34 +1,74 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { Pagination } from "./pagination";
+import { DEFAULT_PAGE_SIZE_OPTIONS, Pagination } from "./pagination";
 
-const ROWS_PER_PAGE = "Rows per page";
+vi.stubGlobal(
+  "ResizeObserver",
+  class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  },
+);
 
-const renderPagination = (totalCount: number, pageSize = 10) =>
-  render(
-    <Pagination
-      page={0}
-      pageSize={pageSize}
-      totalCount={totalCount}
-      onChange={vi.fn()}
-      onPageSizeChange={vi.fn()}
-      pageSizeOptions={[5, 10, 20, 40]}
-    />,
-  );
+const openSelect = async () => {
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("combobox"));
+  return screen.getAllByRole("option").map((option) => option.textContent);
+};
 
-describe("Pagination rows-per-page", () => {
-  it("hides the size choice when every size shows the same rows", () => {
-    renderPagination(1, 5);
-    expect(screen.queryByText(ROWS_PER_PAGE)).toBeNull();
+describe("Pagination", () => {
+  it("shares one default set of page sizes", () => {
+    expect(DEFAULT_PAGE_SIZE_OPTIONS).toEqual([10, 25, 50]);
   });
 
-  it("shows the size choice when a size changes what is shown", () => {
-    renderPagination(12);
-    expect(screen.getByText(ROWS_PER_PAGE)).toBeTruthy();
+  it("offers the default sizes when a table passes none", async () => {
+    render(
+      <Pagination
+        page={0}
+        pageSize={10}
+        totalCount={100}
+        onChange={vi.fn()}
+        onPageSizeChange={vi.fn()}
+      />,
+    );
+    expect(await openSelect()).toEqual(["10", "25", "50"]);
   });
 
-  it("hides the size choice when the smallest size already fits every row", () => {
-    renderPagination(3, 10);
-    expect(screen.queryByText(ROWS_PER_PAGE)).toBeNull();
+  it("lists a current size that is not one of the choices so the select still shows it", async () => {
+    render(
+      <Pagination
+        page={0}
+        pageSize={5}
+        totalCount={100}
+        onChange={vi.fn()}
+        onPageSizeChange={vi.fn()}
+      />,
+    );
+    expect(await openSelect()).toEqual(["5", "10", "25", "50"]);
+  });
+
+  it("shows no size picker when nothing can change the size", () => {
+    render(<Pagination page={0} pageSize={10} totalCount={100} onChange={vi.fn()} />);
+    expect(screen.queryByText("Rows per page")).toBeNull();
+    expect(screen.getByText("Page 1 of 10")).toBeTruthy();
+  });
+
+  it("reports the chosen size", async () => {
+    const onPageSizeChange = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <Pagination
+        page={0}
+        pageSize={10}
+        totalCount={100}
+        onChange={vi.fn()}
+        onPageSizeChange={onPageSizeChange}
+      />,
+    );
+    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByRole("option", { name: "25" }));
+    expect(onPageSizeChange).toHaveBeenCalledWith(25);
   });
 });

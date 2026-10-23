@@ -26,7 +26,7 @@ export const useGetProjects = ({
     queryKey: ["identifier", "projects", tenantGroupId],
     queryFn: () => projectService.getProjects(0, 100, tenantGroupId),
     enabled: enabled,
-    staleTime: 5 * 60 * 1000, // 5 minutes - prevent unnecessary re-fetches during navigation
+    staleTime: 30 * 1000, // short, so lists do not show stale environments; mutations also invalidate
   });
 
   useEffect(() => {
@@ -160,10 +160,13 @@ export const useDisableProject = (options: { projectKey: string }) => {
     mutationKey: ["identifier", "projects", "disable"],
     mutationFn: () => crossProjectService.disableProject(options),
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["identifier", "project", options],
-      });
+      // "project" is keyed by tenant id, so match the whole prefix.
+      queryClient.invalidateQueries({ queryKey: ["identifier", "project"] });
       queryClient.invalidateQueries({ queryKey: ["identifier", "projects"] });
+      // Disabling an environment changes who has access and what the plan counts.
+      queryClient.invalidateQueries({ queryKey: ["people"] });
+      queryClient.invalidateQueries({ queryKey: ["subscription-usage"] });
+      queryClient.invalidateQueries({ queryKey: ["env-repositories"] });
     },
   });
 };
@@ -190,6 +193,9 @@ export const useRestoreProject = () => {
   });
 };
 
+// Environments are provisioned by a background worker, so the first refetch can miss the new one.
+export const PROJECT_LATE_REFETCH_MS = 3000;
+
 export const useCreateProject = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -199,6 +205,10 @@ export const useCreateProject = () => {
       queryClient.invalidateQueries({ queryKey: ["identifier", "projects"] });
       queryClient.invalidateQueries({ queryKey: ["get-assets"] });
       queryClient.invalidateQueries({ queryKey: ["env-repositories"] });
+      // One more refetch shortly after, so the new environment shows without a reload.
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["identifier", "projects"] });
+      }, PROJECT_LATE_REFETCH_MS);
     },
   });
 };

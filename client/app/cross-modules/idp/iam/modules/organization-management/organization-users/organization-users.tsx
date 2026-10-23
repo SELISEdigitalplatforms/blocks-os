@@ -90,7 +90,6 @@ export const OrganizationUsers = ({
             page={queryParams.page}
             pageSize={queryParams.pageSize}
             totalCount={data?.totalCount || 0}
-            pageSizeOptions={[5, 10, 25, 50]}
             onChange={onPageChangeHandler}
             onPageSizeChange={(size) =>
               setQueryParams((params) => ({ ...params, pageSize: size, page: 0 }))

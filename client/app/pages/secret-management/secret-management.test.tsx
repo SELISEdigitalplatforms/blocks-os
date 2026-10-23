@@ -160,7 +160,7 @@ describe("SecretManagementLayout", () => {
         breadcrumbIndex: 3,
         customTitles: {
           "/app/proj/secret-management/oidc": "OIDC",
-          "/app/proj/secret-management/oidc/branding": "Template",
+          "/app/proj/secret-management/oidc/branding": null,
         },
       }),
     );

@@ -37,8 +37,7 @@ export const UserHistories = ({ id }: HistoriesProps) => {
               pageSize={filter.pageSize}
               onChange={(page) => setFilter((f) => ({ ...f, page }))}
               totalCount={data?.totalCount || 0}
-              onPageSizeChange={(pageSize) => setFilter({ page: 0, pageSize })}
-              pageSizeOptions={[5, 10, 20, 40]}
+              onPageSizeChange={(pageSize) => setFilter((f) => ({ ...f, pageSize }))}
             />
           </div>
         )}

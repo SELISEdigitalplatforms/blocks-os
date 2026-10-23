@@ -305,7 +305,6 @@ export function RestoredTracesTab({
                 <Pagination
                   page={queryParams.page}
                   pageSize={queryParams.pageSize}
-                  pageSizeOptions={[10, 20, 50]}
                   onChange={pageChangeHandler}
                   onPageSizeChange={pageSizeChangeHandler}
                   totalCount={data.totalCount || 0}

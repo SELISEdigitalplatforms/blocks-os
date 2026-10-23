@@ -163,7 +163,6 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
             page={queryParams.notificationPage}
             pageSize={queryParams.notificationPageSize}
             totalCount={data?.totalCount ?? 0}
-            pageSizeOptions={[queryParams.notificationPageSize]}
             onChange={onPageChangeHandler}
           />
         }
