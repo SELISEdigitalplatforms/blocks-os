@@ -16,7 +16,7 @@ describe("DisabledReason", () => {
     expect(screen.queryByTestId("disabled-reason")).toBeNull();
   });
 
-  it("wraps the control in a focusable explainer when there is a reason", () => {
+  it("wraps the control in an explainer that carries the reason as screen-reader text", () => {
     render(
       <DisabledReason reason="You can't manage this user.">
         <button type="button" disabled>
@@ -25,7 +25,8 @@ describe("DisabledReason", () => {
       </DisabledReason>,
     );
     const wrapper = screen.getByTestId("disabled-reason");
-    expect(wrapper.getAttribute("tabindex")).toBe("0");
+    expect(wrapper.hasAttribute("tabindex")).toBe(false);
     expect(wrapper.querySelector("button")?.disabled).toBe(true);
+    expect(wrapper.querySelector(".sr-only")?.textContent).toBe("You can't manage this user.");
   });
 });
