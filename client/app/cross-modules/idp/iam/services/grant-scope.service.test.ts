@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
 import { http } from "@/lib/http/http-client";
-import { DELEGATION_ENDPOINTS } from "../constants/endpoint.constant";
-import { delegationService } from "./delegation.service";
+import { GRANT_ENDPOINTS } from "../constants/endpoint.constant";
+import { grantScopeService } from "./grant-scope.service";
 
 vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 
-describe("delegationService", () => {
+describe("grantScopeService", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("reads the delegation scope from IAM with an absolute url", async () => {
+  it("reads the grant scope from IAM with an absolute url", async () => {
     const scope = {
       isSystemUser: false,
       heldRoles: ["a"],
@@ -19,9 +19,9 @@ describe("delegationService", () => {
     };
     vi.mocked(http.get).mockResolvedValue(scope as never);
 
-    await expect(delegationService.getScope()).resolves.toEqual(scope);
-    expect(DELEGATION_ENDPOINTS.SCOPE).toMatch(/\/iam\/delegation-scope$/);
-    expect(http.get).toHaveBeenCalledWith(DELEGATION_ENDPOINTS.SCOPE, undefined, {
+    await expect(grantScopeService.getScope()).resolves.toEqual(scope);
+    expect(GRANT_ENDPOINTS.SCOPE).toMatch(/\/iam\/grant-scope$/);
+    expect(http.get).toHaveBeenCalledWith(GRANT_ENDPOINTS.SCOPE, undefined, {
       absoluteUrl: true,
     });
   });

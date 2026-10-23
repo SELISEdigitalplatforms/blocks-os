@@ -1,7 +1,7 @@
 import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
 import { useUserManageability } from "@blocks-idp/iam/hooks/use-user-manageability";
 import { SessionListCard } from "@blocks-idp/iam/security/components/session-list-card";
-import { CANNOT_MANAGE_USER_TOOLTIP } from "@blocks-idp/iam/utils/delegation-scope";
+import { CANNOT_MANAGE_USER_TOOLTIP } from "@blocks-idp/iam/utils/grant-scope";
 
 type DevicesProps = {
   id: string;

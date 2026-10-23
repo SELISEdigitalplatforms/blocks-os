@@ -15,8 +15,8 @@ const h = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("@blocks-idp/iam/hooks/use-delegation-scope", () => ({
-  useDelegationScope: () => h.scope,
+vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => ({
+  useGrantScope: () => h.scope,
 }));
 vi.mock("@blocks-idp/iam/services/role.service", () => ({
   roleService: { getRoles: vi.fn() },

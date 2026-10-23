@@ -1,5 +1,5 @@
 import { useGetPermissionById, useUpdatePermission } from "@blocks-idp/iam/hooks/use-permission";
-import { useSystemOnlyReason } from "@blocks-idp/iam/hooks/use-delegation-scope";
+import { useSystemOnlyReason } from "@blocks-idp/iam/hooks/use-grant-scope";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { useMemo } from "react";
 import { mapPermissionToFormValues, PermissionFormSchemaType } from "../permission-form/utils";

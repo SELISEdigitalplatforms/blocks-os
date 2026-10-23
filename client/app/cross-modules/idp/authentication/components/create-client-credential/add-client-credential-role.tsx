@@ -18,7 +18,7 @@ import { useGetAssignableRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
-import { DelegationHint } from "@blocks-idp/iam/components/delegation-hint";
+import { GrantHint } from "@blocks-idp/iam/components/grant-hint";
 
 type AddClientCredentialRoleProps = {
   selectedSlugs: string[];
@@ -77,7 +77,7 @@ export const AddClientCredentialRole = ({ onAdd, selectedSlugs }: AddClientCrede
           <DialogTitle className="text-left">Assign roles</DialogTitle>
           <DialogDescription />
         </DialogHeader>
-        <DelegationHint kind="roles" />
+        <GrantHint kind="roles" />
         <div>
           <FilterControls.SearchInput
             value={filter.search}

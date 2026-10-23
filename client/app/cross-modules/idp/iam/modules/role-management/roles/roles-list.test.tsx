@@ -1,9 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-const delegation = vi.hoisted(() => ({ isRestricted: false }));
-vi.mock("@blocks-idp/iam/hooks/use-delegation-scope", () => ({
-  useDelegationScope: () => ({ isRestricted: delegation.isRestricted }),
+const grant = vi.hoisted(() => ({ isRestricted: false }));
+vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => ({
+  useGrantScope: () => ({ isRestricted: grant.isRestricted }),
 }));
 
 // See the mock for why the tooltip barrel cannot be imported under jsdom.
@@ -129,7 +129,7 @@ const MANAGED_BY = "Managed by";
 describe("RolesList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    delegation.isRestricted = false;
+    grant.isRestricted = false;
   });
 
   describe("Managed by column", () => {
@@ -148,7 +148,7 @@ describe("RolesList", () => {
     });
 
     it("always appears for a limited caller", () => {
-      delegation.isRestricted = true;
+      grant.isRestricted = true;
       render(<RolesList roles={[role]} isLoading={false} />);
       expect(screen.getAllByText(MANAGED_BY).length).toBeGreaterThan(0);
     });

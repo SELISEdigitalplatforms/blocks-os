@@ -18,7 +18,7 @@ import { useGetAssignableRoles } from "@blocks-idp/iam/hooks/use-roles";
 import type { IRole } from "@blocks-idp/iam/models/role";
 import { CirclePlus } from "lucide-react";
 import { useMemo, useState } from "react";
-import { DelegationHint } from "@blocks-idp/iam/components/delegation-hint";
+import { GrantHint } from "@blocks-idp/iam/components/grant-hint";
 
 type AssignSignupRolesDialogProps = {
   roles: IRole[];
@@ -105,7 +105,7 @@ export const AssignSignupRolesDialog = ({ roles, onAssign }: AssignSignupRolesDi
             to persist them.
           </DialogDescription>
         </DialogHeader>
-        <DelegationHint kind="roles" />
+        <GrantHint kind="roles" />
         <FilterControls.SearchInput
           value={filter.search}
           onChange={(value) => setFilter((current) => ({ ...current, search: value, page: 0 }))}

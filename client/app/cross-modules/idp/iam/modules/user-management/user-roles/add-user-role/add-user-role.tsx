@@ -25,7 +25,7 @@ import { useGetAssignableRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { useUserRoles } from "@blocks-idp/iam/hooks/use-user";
 import { CirclePlus, Info } from "lucide-react";
 import { useState } from "react";
-import { DelegationHint } from "@blocks-idp/iam/components/delegation-hint";
+import { GrantHint } from "@blocks-idp/iam/components/grant-hint";
 
 type AddUserRoleProps = {
   userId: string;
@@ -134,7 +134,7 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
           </div>
           <DialogDescription></DialogDescription>
         </DialogHeader>
-        <DelegationHint kind="roles" />
+        <GrantHint kind="roles" />
         <div>
           <FilterControls.SearchInput
             value={filter.search}

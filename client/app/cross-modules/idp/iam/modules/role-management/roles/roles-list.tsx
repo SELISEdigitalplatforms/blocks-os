@@ -5,7 +5,7 @@ import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { ArchiveAction } from "@blocks-idp/iam/components/archive-action";
 import { useDeleteRole } from "@blocks-idp/iam/hooks/use-roles";
-import { useDelegationScope } from "@blocks-idp/iam/hooks/use-delegation-scope";
+import { useGrantScope } from "@blocks-idp/iam/hooks/use-grant-scope";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { Pencil, ShieldCheck } from "lucide-react";
@@ -76,7 +76,7 @@ export const RolesList = ({
     (value: SortValue) => setSortQueryParams(value),
     [setSortQueryParams],
   );
-  const { isRestricted } = useDelegationScope();
+  const { isRestricted } = useGrantScope();
   // The column is for people who work with the tree; the system user sees it only once a role has one.
   const showManagedBy = isRestricted || roles.some((role) => Boolean(role.parentRoleSlug));
   const gridColumns = showManagedBy ? MANAGED_BY_GRID : BASE_GRID;

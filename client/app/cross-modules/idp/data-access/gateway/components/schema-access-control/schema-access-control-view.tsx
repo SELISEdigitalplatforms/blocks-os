@@ -1,6 +1,6 @@
 "use client";
 import { forwardRef, useEffect, useId, useImperativeHandle, useState } from "react";
-import { useSystemOnlyReason } from "@blocks-idp/iam/hooks/use-delegation-scope";
+import { useSystemOnlyReason } from "@blocks-idp/iam/hooks/use-grant-scope";
 import { Button } from "@/components/ui-kits/button/button";
 import {
   Dialog,

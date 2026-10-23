@@ -6,7 +6,7 @@ import { useUserManageability } from "@blocks-idp/iam/hooks/use-user-manageabili
 import {
   CANNOT_MANAGE_USER_TOOLTIP,
   OWN_ROLES_TOOLTIP,
-} from "@blocks-idp/iam/utils/delegation-scope";
+} from "@blocks-idp/iam/utils/grant-scope";
 import { useNavigate } from "react-router";
 import { useUsersSortQueryParams } from "./users-filter-toolbar";
 import { FilterControls } from "@/components/filter-toolbar";

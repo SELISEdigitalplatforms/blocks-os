@@ -10,7 +10,7 @@ import { PERMISSION_SEVERITY_OPTIONS, ResourceType } from "@blocks-idp/iam/model
 import { BadgeAlert, BadgeCheck } from "lucide-react";
 import { useMemo } from "react";
 import { PermissionState, useRoleDetailsStore } from "./role-details-state";
-import { GRANT_PERMISSION_TOOLTIP } from "@blocks-idp/iam/utils/delegation-scope";
+import { GRANT_PERMISSION_TOOLTIP } from "@blocks-idp/iam/utils/grant-scope";
 type PermissionToggleCardProps = {
   permission: PermissionState;
   checked: boolean;

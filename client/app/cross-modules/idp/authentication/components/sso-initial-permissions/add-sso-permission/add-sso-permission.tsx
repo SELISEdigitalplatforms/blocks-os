@@ -29,7 +29,7 @@ import { useGetGrantablePermissions } from "@blocks-idp/iam/hooks/use-permission
 import { IPermission, RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
 import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
-import { DelegationHint } from "@blocks-idp/iam/components/delegation-hint";
+import { GrantHint } from "@blocks-idp/iam/components/grant-hint";
 type AddSSOPermissionProps = {
   permissions: IPermission[];
   onAdd: (data: IPermission[]) => void;
@@ -112,7 +112,7 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
           <DialogTitle className="text-left">Assign Permissions</DialogTitle>
           <DialogDescription></DialogDescription>
         </DialogHeader>
-        <DelegationHint kind="permissions" />
+        <GrantHint kind="permissions" />
         <div>
           <FilterControls.SearchInput
             placeholder="Search by permission name"

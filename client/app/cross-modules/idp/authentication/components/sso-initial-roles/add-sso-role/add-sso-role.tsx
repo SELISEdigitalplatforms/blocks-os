@@ -18,7 +18,7 @@ import { useGetAssignableRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
-import { DelegationHint } from "@blocks-idp/iam/components/delegation-hint";
+import { GrantHint } from "@blocks-idp/iam/components/grant-hint";
 type AddSSORoleProps = {
   roles: IRole[];
   onAdd: (data: IRole[]) => void;
@@ -75,7 +75,7 @@ export const AddSSORole = ({ onAdd, roles }: AddSSORoleProps) => {
           <DialogTitle className="text-left">Assign roles</DialogTitle>
           <DialogDescription></DialogDescription>
         </DialogHeader>
-        <DelegationHint kind="roles" />
+        <GrantHint kind="roles" />
         <div>
           <FilterControls.SearchInput
             value={filter.search}

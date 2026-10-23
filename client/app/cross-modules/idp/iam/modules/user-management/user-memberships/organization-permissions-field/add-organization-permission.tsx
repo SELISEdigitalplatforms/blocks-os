@@ -38,7 +38,7 @@ import {
   shouldDisablePermissionCheckbox,
   togglePermissionSelection,
 } from "./permission-selection.utils";
-import { DelegationHint } from "@blocks-idp/iam/components/delegation-hint";
+import { GrantHint } from "@blocks-idp/iam/components/grant-hint";
 
 type AddOrganizationPermissionProps = {
   permissions: IPermission[];
@@ -172,7 +172,7 @@ export const AddOrganizationPermission = ({
             You can assign a maximum of {MAX_PERMISSIONS_PER_USER} permissions per user.
           </DialogDescription>
         </DialogHeader>
-        <DelegationHint kind="permissions" />
+        <GrantHint kind="permissions" />
         <div>
           <FilterControls.SearchInput
             placeholder="Search by permission name"

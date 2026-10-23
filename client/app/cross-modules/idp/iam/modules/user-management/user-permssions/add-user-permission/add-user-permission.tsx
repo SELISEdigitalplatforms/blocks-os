@@ -34,7 +34,7 @@ import { useUserPermissions } from "@blocks-idp/iam/hooks/use-user";
 import { RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
 import { CirclePlus, Info } from "lucide-react";
 import { useState } from "react";
-import { DelegationHint } from "@blocks-idp/iam/components/delegation-hint";
+import { GrantHint } from "@blocks-idp/iam/components/grant-hint";
 
 type AddUserPermissionProps = {
   userId: string;
@@ -156,7 +156,7 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
             </TooltipProvider>
           </div>
         </DialogHeader>
-        <DelegationHint kind="permissions" />
+        <GrantHint kind="permissions" />
         <div>
           <FilterControls.SearchInput
             placeholder="Search by permission name"

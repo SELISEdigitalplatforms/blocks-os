@@ -6,7 +6,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui-kits/select/select";
-import { useDelegationScope } from "@blocks-idp/iam/hooks/use-delegation-scope";
+import { useGrantScope } from "@blocks-idp/iam/hooks/use-grant-scope";
 import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { useMemo } from "react";
 
@@ -33,7 +33,7 @@ export const ManagedBySelect = ({
   excludeSlug,
   disabled,
 }: Readonly<ManagedBySelectProps>) => {
-  const { isRestricted, managedByCandidates } = useDelegationScope();
+  const { isRestricted, managedByCandidates } = useGrantScope();
   const candidates = useMemo(
     () => managedByCandidates.filter((slug) => slug !== excludeSlug),
     [managedByCandidates, excludeSlug],

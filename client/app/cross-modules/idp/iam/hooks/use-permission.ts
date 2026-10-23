@@ -7,7 +7,7 @@ import {
   IPermissionFilter,
 } from "@blocks-idp/iam/models/permission";
 import { iamService } from "@blocks-idp/iam/services/iam.service";
-import { useDelegationScope } from "@blocks-idp/iam/hooks/use-delegation-scope";
+import { useGrantScope } from "@blocks-idp/iam/hooks/use-grant-scope";
 
 export const useGetPermissions = (
   options: IPermissionFilter,
@@ -53,7 +53,7 @@ export const useGetGrantablePermissions = (
   options: IPermissionFilter,
   { enabled = true }: { enabled?: boolean } = {},
 ) => {
-  const { isLoading: isScopeLoading, isRestricted, heldPermissions } = useDelegationScope();
+  const { isLoading: isScopeLoading, isRestricted, heldPermissions } = useGrantScope();
   // An empty list means "no filter" to the server, so "nothing to grant" must not be sent.
   const nothingToGrant = isRestricted && heldPermissions.length === 0;
   const scoped: IPermissionFilter = isRestricted

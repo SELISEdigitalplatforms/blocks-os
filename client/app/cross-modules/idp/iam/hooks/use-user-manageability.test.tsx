@@ -1,6 +1,6 @@
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { IDelegationScope } from "@blocks-idp/iam/models/delegation-scope";
+import { IGrantScope } from "@blocks-idp/iam/models/grant-scope";
 
 const h = vi.hoisted(() => ({
   scope: undefined as unknown,
@@ -8,8 +8,8 @@ const h = vi.hoisted(() => ({
   authUser: { sub: "me", org_id: "org-1" } as { sub: string; org_id?: string } | undefined,
 }));
 
-vi.mock("@blocks-idp/iam/hooks/use-delegation-scope", () => ({
-  useDelegationScope: () => ({ scope: h.scope, isRestricted: h.isRestricted }),
+vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => ({
+  useGrantScope: () => ({ scope: h.scope, isRestricted: h.isRestricted }),
 }));
 vi.mock("@seliseblocks/genesis-os/store", () => ({
   useAuthStore: () => ({ user: h.authUser }),
@@ -17,7 +17,7 @@ vi.mock("@seliseblocks/genesis-os/store", () => ({
 
 import { useUserManageability } from "./use-user-manageability";
 
-const scope: IDelegationScope = {
+const scope: IGrantScope = {
   isSystemUser: false,
   heldRoles: ["lead"],
   managedRoles: ["member"],

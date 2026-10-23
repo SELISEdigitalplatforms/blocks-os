@@ -9,8 +9,8 @@ const { useGetRoleById, getPermissions, scope } = vi.hoisted(() => ({
   scope: { isRestricted: false, heldPermissions: [] as string[] },
 }));
 
-vi.mock("@blocks-idp/iam/hooks/use-delegation-scope", () => ({
-  useDelegationScope: () => scope,
+vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => ({
+  useGrantScope: () => scope,
 }));
 
 vi.mock("@blocks-idp/iam/hooks/use-roles", () => ({ useGetRoleById }));

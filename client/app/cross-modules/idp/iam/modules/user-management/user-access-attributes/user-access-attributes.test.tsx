@@ -15,8 +15,8 @@ const h = vi.hoisted(() => ({
 vi.mock("@seliseblocks/genesis-os/store", () => ({
   useAuthStore: () => ({ user: h.authUser }),
 }));
-vi.mock("@blocks-idp/iam/hooks/use-delegation-scope", () => ({
-  useDelegationScope: () => ({ isRestricted: h.isRestricted }),
+vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => ({
+  useGrantScope: () => ({ isRestricted: h.isRestricted }),
 }));
 vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
   useGetUserById: ({ id }: { id: string }) => ({ data: { data: h.users[id] } }),

@@ -1,4 +1,4 @@
-import { useDelegationScope } from "@blocks-idp/iam/hooks/use-delegation-scope";
+import { useGrantScope } from "@blocks-idp/iam/hooks/use-grant-scope";
 import { useGetRoleById } from "@blocks-idp/iam/hooks/use-roles";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import { IRole } from "@blocks-idp/iam/models/role";
@@ -144,7 +144,7 @@ export const RoleDetailsProvider = ({
 }) => {
   const [store] = useState(() => createRoleDetailsStore());
   const { data: role } = useGetRoleById({ id, projectKey });
-  const { isRestricted, heldPermissions } = useDelegationScope();
+  const { isRestricted, heldPermissions } = useGrantScope();
   const organizationId = role?.data?.organizationId;
   const { data: permissionsData } = useQuery({
     queryKey: ["permissions", projectKey, organizationId],

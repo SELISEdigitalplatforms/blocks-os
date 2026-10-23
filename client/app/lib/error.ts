@@ -1,4 +1,4 @@
-/** Delegated administration: the server refused a grant the caller does not hold (HTTP 403). */
+/** Access grant: the server refused a grant the caller does not hold (HTTP 403). */
 export const ACCESS_GRANT_NOT_ALLOWED = "Access_Grant_Not_Allowed";
 export const ACCESS_GRANT_NOT_ALLOWED_MESSAGE = "You can't grant access you don't hold.";
 
@@ -19,7 +19,7 @@ export const isErrorWithErrors = (
   );
 };
 
-/** True when a rejected request carries the delegated-administration refusal, as key or value. */
+/** True when a rejected request carries the access-grant refusal, as key or value. */
 export const isAccessGrantRefused = (error: unknown): boolean => {
   if (!isErrorWithErrors(error)) return false;
   return Object.entries(error.errors).some(([key, value]) => {

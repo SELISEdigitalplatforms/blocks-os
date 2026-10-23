@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-vi.mock("@blocks-idp/iam/hooks/use-delegation-scope", () => import("@/test-utils/__mocks__/delegation-scope.mock"));
+vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => import("@/test-utils/__mocks__/grant-scope.mock"));
 
 const h = vi.hoisted(() => ({
   navigate: vi.fn(),
@@ -57,12 +57,12 @@ vi.mock("../permission-form", () => ({
 }));
 
 import { AddPermission } from "./add-permission";
-import { delegation, resetDelegation } from "@/test-utils/__mocks__/delegation-scope.mock";
+import { grant, resetGrant } from "@/test-utils/__mocks__/grant-scope.mock";
 
 
 describe("AddPermission", () => {
   beforeEach(() => {
-    resetDelegation();
+    resetGrant();
     vi.clearAllMocks();
     h.isPending = false;
     h.mutateAsync.mockResolvedValue({ isSuccess: true });
@@ -105,7 +105,7 @@ describe("AddPermission", () => {
   });
 
   it("is read-only for a caller who is not the system user, and never saves", () => {
-    delegation.systemOnlyReason = "Only the system user can change this.";
+    grant.systemOnlyReason = "Only the system user can change this.";
     render(<AddPermission />);
     expect(h.formProps?.readOnlyReason).toBe("Only the system user can change this.");
     fireEvent.click(screen.getByText("save-valid"));

@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { normalizeArchiveErrors } from "../constants/archive-error-messages";
 import { roleService } from "@blocks-idp/iam/services/role.service";
 import { GetRolesPayload, GetRolesResponse, IRole } from "@blocks-idp/iam/models/role";
-import { useDelegationScope } from "@blocks-idp/iam/hooks/use-delegation-scope";
+import { useGrantScope } from "@blocks-idp/iam/hooks/use-grant-scope";
 
 const DEFAULT_ORGANIZATION_ID = "default";
 const ROLE_OPTIONS_PAGE_SIZE = 100;
@@ -29,7 +29,7 @@ export const useGetAssignableRoles = (
   option: GetRolesPayload,
   { enabled = true }: { enabled?: boolean } = {},
 ) => {
-  const { isLoading: isScopeLoading, isRestricted, assignableRoles } = useDelegationScope();
+  const { isLoading: isScopeLoading, isRestricted, assignableRoles } = useGrantScope();
   // A caller that already narrows by slugs (the bulk "remove" list) keeps only the assignable ones.
   const requested = option.filter?.slugs ?? [];
   const slugs =

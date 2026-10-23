@@ -4,7 +4,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { cn } from "@/lib/utils";
 import { ArchiveAction } from "@blocks-idp/iam/components/archive-action";
-import { useSystemOnlyReason } from "@blocks-idp/iam/hooks/use-delegation-scope";
+import { useSystemOnlyReason } from "@blocks-idp/iam/hooks/use-grant-scope";
 import { useDeletePermission } from "@blocks-idp/iam/hooks/use-permission";
 import {
   IPermission,

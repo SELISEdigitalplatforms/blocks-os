@@ -11,7 +11,7 @@ import { UserResetPassword } from "./user-reset-password";
 import { UserResendActivationMail } from "./user-resend-activation/user-resend-activation";
 import { DisabledReason } from "@blocks-idp/iam/components/disabled-reason";
 import { useUserManageability } from "@blocks-idp/iam/hooks/use-user-manageability";
-import { CANNOT_MANAGE_USER_TOOLTIP } from "@blocks-idp/iam/utils/delegation-scope";
+import { CANNOT_MANAGE_USER_TOOLTIP } from "@blocks-idp/iam/utils/grant-scope";
 import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
 
 type UserActionMenuProps = {

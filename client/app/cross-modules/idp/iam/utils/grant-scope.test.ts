@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { IDelegationScope } from "@blocks-idp/iam/models/delegation-scope";
+import { IGrantScope } from "@blocks-idp/iam/models/grant-scope";
 import {
   canManageUserAccess,
   getManagedByCandidates,
   isScopeRestricted,
-} from "./delegation-scope";
+} from "./grant-scope";
 
-const scope = (overrides: Partial<IDelegationScope> = {}): IDelegationScope => ({
+const scope = (overrides: Partial<IGrantScope> = {}): IGrantScope => ({
   isSystemUser: false,
   heldRoles: ["lead"],
   managedRoles: ["member", "lead"],
@@ -15,7 +15,7 @@ const scope = (overrides: Partial<IDelegationScope> = {}): IDelegationScope => (
   ...overrides,
 });
 
-describe("delegation-scope utils", () => {
+describe("grant-scope utils", () => {
   describe("isScopeRestricted", () => {
     it("is false until the scope is known", () => {
       expect(isScopeRestricted(undefined)).toBe(false);

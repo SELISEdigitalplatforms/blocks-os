@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import { useAuthStore } from "@seliseblocks/genesis-os/store";
-import { useDelegationScope } from "@blocks-idp/iam/hooks/use-delegation-scope";
+import { useGrantScope } from "@blocks-idp/iam/hooks/use-grant-scope";
 import { User } from "@blocks-idp/iam/models/user";
-import { canManageUserAccess } from "@blocks-idp/iam/utils/delegation-scope";
+import { canManageUserAccess } from "@blocks-idp/iam/utils/grant-scope";
 
 type TargetUser = Pick<User, "roles" | "permissions">;
 
@@ -12,7 +12,7 @@ type TargetUser = Pick<User, "roles" | "permissions">;
  * organization come from the token claims (`sub`, `org_id`).
  */
 export const useUserManageability = () => {
-  const { scope, isRestricted } = useDelegationScope();
+  const { scope, isRestricted } = useGrantScope();
   const authUser = useAuthStore().user;
   const callerId = authUser?.sub;
   const organizationId = authUser?.org_id || "default";

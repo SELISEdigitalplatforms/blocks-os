@@ -1,6 +1,6 @@
 import { CreatePermissionPayload } from "@blocks-idp/iam/models/permission";
 import { useAddPermission } from "@blocks-idp/iam/hooks/use-permission";
-import { useSystemOnlyReason } from "@blocks-idp/iam/hooks/use-delegation-scope";
+import { useSystemOnlyReason } from "@blocks-idp/iam/hooks/use-grant-scope";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { PermissionForm } from "../permission-form";
 import { PermissionFormSchemaType } from "../permission-form/utils";

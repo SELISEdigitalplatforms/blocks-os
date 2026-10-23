@@ -10,7 +10,7 @@ import {
 } from "@/components/ui-kits/select/select";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
-import { useDelegationScope } from "@blocks-idp/iam/hooks/use-delegation-scope";
+import { useGrantScope } from "@blocks-idp/iam/hooks/use-grant-scope";
 import { useGetUserById, useUpdateUser } from "@blocks-idp/iam/hooks/use-user";
 import { AccessAttributes } from "@blocks-idp/iam/models/user";
 import {
@@ -129,7 +129,7 @@ const AttributeAdder = ({ choices, onAdd }: Readonly<AttributeAdderProps>) => {
 export const UserAccessAttributes = ({ userId, projectKey }: Readonly<UserAccessAttributesProps>) => {
   const authUser = useAuthStore().user;
   const organizationId = authUser?.org_id || DEFAULT_ORGANIZATION_ID;
-  const { isRestricted } = useDelegationScope();
+  const { isRestricted } = useGrantScope();
   const { data: userData } = useGetUserById({ id: userId, projectKey });
   const { data: callerData } = useGetUserById(
     { id: authUser?.sub ?? "", projectKey },
