@@ -19,7 +19,6 @@ import { useUserManageability } from "./use-user-manageability";
 
 const scope: IDelegationScope = {
   isSystemUser: false,
-  mode: "Enforce",
   heldRoles: ["lead"],
   managedRoles: ["member"],
   assignableRoles: ["member"],

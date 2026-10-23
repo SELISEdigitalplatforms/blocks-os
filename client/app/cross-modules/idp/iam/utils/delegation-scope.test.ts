@@ -8,7 +8,6 @@ import {
 
 const scope = (overrides: Partial<IDelegationScope> = {}): IDelegationScope => ({
   isSystemUser: false,
-  mode: "Enforce",
   heldRoles: ["lead"],
   managedRoles: ["member", "lead"],
   assignableRoles: ["member"],
@@ -24,10 +23,7 @@ describe("delegation-scope utils", () => {
     it("is false for the system user", () => {
       expect(isScopeRestricted(scope({ isSystemUser: true }))).toBe(false);
     });
-    it("is false in Audit mode, where the server only logs", () => {
-      expect(isScopeRestricted(scope({ mode: "Audit" }))).toBe(false);
-    });
-    it("is true for a non-system caller in Enforce mode", () => {
+    it("is true for a non-system caller", () => {
       expect(isScopeRestricted(scope())).toBe(true);
     });
   });

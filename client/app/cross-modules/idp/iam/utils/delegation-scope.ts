@@ -7,12 +7,11 @@ export const OWN_ROLES_TOOLTIP = "You can't change your own roles.";
 export const SYSTEM_ONLY_TOOLTIP = "Only the system user can change this.";
 
 /**
- * True when the UI must limit choices: a known, non-system caller in a tenant that enforces the
- * rules. In `Audit` the server allows everything and only logs, so limiting here would hide the
- * very actions the audit is meant to observe.
+ * True when the UI must limit choices: a known, non-system caller. The server always enforces the
+ * rules, so the client limits every such caller.
  */
 export const isScopeRestricted = (scope: IDelegationScope | undefined): scope is IDelegationScope =>
-  scope !== undefined && !scope.isSystemUser && scope.mode === "Enforce";
+  scope !== undefined && !scope.isSystemUser;
 
 /** Roles that may be picked as "Managed by": the ones the caller holds or manages. */
 export const getManagedByCandidates = (scope: IDelegationScope): string[] => [

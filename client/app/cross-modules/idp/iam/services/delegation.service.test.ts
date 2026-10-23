@@ -12,7 +12,6 @@ describe("delegationService", () => {
   it("reads the delegation scope from IAM with an absolute url", async () => {
     const scope = {
       isSystemUser: false,
-      mode: "Enforce",
       heldRoles: ["a"],
       managedRoles: ["b"],
       assignableRoles: ["b"],

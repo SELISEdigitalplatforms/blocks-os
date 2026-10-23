@@ -6,8 +6,6 @@
 export interface IDelegationScope {
   /** The system user is never limited: the UI stays as it was before delegation existed. */
   isSystemUser: boolean;
-  /** `Audit` only logs a refusal, so the UI does not limit anything; `Enforce` refuses. */
-  mode: "Audit" | "Enforce";
   heldRoles: string[];
   managedRoles: string[];
   assignableRoles: string[];

@@ -16,7 +16,6 @@ vi.mock("@blocks-idp/iam/services/delegation.service", () => ({
 
 const limited: IDelegationScope = {
   isSystemUser: false,
-  mode: "Enforce",
   heldRoles: ["lead"],
   managedRoles: ["member"],
   assignableRoles: ["member"],
@@ -26,7 +25,7 @@ const limited: IDelegationScope = {
 describe("useDelegationScope", () => {
   beforeEach(() => vi.resetAllMocks());
 
-  it("limits a non-system caller in Enforce mode", async () => {
+  it("limits a non-system caller", async () => {
     vi.mocked(delegationService.getScope).mockResolvedValue(limited);
     const { result } = renderHook(() => useDelegationScope(), { wrapper: createWrapper() });
 
@@ -50,14 +49,6 @@ describe("useDelegationScope", () => {
     expect(result.current.isRestricted).toBe(false);
     expect(result.current.canAssignRole("anything")).toBe(true);
     expect(result.current.canGrantPermission("anything")).toBe(true);
-  });
-
-  it("does not limit anything in Audit mode", async () => {
-    vi.mocked(delegationService.getScope).mockResolvedValue({ ...limited, mode: "Audit" });
-    const { result } = renderHook(() => useDelegationScope(), { wrapper: createWrapper() });
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-
-    expect(result.current.isRestricted).toBe(false);
   });
 
   it("fails open when the endpoint errors, so older IAM builds keep working", async () => {
