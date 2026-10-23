@@ -148,11 +148,10 @@ export const UserAccessAttributes = ({ userId, projectKey }: Readonly<UserAccess
   const names = Object.keys(current).filter((name) => current[name].length > 0);
 
   const onSave = async () => {
-    if (!draft) return;
     try {
       const res = await mutateAsync({
         itemId: userId,
-        attributes: withOrgAccessAttributes(user?.attributes, organizationId, draft),
+        attributes: withOrgAccessAttributes(user?.attributes, organizationId, draft as AccessAttributes),
       });
       if (!res.isSuccess) {
         showErrorToast({ errors: res.errors });

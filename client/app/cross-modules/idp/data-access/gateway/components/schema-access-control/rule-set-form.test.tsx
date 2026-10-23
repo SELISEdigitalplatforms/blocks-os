@@ -81,13 +81,37 @@ describe("RuleSetForm: left side Auth > Attributes", () => {
     await waitFor(() => expect(onStage).toHaveBeenCalledTimes(1));
   });
 
-  it("picks Attributes from the left list and keeps the list operators", async () => {
+  it("picks Attributes from the left list, then types the name so Save works", async () => {
+    const user = userEvent.setup();
+    renderForm(row({ operator: "CONTAIN", compareSource: STATIC_VALUE, compareValue: "eu" }));
+
+    await user.click(screen.getByRole("button", { name: "Set Left value" }));
+    await user.click(await screen.findByText("Attributes"));
+
+    const input = await screen.findByRole("textbox", { name: ATTRIBUTE_NAME });
+    await waitFor(() => expect(saveButton().matches(":disabled")).toBe(true));
+    await user.type(input, "re-gion!");
+    expect((input as HTMLInputElement).value).toBe("region");
+
+    await user.tab();
+    expect(await screen.findByRole("button", { name: "Attributes.region" })).toBeTruthy();
+
+    // Picking the left field clears the right side, so finish the rule.
+    await user.click(screen.getByRole("button", { name: "Set Right operand" }));
+    await user.click(await screen.findByText("Static Value"));
+    await user.type(await screen.findByPlaceholderText("Enter value"), "eu");
+    await waitFor(() => expect(saveButton().matches(":disabled")).toBe(false));
+  });
+
+  it("closes the name editor when it is left empty", async () => {
     const user = userEvent.setup();
     renderForm(row({}));
 
     await user.click(screen.getByRole("button", { name: "Set Left value" }));
     await user.click(await screen.findByText("Attributes"));
+    await user.tab();
 
+    expect(screen.queryByRole("textbox", { name: ATTRIBUTE_NAME })).toBeNull();
     expect(screen.getByRole("button", { name: "Attributes." })).toBeTruthy();
   });
 });

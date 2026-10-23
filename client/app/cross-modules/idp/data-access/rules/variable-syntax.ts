@@ -149,7 +149,7 @@ const AUTH_CHOICES = AUTH_NAMES.map((n) => `Auth.${n}`).join(", ");
 function checkAuthPart(part: VariablePart, mode: VariableMode, targetIsList: boolean): VariableError | null {
   const { position } = part;
   if (mode === "single") return at(`Auth values aren't available in validation rules at position ${position}: use an access policy`, position);
-  if (ATTRIBUTE_PATH_PATTERN.test(part.path ?? "")) {
+  if (ATTRIBUTE_PATH_PATTERN.test(String(part.path))) {
     return targetIsList
       ? null
       : at(`Auth.${part.path} is a list at position ${position}: use it in a list property`, position);
