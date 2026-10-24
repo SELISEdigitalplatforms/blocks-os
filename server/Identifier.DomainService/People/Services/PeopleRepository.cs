@@ -186,22 +186,27 @@ namespace DomainService.People
                         Enviroment = _tenants.GetTenantByID(x.TenantId)?.Environment ?? string.Empty,
                     };
 
-                    var user = users.ContainsKey(x.UserId) ? users[x.UserId] : null; if (user != null)
+                    if (users.TryGetValue(x.UserId, out var user))
                     {
-                        projectPeople.peopleDetails.Email = user.Email;
-                        projectPeople.peopleDetails.FirstName = user.FirstName;
-                        projectPeople.peopleDetails.LastName = user.LastName;
-                        projectPeople.peopleDetails.Salutation = user.Salutation;
-                        projectPeople.peopleDetails.ProfileImageUrl = user.ProfileImageUrl;
-                        var isDeactivated = UserAccountStatus.IsDeactivated(user);
-                        projectPeople.peopleDetails.IsActive = !isDeactivated;
-                        // A deactivated account cannot be re-invited; only an administrator can turn it back on.
-                        projectPeople.peopleDetails.AllowResendActivation = !isDeactivated && (!user.Active || !user.IsVerified);
+                        FillUserDetails(projectPeople.peopleDetails, user);
                     }
                     return projectPeople;
                 });
 
             return (peoples.ToList(), totalCount, peoplesTotalCount, isOwner);
+        }
+
+        private static void FillUserDetails(PeopleDetails details, User user)
+        {
+            details.Email = user.Email;
+            details.FirstName = user.FirstName;
+            details.LastName = user.LastName;
+            details.Salutation = user.Salutation;
+            details.ProfileImageUrl = user.ProfileImageUrl;
+            var isDeactivated = UserAccountStatus.IsDeactivated(user);
+            details.IsActive = !isDeactivated;
+            // A deactivated account cannot be re-invited; only an administrator can turn it back on.
+            details.AllowResendActivation = !isDeactivated && (!user.Active || !user.IsVerified);
         }
 
         public async Task<Tenant> GetProjectByIdAsync(string tenantId)

@@ -19,6 +19,7 @@ namespace DomainService.Migration
         private const string ErrorMessageKey = "message";
         private const string InvalidTwoFactorIdError = "invalid_two_factor_id";
         private const string RootTenantIdConfigKey = "RootTenantId";
+        private const string MigrationFailedText = "Migration failed";
 
         private readonly ICacheClient _cacheClient;
         private readonly IMessageClient _messageClient;
@@ -339,7 +340,7 @@ namespace DomainService.Migration
                 DenormalizedPayload = JsonSerializer.Serialize(new
                 {
                     IsSuccess = response,
-                    title = response ? "Migration Completed": "Migration failed",
+                    title = response ? "Migration Completed": MigrationFailedText,
                     projectKey = projectKey,
                     targetedProjectKey = targetedProjectKey
                 }),
@@ -347,7 +348,7 @@ namespace DomainService.Migration
                 ConfigurationName = "DataMigrationProgress",
                 ContentAvailable = true,
                 ResponseKey = "Environment Data Migration",
-                ResponseValue = response ? "Migration completed" : "Migration failed"
+                ResponseValue = response ? "Migration completed" : MigrationFailedText
             };
 
             var blocksKey = _configuration[RootTenantIdConfigKey];
@@ -376,7 +377,7 @@ namespace DomainService.Migration
                 DenormalizedPayload = JsonSerializer.Serialize(new
                 {
                     IsSuccess = response,
-                    title = response ? "Migration Completed" : "Migration failed",
+                    title = response ? "Migration Completed" : MigrationFailedText,
                     description = $"Migration {(response ? "completed successfully" : "failed")}",
                     projectKey = projectKey,
                     targetedProjectKey = targetedProjectKey
@@ -385,7 +386,7 @@ namespace DomainService.Migration
                 ConfigurationName = "EnvironmentDataMigration",
                 ContentAvailable = true,
                 ResponseKey = "Environment Data Migration",
-                ResponseValue = response ? "Migration completed" : "Migration failed"
+                ResponseValue = response ? "Migration completed" : MigrationFailedText
             };
 
             var blocksKey = _configuration[RootTenantIdConfigKey];
