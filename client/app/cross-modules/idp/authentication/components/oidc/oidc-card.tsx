@@ -29,6 +29,7 @@ import {
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { CreateOIDC } from "../create-oidc/create-oidc";
 import { KVDetailItem } from "../kv-detail-item";
+import { MaskedText } from "@/components/masked-text/masked-text";
 import { OneTimeSecret, OneTimeSecretDialog } from "../one-time-secret-dialog";
 
 interface OIDCRowProps {
@@ -70,8 +71,9 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
     value: string;
     copyable?: boolean;
     sensitive?: boolean;
+    masked?: boolean;
   }[] = [
-    { key: "Client Id", value: item.itemId, copyable: true },
+    { key: "Client Id", value: item.itemId, copyable: true, masked: true },
     {
       key: "Redirect URI(s)",
       value: redirectUris.join(", "),
@@ -223,9 +225,11 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">
-                {item.clientDisplayName || item.itemId}
+                {item.clientDisplayName || "OIDC client"}
               </p>
-              <p className="truncate font-mono text-xs text-muted-foreground">{item.itemId}</p>
+              <div className="truncate font-mono text-xs text-muted-foreground">
+                <MaskedText text={item.itemId} length={20} showFirstN={4} showLastN={4} />
+              </div>
             </div>
           </div>
         </TableCell>
@@ -335,13 +339,14 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
             className="max-w-0 bg-muted/20 px-3 py-3 pl-8 sm:px-6 sm:py-4 sm:pl-12"
           >
             <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
-              {kvPairs.map(({ key, value, copyable, sensitive }) => (
+              {kvPairs.map(({ key, value, copyable, sensitive, masked }) => (
                 <KVDetailItem
                   key={key}
                   label={key}
                   value={value}
                   copyable={copyable}
                   sensitive={sensitive}
+                  masked={masked}
                 />
               ))}
             </div>

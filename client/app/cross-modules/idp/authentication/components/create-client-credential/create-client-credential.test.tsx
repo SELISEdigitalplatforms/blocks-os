@@ -119,7 +119,8 @@ describe("CreateClientCredential", () => {
     await user.click(screen.getByRole("button", { name: "Add" }));
 
     expect(await screen.findByText(FRESH_SECRET)).toBeTruthy();
-    expect(screen.getByText("cc-new")).toBeTruthy();
+    // The client id is masked for display only.
+    expect(screen.queryByText("cc-new")).toBeNull();
     expect(screen.getByText(/You will not see this secret again/)).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "I copied it, close" }));
     await waitFor(() => expect(screen.queryByText(FRESH_SECRET)).toBeNull());

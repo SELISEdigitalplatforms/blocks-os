@@ -71,7 +71,9 @@ describe("OIDCCard", () => {
   it("renders the client label, id and detail rows expanded", () => {
     renderCard();
     expect(screen.getAllByText("Portal").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("oidc-123").length).toBeGreaterThan(0);
+    // Client ids are masked for display: first and last 4 characters only.
+    expect(screen.queryByText("oidc-123")).toBeNull();
+    expect(screen.getAllByText("oidc").length).toBeGreaterThan(0);
     expect(screen.getByText("Client Id")).toBeTruthy();
     expect(screen.getByText("Redirect URI(s)")).toBeTruthy();
     expect(screen.getByText("openid profile")).toBeTruthy();

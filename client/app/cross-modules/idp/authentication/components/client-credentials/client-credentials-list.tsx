@@ -181,8 +181,9 @@ const ClientCredentialRow = ({
     value: string;
     copyable?: boolean;
     sensitive?: boolean;
+    masked?: boolean;
   }[] = [
-    { key: "Client Id", value: item.itemId ?? "", copyable: true },
+    { key: "Client Id", value: item.itemId ?? "", copyable: true, masked: true },
     // Shown even when it is the tenant-wide "default", because that is the most privileged
     // scope a credential can have and is worth seeing rather than inferring from an absence.
     {
@@ -332,13 +333,14 @@ const ClientCredentialRow = ({
             className="max-w-0 bg-muted/20 px-3 py-3 pl-8 sm:px-6 sm:py-4 sm:pl-12"
           >
             <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
-              {kvPairs.map(({ key, value, copyable, sensitive }) => (
+              {kvPairs.map(({ key, value, copyable, sensitive, masked }) => (
                 <KVDetailItem
                   key={key}
                   label={key}
                   value={value}
                   copyable={copyable}
                   sensitive={sensitive}
+                  masked={masked}
                 />
               ))}
             </div>
