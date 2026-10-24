@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LINKED_SECRET_STATUS } from "@/cross-modules/secrets/models/secret.model";
 import type { IStorageConfiguration } from "@blocks-storage/models/storage.model";
 import {
   buildStorageConfigurationFormSchema,
@@ -228,7 +229,7 @@ describe("toStorageConfigurationFormValues", () => {
     connectionStringStatus: "active",
     secretKeyStatus: "none",
     accessKeyStatus: "none",
-    passwordStatus: "none",
+    passwordStatus: LINKED_SECRET_STATUS.None,
     sftpSecretKeyStatus: "none",
     cloudStorageRegionEndPoint: null,
     createdBy: "me",
@@ -246,7 +247,7 @@ describe("toStorageConfigurationFormValues", () => {
   };
 
   it("falls back to the documented defaults for a new configuration", () => {
-    expect(toStorageConfigurationFormValues(undefined)).toEqual(
+    expect(toStorageConfigurationFormValues()).toEqual(
       storageConfigurationFormDefaultValue,
     );
   });
