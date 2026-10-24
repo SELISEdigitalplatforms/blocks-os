@@ -72,7 +72,7 @@ export function schemaExposure(
   if (publicWrite) return { tier: "public", reason: `Anyone can ${VERB_PHRASES[publicWrite]} this schema` };
   if (tierFromLevel(level("read")) === "public") return { tier: "public", reason: "Anyone can read this schema" };
   const userWrite = WRITE_VERBS.find((verb) => tierFromLevel(level(verb)) === "user");
-  if (userWrite) return { tier: "user", reason: `Any signed-in user can ${VERB_PHRASES[userWrite]} this schema` };
+  if (userWrite) return { tier: "user", reason: `Any requester can ${VERB_PHRASES[userWrite]} this schema` };
   return null;
 }
 

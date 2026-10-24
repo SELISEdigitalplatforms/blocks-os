@@ -159,8 +159,8 @@ export function accessEffect({
 
   if (tier === "user") {
     return {
-      heading: "Every signed-in user",
-      text: `Any signed-in user in this project can ${verb} ${subject}, with no further checks.`,
+      heading: "Every requester",
+      text: `Any requester in this project can ${verb} ${subject}, with no further checks.`,
       risk: "caution",
     };
   }
@@ -196,8 +196,8 @@ export function accessEffect({
     heading: "Effect",
     text:
       policies.length === 1
-        ? `A signed-in user can ${verb} ${subject} when ${listNames(policies)} matches.`
-        : `A signed-in user can ${verb} ${subject} when any of these ${policies.length} rule sets match: ${listNames(policies)}.`,
+        ? `A requester can ${verb} ${subject} when ${listNames(policies)} matches.`
+        : `A requester can ${verb} ${subject} when any of these ${policies.length} rule sets match: ${listNames(policies)}.`,
     risk: "scoped",
   };
 }

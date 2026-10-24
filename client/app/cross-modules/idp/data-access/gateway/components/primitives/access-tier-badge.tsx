@@ -57,7 +57,7 @@ const TYPE_TO_TIER: Record<string, AccessTier> = {
 
 export const ACCESS_TIER_LABELS: Record<AccessTier, string> = {
   public: "Public",
-  user: "Signed-in users",
+  user: "Requester",
   custom: "Custom",
   inherited: "Inherited",
 };

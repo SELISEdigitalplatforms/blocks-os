@@ -50,8 +50,8 @@ describe("schemaExposure", () => {
     expect(schemaExposure(levels(2, 3, 3, 3))?.reason).toBe("Anyone can read this schema");
   });
 
-  it("warns when any signed-in user can change it", () => {
-    expect(schemaExposure(levels(3, 1, 3, 3))).toEqual({ tier: "user", reason: "Any signed-in user can create records in this schema" });
+  it("warns when any requester can change it", () => {
+    expect(schemaExposure(levels(3, 1, 3, 3))).toEqual({ tier: "user", reason: "Any requester can create records in this schema" });
   });
 
   it("says nothing for custom access everywhere, which is how system schemas are seeded", () => {
