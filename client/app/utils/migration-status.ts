@@ -45,11 +45,13 @@ export const getMigrationStateForTarget = (
   now: number = Date.now(),
 ): MigrationState => {
   if (!Array.isArray(trackers)) return "done";
-  const states = trackers
-    .filter((tracker) => tracker.targetedProjectKey === tenantId)
-    .map((tracker) => getMigrationState(tracker, now));
-  if (states.includes(IN_PROGRESS)) return IN_PROGRESS;
-  return states.includes("failed") ? "failed" : "done";
+  const states = new Set(
+    trackers
+      .filter((tracker) => tracker.targetedProjectKey === tenantId)
+      .map((tracker) => getMigrationState(tracker, now)),
+  );
+  if (states.has(IN_PROGRESS)) return IN_PROGRESS;
+  return states.has("failed") ? "failed" : "done";
 };
 
 export type MigrationNotificationOutcome = {
