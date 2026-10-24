@@ -3,6 +3,7 @@ using Blocks.Genesis;
 using Blocks.Genesis.DataAccess.Evaluation;
 using Blocks.Genesis.DataAccess.Rules;
 using Blocks.Genesis.Entities.Data;
+using Configuration.DomainService.DataGateway.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using MongoDB.Driver;
@@ -13,9 +14,6 @@ namespace BlocksOs.Api.Controllers;
 [Route("[controller]/[action]")]
 public sealed class PlatformDataAccessController(IDbContextProvider databaseProvider, IConfiguration? configuration = null) : ControllerBase
 {
-    private const string LogicService = "Logic";
-    private const string MonitorService = "Monitor";
-
     /// <summary>
     /// Validation rules and default values on system schemas. Off until IAM, OS, Logic and Release all run a
     /// Genesis that understands them: while off the rule endpoints answer 404 and Schemas carries no rule flags.
@@ -54,28 +52,6 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
     // Field rules the services apply: Genesis derives column rules for READ and EDIT only.
     private static readonly PolicyOperation[] FieldOperations = [PolicyOperation.READ, PolicyOperation.EDIT];
 
-    private static readonly IReadOnlyDictionary<string, string> Owners = new Dictionary<string, string>
-    {
-        ["User"] = "IAM", ["Role"] = "IAM", ["Permission"] = "IAM", ["Organization"] = "IAM",
-        ["UserKeyMap"] = "IAM", ["IdentityConfiguration"] = "IAM", ["IdentityProvider"] = "IAM",
-        ["ClientCredential"] = "IAM", ["OidcClientRegistration"] = "IAM", ["RefreshTokenModel"] = "IAM",
-        ["IdpSessionModel"] = "IAM", ["TokenRevocationModel"] = "IAM", ["DeviceAuthorizationRequestModel"] = "IAM",
-        ["SignupLink"] = "IAM", ["SignupLinkConfiguration"] = "IAM", ["UserActivity"] = "IAM",
-        ["UserTotpDetail"] = "IAM", ["ImpersonationSession"] = "IAM", ["BiometricCredential"] = "IAM",
-        ["BlocksClientConfig"] = "IAM", ["Secret"] = "IAM",
-        ["EmailTemplate"] = "OS", ["IntegrationSetup"] = "OS", ["ThirdPartyJWTClaims"] = "OS",
-        ["MailServerConfiguration"] = "OS", ["ResourceLimit"] = "OS", ["MigrationTracker"] = "OS",
-        ["WorkflowEntity"] = LogicService, ["WorkflowVersionEntity"] = LogicService, ["WorkflowExecutionEntity"] = LogicService,
-        ["WorkflowItemExecutionEntity"] = LogicService, ["FunctionEntity"] = LogicService, ["FunctionVersionEntity"] = LogicService,
-        ["FunctionRunEntity"] = LogicService, ["FunctionRunLogEntity"] = LogicService, ["FunctionBuildEntity"] = LogicService,
-        ["FunctionAuditEventEntity"] = LogicService, ["ProxyDetailEntity"] = LogicService, ["ProxyVersionEntity"] = LogicService,
-        ["ProxyExecutionEntity"] = LogicService, ["Schedule"] = LogicService, ["MailBoxEntity"] = LogicService,
-        ["MailBoxSyncCursor"] = LogicService, ["NotificationConnection"] = LogicService, ["NotificationSubscription"] = LogicService,
-        ["OfflineNotification"] = LogicService, ["FirebaseConfiguration"] = LogicService,
-        ["Build"] = "Release", ["Repo"] = "Release", ["RepositoryWebhook"] = "Release",
-        ["MonitorConfiguration"] = MonitorService, ["MonitorIncident"] = MonitorService, ["MonitorPingLog"] = MonitorService
-    };
-
     [HttpGet]
     [ProtectedEndPoint("blocks-data::data-access::get-data-access-policy")]
     public async Task<IActionResult> Schemas(CancellationToken cancellationToken)
@@ -85,18 +61,18 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
         var validations = rulesEnabled
             ? await ValidationCollection.Find(x => !x.IsDeleted).ToListAsync(cancellationToken)
             : [];
-        var result = schemas.Where(x => Owners.ContainsKey(x.SchemaName)).Select(x => new
+        var result = schemas.Where(x => PlatformSchemaCatalog.IsOffered(x.SchemaName)).Select(x => new
         {
             id = x.ItemId,
             x.SchemaName,
             x.CollectionName,
-            service = Owners[x.SchemaName],
+            service = PlatformSchemaCatalog.Owners[x.SchemaName],
             // All four levels, one per access tab in the console.
             readAccessLevel = (int)x.ReadAccessLevel,
             writeAccessLevel = (int)x.WriteAccessLevel,
             editAccessLevel = (int)x.EditAccessLevel,
             deleteAccessLevel = (int)x.DeleteAccessLevel,
-            fields = FieldDefinitionMapper.GetFieldDefinitionResponses(x.Fields, [], validations.Where(v => v.SchemaId == x.ItemId).ToList()),
+            fields = FieldDefinitionMapper.GetFieldDefinitionResponses(PlatformSchemaCatalog.VisibleFields(x), [], validations.Where(v => v.SchemaId == x.ItemId).ToList()),
             // Which properties take validation rules and defaults (the Genesis allow-list); null when none do or rules are off.
             rules = rulesEnabled ? RuleFlags(x.SchemaName) : null
         }).OrderBy(x => x.service).ThenBy(x => x.SchemaName).ToList();
@@ -139,13 +115,13 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
     {
         var schema = await SchemaCollection.Find(x => x.ItemId == request.SchemaId && x.IsSystemEntity && !x.IsDeleted)
             .FirstOrDefaultAsync(cancellationToken);
-        if (schema is null || !Owners.ContainsKey(schema.SchemaName) || request.Operation is not { } operation || !Operations.Contains(operation)) return BadRequest();
+        if (schema is null || !PlatformSchemaCatalog.IsOffered(schema.SchemaName) || request.Operation is not { } operation || !Operations.Contains(operation)) return BadRequest();
         var accessLevel = request.AccessLevel ?? default;
         if ((request.PolicyType ?? default) == PolicyType.RLS) SetAccessLevel(schema, operation, accessLevel);
         else
         {
             if (!FieldOperations.Contains(operation) || request.FieldNames.Length == 0
-                || request.FieldNames.Any(name => schema.Fields.All(field => field.Name != name))) return BadRequest();
+                || request.FieldNames.Any(name => VisibleField(schema, name) is null)) return BadRequest();
             foreach (var field in schema.Fields.Where(field => request.FieldNames.Contains(field.Name))) SetAccessLevel(field, operation, accessLevel);
         }
         await SchemaCollection.ReplaceOneAsync(x => x.ItemId == schema.ItemId, schema, cancellationToken: cancellationToken);
@@ -188,7 +164,7 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
     {
         if (!RulesEnabled || await LoadRulesSchemaAsync(request.SchemaId, cancellationToken) is not { } loaded) return NotFound();
         var (schema, rules) = loaded;
-        var field = schema.Fields.FirstOrDefault(f => f.Name == request.FieldName);
+        var field = VisibleField(schema, request.FieldName);
         if (field is null || rules.ValidationFor(field.Name) == RuleAccess.Blocked)
             return Refused(request.FieldName, $"Validation rules can't be set on {schema.SchemaName}.{request.FieldName}");
 
@@ -239,7 +215,7 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
     {
         if (!RulesEnabled || await LoadRulesSchemaAsync(request.SchemaId, cancellationToken) is not { } loaded) return NotFound();
         var (schema, rules) = loaded;
-        var field = schema.Fields.FirstOrDefault(f => f.Name == request.FieldName);
+        var field = VisibleField(schema, request.FieldName);
         if (field is null || rules.DefaultFor(field.Name) == RuleAccess.Blocked)
             return Refused(request.FieldName, $"A default value can't be set on {schema.SchemaName}.{request.FieldName}");
 
@@ -261,7 +237,7 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
         foreach (var fieldName in request.FieldNames.Distinct())
         {
             var key = $"{schema.SchemaName}.{fieldName}";
-            var field = schema.Fields.FirstOrDefault(f => f.Name == fieldName);
+            var field = VisibleField(schema, fieldName);
             if (field is null || rules.ValidationFor(field.Name) == RuleAccess.Blocked)
             {
                 errors[key] = $"Validation rules can't be set on {key}";
@@ -300,7 +276,7 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
             foreach (var fieldName in request.FieldNames.Distinct())
             {
                 var key = $"{schema.SchemaName}.{fieldName}";
-                var field = schema.Fields.FirstOrDefault(f => f.Name == fieldName);
+                var field = VisibleField(schema, fieldName);
                 if (field is null || rules.DefaultFor(field.Name) == RuleAccess.Blocked) errors[key] = $"A default value can't be set on {key}";
                 else if (CheckDefault(schema, field, defaultValue) is { } problem) errors[key] = problem;
                 else fields.Add(field);
@@ -449,7 +425,7 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
     private async Task<(SchemaDefinition Schema, SystemSchemaRuleSet Rules)?> LoadRulesSchemaAsync(string schemaId, CancellationToken cancellationToken)
     {
         var schema = await SchemaCollection.Find(x => x.ItemId == schemaId && x.IsSystemEntity && !x.IsDeleted).FirstOrDefaultAsync(cancellationToken);
-        return schema is not null && Owners.ContainsKey(schema.SchemaName) && OfferedRules(schema.SchemaName) is { } rules
+        return schema is not null && PlatformSchemaCatalog.IsOffered(schema.SchemaName) && OfferedRules(schema.SchemaName) is { } rules
             ? (schema, rules)
             : null;
     }
@@ -477,7 +453,7 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
     {
         var schema = await SchemaCollection.Find(x => x.ItemId == request.SchemaId && x.IsSystemEntity && !x.IsDeleted)
             .FirstOrDefaultAsync(cancellationToken);
-        if (schema is null || !Owners.ContainsKey(schema.SchemaName)) return NotFound();
+        if (schema is null || !PlatformSchemaCatalog.IsOffered(schema.SchemaName)) return NotFound();
         var policyType = request.PolicyType ?? default;
         if (request.Operation is not { } operation || !IsValidPolicyRequest(request, operation, policyType, schema)) return BadRequest();
 
@@ -504,13 +480,18 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
         return Ok(new { isSuccess = true, data = new { acknowledged = true, itemId = policy.ItemId } });
     }
 
+    /// <summary>The schema's property by name, or null when it doesn't exist or is hidden from this page.</summary>
+    private static FieldDefinition? VisibleField(SchemaDefinition schema, string name) =>
+        PlatformSchemaCatalog.IsHiddenField(schema.SchemaName, name) ? null : schema.Fields.FirstOrDefault(field => field.Name == name);
+
     private static bool IsValidPolicyRequest(SavePlatformPolicyRequest request, PolicyOperation operation, PolicyType policyType, SchemaDefinition schema)
     {
         if (string.IsNullOrWhiteSpace(request.PolicyName) || !Operations.Contains(operation)) return false;
+        if (PlatformSchemaCatalog.FirstHiddenInRules(schema.SchemaName, request.RuleGroup) is not null) return false;
         if (policyType == PolicyType.RLS) return request.FieldNames.Length == 0;
         if (policyType == PolicyType.CLS)
             return FieldOperations.Contains(operation) && request.FieldNames.Length != 0
-                && request.FieldNames.All(name => schema.Fields.Any(field => field.Name == name));
+                && request.FieldNames.All(name => VisibleField(schema, name) is not null);
         return true;
     }
 
@@ -543,7 +524,7 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
     {
         var schema = await SchemaCollection.Find(x => x.ItemId == schemaId && x.IsSystemEntity && !x.IsDeleted)
             .FirstOrDefaultAsync(cancellationToken);
-        return schema is not null && Owners.ContainsKey(schema.SchemaName);
+        return schema is not null && PlatformSchemaCatalog.IsOffered(schema.SchemaName);
     }
 
     private IMongoDatabase Database => databaseProvider.GetDatabase() ?? throw new InvalidOperationException("Tenant database is unavailable.");

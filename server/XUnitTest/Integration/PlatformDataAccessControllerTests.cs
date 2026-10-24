@@ -130,6 +130,72 @@ public class PlatformDataAccessControllerTests
         (await ListPoliciesAsync(controller, id)).Should().ContainSingle();
     }
 
+    [Fact]
+    public async Task Schemas_LeavesOutHiddenSchemasAndHiddenProperties()
+    {
+        var repoId = await InsertRepoAsync();
+        var hiddenId = Guid.NewGuid().ToString();
+        await _fixture.Collection<SchemaDefinition>("SchemaDefinitions").InsertOneAsync(new SchemaDefinition
+        {
+            ItemId = hiddenId, SchemaName = "RefreshTokenModel", CollectionName = "IdpRefreshTokens", IsSystemEntity = true,
+            Fields = [new FieldDefinition { Name = "Name", Type = "String" }],
+        });
+        var controller = new PlatformDataAccessController(_fixture.DbContextProvider);
+
+        var body = JsonSerializer.SerializeToElement(((OkObjectResult)await controller.Schemas(CancellationToken.None)).Value);
+
+        var schemas = body.GetProperty("data").EnumerateArray().ToList();
+        schemas.Should().NotContain(s => s.GetProperty("id").GetString() == hiddenId);
+        var repo = schemas.Single(s => s.GetProperty("id").GetString() == repoId);
+        repo.GetProperty("fields").EnumerateArray().Select(f => f.GetProperty("Name").GetString()).Should().Equal("Name");
+        // The stored doc keeps every property: services read exactly the listed fields.
+        (await LoadAsync(repoId)).Fields.Should().HaveCount(3);
+    }
+
+    [Fact]
+    public async Task HiddenProperties_TakeNoRules()
+    {
+        var id = await InsertRepoAsync();
+        var controller = new PlatformDataAccessController(_fixture.DbContextProvider);
+        var hiddenCondition = new PolicyRuleGroup
+        {
+            NestedGroups = [new PolicyRuleGroup { Rules = [new PolicyRule { LeftOperand = "DeploySettings.Region", StaticValue = "eu" }] }],
+        };
+
+        (await controller.Configure(new ConfigurePlatformAccessRequest
+        {
+            SchemaId = id, Operation = PolicyOperation.READ, PolicyType = PolicyType.CLS, FieldNames = ["DeploySettings"], AccessLevel = SchemaAccessLevel.Custom,
+        }, CancellationToken.None)).Should().BeOfType<BadRequestResult>();
+        (await controller.Create(new SavePlatformPolicyRequest
+        {
+            SchemaId = id, PolicyName = "hidden", Operation = PolicyOperation.READ, PolicyType = PolicyType.CLS, FieldNames = ["DeploySettings.Region"],
+        }, CancellationToken.None)).Should().BeOfType<BadRequestResult>();
+        (await controller.Create(new SavePlatformPolicyRequest
+        {
+            SchemaId = id, PolicyName = "hidden", Operation = PolicyOperation.READ, PolicyType = PolicyType.RLS, RuleGroup = hiddenCondition,
+        }, CancellationToken.None)).Should().BeOfType<BadRequestResult>();
+
+        (await LoadAsync(id)).ReadAccessLevel.Should().Be(SchemaAccessLevel.User);
+    }
+
+    private async Task<string> InsertRepoAsync()
+    {
+        var id = Guid.NewGuid().ToString();
+        await _fixture.Collection<SchemaDefinition>("SchemaDefinitions").InsertOneAsync(new SchemaDefinition
+        {
+            ItemId = id, SchemaName = "Repo", CollectionName = "Repos", IsSystemEntity = true,
+            ReadAccessLevel = SchemaAccessLevel.User, WriteAccessLevel = SchemaAccessLevel.User,
+            EditAccessLevel = SchemaAccessLevel.User, DeleteAccessLevel = SchemaAccessLevel.User,
+            Fields =
+            [
+                new FieldDefinition { Name = "Name", Type = "String" },
+                new FieldDefinition { Name = "DeploySettings", Type = "DeploySettings" },
+                new FieldDefinition { Name = "DeploySettings.Region", Type = "String", IsReferenceField = true },
+            ],
+        });
+        return id;
+    }
+
     private async Task<string> InsertRoleAsync()
     {
         var id = Guid.NewGuid().ToString();
