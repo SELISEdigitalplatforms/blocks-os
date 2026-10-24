@@ -1,4 +1,5 @@
 import { vi } from "vitest";
+import { LINKED_SECRET_STATUS } from "@/cross-modules/secrets/models/secret.model";
 import type {
   IStorageConfiguration,
   IStorageConfigurationSavePayload,
@@ -19,6 +20,12 @@ import type {
   DmsItemType,
 } from "../../models/storage.model";
 
+const MOCK_UPDATED_DATE = "2026-01-10T00:00:00.000Z";
+const MOCK_AMAZON_CONFIG_NAME = "Amazon S3 Config";
+const MOCK_PROJECT_KEY = "test-project-key-123";
+const MOCK_FILE_NAME = "document.pdf";
+const MOCK_FILE_STORAGE_ID = "storage-001";
+
 // ─── Storage configuration mock data ─────────────────────────────────────────
 
 export const mockStorageConfigList: IStorageConfiguration[] = [
@@ -27,15 +34,15 @@ export const mockStorageConfigList: IStorageConfiguration[] = [
     connectionStringStatus: "none",
     secretKeyStatus: "active",
     accessKeyStatus: "active",
-    passwordStatus: "none",
+    passwordStatus: LINKED_SECRET_STATUS.None,
     sftpSecretKeyStatus: "none",
     cloudStorageRegionEndPoint: "us-east-1",
     createdBy: "user-1",
     createdDate: "2026-01-01T00:00:00.000Z",
     itemId: "config-1",
     lastUpdatedBy: "user-1",
-    lastUpdatedDate: "2026-01-10T00:00:00.000Z",
-    name: "Amazon S3 Config",
+    lastUpdatedDate: MOCK_UPDATED_DATE,
+    name: MOCK_AMAZON_CONFIG_NAME,
     organizationIds: ["org-1"],
     tags: [],
     host: null,
@@ -48,14 +55,14 @@ export const mockStorageConfigList: IStorageConfiguration[] = [
     connectionStringStatus: "active",
     secretKeyStatus: "none",
     accessKeyStatus: "none",
-    passwordStatus: "none",
+    passwordStatus: LINKED_SECRET_STATUS.None,
     sftpSecretKeyStatus: "none",
     cloudStorageRegionEndPoint: null,
     createdBy: "user-1",
     createdDate: "2026-01-05T00:00:00.000Z",
     itemId: "config-2",
     lastUpdatedBy: "user-1",
-    lastUpdatedDate: "2026-01-10T00:00:00.000Z",
+    lastUpdatedDate: MOCK_UPDATED_DATE,
     name: "Azure Blob Config",
     organizationIds: ["org-1"],
     tags: [],
@@ -78,8 +85,8 @@ export const mockDeleteSuccessResponse: IDeleteResourceResponse = {
 };
 
 export const mockSaveAmazonConfigPayload: IStorageConfigurationSavePayload = {
-  name: "Amazon S3 Config",
-  projectKey: "test-project-key-123",
+  name: MOCK_AMAZON_CONFIG_NAME,
+  projectKey: MOCK_PROJECT_KEY,
   storageStrategy: "AWS",
   secretKey: "mock-aws-secret-key",
   accessKey: "AKIAIOSFODNN7EXAMPLE",
@@ -100,7 +107,7 @@ export const mockSaveAmazonConfigPayload: IStorageConfigurationSavePayload = {
 
 export const mockSaveAzureConfigPayload: IStorageConfigurationSavePayload = {
   name: "Azure Blob Config",
-  projectKey: "test-project-key-123",
+  projectKey: MOCK_PROJECT_KEY,
   storageStrategy: "Azure",
   secretKey: null,
   accessKey: null,
@@ -121,7 +128,7 @@ export const mockSaveAzureConfigPayload: IStorageConfigurationSavePayload = {
 
 export const mockSaveSftpConfigPayload: IStorageConfigurationSavePayload = {
   name: "SFTP Config",
-  projectKey: "test-project-key-123",
+  projectKey: MOCK_PROJECT_KEY,
   storageStrategy: "SftpStorage",
   secretKey: null,
   accessKey: null,
@@ -142,7 +149,7 @@ export const mockSaveSftpConfigPayload: IStorageConfigurationSavePayload = {
 
 export const mockSaveS3CompatibleConfigPayload: IStorageConfigurationSavePayload = {
   name: "S3 Compatible Config",
-  projectKey: "test-project-key-123",
+  projectKey: MOCK_PROJECT_KEY,
   storageStrategy: "S3Compatible",
   secretKey: "secret-key-example",
   accessKey: "access-key-example",
@@ -162,8 +169,8 @@ export const mockSaveS3CompatibleConfigPayload: IStorageConfigurationSavePayload
 };
 
 export const mockDeleteConfigPayload: IStorageConfigurationDeletePayload = {
-  projectKey: "test-project-key-123",
-  configurationName: "Amazon S3 Config",
+  projectKey: MOCK_PROJECT_KEY,
+  configurationName: MOCK_AMAZON_CONFIG_NAME,
 };
 
 // ─── Storage file mock data ───────────────────────────────────────────────────
@@ -179,7 +186,7 @@ export const mockGetFileByIdResponse: IGetFileByFileIDResponse = {
   systemName: "file-1-system.pdf",
   type: 1,
   typeString: "File",
-  createDate: "2026-01-10T00:00:00.000Z",
+  createDate: MOCK_UPDATED_DATE,
   createdBy: "user-1",
   language: "en",
   tenantId: "test-tenant-id-123",
@@ -225,14 +232,14 @@ export const mockGetDmsFileAndFolderResponse: IGetDmsFileAndFolderResponse = {
     {
       parentId: "",
       type: 1 as DmsItemType,
-      name: "document.pdf",
-      fileStorageId: "storage-001",
+      name: MOCK_FILE_NAME,
+      fileStorageId: MOCK_FILE_STORAGE_ID,
       extension: ".pdf",
       sizeInBytes: "204800",
       version: 1,
       description: "A test document",
       itemId: "dms-item-1",
-      lastUpdatedDate: "2026-01-10T00:00:00.000Z",
+      lastUpdatedDate: MOCK_UPDATED_DATE,
     },
   ],
   totalCount: 1,
@@ -241,7 +248,7 @@ export const mockGetDmsFileAndFolderResponse: IGetDmsFileAndFolderResponse = {
 export const mockUploadDmsFileResponse: IUploadDmsFileResponse = {
   result: [
     {
-      fileStorageId: "storage-001",
+      fileStorageId: MOCK_FILE_STORAGE_ID,
       success: true,
     },
   ],
@@ -253,20 +260,20 @@ export const mockUploadDmsFileResponse: IUploadDmsFileResponse = {
 
 export const mockGetFilePayload: IGetFileByFileIDPayload = {
   itemId: "file-1",
-  projectKey: "test-project-key-123",
-  configurationName: "Amazon S3 Config",
+  projectKey: MOCK_PROJECT_KEY,
+  configurationName: MOCK_AMAZON_CONFIG_NAME,
 };
 
 export const mockDeleteFilePayload: IDeleteFilePayload = {
   fileId: "file-1",
-  projectKey: "test-project-key-123",
-  configurationName: "Amazon S3 Config",
+  projectKey: MOCK_PROJECT_KEY,
+  configurationName: MOCK_AMAZON_CONFIG_NAME,
 };
 
 export const mockPreSignedUrlPayload: IGetPreSignedUrlForUploadPayload = {
   name: "upload.pdf",
-  configurationName: "Amazon S3 Config",
-  projectKey: "test-project-key-123",
+  configurationName: MOCK_AMAZON_CONFIG_NAME,
+  projectKey: MOCK_PROJECT_KEY,
   metaData: "{}",
   parentDirectoryId: "dir-1",
   tags: "[]",
@@ -281,12 +288,12 @@ export const mockGetFilesInfoPayload: IGetFilesInfoPayload = {
     property: "name",
     isDescending: false,
   },
-  projectKey: "test-project-key-123",
+  projectKey: MOCK_PROJECT_KEY,
 };
 
 export const mockGetDmsPayload: IGetDmsFileAndFolderPayload = {
-  configurationName: "Amazon S3 Config",
-  projectKey: "test-project-key-123",
+  configurationName: MOCK_AMAZON_CONFIG_NAME,
+  projectKey: MOCK_PROJECT_KEY,
   skip: 0,
   take: 20,
 };
@@ -294,18 +301,18 @@ export const mockGetDmsPayload: IGetDmsFileAndFolderPayload = {
 export const mockUploadDmsFilePayload: IUploadDmsFilePayload = {
   upload: [
     {
-      artifactName: "document.pdf",
+      artifactName: MOCK_FILE_NAME,
       description: "A test document",
       parentId: "",
       tags: [],
       metaData: {},
       organizationId: "org-1",
-      fileStorageId: "storage-001",
-      configurationName: "Amazon S3 Config",
+      fileStorageId: MOCK_FILE_STORAGE_ID,
+      configurationName: MOCK_AMAZON_CONFIG_NAME,
     },
   ],
-  projectKey: "test-project-key-123",
-  name: "document.pdf",
+  projectKey: MOCK_PROJECT_KEY,
+  name: MOCK_FILE_NAME,
 };
 
 export const mockCreateDmsFolderPayload: ICreateDmsFolderPayload = {
@@ -316,8 +323,8 @@ export const mockCreateDmsFolderPayload: ICreateDmsFolderPayload = {
   metaData: {},
   organizationId: "org-1",
   fileStorageId: "",
-  projectKey: "test-project-key-123",
-  configurationName: "Amazon S3 Config",
+  projectKey: MOCK_PROJECT_KEY,
+  configurationName: MOCK_AMAZON_CONFIG_NAME,
 };
 
 // ─── Service factory ──────────────────────────────────────────────────────────

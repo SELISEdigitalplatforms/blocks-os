@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { LINKED_SECRET_STATUS } from "@/cross-modules/secrets/models/secret.model";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { StorageDetailsDrawer } from "./storage-details-drawer";
@@ -59,7 +60,7 @@ describe("StorageDetailsDrawer", () => {
         onOpenChange={vi.fn()}
         storage={storage({
           storageStrategy: "SftpStorage",
-          passwordStatus: "active",
+          passwordStatus: LINKED_SECRET_STATUS.Active,
           sftpSecretKeyStatus: "archived",
         })}
       />,
