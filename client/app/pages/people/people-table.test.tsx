@@ -4,6 +4,12 @@ import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PeopleGroupedByEnvironments } from "../../models/people";
 
+const ADA_EMAIL = "ada@example.com";
+const ADA_NAME = "Ada Lovelace";
+const RESEND_INVITATION = "Resend Invitation";
+const RESEND_ACTIVATION = "Resend Activation";
+const TRANSFER_OWNERSHIP = "Transfer Ownership";
+
 vi.stubGlobal("matchMedia", (query: string) => ({
   matches: false,
   media: query,
@@ -95,7 +101,7 @@ const makePerson = (
     salutation: "",
     firstName: "Ada",
     lastName: "Lovelace",
-    email: "ada@example.com",
+    email: ADA_EMAIL,
     profileImageUrl: null,
     userId: "u-1",
     allowResendActivation: false,
@@ -125,8 +131,8 @@ describe("PeopleTable", () => {
 
   it("renders a row per person with name, email and mapped environment label", () => {
     renderTable({ people: [makePerson()], isLoading: false });
-    expect(screen.getByText("Ada Lovelace")).toBeTruthy();
-    expect(screen.getByText("ada@example.com")).toBeTruthy();
+    expect(screen.getByText(ADA_NAME)).toBeTruthy();
+    expect(screen.getByText(ADA_EMAIL)).toBeTruthy();
     expect(screen.getByText("Development")).toBeTruthy();
   });
 
@@ -160,7 +166,7 @@ describe("PeopleTable", () => {
       people: [makePerson({ profileImageUrl: "https://img.example/a.png" })],
       isLoading: false,
     });
-    const img = screen.getByAltText("Ada Lovelace") as HTMLImageElement;
+    const img = screen.getByAltText(ADA_NAME) as HTMLImageElement;
     expect(img.src).toContain("https://img.example/a.png");
   });
 
@@ -205,7 +211,7 @@ describe("PeopleTable", () => {
 
   it("shows a dash for the environments column when there are none", () => {
     renderTable({ people: [makePerson({}, [])], isLoading: false });
-    const emailCell = screen.getByText("ada@example.com");
+    const emailCell = screen.getByText(ADA_EMAIL);
     expect(emailCell).toBeTruthy();
     expect(screen.getAllByText("-").length).toBeGreaterThan(0);
   });
@@ -224,8 +230,8 @@ describe("PeopleTable", () => {
   it("navigates to the person detail route when a data row is clicked", async () => {
     const user = userEvent.setup();
     renderTable({ people: [makePerson()], isLoading: false });
-    const row = screen.getByText("Ada Lovelace").closest("tr") as HTMLElement;
-    await user.click(within(row).getByText("Ada Lovelace"));
+    const row = screen.getByText(ADA_NAME).closest("tr") as HTMLElement;
+    await user.click(within(row).getByText(ADA_NAME));
     await waitFor(() => expect(h.navigate).toHaveBeenCalledWith("/app/project/grp-1/people/u-1"));
   });
 
@@ -281,7 +287,7 @@ describe("PeopleTable", () => {
       await user.click(await screen.findByRole("button", { name: "Revoke" }));
       await waitFor(() =>
         expect(h.removeAsync).toHaveBeenCalledWith({
-          email: "ada@example.com",
+          email: ADA_EMAIL,
           tenantIds: ["t-1"],
           groupId: "grp-1",
         }),
@@ -322,11 +328,11 @@ describe("PeopleTable", () => {
       const user = userEvent.setup();
       renderTable({ people: [pending()], isLoading: false, canInvite: true, canRemove: true, isOwner: true });
       await user.click(screen.getByRole("button", { name: "Open menu" }));
-      await user.click(await screen.findByText("Resend Invitation"));
+      await user.click(await screen.findByText(RESEND_INVITATION));
       await user.click(await screen.findByRole("button", { name: "Resend" }));
       await waitFor(() =>
         expect(h.resendInvitation).toHaveBeenCalledWith({
-          email: "ada@example.com",
+          email: ADA_EMAIL,
           groupId: "grp-1",
         }),
       );
@@ -340,7 +346,7 @@ describe("PeopleTable", () => {
       const user = userEvent.setup();
       renderTable({ people: [pending()], isLoading: false, canInvite: true, canRemove: true, isOwner: true });
       await user.click(screen.getByRole("button", { name: "Open menu" }));
-      await user.click(await screen.findByText("Resend Invitation"));
+      await user.click(await screen.findByText(RESEND_INVITATION));
       await user.click(await screen.findByRole("button", { name: "Resend" }));
       await waitFor(() => expect(showErrorToast).toHaveBeenCalled());
     });
@@ -349,7 +355,7 @@ describe("PeopleTable", () => {
       const user = userEvent.setup();
       renderTable({ people: [pending()], isLoading: false, canInvite: true, canRemove: true, isOwner: true });
       await user.click(screen.getByRole("button", { name: "Open menu" }));
-      await user.click(await screen.findByText("Resend Invitation"));
+      await user.click(await screen.findByText(RESEND_INVITATION));
       const cancel = await screen.findByRole("button", { name: "Cancel" });
       await user.click(cancel);
       await waitFor(() => expect(h.resendInvitation).not.toHaveBeenCalled());
@@ -363,11 +369,11 @@ describe("PeopleTable", () => {
       const user = userEvent.setup();
       renderTable({ people: [activatable()], isLoading: false, canInvite: true, canRemove: true, isOwner: true });
       await user.click(screen.getByRole("button", { name: "Open menu" }));
-      await user.click(await screen.findByText("Resend Activation"));
+      await user.click(await screen.findByText(RESEND_ACTIVATION));
       await user.click(await screen.findByRole("button", { name: "Resend" }));
       await waitFor(() =>
         expect(h.resendInvitation).toHaveBeenCalledWith({
-          email: "ada@example.com",
+          email: ADA_EMAIL,
           groupId: "grp-1",
         }),
       );
@@ -381,7 +387,7 @@ describe("PeopleTable", () => {
       const user = userEvent.setup();
       renderTable({ people: [activatable()], isLoading: false, canInvite: true, canRemove: true, isOwner: true });
       await user.click(screen.getByRole("button", { name: "Open menu" }));
-      await user.click(await screen.findByText("Resend Activation"));
+      await user.click(await screen.findByText(RESEND_ACTIVATION));
       await user.click(await screen.findByRole("button", { name: "Resend" }));
       await waitFor(() => expect(showErrorToast).toHaveBeenCalled());
     });
@@ -391,7 +397,7 @@ describe("PeopleTable", () => {
       const user = userEvent.setup();
       renderTable({ people: [activatable()], isLoading: false, canInvite: true, canRemove: true, isOwner: true });
       await user.click(screen.getByRole("button", { name: "Open menu" }));
-      await user.click(await screen.findByText("Resend Activation"));
+      await user.click(await screen.findByText(RESEND_ACTIVATION));
       await user.click(await screen.findByRole("button", { name: "Resend" }));
       await waitFor(() => expect(showErrorToast).toHaveBeenCalledWith({ errors: { user: "inactive" } }));
       expect(showSuccessToast).not.toHaveBeenCalled();
@@ -401,7 +407,7 @@ describe("PeopleTable", () => {
       const user = userEvent.setup();
       renderTable({ people: [activatable()], isLoading: false, canInvite: true, canRemove: true, isOwner: true });
       await user.click(screen.getByRole("button", { name: "Open menu" }));
-      await user.click(await screen.findByText("Resend Activation"));
+      await user.click(await screen.findByText(RESEND_ACTIVATION));
       await user.click(await screen.findByRole("button", { name: "Cancel" }));
       await waitFor(() => expect(h.resendInvitation).not.toHaveBeenCalled());
     });
@@ -415,12 +421,12 @@ describe("PeopleTable", () => {
       const user = userEvent.setup();
       renderTable({ people: [transferable()], isLoading: false, canInvite: true, canRemove: true, isOwner: true });
       await user.click(screen.getByRole("button", { name: "Open menu" }));
-      await user.click(await screen.findByText("Transfer Ownership"));
+      await user.click(await screen.findByText(TRANSFER_OWNERSHIP));
       await user.click(await screen.findByRole("button", { name: "Transfer" }));
       await waitFor(() =>
         expect(h.transferOwnership).toHaveBeenCalledWith({
           tenantGroupId: "grp-1",
-          transferToUserEmail: "ada@example.com",
+          transferToUserEmail: ADA_EMAIL,
         }),
       );
       expect(showSuccessToast).toHaveBeenCalledWith({
@@ -433,7 +439,7 @@ describe("PeopleTable", () => {
       const user = userEvent.setup();
       renderTable({ people: [transferable()], isLoading: false, canInvite: true, canRemove: true, isOwner: true });
       await user.click(screen.getByRole("button", { name: "Open menu" }));
-      await user.click(await screen.findByText("Transfer Ownership"));
+      await user.click(await screen.findByText(TRANSFER_OWNERSHIP));
       await user.click(await screen.findByRole("button", { name: "Transfer" }));
       await waitFor(() => expect(showErrorToast).toHaveBeenCalled());
     });
@@ -442,7 +448,7 @@ describe("PeopleTable", () => {
       const user = userEvent.setup();
       renderTable({ people: [transferable()], isLoading: false, canInvite: true, canRemove: true, isOwner: true });
       await user.click(screen.getByRole("button", { name: "Open menu" }));
-      await user.click(await screen.findByText("Transfer Ownership"));
+      await user.click(await screen.findByText(TRANSFER_OWNERSHIP));
       await user.click(await screen.findByRole("button", { name: "Cancel" }));
       await waitFor(() => expect(h.transferOwnership).not.toHaveBeenCalled());
     });
@@ -452,7 +458,7 @@ describe("PeopleTable", () => {
       const user = userEvent.setup();
       renderTable({ people: [transferable()], isLoading: false, canInvite: true, canRemove: true, isOwner: true });
       await user.click(screen.getByRole("button", { name: "Open menu" }));
-      await user.click(await screen.findByText("Transfer Ownership"));
+      await user.click(await screen.findByText(TRANSFER_OWNERSHIP));
       const transferring = await screen.findByRole("button", { name: "Transferring..." });
       expect(transferring).toBeTruthy();
       expect((transferring as HTMLButtonElement).disabled).toBe(true);
