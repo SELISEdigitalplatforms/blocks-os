@@ -20,7 +20,6 @@ namespace Configuration.DomainService.Shared.Services
 
         private const string NotificationKeyPrefix = "notification-config:";
         private const string _notificatonConfigurationCollectionName = "NotificationConfigurations";
-        private const string _storageCollectionName = "StorageConfigurations";
         private const string _mailConfigurationCollectionName = "MailServerConfigurations";
 
         public ConfigurationRepository(
@@ -163,68 +162,6 @@ namespace Configuration.DomainService.Shared.Services
             }
 
             return new BaseResponse { IsSuccess = true };
-        }
-
-        #endregion
-
-        #region Storage
-
-        public async Task SaveStorageConfigurationAsync(StorageConfiguration configuration)
-        {
-            var collection = _dbContextProvider.GetCollection<StorageConfiguration>(_storageCollectionName);
-
-            var filter = Builders<StorageConfiguration>.Filter.Eq(mc => mc.ItemId, configuration.ItemId);
-
-            await collection.ReplaceOneAsync(
-                filter,
-                configuration,
-                new ReplaceOptions { IsUpsert = true }
-            );
-        }
-
-        public async Task<StorageConfiguration> GetStorageConfigurationByNameAsync(string configurationName)
-        {
-            var collection = _dbContextProvider.GetCollection<StorageConfiguration>(_storageCollectionName);
-
-            var filter = Builders<StorageConfiguration>.Filter.Eq(mc => mc.Name, configurationName);
-            return await collection.Find(filter).FirstOrDefaultAsync();
-        }
-
-        public async Task<List<StorageConfiguration>> GetAllStorageConfigurationsByDateAsync()
-        {
-            var collection = _dbContextProvider.GetCollection<StorageConfiguration>(_storageCollectionName);
-            var filter = Builders<StorageConfiguration>.Filter.Where(_ => true);
-
-            using var cursor = await collection.FindAsync(filter, new FindOptions<StorageConfiguration>
-            {
-                Sort = Builders<StorageConfiguration>.Sort.Ascending(doc => doc.LastUpdatedDate)
-            });
-
-            return await cursor.ToListAsync();
-        }
-
-        public async Task DeleteStorageConfigurationByNameAsync(string configurationName)
-        {
-            var collection = _dbContextProvider.GetCollection<StorageConfiguration>(_storageCollectionName);
-            var filter = Builders<StorageConfiguration>.Filter.Eq(mc => mc.Name, configurationName);
-
-            await collection.DeleteOneAsync(filter);
-        }
-
-        public async Task<StorageConfiguration> GetStorageConfigurationByIdAsync(string itemId)
-        {
-            var collection = _dbContextProvider.GetCollection<StorageConfiguration>(_storageCollectionName);
-
-            var filter = Builders<StorageConfiguration>.Filter.Eq(mc => mc.ItemId, itemId);
-            return await collection.Find(filter).FirstOrDefaultAsync();
-        }
-
-        public async Task<StorageConfiguration?> GetStorageConfigurationStrategyAsync(string storageStrategy)
-        {
-            var collection = _dbContextProvider.GetCollection<StorageConfiguration>(_storageCollectionName);
-
-            var filter = Builders<StorageConfiguration>.Filter.Eq(mc => mc.StorageStrategy, storageStrategy);
-            return await collection.Find(filter).FirstOrDefaultAsync();
         }
 
         #endregion

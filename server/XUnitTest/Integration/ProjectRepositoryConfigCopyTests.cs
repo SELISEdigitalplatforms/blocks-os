@@ -35,7 +35,7 @@ namespace XUnitTest.Integration
             var encoding = new Mock<IEncodingService>();
             encoding.Setup(e => e.EncodeToBase26Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>()))
                     .ReturnsAsync("abcde");
-            return new ProjectRepository(_fixture.DbContextProvider, config, secret.Object, encoding.Object, Mock.Of<IDataGatewayRootProvisioner>(), new XUnitTest.TestHelpers.PassThroughOsDataAccess());
+            return new ProjectRepository(_fixture.DbContextProvider, config, secret.Object, encoding.Object, Mock.Of<IDataGatewayRootProvisioner>(), new XUnitTest.TestHelpers.PassThroughOsDataAccess(), Mock.Of<IStorageConfigurationSeedCopier>());
         }
 
         private static Tenant NewProject(string suffix)

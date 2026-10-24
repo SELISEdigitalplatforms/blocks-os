@@ -8,7 +8,9 @@ using Configuration.DomainService.Shared.Services;
 using Configuration.DomainService.Shared.Utilities;
 using Configuration.DomainService.Storage.Entities;
 using Configuration.DomainService.Storage.RequestModel;
+using Configuration.DomainService.Storage.Repositories;
 using Configuration.DomainService.Storage.Validators;
+using StorageSettings = DomainService.Configuration.StorageSettings;
 using FluentAssertions;
 using Moq;
 using Blocks.Genesis.Entities.Data;
@@ -18,16 +20,32 @@ namespace XUnitTest.Validators
 {
     public class StorageConfigurationValidatorTests
     {
-        private readonly Mock<IConfigurationRepository> _repo = new();
+        private readonly Mock<IStorageConfigurationRepository> _repo = new();
 
         private StorageConfigurationValidator Validator() => new(_repo.Object);
 
         [Fact]
+        public async Task Validate_Create_NameAlreadyTaken_FailsOnName()
+        {
+            // Uniqueness was once bound to ConnectionString, so a taken name passed.
+            _repo.Setup(r => r.GetByNameAsync("az"))
+                 .ReturnsAsync(new StoredStorageConfiguration(new StorageSettings { Name = "az" }, null));
+
+            var request = new SaveStorageConfigurationRequest
+            {
+                Name = "az",
+                StorageStrategy = "Azure",
+                ConnectionString = "DefaultEndpointsProtocol=https;AccountName=acct;AccountKey=abc123==;EndpointSuffix=core.windows.net"
+            };
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.Errors.Should().ContainSingle(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.Name));
+        }
+
+        [Fact]
         public async Task Validate_Azure_ValidConnectionString_IsValid()
         {
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
             var request = new SaveStorageConfigurationRequest
             {
                 Name = "az",
@@ -43,9 +61,6 @@ namespace XUnitTest.Validators
         [Fact]
         public async Task Validate_Azure_InvalidConnectionString_Fails()
         {
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
             var request = new SaveStorageConfigurationRequest
             {
                 Name = "az",
@@ -61,9 +76,6 @@ namespace XUnitTest.Validators
         [Fact]
         public async Task Validate_EmptyName_Fails()
         {
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
             // Provide a valid Azure connection string so only the Name rule fails.
             var request = new SaveStorageConfigurationRequest
             {
@@ -81,9 +93,6 @@ namespace XUnitTest.Validators
         [Fact]
         public async Task Validate_UnknownStorageStrategy_Fails()
         {
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
             var request = new SaveStorageConfigurationRequest { Name = "x", StorageStrategy = "GoogleCloud" };
 
             var result = await Validator().ValidateAsync(request);
@@ -94,9 +103,6 @@ namespace XUnitTest.Validators
         [Fact]
         public async Task Validate_Sftp_Valid_IsValid()
         {
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
             var request = new SaveStorageConfigurationRequest
             {
                 Name = "sftp",
@@ -115,9 +121,6 @@ namespace XUnitTest.Validators
         [Fact]
         public async Task Validate_Sftp_RelativeRemotePath_Fails()
         {
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
             var request = new SaveStorageConfigurationRequest
             {
                 Name = "sftp",
@@ -137,9 +140,6 @@ namespace XUnitTest.Validators
         [Fact]
         public async Task Validate_Aws_MissingKeys_Fails()
         {
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
             var request = new SaveStorageConfigurationRequest { Name = "aws", StorageStrategy = "AWS" };
 
             var result = await Validator().ValidateAsync(request);
@@ -150,11 +150,6 @@ namespace XUnitTest.Validators
         [Fact]
         public async Task Validate_UpdateRequest_WithoutItemId_Fails()
         {
-            _repo.Setup(r => r.GetStorageConfigurationByIdAsync(It.IsAny<string>()))
-                 .ReturnsAsync(new StorageConfiguration { Name = "existing-name" });
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
             var request = new SaveStorageConfigurationRequest
             {
                 Name = "x",
@@ -175,7 +170,7 @@ namespace XUnitTest.Validators
         {
             // The client sends nothing but the settings an update may change plus the target's id.
             // Requiring a name, a provider or credentials here would reject a perfectly good update,
-            // since ConfigurationService discards all of them on an update anyway.
+            // since StorageConfigurationService ignores all of them on an update anyway.
             var request = new SaveStorageConfigurationRequest
             {
                 UpdateRequest = true,
@@ -240,9 +235,6 @@ namespace XUnitTest.Validators
         [Fact]
         public async Task Validate_CreateRequest_StillRequiresNameAndProviderCredentials()
         {
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
             // The relaxation above must apply to updates only - creating a configuration is still the
             // one request that has to supply a name, a provider and that provider's credentials.
             var request = new SaveStorageConfigurationRequest
@@ -271,9 +263,6 @@ namespace XUnitTest.Validators
         [InlineData(604_801)]
         public async Task Validate_UploadUrlExpirySeconds_OutOfRange_Fails(int value)
         {
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
             var request = ValidAzureRequest();
             request.UploadUrlExpirySeconds = value;
 
@@ -289,9 +278,6 @@ namespace XUnitTest.Validators
         [InlineData(604_800)]
         public async Task Validate_UploadUrlExpirySeconds_InRange_IsValid(int value)
         {
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
             var request = ValidAzureRequest();
             request.UploadUrlExpirySeconds = value;
 
@@ -306,9 +292,6 @@ namespace XUnitTest.Validators
         [InlineData(604_801)]
         public async Task Validate_DownloadUrlExpirySeconds_OutOfRange_Fails(int value)
         {
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
             var request = ValidAzureRequest();
             request.DownloadUrlExpirySeconds = value;
 
@@ -323,9 +306,6 @@ namespace XUnitTest.Validators
         [InlineData(-1)]
         public async Task Validate_MaxFileSizeInBytes_NotPositive_Fails(long value)
         {
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
             var request = ValidAzureRequest();
             request.MaxFileSizeInBytes = value;
 
@@ -338,9 +318,6 @@ namespace XUnitTest.Validators
         [Fact]
         public async Task Validate_MaxFileSizeInBytes_Positive_IsValid()
         {
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
             var request = ValidAzureRequest();
             request.MaxFileSizeInBytes = 5_242_880;
 
@@ -352,9 +329,6 @@ namespace XUnitTest.Validators
         [Fact]
         public async Task Validate_MaxFileSizeInBytes_ExceedsFiftyMb_Fails()
         {
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
             var request = ValidAzureRequest();
             request.MaxFileSizeInBytes = 50 * 1024 * 1024 + 1;
 
@@ -367,9 +341,6 @@ namespace XUnitTest.Validators
         [Fact]
         public async Task Validate_MaxFileSizeInBytes_ExactlyFiftyMb_IsValid()
         {
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
             var request = ValidAzureRequest();
             request.MaxFileSizeInBytes = 50 * 1024 * 1024;
 
@@ -382,9 +353,6 @@ namespace XUnitTest.Validators
         [MemberData(nameof(AllowedUploadCompletionCombinations))]
         public async Task Validate_UploadCompletionRequiredFor_AllowedCombinations_IsValid(List<string> accessModifiers)
         {
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
             var request = ValidAzureRequest();
             request.UploadCompletionRequiredFor = accessModifiers;
 
@@ -403,9 +371,6 @@ namespace XUnitTest.Validators
         [Fact]
         public async Task Validate_UploadCompletionRequiredFor_DisallowedValue_Fails()
         {
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
             var request = ValidAzureRequest();
             request.UploadCompletionRequiredFor = new List<string> { "Secure" };
 
@@ -418,9 +383,6 @@ namespace XUnitTest.Validators
         [Fact]
         public async Task Validate_UploadCompletionRequiredFor_DuplicateValue_Fails()
         {
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
             var request = ValidAzureRequest();
             request.UploadCompletionRequiredFor = new List<string> { "Public", "Public" };
 

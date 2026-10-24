@@ -108,14 +108,10 @@ describe("SaveStorageConfiguration", () => {
       itemId: "cfg-5",
       name: "Existing Store",
       storageStrategy: "AWS",
-      accessKey: "AKIAOLD",
-      secretKey: "secretold",
       cloudStorageRegionEndPoint: "us-east-1",
-      connectionString: null,
       host: null,
       port: null,
       userName: null,
-      password: null,
       remoteBasePath: null,
     } as unknown as IStorageConfiguration;
     renderModal({ configuration });
@@ -140,8 +136,7 @@ describe("SaveStorageConfiguration", () => {
     await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
     // An update carries nothing but the settings it is allowed to change plus what identifies the
     // configuration being changed. The name, the provider and its credentials must not reach the
-    // wire at all - the server discards them, and the only value the client holds for a secret is
-    // the masked one the read endpoint gave it.
+    // wire at all - the server ignores them, and the read endpoint never returns a secret.
     const payload = h.mutateAsync.mock.calls[0][0];
     expect(Object.keys(payload).sort()).toEqual([
       "downloadUrlExpirySeconds",
@@ -212,14 +207,10 @@ describe("SaveStorageConfiguration", () => {
         itemId: "cfg-5",
         name: "Existing Store",
         storageStrategy: "AWS",
-        accessKey: "AKIAOLD",
-        secretKey: "secretold",
         cloudStorageRegionEndPoint: "us-east-1",
-        connectionString: null,
         host: null,
         port: null,
         userName: null,
-        password: null,
         remoteBasePath: null,
         uploadUrlExpirySeconds: 900,
         downloadUrlExpirySeconds: 120,
@@ -292,14 +283,10 @@ describe("SaveStorageConfiguration", () => {
         itemId: "cfg-9",
         name: "Existing Store",
         storageStrategy: "Azure",
-        accessKey: null,
-        secretKey: null,
         cloudStorageRegionEndPoint: null,
-        connectionString: "conn-string",
         host: null,
         port: null,
         userName: null,
-        password: null,
         remoteBasePath: null,
         // Deliberately different from the Add-mode defaults (600 / 300 / 5 MB / none) this instance
         // was first mounted with, so the assertions below can tell a synced form from a stale one.

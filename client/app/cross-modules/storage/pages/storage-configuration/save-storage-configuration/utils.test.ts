@@ -177,9 +177,9 @@ describe("storageConfigurationFormSchema", () => {
 
 describe("buildStorageConfigurationFormSchema(true) - edit mode", () => {
   // The provider identity/credential fields are hidden (not rendered) in the edit-mode form, so
-  // validating them would fail silently with no way for the user to see or fix the error. A real
-  // GET response can also return these masked or null for a provider that doesn't use them, which
-  // must never block saving a Phase 1 field change.
+  // validating them would fail silently with no way for the user to see or fix the error. The GET
+  // response never returns a secret, so these are always empty in edit mode, which must never block
+  // saving a Phase 1 field change.
   const editSchema = buildStorageConfigurationFormSchema(true);
 
   it("accepts missing AWS credentials", () => {
@@ -225,9 +225,12 @@ describe("buildStorageConfigurationFormSchema(true) - edit mode", () => {
 describe("toStorageConfigurationFormValues", () => {
   const baseConfiguration: IStorageConfiguration = {
     storageStrategy: "Azure",
-    accessKey: null,
+    connectionStringStatus: "active",
+    secretKeyStatus: "none",
+    accessKeyStatus: "none",
+    passwordStatus: "none",
+    sftpSecretKeyStatus: "none",
     cloudStorageRegionEndPoint: null,
-    connectionString: "conn",
     createdBy: "me",
     createdDate: "2024-01-01",
     itemId: "cfg-1",
@@ -235,12 +238,10 @@ describe("toStorageConfigurationFormValues", () => {
     lastUpdatedDate: "2024-01-02",
     name: "azure-store",
     organizationIds: [],
-    secretKey: null,
     tags: [],
     host: null,
     port: null,
     userName: null,
-    password: null,
     remoteBasePath: null,
   };
 

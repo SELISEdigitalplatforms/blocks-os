@@ -52,6 +52,28 @@ describe("StorageDetailsDrawer", () => {
     expect(screen.getByText("SFTP")).toBeTruthy();
   });
 
+  it("shows each provider secret by status only, with a repair hint when it is broken", () => {
+    render(
+      <StorageDetailsDrawer
+        open
+        onOpenChange={vi.fn()}
+        storage={storage({
+          storageStrategy: "SftpStorage",
+          passwordStatus: "active",
+          sftpSecretKeyStatus: "archived",
+        })}
+      />,
+    );
+    expect(screen.getByText("Password")).toBeTruthy();
+    expect(screen.getByText("Set")).toBeTruthy();
+    expect(screen.getByText("Archived")).toBeTruthy();
+    expect(
+      screen.getByText("Delete this configuration and add it again with a new secret."),
+    ).toBeTruthy();
+    // Only the secrets the provider uses are listed.
+    expect(screen.queryByText("Connection String")).toBeNull();
+  });
+
   it("closes the drawer when the close button is clicked", async () => {
     const onOpenChange = vi.fn();
     const user = userEvent.setup();

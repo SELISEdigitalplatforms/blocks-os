@@ -94,7 +94,8 @@ public class DatabaseRoutingTests
         var encoding = new Mock<IEncodingService>();
         encoding.Setup(e => e.EncodeToBase26Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>())).ReturnsAsync("abc");
         var dataGatewayRoot = new Mock<IDataGatewayRootProvisioner>();
-        var repository = new ProjectRepository(provider.Object, new ConfigurationBuilder().Build(), secret, encoding.Object, dataGatewayRoot.Object, new XUnitTest.TestHelpers.PassThroughOsDataAccess());
+        var storageSeedCopier = new Mock<IStorageConfigurationSeedCopier>();
+        var repository = new ProjectRepository(provider.Object, new ConfigurationBuilder().Build(), secret, encoding.Object, dataGatewayRoot.Object, new XUnitTest.TestHelpers.PassThroughOsDataAccess(), storageSeedCopier.Object);
         var tenant = new Tenant
         {
             TenantId = "new-stg", TenantGroupId = "group", Environment = "stg", Name = "Placement test",
@@ -111,7 +112,10 @@ public class DatabaseRoutingTests
         Assert.Contains("Repos", writes);
         Assert.Contains("Roles", writes);
         Assert.Contains("Permissions", writes);
-        Assert.Contains("StorageConfigurations", writes);
+        // Storage configurations are not copied raw (the seed's secret ids belong to the root tenant): the copier
+        // reads the seed on main and writes to the stored placement.
+        Assert.DoesNotContain("StorageConfigurations", writes);
+        storageSeedCopier.Verify(c => c.CopyAsync(source.Object, target.Object, It.IsAny<string?>(), "new-stg"), Times.Once);
         Assert.Contains("create:Roles", writes);
         Assert.Contains("index:Roles", writes);
         registry.Verify(c => c.InsertOneAsync(tenant, null, default), Times.Once);

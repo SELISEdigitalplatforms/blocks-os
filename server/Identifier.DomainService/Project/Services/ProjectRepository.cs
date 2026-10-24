@@ -23,6 +23,7 @@ namespace DomainService.Projects
         private readonly IMongoDatabase _clientDb;
         private readonly IDataGatewayRootProvisioner _dataGatewayRoot;
         private readonly IOsDataAccess _dataAccess;
+        private readonly IStorageConfigurationSeedCopier _storageSeedCopier;
 
         private const string _projectStatusTraceCollectionName = "ProjectStatusTracers";
         private const string _legacyDefaultUserRoleSlug = "user";
@@ -35,9 +36,11 @@ namespace DomainService.Projects
                                  IBlocksSecret blocksSecret,
                                  IEncodingService urlEncodingService,
                                  IDataGatewayRootProvisioner dataGatewayRoot,
-                                 IOsDataAccess dataAccess)
+                                 IOsDataAccess dataAccess,
+                                 IStorageConfigurationSeedCopier storageSeedCopier)
         {
             _dataAccess = dataAccess;
+            _storageSeedCopier = storageSeedCopier;
             _dbContextProvider = dbContextProvider;
             _blocksSecret = blocksSecret;
             _configuration = configuration;
@@ -433,7 +436,8 @@ namespace DomainService.Projects
             await Task.WhenAll(
                 CopyDocumentAsync(sourceDatabase, consumerDb, "MailServerConfigurations", project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "EmailTemplates", project),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "StorageConfigurations", project),
+                // Settings rows + the project's own secrets, not a raw copy (the seed's secret ids belong to the root tenant).
+                CopyStorageConfigurationsAsync(sourceDatabase, consumerDb, project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "BlocksLanguages", project),
                 // The remaining localization collections (UilmFiles, BlocksLanguageModules,
                 // BlocksLanguageKeys) are deliberately not seeded here. DataCleanupAsync still
@@ -452,6 +456,10 @@ namespace DomainService.Projects
                 _dataGatewayRoot.EnsureAsync(project.TenantId, project.CreatedBy));
 
         }
+
+        /// <summary>The seed's storage secrets live in the root tenant (config <c>RootTenantId</c>).</summary>
+        private Task CopyStorageConfigurationsAsync(IMongoDatabase sourceDb, IMongoDatabase targetDb, Tenant project) =>
+            _storageSeedCopier.CopyAsync(sourceDb, targetDb, _configuration["RootTenantId"], project.TenantId);
 
         /// <summary>
         /// Copies the system entity schemas (IAM, OS, Logic, Release, Monitor) of the seed into the project, unchanged:
