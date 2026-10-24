@@ -12,7 +12,8 @@ export interface IOidcConfig {
   lastUpdatedBy: string;
   organizationIds: string[];
   tags: string[];
-  clientSecret: string;
+  /** Never returned by the list or detail API. Shown once on create and on rotate only. */
+  clientSecret?: string | null;
   redirectUris?: string[];
   redirectUri?: string;
   scope: string;
@@ -87,6 +88,13 @@ export interface ISaveOidcCredentialResponse {
   allowedResponseTypes: string[];
   allowedServiceAccessResources?: string[];
   clientDisplayName: string;
+}
+
+/** Top-level fields of the save response body (it is not wrapped in `data`). */
+export interface ISaveOidcCredentialResult {
+  itemId?: string | null;
+  /** Set on create only (not for device-flow clients): the one time the new secret is returned. */
+  clientSecret?: string | null;
 }
 
 export interface IOidcUiThemePalette {
@@ -251,7 +259,8 @@ export interface IGetClientsPayload {
 export interface IClientCredentialsConfig {
   itemId: string;
   name: string;
-  clientSecret: string;
+  /** Never returned by the list API. Shown once on create and on rotate only. */
+  clientSecret?: string | null;
   accessTokenValidForNumberMinutes: number;
   roles: string[];
   permissions: string[];
@@ -289,6 +298,9 @@ export interface ISaveClientCredentialResponse {
   roles: string[];
   permissions: string[];
   isSuccess: boolean;
+  /** Set on create only: the one time the new secret is returned. */
+  clientSecret?: string | null;
+  errors?: Record<string, string>;
 }
 
 export interface TabValue {
@@ -305,6 +317,12 @@ export interface IDeleteOidcClientResponse {
     additionalProp3: string;
   };
   isSuccess: boolean;
+}
+
+export interface IRotateClientCredentialSecretResponse {
+  isSuccess: boolean;
+  clientSecret?: string | null;
+  errors?: Record<string, string>;
 }
 
 export interface IRotateOidcClientSecretPayload {

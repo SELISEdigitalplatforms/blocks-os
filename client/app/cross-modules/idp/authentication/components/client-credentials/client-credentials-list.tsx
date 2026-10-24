@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ChevronRight, KeyRound, Pencil, Power, PowerOff, Trash2 } from "lucide-react";
+import { ChevronRight, KeyRound, Pencil, Power, PowerOff, RotateCw, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
@@ -32,13 +32,16 @@ import {
 } from "@blocks-idp/authentication/models/auth.oidc.model";
 import {
   useDeleteAuthClient,
+  useRotateAuthClientSecret,
   useSaveAuthClient,
 } from "@blocks-idp/authentication/hooks/use-auth-clients";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { format } from "date-fns";
 import { KVDetailItem } from "../kv-detail-item";
+import { OneTimeSecret, OneTimeSecretDialog } from "../one-time-secret-dialog";
 
 const SKELETON_ROWS = 3;
+const GENERIC_ERROR = "Something went wrong";
 
 const getBackendErrorMap = (response: unknown) => {
   if (!response || typeof response !== "object") return undefined;
@@ -95,11 +98,16 @@ const ClientCredentialRow = ({
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showRotateDialog, setShowRotateDialog] = useState(false);
+  const [rotatedSecret, setRotatedSecret] = useState<OneTimeSecret | null>(null);
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync: saveClient, isPending: isUpdating } = useSaveAuthClient({
     projectKey: tenantId,
   });
   const { mutateAsync: deleteClient, isPending: isDeleting } = useDeleteAuthClient({
+    projectKey: tenantId,
+  });
+  const { mutateAsync: rotateSecret, isPending: isRotating } = useRotateAuthClientSecret({
     projectKey: tenantId,
   });
 
@@ -129,7 +137,27 @@ const ClientCredentialRow = ({
       setShowStatusDialog(false);
     } catch (err) {
       if (isErrorWithErrors(err)) return showErrorToast({ errors: err.errors });
-      showErrorToast({ errors: "Something went wrong" });
+      showErrorToast({ errors: GENERIC_ERROR });
+    }
+  };
+
+  const handleConfirmRotate = async () => {
+    try {
+      const res = await rotateSecret({ itemId: item.itemId });
+      if (res?.isSuccess && res.clientSecret) {
+        setShowRotateDialog(false);
+        setRotatedSecret({
+          label: item.name,
+          clientId: item.itemId,
+          clientSecret: res.clientSecret,
+          reason: "rotated",
+        });
+        showSuccessToast({ description: "Client secret rotated successfully" });
+      } else {
+        showErrorToast({ errors: getBackendErrorMap(res) ?? "Failed to rotate secret." });
+      }
+    } catch (err) {
+      showErrorToast({ errors: isErrorWithErrors(err) ? err.errors : GENERIC_ERROR });
     }
   };
 
@@ -144,7 +172,7 @@ const ClientCredentialRow = ({
       setShowDeleteDialog(false);
     } catch (err) {
       if (isErrorWithErrors(err)) return showErrorToast({ errors: err.errors });
-      showErrorToast({ errors: "Something went wrong" });
+      showErrorToast({ errors: GENERIC_ERROR });
     }
   };
 
@@ -155,12 +183,14 @@ const ClientCredentialRow = ({
     sensitive?: boolean;
   }[] = [
     { key: "Client Id", value: item.itemId ?? "", copyable: true },
-    { key: "Client Secret", value: item.clientSecret ?? "", sensitive: true },
+    // The API never returns the secret. It is shown once on create and on rotate.
+    { key: "Client Secret", value: "Hidden. Rotate the secret to get a new one." },
     // Shown even when it is the tenant-wide "default", because that is the most privileged
     // scope a credential can have and is worth seeing rather than inferring from an absence.
     {
       key: "Organization",
-      value: item.organizationId === "default" ? "Default (tenant-wide)" : (item.organizationId ?? ""),
+      value:
+        item.organizationId === "default" ? "Default (tenant-wide)" : (item.organizationId ?? ""),
     },
     { key: "Token Lifetime", value: formatLifetime(item.accessTokenValidForNumberMinutes) },
     { key: "Role(s)", value: item.roles?.length ? item.roles.join(", ") : "" },
@@ -176,7 +206,8 @@ const ClientCredentialRow = ({
           expanded ? "border-b-0" : "border-b-2 border-border",
           !isActive && "opacity-75",
         )}
-        onClick={() => setExpanded((e) => !e)}>
+        onClick={() => setExpanded((e) => !e)}
+      >
         <TableCell className="w-8 py-3.5 pl-4">
           <ChevronRight
             className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
@@ -205,7 +236,8 @@ const ClientCredentialRow = ({
         <TableCell className="hidden py-3.5 sm:table-cell">
           <Badge
             variant="outline"
-            className="w-fit gap-1.5 border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis">
+            className="w-fit gap-1.5 border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis"
+          >
             <span
               className={cn(
                 "h-1.5 w-1.5 shrink-0 rounded-full",
@@ -228,13 +260,29 @@ const ClientCredentialRow = ({
                     size="sm"
                     className="h-7 w-7 p-0"
                     aria-label="Edit client credential"
-                    onClick={() => onEdit(item)}>
+                    onClick={() => onEdit(item)}
+                  >
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Edit</TooltipContent>
               </Tooltip>
             )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
+                  aria-label="Rotate client secret"
+                  onClick={() => setShowRotateDialog(true)}
+                  disabled={isRotating}
+                >
+                  <RotateCw className={cn("h-3.5 w-3.5", isRotating && "animate-spin")} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Rotate Secret</TooltipContent>
+            </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -248,7 +296,8 @@ const ClientCredentialRow = ({
                   )}
                   aria-label={isActive ? "Disable client credential" : "Enable client credential"}
                   onClick={() => setShowStatusDialog(true)}
-                  disabled={isUpdating}>
+                  disabled={isUpdating}
+                >
                   {isActive ? (
                     <Power className="h-3.5 w-3.5" />
                   ) : (
@@ -267,7 +316,8 @@ const ClientCredentialRow = ({
                   className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                   aria-label="Delete client credential"
                   onClick={() => setShowDeleteDialog(true)}
-                  disabled={isDeleting}>
+                  disabled={isDeleting}
+                >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </TooltipTrigger>
@@ -307,13 +357,13 @@ const ClientCredentialRow = ({
             <DialogDescription>
               {willEnable ? (
                 <>
-                  <strong>{item.name}</strong> will be able to obtain new tokens again. Are you
-                  sure you want to enable it?
+                  <strong>{item.name}</strong> will be able to obtain new tokens again. Are you sure
+                  you want to enable it?
                 </>
               ) : (
                 <>
-                  <strong>{item.name}</strong> will no longer be able to obtain new tokens. Are
-                  you sure you want to disable it?
+                  <strong>{item.name}</strong> will no longer be able to obtain new tokens. Are you
+                  sure you want to disable it?
                 </>
               )}
             </DialogDescription>
@@ -323,14 +373,16 @@ const ClientCredentialRow = ({
               variant="outline"
               size="sm"
               onClick={() => setShowStatusDialog(false)}
-              disabled={isUpdating}>
+              disabled={isUpdating}
+            >
               Cancel
             </Button>
             <Button
               variant={willEnable ? "default" : "destructive"}
               size="sm"
               onClick={handleConfirmStatusChange}
-              disabled={isUpdating}>
+              disabled={isUpdating}
+            >
               {isUpdating
                 ? willEnable
                   ? "Enabling…"
@@ -342,6 +394,33 @@ const ClientCredentialRow = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={showRotateDialog} onOpenChange={setShowRotateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rotate client secret</DialogTitle>
+            <DialogDescription>
+              A new secret will be made for <strong>{item.name}</strong>. The current secret stops
+              working at once, so every service that uses it must be updated.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowRotateDialog(false)}
+              disabled={isRotating}
+            >
+              Cancel
+            </Button>
+            <Button size="sm" onClick={handleConfirmRotate} disabled={isRotating}>
+              {isRotating ? "Rotating…" : "Rotate Secret"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <OneTimeSecretDialog secret={rotatedSecret} onClose={() => setRotatedSecret(null)} />
 
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
@@ -357,14 +436,16 @@ const ClientCredentialRow = ({
               variant="outline"
               size="sm"
               onClick={() => setShowDeleteDialog(false)}
-              disabled={isDeleting}>
+              disabled={isDeleting}
+            >
               Cancel
             </Button>
             <Button
               variant="destructive"
               size="sm"
               onClick={handleConfirmDelete}
-              disabled={isDeleting}>
+              disabled={isDeleting}
+            >
               {isDeleting ? "Deleting…" : "Delete"}
             </Button>
           </DialogFooter>
@@ -450,7 +531,7 @@ export const ClientCredentialList = ({ data, isLoading, onEdit }: ClientCredenti
               <TableHead className="hidden w-40 text-xs font-semibold uppercase tracking-wide text-high-emphasis md:table-cell">
                 Created On
               </TableHead>
-              <TableHead className="w-28" />
+              <TableHead className="w-36" />
             </TableRow>
           </TableHeader>
           <TableBody className="[&_tr:last-child]:border-b">

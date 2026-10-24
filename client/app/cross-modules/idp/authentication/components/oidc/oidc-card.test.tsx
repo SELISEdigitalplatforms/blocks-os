@@ -62,6 +62,12 @@ const renderCard = (item = makeItem()) =>
 describe("OIDCCard", () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it("never renders a secret that the item somehow carries", () => {
+    renderCard();
+    expect(screen.queryByText(/sek-ret/)).toBeNull();
+    expect(screen.getByText("Hidden. Rotate the secret to get a new one.")).toBeTruthy();
+  });
+
   it("renders the client label, id and detail rows expanded", () => {
     renderCard();
     expect(screen.getAllByText("Portal").length).toBeGreaterThan(0);

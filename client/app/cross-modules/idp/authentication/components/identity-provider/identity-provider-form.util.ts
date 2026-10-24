@@ -105,7 +105,8 @@ export const buildIdentityProviderPayload = ({
     return {
       ...editedProvider,
       ...sharedFields,
-      clientSecret: values.clientSecret || editedProvider.clientSecret,
+      // The API never returns the stored secret. Empty keeps it; a typed value replaces it.
+      clientSecret: values.clientSecret,
       isActive: editedProvider.isActive,
       itemId: editId ?? editedProvider.itemId,
     };

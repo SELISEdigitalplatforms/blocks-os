@@ -11,6 +11,7 @@ import {
   IRotateOidcClientSecretResponse,
   ISaveOidcCredentialPayload,
   ISaveOidcCredentialResponse,
+  ISaveOidcCredentialResult,
   IOidcUiTemplate,
   ISaveOidcUiTemplateResponse,
 } from "@blocks-idp/authentication/models/auth.oidc.model";
@@ -31,7 +32,7 @@ export class AuthOidc {
 
   saveOidcCredential(
     payload: ISaveOidcCredentialPayload,
-  ): Promise<APIResponse<ISaveOidcCredentialResponse>> {
+  ): Promise<APIResponse<ISaveOidcCredentialResponse> & ISaveOidcCredentialResult> {
     return http.post(AUTH_OIDC_ENDPOINTS.SAVE_OIDC_CLIENT, payload, undefined, {
       absoluteUrl: true,
     });

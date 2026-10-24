@@ -46,6 +46,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui-kits/radio-group/rad
 import { Button } from "@/components/ui-kits/button/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
 import { isErrorWithErrors } from "@/lib/error";
+import { OneTimeSecret, OneTimeSecretDialog } from "../one-time-secret-dialog";
 
 const APPLICATION_TYPE_OPTIONS: { value: ApplicationType; id: string; label: string }[] = [
   { value: "web", id: "applicationType-web", label: "Web application" },
@@ -96,6 +97,7 @@ type CreateOIDCProps = {
 
 export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCProps) => {
   const [open, setOpen] = useState<boolean>(false);
+  const [createdSecret, setCreatedSecret] = useState<OneTimeSecret | null>(null);
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useSaveAuthOidc();
   // Guards against a second POST while a save is still in flight (C12).
@@ -269,6 +271,15 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
         ? "OIDC Client updated successfully"
         : "OIDC Client created successfully";
       showSuccessToast({ description: message });
+      // Create is the only time the API returns the secret; list and get never do.
+      if (!isEditMode && res.clientSecret) {
+        setCreatedSecret({
+          label: data.clientDisplayName || res.itemId || "",
+          clientId: res.itemId ?? "",
+          clientSecret: res.clientSecret,
+          reason: "created",
+        });
+      }
       form.reset();
       setOpen(false);
     } catch (error) {
@@ -284,6 +295,8 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
+      {/* Its own dialog: it stays open after this form closes. */}
+      <OneTimeSecretDialog secret={createdSecret} onClose={() => setCreatedSecret(null)} />
       {isEditMode ? (
         <Tooltip>
           <TooltipTrigger asChild>

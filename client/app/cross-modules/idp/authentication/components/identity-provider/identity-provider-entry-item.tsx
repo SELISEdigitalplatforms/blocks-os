@@ -86,7 +86,8 @@ export function ProviderEntryItem({ item, defaultExpanded = false }: ProviderEnt
     sensitive?: boolean;
   }[] = [
     { key: "Client Id", value: item.clientId ?? "", copyable: true },
-    { key: "Client Secret", value: item.clientSecret ?? "", sensitive: true },
+    // The API never returns the secret. Edit the provider to replace it.
+    { key: "Client Secret", value: "Hidden. Edit the provider to replace it." },
     { key: "Issuer URL", value: item.issuer ?? "", copyable: true },
     {
       key: "Authorization URL",

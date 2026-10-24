@@ -40,6 +40,7 @@ import { ClientCredentialRolesSection } from "./client-credential-roles-section"
 import { ClientCredentialPermissionsSection } from "./client-credential-permissions-section";
 import { useGetOrganizationConfig } from "@blocks-idp/iam/hooks/use-organization";
 import { OrganizationCombobox } from "@blocks-idp/iam/components/organization-combobox";
+import { OneTimeSecret, OneTimeSecretDialog } from "../one-time-secret-dialog";
 
 const MAX_PERMISSIONS = 10;
 
@@ -76,6 +77,7 @@ export const CreateClientCredential = ({
   hideTrigger = false,
 }: CreateClientCredentialProps) => {
   const [internalOpen, setInternalOpen] = useState<boolean>(false);
+  const [createdSecret, setCreatedSecret] = useState<OneTimeSecret | null>(null);
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
   const setOpen = (v: boolean) => {
@@ -171,6 +173,15 @@ export const CreateClientCredential = ({
           ? "Client credential updated successfully"
           : "Client credential created successfully",
       });
+      // Create is the only time the API returns the secret; the list never does.
+      if (!isEdit && res.clientSecret) {
+        setCreatedSecret({
+          label: data.clientNameService,
+          clientId: res.itemId,
+          clientSecret: res.clientSecret,
+          reason: "created",
+        });
+      }
       reset();
       setOpen(false);
     } catch (error) {
@@ -181,6 +192,8 @@ export const CreateClientCredential = ({
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
+      {/* Its own dialog: it stays open after this form closes. */}
+      <OneTimeSecretDialog secret={createdSecret} onClose={() => setCreatedSecret(null)} />
       {!hideTrigger && (
         <DialogTrigger asChild>
           <Button size="sm">
