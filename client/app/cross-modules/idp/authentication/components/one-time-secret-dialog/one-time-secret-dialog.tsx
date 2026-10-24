@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui-kits/button/button";
-import { MaskedText } from "@/components/masked-text/masked-text";
+import { maskId } from "../../utils/mask-id.util";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button/copy-to-clipboard-button";
 import {
   Dialog,
@@ -60,10 +60,8 @@ export function OneTimeSecretDialog({ secret, onClose }: Readonly<OneTimeSecretD
           <div className="space-y-1">
             <span className="text-sm font-medium">Client ID</span>
             <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
-              <code className="min-w-0 flex-1 font-mono text-sm">
-                {secret?.clientId ? (
-                  <MaskedText text={secret.clientId} length={20} showFirstN={4} showLastN={4} />
-                ) : null}
+              <code className="min-w-0 flex-1 break-all font-mono text-sm">
+                {maskId(secret?.clientId)}
               </code>
               {secret?.clientId && (
                 <CopyToClipboardButton textToCopy={secret.clientId} label="Copy client ID">

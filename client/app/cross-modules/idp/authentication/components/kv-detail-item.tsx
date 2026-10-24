@@ -1,6 +1,7 @@
 import { MouseEvent, useState } from "react";
 import { Check, Copy, Eye, EyeOff } from "lucide-react";
 import { MaskedText } from "@/components/masked-text";
+import { maskId } from "../utils/mask-id.util";
 import { Button } from "@/components/ui-kits/button/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
 
@@ -14,8 +15,6 @@ interface KVDetailItemProps {
 }
 
 const SENSITIVE_MASK_LENGTH = 30;
-const MASKED_LENGTH = 20;
-const MASKED_VISIBLE = 4;
 
 const copyTextToClipboard = async (text: string) => {
   if (navigator.clipboard && window.isSecureContext) {
@@ -122,17 +121,8 @@ export const KVDetailItem = ({
       );
     }
 
-    const shown = masked ? (
-      <span className="text-high-emphasis">
-        <MaskedText
-          text={value}
-          length={MASKED_LENGTH}
-          showFirstN={MASKED_VISIBLE}
-          showLastN={MASKED_VISIBLE}
-        />
-      </span>
-    ) : (
-      <span className="break-all text-high-emphasis">{value}</span>
+    const shown = (
+      <span className="break-all text-high-emphasis">{masked ? maskId(value) : value}</span>
     );
 
     if (!copyable) {

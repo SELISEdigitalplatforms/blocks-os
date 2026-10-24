@@ -29,7 +29,7 @@ import {
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { CreateOIDC } from "../create-oidc/create-oidc";
 import { KVDetailItem } from "../kv-detail-item";
-import { MaskedText } from "@/components/masked-text/masked-text";
+import { maskId } from "../../utils/mask-id.util";
 import { OneTimeSecret, OneTimeSecretDialog } from "../one-time-secret-dialog";
 
 interface OIDCRowProps {
@@ -106,7 +106,7 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
   ].filter((pair) => pair.value);
 
   const clientLabel = useMemo(
-    () => item.clientDisplayName || item.itemId,
+    () => item.clientDisplayName || maskId(item.itemId),
     [item.clientDisplayName, item.itemId],
   );
 
@@ -227,9 +227,9 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
               <p className="truncate text-sm font-medium">
                 {item.clientDisplayName || "OIDC client"}
               </p>
-              <div className="truncate font-mono text-xs text-muted-foreground">
-                <MaskedText text={item.itemId} length={20} showFirstN={4} showLastN={4} />
-              </div>
+              <p className="truncate font-mono text-xs text-muted-foreground">
+                {maskId(item.itemId)}
+              </p>
             </div>
           </div>
         </TableCell>

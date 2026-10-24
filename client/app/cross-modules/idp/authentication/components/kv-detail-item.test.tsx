@@ -108,8 +108,7 @@ describe("KVDetailItem", () => {
 
     render(<KVDetailItem label="Client Id" value="abcd-1234-5678-wxyz" copyable masked />);
     expect(screen.queryByText("abcd-1234-5678-wxyz")).toBeNull();
-    expect(screen.getByText("abcd")).toBeTruthy();
-    expect(screen.getByText("wxyz")).toBeTruthy();
+    expect(screen.getByText("abcd********wxyz")).toBeTruthy();
     expect(screen.queryByLabelText("Show value")).toBeNull();
     await user.click(screen.getByLabelText("Copy value"));
 

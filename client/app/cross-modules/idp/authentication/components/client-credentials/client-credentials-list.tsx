@@ -22,7 +22,7 @@ import {
   TableRow,
 } from "@/components/ui-kits/table/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
-import { MaskedText } from "@/components/masked-text/masked-text";
+import { maskId } from "../../utils/mask-id.util";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { cn } from "@/lib/utils";
@@ -226,9 +226,9 @@ const ClientCredentialRow = ({
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">{item.name}</p>
-              <div className="truncate font-mono text-xs text-muted-foreground">
-                <MaskedText text={item.itemId ?? ""} length={20} showFirstN={4} showLastN={4} />
-              </div>
+              <p className="truncate font-mono text-xs text-muted-foreground">
+                {maskId(item.itemId)}
+              </p>
             </div>
           </div>
         </TableCell>

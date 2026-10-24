@@ -53,6 +53,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
 import { isErrorWithErrors } from "@/lib/error";
 import { OneTimeSecret, OneTimeSecretDialog } from "../one-time-secret-dialog";
+import { maskId } from "../../utils/mask-id.util";
 
 const APPLICATION_TYPE_OPTIONS: { value: ApplicationType; id: string; label: string }[] = [
   { value: "web", id: "applicationType-web", label: "Web application" },
@@ -443,7 +444,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
       // Create is the only time the API returns the secret; list and get never do.
       if (!isEditMode && res.clientSecret) {
         setCreatedSecret({
-          label: data.clientDisplayName || res.itemId || "",
+          label: data.clientDisplayName || maskId(res.itemId),
           clientId: res.itemId ?? "",
           clientSecret: res.clientSecret,
           reason: "created",
