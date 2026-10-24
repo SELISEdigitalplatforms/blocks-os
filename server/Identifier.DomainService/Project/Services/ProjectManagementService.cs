@@ -14,6 +14,7 @@ using Storage.DomainService.Enums;
 using StorageDriver;
 using System.Net.Http.Headers;
 using System.Security.Cryptography.X509Certificates;
+using Blocks.Genesis.Entities.Data;
 using Blocks.Genesis.Entities.Os;
 using Os.DataAccess.Notifications;
 

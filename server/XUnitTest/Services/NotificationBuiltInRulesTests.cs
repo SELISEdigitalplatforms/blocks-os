@@ -8,7 +8,6 @@ using Configuration.DomainService.Notification.Propagation;
 using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Shared.Services;
 using Configuration.DomainService.Shared.Utilities;
-using Configuration.DomainService.Storage.RequestModel;
 using FluentAssertions;
 using FluentValidation;
 using FluentValidation.Results;
@@ -54,7 +53,6 @@ namespace XUnitTest.Services
         private ConfigurationService Service() => new(
             _repo.Object,
             _validator.Object,
-            new Mock<IValidator<SaveStorageConfigurationRequest>>().Object,
             _messageClient.Object,
             _tenants.Object,
             NullLogger<ConfigurationService>.Instance);

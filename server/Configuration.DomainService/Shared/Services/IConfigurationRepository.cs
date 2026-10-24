@@ -22,17 +22,6 @@ namespace Configuration.DomainService.Shared.Services
 
         #endregion
 
-        #region Storage
-
-        public Task SaveStorageConfigurationAsync(StorageConfiguration configuration);
-        Task<StorageConfiguration> GetStorageConfigurationByNameAsync(string configurationName);
-        Task<List<StorageConfiguration>> GetAllStorageConfigurationsByDateAsync();
-        Task DeleteStorageConfigurationByNameAsync(string configurationName);
-        Task<StorageConfiguration> GetStorageConfigurationByIdAsync(string itemId);
-        Task<StorageConfiguration?> GetStorageConfigurationStrategyAsync(string storageStrategy);
-
-        #endregion
-
         #region Mail
 
         Task SaveMailConfigurationAsync(MailServerConfiguration configuration);

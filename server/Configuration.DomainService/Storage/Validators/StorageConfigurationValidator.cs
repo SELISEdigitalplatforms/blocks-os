@@ -1,4 +1,4 @@
-using Configuration.DomainService.Shared.Services;
+using Configuration.DomainService.Storage.Repositories;
 using Configuration.DomainService.Storage.RequestModel;
 using FluentValidation;
 using System.Text.RegularExpressions;
@@ -19,18 +19,17 @@ namespace Configuration.DomainService.Storage.Validators
         /// <summary>The only access modifiers <c>UploadCompletionRequiredFor</c> may name, matching blocks-data's <c>AccessModifierValidation</c>.</summary>
         private static readonly string[] AllowedUploadCompletionAccessModifiers = { "Public", "Private" };
 
-        private readonly IConfigurationRepository _configurationRepository;
+        private readonly IStorageConfigurationRepository _repository;
 
-        public StorageConfigurationValidator(IConfigurationRepository configurationRepository)
+        public StorageConfigurationValidator(IStorageConfigurationRepository repository)
         {
-            _configurationRepository = configurationRepository;
+            _repository = repository;
 
             // An update only ever changes the Phase 1 upload/verification settings below. The configuration
             // name, the provider identity and its credentials are fixed once a configuration exists -
-            // ConfigurationService.MappedIntoRepoConfigurationAsync discards them outright on an update - so
-            // requiring them here would only reject requests whose values are ignored anyway. It would also
-            // be impossible to satisfy: the read endpoint masks secrets before handing them to a client, and
-            // a masked Azure connection string ("D****...t") can never match the format rule below.
+            // StorageConfigurationService ignores them on an update - so requiring them here would only reject
+            // requests whose values are ignored anyway. It would also be impossible to satisfy: the read
+            // endpoint never returns a secret, only its status.
             When(config => config.UpdateRequest, () =>
             {
                 RuleFor(config => config.ItemId)
@@ -47,11 +46,9 @@ namespace Configuration.DomainService.Storage.Validators
                     .Cascade(CascadeMode.Stop)
                     .NotEmpty()
                     .NotNull()
-                    .WithMessage("Name must not be empty.");
-
-                RuleFor(config => config.ConnectionString)
-                .MustAsync(IsUniqueNameAsync)
-               .WithMessage("Name should be unique");
+                    .WithMessage("Name must not be empty.")
+                    .MustAsync(IsUniqueNameAsync)
+                    .WithMessage(StorageConfigurationMessages.NameNotUnique);
 
                 // Validate StorageStrategy
                 RuleFor(config => config.StorageStrategy)
@@ -184,11 +181,8 @@ namespace Configuration.DomainService.Storage.Validators
             return Regex.IsMatch(connectionString, pattern, RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(500));
         }
 
-        private async Task<bool> IsUniqueNameAsync(string name, CancellationToken cancellationToken)
-        {
-            var configuration = await _configurationRepository.GetStorageConfigurationByNameAsync(name);
-            return configuration == null;
-        }
+        private async Task<bool> IsUniqueNameAsync(string? name, CancellationToken cancellationToken) =>
+            await _repository.GetByNameAsync(name ?? string.Empty) is null;
     }
 }
 

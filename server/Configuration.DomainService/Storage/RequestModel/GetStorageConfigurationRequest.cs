@@ -1,5 +1,5 @@
 using Blocks.Genesis;
-using Blocks.Genesis.Entities.Data;
+using DomainService.Configuration;
 
 namespace Configuration.DomainService.Storage.RequestModel
 {
@@ -9,61 +9,62 @@ namespace Configuration.DomainService.Storage.RequestModel
     }
 
     /// <summary>
-    /// API shape of a storage configuration, exactly as the os API returned it before the entity
-    /// moved to Genesis: <c>UploadCompletionRequiredFor</c> stays a list of strings in JSON.
+    /// API shape of a storage configuration: its settings and, per secret, only a status (<c>none</c>, <c>active</c>,
+    /// <c>locked</c>, <c>archived</c>, <c>missing</c>, <c>unavailable</c>). Never a secret value or a masked value.
+    /// <c>UploadCompletionRequiredFor</c> stays a list of strings in JSON.
     /// </summary>
     public class StorageConfigurationResponse : BaseEntity
     {
-        public string Name { get; set; }
-        public string ConnectionString { get; set; }
-        public string SecretKey { get; set; }
-        public string AccessKey { get; set; }
-        public string StorageStrategy { get; set; }
-        public string CloudStorageRegionEndPoint { get; set; }
-        public string Host { get; set; }
-        public string Port { get; set; }
-        public string UserName { get; set; }
-        public string Password { get; set; }
-        public string RemoteBasePath { get; set; }
-        public string SftpSecretKey { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? StorageStrategy { get; set; }
+        public string? CloudStorageRegionEndPoint { get; set; }
+        public string? Host { get; set; }
+        public string? Port { get; set; }
+        public string? UserName { get; set; }
+        public string? RemoteBasePath { get; set; }
         public int? UploadUrlExpirySeconds { get; set; }
         public int? DownloadUrlExpirySeconds { get; set; }
         public long? MaxFileSizeInBytes { get; set; }
         public List<string>? UploadCompletionRequiredFor { get; set; }
 
-        public static StorageConfigurationResponse? From(StorageConfiguration? source)
+        public string ConnectionStringStatus { get; set; } = StorageSecretStatus.None;
+        public string SecretKeyStatus { get; set; } = StorageSecretStatus.None;
+        public string AccessKeyStatus { get; set; } = StorageSecretStatus.None;
+        public string PasswordStatus { get; set; } = StorageSecretStatus.None;
+        public string SftpSecretKeyStatus { get; set; } = StorageSecretStatus.None;
+
+        public static StorageConfigurationResponse From(StorageSettings settings, IReadOnlyDictionary<string, string> secretStatus)
         {
-            if (source is null)
-            {
-                return null;
-            }
+            ArgumentNullException.ThrowIfNull(settings);
+            ArgumentNullException.ThrowIfNull(secretStatus);
+
+            string Status(StorageSecretField field) =>
+                secretStatus.TryGetValue(field.Name, out var status) ? status : StorageSecretStatus.None;
 
             return new StorageConfigurationResponse
             {
-                ItemId = source.ItemId,
-                CreatedDate = source.CreatedDate,
-                LastUpdatedDate = source.LastUpdatedDate,
-                CreatedBy = source.CreatedBy,
-                Language = source.Language,
-                LastUpdatedBy = source.LastUpdatedBy,
-                OrganizationId = source.OrganizationId,
-                Tags = source.Tags,
-                Name = source.Name,
-                ConnectionString = source.ConnectionString,
-                SecretKey = source.SecretKey,
-                AccessKey = source.AccessKey,
-                StorageStrategy = source.StorageStrategy,
-                CloudStorageRegionEndPoint = source.CloudStorageRegionEndPoint,
-                Host = source.Host,
-                Port = source.Port,
-                UserName = source.UserName,
-                Password = source.Password,
-                RemoteBasePath = source.RemoteBasePath,
-                SftpSecretKey = source.SftpSecretKey,
-                UploadUrlExpirySeconds = source.UploadUrlExpirySeconds,
-                DownloadUrlExpirySeconds = source.DownloadUrlExpirySeconds,
-                MaxFileSizeInBytes = source.MaxFileSizeInBytes,
-                UploadCompletionRequiredFor = source.UploadCompletionRequiredFor?.Select(x => x.ToString()).ToList(),
+                ItemId = settings.ItemId ?? string.Empty,
+                CreatedDate = settings.CreatedDate,
+                LastUpdatedDate = settings.LastUpdatedDate,
+                CreatedBy = settings.CreatedBy,
+                LastUpdatedBy = settings.LastUpdatedBy,
+                OrganizationId = settings.OrganizationId ?? string.Empty,
+                Name = settings.Name,
+                StorageStrategy = settings.StorageStrategy,
+                CloudStorageRegionEndPoint = settings.CloudStorageRegionEndPoint,
+                Host = settings.Host,
+                Port = settings.Port,
+                UserName = settings.UserName,
+                RemoteBasePath = settings.RemoteBasePath,
+                UploadUrlExpirySeconds = settings.UploadUrlExpirySeconds,
+                DownloadUrlExpirySeconds = settings.DownloadUrlExpirySeconds,
+                MaxFileSizeInBytes = settings.MaxFileSizeInBytes,
+                UploadCompletionRequiredFor = settings.UploadCompletionRequiredFor?.ToList(),
+                ConnectionStringStatus = Status(StorageSecretFields.ConnectionString),
+                SecretKeyStatus = Status(StorageSecretFields.SecretKey),
+                AccessKeyStatus = Status(StorageSecretFields.AccessKey),
+                PasswordStatus = Status(StorageSecretFields.Password),
+                SftpSecretKeyStatus = Status(StorageSecretFields.SftpSecretKey),
             };
         }
     }

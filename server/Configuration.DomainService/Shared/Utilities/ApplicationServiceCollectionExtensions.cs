@@ -15,6 +15,9 @@ using Configuration.DomainService.Mail.Template.Validators;
 using Configuration.DomainService.Mail.Validators;
 using Configuration.DomainService.Storage.RequestModel;
 using Configuration.DomainService.Storage.Validators;
+using Configuration.DomainService.Storage.Repositories;
+using Configuration.DomainService.Storage.Services;
+using Blocks.Extension.DependencyInjection;
 using Configuration.DomainService.DataGateway.RequestModel;
 using Configuration.DomainService.DataGateway.Services;
 using Configuration.DomainService.DataGateway.Validators;
@@ -47,6 +50,11 @@ namespace Configuration.DomainService.Shared.Utilities
             serviceCollection.AddSingleton<IIntegrationConnectService, IntegrationConnectService>();
             serviceCollection.AddSingleton<IIamClient, IamClient>();
             serviceCollection.AddSingleton<IIntegrationRateLimiter, IntegrationRateLimiter>();
+
+            // Storage configurations: settings in KeyValueStores, secrets in SecretStore (blocks-data driver store).
+            serviceCollection.AddBlocksStorageConfiguration();
+            serviceCollection.AddSingleton<IStorageConfigurationRepository, StorageConfigurationRepository>();
+            serviceCollection.AddSingleton<IStorageConfigurationService, StorageConfigurationService>();
 
             // Scoped, unlike the services above: it depends on Blocks.Secrets' ISecretService/
             // ISecretAuditService/ISecretAuthorizationService, which are themselves Scoped

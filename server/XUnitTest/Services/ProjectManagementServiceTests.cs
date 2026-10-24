@@ -1499,7 +1499,7 @@ namespace XUnitTest.Services
                     .ReturnsAsync(new CompleteUploadResponse
                     {
                         IsSuccess = true,
-                        VerificationStatus = Storage.DomainService.Enums.FileVerificationStatus.Verified,
+                        VerificationStatus = Blocks.Genesis.Entities.Data.FileVerificationStatus.Verified,
                     });
             _storage.Setup(s => s.GetUrlForDownloadFileAsync(It.IsAny<GetFileRequest>()))
                     .ReturnsAsync(new FileResponse { IsSuccess = true, Url = "https://download/cert" });
@@ -1525,7 +1525,7 @@ namespace XUnitTest.Services
                     .ReturnsAsync(new CompleteUploadResponse
                     {
                         IsSuccess = true,
-                        VerificationStatus = Storage.DomainService.Enums.FileVerificationStatus.Rejected,
+                        VerificationStatus = Blocks.Genesis.Entities.Data.FileVerificationStatus.Rejected,
                         RejectionReason = "real_file_type_mismatch",
                     });
 

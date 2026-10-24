@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Blocks.Genesis;
 using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Shared.Services;
-using Configuration.DomainService.Storage.Entities;
 using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -249,30 +248,6 @@ namespace XUnitTest.Integration
         }
 
         [Fact]
-        public async Task Storage_SaveGetByIdByNameByStrategyAllAndDelete()
-        {
-            var tag = Guid.NewGuid().ToString("N");
-            var repo = NewRepository();
-            var strategy = "strat-" + tag;
-            var config = new StorageConfiguration
-            {
-                ItemId = "s-" + tag,
-                Name = "storage-" + tag,
-                StorageStrategy = strategy
-            };
-
-            await repo.SaveStorageConfigurationAsync(config);
-
-            (await repo.GetStorageConfigurationByIdAsync("s-" + tag))!.Name.Should().Be("storage-" + tag);
-            (await repo.GetStorageConfigurationByNameAsync("storage-" + tag))!.ItemId.Should().Be("s-" + tag);
-            (await repo.GetStorageConfigurationStrategyAsync(strategy))!.ItemId.Should().Be("s-" + tag);
-            (await repo.GetAllStorageConfigurationsByDateAsync()).Should().Contain(c => c.ItemId == "s-" + tag);
-
-            await repo.DeleteStorageConfigurationByNameAsync("storage-" + tag);
-            (await repo.GetStorageConfigurationByIdAsync("s-" + tag)).Should().BeNull();
-        }
-
-        [Fact]
         public async Task Mail_SaveGetByIdAllAndDelete()
         {
             var tag = Guid.NewGuid().ToString("N");
@@ -343,7 +318,9 @@ namespace XUnitTest.Integration
 
             await repo.UpsertAsync(config, c => c.ItemId == "g-" + tag, "StorageConfigurations");
 
-            (await repo.GetStorageConfigurationByIdAsync("g-" + tag))!.Name.Should().Be("generic-" + tag);
+            var stored = await _fixture.DbContextProvider.GetCollection<StorageConfiguration>("StorageConfigurations")
+                .Find(c => c.ItemId == "g-" + tag).FirstOrDefaultAsync();
+            stored.Name.Should().Be("generic-" + tag);
         }
     }
 }
