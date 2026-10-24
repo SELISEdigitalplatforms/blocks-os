@@ -259,6 +259,46 @@ namespace XUnitTest.Integration
         }
 
         [Fact]
+        public async Task GetProjectByIdAsync_SkipsDeletedRowWithSameTenantId()
+        {
+            var suffix = Guid.NewGuid().ToString("N");
+            using var _ = new IntegrationContext("ctx-" + suffix);
+            await _fixture.Collection<Tenant>("Tenants").InsertManyAsync(new[]
+            {
+                NewTenantRow("old-" + suffix, "tid-" + suffix, "Deleted", isDisabled: true),
+                NewTenantRow("new-" + suffix, "tid-" + suffix, "Live", isDisabled: false)
+            });
+
+            var result = await NewRepository().GetProjectByIdAsync("tid-" + suffix);
+
+            result.Should().NotBeNull();
+            result.ItemId.Should().Be("new-" + suffix);
+        }
+
+        [Fact]
+        public async Task GetProjectByIdAsync_OnlyDeletedRow_ReturnsNull()
+        {
+            var suffix = Guid.NewGuid().ToString("N");
+            using var _ = new IntegrationContext("ctx-" + suffix);
+            await _fixture.Collection<Tenant>("Tenants").InsertOneAsync(
+                NewTenantRow("old-" + suffix, "tid-" + suffix, "Deleted", isDisabled: true));
+
+            var result = await NewRepository().GetProjectByIdAsync("tid-" + suffix);
+
+            result.Should().BeNull();
+        }
+
+        private static Tenant NewTenantRow(string itemId, string tenantId, string name, bool isDisabled) => new()
+        {
+            ItemId = itemId,
+            TenantId = tenantId,
+            Name = name,
+            IsDisabled = isDisabled,
+            DbConnectionString = "x",
+            JwtTokenParameters = new JwtTokenParameters { IssueDate = DateTime.UtcNow, PrivateCertificatePassword = "p" }
+        };
+
+        [Fact]
         public async Task Users_GetByEmailListAndById()
         {
             var suffix = Guid.NewGuid().ToString("N");

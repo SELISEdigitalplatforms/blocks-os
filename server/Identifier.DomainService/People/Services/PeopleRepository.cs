@@ -206,7 +206,10 @@ namespace DomainService.People
 
         public async Task<Tenant> GetProjectByIdAsync(string tenantId)
         {
-            var filter = Builders<Tenant>.Filter.Eq(mc => mc.TenantId, tenantId);
+            // A deleted environment keeps its disabled row, and adding it back inserts a new row under
+            // the same TenantId, so only the live row may be read here.
+            var filter = Builders<Tenant>.Filter.Eq(mc => mc.TenantId, tenantId)
+                       & Builders<Tenant>.Filter.Ne(mc => mc.IsDisabled, true);
             return await _dbContextProvider.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName).Find(filter).FirstOrDefaultAsync();
         }
 
