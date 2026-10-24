@@ -1,11 +1,11 @@
 import { authenticationService } from "@blocks-idp/authentication/services/authentication.service";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-export const useGetAuthConfig = (options: { projectKey: string }) => {
+export const useGetAuthConfig = (options: { projectKey: string }, enabled = true) => {
   return useQuery({
     queryKey: ["authentication", "auth-config", options],
     queryFn: () => authenticationService.configuration.getConfig(options),
-    enabled: !!options.projectKey,
+    enabled: enabled && !!options.projectKey,
   });
 };
 

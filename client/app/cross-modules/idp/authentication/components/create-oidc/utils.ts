@@ -186,6 +186,41 @@ const parseMinutes = (raw: string): number | null => {
   return WHOLE_NUMBER.test(value) ? Number(value) : Number.NaN;
 };
 
+const MINUTES_PER_HOUR = 60;
+const MINUTES_PER_DAY = 1440;
+
+const plural = (count: number, unit: string) => `${count} ${unit}${count === 1 ? "" : "s"}`;
+
+/** 1440 -> "1 day", 90 -> "1 h 30 min", 45 -> "45 min". */
+export const formatMinutes = (minutes: number): string => {
+  if (minutes % MINUTES_PER_DAY === 0) return plural(minutes / MINUTES_PER_DAY, "day");
+  if (minutes % MINUTES_PER_HOUR === 0) return plural(minutes / MINUTES_PER_HOUR, "hour");
+  if (minutes > MINUTES_PER_HOUR) {
+    return `${Math.floor(minutes / MINUTES_PER_HOUR)} h ${minutes % MINUTES_PER_HOUR} min`;
+  }
+  return `${minutes} min`;
+};
+
+/** A project value the UI can show: a positive number, else undefined (not loaded or unset). */
+export const knownMinutes = (value: number | null | undefined): number | undefined =>
+  typeof value === "number" && value > 0 ? value : undefined;
+
+/**
+ * The line under a lifetime input: what an empty input falls back to, or what a typed value
+ * means in days/hours. Empty string for a value the schema rejects (its error is shown instead).
+ */
+export const describeTokenLifetime = (raw: string, projectMinutes?: number): string => {
+  const project = projectMinutes === undefined ? undefined : formatMinutes(projectMinutes);
+  const value = raw.trim();
+  if (value === "") {
+    return project ? `Uses project setting: ${project}.` : "Uses project setting.";
+  }
+  const minutes = Number(value);
+  if (!WHOLE_NUMBER.test(value) || minutes < 1) return "";
+  const own = `= ${formatMinutes(minutes)}`;
+  return project ? `${own} · project: ${project}` : own;
+};
+
 /**
  * The save payload's `tokenLifetimes`, or undefined when no lifetime input changed — then the
  * property is left out and the server keeps the stored values.

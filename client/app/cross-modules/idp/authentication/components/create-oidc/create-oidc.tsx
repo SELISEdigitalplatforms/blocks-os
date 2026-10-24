@@ -19,7 +19,7 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useRef, useState } from "react";
 import { useProjectStore } from "@seliseblocks/genesis-os";
-import { useFieldArray, useForm } from "react-hook-form";
+import { useFieldArray, useForm, type UseFormReturn } from "react-hook-form";
 import { Info, Plus, Pencil, X } from "lucide-react";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { ISaveOidcCredentialPayload } from "@blocks-idp/authentication/models/auth.oidc.model";
@@ -27,6 +27,9 @@ import {
   useGetAuthOidcCredential,
   useSaveAuthOidc,
 } from "@blocks-idp/authentication/hooks/use-auth-oidc";
+import { useGetAuthConfig } from "@blocks-idp/authentication/hooks/use-auth-config";
+import { normalizeAuthConfigResponse } from "@blocks-idp/settings/utils/normalize-auth-config";
+import type { ISettingsAuthConfig } from "@blocks-idp/settings/models/settings.model";
 import {
   ApplicationType,
   buildTokenLifetimesPayload,
@@ -34,7 +37,10 @@ import {
   CreateOIDCFormValues,
   createOidcSchema,
   deriveApplicationType,
+  describeTokenLifetime,
+  formatMinutes,
   getRedirectUriSchema,
+  knownMinutes,
   TOKEN_LIFETIME_LIMITS,
   type TokenLifetimeFormValues,
   tokenLifetimesToForm,
@@ -64,31 +70,188 @@ const REDIRECT_URI_PLACEHOLDER: Record<ApplicationType, string> = {
   mobile: "com.example.app://callback",
 };
 
+type ProjectLifetimeKey =
+  | "accessTokenValidForNumberMinutes"
+  | "refreshTokenValidForNumberMinutes"
+  | "absoluteRefreshTokenValidForNumberMinutes";
+
 const TOKEN_LIFETIME_FIELDS: {
   name: keyof TokenLifetimeFormValues;
   label: string;
+  shortLabel: string;
+  note: string;
   ariaLabel: string;
   max: number;
+  projectKey: ProjectLifetimeKey;
 }[] = [
   {
     name: "accessTokenLifetime",
-    label: "Access token (minutes)",
+    label: "Access token",
+    shortLabel: "Access",
+    note: "How long a sign-in stays valid before the app must refresh it. Shorter is safer.",
     ariaLabel: "Access token lifetime in minutes",
     max: TOKEN_LIFETIME_LIMITS.access.max,
+    projectKey: "accessTokenValidForNumberMinutes",
   },
   {
     name: "refreshTokenLifetime",
-    label: "Refresh token idle (minutes)",
+    label: "Refresh token – idle",
+    shortLabel: "Idle",
+    note: "Signs the user out after this long without using the app.",
     ariaLabel: "Refresh token idle lifetime in minutes",
     max: TOKEN_LIFETIME_LIMITS.refresh.max,
+    projectKey: "refreshTokenValidForNumberMinutes",
   },
   {
     name: "absoluteRefreshTokenLifetime",
-    label: "Refresh token maximum (minutes)",
+    label: "Refresh token – maximum",
+    shortLabel: "Maximum",
+    note: "Signs the user out after this time, even when active. At least the idle time.",
     ariaLabel: "Refresh token maximum lifetime in minutes",
     max: TOKEN_LIFETIME_LIMITS.refresh.max,
+    projectKey: "absoluteRefreshTokenValidForNumberMinutes",
   },
 ];
+
+type TokenLifetimeMode = "project" | "custom";
+
+const TOKEN_MODE_OPTIONS: { value: TokenLifetimeMode; id: string; label: string }[] = [
+  { value: "project", id: "tokenLifetimes-project", label: "Use project settings" },
+  { value: "custom", id: "tokenLifetimes-custom", label: "Custom for this client" },
+];
+
+const hasAnyLifetime = (values: TokenLifetimeFormValues) =>
+  Object.values(values).some((value) => value.trim() !== "");
+
+const modeForLifetimes = (values: TokenLifetimeFormValues): TokenLifetimeMode =>
+  hasAnyLifetime(values) ? "custom" : "project";
+
+const toProjectConfig = (raw: Parameters<typeof normalizeAuthConfigResponse>[0] | undefined) =>
+  raw ? normalizeAuthConfigResponse(raw) : undefined;
+
+const projectSummary = (config?: ISettingsAuthConfig) => {
+  if (!config) return "The values set for the whole project.";
+  const parts = TOKEN_LIFETIME_FIELDS.map((lifetime) => {
+    const minutes = knownMinutes(config[lifetime.projectKey]);
+    return minutes === undefined ? undefined : `${lifetime.shortLabel} ${formatMinutes(minutes)}`;
+  }).filter(Boolean);
+  return parts.length ? parts.join(" · ") : "The values set for the whole project.";
+};
+
+type TokenLifetimesSectionProps = {
+  form: UseFormReturn<CreateOIDCFormValues>;
+  mode: TokenLifetimeMode;
+  onModeChange: (mode: TokenLifetimeMode) => void;
+  projectConfig?: ISettingsAuthConfig;
+};
+
+/** Per-client token lifetimes: the project values, or this client's own values. */
+const TokenLifetimesSection = ({
+  form,
+  mode,
+  onModeChange,
+  projectConfig,
+}: Readonly<TokenLifetimesSectionProps>) => {
+  const handleModeChange = (next: TokenLifetimeMode) => {
+    onModeChange(next);
+    TOKEN_LIFETIME_FIELDS.forEach((lifetime) => {
+      // Custom starts from the project values; project clears this client's values.
+      const projectMinutes = knownMinutes(projectConfig?.[lifetime.projectKey]);
+      const startValue =
+        next === "custom" && projectMinutes !== undefined ? String(projectMinutes) : "";
+      const keepTyped = next === "custom" && form.getValues(lifetime.name).trim() !== "";
+      if (!keepTyped) {
+        form.setValue(lifetime.name, startValue, { shouldDirty: true, shouldValidate: true });
+      }
+    });
+  };
+
+  return (
+    <div className="space-y-2">
+      <FormLabel>Token lifetimes</FormLabel>
+      <RadioGroup
+        aria-label="Token lifetimes"
+        value={mode}
+        onValueChange={(value) => handleModeChange(value as TokenLifetimeMode)}
+      >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {TOKEN_MODE_OPTIONS.map((option) => (
+            <div
+              key={option.value}
+              className={`flex items-start gap-2 rounded-md border p-3 ${
+                mode === option.value ? "border-primary bg-primary/5" : "border-input"
+              }`}
+            >
+              <RadioGroupItem value={option.value} id={option.id} className="mt-0.5" />
+              <div className="space-y-1">
+                <Label htmlFor={option.id} className="cursor-pointer text-sm">
+                  {option.label}
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {option.value === "project"
+                    ? projectSummary(projectConfig)
+                    : "Set different values for this client only."}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </RadioGroup>
+      {mode === "custom" && (
+        <div className="rounded-md border px-3">
+          {TOKEN_LIFETIME_FIELDS.map((lifetime) => {
+            const projectMinutes = knownMinutes(projectConfig?.[lifetime.projectKey]);
+            return (
+              <FormField
+                key={lifetime.name}
+                control={form.control}
+                name={lifetime.name}
+                render={({ field, fieldState }) => (
+                  <FormItem className="grid grid-cols-1 gap-x-4 gap-y-2 space-y-0 border-b py-3 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_11rem]">
+                    <div className="space-y-1">
+                      <FormLabel>{lifetime.label}</FormLabel>
+                      <FormDescription className="text-xs">{lifetime.note}</FormDescription>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="relative">
+                        <FormControl>
+                          <Input
+                            type="number"
+                            inputMode="numeric"
+                            autoComplete="off"
+                            min={1}
+                            max={lifetime.max}
+                            step={1}
+                            placeholder="Project setting"
+                            aria-label={lifetime.ariaLabel}
+                            className="pr-11"
+                            {...field}
+                          />
+                        </FormControl>
+                        <span
+                          aria-hidden="true"
+                          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground"
+                        >
+                          min
+                        </span>
+                      </div>
+                      {!fieldState.error && (
+                        <p className="text-xs text-muted-foreground">
+                          {describeTokenLifetime(field.value, projectMinutes)}
+                        </p>
+                      )}
+                      <FormMessage className="text-xs" />
+                    </div>
+                  </FormItem>
+                )}
+              />
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
 
 type CreateOIDCProps = {
   itemId?: string;
@@ -98,6 +261,7 @@ type CreateOIDCProps = {
 export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const [createdSecret, setCreatedSecret] = useState<OneTimeSecret | null>(null);
+  const [tokenMode, setTokenMode] = useState<TokenLifetimeMode>("project");
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useSaveAuthOidc();
   // Guards against a second POST while a save is still in flight (C12).
@@ -106,6 +270,8 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
     { projectKey: tenantId, clientId: itemId! },
     open && !!itemId,
   );
+  const { data: authConfig } = useGetAuthConfig({ projectKey: tenantId }, open);
+  const projectConfig = toProjectConfig(authConfig);
 
   const form = useForm<CreateOIDCFormValues>({
     resolver: zodResolver(createOidcSchema),
@@ -182,8 +348,10 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
         ...loadedTokenLifetimes,
         loadedTokenLifetimes,
       });
+      const loadedMode = modeForLifetimes(loadedTokenLifetimes);
+      setTokenMode(loadedMode);
       // A stored value the rules reject is flagged at once, not only after the user edits it.
-      if (Object.values(loadedTokenLifetimes).some((value) => value !== "")) {
+      if (loadedMode === "custom") {
         void form.trigger([
           "accessTokenLifetime",
           "refreshTokenLifetime",
@@ -192,6 +360,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
       }
     } else if (!isEditMode && open) {
       form.reset(createOIDCFormDefaultValue);
+      setTokenMode("project");
     }
   }, [existingOidc, isEditMode, open, form]);
 
@@ -641,42 +810,14 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                 />
               )}
 
-              {/* Token lifetimes — optional per-client values for every client type. Empty
-                  inputs keep the project setting. */}
-              <div className="space-y-2">
-                <FormLabel>Token lifetimes</FormLabel>
-                <FormDescription className="text-xs">
-                  Leave a field empty to use the project setting.
-                </FormDescription>
-                <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-3">
-                  {TOKEN_LIFETIME_FIELDS.map((lifetime) => (
-                    <FormField
-                      key={lifetime.name}
-                      control={form.control}
-                      name={lifetime.name}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{lifetime.label}</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              inputMode="numeric"
-                              autoComplete="off"
-                              min={1}
-                              max={lifetime.max}
-                              step={1}
-                              placeholder="Project setting"
-                              aria-label={lifetime.ariaLabel}
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  ))}
-                </div>
-              </div>
+              {/* Token lifetimes — the project values, or this client's own values. An input
+                  left empty in Custom still uses the project setting. */}
+              <TokenLifetimesSection
+                form={form}
+                mode={tokenMode}
+                onModeChange={setTokenMode}
+                projectConfig={projectConfig}
+              />
             </form>
           </Form>
         </div>
