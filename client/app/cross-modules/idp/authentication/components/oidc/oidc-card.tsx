@@ -72,11 +72,6 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
     sensitive?: boolean;
   }[] = [
     { key: "Client Id", value: item.itemId, copyable: true },
-    // The API never returns the secret. It is shown once on create and on rotate.
-    // Device-flow clients are public and have no secret.
-    ...(item.isDeviceFlowClient
-      ? []
-      : [{ key: "Client Secret", value: "Hidden. Rotate the secret to get a new one." }]),
     {
       key: "Redirect URI(s)",
       value: redirectUris.join(", "),

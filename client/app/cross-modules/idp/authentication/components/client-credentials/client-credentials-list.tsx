@@ -183,8 +183,6 @@ const ClientCredentialRow = ({
     sensitive?: boolean;
   }[] = [
     { key: "Client Id", value: item.itemId ?? "", copyable: true },
-    // The API never returns the secret. It is shown once on create and on rotate.
-    { key: "Client Secret", value: "Hidden. Rotate the secret to get a new one." },
     // Shown even when it is the tenant-wide "default", because that is the most privileged
     // scope a credential can have and is worth seeing rather than inferring from an absence.
     {

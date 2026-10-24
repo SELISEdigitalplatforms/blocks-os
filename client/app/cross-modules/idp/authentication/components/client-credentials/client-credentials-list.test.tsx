@@ -68,8 +68,7 @@ describe("ClientCredentialList", () => {
     expect(screen.getByText("Active")).toBeTruthy();
     // first row is expanded by default -> detail rows visible
     expect(screen.getByText("Client Id")).toBeTruthy();
-    expect(screen.getByText("Client Secret")).toBeTruthy();
-    expect(screen.getByText("Hidden. Rotate the secret to get a new one.")).toBeTruthy();
+    expect(screen.queryByText("Client Secret")).toBeNull();
     expect(screen.getByText("Role(s)")).toBeTruthy();
   });
 

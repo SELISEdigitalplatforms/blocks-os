@@ -65,7 +65,7 @@ describe("OIDCCard", () => {
   it("never renders a secret that the item somehow carries", () => {
     renderCard();
     expect(screen.queryByText(/sek-ret/)).toBeNull();
-    expect(screen.getByText("Hidden. Rotate the secret to get a new one.")).toBeTruthy();
+    expect(screen.queryByText("Client Secret")).toBeNull();
   });
 
   it("renders the client label, id and detail rows expanded", () => {
