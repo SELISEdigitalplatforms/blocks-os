@@ -29,19 +29,18 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { EllipsisVertical, ArrowRightLeft, Mail, RefreshCw, User } from "lucide-react";
+import { EllipsisVertical, ArrowRightLeft, Mail, RefreshCw, User, UserMinus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { useRemoveAccess, useResendInvitation, useTransferOwnership } from "@/hooks/use-people";
-import { useAccountResendActivation } from "@blocks-idp/iam/hooks/use-account";
 import { useNavigate, useParams } from "react-router";
 import { PeopleGroupedByEnvironments } from "@/models/people";
 import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useAuthStore } from "@seliseblocks/genesis-os/store";
 import { environmentOptions } from "@/constants/environment-options";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { PeopleStatusBadge } from "@/components/people/status-badge";
-import { getRuntimeEnv } from "@/lib/runtime-env";
 import { getUserDisplayName } from "@blocks-idp/iam/utils/user-display-name";
 
 type PeopleTableProps = {
@@ -71,12 +70,16 @@ export const PeopleTable = ({
     null,
   );
 
-  const xBlocksKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
   const { mutateAsync: removeAsync } = useRemoveAccess();
   const { mutateAsync: resendInvitation } = useResendInvitation();
-  const { mutateAsync: resendActivation } = useAccountResendActivation();
   const { mutateAsync: transferOwnership, isPending: isTransferring } = useTransferOwnership();
   const groupId = useProjectStore().selectedTenantGroup || "";
+  const viewerUserId = useAuthStore((state) => state.user?.sub);
+
+  const openRemoveAccessDialog = (rowData: PeopleGroupedByEnvironments) => {
+    setIsRemoveAccessDialogOpen(true);
+    setSelectedPeopleData(rowData);
+  };
 
   const openResendDialog = (rowData: PeopleGroupedByEnvironments) => {
     setIsResendInvitationDialogOpen(true);
@@ -103,11 +106,15 @@ export const PeopleTable = ({
 
       if (!groupId || tenantIds.length === 0) return;
 
-      await removeAsync({
+      const res = await removeAsync({
         email: selectedPeopleData.peopleDetails.email,
         tenantIds,
         groupId,
       });
+      if (!res?.isSuccess) {
+        showErrorToast({ errors: res?.errors });
+        return;
+      }
 
       showSuccessToast({ description: "Removed access successfully" });
       setIsRemoveAccessDialogOpen(false);
@@ -119,10 +126,14 @@ export const PeopleTable = ({
   const onConfirmResendInvitation = async () => {
     if (!selectedPeopleData) return;
     try {
-      await resendInvitation({
+      const res = await resendInvitation({
         email: selectedPeopleData.peopleDetails.email,
         groupId,
       });
+      if (!res?.isSuccess) {
+        showErrorToast({ errors: res?.errors });
+        return;
+      }
       showSuccessToast({ description: "Resend invitation mail successfully" });
       setIsResendInvitationDialogOpen(false);
     } catch (error) {
@@ -133,10 +144,16 @@ export const PeopleTable = ({
   const onConfirmResendActivation = async () => {
     if (!selectedPeopleData) return;
     try {
-      await resendActivation({
-        userId: selectedPeopleData.peopleDetails.userId,
-        projectKey: xBlocksKey,
+      // The first mail comes from blocks-os (a /invitation?code= link), so the resend must too.
+      // The IAM resend sends a different mail with an IAM link.
+      const res = await resendInvitation({
+        email: selectedPeopleData.peopleDetails.email,
+        groupId,
       });
+      if (!res?.isSuccess) {
+        showErrorToast({ errors: res?.errors });
+        return;
+      }
       showSuccessToast({ description: "Resend activation mail successfully" });
       setIsResendActivationDialogOpen(false);
     } catch (error) {
@@ -197,7 +214,8 @@ export const PeopleTable = ({
                 )}
               {/* Inactive: the account itself is not activated yet (no password / unverified).
                   Independent of invite acceptance — accepting an invite does not activate the account. */}
-              {info.row.original.peopleDetails.allowResendActivation &&
+              {(info.row.original.peopleDetails.allowResendActivation ||
+                info.row.original.peopleDetails.isActive === false) &&
                 !info.row.original.sharedEnviroments.some((env) => env.isCreator) && (
                   <PeopleStatusBadge
                     status="Inactive"
@@ -302,6 +320,9 @@ export const PeopleTable = ({
                 const isRowUserOwner = row.original.sharedEnviroments.some((env) => env.isCreator);
                 if (isRowUserOwner) return null;
 
+                // A deactivated user has no actions: access cannot change and mail would bounce.
+                if (row.original.peopleDetails.isActive === false) return null;
+
                 const hasPending = row.original.sharedEnviroments.some(
                   (env) => !env.isInvitationConfirmed,
                 );
@@ -311,6 +332,13 @@ export const PeopleTable = ({
                   canInvite &&
                   row.original.peopleDetails.allowResendActivation &&
                   row.original.sharedEnviroments.some((env) => env.isInvitationConfirmed);
+
+                // The owner row is already skipped above; never offer a person removing themselves.
+                const showRemoveAccess =
+                  canRemove && row.original.peopleDetails.userId !== viewerUserId;
+
+                if (!showResendInvite && !showResendActivation && !showRemoveAccess && !isViewerOwner)
+                  return null;
 
                 return (
                   <DropdownMenu>
@@ -343,6 +371,17 @@ export const PeopleTable = ({
                           <span>Resend Activation</span>
                         </DropdownMenuItem>
                       )}
+                      {showRemoveAccess && (
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openRemoveAccessDialog(row.original);
+                          }}
+                        >
+                          <UserMinus className="mr-2 h-4 w-4" />
+                          <span>Remove access</span>
+                        </DropdownMenuItem>
+                      )}
                       {!showResendInvite && isViewerOwner && (
                         <DropdownMenuItem
                           onClick={(e) => {
@@ -362,7 +401,7 @@ export const PeopleTable = ({
           ]
         : []),
     ],
-    [canInvite, canRemove, isViewerOwner],
+    [canInvite, canRemove, isViewerOwner, viewerUserId],
   );
 
   const table = useReactTable({

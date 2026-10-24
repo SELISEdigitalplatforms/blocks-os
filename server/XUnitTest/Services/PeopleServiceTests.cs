@@ -780,6 +780,132 @@ namespace XUnitTest.Services
             _peopleRepo.Verify(r => r.InsertPeoplesAsync(It.IsAny<List<ProjectPeople>>()), Times.Never);
         }
 
+        // ---------- Inactive (deactivated) users ----------
+
+        private static User Deactivated(string id, string email) => new()
+        {
+            ItemId = id,
+            Email = email,
+            Active = false,
+            IsVerified = true,
+            Status = UserLifecycleStatus.Disabled,
+            DeactivatedAtUtc = System.DateTime.UtcNow
+        };
+
+        private static InviteRequest InviteTo(params string[] emails)
+        {
+            var invitations = new Dictionary<string, List<EnviromentDetails>>();
+            foreach (var email in emails)
+            {
+                invitations[email] = new List<EnviromentDetails> { new() { TenantId = "t1" } };
+            }
+            return new InviteRequest { GroupId = "grp", Invitations = invitations };
+        }
+
+        [Fact]
+        public async Task InvitePeoplesAsync_InactiveUser_RejectsWithoutWritingOrMessagingIam()
+        {
+            using var _ = new BlocksTestContext(userName: "owner@x.com");
+            _projectRepo.Setup(r => r.GetProjectIdsByGroupId("grp")).ReturnsAsync(new List<string> { "t1" });
+            _peopleRepo.Setup(r => r.GetUsersByEmailAsync(It.IsAny<List<string>>()))
+                       .ReturnsAsync(new List<User> { Deactivated("u2", "Off@x.com") });
+
+            var response = await Service().InvitePeoplesAsync(InviteTo("OFF@x.com"));
+
+            response.IsSuccess.Should().BeFalse();
+            response.Errors.Should().ContainKey(UserAccountStatus.InactiveErrorCode);
+            response.Errors[UserAccountStatus.InactiveErrorCode].Should().Contain("off@x.com");
+            _peopleRepo.Verify(r => r.InsertPeoplesAsync(It.IsAny<List<ProjectPeople>>()), Times.Never);
+            _messageClient.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<CreateUserByEmailEvent>>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task InvitePeoplesAsync_MixedRequestWithOneInactiveUser_RejectsTheWholeRequest()
+        {
+            using var _ = new BlocksTestContext(userName: "owner@x.com");
+            _projectRepo.Setup(r => r.GetProjectIdsByGroupId("grp")).ReturnsAsync(new List<string> { "t1" });
+            _peopleRepo.Setup(r => r.GetUsersByEmailAsync(It.IsAny<List<string>>()))
+                       .ReturnsAsync(new List<User>
+                       {
+                           new() { ItemId = "u1", Email = "on@x.com", Active = true, IsVerified = true },
+                           Deactivated("u2", "off@x.com")
+                       });
+
+            var response = await Service().InvitePeoplesAsync(InviteTo("on@x.com", "off@x.com"));
+
+            response.IsSuccess.Should().BeFalse();
+            response.Errors[UserAccountStatus.InactiveErrorCode].Should().Contain("off@x.com").And.NotContain("on@x.com");
+            _peopleRepo.Verify(r => r.InsertPeoplesAsync(It.IsAny<List<ProjectPeople>>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task InvitePeoplesAsync_PendingInviteeNeverActivated_IsStillInvited()
+        {
+            using var _ = new BlocksTestContext(userName: "owner@x.com");
+            _projectRepo.Setup(r => r.GetProjectIdsByGroupId("grp")).ReturnsAsync(new List<string> { "t1" });
+            // How IAM creates an invitee: inactive and unverified, status untouched.
+            _peopleRepo.Setup(r => r.GetUsersByEmailAsync(It.IsAny<List<string>>()))
+                       .ReturnsAsync(new List<User> { new() { ItemId = "u2", Email = "new@x.com", Active = false, IsVerified = false } });
+            _peopleRepo.Setup(r => r.GetProjectPeoplesAsync("u2", It.IsAny<List<string>>())).ReturnsAsync(new List<ProjectPeople>());
+
+            var response = await Service().InvitePeoplesAsync(InviteTo("new@x.com"));
+
+            response.IsSuccess.Should().BeTrue();
+            response.Results["new@x.com"].Should().Be(InvitationOutcomes.InvitationRequested);
+        }
+
+        [Fact]
+        public async Task RemoveAccess_InactiveUser_RejectsAndKeepsTheRows()
+        {
+            using var _ = new BlocksTestContext();
+            _projectRepo.Setup(r => r.GetProjectIdsByGroupId("grp")).ReturnsAsync(new List<string> { "t1" });
+            _peopleRepo.Setup(r => r.GetUsersByEmailAsync(It.IsAny<List<string>>()))
+                       .ReturnsAsync(new List<User> { Deactivated("u2", "off@x.com") });
+
+            var response = await Service().RemoveAccessFromProjectAsync(new RemoveAccessRequest
+            {
+                GroupId = "grp",
+                Email = "off@x.com",
+                TenantIds = new List<string> { "t1" }
+            });
+
+            response.IsSuccess.Should().BeFalse();
+            response.Errors.Should().ContainKey(UserAccountStatus.InactiveErrorCode);
+            _peopleRepo.Verify(r => r.RemovePeoplesAsync(It.IsAny<string>(), It.IsAny<List<string>>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task ResendInvitation_InactiveUser_RejectsWithoutSending()
+        {
+            using var _ = new BlocksTestContext();
+            _projectRepo.Setup(r => r.GetProjectIdsByGroupId("grp")).ReturnsAsync(new List<string> { "t1" });
+            _peopleRepo.Setup(r => r.GetUsersByEmailAsync(It.IsAny<List<string>>()))
+                       .ReturnsAsync(new List<User> { Deactivated("u2", "off@x.com") });
+
+            var response = await Service().ResendInvitationAsync(new ResendInvitationRequest { GroupId = "grp", Email = "off@x.com" });
+
+            response.IsSuccess.Should().BeFalse();
+            response.Errors.Should().ContainKey(UserAccountStatus.InactiveErrorCode);
+            _peopleRepo.Verify(r => r.GetProjectPeoplesAsync(It.IsAny<string>(), It.IsAny<List<string>>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task TransferOwnership_ToInactiveUser_RejectsAndKeepsTheOwner()
+        {
+            using var _ = new BlocksTestContext(userId: "owner-id", userName: "owner@x.com");
+            _peopleRepo.Setup(r => r.GetUserByEmailAsync("off@x.com")).ReturnsAsync(Deactivated("u2", "off@x.com"));
+
+            var response = await Service().TransferOwnershipAsync(new TransferOwnershipRequest
+            {
+                TenantGroupId = "grp",
+                TransferToUserEmail = "off@x.com"
+            });
+
+            response.IsSuccess.Should().BeFalse();
+            response.Errors.Should().ContainKey(UserAccountStatus.InactiveErrorCode);
+            _peopleRepo.Verify(r => r.UpdateProjectPeopleOwnerShipAsync(It.IsAny<List<string>>(), It.IsAny<bool>()), Times.Never);
+        }
+
         private static Tenant NewTenant() => new()
         {
             DbConnectionString = "mongodb://x",

@@ -161,7 +161,6 @@ export const PermissionRolesList = ({ slugs }: RolesTableProps) => {
               page={queryParams.page}
               onChange={onPageChangeHandler}
               totalCount={data.totalCount}
-              pageSizeOptions={[5, 10, 20]}
               onPageSizeChange={onPageSizeChangeHandler}
               pageSize={queryParams.pageSize}
             />

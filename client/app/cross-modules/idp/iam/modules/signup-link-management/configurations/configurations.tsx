@@ -55,7 +55,6 @@ export const SignupLinkConfigurations = () => {
               page={queryParams.page}
               onChange={(page) => setQueryParams((params) => ({ ...params, page }))}
               totalCount={totalCount}
-              pageSizeOptions={[queryParams.pageSize]}
               pageSize={queryParams.pageSize}
             />
           </div>

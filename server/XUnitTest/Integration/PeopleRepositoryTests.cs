@@ -99,6 +99,41 @@ namespace XUnitTest.Integration
         }
 
         [Fact]
+        public async Task GetPeoplesAsync_FlagsOnlyDeactivatedPeopleAsInactive()
+        {
+            var suffix = Guid.NewGuid().ToString("N");
+            var tenant = "t-" + suffix;
+            using var _ = new IntegrationContext("ctx-" + suffix);
+            _projectRepo.Setup(r => r.GetProjectIdsByGroupId("grp-" + suffix))
+                        .ReturnsAsync(new List<string> { tenant });
+
+            var deactivated = NewUser("off-" + suffix, "off@x.com", "Off", "User");
+            deactivated.Active = false;
+            deactivated.Status = UserLifecycleStatus.Disabled;
+            deactivated.DeactivatedAtUtc = DateTime.UtcNow;
+            // Invited, never activated: still active, and may get a fresh activation mail.
+            var pending = NewUser("pending-" + suffix, "pending@x.com", "Pen", "Ding");
+            pending.Active = false;
+            pending.IsVerified = false;
+
+            await InsertPeopleAsync(
+                Person("on-" + suffix, tenant, "on@x.com"),
+                Person(deactivated.ItemId, tenant, "off@x.com"),
+                Person(pending.ItemId, tenant, "pending@x.com", confirmed: false));
+            await InsertUsersAsync(NewUser("on-" + suffix, "on@x.com", "On", "User"), deactivated, pending);
+
+            var (peoples, _, _, _) = await NewRepository().GetPeoplesAsync(
+                new GetPeoplesRequest { ProjectGroupId = "grp-" + suffix, Page = 0, PageSize = 10 });
+
+            var byEmail = peoples.ToDictionary(p => p.peopleDetails.Email!, p => p.peopleDetails);
+            byEmail["on@x.com"].IsActive.Should().BeTrue();
+            byEmail["off@x.com"].IsActive.Should().BeFalse();
+            byEmail["off@x.com"].AllowResendActivation.Should().BeFalse();
+            byEmail["pending@x.com"].IsActive.Should().BeTrue();
+            byEmail["pending@x.com"].AllowResendActivation.Should().BeTrue();
+        }
+
+        [Fact]
         public async Task GetPeoplesAsync_SearchByEmail_FiltersOnProjectPeople()
         {
             var suffix = Guid.NewGuid().ToString("N");
@@ -222,6 +257,46 @@ namespace XUnitTest.Integration
             result.Should().NotBeNull();
             result.TenantId.Should().Be("tid-" + suffix);
         }
+
+        [Fact]
+        public async Task GetProjectByIdAsync_SkipsDeletedRowWithSameTenantId()
+        {
+            var suffix = Guid.NewGuid().ToString("N");
+            using var _ = new IntegrationContext("ctx-" + suffix);
+            await _fixture.Collection<Tenant>("Tenants").InsertManyAsync(new[]
+            {
+                NewTenantRow("old-" + suffix, "tid-" + suffix, "Deleted", isDisabled: true),
+                NewTenantRow("new-" + suffix, "tid-" + suffix, "Live", isDisabled: false)
+            });
+
+            var result = await NewRepository().GetProjectByIdAsync("tid-" + suffix);
+
+            result.Should().NotBeNull();
+            result.ItemId.Should().Be("new-" + suffix);
+        }
+
+        [Fact]
+        public async Task GetProjectByIdAsync_OnlyDeletedRow_ReturnsNull()
+        {
+            var suffix = Guid.NewGuid().ToString("N");
+            using var _ = new IntegrationContext("ctx-" + suffix);
+            await _fixture.Collection<Tenant>("Tenants").InsertOneAsync(
+                NewTenantRow("old-" + suffix, "tid-" + suffix, "Deleted", isDisabled: true));
+
+            var result = await NewRepository().GetProjectByIdAsync("tid-" + suffix);
+
+            result.Should().BeNull();
+        }
+
+        private static Tenant NewTenantRow(string itemId, string tenantId, string name, bool isDisabled) => new()
+        {
+            ItemId = itemId,
+            TenantId = tenantId,
+            Name = name,
+            IsDisabled = isDisabled,
+            DbConnectionString = "x",
+            JwtTokenParameters = new JwtTokenParameters { IssueDate = DateTime.UtcNow, PrivateCertificatePassword = "p" }
+        };
 
         [Fact]
         public async Task Users_GetByEmailListAndById()

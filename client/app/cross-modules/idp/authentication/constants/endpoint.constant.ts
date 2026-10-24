@@ -18,6 +18,7 @@ export const AUTH_CLIENT_ENDPOINTS = {
   LIST: `${API_BASES.IAM}${AUTH_SUBPATH}/client-credentials`,
   SAVE: `${API_BASES.IAM}${AUTH_SUBPATH}/client-credentials`,
   DELETE: `${API_BASES.IAM}${AUTH_SUBPATH}/client-credentials`,
+  ROTATE_SECRET: `${API_BASES.IAM}${AUTH_SUBPATH}/client-credentials`,
 } as const;
 
 // ─── OIDC client endpoints (auth-clients-oidc.service) ──────────────────────

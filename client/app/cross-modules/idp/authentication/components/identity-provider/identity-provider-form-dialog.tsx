@@ -517,7 +517,7 @@ export function IdentityProviderFormDialog({
                     Client Secret <span className="text-destructive">*</span>
                     {isEditing && (
                       <span className="ml-1 text-xs font-normal text-muted-foreground">
-                        (leave blank to keep existing)
+                        (hidden; leave blank to keep it, or enter a new one to replace it)
                       </span>
                     )}
                   </Label>

@@ -8,6 +8,7 @@ const h = vi.hoisted(() => ({
   saveOidc: vi.fn(),
   isPending: false,
   useGetAuthOidcCredential: vi.fn(),
+  useGetAuthConfig: vi.fn(),
   showErrorToast: vi.fn(),
   showSuccessToast: vi.fn(),
 }));
@@ -26,6 +27,9 @@ vi.mock("@blocks-idp/authentication/hooks/use-auth-oidc", () => ({
   useSaveAuthOidc: () => ({ mutateAsync: h.saveOidc, isPending: h.isPending }),
   useGetAuthOidcCredential: (args: unknown, enabled: boolean) =>
     h.useGetAuthOidcCredential(args, enabled),
+}));
+vi.mock("@blocks-idp/authentication/hooks/use-auth-config", () => ({
+  useGetAuthConfig: (args: unknown, enabled: boolean) => h.useGetAuthConfig(args, enabled),
 }));
 vi.mock("@/hooks/use-toast", () => ({
   showErrorToast: h.showErrorToast,
@@ -94,6 +98,7 @@ describe("CreateOIDC", () => {
     h.isPending = false;
     h.saveOidc.mockResolvedValue({ isSuccess: true });
     h.useGetAuthOidcCredential.mockReturnValue({ data: undefined, isLoading: false });
+    h.useGetAuthConfig.mockReturnValue({ data: undefined });
   });
 
   it("opens the create dialog from the Create trigger", async () => {
@@ -504,7 +509,7 @@ describe("CreateOIDC", () => {
       await user.type(screen.getByPlaceholderText("Enter client name"), "TV");
       await user.click(screen.getByLabelText("Generate this OIDC client only for device flow"));
       expect(screen.queryByText("Application type")).toBeNull();
-      expect(screen.queryByRole("radio")).toBeNull();
+      expect(screen.queryByRole("radiogroup", { name: /application type/i })).toBeNull();
       await user.click(submitButton());
       await waitFor(() => expect(h.saveOidc).toHaveBeenCalledTimes(1));
       expect(lastPayload()).not.toHaveProperty("clientType");
@@ -542,7 +547,7 @@ describe("CreateOIDC", () => {
       await user.click(radio("Mobile app"));
       const deviceFlow = screen.getByLabelText("Generate this OIDC client only for device flow");
       await user.click(deviceFlow);
-      expect(screen.queryByRole("radio")).toBeNull();
+      expect(screen.queryByRole("radiogroup", { name: /application type/i })).toBeNull();
       expect(screen.queryByText("Redirect URI(s)")).toBeNull();
       await user.click(deviceFlow);
       expect(isChecked(radio("Mobile app"))).toBe(true);
@@ -762,6 +767,19 @@ describe("CreateOIDC", () => {
     const MAXIMUM = "Refresh token maximum lifetime in minutes";
     const lifetimeInput = (name: string) =>
       screen.getByRole("spinbutton", { name }) as HTMLInputElement;
+    const PROJECT_MODE = "Use project settings";
+    const CUSTOM_MODE = "Custom for this client";
+    const modeRadio = (name: typeof PROJECT_MODE | typeof CUSTOM_MODE) =>
+      screen.getByRole("radio", { name });
+    const chooseCustom = (user: User) => user.click(modeRadio(CUSTOM_MODE));
+    const mockProjectConfig = () =>
+      h.useGetAuthConfig.mockReturnValue({
+        data: {
+          accessTokenValidForNumberMinutes: 60,
+          refreshTokenValidForNumberMinutes: 1440,
+          absoluteRefreshTokenValidForNumberMinutes: 43200,
+        },
+      });
 
     const mockClientWithLifetimes = (
       tokenLifetimes: unknown,
@@ -791,20 +809,77 @@ describe("CreateOIDC", () => {
       await user.type(uriInput(), "https://app.example.com/callback");
     };
 
-    it("shows the block with three optional inputs and the helper text (H1)", async () => {
+    it("opens on project settings with no inputs (H1)", async () => {
       const user = userEvent.setup();
       await openCreate(user);
 
       expect(screen.getByText("Token lifetimes")).toBeTruthy();
-      expect(screen.getByText("Leave a field empty to use the project setting.")).toBeTruthy();
+      expect(isChecked(modeRadio(PROJECT_MODE))).toBe(true);
+      expect(screen.queryByRole("spinbutton", { name: ACCESS })).toBeNull();
+      expect(screen.getByText("The values set for the whole project.")).toBeTruthy();
+    });
+
+    it("shows three empty inputs with notes when Custom is chosen", async () => {
+      const user = userEvent.setup();
+      await openCreate(user);
+      await chooseCustom(user);
+
       for (const name of [ACCESS, IDLE, MAXIMUM]) {
         const input = lifetimeInput(name);
         expect(input.value).toBe("");
         expect(input.placeholder).toBe("Project setting");
       }
-      expect(screen.getByText("Access token (minutes)")).toBeTruthy();
-      expect(screen.getByText("Refresh token idle (minutes)")).toBeTruthy();
-      expect(screen.getByText("Refresh token maximum (minutes)")).toBeTruthy();
+      expect(screen.getByText("Access token")).toBeTruthy();
+      expect(screen.getByText("Refresh token – idle")).toBeTruthy();
+      expect(screen.getByText("Refresh token – maximum")).toBeTruthy();
+      expect(screen.getAllByText("Uses project setting.")).toHaveLength(3);
+    });
+
+    it("loads the project values only while the dialog is open", async () => {
+      const user = userEvent.setup();
+      render(<CreateOIDC />);
+      expect(h.useGetAuthConfig).toHaveBeenLastCalledWith({ projectKey: "tenant-1" }, false);
+      await user.click(screen.getByRole("button", { name: /Create/i }));
+      expect(h.useGetAuthConfig).toHaveBeenLastCalledWith({ projectKey: "tenant-1" }, true);
+    });
+
+    it("shows the project values and starts Custom from them", async () => {
+      const user = userEvent.setup();
+      mockProjectConfig();
+      await openCreate(user);
+
+      expect(screen.getByText("Access 1 hour · Idle 1 day · Maximum 30 days")).toBeTruthy();
+      await chooseCustom(user);
+      expect(lifetimeInput(ACCESS).value).toBe("60");
+      expect(lifetimeInput(IDLE).value).toBe("1440");
+      expect(lifetimeInput(MAXIMUM).value).toBe("43200");
+      expect(screen.getByText("= 1 hour · project: 1 hour")).toBeTruthy();
+
+      await user.clear(lifetimeInput(ACCESS));
+      await user.type(lifetimeInput(ACCESS), "30");
+      expect(screen.getByText("= 30 min · project: 1 hour")).toBeTruthy();
+    });
+
+    it("clears this client's values when switched back to project settings", async () => {
+      const user = userEvent.setup();
+      mockClientWithLifetimes({
+        accessTokenValidForNumberMinutes: 30,
+        refreshTokenValidForNumberMinutes: 1440,
+        absoluteRefreshTokenValidForNumberMinutes: 43200,
+      });
+      await openEdit(user);
+      expect(isChecked(modeRadio(CUSTOM_MODE))).toBe(true);
+
+      await user.click(modeRadio(PROJECT_MODE));
+      expect(screen.queryByRole("spinbutton", { name: ACCESS })).toBeNull();
+      await user.click(submitButton("Update"));
+
+      await waitFor(() => expect(h.saveOidc).toHaveBeenCalledTimes(1));
+      expect(lastPayload().tokenLifetimes).toEqual({
+        accessTokenValidForNumberMinutes: null,
+        refreshTokenValidForNumberMinutes: null,
+        absoluteRefreshTokenValidForNumberMinutes: null,
+      });
     });
 
     it("leaves tokenLifetimes out when the inputs are untouched (H2, C9)", async () => {
@@ -821,6 +896,7 @@ describe("CreateOIDC", () => {
       const user = userEvent.setup();
       await openCreate(user);
       await fillValidCreate(user);
+      await chooseCustom(user);
       await user.type(lifetimeInput(ACCESS), "30");
       await user.type(lifetimeInput(IDLE), "1440");
       await user.type(lifetimeInput(MAXIMUM), "43200");
@@ -901,7 +977,8 @@ describe("CreateOIDC", () => {
         mockClientWithLifetimes(tokenLifetimes);
         await openEdit(user);
 
-        for (const name of [ACCESS, IDLE, MAXIMUM]) expect(lifetimeInput(name).value).toBe("");
+        expect(isChecked(modeRadio(PROJECT_MODE))).toBe(true);
+        expect(screen.queryByRole("spinbutton", { name: ACCESS })).toBeNull();
         await user.click(submitButton("Update"));
         await waitFor(() => expect(h.saveOidc).toHaveBeenCalledTimes(1));
         expect(lastPayload()).not.toHaveProperty("tokenLifetimes");
@@ -912,6 +989,7 @@ describe("CreateOIDC", () => {
       const user = userEvent.setup();
       mockClientWithLifetimes(null, { isDeviceFlowClient: true, allowedResponseTypes: [] });
       await openEdit(user);
+      await chooseCustom(user);
       await user.type(lifetimeInput(IDLE), "10080");
       await user.click(submitButton("Update"));
 
@@ -933,6 +1011,7 @@ describe("CreateOIDC", () => {
       const user = userEvent.setup();
       await openCreate(user);
       await fillValidCreate(user);
+      await chooseCustom(user);
       await user.type(lifetimeInput(name), value);
 
       expect(await screen.findByText(message)).toBeTruthy();
@@ -944,6 +1023,7 @@ describe("CreateOIDC", () => {
       const user = userEvent.setup();
       await openCreate(user);
       await fillValidCreate(user);
+      await chooseCustom(user);
       await user.type(lifetimeInput(IDLE), "600");
       await user.type(lifetimeInput(MAXIMUM), "599");
 
@@ -969,6 +1049,7 @@ describe("CreateOIDC", () => {
       });
       await openCreate(user);
       await fillValidCreate(user);
+      await chooseCustom(user);
       await user.type(lifetimeInput(IDLE), "20000");
       await user.click(submitButton("Add"));
 
@@ -983,11 +1064,14 @@ describe("CreateOIDC", () => {
     it("resets the inputs when the create dialog is opened again (C7)", async () => {
       const user = userEvent.setup();
       await openCreate(user);
+      await chooseCustom(user);
       await user.type(lifetimeInput(ACCESS), "30");
       await user.click(screen.getByRole("button", { name: "Cancel" }));
       await user.click(screen.getByRole("button", { name: /Create/i }));
       await screen.findByRole("heading", { name: "New OIDC Client" });
 
+      expect(isChecked(modeRadio(PROJECT_MODE))).toBe(true);
+      await chooseCustom(user);
       expect(lifetimeInput(ACCESS).value).toBe("");
     });
 
@@ -1012,6 +1096,7 @@ describe("CreateOIDC", () => {
     it("reaches each input by keyboard with its accessible name (C10)", async () => {
       const user = userEvent.setup();
       await openCreate(user);
+      await chooseCustom(user);
       lifetimeInput(ACCESS).focus();
       expect(document.activeElement).toBe(lifetimeInput(ACCESS));
       await user.tab();
@@ -1030,8 +1115,8 @@ describe("CreateOIDC", () => {
       );
       expect(source).toContain('import { Input } from "@/components/ui-kits/input/input";');
       expect(source).toContain('placeholder="Project setting"');
-      expect(source).toContain("Leave a field empty to use the project setting.");
-      expect(source.match(/grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-3/g)?.length).toBe(2);
+      expect(source).toContain("Custom for this client");
+      expect(source).not.toContain("Leave a field empty to use the project setting.");
     });
   });
 });

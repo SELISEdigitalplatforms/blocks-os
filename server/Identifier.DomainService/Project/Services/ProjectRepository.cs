@@ -88,7 +88,8 @@ namespace DomainService.Projects
         {
             var collection = _clientDb.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
             var listDomain = new List<string> { name };
-            var filter = Builders<Tenant>.Filter.ElemMatch(x => x.Applications, app => listDomain.Contains(app.Domain));
+            var filter = Builders<Tenant>.Filter.ElemMatch(x => x.Applications, app => listDomain.Contains(app.Domain))
+                       & Builders<Tenant>.Filter.Ne(mc => mc.IsDisabled, true);
             return await collection.Find(filter).FirstOrDefaultAsync();
         }
 
@@ -817,7 +818,7 @@ namespace DomainService.Projects
             var collection = _clientDb.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
 
             var filter = Builders<Tenant>.Filter.And(Builders<Tenant>.Filter.Eq(mc => mc.TenantId, tenantId),
-                                                     Builders<Tenant>.Filter.Eq(mc => mc.IsDisabled, false));
+                                                     Builders<Tenant>.Filter.Ne(mc => mc.IsDisabled, true));
 
             return await (await collection.FindAsync(filter)).FirstOrDefaultAsync();
         }

@@ -6,10 +6,13 @@ import {
   createOidcSchema,
   createOIDCFormDefaultValue,
   deriveApplicationType,
+  describeTokenLifetime,
+  formatMinutes,
   getRedirectUriError,
   getRedirectUriSchema,
   HTTPS_REDIRECT_URI_MESSAGE,
   isAppSchemeRedirectUri,
+  knownMinutes,
   MOBILE_INVALID_REDIRECT_URI_MESSAGE,
   WEB_APP_SCHEME_REDIRECT_URI_MESSAGE,
   TOKEN_LIFETIME_MESSAGES,
@@ -455,5 +458,51 @@ describe("buildTokenLifetimesPayload", () => {
       refreshTokenValidForNumberMinutes: null,
       absoluteRefreshTokenValidForNumberMinutes: null,
     });
+  });
+});
+
+describe("formatMinutes", () => {
+  it.each([
+    [1, "1 min"],
+    [45, "45 min"],
+    [60, "1 hour"],
+    [90, "1 h 30 min"],
+    [120, "2 hours"],
+    [1440, "1 day"],
+    [43200, "30 days"],
+  ])("%i -> %s", (minutes, text) => {
+    expect(formatMinutes(minutes)).toBe(text);
+  });
+});
+
+describe("knownMinutes", () => {
+  it.each([
+    [60, 60],
+    [0, undefined],
+    [-5, undefined],
+    [null, undefined],
+    [undefined, undefined],
+  ])("%s -> %s", (value, expected) => {
+    expect(knownMinutes(value)).toBe(expected);
+  });
+});
+
+describe("describeTokenLifetime", () => {
+  it("names the project value for an empty input", () => {
+    expect(describeTokenLifetime("", 60)).toBe("Uses project setting: 1 hour.");
+    expect(describeTokenLifetime("  ", 1440)).toBe("Uses project setting: 1 day.");
+  });
+
+  it("falls back to a plain line when the project value is unknown", () => {
+    expect(describeTokenLifetime("")).toBe("Uses project setting.");
+    expect(describeTokenLifetime("90")).toBe("= 1 h 30 min");
+  });
+
+  it("shows a typed value next to the project value", () => {
+    expect(describeTokenLifetime("1440", 60)).toBe("= 1 day · project: 1 hour");
+  });
+
+  it.each(["0", "-1", "1.5", "abc"])("returns nothing for the invalid value %s", (raw) => {
+    expect(describeTokenLifetime(raw, 60)).toBe("");
   });
 });

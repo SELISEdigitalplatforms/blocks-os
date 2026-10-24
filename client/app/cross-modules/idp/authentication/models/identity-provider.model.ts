@@ -13,6 +13,7 @@ export interface IdentityProvider {
   protocol?: Protocol;
   tokenEndpointAuthMethod: TokenEndpointAuthMethod;
   clientId: string;
+  /** Write-only. Reads always return it empty; on update, empty keeps the stored secret. */
   clientSecret: string;
   issuer?: string | null;
   authorizationUrl?: string | null;

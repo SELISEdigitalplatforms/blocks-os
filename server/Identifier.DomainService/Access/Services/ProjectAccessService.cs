@@ -202,17 +202,10 @@ namespace DomainService.Access.Services
                 return Invalid<SaveAccessPolicyResponse>("invalid_group_id", "The given groupId is invalid.");
             }
 
-            var rows = await _peopleRepository.GetProjectPeoplesAsync(request.UserId, tenantIds);
-            if (rows.Count == 0)
+            var (rows, targetError) = await ValidateGrantTargetAsync(request.UserId, tenantIds);
+            if (targetError is not null)
             {
-                return Invalid<SaveAccessPolicyResponse>("not_a_member", "That person is not a member of this project.");
-            }
-
-            // An owner already holds everything implicitly; writing grants onto their rows would
-            // create a second, divergent answer to "what may they do".
-            if (rows.Count(row => row.IsCreator) == tenantIds.Count)
-            {
-                return Invalid<SaveAccessPolicyResponse>("owner_has_full_access", "Owners already have every menu; there is nothing to grant.");
+                return targetError;
             }
 
             var catalog = await GetCatalogAsync(cancellationToken).ConfigureAwait(false);
@@ -275,6 +268,35 @@ namespace DomainService.Access.Services
         }
 
         // ── Helpers ─────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// The member's rows in the group, or why grants may not be written for them: not a
+        /// member, an owner (holds everything already), or a deactivated account.
+        /// </summary>
+        private async Task<(List<ProjectPeople> rows, SaveAccessPolicyResponse? error)> ValidateGrantTargetAsync(string userId, List<string> tenantIds)
+        {
+            var rows = await _peopleRepository.GetProjectPeoplesAsync(userId, tenantIds);
+            if (rows.Count == 0)
+            {
+                return (rows, Invalid<SaveAccessPolicyResponse>("not_a_member", "That person is not a member of this project."));
+            }
+
+            // An owner already holds everything implicitly; writing grants onto their rows would
+            // create a second, divergent answer to "what may they do".
+            if (rows.Count(row => row.IsCreator) == tenantIds.Count)
+            {
+                return (rows, Invalid<SaveAccessPolicyResponse>("owner_has_full_access", "Owners already have every menu; there is nothing to grant."));
+            }
+
+            // A deactivated account's access is frozen until an administrator turns it back on.
+            var user = await _peopleRepository.GetUserByIdAsync(userId);
+            if (UserAccountStatus.IsDeactivated(user))
+            {
+                return (rows, Invalid<SaveAccessPolicyResponse>(UserAccountStatus.InactiveErrorCode, UserAccountStatus.InactiveMessage(user.Email)));
+            }
+
+            return (rows, null);
+        }
 
         private async Task<List<string>> MemberEnvironmentsAsync(ProjectAccessContext context)
         {

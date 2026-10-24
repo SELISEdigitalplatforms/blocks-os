@@ -28,7 +28,7 @@ vi.mock("@blocks-idp/data-access/gateway/hooks/use-configuration", () => ({
 
 import { SchemaAccessControlView } from "./schema-access-control-view";
 
-// READ, at schema level by default, currently Signed-in users.
+// READ, at schema level by default, currently Requester.
 const renderView = ({ level = "row" as "row" | "column", defaultAccessLevel = 1 } = {}) =>
   render(
     <SchemaAccessControlView
@@ -49,14 +49,14 @@ describe("SchemaAccessControlView: who is allowed", () => {
     h.policies = [];
   });
 
-  it("offers Signed-in users and Custom on a schema, never Public", () => {
+  it("offers Requester and Custom on a schema, never Public", () => {
     renderView();
-    expect(tierOptions()).toEqual(["Signed-in users", "Custom"]);
+    expect(tierOptions()).toEqual(["Requester", "Custom"]);
   });
 
   it("adds Inherited on a property", () => {
     renderView({ level: "column", defaultAccessLevel: 0 });
-    expect(tierOptions()).toEqual(["Inherited", "Signed-in users", "Custom"]);
+    expect(tierOptions()).toEqual(["Inherited", "Requester", "Custom"]);
   });
 });
 
@@ -136,7 +136,7 @@ describe("SchemaAccessControlView: Custom with no rule sets", () => {
     const user = userEvent.setup();
     renderView({ defaultAccessLevel: 3 });
 
-    await user.click(screen.getByRole("radio", { name: "Signed-in users" }));
+    await user.click(screen.getByRole("radio", { name: "Requester" }));
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(h.configure).toHaveBeenCalledTimes(1));

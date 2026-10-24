@@ -22,6 +22,7 @@ public static class OsDataAccessExtensions
         }
 
         services.AddBlocksDataAccess();
+        services.AddSingleton<IAccessPrincipalAccessor, BlocksContextPrincipalAccessor>();
         services.AddSingleton<IOsDataAccess, OsDataAccess>();
         return services;
     }

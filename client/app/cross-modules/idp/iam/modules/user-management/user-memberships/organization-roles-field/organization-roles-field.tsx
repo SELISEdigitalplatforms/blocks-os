@@ -129,7 +129,6 @@ export const OrganizationRolesField = ({
                 page={filter.page}
                 onChange={onPageChangeHandler}
                 totalCount={roles.length || 0}
-                pageSizeOptions={[filter.pageSize]}
                 pageSize={filter.pageSize}
               />
             </div>

@@ -43,7 +43,6 @@ export const MagicUrls = () => {
         <Pagination
           page={queryParams.page}
           pageSize={queryParams.pageSize}
-          pageSizeOptions={[queryParams.pageSize]}
           onChange={handlePageChange}
           totalCount={data?.totalCount ?? 0}
         />

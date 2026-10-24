@@ -75,7 +75,7 @@ export interface SchemaAccessControlViewHandle {
  */
 const ACCESS_TIER_TILES = [
   { type: ACCESS_TYPES.INHERITED, label: "Inherited" },
-  { type: ACCESS_TYPES.LOGGED_IN, label: "Signed-in users" },
+  { type: ACCESS_TYPES.LOGGED_IN, label: "Requester" },
   { type: ACCESS_TYPES.CUSTOM, label: "Custom" },
 ];
 
@@ -192,7 +192,7 @@ const EmptyCustomConfirmDialog = ({
       <DialogHeader>
         <DialogTitle className="text-left text-lg font-semibold leading-7">Nobody will be able to {verb} {subject}</DialogTitle>
         <DialogDescription className="mt-2 wrap-break-word text-left text-sm font-normal leading-5">
-          Custom with no rule sets allows nobody. Every signed-in user of this project, and the platform services
+          Custom with no rule sets allows nobody. Every requester in this project, and the platform services
           acting for them, will be refused until you add a rule set. Features that depend on {subject} can stop working.
         </DialogDescription>
       </DialogHeader>

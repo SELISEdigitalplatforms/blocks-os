@@ -11,6 +11,13 @@ vi.mock("@/hooks/use-project", () => ({
   useCreateProject: () => ({ mutateAsync: h.createProject, isPending: h.isPending }),
 }));
 
+vi.mock("@seliseblocks/genesis-os/utils", () => ({
+  showErrorToast: vi.fn(),
+  isErrorWithErrors: (error: unknown) =>
+    typeof error === "object" && error !== null && "errors" in error,
+}));
+
+import { showErrorToast } from "@seliseblocks/genesis-os/utils";
 import { AddEnvironmentModal } from "./add-environment-modal";
 
 describe("AddEnvironmentModal", () => {
@@ -76,5 +83,43 @@ describe("AddEnvironmentModal", () => {
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(onClose).toHaveBeenCalledWith([]);
     expect(h.createProject).not.toHaveBeenCalled();
+  });
+  it("keeps the dialog open and shows an error when the server refuses", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    h.createProject.mockResolvedValue({ isSuccess: false, errors: { name: "taken" } });
+    render(<AddEnvironmentModal tenantGroupId="tg-1" onClose={onClose} />);
+    await user.click(checkbox(0));
+    await user.click(screen.getByRole("button", { name: "Add" }));
+
+    await waitFor(() => expect(showErrorToast).toHaveBeenCalledWith({ errors: { name: "taken" } }));
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("keeps the dialog open and shows an error when the request fails", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    h.createProject.mockRejectedValue({ errors: { server: "down" } });
+    render(<AddEnvironmentModal tenantGroupId="tg-1" onClose={onClose} />);
+    await user.click(checkbox(0));
+    await user.click(screen.getByRole("button", { name: "Add" }));
+
+    await waitFor(() => expect(showErrorToast).toHaveBeenCalledWith({ errors: { server: "down" } }));
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("shows a generic error when the failure carries no error details", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    h.createProject.mockRejectedValue(new Error("boom"));
+    render(<AddEnvironmentModal tenantGroupId="tg-1" onClose={onClose} />);
+    await user.click(checkbox(0));
+    await user.click(screen.getByRole("button", { name: "Add" }));
+
+    await waitFor(() => expect(h.createProject).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(showErrorToast).toHaveBeenCalledWith({ errors: "Could not add the environment." }),
+    );
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

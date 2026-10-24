@@ -370,7 +370,6 @@ export const Users = () => {
               page={queryParams.page}
               pageSize={queryParams.pageSize}
               totalCount={data?.totalCount || 0}
-              pageSizeOptions={[5, 10]}
               onChange={onPageChangeHandler}
               onPageSizeChange={(pageSize) =>
                 setQueryParams((params) => ({ ...params, pageSize, page: 1 }))

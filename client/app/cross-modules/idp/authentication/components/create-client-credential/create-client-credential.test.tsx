@@ -50,6 +50,10 @@ vi.mock("./client-credential-permissions-section", () => ({
 import { CreateClientCredential } from "./create-client-credential";
 import type { IClientCredentialsConfig } from "@blocks-idp/authentication/models/auth.oidc.model";
 
+const FRESH_SECRET = "fresh-secret";
+const NAME_PLACEHOLDER = "Enter client name";
+const PICK_ROLE = "pick-role";
+
 describe("CreateClientCredential", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -85,8 +89,8 @@ describe("CreateClientCredential", () => {
     const user = userEvent.setup();
     const onOpenChange = vi.fn();
     render(<CreateClientCredential open onOpenChange={onOpenChange} hideTrigger />);
-    await user.type(screen.getByPlaceholderText("Enter client name"), "My Service");
-    await user.click(screen.getByRole("button", { name: "pick-role" }));
+    await user.type(screen.getByPlaceholderText(NAME_PLACEHOLDER), "My Service");
+    await user.click(screen.getByRole("button", { name: PICK_ROLE }));
     await user.click(screen.getByRole("button", { name: "pick-permission" }));
     await user.click(screen.getByRole("button", { name: "Add" }));
 
@@ -100,6 +104,26 @@ describe("CreateClientCredential", () => {
       description: "Client credential created successfully",
     });
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("shows the new secret once after create, until the user closes it", async () => {
+    h.saveClient.mockResolvedValue({
+      isSuccess: true,
+      itemId: "cc-new",
+      clientSecret: FRESH_SECRET,
+    });
+    const user = userEvent.setup();
+    render(<CreateClientCredential open onOpenChange={vi.fn()} hideTrigger />);
+    await user.type(screen.getByPlaceholderText(NAME_PLACEHOLDER), "My Service");
+    await user.click(screen.getByRole("button", { name: PICK_ROLE }));
+    await user.click(screen.getByRole("button", { name: "Add" }));
+
+    expect(await screen.findByText(FRESH_SECRET)).toBeTruthy();
+    // The client id is masked for display only.
+    expect(screen.queryByText("cc-new")).toBeNull();
+    expect(screen.getByText(/You will not see this secret again/)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "I copied it, close" }));
+    await waitFor(() => expect(screen.queryByText(FRESH_SECRET)).toBeNull());
   });
 
   it("prefills fields and updates an existing client credential", async () => {
@@ -124,7 +148,7 @@ describe("CreateClientCredential", () => {
     await waitFor(() => expect(screen.getByDisplayValue("Existing Client")).toBeTruthy());
 
     // Make the form dirty by editing the name, then save.
-    await user.type(screen.getByPlaceholderText("Enter client name"), " Updated");
+    await user.type(screen.getByPlaceholderText(NAME_PLACEHOLDER), " Updated");
     await user.click(screen.getByRole("button", { name: "Update Changes" }));
     await waitFor(() => expect(h.saveClient).toHaveBeenCalledTimes(1));
     const payload = h.saveClient.mock.calls[0][0];
@@ -138,8 +162,8 @@ describe("CreateClientCredential", () => {
     const user = userEvent.setup();
     h.saveClient.mockResolvedValue({ isSuccess: false, errors: { name: "duplicate" } });
     render(<CreateClientCredential open hideTrigger />);
-    await user.type(screen.getByPlaceholderText("Enter client name"), "Dup");
-    await user.click(screen.getByRole("button", { name: "pick-role" }));
+    await user.type(screen.getByPlaceholderText(NAME_PLACEHOLDER), "Dup");
+    await user.click(screen.getByRole("button", { name: PICK_ROLE }));
     await user.click(screen.getByRole("button", { name: "pick-permission" }));
     await user.click(screen.getByRole("button", { name: "Add" }));
     await waitFor(() =>
@@ -151,8 +175,8 @@ describe("CreateClientCredential", () => {
     const user = userEvent.setup();
     h.saveClient.mockRejectedValue(new Error("boom"));
     render(<CreateClientCredential open hideTrigger />);
-    await user.type(screen.getByPlaceholderText("Enter client name"), "Dup");
-    await user.click(screen.getByRole("button", { name: "pick-role" }));
+    await user.type(screen.getByPlaceholderText(NAME_PLACEHOLDER), "Dup");
+    await user.click(screen.getByRole("button", { name: PICK_ROLE }));
     await user.click(screen.getByRole("button", { name: "pick-permission" }));
     await user.click(screen.getByRole("button", { name: "Add" }));
     await waitFor(() =>
@@ -167,8 +191,8 @@ describe("CreateClientCredential", () => {
 
       expect(screen.queryByRole("button", { name: "pick-organization" })).toBeNull();
 
-      await user.type(screen.getByPlaceholderText("Enter client name"), "My Service");
-      await user.click(screen.getByRole("button", { name: "pick-role" }));
+      await user.type(screen.getByPlaceholderText(NAME_PLACEHOLDER), "My Service");
+      await user.click(screen.getByRole("button", { name: PICK_ROLE }));
       await user.click(screen.getByRole("button", { name: "Add" }));
 
       await waitFor(() => expect(h.saveClient).toHaveBeenCalledTimes(1));
@@ -180,8 +204,8 @@ describe("CreateClientCredential", () => {
       h.config = { data: { isMultiOrgEnabled: true }, isLoading: false };
       render(<CreateClientCredential open hideTrigger />);
 
-      await user.type(screen.getByPlaceholderText("Enter client name"), "My Service");
-      await user.click(screen.getByRole("button", { name: "pick-role" }));
+      await user.type(screen.getByPlaceholderText(NAME_PLACEHOLDER), "My Service");
+      await user.click(screen.getByRole("button", { name: PICK_ROLE }));
 
       // Name and role alone are no longer enough: the organization decides what the issued
       // tokens can reach, so it cannot be left to a default.
@@ -207,8 +231,8 @@ describe("CreateClientCredential", () => {
       h.config = { data: undefined, isLoading: true };
       const { rerender } = render(<CreateClientCredential open hideTrigger />);
 
-      await user.type(screen.getByPlaceholderText("Enter client name"), "My Service");
-      await user.click(screen.getByRole("button", { name: "pick-role" }));
+      await user.type(screen.getByPlaceholderText(NAME_PLACEHOLDER), "My Service");
+      await user.click(screen.getByRole("button", { name: PICK_ROLE }));
 
       h.config = { data: { isMultiOrgEnabled: true }, isLoading: false };
       rerender(<CreateClientCredential open hideTrigger />);
@@ -251,7 +275,7 @@ describe("CreateClientCredential", () => {
       expect(screen.queryByRole("button", { name: "pick-organization" })).toBeNull();
 
       await waitFor(() => expect(screen.getByDisplayValue("Existing Client")).toBeTruthy());
-      await user.type(screen.getByPlaceholderText("Enter client name"), " Updated");
+      await user.type(screen.getByPlaceholderText(NAME_PLACEHOLDER), " Updated");
       await user.click(screen.getByRole("button", { name: "Update Changes" }));
 
       await waitFor(() => expect(h.saveClient).toHaveBeenCalledTimes(1));

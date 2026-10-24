@@ -1158,8 +1158,9 @@ namespace DomainService.Projects
                 {
                     ConfigurationName = BuiltInNotificationNames.ProjectDisabledOrDeleted,
                     Event = "project-disabled",
-                    Title = "Project disabled",
-                    Description = "A project you belong to was disabled.",
+                    // One call disables one environment (tenant), not the whole project.
+                    Title = "Environment deleted",
+                    Description = DescribeDeletedEnvironment(project),
                     Ids = new Dictionary<string, string?>
                     {
                         ["projectKey"] = project.TenantId,
@@ -1171,6 +1172,21 @@ namespace DomainService.Projects
             }
 
             return new BaseResponse { IsSuccess = true };
+        }
+
+        private static string DescribeDeletedEnvironment(Tenant project)
+        {
+            var environment = project.Environment?.Trim();
+            var projectName = project.Name?.Trim();
+
+            if (string.IsNullOrEmpty(environment))
+            {
+                return "An environment you belong to was deleted.";
+            }
+
+            return string.IsNullOrEmpty(projectName)
+                ? $"An environment you belong to ({environment}) was deleted."
+                : $"An environment you belong to ({environment} of {projectName}) was deleted.";
         }
 
         private async Task<string?> TryGetOwnerUserIdAsync(string tenantId)
