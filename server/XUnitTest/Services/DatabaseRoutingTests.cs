@@ -91,6 +91,16 @@ public class DatabaseRoutingTests
                     new BsonDocument { { "name", "_id_" }, { "key", new BsonDocument("_id", 1) } }));
                 return collection.Object;
             });
+        // Key-value seed rows (built-in notification configs): read on main, written to the stored placement.
+        var seedKeyValues = new Mock<IMongoCollection<KeyValueEntry>>();
+        seedKeyValues.Setup(c => c.FindAsync(It.IsAny<FilterDefinition<KeyValueEntry>>(), It.IsAny<FindOptions<KeyValueEntry, KeyValueEntry>>(), default))
+            .ReturnsAsync(() => Cursor(new[] { new KeyValueEntry { Key = "notification-config:built-in" } }));
+        source.Setup(d => d.GetCollection<KeyValueEntry>("KeyValueStores", null)).Returns(seedKeyValues.Object);
+        var projectKeyValues = new Mock<IMongoCollection<KeyValueEntry>>();
+        projectKeyValues.Setup(c => c.UpdateOneAsync(It.IsAny<FilterDefinition<KeyValueEntry>>(), It.IsAny<UpdateDefinition<KeyValueEntry>>(), It.IsAny<UpdateOptions>(), default))
+            .Callback(() => { lock (writes) writes.Add("KeyValueStores"); })
+            .ReturnsAsync(new UpdateResult.Acknowledged(0, 0, BsonValue.Create("new-row")));
+        target.Setup(d => d.GetCollection<KeyValueEntry>("KeyValueStores", null)).Returns(projectKeyValues.Object);
         var encoding = new Mock<IEncodingService>();
         encoding.Setup(e => e.EncodeToBase26Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>())).ReturnsAsync("abc");
         var dataGatewayRoot = new Mock<IDataGatewayRootProvisioner>();
@@ -112,6 +122,7 @@ public class DatabaseRoutingTests
         Assert.Contains("Repos", writes);
         Assert.Contains("Roles", writes);
         Assert.Contains("Permissions", writes);
+        Assert.Contains("KeyValueStores", writes);
         // Storage configurations are not copied raw (the seed's secret ids belong to the root tenant): the copier
         // reads the seed on main and writes to the stored placement.
         Assert.DoesNotContain("StorageConfigurations", writes);
