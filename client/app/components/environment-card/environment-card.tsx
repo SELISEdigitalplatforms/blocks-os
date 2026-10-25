@@ -36,7 +36,12 @@ export const EnvironmentCard = ({
   const navigate = useNavigate();
   const { setSelectedProject } = useProjectStore();
   const { mutateAsync: startImpersonation } = useStartImpersonation();
-  const { data: isSetupComplete } = useGetProjectStatus(project.itemId);
+  const {
+    data: isSetupComplete,
+    isError: isStatusError,
+    isFetching: isStatusFetching,
+    refetch: refetchStatus,
+  } = useGetProjectStatus(project.itemId);
   const { mutateAsync: restoreProject, isPending: isRestoring } = useRestoreProject();
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
   const [isRestoreOpen, setIsRestoreOpen] = useState(false);
@@ -46,7 +51,12 @@ export const EnvironmentCard = ({
   const { isOwner } = useProjectPermissions(project.tenantGroupId);
   const canRepair = isOwner;
 
+  // Only a confirmed `true` opens the card. A failed or unfinished status call used to read
+  // as "set up", which let people into an environment whose setup had not finished.
+  const setupComplete = isSetupComplete === true;
   const setupPending = isSetupComplete === false;
+  const statusFailed = isSetupComplete === undefined && isStatusError;
+  const statusChecking = isSetupComplete === undefined && !isStatusError;
 
   // An environment carries a generated domain plus any custom ones, so the card shows the
   // first and counts the rest rather than implying there is only one.
@@ -73,7 +83,7 @@ export const EnvironmentCard = ({
     if (event.target instanceof Element && event.target.closest("[role='dialog']")) {
       return;
     }
-    if (setupPending) {
+    if (!setupComplete) {
       return;
     }
     if (isMigrationOngoing) {
@@ -108,7 +118,10 @@ export const EnvironmentCard = ({
     <Dialog open={isConfirmationOpen} onOpenChange={setIsConfirmationOpen}>
       <Card
         onClick={handleCardClick}
-        className={`group flex min-h-[70px] cursor-pointer flex-col justify-between rounded-sm p-4 shadow-none transition-shadow duration-200 hover:shadow-md ${className}`}
+        aria-disabled={!setupComplete || undefined}
+        className={`group flex min-h-[70px] flex-col justify-between rounded-sm p-4 shadow-none transition-shadow duration-200 ${
+          setupComplete ? "cursor-pointer hover:shadow-md" : "cursor-default"
+        } ${className}`}
       >
         <CardHeader className="flex flex-row justify-between p-0!">
           <CardTitle className="line-clamp-1 break-all text-lg leading-tight">
@@ -147,23 +160,45 @@ export const EnvironmentCard = ({
           </CardTitle>
           <div className="flex items-center gap-1">
             {setupPending && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span
-                      className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-warning-100 text-warning-700"
-                      aria-label="Setup pending"
-                    >
-                      <AlertTriangle className="h-3.5 w-3.5" />
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent className="border-none bg-neutral-500 text-white shadow-none">
-                    Setup pending — click restore to re-run seeding.
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Badge variant="warning" className="gap-1" aria-label="Setup pending">
+                <AlertTriangle className="h-3 w-3" />
+                Setup not finished
+              </Badge>
             )}
-            {setupPending && canRepair && (
+            {statusChecking && (
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Checking setup…
+              </span>
+            )}
+            {setupComplete && (
+              <ChevronRight className="h-4 w-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+            )}
+          </div>
+        </CardHeader>
+        {/* The reason used to sit in a hover tooltip on a bare icon, named a "restore" button
+            the card does not have, and contributors got no button at all. Say it on the card. */}
+        {statusFailed && (
+          <div className="mt-3 flex items-center justify-between gap-2 rounded-sm border border-warning-200 bg-warning-50 p-3 text-xs text-warning-900">
+            <p>Couldn&apos;t check the setup status of this environment.</p>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                refetchStatus();
+              }}
+              disabled={isStatusFetching}
+              className="inline-flex h-6 shrink-0 items-center gap-1 rounded-full bg-secondary px-2 text-xs font-medium text-secondary-foreground transition-colors hover:bg-secondary/80 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {isStatusFetching && <Loader2 className="h-3 w-3 animate-spin" />}
+              Retry
+            </button>
+          </div>
+        )}
+        {setupPending && (
+          <div className="mt-3 flex flex-col gap-2 rounded-sm border border-warning-200 bg-warning-50 p-3 text-xs text-warning-900">
+            <p>Setup of this environment did not finish, so it can&apos;t be opened yet.</p>
+            {canRepair ? (
               <Dialog open={isRestoreOpen} onOpenChange={setIsRestoreOpen}>
                 <DialogTrigger asChild>
                   <button
@@ -205,12 +240,11 @@ export const EnvironmentCard = ({
                   buttonState={{ confirm: { disable: isRestoring } }}
                 />
               </Dialog>
-            )}
-            {!setupPending && (
-              <ChevronRight className="h-4 w-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+            ) : (
+              <p className="text-warning-700">Ask the project owner to run Repair.</p>
             )}
           </div>
-        </CardHeader>
+        )}
         {/* The card used to carry a name and a raw key and nothing else, while Project
             Settings had the domains, the created date and a masked key all along. Same
             facts, one presentation — including the masking, which only one of the two

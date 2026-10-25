@@ -1,8 +1,11 @@
 using System.Text.Json;
 using Blocks.Genesis.Entities.Data;
 using BlocksOs.Api.Controllers;
+using Configuration.DomainService.DataGateway.RequestModel;
+using Configuration.DomainService.DataGateway.Services;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using Xunit;
 
@@ -40,7 +43,7 @@ public class PlatformDataAccessControllerTests
                 new FieldDefinition { Name = "Create.Roles", Type = "String", IsArray = true, IsReferenceField = true },
             ],
         });
-        var controller = new PlatformDataAccessController(_fixture.DbContextProvider);
+        var controller = new PlatformDataAccessController(new PlatformDataAccessService(_fixture.DbContextProvider));
 
         var result = await controller.Schemas(CancellationToken.None);
 
@@ -70,7 +73,7 @@ public class PlatformDataAccessControllerTests
     public async Task Configure_SetsTheSchemaLevelOfThatOperationOnly(PolicyOperation operation)
     {
         var id = await InsertRoleAsync();
-        var controller = new PlatformDataAccessController(_fixture.DbContextProvider);
+        var controller = new PlatformDataAccessController(new PlatformDataAccessService(_fixture.DbContextProvider));
 
         var result = await controller.Configure(new ConfigurePlatformAccessRequest
         {
@@ -87,7 +90,7 @@ public class PlatformDataAccessControllerTests
     public async Task Configure_FieldLevel_AllowsViewAndEditOnly()
     {
         var id = await InsertRoleAsync();
-        var controller = new PlatformDataAccessController(_fixture.DbContextProvider);
+        var controller = new PlatformDataAccessController(new PlatformDataAccessService(_fixture.DbContextProvider));
         ConfigurePlatformAccessRequest Field(PolicyOperation operation) => new()
         {
             SchemaId = id, Operation = operation, PolicyType = PolicyType.CLS, FieldNames = ["Name"], AccessLevel = SchemaAccessLevel.Custom,
@@ -107,7 +110,7 @@ public class PlatformDataAccessControllerTests
     public async Task Policies_AreSavedListedAndDeletedPerOperation()
     {
         var id = await InsertRoleAsync();
-        var controller = new PlatformDataAccessController(_fixture.DbContextProvider);
+        var controller = new PlatformDataAccessController(new PlatformDataAccessService(_fixture.DbContextProvider));
         SavePlatformPolicyRequest Rule(PolicyOperation? operation) => new() { SchemaId = id, PolicyName = $"{operation} rule", Operation = operation, PolicyType = PolicyType.RLS };
 
         (await controller.Create(Rule(null), CancellationToken.None)).Should().BeOfType<BadRequestResult>();
@@ -131,6 +134,24 @@ public class PlatformDataAccessControllerTests
     }
 
     [Fact]
+    public async Task Delete_NeverReadsATenantSchemasPolicy_EvenOneThisGenesisCantRead()
+    {
+        // A tenant schema's policy with an operator this Genesis doesn't know, as a newer gateway stores one (e.g. EXISTS_IN).
+        var policyId = Guid.NewGuid().ToString();
+        await _fixture.Collection<BsonDocument>("DataAccessPolicys").InsertOneAsync(new BsonDocument
+        {
+            ["_id"] = policyId, ["SchemaId"] = Guid.NewGuid().ToString(), ["Operation"] = "READ", ["PolicyType"] = "RLS", ["IsDeleted"] = false,
+            ["RuleGroup"] = new BsonDocument { ["Rules"] = new BsonArray { new BsonDocument { ["LeftOperand"] = "CustomerId", ["Operator"] = "FUTURE_OPERATOR" } } },
+        });
+        var policies = _fixture.Collection<DataAccessPolicy>("DataAccessPolicys");
+        await FluentActions.Awaiting(() => policies.Find(x => x.ItemId == policyId).ToListAsync())
+            .Should().ThrowAsync<Exception>("the tenant policy must be unreadable here for this test to mean anything");
+
+        (await new PlatformDataAccessController(new PlatformDataAccessService(_fixture.DbContextProvider)).Delete(policyId, CancellationToken.None)).Should().BeOfType<NotFoundResult>();
+        (await _fixture.Collection<BsonDocument>("DataAccessPolicys").CountDocumentsAsync(new BsonDocument("_id", policyId))).Should().Be(1);
+    }
+
+    [Fact]
     public async Task Schemas_LeavesOutHiddenSchemasAndHiddenProperties()
     {
         var repoId = await InsertRepoAsync();
@@ -140,7 +161,7 @@ public class PlatformDataAccessControllerTests
             ItemId = hiddenId, SchemaName = "RefreshTokenModel", CollectionName = "IdpRefreshTokens", IsSystemEntity = true,
             Fields = [new FieldDefinition { Name = "Name", Type = "String" }],
         });
-        var controller = new PlatformDataAccessController(_fixture.DbContextProvider);
+        var controller = new PlatformDataAccessController(new PlatformDataAccessService(_fixture.DbContextProvider));
 
         var body = JsonSerializer.SerializeToElement(((OkObjectResult)await controller.Schemas(CancellationToken.None)).Value);
 
@@ -156,7 +177,7 @@ public class PlatformDataAccessControllerTests
     public async Task HiddenProperties_TakeNoRules()
     {
         var id = await InsertRepoAsync();
-        var controller = new PlatformDataAccessController(_fixture.DbContextProvider);
+        var controller = new PlatformDataAccessController(new PlatformDataAccessService(_fixture.DbContextProvider));
         var hiddenCondition = new PolicyRuleGroup
         {
             NestedGroups = [new PolicyRuleGroup { Rules = [new PolicyRule { LeftOperand = "DeploySettings.Region", StaticValue = "eu" }] }],
