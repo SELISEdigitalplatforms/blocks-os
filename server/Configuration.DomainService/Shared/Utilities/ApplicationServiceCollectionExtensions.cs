@@ -77,6 +77,9 @@ namespace Configuration.DomainService.Shared.Utilities
             serviceCollection.AddSingleton<IDataGatewayRootStore, DataGatewayRootStore>();
             serviceCollection.AddScoped<IDataGatewayConfigurationService, DataGatewayConfigurationService>();
 
+            // Data Access page for platform (system) schemas: reads the tenant database per request.
+            serviceCollection.AddScoped<IPlatformDataAccessService, PlatformDataAccessService>();
+
             // Finds the CAPTCHA and mail configurations that point at a secret, for the warning
             // shown before it is archived or purged.
             serviceCollection.AddScoped<ISecretDependentLookup, SecretDependentLookup>();

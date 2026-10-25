@@ -8,7 +8,9 @@ const h = vi.hoisted(() => ({
   setSelectedProject: vi.fn(),
   startImpersonation: vi.fn(),
   restoreProject: vi.fn(),
-  projectStatus: undefined as boolean | undefined,
+  projectStatus: true as boolean | undefined,
+  statusError: false,
+  refetchStatus: vi.fn(),
   isRestoring: false,
 }));
 
@@ -23,7 +25,12 @@ vi.mock("@/hooks/use-project-access", () => ({
   useProjectPermissions: () => ({ isOwner: h.isOwner ?? true, can: () => true, menus: [] }),
 }));
 vi.mock("@/hooks/use-project", () => ({
-  useGetProjectStatus: () => ({ data: h.projectStatus }),
+  useGetProjectStatus: () => ({
+    data: h.projectStatus,
+    isError: h.statusError,
+    isFetching: false,
+    refetch: h.refetchStatus,
+  }),
   useRestoreProject: () => ({ mutateAsync: h.restoreProject, isPending: h.isRestoring }),
 }));
 // The tooltip ui-kit re-exports blocks-kit, which touches process.env via
@@ -55,7 +62,8 @@ describe("EnvironmentCard", () => {
     vi.clearAllMocks();
     h.startImpersonation.mockResolvedValue(undefined);
     h.restoreProject.mockResolvedValue({ isSuccess: true });
-    h.projectStatus = undefined;
+    h.projectStatus = true;
+    h.statusError = false;
     h.isOwner = true;
     h.isRestoring = false;
   });
@@ -77,6 +85,7 @@ describe("EnvironmentCard", () => {
     h.projectStatus = false;
     render(<EnvironmentCard project={project} />);
     expect(screen.queryByRole("button", { name: /Repair/i })).toBeNull();
+    expect(screen.getByText("Ask the project owner to run Repair.")).toBeTruthy();
   });
 
   it("shows the primary domain and counts the rest", () => {
@@ -98,12 +107,14 @@ describe("EnvironmentCard", () => {
     expect(screen.queryByLabelText("Repair environment")).toBeNull();
   });
 
-  it("shows a compact setup indicator and repair action when setup is pending", () => {
+  it("explains the pending setup on the card and offers Repair to the owner", () => {
     h.projectStatus = false;
     render(<EnvironmentCard project={project} />);
     expect(screen.getByLabelText("Setup pending")).toBeTruthy();
     expect(screen.getByLabelText("Repair environment")).toBeTruthy();
     expect(screen.getByText("Repair")).toBeTruthy();
+    expect(screen.getByText(/did not finish/)).toBeTruthy();
+    expect(screen.queryByText(/Ask the project owner/)).toBeNull();
   });
 
   it("does not navigate to the dashboard while setup is pending", () => {
@@ -112,6 +123,26 @@ describe("EnvironmentCard", () => {
     fireEvent.click(screen.getByText("Development"));
     expect(h.startImpersonation).not.toHaveBeenCalled();
     expect(h.navigate).not.toHaveBeenCalled();
+  });
+
+  it("shows a checking state and does not open while the status is loading", () => {
+    h.projectStatus = undefined;
+    render(<EnvironmentCard project={project} />);
+    expect(screen.getByText("Checking setup…")).toBeTruthy();
+    fireEvent.click(screen.getByText("Development"));
+    expect(h.startImpersonation).not.toHaveBeenCalled();
+  });
+
+  it("offers Retry and does not open when the status call fails", () => {
+    // Unknown is not "set up": the card used to open on a failed status call.
+    h.projectStatus = undefined;
+    h.statusError = true;
+    render(<EnvironmentCard project={project} />);
+    fireEvent.click(screen.getByText("Development"));
+    expect(h.startImpersonation).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: /Retry/ }));
+    expect(h.refetchStatus).toHaveBeenCalled();
+    expect(h.startImpersonation).not.toHaveBeenCalled();
   });
 
   it("impersonates, selects the project and navigates on click when no migration", async () => {

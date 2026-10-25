@@ -217,32 +217,22 @@
         <member name="M:BlocksOs.Api.Controllers.PeopleController.SaveAccessPolicy(DomainService.Access.SaveAccessPolicyRequest)">
             <summary>Owner-only, always — a grant must never be able to widen itself.</summary>
         </member>
-        <member name="F:BlocksOs.Api.Controllers.PlatformDataAccessController.RulesEnabledSetting">
-            <summary>
-            Validation rules and default values on system schemas. Off until IAM, OS, Logic and Release all run a
-            Genesis that understands them: while off the rule endpoints answer 404 and Schemas carries no rule flags.
-            </summary>
+        <member name="T:BlocksOs.Api.Controllers.PlatformDataAccessController">
+            <summary>The Data Access page for platform (system) schemas. The work is in <see cref="T:Configuration.DomainService.DataGateway.Services.IPlatformDataAccessService"/>.</summary>
         </member>
-        <member name="F:BlocksOs.Api.Controllers.PlatformDataAccessController.RulesIncludeWarnedSetting">
-            <summary>
-            Whether warned schemas (sign-in, the console: User, Role, mail configuration, …) and warned properties
-            (row access lists, template bodies, …) are offered too. Off by default: only Normal schemas and their
-            Allowed properties, the ones that cannot stop a service from saving or users from signing in.
-            </summary>
-        </member>
-        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.OfferedRules(System.String)">
-            <summary>The allow-list as this environment offers it: warned schemas and properties left out unless switched on.</summary>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.#ctor(Configuration.DomainService.DataGateway.Services.IPlatformDataAccessService)">
+            <summary>The Data Access page for platform (system) schemas. The work is in <see cref="T:Configuration.DomainService.DataGateway.Services.IPlatformDataAccessService"/>.</summary>
         </member>
         <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.Validation(System.String,System.String,System.Threading.CancellationToken)">
             <summary>The field's validation rules; null when it has none.</summary>
         </member>
-        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.SaveValidation(BlocksOs.Api.Controllers.SavePlatformValidationRequest,System.Threading.CancellationToken)">
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.SaveValidation(Configuration.DomainService.DataGateway.RequestModel.SavePlatformValidationRequest,System.Threading.CancellationToken)">
             <summary>
             Replaces the field's validation rules; an empty list removes them. Only properties the Genesis allow-list
             opens; Reference rules point at system Entity schemas; every rule is saved as version 1.
             </summary>
         </member>
-        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.BulkValidation(BlocksOs.Api.Controllers.BulkPlatformValidationRequest,System.Threading.CancellationToken)">
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.BulkValidation(Configuration.DomainService.DataGateway.RequestModel.BulkPlatformValidationRequest,System.Threading.CancellationToken)">
             <summary>
             The same validation rules on several default properties (the base entity's own: Language, Tags, Read.Roles, …)
             of several system schemas. <c>Replace</c> gives each property exactly these rules (an empty list removes
@@ -250,77 +240,14 @@
             be; if any is refused nothing is written, and each refusal is named by Schema.Property.
             </summary>
         </member>
-        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.FieldDefault(BlocksOs.Api.Controllers.SetPlatformFieldDefaultRequest,System.Threading.CancellationToken)">
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.FieldDefault(Configuration.DomainService.DataGateway.RequestModel.SetPlatformFieldDefaultRequest,System.Threading.CancellationToken)">
             <summary>Sets or (null) clears the field's default value. Only properties the Genesis allow-list opens.</summary>
         </member>
-        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.PlanValidationWritesAsync(Blocks.Genesis.Entities.Data.SchemaDefinition,Blocks.Genesis.DataAccess.Rules.SystemSchemaRuleSet,BlocksOs.Api.Controllers.BulkPlatformValidationRequest,System.Collections.Generic.Dictionary{System.String,System.String},System.Collections.Generic.List{BlocksOs.Api.Controllers.PlatformDataAccessController.ValidationWrite},System.Threading.CancellationToken)">
-            <summary>One schema's share of a bulk validation: what each picked property would get, or why it can't.</summary>
-        </member>
-        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.BulkFieldDefault(BlocksOs.Api.Controllers.BulkPlatformFieldDefaultRequest,System.Threading.CancellationToken)">
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.BulkFieldDefault(Configuration.DomainService.DataGateway.RequestModel.BulkPlatformFieldDefaultRequest,System.Threading.CancellationToken)">
             <summary>
             Sets or (null) clears the same default value on several default properties of several system schemas.
             Every pair is checked first; if any is refused nothing is written, and each refusal is named by Schema.Property.
             </summary>
-        </member>
-        <member name="F:BlocksOs.Api.Controllers.PlatformDataAccessController.DefaultPropertyNames">
-            <summary>The base entity's own properties, which every system schema has: the only ones bulk changes may touch.</summary>
-        </member>
-        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.BulkTargetsProblem(System.Collections.Generic.List{System.String},System.Collections.Generic.List{System.String})">
-            <summary>Why a bulk request's schemas and properties can't be used, or null when they can.</summary>
-        </member>
-        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.NormaliseRules(System.Collections.Generic.List{Blocks.Genesis.Entities.Data.ValidationRule})">
-            <summary>Rules as stored: request values as text, numbers and lists, every rule version 1.</summary>
-        </member>
-        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.WriteValidationAsync(System.String,System.String,Blocks.Genesis.Entities.Data.DataValidation,System.Collections.Generic.List{Blocks.Genesis.Entities.Data.ValidationRule},System.Threading.CancellationToken)">
-            <summary>Stores the property's rules, or removes its row when there are none; returns the row's id.</summary>
-        </member>
-        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.StorableDefault(Blocks.Genesis.Entities.Data.FieldDefaultValue)">
-            <summary>The requested default as stored; null clears it.</summary>
-        </member>
-        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.CheckDefault(Blocks.Genesis.Entities.Data.SchemaDefinition,Blocks.Genesis.Entities.Data.FieldDefinition,Blocks.Genesis.Entities.Data.FieldDefaultValue)">
-            <summary>Why the default can't go on the field, or null when it can (clearing always can).</summary>
-        </member>
-        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.CheckRulesAsync(Blocks.Genesis.Entities.Data.SchemaDefinition,Blocks.Genesis.Entities.Data.FieldDefinition,System.Collections.Generic.List{Blocks.Genesis.Entities.Data.ValidationRule},System.Threading.CancellationToken)">
-            <summary>The same checks the Data Gateway makes when a rule is saved, with system schemas as Reference targets.</summary>
-        </member>
-        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.CheckRuleShape(Blocks.Genesis.Entities.Data.ValidationRule)">
-            <summary>The rule on its own: a known type, the values it needs, a pattern that parses.</summary>
-        </member>
-        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.CheckReferenceAsync(Blocks.Genesis.Entities.Data.FieldDefinition,Blocks.Genesis.Entities.Data.ValidationRule,System.Threading.CancellationToken)">
-            <summary>A Reference rule must point at a system Entity schema and one of its fields that fits.</summary>
-        </member>
-        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.IsValidPattern(System.String)">
-            <summary>Parses the pattern only (the timeout bounds the parse); nothing is matched here.</summary>
-        </member>
-        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.LoadRulesSchemaAsync(System.String,System.Threading.CancellationToken)">
-            <summary>A platform schema the allow-list opens for rules, with its rule set; null otherwise.</summary>
-        </member>
-        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.ToStorable(System.Object)">
-            <summary>JSON request values as stored values: text, numbers, booleans, and lists of them.</summary>
-        </member>
-        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.NumberOf(System.Text.Json.JsonElement)">
-            <summary>A whole number as a long, anything else as a double.</summary>
-        </member>
-        <member name="P:BlocksOs.Api.Controllers.SavePlatformValidationRequest.FieldName">
-            <summary>The property; a nested one by its dotted path, e.g. Read.Roles.</summary>
-        </member>
-        <member name="P:BlocksOs.Api.Controllers.SetPlatformFieldDefaultRequest.FieldName">
-            <summary>The property; a nested one by its dotted path, e.g. Read.Roles.</summary>
-        </member>
-        <member name="P:BlocksOs.Api.Controllers.SetPlatformFieldDefaultRequest.DefaultValue">
-            <summary>Null clears the default.</summary>
-        </member>
-        <member name="P:BlocksOs.Api.Controllers.BulkPlatformValidationRequest.FieldNames">
-            <summary>Default properties only; nested ones by their dotted path, e.g. Read.Roles.</summary>
-        </member>
-        <member name="P:BlocksOs.Api.Controllers.BulkPlatformValidationRequest.Replace">
-            <summary>True: each property gets exactly these rules. False or missing: they are added after its own.</summary>
-        </member>
-        <member name="P:BlocksOs.Api.Controllers.BulkPlatformFieldDefaultRequest.FieldNames">
-            <summary>Default properties only; nested ones by their dotted path, e.g. Read.Roles.</summary>
-        </member>
-        <member name="P:BlocksOs.Api.Controllers.BulkPlatformFieldDefaultRequest.DefaultValue">
-            <summary>Null clears the default.</summary>
         </member>
         <member name="M:BlocksOs.Api.Controllers.ProjectController.GetThirdPartyJwtProviders">
             <summary>
