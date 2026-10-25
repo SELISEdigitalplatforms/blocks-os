@@ -55,8 +55,11 @@ export const ManagedBySelect = ({
 
   const roles = data?.data ?? [];
   const nameBySlug = new Map(roles.map((role) => [role.slug, role.name]));
+  // A role cannot hang below itself or below a role under it: the server refuses that loop.
   const candidates = isSystemUser
-    ? roles.map((role) => role.slug).filter((slug) => slug !== excludeSlug)
+    ? roles
+        .filter((role) => role.slug !== excludeSlug && !(excludeSlug && role.ancestorRoleSlugs?.includes(excludeSlug)))
+        .map((role) => role.slug)
     : restrictedCandidates;
   const current = value ?? "";
   // A parent set earlier by someone else must still show, even if this caller could not pick it.

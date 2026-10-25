@@ -82,6 +82,23 @@ describe("ManagedBySelect", () => {
       );
     });
 
+    it("leaves out the roles below the role itself", async () => {
+      h.getRoles.mockReturnValue({
+        data: {
+          data: [
+            { slug: "lead", name: "Team Lead", ancestorRoleSlugs: [] },
+            { slug: "member", name: "Member", ancestorRoleSlugs: ["lead"] },
+            { slug: "guest", name: "Guest", ancestorRoleSlugs: [] },
+          ],
+        },
+      });
+      const user = userEvent.setup();
+      render(<Harness excludeSlug="lead" />);
+      await user.click(screen.getByTestId(TRIGGER_ID));
+      expect(screen.getByRole("option", { name: "Guest" })).toBeTruthy();
+      expect(screen.queryByRole("option", { name: "Member" })).toBeNull();
+    });
+
     it("offers every role except the role itself", async () => {
       const user = userEvent.setup();
       render(<Harness excludeSlug="lead" />);
