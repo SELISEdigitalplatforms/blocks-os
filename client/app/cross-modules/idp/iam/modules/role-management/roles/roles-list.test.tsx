@@ -1,9 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-const grant = vi.hoisted(() => ({ isRestricted: false }));
+const grant = vi.hoisted(() => ({ scope: undefined as { isSystemUser: boolean } | undefined }));
 vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => ({
-  useGrantScope: () => ({ isRestricted: grant.isRestricted }),
+  useGrantScope: () => ({ scope: grant.scope }),
 }));
 
 // See the mock for why the tooltip barrel cannot be imported under jsdom.
@@ -129,26 +129,29 @@ const MANAGED_BY = "Managed by";
 describe("RolesList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    grant.isRestricted = false;
+    grant.scope = undefined;
   });
 
   describe("Managed by column", () => {
     const child = { ...role, itemId: "role-child", name: "Member", slug: "member", parentRoleSlug: "administrator" } as IRole;
 
-    it("is left out for the system user while no role has a parent", () => {
+    it("is left out while the grant scope is not loaded and no role has a parent", () => {
       render(<RolesList roles={[role]} isLoading={false} />);
       expect(screen.queryByText(MANAGED_BY)).toBeNull();
     });
 
-    it("appears for the system user once a role has a parent, naming it", () => {
+    it("appears once a role has a parent, naming it", () => {
       render(<RolesList roles={[role, child]} isLoading={false} />);
       expect(screen.getAllByText(MANAGED_BY).length).toBeGreaterThan(0);
       const cells = screen.getAllByTestId("managed-by-cell").map((cell) => cell.textContent);
       expect(cells).toEqual(["-", "Administrator"]);
     });
 
-    it("always appears for a limited caller", () => {
-      grant.isRestricted = true;
+    it.each([
+      ["the system user", true],
+      ["a limited caller", false],
+    ])("always appears for %s", (_who, isSystemUser) => {
+      grant.scope = { isSystemUser };
       render(<RolesList roles={[role]} isLoading={false} />);
       expect(screen.getAllByText(MANAGED_BY).length).toBeGreaterThan(0);
     });

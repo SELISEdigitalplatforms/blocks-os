@@ -76,9 +76,9 @@ export const RolesList = ({
     (value: SortValue) => setSortQueryParams(value),
     [setSortQueryParams],
   );
-  const { isRestricted } = useGrantScope();
-  // The column is for people who work with the tree; the system user sees it only once a role has one.
-  const showManagedBy = isRestricted || roles.some((role) => Boolean(role.parentRoleSlug));
+  const { scope } = useGrantScope();
+  // Shown once the grant scope has loaded (system user too), or when a role already has a parent.
+  const showManagedBy = Boolean(scope) || roles.some((role) => Boolean(role.parentRoleSlug));
   const gridColumns = showManagedBy ? MANAGED_BY_GRID : BASE_GRID;
   const nameBySlug = new Map(roles.map((role) => [role.slug, role.name]));
   const openRole = (itemId: string) => navigate(scoped(`iam/role-detail/${itemId}`));

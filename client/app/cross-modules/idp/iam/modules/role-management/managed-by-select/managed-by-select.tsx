@@ -25,7 +25,7 @@ type ManagedBySelectProps = {
 
 /**
  * "Managed by": the role above this one. A limited caller may only pick a role they hold or
- * manage. Hidden for the system user, whose role form stays as it was.
+ * manage; the system user may pick any role. Hidden until the grant scope has loaded.
  */
 export const ManagedBySelect = ({
   value,
@@ -33,8 +33,9 @@ export const ManagedBySelect = ({
   excludeSlug,
   disabled,
 }: Readonly<ManagedBySelectProps>) => {
-  const { isRestricted, managedByCandidates } = useGrantScope();
-  const candidates = useMemo(
+  const { scope, isRestricted, managedByCandidates } = useGrantScope();
+  const isSystemUser = scope?.isSystemUser === true;
+  const restrictedCandidates = useMemo(
     () => managedByCandidates.filter((slug) => slug !== excludeSlug),
     [managedByCandidates, excludeSlug],
   );
@@ -44,14 +45,19 @@ export const ManagedBySelect = ({
       pageSize: OPTIONS_PAGE_SIZE,
       projectKey: "managed-by",
       sort: { property: "Name", isDescending: false },
-      filter: { slugs: candidates },
+      // The system user is not limited, so every role of the organization is a candidate.
+      filter: isSystemUser ? { search: "" } : { slugs: restrictedCandidates },
     },
-    { enabled: candidates.length > 0 },
+    { enabled: isSystemUser || restrictedCandidates.length > 0 },
   );
 
-  if (!isRestricted) return null;
+  if (!isRestricted && !isSystemUser) return null;
 
-  const nameBySlug = new Map((data?.data ?? []).map((role) => [role.slug, role.name]));
+  const roles = data?.data ?? [];
+  const nameBySlug = new Map(roles.map((role) => [role.slug, role.name]));
+  const candidates = isSystemUser
+    ? roles.map((role) => role.slug).filter((slug) => slug !== excludeSlug)
+    : restrictedCandidates;
   const current = value ?? "";
   // A parent set earlier by someone else must still show, even if this caller could not pick it.
   const options = current && !candidates.includes(current) ? [...candidates, current] : candidates;
