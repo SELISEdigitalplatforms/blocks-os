@@ -3,6 +3,7 @@ import { IStorageConfiguration, StorageStrategyType } from "@blocks-storage/mode
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui-kits/sheet/sheet";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { cn, formatDate } from "@/lib/utils";
+import { StorageSecretStatusList } from "./storage-secret-status";
 interface StorageDetailsDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -88,6 +89,7 @@ export function StorageDetailsDrawer({ open, onOpenChange, storage }: StorageDet
                       <span className="text-sm font-medium">{providerLabel}</span>
                     </div>
                   </div>
+                  <StorageSecretStatusList storage={storage} />
                   <div>
                     <div className="mb-1 text-xs text-muted-foreground">Owner</div>
                     <div className="text-sm font-medium">{storage.createdBy || "Me"}</div>

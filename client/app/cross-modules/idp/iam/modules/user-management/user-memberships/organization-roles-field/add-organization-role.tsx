@@ -22,10 +22,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
 import { useProjectStore } from "@seliseblocks/genesis-os";
-import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
+import { useGetAssignableRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { Info, Plus, ShieldCheck } from "lucide-react";
 import { MINIMUM_ROLE_MESSAGE } from "./role-assignment.constants";
+import { GrantHint } from "@blocks-idp/iam/components/grant-hint";
 
 type AddOrganizationRoleProps = {
   roles: IRole[];
@@ -60,7 +61,7 @@ export const AddOrganizationRole = ({
   const [selectedRoles, setSelectedRoles] = useState<IRole[]>([]);
   const [filter, setFilter] = useState({ page: 0, pageSize: 10, search: "" });
 
-  const { data, isLoading } = useGetRoles(
+  const { data, isLoading } = useGetAssignableRoles(
     {
       page: filter.page,
       pageSize: filter.pageSize,
@@ -198,6 +199,7 @@ export const AddOrganizationRole = ({
             You can assign a maximum of {MAX_ROLES_PER_USER} roles per user.
           </DialogDescription>
         </DialogHeader>
+        <GrantHint kind="roles" />
         <div>
           <FilterControls.SearchInput
             value={filter.search}

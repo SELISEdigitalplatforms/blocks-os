@@ -52,7 +52,6 @@ export const PeopleList = ({
               page={page}
               pageSize={pageSize}
               totalCount={totalCount}
-              pageSizeOptions={[10, 20, 50, 100]}
               onChange={onPageChange}
               onPageSizeChange={onPageSizeChange}
             />

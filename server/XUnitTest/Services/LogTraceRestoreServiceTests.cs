@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Blocks.Genesis;
-using Blocks.MailDriver;
 using Cloud.LmtService.Models.ColdRestore;
 using Cloud.LmtService.Models.Shared;
 using Cloud.LmtService.Repositories.ColdRestore;
@@ -16,11 +15,14 @@ using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
+using XUnitTest.TestHelpers;
 
 namespace XUnitTest.Services
 {
-    public class LogTraceRestoreServiceTests
+    public class LogTraceRestoreServiceTests : IDisposable
     {
+        public void Dispose() => TestBlocksContext.Clear();
+
         private readonly Mock<ILogger<LogTraceRestoreService>> _logger = new();
         private readonly Mock<ILogTraceRestoreRepository> _coldRestoreRepository = new();
         private readonly Mock<IMessageClient> _messageClient = new();
@@ -29,7 +31,7 @@ namespace XUnitTest.Services
         private readonly Mock<IBlobStorage> _blobStorage = new();
         private readonly Mock<IConfiguration> _configuration = new();
         private readonly Mock<ILmtArchiveRestoreConfigurationRepository> _configRepository = new();
-        private readonly Mock<IMailDriverService> _mailDriverService = new();
+        private readonly MailPreCheckDb _mailDb = new();
         private readonly Mock<IHttpService> _httpService = new();
         private readonly Mock<ICryptoService> _cryptoService = new();
         private readonly Mock<ITenants> _tenants = new();
@@ -45,12 +47,12 @@ namespace XUnitTest.Services
             _blobStorage.Object,
             _configuration.Object,
             _configRepository.Object,
-            _mailDriverService.Object,
+            _mailDb.Object,
             _httpService.Object,
             _cryptoService.Object,
             _tenants.Object,
             _archiveRestoreRepository.Object,
-            _userRepository.Object);
+            _userRepository.Object, new XUnitTest.TestHelpers.PassThroughOsDataAccess());
 
         [Fact]
         public async Task GetStatusAsync_MissingRequestId_Throws()
@@ -210,7 +212,7 @@ namespace XUnitTest.Services
 
             await Service().UpdateFileRequestStatus("req-1");
 
-            _mailDriverService.Verify(m => m.SendAsync(It.IsAny<SendMail>()), Times.Never);
+            _messageClient.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<SendMail>>()), Times.Never);
         }
 
         /// <summary>
@@ -387,6 +389,110 @@ namespace XUnitTest.Services
 
             created.Should().HaveCount(2);
             created.Should().OnlyContain(record => record.Status == RestoreFileProgressStatus.Pending);
+        }
+
+        private void GivenCompletedRequestWithEmail(string? templateName = "restore-done")
+        {
+            TestBlocksContext.Set("tenant-a");
+            GivenRequest(new RestoreRequestRecord
+            {
+                RequestId = "req-1",
+                TenantId = "tenant-a",
+                Status = RestoreRequestStatus.InProgress,
+                UserEmail = "someone@example.com"
+            });
+            GivenAllFilesCompleted();
+            GivenCompletionTransitionWon();
+            GivenNotificationEndpointAccepts();
+            _configRepository
+                .Setup(r => r.GetLmtArchiveRestoreConfigurationsAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new LmtArchiveRestoreConfigurations
+                {
+                    RetentionDay = 7,
+                    EmailTemplateConfig = new LogTraceRestoreEmailTConfig { TemplateName = templateName! },
+                    NotificationConfig = new NotificationConfig
+                    {
+                        NotificationUrl = "https://notify.example.com/send",
+                        NotificationConfigName = "log_trace_restore"
+                    }
+                });
+        }
+
+        private void AssertNoMailQueued() =>
+            _messageClient.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<SendMail>>()), Times.Never);
+
+        [Fact]
+        public async Task RestoreMail_IsQueuedToTheMailListenerWithSendPhoneNumberAsEmail()
+        {
+            GivenCompletedRequestWithEmail();
+            _mailDb.UserExists = false; // restore mail is not limited to registered users
+
+            await Service().UpdateFileRequestStatus("req-1");
+
+            _messageClient.Verify(m => m.SendToConsumerAsync(It.Is<ConsumerMessage<SendMail>>(msg =>
+                msg.ConsumerName == "blocks_email_listener"
+                && msg.Payload.Purpose == "restore-done"
+                && msg.Payload.Language == "en-US"
+                && msg.Payload.To.Single() == "someone@example.com"
+                && msg.Payload.SendPhoneNumberAsEmail
+                && msg.Payload.BodyDataContext.ContainsKey("tier")
+                && msg.Payload.BodyDataContext.ContainsKey("status"))), Times.Once);
+        }
+
+        [Fact]
+        public void RestoreMail_PayloadTypeIsNamedSendMail()
+        {
+            // Genesis routes by payload type name; the logic listener consumes "SendMail".
+            typeof(SendMail).Name.Should().Be("SendMail");
+            Cloud.LmtService.Utilities.Constants.MailQueue.Should().Be("blocks_email_listener");
+        }
+
+        [Fact]
+        public async Task RestoreMail_EnqueueThrows_DoesNotFailTheRequest()
+        {
+            GivenCompletedRequestWithEmail();
+            _messageClient.Setup(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<SendMail>>()))
+                .ThrowsAsync(new InvalidOperationException("queue down"));
+
+            var act = async () => await Service().UpdateFileRequestStatus("req-1");
+
+            await act.Should().NotThrowAsync();
+            _coldRestoreRepository.Verify(
+                r => r.TryCompleteRequestAsync("req-1", It.IsAny<RestoreRequestStatus>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task RestoreMail_TemplateMissing_QueuesNothing()
+        {
+            GivenCompletedRequestWithEmail();
+            _mailDb.TemplateExists = false;
+
+            await Service().UpdateFileRequestStatus("req-1");
+
+            AssertNoMailQueued();
+        }
+
+        [Fact]
+        public async Task RestoreMail_MailServerConfigMissing_QueuesNothing()
+        {
+            GivenCompletedRequestWithEmail();
+            _mailDb.ConfigExists = false;
+
+            await Service().UpdateFileRequestStatus("req-1");
+
+            AssertNoMailQueued();
+        }
+
+        [Fact]
+        public async Task RestoreMail_NoTenantContext_QueuesNothing()
+        {
+            GivenCompletedRequestWithEmail();
+            BlocksContext.ClearContext();
+
+            await Service().UpdateFileRequestStatus("req-1");
+
+            AssertNoMailQueued();
         }
 
         private void GivenRequest(RestoreRequestRecord record) =>

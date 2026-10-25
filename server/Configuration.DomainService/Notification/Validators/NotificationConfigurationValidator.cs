@@ -31,6 +31,29 @@ namespace Configuration.DomainService.Notification.Validators
 
             RuleFor(x => x.EnablePersistence)
                 .NotNull().WithMessage("EnablePersistence must be specified.");
+
+            // Built-in fields: checked only when sent, so a request without them validates as before.
+            RuleFor(x => x.Importance!.Value)
+                .IsInEnum().WithMessage("Invalid importance.")
+                .OverridePropertyName("Importance")
+                .When(x => x.Importance.HasValue);
+
+            RuleFor(x => x.Kind!.Value)
+                .IsInEnum().WithMessage("Invalid kind.")
+                .OverridePropertyName("Kind")
+                .When(x => x.Kind.HasValue);
+
+            RuleFor(x => x.Description)
+                .MaximumLength(1000).WithMessage("Description must not exceed 1000 characters.");
+
+            RuleFor(x => x.SourceService)
+                .MaximumLength(100).WithMessage("SourceService must not exceed 100 characters.");
+
+            RuleFor(x => x.ConsumerAppRecommendation)
+                .MaximumLength(2000).WithMessage("ConsumerAppRecommendation must not exceed 2000 characters.");
+
+            RuleFor(x => x.ConsumerAppNote)
+                .MaximumLength(2000).WithMessage("ConsumerAppNote must not exceed 2000 characters.");
         }
 
         private async Task<bool> IsUniqueNameAsync(string name, CancellationToken cancellationToken)

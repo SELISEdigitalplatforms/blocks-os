@@ -30,6 +30,7 @@ vi.mock("@blocks-idp/iam/hooks/use-organization", () => ({
     }
     return h.orgs;
   },
+  useGetOrganizationById: () => ({ data: undefined }),
   useGetOrganizationConfig: () => h.config,
 }));
 vi.mock("@seliseblocks/genesis-os", () => ({

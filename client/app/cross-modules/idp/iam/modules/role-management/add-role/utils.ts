@@ -4,6 +4,7 @@ export const addRoleFormDefaultValue = {
   name: "",
   slug: "",
   description: "",
+  parentRoleSlug: "",
 };
 
 // Mirrors the server's limits deliberately, so a value the API would accept is not blocked here
@@ -17,4 +18,5 @@ export const addRoleFormSchema = z.object({
     .max(200, "Use at most 200 characters.")
     .refine((s) => !s.includes(" "), "A slug cannot contain spaces."),
   description: z.string().trim().max(150, "Use at most 150 characters.").optional(),
+  parentRoleSlug: z.string().optional(),
 });

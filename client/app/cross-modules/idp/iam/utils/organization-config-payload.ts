@@ -15,4 +15,9 @@ export const toOrganizationConfigSaveApiPayload = (
   defaultPermissionsOnOrgCreation: payload.defaultPermissionsOnOrgCreation ?? [],
   keepOrgRolesSameAsDefaultRoles: payload.keepOrgRolesSameAsDefaultRoles,
   keepOrgPermissionsSameAsDefaultPermissions: payload.keepOrgPermissionsSameAsDefaultPermissions,
+  isSignupAutoJoinEnabled: payload.isSignupAutoJoinEnabled === true,
+  // Omitted while the toggle is off so IAM keeps the stored target for later.
+  ...(payload.isSignupAutoJoinEnabled === true
+    ? { signupAutoJoinOrganizationId: payload.signupAutoJoinOrganizationId ?? null }
+    : {}),
 });

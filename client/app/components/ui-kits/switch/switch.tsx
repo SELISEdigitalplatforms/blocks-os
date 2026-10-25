@@ -53,7 +53,8 @@ const Switch = React.forwardRef<
       className={cn(
         switchThumbVariants({ size }),
         "bg-white shadow-xs",
-        "group-data-disabled:bg-neutral-50 group-data-disabled:shadow-none",
+        // A ring rather than a lighter fill: on the pale disabled track a near-white thumb vanished.
+        "group-data-disabled:shadow-none group-data-disabled:ring-1 group-data-disabled:ring-neutral-300",
       )}
     />
   </SwitchPrimitive.Root>

@@ -1,13 +1,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Cloud.DomainService.Models;
 using Cloud.DomainService.Repositories;
 using Cloud.DomainService.Requests;
 using FluentAssertions;
 using Moq;
 using Blocks.Genesis;
 using MongoDB.Driver;
+using Blocks.Genesis.Entities.Iam;
 
 namespace XUnitTest.Integration
 {
@@ -28,12 +28,12 @@ namespace XUnitTest.Integration
             return new ApiEndpointConfigRepository(_fixture.DbContextProvider, secret.Object);
         }
 
-        private async Task SeedAsync(params ApiEndpointConfig[] items)
+        private async Task SeedAsync(params Permission[] items)
         {
-            await _fixture.Collection<ApiEndpointConfig>(CollectionName).InsertManyAsync(items);
+            await _fixture.Collection<Permission>(CollectionName).InsertManyAsync(items);
         }
 
-        private static ApiEndpointConfig NewConfig(string resource, string resourceGroup, string? name = null)
+        private static Permission NewConfig(string resource, string resourceGroup, string? name = null)
             => new()
             {
                 ItemId = System.Guid.NewGuid().ToString("N"),
@@ -190,8 +190,8 @@ namespace XUnitTest.Integration
             var modified = await NewRepository().UpdateAsync(config.ItemId, true, true, "tester");
 
             modified.Should().BeTrue();
-            var stored = await _fixture.Collection<ApiEndpointConfig>(CollectionName)
-                .Find(Builders<ApiEndpointConfig>.Filter.Eq(x => x.ItemId, config.ItemId))
+            var stored = await _fixture.Collection<Permission>(CollectionName)
+                .Find(Builders<Permission>.Filter.Eq(x => x.ItemId, config.ItemId))
                 .FirstAsync();
             stored.IsCaptchaRequired.Should().BeTrue();
             stored.IsMFARequired.Should().BeTrue();

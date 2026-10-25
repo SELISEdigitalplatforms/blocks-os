@@ -6,7 +6,6 @@ import {
   ICreateUserPayload,
   ICreateUserResponse,
   IDeviceSessionResponse,
-  IGeneratePATPayload,
   IGetHistoriesPayload,
   IGetSessionPayload,
   IGetUserByIdPayload,
@@ -18,7 +17,6 @@ import {
   IGetUsersPayload,
   IGetUsersResponse,
   IHistoriesResponse,
-  IPATResponse,
   ISaveRolesAndPermissionsPayload,
   ISaveRolesAndPermissionsResponse,
   IUpdateUserPayload,
@@ -131,8 +129,9 @@ export class UserService {
     });
   }
 
+  /** The address goes in the body, not the URL (CWE-598); IAM's GET form is deprecated. */
   isUserExist(email: string): Promise<{ userId?: string; organizationIds?: string[] }> {
-    return http.get(`${USER_ENDPOINTS.EXISTS}?email=${encodeURIComponent(email)}`, undefined, {
+    return http.post(USER_ENDPOINTS.EXISTS, { email }, undefined, {
       absoluteUrl: true,
     });
   }
@@ -294,18 +293,6 @@ export class UserService {
       totalCount: res.totalCount,
       errors: res.errors,
     };
-  }
-
-  async getPats(): Promise<IPATResponse> {
-    return http.get(USER_ENDPOINTS.GET_USER_CODES, undefined, {
-      absoluteUrl: true,
-    });
-  }
-
-  async generatePats(payload: IGeneratePATPayload): Promise<IPATResponse> {
-    return http.post(USER_ENDPOINTS.GENERATE_USER_CODE, payload, undefined, {
-      absoluteUrl: true,
-    });
   }
 }
 

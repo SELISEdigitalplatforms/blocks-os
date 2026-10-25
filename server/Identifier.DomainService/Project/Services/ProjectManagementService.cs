@@ -14,6 +14,9 @@ using Storage.DomainService.Enums;
 using StorageDriver;
 using System.Net.Http.Headers;
 using System.Security.Cryptography.X509Certificates;
+using Blocks.Genesis.Entities.Data;
+using Blocks.Genesis.Entities.Os;
+using Os.DataAccess.Notifications;
 
 namespace DomainService.Projects
 {
@@ -30,6 +33,7 @@ namespace DomainService.Projects
         private readonly ICacheClient _cacheClient;
         private readonly ICryptoService _cryptoService;
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IBuiltInNotificationSender? _notificationSender;
 
         private const string _tenantTokenPublicCertificateCachePrefix = "tetocertpublic::";
         private const string UpsertAction = "upsert";
@@ -47,7 +51,8 @@ namespace DomainService.Projects
                                         IEncodingService urlEncodingService,
                                         ICacheClient cacheClient,
                                         ICryptoService cryptoService,
-                                        IHttpClientFactory httpClientFactory)
+                                        IHttpClientFactory httpClientFactory,
+                                        IBuiltInNotificationSender? notificationSender = null)
         {
             _projectRepository = projectRepository;
             _blocksSecret = blocksSecret;
@@ -60,6 +65,7 @@ namespace DomainService.Projects
             _cacheClient = cacheClient;
             _cryptoService = cryptoService;
             _httpClientFactory = httpClientFactory;
+            _notificationSender = notificationSender;
         }
 
         public async Task ConfigureProjectAsync(Tenant project, ProjectStatusTracer? projectStatus = null)
@@ -83,12 +89,39 @@ namespace DomainService.Projects
             catch (Exception ex)
             {
                 await HandleConfigurationErrorAsync(projectStatus, ex.Message);
+                await NotifyProjectSetupFailedAsync(project);
             }
         }
 
         /// <summary>
-        /// Broadcasts the provisioned tenant so every service replaces the copy it may have
-        /// cached while the certificate was still being generated.
+        /// Tells the project creator that setup failed. Sent only after the error is saved on the
+        /// status tracer; the error text itself is not sent.
+        /// </summary>
+        private Task NotifyProjectSetupFailedAsync(Tenant project)
+        {
+            if (_notificationSender is null) return Task.CompletedTask;
+
+            return _notificationSender.SendAsync(new BuiltInNotification
+            {
+                ConfigurationName = BuiltInNotificationNames.ProjectSetupFailed,
+                Event = "project-setup-failed",
+                Title = "Project setup failed",
+                Description = "Setting up the project or environment did not finish. You can retry it from the project page.",
+                IsSuccess = false,
+                Ids = new Dictionary<string, string?>
+                {
+                    ["projectId"] = project.ItemId,
+                    ["projectKey"] = project.TenantId,
+                    ["tenantGroupId"] = project.TenantGroupId
+                },
+                UserIds = [project.CreatedBy],
+                ConnectionId = project.TenantId
+            });
+        }
+
+        /// <summary>
+        /// Broadcasts the provisioned tenant, as stored, so every service replaces the copy it
+        /// may have cached while the certificate was still being generated.
         /// </summary>
         /// <remarks>
         /// Provisioning is the only write that sets <c>JwtTokenParameters.PublicCertificatePath</c>,
@@ -98,10 +131,16 @@ namespace DomainService.Projects
         /// </remarks>
         private async Task AnnounceTenantUpdateIfNeeded(Tenant project)
         {
-            // A resumed run whose certificates were already marked uploaded never re-assigns the
-            // path, so the in-memory project can still be blank here. Broadcasting that would
-            // replace good cached copies with a useless one, which is worse than staying quiet.
-            if (string.IsNullOrWhiteSpace(project.JwtTokenParameters?.PublicCertificatePath))
+            // The stored row, not the copy this run was handed at creation. Provisioning takes
+            // long enough for the tenant to change underneath it — adding a repository registers
+            // its host and broadcasts — and announcing the creation-time copy afterwards put every
+            // service's cache back to before that change.
+            var stored = await _projectRepository.GetByIdAsync(project.ItemId);
+
+            // A resumed run can find the certificates marked uploaded and the path never saved.
+            // Broadcasting that would replace good cached copies with a useless one, which is
+            // worse than staying quiet.
+            if (string.IsNullOrWhiteSpace(stored?.JwtTokenParameters?.PublicCertificatePath))
             {
                 return;
             }
@@ -109,8 +148,8 @@ namespace DomainService.Projects
             await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
             {
                 Action = UpsertAction,
-                TenantId = project.TenantId,
-                Tenant = project
+                TenantId = stored.TenantId,
+                Tenant = stored
             });
         }
 
@@ -187,7 +226,9 @@ namespace DomainService.Projects
         {
             if (statusTracer.IsProjectUpdated) return;
 
-            await _projectRepository.UpdateProjectAsync(project);
+            // The certificate path is the only thing provisioning changes on the tenant. Replacing
+            // the whole document with this run's copy undid anything saved since creation.
+            await _projectRepository.SetPublicCertificatePathAsync(project.ItemId, project.JwtTokenParameters.PublicCertificatePath);
             statusTracer.IsProjectUpdated = true;
         }
 
@@ -730,8 +771,6 @@ namespace DomainService.Projects
 
         public async Task<RestoreProjectResponse> RestoreProjectAsync(RestoreProjectRequest restoreProjectRequest)
         {
-           //await _messageClient.SendToConsumerAsync(new ConsumerMessage<RestoreProjectRequest> { ConsumerName = IdentifierConstants.IdentifierQueueName, Payload = restoreProjectRequest });
-
            var project = await _projectRepository.GetByIdAsync(restoreProjectRequest.ItemId);
            ProjectStatusTracer? projectStatusTracer = await _projectRepository.GetUnfinishedProjectByIdAsync(restoreProjectRequest.ItemId);
 
@@ -1078,6 +1117,9 @@ namespace DomainService.Projects
             project.LastUpdatedDate = DateTime.UtcNow;
 
             await _projectRepository.UpdateProjectAsync(project);
+
+            // Read before the member rows go: afterwards nobody owns the environment any more.
+            var ownerUserId = await TryGetOwnerUserIdAsync(project.TenantId);
             await _projectRepository.DeletePrjectPeopleAsync(project.TenantId);
 
             await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
@@ -1110,7 +1152,57 @@ namespace DomainService.Projects
                 ProjectId = project.TenantId
             });
 
+            if (_notificationSender is not null)
+            {
+                // Owner + caller: there is no cheap lookup of every member (SPEC5 D4).
+                await _notificationSender.SendAsync(new BuiltInNotification
+                {
+                    ConfigurationName = BuiltInNotificationNames.ProjectDisabledOrDeleted,
+                    Event = "project-disabled",
+                    // One call disables one environment (tenant), not the whole project.
+                    Title = "Environment deleted",
+                    Description = DescribeDeletedEnvironment(project),
+                    Ids = new Dictionary<string, string?>
+                    {
+                        ["projectKey"] = project.TenantId,
+                        ["tenantGroupId"] = project.TenantGroupId
+                    },
+                    UserIds = [ownerUserId, BlocksContext.GetContext()?.UserId],
+                    ConnectionId = project.TenantId
+                });
+            }
+
             return new BaseResponse { IsSuccess = true };
+        }
+
+        private static string DescribeDeletedEnvironment(Tenant project)
+        {
+            var environment = project.Environment?.Trim();
+            var projectName = project.Name?.Trim();
+
+            if (string.IsNullOrEmpty(environment))
+            {
+                return "An environment you belong to was deleted.";
+            }
+
+            return string.IsNullOrEmpty(projectName)
+                ? $"An environment you belong to ({environment}) was deleted."
+                : $"An environment you belong to ({environment} of {projectName}) was deleted.";
+        }
+
+        private async Task<string?> TryGetOwnerUserIdAsync(string tenantId)
+        {
+            if (_notificationSender is null) return null;
+
+            try
+            {
+                return await _projectRepository.GetOwnerUserIdAsync(tenantId);
+            }
+            catch (Exception)
+            {
+                // Only the notification recipient is lost; disabling goes on.
+                return null;
+            }
         }
 
         public async Task<GetAssetResponse> GetAssetAsync(GetAssetRequest request)
@@ -1357,13 +1449,13 @@ namespace DomainService.Projects
         public async Task<SaveThirdPartyJWTClaimsResponse> SaveThirdPartyJWTClaimsAsync(SaveThirdPartyJWTClaimsRequest request)
         {
             var claimsMapper = await MapJWTClaims(request);
-            await _projectRepository.SaveJWTClaimsAsync(claimsMapper);
-            return new SaveThirdPartyJWTClaimsResponse { IsSuccess = true , ItemId = claimsMapper.ItemId};
+            var saved = await _projectRepository.SaveJWTClaimsAsync(claimsMapper);
+            return new SaveThirdPartyJWTClaimsResponse { IsSuccess = saved.IsSuccess, ItemId = claimsMapper.ItemId };
         }
 
         public async Task<ThirdPartyJWTClaims?> GetThirdPartyJWTClaimsAsync()
         {
-            return await _projectRepository.GetThirdPartyJWTClaimsAsync(string.Empty);
+            return await _projectRepository.GetThirdPartyJWTClaimsForViewAsync();
         }
 
         private async Task<ThirdPartyJWTClaims> MapJWTClaims(SaveThirdPartyJWTClaimsRequest request)

@@ -1,3 +1,5 @@
+import type { LinkedSecretStatus } from "@/cross-modules/secrets/models/secret.model";
+
 // "Azure"
 export type StorageStrategyType = "AWS" | "Azure" | "SftpStorage" | "S3Compatible";
 
@@ -13,11 +15,43 @@ export const STORAGE_STRATEGIES: StorageStrategyOption[] = [
   { id: "sftp", label: "SFTP", value: "SftpStorage" },
   { id: "s3compatible", label: "AWS S3 Compatible", value: "S3Compatible" },
 ];
-export interface IStorageConfiguration {
+/**
+ * State of each secret of a configuration, from the server. A secret value (or a masked one) is
+ * never returned; "none" = not set for this provider.
+ */
+export interface IStorageSecretStatuses {
+  connectionStringStatus: LinkedSecretStatus;
+  secretKeyStatus: LinkedSecretStatus;
+  accessKeyStatus: LinkedSecretStatus;
+  passwordStatus: LinkedSecretStatus;
+  sftpSecretKeyStatus: LinkedSecretStatus;
+}
+
+export type StorageSecretStatusKey = keyof IStorageSecretStatuses;
+
+/** The secrets each provider uses, in display order. */
+export const STORAGE_SECRET_FIELDS: Record<
+  StorageStrategyType,
+  { key: StorageSecretStatusKey; label: string }[]
+> = {
+  AWS: [
+    { key: "accessKeyStatus", label: "Access Key" },
+    { key: "secretKeyStatus", label: "Secret Key" },
+  ],
+  Azure: [{ key: "connectionStringStatus", label: "Connection String" }],
+  SftpStorage: [
+    { key: "passwordStatus", label: "Password" },
+    { key: "sftpSecretKeyStatus", label: "SFTP Secret Key" },
+  ],
+  S3Compatible: [
+    { key: "accessKeyStatus", label: "Access Key" },
+    { key: "secretKeyStatus", label: "Secret Key" },
+  ],
+};
+
+export interface IStorageConfiguration extends IStorageSecretStatuses {
   storageStrategy: StorageStrategyType;
-  accessKey: string | null;
   cloudStorageRegionEndPoint: string | null;
-  connectionString: string | null;
   createdBy: string;
   createdDate: string;
   itemId: string;
@@ -25,12 +59,10 @@ export interface IStorageConfiguration {
   lastUpdatedDate: string;
   name: string;
   organizationIds: string[];
-  secretKey: string | null;
   tags: string[];
   host: string | null;
   port: string | null;
   userName: string | null;
-  password: string | null;
   remoteBasePath: string | null;
   /**
    * Phase 1 upload-security fields. Optional because a configuration predating Phase 1, or one
@@ -72,8 +104,7 @@ export interface IStorageConfigurationCreatePayload extends IStorageConfiguratio
 /**
  * An update carries nothing but the settings it is allowed to change, plus what identifies the
  * configuration being changed. The name, provider and credentials are deliberately absent: the
- * server discards them on an update anyway, and the only value a client could send back for a
- * secret is the masked one the read endpoint gave it.
+ * server ignores them on an update anyway, and the read endpoint never returns a secret.
  */
 export interface IStorageConfigurationUpdatePayload extends IStorageConfigurationMutableSettings {
   projectKey: string;

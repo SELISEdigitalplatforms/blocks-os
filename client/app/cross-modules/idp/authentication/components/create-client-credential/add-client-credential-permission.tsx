@@ -25,10 +25,11 @@ import {
 } from "@/components/ui-kits/table/table";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@seliseblocks/genesis-os";
-import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
+import { useGetGrantablePermissions } from "@blocks-idp/iam/hooks/use-permission";
 import { IPermission, RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
 import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
+import { GrantHint } from "@blocks-idp/iam/components/grant-hint";
 
 type AddClientCredentialPermissionProps = {
   selectedResources: string[];
@@ -52,7 +53,7 @@ export const AddClientCredentialPermission = ({
     search: "",
   });
 
-  const { data, isLoading } = useGetPermissions(
+  const { data, isLoading } = useGetGrantablePermissions(
     {
       ...filter,
       projectKey: tenantId,
@@ -119,6 +120,7 @@ export const AddClientCredentialPermission = ({
           <DialogTitle className="text-left">Assign Permissions</DialogTitle>
           <DialogDescription />
         </DialogHeader>
+        <GrantHint kind="permissions" />
         <div>
           <FilterControls.SearchInput
             placeholder="Search by permission name"

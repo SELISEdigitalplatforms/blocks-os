@@ -1,12 +1,12 @@
 ﻿using Blocks.Genesis;
-using Configuration.DomainService.Mail.Entities;
 using Configuration.DomainService.Mail.RequestModel;
-using Configuration.DomainService.Notification.Entities;
 using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Notification.ResponseModel;
 using Configuration.DomainService.Storage.Entities;
-using Configuration.DomainService.DataGateway.Entities;
+using MongoDB.Bson;
 using System.Linq.Expressions;
+using Blocks.Genesis.Entities.Data;
+using Blocks.Genesis.Entities.Os;
 
 namespace Configuration.DomainService.Shared.Services
 {
@@ -22,17 +22,6 @@ namespace Configuration.DomainService.Shared.Services
 
         #endregion
 
-        #region Storage
-
-        public Task SaveStorageConfigurationAsync(StorageConfiguration configuration);
-        Task<StorageConfiguration> GetStorageConfigurationByNameAsync(string configurationName);
-        Task<List<StorageConfiguration>> GetAllStorageConfigurationsByDateAsync();
-        Task DeleteStorageConfigurationByNameAsync(string configurationName);
-        Task<StorageConfiguration> GetStorageConfigurationByIdAsync(string itemId);
-        Task<StorageConfiguration?> GetStorageConfigurationStrategyAsync(string storageStrategy);
-
-        #endregion
-
         #region Mail
 
         Task SaveMailConfigurationAsync(MailServerConfiguration configuration);
@@ -44,6 +33,8 @@ namespace Configuration.DomainService.Shared.Services
         Task UpdateMailSenderNameAsync(string configurationId, string senderName, DateTime lastUpdatedDate, string lastUpdatedBy);
         Task<MailServerConfiguration> GetMailConfigurationByIdAsync(string configurationId);
         Task<MailServerConfiguration> GetMailConfigurationByNameAsync(string configurationName);
+        /// <summary>The configuration as the caller may see it: properties a column rule hides are left out. Never save it back.</summary>
+        Task<MailServerConfiguration> GetMailConfigurationByNameForViewAsync(string configurationName);
         Task<List<MailServerConfiguration>> GetAllMailConfigurationsAsync();
 
         /// <summary>
@@ -53,14 +44,6 @@ namespace Configuration.DomainService.Shared.Services
         /// </summary>
         Task<List<MailServerConfiguration>> GetMailConfigurationsByClientSecretReferenceAsync(string clientSecretReference);
         Task DeleteMailConfigurationAsync(string configurationId);
-
-        #endregion
-
-        #region DataGateway
-
-        Task SaveDataGatewayConfigurationAsync(DataGatewayConfiguration configuration);
-        Task<DataGatewayConfiguration> GetDataGatewayConfigurationAsync();
-        Task<DataGatewayConfiguration> GetDataGatewayConfigurationByIdAsync(string itemId);
 
         #endregion
 

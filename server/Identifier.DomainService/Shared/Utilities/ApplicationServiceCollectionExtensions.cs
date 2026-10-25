@@ -1,3 +1,5 @@
+using Os.DataAccess;
+using Os.DataAccess;
 using Blocks.Extension.DependencyInjection;
 using Blocks.Genesis;
 using DomainService.Access;
@@ -9,6 +11,8 @@ using DomainService.ManagedService.Validator;
 using DomainService.Migration;
 using DomainService.Migration.Services;
 using DomainService.People;
+using DomainService.Preference;
+using DomainService.Preference.Services;
 using DomainService.Projects;
 using DomainService.Shared.Services;
 using DomainService.Shared.Utilities;
@@ -25,6 +29,8 @@ namespace DomainService.Shared
     {
         public static void AddApplicationServices(this IServiceCollection services)
         {
+            services.AddOsDataAccess();
+
             // Register validator
             services.AddTransient<IValidator<CreateProjectRequest>, CreateProjectRequestValidator>();
             services.AddTransient<IValidator<UpdateAuthConfigRequest>, UpdateAuthConfigRequestValidator>();
@@ -34,6 +40,8 @@ namespace DomainService.Shared
 
    // Register services
             services.AddSingleton<IProjectManagementService, ProjectManagementService>();
+            services.AddSingleton<IDataGatewayRootProvisioner, DataGatewayRootProvisioner>();
+            services.AddSingleton<IStorageConfigurationSeedCopier, StorageConfigurationSeedCopier>();
             services.AddSingleton<IProjectRepository, ProjectRepository>();
 
             services.AddSingleton<IDomainManagementService, DomainManagementService>();
@@ -49,7 +57,14 @@ namespace DomainService.Shared
             services.AddSingleton<IMigrationNotificationService, MigrationNotificationService>();
    // People
             services.AddSingleton<IPeopleService, PeopleService>();
+            services.AddSingleton<IPeopleInvitationMessenger, PeopleInvitationMessenger>();
             services.AddSingleton<IPeopleRepository, PeopleRepository>();
+            // Built-in notifications to project owner + caller
+            services.AddSingleton<IProjectChangeNotifier, ProjectChangeNotifier>();
+
+            // User preferences (the caller's own settings, in the root key-value store)
+            services.AddTransient<IValidator<SaveUserPreferenceRequest>, SaveUserPreferenceRequestValidator>();
+            services.AddSingleton<IUserPreferenceService, UserPreferenceService>();
 
             // Project access (owner / contributor grants)
             // Scoped, not singleton: it caches the per-request access resolution through
@@ -62,7 +77,6 @@ namespace DomainService.Shared
             services.AddTransient<IValidator<UpdateFileRequest>, UpdateFileRequestValidator>();
 
             services.RegisterBlocksStorageServices();
-            services.RegisterBlocksMailService();
 
             // Registered after RegisterBlocksStorageServices: it resolves IStorageDriverService.
             services.AddSingleton<ICertificateUploadService, CertificateUploadService>();

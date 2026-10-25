@@ -11,6 +11,7 @@ import {
 } from "@/components/ui-kits/dialog/dialog";
 import { Form } from "@/components/ui-kits/form/form";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import { isAccessGrantRefused } from "@/lib/error";
 import { isHttpErrorStatus } from "@/lib/http/http-error.util";
 import { useUpdateSignupLinkConfiguration } from "@blocks-idp/iam/hooks/use-signup-link-configurations";
 import { ISignupLinkConfiguration } from "@blocks-idp/iam/models/signup-link-configuration";
@@ -131,6 +132,10 @@ export const UpdateConfiguration = ({
       showSuccessToast({ description: "Configuration updated" });
       onClose();
     } catch (error: unknown) {
+      if (isAccessGrantRefused(error)) {
+        showErrorToast({ errors: (error as { errors: unknown }).errors });
+        return;
+      }
       if (isHttpErrorStatus(error, 404)) {
         showErrorToast({ errors: "This configuration no longer exists." });
         void queryClient.invalidateQueries({ queryKey: ["signup-link-configurations"] });

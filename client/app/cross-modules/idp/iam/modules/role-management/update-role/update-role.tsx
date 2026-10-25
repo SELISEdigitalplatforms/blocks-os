@@ -25,6 +25,7 @@ import { updateRoleFormSchema } from "./utils";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { useUpdateRole } from "@blocks-idp/iam/hooks/use-roles";
 import { isErrorWithErrors } from "@/lib/error";
+import { ManagedBySelect } from "../managed-by-select";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
 type UpdateRoleProps = { role: IRole; isOpen: boolean; onClose: () => void };
 export const UpdateRole = ({ role, isOpen, onClose }: UpdateRoleProps) => {
@@ -38,9 +39,13 @@ export const UpdateRole = ({ role, isOpen, onClose }: UpdateRoleProps) => {
     formState: { isDirty },
   } = form;
   const onSubmit: SubmitHandler<z.infer<typeof updateRoleFormSchema>> = async (data) => {
+    const { parentRoleSlug, ...rest } = data;
+    const currentParent = role.parentRoleSlug ?? "";
     const newRole = {
-      ...data,
+      ...rest,
       itemId: role.itemId,
+      // Sent only when "Managed by" changed; an empty choice clears it with an explicit null.
+      ...((parentRoleSlug ?? "") === currentParent ? {} : { parentRoleSlug: parentRoleSlug || null }),
     };
     try {
       await mutateAsync(newRole);
@@ -93,6 +98,18 @@ export const UpdateRole = ({ role, isOpen, onClose }: UpdateRoleProps) => {
                 </FormControl>
                 <FormMessage />
               </FormItem>
+            )}
+          />
+          <FormField
+            name="parentRoleSlug"
+            control={form.control}
+            render={({ field }) => (
+              <ManagedBySelect
+                value={field.value}
+                onChange={(slug) => field.onChange(slug)}
+                excludeSlug={role.slug}
+                disabled={isPending}
+              />
             )}
           />
           <DialogFooter className="mt-6">

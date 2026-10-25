@@ -4,6 +4,7 @@ using DomainService.Dtos;
 using DomainService.Shared.Entities;
 using MongoDB.Driver;
 using DomainService.Shared;
+using Blocks.Genesis.Entities.Os;
 
 namespace DomainService.Projects
 {
@@ -11,12 +12,13 @@ namespace DomainService.Projects
     {
         Task<Tenant> GetByDomainAsync(string name);
 
-        /// <summary>Every environment in a project group, including disabled ones.</summary>
+        /// <summary>The live environments in a project group; deleted (disabled) ones are left out.</summary>
         Task<List<Tenant>> GetByGroupIdAsync(string tenantGroupId);
 
         Task<Tenant> GetByIdAsync(string itemId);
         Task InsertProjectAsync(Tenant project);
         Task UpdateProjectAsync(Tenant project);
+        Task SetPublicCertificatePathAsync(string itemId, string publicCertificatePath);
         Task<List<GroupedProjectsDto>> GetAllByLastModifiedDateAsync(GetProjectsRequest request);
         Task SaveStatusTracerAsync(ProjectStatusTracer statusTrace);
         Task<List<ProjectStatusTracer>> GetAllUnfinishedProjectAsync();
@@ -47,6 +49,8 @@ namespace DomainService.Projects
         Task<BlocksGuid> GetBlocksGuidAsync(string tenantGroupId);
         Task<BaseResponse> SaveJWTClaimsAsync(ThirdPartyJWTClaims mapper);
         Task<ThirdPartyJWTClaims> GetThirdPartyJWTClaimsAsync(string itemId);
+        /// <summary>The claims as the caller may see them: properties a column rule hides are left out. Never save them back.</summary>
+        Task<ThirdPartyJWTClaims> GetThirdPartyJWTClaimsForViewAsync();
 
         Task<List<ThirdPartyJwtProvider>> GetThirdPartyJwtProvidersAsync(string tenantId);
         Task<ThirdPartyJwtProvider?> GetThirdPartyJwtProviderAsync(string tenantId, string itemId);

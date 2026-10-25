@@ -3,6 +3,7 @@ import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { Button } from "@/components/ui-kits/button/button";
 import { useCreateProject } from "@/hooks/use-project";
 import { environmentOptions } from "@/constants/environment-options";
+import { isErrorWithErrors, showErrorToast } from "@seliseblocks/genesis-os/utils";
 function shortGuidGenerator(length: number): string {
   const letters = "abcdefghijklmnopqrstuvwxyz";
   const bytes = crypto.getRandomValues(new Uint8Array(length));
@@ -29,7 +30,7 @@ export const AddEnvironmentModal = ({
   for (let i = 0; i < availableOptions.length; i += 2) {
     rows.push(availableOptions.slice(i, i + 2));
   }
-  const onSaveClick = () => {
+  const onSaveClick = async () => {
     if (selected.length > 0 && onClose && tenantGroupId) {
       const sortedSelected = [...selected].sort((a, b) => {
         const aIndex = environmentOptions.find((opt) => opt.value === a)?.index ?? 0;
@@ -43,15 +44,25 @@ export const AddEnvironmentModal = ({
         domain: `https://${env === "main" ? "" : env}-${shortGuid}.${domain}`,
         cookieDomain: domain,
       }));
-      mutateAsync({
-        name: projectName || "old Project",
-        isAcceptBlocksTerms: true,
-        isUseBlocksExclusively: true,
-        resources: [],
-        tenantGroupId: tenantGroupId || "default-tenant-group-id",
-        applicationContexts: applicationContexts,
-      });
-      onClose(sortedSelected);
+      try {
+        const response = await mutateAsync({
+          name: projectName || "old Project",
+          isAcceptBlocksTerms: true,
+          isUseBlocksExclusively: true,
+          resources: [],
+          tenantGroupId,
+          applicationContexts: applicationContexts,
+        });
+        if (response.isSuccess) {
+          onClose(sortedSelected);
+        } else {
+          showErrorToast({ errors: response.errors });
+        }
+      } catch (error) {
+        showErrorToast({
+          errors: isErrorWithErrors(error) ? error.errors : "Could not add the environment.",
+        });
+      }
     }
   };
   return (

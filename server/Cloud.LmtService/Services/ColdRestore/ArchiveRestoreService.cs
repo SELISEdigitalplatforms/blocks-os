@@ -7,6 +7,7 @@ using Cloud.LmtService.Services.ArchiveAndDelete;
 using Cloud.LmtService.Utilities;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
+using Os.DataAccess.Notifications;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -27,6 +28,7 @@ namespace Cloud.LmtService.Services.ColdRestore
         private readonly IMessageClient _messageClient;
         private readonly ILogTraceRestoreService _logTraceRestoreService;
         private readonly IRestoreUserRepository _userRepository;
+        private readonly IBuiltInNotificationSender? _notificationSender;
 
         [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "DI constructor: each parameter is an injected dependency.")]
         public ArchiveRestoreService(
@@ -37,7 +39,8 @@ namespace Cloud.LmtService.Services.ColdRestore
             ILmtArchiveRestoreConfigurationRepository lmtConfigRepository,
             IMessageClient messageClient,
             ILogTraceRestoreService logTraceRestoreService,
-            IRestoreUserRepository userRepository)
+            IRestoreUserRepository userRepository,
+            IBuiltInNotificationSender? notificationSender = null)
         {
             _logger = logger;
             _blobStorage = blobStorage;
@@ -47,6 +50,7 @@ namespace Cloud.LmtService.Services.ColdRestore
             _messageClient = messageClient;
             _logTraceRestoreService = logTraceRestoreService;
             _userRepository = userRepository;
+            _notificationSender = notificationSender;
         }
 
         public async Task<StartArchiveRestoreResponse> StartArchiveRestoreAsync(StartArchiveRestoreRequest request, CancellationToken ct = default)
@@ -119,6 +123,12 @@ namespace Cloud.LmtService.Services.ColdRestore
                     ConsumerName = Constants.ArchiveRestoreQueue,
                     Payload = message
                 });
+
+            if (_notificationSender is not null)
+            {
+                await _notificationSender.SendAsync(RestoreProgressNotification.Accepted(
+                    requestId, nameof(RestoreSourceType.Archive), userId, tenantId), ct);
+            }
 
             return new StartArchiveRestoreResponse
             {

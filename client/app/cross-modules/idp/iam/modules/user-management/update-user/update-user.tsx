@@ -20,6 +20,9 @@ import { Input } from "@/components/ui-kits/input/input";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { useGetUserById, useUpdateUser } from "@blocks-idp/iam/hooks/use-user";
+import { DisabledReason } from "@blocks-idp/iam/components/disabled-reason";
+import { useUserManageability } from "@blocks-idp/iam/hooks/use-user-manageability";
+import { CANNOT_MANAGE_USER_TOOLTIP } from "@blocks-idp/iam/utils/grant-scope";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Pen } from "lucide-react";
 import { useState } from "react";
@@ -37,6 +40,9 @@ export const UpdateUser = ({ id, projectKey, iconOnly = false }: UpdateUserProps
   const [open, setOpen] = useState<boolean>(false);
   const { data: userData, isLoading, isFetching } = useGetUserById({ id, projectKey });
   const { isPending, mutateAsync } = useUpdateUser({ id, projectKey });
+
+  const { canManage } = useUserManageability();
+  const isBlocked = !canManage(userData?.data);
 
   const form = useForm({
     defaultValues: inviteUserFormDefaultValue,
@@ -66,6 +72,22 @@ export const UpdateUser = ({ id, projectKey, iconOnly = false }: UpdateUserProps
       showErrorToast({ errors: "Something went wrong" });
     }
   };
+
+  if (isBlocked) {
+    return (
+      <DisabledReason reason={CANNOT_MANAGE_USER_TOOLTIP}>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Edit user"
+          disabled
+          className="h-7 w-7 shrink-0 rounded-full"
+        >
+          <Pen className="h-3.5 w-3.5" />
+        </Button>
+      </DisabledReason>
+    );
+  }
 
   return (
     <Dialog

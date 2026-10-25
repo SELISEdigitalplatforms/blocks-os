@@ -37,3 +37,14 @@ export const useDeleteAuthClient = (options: { projectKey: string }) => {
     },
   });
 };
+
+export const useRotateAuthClientSecret = (options: { projectKey: string }) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: ["authentication", "auth-clients", "rotate-secret", options],
+    mutationFn: (p: { itemId: string }) => authClientService.clients.rotateSecret(p),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["authentication", "auth-clients"] });
+    },
+  });
+};

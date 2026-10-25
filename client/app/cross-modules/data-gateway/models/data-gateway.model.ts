@@ -7,37 +7,30 @@ export interface IDataGatewayAnalyticsConfiguration {
   validTill: string | null;
 }
 
-/** Mirrors `Configuration.DomainService.DataGateway.Entities.DataGatewayConfiguration`. */
+/** Which data source the project uses. The connection string itself is never returned by the backend. */
+export type DataGatewayConnectionType = "Default" | "Custom";
+
+/** Mirrors `Configuration.DomainService.DataGateway.ResponseModel.DataGatewayConfigurationResponse`. */
 export interface IDataGatewayConfiguration {
+  /** The tenant id (the root doc id). Sent back on an update. */
   itemId: string;
-  createdBy: string;
-  createdDate: string;
-  lastUpdatedBy: string;
-  lastUpdatedDate: string;
+  /** `Default` = Blocks database, `Custom` = the project's own database (string kept in a secret). */
+  connectionType: DataGatewayConnectionType;
   projectKey: string;
   projectShortKey: string;
-  /**
-   * Decoded by the backend on every read - unlike Storage's masked secrets, this is the real
-   * value (or the "default" sentinel meaning the platform-managed database). Named
-   * `dbConnectionString` (not `connectionString`) to match the stored entity's actual field,
-   * shared with blocks-data's own DataServiceConfiguration document.
-   */
-  dbConnectionString: string;
   databaseName: string;
   isCollectionNameEditable: boolean;
   collectionNamePattern: string;
-  isDeleted: boolean;
   analyticsConfiguration?: IDataGatewayAnalyticsConfiguration;
 }
 
 /**
- * The settings every save (create or update) carries. Unlike Storage's provider identity, a
- * DataGateway configuration's connection details are the very thing an update exists to change,
- * so - unusually - `connectionString` and `databaseName` are required on both a create and an
- * update, not just on create.
+ * The settings every save (create or update) carries. `connectionString` is `"default"` for the
+ * Blocks database, the real string for an own database, and OMITTED on an update of a saved Custom
+ * configuration to keep the stored secret (the backend never returns it).
  */
 export interface IDataGatewayConfigurationMutableSettings {
-  connectionString: string;
+  connectionString?: string;
   databaseName: string;
   isCollectionNameEditable: boolean;
   collectionNamePattern?: string;

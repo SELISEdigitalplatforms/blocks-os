@@ -1,5 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => import("@/test-utils/__mocks__/grant-scope.mock"));
+vi.mock("@blocks-idp/iam/hooks/use-user-manageability", () => import("@/test-utils/__mocks__/user-manageability.mock"));
 
 // Tooltip re-exports blocks-kit (process.env at load); passthrough keeps it renderable.
 vi.mock("@/components/ui-kits/tooltip/tooltip", () => ({
@@ -35,9 +37,12 @@ vi.mock("./user-resend-activation/user-resend-activation", () => ({
 }));
 
 import { UserActionMenu } from "./user-action-menu";
+import { manageability, resetManageability } from "@/test-utils/__mocks__/user-manageability.mock";
+
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetManageability();
   h.user.data = { data: { active: true } };
 });
 
@@ -61,5 +66,22 @@ describe("UserActionMenu", () => {
     h.user.data = undefined;
     render(<UserActionMenu id="u1" projectKey="p1" />);
     expect(screen.getAllByText("Resend Activation").length).toBeGreaterThan(0);
+  });
+
+  it("turns the action off, with the reason, for a user the caller cannot manage", () => {
+    manageability.blockedIds.add("u1");
+    h.user.data = { data: { itemId: "u1", active: true } } as never;
+    render(<UserActionMenu id="u1" projectKey="p1" />);
+    const button = screen.getByRole("button", { name: "Reset Password" }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    expect(screen.getByTestId("disabled-reason")).toBeTruthy();
+    expect(screen.queryByTestId("reset-modal")).toBeNull();
+  });
+
+  it("offers Resend Activation, off, for an inactive user the caller cannot manage", () => {
+    manageability.blockedIds.add("u1");
+    h.user.data = { data: { itemId: "u1", active: false } } as never;
+    render(<UserActionMenu id="u1" projectKey="p1" />);
+    expect((screen.getByRole("button", { name: "Resend Activation" }) as HTMLButtonElement).disabled).toBe(true);
   });
 });

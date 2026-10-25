@@ -1,4 +1,3 @@
-using Blocks.Extension.DependencyInjection;
 using Blocks.Genesis;
 using Cloud.LmtService.Models.ArchiveAndDelete;
 using Cloud.LmtService.Models.ColdRestore;
@@ -43,6 +42,5 @@ IHostBuilder CreateHostBuilder(string[] args) =>
         services.AddCloudLmtServices();
 
         services.AddLmtConsumers();
-        services.RegisterBlocksMailService();
      ApplicationConfigurations.ConfigureWorker(services, Constants.GetMessageConfiguration(secret.MessageConnectionString));
     });

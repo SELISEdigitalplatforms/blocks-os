@@ -1,4 +1,5 @@
 ﻿using DomainService.Entities;
+using Blocks.Genesis.Entities.Os;
 
 namespace DomainService.Subscription.Services
 {

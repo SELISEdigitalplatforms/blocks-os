@@ -10,17 +10,12 @@ import type {
 
 export const mockDataGatewayConfig: IDataGatewayConfiguration = {
   itemId: "dg-config-1",
-  createdBy: "user-1",
-  createdDate: "2026-01-01T00:00:00.000Z",
-  lastUpdatedBy: "user-1",
-  lastUpdatedDate: "2026-01-10T00:00:00.000Z",
+  connectionType: "Custom",
   projectKey: "project-key-1",
   projectShortKey: "proj1",
-  dbConnectionString: "mongodb://localhost:27017",
   databaseName: "project_one_db",
   isCollectionNameEditable: false,
   collectionNamePattern: "sb_{SchemaName}s",
-  isDeleted: false,
   analyticsConfiguration: {
     enableAnalytics: true,
     enableDate: "2026-01-05T00:00:00.000Z",

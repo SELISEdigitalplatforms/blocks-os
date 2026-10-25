@@ -84,9 +84,9 @@ export function ProviderEntryItem({ item, defaultExpanded = false }: ProviderEnt
     value: string;
     copyable?: boolean;
     sensitive?: boolean;
+    masked?: boolean;
   }[] = [
-    { key: "Client Id", value: item.clientId ?? "", copyable: true },
-    { key: "Client Secret", value: item.clientSecret ?? "", sensitive: true },
+    { key: "Client Id", value: item.clientId ?? "", copyable: true, masked: true },
     { key: "Issuer URL", value: item.issuer ?? "", copyable: true },
     {
       key: "Authorization URL",
@@ -201,13 +201,14 @@ export function ProviderEntryItem({ item, defaultExpanded = false }: ProviderEnt
       {expanded && (
         <div className="border-t border-border/60 bg-muted/20 px-3 py-3">
           <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
-            {kvPairs.map(({ key, value, copyable, sensitive }) => (
+            {kvPairs.map(({ key, value, copyable, sensitive, masked }) => (
               <KVDetailItem
                 key={key}
                 label={key}
                 value={value}
                 copyable={copyable}
                 sensitive={sensitive}
+                masked={masked}
               />
             ))}
           </div>

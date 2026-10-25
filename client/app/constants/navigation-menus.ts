@@ -297,6 +297,14 @@ export const navigationMenus: Menu[] = [
         type: "menu",
       },
       {
+        id: "data-access",
+        name: "Data Access",
+        path: "/app/iam/data-access",
+        icon: Database,
+        desc: "Manage update access for platform collections",
+        type: "menu",
+      },
+      {
         id: "signup-link-configurations",
         name: "One-Click Signup",
         // Plural is safe here, unlike the siblings above: this screen edits in dialogs

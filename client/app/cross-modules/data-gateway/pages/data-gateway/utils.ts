@@ -2,12 +2,14 @@ import { z } from "zod";
 import type { IDataGatewayConfiguration } from "@/cross-modules/data-gateway/models/data-gateway.model";
 import { DEFAULT_COLLECTION_NAME_PATTERN } from "@/cross-modules/data-gateway/models/data-gateway.model";
 
-/** Sentinel the backend/runtime treats as "use the platform's own managed database". */
+/** Value the backend treats as "use the platform's own managed database". */
 export const DEFAULT_DATA_SOURCE_VALUE = "default";
 
-/** A stored connection string/database name is the platform default when absent or the sentinel. */
-export const isDefaultConnection = (val: string | undefined | null) =>
-  !val || val === DEFAULT_DATA_SOURCE_VALUE;
+export type DataSourceChoice = "blocks" | "others";
+
+/** A saved configuration is on its own database only when the backend says `Custom`. */
+export const isCustomConnection = (configuration?: IDataGatewayConfiguration | null) =>
+  configuration?.connectionType === "Custom";
 
 export const dataGatewayConfigurationFormSchema = z.object({
   connectionString: z.string().trim(),
@@ -30,23 +32,42 @@ export const dataGatewayConfigurationFormDefaultValue: DataGatewayConfigurationF
 };
 
 /**
- * Maps a persisted configuration onto the form's display representation. `connectionString` and
- * `databaseName` are blanked when the configuration is on the platform-managed default - the
- * "My data sources" fields only ever show a real custom value, never the "default" sentinel.
+ * Maps a saved configuration onto the form. The connection string is NEVER shown (the backend does
+ * not return it): the field is always empty. `databaseName` is blanked for the Blocks database.
  */
 export function toDataGatewayConfigurationFormValues(
   configuration?: IDataGatewayConfiguration | null,
 ): DataGatewayConfigurationFormValues {
   if (!configuration) return dataGatewayConfigurationFormDefaultValue;
 
-  const isBlocksManaged = isDefaultConnection(configuration.dbConnectionString);
-
   return {
     ...dataGatewayConfigurationFormDefaultValue,
-    connectionString: isBlocksManaged ? "" : configuration.dbConnectionString,
-    databaseName: isBlocksManaged ? "" : configuration.databaseName,
+    connectionString: "",
+    databaseName: isCustomConnection(configuration) ? configuration.databaseName : "",
     isCollectionNameEditable: configuration.isCollectionNameEditable,
     collectionNamePattern: configuration.collectionNamePattern || DEFAULT_COLLECTION_NAME_PATTERN,
     enableAnalytics: configuration.analyticsConfiguration?.enableAnalytics ?? false,
   };
+}
+
+/**
+ * Whether the entered string may stay empty: only when the saved configuration is already Custom
+ * (an empty field then means "keep the saved one"). A first Custom save and a Default -> Custom
+ * switch need the string.
+ */
+export const canOmitConnectionString = (
+  source: DataSourceChoice,
+  configuration?: IDataGatewayConfiguration | null,
+) => source === "others" && isCustomConnection(configuration);
+
+/** The `connectionString` of a save: "default" for Blocks DB, the entered value, or undefined = keep. */
+export function toConnectionStringPayload(
+  source: DataSourceChoice,
+  entered: string,
+  configuration?: IDataGatewayConfiguration | null,
+): string | undefined {
+  if (source === "blocks") return DEFAULT_DATA_SOURCE_VALUE;
+  const value = entered.trim();
+  if (value) return value;
+  return canOmitConnectionString(source, configuration) ? undefined : "";
 }

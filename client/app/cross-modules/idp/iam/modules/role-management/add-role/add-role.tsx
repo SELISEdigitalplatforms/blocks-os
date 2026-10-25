@@ -27,6 +27,8 @@ import { useAddRole } from "@blocks-idp/iam/hooks/use-roles";
 import { PrimaryButton } from "@/components/action-buttons/primary-button";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
 import { toSnakeCase } from "@/lib/utils";
+import { ManagedBySelect } from "../managed-by-select";
+import { isAccessGrantRefused } from "@/lib/error";
 // Named export here, unlike the blocks-iam copy, which default-exports it.
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import { CreateRolePayload, CreateRoleResponse } from "@blocks-idp/iam/models/role";
@@ -94,7 +96,7 @@ export const AddRole = () => {
           return;
         }
 
-        if (httpError.status === 403) {
+        if (httpError.status === 403 && !isAccessGrantRefused(httpError)) {
           showErrorToast({
             title: "Forbidden",
             errors: "You are not allowed to perform this action.",
@@ -130,6 +132,8 @@ export const AddRole = () => {
       name: data.name,
       description: data.description || "",
       slug: data.slug,
+      // Omitted when empty, so a role without a "Managed by" sends what it always sent.
+      ...(data.parentRoleSlug ? { parentRoleSlug: data.parentRoleSlug } : {}),
     });
   return (
     <Dialog
@@ -206,6 +210,17 @@ export const AddRole = () => {
                   </FormControl>
                   <FormMessage />
                 </FormItem>
+              )}
+            />
+            <FormField
+              name="parentRoleSlug"
+              control={form.control}
+              render={({ field }) => (
+                <ManagedBySelect
+                  value={field.value}
+                  onChange={(slug) => field.onChange(slug)}
+                  disabled={isPending}
+                />
               )}
             />
             <DialogFooter className="mt-6">

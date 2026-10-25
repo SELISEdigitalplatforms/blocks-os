@@ -6,6 +6,8 @@ import type { User } from "@blocks-idp/iam/models/user";
 import type { PeopleGroupedByEnvironments } from "@/models/people";
 import type { IProjectGroup } from "@/models/project.model";
 
+const GRANT_STAGING_LABEL = "Grant access to Staging";
+
 const removeEnvAsync = vi.fn();
 const inviteAsync = vi.fn();
 let removePending = false;
@@ -138,7 +140,7 @@ describe("PeopleEnvironmentsTab", () => {
         canInvite
       />,
     );
-    await userEvent.click(screen.getByLabelText("Grant access to Staging"));
+    await userEvent.click(screen.getByLabelText(GRANT_STAGING_LABEL));
     expect(screen.getByText("Grant Access")).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "Grant" }));
     await waitFor(() => expect(inviteAsync).toHaveBeenCalledTimes(1));
@@ -187,12 +189,59 @@ describe("PeopleEnvironmentsTab", () => {
         canInvite
       />,
     );
-    await userEvent.click(screen.getByLabelText("Grant access to Staging"));
+    await userEvent.click(screen.getByLabelText(GRANT_STAGING_LABEL));
     await userEvent.click(screen.getByRole("button", { name: "Grant" }));
     await waitFor(() =>
       expect(showErrorToast).toHaveBeenCalledWith({
         errors: "Failed to grant access to Staging",
       }),
     );
+  });
+
+  describe("inactive account", () => {
+    const withDetails = (isActive: boolean | undefined, confirmed = true) =>
+      [
+        {
+          peopleDetails: { isActive },
+          sharedEnviroments: [
+            {
+              enviroment: "dev",
+              tenantId: "t-dev",
+              isCreator: false,
+              isInvitationSent: true,
+              isInvitationConfirmed: confirmed,
+            },
+          ],
+        },
+      ] as unknown as PeopleGroupedByEnvironments[];
+
+    const renderTab = (people: PeopleGroupedByEnvironments[]) =>
+      render(
+        <PeopleEnvironmentsTab
+          user={user}
+          peopleData={people}
+          environmentList={environmentList}
+          canRemove
+          canInvite
+        />,
+      );
+
+    it("hides grant and remove and says why", () => {
+      renderTab(withDetails(false));
+      expect(screen.queryByLabelText(/Remove access from/)).toBeNull();
+      expect(screen.queryByLabelText(/Grant access to/)).toBeNull();
+      expect(screen.getByText(/account is inactive/)).toBeTruthy();
+    });
+
+    it("keeps the controls for an active account", () => {
+      renderTab(withDetails(true));
+      expect(screen.getByLabelText(GRANT_STAGING_LABEL)).toBeTruthy();
+      expect(screen.queryByText(/account is inactive/)).toBeNull();
+    });
+
+    it("keeps the controls for a pending invitee, who the server reports as active", () => {
+      renderTab(withDetails(true, false));
+      expect(screen.getByLabelText(GRANT_STAGING_LABEL)).toBeTruthy();
+    });
   });
 });

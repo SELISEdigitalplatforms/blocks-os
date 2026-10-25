@@ -4,7 +4,6 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Blocks.Genesis;
-using Blocks.MailDriver;
 using Cloud.LmtService.Models.ColdRestore;
 using Cloud.LmtService.Models.Shared;
 using Cloud.LmtService.Repositories.ColdRestore;
@@ -15,6 +14,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
+using XUnitTest.TestHelpers;
 
 namespace XUnitTest.Services
 {
@@ -35,7 +35,7 @@ namespace XUnitTest.Services
         private readonly Mock<IBlobStorage> _blobStorage = new();
         private readonly Mock<IConfiguration> _configuration = new();
         private readonly Mock<ILmtArchiveRestoreConfigurationRepository> _configRepository = new();
-        private readonly Mock<IMailDriverService> _mailDriverService = new();
+        private readonly MailPreCheckDb _mailDb = new();
         private readonly Mock<IHttpService> _httpService = new();
         private readonly Mock<ICryptoService> _cryptoService = new();
         private readonly Mock<ITenants> _tenants = new();
@@ -74,12 +74,13 @@ namespace XUnitTest.Services
             _blobStorage.Object,
             _configuration.Object,
             _configRepository.Object,
-            _mailDriverService.Object,
+            _mailDb.Object,
             _httpService.Object,
             _cryptoService.Object,
             _tenants.Object,
             _archiveRepository.Object,
-            _userRepository.Object);
+            _userRepository.Object,
+            new XUnitTest.TestHelpers.PassThroughOsDataAccess());
 
         [Fact]
         public async Task CancelRestoreAsync_StopsOutstandingWorkAndPurgesPartialResults()

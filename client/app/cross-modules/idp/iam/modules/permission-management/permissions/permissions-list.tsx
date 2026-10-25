@@ -4,6 +4,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { cn } from "@/lib/utils";
 import { ArchiveAction } from "@blocks-idp/iam/components/archive-action";
+import { useSystemOnlyReason } from "@blocks-idp/iam/hooks/use-grant-scope";
 import { useDeletePermission } from "@blocks-idp/iam/hooks/use-permission";
 import {
   IPermission,
@@ -42,6 +43,7 @@ export const PermissionSeverityBadge = ({ severity }: { severity: PermissionSeve
 const PermissionRowActions = ({ row }: { row: IPermission }) => {
   const { mutateAsync, isPending } = useDeletePermission();
   const scoped = useScopedPath();
+  const systemOnlyReason = useSystemOnlyReason();
   return (
     <div
       className="flex justify-end"
@@ -67,7 +69,7 @@ const PermissionRowActions = ({ row }: { row: IPermission }) => {
         itemId={row.itemId}
         archive={mutateAsync}
         isPending={isPending}
-        disabledReason={row.isBuiltIn ? BUILT_IN_ARCHIVE_REASON : undefined}
+        disabledReason={row.isBuiltIn ? BUILT_IN_ARCHIVE_REASON : systemOnlyReason}
       />
     </div>
   );

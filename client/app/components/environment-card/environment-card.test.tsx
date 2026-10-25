@@ -144,4 +144,14 @@ describe("EnvironmentCard", () => {
     fireEvent.click(screen.getByText("Continue Anyway"));
     await waitFor(() => expect(h.startImpersonation).toHaveBeenCalled());
   });
+
+  it("marks a failed migration and drops the hourglass", () => {
+    render(<EnvironmentCard project={project} isMigrationFailed />);
+    expect(screen.getByLabelText("Migration failed")).toBeTruthy();
+  });
+
+  it("shows no failure mark while the migration is still running", () => {
+    render(<EnvironmentCard project={project} isMigrationOngoing isMigrationFailed />);
+    expect(screen.queryByLabelText("Migration failed")).toBeNull();
+  });
 });

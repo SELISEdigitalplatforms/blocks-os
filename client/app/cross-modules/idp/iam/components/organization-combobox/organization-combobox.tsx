@@ -4,7 +4,10 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui-kits/popover/popover";
 import { cn } from "@/lib/utils";
-import { useGetOrganizations } from "@blocks-idp/iam/hooks/use-organization";
+import {
+  useGetOrganizationById,
+  useGetOrganizations,
+} from "@blocks-idp/iam/hooks/use-organization";
 import type { IOrganization } from "@blocks-idp/iam/models/organization";
 
 const DEFAULT_ORGANIZATION_ID = "default";
@@ -19,6 +22,9 @@ interface OrganizationComboboxProps {
   initialSelectedName?: string;
   emptyMessage?: string;
   disabled?: boolean;
+  /** Also hide organizations with `isEnable === false`. Defaults to false for existing callers. */
+  excludeNotEnabled?: boolean;
+  id?: string;
 }
 
 const mergeOrganizations = (
@@ -38,6 +44,8 @@ export const OrganizationCombobox = ({
   initialSelectedName,
   emptyMessage = "No organizations available",
   disabled = false,
+  excludeNotEnabled = false,
+  id,
 }: OrganizationComboboxProps) => {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -69,6 +77,14 @@ export const OrganizationCombobox = ({
     enabled: open && !disabled,
   });
 
+  // A saved value arrives as a bare id; fetch its name until the user picks an option.
+  const needsSelectedLookup =
+    !!value && value !== DEFAULT_ORGANIZATION_ID && selectedOption?.itemId !== value;
+  const { data: selectedOrganizationDetails } = useGetOrganizationById({
+    projectKey,
+    itemId: needsSelectedLookup ? value : "",
+  });
+
   const [lastSearchTerm, setLastSearchTerm] = useState(debouncedSearchTerm);
   const [lastData, setLastData] = useState<typeof data>(undefined);
 
@@ -88,7 +104,9 @@ export const OrganizationCombobox = ({
   const options = useMemo(() => {
     const organizations = loadedOrganizations.filter(
       (organization) =>
-        organization.isDisabled !== true && organization.itemId !== DEFAULT_ORGANIZATION_ID,
+        organization.isDisabled !== true &&
+        !(excludeNotEnabled && organization.isEnable === false) &&
+        organization.itemId !== DEFAULT_ORGANIZATION_ID,
     );
     const defaultMatchesSearch = "default".includes(debouncedSearchTerm.toLowerCase());
     if (defaultMatchesSearch) {
@@ -98,7 +116,7 @@ export const OrganizationCombobox = ({
       ];
     }
     return organizations.map(({ itemId, name }) => ({ itemId, name }));
-  }, [debouncedSearchTerm, loadedOrganizations]);
+  }, [debouncedSearchTerm, excludeNotEnabled, loadedOrganizations]);
 
   const totalCount = data?.totalCount ?? loadedOrganizations.length;
   const hasMore = loadedOrganizations.length < totalCount;
@@ -112,6 +130,7 @@ export const OrganizationCombobox = ({
       ? "Default"
       : (selectedOrganization?.name ??
         (selectedOption?.itemId === value ? selectedOption.name : undefined) ??
+        selectedOrganizationDetails?.organization?.name ??
         value);
 
   const handleOpenChange = useCallback((nextOpen: boolean) => {
@@ -140,6 +159,7 @@ export const OrganizationCombobox = ({
     <Popover open={open} onOpenChange={handleOpenChange} modal>
       <PopoverTrigger asChild>
         <Button
+          id={id}
           type="button"
           variant="outline"
           role="combobox"

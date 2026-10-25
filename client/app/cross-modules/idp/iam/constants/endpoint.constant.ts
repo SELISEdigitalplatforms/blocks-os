@@ -41,11 +41,6 @@ export const USER_ENDPOINTS = {
 
   GET_SESSIONS: `${API_BASES.IAM}${IAM_SUBPATH}/sessions`,
   GET_HISTORIES: `${API_BASES.IAM}${IAM_SUBPATH}/history`,
-  // Personal access tokens live under /auth/user-codes (GET lists, POST issues).
-  // The old /auth/PascalCase pair does not exist and falls through to the IAM
-  // SPA, so the client got an HTML document back instead of JSON.
-  GET_USER_CODES: `${API_BASES.IAM}/auth/user-codes`,
-  GENERATE_USER_CODE: `${API_BASES.IAM}/auth/user-codes`,
 } as const;
 
 // ─── Account endpoints (account.service) ────────────────────────────────────
@@ -71,6 +66,13 @@ export const ROLE_ENDPOINTS = {
   // POST despite being a read: the diff it previews is two id lists.
   PERMISSION_CHANGE_IMPACT: `${API_BASES.IAM}${IAM_SUBPATH}/roles/permission-change-impact`,
   GET_ALL_ASSIGNED_ROLES: `${API_BASES.IAM}${IAM_SUBPATH}/roles/assignable`,
+} as const;
+
+// ─── Access grant (grant-scope.service) ──────────────────────────
+
+export const GRANT_ENDPOINTS = {
+  // What the token's user may grant in the token's organization. Read-only.
+  SCOPE: `${API_BASES.IAM}${IAM_SUBPATH}/grant-scope`,
 } as const;
 
 // ─── Permission endpoints (permission.service) ─────────────────────────────

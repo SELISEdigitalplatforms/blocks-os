@@ -26,6 +26,7 @@ vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
 }));
 vi.mock("@blocks-idp/iam/hooks/use-organization", () => ({
   useGetOrganizations: () => h.orgs,
+  useGetOrganizationById: () => ({ data: undefined }),
   useGetOrganizationConfig: () => h.config,
 }));
 vi.mock("@/store/useProjectStore", () => ({

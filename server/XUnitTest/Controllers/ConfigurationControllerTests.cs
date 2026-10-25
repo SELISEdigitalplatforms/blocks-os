@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using Blocks.Genesis;
 using BlocksOs.Api.Controllers;
-using Configuration.DomainService.Mail.Entities;
 using Configuration.DomainService.Mail.Mailbox;
 using Configuration.DomainService.Mail.Mailbox.Services;
 using Configuration.DomainService.Mail.RequestModel;
@@ -10,15 +9,18 @@ using Configuration.DomainService.Mail.ResponseModel;
 using Configuration.DomainService.Mail.Services;
 using Configuration.DomainService.Mail.Template;
 using Configuration.DomainService.Mail.Template.Services;
-using Configuration.DomainService.Notification.Entities;
 using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Notification.ResponseModel;
 using Configuration.DomainService.Shared.Services;
 using Configuration.DomainService.Storage.Entities;
 using Configuration.DomainService.Storage.RequestModel;
+using Configuration.DomainService.Storage.Services;
+using DomainService.Configuration;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
+using Blocks.Genesis.Entities.Data;
+using Blocks.Genesis.Entities.Os;
 
 namespace XUnitTest.Controllers
 {
@@ -370,13 +372,13 @@ namespace XUnitTest.Controllers
 
     public class StorageControllerTests
     {
-        private readonly Mock<IConfigurationService> _service = new();
+        private readonly Mock<IStorageConfigurationService> _service = new();
         private StorageController Controller() => new(_service.Object);
 
         [Fact]
         public async Task Save_DelegatesToService()
         {
-            _service.Setup(s => s.SaveStorageConfigurationAsync(It.IsAny<SaveStorageConfigurationRequest>()))
+            _service.Setup(s => s.SaveAsync(It.IsAny<SaveStorageConfigurationRequest>()))
                     .ReturnsAsync(new BaseMutationResponse { IsSuccess = true });
 
             var response = await Controller().Save(new SaveStorageConfigurationRequest());
@@ -385,31 +387,30 @@ namespace XUnitTest.Controllers
         }
 
         [Fact]
-        public async Task Gets_DelegatesToService()
+        public async Task Get_ReturnsSettingsAndSecretStatus_NeverASecretField()
         {
-            var expected = new List<StorageConfiguration> { new() };
-            _service.Setup(s => s.GetStorageConfigurationsAsync()).ReturnsAsync(expected);
-
-            var response = await Controller().Gets(new GetStorageConfigurationsRequest());
-
-            response.Should().BeSameAs(expected);
-        }
-
-        [Fact]
-        public async Task Get_DelegatesToService()
-        {
-            var expected = new StorageConfiguration { Name = "az" };
-            _service.Setup(s => s.GetStorageConfigurationAsync("az")).ReturnsAsync(expected);
+            // The API contract the client relies on: per-secret status, no value and no masked value.
+            var settings = new StorageSettings { Name = "az", UploadCompletionRequiredFor = new List<string> { "Public", "Private" } };
+            var status = new Dictionary<string, string> { { "ConnectionString", "active" } };
+            _service.Setup(s => s.GetAsync("az")).ReturnsAsync(StorageConfigurationResponse.From(settings, status));
 
             var response = await Controller().Get(new GetStorageConfigurationRequest { ConfigurationName = "az" });
 
-            response.Should().BeSameAs(expected);
+            var json = System.Text.Json.JsonSerializer.Serialize(response);
+            json.Should().Contain("\"ConnectionStringStatus\":\"active\"")
+                .And.Contain("\"PasswordStatus\":\"none\"")
+                .And.Contain("\"UploadCompletionRequiredFor\":[\"Public\",\"Private\"]")
+                .And.NotContain("\"ConnectionString\":")
+                .And.NotContain("\"Password\":")
+                .And.NotContain("\"SecretKey\":")
+                .And.NotContain("\"AccessKey\":")
+                .And.NotContain("\"SftpSecretKey\":");
         }
 
         [Fact]
         public async Task Delete_DelegatesToService()
         {
-            _service.Setup(s => s.DeleteStorageConfigurationAsync("az"))
+            _service.Setup(s => s.DeleteAsync("az"))
                     .ReturnsAsync(new BaseResponse { IsSuccess = true });
 
             var response = await Controller().Delete(new DeleteStorageConfigurationRequest { ConfigurationName = "az" });

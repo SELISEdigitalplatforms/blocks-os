@@ -3,37 +3,32 @@ using FluentValidation;
 using Configuration.DomainService.Shared.Utilities;
 using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Notification.ResponseModel;
-using Configuration.DomainService.Notification.Entities;
-using Configuration.DomainService.Storage.RequestModel;
-using Configuration.DomainService.Storage.Entities;
-using Configuration.DomainService.Storage.Enums;
-using Configuration.DomainService.DataGateway.RequestModel;
-using Configuration.DomainService.DataGateway.Entities;
-using System.Collections.Immutable;
+using Blocks.Genesis.Entities.Data;
+using Blocks.Genesis.Entities.Os;
+using Configuration.DomainService.Notification.Propagation;
+using Microsoft.Extensions.Logging;
 
 namespace Configuration.DomainService.Shared.Services
 {
     public class ConfigurationService : IConfigurationService
     {
-        private const string MaskedSecretValue = "********";
-
         private readonly IConfigurationRepository _configurationRepository;
         private readonly IValidator<SaveNotificationConfigurationRequest> _notificatonConfigurationValidator;
-        private readonly IValidator<SaveStorageConfigurationRequest> _storageConfigurationValidator;
-        private readonly IValidator<SaveDataGatewayConfigurationRequest> _dataGatewayConfigurationValidator;
         private readonly IMessageClient _messageClient;
+        private readonly ITenants _tenants;
+        private readonly ILogger<ConfigurationService> _logger;
 
 
         public ConfigurationService(IConfigurationRepository configurationRepository,
                                     IValidator<SaveNotificationConfigurationRequest> notificatonConfigurationValidator,
-                                    IValidator<SaveStorageConfigurationRequest> storageConfigurationValidator,
-                                    IValidator<SaveDataGatewayConfigurationRequest> dataGatewayConfigurationValidator,
-                                    IMessageClient messageClient)
+                                    IMessageClient messageClient,
+                                    ITenants tenants,
+                                    ILogger<ConfigurationService> logger)
         {
+            _tenants = tenants;
+            _logger = logger;
             _configurationRepository = configurationRepository;
             _notificatonConfigurationValidator = notificatonConfigurationValidator;
-            _storageConfigurationValidator = storageConfigurationValidator;
-            _dataGatewayConfigurationValidator = dataGatewayConfigurationValidator;
             _messageClient = messageClient;
         }
 
@@ -52,8 +47,38 @@ namespace Configuration.DomainService.Shared.Services
                 };
             }
 
-            var repoConfig = await MapAsync(configuration);
+            var stored = await _configurationRepository.GetNotificationConfigurationByNameAsync(configuration.Name);
+            var storedIsBuiltIn = stored?.IsBuiltIn == true;
+            var requestsBuiltIn = configuration.IsBuiltIn == true;
+
+            // The tenant lookup runs only when a built-in config is involved, so custom saves cost what they did.
+            var isRoot = (storedIsBuiltIn || requestsBuiltIn) && IsRootCaller();
+
+            if (!storedIsBuiltIn && requestsBuiltIn && !isRoot)
+            {
+                return Refused(nameof(configuration.IsBuiltIn), Constants.OnlyRootTenantCanManageBuiltInNotificationConfiguration);
+            }
+
+            if (storedIsBuiltIn && !isRoot && ChangesReadOnlyField(stored!, configuration))
+            {
+                return Refused(nameof(configuration.IsBuiltIn), Constants.BuiltInNotificationConfigurationIsReadOnly);
+            }
+
+            var repoConfig = Map(stored, configuration, isRoot);
+
+            if (configuration.IsDisabled == true && !repoConfig.CanBeDisabled())
+            {
+                return Refused(nameof(configuration.IsDisabled), Constants.NotificationConfigurationCannotBeDisabled);
+            }
+
             await _configurationRepository.SaveNotificationConfigurationAsync(repoConfig);
+
+            // Only a root change to a built-in config reaches the other tenants. Custom configs never travel.
+            if (isRoot && (repoConfig.IsBuiltIn || storedIsBuiltIn))
+            {
+                return await PublishBuiltInChangeAsync(NotificationConfigurationChangeAction.Upsert, repoConfig);
+            }
+
             return new BaseResponse { IsSuccess = true };
         }
 
@@ -69,14 +94,59 @@ namespace Configuration.DomainService.Shared.Services
 
         public async Task<BaseResponse> DeleteNotificationConfigurationAsync(DeleteNotificationConfigurationRequest request)
         {
-            return await _configurationRepository.DeleteNotificationConfigurationAsync(request);
+            var stored = string.IsNullOrWhiteSpace(request?.ItemId)
+                ? null
+                : await _configurationRepository.GetNotificationConfigurationByIdAsync(request.ItemId);
+
+            if (stored?.IsBuiltIn != true)
+            {
+                return await _configurationRepository.DeleteNotificationConfigurationAsync(request!);
+            }
+
+            if (!IsRootCaller())
+            {
+                return Refused(nameof(request.ItemId), Constants.OnlyRootTenantCanManageBuiltInNotificationConfiguration);
+            }
+
+            var response = await _configurationRepository.DeleteNotificationConfigurationAsync(request!);
+            if (!response.IsSuccess)
+            {
+                return response;
+            }
+
+            return await PublishBuiltInChangeAsync(NotificationConfigurationChangeAction.Delete, stored);
         }
 
-        private async Task<NotificationConfiguration> MapAsync(SaveNotificationConfigurationRequest configuration)
+        private static BaseResponse Refused(string field, string errorKey) => new()
         {
-            var repoConfig = await _configurationRepository.GetNotificationConfigurationByNameAsync(configuration.Name);
+            IsSuccess = false,
+            Errors = new Dictionary<string, string> { { field, errorKey } }
+        };
 
-            repoConfig = repoConfig ?? new NotificationConfiguration { ItemId = Guid.NewGuid().ToString(), CreatedDate = DateTime.UtcNow, CreatedBy = BlocksContext.GetContext()?.UserId };
+        /// <summary>
+        /// A built-in config is read-only for a non-root tenant except for <c>IsDisabled</c>. The portal re-sends
+        /// every field, so a field sent with the stored value is not a change. Fields left out (null) are not a change.
+        /// </summary>
+        private static bool ChangesReadOnlyField(NotificationConfiguration stored, SaveNotificationConfigurationRequest request)
+        {
+            static bool SameText(string? a, string? b) => string.Equals(a ?? string.Empty, b ?? string.Empty, StringComparison.Ordinal);
+
+            return stored.ChannelToNotify != request.ChannelToNotify
+                || stored.NotificationType != request.NotificationType
+                || stored.EnablePersistence != request.EnablePersistence
+                || !SameText(stored.NotifyMethod, request.NotifyMethod)
+                || (request.IsBuiltIn.HasValue && request.IsBuiltIn.Value != stored.IsBuiltIn)
+                || (request.Description is not null && !SameText(stored.Description, request.Description))
+                || (request.Importance.HasValue && request.Importance.Value != stored.Importance)
+                || (request.Kind.HasValue && request.Kind.Value != stored.Kind)
+                || (request.SourceService is not null && !SameText(stored.SourceService, request.SourceService))
+                || (request.ConsumerAppRecommendation is not null && !SameText(stored.ConsumerAppRecommendation, request.ConsumerAppRecommendation))
+                || (request.ConsumerAppNote is not null && !SameText(stored.ConsumerAppNote, request.ConsumerAppNote));
+        }
+
+        private static NotificationConfiguration Map(NotificationConfiguration? stored, SaveNotificationConfigurationRequest configuration, bool isRoot)
+        {
+            var repoConfig = stored ?? new NotificationConfiguration { ItemId = Guid.NewGuid().ToString(), CreatedDate = DateTime.UtcNow, CreatedBy = BlocksContext.GetContext()?.UserId };
 
             repoConfig.LastUpdatedDate = DateTime.UtcNow;
             repoConfig.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
@@ -86,251 +156,85 @@ namespace Configuration.DomainService.Shared.Services
             repoConfig.EnablePersistence = configuration.EnablePersistence;
             repoConfig.NotifyMethod = configuration.NotifyMethod;
 
+            // Null = not sent = keep the stored value. Only the root tenant ever sets IsBuiltIn; the read-only check
+            // above has already refused any other field change a non-root caller sent for a built-in config.
+            if (isRoot && configuration.IsBuiltIn.HasValue) repoConfig.IsBuiltIn = configuration.IsBuiltIn.Value;
+            if (configuration.IsDisabled.HasValue) repoConfig.IsDisabled = configuration.IsDisabled.Value;
+            if (configuration.Description is not null) repoConfig.Description = NullIfEmpty(configuration.Description);
+            if (configuration.Importance.HasValue) repoConfig.Importance = configuration.Importance.Value;
+            if (configuration.Kind.HasValue) repoConfig.Kind = configuration.Kind.Value;
+            if (configuration.SourceService is not null) repoConfig.SourceService = NullIfEmpty(configuration.SourceService);
+            if (configuration.ConsumerAppRecommendation is not null) repoConfig.ConsumerAppRecommendation = NullIfEmpty(configuration.ConsumerAppRecommendation);
+            if (configuration.ConsumerAppNote is not null) repoConfig.ConsumerAppNote = NullIfEmpty(configuration.ConsumerAppNote);
+
             return repoConfig;
         }
 
-        #endregion
+        // An empty string is stored as "not set", so it stays out of the stored document like any other default.
+        private static string? NullIfEmpty(string value) => string.IsNullOrEmpty(value) ? null : value;
 
-        #region Storage
-
-        public async Task<BaseMutationResponse> SaveStorageConfigurationAsync(SaveStorageConfigurationRequest request)
+        /// <summary>
+        /// Root = the caller's tenant is flagged <c>IsRootTenant</c>. Same signal as blocks-iam
+        /// <c>IsRoot()</c> and <c>SecretAuthorizationService.IsRootTenant</c>. A lookup failure is never read as root.
+        /// </summary>
+        private bool IsRootCaller()
         {
-            var validationResult = await _storageConfigurationValidator.ValidateAsync(request);
-
-            if (!validationResult.IsValid)
-                return new BaseMutationResponse { IsSuccess = false, Errors = validationResult.Errors.ToDictionary(e => e.PropertyName, e => e.ErrorMessage) };
-
-            var repoConfiguration = await MappedIntoRepoConfigurationAsync(request);
-
-            await _configurationRepository.SaveStorageConfigurationAsync(repoConfiguration);
-
-            await _messageClient.SendToConsumerAsync(new ConsumerMessage<CreateDefaultFolderEvent>
+            var tenantId = BlocksContext.GetContext()?.TenantId;
+            if (string.IsNullOrWhiteSpace(tenantId))
             {
-                Payload = new CreateDefaultFolderEvent
-                {
-                    ItemId = repoConfiguration.ItemId,
-                    ConfigurationName = repoConfiguration.Name,
-                    StorageStrategy = repoConfiguration.StorageStrategy
-                },
-                ConsumerName = Constants.StorageQueue,
-            });
+                return false;
+            }
 
-            return new BaseMutationResponse { IsSuccess = true, ItemId = repoConfiguration.ItemId };
+            try
+            {
+                return _tenants.GetTenantByID(tenantId)?.IsRootTenant == true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Tenant lookup failed while checking the root tenant. ErrorType={ErrorType}", ex.GetType().Name);
+                return false;
+            }
         }
 
-        private async Task<StorageConfiguration> MappedIntoRepoConfigurationAsync(SaveStorageConfigurationRequest request)
+        /// <summary>
+        /// The change is already saved for the root tenant. If queuing fails, the save stands and the response says
+        /// that the copy to other tenants was not queued; saving the config again queues it again (the copy is idempotent).
+        /// </summary>
+        private async Task<BaseResponse> PublishBuiltInChangeAsync(NotificationConfigurationChangeAction action, NotificationConfiguration configuration)
         {
-            var repoConfiguration = request.UpdateRequest ?
-                                    await _configurationRepository.GetStorageConfigurationByIdAsync(request.ItemId ?? "") :
-                                    await _configurationRepository.GetStorageConfigurationByNameAsync(request.Name ?? "");
-
-            var isNewConfiguration = repoConfiguration == null;
-
-            if (repoConfiguration == null)
+            try
             {
-                repoConfiguration = new StorageConfiguration { ItemId = Guid.NewGuid().ToString(), CreatedDate = DateTime.UtcNow };
-                // Only a brand new configuration records its author; an update must not rewrite the
-                // original creator to whoever happened to change an expiry setting.
-                repoConfiguration.CreatedBy = BlocksContext.GetContext()?.UserId;
-            }
-
-            repoConfiguration.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
-            repoConfiguration.LastUpdatedDate = DateTime.UtcNow;
-
-            #region Phase1UploadSecurity
-
-            repoConfiguration.UploadUrlExpirySeconds = request.UploadUrlExpirySeconds;
-            repoConfiguration.DownloadUrlExpirySeconds = request.DownloadUrlExpirySeconds;
-            repoConfiguration.MaxFileSizeInBytes = request.MaxFileSizeInBytes;
-            repoConfiguration.UploadCompletionRequiredFor = request.UploadCompletionRequiredFor;
-
-            #endregion
-
-            // The provider identity and its credentials are fixed once a configuration exists - the client UI
-            // disables these fields in edit mode, but that alone doesn't stop a direct API call from sending
-            // different values, so an update request is not trusted to change them here either. Only a brand
-            // new configuration takes these from the request.
-            if (!isNewConfiguration)
-            {
-                return repoConfiguration;
-            }
-
-            // request.Name/StorageStrategy are only null here if validation somehow let a create
-            // request through without them - FluentValidation already requires both when
-            // !UpdateRequest, so this only guards against that invariant, not a real empty write.
-            repoConfiguration.Name = request.Name ?? "";
-            repoConfiguration.ConnectionString = request.ConnectionString;
-            repoConfiguration.SecretKey = request.SecretKey;
-            repoConfiguration.StorageStrategy = request.StorageStrategy ?? "";
-            repoConfiguration.AccessKey = request.AccessKey;
-            repoConfiguration.CloudStorageRegionEndPoint = request.CloudStorageRegionEndPoint;
-
-            #region LocalStorage
-
-            _ = StorageTypes.TryGetCategory(request.StorageStrategy ?? "", out var category);
-
-            repoConfiguration.Host = request.Host ?? "";
-            repoConfiguration.Port = request.Port ?? "";
-            repoConfiguration.UserName = request.UserName ?? "";
-            repoConfiguration.Password = request.Password ?? "";
-            repoConfiguration.RemoteBasePath = request.RemoteBasePath ?? "";
-            repoConfiguration.StorageStrategy = request.StorageStrategy ?? "";
-            repoConfiguration.SftpSecretKey = category == StorageStrategyCategory.Local ? Helper.GenerateAesKey() : "";
-
-            #endregion
-
-            return repoConfiguration;
-        }
-
-        private async Task<DataGatewayConfiguration> MappedIntoRepoConfigurationAsync(SaveDataGatewayConfigurationRequest request)
-        {
-            var repoConfiguration = request.UpdateRequest ?
-                                    await _configurationRepository.GetDataGatewayConfigurationByIdAsync(request.ItemId ?? "") :
-                                    null;
-
-            var isNewConfiguration = repoConfiguration == null;
-
-            if (repoConfiguration == null)
-            {
-                repoConfiguration = new DataGatewayConfiguration { ItemId = Guid.NewGuid().ToString(), CreatedDate = DateTime.UtcNow };
-                repoConfiguration.CreatedBy = BlocksContext.GetContext()?.UserId;
-                repoConfiguration.ProjectKey = request.ProjectKey ?? "";
-            }
-
-            repoConfiguration.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
-            repoConfiguration.LastUpdatedDate = DateTime.UtcNow;
-
-            repoConfiguration.DbConnectionString = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(request.ConnectionString ?? ""));
-            repoConfiguration.DatabaseName = request.DatabaseName ?? "";
-            repoConfiguration.IsCollectionNameEditable = request.IsCollectionNameEditable;
-            repoConfiguration.CollectionNamePattern = request.CollectionNamePattern ?? repoConfiguration.CollectionNamePattern;
-
-            if (request.EnableAnalytics.HasValue)
-            {
-                repoConfiguration.AnalyticsConfiguration ??= new AnalyticsConfiguration();
-                if (request.EnableAnalytics.Value
-                    && !repoConfiguration.AnalyticsConfiguration.EnableDate.HasValue
-                    && !repoConfiguration.AnalyticsConfiguration.ValidTill.HasValue)
+                await _messageClient.SendToConsumerAsync(new ConsumerMessage<BuiltInNotificationConfigurationChangedEvent>
                 {
-                    var enableDate = DateTime.UtcNow;
-                    repoConfiguration.AnalyticsConfiguration.EnableDate = enableDate;
-                    repoConfiguration.AnalyticsConfiguration.ValidTill = enableDate.AddDays(14);
-                }
-
-                repoConfiguration.AnalyticsConfiguration.EnableAnalytics = request.EnableAnalytics.Value;
-            }
-            else if (isNewConfiguration)
-            {
-                var enableDate = DateTime.UtcNow;
-                repoConfiguration.AnalyticsConfiguration = new AnalyticsConfiguration
-                {
-                    EnableAnalytics = true,
-                    EnableDate = enableDate,
-                    ValidTill = enableDate.AddDays(14)
-                };
-            }
-
-            return repoConfiguration;
-        }
-
-        public static class StorageTypes
-        {
-            private static readonly ImmutableDictionary<string, StorageStrategyCategory> TypeToCategory =
-                ImmutableDictionary.CreateRange(StringComparer.OrdinalIgnoreCase, new[]
-                {
-                   new KeyValuePair<string, StorageStrategyCategory>("azure", StorageStrategyCategory.Cloud),
-                   new KeyValuePair<string, StorageStrategyCategory>("aws", StorageStrategyCategory.Cloud),
-                   new KeyValuePair<string, StorageStrategyCategory>("sftpstorage", StorageStrategyCategory.Local)
+                    ConsumerName = Constants.NotificationConfigurationQueue,
+                    Payload = new BuiltInNotificationConfigurationChangedEvent
+                    {
+                        Action = action,
+                        Name = configuration.Name,
+                        SourceTenantId = BlocksContext.GetContext()?.TenantId ?? string.Empty,
+                        Snapshot = configuration
+                    }
                 });
 
-            public static bool TryGetCategory(string type, out StorageStrategyCategory category)
-            {
-                return TypeToCategory.TryGetValue(type.ToLower(), out category);
+                return new BaseResponse { IsSuccess = true };
             }
-        }
-
-        public async Task<List<StorageConfiguration>> GetStorageConfigurationsAsync()
-        {
-            var configurations = await _configurationRepository.GetAllStorageConfigurationsByDateAsync();
-
-            foreach (var configuration in configurations)
+            catch (Exception ex)
             {
-                //To do masking if required
-                if (configuration.StorageStrategy == "SftpStorage")
+                _logger.LogError(
+                    ex,
+                    "Built-in notification config saved but its copy to other tenants was not queued. Name={Name} Action={Action} ErrorType={ErrorType}",
+                    configuration.Name, action, ex.GetType().Name);
+
+                return new BaseResponse
                 {
-                    configuration.Password = MaskedSecretValue;
-                    configuration.SftpSecretKey = MaskedSecretValue;
-                }
-                else
-                {
-                    configuration.ConnectionString = Helper.GetMaskedCloudStorageRegionEndPoint(configuration.ConnectionString);
-                }
+                    IsSuccess = true,
+                    Errors = new Dictionary<string, string> { { "Propagation", Constants.NotificationConfigurationPropagationNotQueued } }
+                };
             }
-
-            return configurations;
-        }
-
-        public async Task<StorageConfiguration> GetStorageConfigurationAsync(string configurationName)
-        {
-            var configuration = await _configurationRepository.GetStorageConfigurationByNameAsync(configurationName);
-
-            //To do masking if required
-            if (configuration.StorageStrategy == "SftpStorage")
-            {
-                configuration.Password = MaskedSecretValue;
-                configuration.SftpSecretKey = MaskedSecretValue;
-            }
-            else
-            {
-                configuration.ConnectionString = Helper.GetMaskedCloudStorageRegionEndPoint(configuration.ConnectionString);
-            }
-
-            return configuration;
-        }
-
-        public async Task<BaseResponse> DeleteStorageConfigurationAsync(string configurationName)
-        {
-            await _configurationRepository.DeleteStorageConfigurationByNameAsync(configurationName);
-
-            return new BaseResponse { IsSuccess = true };
         }
 
         #endregion
 
-        #region DataGateway
-
-        public async Task<BaseMutationResponse> SaveDataGatewayConfigurationAsync(SaveDataGatewayConfigurationRequest request)
-        {
-            var validationResult = await _dataGatewayConfigurationValidator.ValidateAsync(request);
-
-            if (!validationResult.IsValid)
-                return new BaseMutationResponse { IsSuccess = false, Errors = validationResult.Errors.ToDictionary(e => e.PropertyName, e => e.ErrorMessage) };
-
-            var repoConfiguration = await MappedIntoRepoConfigurationAsync(request);
-
-            await _configurationRepository.SaveDataGatewayConfigurationAsync(repoConfiguration);
-
-            return new BaseMutationResponse { IsSuccess = true, ItemId = repoConfiguration.ItemId };
-        }
-
-        public async Task<DataGatewayConfiguration> GetDataGatewayConfigurationAsync()
-        {
-            var configuration = await _configurationRepository.GetDataGatewayConfigurationAsync();
-
-            // Unlike Storage's masked secrets, blocks-data's own DataGatewayConfigurationService.GetConfiguration
-            // returns the connection string decoded, not masked - the client needs the real value to
-            // tell a platform-managed ("default") configuration apart from a custom one and to let an
-            // admin edit an existing custom connection string.
-            if (configuration != null && !string.IsNullOrEmpty(configuration.DbConnectionString))
-            {
-                configuration.DbConnectionString = System.Text.Encoding.UTF8.GetString(
-                    Convert.FromBase64String(configuration.DbConnectionString));
-            }
-
-            return configuration;
-        }
-
-        #endregion
     }
 }
 

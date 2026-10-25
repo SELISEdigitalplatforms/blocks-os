@@ -164,7 +164,6 @@ export function SecretList() {
                   page={queryParams.secretPage}
                   pageSize={queryParams.secretPageSize}
                   totalCount={totalCount}
-                  pageSizeOptions={[10, 20, 50]}
                   onChange={setPage}
                   onPageSizeChange={setPageSize}
                 />

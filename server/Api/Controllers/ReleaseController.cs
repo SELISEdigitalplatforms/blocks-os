@@ -16,70 +16,70 @@ namespace BlocksOs.Api.Controllers
     public class ReleaseController(IReleaseDriverService releaseDriverService) : ControllerBase
     {
         [HttpGet]
-        [Authorize]
+        [ProtectedEndPoint("blocks-release::auth::authorization-status")]
         public async Task<BaseApiResponse> IsAuthorized()
         {
             return await releaseDriverService.IsAuthorizeAsync();
         }
 
         [HttpGet]
-        [Authorize]
+        [ProtectedEndPoint("blocks-release::auth::access-token")]
         public async Task<BaseApiResponse> AccessToken([FromQuery] string code)
         {
             return await releaseDriverService.GetAccessTokenAsync(code);
         }
 
         [HttpPost]
-        [Authorize]
+        [ProtectedEndPoint("blocks-release::auth::remove-authorization")]
         public async Task<BaseApiResponse> RemoveAuthorization()
         {
             return await releaseDriverService.RemoveAuthorizationAsync();
         }
 
         [HttpDelete]
-        [Authorize]
+        [ProtectedEndPoint("blocks-release::auth::delete-authorization")]
         public async Task<BaseApiResponse> DeleteAuthorization()
         {
             return await releaseDriverService.DeleteAuthorizationAsync();
         }
 
         [HttpGet]
-        [Authorize]
+        [ProtectedEndPoint("blocks-release::build::repos-list")]
         public async Task<BaseApiResponse> GetReposList()
         {
             return await releaseDriverService.GetReposListAsync();
         }
 
         [HttpGet]
-        [Authorize]
+        [ProtectedEndPoint("blocks-release::github::user")]
         public async Task<BaseApiResponse> GetUser()
         {
             return await releaseDriverService.GetUserAsync();
         }
 
         [HttpGet]
-        [Authorize]
+        [ProtectedEndPoint("blocks-release::github::repos")]
         public async Task<BaseApiResponse> GetRepos([FromQuery] string? Search, [FromQuery] int PageNumber = 1, [FromQuery] int PageSize = 30)
         {
             return await releaseDriverService.SearchRepositoriesAsync(Search, PageNumber, PageSize);
         }
 
         [HttpGet]
-        [Authorize]
+        [ProtectedEndPoint("blocks-release::github::branches")]
         public async Task<BaseApiResponse> GetBranches([FromQuery] string repo)
         {
             return await releaseDriverService.GetBranchesAsync(repo);
         }
 
         [HttpGet]
-        [Authorize]
+        [ProtectedEndPoint("blocks-release::github::branch-exists")]
         public async Task<BaseApiResponse> GithubBranchExists([FromQuery] string repoId)
         {
             return await releaseDriverService.GithubBranchExistsAsync(repoId);
         }
 
         [HttpPost]
-        [Authorize]
+        [ProtectedEndPoint("blocks-release::build::repo-domain-update")]
         public async Task<BaseApiResponse> UpdateRepoDomain([FromBody] RepoDomainUpdateRequest request)
         {
             return await releaseDriverService.UpdateRepoDomainAsync(request);

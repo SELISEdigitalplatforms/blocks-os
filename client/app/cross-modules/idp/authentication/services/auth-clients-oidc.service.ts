@@ -4,15 +4,16 @@ import {
   IDeleteOidcClientPayload,
   IDeleteOidcClientResponse,
   IGetOidcPayload,
+  IGetOidcCredentialResponse,
   IGetOidcCredentialsResponse,
   IGetOidcUiTemplateResponse,
   IRotateOidcClientSecretPayload,
   IRotateOidcClientSecretResponse,
   ISaveOidcCredentialPayload,
   ISaveOidcCredentialResponse,
+  ISaveOidcCredentialResult,
   IOidcUiTemplate,
   ISaveOidcUiTemplateResponse,
-  IOidcConfig,
 } from "@blocks-idp/authentication/models/auth.oidc.model";
 import { AUTH_OIDC_ENDPOINTS, AUTH_OIDC_TEMPLATE_ENDPOINTS } from "../constants/endpoint.constant";
 
@@ -23,11 +24,7 @@ export class AuthOidc {
     });
   }
 
-  async getOidcCredential(payload: IGetOidcPayload): Promise<{
-    oIDCClientCredential: IOidcConfig;
-    errors: Record<string, string> | null;
-    isSuccess: boolean;
-  }> {
+  async getOidcCredential(payload: IGetOidcPayload): Promise<IGetOidcCredentialResponse> {
     return http.get(`${AUTH_OIDC_ENDPOINTS.GET_OIDC_CLIENT}/${payload.clientId}`, undefined, {
       absoluteUrl: true,
     });
@@ -35,7 +32,7 @@ export class AuthOidc {
 
   saveOidcCredential(
     payload: ISaveOidcCredentialPayload,
-  ): Promise<APIResponse<ISaveOidcCredentialResponse>> {
+  ): Promise<APIResponse<ISaveOidcCredentialResponse> & ISaveOidcCredentialResult> {
     return http.post(AUTH_OIDC_ENDPOINTS.SAVE_OIDC_CLIENT, payload, undefined, {
       absoluteUrl: true,
     });

@@ -100,6 +100,21 @@ describe("KVDetailItem", () => {
     await waitFor(() => expect(writeText).toHaveBeenCalledWith("clip-secret"));
   });
 
+  it("shows a masked value without the full text, but copies the full value", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    Object.defineProperty(globalThis, "isSecureContext", { value: true, configurable: true });
+
+    render(<KVDetailItem label="Client Id" value="abcd-1234-5678-wxyz" copyable masked />);
+    expect(screen.queryByText("abcd-1234-5678-wxyz")).toBeNull();
+    expect(screen.getByText("abcd********wxyz")).toBeTruthy();
+    expect(screen.queryByLabelText("Show value")).toBeNull();
+    await user.click(screen.getByLabelText("Copy value"));
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("abcd-1234-5678-wxyz"));
+  });
+
   it("falls back to execCommand when the clipboard API is unavailable", async () => {
     const user = userEvent.setup();
     // Remove the clipboard after setup to force the legacy execCommand path.

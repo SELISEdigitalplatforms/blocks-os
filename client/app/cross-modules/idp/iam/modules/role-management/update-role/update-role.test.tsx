@@ -18,16 +18,45 @@ vi.mock("@/hooks/use-toast", () => ({
   showSuccessToast: (...a: unknown[]) => h.showSuccessToast(...a),
 }));
 
+vi.mock("../managed-by-select", () => ({
+  ManagedBySelect: ({
+    value,
+    onChange,
+    excludeSlug,
+  }: {
+    value?: string | null;
+    onChange: (slug: string) => void;
+    excludeSlug?: string;
+  }) => (
+    <div>
+      <span data-testid="managed-by-current">{value ?? "none"}</span>
+      <span data-testid="managed-by-exclude">{excludeSlug ?? ""}</span>
+      <button type="button" onClick={() => onChange("lead")}>
+        pick lead
+      </button>
+      <button type="button" onClick={() => onChange("")}>
+        pick none
+      </button>
+    </div>
+  ),
+}));
+
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { UpdateRole } from "./update-role";
 import type { IRole } from "@blocks-idp/iam/models/role";
 
-const role = { itemId: "role-1", name: "Admin", description: "Admin role" } as IRole;
+const role = {
+  itemId: "role-1",
+  slug: "admin",
+  name: "Admin",
+  description: "Admin role",
+  parentRoleSlug: null,
+} as IRole;
 
-const renderUpdateRole = (onClose = vi.fn()) => {
+const renderUpdateRole = (onClose = vi.fn(), current: IRole = role) => {
   render(
     <Dialog open>
-      <UpdateRole role={role} isOpen onClose={onClose} />
+      <UpdateRole role={current} isOpen onClose={onClose} />
     </Dialog>,
   );
   return { onClose };
@@ -73,5 +102,34 @@ describe("UpdateRole", () => {
     fireEvent.change(screen.getByPlaceholderText("Enter name"), { target: { value: "Manager" } });
     fireEvent.click(screen.getByRole("button", { name: "Update" }));
     await waitFor(() => expect(h.showErrorToast).toHaveBeenCalled());
+  });
+
+  it("does not send Managed by when it did not change", async () => {
+    renderUpdateRole();
+    fireEvent.change(screen.getByPlaceholderText("Enter name"), { target: { value: "Manager" } });
+    fireEvent.click(screen.getByRole("button", { name: "Update" }));
+    await waitFor(() => expect(h.mutateAsync).toHaveBeenCalled());
+    expect(h.mutateAsync.mock.calls[0][0]).not.toHaveProperty("parentRoleSlug");
+  });
+
+  it("sends the new Managed by role, and a role is never managed by itself", async () => {
+    renderUpdateRole();
+    expect(screen.getByTestId("managed-by-exclude").textContent).toBe("admin");
+    fireEvent.click(screen.getByRole("button", { name: "pick lead" }));
+    fireEvent.click(screen.getByRole("button", { name: "Update" }));
+    await waitFor(() => expect(h.mutateAsync).toHaveBeenCalled());
+    expect(h.mutateAsync.mock.calls[0][0]).toMatchObject({
+      itemId: "role-1",
+      parentRoleSlug: "lead",
+    });
+  });
+
+  it("clears Managed by with an explicit null", async () => {
+    renderUpdateRole(vi.fn(), { ...role, parentRoleSlug: "lead" });
+    expect(screen.getByTestId("managed-by-current").textContent).toBe("lead");
+    fireEvent.click(screen.getByRole("button", { name: "pick none" }));
+    fireEvent.click(screen.getByRole("button", { name: "Update" }));
+    await waitFor(() => expect(h.mutateAsync).toHaveBeenCalled());
+    expect(h.mutateAsync.mock.calls[0][0]).toMatchObject({ parentRoleSlug: null });
   });
 });

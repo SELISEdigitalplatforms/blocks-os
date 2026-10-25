@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => ({
   saveClient: vi.fn(),
   deleteClient: vi.fn(),
+  rotateSecret: vi.fn(),
   showErrorToast: vi.fn(),
   showSuccessToast: vi.fn(),
 }));
@@ -26,15 +27,18 @@ vi.mock("@/hooks/use-toast", () => ({
 vi.mock("@blocks-idp/authentication/hooks/use-auth-clients", () => ({
   useSaveAuthClient: () => ({ mutateAsync: h.saveClient, isPending: false }),
   useDeleteAuthClient: () => ({ mutateAsync: h.deleteClient, isPending: false }),
+  useRotateAuthClientSecret: () => ({ mutateAsync: h.rotateSecret, isPending: false }),
 }));
 
 import { ClientCredentialList } from "./client-credentials-list";
+
+const CLIENT_ID = "client-abcdef123456";
+const NEW_SECRET = "new-secret-123";
 import type { IClientCredentialsConfig } from "@blocks-idp/authentication/models/auth.oidc.model";
 
 const client = {
-  itemId: "client-abcdef123456",
+  itemId: CLIENT_ID,
   name: "My Client",
-  clientSecret: "secret-abcdef123456",
   isActive: true,
   roles: ["admin"],
   permissions: ["p1", "p2"],
@@ -64,8 +68,41 @@ describe("ClientCredentialList", () => {
     expect(screen.getByText("Active")).toBeTruthy();
     // first row is expanded by default -> detail rows visible
     expect(screen.getByText("Client Id")).toBeTruthy();
-    expect(screen.getByText("Client Secret")).toBeTruthy();
+    expect(screen.queryByText("Client Secret")).toBeNull();
     expect(screen.getByText("Role(s)")).toBeTruthy();
+  });
+
+  it("never renders a secret that the list somehow carries", () => {
+    render(
+      <ClientCredentialList
+        data={[{ ...client, clientSecret: "leaked-secret-value" }]}
+        isLoading={false}
+      />,
+    );
+    expect(screen.queryByText(/leaked-secret-value/)).toBeNull();
+  });
+
+  it("rotates the secret after confirmation and shows the new one once", async () => {
+    h.rotateSecret.mockResolvedValueOnce({ isSuccess: true, clientSecret: NEW_SECRET });
+    const user = userEvent.setup();
+    render(<ClientCredentialList data={[client]} isLoading={false} />);
+    await user.click(screen.getByRole("button", { name: "Rotate client secret" }));
+    await user.click(await screen.findByRole("button", { name: "Rotate Secret" }));
+    await waitFor(() => expect(h.rotateSecret).toHaveBeenCalledWith({ itemId: CLIENT_ID }));
+    expect(await screen.findByText(NEW_SECRET)).toBeTruthy();
+    expect(screen.getByText(/You will not see this secret again/)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "I copied it, close" }));
+    await waitFor(() => expect(screen.queryByText(NEW_SECRET)).toBeNull());
+  });
+
+  it("shows an error toast and no secret when rotation fails", async () => {
+    h.rotateSecret.mockResolvedValueOnce({ isSuccess: false, errors: { general: "no" } });
+    const user = userEvent.setup();
+    render(<ClientCredentialList data={[client]} isLoading={false} />);
+    await user.click(screen.getByRole("button", { name: "Rotate client secret" }));
+    await user.click(await screen.findByRole("button", { name: "Rotate Secret" }));
+    await waitFor(() => expect(h.showErrorToast).toHaveBeenCalled());
+    expect(screen.queryByText(/You will not see this secret again/)).toBeNull();
   });
 
   it("sorts rows by newest created date first", () => {
@@ -92,7 +129,7 @@ describe("ClientCredentialList", () => {
     await user.click(await screen.findByRole("button", { name: "Disable" }));
     await waitFor(() =>
       expect(h.saveClient).toHaveBeenCalledWith(
-        expect.objectContaining({ itemId: "client-abcdef123456", isActive: false }),
+        expect.objectContaining({ itemId: CLIENT_ID, isActive: false }),
       ),
     );
     expect(h.showSuccessToast).toHaveBeenCalled();
@@ -101,14 +138,12 @@ describe("ClientCredentialList", () => {
   it("enables an inactive client credential after confirmation", async () => {
     h.saveClient.mockResolvedValueOnce({ isSuccess: true });
     const user = userEvent.setup();
-    render(
-      <ClientCredentialList data={[{ ...client, isActive: false }]} isLoading={false} />,
-    );
+    render(<ClientCredentialList data={[{ ...client, isActive: false }]} isLoading={false} />);
     await user.click(screen.getByRole("button", { name: "Enable client credential" }));
     await user.click(await screen.findByRole("button", { name: "Enable" }));
     await waitFor(() =>
       expect(h.saveClient).toHaveBeenCalledWith(
-        expect.objectContaining({ itemId: "client-abcdef123456", isActive: true }),
+        expect.objectContaining({ itemId: CLIENT_ID, isActive: true }),
       ),
     );
   });
@@ -129,9 +164,7 @@ describe("ClientCredentialList", () => {
     await user.click(screen.getByRole("button", { name: "Delete client credential" }));
     const buttons = await screen.findAllByRole("button", { name: "Delete" });
     await user.click(buttons[buttons.length - 1]);
-    await waitFor(() =>
-      expect(h.deleteClient).toHaveBeenCalledWith({ itemId: "client-abcdef123456" }),
-    );
+    await waitFor(() => expect(h.deleteClient).toHaveBeenCalledWith({ itemId: CLIENT_ID }));
     expect(h.showSuccessToast).toHaveBeenCalled();
   });
 

@@ -195,8 +195,6 @@ export enum ResourceType {
   Endpoint = 1,
   /** Permission guards a client-side user action / UI affordance. */
   "FE action" = 2,
-  /** Permission guards access to a specific data record or data class. */
-  "Data protection" = 3,
 }
 
 export const RESOURCE_TYPE = [
@@ -207,10 +205,6 @@ export const RESOURCE_TYPE = [
   {
     value: "2",
     label: "FE action",
-  },
-  {
-    value: "3",
-    label: "Data protection",
   },
 ];
 

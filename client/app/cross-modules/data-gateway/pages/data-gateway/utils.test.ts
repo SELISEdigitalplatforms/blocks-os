@@ -4,23 +4,20 @@ import {
   DEFAULT_DATA_SOURCE_VALUE,
   dataGatewayConfigurationFormDefaultValue,
   dataGatewayConfigurationFormSchema,
-  isDefaultConnection,
+  canOmitConnectionString,
+  isCustomConnection,
+  toConnectionStringPayload,
   toDataGatewayConfigurationFormValues,
 } from "./utils";
 
 const baseConfiguration: IDataGatewayConfiguration = {
   itemId: "dg-1",
-  createdBy: "user-1",
-  createdDate: "2026-01-01T00:00:00.000Z",
-  lastUpdatedBy: "user-1",
-  lastUpdatedDate: "2026-01-10T00:00:00.000Z",
+  connectionType: "Custom",
   projectKey: "project-key-1",
   projectShortKey: "proj1",
-  dbConnectionString: "mongodb://localhost:27017",
   databaseName: "project_one_db",
   isCollectionNameEditable: true,
   collectionNamePattern: "custom_{SchemaName}",
-  isDeleted: false,
   analyticsConfiguration: {
     enableAnalytics: true,
     enableDate: "2026-01-05T00:00:00.000Z",
@@ -28,19 +25,57 @@ const baseConfiguration: IDataGatewayConfiguration = {
   },
 };
 
-describe("isDefaultConnection", () => {
-  it("treats a missing value as the platform default", () => {
-    expect(isDefaultConnection(undefined)).toBe(true);
-    expect(isDefaultConnection(null)).toBe(true);
-    expect(isDefaultConnection("")).toBe(true);
+const defaultConfiguration: IDataGatewayConfiguration = {
+  ...baseConfiguration,
+  connectionType: "Default",
+  databaseName: "default",
+};
+
+describe("isCustomConnection", () => {
+  it("is true only for a Custom configuration", () => {
+    expect(isCustomConnection(baseConfiguration)).toBe(true);
+    expect(isCustomConnection(defaultConfiguration)).toBe(false);
+    expect(isCustomConnection(undefined)).toBe(false);
+    expect(isCustomConnection(null)).toBe(false);
+  });
+});
+
+describe("canOmitConnectionString", () => {
+  it("allows an empty string only for an own database that is already Custom", () => {
+    expect(canOmitConnectionString("others", baseConfiguration)).toBe(true);
   });
 
-  it("treats the sentinel value as the platform default", () => {
-    expect(isDefaultConnection(DEFAULT_DATA_SOURCE_VALUE)).toBe(true);
+  it("requires the string for the first Custom save and for Default -> Custom", () => {
+    expect(canOmitConnectionString("others", undefined)).toBe(false);
+    expect(canOmitConnectionString("others", defaultConfiguration)).toBe(false);
   });
 
-  it("treats any other value as a custom connection", () => {
-    expect(isDefaultConnection("mongodb://localhost:27017")).toBe(false);
+  it("is irrelevant for the Blocks database", () => {
+    expect(canOmitConnectionString("blocks", baseConfiguration)).toBe(false);
+  });
+});
+
+describe("toConnectionStringPayload", () => {
+  it("sends the default value for the Blocks database, whatever was typed", () => {
+    expect(toConnectionStringPayload("blocks", "mongodb://x", baseConfiguration)).toBe(
+      DEFAULT_DATA_SOURCE_VALUE,
+    );
+  });
+
+  it("sends the trimmed entered string for an own database", () => {
+    expect(toConnectionStringPayload("others", "  mongodb://x  ", defaultConfiguration)).toBe(
+      "mongodb://x",
+    );
+  });
+
+  it("omits the string (keep the saved one) when empty on a saved Custom configuration", () => {
+    expect(toConnectionStringPayload("others", "", baseConfiguration)).toBeUndefined();
+    expect(toConnectionStringPayload("others", "   ", baseConfiguration)).toBeUndefined();
+  });
+
+  it("never turns an empty value into a keep when the string is required", () => {
+    expect(toConnectionStringPayload("others", "", defaultConfiguration)).toBe("");
+    expect(toConnectionStringPayload("others", "", undefined)).toBe("");
   });
 });
 
@@ -66,9 +101,9 @@ describe("toDataGatewayConfigurationFormValues", () => {
     );
   });
 
-  it("maps a custom configuration onto form values", () => {
+  it("maps a custom configuration onto form values and never shows the connection string", () => {
     expect(toDataGatewayConfigurationFormValues(baseConfiguration)).toEqual({
-      connectionString: "mongodb://localhost:27017",
+      connectionString: "",
       databaseName: "project_one_db",
       isCollectionNameEditable: true,
       collectionNamePattern: "custom_{SchemaName}",
@@ -76,13 +111,8 @@ describe("toDataGatewayConfigurationFormValues", () => {
     });
   });
 
-  it("blanks the connection string and database name for a platform-managed configuration", () => {
-    const configuration = {
-      ...baseConfiguration,
-      dbConnectionString: DEFAULT_DATA_SOURCE_VALUE,
-      databaseName: DEFAULT_DATA_SOURCE_VALUE,
-    };
-    const values = toDataGatewayConfigurationFormValues(configuration);
+  it("blanks the database name for a Blocks-managed configuration", () => {
+    const values = toDataGatewayConfigurationFormValues(defaultConfiguration);
     expect(values.connectionString).toBe("");
     expect(values.databaseName).toBe("");
   });

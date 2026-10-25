@@ -1,6 +1,8 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@/components/ui-kits/tooltip/tooltip", () => import("@/test-utils/__mocks__/tooltip.mock"));
+
 const h = vi.hoisted(() => ({
   useSessionDetails: vi.fn(),
   useRevokeSession: vi.fn(),
@@ -63,6 +65,7 @@ const renderDrawer = (props: Partial<React.ComponentProps<typeof SessionDetailsD
       onOpenChange={props.onOpenChange ?? vi.fn()}
       onRevoked={props.onRevoked}
       userId={props.userId ?? "user-1"}
+      readOnlyReason={props.readOnlyReason}
     />,
   );
 
@@ -146,5 +149,14 @@ describe("SessionDetailsDrawer", () => {
     expect(
       screen.queryByRole("button", { name: /sign out of this device/i }),
     ).toBeNull();
+  });
+
+  it("turns Sign out of this device off, with the reason, when the caller cannot manage the user", () => {
+    setDetails({ data: {} });
+    h.toViewModel.mockReturnValue(vm);
+    renderDrawer({ readOnlyReason: "You can't manage this user." });
+    const button = screen.getByRole("button", { name: "Sign out of this device" });
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByTestId("disabled-reason")).toBeTruthy();
   });
 });

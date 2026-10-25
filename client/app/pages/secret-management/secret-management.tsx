@@ -195,7 +195,8 @@ export default function SecretManagementLayout() {
   const breadcrumbTitles = isOidcBranding
     ? {
         [`${secretManagementBase}/oidc`]: "OIDC",
-        [`${secretManagementBase}/oidc/branding`]: "Template",
+        // null hides the segment, so the trail ends at "OIDC".
+        [`${secretManagementBase}/oidc/branding`]: null,
       }
     : undefined;
 

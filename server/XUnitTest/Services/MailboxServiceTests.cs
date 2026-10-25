@@ -1,11 +1,10 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Configuration.DomainService.Mail.Entities;
-using Configuration.DomainService.Mail.Enums;
 using Configuration.DomainService.Mail.Mailbox;
 using Configuration.DomainService.Mail.Mailbox.Services;
 using FluentAssertions;
 using Moq;
+using Blocks.Genesis.Entities.Logic;
 
 namespace XUnitTest.Services
 {

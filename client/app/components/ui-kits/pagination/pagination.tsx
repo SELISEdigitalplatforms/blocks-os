@@ -9,6 +9,9 @@ import {
 } from "@/components/ui-kits/select/select";
 import { Button } from "@/components/ui-kits/button/button";
 import { cn } from "@/lib/utils";
+/** Rows-per-page choices every table offers, so tables do not each pick their own. */
+export const DEFAULT_PAGE_SIZE_OPTIONS = [10, 25, 50];
+
 interface PaginationProps {
   onChange: (pageIndex: number) => void;
   totalCount: number;
@@ -19,21 +22,36 @@ interface PaginationProps {
   /** Tightens spacing and control sizes for placement inside a card footer or side panel. */
   compact?: boolean;
 }
+const COMPACT_BUTTON = "h-7 w-7 md:h-8 md:w-8";
+
+/**
+ * Offer only sizes that change what is shown: every size below the total plus the first one
+ * that fits it all. When even the smallest size fits every row, there is nothing to choose.
+ * A size from an old link or a saved filter stays listed, so the select shows what is on screen.
+ */
+export function getSizeChoices(options: number[], pageSize: number, totalCount: number): number[] {
+  if (options.length === 0 || totalCount <= Math.min(...options)) return [];
+  const firstFitAll = options.find((size) => size >= totalCount);
+  const choices = options.filter((size) => size < totalCount || size === firstFitAll);
+  return choices.includes(pageSize) ? choices : [...choices, pageSize].sort((x, y) => x - y);
+}
+
 export function Pagination({
   page,
   onChange,
   totalCount,
-  pageSizeOptions,
+  pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
   pageSize,
   onPageSizeChange,
   compact,
-}: PaginationProps) {
+}: Readonly<PaginationProps>) {
   const pageChangeHandler = (page: number) => {
     onChange(page);
   };
   const canGoPreviousPage = !!page;
   const totalPage = Math.max(1, Math.ceil(totalCount / pageSize) || 0);
   const canGoNextPage = page < totalPage - 1;
+  const sizeChoices = getSizeChoices(pageSizeOptions, pageSize, totalCount);
   const onPageSizeChangeHandler = (value: string) => {
     if (onPageSizeChange) onPageSizeChange(+value);
   };
@@ -44,7 +62,7 @@ export function Pagination({
         compact && "flex-row items-center gap-2",
       )}
     >
-      {pageSizeOptions && pageSizeOptions?.length > 0 ? (
+      {onPageSizeChange && sizeChoices.length > 1 ? (
         <div className={cn("flex items-center space-x-2", compact && "shrink-0 space-x-1.5")}>
           <p className={cn("text-sm font-medium", compact && "hidden md:block")}>Rows per page</p>
           <Select value={`${pageSize}`} onValueChange={onPageSizeChangeHandler}>
@@ -57,7 +75,7 @@ export function Pagination({
               <SelectValue placeholder={pageSize} />
             </SelectTrigger>
             <SelectContent side="top">
-              {pageSizeOptions?.map((pageSize) => (
+              {sizeChoices.map((pageSize) => (
                 <SelectItem key={pageSize} value={`${pageSize}`}>
                   {pageSize}
                 </SelectItem>
@@ -83,7 +101,7 @@ export function Pagination({
             variant="outline"
             className={cn(
               "flex h-8 w-8 p-0 disabled:cursor-not-allowed",
-              compact && "h-7 w-7 md:h-8 md:w-8",
+              compact && COMPACT_BUTTON,
             )}
             onClick={() => {
               pageChangeHandler(0);
@@ -95,7 +113,7 @@ export function Pagination({
           <Button
             aria-label="Go to previous page"
             variant="outline"
-            className={cn("h-8 w-8 p-0", compact && "h-7 w-7 md:h-8 md:w-8")}
+            className={cn("h-8 w-8 p-0", compact && COMPACT_BUTTON)}
             onClick={() => {
               pageChangeHandler(page - 1);
             }}
@@ -106,7 +124,7 @@ export function Pagination({
           <Button
             aria-label="Go to next page"
             variant="outline"
-            className={cn("h-8 w-8 p-0", compact && "h-7 w-7 md:h-8 md:w-8")}
+            className={cn("h-8 w-8 p-0", compact && COMPACT_BUTTON)}
             onClick={() => {
               pageChangeHandler(page + 1);
             }}
@@ -117,7 +135,7 @@ export function Pagination({
           <Button
             aria-label="Go to last page"
             variant="outline"
-            className={cn("flex h-8 w-8 p-0", compact && "h-7 w-7 md:h-8 md:w-8")}
+            className={cn("flex h-8 w-8 p-0", compact && COMPACT_BUTTON)}
             onClick={() => {
               pageChangeHandler(totalPage - 1);
             }}

@@ -62,10 +62,18 @@ const renderCard = (item = makeItem()) =>
 describe("OIDCCard", () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it("never renders a secret that the item somehow carries", () => {
+    renderCard();
+    expect(screen.queryByText(/sek-ret/)).toBeNull();
+    expect(screen.queryByText("Client Secret")).toBeNull();
+  });
+
   it("renders the client label, id and detail rows expanded", () => {
     renderCard();
     expect(screen.getAllByText("Portal").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("oidc-123").length).toBeGreaterThan(0);
+    // Client ids are masked for display: first and last 4 characters only.
+    expect(screen.queryByText("oidc-123")).toBeNull();
+    expect(screen.getAllByText("oi********").length).toBeGreaterThan(0);
     expect(screen.getByText("Client Id")).toBeTruthy();
     expect(screen.getByText("Redirect URI(s)")).toBeTruthy();
     expect(screen.getByText("openid profile")).toBeTruthy();
@@ -111,6 +119,44 @@ describe("OIDCCard", () => {
     );
     expect(h.showSuccessToast).toHaveBeenCalledWith({
       description: "OIDC client disabled successfully",
+    });
+  });
+
+  it("resends the stored clientType and useTokensCookie on a status toggle", async () => {
+    h.saveOidc.mockResolvedValueOnce({ isSuccess: true });
+    const user = userEvent.setup();
+    renderCard(makeItem({ clientType: "confidential", useTokensCookie: true }));
+    await user.click(screen.getByRole("button", { name: "Disable OIDC client" }));
+    await user.click(await screen.findByRole("button", { name: "Disable" }));
+    await waitFor(() => expect(h.saveOidc).toHaveBeenCalledTimes(1));
+    expect(h.saveOidc.mock.calls[0][0]).toMatchObject({
+      clientType: "confidential",
+      useTokensCookie: true,
+      isActive: false,
+    });
+  });
+
+  it("keeps a Mobile app client public with tokens in the response after a status toggle", async () => {
+    h.saveOidc.mockResolvedValueOnce({ isSuccess: true });
+    const user = userEvent.setup();
+    renderCard(
+      makeItem({
+        clientType: "public",
+        useTokensCookie: false,
+        registerAsIdentityProvider: false,
+        redirectUris: ["com.klaxai.app://login/callback"],
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Disable OIDC client" }));
+    await user.click(await screen.findByRole("button", { name: "Disable" }));
+    await waitFor(() => expect(h.saveOidc).toHaveBeenCalledTimes(1));
+    expect(h.saveOidc.mock.calls[0][0]).toMatchObject({
+      clientType: "public",
+      useTokensCookie: false,
+      requirePkce: true,
+      registerAsIdentityProvider: false,
+      redirectUris: ["com.klaxai.app://login/callback"],
+      isActive: false,
     });
   });
 

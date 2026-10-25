@@ -29,12 +29,15 @@ vi.mock("./session-details-drawer", () => ({
     sessionId,
     onOpenChange,
     onRevoked,
+    readOnlyReason,
   }: {
+    readOnlyReason?: string;
     sessionId: string | null;
     onOpenChange: (open: boolean) => void;
     onRevoked: () => void;
   }) => (
     <div data-testid="details-drawer">
+      <span data-testid="drawer-reason">{readOnlyReason ?? "none"}</span>
       <span data-testid="drawer-session">{sessionId ?? "none"}</span>
       <button data-testid="drawer-close" onClick={() => onOpenChange(false)}>
         close
@@ -175,5 +178,12 @@ describe("SessionListCard", () => {
     render(<SessionListCard userId="u1" />);
     fireEvent.click(screen.getByTestId("drawer-revoked"));
     expect(h.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("hides Sign out, shows the reason and passes it to the drawer when read-only", () => {
+    render(<SessionListCard userId="u1" readOnlyReason="You can't manage this user." />);
+    expect(screen.queryByRole("button", { name: /Sign out/ })).toBeNull();
+    expect(screen.getByTestId("sessions-read-only").textContent).toBe("You can't manage this user.");
+    expect(screen.getByTestId("drawer-reason").textContent).toBe("You can't manage this user.");
   });
 });

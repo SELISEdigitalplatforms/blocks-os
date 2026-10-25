@@ -21,10 +21,10 @@ import { Input } from "@/components/ui-kits/input/input";
 import { Switch } from "@/components/ui-kits/switch/switch";
 import { Plus } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useSaveAuthClient } from "@blocks-idp/authentication/hooks/use-auth-clients";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import {
   IClientCredentialsConfig,
@@ -40,6 +40,7 @@ import { ClientCredentialRolesSection } from "./client-credential-roles-section"
 import { ClientCredentialPermissionsSection } from "./client-credential-permissions-section";
 import { useGetOrganizationConfig } from "@blocks-idp/iam/hooks/use-organization";
 import { OrganizationCombobox } from "@blocks-idp/iam/components/organization-combobox";
+import { OneTimeSecret, OneTimeSecretDialog } from "../one-time-secret-dialog";
 
 const MAX_PERMISSIONS = 10;
 
@@ -76,6 +77,7 @@ export const CreateClientCredential = ({
   hideTrigger = false,
 }: CreateClientCredentialProps) => {
   const [internalOpen, setInternalOpen] = useState<boolean>(false);
+  const [createdSecret, setCreatedSecret] = useState<OneTimeSecret | null>(null);
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
   const setOpen = (v: boolean) => {
@@ -99,16 +101,25 @@ export const CreateClientCredential = ({
   // authenticates a client id and secret with no caller context that could re-scope it.
   const showOrganizationPicker = isMultiOrgEnabled && !isEdit;
 
+  const schema = useMemo(
+    () => buildCreateClientSchema(isMultiOrgEnabled, isEdit),
+    [isMultiOrgEnabled, isEdit],
+  );
   const form = useForm<CreateClientModalFormValues>({
-    resolver: zodResolver(buildCreateClientSchema(isMultiOrgEnabled, isEdit)),
+    resolver: zodResolver(schema),
     defaultValues: CreateClientModalFormDefaultValues,
     mode: "onChange",
   });
   const {
-    formState: { isDirty, isValid },
+    formState: { isDirty },
     reset,
-    trigger,
   } = form;
+
+  // Errors appear only on fields the user has touched, as in the OIDC dialog. Submit readiness
+  // is read from the values instead of `formState.isValid`, which `reset` leaves stale; forcing
+  // it with `trigger()` would paint every empty required field red the moment the dialog opens.
+  const values = useWatch({ control: form.control });
+  const isValid = schema.safeParse(values).success;
 
   useEffect(() => {
     if (!open) return;
@@ -125,11 +136,7 @@ export const CreateClientCredential = ({
     } else {
       reset(CreateClientModalFormDefaultValues);
     }
-    // `reset` alone leaves `formState.isValid` stale (it only recomputes on the next
-    // field-level change), so the submit button stays disabled until the user touches
-    // an unrelated field. Force a validation pass against the just-reset values.
-    void trigger();
-  }, [editClient, open, reset, trigger]);
+  }, [editClient, open, reset]);
 
   const handleDialogOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
@@ -166,6 +173,15 @@ export const CreateClientCredential = ({
           ? "Client credential updated successfully"
           : "Client credential created successfully",
       });
+      // Create is the only time the API returns the secret; the list never does.
+      if (!isEdit && res.clientSecret) {
+        setCreatedSecret({
+          label: data.clientNameService,
+          clientId: res.itemId,
+          clientSecret: res.clientSecret,
+          reason: "created",
+        });
+      }
       reset();
       setOpen(false);
     } catch (error) {
@@ -176,6 +192,8 @@ export const CreateClientCredential = ({
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
+      {/* Its own dialog: it stays open after this form closes. */}
+      <OneTimeSecretDialog secret={createdSecret} onClose={() => setCreatedSecret(null)} />
       {!hideTrigger && (
         <DialogTrigger asChild>
           <Button size="sm">

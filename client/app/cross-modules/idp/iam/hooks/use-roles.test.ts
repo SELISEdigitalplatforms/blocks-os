@@ -1,5 +1,6 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => import("@/test-utils/__mocks__/grant-scope.mock"));
 import { createWrapper } from "@/test-utils/test-providers/query-client";
 import {
   mockRoleServiceFactory,

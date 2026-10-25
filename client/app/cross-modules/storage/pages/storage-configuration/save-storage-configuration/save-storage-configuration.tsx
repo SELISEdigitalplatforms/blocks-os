@@ -73,8 +73,8 @@ export const SaveStorageConfiguration = ({
       const { maxFileSizeInMb, ...rest } = values;
       // The settings below are the only ones an update may change. Everything else - the name, the
       // provider and its credentials - is fixed once a configuration exists and is discarded by the
-      // server on an update, so an update request simply doesn't carry it. That also keeps the
-      // masked secrets the read endpoint returned (e.g. "D****...t") from being sent back at all.
+      // server on an update, so an update request simply doesn't carry it. Secrets are sent only
+      // when a configuration is created.
       const mutableSettings = {
         uploadUrlExpirySeconds: Number(values.uploadUrlExpirySeconds),
         downloadUrlExpirySeconds: Number(values.downloadUrlExpirySeconds),

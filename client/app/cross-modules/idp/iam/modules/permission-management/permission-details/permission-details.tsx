@@ -1,4 +1,5 @@
 import { useGetPermissionById, useUpdatePermission } from "@blocks-idp/iam/hooks/use-permission";
+import { useSystemOnlyReason } from "@blocks-idp/iam/hooks/use-grant-scope";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { useMemo } from "react";
 import { mapPermissionToFormValues, PermissionFormSchemaType } from "../permission-form/utils";
@@ -39,6 +40,7 @@ const PermissionDetailsPageSkeleton = () => (
 export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
   const { data: permissionData, isLoading } = useGetPermissionById({ id });
   const { isPending, mutateAsync } = useUpdatePermission({ id });
+  const readOnlyReason = useSystemOnlyReason();
   const permission = permissionData?.data;
   const formValues = useMemo(() => {
     if (!permission) return null;
@@ -46,7 +48,7 @@ export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
   }, [permission]);
 
   const onSubmit = async (formData: PermissionFormSchemaType) => {
-    if (permission?.isBuiltIn) return;
+    if (permission?.isBuiltIn || readOnlyReason) return;
     try {
       const res = await mutateAsync({
         ...formData,
@@ -93,6 +95,7 @@ export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
         isPending={isPending}
         values={formValues}
         isBuiltIn={permission.isBuiltIn}
+        readOnlyReason={readOnlyReason}
         showTags={false}
       />
       {/* <PermissionRolesList slugs={permission.roles || []} /> */}

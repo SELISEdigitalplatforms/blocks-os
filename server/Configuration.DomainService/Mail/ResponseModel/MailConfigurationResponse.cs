@@ -1,7 +1,6 @@
 using Blocks.Genesis;
-using Configuration.DomainService.Mail.Entities;
-using Configuration.DomainService.Shared.Enums;
 using System.Text.Json.Serialization;
+using Blocks.Genesis.Entities.Os;
 
 namespace Configuration.DomainService.Mail.ResponseModel
 {

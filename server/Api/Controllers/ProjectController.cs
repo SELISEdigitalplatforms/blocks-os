@@ -6,6 +6,9 @@ using DomainService.Projects;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Blocks.Genesis.Entities.Os;
+using DomainService.Shared.Services;
+using Os.DataAccess.Notifications;
 
 
 namespace BlocksOs.Api.Controllers
@@ -18,11 +21,14 @@ namespace BlocksOs.Api.Controllers
         private readonly IProjectManagementService _projectManagementService;
         private readonly IValidator<CreateProjectRequest> _createProjectValidator;
         private readonly IValidator<UpdateProjectRequest> _updateProjectValidator;
+        private readonly IProjectChangeNotifier? _notifier;
 
         public ProjectController(IProjectManagementService projectManagementService,
                                  IValidator<CreateProjectRequest> createProjectValidator,
-                                 IValidator<UpdateProjectRequest> updateProjectValidator)
+                                 IValidator<UpdateProjectRequest> updateProjectValidator,
+                                 IProjectChangeNotifier? notifier = null)
         {
+            _notifier = notifier;
             _projectManagementService = projectManagementService;
             _createProjectValidator = createProjectValidator;
             _updateProjectValidator = updateProjectValidator;
@@ -63,7 +69,7 @@ namespace BlocksOs.Api.Controllers
         }
 
         [HttpGet]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::project::projects")]
         public async Task<bool> GetProjectStatus([FromQuery] GetProjectStatusRequest request)
         {
             return await _projectManagementService.GetProjectStatusAsync(request.ItemId);
@@ -168,7 +174,9 @@ namespace BlocksOs.Api.Controllers
         [ProtectedEndPoint("blocks-os::project::mutate-token-validation-params")]
         public async Task<BaseResponse> UpdateTokenValidationParameters([FromBody] UpdateTokenValidationParametersRequest request)
         {
-            return await _projectManagementService.UpdateTokenValidationParametersAsync(request);
+            var result = await _projectManagementService.UpdateTokenValidationParametersAsync(request);
+            await NotifyCertificateChangedAsync(result, "token-validation-updated", "Token validation settings changed", null);
+            return result;
         }
 
         [HttpGet]
@@ -211,7 +219,9 @@ namespace BlocksOs.Api.Controllers
         [ProtectedEndPoint("blocks-os::project::mutate-3rd-party-claims")]
         public async Task<SaveThirdPartyJwtProviderResponse> SaveThirdPartyJwtProvider([FromBody] SaveThirdPartyJwtProviderRequest request)
         {
-            return await _projectManagementService.SaveThirdPartyJwtProviderAsync(request);
+            var result = await _projectManagementService.SaveThirdPartyJwtProviderAsync(request);
+            await NotifyCertificateChangedAsync(result, "third-party-provider-saved", "Third-party token provider saved", result?.ItemId);
+            return result;
         }
 
         /// <summary>
@@ -221,7 +231,25 @@ namespace BlocksOs.Api.Controllers
         [ProtectedEndPoint("blocks-os::project::mutate-3rd-party-claims")]
         public async Task<BaseResponse> DeleteThirdPartyJwtProvider([FromBody] DeleteThirdPartyJwtProviderRequest request)
         {
-            return await _projectManagementService.DeleteThirdPartyJwtProviderAsync(request);
+            var result = await _projectManagementService.DeleteThirdPartyJwtProviderAsync(request);
+            await NotifyCertificateChangedAsync(result, "third-party-provider-deleted", "Third-party token provider removed", request?.ItemId);
+            return result;
+        }
+
+        /// <summary>
+        /// Tells the project owner and the caller that what decides accepted tokens changed. Only
+        /// after success; no issuer, certificate, password or secret is sent.
+        /// </summary>
+        private Task NotifyCertificateChangedAsync(BaseResponse? result, string eventName, string title, string? providerId)
+        {
+            if (result?.IsSuccess != true || _notifier is null) return Task.CompletedTask;
+
+            return _notifier.NotifyProjectAdminsAsync(
+                BuiltInNotificationNames.CertificateChanged,
+                eventName,
+                title,
+                "The settings that decide which tokens the project accepts were changed.",
+                new Dictionary<string, string?> { ["providerId"] = providerId });
         }
 
         /// <summary>

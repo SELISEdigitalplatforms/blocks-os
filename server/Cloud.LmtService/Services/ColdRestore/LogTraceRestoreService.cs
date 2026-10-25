@@ -1,6 +1,5 @@
 using Azure;
 using Blocks.Genesis;
-using Blocks.MailDriver;
 using Cloud.LmtService.Models.ArchiveAndDelete;
 using Cloud.LmtService.Models.ColdRestore;
 using Cloud.LmtService.Models.Logs;
@@ -20,6 +19,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text.Json;
+using Os.DataAccess;
+using Os.DataAccess.Notifications;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -40,19 +41,22 @@ namespace Cloud.LmtService.Services.ColdRestore
         private readonly ILogTraceRestoreResultRepository _coldRestoreResultRepository;
         private readonly ILogTraceRestoreParquetReader _coldRestoreParquetReader;
         private readonly ILmtArchiveRestoreConfigurationRepository _lmtArchiveRestoreConfigurationRepository;
-        private readonly IMailDriverService _mailDriverService;
+        private readonly IDbContextProvider _dbContextProvider;
+        private readonly IOsDataAccess _dataAccess;
         private readonly IHttpService _httpService;
         private readonly ICryptoService _cryptoService;
         private readonly ITenants _tenants;
         private readonly IArchiveRestoreRepository _archiveRestoreRepository;
         private readonly IRestoreUserRepository _userRepository;
+        private readonly IBuiltInNotificationSender? _notificationSender;
         [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "DI constructor: each parameter is an injected dependency.")]
         public LogTraceRestoreService(ILogger<LogTraceRestoreService> logger, ILogTraceRestoreRepository coldRestoreRepository, IMessageClient messageClient, ILogTraceRestoreResultRepository coldRestoreResultRepository,
     ILogTraceRestoreParquetReader coldRestoreParquetReader, IBlobStorage blobStorage, IConfiguration configuration,
-    ILmtArchiveRestoreConfigurationRepository lmtArchiveRestoreConfigurationRepository, IMailDriverService mailDriverService,
+    ILmtArchiveRestoreConfigurationRepository lmtArchiveRestoreConfigurationRepository, IDbContextProvider dbContextProvider,
     IHttpService httpService, ICryptoService cryptoService, ITenants tenants, IArchiveRestoreRepository archiveRestoreRepository,
-    IRestoreUserRepository userRepository)
+    IRestoreUserRepository userRepository, IOsDataAccess dataAccess, IBuiltInNotificationSender? notificationSender = null)
         {
+            _dataAccess = dataAccess;
             _logger = logger;
             _coldRestoreRepository = coldRestoreRepository;
             _messageClient = messageClient;
@@ -61,12 +65,13 @@ namespace Cloud.LmtService.Services.ColdRestore
             _blobStorage = blobStorage;
 
             _lmtArchiveRestoreConfigurationRepository = lmtArchiveRestoreConfigurationRepository;
-            _mailDriverService = mailDriverService;
+            _dbContextProvider = dbContextProvider;
             _httpService = httpService;
             _cryptoService = cryptoService;
             _tenants = tenants;
             _archiveRestoreRepository = archiveRestoreRepository;
             _userRepository = userRepository;
+            _notificationSender = notificationSender;
         }
 
 
@@ -138,6 +143,12 @@ namespace Cloud.LmtService.Services.ColdRestore
                     ConsumerName = Constants.ColdRestoreQueue,
                     Payload = message
                 });
+
+            if (_notificationSender is not null)
+            {
+                await _notificationSender.SendAsync(RestoreProgressNotification.Accepted(
+                    requestId, nameof(RestoreSourceType.Cold), userId, tenantId));
+            }
 
             return new StartColdRestoreResponse
             {
@@ -242,9 +253,23 @@ namespace Cloud.LmtService.Services.ColdRestore
                     SendPhoneNumberAsEmail = true
                 };
 
-                var response = await _mailDriverService.SendAsync(sendMailCommand);
-                _logger.LogInformation("Email notification sent to {Email} with tier {Tier} and status {Status}. Success: {IsSuccess}", email, tier, status, response.IsSuccess);
-                return response.IsSuccess;
+                // Same checks the retired mail driver ran in the request; a failure queues nothing.
+                var failedCheck = await MailPreCheck.FindFailureAsync(
+                    _dbContextProvider, _dataAccess, sendMailCommand.Purpose, sendMailCommand.Language, sendMailCommand.To, sendMailCommand.SendPhoneNumberAsEmail, sendMailCommand.BodyDataContext);
+                if (failedCheck != null)
+                {
+                    _logger.LogError("Email notification to {Email} not queued: pre-check failed ({FailedCheck}).", email, failedCheck);
+                    return false;
+                }
+
+                await _messageClient.SendToConsumerAsync(
+                    new ConsumerMessage<SendMail>
+                    {
+                        ConsumerName = Constants.MailQueue,
+                        Payload = sendMailCommand
+                    });
+                _logger.LogInformation("Email notification sent to {Email} with tier {Tier} and status {Status}. Success: {IsSuccess}", email, tier, status, true);
+                return true;
             }
             catch (Exception ex)
             {
@@ -537,7 +562,7 @@ namespace Cloud.LmtService.Services.ColdRestore
                 return;
             }
 
-            await ExtendRetentionFromCompletionAsync(requestId, ct);
+            var extendedUntil = await ExtendRetentionFromCompletionAsync(requestId, ct);
 
             if (!string.IsNullOrEmpty(requestRecord.UserEmail))
             {
@@ -554,6 +579,12 @@ namespace Cloud.LmtService.Services.ColdRestore
                 requestRecord.TenantId,
                 requestRecord.UserId,
                 ct);
+
+            if (extendedUntil.HasValue && _notificationSender is not null)
+            {
+                await _notificationSender.SendAsync(RestoreProgressNotification.RetentionExtended(
+                    requestId, requestRecord.SourceType.ToString(), requestRecord.UserId, requestRecord.TenantId, extendedUntil.Value), ct);
+            }
         }
 
         private static bool IsTerminal(RestoreRequestStatus status) =>
@@ -573,17 +604,20 @@ namespace Cloud.LmtService.Services.ColdRestore
         /// mid-flight, which for archive restores (hours of rehydration) deletes the request record
         /// out from under the job that is still working on it.
         /// </summary>
-        private async Task ExtendRetentionFromCompletionAsync(string requestId, CancellationToken ct)
+        /// <returns>The new expiry, or null when it could not be extended.</returns>
+        private async Task<DateTime?> ExtendRetentionFromCompletionAsync(string requestId, CancellationToken ct)
         {
             try
             {
                 var retentionDays = await GetRetentionDaysAsync(ct);
-                await _coldRestoreRepository.ExtendRequestExpiryAsync(
-                    requestId, DateTime.UtcNow.AddDays(retentionDays), ct);
+                var expireAt = DateTime.UtcNow.AddDays(retentionDays);
+                await _coldRestoreRepository.ExtendRequestExpiryAsync(requestId, expireAt, ct);
+                return expireAt;
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Could not extend retention for RequestId {RequestId}", requestId);
+                return null;
             }
         }
         private async Task PrepareRestorePlanAsync(ColdRestoreMessage message, CancellationToken ct = default)

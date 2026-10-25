@@ -36,6 +36,8 @@ type PermissionFormProps = {
   isPending: boolean;
   values?: PermissionFormSchemaType | null;
   isBuiltIn?: boolean;
+  /** When set, the form is read-only for this reason (e.g. only the system user may change it). */
+  readOnlyReason?: string;
   showTags?: boolean;
 };
 export const PermissionForm = ({
@@ -44,8 +46,9 @@ export const PermissionForm = ({
   values = null,
   isBuiltIn = false,
   showTags = true,
+  readOnlyReason,
 }: PermissionFormProps) => {
-  const isReadOnly = isPermissionFormReadOnly(isBuiltIn);
+  const isReadOnly = isPermissionFormReadOnly(isBuiltIn) || Boolean(readOnlyReason);
   const form = useForm({
     values: values || permissionFormDefaultValue,
     resolver: zodResolver(permissionFormSchema),
@@ -59,7 +62,7 @@ export const PermissionForm = ({
       <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 gap-4">
         {isReadOnly ? (
           <Banner variant="warning" title="Read-only permission" className="mb-0" compact={false}>
-            {BUILTIN_PERMISSION_READONLY_MESSAGE}
+            {readOnlyReason ?? BUILTIN_PERMISSION_READONLY_MESSAGE}
           </Banner>
         ) : null}
         <Card>

@@ -164,7 +164,7 @@ export function MapJwtClaimModal({
       return;
     }
 
-    showSuccessToast({ description: `Claim mapping saved for ${provider.key}` });
+    showSuccessToast({ description: `Claim mapping saved for ${provider.providerName}` });
     onOpenChange(false);
   };
 

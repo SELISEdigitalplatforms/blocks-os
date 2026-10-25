@@ -4,12 +4,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Blocks.Secrets;
-using Configuration.DomainService.Mail.Entities;
 using Configuration.DomainService.Mail.Providers;
 using Configuration.DomainService.Mail.RequestModel;
 using Configuration.DomainService.Mail.Services;
 using Configuration.DomainService.Mail.Validators;
-using Configuration.DomainService.Shared.Enums;
 using Configuration.DomainService.Shared.Secrets;
 using Configuration.DomainService.Shared.Services;
 using FluentAssertions;
@@ -18,6 +16,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using XUnitTest.TestSupport;
+using Blocks.Genesis.Entities.Os;
 
 namespace XUnitTest.Services
 {
@@ -684,7 +683,7 @@ namespace XUnitTest.Services
         [Fact]
         public async Task Get_ByName_ReadsTheStoredRecord()
         {
-            _repo.Setup(r => r.GetMailConfigurationByNameAsync("Microsoft 365 Primary")).ReturnsAsync(StoredOffice365());
+            _repo.Setup(r => r.GetMailConfigurationByNameForViewAsync("Microsoft 365 Primary")).ReturnsAsync(StoredOffice365());
 
             var response = await Service().GetAsync(new GetMailConfigurationRequest { ConfigurationName = "Microsoft 365 Primary" });
 
@@ -905,7 +904,7 @@ namespace XUnitTest.Services
         public async Task Get_ByName_ReportsTheLinkedSecretStatus()
         {
             GivenSecretStatus(SecretStatuses.Deleted);
-            _repo.Setup(r => r.GetMailConfigurationByNameAsync("Microsoft 365 Primary")).ReturnsAsync(StoredOffice365());
+            _repo.Setup(r => r.GetMailConfigurationByNameForViewAsync("Microsoft 365 Primary")).ReturnsAsync(StoredOffice365());
 
             var response = await Service().GetAsync(new GetMailConfigurationRequest { ConfigurationName = "Microsoft 365 Primary" });
 

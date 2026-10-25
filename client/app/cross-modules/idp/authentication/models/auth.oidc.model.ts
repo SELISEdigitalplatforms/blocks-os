@@ -12,7 +12,8 @@ export interface IOidcConfig {
   lastUpdatedBy: string;
   organizationIds: string[];
   tags: string[];
-  clientSecret: string;
+  /** Never returned by the list or detail API. Shown once on create and on rotate only. */
+  clientSecret?: string | null;
   redirectUris?: string[];
   redirectUri?: string;
   scope: string;
@@ -26,7 +27,26 @@ export interface IOidcConfig {
   allowedServiceAccessResources?: string[];
   tenantId: string;
   clientDisplayName: string;
+  clientType?: string | null;
+  useTokensCookie?: boolean;
 }
+/**
+ * Optional token lifetimes of one OIDC client, in minutes. `null` means the project setting is used.
+ */
+export interface IOidcClientTokenLifetimes {
+  accessTokenValidForNumberMinutes: number | null;
+  refreshTokenValidForNumberMinutes: number | null;
+  absoluteRefreshTokenValidForNumberMinutes: number | null;
+}
+
+export interface IGetOidcCredentialResponse {
+  oIDCClientCredential: IOidcConfig;
+  /** Absent on servers without per-client lifetimes; `null` when the client uses the project settings. */
+  tokenLifetimes?: IOidcClientTokenLifetimes | null;
+  errors: Record<string, string> | null;
+  isSuccess: boolean;
+}
+
 export interface IGetOidcCredentialsResponse {
   oIDCClientCredentials: IOidcConfig[];
   errors: Record<string, string> | null;
@@ -46,6 +66,13 @@ export interface ISaveOidcCredentialPayload {
   allowedResponseTypes: string[];
   allowedServiceAccessResources?: string[];
   clientDisplayName: string;
+  clientType?: string | null;
+  useTokensCookie?: boolean;
+  /**
+   * Sent only when a lifetime field was changed. Absent keeps the client's stored values; a `null`
+   * field means "use the project setting".
+   */
+  tokenLifetimes?: IOidcClientTokenLifetimes;
 }
 
 export interface ISaveOidcCredentialResponse {
@@ -61,6 +88,13 @@ export interface ISaveOidcCredentialResponse {
   allowedResponseTypes: string[];
   allowedServiceAccessResources?: string[];
   clientDisplayName: string;
+}
+
+/** Top-level fields of the save response body (it is not wrapped in `data`). */
+export interface ISaveOidcCredentialResult {
+  itemId?: string | null;
+  /** Set on create only (not for device-flow clients): the one time the new secret is returned. */
+  clientSecret?: string | null;
 }
 
 export interface IOidcUiThemePalette {
@@ -225,7 +259,8 @@ export interface IGetClientsPayload {
 export interface IClientCredentialsConfig {
   itemId: string;
   name: string;
-  clientSecret: string;
+  /** Never returned by the list API. Shown once on create and on rotate only. */
+  clientSecret?: string | null;
   accessTokenValidForNumberMinutes: number;
   roles: string[];
   permissions: string[];
@@ -263,6 +298,9 @@ export interface ISaveClientCredentialResponse {
   roles: string[];
   permissions: string[];
   isSuccess: boolean;
+  /** Set on create only: the one time the new secret is returned. */
+  clientSecret?: string | null;
+  errors?: Record<string, string>;
 }
 
 export interface TabValue {
@@ -279,6 +317,12 @@ export interface IDeleteOidcClientResponse {
     additionalProp3: string;
   };
   isSuccess: boolean;
+}
+
+export interface IRotateClientCredentialSecretResponse {
+  isSuccess: boolean;
+  clientSecret?: string | null;
+  errors?: Record<string, string>;
 }
 
 export interface IRotateOidcClientSecretPayload {

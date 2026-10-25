@@ -11,9 +11,9 @@ const MAX_FILE_SIZE_MB = 50;
  * `isEditMode` controls whether the provider-identity/credential fields below are required.
  * They are hidden (not just disabled) in the edit-mode form - see save-storage-configuration.tsx -
  * because they can never actually change once a configuration exists (enforced server-side too), so
- * validating them against whatever the backend happened to return (possibly masked, possibly null
- * for fields the provider doesn't use) would only ever produce a validation failure the user can't
- * see or fix, since there's no rendered field left to show the error on.
+ * validating them (the backend never returns a secret, so they are empty) would only ever produce a
+ * validation failure the user can't see or fix, since there's no rendered field left to show the
+ * error on.
  */
 export const buildStorageConfigurationFormSchema = (isEditMode: boolean) =>
   z
@@ -148,7 +148,8 @@ export const storageConfigurationFormDefaultValue: StorageConfigurationFormValue
 /**
  * Maps a persisted configuration (bytes, seconds) onto the form's display representation (MB for
  * size). Missing Phase 1 fields - a configuration created before they existed - resolve to the
- * same documented defaults the backend itself falls back to.
+ * same documented defaults the backend itself falls back to. Secret fields stay empty: the server
+ * returns only a status per secret, and an update never sends one.
  */
 export function toStorageConfigurationFormValues(
   configuration?: IStorageConfiguration,
@@ -157,7 +158,13 @@ export function toStorageConfigurationFormValues(
 
   return {
     ...storageConfigurationFormDefaultValue,
-    ...configuration,
+    name: configuration.name,
+    storageStrategy: configuration.storageStrategy,
+    cloudStorageRegionEndPoint: configuration.cloudStorageRegionEndPoint,
+    host: configuration.host,
+    port: configuration.port,
+    userName: configuration.userName,
+    remoteBasePath: configuration.remoteBasePath,
     uploadUrlExpirySeconds: String(configuration.uploadUrlExpirySeconds ?? 600),
     downloadUrlExpirySeconds: String(configuration.downloadUrlExpirySeconds ?? 300),
     maxFileSizeInMb: String(

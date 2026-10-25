@@ -29,11 +29,12 @@ import {
 } from "@/components/ui-kits/table/table";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
-import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
+import { useGetGrantablePermissions } from "@blocks-idp/iam/hooks/use-permission";
 import { useUserPermissions } from "@blocks-idp/iam/hooks/use-user";
 import { RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
 import { CirclePlus, Info } from "lucide-react";
 import { useState } from "react";
+import { GrantHint } from "@blocks-idp/iam/components/grant-hint";
 
 type AddUserPermissionProps = {
   userId: string;
@@ -50,7 +51,7 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
     roles: [],
     search: "",
   });
-  const { data, isLoading } = useGetPermissions({
+  const { data, isLoading } = useGetGrantablePermissions({
     ...filter,
     projectKey,
   });
@@ -155,6 +156,7 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
             </TooltipProvider>
           </div>
         </DialogHeader>
+        <GrantHint kind="permissions" />
         <div>
           <FilterControls.SearchInput
             placeholder="Search by permission name"

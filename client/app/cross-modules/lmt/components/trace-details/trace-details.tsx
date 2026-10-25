@@ -1,16 +1,12 @@
 import React, { createContext, useState } from "react";
 import PageBreadcrumb, { BreadcrumbTitles } from "@/components/breadcrumb/breadcrumb";
 import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
-import { Download, GitBranch, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { Download, GitBranch } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
-import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
+import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { useGetRestoredTraceById, useGetTraceById } from "@blocks-lmt/hooks/use-trace";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { TracingListBreadCrumb } from "./tracing-list-breadcrum/tracing-list-breadcrum";
-import { TracingInsights } from "./tracing-insights/tracing-insights";
-import { TracingDistributedTimeline } from "./tracing-distributed-timeline/tracing-distributed-timeline";
-import { ActivityLogs } from "./activity-logs/activity-logs";
+import { TraceStoryView } from "./trace-story";
 import { TraceTree } from "@blocks-lmt/models/trace.model";
 import { useSearchParams } from "react-router";
 export const timelineContext = createContext<{
@@ -30,14 +26,13 @@ export const timelineContext = createContext<{
   >;
   selectedTrace: TraceTree | null;
   setSelectedTrace: React.Dispatch<React.SetStateAction<TraceTree | null>>;
-  isPanelOpen: boolean;
   isLoading: boolean;
+  requestId?: string;
 }>({
   traceHistory: [],
   setTraceHistory: () => {},
   selectedTrace: null,
   setSelectedTrace: () => {},
-  isPanelOpen: true,
   isLoading: false,
 });
 const TraceDetailsEmptyState = ({ traceId, isError }: { traceId: string; isError: boolean }) => (
@@ -54,9 +49,7 @@ const TraceDetailsEmptyState = ({ traceId, isError }: { traceId: string; isError
           ? "Something went wrong while fetching trace details. Please try again in a moment."
           : `No trace data exists for this ID in the current project. The trace may have expired, or it may not have been recorded yet.`}
       </p>
-      {traceId ? (
-        <p className="mt-4 break-all text-xs text-low-emphasis">{traceId}</p>
-      ) : null}
+      {traceId ? <p className="mt-4 break-all text-xs text-low-emphasis">{traceId}</p> : null}
     </CardContent>
   </Card>
 );
@@ -89,8 +82,6 @@ export const TraceDetails = ({
   const lmtBase = useLmtBasePath();
   const [searchParams] = useSearchParams();
   const requestId = searchParams.get("requestId");
-  const isMobile = useIsMobile();
-  const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [traceHistory, setTraceHistory] = useState<
     {
       rootId: string;
@@ -151,7 +142,6 @@ export const TraceDetails = ({
     ...(id ? { [`${lmtBase}/tracing/${id}`]: traceLabel } : {}),
     ...(logsTraceBreadcrumbHref ? { [logsTraceBreadcrumbHref]: traceLabel } : {}),
   };
-  const selectedTraceHistory = traceHistory[traceHistory?.length - 1];
   return (
     <timelineContext.Provider
       value={{
@@ -159,8 +149,8 @@ export const TraceDetails = ({
         setTraceHistory,
         selectedTrace,
         setSelectedTrace,
-        isPanelOpen,
         isLoading: showTimelineLoading,
+        requestId: requestId || undefined,
       }}
     >
       <div className="mb-4 flex items-center justify-between gap-4 sm:mb-6">
@@ -189,82 +179,7 @@ export const TraceDetails = ({
           </>
         )}
       </div>
-      {isEmpty ? (
-        <TraceDetailsEmptyState traceId={id} isError={isError} />
-      ) : (
-        <div className="flex w-full flex-col gap-6 md:flex-row">
-          <div className={`${isPanelOpen ? "w-full md:w-[68%]" : "w-full"}`}>
-            <Card className="h-min rounded-sm shadow-none">
-              <CardHeader>
-                <div className="flex flex-col items-start justify-between sm:flex-row sm:items-center">
-                  {/* Sized as a panel heading rather than a page title: the breadcrumb above
-                      already names the trace, and at text-xl this competed with it while
-                      dwarfing the 12px metadata sitting on the same row. Set to that same
-                      12px so the row reads as one line of labels; weight, not size, is what
-                      marks it as the heading. */}
-                  <CardTitle className="text-[12px]">
-                    {isPending ? <Skeleton className="h-4 w-20" /> : "Timeline"}
-                  </CardTitle>
-                  {isPending ? (
-                    <Skeleton className="h-6 w-64" />
-                  ) : (
-                    <div
-                      className={`mt-2 flex flex-col items-start gap-2 md:mt-0 md:flex-row md:items-center md:justify-end md:gap-10`}
-                    >
-                      <div className="flex flex-col items-start text-[12px] font-medium text-low-emphasis sm:items-center lg:flex-row">
-                        <span>Duration </span>
-                        <span className="ml-1 break-all text-high-emphasis">
-                          {selectedTraceHistory?.current?.duration.toFixed(2)}ms
-                        </span>
-                      </div>
-                      <div className="flex flex-col items-start text-[12px] font-medium text-low-emphasis sm:items-center lg:flex-row">
-                        <span>Trace ID </span>
-                        <span className="ml-1 break-all text-high-emphasis">
-                          {data?.data?.traceId}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div></div>
-                <TracingListBreadCrumb />
-              </CardHeader>
-              <CardContent className="text-base">
-                <div className="flex flex-col">
-                  <div className="mb-[16px]">
-                    <TracingDistributedTimeline />
-                  </div>
-                  <div className="mb-[16px] flex items-center justify-end">
-                    {!isMobile && (
-                      <Button
-                        variant="outline"
-                        className="h-10 w-10 p-0"
-                        onClick={() => setIsPanelOpen(!isPanelOpen)}
-                      >
-                        {isPanelOpen ? (
-                          <PanelRightClose width={20} height={20} />
-                        ) : (
-                          <PanelRightOpen width={20} height={20} />
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                  <ActivityLogs />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          {isPanelOpen && (
-            <div
-              className={`w-full overflow-hidden transition-all duration-500 ease-in-out md:w-[32%] ${
-                isPanelOpen ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
-              }`}
-            >
-              <TracingInsights />
-            </div>
-          )}
-        </div>
-      )}
+      {isEmpty ? <TraceDetailsEmptyState traceId={id} isError={isError} /> : <TraceStoryView />}
     </timelineContext.Provider>
   );
 };

@@ -13,6 +13,10 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { useEffect } from "react";
 import { useNavigate } from "react-router";
 
+const GET_ASSETS_KEY = "get-assets";
+const ENV_REPOSITORIES_KEY = "env-repositories";
+const MIGRATION_STATUS_KEY = "migration-status";
+
 export const useGetProjects = ({
   tenantGroupId,
   enabled = true,
@@ -26,7 +30,7 @@ export const useGetProjects = ({
     queryKey: ["identifier", "projects", tenantGroupId],
     queryFn: () => projectService.getProjects(0, 100, tenantGroupId),
     enabled: enabled,
-    staleTime: 5 * 60 * 1000, // 5 minutes - prevent unnecessary re-fetches during navigation
+    staleTime: 30 * 1000, // short, so lists do not show stale environments; mutations also invalidate
   });
 
   useEffect(() => {
@@ -63,7 +67,7 @@ export const useGetAssets = (
   search: string = "",
 ) => {
   return useQuery({
-    queryKey: ["get-assets", tenantGroupId, page, pageSize, search],
+    queryKey: [GET_ASSETS_KEY, tenantGroupId, page, pageSize, search],
     queryFn: () => crossProjectService.getAssets(tenantGroupId, page, pageSize, search),
     // Paging and searching are server side, so hold the previous page on screen while the
     // next one loads instead of dropping back to the skeleton on every keystroke.
@@ -77,8 +81,8 @@ export const useAddAssets = () => {
     mutationKey: ["assets", "add"],
     mutationFn: crossProjectService.addAssets,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["get-assets"] });
-      queryClient.invalidateQueries({ queryKey: ["env-repositories"] });
+      queryClient.invalidateQueries({ queryKey: [GET_ASSETS_KEY] });
+      queryClient.invalidateQueries({ queryKey: [ENV_REPOSITORIES_KEY] });
     },
   });
 };
@@ -89,15 +93,15 @@ export const useDeleteAsset = () => {
     mutationKey: ["assets", "delete"],
     mutationFn: crossProjectService.deleteAsset,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["get-assets"] });
-      queryClient.invalidateQueries({ queryKey: ["env-repositories"] });
+      queryClient.invalidateQueries({ queryKey: [GET_ASSETS_KEY] });
+      queryClient.invalidateQueries({ queryKey: [ENV_REPOSITORIES_KEY] });
     },
   });
 };
 
 export const useGetEnvRepositories = (projectKey: string) => {
   return useQuery({
-    queryKey: ["env-repositories", projectKey],
+    queryKey: [ENV_REPOSITORIES_KEY, projectKey],
     queryFn: () => crossProjectService.getEnvRepositories(),
     enabled: !!projectKey,
   });
@@ -106,10 +110,10 @@ export const useGetEnvRepositories = (projectKey: string) => {
 export const useUpdateRepositories = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationKey: ["env-repositories", "update"],
+    mutationKey: [ENV_REPOSITORIES_KEY, "update"],
     mutationFn: crossProjectService.repoUpdate,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["env-repositories"] });
+      queryClient.invalidateQueries({ queryKey: [ENV_REPOSITORIES_KEY] });
     },
   });
 };
@@ -135,8 +139,8 @@ export const useUpdateTenantGroup = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["identifier", "projects"] });
       queryClient.invalidateQueries({ queryKey: ["identifier", "project"] });
-      queryClient.invalidateQueries({ queryKey: ["get-assets"] });
-      queryClient.invalidateQueries({ queryKey: ["env-repositories"] });
+      queryClient.invalidateQueries({ queryKey: [GET_ASSETS_KEY] });
+      queryClient.invalidateQueries({ queryKey: [ENV_REPOSITORIES_KEY] });
     },
   });
 };
@@ -160,10 +164,13 @@ export const useDisableProject = (options: { projectKey: string }) => {
     mutationKey: ["identifier", "projects", "disable"],
     mutationFn: () => crossProjectService.disableProject(options),
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["identifier", "project", options],
-      });
+      // "project" is keyed by tenant id, so match the whole prefix.
+      queryClient.invalidateQueries({ queryKey: ["identifier", "project"] });
       queryClient.invalidateQueries({ queryKey: ["identifier", "projects"] });
+      // Disabling an environment changes who has access and what the plan counts.
+      queryClient.invalidateQueries({ queryKey: ["people"] });
+      queryClient.invalidateQueries({ queryKey: ["subscription-usage"] });
+      queryClient.invalidateQueries({ queryKey: [ENV_REPOSITORIES_KEY] });
     },
   });
 };
@@ -190,6 +197,9 @@ export const useRestoreProject = () => {
   });
 };
 
+// Environments are provisioned by a background worker, so the first refetch can miss the new one.
+export const PROJECT_LATE_REFETCH_MS = 3000;
+
 export const useCreateProject = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -197,8 +207,12 @@ export const useCreateProject = () => {
     mutationFn: crossProjectService.createProject,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["identifier", "projects"] });
-      queryClient.invalidateQueries({ queryKey: ["get-assets"] });
-      queryClient.invalidateQueries({ queryKey: ["env-repositories"] });
+      queryClient.invalidateQueries({ queryKey: [GET_ASSETS_KEY] });
+      queryClient.invalidateQueries({ queryKey: [ENV_REPOSITORIES_KEY] });
+      // One more refetch shortly after, so the new environment shows without a reload.
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["identifier", "projects"] });
+      }, PROJECT_LATE_REFETCH_MS);
     },
   });
 };
@@ -210,7 +224,7 @@ const MIGRATION_STATUS_POLL_MS = 5000;
 
 export const useGetMigrationStatus = (tenantGroupId: string) => {
   return useQuery({
-    queryKey: ["identifier", "migration-status", tenantGroupId],
+    queryKey: ["identifier", MIGRATION_STATUS_KEY, tenantGroupId],
     queryFn: () => crossProjectService.getMigrationStatus(tenantGroupId),
     enabled: !!tenantGroupId,
     // The completion push alone is not enough. The wizard redirects from the console layout to
@@ -236,7 +250,7 @@ export const useInitiateMigration = () => {
     mutationFn: crossProjectService.initiateMigration,
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["identifier", "migration-status"],
+        queryKey: ["identifier", MIGRATION_STATUS_KEY],
       });
     },
   });
@@ -249,7 +263,7 @@ export const useVerifyMigration = () => {
     mutationFn: crossProjectService.verifyMigration,
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["identifier", "migration-status"],
+        queryKey: ["identifier", MIGRATION_STATUS_KEY],
       });
       queryClient.invalidateQueries({ queryKey: ["identifier", "projects"] });
     },

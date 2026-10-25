@@ -24,11 +24,13 @@ import { formatDate } from "@/lib/utils";
 type EnvironmentCardProps = {
   project: IProject;
   isMigrationOngoing?: boolean;
+  isMigrationFailed?: boolean;
   className?: string;
 };
 export const EnvironmentCard = ({
   project,
   isMigrationOngoing,
+  isMigrationFailed,
   className,
 }: EnvironmentCardProps) => {
   const navigate = useNavigate();
@@ -114,6 +116,21 @@ export const EnvironmentCard = ({
               <div className="text-base text-medium-emphasis">
                 {environmentOptions.find((option) => option.value === project?.environment)?.label}
               </div>
+              {isMigrationFailed && !isMigrationOngoing && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <AlertTriangle
+                        className="h-4 w-4 cursor-pointer text-icon-warning"
+                        aria-label="Migration failed"
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent className="border-none bg-neutral-500 text-white shadow-none">
+                      Migration failed
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
               {isMigrationOngoing && (
                 <TooltipProvider>
                   <Tooltip>

@@ -29,7 +29,8 @@ import {
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { CreateOIDC } from "../create-oidc/create-oidc";
 import { KVDetailItem } from "../kv-detail-item";
-import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
+import { maskId } from "../../utils/mask-id.util";
+import { OneTimeSecret, OneTimeSecretDialog } from "../one-time-secret-dialog";
 
 interface OIDCRowProps {
   item: IOidcConfig;
@@ -41,8 +42,7 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [showRotateDialog, setShowRotateDialog] = useState(false);
-  const [showRotatedSecretDialog, setShowRotatedSecretDialog] = useState(false);
-  const [rotatedSecret, setRotatedSecret] = useState<string | null>(null);
+  const [rotatedSecret, setRotatedSecret] = useState<OneTimeSecret | null>(null);
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync: deleteOidc, isPending: isDeleting } = useDeleteAuthOidc({
     projectKey: tenantId,
@@ -52,7 +52,6 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
   });
   const { mutateAsync: saveOidc, isPending: isUpdating } = useSaveAuthOidc();
 
-  const clientSecret = rotatedSecret ?? item.clientSecret;
   const isActive = item.isActive;
   const willEnable = !isActive;
 
@@ -72,9 +71,9 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
     value: string;
     copyable?: boolean;
     sensitive?: boolean;
+    masked?: boolean;
   }[] = [
-    { key: "Client Id", value: item.itemId, copyable: true },
-    { key: "Client Secret", value: clientSecret, sensitive: true },
+    { key: "Client Id", value: item.itemId, copyable: true, masked: true },
     {
       key: "Redirect URI(s)",
       value: redirectUris.join(", "),
@@ -107,7 +106,7 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
   ].filter((pair) => pair.value);
 
   const clientLabel = useMemo(
-    () => item.clientDisplayName || item.itemId,
+    () => item.clientDisplayName || maskId(item.itemId),
     [item.clientDisplayName, item.itemId],
   );
 
@@ -145,6 +144,10 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
         isDeviceFlowClient: item.isDeviceFlowClient ?? false,
         allowedResponseTypes: item.isDeviceFlowClient ? [] : responseTypes,
         allowedServiceAccessResources: item.allowedServiceAccessResources,
+        // Resend the stored client type and token delivery so a status toggle never turns a
+        // public (for example Mobile app) client confidential or back to cookie delivery.
+        clientType: item.clientType,
+        useTokensCookie: item.useTokensCookie,
       };
       const res = await saveOidc(payload);
       if (!res.isSuccess) return showErrorToast({ errors: res.error });
@@ -164,15 +167,18 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
         itemId: item.itemId,
         projectKey: tenantId,
       });
-      if (!res.isSuccess) {
+      if (!res.isSuccess || !res.clientSecret) {
         return showErrorToast({
           errors: res.errors ?? "Failed to rotate secret",
         });
       }
-      setRotatedSecret(res.clientSecret);
       setShowRotateDialog(false);
-      setShowRotatedSecretDialog(true);
-      setExpanded(true);
+      setRotatedSecret({
+        label: clientLabel,
+        clientId: res.clientId || item.itemId,
+        clientSecret: res.clientSecret,
+        reason: "rotated",
+      });
       showSuccessToast({ description: "Client secret rotated successfully" });
     } catch (error) {
       if (isErrorWithErrors(error)) {
@@ -219,9 +225,11 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">
-                {item.clientDisplayName || item.itemId}
+                {item.clientDisplayName || "OIDC client"}
               </p>
-              <p className="truncate font-mono text-xs text-muted-foreground">{item.itemId}</p>
+              <p className="truncate font-mono text-xs text-muted-foreground">
+                {maskId(item.itemId)}
+              </p>
             </div>
           </div>
         </TableCell>
@@ -331,13 +339,14 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
             className="max-w-0 bg-muted/20 px-3 py-3 pl-8 sm:px-6 sm:py-4 sm:pl-12"
           >
             <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
-              {kvPairs.map(({ key, value, copyable, sensitive }) => (
+              {kvPairs.map(({ key, value, copyable, sensitive, masked }) => (
                 <KVDetailItem
                   key={key}
                   label={key}
                   value={value}
                   copyable={copyable}
                   sensitive={sensitive}
+                  masked={masked}
                 />
               ))}
             </div>
@@ -395,7 +404,8 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
           <DialogHeader>
             <DialogTitle>Rotate client secret</DialogTitle>
             <DialogDescription>
-              Do you want to rotate the client secret for <strong>{clientLabel}</strong>?
+              A new secret will be made for <strong>{clientLabel}</strong>. The current secret stops
+              working at once, so every app that uses it must be updated.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2">
@@ -414,30 +424,7 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showRotatedSecretDialog} onOpenChange={setShowRotatedSecretDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>New client secret</DialogTitle>
-            <DialogDescription>
-              Copy the new secret for <strong>{clientLabel}</strong> now. The previous secret no
-              longer works.
-            </DialogDescription>
-          </DialogHeader>
-          {rotatedSecret ? (
-            <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
-              <code className="min-w-0 flex-1 break-all text-sm">{rotatedSecret}</code>
-              <CopyToClipboardButton textToCopy={rotatedSecret}>
-                <span />
-              </CopyToClipboardButton>
-            </div>
-          ) : null}
-          <DialogFooter>
-            <Button size="sm" onClick={() => setShowRotatedSecretDialog(false)}>
-              Done
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <OneTimeSecretDialog secret={rotatedSecret} onClose={() => setRotatedSecret(null)} />
 
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>

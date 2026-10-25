@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => import("@/test-utils/__mocks__/grant-scope.mock"));
 
 const h = vi.hoisted(() => ({
   lastRolesQuery: null as Record<string, unknown> | null,
@@ -10,7 +11,7 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("@blocks-idp/iam/hooks/use-roles", () => ({
-  useGetRoles: (option: Record<string, unknown>) => {
+  useGetAssignableRoles: (option: Record<string, unknown>) => {
     h.lastRolesQuery = option;
     h.roleCallCount += 1;
     return { data: { data: h.roles, totalCount: h.totalCount }, isLoading: h.isLoading };
