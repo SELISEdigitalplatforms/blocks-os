@@ -1,6 +1,8 @@
 using System.Text.Json;
 using Blocks.Genesis.Entities.Data;
 using BlocksOs.Api.Controllers;
+using Configuration.DomainService.DataGateway.RequestModel;
+using Configuration.DomainService.DataGateway.Services;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
@@ -41,7 +43,7 @@ public class PlatformDataAccessControllerTests
                 new FieldDefinition { Name = "Create.Roles", Type = "String", IsArray = true, IsReferenceField = true },
             ],
         });
-        var controller = new PlatformDataAccessController(_fixture.DbContextProvider);
+        var controller = new PlatformDataAccessController(new PlatformDataAccessService(_fixture.DbContextProvider));
 
         var result = await controller.Schemas(CancellationToken.None);
 
@@ -71,7 +73,7 @@ public class PlatformDataAccessControllerTests
     public async Task Configure_SetsTheSchemaLevelOfThatOperationOnly(PolicyOperation operation)
     {
         var id = await InsertRoleAsync();
-        var controller = new PlatformDataAccessController(_fixture.DbContextProvider);
+        var controller = new PlatformDataAccessController(new PlatformDataAccessService(_fixture.DbContextProvider));
 
         var result = await controller.Configure(new ConfigurePlatformAccessRequest
         {
@@ -88,7 +90,7 @@ public class PlatformDataAccessControllerTests
     public async Task Configure_FieldLevel_AllowsViewAndEditOnly()
     {
         var id = await InsertRoleAsync();
-        var controller = new PlatformDataAccessController(_fixture.DbContextProvider);
+        var controller = new PlatformDataAccessController(new PlatformDataAccessService(_fixture.DbContextProvider));
         ConfigurePlatformAccessRequest Field(PolicyOperation operation) => new()
         {
             SchemaId = id, Operation = operation, PolicyType = PolicyType.CLS, FieldNames = ["Name"], AccessLevel = SchemaAccessLevel.Custom,
@@ -108,7 +110,7 @@ public class PlatformDataAccessControllerTests
     public async Task Policies_AreSavedListedAndDeletedPerOperation()
     {
         var id = await InsertRoleAsync();
-        var controller = new PlatformDataAccessController(_fixture.DbContextProvider);
+        var controller = new PlatformDataAccessController(new PlatformDataAccessService(_fixture.DbContextProvider));
         SavePlatformPolicyRequest Rule(PolicyOperation? operation) => new() { SchemaId = id, PolicyName = $"{operation} rule", Operation = operation, PolicyType = PolicyType.RLS };
 
         (await controller.Create(Rule(null), CancellationToken.None)).Should().BeOfType<BadRequestResult>();
@@ -145,7 +147,7 @@ public class PlatformDataAccessControllerTests
         await FluentActions.Awaiting(() => policies.Find(x => x.ItemId == policyId).ToListAsync())
             .Should().ThrowAsync<Exception>("the tenant policy must be unreadable here for this test to mean anything");
 
-        (await new PlatformDataAccessController(_fixture.DbContextProvider).Delete(policyId, CancellationToken.None)).Should().BeOfType<NotFoundResult>();
+        (await new PlatformDataAccessController(new PlatformDataAccessService(_fixture.DbContextProvider)).Delete(policyId, CancellationToken.None)).Should().BeOfType<NotFoundResult>();
         (await _fixture.Collection<BsonDocument>("DataAccessPolicys").CountDocumentsAsync(new BsonDocument("_id", policyId))).Should().Be(1);
     }
 
@@ -159,7 +161,7 @@ public class PlatformDataAccessControllerTests
             ItemId = hiddenId, SchemaName = "RefreshTokenModel", CollectionName = "IdpRefreshTokens", IsSystemEntity = true,
             Fields = [new FieldDefinition { Name = "Name", Type = "String" }],
         });
-        var controller = new PlatformDataAccessController(_fixture.DbContextProvider);
+        var controller = new PlatformDataAccessController(new PlatformDataAccessService(_fixture.DbContextProvider));
 
         var body = JsonSerializer.SerializeToElement(((OkObjectResult)await controller.Schemas(CancellationToken.None)).Value);
 
@@ -175,7 +177,7 @@ public class PlatformDataAccessControllerTests
     public async Task HiddenProperties_TakeNoRules()
     {
         var id = await InsertRepoAsync();
-        var controller = new PlatformDataAccessController(_fixture.DbContextProvider);
+        var controller = new PlatformDataAccessController(new PlatformDataAccessService(_fixture.DbContextProvider));
         var hiddenCondition = new PolicyRuleGroup
         {
             NestedGroups = [new PolicyRuleGroup { Rules = [new PolicyRule { LeftOperand = "DeploySettings.Region", StaticValue = "eu" }] }],

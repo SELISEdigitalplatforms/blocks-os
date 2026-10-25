@@ -3,6 +3,8 @@ using Blocks.Genesis;
 using Blocks.Genesis.DataAccess.Rules;
 using Blocks.Genesis.Entities.Data;
 using BlocksOs.Api.Controllers;
+using Configuration.DomainService.DataGateway.RequestModel;
+using Configuration.DomainService.DataGateway.Services;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -23,12 +25,12 @@ public class PlatformSchemaRulesControllerTests
 
     public PlatformSchemaRulesControllerTests(MongoIntegrationFixture fixture) => _fixture = fixture;
 
-    private PlatformDataAccessController Controller(bool rulesEnabled = true, bool includeWarned = true) => new(_fixture.DbContextProvider,
+    private PlatformDataAccessController Controller(bool rulesEnabled = true, bool includeWarned = true) => new(new PlatformDataAccessService(_fixture.DbContextProvider,
         new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
-            [PlatformDataAccessController.RulesEnabledSetting] = rulesEnabled.ToString(),
-            [PlatformDataAccessController.RulesIncludeWarnedSetting] = includeWarned.ToString(),
-        }).Build());
+            [PlatformDataAccessService.RulesEnabledSetting] = rulesEnabled.ToString(),
+            [PlatformDataAccessService.RulesIncludeWarnedSetting] = includeWarned.ToString(),
+        }).Build()));
 
     private IMongoCollection<SchemaDefinition> Schemas => _fixture.Collection<SchemaDefinition>("SchemaDefinitions");
     private IMongoCollection<DataValidation> Validations => _fixture.Collection<DataValidation>("DataValidations");
