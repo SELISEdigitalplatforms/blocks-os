@@ -5,7 +5,11 @@ import { useForm } from "react-hook-form";
 import { Form, FormField } from "@/components/ui-kits/form/form";
 
 const h = vi.hoisted(() => ({
-  scope: { isRestricted: true, managedByCandidates: ["lead", "member"] as string[] },
+  scope: {
+    scope: { isSystemUser: false } as { isSystemUser: boolean } | undefined,
+    isRestricted: true,
+    managedByCandidates: ["lead", "member"] as string[],
+  },
   getRoles: vi.fn(),
 }));
 
@@ -29,6 +33,7 @@ vi.stubGlobal(
 
 const onChange = vi.fn();
 const TRIGGER_ID = "managed-by-select";
+const LABEL = "Managed by";
 
 const Harness = ({ value, excludeSlug }: { value?: string | null; excludeSlug?: string }) => {
   const form = useForm();
@@ -46,7 +51,7 @@ const Harness = ({ value, excludeSlug }: { value?: string | null; excludeSlug?: 
 describe("ManagedBySelect", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    h.scope = { isRestricted: true, managedByCandidates: ["lead", "member"] };
+    h.scope = { scope: { isSystemUser: false }, isRestricted: true, managedByCandidates: ["lead", "member"] };
     h.getRoles.mockReturnValue({
       data: {
         data: [
@@ -57,15 +62,38 @@ describe("ManagedBySelect", () => {
     });
   });
 
-  it("renders nothing for the system user", () => {
-    h.scope = { isRestricted: false, managedByCandidates: [] };
+  it("renders nothing until the grant scope has loaded", () => {
+    h.scope = { scope: undefined, isRestricted: false, managedByCandidates: [] };
     render(<Harness />);
-    expect(screen.queryByText("Managed by")).toBeNull();
+    expect(screen.queryByText(LABEL)).toBeNull();
+  });
+
+  describe("for the system user", () => {
+    beforeEach(() => {
+      h.scope = { scope: { isSystemUser: true }, isRestricted: false, managedByCandidates: [] };
+    });
+
+    it("shows the field and asks for every role of the organization", () => {
+      render(<Harness />);
+      expect(screen.getByText(LABEL)).toBeTruthy();
+      expect(h.getRoles).toHaveBeenCalledWith(
+        expect.objectContaining({ filter: { search: "" } }),
+        { enabled: true },
+      );
+    });
+
+    it("offers every role except the role itself", async () => {
+      const user = userEvent.setup();
+      render(<Harness excludeSlug="lead" />);
+      await user.click(screen.getByTestId(TRIGGER_ID));
+      expect(screen.getByRole("option", { name: "Member" })).toBeTruthy();
+      expect(screen.queryByRole("option", { name: "Team Lead" })).toBeNull();
+    });
   });
 
   it("asks only for the roles the caller holds or manages", () => {
     render(<Harness />);
-    expect(screen.getByText("Managed by")).toBeTruthy();
+    expect(screen.getByText(LABEL)).toBeTruthy();
     expect(h.getRoles).toHaveBeenCalledWith(
       expect.objectContaining({ filter: { slugs: ["lead", "member"] } }),
       { enabled: true },
@@ -81,7 +109,7 @@ describe("ManagedBySelect", () => {
   });
 
   it("does not fetch names when there is nothing to choose from", () => {
-    h.scope = { isRestricted: true, managedByCandidates: [] };
+    h.scope = { scope: { isSystemUser: false }, isRestricted: true, managedByCandidates: [] };
     render(<Harness />);
     expect(h.getRoles).toHaveBeenCalledWith(expect.anything(), { enabled: false });
   });
