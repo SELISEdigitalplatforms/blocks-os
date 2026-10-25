@@ -6,6 +6,7 @@ using BlocksOs.Api.Controllers;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using Xunit;
 
@@ -84,6 +85,31 @@ public class PlatformSchemaRulesControllerTests
         rules.GetProperty("fields").EnumerateArray().Should().NotContain(f => f.GetProperty("Path").GetString() == "MailConfigurationId");
 
         var field = schema.GetProperty("fields").EnumerateArray().Single(f => f.GetProperty("Name").GetString() == "TemplateSubject");
+        field.GetProperty("ValidationRule").GetProperty("Validations").EnumerateArray().Single().GetProperty("Type").GetInt32()
+            .Should().Be((int)ValidationType.MaxLength);
+    }
+
+    [Fact]
+    public async Task Schemas_ReadsOnlySystemSchemasRules_SoATenantRuleOfAnUnknownTypeCantBreakIt()
+    {
+        var id = await InsertEmailTemplateAsync();
+        await Controller().SaveValidation(Rules(id, "TemplateSubject", new ValidationRule { Type = ValidationType.MaxLength, Value = 80 }), CancellationToken.None);
+        // A tenant schema's rule of a type this Genesis doesn't know, as a newer gateway stores one (e.g. In).
+        var tenantSchema = Guid.NewGuid().ToString();
+        await _fixture.Collection<BsonDocument>("DataValidations").InsertOneAsync(new BsonDocument
+        {
+            ["_id"] = Guid.NewGuid().ToString(), ["SchemaId"] = tenantSchema, ["FieldName"] = "Status", ["IsDeleted"] = false,
+            ["Validations"] = new BsonArray { new BsonDocument { ["Type"] = "FutureType", ["Value"] = new BsonArray { "Open" }, ["IsActive"] = true } },
+        });
+        await FluentActions.Awaiting(() => Validations.Find(v => v.SchemaId == tenantSchema).ToListAsync())
+            .Should().ThrowAsync<Exception>("the tenant rule must be unreadable here for this test to mean anything");
+
+        var body = JsonSerializer.SerializeToElement((await Controller().Schemas(CancellationToken.None)).Should().BeOfType<OkObjectResult>().Subject.Value);
+
+        var rows = body.GetProperty("data").EnumerateArray().ToList();
+        rows.Should().NotContain(s => s.GetProperty("id").GetString() == tenantSchema);
+        var field = rows.Single(s => s.GetProperty("id").GetString() == id).GetProperty("fields").EnumerateArray()
+            .Single(f => f.GetProperty("Name").GetString() == "TemplateSubject");
         field.GetProperty("ValidationRule").GetProperty("Validations").EnumerateArray().Single().GetProperty("Type").GetInt32()
             .Should().Be((int)ValidationType.MaxLength);
     }

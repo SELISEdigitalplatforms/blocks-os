@@ -3,6 +3,7 @@ using Blocks.Genesis.Entities.Data;
 using BlocksOs.Api.Controllers;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using Xunit;
 
@@ -128,6 +129,24 @@ public class PlatformDataAccessControllerTests
         var deleteRule = listed.Single(p => p.GetProperty("Operation").GetInt32() == (int)PolicyOperation.DELETE);
         (await controller.Delete(deleteRule.GetProperty("ItemId").GetString()!, CancellationToken.None)).Should().BeOfType<OkObjectResult>();
         (await ListPoliciesAsync(controller, id)).Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Delete_NeverReadsATenantSchemasPolicy_EvenOneThisGenesisCantRead()
+    {
+        // A tenant schema's policy with an operator this Genesis doesn't know, as a newer gateway stores one (e.g. EXISTS_IN).
+        var policyId = Guid.NewGuid().ToString();
+        await _fixture.Collection<BsonDocument>("DataAccessPolicys").InsertOneAsync(new BsonDocument
+        {
+            ["_id"] = policyId, ["SchemaId"] = Guid.NewGuid().ToString(), ["Operation"] = "READ", ["PolicyType"] = "RLS", ["IsDeleted"] = false,
+            ["RuleGroup"] = new BsonDocument { ["Rules"] = new BsonArray { new BsonDocument { ["LeftOperand"] = "CustomerId", ["Operator"] = "FUTURE_OPERATOR" } } },
+        });
+        var policies = _fixture.Collection<DataAccessPolicy>("DataAccessPolicys");
+        await FluentActions.Awaiting(() => policies.Find(x => x.ItemId == policyId).ToListAsync())
+            .Should().ThrowAsync<Exception>("the tenant policy must be unreadable here for this test to mean anything");
+
+        (await new PlatformDataAccessController(_fixture.DbContextProvider).Delete(policyId, CancellationToken.None)).Should().BeOfType<NotFoundResult>();
+        (await _fixture.Collection<BsonDocument>("DataAccessPolicys").CountDocumentsAsync(new BsonDocument("_id", policyId))).Should().Be(1);
     }
 
     [Fact]

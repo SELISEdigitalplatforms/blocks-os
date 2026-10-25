@@ -58,8 +58,10 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
     {
         var schemas = await SchemaCollection.Find(x => x.IsSystemEntity && !x.IsDeleted).ToListAsync(cancellationToken);
         var rulesEnabled = RulesEnabled;
+        // Only these schemas' rules are read: a tenant's rule may have a type this Genesis can't read.
+        var systemIds = schemas.Select(x => x.ItemId).ToList();
         var validations = rulesEnabled
-            ? await ValidationCollection.Find(x => !x.IsDeleted).ToListAsync(cancellationToken)
+            ? await ValidationCollection.Find(x => !x.IsDeleted && systemIds.Contains(x.SchemaId)).ToListAsync(cancellationToken)
             : [];
         var result = schemas.Where(x => PlatformSchemaCatalog.IsOffered(x.SchemaName)).Select(x => new
         {
@@ -137,7 +139,10 @@ public sealed class PlatformDataAccessController(IDbContextProvider databaseProv
     [ProtectedEndPoint("blocks-data::data-access::delete-data-access-policy")]
     public async Task<IActionResult> Delete([FromQuery] string itemId, CancellationToken cancellationToken)
     {
-        var policy = await PolicyCollection.Find(x => x.ItemId == itemId && Operations.Contains(x.Operation)).FirstOrDefaultAsync(cancellationToken);
+        // Only a system schema's policy is read: a tenant's may have an operator this Genesis can't read.
+        var systemIds = await SchemaCollection.Find(x => x.IsSystemEntity && !x.IsDeleted).Project(x => x.ItemId).ToListAsync(cancellationToken);
+        var policy = await PolicyCollection.Find(x => x.ItemId == itemId && systemIds.Contains(x.SchemaId) && Operations.Contains(x.Operation))
+            .FirstOrDefaultAsync(cancellationToken);
         if (policy is null || !await IsPlatformSchemaAsync(policy.SchemaId, cancellationToken)) return NotFound();
         await PolicyCollection.DeleteOneAsync(x => x.ItemId == itemId, cancellationToken);
         return Ok(new { isSuccess = true, data = new { acknowledged = true, itemId } });
