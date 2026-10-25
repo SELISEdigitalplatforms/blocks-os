@@ -108,7 +108,10 @@ export const EnvironmentCard = ({
     <Dialog open={isConfirmationOpen} onOpenChange={setIsConfirmationOpen}>
       <Card
         onClick={handleCardClick}
-        className={`group flex min-h-[70px] cursor-pointer flex-col justify-between rounded-sm p-4 shadow-none transition-shadow duration-200 hover:shadow-md ${className}`}
+        aria-disabled={setupPending || undefined}
+        className={`group flex min-h-[70px] flex-col justify-between rounded-sm p-4 shadow-none transition-shadow duration-200 ${
+          setupPending ? "cursor-default" : "cursor-pointer hover:shadow-md"
+        } ${className}`}
       >
         <CardHeader className="flex flex-row justify-between p-0!">
           <CardTitle className="line-clamp-1 break-all text-lg leading-tight">
@@ -147,23 +150,22 @@ export const EnvironmentCard = ({
           </CardTitle>
           <div className="flex items-center gap-1">
             {setupPending && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span
-                      className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-warning-100 text-warning-700"
-                      aria-label="Setup pending"
-                    >
-                      <AlertTriangle className="h-3.5 w-3.5" />
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent className="border-none bg-neutral-500 text-white shadow-none">
-                    Setup pending — click restore to re-run seeding.
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Badge variant="warning" className="gap-1" aria-label="Setup pending">
+                <AlertTriangle className="h-3 w-3" />
+                Setup not finished
+              </Badge>
             )}
-            {setupPending && canRepair && (
+            {!setupPending && (
+              <ChevronRight className="h-4 w-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+            )}
+          </div>
+        </CardHeader>
+        {/* The reason used to sit in a hover tooltip on a bare icon, named a "restore" button
+            the card does not have, and contributors got no button at all. Say it on the card. */}
+        {setupPending && (
+          <div className="mt-3 flex flex-col gap-2 rounded-sm border border-warning-200 bg-warning-50 p-3 text-xs text-warning-900">
+            <p>Setup of this environment did not finish, so it can&apos;t be opened yet.</p>
+            {canRepair ? (
               <Dialog open={isRestoreOpen} onOpenChange={setIsRestoreOpen}>
                 <DialogTrigger asChild>
                   <button
@@ -205,12 +207,11 @@ export const EnvironmentCard = ({
                   buttonState={{ confirm: { disable: isRestoring } }}
                 />
               </Dialog>
-            )}
-            {!setupPending && (
-              <ChevronRight className="h-4 w-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+            ) : (
+              <p className="text-warning-700">Ask the project owner to run Repair.</p>
             )}
           </div>
-        </CardHeader>
+        )}
         {/* The card used to carry a name and a raw key and nothing else, while Project
             Settings had the domains, the created date and a masked key all along. Same
             facts, one presentation — including the masking, which only one of the two

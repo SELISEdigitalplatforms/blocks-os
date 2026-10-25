@@ -77,6 +77,7 @@ describe("EnvironmentCard", () => {
     h.projectStatus = false;
     render(<EnvironmentCard project={project} />);
     expect(screen.queryByRole("button", { name: /Repair/i })).toBeNull();
+    expect(screen.getByText("Ask the project owner to run Repair.")).toBeTruthy();
   });
 
   it("shows the primary domain and counts the rest", () => {
@@ -98,12 +99,14 @@ describe("EnvironmentCard", () => {
     expect(screen.queryByLabelText("Repair environment")).toBeNull();
   });
 
-  it("shows a compact setup indicator and repair action when setup is pending", () => {
+  it("explains the pending setup on the card and offers Repair to the owner", () => {
     h.projectStatus = false;
     render(<EnvironmentCard project={project} />);
     expect(screen.getByLabelText("Setup pending")).toBeTruthy();
     expect(screen.getByLabelText("Repair environment")).toBeTruthy();
     expect(screen.getByText("Repair")).toBeTruthy();
+    expect(screen.getByText(/did not finish/)).toBeTruthy();
+    expect(screen.queryByText(/Ask the project owner/)).toBeNull();
   });
 
   it("does not navigate to the dashboard while setup is pending", () => {
