@@ -360,5 +360,56 @@ namespace XUnitTest.Integration
             (await (await target.ListCollectionNamesAsync()).ToListAsync())
                 .Should().NotContain(TenantConfigurationEmbedding.LegacyCollection);
         }
+
+        private static BsonDocument KeyValueRow(string key, string value) =>
+            new() { { "_id", Guid.NewGuid().ToString("N") }, { "Key", key }, { "Value", value }, { "Tags", new BsonArray() } };
+
+        private static async Task<List<string>> KeysIn(IMongoDatabase db, string suffix) =>
+            (await db.GetCollection<BsonDocument>(KeyValueSeedCopier.CollectionName)
+                .Find(Builders<BsonDocument>.Filter.Regex("Key", new BsonRegularExpression(suffix + "$")))
+                .ToListAsync())
+            .Select(d => d["Key"].AsString).ToList();
+
+        [Fact]
+        public async Task CreateDefaultConfigurationAsync_GivesTheProjectTheSeedNotificationConfigs_AndNoOtherKeyValueRows()
+        {
+            var suffix = Guid.NewGuid().ToString("N");
+            using var _ = new IntegrationContext(suffix);
+            var project = NewProject(suffix);
+            await SourceDb().GetCollection<BsonDocument>(KeyValueSeedCopier.CollectionName).InsertManyAsync(new[]
+            {
+                KeyValueRow("notification-config:built-in-" + suffix, "seed"),
+                KeyValueRow("storage-config:files-" + suffix, "seed"),
+                KeyValueRow("oidcUiTemplate-" + suffix, "seed branding"),
+            });
+
+            await NewRepository().CreateDefaultConfigurationAsync(new ProjectStatusTracer { ProjectId = project.ItemId }, project);
+
+            (await KeysIn(TargetDb(project), suffix)).Should().BeEquivalentTo("notification-config:built-in-" + suffix);
+        }
+
+        [Fact]
+        public async Task KeyValueSeedCopier_CopiesMfaConfig_AndKeepsTheProjectsOwnValue()
+        {
+            var suffix = Guid.NewGuid().ToString("N");
+            var seed = _fixture.DbContextProvider.GetDatabase("", "kvseed-" + suffix[..8]);
+            var projectDb = _fixture.DbContextProvider.GetDatabase("", "kvproj-" + suffix[..8]);
+            var notificationKey = "notification-config:built-in-" + suffix;
+            await seed.GetCollection<BsonDocument>(KeyValueSeedCopier.CollectionName)
+                .InsertManyAsync(new[] { KeyValueRow("mfa-config", "seed"), KeyValueRow(notificationKey, "seed") });
+            await projectDb.GetCollection<BsonDocument>(KeyValueSeedCopier.CollectionName)
+                .InsertOneAsync(KeyValueRow(notificationKey, "changed by the project"));
+
+            var inserted = await KeyValueSeedCopier.CopyAsync(seed, projectDb, "creator");
+            var retried = await KeyValueSeedCopier.CopyAsync(seed, projectDb, "creator");
+
+            inserted.Should().Be(1);
+            retried.Should().Be(0);
+            var rows = await projectDb.GetCollection<BsonDocument>(KeyValueSeedCopier.CollectionName)
+                .Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+            rows.Should().HaveCount(2);
+            rows.Single(r => r["Key"] == "mfa-config")["CreatedBy"].AsString.Should().Be("creator");
+            rows.Single(r => r["Key"] == notificationKey)["Value"].AsString.Should().Be("changed by the project");
+        }
     }
 }
