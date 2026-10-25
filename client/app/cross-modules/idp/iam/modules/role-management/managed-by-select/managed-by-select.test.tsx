@@ -6,8 +6,8 @@ import { Form, FormField } from "@/components/ui-kits/form/form";
 
 const h = vi.hoisted(() => ({
   scope: {
-    scope: { isSystemUser: false } as { isSystemUser: boolean } | undefined,
-    isRestricted: true,
+    scope: { isSystemUser: false } as { isSystemUser: boolean; isTopUser?: boolean } | undefined,
+    isDescendant: true,
     managedByCandidates: ["lead", "member"] as string[],
   },
   getRoles: vi.fn(),
@@ -51,7 +51,7 @@ const Harness = ({ value, excludeSlug }: { value?: string | null; excludeSlug?: 
 describe("ManagedBySelect", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    h.scope = { scope: { isSystemUser: false }, isRestricted: true, managedByCandidates: ["lead", "member"] };
+    h.scope = { scope: { isSystemUser: false }, isDescendant: true, managedByCandidates: ["lead", "member"] };
     h.getRoles.mockReturnValue({
       data: {
         data: [
@@ -63,14 +63,14 @@ describe("ManagedBySelect", () => {
   });
 
   it("renders nothing until the grant scope has loaded", () => {
-    h.scope = { scope: undefined, isRestricted: false, managedByCandidates: [] };
+    h.scope = { scope: undefined, isDescendant: false, managedByCandidates: [] };
     render(<Harness />);
     expect(screen.queryByText(LABEL)).toBeNull();
   });
 
   describe("for the system user", () => {
     beforeEach(() => {
-      h.scope = { scope: { isSystemUser: true }, isRestricted: false, managedByCandidates: [] };
+      h.scope = { scope: { isSystemUser: true }, isDescendant: false, managedByCandidates: [] };
     });
 
     it("shows the field and asks for every role of the organization", () => {
@@ -91,7 +91,25 @@ describe("ManagedBySelect", () => {
     });
   });
 
-  it("asks only for the roles the caller holds or manages", () => {
+  describe("for a top user", () => {
+    beforeEach(() => {
+      h.scope = { scope: { isSystemUser: false, isTopUser: true }, isDescendant: false, managedByCandidates: [] };
+    });
+
+    it("asks for every role and offers 'No one' (standalone)", async () => {
+      const user = userEvent.setup();
+      render(<Harness value="lead" />);
+      expect(h.getRoles).toHaveBeenCalledWith(
+        expect.objectContaining({ filter: { search: "" } }),
+        { enabled: true },
+      );
+      await user.click(screen.getByTestId(TRIGGER_ID));
+      await user.click(await screen.findByRole("option", { name: "No one" }));
+      expect(onChange).toHaveBeenCalledWith("");
+    });
+  });
+
+  it("asks a descendant only for its power roles and the roles below them", () => {
     render(<Harness />);
     expect(screen.getByText(LABEL)).toBeTruthy();
     expect(h.getRoles).toHaveBeenCalledWith(
@@ -109,7 +127,7 @@ describe("ManagedBySelect", () => {
   });
 
   it("does not fetch names when there is nothing to choose from", () => {
-    h.scope = { scope: { isSystemUser: false }, isRestricted: true, managedByCandidates: [] };
+    h.scope = { scope: { isSystemUser: false }, isDescendant: true, managedByCandidates: [] };
     render(<Harness />);
     expect(h.getRoles).toHaveBeenCalledWith(expect.anything(), { enabled: false });
   });
@@ -124,12 +142,16 @@ describe("ManagedBySelect", () => {
     expect(onChange).toHaveBeenCalledWith("member");
   });
 
-  it("clears the choice with 'No one'", async () => {
+  it("never offers a descendant 'No one': its role must sit below its own", async () => {
     const user = userEvent.setup();
     render(<Harness value="lead" />);
     await user.click(screen.getByTestId(TRIGGER_ID));
-    await user.click(await screen.findByRole("option", { name: "No one" }));
-    expect(onChange).toHaveBeenCalledWith("");
+    expect(screen.queryByRole("option", { name: "No one" })).toBeNull();
+  });
+
+  it("starts a descendant's empty choice on its first own role", () => {
+    render(<Harness value="" />);
+    expect(onChange).toHaveBeenCalledWith("lead");
   });
 
   it("still shows a parent the caller could not pick", () => {

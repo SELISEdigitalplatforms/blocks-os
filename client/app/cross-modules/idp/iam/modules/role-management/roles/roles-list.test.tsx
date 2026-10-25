@@ -1,9 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-const grant = vi.hoisted(() => ({ scope: undefined as { isSystemUser: boolean } | undefined }));
+const grant = vi.hoisted(() => ({
+  scope: undefined as { isSystemUser: boolean } | undefined,
+  block: undefined as string | undefined,
+}));
 vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => ({
-  useGrantScope: () => ({ scope: grant.scope }),
+  useGrantScope: () => ({ scope: grant.scope, roleEditBlock: () => grant.block }),
 }));
 
 // See the mock for why the tooltip barrel cannot be imported under jsdom.
@@ -125,11 +128,13 @@ const role = {
 } as IRole;
 
 const MANAGED_BY = "Managed by";
+const EDIT_ADMIN = "Edit role Administrator";
 
 describe("RolesList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     grant.scope = undefined;
+    grant.block = undefined;
   });
 
   describe("Managed by column", () => {
@@ -250,7 +255,7 @@ describe("RolesList", () => {
     expect(screen.queryByTestId("update-role-dialog")).toBeNull();
     // There are two actions per row now, so select the edit button by its accessible name
     // rather than by being the only button.
-    await user.click(screen.getByRole("button", { name: "Edit role Administrator" }));
+    await user.click(screen.getByRole("button", { name: EDIT_ADMIN }));
     expect(screen.getByTestId("update-role-dialog")).toBeTruthy();
     expect(screen.getByText("Editing Administrator")).toBeTruthy();
     // Editing must not trigger row navigation.
@@ -268,6 +273,16 @@ describe("RolesList archive action", () => {
     archivePending.value = false;
     archivePending.perCall = [];
     archiveRole.mockResolvedValue({ isSuccess: true });
+  });
+
+  it("locks edit and hides archive with the reason when the caller may not change the role", () => {
+    grant.block = "This role is not below your role.";
+    renderList([role]);
+
+    expect(screen.getByRole("button", { name: EDIT_ADMIN })).toHaveProperty("disabled", true);
+    expect(screen.queryByRole("button", { name: "Archive role Administrator" })).toBeNull();
+    expect(screen.getAllByText("This role is not below your role.").length).toBeGreaterThan(0);
+    grant.block = undefined;
   });
 
   it("renders an archive action for a normal role", () => {
@@ -473,7 +488,7 @@ describe("RolesList archive action", () => {
     unmount();
 
     renderList([role]);
-    await user.click(screen.getByRole("button", { name: "Edit role Administrator" }));
+    await user.click(screen.getByRole("button", { name: EDIT_ADMIN }));
     expect(screen.getByTestId("update-role-dialog")).toBeTruthy();
     expect(screen.queryByText("Archive this role?")).toBeNull();
   });

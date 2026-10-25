@@ -144,7 +144,7 @@ export const RoleDetailsProvider = ({
 }) => {
   const [store] = useState(() => createRoleDetailsStore());
   const { data: role } = useGetRoleById({ id, projectKey });
-  const { isRestricted, heldPermissions } = useGrantScope();
+  const { isDescendant, rolePermissionCap } = useGrantScope();
   const organizationId = role?.data?.organizationId;
   const { data: permissionsData } = useQuery({
     queryKey: ["permissions", projectKey, organizationId],
@@ -164,8 +164,9 @@ export const RoleDetailsProvider = ({
   });
 
   useEffect(() => {
-    store.setState({ grantableResources: isRestricted ? new Set(heldPermissions) : null });
-  }, [isRestricted, heldPermissions, store]);
+    // A descendant may put on a role only what its own roles carry; everybody else is not capped.
+    store.setState({ grantableResources: isDescendant ? new Set(rolePermissionCap) : null });
+  }, [isDescendant, rolePermissionCap, store]);
 
   useEffect(() => {
     store.setState({ isEditMode: false, isInitialized: false });

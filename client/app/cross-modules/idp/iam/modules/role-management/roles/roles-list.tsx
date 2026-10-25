@@ -4,6 +4,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { ArchiveAction } from "@blocks-idp/iam/components/archive-action";
+import { DisabledReason } from "@blocks-idp/iam/components/disabled-reason";
 import { useDeleteRole } from "@blocks-idp/iam/hooks/use-roles";
 import { useGrantScope } from "@blocks-idp/iam/hooks/use-grant-scope";
 import { IRole } from "@blocks-idp/iam/models/role";
@@ -34,6 +35,8 @@ const LoadingSkelton = () => (
 
 const RoleRowActions = ({ row, onEdit }: { row: IRole; onEdit: (role: IRole) => void }) => {
   const { mutateAsync, isPending } = useDeleteRole();
+  const { roleEditBlock } = useGrantScope();
+  const blockedReason = roleEditBlock(row);
   return (
     <div
       className="flex justify-end"
@@ -41,16 +44,24 @@ const RoleRowActions = ({ row, onEdit }: { row: IRole; onEdit: (role: IRole) => 
       onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => event.stopPropagation()}
     >
-      <Button
-        size="icon"
-        className="rounded-full"
-        variant="ghost"
-        aria-label={`Edit role ${row.name}`}
-        onClick={() => onEdit(row)}
-      >
-        <Pencil className="h-4 w-4" />
-      </Button>
-      {!row.createdFromDefault && (
+      {blockedReason ? (
+        <DisabledReason reason={blockedReason}>
+          <Button size="icon" className="rounded-full" variant="ghost" aria-label={`Edit role ${row.name}`} disabled>
+            <Pencil className="h-4 w-4" />
+          </Button>
+        </DisabledReason>
+      ) : (
+        <Button
+          size="icon"
+          className="rounded-full"
+          variant="ghost"
+          aria-label={`Edit role ${row.name}`}
+          onClick={() => onEdit(row)}
+        >
+          <Pencil className="h-4 w-4" />
+        </Button>
+      )}
+      {!row.createdFromDefault && !blockedReason && (
         <ArchiveAction
           entity="role"
           name={row.name}

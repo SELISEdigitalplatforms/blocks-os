@@ -8,7 +8,12 @@ import {
 } from "@/components/ui-kits/select/select";
 import { useGrantScope } from "@blocks-idp/iam/hooks/use-grant-scope";
 import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
-import { useMemo } from "react";
+import { IRole } from "@blocks-idp/iam/models/role";
+import { useEffect, useMemo } from "react";
+
+/** True for the role itself or a role below it: picking it as the parent would close a loop. */
+const isSelfOrBelow = (role: IRole, slug: string | undefined): boolean =>
+  slug !== undefined && (role.slug === slug || (role.ancestorRoleSlugs ?? []).includes(slug));
 
 /** Radix Select forbids an empty item value, so "no parent" travels as this marker. */
 const NO_PARENT = "__none__";
@@ -24,8 +29,10 @@ type ManagedBySelectProps = {
 };
 
 /**
- * "Managed by": the role above this one. A limited caller may only pick a role they hold or
- * manage; the system user may pick any role. Hidden until the grant scope has loaded.
+ * "Managed by": the role above this one. The system user and a top user may pick any role of the
+ * organization, or none (standalone). A descendant must pick one of its power roles or a role below
+ * them -- never none -- so the field starts on its own role. Hidden until the grant scope has loaded.
+ * A role is never offered below itself or below a role under it: the server refuses that loop.
  */
 export const ManagedBySelect = ({
   value,
@@ -33,9 +40,9 @@ export const ManagedBySelect = ({
   excludeSlug,
   disabled,
 }: Readonly<ManagedBySelectProps>) => {
-  const { scope, isRestricted, managedByCandidates } = useGrantScope();
-  const isSystemUser = scope?.isSystemUser === true;
-  const restrictedCandidates = useMemo(
+  const { scope, isDescendant, managedByCandidates } = useGrantScope();
+  const seesEveryRole = scope !== undefined && !isDescendant;
+  const descendantCandidates = useMemo(
     () => managedByCandidates.filter((slug) => slug !== excludeSlug),
     [managedByCandidates, excludeSlug],
   );
@@ -45,19 +52,29 @@ export const ManagedBySelect = ({
       pageSize: OPTIONS_PAGE_SIZE,
       projectKey: "managed-by",
       sort: { property: "Name", isDescending: false },
-      // The system user is not limited, so every role of the organization is a candidate.
-      filter: isSystemUser ? { search: "" } : { slugs: restrictedCandidates },
+      filter: seesEveryRole ? { search: "" } : { slugs: descendantCandidates },
     },
-    { enabled: isSystemUser || restrictedCandidates.length > 0 },
+    { enabled: seesEveryRole || descendantCandidates.length > 0 },
   );
 
-  if (!isRestricted && !isSystemUser) return null;
+  const roles = useMemo(() => data?.data ?? [], [data]);
+  const candidates = useMemo(
+    () =>
+      seesEveryRole
+        ? roles.filter((role) => !isSelfOrBelow(role, excludeSlug)).map((role) => role.slug)
+        : descendantCandidates,
+    [seesEveryRole, roles, excludeSlug, descendantCandidates],
+  );
 
-  const roles = data?.data ?? [];
+  // A descendant may not create a standalone role, so the field starts on its first own role.
+  const firstCandidate = candidates[0];
+  useEffect(() => {
+    if (isDescendant && !value && firstCandidate) onChange(firstCandidate);
+  }, [isDescendant, value, firstCandidate, onChange]);
+
+  if (!scope) return null;
+
   const nameBySlug = new Map(roles.map((role) => [role.slug, role.name]));
-  const candidates = isSystemUser
-    ? roles.map((role) => role.slug).filter((slug) => slug !== excludeSlug)
-    : restrictedCandidates;
   const current = value ?? "";
   // A parent set earlier by someone else must still show, even if this caller could not pick it.
   const options = current && !candidates.includes(current) ? [...candidates, current] : candidates;
@@ -76,7 +93,7 @@ export const ManagedBySelect = ({
           </SelectTrigger>
         </FormControl>
         <SelectContent>
-          <SelectItem value={NO_PARENT}>No one</SelectItem>
+          {!isDescendant && <SelectItem value={NO_PARENT}>No one</SelectItem>}
           {options.map((slug) => (
             <SelectItem key={slug} value={slug}>
               {nameBySlug.get(slug) ?? slug}
@@ -84,7 +101,11 @@ export const ManagedBySelect = ({
           ))}
         </SelectContent>
       </Select>
-      <FormDescription>Holders of this role can manage the new role.</FormDescription>
+      <FormDescription>
+        {isDescendant
+          ? "Required. The role sits below your role, so you can manage it."
+          : "Holders of the chosen role can manage this role. No one = standalone."}
+      </FormDescription>
     </FormItem>
   );
 };
