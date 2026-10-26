@@ -51,6 +51,12 @@ vi.mock("./role-details-state", () => ({
   RoleDetailsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useRoleDetailsStore: (selector: (s: StoreShape) => unknown) => selector(h.store as StoreShape),
 }));
+const EDIT_PERMISSIONS = "Edit Permissions";
+const grantBlock = vi.hoisted(() => ({ reason: undefined as string | undefined }));
+vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => ({
+  useGrantScope: () => ({ roleEditBlock: () => grantBlock.reason }),
+}));
+vi.mock("@/components/ui-kits/tooltip/tooltip", () => import("@/test-utils/__mocks__/tooltip.mock"));
 vi.mock("@blocks-idp/iam/hooks/use-roles", () => ({
   useSetRoles: () => ({ isPending: h.isPending, mutateAsync: h.mutateAsync }),
 }));
@@ -113,7 +119,7 @@ describe("RoleDetailsContainer", () => {
   it("shows the skeleton until the store is initialized", () => {
     h.store = baseStore({ isInitialized: false });
     render(<RoleDetailsContainer />);
-    expect(screen.queryByText("Edit Permissions")).toBeNull();
+    expect(screen.queryByText(EDIT_PERMISSIONS)).toBeNull();
     expect(screen.queryByTestId("panel")).toBeNull();
   });
 
@@ -122,8 +128,17 @@ describe("RoleDetailsContainer", () => {
     h.store = store;
     render(<RoleDetailsContainer />);
     expect(screen.getByTestId("panel")).toBeTruthy();
-    await userEvent.click(screen.getByText("Edit Permissions"));
+    await userEvent.click(screen.getByText(EDIT_PERMISSIONS));
     expect(store.changeEditMode).toHaveBeenCalledWith(true);
+  });
+
+  it("locks Edit Permissions with the reason when the caller may not change the role", () => {
+    grantBlock.reason = "Comes from default. Only the system user can change it.";
+    h.store = baseStore();
+    render(<RoleDetailsContainer />);
+    expect(screen.getByRole("button", { name: EDIT_PERMISSIONS })).toHaveProperty("disabled", true);
+    expect(screen.getAllByText("Comes from default. Only the system user can change it.").length).toBeGreaterThan(0);
+    grantBlock.reason = undefined;
   });
 
   it("shows Discard and Save actions in edit mode and discards on demand", async () => {

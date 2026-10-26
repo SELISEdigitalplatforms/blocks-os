@@ -46,24 +46,20 @@ export const useGetPermissions = (
 const NO_PERMISSIONS = { data: [], errors: null, totalCount: 0 };
 
 /**
- * The permissions the caller may grant (the ones they hold). Same query as `useGetPermissions`;
- * for a limited caller the list is narrowed to the held resources on the server side.
+ * The permissions the caller may give directly (to a user, a client credential or SSO defaults).
+ * Same query as `useGetPermissions`. The system user and a top user may give any; a descendant
+ * none -- it gives power through roles below it.
  */
 export const useGetGrantablePermissions = (
   options: IPermissionFilter,
   { enabled = true }: { enabled?: boolean } = {},
 ) => {
-  const { isLoading: isScopeLoading, isRestricted, heldPermissions } = useGrantScope();
-  // An empty list means "no filter" to the server, so "nothing to grant" must not be sent.
-  const nothingToGrant = isRestricted && heldPermissions.length === 0;
-  const scoped: IPermissionFilter = isRestricted
-    ? { ...options, resources: heldPermissions }
-    : options;
-  const query = useGetPermissions(scoped, {
-    enabled: enabled && !isScopeLoading && !nothingToGrant,
+  const { isLoading: isScopeLoading, isDescendant } = useGrantScope();
+  const query = useGetPermissions(options, {
+    enabled: enabled && !isScopeLoading && !isDescendant,
   });
 
-  if (nothingToGrant) {
+  if (isDescendant) {
     return { ...query, data: NO_PERMISSIONS, isLoading: false };
   }
   return { ...query, isLoading: query.isLoading || (enabled && isScopeLoading) };

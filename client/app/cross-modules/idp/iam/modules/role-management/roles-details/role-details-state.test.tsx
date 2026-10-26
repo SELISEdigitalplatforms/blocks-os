@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const { useGetRoleById, getPermissions, scope } = vi.hoisted(() => ({
   useGetRoleById: vi.fn(),
   getPermissions: vi.fn(),
-  scope: { isRestricted: false, heldPermissions: [] as string[] },
+  scope: { isDescendant: false, rolePermissionCap: [] as string[] },
 }));
 
 vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => ({
@@ -62,8 +62,8 @@ const renderStore = () =>
 describe("role-details-state store", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    scope.isRestricted = false;
-    scope.heldPermissions = [];
+    scope.isDescendant = false;
+    scope.rolePermissionCap = [];
     useGetRoleById.mockReturnValue({ data: { data: { slug: "admin", organizationId: "org-1" } } });
     getPermissions.mockResolvedValue({ data: permissions });
   });
@@ -179,8 +179,8 @@ describe("role-details-state store", () => {
 
   describe("a caller limited to the permissions they hold", () => {
     it("changes only the permissions they hold", async () => {
-      scope.isRestricted = true;
-      scope.heldPermissions = ["users:view"];
+      scope.isDescendant = true;
+      scope.rolePermissionCap = ["users:view"];
       const { result } = renderStore();
       await waitFor(() => expect(result.current.isInitialized).toBe(true));
       await waitFor(() => expect(result.current.grantableResources?.has("users:view")).toBe(true));
@@ -197,8 +197,8 @@ describe("role-details-state store", () => {
     });
 
     it("skips unheld permissions in a group change", async () => {
-      scope.isRestricted = true;
-      scope.heldPermissions = [];
+      scope.isDescendant = true;
+      scope.rolePermissionCap = [];
       const { result } = renderStore();
       await waitFor(() => expect(result.current.isInitialized).toBe(true));
       await waitFor(() => expect(result.current.grantableResources).not.toBeNull());

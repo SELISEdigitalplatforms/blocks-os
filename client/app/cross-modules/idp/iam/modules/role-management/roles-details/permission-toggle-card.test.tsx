@@ -29,7 +29,7 @@ const permission = (over: Record<string, unknown> = {}) =>
     ...over,
   }) as never;
 
-const GRANT_REASON = "You can grant only permissions you hold.";
+const GRANT_REASON = "Your role doesn't have this permission.";
 
 describe("PermissionToggleCard", () => {
   beforeEach(() => {

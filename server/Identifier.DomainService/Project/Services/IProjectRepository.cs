@@ -45,7 +45,6 @@ namespace DomainService.Projects
         Task UpdateRepoResourceInfoAsync(AddAssetRequest request);
         Task ArchiveRepoResourceAsync(DeleteAssetRequest request);
         Task SaveRepoInfoAsync(Tenant project, List<Resource>? resources);
-        Task UpdateIamConfigurationAsync(Tenant project);
         Task<BlocksGuid> GetBlocksGuidAsync(string tenantGroupId);
         Task<BaseResponse> SaveJWTClaimsAsync(ThirdPartyJWTClaims mapper);
         Task<ThirdPartyJWTClaims> GetThirdPartyJWTClaimsAsync(string itemId);

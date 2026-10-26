@@ -17,11 +17,15 @@ export const useGrantScope = () => ({
   scope: undefined,
   isLoading: false,
   isRestricted: false,
+  isTopUser: false,
+  isDescendant: false,
   assignableRoles: [] as string[],
-  heldPermissions: [] as string[],
+  rolePermissionCap: [] as string[],
   managedByCandidates: [] as string[],
   canAssignRole: () => true,
-  canGrantPermission: () => true,
+  canPutOnRole: () => true,
+  canGrantDirectPermission: true,
+  roleEditBlock: () => undefined,
 });
 
 export const useSystemOnlyReason = (): string | undefined => grant.systemOnlyReason;
