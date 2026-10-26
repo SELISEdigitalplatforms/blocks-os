@@ -42,32 +42,28 @@ export async function clientSideRequiredValidationFlow(page: Page) {
 let signupLinkClientReady = false;
 
 /**
- * The Client select only offers active, non-device-flow OIDC clients, and a new project has
- * none. Make sure one exists rather than relying on a client another spec happened to leave
- * behind. Checked once per worker; the shared project is deleted at teardown.
+ * The Client select only lets you pick active, non-device-flow OIDC clients registered as a
+ * Blocks OIDC identity provider, and a new project has none. The client list does not show the
+ * registration, so create one rather than relying on a client another spec happened to leave
+ * behind. Once per worker; the shared project is deleted at teardown.
  */
 export async function ensureSignupLinkClientFlow(page: Page) {
   if (signupLinkClientReady) return;
   await navigateToOidcFlow(page);
-  // Case-sensitive, so the "Inactive" badge does not count.
-  const eligible = page
-    .getByRole("row")
-    .filter({ hasText: /Active/ })
-    .filter({ hasNotText: "Device Flow" });
-  if ((await eligible.count()) === 0) {
-    await createBasicOidcClientFlow(page, `E2E Signup Link Client ${Date.now()}`);
-    await expect(eligible.first()).toBeVisible({ timeout: 15_000 });
-  }
+  const name = `E2E Signup Link Client ${Date.now()}`;
+  await createBasicOidcClientFlow(page, name, { registerAsIdentityProvider: true });
+  await expect(page.getByRole("row").filter({ hasText: name })).toBeVisible({ timeout: 15_000 });
   signupLinkClientReady = true;
 }
 
 /**
- * Picks the first eligible OIDC client through the Client select, then its first registered
- * redirect URI when the redirect select is shown and still empty.
+ * Picks the first OIDC client the Client select lets you pick (unregistered ones are listed
+ * but disabled), then its first registered redirect URI when the redirect select is shown and
+ * still empty.
  */
 export async function chooseFirstClientFlow(page: Page) {
   await page.getByTestId("client-select").click();
-  await page.getByRole("option").first().click();
+  await page.getByRole("option", { disabled: false }).first().click();
   const redirect = page.getByTestId("redirect-select");
   if (await redirect.isVisible().catch(() => false)) {
     if ((await redirect.textContent())?.includes("Select a registered redirect URI")) {

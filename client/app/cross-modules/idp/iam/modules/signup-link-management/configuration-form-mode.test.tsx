@@ -40,6 +40,15 @@ vi.mock("@blocks-idp/authentication/hooks/use-auth-oidc", () => ({
           ],
           isActive: true,
           isDeviceFlowClient: false,
+          registerAsIdentityProvider: true,
+        },
+        {
+          itemId: "unregistered-app",
+          clientDisplayName: "Unregistered App",
+          redirectUris: ["https://unregistered.example.com/callback"],
+          isActive: true,
+          isDeviceFlowClient: false,
+          registerAsIdentityProvider: false,
         },
         {
           itemId: "device-client",
@@ -125,6 +134,25 @@ describe("ConfigurationFormFields mode", () => {
     // so neither is a valid target for a signup link.
     expect(screen.queryByRole("option", { name: "Device Flow" })).toBeNull();
     expect(screen.queryByRole("option", { name: "Retired" })).toBeNull();
+  });
+
+  it("greys out a client that is not registered as a Blocks OIDC identity provider", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    await user.click(screen.getByTestId("client-select"));
+    await screen.findByRole("option", { name: "Partner Portal" });
+
+    // Shown, so the author can see why their client is missing, but not pickable: IAM refuses
+    // it because a link could never finish through it.
+    const option = screen
+      .getAllByRole("option")
+      .find((o) => o.textContent?.startsWith("Unregistered App"));
+    expect(option?.textContent).toContain("Register as a Blocks OIDC identity provider first");
+    expect(option?.getAttribute("aria-disabled")).toBe("true");
+    expect(
+      screen.getByRole("option", { name: "Partner Portal" }).getAttribute("aria-disabled"),
+    ).not.toBe("true");
   });
 
   it("lists the chosen client's registered redirect URIs", async () => {
