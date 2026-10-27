@@ -49,19 +49,15 @@ namespace Configuration.DomainService.Shared.Services
 
             var stored = await _configurationRepository.GetNotificationConfigurationByNameAsync(configuration.Name);
             var storedIsBuiltIn = stored?.IsBuiltIn == true;
-            var requestsBuiltIn = configuration.IsBuiltIn == true;
+            var scopeChange = ChangesScope(stored, configuration);
 
-            // The tenant lookup runs only when a built-in config is involved, so custom saves cost what they did.
-            var isRoot = (storedIsBuiltIn || requestsBuiltIn) && IsRootCaller();
+            // The tenant lookup runs only when a built-in config or a scope change is involved, so custom saves cost what they did.
+            var isRoot = (storedIsBuiltIn || configuration.IsBuiltIn == true || scopeChange) && IsRootCaller();
 
-            if (!storedIsBuiltIn && requestsBuiltIn && !isRoot)
+            var refusal = RefusalForNonRoot(stored, configuration, isRoot, scopeChange);
+            if (refusal is not null)
             {
-                return Refused(nameof(configuration.IsBuiltIn), Constants.OnlyRootTenantCanManageBuiltInNotificationConfiguration);
-            }
-
-            if (storedIsBuiltIn && !isRoot && ChangesReadOnlyField(stored!, configuration))
-            {
-                return Refused(nameof(configuration.IsBuiltIn), Constants.BuiltInNotificationConfigurationIsReadOnly);
+                return refusal;
             }
 
             var repoConfig = Map(stored, configuration, isRoot);
@@ -117,6 +113,34 @@ namespace Configuration.DomainService.Shared.Services
             return await PublishBuiltInChangeAsync(NotificationConfigurationChangeAction.Delete, stored);
         }
 
+        /// <summary>Root-only changes: a new built-in flag, a scope change, or any read-only field of a stored built-in.</summary>
+        private static BaseResponse? RefusalForNonRoot(NotificationConfiguration? stored, SaveNotificationConfigurationRequest configuration, bool isRoot, bool scopeChange)
+        {
+            if (isRoot)
+            {
+                return null;
+            }
+
+            if (scopeChange)
+            {
+                return Refused(nameof(configuration.Scope), Constants.OnlyRootTenantCanManageBuiltInNotificationConfiguration);
+            }
+
+            if (stored?.IsBuiltIn != true)
+            {
+                return configuration.IsBuiltIn == true
+                    ? Refused(nameof(configuration.IsBuiltIn), Constants.OnlyRootTenantCanManageBuiltInNotificationConfiguration)
+                    : null;
+            }
+
+            return ChangesReadOnlyField(stored, configuration)
+                ? Refused(nameof(configuration.IsBuiltIn), Constants.BuiltInNotificationConfigurationIsReadOnly)
+                : null;
+        }
+
+        private static bool ChangesScope(NotificationConfiguration? stored, SaveNotificationConfigurationRequest request) =>
+            request.Scope.HasValue && request.Scope.Value != (stored?.Scope ?? NotificationScope.App);
+
         private static BaseResponse Refused(string field, string errorKey) => new()
         {
             IsSuccess = false,
@@ -124,7 +148,7 @@ namespace Configuration.DomainService.Shared.Services
         };
 
         /// <summary>
-        /// A built-in config is read-only for a non-root tenant except for <c>IsDisabled</c>. The portal re-sends
+        /// A built-in config is read-only for a non-root tenant except for <c>IsDisabled</c> and <c>Audience</c>. The portal re-sends
         /// every field, so a field sent with the stored value is not a change. Fields left out (null) are not a change.
         /// </summary>
         private static bool ChangesReadOnlyField(NotificationConfiguration stored, SaveNotificationConfigurationRequest request)
@@ -159,6 +183,9 @@ namespace Configuration.DomainService.Shared.Services
             // Null = not sent = keep the stored value. Only the root tenant ever sets IsBuiltIn; the read-only check
             // above has already refused any other field change a non-root caller sent for a built-in config.
             if (isRoot && configuration.IsBuiltIn.HasValue) repoConfig.IsBuiltIn = configuration.IsBuiltIn.Value;
+            if (isRoot && configuration.Scope.HasValue) repoConfig.Scope = configuration.Scope.Value;
+            // An audience with no rules and not "everyone" is a clear: it is stored as null.
+            if (configuration.Audience is not null) repoConfig.Audience = configuration.Audience.IsSet() ? configuration.Audience : null;
             if (configuration.IsDisabled.HasValue) repoConfig.IsDisabled = configuration.IsDisabled.Value;
             if (configuration.Description is not null) repoConfig.Description = NullIfEmpty(configuration.Description);
             if (configuration.Importance.HasValue) repoConfig.Importance = configuration.Importance.Value;

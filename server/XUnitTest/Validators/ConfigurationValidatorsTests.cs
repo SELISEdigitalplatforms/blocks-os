@@ -1,4 +1,6 @@
-﻿using System.Threading;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Configuration.DomainService.Mail.RequestModel;
 using Configuration.DomainService.Mail.Validators;
@@ -662,6 +664,134 @@ namespace XUnitTest.Validators
             var result = await Validator().ValidateAsync(request);
 
             result.IsValid.Should().BeFalse();
+        }
+
+        private static SaveNotificationConfigurationRequest WithAudience(NotificationAudience audience)
+        {
+            var request = Valid();
+            request.Audience = audience;
+            return request;
+        }
+
+        private async Task<FluentValidation.Results.ValidationResult> ValidateAsync(SaveNotificationConfigurationRequest request)
+        {
+            _repo.Setup(r => r.GetNotificationConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync((NotificationConfiguration?)null);
+            return await Validator().ValidateAsync(request);
+        }
+
+        [Fact]
+        public async Task Audience_WithinLimits_IsValid()
+        {
+            var audience = new NotificationAudience
+            {
+                Match = NotificationAudienceMatch.All,
+                UserIds = Enumerable.Range(0, 500).Select(i => "u" + i).ToList(),
+                OrganizationIds = Enumerable.Range(0, 50).Select(i => "o" + i).ToList(),
+                Roles = new List<string> { new string('r', 200) },
+                Permissions = new List<string> { "blocks-iam::iam::users" },
+                Filters = Enumerable.Range(0, 20).Select(i => new Blocks.Genesis.Entities.Logic.SubscriptionFilter { Context = "c" + i }).ToList()
+            };
+
+            (await ValidateAsync(WithAudience(audience))).IsValid.Should().BeTrue();
+        }
+
+        [Theory]
+        [InlineData("UserIds", 501)]
+        [InlineData("OrganizationIds", 51)]
+        [InlineData("Roles", 51)]
+        [InlineData("Permissions", 51)]
+        [InlineData("Filters", 21)]
+        public async Task Audience_OverTheListLimit_Fails(string list, int count)
+        {
+            var audience = new NotificationAudience();
+            var items = Enumerable.Range(0, count).Select(i => "x" + i).ToList();
+            switch (list)
+            {
+                case "UserIds": audience.UserIds = items; break;
+                case "OrganizationIds": audience.OrganizationIds = items; break;
+                case "Roles": audience.Roles = items; break;
+                case "Permissions": audience.Permissions = items; break;
+                default: audience.Filters = items.Select(c => new Blocks.Genesis.Entities.Logic.SubscriptionFilter { Context = c }).ToList(); break;
+            }
+
+            var result = await ValidateAsync(WithAudience(audience));
+
+            result.Errors.Should().Contain(e => e.PropertyName.StartsWith("Audience." + list));
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("   ")]
+        [InlineData(null)]
+        public async Task Audience_EmptyItem_Fails(string? item)
+        {
+            var result = await ValidateAsync(WithAudience(new NotificationAudience { Roles = new List<string> { item! } }));
+
+            result.IsValid.Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task Audience_TooLongItem_Fails()
+        {
+            var result = await ValidateAsync(WithAudience(new NotificationAudience { Permissions = new List<string> { new string('p', 201) } }));
+
+            result.IsValid.Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task Audience_FilterWithoutContext_Fails()
+        {
+            var audience = new NotificationAudience
+            {
+                Filters = new List<Blocks.Genesis.Entities.Logic.SubscriptionFilter> { new() { Context = " ", Value = "v" } }
+            };
+
+            (await ValidateAsync(WithAudience(audience))).IsValid.Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task Audience_FilterFieldTooLong_Fails()
+        {
+            var audience = new NotificationAudience
+            {
+                Filters = new List<Blocks.Genesis.Entities.Logic.SubscriptionFilter> { new() { Context = "c", Value = new string('v', 201) } }
+            };
+
+            (await ValidateAsync(WithAudience(audience))).IsValid.Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task Audience_EveryoneWithRules_Fails()
+        {
+            var result = await ValidateAsync(WithAudience(new NotificationAudience { EveryoneInTenant = true, Roles = new List<string> { "admin" } }));
+
+            result.Errors.Should().Contain(e => e.ErrorMessage.Contains("EveryoneInTenant"));
+        }
+
+        [Fact]
+        public async Task Audience_EveryoneAlone_AndEmptyClear_AreValid()
+        {
+            (await ValidateAsync(WithAudience(new NotificationAudience { EveryoneInTenant = true }))).IsValid.Should().BeTrue();
+            (await ValidateAsync(WithAudience(new NotificationAudience()))).IsValid.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task Audience_NullLists_FailWithoutThrowing()
+        {
+            var result = await ValidateAsync(WithAudience(new NotificationAudience { UserIds = null!, Filters = null! }));
+
+            result.IsValid.Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task Audience_InvalidMatchOrScope_Fails()
+        {
+            (await ValidateAsync(WithAudience(new NotificationAudience { Match = (NotificationAudienceMatch)9 }))).IsValid.Should().BeFalse();
+
+            var request = Valid();
+            request.Scope = (NotificationScope)7;
+            (await ValidateAsync(request)).Errors.Should().Contain(e => e.PropertyName == "Scope");
         }
     }
 }

@@ -17,9 +17,11 @@ namespace Configuration.DomainService.Notification.Propagation
     /// <remarks>
     /// Rules per target:
     /// <list type="bullet">
-    /// <item><description>Missing: insert a copy, enabled.</description></item>
-    /// <item><description>Existing built-in: overwrite every field except <c>IsDisabled</c>, <c>ItemId</c>,
-    /// <c>CreatedDate</c> and <c>CreatedBy</c>.</description></item>
+    /// <item><description>Missing: insert a copy, enabled, with no audience.</description></item>
+    /// <item><description>Existing built-in: overwrite every field except <c>IsDisabled</c>, <c>Audience</c>,
+    /// <c>ItemId</c>, <c>CreatedDate</c> and <c>CreatedBy</c>.</description></item>
+    /// <item><description>Console scope: the seed database gets it like any other row; a tenant database never gets
+    /// an insert, and loses its existing built-in copy unless the tenant disabled it or set an audience.</description></item>
     /// <item><description>Existing custom config with that name: leave it, count a conflict.</description></item>
     /// <item><description>Delete: remove the target only when it is built-in.</description></item>
     /// </list>
@@ -194,7 +196,7 @@ namespace Configuration.DomainService.Notification.Propagation
                 var database = OpenDatabase(target.DbConnectionString, target.DbName);
                 var outcome = desired is null
                     ? await ApplyDeleteAsync(database, name)
-                    : await ApplyUpsertAsync(database, desired);
+                    : await ApplyUpsertAsync(database, desired, target.TargetId == SeedTargetId);
 
                 results.Add(new NotificationPropagationResult { TargetId = target.TargetId, Outcome = outcome });
             }
@@ -267,7 +269,7 @@ namespace Configuration.DomainService.Notification.Propagation
                 .Find(Builders<NotificationConfiguration>.Filter.Eq(c => c.Name, name))
                 .FirstOrDefaultAsync();
 
-        private static async Task<NotificationPropagationOutcome> ApplyUpsertAsync(IMongoDatabase database, NotificationConfiguration source)
+        private static async Task<NotificationPropagationOutcome> ApplyUpsertAsync(IMongoDatabase database, NotificationConfiguration source, bool isSeedTarget)
         {
             var (kv, _) = await ReadKeyValueAsync(database, source.Name);
             var legacyExists = await LegacyExistsAsync(database);
@@ -280,6 +282,15 @@ namespace Configuration.DomainService.Notification.Propagation
             }
 
             var existing = kv ?? legacy;
+
+            // Console configs stay in the root tenant and the seed. A tenant that disabled one or set its own audience keeps it.
+            if (source.Scope == NotificationScope.Console && !isSeedTarget && !KeepsConsoleCopy(existing))
+            {
+                return existing is null
+                    ? NotificationPropagationOutcome.NotPresent
+                    : await ApplyDeleteAsync(database, source.Name);
+            }
+
             var copy = Clone(source);
             if (existing is not null)
             {
@@ -287,10 +298,12 @@ namespace Configuration.DomainService.Notification.Propagation
                 copy.CreatedDate = existing.CreatedDate;
                 copy.CreatedBy = existing.CreatedBy;
                 copy.IsDisabled = existing.IsDisabled;
+                copy.Audience = existing.Audience;
             }
             else
             {
                 copy.IsDisabled = false;
+                copy.Audience = null;
             }
 
             if (legacyExists)
@@ -306,6 +319,9 @@ namespace Configuration.DomainService.Notification.Propagation
 
             return existing is null ? NotificationPropagationOutcome.Inserted : NotificationPropagationOutcome.Updated;
         }
+
+        private static bool KeepsConsoleCopy(NotificationConfiguration? existing) =>
+            existing is not null && (existing.IsDisabled || existing.Audience?.IsSet() == true);
 
         private static async Task<NotificationPropagationOutcome> ApplyDeleteAsync(IMongoDatabase database, string name)
         {

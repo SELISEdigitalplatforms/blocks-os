@@ -390,5 +390,26 @@ namespace XUnitTest.Integration
             rows.Single(r => r["Key"] == "mfa-config")["CreatedBy"].AsString.Should().Be("creator");
             rows.Single(r => r["Key"] == notificationKey)["Value"].AsString.Should().Be("changed by the project");
         }
+
+        [Fact]
+        public async Task KeyValueSeedCopier_SkipsConsoleScopeNotificationConfigs()
+        {
+            var suffix = Guid.NewGuid().ToString("N");
+            var seed = _fixture.DbContextProvider.GetDatabase("", "kvseed-" + suffix[..8]);
+            var projectDb = _fixture.DbContextProvider.GetDatabase("", "kvproj-" + suffix[..8]);
+            BsonDocument Row(string key, BsonValue value) =>
+                new() { { "_id", Guid.NewGuid().ToString("N") }, { "Key", key }, { "Value", value }, { "Tags", new BsonArray() } };
+            await seed.GetCollection<BsonDocument>(KeyValueSeedCopier.CollectionName).InsertManyAsync(new[]
+            {
+                Row("notification-config:app-" + suffix, new BsonDocument("Name", "app")),
+                Row("notification-config:app0-" + suffix, new BsonDocument { { "Name", "app0" }, { "Scope", 0 } }),
+                Row("notification-config:console-" + suffix, new BsonDocument { { "Name", "console" }, { "Scope", 1 } }),
+            });
+
+            var inserted = await KeyValueSeedCopier.CopyAsync(seed, projectDb, "creator");
+
+            inserted.Should().Be(2);
+            (await KeysIn(projectDb, suffix)).Should().BeEquivalentTo("notification-config:app-" + suffix, "notification-config:app0-" + suffix);
+        }
     }
 }

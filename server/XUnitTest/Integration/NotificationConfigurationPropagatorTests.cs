@@ -353,6 +353,76 @@ namespace XUnitTest.Integration
         }
 
         [Fact]
+        public async Task Upsert_KeepsTheTenantsOwnAudience_AndInsertsWithNone()
+        {
+            await SeedRegistryAsync();
+            var root = BuiltIn("v2");
+            root.Audience = new NotificationAudience { EveryoneInTenant = true };
+            await PutKvAsync(RootTenantDb, root);
+            var tenantCopy = BuiltIn("v1");
+            tenantCopy.Audience = new NotificationAudience { Roles = new List<string> { "admin" } };
+            await PutKvAsync(TenantA, tenantCopy);
+
+            await Propagator().PropagateAsync(Event());
+
+            var kept = await GetKvAsync(TenantA);
+            kept!.Description.Should().Be("v2");
+            kept.Audience!.Roles.Should().Equal("admin");
+            kept.Audience.EveryoneInTenant.Should().BeFalse();
+            (await GetKvAsync(TenantB))!.Audience.Should().BeNull("a new tenant copy never takes the root audience");
+        }
+
+        [Fact]
+        public async Task ConsoleScope_IsInsertedIntoTheSeedOnly()
+        {
+            await SeedRegistryAsync();
+            var root = BuiltIn();
+            root.Scope = NotificationScope.Console;
+            await PutKvAsync(RootTenantDb, root);
+
+            var summary = await Propagator().PropagateAsync(Event());
+
+            (await GetKvAsync(SeedDb))!.Scope.Should().Be(NotificationScope.Console);
+            foreach (var db in new[] { TenantA, TenantB, TenantDisabled })
+            {
+                (await KvCountAsync(db)).Should().Be(0);
+            }
+            summary.Count(NotificationPropagationOutcome.Inserted).Should().Be(1);
+            summary.Count(NotificationPropagationOutcome.NotPresent).Should().Be(3);
+        }
+
+        [Fact]
+        public async Task ConsoleScope_DeletesTenantCopy_UnlessDisabledOrAudienceSet_AndNeverCustom()
+        {
+            await SeedRegistryAsync();
+            var root = BuiltIn();
+            root.Scope = NotificationScope.Console;
+            await PutKvAsync(RootTenantDb, root);
+            await PutKvAsync(TenantA, BuiltIn());
+            var disabled = BuiltIn();
+            disabled.IsDisabled = true;
+            await PutKvAsync(TenantB, disabled);
+            var withAudience = BuiltIn();
+            withAudience.Audience = new NotificationAudience { UserIds = new List<string> { "u1" } };
+            await PutKvAsync(TenantDisabled, withAudience);
+
+            var summary = await Propagator().PropagateAsync(Event());
+
+            (await KvCountAsync(TenantA)).Should().Be(0);
+            (await GetKvAsync(TenantB))!.IsDisabled.Should().BeTrue();
+            (await GetKvAsync(TenantDisabled))!.Audience!.UserIds.Should().Equal("u1");
+            summary.Count(NotificationPropagationOutcome.Deleted).Should().Be(1);
+
+            // A tenant's own custom config with the same name is never touched.
+            var custom = BuiltIn();
+            custom.IsBuiltIn = false;
+            await PutKvAsync(TenantA, custom);
+            var again = await Propagator().PropagateAsync(Event());
+            (await GetKvAsync(TenantA))!.IsBuiltIn.Should().BeFalse();
+            again.Count(NotificationPropagationOutcome.Conflict).Should().Be(1);
+        }
+
+        [Fact]
         public async Task IncompleteEvent_ChangesNothing()
         {
             var summary = await Propagator().PropagateAsync(new BuiltInNotificationConfigurationChangedEvent { Name = "", SourceTenantId = "ROOT" });

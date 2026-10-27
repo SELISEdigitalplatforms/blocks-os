@@ -22,6 +22,7 @@ import {
   notificationKinds,
   notificationTypes,
 } from "../constants/notification.constant";
+import { audienceSummary } from "../utils/notification-audience";
 import { getErrorMessage, isErrorWithErrors } from "@/lib/error";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import type { INotificationConfigRow } from "../models/notification-config.model";
@@ -49,6 +50,7 @@ const columns = [
   { key: "kind", label: "Kind" },
   { key: "sourceService", label: "Service" },
   { key: "notificationType", label: "Receiver" },
+  { key: "audience", label: "Who receives" },
   { key: "status", label: "Status" },
   { key: "actions", label: "" },
 ];
@@ -256,6 +258,7 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
                     )}
                   </TableCell>
                   <TableCell>{labelOf(notificationTypes, config.notificationType)}</TableCell>
+                  <TableCell>{audienceSummary(config.audience)}</TableCell>
                   <TableCell>
                     <span className="inline-flex items-center gap-1.5">
                       <span

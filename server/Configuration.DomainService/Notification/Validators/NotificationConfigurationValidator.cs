@@ -54,6 +54,16 @@ namespace Configuration.DomainService.Notification.Validators
 
             RuleFor(x => x.ConsumerAppNote)
                 .MaximumLength(2000).WithMessage("ConsumerAppNote must not exceed 2000 characters.");
+
+            RuleFor(x => x.Scope!.Value)
+                .IsInEnum().WithMessage("Invalid scope.")
+                .OverridePropertyName("Scope")
+                .When(x => x.Scope.HasValue);
+
+            RuleFor(x => x.Audience!)
+                .SetValidator(new NotificationAudienceValidator())
+                .OverridePropertyName("Audience")
+                .When(x => x.Audience is not null);
         }
 
         private async Task<bool> IsUniqueNameAsync(string name, CancellationToken cancellationToken)

@@ -68,6 +68,23 @@ const configurations = [
     channelToNotify: 1,
     notificationType: 2,
     enablePersistence: false,
+    audience: {
+      everyoneInTenant: false,
+      match: 0,
+      userIds: ["u-1"],
+      organizationIds: [],
+      roles: ["admin"],
+      permissions: [],
+      filters: [],
+    },
+  },
+  {
+    itemId: "c-3",
+    name: "Everyone note",
+    channelToNotify: 0,
+    notificationType: 3,
+    enablePersistence: false,
+    audience: { everyoneInTenant: true },
   },
 ] as unknown as INotificationConfigRow[];
 
@@ -82,7 +99,7 @@ describe("NotificationConfigurationList", () => {
     h.importance = "";
     h.service = "";
     h.useGetNotificationConfigs.mockReturnValue({
-      data: { configurations, totalCount: 2 },
+      data: { configurations, totalCount: 3 },
       isLoading: false,
       isFetching: false,
     });
@@ -99,7 +116,14 @@ describe("NotificationConfigurationList", () => {
     expect(screen.getByText(REALTIME_ALERTS)).toBeTruthy();
     expect(screen.getByText("Broadcast")).toBeTruthy();
     expect(screen.getByText("Users")).toBeTruthy();
-    expect(screen.getAllByText("On")).toHaveLength(2);
+    expect(screen.getAllByText("On")).toHaveLength(3);
+  });
+
+  it("shows who receives each notification: code decides, everyone, or the rule count", () => {
+    render(<NotificationConfigurationList />, { wrapper });
+    expect(screen.getByText("Code decides")).toBeTruthy();
+    expect(screen.getByText("Rules (2)")).toBeTruthy();
+    expect(screen.getByText("Everyone")).toBeTruthy();
   });
 
   it("opens the edit modal from the row actions", async () => {

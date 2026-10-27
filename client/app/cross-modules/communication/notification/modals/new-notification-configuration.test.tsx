@@ -8,6 +8,9 @@ import type { INotificationConfigRow } from "../models/notification-config.model
 const NAME_PLACEHOLDER = "Enter name";
 const METHOD_PLACEHOLDER = "Enter notify method";
 const SAVE_CHANGES = "Save changes";
+const CHECKED = "true";
+const ARIA_CHECKED = "aria-checked";
+const SENDER_DECIDES = "Code that sends it decides";
 
 const h = vi.hoisted(() => ({
   mutateAsync: vi.fn(),
@@ -21,6 +24,15 @@ vi.mock("@seliseblocks/genesis-os", () => ({
 }));
 vi.mock("../hooks/use-notification-config", () => ({
   useSaveNotificationConfig: () => ({ mutateAsync: h.mutateAsync, isPending: h.isPending }),
+}));
+vi.mock("../hooks/use-audience-options", () => ({
+  useAudienceOptions: (kind: string) => ({
+    isLoading: false,
+    options: [
+      { value: `${kind}-1`, label: `${kind} one` },
+      { value: `${kind}-2`, label: `${kind} two` },
+    ],
+  }),
 }));
 vi.mock("@/hooks/use-toast", () => ({ toast: h.toast, showErrorToast: h.showErrorToast }));
 
@@ -225,7 +237,7 @@ describe("NewNotificationConfiguration", () => {
         notifyMethod: "legacy-method",
       } as INotificationConfigRow);
       expect(screen.queryByText("Built-in")).toBeNull();
-      expect(screen.getByRole("switch").getAttribute("aria-checked")).toBe("true");
+      expect(screen.getByRole("switch").getAttribute(ARIA_CHECKED)).toBe(CHECKED);
       expect((screen.getByRole("switch") as HTMLButtonElement).disabled).toBe(false);
       expect((screen.getByPlaceholderText(METHOD_PLACEHOLDER) as HTMLInputElement).disabled).toBe(
         false,
@@ -275,6 +287,8 @@ describe("NewNotificationConfiguration", () => {
         "consumerAppRecommendation",
         "consumerAppNote",
         "isBuiltIn",
+        "scope",
+        "audience",
       ]) {
         expect(payload).not.toHaveProperty(key);
       }
@@ -406,6 +420,167 @@ describe("NewNotificationConfiguration", () => {
         ),
       );
       expect(h.showErrorToast).not.toHaveBeenCalled();
+    });
+
+    describe("who receives", () => {
+      const WHO = "Only these people";
+      const saveAndGet = async (user: ReturnType<typeof userEvent.setup>, label = "Save") => {
+        await user.click(screen.getByRole("button", { name: label }));
+        await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+        return h.mutateAsync.mock.calls[0][0];
+      };
+
+      it("starts on 'Code that sends it decides' and sends no audience", async () => {
+        const user = userEvent.setup();
+        renderModal();
+        await fillValid(user);
+        expect(
+          (screen.getByRole("radio", { name: SENDER_DECIDES }) as HTMLButtonElement).getAttribute(
+            ARIA_CHECKED,
+          ),
+        ).toBe(CHECKED);
+        expect(await saveAndGet(user)).not.toHaveProperty("audience");
+      });
+
+      it("sends everyone in the project with the narrow-only hint", async () => {
+        const user = userEvent.setup();
+        renderModal();
+        await fillValid(user);
+        await user.click(screen.getByRole("radio", { name: "Everyone in this project" }));
+        expect(
+          screen.getByText("Code that sends this notification can only narrow this list."),
+        ).toBeTruthy();
+        const payload = await saveAndGet(user);
+        expect(payload.audience).toMatchObject({
+          everyoneInTenant: true,
+          userIds: [],
+          filters: [],
+        });
+      });
+
+      it("shows the rule pickers only for 'Only these people' and keeps Save off until a rule exists", async () => {
+        const user = userEvent.setup();
+        renderModal();
+        await fillValid(user);
+        expect(screen.queryByRole("button", { name: "Roles picker" })).toBeNull();
+        await user.click(screen.getByRole("radio", { name: WHO }));
+        for (const label of ["Users", "Organizations", "Roles", "Permissions"]) {
+          expect(screen.getByRole("button", { name: `${label} picker` })).toBeTruthy();
+        }
+        await waitFor(() =>
+          expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(
+            true,
+          ),
+        );
+      });
+
+      it("sends the picked roles and the match mode", async () => {
+        const user = userEvent.setup();
+        renderModal();
+        await fillValid(user);
+        await user.click(screen.getByRole("radio", { name: WHO }));
+        await user.click(screen.getByRole("combobox", { name: /^Match$/ }));
+        await user.click(await screen.findByRole("option", { name: "All rules" }));
+        await user.click(screen.getByRole("button", { name: "Roles picker" }));
+        await user.click(await screen.findByRole("checkbox", { name: /roles one/ }));
+        await user.keyboard("{Escape}");
+        const payload = await saveAndGet(user);
+        expect(payload.audience).toMatchObject({
+          everyoneInTenant: false,
+          match: 1,
+          roles: ["roles-1"],
+        });
+      });
+
+      it("adds and removes filter rows, needs a context, and stops at 20", async () => {
+        const user = userEvent.setup();
+        renderModal();
+        await fillValid(user);
+        await user.click(screen.getByRole("radio", { name: WHO }));
+        const add = screen.getByRole("button", { name: /Add filter/ }) as HTMLButtonElement;
+        await user.click(add);
+        await user.click(add);
+        expect(screen.getByLabelText("Filter 2 context")).toBeTruthy();
+        await user.click(screen.getByRole("button", { name: "Remove filter 1" }));
+        expect(screen.queryByLabelText("Filter 2 context")).toBeNull();
+        // A filter without a context is not valid.
+        await waitFor(() =>
+          expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(
+            true,
+          ),
+        );
+        await user.type(screen.getByLabelText("Filter 1 context"), "order");
+        await waitFor(() =>
+          expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(
+            false,
+          ),
+        );
+        for (let i = 0; i < 19; i++) await user.click(add);
+        expect(add.disabled).toBe(true);
+        expect(screen.getAllByLabelText(/Filter \d+ context/)).toHaveLength(20);
+      }, 30000);
+
+      it("prefills a stored audience and clears it when the user picks 'Code that sends it decides'", async () => {
+        const user = userEvent.setup();
+        edit(
+          builtIn({
+            audience: {
+              everyoneInTenant: false,
+              match: 0,
+              userIds: [],
+              organizationIds: [],
+              roles: ["admin"],
+              permissions: [],
+              filters: [],
+            },
+          }),
+        );
+        expect(screen.getByRole("radio", { name: WHO }).getAttribute(ARIA_CHECKED)).toBe(CHECKED);
+        await user.click(screen.getByRole("radio", { name: SENDER_DECIDES }));
+        const payload = await saveAndGet(user, SAVE_CHANGES);
+        expect(payload.audience).toEqual({
+          everyoneInTenant: false,
+          match: 0,
+          userIds: [],
+          organizationIds: [],
+          roles: [],
+          permissions: [],
+          filters: [],
+        });
+      });
+
+      it("lets a built-in change only its audience: nothing else is sent", async () => {
+        const user = userEvent.setup();
+        edit(builtIn());
+        await user.click(screen.getByRole("radio", { name: "Everyone in this project" }));
+        const payload = await saveAndGet(user, SAVE_CHANGES);
+        expect(payload.audience.everyoneInTenant).toBe(true);
+        for (const key of [
+          "isBuiltIn",
+          "scope",
+          "isDisabled",
+          "description",
+          "importance",
+          "kind",
+        ]) {
+          expect(payload).not.toHaveProperty(key);
+        }
+      });
+    });
+
+    describe("scope", () => {
+      it("shows the scope select only for a built-in and sends it when changed", async () => {
+        const user = userEvent.setup();
+        renderModal();
+        await fillValid(user);
+        expect(screen.queryByRole("combobox", { name: "Scope" })).toBeNull();
+        await user.click(screen.getByLabelText(/Built-in/));
+        await user.click(screen.getByRole("combobox", { name: "Scope" }));
+        await user.click(await screen.findByRole("option", { name: /Console/ }));
+        await user.click(screen.getByRole("button", { name: "Save" }));
+        await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+        expect(h.mutateAsync.mock.calls[0][0]).toMatchObject({ isBuiltIn: true, scope: 1 });
+      });
     });
   });
 });

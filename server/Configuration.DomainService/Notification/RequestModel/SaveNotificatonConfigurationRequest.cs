@@ -26,5 +26,11 @@ namespace Configuration.DomainService.Notification.RequestModel
         public string? SourceService { get; set; }
         public string? ConsumerAppRecommendation { get; set; }
         public string? ConsumerAppNote { get; set; }
+
+        /// <summary>Where a built-in is needed (App or Console). Root only. Null keeps the stored value.</summary>
+        public NotificationScope? Scope { get; set; }
+
+        /// <summary>Who may receive it. Null keeps the stored value. No rules and not EveryoneInTenant clears it.</summary>
+        public NotificationAudience? Audience { get; set; }
     }
 }

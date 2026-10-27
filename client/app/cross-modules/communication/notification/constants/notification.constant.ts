@@ -26,6 +26,28 @@ export const notificationKinds = [
   { label: "Access", value: 5 },
 ];
 
+export const notificationScopes = [
+  { label: "App (copied to every project)", value: 0 },
+  { label: "Console (root tenant only)", value: 1 },
+];
+
+export const AUDIENCE_MODE_SENDER = "sender";
+export const AUDIENCE_MODE_EVERYONE = "everyone";
+export const AUDIENCE_MODE_RULES = "rules";
+
+export const audienceMatches = [
+  { label: "Any rule", value: 0 },
+  { label: "All rules", value: 1 },
+];
+
+/** Same limits as the server validator. */
+export const AUDIENCE_MAX_USERS = 500;
+export const AUDIENCE_MAX_OTHER = 50;
+export const AUDIENCE_MAX_FILTERS = 20;
+export const AUDIENCE_MAX_TEXT = 200;
+
+export const AUDIENCE_HINT = "Code that sends this notification can only narrow this list.";
+
 export const NOTIFICATION_KIND_JOB = 1;
 export const NOTIFICATION_KIND_PROGRESS = 2;
 
@@ -44,7 +66,7 @@ export const NOTIFICATION_CONFIG_ERROR_MESSAGES: Record<string, string> = {
   Only_Root_Tenant_Can_Manage_Built_In_Notification_Configuration:
     "Only a root-tenant administrator can add, change or delete built-in notification configurations.",
   Built_In_Notification_Configuration_Is_Read_Only:
-    "This built-in configuration is read-only. You can only turn it on or off.",
+    "This built-in configuration is read-only. You can only turn it on or off and change who receives it.",
   Notification_Configuration_Cannot_Be_Disabled:
     "This configuration cannot be turned off: a page waits for its result.",
 };

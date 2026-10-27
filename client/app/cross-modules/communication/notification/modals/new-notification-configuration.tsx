@@ -12,10 +12,23 @@ import {
   NOTIFICATION_PROPAGATION_NOT_QUEUED,
   PROPAGATION_WARNING_MESSAGE,
   canNotificationConfigBeDisabled,
+  AUDIENCE_MAX_FILTERS,
+  AUDIENCE_MAX_OTHER,
+  AUDIENCE_MAX_TEXT,
+  AUDIENCE_MAX_USERS,
+  AUDIENCE_MODE_RULES,
   notificationImportances,
   notificationKinds,
+  notificationScopes,
   notificationTypes,
 } from "../constants/notification.constant";
+import { NotificationAudienceField } from "../components/notification-audience-field";
+import {
+  audienceToFormValues,
+  buildAudiencePayload,
+  emptyAudienceForm,
+  type IAudienceFormValues,
+} from "../utils/notification-audience";
 import { Switch } from "@/components/ui-kits/switch/switch";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
 import { Badge } from "@/components/ui-kits/badge/badge";
@@ -61,7 +74,8 @@ interface NewNotificationConfigurationProps {
   previousData?: INotificationConfigRow;
   isEdit: boolean;
 }
-type NotificationConfigFormValues = {
+type NotificationConfigFormValues = IAudienceFormValues & {
+  scope: number;
   name: string;
   channelToNotify: number;
   notificationType: number;
@@ -91,6 +105,8 @@ const emptyFormValues: NotificationConfigFormValues = {
   consumerAppNote: "",
   isBuiltIn: false,
   isEnabled: true,
+  scope: 0,
+  ...emptyAudienceForm,
 };
 
 // Rows from older servers lack the built-in fields: they read as custom and enabled.
@@ -108,6 +124,8 @@ const toFormValues = (data?: INotificationConfigRow): NotificationConfigFormValu
   consumerAppNote: data?.consumerAppNote ?? "",
   isBuiltIn: data?.isBuiltIn ?? false,
   isEnabled: !(data?.isDisabled ?? false),
+  scope: data?.scope ?? 0,
+  ...audienceToFormValues(data?.audience),
 });
 
 const TEXT_FIELDS = [
@@ -138,38 +156,72 @@ export const buildBuiltInPayload = (
   }
   if (data.isBuiltIn !== before.isBuiltIn) out.isBuiltIn = data.isBuiltIn;
   if (data.isEnabled !== before.isEnabled) out.isDisabled = !data.isEnabled;
+  // The server refuses a scope change from any tenant but the root; it is sent only when changed.
+  if (data.scope !== before.scope) out.scope = data.scope;
+  const audience = buildAudiencePayload(data, before);
+  if (audience) out.audience = audience;
   return out;
 };
 
-const schema = z.object({
-  name: z
-    .string()
-    .min(3, { message: "Configuration name must be at least 3 characters" })
-    .max(100, { message: "Configuration name must be at most 100 characters" })
-    .refine((val) => val.trim().length > 0, {
-      message: "Name cannot contain only whitespace",
-    }),
-  channelToNotify: z.number().min(0, { message: "Channel to notify is required" }),
-  notificationType: z.number().min(0, { message: "Notification type is required" }),
-  enablePersistence: z.boolean(),
-  notifyMethod: z
-    .string()
-    .min(3, { message: "Notify method must be at least 3 characters" })
-    .max(100, { message: "Notify method must be at most 100 characters" })
-    .refine((val) => val.trim().length > 0, {
-      message: "Notify method cannot contain only whitespace",
-    }),
-  description: z.string().max(1000, { message: "Description must be at most 1000 characters" }),
-  importance: z.number(),
-  kind: z.number(),
-  sourceService: z.string().max(100, { message: "Source service must be at most 100 characters" }),
-  consumerAppRecommendation: z
-    .string()
-    .max(1000, { message: "Recommendation must be at most 1000 characters" }),
-  consumerAppNote: z.string().max(1000, { message: "Note must be at most 1000 characters" }),
-  isBuiltIn: z.boolean(),
-  isEnabled: z.boolean(),
-});
+const schema = z
+  .object({
+    name: z
+      .string()
+      .min(3, { message: "Configuration name must be at least 3 characters" })
+      .max(100, { message: "Configuration name must be at most 100 characters" })
+      .refine((val) => val.trim().length > 0, {
+        message: "Name cannot contain only whitespace",
+      }),
+    channelToNotify: z.number().min(0, { message: "Channel to notify is required" }),
+    notificationType: z.number().min(0, { message: "Notification type is required" }),
+    enablePersistence: z.boolean(),
+    notifyMethod: z
+      .string()
+      .min(3, { message: "Notify method must be at least 3 characters" })
+      .max(100, { message: "Notify method must be at most 100 characters" })
+      .refine((val) => val.trim().length > 0, {
+        message: "Notify method cannot contain only whitespace",
+      }),
+    description: z.string().max(1000, { message: "Description must be at most 1000 characters" }),
+    importance: z.number(),
+    kind: z.number(),
+    sourceService: z
+      .string()
+      .max(100, { message: "Source service must be at most 100 characters" }),
+    consumerAppRecommendation: z
+      .string()
+      .max(1000, { message: "Recommendation must be at most 1000 characters" }),
+    consumerAppNote: z.string().max(1000, { message: "Note must be at most 1000 characters" }),
+    isBuiltIn: z.boolean(),
+    isEnabled: z.boolean(),
+    scope: z.number(),
+    audienceMode: z.enum(["sender", "everyone", "rules"]),
+    audienceMatch: z.number(),
+    audienceUserIds: z.array(z.string()).max(AUDIENCE_MAX_USERS),
+    audienceOrganizationIds: z.array(z.string()).max(AUDIENCE_MAX_OTHER),
+    audienceRoles: z.array(z.string()).max(AUDIENCE_MAX_OTHER),
+    audiencePermissions: z.array(z.string()).max(AUDIENCE_MAX_OTHER),
+    audienceFilters: z
+      .array(
+        z.object({
+          context: z.string().trim().min(1).max(AUDIENCE_MAX_TEXT),
+          actionName: z.string().max(AUDIENCE_MAX_TEXT),
+          value: z.string().max(AUDIENCE_MAX_TEXT),
+        }),
+      )
+      .max(AUDIENCE_MAX_FILTERS),
+  })
+  .refine(
+    (data) =>
+      data.audienceMode !== AUDIENCE_MODE_RULES ||
+      data.audienceUserIds.length +
+        data.audienceOrganizationIds.length +
+        data.audienceRoles.length +
+        data.audiencePermissions.length +
+        data.audienceFilters.length >
+        0,
+    { message: "Add at least one rule, or pick another option.", path: ["audienceMode"] },
+  );
 const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> = ({
   dialogTitle,
   onClose,
@@ -302,6 +354,7 @@ const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> 
                 </FormItem>
               )}
             />
+            <NotificationAudienceField projectKey={tenantId} />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField
                 name="notificationType"
@@ -474,6 +527,34 @@ const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> 
                 />
               )}
             </div>
+            {effectiveBuiltIn && (
+              <FormField
+                name="scope"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem className="sm:max-w-72">
+                    <FormLabel>Scope</FormLabel>
+                    <Select
+                      onValueChange={(val) => field.onChange(Number(val))}
+                      defaultValue={String(field.value)}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select scope" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {notificationScopes.map((item) => (
+                          <SelectItem key={item.value} value={String(item.value)}>
+                            {item.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+            )}
             {isEdit && !canBeDisabled && (
               <p className="-mt-2 text-xs text-medium-emphasis">{ALWAYS_ON_MESSAGE}</p>
             )}
