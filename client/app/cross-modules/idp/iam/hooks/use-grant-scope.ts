@@ -5,6 +5,9 @@ import { useAuthStore } from "@seliseblocks/genesis-os/store";
 import { grantScopeService } from "@blocks-idp/iam/services/grant-scope.service";
 import {
   getManagedByCandidates,
+  getRoleEditBlock,
+  getRolePermissionCap,
+  isScopeDescendant,
   isScopeRestricted,
   SYSTEM_ONLY_TOOLTIP,
 } from "@blocks-idp/iam/utils/grant-scope";
@@ -31,25 +34,37 @@ export const useGrantScope = () => {
 
   const scope = query.data;
   const isRestricted = isScopeRestricted(scope);
+  const isDescendant = isScopeDescendant(scope);
 
   return useMemo(() => {
     const assignableRoles = isRestricted ? scope.assignableRoles : [];
-    const heldPermissions = isRestricted ? scope.heldPermissions : [];
-    const managedByCandidates = isRestricted ? getManagedByCandidates(scope) : [];
+    const rolePermissionCap = isDescendant ? getRolePermissionCap(scope) : [];
+    const managedByCandidates = isDescendant ? getManagedByCandidates(scope) : [];
     const assignable = new Set(assignableRoles);
-    const held = new Set(heldPermissions);
+    const cap = new Set(rolePermissionCap);
     return {
       scope,
       /** Waiting for the first answer; screens that filter by scope hold their lists until then. */
       isLoading: Boolean(tenantId) && query.isPending,
+      /** A known non-system caller: system-only screens are read-only. */
       isRestricted,
+      /** A top user: the organization's owner. */
+      isTopUser: isRestricted && Boolean(scope.isTopUser),
+      /** A descendant: acts only below its own roles and never gives direct permissions. */
+      isDescendant,
       assignableRoles,
-      heldPermissions,
+      /** What a descendant may put on a role below it. */
+      rolePermissionCap,
       managedByCandidates,
       canAssignRole: (slug: string) => !isRestricted || assignable.has(slug),
-      canGrantPermission: (resource: string) => !isRestricted || held.has(resource),
+      /** A permission on a role: a descendant only one of its own. */
+      canPutOnRole: (resource: string) => !isDescendant || cap.has(resource),
+      /** A direct permission (to a user or a client): never for a descendant. */
+      canGrantDirectPermission: !isDescendant,
+      /** Why this role is locked for the caller, or `undefined`. */
+      roleEditBlock: (role: { slug: string; createdFromDefault?: boolean }) => getRoleEditBlock(scope, role),
     };
-  }, [scope, isRestricted, query.isPending, tenantId]);
+  }, [scope, isRestricted, isDescendant, query.isPending, tenantId]);
 };
 
 /**

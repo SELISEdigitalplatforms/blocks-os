@@ -364,9 +364,13 @@ namespace Configuration.DomainService.DataGateway.Services
         {
             if (rules.Count(r => r.Type == ValidationType.Reference) > 1) return ReferenceRuleCompatibility.OnlyOneReference;
             var fields = VariableSyntax.FieldsOf(schema.Fields);
+            var ruleField = new RuleField(field.Name, field.Type, field.IsArray, field.EnumValues);
             foreach (var rule in rules)
             {
-                var problem = CheckRuleShape(rule)
+                // System schemas take only the older rule types: no new type, condition, filter or date relative to now.
+                // The platform services read these rules and may run an older Genesis.
+                var problem = ValidationRuleCheck.Check(rule, ruleField, schema.SchemaName, systemSchema: true, fields).FirstOrDefault()
+                    ?? CheckRuleShape(rule)
                     ?? ValidationVariableCheck.Check(rule, field.Type, schema.SchemaName, fields)
                     ?? await CheckReferenceAsync(field, rule, cancellationToken);
                 if (problem is not null) return problem;

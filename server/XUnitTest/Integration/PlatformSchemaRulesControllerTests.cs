@@ -180,6 +180,30 @@ public class PlatformSchemaRulesControllerTests
     }
 
     [Fact]
+    public async Task SaveValidation_RefusesTheNewerRules_SystemSchemasTakeOnlyTheOlderOnes()
+    {
+        var id = await InsertEmailTemplateAsync();
+        var controller = Controller();
+        var onlyWhen = new PolicyRuleGroup
+        {
+            Rules = [new PolicyRule { LeftSource = ConditionSource.SCHEMA_FIELD, LeftOperand = "Name", Operator = PolicyOperator.EQUAL, RightSource = ConditionSource.STATIC_VALUE, StaticValue = "Welcome" }],
+        };
+
+        foreach (var (field, rule) in new (string, ValidationRule)[]
+        {
+            ("TemplateSubject", new ValidationRule { Type = ValidationType.In, Value = new List<object?> { "Hi" } }),
+            ("Tags", new ValidationRule { Type = ValidationType.UniqueItems }),
+            ("TemplateSubject", new ValidationRule { Type = ValidationType.NotEmpty, When = onlyWhen }),
+            ("TemplateSubject", new ValidationRule { Type = ValidationType.NotExistsIn, Value = "Role" }),
+        })
+            Message(await controller.SaveValidation(Rules(id, field, rule), CancellationToken.None)).Should().Be(ValidationRuleCheck.NotOnSystemSchemas);
+
+        (await Validations.CountDocumentsAsync(v => v.SchemaId == id)).Should().Be(0);
+        (await controller.SaveValidation(Rules(id, "TemplateSubject", new ValidationRule { Type = ValidationType.MaxLength, Value = 80 }), CancellationToken.None))
+            .Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
     public async Task FieldDefault_SetsAndClears_OnlyWhereAllowed()
     {
         var id = await InsertEmailTemplateAsync();

@@ -194,27 +194,6 @@ namespace XUnitTest.Integration
         }
 
         [Fact]
-        public async Task UpdateIamConfigurationAsync_UpdatesExistingIamConfiguration()
-        {
-            var suffix = Guid.NewGuid().ToString("N");
-            using var _ = new IntegrationContext(suffix);
-            var project = NewProject(suffix);
-            // IamConfigurations lives in the tenant database (main throwaway db).
-            await _fixture.Collection<BsonDocument>("IamConfigurations").InsertOneAsync(new BsonDocument
-            {
-                { "_id", "iam-" + suffix },
-                { "AccountActivationUrl", "old" }
-            });
-
-            await NewRepository().UpdateIamConfigurationAsync(project);
-
-            var updated = await _fixture.Collection<BsonDocument>("IamConfigurations")
-                .Find(Builders<BsonDocument>.Filter.Eq("_id", "iam-" + suffix)).FirstAsync();
-            var domain = project.Applications.First().Domain;
-            updated["AccountActivationUrl"].AsString.Should().Be($"{domain}/activate");
-        }
-
-        [Fact]
         public async Task CreateDefaultConfigurationAsync_CopiesSeedDocumentsThenSeedCollectionsAndIndexes()
         {
             var suffix = Guid.NewGuid().ToString("N");

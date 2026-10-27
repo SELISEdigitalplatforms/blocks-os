@@ -653,30 +653,6 @@ namespace DomainService.Projects
             }
         }
 
-        public async Task UpdateIamConfigurationAsync(Tenant project)
-        {
-            var targetedDb = _dbContextProvider.GetDatabase(project.TenantId);
-            var collection = targetedDb.GetCollection<BsonDocument>("IamConfigurations");
-
-            var iamConfiguration = await collection.Find(_ => true).FirstOrDefaultAsync();
-
-            if (iamConfiguration != null)
-            {
-                var filter = Builders<BsonDocument>.Filter.Eq("_id", iamConfiguration["_id"]);
-
-                var applicationDomain = project.Applications.FirstOrDefault()?.Domain;
-
-                var update = Builders<BsonDocument>.Update
-                    .Set("AccountActivationUrl", $"{applicationDomain}/activate")
-                    .Set("AccountVerificationUrl", $"{applicationDomain}/verify")
-                    .Set("RecoverAccountUrl", $"{applicationDomain}/resetpassword")
-                    .Set("CreatedBy", project.TenantId)
-                    .Set("LastUpdatedBy", project.TenantId);
-
-                await collection.UpdateOneAsync(filter, update);
-            }
-        }
-
 
         public async Task SaveRepoInfoAsync(Tenant project, List<Resource>? resources)
         {

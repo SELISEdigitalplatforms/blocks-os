@@ -10,8 +10,8 @@ const h = vi.hoisted(() => ({
   scope: {
     isLoading: false,
     isRestricted: true,
+    isDescendant: true,
     assignableRoles: ["member", "guest"] as string[],
-    heldPermissions: ["read", "list"] as string[],
   },
 }));
 
@@ -46,8 +46,8 @@ describe("useGetAssignableRoles", () => {
     h.scope = {
       isLoading: false,
       isRestricted: true,
+      isDescendant: true,
       assignableRoles: ["member", "guest"],
-      heldPermissions: ["read", "list"],
     };
     vi.mocked(roleService.getRoles).mockResolvedValue({ data: [], errors: null, totalCount: 0 });
   });
@@ -119,8 +119,8 @@ describe("useGetGrantablePermissions", () => {
     h.scope = {
       isLoading: false,
       isRestricted: true,
+      isDescendant: false,
       assignableRoles: [],
-      heldPermissions: ["read", "list"],
     };
     vi.mocked(iamService.permission.getPermissions).mockResolvedValue({
       data: [],
@@ -129,20 +129,18 @@ describe("useGetGrantablePermissions", () => {
     } as never);
   });
 
-  it("narrows the query to the held resources", async () => {
+  it("lets a top user give any permission: today's query, no narrowing", async () => {
     const { result } = renderHook(() => useGetGrantablePermissions(permissionsPayload), {
       wrapper: createWrapper(),
     });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(iamService.permission.getPermissions).toHaveBeenCalledWith(
-      expect.objectContaining({
-        filter: expect.objectContaining({ resources: ["read", "list"] }),
-      }),
+      expect.objectContaining({ filter: expect.not.objectContaining({ resources: expect.anything() }) }),
     );
   });
 
-  it("returns an empty list without asking when the caller holds nothing", () => {
-    h.scope.heldPermissions = [];
+  it("gives a descendant nothing to pick, without asking: it gives roles, not direct permissions", () => {
+    h.scope.isDescendant = true;
     const { result } = renderHook(() => useGetGrantablePermissions(permissionsPayload), {
       wrapper: createWrapper(),
     });

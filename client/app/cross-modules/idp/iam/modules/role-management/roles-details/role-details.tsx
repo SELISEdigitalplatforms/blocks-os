@@ -4,6 +4,8 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { useSetRoles } from "@blocks-idp/iam/hooks/use-roles";
+import { useGrantScope } from "@blocks-idp/iam/hooks/use-grant-scope";
+import { DisabledReason } from "@blocks-idp/iam/components/disabled-reason";
 import { useGetOrganizationConfig } from "@blocks-idp/iam/hooks/use-organization";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 // import { IPermission, PermissionSeverityLevel } from "@blocks-idp/iam/models/permission";
@@ -48,6 +50,8 @@ export function RoleDetailsContainer() {
   const isInitialized = useRoleDetailsStore((state) => state.isInitialized);
   const permissionMap = useRoleDetailsStore((state) => state.permissionMap);
   const { isPending, mutateAsync } = useSetRoles();
+  const { roleEditBlock } = useGrantScope();
+  const editBlock = role ? roleEditBlock(role) : undefined;
   const { tenantId } = useProjectStore().selectedProject || { tenantId: "" };
   const { data: orgConfig } = useGetOrganizationConfig(tenantId);
 
@@ -137,11 +141,19 @@ export function RoleDetailsContainer() {
           customTitles={breadcrumbTitles}
         />
         <div className="flex shrink-0 items-center gap-2">
-          {!isEditMode ? (
+          {!isEditMode && editBlock && (
+            <DisabledReason reason={editBlock}>
+              <Button variant="outline" disabled>
+                <span>Edit Permissions</span>
+              </Button>
+            </DisabledReason>
+          )}
+          {!isEditMode && !editBlock && (
             <Button variant="outline" onClick={() => changeEditMode(true)}>
               <span>Edit Permissions</span>
             </Button>
-          ) : (
+          )}
+          {isEditMode && (
             <>
               <Button variant="outline" disabled={isPending} onClick={() => discardChanges()}>
                 <span>Discard</span>
