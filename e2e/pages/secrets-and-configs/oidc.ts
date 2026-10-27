@@ -102,10 +102,17 @@ export async function createOidcClientFlow(page: Page, clientName: string) {
 }
 
 /** Creates a plain active OIDC client with one redirect URI, for specs that just need one. */
-export async function createBasicOidcClientFlow(page: Page, clientName: string) {
+export async function createBasicOidcClientFlow(
+  page: Page,
+  clientName: string,
+  options: { registerAsIdentityProvider?: boolean } = {},
+) {
   await openNewOidcClientDialogFlow(page);
   await page.getByPlaceholder("Enter client name").fill(clientName);
   await page.getByPlaceholder("https://example.com/oidc").first().fill("https://example.com/callback");
+  if (options.registerAsIdentityProvider) {
+    await page.locator("#registerAsIdentityProvider").click();
+  }
   const addButton = page.getByRole("button", { name: "Add", exact: true });
   await expect(addButton).toBeEnabled({ timeout: 10000 });
   await addButton.click();
