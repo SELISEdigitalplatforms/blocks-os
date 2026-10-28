@@ -11,8 +11,12 @@ public interface IIamClient
     Task<IamCredential?> FindCredentialAsync(string name, CancellationToken cancellationToken = default);
     Task<IamMutationResult> DeleteCredentialAsync(string id, CancellationToken cancellationToken = default);
     Task<IamRotateSecretResult> RotateSecretAsync(string id, CancellationToken cancellationToken = default);
+
+    /// <summary>What the current caller may administer (roles held or managed, permissions held). Null when IAM does not answer.</summary>
+    Task<IamGrantScope?> GetGrantScopeAsync(CancellationToken cancellationToken = default);
 }
 
+public sealed record IamGrantScope(bool IsSystemUser, IReadOnlyList<string> HeldRoles, IReadOnlyList<string> ManagedRoles, IReadOnlyList<string> HeldPermissions);
 public sealed record IamPermission(string ItemId, string Resource);
 public sealed record IamRole(string ItemId, string Name, string Slug, string? OrganizationId);
 public sealed record IamCredential(string ItemId, string Name, IReadOnlyList<string> Roles, IReadOnlyList<string> Permissions);

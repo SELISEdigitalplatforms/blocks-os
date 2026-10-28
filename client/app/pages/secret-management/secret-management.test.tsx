@@ -9,6 +9,7 @@ const h = vi.hoisted(() => ({
   navigate: vi.fn(),
   breadcrumbProps: undefined as unknown,
   toast: vi.fn(),
+  query: {} as Record<string, unknown>,
 }));
 
 vi.mock("react-router", () => ({
@@ -31,8 +32,8 @@ vi.mock("nuqs", () => {
   return {
     parseAsBoolean: parser,
     parseAsString: parser,
-    useQueryState: (_k: string, opts: { defaultValue: unknown }) =>
-      React.useState(opts.defaultValue),
+    useQueryState: (k: string, opts: { defaultValue: unknown }) =>
+      React.useState(h.query[k] ?? opts.defaultValue),
   };
 });
 vi.mock("@blocks-idp/authentication/contexts/oidc-branding-header-context", () => ({
@@ -82,6 +83,8 @@ vi.mock("@/components/ui-kits/dialog/dialog", () => ({
 
 import SecretManagementLayout from "./secret-management";
 
+const ADD_CONFIGURATION = "Add Configuration";
+
 describe("SecretManagementLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -89,6 +92,7 @@ describe("SecretManagementLayout", () => {
     h.clientsData = [];
     h.brandingActions = undefined;
     h.breadcrumbProps = undefined;
+    h.query = {};
   });
 
   it("renders the page header and outlet for a known nav item", () => {
@@ -97,6 +101,26 @@ describe("SecretManagementLayout", () => {
     expect(screen.getByTestId("outlet")).toBeTruthy();
     // The secret page shows the create-secret action.
     expect(screen.getByTestId("create-secret-button")).toBeTruthy();
+  });
+
+  it("shows the list header with Add Configuration on the notification list", () => {
+    h.pathname = "/app/proj/secret-management/notification";
+    render(<SecretManagementLayout />);
+    expect(screen.getByRole("heading", { level: 1 })).toBeTruthy();
+    expect(screen.getByText(ADD_CONFIGURATION)).toBeTruthy();
+  });
+
+  it.each([
+    ["notificationConfig", true],
+    ["notificationEdit", "item-1"],
+    ["notificationPush", true],
+  ])("hides the list header while the notification page opened by %s is shown", (key, value) => {
+    h.pathname = "/app/proj/secret-management/notification";
+    h.query = { [key]: value };
+    render(<SecretManagementLayout />);
+    expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
+    expect(screen.queryByText(ADD_CONFIGURATION)).toBeNull();
+    expect(screen.getByTestId("outlet")).toBeTruthy();
   });
 
   it("shows Manage Template immediately before Create on the OIDC page", () => {
@@ -140,7 +164,7 @@ describe("SecretManagementLayout", () => {
   it("always shows the Add Configuration action on the captcha page, since a tenant may configure more than one", () => {
     h.pathname = "/app/proj/secret-management/captcha";
     render(<SecretManagementLayout />);
-    expect(screen.getByText("Add Configuration")).toBeTruthy();
+    expect(screen.getByText(ADD_CONFIGURATION)).toBeTruthy();
   });
 
   it("renders the branding save/undo actions in branding mode", () => {

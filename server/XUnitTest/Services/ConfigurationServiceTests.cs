@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using Configuration.DomainService.Notification.Services;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Blocks.Genesis;
@@ -20,12 +21,14 @@ namespace XUnitTest.Services
         private readonly Mock<IConfigurationRepository> _repo = new();
         private readonly Mock<IValidator<SaveNotificationConfigurationRequest>> _notifValidator = new();
         private readonly Mock<IMessageClient> _messageClient = new();
+        private readonly Mock<INotificationAudienceGrantGuard> _grantGuard = new();
 
         private ConfigurationService Service() => new(
             _repo.Object,
             _notifValidator.Object,
             _messageClient.Object,
             new Mock<ITenants>().Object,
+            _grantGuard.Object,
             Microsoft.Extensions.Logging.Abstractions.NullLogger<ConfigurationService>.Instance);
 
         private static ValidationResult Valid() => new();

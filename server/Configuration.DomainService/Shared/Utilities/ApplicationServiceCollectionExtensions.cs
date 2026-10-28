@@ -1,4 +1,5 @@
-﻿using FluentValidation;
+﻿using Configuration.DomainService.Notification.Services;
+using FluentValidation;
 using Os.DataAccess;
 using Os.DataAccess;
 using Microsoft.Extensions.Configuration;
@@ -49,6 +50,7 @@ namespace Configuration.DomainService.Shared.Utilities
             serviceCollection.AddSingleton<IIntegrationRequestRepository, IntegrationRequestRepository>();
             serviceCollection.AddSingleton<IIntegrationConnectService, IntegrationConnectService>();
             serviceCollection.AddSingleton<IIamClient, IamClient>();
+            serviceCollection.AddSingleton<INotificationAudienceGrantGuard, NotificationAudienceGrantGuard>();
             serviceCollection.AddSingleton<IIntegrationRateLimiter, IntegrationRateLimiter>();
 
             // Storage configurations: settings in KeyValueStores, secrets in SecretStore (blocks-data driver store).

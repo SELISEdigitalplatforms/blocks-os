@@ -1,7 +1,5 @@
 ﻿using Blocks.Genesis;
 using DomainService.Certificate;
-using DomainService.Shared.Services;
-using Os.DataAccess.Notifications;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BlocksOs.Api.Controllers
@@ -11,12 +9,10 @@ namespace BlocksOs.Api.Controllers
     public class CertificateController : ControllerBase
     {
         private readonly ICertificateUploadService _certificateUploadService;
-        private readonly IProjectChangeNotifier? _notifier;
 
-        public CertificateController(ICertificateUploadService certificateUploadService, IProjectChangeNotifier? notifier = null)
+        public CertificateController(ICertificateUploadService certificateUploadService)
         {
             _certificateUploadService = certificateUploadService;
-            _notifier = notifier;
         }
 
         /// <summary>
@@ -41,29 +37,12 @@ namespace BlocksOs.Api.Controllers
             [FromQuery] bool isThirdParty,
             [FromQuery] string? providerRef = null)
         {
-            var result = await _certificateUploadService.UploadPublicCertificateAsync(new UploadCertificateRequest
+            return await _certificateUploadService.UploadPublicCertificateAsync(new UploadCertificateRequest
             {
                 Certificate = certificate,
                 IsThirdParty = isThirdParty,
                 ProviderRef = providerRef
             });
-
-            if (result?.IsSuccess == true && _notifier is not null)
-            {
-                // Ids only: the certificate and its URL are not sent.
-                await _notifier.NotifyProjectAdminsAsync(
-                    BuiltInNotificationNames.CertificateChanged,
-                    "certificate-uploaded",
-                    "Certificate uploaded",
-                    "A token-validation certificate was uploaded. It decides which tokens the project accepts.",
-                    new Dictionary<string, string?>
-                    {
-                        ["isThirdParty"] = isThirdParty ? "true" : "false",
-                        ["providerId"] = providerRef
-                    });
-            }
-
-            return result!;
         }
     }
 }

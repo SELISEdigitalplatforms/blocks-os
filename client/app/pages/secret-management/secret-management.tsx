@@ -175,10 +175,19 @@ export default function SecretManagementLayout() {
   // Shared via URL so child routes can read/close the same modal
   const [, setIsAddIdpOpen] = useQueryState("addIdp", parseAsBoolean.withDefault(false));
   const [, setIsEmailConfigOpen] = useQueryState("emailConfig", parseAsBoolean.withDefault(false));
-  const [, setIsNotificationConfigOpen] = useQueryState(
+  const [isNotificationConfigOpen, setIsNotificationConfigOpen] = useQueryState(
     "notificationConfig",
     parseAsBoolean.withDefault(false),
   );
+  const [notificationEditId] = useQueryState("notificationEdit", parseAsString.withDefault(""));
+  const [isNotificationPushOpen] = useQueryState(
+    "notificationPush",
+    parseAsBoolean.withDefault(false),
+  );
+  // The notification form and the mobile push page show their own title, so the list header steps aside.
+  const isNotificationPageOpen =
+    currentPath === "notification" &&
+    (isNotificationConfigOpen || Boolean(notificationEditId) || isNotificationPushOpen);
   const [, setIsManagedServicesGuideOpen] = useQueryState(
     "guideOpen",
     parseAsBoolean.withDefault(false),
@@ -200,11 +209,12 @@ export default function SecretManagementLayout() {
       }
     : undefined;
 
-  const currentItem = isOidcBranding
-    ? null
-    : SECRET_MANAGEMENT_NAV_GROUPS.flatMap((g) => g.items).find(
-        (item) => item.value === currentPath,
-      );
+  const currentItem =
+    isOidcBranding || isNotificationPageOpen
+      ? null
+      : SECRET_MANAGEMENT_NAV_GROUPS.flatMap((g) => g.items).find(
+          (item) => item.value === currentPath,
+        );
 
   const headerActions = (
     <SecretManagementHeaderActions

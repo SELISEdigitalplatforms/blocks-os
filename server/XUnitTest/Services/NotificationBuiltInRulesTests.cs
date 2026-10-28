@@ -55,6 +55,7 @@ namespace XUnitTest.Services
             _validator.Object,
             _messageClient.Object,
             _tenants.Object,
+            Mock.Of<Configuration.DomainService.Notification.Services.INotificationAudienceGrantGuard>(),
             NullLogger<ConfigurationService>.Instance);
 
         private static Tenant NewTenant(string id, bool isRoot) => new()
@@ -254,7 +255,6 @@ namespace XUnitTest.Services
         [InlineData("NotifyMethod")]
         [InlineData("ChannelToNotify")]
         [InlineData("NotificationType")]
-        [InlineData("EnablePersistence")]
         [InlineData("Description")]
         [InlineData("Importance")]
         [InlineData("Kind")]
@@ -273,7 +273,6 @@ namespace XUnitTest.Services
                 case "NotifyMethod": request.NotifyMethod = "Other"; break;
                 case "ChannelToNotify": request.ChannelToNotify = NotifierTypes.Firebase; break;
                 case "NotificationType": request.NotificationType = NotificationReceiverTypes.BroadcastReceiverType; break;
-                case "EnablePersistence": request.EnablePersistence = false; break;
                 case "Description": request.Description = "Other"; break;
                 case "Importance": request.Importance = NotificationImportance.Low; break;
                 case "Kind": request.Kind = NotificationKind.Security; break;
