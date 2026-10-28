@@ -9,6 +9,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using Pipelines.Sockets.Unofficial.Arenas;
 using System.Collections;
+using System.Text.RegularExpressions;
 using Blocks.Genesis.Entities.Os;
 using Os.DataAccess;
 
@@ -94,6 +95,20 @@ namespace DomainService.Projects
             var filter = Builders<Tenant>.Filter.ElemMatch(x => x.Applications, app => listDomain.Contains(app.Domain))
                        & Builders<Tenant>.Filter.Ne(mc => mc.IsDisabled, true);
             return await collection.Find(filter).FirstOrDefaultAsync();
+        }
+
+        public async Task<bool> IsDomainUsedByAnotherProjectAsync(string normalizedDomain, string tenantId)
+        {
+            var collection = _clientDb.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
+
+            // Domains are stored as "x", "http://x" or "https://x", with or without a trailing
+            // slash and in any case, so the match covers every form. Disabled projects count too:
+            // one can be restored with its domains.
+            var pattern = new BsonRegularExpression($"^(https?://)?{Regex.Escape(normalizedDomain)}/?$", "i");
+            var filter = Builders<Tenant>.Filter.ElemMatch(x => x.Applications, Builders<Applications>.Filter.Regex(a => a.Domain, pattern))
+                       & Builders<Tenant>.Filter.Ne(x => x.TenantId, tenantId);
+
+            return await collection.Find(filter).AnyAsync();
         }
 
         public async Task InsertProjectAsync(Tenant project)

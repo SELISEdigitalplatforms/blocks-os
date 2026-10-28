@@ -12,6 +12,12 @@ namespace DomainService.Projects
     {
         Task<Tenant> GetByDomainAsync(string name);
 
+        /// <summary>
+        /// True when a project other than <paramref name="tenantId"/> has an application on
+        /// <paramref name="normalizedDomain"/> (host only, lower case), stored in any of its forms.
+        /// </summary>
+        Task<bool> IsDomainUsedByAnotherProjectAsync(string normalizedDomain, string tenantId);
+
         /// <summary>The live environments in a project group; deleted (disabled) ones are left out.</summary>
         Task<List<Tenant>> GetByGroupIdAsync(string tenantGroupId);
 

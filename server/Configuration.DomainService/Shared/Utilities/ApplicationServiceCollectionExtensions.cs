@@ -90,6 +90,7 @@ namespace Configuration.DomainService.Shared.Utilities
             serviceCollection.AddSingleton<IValidator<SaveStorageConfigurationRequest>, StorageConfigurationValidator>();
             serviceCollection.AddSingleton<IValidator<SaveDataGatewayConfigurationRequest>, DataGatewayConfigurationValidator>();
             serviceCollection.AddSingleton<IValidator<MailConfiguration>, MailConfigurationValidator>();
+            serviceCollection.AddSingleton<IMailTemplateHtmlChecker, MailTemplateHtmlChecker>();
             serviceCollection.AddSingleton<IValidator<SaveMailTemplateRequest>, MailTemplateValidator>();
             serviceCollection.AddSingleton<IValidator<SaveCaptchaConfigRequest>, CaptchaConfigValidator>();
             serviceCollection.AddSingleton<IValidator<RunIntegrationSetupRequest>, RunIntegrationSetupRequestValidator>();

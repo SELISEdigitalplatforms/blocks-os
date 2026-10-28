@@ -10,6 +10,7 @@
 		<!--<PackageReference Include="MongoDB.Driver" />-->
 		<PackageReference Include="SeliseBlocks.Genesis.OS" />
 		<PackageReference Include="FluentValidation" />
+		<PackageReference Include="AngleSharp" />
 		<!-- Parses a stored message (RawMime) into its HTML body and attachment list for display. -->
 		<PackageReference Include="MimeKit" />
 		<PackageReference Include="System.Security.Cryptography.Pkcs" />

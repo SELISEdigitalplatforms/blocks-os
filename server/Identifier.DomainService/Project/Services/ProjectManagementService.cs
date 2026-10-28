@@ -881,6 +881,10 @@ namespace DomainService.Projects
             var previousCookieDomain = applicationBeforeUpdate?.CookieDomain;
             var previousDomainWasProvisioned = applicationBeforeUpdate is not null && IsSelfProvisioned(applicationBeforeUpdate);
 
+            var domainInUse = await RejectDomainOfAnotherProjectAsync(project, request);
+            if (domainInUse != null)
+                return domainInUse;
+
             var applicationActionFailure = ApplyApplicationAction(project, request);
             if (applicationActionFailure != null)
                 return applicationActionFailure;
@@ -913,6 +917,24 @@ namespace DomainService.Projects
             }
 
             return new BaseResponse { IsSuccess = true };
+        }
+
+        // A request without a tenant key finds its tenant by domain, and the first match wins, so
+        // two projects on one domain would send requests to the wrong one. Only a new or changed
+        // domain is checked; duplicates saved before this check are left as they are.
+        private async Task<BaseResponse?> RejectDomainOfAnotherProjectAsync(Tenant project, UpdateProjectRequest request)
+        {
+            var domain = NormalizeDomain(request.Application?.Domain);
+            var isNewDomain = request.Action == ApplicationAction.Add
+                || (request.Action == ApplicationAction.Edit && domain != NormalizeDomain(request.ApplicationDomain));
+
+            if (!isNewDomain || domain.Length == 0
+                || !await _projectRepository.IsDomainUsedByAnotherProjectAsync(domain, project.TenantId))
+            {
+                return null;
+            }
+
+            return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "domain_in_use", $"The domain {request.Application!.Domain} is already used by another project" } } };
         }
 
         // Applies the requested add/edit/delete to the project in memory. Returns the failed

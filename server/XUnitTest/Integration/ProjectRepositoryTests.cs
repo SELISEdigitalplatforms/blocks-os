@@ -158,6 +158,20 @@ namespace XUnitTest.Integration
         }
 
         [Fact]
+        public async Task IsDomainUsedByAnotherProjectAsync_MatchesEveryStoredForm_ButNotTheSameProject()
+        {
+            var tenant = MongoIntegrationFixture.NewTenantId();
+            var host = "app-" + tenant + ".example.com";
+            using var _ = new IntegrationContext(tenant);
+            var repo = NewRepository();
+            await repo.InsertProjectAsync(NewTenant("s-" + tenant, "grp-" + tenant, UserOf(tenant), domain: "HTTPS://" + host.ToUpperInvariant() + "/"));
+
+            (await repo.IsDomainUsedByAnotherProjectAsync(host, "other-" + tenant)).Should().BeTrue();
+            (await repo.IsDomainUsedByAnotherProjectAsync(host, "s-" + tenant)).Should().BeFalse();
+            (await repo.IsDomainUsedByAnotherProjectAsync("x" + host, "other-" + tenant)).Should().BeFalse();
+        }
+
+        [Fact]
         public async Task UpdateProjectAsync_ReplacesDocument()
         {
             var tenant = MongoIntegrationFixture.NewTenantId();

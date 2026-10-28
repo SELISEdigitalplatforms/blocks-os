@@ -4,6 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="FluentValidation" Version="12.0.0" />
+    <PackageVersion Include="AngleSharp" Version="1.8.6" />
     <PackageVersion Include="FluentValidation.AspNetCore" Version="11.3.0" />
     <PackageVersion Include="SixLabors.Fonts" Version="2.1.2" />
     <PackageVersion Include="MongoDB.Driver" Version="3.8.0" />

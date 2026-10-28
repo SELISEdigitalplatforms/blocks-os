@@ -431,6 +431,57 @@ namespace XUnitTest.Services
             tenant.Applications[0].Domain.Should().Be("https://new.example.com");
         }
 
+        [Theory]
+        [InlineData(ApplicationAction.Add, null)]
+        [InlineData(ApplicationAction.Edit, "https://old.example.com")]
+        public async Task UpdateProjectAsync_DomainOfAnotherProject_IsRefused_AndNothingIsSaved(ApplicationAction action, string? currentDomain)
+        {
+            using var _ = new BlocksTestContext();
+            var tenant = new Tenant
+            { DbConnectionString = "mongodb://x", JwtTokenParameters = new JwtTokenParameters { IssueDate = System.DateTime.UtcNow, PrivateCertificatePassword = "pwd" },
+                TenantId = "t1",
+                Applications = new List<Applications> { new() { Domain = "https://old.example.com" } }
+            };
+            _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
+            _repo.Setup(r => r.IsDomainUsedByAnotherProjectAsync("taken.example.com", "t1")).ReturnsAsync(true);
+
+            var response = await Service().UpdateProjectAsync(new UpdateProjectRequest
+            {
+                Action = action,
+                ApplicationDomain = currentDomain,
+                Application = new Application { Domain = "https://Taken.example.com/", CookieDomain = "example.com" }
+            });
+
+            response.IsSuccess.Should().BeFalse();
+            response.Errors.Should().ContainKey("domain_in_use");
+            tenant.Applications.Should().ContainSingle().Which.Domain.Should().Be("https://old.example.com");
+            _repo.Verify(r => r.UpdateProjectAsync(It.IsAny<Tenant>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task UpdateProjectAsync_EditKeepingTheSameDomain_DoesNotCheckOtherProjects()
+        {
+            using var _ = new BlocksTestContext();
+            var tenant = new Tenant
+            { DbConnectionString = "mongodb://x", JwtTokenParameters = new JwtTokenParameters { IssueDate = System.DateTime.UtcNow, PrivateCertificatePassword = "pwd" },
+                TenantId = "t1",
+                Applications = new List<Applications> { new() { Domain = "https://shared.example.com" } }
+            };
+            _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
+            _repo.Setup(r => r.IsDomainUsedByAnotherProjectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+
+            var response = await Service().UpdateProjectAsync(new UpdateProjectRequest
+            {
+                Action = ApplicationAction.Edit,
+                ApplicationDomain = "https://shared.example.com",
+                Application = new Application { Domain = "https://shared.example.com", CookieDomain = "new.example.com" }
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            _repo.Verify(r => r.IsDomainUsedByAnotherProjectAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        }
+
         [Fact]
         public async Task UpdateProjectAsync_DeleteApplication_Succeeds()
         {
