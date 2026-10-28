@@ -14,7 +14,7 @@ export type KeyDraftResult =
  * (the file, the private key textarea), never in state or on screen, and `clear` drops it.
  */
 export const usePushKeyDraft = () => {
-  const [source, setSourceState] = useState<number>(KEY_SOURCE.Upload);
+  const [source, setSource] = useState<number>(KEY_SOURCE.Upload);
   const [fileName, setFileName] = useState("");
   const [fileProjectId, setFileProjectId] = useState<string | null>(null);
   const [projectId, setProjectId] = useState("");
@@ -32,10 +32,11 @@ export const usePushKeyDraft = () => {
     if (privateKeyRef.current) privateKeyRef.current.value = "";
   };
 
-  const setSource = (next: number) => {
+  /** Switching between file and typed fields drops whatever key was half entered. */
+  const changeSource = (next: number) => {
     clear();
     setError(null);
-    setSourceState(next);
+    setSource(next);
   };
 
   const pickFile = async (file: File | undefined) => {
@@ -90,7 +91,7 @@ export const usePushKeyDraft = () => {
 
   return {
     source,
-    setSource,
+    setSource: changeSource,
     fileName,
     bindFileInput,
     openFilePicker,
