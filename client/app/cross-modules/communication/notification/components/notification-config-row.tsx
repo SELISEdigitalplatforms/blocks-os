@@ -64,11 +64,12 @@ export function NotificationConfigRow({
           {config.audienceLocked && (
             <Lock className="h-3.5 w-3.5 shrink-0" aria-label="Personal notice" />
           )}
-          {!config.isBuiltIn && (
-            <Badge variant="info" className="w-fit shrink-0 px-1.5 py-0">
-              {NOTIFICATION_TEXT.custom}
-            </Badge>
-          )}
+          <Badge
+            variant={config.isBuiltIn ? "secondary" : "info"}
+            className="w-fit shrink-0 px-1.5 py-0 font-normal"
+          >
+            {config.isBuiltIn ? NOTIFICATION_TEXT.builtIn : NOTIFICATION_TEXT.custom}
+          </Badge>
         </div>
         {config.description && (
           <div className="mt-0.5 text-xs text-medium-emphasis">{config.description}</div>

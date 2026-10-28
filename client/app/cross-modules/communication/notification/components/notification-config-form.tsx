@@ -9,6 +9,7 @@ import { isErrorWithErrors } from "@/lib/error";
 import type { INotificationConfigRow } from "../models/notification-config.model";
 import { useSaveNotificationConfig } from "../hooks/use-notification-config";
 import { isPushReady, usePushSettings } from "../hooks/use-push-settings";
+import { useIsRootProject } from "../hooks/use-is-root-project";
 import {
   ALWAYS_ON_MESSAGE,
   NOTIFICATION_CONFIG_ERROR_MESSAGES,
@@ -139,6 +140,9 @@ export function NotificationConfigForm({
   const isEdit = !!previous;
   const locked = isEdit && !!previous?.audienceLocked;
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
+  const isRoot = useIsRootProject();
+  // Only the root project changes the shared notes of a built-in; the server refuses it elsewhere.
+  const notesReadOnly = isEdit && !!previous?.isBuiltIn && !isRoot;
   const { isPending, mutateAsync } = useSaveNotificationConfig();
   const push = usePushSettings();
   const [values, setValues] = useState<NotificationFormValues>(() => toFormValues(previous));
@@ -241,7 +245,12 @@ export function NotificationConfigForm({
           )}
           {!locked && (
             <FormRow label="">
-              <DeveloperNotes values={values} onPatch={patch} canMarkBuiltIn={!isEdit} />
+              <DeveloperNotes
+                values={values}
+                onPatch={patch}
+                canMarkBuiltIn={!isEdit && isRoot}
+                readOnly={notesReadOnly}
+              />
             </FormRow>
           )}
           <div className="flex flex-wrap items-center justify-between gap-3 border-t px-5 py-3.5">

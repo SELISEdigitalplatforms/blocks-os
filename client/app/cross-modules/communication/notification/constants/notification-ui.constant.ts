@@ -141,6 +141,8 @@ export const NOTIFICATION_TEXT = {
   appNote: "Note for apps without the portal",
   builtInAllProjects: "Built-in (all projects)",
   developerNotesHelp: "Recommendation and integration notes for application developers.",
+  developerNotesReadOnly:
+    "Built-in notes are shared by all projects. Only the root project can change them.",
   cancel: "Cancel",
   save: "Save",
   saving: "Saving...",

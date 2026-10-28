@@ -273,8 +273,9 @@ describe("NotificationConfigurationList built-in metadata", () => {
     });
   });
 
-  it("tags only custom rows and shows the description of a built-in", () => {
+  it("tags each row Built-in or Custom and shows the description of a built-in", () => {
     render(<NotificationConfigurationList onEdit={h.onEdit} />, { wrapper });
+    expect(screen.getAllByText("Built-in")).toHaveLength(2);
     expect(screen.getAllByText("Custom")).toHaveLength(1);
     expect(screen.getByText("Sent on reset")).toBeTruthy();
   });

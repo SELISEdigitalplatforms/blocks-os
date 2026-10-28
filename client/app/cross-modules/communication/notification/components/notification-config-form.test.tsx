@@ -13,11 +13,13 @@ const h = vi.hoisted(() => ({
   toast: vi.fn(),
   showErrorToast: vi.fn(),
   pushSettings: { data: { projectId: "p", enabled: true, hasKey: true }, isLoading: false },
+  rootTenantId: "root-tenant",
 }));
 
 vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
+vi.mock("@/lib/runtime-env", () => ({ getRuntimeEnv: () => h.rootTenantId }));
 vi.mock("../hooks/use-notification-config", () => ({
   useSaveNotificationConfig: () => ({ mutateAsync: h.mutateAsync, isPending: false }),
 }));
@@ -74,6 +76,7 @@ describe("NotificationConfigForm", () => {
     vi.clearAllMocks();
     h.mutateAsync.mockResolvedValue({ isSuccess: true });
     h.pushSettings = { data: { projectId: "p", enabled: true, hasKey: true }, isLoading: false };
+    h.rootTenantId = "root-tenant";
   });
 
   it("keeps Save off and shows the reason in the footer until the form is valid", async () => {
@@ -167,6 +170,36 @@ describe("NotificationConfigForm", () => {
     expect(screen.queryByLabelText(EVENT_NAME_LABEL)).toBeNull();
     expect(screen.getByLabelText(PROJECT_USERS)).toBeTruthy();
     expect(screen.getByLabelText("Rate limit per minute")).toBeTruthy();
+  });
+
+  it("locks a built-in's developer notes outside the root project, where the server refuses them", async () => {
+    const user = userEvent.setup();
+    renderForm({ ...ROW, isBuiltIn: true });
+    await user.click(screen.getByRole("button", { name: NOTIFICATION_TEXT.developerNotes }));
+    expect(screen.getByText(NOTIFICATION_TEXT.developerNotesReadOnly)).toBeTruthy();
+    expect(
+      (screen.getByLabelText(NOTIFICATION_TEXT.sourceService) as HTMLInputElement).disabled,
+    ).toBe(true);
+    expect(
+      (screen.getByLabelText(NOTIFICATION_TEXT.recommendation) as HTMLTextAreaElement).disabled,
+    ).toBe(true);
+  });
+
+  it("lets the root project edit a built-in's developer notes", async () => {
+    h.rootTenantId = "tenant-1";
+    const user = userEvent.setup();
+    renderForm({ ...ROW, isBuiltIn: true });
+    await user.click(screen.getByRole("button", { name: NOTIFICATION_TEXT.developerNotes }));
+    expect(
+      (screen.getByLabelText(NOTIFICATION_TEXT.sourceService) as HTMLInputElement).disabled,
+    ).toBe(false);
+  });
+
+  it("offers Built-in (all projects) on a new notification only in the root project", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.click(screen.getByRole("button", { name: NOTIFICATION_TEXT.developerNotes }));
+    expect(screen.queryByLabelText(NOTIFICATION_TEXT.builtInAllProjects)).toBeNull();
   });
 
   it("warns when the copy to tenants was not queued, and maps a refusal to readable copy", async () => {
