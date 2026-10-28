@@ -49,7 +49,10 @@ export function SubscriptionFilters({ filters, onChange }: Readonly<Subscription
       </CollapsibleTrigger>
       <CollapsibleContent className="mt-2 flex flex-col gap-2">
         {filters.map((filter, index) => (
-          <div key={rowIds[index]} className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
+          <div
+            key={rowIds[index]}
+            className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]"
+          >
             <Input
               aria-label={NOTIFICATION_TEXT.filterContext}
               placeholder={NOTIFICATION_TEXT.filterContext}
@@ -68,12 +71,7 @@ export function SubscriptionFilters({ filters, onChange }: Readonly<Subscription
               value={filter.value}
               onChange={(e) => update(index, { value: e.target.value })}
             />
-            <Button
-              type="button"
-              variant="outline"
-              size="xs"
-              onClick={() => remove(index)}
-            >
+            <Button type="button" variant="outline" size="xs" onClick={() => remove(index)}>
               {NOTIFICATION_TEXT.removeFilter}
             </Button>
           </div>

@@ -60,8 +60,7 @@ export interface INotificationConfigDeliveryFields {
 }
 
 export interface INotificationConfigRow
-  extends INotificationConfigBuiltInFields,
-    INotificationConfigDeliveryFields {
+  extends INotificationConfigBuiltInFields, INotificationConfigDeliveryFields {
   itemId: string;
   createdDate?: string;
   lastUpdatedDate?: string;
@@ -87,8 +86,7 @@ export interface IGetNotificationConfigsResponse {
 }
 
 export interface ISaveNotificationConfigPayload
-  extends INotificationConfigBuiltInFields,
-    INotificationConfigDeliveryFields {
+  extends INotificationConfigBuiltInFields, INotificationConfigDeliveryFields {
   itemId?: string;
   name: string;
   channelToNotify: number;

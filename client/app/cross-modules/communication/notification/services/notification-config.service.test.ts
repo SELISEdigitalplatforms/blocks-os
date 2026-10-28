@@ -161,7 +161,12 @@ describe("NotificationConfigService", () => {
         },
       });
       const body = vi.mocked(http.post).mock.calls[0][1] as Record<string, unknown>;
-      expect(body).toMatchObject({ scope: 2, liveEnabled: true, pushEnabled: false, rateLimitPerMinute: 60 });
+      expect(body).toMatchObject({
+        scope: 2,
+        liveEnabled: true,
+        pushEnabled: false,
+        rateLimitPerMinute: 60,
+      });
       expect(body.audience).toMatchObject({ level: 1 });
       expect(body).not.toHaveProperty("pushTemplate");
       expect(body).not.toHaveProperty("audienceLocked");

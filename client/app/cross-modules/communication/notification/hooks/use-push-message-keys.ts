@@ -1,6 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useProjectStore } from "@seliseblocks/genesis-os";
-import { useGetLanguageModules, useGetLanguages } from "@blocks-localization/hooks/use-language-manager";
+import {
+  useGetLanguageModules,
+  useGetLanguages,
+} from "@blocks-localization/hooks/use-language-manager";
 import { languageManagerService } from "@blocks-localization/services/language.manager.service";
 import type { IBlocksLanguageKey, ILanguageConfig } from "@blocks-localization/models/language";
 import { NOTIFICATION_LOCALIZATION_MODULE } from "../constants/notification-ui.constant";

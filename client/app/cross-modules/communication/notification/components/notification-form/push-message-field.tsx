@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui-kits/select/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui-kits/select/select";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import type { NotificationFormValues } from "../../utils/notification-form";
 import { usePushMessageKeys } from "../../hooks/use-push-message-keys";
@@ -144,9 +150,7 @@ export function PushMessageField({
           </div>
           <HelpText>{NOTIFICATION_TEXT.localizationHelp}</HelpText>
           {fields.length > 0 && (
-            <HelpText>
-              Fields: {fields.map((field) => `{{${field}}}`).join(" ")}
-            </HelpText>
+            <HelpText>Fields: {fields.map((field) => `{{${field}}}`).join(" ")}</HelpText>
           )}
           {isError && <HelpText>{NOTIFICATION_TEXT.keysLoadFailed}</HelpText>}
           {manageUrl && (

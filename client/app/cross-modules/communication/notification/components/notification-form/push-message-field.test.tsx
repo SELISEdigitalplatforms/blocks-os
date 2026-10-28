@@ -51,9 +51,7 @@ describe("PushMessageField", () => {
     expect(screen.getByText(TITLE_TEXT)).toBeTruthy();
     expect(screen.getByText("{{amount}} received")).toBeTruthy();
     expect(screen.getByText(/Fields: \{\{orderNo\}\} \{\{amount\}\}/)).toBeTruthy();
-    expect(
-      screen.getByText("No Deutsch text yet — the default language is used."),
-    ).toBeTruthy();
+    expect(screen.getByText("No Deutsch text yet — the default language is used.")).toBeTruthy();
     expect(
       screen.getByRole("link", { name: /Manage keys in Localization/ }).getAttribute("href"),
     ).toBe("https://loc.example/?module=notifications");

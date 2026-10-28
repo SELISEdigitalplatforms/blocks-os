@@ -31,7 +31,11 @@ describe("PushSettingsService", () => {
 
   it("posts the key once, in the save body only", async () => {
     h.post.mockResolvedValue({ isSuccess: true });
-    await pushSettingsService.saveSettings({ projectId: "p", enabled: true, serviceAccountJson: "{}" });
+    await pushSettingsService.saveSettings({
+      projectId: "p",
+      enabled: true,
+      serviceAccountJson: "{}",
+    });
     expect(h.post).toHaveBeenCalledWith(
       SETTINGS_URL,
       { projectId: "p", enabled: true, serviceAccountJson: "{}" },

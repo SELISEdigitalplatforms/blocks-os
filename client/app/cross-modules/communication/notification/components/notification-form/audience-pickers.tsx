@@ -94,7 +94,9 @@ const usePermissionSearch = (term: string, enabled: boolean): PickerSearchResult
   const resources = new Set<string>();
   for (const permission of data?.data ?? []) resources.add(permission.resource);
   return {
-    options: [...resources].filter(Boolean).map((resource) => ({ value: resource, label: resource })),
+    options: [...resources]
+      .filter(Boolean)
+      .map((resource) => ({ value: resource, label: resource })),
     isLoading: isFetching,
   };
 };
