@@ -13,6 +13,9 @@ namespace DomainService.Projects
         public const string ModuleName = "notifications";
         public const string ModulesCollection = "BlocksLanguageModules";
         public const string KeysCollection = "BlocksLanguageKeys";
+        private const string ModuleNameField = "ModuleName";
+        private const string ModuleIdField = "ModuleId";
+        private const string KeyNameField = "KeyName";
 
         /// <returns>The number of keys inserted.</returns>
         public static Task<int> CopyAsync(IMongoDatabase seedDb, IMongoDatabase projectDb, string tenantId, string? createdBy, CancellationToken cancellationToken = default)
@@ -25,7 +28,7 @@ namespace DomainService.Projects
         private static async Task<int> CopyCoreAsync(IMongoDatabase seedDb, IMongoDatabase projectDb, string tenantId, string? createdBy, CancellationToken cancellationToken)
         {
             var seedModule = await seedDb.GetCollection<BsonDocument>(ModulesCollection)
-                .Find(Builders<BsonDocument>.Filter.Eq("ModuleName", ModuleName))
+                .Find(Builders<BsonDocument>.Filter.Eq(ModuleNameField, ModuleName))
                 .FirstOrDefaultAsync(cancellationToken);
             if (seedModule is null)
             {
@@ -33,7 +36,7 @@ namespace DomainService.Projects
             }
 
             var seedKeys = await seedDb.GetCollection<BsonDocument>(KeysCollection)
-                .Find(Builders<BsonDocument>.Filter.Eq("ModuleId", seedModule["_id"]))
+                .Find(Builders<BsonDocument>.Filter.Eq(ModuleIdField, seedModule["_id"]))
                 .ToListAsync(cancellationToken);
             if (seedKeys.Count == 0)
             {
@@ -43,10 +46,10 @@ namespace DomainService.Projects
             var moduleId = await EnsureModuleAsync(seedModule, projectDb, tenantId, createdBy, cancellationToken);
             var target = projectDb.GetCollection<BsonDocument>(KeysCollection);
             var inserted = 0;
-            foreach (var key in seedKeys.Where(k => k.TryGetValue("KeyName", out var name) && name.IsString))
+            foreach (var key in seedKeys.Where(k => k.TryGetValue(KeyNameField, out var name) && name.IsString))
             {
-                var filter = Builders<BsonDocument>.Filter.Eq("ModuleId", moduleId) & Builders<BsonDocument>.Filter.Eq("KeyName", key["KeyName"]);
-                var result = await target.UpdateOneAsync(filter, NewRowFrom(key, tenantId, createdBy, "ModuleId", "KeyName"), new UpdateOptions { IsUpsert = true }, cancellationToken);
+                var filter = Builders<BsonDocument>.Filter.Eq(ModuleIdField, moduleId) & Builders<BsonDocument>.Filter.Eq(KeyNameField, key[KeyNameField]);
+                var result = await target.UpdateOneAsync(filter, NewRowFrom(key, tenantId, createdBy, ModuleIdField, KeyNameField), new UpdateOptions { IsUpsert = true }, cancellationToken);
                 if (result.UpsertedId is not null) inserted++;
             }
 
@@ -56,8 +59,8 @@ namespace DomainService.Projects
         private static async Task<BsonValue> EnsureModuleAsync(BsonDocument seedModule, IMongoDatabase projectDb, string tenantId, string? createdBy, CancellationToken cancellationToken)
         {
             var modules = projectDb.GetCollection<BsonDocument>(ModulesCollection);
-            var filter = Builders<BsonDocument>.Filter.Eq("ModuleName", ModuleName);
-            await modules.UpdateOneAsync(filter, NewRowFrom(seedModule, tenantId, createdBy, "ModuleName"), new UpdateOptions { IsUpsert = true }, cancellationToken);
+            var filter = Builders<BsonDocument>.Filter.Eq(ModuleNameField, ModuleName);
+            await modules.UpdateOneAsync(filter, NewRowFrom(seedModule, tenantId, createdBy, ModuleNameField), new UpdateOptions { IsUpsert = true }, cancellationToken);
 
             var module = await modules.Find(filter).FirstAsync(cancellationToken);
             return module["_id"];

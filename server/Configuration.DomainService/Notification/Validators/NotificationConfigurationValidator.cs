@@ -82,23 +82,23 @@ namespace Configuration.DomainService.Notification.Validators
 
             RuleFor(x => x.PushTemplate!.TitleKey)
                 .MaximumLength(NotificationLimits.ItemLength).WithMessage(Constants.NotificationAudienceItemTooLong)
-                .OverridePropertyName("PushTemplate")
+                .OverridePropertyName(nameof(SaveNotificationConfigurationRequest.PushTemplate))
                 .When(x => x.PushTemplate is not null);
 
             RuleFor(x => x.PushTemplate!.BodyKey)
                 .MaximumLength(NotificationLimits.ItemLength).WithMessage(Constants.NotificationAudienceItemTooLong)
-                .OverridePropertyName("PushTemplate")
+                .OverridePropertyName(nameof(SaveNotificationConfigurationRequest.PushTemplate))
                 .When(x => x.PushTemplate is not null);
 
             RuleFor(x => x.PushTemplate!.Link)
                 .MaximumLength(NotificationLimits.ItemLength).WithMessage(Constants.NotificationAudienceItemTooLong)
-                .OverridePropertyName("PushTemplate")
+                .OverridePropertyName(nameof(SaveNotificationConfigurationRequest.PushTemplate))
                 .When(x => x.PushTemplate is not null);
 
             RuleFor(x => x.PushTemplate!)
                 .Must(t => !string.IsNullOrWhiteSpace(t.TitleKey) && !string.IsNullOrWhiteSpace(t.BodyKey))
                 .WithMessage(Constants.NotificationPushKeysRequired)
-                .OverridePropertyName("PushTemplate")
+                .OverridePropertyName(nameof(SaveNotificationConfigurationRequest.PushTemplate))
                 .When(x => x.PushEnabled == true && x.PushTemplate is not null);
         }
 
