@@ -88,29 +88,34 @@ namespace Configuration.DomainService.Mail.Providers
             }
 
             // In place, so mail already queued in blocks-logic with this reference keeps working.
+            string failureType;
             try
             {
                 await _secretService.RotateAsync(
                     reference,
                     new RotateSecretRequest { Value = password },
                     cancellationToken).ConfigureAwait(false);
+
+                return new MailCredentialResult { Reference = reference, Created = false };
             }
             catch (Exception exception) when (IsGoneOrArchived(exception))
             {
-                // The secret was purged or archived after the status read, or the status read
-                // failed while it was already gone. That is the broken-reference case found late:
-                // repair it the same way, with a new secret, rather than failing the save with an
-                // error whose message names the reference. The old secret is left alone.
-                _logger.LogWarning(
-                    "The password secret of mail configuration {ConfigurationId} could not be rotated ({FailureType}); a new secret replaces it.",
-                    configurationId,
-                    exception.GetType().Name);
-
-                var replacement = await CreateAsync(configurationId, configurationName, password, cancellationToken).ConfigureAwait(false);
-                return new MailCredentialResult { Reference = replacement, Created = true };
+                // Only the type name leaves the catch: the exception object is deliberately not
+                // logged, because its message can name the reference.
+                failureType = exception.GetType().Name;
             }
 
-            return new MailCredentialResult { Reference = reference, Created = false };
+            // The secret was purged or archived after the status read, or the status read
+            // failed while it was already gone. That is the broken-reference case found late:
+            // repair it the same way, with a new secret, rather than failing the save with an
+            // error whose message names the reference. The old secret is left alone.
+            _logger.LogWarning(
+                "The password secret of mail configuration {ConfigurationId} could not be rotated ({FailureType}); a new secret replaces it.",
+                LogSafe.Value(configurationId),
+                failureType);
+
+            var replacement = await CreateAsync(configurationId, configurationName, password, cancellationToken).ConfigureAwait(false);
+            return new MailCredentialResult { Reference = replacement, Created = true };
         }
 
         /// <summary>
@@ -139,7 +144,8 @@ namespace Configuration.DomainService.Mail.Providers
             ArgumentNullException.ThrowIfNull(source);
             ArgumentNullException.ThrowIfNull(copy);
 
-            string? password;
+            string? password = null;
+            string? failureType = null;
             if (string.IsNullOrEmpty(source.AccountPasswordReference))
             {
                 password = source.AccountPassword;
@@ -154,13 +160,19 @@ namespace Configuration.DomainService.Mail.Providers
                 }
                 catch (Exception exception) when (exception is SecretNotFoundException or SecretStateException)
                 {
-                    _logger.LogWarning(
-                        "The password of mail configuration {ConfigurationId} could not be read for a duplicate ({FailureType}).",
-                        source.ItemId,
-                        exception.GetType().Name);
-
-                    return MailCredentialResult.Rejected(PasswordField, SourceUnavailableMessage);
+                    // Only the type name leaves the catch: the exception message can name the reference.
+                    failureType = exception.GetType().Name;
                 }
+            }
+
+            if (failureType is not null)
+            {
+                _logger.LogWarning(
+                    "The password of mail configuration {ConfigurationId} could not be read for a duplicate ({FailureType}).",
+                    LogSafe.Value(source.ItemId),
+                    failureType);
+
+                return MailCredentialResult.Rejected(PasswordField, SourceUnavailableMessage);
             }
 
             if (string.IsNullOrEmpty(password))

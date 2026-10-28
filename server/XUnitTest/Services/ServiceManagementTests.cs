@@ -11,6 +11,7 @@ using DomainService.ManagedService.Validator;
 using DomainService.Shared;
 using DomainService.Shared.Entities;
 using FluentAssertions;
+using FluentValidation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -40,6 +41,7 @@ namespace XUnitTest.Services
 
         private IServiceScopeFactory ScopeFactory() =>
             new ServiceCollection()
+                .AddTransient<IValidator<RegisterServiceRequest>, RegisterServiceRequestValidator>()
                 .AddScoped(_ =>
                 {
                     _secretScopes++;
@@ -70,7 +72,6 @@ namespace XUnitTest.Services
         private ServiceManagement Service() => new(
             NullLogger<ServiceManagement>.Instance,
             _repo.Object,
-            new RegisterServiceRequestValidator(),
             _blocksSecret.Object,
             _cache.Object,
             _tenants.Object,
@@ -260,7 +261,6 @@ namespace XUnitTest.Services
         private ServiceManagement ServiceWithRootTenant(Microsoft.Extensions.Logging.ILogger<ServiceManagement> logger) => new(
             logger,
             _repo.Object,
-            new RegisterServiceRequestValidator(),
             _blocksSecret.Object,
             _cache.Object,
             _tenants.Object,
@@ -370,7 +370,6 @@ namespace XUnitTest.Services
             return new ServiceManagement(
                 logger,
                 _repo.Object,
-                new RegisterServiceRequestValidator(),
                 _blocksSecret.Object,
                 _cache.Object,
                 _tenants.Object,

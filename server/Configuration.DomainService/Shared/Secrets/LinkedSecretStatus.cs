@@ -78,6 +78,7 @@ namespace Configuration.DomainService.Shared.Secrets
                 return None;
             }
 
+            string failureType;
             try
             {
                 var metadata = await secretService.GetAsync(secretId, cancellationToken).ConfigureAwait(false);
@@ -89,14 +90,18 @@ namespace Configuration.DomainService.Shared.Secrets
             }
             catch (Exception exception)
             {
-                logger.LogWarning(
-                    "Could not check the linked secret of {ConfigurationKind} configuration {ConfigurationId} ({FailureType}).",
-                    configurationKind,
-                    configurationId,
-                    exception.GetType().Name);
-
-                return Unavailable;
+                // Only the type name leaves the catch: the exception object is deliberately not
+                // logged, because its message can carry the secret id.
+                failureType = exception.GetType().Name;
             }
+
+            logger.LogWarning(
+                "Could not check the linked secret of {ConfigurationKind} configuration {ConfigurationId} ({FailureType}).",
+                configurationKind,
+                LogSafe.Value(configurationId),
+                failureType);
+
+            return Unavailable;
         }
     }
 }

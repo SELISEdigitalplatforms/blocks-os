@@ -3,6 +3,7 @@ using Blocks.Secrets;
 using Configuration.DomainService.Mail.Providers;
 using Configuration.DomainService.Mail.RequestModel;
 using Configuration.DomainService.Mail.ResponseModel;
+using Configuration.DomainService.Shared.Secrets;
 using Configuration.DomainService.Shared.Services;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
@@ -115,6 +116,7 @@ namespace Configuration.DomainService.Mail.Services
             }
 
             MailCredentialResult credential;
+            string? vaultFailureType = null;
             try
             {
                 credential = await definition
@@ -128,10 +130,16 @@ namespace Configuration.DomainService.Mail.Services
                 // is left to the global filter to classify as 403/409/404.
                 // The type only: a secret-store exception, or the vault error inside it, can name
                 // the secret, and a reference must never reach a log.
+                vaultFailureType = exception.GetType().Name;
+                credential = MailCredentialResult.None;
+            }
+
+            if (vaultFailureType is not null)
+            {
                 _logger.LogError(
                     "Saving mail configuration end -- Secret store unavailable ({FailureType}) for configuration {ConfigurationId}",
-                    exception.GetType().Name,
-                    configuration.ConfigurationId);
+                    vaultFailureType,
+                    LogSafe.Value(configuration.ConfigurationId));
 
                 return MailConfigurationMutationResult.SecretStoreUnavailable();
             }
@@ -201,6 +209,7 @@ namespace Configuration.DomainService.Mail.Services
             // that nothing references any more. A credential that is already archived or purged
             // is tolerated, and remembered as not retired by this call.
             var retiredHere = false;
+            string? vaultFailureType = null;
             if (hasDefinition)
             {
                 try
@@ -211,13 +220,18 @@ namespace Configuration.DomainService.Mail.Services
                 }
                 catch (SecretVaultException exception)
                 {
-                    _logger.LogError(
-                        "Deleting mail configuration end -- Secret store unavailable ({FailureType}) for configuration {ConfigurationId}",
-                        exception.GetType().Name,
-                        config.ItemId);
-
-                    return MailConfigurationMutationResult.SecretStoreUnavailable();
+                    vaultFailureType = exception.GetType().Name;
                 }
+            }
+
+            if (vaultFailureType is not null)
+            {
+                _logger.LogError(
+                    "Deleting mail configuration end -- Secret store unavailable ({FailureType}) for configuration {ConfigurationId}",
+                    vaultFailureType,
+                    LogSafe.Value(config.ItemId));
+
+                return MailConfigurationMutationResult.SecretStoreUnavailable();
             }
 
             try
@@ -274,16 +288,23 @@ namespace Configuration.DomainService.Mail.Services
             var newConfig = CopyForDuplicate(config, definition);
 
             MailCredentialResult credential;
+            string? vaultFailureType = null;
             try
             {
                 credential = await definition.DuplicateCredentialAsync(config, newConfig, request, cancellationToken).ConfigureAwait(false);
             }
             catch (SecretVaultException exception)
             {
+                vaultFailureType = exception.GetType().Name;
+                credential = MailCredentialResult.None;
+            }
+
+            if (vaultFailureType is not null)
+            {
                 _logger.LogError(
                     "Duplicating mail configuration end -- Secret store unavailable ({FailureType}) for configuration {ConfigurationId}",
-                    exception.GetType().Name,
-                    config.ItemId);
+                    vaultFailureType,
+                    LogSafe.Value(config.ItemId));
 
                 return MailConfigurationMutationResult.SecretStoreUnavailable();
             }
@@ -529,34 +550,52 @@ namespace Configuration.DomainService.Mail.Services
                 return;
             }
 
+            var loggedConfigurationId = LogSafe.Value(configurationId);
+            bool storedReferencesSecret;
+            string? readBackFailureType = null;
             try
             {
                 var stored = await _configurationRepository.GetMailConfigurationByIdAsync(configurationId).ConfigureAwait(false);
-                if (stored is not null
-                    && string.Equals(definition.CredentialReferenceOf(stored), credential.Reference, StringComparison.Ordinal))
-                {
-                    _logger.LogWarning(
-                        "Mail configuration {Operation} reported a failure but the configuration was written; its new secret is kept. Configuration {ConfigurationId}.",
-                        operation,
-                        configurationId);
-                    return;
-                }
+                storedReferencesSecret = stored is not null
+                    && string.Equals(definition.CredentialReferenceOf(stored), credential.Reference, StringComparison.Ordinal);
             }
             catch (Exception exception)
+            {
+                // Only the type name leaves the catch: the exception message can carry the reference.
+                storedReferencesSecret = false;
+                readBackFailureType = exception.GetType().Name;
+            }
+
+            if (readBackFailureType is not null)
             {
                 _logger.LogWarning(
                     "Mail configuration {Operation} failed and the configuration could not be read back ({FailureType}); its new secret is kept. Reconcile configuration {ConfigurationId}.",
                     operation,
-                    exception.GetType().Name,
-                    configurationId);
+                    readBackFailureType,
+                    loggedConfigurationId);
                 return;
             }
 
+            if (storedReferencesSecret)
+            {
+                _logger.LogWarning(
+                    "Mail configuration {Operation} reported a failure but the configuration was written; its new secret is kept. Configuration {ConfigurationId}.",
+                    operation,
+                    loggedConfigurationId);
+                return;
+            }
+
+            string? retireFailureType = null;
             try
             {
                 await definition.DeleteCredentialAsync(credential.Reference, CancellationToken.None).ConfigureAwait(false);
             }
             catch (Exception exception)
+            {
+                retireFailureType = exception.GetType().Name;
+            }
+
+            if (retireFailureType is not null)
             {
                 // Secret-free on purpose: the configuration id and the operation are enough for an
                 // operator to find both sides, and the reference must not reach a log that is
@@ -564,8 +603,8 @@ namespace Configuration.DomainService.Mail.Services
                 _logger.LogError(
                     "Mail configuration {Operation} failed and its new secret could not be retired ({FailureType}). Reconcile configuration {ConfigurationId}.",
                     operation,
-                    exception.GetType().Name,
-                    configurationId);
+                    retireFailureType,
+                    loggedConfigurationId);
             }
         }
 
@@ -583,19 +622,25 @@ namespace Configuration.DomainService.Mail.Services
                 return;
             }
 
+            string? failureType = null;
             try
             {
                 await definition.RestoreCredentialAsync(reference, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception exception)
             {
+                failureType = exception.GetType().Name;
+            }
+
+            if (failureType is not null)
+            {
                 // The configuration is deliberately left in place for operator repair: it still
                 // points at a secret that is now soft-deleted, which is visible and fixable,
                 // where deleting it would leave nothing to reconcile against.
                 _logger.LogError(
                     "Mail configuration delete failed and its secret could not be restored ({FailureType}). Reconcile configuration {ConfigurationId}.",
-                    exception.GetType().Name,
-                    config.ItemId);
+                    failureType,
+                    LogSafe.Value(config.ItemId));
             }
         }
     }

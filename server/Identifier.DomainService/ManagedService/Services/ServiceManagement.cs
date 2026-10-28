@@ -31,7 +31,6 @@ namespace DomainService.ManagedService.Services
         public const string SecretStoreUnavailableError = "secret_store_unavailable";
 
         private readonly ILogger<ServiceManagement> _logger;
-        private readonly IValidator<RegisterServiceRequest> _registerServiceRequestValidator;
         private readonly IServiceManagementRepository _serviceManagementRepository;
         private readonly IBlocksSecret _blocksSecret;
         private readonly ICacheClient _cacheClient;
@@ -46,12 +45,13 @@ namespace DomainService.ManagedService.Services
         /// <param name="scopeFactory">
         /// This service is a singleton and <c>ISecretService</c> is scoped (it reads the
         /// request-scoped <see cref="BlocksContext"/>), so every secret call opens its own scope
-        /// rather than capturing one service for the process lifetime.
+        /// rather than capturing one service for the process lifetime. The transient
+        /// <c>IValidator&lt;RegisterServiceRequest&gt;</c> is resolved the same way, once per
+        /// registration, instead of being captured by this singleton.
         /// </param>
         [ExcludeFromCodeCoverage]
         public ServiceManagement(ILogger<ServiceManagement> logger,
                                  IServiceManagementRepository serviceManagementRepository,
-                                 IValidator<RegisterServiceRequest> registerServiceRequestValidator,
                                  IBlocksSecret blocksSecret,
                                  ICacheClient cacheClient,
                                  ITenants tenants,
@@ -61,7 +61,6 @@ namespace DomainService.ManagedService.Services
             _logger = logger;
             _scopeFactory = scopeFactory;
             _serviceManagementRepository = serviceManagementRepository;
-            _registerServiceRequestValidator = registerServiceRequestValidator;
             _blocksSecret = blocksSecret;
             _cacheClient = cacheClient;
             this.configuration = configuration;
@@ -82,7 +81,7 @@ namespace DomainService.ManagedService.Services
 
         public async Task<RegisterServiceResponse> RegisterServiceAsync(RegisterServiceRequest request)
         {
-            var validationResult = await _registerServiceRequestValidator.ValidateAsync(request);
+            var validationResult = await ValidateRegistrationAsync(request);
 
             if (!validationResult.IsValid)
             {
@@ -111,7 +110,8 @@ namespace DomainService.ManagedService.Services
 
             // The connection string goes to Blocks Secrets in the caller's own context, whose
             // tenant is the row's TenantId (see Map), and the row keeps only the reference.
-            string reference;
+            string reference = string.Empty;
+            string? vaultFailureType = null;
             try
             {
                 reference = await WithSecretServiceAsync(secrets => secrets.SetAsync(new SetSecretRequest
@@ -127,9 +127,14 @@ namespace DomainService.ManagedService.Services
                 // Only an unreachable vault is an availability answer; any other secret failure
                 // propagates to the global SecretExceptionFilter. The exception itself is not
                 // logged: the vault's inner error can name the secret.
+                vaultFailureType = exception.GetType().Name;
+            }
+
+            if (vaultFailureType is not null)
+            {
                 _logger.LogWarning(
                     "Secret store unavailable ({FailureType}); service {ServiceId} was not saved and its provisioned bus resources were left in place",
-                    exception.GetType().Name, service.ServiceId);
+                    vaultFailureType, service.ServiceId);
 
                 return new RegisterServiceResponse
                 {
@@ -373,17 +378,22 @@ namespace DomainService.ManagedService.Services
                 return string.Empty;
             }
 
+            string failureType;
             try
             {
                 return await WithSecretServiceAsync(secrets => secrets.GetValueAsync(item.ServiceBusConnectionStringReference!));
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
-                _logger.LogError(
-                    "Connection string for service {ServiceId} could not be read from Blocks Secrets ({FailureType}); returning it empty",
-                    item.ServiceId, exception.GetType().Name);
-                return string.Empty;
+                // Only the type name leaves the catch: the exception object is deliberately not
+                // logged, because its message can carry the reference.
+                failureType = exception.GetType().Name;
             }
+
+            _logger.LogError(
+                "Connection string for service {ServiceId} could not be read from Blocks Secrets ({FailureType}); returning it empty",
+                item.ServiceId, failureType);
+            return string.Empty;
         }
 
         /// <summary>
@@ -398,6 +408,8 @@ namespace DomainService.ManagedService.Services
         /// </remarks>
         private async Task RetireUnsavedSecretAsync(string serviceId, string reference)
         {
+            bool rowReferencesSecret;
+            string? readBackFailureType = null;
             try
             {
                 var (rows, _) = await _serviceManagementRepository.GetAllServicesAsync(new GetAllServiceRequest
@@ -407,22 +419,32 @@ namespace DomainService.ManagedService.Services
                     Filter = new GetAllServiceFilter { ServiceId = serviceId }
                 });
 
-                if (rows.Any(row => string.Equals(row.ServiceBusConnectionStringReference, reference, StringComparison.Ordinal)))
-                {
-                    _logger.LogWarning(
-                        "Saving service {ServiceId} reported a failure but the row was written; its connection string secret is kept",
-                        serviceId);
-                    return;
-                }
+                rowReferencesSecret = rows.Any(row => string.Equals(row.ServiceBusConnectionStringReference, reference, StringComparison.Ordinal));
             }
             catch (Exception exception)
             {
+                // Only the type name leaves the catch: the exception message can carry the reference.
+                rowReferencesSecret = false;
+                readBackFailureType = exception.GetType().Name;
+            }
+
+            if (readBackFailureType is not null)
+            {
                 _logger.LogWarning(
                     "Service {ServiceId} could not be read back after a failed save ({FailureType}); its connection string secret is kept",
-                    serviceId, exception.GetType().Name);
+                    serviceId, readBackFailureType);
                 return;
             }
 
+            if (rowReferencesSecret)
+            {
+                _logger.LogWarning(
+                    "Saving service {ServiceId} reported a failure but the row was written; its connection string secret is kept",
+                    serviceId);
+                return;
+            }
+
+            string? retireFailureType = null;
             try
             {
                 await WithSecretServiceAsync(async secrets =>
@@ -433,10 +455,24 @@ namespace DomainService.ManagedService.Services
             }
             catch (Exception exception)
             {
+                retireFailureType = exception.GetType().Name;
+            }
+
+            if (retireFailureType is not null)
+            {
                 _logger.LogError(
                     "Service {ServiceId} was not saved and its new connection string secret could not be retired ({FailureType}). Reconcile it.",
-                    serviceId, exception.GetType().Name);
+                    serviceId, retireFailureType);
             }
+        }
+
+        /// <summary>The registered request validator, resolved in its own DI scope for this one call.</summary>
+        private async Task<FluentValidation.Results.ValidationResult> ValidateRegistrationAsync(RegisterServiceRequest request)
+        {
+            using var scope = _scopeFactory.CreateScope();
+            return await scope.ServiceProvider
+                .GetRequiredService<IValidator<RegisterServiceRequest>>()
+                .ValidateAsync(request);
         }
 
         /// <summary>One secret call in its own DI scope, under the caller's context.</summary>

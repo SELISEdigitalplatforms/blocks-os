@@ -132,11 +132,11 @@ namespace XUnitTest.Services
                 SenderUserName = "someone@gmail.com",
                 AccountPassword = "gmail-app-pw"
             },
-            MailServiceProvider.Office365Smtp => Office365PasswordRequest(),
+            MailServiceProvider.Office365Smtp => Office365SmtpBasicAuthRequest(),
             _ => ZohoRequest()
         };
 
-        private static MailConfiguration Office365PasswordRequest(string configurationId = "") => new()
+        private static MailConfiguration Office365SmtpBasicAuthRequest(string configurationId = "") => new()
         {
             ConfigurationId = configurationId,
             ConfigurationName = "Microsoft 365 Basic",
@@ -163,7 +163,7 @@ namespace XUnitTest.Services
             AccountPasswordReference = reference
         };
 
-        private static MailServerConfiguration StoredOffice365Password(string? reference = "pw-o365") => new()
+        private static MailServerConfiguration StoredOffice365SmtpBasicAuth(string? reference = "pw-o365") => new()
         {
             ItemId = "o365-pw",
             Name = "Microsoft 365 Basic",
@@ -214,7 +214,7 @@ namespace XUnitTest.Services
         {
             if (provider == MailServiceProvider.Office365Smtp)
             {
-                return StoredOffice365Password(reference);
+                return StoredOffice365SmtpBasicAuth(reference);
             }
 
             var stored = StoredZoho(reference);
@@ -393,11 +393,11 @@ namespace XUnitTest.Services
         public async Task Save_EditOfAReferencedOffice365PasswordConfiguration_RotatesItsPasswordSecret()
         {
             using var _ = new BlocksTestContext();
-            GivenStored(StoredOffice365Password());
+            GivenStored(StoredOffice365SmtpBasicAuth());
             GivenStatus(SecretStatuses.Active);
             GivenRotateSucceeds();
 
-            var result = await Service().SaveAsync(Office365PasswordRequest("o365-pw"));
+            var result = await Service().SaveAsync(Office365SmtpBasicAuthRequest("o365-pw"));
 
             result.Outcome.Should().Be(MailConfigurationOutcome.Success);
             _saved.Single().AccountPasswordReference.Should().Be("pw-o365");
@@ -910,7 +910,7 @@ namespace XUnitTest.Services
         public async Task Duplicate_Office365PasswordSource_CopiesItsPasswordSecret()
         {
             using var _ = new BlocksTestContext();
-            GivenStored(StoredOffice365Password());
+            GivenStored(StoredOffice365SmtpBasicAuth());
             _secrets.Setup(s => s.GetValueAsync("pw-o365", It.IsAny<CancellationToken>())).ReturnsAsync("o365-password");
             GivenSetReturns("pw-o365-2");
 
@@ -1109,7 +1109,7 @@ namespace XUnitTest.Services
         [Fact]
         public async Task Delete_Office365PasswordConfiguration_RetiresThePasswordReference()
         {
-            var stored = StoredOffice365Password();
+            var stored = StoredOffice365SmtpBasicAuth();
             stored.ClientSecretReference = "unrelated";
             GivenStored(stored);
             GivenDeleteSucceeds();
@@ -1221,8 +1221,8 @@ namespace XUnitTest.Services
                      StoredZoho(reference: null, password: "legacy-plaintext"),
                      StoredZoho("pw-1"),
                      gmail,
-                     StoredOffice365Password(reference: null),
-                     StoredOffice365Password(),
+                     StoredOffice365SmtpBasicAuth(reference: null),
+                     StoredOffice365SmtpBasicAuth(),
                      oauth
                  });
 
