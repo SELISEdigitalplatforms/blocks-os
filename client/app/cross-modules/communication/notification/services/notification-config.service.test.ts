@@ -142,6 +142,31 @@ describe("NotificationConfigService", () => {
       expect(body).not.toHaveProperty("sourceService");
     });
 
+    it("sends the receiver and delivery fields only when the caller set them", async () => {
+      vi.mocked(http.post).mockResolvedValue({ isSuccess: true, errors: null });
+      await service.saveNotificationConfig({
+        ...base,
+        scope: 2,
+        liveEnabled: true,
+        pushEnabled: false,
+        rateLimitPerMinute: 60,
+        audience: {
+          level: 1,
+          match: 0,
+          userIds: [],
+          roles: [],
+          permissions: [],
+          filters: [],
+          alsoNamedUsers: false,
+        },
+      });
+      const body = vi.mocked(http.post).mock.calls[0][1] as Record<string, unknown>;
+      expect(body).toMatchObject({ scope: 2, liveEnabled: true, pushEnabled: false, rateLimitPerMinute: 60 });
+      expect(body.audience).toMatchObject({ level: 1 });
+      expect(body).not.toHaveProperty("pushTemplate");
+      expect(body).not.toHaveProperty("audienceLocked");
+    });
+
     it("returns the server refusal keys unchanged", async () => {
       vi.mocked(http.post).mockResolvedValue({
         isSuccess: false,

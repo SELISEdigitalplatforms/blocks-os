@@ -15,7 +15,53 @@ export interface INotificationConfigBuiltInFields {
   consumerAppNote?: string | null;
 }
 
-export interface INotificationConfigRow extends INotificationConfigBuiltInFields {
+/** A narrowing rule: keeps only receivers with a live subscription for this context. Never adds receivers. */
+export interface INotificationSubscriptionFilter {
+  context: string;
+  actionName: string;
+  value: string;
+}
+
+/** Who receives the notification. The project always comes from the sending call, never from here. */
+export interface INotificationAudience {
+  /** 0 Affected users only, 1 All users, 2 Selected */
+  level: number;
+  /** 0 Any, 1 All: how the Selected rules combine */
+  match: number;
+  userIds: string[];
+  roles: string[];
+  /** Permission resources */
+  permissions: string[];
+  filters: INotificationSubscriptionFilter[];
+  /** Also notify the users the sending service names (Selected only) */
+  alsoNamedUsers: boolean;
+}
+
+/** Text lives in Localization (module `notifications`); the config only holds the keys. */
+export interface INotificationPushTemplate {
+  titleKey: string;
+  bodyKey: string;
+  link: string;
+}
+
+/** Delivery and receiver fields. Rows from older servers lack them: read the defaults in the form mapper. */
+export interface INotificationConfigDeliveryFields {
+  /** 0 Project users, 1 Console users, 2 Both */
+  scope?: number;
+  audience?: INotificationAudience | null;
+  defaultAudience?: INotificationAudience | null;
+  /** Personal notices: the audience and push text are fixed, only channels and on/off change. */
+  audienceLocked?: boolean;
+  liveEnabled?: boolean;
+  pushEnabled?: boolean;
+  pushTemplate?: INotificationPushTemplate | null;
+  /** 0 means the server default (120 per minute). */
+  rateLimitPerMinute?: number;
+}
+
+export interface INotificationConfigRow
+  extends INotificationConfigBuiltInFields,
+    INotificationConfigDeliveryFields {
   itemId: string;
   createdDate?: string;
   lastUpdatedDate?: string;
@@ -40,7 +86,9 @@ export interface IGetNotificationConfigsResponse {
   totalCount: number;
 }
 
-export interface ISaveNotificationConfigPayload extends INotificationConfigBuiltInFields {
+export interface ISaveNotificationConfigPayload
+  extends INotificationConfigBuiltInFields,
+    INotificationConfigDeliveryFields {
   itemId?: string;
   name: string;
   channelToNotify: number;
@@ -54,4 +102,26 @@ export interface ISaveNotificationConfigResponse {
   errors: null | unknown;
   isSuccess: boolean;
   itemId: string;
+}
+
+/** Answer of GET Notifier/push-settings. The service account key is never part of it. */
+export interface IPushSettings {
+  projectId: string | null;
+  enabled: boolean;
+  /** True once a service account key is stored. */
+  hasKey: boolean;
+  keyUploadedAt?: string | null;
+  keyUploadedBy?: string | null;
+}
+
+/** Body of POST Notifier/push-settings. `serviceAccountJson` is sent only when a key file was chosen. */
+export interface ISavePushSettingsPayload {
+  projectId: string;
+  enabled: boolean;
+  serviceAccountJson?: string;
+}
+
+export interface IPushSettingsAck {
+  isSuccess?: boolean;
+  errors?: Record<string, string> | null;
 }

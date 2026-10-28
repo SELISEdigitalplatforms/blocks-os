@@ -70,6 +70,26 @@ const pickBuiltInFields = (payload: ISaveNotificationConfigPayload) => {
   return picked;
 };
 
+const DELIVERY_FIELD_KEYS = [
+  "scope",
+  "audience",
+  "liveEnabled",
+  "pushEnabled",
+  "pushTemplate",
+  "rateLimitPerMinute",
+  "defaultAudience",
+  "audienceLocked",
+] as const;
+
+/** Same rule as the built-in fields: a field the caller did not set is not sent. */
+const pickDeliveryFields = (payload: ISaveNotificationConfigPayload) => {
+  const picked: Partial<Record<(typeof DELIVERY_FIELD_KEYS)[number], unknown>> = {};
+  for (const key of DELIVERY_FIELD_KEYS) {
+    if (payload[key] !== undefined) picked[key] = payload[key];
+  }
+  return picked;
+};
+
 export class NotificationConfigService {
   getNotificationConfigs(
     payload: IGetNotificationConfigsPayload,
@@ -113,6 +133,7 @@ export class NotificationConfigService {
         itemId: payload.itemId ?? "",
         isUpdateRequest: !!payload.itemId,
         ...pickBuiltInFields(payload),
+        ...pickDeliveryFields(payload),
       })
       .then((response): ISaveNotificationConfigResponse => ({
         isSuccess: !!response?.isSuccess,
