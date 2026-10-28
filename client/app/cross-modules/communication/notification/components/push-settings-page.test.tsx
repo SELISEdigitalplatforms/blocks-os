@@ -22,6 +22,9 @@ const SNIPPET = (project: string) =>
   `const firebaseConfig = { apiKey: "${API_KEY}", projectId: "${project}", messagingSenderId: "${SENDER}", appId: "${APP_ID}" };`;
 const SAVE = "Save";
 const WEB_SWITCH = "Web sending";
+const SENT_AT = "2026-10-28T20:41:00Z";
+const TEST_ALL = "Test all platforms";
+const NOW_ISO = () => new Date(Date.now() - 2 * 3_600_000).toISOString();
 const BASE: IPushSettings = {
   projectId: PROJECT,
   enabled: true,
@@ -44,6 +47,7 @@ const h = vi.hoisted(() => ({
   test: vi.fn(),
   toast: vi.fn(),
   showErrorToast: vi.fn(),
+  status: {} as Record<string, unknown>,
 }));
 
 vi.mock("../hooks/use-push-settings", async (importOriginal) => ({
@@ -52,13 +56,7 @@ vi.mock("../hooks/use-push-settings", async (importOriginal) => ({
   useSavePushSettings: () => ({ mutateAsync: h.save, isPending: false }),
 }));
 vi.mock("../hooks/use-push-runtime", () => ({
-  usePushStatus: () => ({
-    data: {
-      android: { devices: 3, lastTest: null },
-      ios: { devices: 1, lastTest: null },
-      web: { devices: 0, lastTest: null },
-    },
-  }),
+  usePushStatus: () => ({ data: h.status }),
   useSendTestPush: () => ({ mutateAsync: h.test, isPending: false }),
 }));
 vi.mock("@/hooks/use-toast", () => ({ toast: h.toast, showErrorToast: h.showErrorToast }));
@@ -83,10 +81,15 @@ describe("PushSettingsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     h.settings = BASE;
+    h.status = {
+      android: { devices: 3, lastTest: null },
+      ios: { devices: 1, lastTest: null },
+      web: { devices: 0, lastTest: null },
+    };
     h.save.mockResolvedValue({ isSuccess: true });
     h.test.mockResolvedValue({
       isSuccess: true,
-      sentAt: "2026-10-28T20:41:00Z",
+      sentAt: SENT_AT,
       delivered: 0,
       failed: 0,
       devices: [],
@@ -304,11 +307,123 @@ describe("PushSettingsPage", () => {
     });
   });
 
+  describe("last test per platform", () => {
+    it("shows the last result: delivered with its age, or failed with the reason and the Apple key hint", () => {
+      h.status = {
+        android: { devices: 3, lastTest: { at: NOW_ISO(), delivered: 3, failed: 0 } },
+        ios: {
+          devices: 1,
+          lastTest: { at: NOW_ISO(), delivered: 0, failed: 1, reason: "apnsKeyMissing" },
+        },
+        web: { devices: 0, lastTest: null },
+      };
+      renderPage();
+      expect(screen.getByText("Delivered · 2 hours ago")).toBeTruthy();
+      expect(screen.getByText(/Failed · /)).toBeTruthy();
+      expect(screen.getByText(/Upload your APNs key in Firebase console/)).toBeTruthy();
+    });
+
+    it("a failure without a reason is just failed", () => {
+      h.status = {
+        android: { devices: 1, lastTest: { at: NOW_ISO(), delivered: 0, failed: 1 } },
+        ios: { devices: 0, lastTest: null },
+        web: { devices: 0, lastTest: null },
+      };
+      renderPage();
+      expect(screen.getByText("Failed")).toBeTruthy();
+    });
+
+    it("the Web row says a config is needed until one exists", () => {
+      renderPage();
+      expect(screen.getByText("Needs web config")).toBeTruthy();
+    });
+  });
+
+  describe("web config panel", () => {
+    it("says when and by whom the stored config was added", () => {
+      h.settings = {
+        ...BASE,
+        hasWebConfig: true,
+        webConfigUploadedAt: SENT_AT,
+        webConfigUploadedBy: "Ana",
+      };
+      renderPage();
+      expect(screen.getByText("Web config stored on 28/10/2026 by Ana")).toBeTruthy();
+    });
+
+    it("reads a chosen config file and shows only that it was added", async () => {
+      const user = userEvent.setup();
+      renderPage();
+      const file = new File([SNIPPET(PROJECT)], "firebase.js", { type: "text/javascript" });
+      await user.upload(screen.getByLabelText(WEB_TEXT.chooseFile, { selector: "input" }), file);
+      expect(await screen.findByText("firebase.js")).toBeTruthy();
+      expect(document.body.textContent).not.toContain(API_KEY);
+    });
+
+    it("an unreadable file adds nothing", async () => {
+      const user = userEvent.setup({ applyAccept: false });
+      renderPage();
+      const file = new File(["x"], "broken.json", { type: "application/json" });
+      Object.defineProperty(file, "text", { value: () => Promise.reject(new Error("read")) });
+      await user.upload(screen.getByLabelText(WEB_TEXT.chooseFile, { selector: "input" }), file);
+      await waitFor(() => expect(screen.queryByText("broken.json")).toBeNull());
+      expect(screen.queryByText(WEB_TEXT.remove)).toBeNull();
+    });
+
+    it("Remove takes the added config back out so the Web switch locks again", async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await addWebConfig(user);
+      await user.click(await screen.findByRole("button", { name: WEB_TEXT.remove }));
+      expect(screen.queryByRole("button", { name: WEB_TEXT.remove })).toBeNull();
+      expect(screen.getByRole("switch", { name: WEB_SWITCH }).hasAttribute("disabled")).toBe(true);
+    });
+  });
+
+  it("opens the setup guide from the key area and closes it again", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getAllByRole("button", { name: PUSH_TEXT.howToFind })[0]);
+    expect(await screen.findByText(/Setup guide/)).toBeTruthy();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByText(/Setup guide/)).toBeNull());
+  });
+
   describe("test send", () => {
+    it("Send again repeats the same test and Close hides the result", async () => {
+      h.test.mockResolvedValue({
+        isSuccess: true,
+        sentAt: SENT_AT,
+        delivered: 1,
+        failed: 0,
+        devices: [{ platform: "android", name: "Pixel 8", result: "delivered" }],
+      });
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(screen.getByRole("button", { name: "Send test Android" }));
+      await screen.findByText("Pixel 8");
+      await user.click(screen.getByRole("button", { name: "Send again" }));
+      await waitFor(() => expect(h.test).toHaveBeenCalledTimes(2));
+      expect(h.test).toHaveBeenLastCalledWith({ platform: "android" });
+      const close = screen
+        .getAllByRole("button", { name: "Close" })
+        .find((button) => button.textContent === "Close");
+      await user.click(close as HTMLElement);
+      await waitFor(() => expect(screen.queryByText("Pixel 8")).toBeNull());
+    });
+
+    it("shows an error when the test call itself fails", async () => {
+      h.test.mockRejectedValue(new Error("network"));
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(screen.getByRole("button", { name: TEST_ALL }));
+      await waitFor(() => expect(h.showErrorToast).toHaveBeenCalled());
+    });
+
     it("shows the result dialog with the fix line of a failed device", async () => {
       h.test.mockResolvedValue({
         isSuccess: true,
-        sentAt: "2026-10-28T20:41:00Z",
+        sentAt: SENT_AT,
         delivered: 0,
         failed: 1,
         devices: [{ platform: "ios", name: "iPhone 15", result: "apnsKeyMissing" }],
@@ -324,7 +439,7 @@ describe("PushSettingsPage", () => {
       h.test.mockResolvedValue({ isSuccess: false, errors: { devices: "No device" } });
       const user = userEvent.setup();
       renderPage();
-      await user.click(screen.getByRole("button", { name: "Test all platforms" }));
+      await user.click(screen.getByRole("button", { name: TEST_ALL }));
       await waitFor(() =>
         expect(h.showErrorToast).toHaveBeenCalledWith({ errors: { devices: "No device" } }),
       );
@@ -333,9 +448,7 @@ describe("PushSettingsPage", () => {
     it("offers no test before push is set up", () => {
       h.settings = NOT_SET_UP;
       renderPage();
-      expect(
-        screen.getByRole("button", { name: "Test all platforms" }).hasAttribute("disabled"),
-      ).toBe(true);
+      expect(screen.getByRole("button", { name: TEST_ALL }).hasAttribute("disabled")).toBe(true);
     });
   });
 });
