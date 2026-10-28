@@ -144,7 +144,7 @@ namespace Configuration.DomainService.Mail.Services
             }
             catch
             {
-                await CompensateAsync(definition, credential, entity.ItemId, "save").ConfigureAwait(false);
+                await CompensateUnsavedAsync(definition, credential, entity.ItemId, "save").ConfigureAwait(false);
                 throw;
             }
 
@@ -302,7 +302,7 @@ namespace Configuration.DomainService.Mail.Services
             }
             catch
             {
-                await CompensateAsync(definition, credential, newConfig.ItemId, "duplicate").ConfigureAwait(false);
+                await CompensateUnsavedAsync(definition, credential, newConfig.ItemId, "duplicate").ConfigureAwait(false);
                 throw;
             }
 
@@ -452,8 +452,13 @@ namespace Configuration.DomainService.Mail.Services
 
         /// <summary>
         /// Builds the browser-facing view of a stored record, including the linked secret's
-        /// status for a provider that owns one.
+        /// status where the provider shows one.
         /// </summary>
+        /// <remarks>
+        /// The status costs one metadata read, so it is resolved only when the provider says the
+        /// response shows it (Office 365 OAuth). Password records show a fixed mask and make no
+        /// secret-store call at all.
+        /// </remarks>
         private async Task<MailConfigurationResponse> ProjectAsync(MailServerConfiguration entity, CancellationToken cancellationToken)
         {
             var response = new MailConfigurationResponse
@@ -487,7 +492,9 @@ namespace Configuration.DomainService.Mail.Services
 
             if (_providers.TryGet(entity.Provider, out var definition))
             {
-                var credentialStatus = await definition.ResolveCredentialStatusAsync(entity, cancellationToken).ConfigureAwait(false);
+                var credentialStatus = definition.ProjectsCredentialStatus(entity)
+                    ? await definition.ResolveCredentialStatusAsync(entity, cancellationToken).ConfigureAwait(false)
+                    : null;
                 definition.ProjectResponse(entity, response, credentialStatus);
             }
 
@@ -495,15 +502,23 @@ namespace Configuration.DomainService.Mail.Services
         }
 
         /// <summary>
-        /// Retires a credential this operation created but could not finish using.
+        /// Retires a credential this operation created when the write that would reference it
+        /// failed. Every failure here is logged and swallowed so the write failure is what propagates.
         /// </summary>
         /// <remarks>
         /// Only a created credential is compensated. Undoing a rotation would need the previous
         /// plaintext, which the caller no longer holds and this service never keeps — so a failed
         /// write after a rotation leaves the new value in place and the configuration unchanged,
         /// which is recoverable by retrying the edit.
+        /// <para>
+        /// A write can fail after the server applied it (a lost acknowledgement), and retiring the
+        /// secret then would leave the stored document pointing at an archived secret. So the
+        /// document is read back first, as service registration does, and the secret is kept when
+        /// the stored document already references it or the read-back itself fails: an orphaned
+        /// secret is recoverable, a configuration that can no longer authenticate is not.
+        /// </para>
         /// </remarks>
-        private async Task CompensateAsync(
+        private async Task CompensateUnsavedAsync(
             IMailConfigurationProvider definition,
             MailCredentialResult credential,
             string configurationId,
@@ -511,6 +526,29 @@ namespace Configuration.DomainService.Mail.Services
         {
             if (!credential.Created || string.IsNullOrEmpty(credential.Reference))
             {
+                return;
+            }
+
+            try
+            {
+                var stored = await _configurationRepository.GetMailConfigurationByIdAsync(configurationId).ConfigureAwait(false);
+                if (stored is not null
+                    && string.Equals(definition.CredentialReferenceOf(stored), credential.Reference, StringComparison.Ordinal))
+                {
+                    _logger.LogWarning(
+                        "Mail configuration {Operation} reported a failure but the configuration was written; its new secret is kept. Configuration {ConfigurationId}.",
+                        operation,
+                        configurationId);
+                    return;
+                }
+            }
+            catch (Exception exception)
+            {
+                _logger.LogWarning(
+                    "Mail configuration {Operation} failed and the configuration could not be read back ({FailureType}); its new secret is kept. Reconcile configuration {ConfigurationId}.",
+                    operation,
+                    exception.GetType().Name,
+                    configurationId);
                 return;
             }
 

@@ -82,7 +82,7 @@ namespace XUnitTest.Controllers
             objectResult.StatusCode.Should().Be(503);
             objectResult.Value.Should().BeOfType<BaseMutationResponse>()
                         .Which.Errors.Should().ContainKey("ClientSecret")
-                        .WhoseValue.Should().Be("The client secret could not be stored. Try again.");
+                        .WhoseValue.Should().Be("The secret store is unavailable. Try again later.");
         }
 
         [Fact]

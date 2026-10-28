@@ -25,9 +25,11 @@ namespace XUnitTest.Services
     /// validator and provider definitions.
     /// </summary>
     /// <remarks>
-    /// The secret store is a <b>strict</b> mock: a call no test set up fails the test, and every
-    /// test ends with <c>VerifyNoOtherCalls</c>, so each one states the exact secret-call budget of
-    /// its path (spec §5), on success and on failure alike.
+    /// The secret store is a <b>strict</b> mock, but strictness alone does not fail a test: the
+    /// production catch-alls (status resolution, compensation, restore) swallow the
+    /// <c>MockException</c> an unexpected call throws. What pins each path's exact secret-call
+    /// budget (spec §5), on success and on failure alike, is that every test that reaches the
+    /// store ends with <c>VerifyNoOtherCalls</c>: Moq records the invocation before the strict check.
     /// </remarks>
     public class MailPasswordSecretTests
     {
@@ -35,7 +37,9 @@ namespace XUnitTest.Services
 
         private readonly Mock<IConfigurationRepository> _repo = new();
         private readonly Mock<ISecretService> _secrets = new(MockBehavior.Strict);
+        private readonly RecordingLogger<AmazonSesMailConfigurationProvider> _sesLogger = new();
         private readonly RecordingLogger<ZohoMailConfigurationProvider> _zohoLogger = new();
+        private readonly RecordingLogger<GmailMailConfigurationProvider> _gmailLogger = new();
         private readonly RecordingLogger<Office365SmtpMailConfigurationProvider> _office365Logger = new();
         private readonly RecordingLogger<MailConfigurationService> _serviceLogger = new();
         private readonly List<SetSecretRequest> _created = new();
@@ -60,9 +64,9 @@ namespace XUnitTest.Services
 
             var registry = new MailConfigurationProviderRegistry(new IMailConfigurationProvider[]
             {
-                new AmazonSesMailConfigurationProvider(_secrets.Object, NullLogger<AmazonSesMailConfigurationProvider>.Instance),
+                new AmazonSesMailConfigurationProvider(_secrets.Object, _sesLogger),
                 new ZohoMailConfigurationProvider(_secrets.Object, _zohoLogger),
-                new GmailMailConfigurationProvider(_secrets.Object, NullLogger<GmailMailConfigurationProvider>.Instance),
+                new GmailMailConfigurationProvider(_secrets.Object, _gmailLogger),
                 new Office365SmtpMailConfigurationProvider(_secrets.Object, _office365Logger)
             });
 
@@ -178,9 +182,61 @@ namespace XUnitTest.Services
         private void GivenStored(MailServerConfiguration stored) =>
             _repo.Setup(r => r.GetMailConfigurationByIdAsync(stored.ItemId)).ReturnsAsync(stored);
 
+        /// <summary>
+        /// A fresh copy on every read, as the database returns. Needed where a test reads the
+        /// record back after the service has mutated the instance it loaded.
+        /// </summary>
+        private void GivenStoredFreshEachRead(string itemId, Func<MailServerConfiguration> stored) =>
+            _repo.Setup(r => r.GetMailConfigurationByIdAsync(itemId)).ReturnsAsync(stored);
+
+        /// <summary>
+        /// The configuration write throws, but the document it sent was applied (a lost
+        /// acknowledgement): a read-back by id returns it.
+        /// </summary>
+        private void GivenWriteAppliedButThrows()
+        {
+            var applied = new Dictionary<string, string?>();
+            _repo.Setup(r => r.SaveMailConfigurationAsync(It.IsAny<MailServerConfiguration>()))
+                 .Callback<MailServerConfiguration>(m => applied[m.ItemId] = m.AccountPasswordReference)
+                 .ThrowsAsync(new TimeoutException("acknowledgement lost"));
+            _repo.Setup(r => r.GetMailConfigurationByIdAsync(It.Is<string>(id => applied.ContainsKey(id))))
+                 .ReturnsAsync((string id) => new MailServerConfiguration
+                 {
+                     ItemId = id,
+                     Provider = MailServiceProvider.Zoho,
+                     AccountPassword = "",
+                     AccountPasswordReference = applied[id]
+                 });
+        }
+
+        /// <summary>A stored, referenced record of <paramref name="provider"/>, matching <see cref="RequestFor"/>.</summary>
+        private static MailServerConfiguration StoredFor(MailServiceProvider provider, string reference)
+        {
+            if (provider == MailServiceProvider.Office365Smtp)
+            {
+                return StoredOffice365Password(reference);
+            }
+
+            var stored = StoredZoho(reference);
+            stored.ItemId = provider + "-1";
+            stored.Name = RequestFor(provider).ConfigurationName;
+            stored.Provider = provider;
+            return stored;
+        }
+
+        private IEnumerable<(LogLevel Level, string Message, Exception? Exception)> ProviderLogEntries(MailServiceProvider provider) => provider switch
+        {
+            MailServiceProvider.AmazonSes => _sesLogger.Entries,
+            MailServiceProvider.Gmail => _gmailLogger.Entries,
+            MailServiceProvider.Office365Smtp => _office365Logger.Entries,
+            _ => _zohoLogger.Entries
+        };
+
         /// <summary>Every log line as a sink would render it: the message and any exception passed with it.</summary>
         private IEnumerable<string> AllLogMessages() =>
             _zohoLogger.Entries.Select(e => e.Message + " " + e.Exception)
+                .Concat(_sesLogger.Entries.Select(e => e.Message + " " + e.Exception))
+                .Concat(_gmailLogger.Entries.Select(e => e.Message + " " + e.Exception))
                 .Concat(_office365Logger.Entries.Select(e => e.Message + " " + e.Exception))
                 .Concat(_serviceLogger.Entries.Select(e => e.Message + " " + e.Exception));
 
@@ -353,6 +409,130 @@ namespace XUnitTest.Services
             _secrets.VerifyNoOtherCalls();
         }
 
+        // ---------- the secret disappears between the status read and the rotation ----------
+
+        public static TheoryData<MailServiceProvider, Exception> RotateFindsTheSecretGone => new()
+        {
+            { MailServiceProvider.AmazonSes, new SecretNotFoundException("pw-old") },
+            { MailServiceProvider.Zoho, new SecretNotFoundException("pw-old") },
+            { MailServiceProvider.Gmail, new SecretStateException(SecretStatuses.Deleted, "rotate") },
+            { MailServiceProvider.Office365Smtp, new SecretStateException(SecretStatuses.Deleted, "rotate") }
+        };
+
+        [Theory]
+        [MemberData(nameof(RotateFindsTheSecretGone))]
+        public async Task Save_RotateFindsTheSecretGoneOrArchived_CreatesANewSecretAndRepoints(MailServiceProvider provider, Exception failure)
+        {
+            using var _ = new BlocksTestContext();
+            var stored = StoredFor(provider, "pw-old");
+            GivenStored(stored);
+            GivenStatus(SecretStatuses.Active);
+            _secrets.Setup(s => s.RotateAsync("pw-old", It.IsAny<RotateSecretRequest>(), It.IsAny<CancellationToken>()))
+                    .ThrowsAsync(failure);
+            GivenSetReturns("pw-new");
+            var request = RequestFor(provider);
+            request.ConfigurationId = stored.ItemId;
+
+            var result = await Service().SaveAsync(request);
+
+            // A save, not a 404 or 409 whose message could carry the reference.
+            result.Outcome.Should().Be(MailConfigurationOutcome.Success);
+            _saved.Single().AccountPasswordReference.Should().Be("pw-new");
+            _saved.Single().AccountPassword.Should().BeEmpty();
+            _created.Single().Value.Should().Be(request.AccountPassword);
+
+            var warning = ProviderLogEntries(provider).Should().ContainSingle(e => e.Level == LogLevel.Warning).Subject;
+            warning.Message.Should().Contain(stored.ItemId).And.Contain(failure.GetType().Name);
+            AllLogMessages().Should().NotContain(m => m.Contains("pw-old") || m.Contains("pw-new"));
+
+            _secrets.Verify(s => s.GetAsync("pw-old", It.IsAny<CancellationToken>()), Times.Once);
+            _secrets.Verify(s => s.RotateAsync("pw-old", It.IsAny<RotateSecretRequest>(), It.IsAny<CancellationToken>()), Times.Once);
+            _secrets.Verify(s => s.SetAsync(It.IsAny<SetSecretRequest>(), It.IsAny<CancellationToken>()), Times.Once);
+            _secrets.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task Save_RotateFindsTheSecretGoneAndTheWriteFails_RetiresTheReplacementOnly()
+        {
+            using var _ = new BlocksTestContext();
+            GivenStoredFreshEachRead("zoho-1", () => StoredZoho());
+            GivenStatus(SecretStatuses.Active);
+            _secrets.Setup(s => s.RotateAsync("pw-1", It.IsAny<RotateSecretRequest>(), It.IsAny<CancellationToken>()))
+                    .ThrowsAsync(new SecretNotFoundException("pw-1"));
+            GivenSetReturns("pw-2");
+            GivenDeleteSucceeds();
+            _repo.Setup(r => r.SaveMailConfigurationAsync(It.IsAny<MailServerConfiguration>()))
+                 .ThrowsAsync(new InvalidOperationException("mongo down"));
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() => Service().SaveAsync(ZohoRequest("zoho-1")));
+
+            _secrets.Verify(s => s.GetAsync("pw-1", It.IsAny<CancellationToken>()), Times.Once);
+            _secrets.Verify(s => s.RotateAsync("pw-1", It.IsAny<RotateSecretRequest>(), It.IsAny<CancellationToken>()), Times.Once);
+            _secrets.Verify(s => s.SetAsync(It.IsAny<SetSecretRequest>(), It.IsAny<CancellationToken>()), Times.Once);
+            _secrets.Verify(s => s.DeleteAsync("pw-2", It.IsAny<CancellationToken>()), Times.Once);
+            _secrets.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task Save_RotateRefusedForAnotherReason_PropagatesAndCreatesNothing()
+        {
+            using var _ = new BlocksTestContext();
+            GivenStored(StoredZoho());
+            GivenStatus(SecretStatuses.Active);
+            _secrets.Setup(s => s.RotateAsync("pw-1", It.IsAny<RotateSecretRequest>(), It.IsAny<CancellationToken>()))
+                    .ThrowsAsync(new SecretAccessDeniedException("NOT_IN_ACCESS_LIST"));
+
+            await Assert.ThrowsAsync<SecretAccessDeniedException>(() => Service().SaveAsync(ZohoRequest("zoho-1")));
+
+            _repo.Verify(r => r.SaveMailConfigurationAsync(It.IsAny<MailServerConfiguration>()), Times.Never);
+            _secrets.Verify(s => s.GetAsync("pw-1", It.IsAny<CancellationToken>()), Times.Once);
+            _secrets.Verify(s => s.RotateAsync("pw-1", It.IsAny<RotateSecretRequest>(), It.IsAny<CancellationToken>()), Times.Once);
+            _secrets.VerifyNoOtherCalls();
+        }
+
+        [Theory]
+        [InlineData(MailServiceProvider.AmazonSes)]
+        [InlineData(MailServiceProvider.Gmail)]
+        public async Task Save_EditWhoseStatusReadFails_LogsTheSesOrGmailConfigurationButNeverTheReference(MailServiceProvider provider)
+        {
+            using var _ = new BlocksTestContext();
+            var stored = StoredFor(provider, "pw-1");
+            GivenStored(stored);
+            _secrets.Setup(s => s.GetAsync("pw-1", It.IsAny<CancellationToken>()))
+                    .ThrowsAsync(VaultFailureNaming("pw-1"));
+            GivenRotateSucceeds();
+            var request = RequestFor(provider);
+            request.ConfigurationId = stored.ItemId;
+
+            var result = await Service().SaveAsync(request);
+
+            result.Outcome.Should().Be(MailConfigurationOutcome.Success);
+            ProviderLogEntries(provider).Should().ContainSingle(e => e.Level == LogLevel.Warning).Which.Message.Should().Contain(stored.ItemId);
+            AllLogMessages().Should().NotContain(m => m.Contains("pw-1") || m.Contains(request.AccountPassword!));
+            _secrets.Verify(s => s.GetAsync("pw-1", It.IsAny<CancellationToken>()), Times.Once);
+            _secrets.Verify(s => s.RotateAsync("pw-1", It.IsAny<RotateSecretRequest>(), It.IsAny<CancellationToken>()), Times.Once);
+            _secrets.VerifyNoOtherCalls();
+        }
+
+        [Theory]
+        [InlineData(MailServiceProvider.AmazonSes)]
+        [InlineData(MailServiceProvider.Gmail)]
+        public async Task Duplicate_UnreadableSesOrGmailSource_LogsTheSourceButNeverTheReference(MailServiceProvider provider)
+        {
+            using var _ = new BlocksTestContext();
+            var stored = StoredFor(provider, "pw-1");
+            GivenStored(stored);
+            _secrets.Setup(s => s.GetValueAsync("pw-1", It.IsAny<CancellationToken>())).ThrowsAsync(new SecretNotFoundException("pw-1"));
+
+            var result = await Service().DuplicateAsync(new DuplicateMailConfigurationRequest { ConfigurationId = stored.ItemId });
+
+            result.Outcome.Should().Be(MailConfigurationOutcome.Invalid);
+            ProviderLogEntries(provider).Should().ContainSingle(e => e.Level == LogLevel.Warning).Which.Message.Should().Contain(stored.ItemId);
+            AllLogMessages().Should().NotContain(m => m.Contains("pw-1"));
+            _secrets.Verify(s => s.GetValueAsync("pw-1", It.IsAny<CancellationToken>()), Times.Once);
+            _secrets.VerifyNoOtherCalls();
+        }
+
         // ---------- H5: edit of a legacy configuration migrates it ----------
 
         [Fact]
@@ -463,6 +643,12 @@ namespace XUnitTest.Services
             var result = await Service().SaveAsync(ZohoRequest());
 
             result.Outcome.Should().Be(MailConfigurationOutcome.SecretStoreUnavailable);
+
+            // Provider-neutral: a Zoho admin entered a password, not a client secret.
+            result.Response.Errors.Should().Equal(new Dictionary<string, string>
+            {
+                ["ClientSecret"] = "The secret store is unavailable. Try again later."
+            });
             _repo.Verify(r => r.SaveMailConfigurationAsync(It.IsAny<MailServerConfiguration>()), Times.Never);
             _secrets.Verify(s => s.SetAsync(It.IsAny<SetSecretRequest>(), It.IsAny<CancellationToken>()), Times.Once);
             _secrets.VerifyNoOtherCalls();
@@ -513,6 +699,8 @@ namespace XUnitTest.Services
 
             await Assert.ThrowsAsync<InvalidOperationException>(() => Service().SaveAsync(ZohoRequest()));
 
+            // The read-back found no document, so the write did not land and the secret goes.
+            _repo.Verify(r => r.GetMailConfigurationByIdAsync(It.IsAny<string>()), Times.Once);
             _secrets.Verify(s => s.SetAsync(It.IsAny<SetSecretRequest>(), It.IsAny<CancellationToken>()), Times.Once);
             _secrets.Verify(s => s.DeleteAsync("pw-new", It.IsAny<CancellationToken>()), Times.Once);
             _secrets.VerifyNoOtherCalls();
@@ -522,7 +710,9 @@ namespace XUnitTest.Services
         public async Task Save_WriteFailsAfterARepair_RetiresOnlyTheNewSecret()
         {
             using var _ = new BlocksTestContext();
-            GivenStored(StoredZoho());
+
+            // The read-back sees the document as it still is: pointing at the archived pw-1.
+            GivenStoredFreshEachRead("zoho-1", () => StoredZoho());
             GivenStatus(SecretStatuses.Deleted);
             GivenSetReturns("pw-2");
             GivenDeleteSucceeds();
@@ -534,6 +724,62 @@ namespace XUnitTest.Services
             _secrets.Verify(s => s.GetAsync("pw-1", It.IsAny<CancellationToken>()), Times.Once);
             _secrets.Verify(s => s.SetAsync(It.IsAny<SetSecretRequest>(), It.IsAny<CancellationToken>()), Times.Once);
             _secrets.Verify(s => s.DeleteAsync("pw-2", It.IsAny<CancellationToken>()), Times.Once);
+            _secrets.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task Save_WriteFailsAfterALegacyMigrationThatDidNotLand_RetiresTheNewSecret()
+        {
+            using var _ = new BlocksTestContext();
+            GivenStoredFreshEachRead("zoho-1", () => StoredZoho(reference: null, password: "legacy-plaintext"));
+            GivenSetReturns("pw-new");
+            GivenDeleteSucceeds();
+            _repo.Setup(r => r.SaveMailConfigurationAsync(It.IsAny<MailServerConfiguration>()))
+                 .ThrowsAsync(new InvalidOperationException("mongo down"));
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() => Service().SaveAsync(ZohoRequest("zoho-1")));
+
+            // One read to load the record, one to read it back after the failed write.
+            _repo.Verify(r => r.GetMailConfigurationByIdAsync("zoho-1"), Times.Exactly(2));
+            _secrets.Verify(s => s.SetAsync(It.IsAny<SetSecretRequest>(), It.IsAny<CancellationToken>()), Times.Once);
+            _secrets.Verify(s => s.DeleteAsync("pw-new", It.IsAny<CancellationToken>()), Times.Once);
+            _secrets.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task Save_WriteThrowsButTheDocumentWasStored_KeepsTheNewSecret()
+        {
+            using var _ = new BlocksTestContext();
+            GivenSetReturns("pw-new");
+            GivenWriteAppliedButThrows();
+
+            // The write failure still reaches the caller; only the retire is skipped.
+            await Assert.ThrowsAsync<TimeoutException>(() => Service().SaveAsync(ZohoRequest()));
+
+            _serviceLogger.Entries.Should().ContainSingle(e => e.Level == LogLevel.Warning && e.Message.Contains("new secret is kept"));
+            AllLogMessages().Should().NotContain(m => m.Contains("pw-new") || m.Contains(SourcePassword));
+            _repo.Verify(r => r.GetMailConfigurationByIdAsync(It.IsAny<string>()), Times.Once);
+            _secrets.Verify(s => s.SetAsync(It.IsAny<SetSecretRequest>(), It.IsAny<CancellationToken>()), Times.Once);
+            _secrets.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task Save_WriteThrowsAndTheReadBackFails_KeepsTheNewSecretAndLogsTheTypeOnly()
+        {
+            using var _ = new BlocksTestContext();
+            GivenSetReturns("pw-new");
+            _repo.Setup(r => r.SaveMailConfigurationAsync(It.IsAny<MailServerConfiguration>()))
+                 .ThrowsAsync(new InvalidOperationException("mongo down"));
+            _repo.Setup(r => r.GetMailConfigurationByIdAsync(It.IsAny<string>()))
+                 .ThrowsAsync(new TimeoutException("read-back of pw-new timed out"));
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() => Service().SaveAsync(ZohoRequest()));
+
+            var warning = _serviceLogger.Entries.Should().ContainSingle(e => e.Level == LogLevel.Warning).Subject;
+            warning.Message.Should().Contain(nameof(TimeoutException)).And.Contain("could not be read back");
+            warning.Exception.Should().BeNull();
+            AllLogMessages().Should().NotContain(m => m.Contains("pw-new"));
+            _secrets.Verify(s => s.SetAsync(It.IsAny<SetSecretRequest>(), It.IsAny<CancellationToken>()), Times.Once);
             _secrets.VerifyNoOtherCalls();
         }
 
@@ -577,20 +823,39 @@ namespace XUnitTest.Services
         // ---------- C5: no plaintext on the entity or in a log ----------
 
         [Fact]
-        public async Task SaveAndEdit_NeverPutThePlaintextOnTheEntityOrInALog()
+        public async Task CreateMigrateAndRotate_NeverPutThePlaintextOnTheEntityOrInALog()
         {
             using var _ = new BlocksTestContext();
-            GivenSetReturns("pw-1");
+            GivenSetReturns("pw-new");
             GivenStatus(SecretStatuses.Active);
             GivenRotateSucceeds();
-            GivenStored(StoredZoho(reference: null, password: "legacy-plaintext"));
+            GivenStored(StoredZoho(reference: "pw-1"));
+            var legacy = StoredZoho(reference: null, password: "legacy-plaintext");
+            legacy.ItemId = "zoho-legacy";
+            GivenStored(legacy);
 
+            // A create, a legacy migration and an edit of a referenced record that rotates.
             await Service().SaveAsync(ZohoRequest());
+            await Service().SaveAsync(ZohoRequest("zoho-legacy", "zoho-app-pw3"));
             await Service().SaveAsync(ZohoRequest("zoho-1", "zoho-app-pw2"));
 
-            _saved.Should().HaveCount(2).And.OnlyContain(m => m.AccountPassword == "");
+            _saved.Should().HaveCount(3).And.OnlyContain(m => m.AccountPassword == "");
+            _saved.Select(m => m.AccountPasswordReference).Should().Equal("pw-new", "pw-new", "pw-1");
             AllLogMessages().Should().NotContain(m =>
-                m.Contains(SourcePassword) || m.Contains("zoho-app-pw2") || m.Contains("legacy-plaintext") || m.Contains("pw-1"));
+                m.Contains(SourcePassword) || m.Contains("zoho-app-pw2") || m.Contains("zoho-app-pw3")
+                || m.Contains("legacy-plaintext") || m.Contains("pw-1") || m.Contains("pw-new"));
+
+            _secrets.Verify(
+                s => s.SetAsync(It.Is<SetSecretRequest>(r => r.Value == SourcePassword), It.IsAny<CancellationToken>()),
+                Times.Once);
+            _secrets.Verify(
+                s => s.SetAsync(It.Is<SetSecretRequest>(r => r.Value == "zoho-app-pw3"), It.IsAny<CancellationToken>()),
+                Times.Once);
+            _secrets.Verify(s => s.GetAsync("pw-1", It.IsAny<CancellationToken>()), Times.Once);
+            _secrets.Verify(
+                s => s.RotateAsync("pw-1", It.Is<RotateSecretRequest>(r => r.Value == "zoho-app-pw2"), It.IsAny<CancellationToken>()),
+                Times.Once);
+            _secrets.VerifyNoOtherCalls();
         }
 
         // ---------- H7 / Q4: duplicate ----------
@@ -778,6 +1043,47 @@ namespace XUnitTest.Services
             _secrets.VerifyNoOtherCalls();
         }
 
+        [Fact]
+        public async Task Duplicate_WriteThrowsButTheCopyWasStored_KeepsTheCopysSecret()
+        {
+            using var _ = new BlocksTestContext();
+            GivenStored(StoredZoho());
+            _secrets.Setup(s => s.GetValueAsync("pw-1", It.IsAny<CancellationToken>())).ReturnsAsync(SourcePassword);
+            GivenSetReturns("pw-2");
+            GivenWriteAppliedButThrows();
+
+            await Assert.ThrowsAsync<TimeoutException>(
+                () => Service().DuplicateAsync(new DuplicateMailConfigurationRequest { ConfigurationId = "zoho-1" }));
+
+            _serviceLogger.Entries.Should().ContainSingle(e => e.Level == LogLevel.Warning && e.Message.Contains("new secret is kept"));
+            AllLogMessages().Should().NotContain(m => m.Contains("pw-1") || m.Contains("pw-2") || m.Contains(SourcePassword));
+            _secrets.Verify(s => s.GetValueAsync("pw-1", It.IsAny<CancellationToken>()), Times.Once);
+            _secrets.Verify(s => s.SetAsync(It.IsAny<SetSecretRequest>(), It.IsAny<CancellationToken>()), Times.Once);
+            _secrets.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task Duplicate_WriteThrowsAndTheReadBackFails_KeepsTheCopysSecret()
+        {
+            using var _ = new BlocksTestContext();
+            var source = StoredZoho();
+            _repo.Setup(r => r.GetMailConfigurationByIdAsync(It.IsAny<string>()))
+                 .ReturnsAsync((string id) => id == "zoho-1" ? source : throw new TimeoutException("read-back timed out"));
+            _secrets.Setup(s => s.GetValueAsync("pw-1", It.IsAny<CancellationToken>())).ReturnsAsync(SourcePassword);
+            GivenSetReturns("pw-2");
+            _repo.Setup(r => r.SaveMailConfigurationAsync(It.IsAny<MailServerConfiguration>()))
+                 .ThrowsAsync(new InvalidOperationException("mongo down"));
+
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                () => Service().DuplicateAsync(new DuplicateMailConfigurationRequest { ConfigurationId = "zoho-1" }));
+
+            _serviceLogger.Entries.Should().Contain(e => e.Level == LogLevel.Warning && e.Message.Contains(nameof(TimeoutException)));
+            AllLogMessages().Should().NotContain(m => m.Contains("pw-2"));
+            _secrets.Verify(s => s.GetValueAsync("pw-1", It.IsAny<CancellationToken>()), Times.Once);
+            _secrets.Verify(s => s.SetAsync(It.IsAny<SetSecretRequest>(), It.IsAny<CancellationToken>()), Times.Once);
+            _secrets.VerifyNoOtherCalls();
+        }
+
         // ---------- H8 / C1: delete ----------
 
         [Fact]
@@ -895,9 +1201,17 @@ namespace XUnitTest.Services
         // ---------- H9 / C8 / C13: list ----------
 
         [Fact]
-        public async Task GetAll_MasksEveryPasswordReadsOnlyMetadataPerReferencedRecordAndWritesNothing()
+        public async Task GetAll_MasksEveryPasswordMakesNoSecretCallForPasswordRecordsAndWritesNothing()
         {
             GivenStatus(SecretStatuses.Active);
+            var oauth = new MailServerConfiguration
+            {
+                ItemId = "o365-oauth",
+                Name = "Microsoft 365 Primary",
+                Provider = MailServiceProvider.Office365Smtp,
+                AuthenticationType = MailAuthenticationType.OAuthClientCredentials,
+                ClientSecretReference = "cs-1"
+            };
             var gmail = StoredZoho("pw-gmail");
             gmail.ItemId = "gmail-1";
             gmail.Provider = MailServiceProvider.Gmail;
@@ -907,26 +1221,42 @@ namespace XUnitTest.Services
                      StoredZoho(reference: null, password: "legacy-plaintext"),
                      StoredZoho("pw-1"),
                      gmail,
-                     StoredOffice365Password(reference: null)
+                     StoredOffice365Password(reference: null),
+                     StoredOffice365Password(),
+                     oauth
                  });
 
             var responses = await Service().GetAllAsync();
 
-            responses.Should().HaveCount(4).And.OnlyContain(r => r.AccountPassword == "********" && r.ClientSecretStatus == null);
+            responses.Should().HaveCount(6);
+            responses.Take(5).Should().OnlyContain(r => r.AccountPassword == "********" && r.ClientSecretStatus == null);
+            responses.Last().ClientSecretStatus.Should().Be(LinkedSecretStatus.Active);
             var json = System.Text.Json.JsonSerializer.Serialize(
                 responses,
                 new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
-            json.Should().NotContain("pw-1").And.NotContain("pw-gmail").And.NotContain("legacy-plaintext")
-                .And.NotContain("accountPasswordReference");
+            json.Should().NotContain("pw-1").And.NotContain("pw-gmail").And.NotContain("pw-o365").And.NotContain("cs-1")
+                .And.NotContain("legacy-plaintext").And.NotContain("accountPasswordReference");
 
-            // §5: ≤1 metadata read per referenced record, none for a legacy one, never a value.
-            _secrets.Verify(s => s.GetAsync("pw-1", It.IsAny<CancellationToken>()), Times.Once);
-            _secrets.Verify(s => s.GetAsync("pw-gmail", It.IsAny<CancellationToken>()), Times.Once);
+            // §5 allows ≤1 metadata read per referenced record. A password record shows only the
+            // mask, so it gets none; the OAuth record keeps its one status read. Never a value.
+            _secrets.Verify(s => s.GetAsync("cs-1", It.IsAny<CancellationToken>()), Times.Once);
             _secrets.VerifyNoOtherCalls();
 
             // C8: a read writes nothing.
             _repo.Verify(r => r.SaveMailConfigurationAsync(It.IsAny<MailServerConfiguration>()), Times.Never);
             _repo.Verify(r => r.UpdateMailSenderNameAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Get_ReferencedPasswordRecord_MakesNoSecretCall()
+        {
+            _repo.Setup(r => r.GetMailConfigurationByNameForViewAsync("Zoho Primary")).ReturnsAsync(StoredZoho("pw-1"));
+
+            var response = await Service().GetAsync(new GetMailConfigurationRequest { ConfigurationName = "Zoho Primary" });
+
+            response!.AccountPassword.Should().Be("********");
+            response.ClientSecretStatus.Should().BeNull();
+            _secrets.VerifyNoOtherCalls();
         }
 
         // ---------- provider and helper contracts ----------

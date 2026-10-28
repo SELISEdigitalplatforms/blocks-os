@@ -107,6 +107,12 @@ namespace Configuration.DomainService.Mail.Providers
         public Task<string?> ResolveCredentialStatusAsync(MailServerConfiguration entity, CancellationToken cancellationToken = default) =>
             _password.ResolveStatusAsync(entity, cancellationToken);
 
+        /// <summary>
+        /// False: the response shows only the fixed mask, so a read makes no metadata read for
+        /// the password secret.
+        /// </summary>
+        public bool ProjectsCredentialStatus(MailServerConfiguration entity) => false;
+
         public void ProjectResponse(MailServerConfiguration entity, MailConfigurationResponse response, string? credentialStatus)
         {
             // The existing mask, byte for byte: the UI has always shown a fixed-width mask here

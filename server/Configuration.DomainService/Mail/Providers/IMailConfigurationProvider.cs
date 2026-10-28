@@ -34,8 +34,9 @@ namespace Configuration.DomainService.Mail.Providers
     /// client label entry, and nothing else: the orchestrating service keeps name/id validation,
     /// repository writes, authorization and response envelopes, and has no branch on
     /// <see cref="MailServiceProvider"/>. Existing flat fields stay the persistence contract for
-    /// the password providers — a definition maps records into a normalized view, it does not
-    /// rewrite them or introduce a polymorphic discriminator.
+    /// the password providers — a definition maps records into a normalized view and introduces
+    /// no polymorphic discriminator. The one rewrite is the password itself: a save moves it to
+    /// Blocks Secrets, blanks <c>AccountPassword</c> and stores <c>AccountPasswordReference</c>.
     /// <para>
     /// Definitions are <b>scoped</b>, because the ones that own a secret depend on the scoped
     /// <c>ISecretService</c>, which reads the request-scoped <c>BlocksContext</c>.
@@ -171,10 +172,24 @@ namespace Configuration.DomainService.Mail.Providers
         Task<string?> ResolveCredentialStatusAsync(MailServerConfiguration entity, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Whether <see cref="ProjectResponse"/> shows the linked secret's status for
+        /// <paramref name="entity"/>. When false, a read projects the record without resolving
+        /// the status, so a list or a lookup makes no secret-store call for it.
+        /// </summary>
+        /// <remarks>
+        /// Read paths only. A save still resolves the status, because whether the stored
+        /// reference is broken decides between rotating and replacing it.
+        /// </remarks>
+        bool ProjectsCredentialStatus(MailServerConfiguration entity);
+
+        /// <summary>
         /// Copies this provider's non-secret fields and "configured" flags onto the response.
         /// Never the plaintext and never the reference.
         /// </summary>
-        /// <param name="credentialStatus">What <see cref="ResolveCredentialStatusAsync"/> returned for <paramref name="entity"/>.</param>
+        /// <param name="credentialStatus">
+        /// What <see cref="ResolveCredentialStatusAsync"/> returned for <paramref name="entity"/>, or
+        /// null when <see cref="ProjectsCredentialStatus"/> is false and no status was resolved.
+        /// </param>
         void ProjectResponse(MailServerConfiguration entity, MailConfigurationResponse response, string? credentialStatus);
     }
 

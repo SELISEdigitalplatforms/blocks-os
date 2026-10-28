@@ -29,8 +29,10 @@ namespace XUnitTest.Services
         private readonly Mock<ITenants> _tenants = new();
         private readonly IConfiguration _configuration = new ConfigurationBuilder().Build();
 
-        // Strict: any secret call a test did not set up fails it. Legacy rows and rejected
-        // registrations therefore prove "no secret call" without a separate assertion.
+        // Strict, but strictness alone does not fail a test: the per-row read and the unsaved-secret
+        // retire catch every exception, including the MockException an unexpected call throws.
+        // What catches such a call is VerifyNoOtherCalls (Moq records the invocation before the
+        // strict check), so every test that can reach the store ends with it.
         private readonly Mock<ISecretService> _secrets = new(MockBehavior.Strict);
 
         /// <summary>How many DI scopes resolved ISecretService: one per secret call.</summary>
@@ -719,6 +721,10 @@ namespace XUnitTest.Services
             _repo.Setup(r => r.GetAllServicesAsync(It.IsAny<GetAllServiceRequest>())).ReturnsAsync((services, 1L));
 
             await Assert.ThrowsAsync<OperationCanceledException>(() => Service().GetAllServicesAsync(new GetAllServiceRequest()));
+
+            _secrets.Verify(s => s.GetValueAsync("ref-s", It.IsAny<CancellationToken>()), Times.Once);
+            _secrets.VerifyNoOtherCalls();
+            _secretScopes.Should().Be(1);
         }
 
         [Fact]
@@ -757,6 +763,11 @@ namespace XUnitTest.Services
             await ServiceWithRootTenant(logger).GetAllServicesAsync(new GetAllServiceRequest());
 
             logger.Entries.Should().ContainSingle(e => e.Level == LogLevel.Warning).Which.Message.Should().Contain("decrypting 1 service(s)");
+
+            // The referenced row is read from the store once; the legacy row never is.
+            _secrets.Verify(s => s.GetValueAsync("ref-s", It.IsAny<CancellationToken>()), Times.Once);
+            _secrets.VerifyNoOtherCalls();
+            _secretScopes.Should().Be(1);
         }
 
         [Fact]

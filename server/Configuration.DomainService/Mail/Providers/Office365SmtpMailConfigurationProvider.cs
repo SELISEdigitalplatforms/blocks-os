@@ -350,6 +350,17 @@ namespace Configuration.DomainService.Mail.Providers
                 .ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// OAuth records show the client secret's status; password records show only the mask,
+        /// so reading them makes no metadata read.
+        /// </summary>
+        public bool ProjectsCredentialStatus(MailServerConfiguration entity)
+        {
+            ArgumentNullException.ThrowIfNull(entity);
+
+            return entity.AuthenticationType != MailAuthenticationType.Password;
+        }
+
         public void ProjectResponse(MailServerConfiguration entity, MailConfigurationResponse response, string? credentialStatus)
         {
             if (entity.AuthenticationType == MailAuthenticationType.Password)
@@ -370,9 +381,10 @@ namespace Configuration.DomainService.Mail.Providers
             response.ClientSecretStatus = status;
             response.IsClientSecretConfigured = status is LinkedSecretStatus.Active or LinkedSecretStatus.Locked or LinkedSecretStatus.Unavailable;
 
-            // No mask. A password provider's fixed-width mask is harmless because a blank
-            // submission means "unchanged" there too, but a mask in this field is something a
-            // caller could post back as the literal secret.
+            // No mask. The password modes' fixed-width mask is never mistaken for a value
+            // because their form posts the password on every save and a blank one is rejected,
+            // but a mask in this field is something an OAuth caller could post back as the
+            // literal secret.
             response.AccountPassword = null;
         }
 

@@ -588,7 +588,7 @@ namespace XUnitTest.Services
 
             result.Outcome.Should().Be(MailConfigurationOutcome.SecretStoreUnavailable);
             result.Response.Errors.Should().Contain(new KeyValuePair<string, string>(
-                "ClientSecret", "The client secret could not be stored. Try again."));
+                "ClientSecret", "The secret store is unavailable. Try again later."));
             _repo.Verify(r => r.SaveMailConfigurationAsync(It.IsAny<MailServerConfiguration>()), Times.Never);
         }
 
@@ -1061,7 +1061,10 @@ namespace XUnitTest.Services
         {
             using var _ = new BlocksTestContext();
             GivenSecretStatus(SecretStatuses.Deleted);
-            _repo.Setup(r => r.GetMailConfigurationByIdAsync("cfg-1")).ReturnsAsync(StoredOffice365());
+
+            // A fresh document per read, as the database returns: the read-back after the failed
+            // write must see the stored record, not the instance the service updated in memory.
+            _repo.Setup(r => r.GetMailConfigurationByIdAsync("cfg-1")).ReturnsAsync(() => StoredOffice365());
             _repo.Setup(r => r.SaveMailConfigurationAsync(It.IsAny<MailServerConfiguration>()))
                  .ThrowsAsync(new InvalidOperationException("mongo down"));
             _secrets.Setup(s => s.SetAsync(It.IsAny<SetSecretRequest>(), It.IsAny<CancellationToken>()))

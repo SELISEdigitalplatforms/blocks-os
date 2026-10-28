@@ -53,7 +53,8 @@ namespace Configuration.DomainService.Mail.Providers
 
         /// <summary>
         /// Stores <paramref name="password"/> for the configuration being saved: one
-        /// <c>SetAsync</c> or one <c>RotateAsync</c>, never both.
+        /// <c>SetAsync</c> or one <c>RotateAsync</c>. Only a rotation that finds the secret gone or
+        /// archived is followed by a <c>SetAsync</c>, which replaces the dead reference.
         /// </summary>
         /// <param name="existingStatus">
         /// What <see cref="ResolveStatusAsync"/> said about the stored reference. Archived or
@@ -87,13 +88,38 @@ namespace Configuration.DomainService.Mail.Providers
             }
 
             // In place, so mail already queued in blocks-logic with this reference keeps working.
-            await _secretService.RotateAsync(
-                reference,
-                new RotateSecretRequest { Value = password },
-                cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await _secretService.RotateAsync(
+                    reference,
+                    new RotateSecretRequest { Value = password },
+                    cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception exception) when (IsGoneOrArchived(exception))
+            {
+                // The secret was purged or archived after the status read, or the status read
+                // failed while it was already gone. That is the broken-reference case found late:
+                // repair it the same way, with a new secret, rather than failing the save with an
+                // error whose message names the reference. The old secret is left alone.
+                _logger.LogWarning(
+                    "The password secret of mail configuration {ConfigurationId} could not be rotated ({FailureType}); a new secret replaces it.",
+                    configurationId,
+                    exception.GetType().Name);
+
+                var replacement = await CreateAsync(configurationId, configurationName, password, cancellationToken).ConfigureAwait(false);
+                return new MailCredentialResult { Reference = replacement, Created = true };
+            }
 
             return new MailCredentialResult { Reference = reference, Created = false };
         }
+
+        /// <summary>
+        /// A rotate failure that means the reference is dead: no such secret for this tenant, or
+        /// one that is archived (the only status that refuses a rotation).
+        /// </summary>
+        private static bool IsGoneOrArchived(Exception exception) =>
+            exception is SecretNotFoundException
+            || exception is SecretStateException { CurrentStatus: SecretStatuses.Deleted };
 
         /// <summary>
         /// Gives <paramref name="copy"/> its own secret holding the source's password, so deleting
