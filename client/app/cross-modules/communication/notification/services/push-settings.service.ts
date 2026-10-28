@@ -5,17 +5,23 @@ import type {
   IPushSettings,
   IPushSettingsAck,
   ISavePushSettingsPayload,
-} from "../models/notification-config.model";
+} from "../models/push.model";
 
-const ABSOLUTE = { absoluteUrl: true } as const;
-
-const NOT_SET_UP: IPushSettings = { projectId: null, enabled: false, hasKey: false };
+/** The shape a project has before anything is stored; also the answer when the read fails. */
+export const NOT_SET_UP: IPushSettings = {
+  projectId: null,
+  enabled: false,
+  hasKey: false,
+  platforms: { android: true, ios: true, web: false },
+  hasWebConfig: false,
+};
 
 /** The endpoint answers either wrapped in `data` or as the bare settings. */
 const toSettings = (response: IPushSettings | IAPIResponse<IPushSettings>): IPushSettings => {
   const wrapped = (response as IAPIResponse<IPushSettings>)?.data;
   const bare = wrapped && !Array.isArray(wrapped) ? wrapped : (response as IPushSettings);
-  return bare && typeof bare === "object" ? { ...NOT_SET_UP, ...bare } : NOT_SET_UP;
+  if (!bare || typeof bare !== "object") return NOT_SET_UP;
+  return { ...NOT_SET_UP, ...bare, platforms: { ...NOT_SET_UP.platforms, ...bare.platforms } };
 };
 
 const toAck = (response: IPushSettingsAck): IPushSettingsAck => ({
@@ -26,24 +32,12 @@ const toAck = (response: IPushSettingsAck): IPushSettingsAck => ({
 export class PushSettingsService {
   getSettings(): Promise<IPushSettings> {
     return http
-      .get<IPushSettings | IAPIResponse<IPushSettings>>(
-        PUSH_SETTINGS_ENDPOINTS.SETTINGS(),
-        undefined,
-        ABSOLUTE,
-      )
+      .get<IPushSettings | IAPIResponse<IPushSettings>>(PUSH_SETTINGS_ENDPOINTS.GET)
       .then(toSettings);
   }
 
   saveSettings(payload: ISavePushSettingsPayload): Promise<IPushSettingsAck> {
-    return http
-      .post<IPushSettingsAck>(PUSH_SETTINGS_ENDPOINTS.SETTINGS(), payload, undefined, ABSOLUTE)
-      .then(toAck);
-  }
-
-  sendTest(): Promise<IPushSettingsAck> {
-    return http
-      .post<IPushSettingsAck>(PUSH_SETTINGS_ENDPOINTS.TEST(), {}, undefined, ABSOLUTE)
-      .then(toAck);
+    return http.post<IPushSettingsAck>(PUSH_SETTINGS_ENDPOINTS.SAVE, payload).then(toAck);
   }
 }
 

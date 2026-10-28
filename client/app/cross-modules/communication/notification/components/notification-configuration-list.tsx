@@ -20,6 +20,7 @@ import { NOTIFICATION_TEXT } from "../constants/notification-ui.constant";
 import { matchesReceivers, matchesSendTo } from "../utils/notification-labels";
 import { NotificationConfigRow } from "./notification-config-row";
 import { NotificationConfigPage } from "./notification-config-page";
+import { PushDevicesPage } from "./push-devices-page";
 import { PushSettingsPage } from "./push-settings-page";
 import { RecipientsHeader } from "./recipients-header";
 import { getErrorMessage, isErrorWithErrors } from "@/lib/error";
@@ -235,7 +236,10 @@ export function NotificationConfigurationListPage() {
     !!queryParams.notificationReceivers;
   const isEmpty = !loading && (data?.configurations ?? []).length === 0 && !hasFilters;
 
-  if (view.kind === "push") return <PushSettingsPage onClose={nav.openList} />;
+  if (view.kind === "devices") return <PushDevicesPage onBack={nav.openPush} />;
+  if (view.kind === "push") {
+    return <PushSettingsPage onClose={nav.openList} onViewDevices={nav.openDevices} />;
+  }
   if (view.kind === "new" || view.kind === "edit") {
     return (
       <NotificationConfigPage

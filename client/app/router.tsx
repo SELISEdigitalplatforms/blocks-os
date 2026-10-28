@@ -321,8 +321,8 @@ export const router = createBrowserRouter([
                         element: <EmailConfigurationPage />,
                       },
                       {
-                        // /notification, /notification/new, /notification/push, /notification/<id>
-                        path: "notification/:notificationId?",
+                        // /notification, /notification/new, /notification/push, /notification/push/devices, /notification/<id>
+                        path: "notification/:notificationId?/:notificationSub?",
                         element: <NotificationConfigurationListPage />,
                       },
                       {

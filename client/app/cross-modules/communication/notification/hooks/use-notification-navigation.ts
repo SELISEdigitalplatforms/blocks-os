@@ -4,16 +4,24 @@ import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 const NOTIFICATION_ROUTE = "secret-management/notification";
 export const NOTIFICATION_NEW_SEGMENT = "new";
 export const NOTIFICATION_PUSH_SEGMENT = "push";
+export const NOTIFICATION_DEVICES_SEGMENT = "devices";
 const LEGACY_EDIT = "notificationEdit";
 const LEGACY_ADD = "notificationConfig";
 const LEGACY_PUSH = "notificationPush";
 
 export type NotificationView =
-  { kind: "list" } | { kind: "new" } | { kind: "push" } | { kind: "edit"; id: string };
+  | { kind: "list" }
+  | { kind: "new" }
+  | { kind: "push" }
+  | { kind: "devices" }
+  | { kind: "edit"; id: string };
 
 /** The page a notification path shows: `/notification`, `/notification/new`, `/notification/push` or `/notification/<id>`. */
-export const toNotificationView = (segment: string | undefined): NotificationView => {
+export const toNotificationView = (segment: string | undefined, sub?: string): NotificationView => {
   if (!segment) return { kind: "list" };
+  if (segment === NOTIFICATION_PUSH_SEGMENT && sub === NOTIFICATION_DEVICES_SEGMENT) {
+    return { kind: "devices" };
+  }
   if (segment === NOTIFICATION_NEW_SEGMENT) return { kind: "new" };
   if (segment === NOTIFICATION_PUSH_SEGMENT) return { kind: "push" };
   return { kind: "edit", id: segment };
@@ -32,7 +40,9 @@ export const useNotificationNavigation = () => {
     navigate(
       {
         pathname: scoped(
-          segment ? `${NOTIFICATION_ROUTE}/${encodeURIComponent(segment)}` : NOTIFICATION_ROUTE,
+          segment
+            ? `${NOTIFICATION_ROUTE}/${segment.split("/").map(encodeURIComponent).join("/")}`
+            : NOTIFICATION_ROUTE,
         ),
         search: options?.search ?? search,
       },
@@ -43,6 +53,7 @@ export const useNotificationNavigation = () => {
     openList: () => go(),
     openNew: () => go(NOTIFICATION_NEW_SEGMENT),
     openPush: () => go(NOTIFICATION_PUSH_SEGMENT),
+    openDevices: () => go(`${NOTIFICATION_PUSH_SEGMENT}/${NOTIFICATION_DEVICES_SEGMENT}`),
     openEdit: (id: string) => go(id),
     /** Old `?notificationEdit=<id>` / `?notificationConfig` / `?notificationPush` links → the path, other params kept. */
     redirectLegacyLink: () => {
@@ -61,5 +72,7 @@ export const useNotificationNavigation = () => {
 };
 
 /** The view of the current notification route. */
-export const useNotificationView = (): NotificationView =>
-  toNotificationView(useParams().notificationId);
+export const useNotificationView = (): NotificationView => {
+  const { notificationId, notificationSub } = useParams();
+  return toNotificationView(notificationId, notificationSub);
+};

@@ -7,6 +7,7 @@ import {
   validateNotificationForm,
   type NotificationFormValues,
 } from "./notification-form";
+import { EMPTY_PUSH_OPTIONS } from "./push-options";
 import { NOTIFICATION_TEXT } from "../constants/notification-ui.constant";
 
 const EVENT_NAME = "orders-paid";
@@ -28,6 +29,8 @@ const row = (patch: Partial<INotificationConfigRow> = {}): INotificationConfigRo
     enablePersistence: true,
     ...patch,
   }) as INotificationConfigRow;
+
+const PLAIN_LINK = ["http", "://a.b"].join("");
 
 describe("validateNotificationForm", () => {
   const ctx = { locked: false, isEdit: false };
@@ -264,5 +267,40 @@ describe("buildSavePayload", () => {
       "t",
     );
     expect(payload).toMatchObject({ name: EVENT_NAME, notifyMethod: EVENT_NAME, isBuiltIn: true });
+  });
+});
+
+describe("push platforms and options in the save payload", () => {
+  it("sends the chosen platforms and the options built from the form", () => {
+    const values = valid({
+      pushPlatforms: ["android"],
+      pushOptions: {
+        ...EMPTY_PUSH_OPTIONS,
+        webLink: "https://a.b/x",
+        android: { ...EMPTY_PUSH_OPTIONS.android, priority: "high" },
+      },
+    });
+    const payload = buildSavePayload(values, undefined, false, "tenant");
+    expect(payload.pushPlatforms).toEqual(["android"]);
+    expect(payload.pushOptions).toEqual({
+      webLink: "https://a.b/x",
+      android: { priority: "high" },
+      ios: null,
+      web: null,
+    });
+  });
+
+  it("refuses a push with no platform chosen and a non-https web link", () => {
+    const errors = validateNotificationForm(
+      valid({
+        pushEnabled: true,
+        titleKey: "t",
+        bodyKey: "b",
+        pushPlatforms: [],
+        pushOptions: { ...EMPTY_PUSH_OPTIONS, webLink: PLAIN_LINK },
+      }),
+      CREATE,
+    );
+    expect(errors).toHaveLength(2);
   });
 });

@@ -25,6 +25,7 @@ import {
   NOTIFICATION_LOCALIZATION_MODULE,
   NOTIFICATION_TEXT,
 } from "../../constants/notification-ui.constant";
+import { PUSH_FORM_TEXT } from "../../constants/push-ui.constant";
 import { HelpText } from "./form-row";
 
 interface PushMessageFieldProps {
@@ -139,13 +140,25 @@ export function PushMessageField({
             onChange={(bodyKey) => onPatch({ bodyKey })}
           />
           <div className="grid grid-cols-1 items-center gap-1.5 sm:grid-cols-[110px_minmax(0,1fr)]">
-            <span className="text-sm">{NOTIFICATION_TEXT.openLink}</span>
+            <span className="text-sm">{PUSH_FORM_TEXT.appLink}</span>
             <Input
-              aria-label={NOTIFICATION_TEXT.openLinkAria}
+              aria-label={PUSH_FORM_TEXT.appLink}
               placeholder={NOTIFICATION_TEXT.optional}
               maxLength={LIMITS.textLength}
               value={values.link}
               onChange={(event) => onPatch({ link: event.target.value })}
+            />
+          </div>
+          <div className="grid grid-cols-1 items-center gap-1.5 sm:grid-cols-[110px_minmax(0,1fr)]">
+            <span className="text-sm">{PUSH_FORM_TEXT.webLink}</span>
+            <Input
+              aria-label={PUSH_FORM_TEXT.webLink}
+              placeholder={NOTIFICATION_TEXT.optional}
+              maxLength={500}
+              value={values.pushOptions.webLink}
+              onChange={(event) =>
+                onPatch({ pushOptions: { ...values.pushOptions, webLink: event.target.value } })
+              }
             />
           </div>
           <HelpText>{NOTIFICATION_TEXT.localizationHelp}</HelpText>

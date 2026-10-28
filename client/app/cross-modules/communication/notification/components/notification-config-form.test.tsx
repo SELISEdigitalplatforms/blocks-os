@@ -27,6 +27,9 @@ vi.mock("../hooks/use-push-settings", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../hooks/use-push-settings")>()),
   usePushSettings: () => h.pushSettings,
 }));
+vi.mock("../hooks/use-push-runtime", () => ({
+  useSendNotificationTest: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
 vi.mock("@/hooks/use-toast", () => ({ toast: h.toast, showErrorToast: h.showErrorToast }));
 vi.mock("./notification-form/audience-pickers", () => ({
   UserPicker: () => <div data-testid="user-picker" />,

@@ -37,22 +37,43 @@ export const normalizePrivateKey = (privateKey: string): string => {
   return pem ? `${pem}\n` : "";
 };
 
+const IAM_EMAIL = /^[^@\s]+@([a-z0-9-]+)\.iam\.gserviceaccount\.com$/i;
+const APPSPOT_EMAIL = /^([a-z0-9-]+)@appspot\.gserviceaccount\.com$/i;
+
+/**
+ * The Firebase project a service account email belongs to: `...@<project>.iam.gserviceaccount.com`, or the part
+ * before the @ of `<project>@appspot.gserviceaccount.com`. Null when the email has neither form.
+ */
+export const projectFromEmail = (email: string): string | null => {
+  const text = email.trim();
+  const match = IAM_EMAIL.exec(text) ?? APPSPOT_EMAIL.exec(text);
+  return match ? match[1].toLowerCase() : null;
+};
+
 export interface IManualKeyFields {
-  projectId: string;
   clientEmail: string;
   privateKey: string;
 }
 
-/** Builds the same JSON a downloaded key file holds, from the typed fields; null when a field is missing. */
-export const buildServiceAccountKey = (fields: IManualKeyFields): string | null => {
-  const projectId = fields.projectId.trim();
+export type ManualKeyResult =
+  { ok: true; projectId: string; json: string } | { ok: false; reason: "incomplete" | "email" };
+
+/**
+ * Builds the same JSON a downloaded key file holds, from the typed fields. The project comes from the email, so it
+ * can never disagree with the key.
+ */
+export const buildServiceAccountKey = (fields: IManualKeyFields): ManualKeyResult => {
   const clientEmail = fields.clientEmail.trim();
   const privateKey = normalizePrivateKey(fields.privateKey);
-  if (!projectId || !clientEmail || !privateKey.includes("PRIVATE KEY")) return null;
-  return JSON.stringify({
+  if (!clientEmail || !privateKey.includes("PRIVATE KEY"))
+    return { ok: false, reason: "incomplete" };
+  const projectId = projectFromEmail(clientEmail);
+  if (!projectId) return { ok: false, reason: "email" };
+  const json = JSON.stringify({
     type: SERVICE_ACCOUNT,
     project_id: projectId,
     client_email: clientEmail,
     private_key: privateKey,
   });
+  return { ok: true, projectId, json };
 };

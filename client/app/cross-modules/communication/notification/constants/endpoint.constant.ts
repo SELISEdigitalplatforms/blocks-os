@@ -16,7 +16,17 @@ export const NOTIFICATION_ENDPOINTS = {
   DELETE_CONFIG: `/api/Notification/Delete`,
 } as const;
 
+/** Push settings are owned by the OS server (relative URLs). */
 export const PUSH_SETTINGS_ENDPOINTS = {
-  SETTINGS: () => logicNotifier("push-settings"),
-  TEST: () => logicNotifier("push-settings/test"),
+  GET: "/api/PushSettings/Get",
+  SAVE: "/api/PushSettings/Save",
+} as const;
+
+/** Push runtime (status, test, devices) is served by the logic service. */
+export const PUSH_RUNTIME_ENDPOINTS = {
+  STATUS: () => logicNotifier("push-status"),
+  TEST: () => logicNotifier("push-test"),
+  TEST_NOTIFICATION: () => logicNotifier("push-test/notification"),
+  DEVICES: (query: string) => logicNotifier(`devices/all?${query}`),
+  DEVICE: (id: string) => logicNotifier(`devices/all/${encodeURIComponent(id)}`),
 } as const;

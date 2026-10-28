@@ -4,10 +4,11 @@ import {
   isServiceAccountKey,
   keyProjectId,
   normalizePrivateKey,
+  projectFromEmail,
 } from "./push-key";
 
 const PROJECT = "shop-app";
-const EMAIL = "svc@shop-app.iam";
+const EMAIL = "svc@shop-app.iam.gserviceaccount.com";
 const KEY = JSON.stringify({
   type: "service_account",
   project_id: PROJECT,
@@ -45,11 +46,27 @@ describe("normalizePrivateKey", () => {
   });
 });
 
-describe("buildServiceAccountKey", () => {
-  const fields = { projectId: ` ${PROJECT} `, clientEmail: EMAIL, privateKey: PEM };
+describe("projectFromEmail", () => {
+  it.each([
+    ["firebase-adminsdk-x@my-app-123.iam.gserviceaccount.com", "my-app-123"],
+    ["my-app-123@appspot.gserviceaccount.com", "my-app-123"],
+    ["  Svc@My-App.iam.gserviceaccount.com ", "my-app"],
+    ["svc@shop-app.iam", null],
+    ["svc@evil.example.com", null],
+    ["svc@x.iam.gserviceaccount.com.evil.com", null],
+    ["", null],
+  ])("reads %s", (email, expected) => {
+    expect(projectFromEmail(email)).toBe(expected);
+  });
+});
 
-  it("builds the same JSON fields a key file holds", () => {
-    expect(JSON.parse(buildServiceAccountKey(fields)!)).toEqual({
+describe("buildServiceAccountKey", () => {
+  const fields = { clientEmail: EMAIL, privateKey: PEM };
+
+  it("builds the key JSON with the project taken from the email", () => {
+    const built = buildServiceAccountKey(fields);
+    expect(built.ok && built.projectId).toBe(PROJECT);
+    expect(JSON.parse(built.ok ? built.json : "{}")).toEqual({
       type: "service_account",
       project_id: PROJECT,
       client_email: EMAIL,
@@ -57,8 +74,18 @@ describe("buildServiceAccountKey", () => {
     });
   });
 
-  it("refuses a missing field or text that is not a private key", () => {
-    expect(buildServiceAccountKey({ ...fields, clientEmail: " " })).toBeNull();
-    expect(buildServiceAccountKey({ ...fields, privateKey: "hello" })).toBeNull();
+  it("refuses an email without a project and a missing or broken private key", () => {
+    expect(buildServiceAccountKey({ ...fields, clientEmail: "a@b.com" })).toEqual({
+      ok: false,
+      reason: "email",
+    });
+    expect(buildServiceAccountKey({ ...fields, clientEmail: " " })).toEqual({
+      ok: false,
+      reason: "incomplete",
+    });
+    expect(buildServiceAccountKey({ ...fields, privateKey: "hello" })).toEqual({
+      ok: false,
+      reason: "incomplete",
+    });
   });
 });

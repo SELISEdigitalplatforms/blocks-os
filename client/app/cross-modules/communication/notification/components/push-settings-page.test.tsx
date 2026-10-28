@@ -2,14 +2,44 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PUSH_TEXT } from "../constants/notification-ui.constant";
+import { PUSH_RESULT_FIX, WEB_PROBLEM_TEXT, WEB_TEXT } from "../constants/push-ui.constant";
+import type { IPushSettings } from "../models/push.model";
+
+const PROJECT = "shop-app";
+const SENDER = "123456789012";
+const API_KEY = "AIzaSyA1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q";
+const APP_ID = `1:${SENDER}:web:abc123def456`;
+const VAPID = "B".repeat(87);
+const KEY_MATERIAL = "fake-key-material";
+const EMAIL = `svc@${PROJECT}.iam.gserviceaccount.com`;
+const KEY = JSON.stringify({
+  type: "service_account",
+  project_id: PROJECT,
+  private_key: KEY_MATERIAL,
+  client_email: EMAIL,
+});
+const SNIPPET = (project: string) =>
+  `const firebaseConfig = { apiKey: "${API_KEY}", projectId: "${project}", messagingSenderId: "${SENDER}", appId: "${APP_ID}" };`;
+const SAVE = "Save";
+const WEB_SWITCH = "Web sending";
+const BASE: IPushSettings = {
+  projectId: PROJECT,
+  enabled: true,
+  hasKey: true,
+  keyUploadedBy: "Ana",
+  platforms: { android: true, ios: true, web: false },
+  hasWebConfig: false,
+};
+const NOT_SET_UP: IPushSettings = {
+  ...BASE,
+  projectId: null,
+  enabled: false,
+  hasKey: false,
+  keyUploadedBy: undefined,
+};
 
 const h = vi.hoisted(() => ({
-  settings: { projectId: "shop-app", enabled: true, hasKey: true } as {
-    projectId: string | null;
-    enabled: boolean;
-    hasKey: boolean;
-    keyUploadedBy?: string;
-  },
+  settings: {} as IPushSettings,
   save: vi.fn(),
   test: vi.fn(),
   toast: vi.fn(),
@@ -20,35 +50,51 @@ vi.mock("../hooks/use-push-settings", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../hooks/use-push-settings")>()),
   usePushSettings: () => ({ data: h.settings, isLoading: false }),
   useSavePushSettings: () => ({ mutateAsync: h.save, isPending: false }),
+}));
+vi.mock("../hooks/use-push-runtime", () => ({
+  usePushStatus: () => ({
+    data: {
+      android: { devices: 3, lastTest: null },
+      ios: { devices: 1, lastTest: null },
+      web: { devices: 0, lastTest: null },
+    },
+  }),
   useSendTestPush: () => ({ mutateAsync: h.test, isPending: false }),
 }));
 vi.mock("@/hooks/use-toast", () => ({ toast: h.toast, showErrorToast: h.showErrorToast }));
 
 import { PushSettingsPage } from "./push-settings-page";
 
-const KEY_MATERIAL = "fake-key-material";
-const SAVE = "Save";
-const PROJECT = "shop-app";
-const EMAIL = "svc@shop-app.iam";
-const KEY = JSON.stringify({
-  type: "service_account",
-  project_id: PROJECT,
-  private_key: KEY_MATERIAL,
-  client_email: EMAIL,
-});
 const keyFile = (text = KEY) => new File([text], "key.json", { type: "application/json" });
 const fileInput = () => screen.getByLabelText(PUSH_TEXT.upload) as HTMLInputElement;
+const clickSave = (user: ReturnType<typeof userEvent.setup>) =>
+  user.click(screen.getByRole("button", { name: SAVE }));
+const savedPayload = (call = 0) => h.save.mock.calls[call][0];
+
+const renderPage = () => render(<PushSettingsPage onClose={vi.fn()} onViewDevices={vi.fn()} />);
+
+const addWebConfig = async (user: ReturnType<typeof userEvent.setup>, project = PROJECT) => {
+  await user.click(screen.getByLabelText(WEB_TEXT.pasteLabel));
+  await user.paste(SNIPPET(project));
+  await user.type(screen.getByLabelText(WEB_TEXT.vapidPaste), VAPID);
+};
 
 describe("PushSettingsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    h.settings = { projectId: PROJECT, enabled: true, hasKey: true, keyUploadedBy: "Ana" };
+    h.settings = BASE;
     h.save.mockResolvedValue({ isSuccess: true });
-    h.test.mockResolvedValue({ isSuccess: true });
+    h.test.mockResolvedValue({
+      isSuccess: true,
+      sentAt: "2026-10-28T20:41:00Z",
+      delivered: 0,
+      failed: 0,
+      devices: [],
+    });
   });
 
-  it("shows the status, the project id and who stored the key, never the key", () => {
-    render(<PushSettingsPage onClose={vi.fn()} />);
+  it("shows the status, the project and who stored the key, never the key", () => {
+    renderPage();
     expect(screen.getByText(PUSH_TEXT.ready)).toBeTruthy();
     expect(screen.getByText(PROJECT)).toBeTruthy();
     expect(screen.getByRole("switch", { name: PUSH_TEXT.pushOn })).toBeTruthy();
@@ -58,132 +104,238 @@ describe("PushSettingsPage", () => {
 
   it("sends the chosen key with the save, then forgets it and never shows its content", async () => {
     const user = userEvent.setup();
-    render(<PushSettingsPage onClose={vi.fn()} />);
+    renderPage();
     await user.upload(fileInput(), keyFile());
     expect(await screen.findByText(/key\.json/)).toBeTruthy();
     expect(document.body.textContent).not.toContain(KEY_MATERIAL);
 
-    await user.click(screen.getByRole("button", { name: SAVE }));
+    await clickSave(user);
     await waitFor(() => expect(h.save).toHaveBeenCalledTimes(1));
-    expect(h.save.mock.calls[0][0]).toEqual({
-      projectId: PROJECT,
+    expect(savedPayload()).toEqual({
       enabled: true,
+      platforms: BASE.platforms,
       serviceAccountJson: KEY,
+      webConfig: undefined,
     });
     await waitFor(() => expect(screen.queryByText(/key\.json/)).toBeNull());
     expect(fileInput().value).toBe("");
 
-    await user.click(screen.getByRole("button", { name: SAVE }));
+    await clickSave(user);
     await waitFor(() => expect(h.save).toHaveBeenCalledTimes(2));
-    expect(h.save.mock.calls[1][0].serviceAccountJson).toBeUndefined();
+    expect(savedPayload(1).serviceAccountJson).toBeUndefined();
   });
 
-  it("refuses a file that is not a service account key and sends nothing", async () => {
+  it("refuses a file that is not a service account key and sends no key", async () => {
     const user = userEvent.setup();
-    render(<PushSettingsPage onClose={vi.fn()} />);
+    renderPage();
     await user.upload(fileInput(), keyFile('{"type":"user"}'));
     expect(await screen.findByText(PUSH_TEXT.invalidKey)).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: SAVE }));
+    await clickSave(user);
     await waitFor(() => expect(h.save).toHaveBeenCalledTimes(1));
-    expect(h.save.mock.calls[0][0].serviceAccountJson).toBeUndefined();
+    expect(savedPayload().serviceAccountJson).toBeUndefined();
   });
 
   it("drops the key and shows the refusal when the save fails", async () => {
     h.save.mockResolvedValueOnce({ isSuccess: false, errors: { Key: "bad" } });
     const user = userEvent.setup();
-    render(<PushSettingsPage onClose={vi.fn()} />);
+    renderPage();
     await user.upload(fileInput(), keyFile());
     await screen.findByText(/key\.json/);
-    await user.click(screen.getByRole("button", { name: SAVE }));
+    await clickSave(user);
     await waitFor(() => expect(h.showErrorToast).toHaveBeenCalledWith({ errors: { Key: "bad" } }));
     expect(screen.queryByText(/key\.json/)).toBeNull();
   });
 
-  it("offers the test send only when push is ready", async () => {
-    const user = userEvent.setup();
-    const { unmount } = render(<PushSettingsPage onClose={vi.fn()} />);
-    await user.click(screen.getByRole("button", { name: PUSH_TEXT.sendTest }));
-    await waitFor(() =>
-      expect(h.toast).toHaveBeenCalledWith(
-        expect.objectContaining({ description: PUSH_TEXT.testSent }),
-      ),
-    );
-    unmount();
-    h.settings = { projectId: null, enabled: false, hasKey: false };
-    render(<PushSettingsPage onClose={vi.fn()} />);
-    expect(screen.getByText(PUSH_TEXT.notSetUp)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: PUSH_TEXT.sendTest })).toBeNull();
-  });
-
   it("first setup: no switch, refuses a save without a key, and a key turns push on", async () => {
-    h.settings = { projectId: null, enabled: false, hasKey: false };
+    h.settings = NOT_SET_UP;
     const user = userEvent.setup();
-    render(<PushSettingsPage onClose={vi.fn()} />);
-    expect(screen.queryByRole("switch")).toBeNull();
-    await user.click(screen.getByRole("button", { name: SAVE }));
+    renderPage();
+    expect(screen.queryByRole("switch", { name: PUSH_TEXT.pushOn })).toBeNull();
+    await clickSave(user);
     expect(await screen.findByText(PUSH_TEXT.needKey)).toBeTruthy();
     expect(h.save).not.toHaveBeenCalled();
 
     await user.upload(fileInput(), keyFile());
-    await user.click(screen.getByRole("button", { name: SAVE }));
+    await clickSave(user);
     await waitFor(() => expect(h.save).toHaveBeenCalledTimes(1));
-    expect(h.save.mock.calls[0][0]).toEqual({
-      projectId: PROJECT,
-      enabled: true,
-      serviceAccountJson: KEY,
-    });
+    expect(savedPayload()).toMatchObject({ enabled: true, serviceAccountJson: KEY });
   });
 
   it("the switch pauses push and keeps the stored key", async () => {
     const user = userEvent.setup();
-    render(<PushSettingsPage onClose={vi.fn()} />);
+    renderPage();
     await user.click(screen.getByRole("switch", { name: PUSH_TEXT.pushOn }));
-    await user.click(screen.getByRole("button", { name: SAVE }));
+    await clickSave(user);
     await waitFor(() => expect(h.save).toHaveBeenCalledTimes(1));
-    expect(h.save.mock.calls[0][0]).toEqual({
-      projectId: PROJECT,
-      enabled: false,
-      serviceAccountJson: undefined,
-    });
+    expect(savedPayload()).toMatchObject({ enabled: false, serviceAccountJson: undefined });
   });
 
   it("warns when the new key is for another Firebase project", async () => {
     const user = userEvent.setup();
-    render(<PushSettingsPage onClose={vi.fn()} />);
+    renderPage();
     await user.upload(fileInput(), keyFile(KEY.replace(PROJECT, "other-app")));
     expect(await screen.findByText(PUSH_TEXT.otherProject)).toBeTruthy();
   });
 
-  it("builds the key from typed fields, fixes pasted \\n line breaks and forgets the private key", async () => {
-    const user = userEvent.setup();
-    render(<PushSettingsPage onClose={vi.fn()} />);
-    await user.click(screen.getByRole("button", { name: PUSH_TEXT.manualMode }));
-    await user.type(screen.getByLabelText(PUSH_TEXT.projectId), PROJECT);
-    await user.type(screen.getByLabelText(PUSH_TEXT.clientEmail), EMAIL);
-    const privateKey = screen.getByLabelText(PUSH_TEXT.privateKey) as HTMLTextAreaElement;
-    await user.click(privateKey);
-    await user.paste(String.raw`-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----\n`);
-    await user.click(screen.getByRole("button", { name: SAVE }));
+  describe("manual key", () => {
+    const openManual = async (user: ReturnType<typeof userEvent.setup>) => {
+      await user.click(screen.getByRole("button", { name: PUSH_TEXT.manualMode }));
+    };
 
-    await waitFor(() => expect(h.save).toHaveBeenCalledTimes(1));
-    const payload = h.save.mock.calls[0][0];
-    expect(payload.projectId).toBe(PROJECT);
-    expect(JSON.parse(payload.serviceAccountJson)).toEqual({
-      type: "service_account",
-      project_id: PROJECT,
-      client_email: EMAIL,
-      private_key: "-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----\n",
+    it("has no project input: the project is read from the email", async () => {
+      const user = userEvent.setup();
+      h.settings = NOT_SET_UP;
+      renderPage();
+      await openManual(user);
+      expect(screen.queryByLabelText(/project id/i)).toBeNull();
+      expect(screen.getByText(PUSH_TEXT.noProjectManual)).toBeTruthy();
+      await user.type(screen.getByLabelText(PUSH_TEXT.clientEmail), EMAIL);
+      expect(screen.getByText(PROJECT)).toBeTruthy();
+      expect(screen.getByText(PUSH_TEXT.fromEmail)).toBeTruthy();
     });
-    await waitFor(() => expect(privateKey.value).toBe(""));
+
+    it("builds the key, fixes pasted \\n line breaks and forgets the private key", async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await openManual(user);
+      await user.type(screen.getByLabelText(PUSH_TEXT.clientEmail), EMAIL);
+      const privateKey = screen.getByLabelText(PUSH_TEXT.privateKey) as HTMLTextAreaElement;
+      await user.click(privateKey);
+      await user.paste(String.raw`-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----\n`);
+      await clickSave(user);
+
+      await waitFor(() => expect(h.save).toHaveBeenCalledTimes(1));
+      expect(JSON.parse(savedPayload().serviceAccountJson)).toEqual({
+        type: "service_account",
+        project_id: PROJECT,
+        client_email: EMAIL,
+        private_key: "-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----\n",
+      });
+      await waitFor(() => expect(privateKey.value).toBe(""));
+    });
+
+    it("refuses an email that names no project and sends nothing", async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await openManual(user);
+      await user.type(screen.getByLabelText(PUSH_TEXT.clientEmail), "someone@example.com");
+      await user.click(screen.getByLabelText(PUSH_TEXT.privateKey));
+      await user.paste("-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----");
+      await clickSave(user);
+      expect(await screen.findByText(PUSH_TEXT.emailInvalid)).toBeTruthy();
+      expect(h.save).not.toHaveBeenCalled();
+    });
+
+    it("refuses a missing private key", async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await openManual(user);
+      await user.type(screen.getByLabelText(PUSH_TEXT.clientEmail), EMAIL);
+      await clickSave(user);
+      expect(await screen.findByText(PUSH_TEXT.manualIncomplete)).toBeTruthy();
+      expect(h.save).not.toHaveBeenCalled();
+    });
   });
 
-  it("refuses typed fields with no private key and sends nothing", async () => {
-    const user = userEvent.setup();
-    render(<PushSettingsPage onClose={vi.fn()} />);
-    await user.click(screen.getByRole("button", { name: PUSH_TEXT.manualMode }));
-    await user.type(screen.getByLabelText(PUSH_TEXT.projectId), PROJECT);
-    await user.click(screen.getByRole("button", { name: SAVE }));
-    expect(await screen.findByText(PUSH_TEXT.manualIncomplete)).toBeTruthy();
-    expect(h.save).not.toHaveBeenCalled();
+  describe("web config", () => {
+    it("keeps the Web switch off until a config is added", async () => {
+      const user = userEvent.setup();
+      renderPage();
+      expect(screen.getByRole("switch", { name: WEB_SWITCH }).hasAttribute("disabled")).toBe(true);
+      await addWebConfig(user);
+      expect(await screen.findByText(WEB_TEXT.added.split(" ·")[0], { exact: false })).toBeTruthy();
+      expect(screen.getByRole("switch", { name: WEB_SWITCH }).hasAttribute("disabled")).toBe(false);
+    });
+
+    it("sends a pasted config with the save and shows none of its values", async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await addWebConfig(user);
+      await user.click(screen.getByRole("switch", { name: WEB_SWITCH }));
+      expect(document.body.textContent).not.toContain(API_KEY);
+      expect(document.body.textContent).not.toContain(VAPID);
+
+      await clickSave(user);
+      await waitFor(() => expect(h.save).toHaveBeenCalledTimes(1));
+      expect(savedPayload()).toMatchObject({
+        platforms: { web: true },
+        webConfig: {
+          apiKey: API_KEY,
+          appId: APP_ID,
+          messagingSenderId: SENDER,
+          vapidKey: VAPID,
+          projectId: PROJECT,
+        },
+      });
+      await waitFor(() => expect(screen.queryByText(WEB_TEXT.remove)).toBeNull());
+      await clickSave(user);
+      await waitFor(() => expect(h.save).toHaveBeenCalledTimes(2));
+      expect(savedPayload(1).webConfig).toBeUndefined();
+    });
+
+    it("blocks a config for another Firebase project and sends nothing", async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await addWebConfig(user, "other-app");
+      expect((await screen.findAllByText(WEB_PROBLEM_TEXT.otherProject)).length).toBeGreaterThan(0);
+      await clickSave(user);
+      expect(h.save).not.toHaveBeenCalled();
+    });
+
+    it("says so when the pasted text is not a web config", async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(screen.getByLabelText(WEB_TEXT.pasteLabel));
+      await user.paste("hello");
+      expect(await screen.findByText(WEB_PROBLEM_TEXT.notConfig)).toBeTruthy();
+    });
+
+    it("typed fields: refuses an App ID that belongs to another sender", async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(screen.getByRole("button", { name: WEB_TEXT.fields }));
+      await user.type(screen.getByLabelText(WEB_TEXT.apiKey), API_KEY);
+      await user.type(screen.getByLabelText(WEB_TEXT.appId), APP_ID);
+      await user.type(screen.getByLabelText(WEB_TEXT.senderId), "999");
+      await user.type(screen.getByLabelText(WEB_TEXT.vapid), VAPID);
+      await clickSave(user);
+      expect(await screen.findByText(WEB_PROBLEM_TEXT.otherSender)).toBeTruthy();
+      expect(h.save).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("test send", () => {
+    it("shows the result dialog with the fix line of a failed device", async () => {
+      h.test.mockResolvedValue({
+        isSuccess: true,
+        sentAt: "2026-10-28T20:41:00Z",
+        delivered: 0,
+        failed: 1,
+        devices: [{ platform: "ios", name: "iPhone 15", result: "apnsKeyMissing" }],
+      });
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(screen.getByRole("button", { name: "Send test iOS" }));
+      expect(await screen.findByText(PUSH_RESULT_FIX.apnsKeyMissing as string)).toBeTruthy();
+      expect(h.test).toHaveBeenCalledWith({ platform: "ios" });
+    });
+
+    it("shows the refusal when nothing could be sent", async () => {
+      h.test.mockResolvedValue({ isSuccess: false, errors: { devices: "No device" } });
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(screen.getByRole("button", { name: "Test all platforms" }));
+      await waitFor(() =>
+        expect(h.showErrorToast).toHaveBeenCalledWith({ errors: { devices: "No device" } }),
+      );
+    });
+
+    it("offers no test before push is set up", () => {
+      h.settings = NOT_SET_UP;
+      renderPage();
+      expect(
+        screen.getByRole("button", { name: "Test all platforms" }).hasAttribute("disabled"),
+      ).toBe(true);
+    });
   });
 });

@@ -28,6 +28,7 @@ import { CheckRow, FormRow, HelpText } from "./notification-form/form-row";
 import { ReceiversField } from "./notification-form/receivers-field";
 import { ChannelsField } from "./notification-form/channels-field";
 import { PushMessageField } from "./notification-form/push-message-field";
+import { PushOptionsRows, PushPlatformsRow } from "./notification-form/push-extra-rows";
 import { DeveloperNotes } from "./notification-form/developer-notes";
 import { NotificationPageHeader } from "./notification-page-header";
 
@@ -235,6 +236,9 @@ export function NotificationConfigForm({
           <FormRow label={NOTIFICATION_TEXT.channels}>
             <ChannelsField values={values} onPatch={patch} />
           </FormRow>
+          {values.pushEnabled && !locked && (
+            <PushPlatformsRow values={values} onPatch={patch} settings={push.data} />
+          )}
           {values.pushEnabled && (
             <FormRow label={NOTIFICATION_TEXT.pushMessage}>
               <PushMessageField
@@ -246,6 +250,7 @@ export function NotificationConfigForm({
               />
             </FormRow>
           )}
+          {values.pushEnabled && !locked && <PushOptionsRows values={values} onPatch={patch} />}
           {!locked && (
             <FormRow label="">
               <DeveloperNotes

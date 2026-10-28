@@ -1,3 +1,5 @@
+import type { IPushOptions, PushPlatform } from "./push.model";
+
 // DEADCODE 2026-07-29: no references in client or e2e; commented pending review
 // export const NOTIFICATION_CONFIG_SECRET_KEY = "notification" as const;
 
@@ -55,6 +57,9 @@ export interface INotificationConfigDeliveryFields {
   liveEnabled?: boolean;
   pushEnabled?: boolean;
   pushTemplate?: INotificationPushTemplate | null;
+  /** Push platforms the notification goes to; missing or empty means all three. */
+  pushPlatforms?: PushPlatform[] | null;
+  pushOptions?: IPushOptions | null;
   /** 0 means the server default (120 per minute). */
   rateLimitPerMinute?: number;
 }
@@ -100,26 +105,4 @@ export interface ISaveNotificationConfigResponse {
   errors: null | unknown;
   isSuccess: boolean;
   itemId: string;
-}
-
-/** Answer of GET Notifier/push-settings. The service account key is never part of it. */
-export interface IPushSettings {
-  projectId: string | null;
-  enabled: boolean;
-  /** True once a service account key is stored. */
-  hasKey: boolean;
-  keyUploadedAt?: string | null;
-  keyUploadedBy?: string | null;
-}
-
-/** Body of POST Notifier/push-settings. `serviceAccountJson` is sent only when a key file was chosen. */
-export interface ISavePushSettingsPayload {
-  projectId: string;
-  enabled: boolean;
-  serviceAccountJson?: string;
-}
-
-export interface IPushSettingsAck {
-  isSuccess?: boolean;
-  errors?: Record<string, string> | null;
 }

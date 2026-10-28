@@ -5,6 +5,16 @@ import type {
   INotificationSubscriptionFilter,
   ISaveNotificationConfigPayload,
 } from "../models/notification-config.model";
+import { PUSH_PLATFORMS, type PushPlatform } from "../models/push.model";
+import {
+  buildPushOptions,
+  EMPTY_PUSH_OPTIONS,
+  pushOptionsErrors,
+  toPushOptionValues,
+  toPushPlatforms,
+  type PushOptionValues,
+} from "./push-options";
+import { PUSH_FORM_TEXT } from "../constants/push-ui.constant";
 import {
   AUDIENCE_LEVEL,
   AUDIENCE_MATCH,
@@ -35,6 +45,9 @@ export interface NotificationFormValues {
   titleKey: string;
   bodyKey: string;
   link: string;
+  /** Platforms the push goes to; all three by default. */
+  pushPlatforms: PushPlatform[];
+  pushOptions: PushOptionValues;
   importance: number;
   kind: number;
   sourceService: string;
@@ -63,6 +76,8 @@ export const EMPTY_FORM_VALUES: NotificationFormValues = {
   titleKey: "",
   bodyKey: "",
   link: "",
+  pushPlatforms: [...PUSH_PLATFORMS],
+  pushOptions: EMPTY_PUSH_OPTIONS,
   importance: 0,
   kind: 0,
   sourceService: "",
@@ -113,6 +128,8 @@ export const toFormValues = (row?: INotificationConfigRow): NotificationFormValu
     titleKey: row.pushTemplate?.titleKey ?? "",
     bodyKey: row.pushTemplate?.bodyKey ?? "",
     link: row.pushTemplate?.link ?? "",
+    pushPlatforms: toPushPlatforms(row.pushPlatforms),
+    pushOptions: toPushOptionValues(row.pushOptions),
     importance: row.importance ?? 0,
     kind: row.kind ?? 0,
     sourceService: row.sourceService ?? "",
@@ -165,6 +182,11 @@ export interface ValidationContext {
   isEdit: boolean;
 }
 
+const pushErrors = (v: NotificationFormValues): string[] => [
+  ...(v.pushPlatforms.length === 0 ? [PUSH_FORM_TEXT.atLeastOne] : []),
+  ...pushOptionsErrors(v.pushOptions),
+];
+
 /** One message per broken rule; the page shows them in the footer and keeps Save off. */
 export const validateNotificationForm = (
   v: NotificationFormValues,
@@ -181,6 +203,7 @@ export const validateNotificationForm = (
     errors.push(NOTIFICATION_TEXT.errors.pushKeys);
   }
   if (!locked && v.link.length > LIMITS.textLength) errors.push(NOTIFICATION_TEXT.errors.link);
+  if (!locked && v.pushEnabled) errors.push(...pushErrors(v));
   if (parseRate(v.rateLimit) === null) errors.push(NOTIFICATION_TEXT.errors.rate);
   if (!locked) errors.push(...selectedErrors(v));
   return errors;
@@ -289,5 +312,8 @@ export const buildSavePayload = (
       v.titleKey || v.bodyKey
         ? { titleKey: v.titleKey, bodyKey: v.bodyKey, link: v.link.trim() }
         : null,
+    // Platforms and options stay saved while push is off, like the keys.
+    pushPlatforms: v.pushPlatforms,
+    pushOptions: buildPushOptions(v.pushOptions),
   };
 };

@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { pushSettingsService } from "../services/push-settings.service";
-import type { ISavePushSettingsPayload } from "../models/notification-config.model";
+import type { ISavePushSettingsPayload } from "../models/push.model";
 
-const PUSH_SETTINGS_KEY = "notification-push-settings";
+export const PUSH_SETTINGS_KEY = "notification-push-settings";
+export const PUSH_STATUS_KEY = "notification-push-status";
 
 export const usePushSettings = (options?: { enabled?: boolean }) =>
   useQuery({
@@ -23,12 +24,10 @@ export const useSavePushSettings = () => {
   return useMutation({
     mutationKey: [PUSH_SETTINGS_KEY, "save"],
     mutationFn: (payload: ISavePushSettingsPayload) => pushSettingsService.saveSettings(payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: [PUSH_SETTINGS_KEY] }),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: [PUSH_SETTINGS_KEY] }),
+        queryClient.invalidateQueries({ queryKey: [PUSH_STATUS_KEY] }),
+      ]),
   });
 };
-
-export const useSendTestPush = () =>
-  useMutation({
-    mutationKey: [PUSH_SETTINGS_KEY, "test"],
-    mutationFn: () => pushSettingsService.sendTest(),
-  });

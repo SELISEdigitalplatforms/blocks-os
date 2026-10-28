@@ -76,6 +76,8 @@ const DELIVERY_FIELD_KEYS = [
   "liveEnabled",
   "pushEnabled",
   "pushTemplate",
+  "pushPlatforms",
+  "pushOptions",
   "rateLimitPerMinute",
   "defaultAudience",
   "audienceLocked",
