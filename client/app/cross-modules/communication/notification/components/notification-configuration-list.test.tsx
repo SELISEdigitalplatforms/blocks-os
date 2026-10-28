@@ -1,6 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
+import { MemoryRouter, Route, Routes } from "react-router";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -16,6 +17,9 @@ const h = vi.hoisted(() => ({
   onEdit: vi.fn(),
 }));
 
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
+  useScopedPath: () => (p: string) => `/app/proj/${p}`,
+}));
 vi.mock("@seliseblocks/genesis-os", () => {
   const Passthrough = ({ children }: { children: ReactNode }) => children;
   return {
@@ -84,9 +88,25 @@ const configurations = [
   },
 ] as unknown as INotificationConfigRow[];
 
-const wrapper = ({ children }: { children: ReactNode }) => (
-  <NuqsTestingAdapter>{children}</NuqsTestingAdapter>
-);
+const NOTIFICATION_PATH = "/app/proj/secret-management/notification";
+
+/** Renders the page at a real notification path, the way the router mounts it. */
+const at = (path: string) => {
+  function RouterAt({ children }: Readonly<{ children: ReactNode }>) {
+    return (
+      <MemoryRouter initialEntries={[path]}>
+        <NuqsTestingAdapter>
+          <Routes>
+            <Route path={`${NOTIFICATION_PATH}/:notificationId?`} element={children} />
+          </Routes>
+        </NuqsTestingAdapter>
+      </MemoryRouter>
+    );
+  }
+  return RouterAt;
+};
+
+const wrapper = at(NOTIFICATION_PATH);
 
 describe("NotificationConfigurationList", () => {
   beforeEach(() => {
@@ -111,22 +131,21 @@ describe("NotificationConfigurationList", () => {
   it("shows recipients (merged audience and receivers), source and the channels", () => {
     render(<NotificationConfigurationList onEdit={h.onEdit} />, { wrapper });
     const headers = screen.getAllByRole("columnheader").map((c) => c.textContent);
-    expect(headers.slice(0, 8)).toEqual([
+    expect(headers.slice(0, 6)).toEqual([
       "Name",
       "Recipients",
       "Service",
       "Importance",
-      "In-app",
-      "Mobile push",
-      "Offline",
+      "Delivery channels",
       "Status",
     ]);
     const row = screen.getByText(REALTIME_ALERTS).closest("tr") as HTMLElement;
     expect(within(row).getByText("Project users")).toBeTruthy();
     expect(within(row).getByText("Targeted: event owner")).toBeTruthy();
     // Old rows keep in-app on and push off; inbox follows the saved flag.
-    expect(within(row).getAllByLabelText("Yes")).toHaveLength(2);
-    expect(within(row).getAllByLabelText("No")).toHaveLength(1);
+    expect(within(row).getByText("In-app: on")).toBeTruthy();
+    expect(within(row).getByText("Mobile push: off")).toBeTruthy();
+    expect(within(row).getByText("Offline: on")).toBeTruthy();
     expect(screen.getAllByText("Active")).toHaveLength(2);
   });
 
@@ -190,29 +209,38 @@ describe("NotificationConfigurationListPage", () => {
     expect(screen.getByText("No notifications yet")).toBeTruthy();
   });
 
-  it("shows the edit page when a notification id is in the address", () => {
+  it.each([
+    ["c-2", "c-2"],
+    ["new", "new"],
+  ])("shows the notification form at /notification/%s", (segment, itemId) => {
     h.useGetNotificationConfigs.mockReturnValue({
       data: { configurations, totalCount: 2 },
       isLoading: false,
       isFetching: false,
     });
     render(<NotificationConfigurationListPage />, {
-      wrapper: ({ children }: { children: ReactNode }) => (
-        <NuqsTestingAdapter searchParams="?notificationEdit=c-2">{children}</NuqsTestingAdapter>
-      ),
+      wrapper: at(`${NOTIFICATION_PATH}/${segment}`),
     });
-    expect(screen.getByTestId("config-page").textContent).toBe("c-2");
+    expect(screen.getByTestId("config-page").textContent).toBe(itemId);
     expect(screen.queryByText(REALTIME_ALERTS)).toBeNull();
   });
 
-  it("opens the mobile push page that the header button asks for", () => {
-    render(<NotificationConfigurationListPage />, {
-      wrapper: ({ children }: { children: ReactNode }) => (
-        <NuqsTestingAdapter searchParams="?notificationPush=true">{children}</NuqsTestingAdapter>
-      ),
-    });
+  it("shows the mobile push page at /notification/push", () => {
+    render(<NotificationConfigurationListPage />, { wrapper: at(`${NOTIFICATION_PATH}/push`) });
     expect(screen.getByTestId("push-page")).toBeTruthy();
     expect(screen.queryByText(REALTIME_ALERTS)).toBeNull();
+  });
+
+  it("moves an old ?notificationEdit=<id> link to the id path and keeps the list filters", async () => {
+    h.useGetNotificationConfigs.mockReturnValue({
+      data: { configurations, totalCount: 2 },
+      isLoading: false,
+      isFetching: false,
+    });
+    render(<NotificationConfigurationListPage />, {
+      wrapper: at(`${NOTIFICATION_PATH}?notificationEdit=c-2&notificationSearch=push`),
+    });
+    expect((await screen.findByTestId("config-page")).textContent).toBe("c-2");
   });
 
   it("renders the configuration list when configurations exist", () => {

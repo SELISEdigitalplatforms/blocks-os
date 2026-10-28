@@ -58,8 +58,11 @@ export const NOTIFICATION_TEXT = {
     inApp: "In-app",
     push: MOBILE_PUSH,
     inbox: "Offline",
+    delivery: "Delivery channels",
     status: "Status",
   },
+  channelOn: "on",
+  channelOff: "off",
   /** Help for the merged Recipients column: the audience group and who in it gets the notice. */
   recipientsHelp: [
     "Audience: Project users use your application; Console users work in Blocks Console.",

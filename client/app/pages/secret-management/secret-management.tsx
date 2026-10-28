@@ -17,6 +17,7 @@ import {
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { Plus, Loader2, Notebook, LayoutTemplate, Smartphone } from "lucide-react";
 import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
+import { useNotificationNavigation } from "@/cross-modules/communication/notification/hooks/use-notification-navigation";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 
@@ -25,8 +26,8 @@ function SecretManagementHeaderActions({
   currentPath,
   setIsAddIdpOpen,
   setIsEmailConfigOpen,
-  setIsNotificationConfigOpen,
-  setIsNotificationPushOpen,
+  openNotificationNew,
+  openNotificationPush,
   setIsManagedServicesGuideOpen,
   setIsClientCredentialOpen,
 }: Readonly<{
@@ -34,8 +35,8 @@ function SecretManagementHeaderActions({
   currentPath: string;
   setIsAddIdpOpen: (value: boolean) => void;
   setIsEmailConfigOpen: (value: boolean) => void;
-  setIsNotificationConfigOpen: (value: boolean) => void;
-  setIsNotificationPushOpen: (value: boolean) => void;
+  openNotificationNew: () => void;
+  openNotificationPush: () => void;
   setIsManagedServicesGuideOpen: (value: boolean) => void;
   setIsClientCredentialOpen: (value: boolean) => void;
 }>) {
@@ -147,13 +148,13 @@ function SecretManagementHeaderActions({
       )}
       {currentPath === "notification" && (
         <>
-          <Button variant="outline" size="sm" onClick={() => setIsNotificationPushOpen(true)}>
+          <Button variant="outline" size="sm" onClick={openNotificationPush}>
             <Smartphone className="h-4 w-4" />
             <span className="sr-only sm:not-sr-only sm:ml-2 sm:text-sm sm:whitespace-nowrap">
               Mobile push
             </span>
           </Button>
-          <Button size="sm" onClick={() => setIsNotificationConfigOpen(true)}>
+          <Button size="sm" onClick={openNotificationNew}>
             <Plus className="h-5 w-5" />
             <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
               Add notification
@@ -169,7 +170,9 @@ function SecretManagementHeaderActions({
 export default function SecretManagementLayout() {
   const { pathname } = useLocation();
   const scoped = useScopedPath();
-  const currentPath = pathname.split("/").pop() ?? "secret";
+  // /secret-management/notification/<new|push|id> still belongs to the notification page.
+  const notificationMatch = /\/secret-management\/notification(?:\/([^/]+))?\/?$/.exec(pathname);
+  const currentPath = notificationMatch ? "notification" : (pathname.split("/").pop() ?? "secret");
   const oidcBrandingMatch = pathname.match(/\/oidc\/branding$/);
   const isOidcBranding = Boolean(oidcBrandingMatch);
   const secretManagementBase = scoped("secret-management");
@@ -185,19 +188,9 @@ export default function SecretManagementLayout() {
   // Shared via URL so child routes can read/close the same modal
   const [, setIsAddIdpOpen] = useQueryState("addIdp", parseAsBoolean.withDefault(false));
   const [, setIsEmailConfigOpen] = useQueryState("emailConfig", parseAsBoolean.withDefault(false));
-  const [isNotificationConfigOpen, setIsNotificationConfigOpen] = useQueryState(
-    "notificationConfig",
-    parseAsBoolean.withDefault(false),
-  );
-  const [notificationEditId] = useQueryState("notificationEdit", parseAsString.withDefault(""));
-  const [isNotificationPushOpen, setIsNotificationPushOpen] = useQueryState(
-    "notificationPush",
-    parseAsBoolean.withDefault(false),
-  );
+  const notificationNav = useNotificationNavigation();
   // The notification form and the mobile push page show their own title, so the list header steps aside.
-  const isNotificationPageOpen =
-    currentPath === "notification" &&
-    (isNotificationConfigOpen || Boolean(notificationEditId) || isNotificationPushOpen);
+  const isNotificationPageOpen = Boolean(notificationMatch?.[1]);
   const [, setIsManagedServicesGuideOpen] = useQueryState(
     "guideOpen",
     parseAsBoolean.withDefault(false),
@@ -232,8 +225,8 @@ export default function SecretManagementLayout() {
       currentPath={currentPath}
       setIsAddIdpOpen={setIsAddIdpOpen}
       setIsEmailConfigOpen={setIsEmailConfigOpen}
-      setIsNotificationConfigOpen={setIsNotificationConfigOpen}
-      setIsNotificationPushOpen={setIsNotificationPushOpen}
+      openNotificationNew={notificationNav.openNew}
+      openNotificationPush={notificationNav.openPush}
       setIsManagedServicesGuideOpen={setIsManagedServicesGuideOpen}
       setIsClientCredentialOpen={setIsClientCredentialOpen}
     />

@@ -63,7 +63,6 @@ namespace Configuration.DomainService.Shared.Utilities
 
         public const string OnlyRootTenantCanManageBuiltInNotificationConfiguration = "Only_Root_Tenant_Can_Manage_Built_In_Notification_Configuration";
         public const string BuiltInNotificationConfigurationIsReadOnly = "Built_In_Notification_Configuration_Is_Read_Only";
-        public const string NotificationConfigurationCannotBeDisabled = "Notification_Configuration_Cannot_Be_Disabled";
         public const string NotificationConfigurationPropagationNotQueued = "Notification_Configuration_Propagation_Not_Queued";
 
         // Receivers, channels and push message of a notification configuration. Each key has a message in the client's

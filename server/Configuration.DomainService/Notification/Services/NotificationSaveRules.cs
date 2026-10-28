@@ -60,11 +60,6 @@ namespace Configuration.DomainService.Notification.Services
         /// <summary>The first rule the merged configuration breaks (it needs the stored values the request left out), or null.</summary>
         public static SaveRefusal? FindMergedRefusal(NotificationConfiguration merged, SaveNotificationConfigurationRequest request)
         {
-            if (request.IsDisabled == true && !merged.CanBeDisabled())
-            {
-                return new(nameof(request.IsDisabled), Constants.NotificationConfigurationCannotBeDisabled);
-            }
-
             if (request.LiveEnabled is null && request.PushEnabled is null && request.PushTemplate is null)
             {
                 return null;

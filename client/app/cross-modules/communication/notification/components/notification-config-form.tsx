@@ -11,11 +11,11 @@ import { useSaveNotificationConfig } from "../hooks/use-notification-config";
 import { isPushReady, usePushSettings } from "../hooks/use-push-settings";
 import { useIsRootProject } from "../hooks/use-is-root-project";
 import {
-  ALWAYS_ON_MESSAGE,
   NOTIFICATION_CONFIG_ERROR_MESSAGES,
   NOTIFICATION_PROPAGATION_NOT_QUEUED,
   PROPAGATION_WARNING_MESSAGE,
-  canNotificationConfigBeDisabled,
+  WAITED_ON_OFF_WARNING,
+  isWaitedOnByPage,
 } from "../constants/notification.constant";
 import { LIMITS, NOTIFICATION_TEXT, OWNER_ONLY_LABEL } from "../constants/notification-ui.constant";
 import {
@@ -47,13 +47,13 @@ function EventRow({
   values,
   isEdit,
   locked,
-  canBeDisabled,
+  waitedOn,
   onPatch,
 }: Readonly<{
   values: NotificationFormValues;
   isEdit: boolean;
   locked: boolean;
-  canBeDisabled: boolean;
+  waitedOn: boolean;
   onPatch: (patch: Partial<NotificationFormValues>) => void;
 }>) {
   const isCustom = !isEdit || !values.isBuiltIn;
@@ -75,11 +75,14 @@ function EventRow({
           id="event-enabled"
           label={NOTIFICATION_TEXT.enabled}
           checked={values.isEnabled}
-          disabled={!canBeDisabled}
           onChange={(isEnabled) => onPatch({ isEnabled })}
         />
       </div>
-      {!canBeDisabled && <HelpText>{ALWAYS_ON_MESSAGE}</HelpText>}
+      {waitedOn && !values.isEnabled && (
+        <p className="text-xs text-warning-700" role="alert">
+          {WAITED_ON_OFF_WARNING}
+        </p>
+      )}
       {isCustom && !locked && (
         <Input
           aria-label={NOTIFICATION_TEXT.description}
@@ -153,7 +156,7 @@ export function NotificationConfigForm({
     () => validateNotificationForm(values, { locked, isEdit }),
     [values, locked, isEdit],
   );
-  const canBeDisabled = canNotificationConfigBeDisabled({
+  const waitedOn = isWaitedOnByPage({
     isBuiltIn: isEdit && values.isBuiltIn,
     kind: values.kind,
   });
@@ -220,7 +223,7 @@ export function NotificationConfigForm({
             values={values}
             isEdit={isEdit}
             locked={locked}
-            canBeDisabled={canBeDisabled}
+            waitedOn={waitedOn}
             onPatch={patch}
           />
           <SendToRow values={values} locked={locked} onPatch={patch} />

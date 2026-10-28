@@ -323,23 +323,19 @@ namespace XUnitTest.Services
         [Theory]
         [InlineData(NotificationKind.Job)]
         [InlineData(NotificationKind.Progress)]
-        public async Task Disable_BuiltInJobOrProgress_IsRefusedForEveryone(NotificationKind kind)
+        public async Task Disable_BuiltInJobOrProgress_IsAllowed_WhenTheProjectDoesNotNeedIt(NotificationKind kind)
         {
-            foreach (var tenant in new[] { OtherTenant, RootTenant })
-            {
-                using var _ = new BlocksTestContext(tenantId: tenant);
-                var stored = BuiltIn(kind);
-                Stored(stored);
-                var request = SameAs(stored);
-                request.IsDisabled = true;
+            // User, 2026-10-28: a project may turn off any event it does not need, a page waiting on it included.
+            using var _ = new BlocksTestContext(tenantId: OtherTenant);
+            var stored = BuiltIn(kind);
+            Stored(stored);
+            var request = SameAs(stored);
+            request.IsDisabled = true;
 
-                var response = await Service().SaveNotificationConfigurationAsync(request);
+            var response = await Service().SaveNotificationConfigurationAsync(request);
 
-                response.IsSuccess.Should().BeFalse();
-                response.Errors!.Values.Should().Contain(Constants.NotificationConfigurationCannotBeDisabled);
-            }
-
-            _repo.Verify(r => r.SaveNotificationConfigurationAsync(It.IsAny<NotificationConfiguration>()), Times.Never);
+            response.IsSuccess.Should().BeTrue();
+            _saved!.IsDisabled.Should().BeTrue();
         }
 
         [Fact]

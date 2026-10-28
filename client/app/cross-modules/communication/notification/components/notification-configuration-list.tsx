@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   useDeleteNotificationConfig,
   useGetNotificationConfigs,
@@ -33,16 +33,17 @@ import {
   NotificationConfigsFilterToolBar,
   useNotificationConfigsFilterQueryParams,
 } from "./notification-configs-filter-toolbar";
-import { useQueryState, parseAsBoolean, parseAsString } from "nuqs";
+import {
+  useNotificationNavigation,
+  useNotificationView,
+} from "../hooks/use-notification-navigation";
 
 const columns: { key: string; label: React.ReactNode }[] = [
   { key: "name", label: NOTIFICATION_TEXT.columns.name },
   { key: "recipients", label: <RecipientsHeader /> },
   { key: "service", label: NOTIFICATION_TEXT.columns.service },
   { key: "importance", label: NOTIFICATION_TEXT.columns.importance },
-  { key: "inApp", label: NOTIFICATION_TEXT.columns.inApp },
-  { key: "push", label: NOTIFICATION_TEXT.columns.push },
-  { key: "inbox", label: NOTIFICATION_TEXT.columns.inbox },
+  { key: "delivery", label: NOTIFICATION_TEXT.columns.delivery },
   { key: "status", label: NOTIFICATION_TEXT.columns.status },
   { key: "actions", label: "" },
 ];
@@ -214,15 +215,10 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
 export default NotificationConfigurationList;
 
 export function NotificationConfigurationListPage() {
-  const [addOpen, setAddOpen] = useQueryState(
-    "notificationConfig",
-    parseAsBoolean.withDefault(false),
-  );
-  const [editId, setEditId] = useQueryState("notificationEdit", parseAsString.withDefault(""));
-  const [pushOpen, setPushOpen] = useQueryState(
-    "notificationPush",
-    parseAsBoolean.withDefault(false),
-  );
+  const view = useNotificationView();
+  const nav = useNotificationNavigation();
+  const { redirectLegacyLink } = nav;
+  useEffect(redirectLegacyLink, [redirectLegacyLink]);
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const { queryParams } = useNotificationConfigsFilterQueryParams();
   const { data, isLoading, isFetching } = useGetNotificationConfigs({
@@ -239,23 +235,13 @@ export function NotificationConfigurationListPage() {
     !!queryParams.notificationReceivers;
   const isEmpty = !loading && (data?.configurations ?? []).length === 0 && !hasFilters;
 
-  const backToList = () => {
-    setAddOpen(false);
-    setEditId("");
-    setPushOpen(false);
-  };
-
-  if (pushOpen) return <PushSettingsPage onClose={backToList} />;
-  if (addOpen || editId) {
+  if (view.kind === "push") return <PushSettingsPage onClose={nav.openList} />;
+  if (view.kind === "new" || view.kind === "edit") {
     return (
       <NotificationConfigPage
-        itemId={editId}
-        onClose={backToList}
-        onSetUpPush={() => {
-          setAddOpen(false);
-          setEditId("");
-          setPushOpen(true);
-        }}
+        itemId={view.kind === "edit" ? view.id : ""}
+        onClose={nav.openList}
+        onSetUpPush={nav.openPush}
       />
     );
   }
@@ -268,6 +254,6 @@ export function NotificationConfigurationListPage() {
       description="Use Add notification to create one."
     />
   ) : (
-    <NotificationConfigurationList isLoading={loading} onEdit={setEditId} />
+    <NotificationConfigurationList isLoading={loading} onEdit={nav.openEdit} />
   );
 }

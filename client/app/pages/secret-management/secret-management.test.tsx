@@ -13,7 +13,7 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("react-router", () => ({
-  useLocation: () => ({ pathname: h.pathname }),
+  useLocation: () => ({ pathname: h.pathname, search: "" }),
   useNavigate: () => h.navigate,
   Outlet: () => <div data-testid="outlet" />,
 }));
@@ -112,17 +112,30 @@ describe("SecretManagementLayout", () => {
     expect(screen.getByText(ADD_NOTIFICATION)).toBeTruthy();
   });
 
-  it.each([
-    ["notificationConfig", true],
-    ["notificationEdit", "item-1"],
-    ["notificationPush", true],
-  ])("hides the list header while the notification page opened by %s is shown", (key, value) => {
+  it.each(["new", "item-1", "push"])(
+    "hides the list header while the notification page at /notification/%s is shown",
+    (segment) => {
+      h.pathname = `/app/proj/secret-management/notification/${segment}`;
+      render(<SecretManagementLayout />);
+      expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
+      expect(screen.queryByText(ADD_NOTIFICATION)).toBeNull();
+      expect(screen.getByTestId("outlet")).toBeTruthy();
+    },
+  );
+
+  it("opens Mobile push and Add notification by path, not by query parameter", () => {
     h.pathname = "/app/proj/secret-management/notification";
-    h.query = { [key]: value };
     render(<SecretManagementLayout />);
-    expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
-    expect(screen.queryByText(ADD_NOTIFICATION)).toBeNull();
-    expect(screen.getByTestId("outlet")).toBeTruthy();
+    screen.getByText("Mobile push").click();
+    expect(h.navigate).toHaveBeenLastCalledWith(
+      { pathname: "/app/proj/secret-management/notification/push", search: "" },
+      { replace: false },
+    );
+    screen.getByText(ADD_NOTIFICATION).click();
+    expect(h.navigate).toHaveBeenLastCalledWith(
+      { pathname: "/app/proj/secret-management/notification/new", search: "" },
+      { replace: false },
+    );
   });
 
   it("shows Manage Template immediately before Create on the OIDC page", () => {
