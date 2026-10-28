@@ -1,9 +1,9 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card } from "@/components/ui-kits/card/card";
-import { Input } from "@/components/ui-kits/input/input";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
+import { Switch } from "@/components/ui-kits/switch/switch";
 import { showErrorToast, toast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import type { IPushSettings } from "../models/notification-config.model";
@@ -13,32 +13,13 @@ import {
   useSavePushSettings,
   useSendTestPush,
 } from "../hooks/use-push-settings";
+import { usePushKeyDraft } from "../hooks/use-push-key-draft";
 import { NOTIFICATION_TEXT, PUSH_TEXT } from "../constants/notification-ui.constant";
-import { CheckRow, FormRow, HelpText } from "./notification-form/form-row";
+import { FormRow, HelpText } from "./notification-form/form-row";
 import { NotificationPageHeader } from "./notification-page-header";
+import { PushKeyFields } from "./push-key-fields";
 
-const MAX_KEY_BYTES = 20_000;
 const NOT_SET_UP: IPushSettings = { projectId: null, enabled: false, hasKey: false };
-
-/** Light client check: the file parses as an object with the four fields of a service account key. */
-export const isServiceAccountKey = (text: string): boolean => {
-  try {
-    const key = JSON.parse(text) as Record<string, unknown>;
-    return (
-      key?.type === "service_account" && !!key.project_id && !!key.private_key && !!key.client_email
-    );
-  } catch {
-    return false;
-  }
-};
-
-const keyUploadedText = (settings: IPushSettings): string => {
-  const parts: string[] = [PUSH_TEXT.keyUploaded];
-  if (settings.keyUploadedAt)
-    parts.push("on", new Date(settings.keyUploadedAt).toLocaleDateString());
-  if (settings.keyUploadedBy) parts.push("by", settings.keyUploadedBy);
-  return parts.join(" ");
-};
 
 interface PushSettingsFormProps {
   settings: IPushSettings;
@@ -48,50 +29,32 @@ interface PushSettingsFormProps {
 function PushSettingsForm({ settings, onClose }: Readonly<PushSettingsFormProps>) {
   const save = useSavePushSettings();
   const test = useSendTestPush();
-  const [projectId, setProjectId] = useState(settings.projectId ?? "");
-  const [enabled, setEnabled] = useState(settings.enabled);
-  const [fileName, setFileName] = useState("");
-  const [keyError, setKeyError] = useState(false);
-  // The key file is held in a ref, never in state or on screen, and dropped once saved.
-  const keyFile = useRef<File | null>(null);
-  const fileInput = useRef<HTMLInputElement>(null);
-
-  const clearKey = () => {
-    keyFile.current = null;
-    setFileName("");
-    if (fileInput.current) fileInput.current.value = "";
-  };
-
-  const onPickFile = async (file: File | undefined) => {
-    clearKey();
-    setKeyError(false);
-    if (!file) return;
-    const text = file.size <= MAX_KEY_BYTES ? await file.text() : "";
-    if (!isServiceAccountKey(text)) {
-      setKeyError(true);
-      if (fileInput.current) fileInput.current.value = "";
-      return;
-    }
-    keyFile.current = file;
-    setFileName(file.name);
-  };
+  const draft = usePushKeyDraft();
+  // First setup: a valid key turns push on. After that the switch pauses and resumes it without touching the key.
+  const [enabled, setEnabled] = useState(settings.hasKey ? settings.enabled : true);
 
   const onSave = async () => {
+    const key = await draft.read();
+    if (key.status === "invalid") return;
+    if (key.status === "none" && !settings.hasKey) {
+      draft.setError(PUSH_TEXT.needKey);
+      return;
+    }
+    const newKey = key.status === "key" ? key : null;
     try {
-      const serviceAccountJson = keyFile.current ? await keyFile.current.text() : undefined;
       const res = await save.mutateAsync({
-        projectId: projectId.trim(),
+        projectId: newKey?.projectId ?? settings.projectId ?? "",
         enabled,
-        serviceAccountJson,
+        serviceAccountJson: newKey?.json,
       });
-      clearKey();
+      draft.clear();
       if (res.isSuccess) {
         toast({ variant: "success", title: "Success", description: PUSH_TEXT.saved });
       } else {
         showErrorToast({ errors: res.errors });
       }
     } catch (error) {
-      clearKey();
+      draft.clear();
       showErrorToast({ errors: isErrorWithErrors(error) ? error.errors : "Something went wrong" });
     }
   };
@@ -125,61 +88,28 @@ function PushSettingsForm({ settings, onClose }: Readonly<PushSettingsFormProps>
           }}
         >
           <FormRow label={PUSH_TEXT.status}>
-            <output>
-              <Badge variant={ready ? "success" : "secondary"} className="w-fit font-normal">
-                {ready ? PUSH_TEXT.ready : PUSH_TEXT.notSetUp}
-              </Badge>
-            </output>
-          </FormRow>
-          <FormRow label={PUSH_TEXT.firebaseProject}>
-            <Input
-              aria-label={PUSH_TEXT.projectId}
-              placeholder={PUSH_TEXT.projectIdPlaceholder}
-              maxLength={100}
-              value={projectId}
-              onChange={(event) => setProjectId(event.target.value)}
-            />
-          </FormRow>
-          <FormRow label={PUSH_TEXT.keyLabel}>
             <div className="flex flex-wrap items-center gap-3">
-              {settings.hasKey && <span className="text-sm">{keyUploadedText(settings)}</span>}
-              <input
-                ref={fileInput}
-                type="file"
-                accept="application/json,.json"
-                hidden
-                aria-label={PUSH_TEXT.upload}
-                onChange={(event) => void onPickFile(event.target.files?.[0])}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="xs"
-                onClick={() => fileInput.current?.click()}
-              >
-                {settings.hasKey ? PUSH_TEXT.replace : PUSH_TEXT.upload}
-              </Button>
-              {fileName && (
-                <span className="text-sm">
-                  {PUSH_TEXT.chosenFile} {fileName}
-                </span>
+              <output>
+                <Badge variant={ready ? "success" : "secondary"} className="w-fit font-normal">
+                  {ready ? PUSH_TEXT.ready : PUSH_TEXT.notSetUp}
+                </Badge>
+              </output>
+              {settings.hasKey && (
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="push-enabled"
+                    size="sm"
+                    checked={enabled}
+                    onCheckedChange={setEnabled}
+                  />
+                  <label htmlFor="push-enabled" className="text-sm">
+                    {PUSH_TEXT.pushOn}
+                  </label>
+                </div>
               )}
             </div>
-            {keyError && (
-              <p className="text-xs text-error" role="alert">
-                {PUSH_TEXT.invalidKey}
-              </p>
-            )}
-            <HelpText>{PUSH_TEXT.keyHelp}</HelpText>
           </FormRow>
-          <FormRow label="">
-            <CheckRow
-              id="push-enabled"
-              label={PUSH_TEXT.enable}
-              checked={enabled}
-              onChange={setEnabled}
-            />
-          </FormRow>
+          <PushKeyFields draft={draft} settings={settings} />
           {ready && (
             <FormRow label={PUSH_TEXT.testTitle}>
               <div>
@@ -214,7 +144,7 @@ interface PushSettingsPageProps {
   onClose: () => void;
 }
 
-/** Mobile push settings: Firebase project, service account key, on/off and a test send. */
+/** Mobile push settings: service account key (file or typed), on/off and a test send. */
 export function PushSettingsPage({ onClose }: Readonly<PushSettingsPageProps>) {
   const { data, isLoading } = usePushSettings();
   if (isLoading) return <Skeleton className="h-64 w-full max-w-[880px] rounded" />;
