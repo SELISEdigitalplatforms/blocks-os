@@ -1,5 +1,6 @@
 using Blocks.Secrets;
 using Blocks.Genesis;
+using Blocks.Genesis.Notifications;
 using DomainService.Dtos;
 using DomainService.Projects;
 using DomainService.Shared;
@@ -45,6 +46,8 @@ IHostBuilder CreateHostBuilder(string[] args) =>
 
             #region Identifier Service Consumers
             services.AddApplicationServices();
+            // The migration-failed notification goes through the Genesis publisher.
+            services.AddBlocksNotifications();
             // Project create makes the default data-source secret (Identifier DataGatewayRootProvisioner).
             services.AddBlocksSecrets();
             services.AddSingleton<IConsumer<Tenant>, ConfigureProjectConsumer>();

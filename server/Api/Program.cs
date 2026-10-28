@@ -1,5 +1,6 @@
 ﻿using Blocks.Extensions.DependencyInjection;
 using Blocks.Genesis;
+using Blocks.Genesis.Notifications;
 using Blocks.Secrets;
 using BlocksOs.Api;
 using BlocksOs.Api.Middleware;
@@ -69,6 +70,8 @@ services.AddApplicationServices();
 services.AddCloudDomainServices();
 services.AddCloudLmtServices();
 services.AddConfigurationServices();
+// Built-in notifications (os-*) go through the Genesis publisher.
+services.AddBlocksNotifications();
 
 // Scoped internally: these read the request-scoped BlocksContext, so the old singleton
 // registration would have served the first caller's tenant to everyone afterwards.

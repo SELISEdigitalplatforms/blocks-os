@@ -60,7 +60,6 @@ namespace DomainService.Shared
             services.AddSingleton<IPeopleInvitationMessenger, PeopleInvitationMessenger>();
             services.AddSingleton<IPeopleRepository, PeopleRepository>();
             // Built-in notifications to project owner + caller
-            services.AddSingleton<IProjectChangeNotifier, ProjectChangeNotifier>();
 
             // User preferences (the caller's own settings, in the root key-value store)
             services.AddTransient<IValidator<SaveUserPreferenceRequest>, SaveUserPreferenceRequestValidator>();

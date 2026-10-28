@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Blocks.Genesis;
-using Microsoft.Extensions.Configuration;
+using Blocks.Genesis.Notifications;
 using Microsoft.Extensions.Logging;
 
 namespace Os.DataAccess.Notifications;
@@ -14,10 +14,6 @@ public static class BuiltInNotificationNames
     public const string ProjectMemberRemoved = "os-project-member-removed";
     public const string ProjectOwnershipTransferred = "os-project-ownership-transferred";
     public const string ProjectAccessChanged = "os-project-access-changed";
-    public const string ProjectDisabledOrDeleted = "os-project-disabled-or-deleted";
-    public const string LmtRestoreProgress = "os-lmt-restore-progress";
-    public const string SecretChanged = "os-secret-changed";
-    public const string CertificateChanged = "os-certificate-changed";
     public const string CustomDomainStatus = "os-custom-domain-status";
 }
 
@@ -44,141 +40,85 @@ public sealed class BuiltInNotification
     /// </summary>
     public string? TenantId { get; init; }
 
-    public string? ConnectionId { get; init; }
+    /// <summary>Organization of the send. Null: the organization of the caller's token.</summary>
+    public string? OrganizationId { get; init; }
 }
 
-/// <summary>Sends a built-in notification to the Notifier. Best effort: never throws.</summary>
+/// <summary>Queues a built-in notification with the Genesis notification publisher. Best effort: never throws.</summary>
 public interface IBuiltInNotificationSender
 {
-    /// <returns>True only when the Notifier accepted the notification.</returns>
+    /// <returns>True when the notification was queued (the publisher decides receivers and channels from the saved config).</returns>
     Task<bool> SendAsync(BuiltInNotification notification, CancellationToken cancellationToken = default);
 }
 
 /// <inheritdoc />
 public sealed class BuiltInNotificationSender : IBuiltInNotificationSender
 {
-    /// <summary>Config key holding the Notifier send URL (the same key the migration notifications read).</summary>
-    public const string UrlConfigKey = "NotificationServiceUrl";
-    private const string NotSentMessage = "Built-in notification {ConfigurationName} for tenant {TenantId} not sent: {Status}";
-
-    /// <summary>Longest time an action waits for the Notifier.</summary>
-    public static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);
-
     private static readonly JsonSerializerOptions PayloadJson = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
 
-    private readonly IHttpService _httpService;
-    private readonly ICryptoService _cryptoService;
-    private readonly ITenants _tenants;
-    private readonly IConfiguration _configuration;
+    private readonly INotificationPublisher _publisher;
     private readonly ILogger<BuiltInNotificationSender> _logger;
 
-    public BuiltInNotificationSender(
-        IHttpService httpService,
-        ICryptoService cryptoService,
-        ITenants tenants,
-        IConfiguration configuration,
-        ILogger<BuiltInNotificationSender> logger)
+    public BuiltInNotificationSender(INotificationPublisher publisher, ILogger<BuiltInNotificationSender> logger)
     {
-        _httpService = httpService;
-        _cryptoService = cryptoService;
-        _tenants = tenants;
-        _configuration = configuration;
+        _publisher = publisher;
         _logger = logger;
     }
 
-    public async Task<bool> SendAsync(BuiltInNotification notification, CancellationToken cancellationToken = default)
+    public Task<bool> SendAsync(BuiltInNotification notification, CancellationToken cancellationToken = default)
     {
         var name = notification?.ConfigurationName ?? string.Empty;
-        var tenantId = string.Empty;
 
         try
         {
             ArgumentNullException.ThrowIfNull(notification);
-            tenantId = ResolveTenantId(notification.TenantId);
+            var context = BlocksContext.GetContext();
 
-            var userIds = notification.UserIds
-                .Where(id => !string.IsNullOrWhiteSpace(id))
-                .Select(id => id!)
-                .Distinct(StringComparer.Ordinal)
-                .ToList();
-
-            if (userIds.Count == 0)
-            {
-                _logger.LogDebug("Built-in notification {ConfigurationName} for tenant {TenantId} skipped: no recipient", name, tenantId);
-                return false;
-            }
-
+            var tenantId = ResolveTenantId(notification.TenantId, context);
             if (string.IsNullOrWhiteSpace(tenantId))
             {
                 _logger.LogDebug("Built-in notification {ConfigurationName} skipped: no tenant", name);
-                return false;
+                return Task.FromResult(false);
             }
 
-            var url = _configuration[UrlConfigKey];
-            if (string.IsNullOrWhiteSpace(url))
+            // Publish returns at once and never throws; the receivers and channels come from the saved configuration.
+            _publisher.Publish(new NotificationRequest
             {
-                _logger.LogWarning(NotSentMessage, name, tenantId, "url-not-configured");
-                return false;
-            }
-
-            var tenant = _tenants.GetTenantByID(tenantId);
-            if (tenant is null)
-            {
-                _logger.LogWarning(NotSentMessage, name, tenantId, "unknown-tenant");
-                return false;
-            }
-
-            var request = new NotifierRequest
-            {
-                ConnectionId = notification.ConnectionId ?? string.Empty,
-                UserIds = userIds,
-                DenormalizedPayload = BuildPayload(notification),
-                ConfigurationName = name,
+                Name = name,
+                TenantId = tenantId,
+                OrganizationId = notification.OrganizationId ?? context?.OrganizationId,
+                NamedUserIds = NamedUsers(notification, context),
+                Payload = BuildPayload(notification),
                 ResponseKey = name,
                 ResponseValue = notification.Event
-            };
+            });
 
-            var headers = new Dictionary<string, string>
-            {
-                { "x-blocks-key", tenantId },
-                { "Secret", _cryptoService.Hash(tenantId, tenant.TenantSalt) }
-            };
-
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(Timeout);
-
-            var sendTask = _httpService.Post<NotifierResponse>(
-                request, url, "application/json", headers, timeout.Token, (int)Timeout.TotalSeconds);
-
-            // Also bounds an HTTP layer that ignores the token.
-            var finished = await Task.WhenAny(sendTask, Task.Delay(Timeout, timeout.Token)).ConfigureAwait(false);
-            if (finished != sendTask)
-            {
-                ObserveLater(sendTask);
-                _logger.LogWarning(NotSentMessage, name, tenantId, "timeout");
-                return false;
-            }
-
-            var (response, _) = await sendTask.ConfigureAwait(false);
-            if (response is { isSuccess: true })
-            {
-                _logger.LogInformation("Built-in notification {ConfigurationName} sent for tenant {TenantId}", name, tenantId);
-                return true;
-            }
-
-            _logger.LogWarning(NotSentMessage, name, tenantId, "rejected");
-            return false;
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogWarning(ex, NotSentMessage, name, tenantId, "timeout");
-            return false;
+            return Task.FromResult(true);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, NotSentMessage, name, tenantId, ex.GetType().Name);
-            return false;
+            _logger.LogWarning(ex, "Built-in notification {ConfigurationName} not sent: {Status}", name, ex.GetType().Name);
+            return Task.FromResult(false);
         }
+    }
+
+    /// <summary>
+    /// The recipients the code names, plus the acting root user when a console user is impersonating a project:
+    /// that user is not a member of the project's own user list, so only a named id reaches them.
+    /// </summary>
+    private static List<string> NamedUsers(BuiltInNotification notification, BlocksContext? context)
+    {
+        IEnumerable<string?> ids = notification.UserIds;
+        if (context is { Impersonated: true })
+        {
+            ids = ids.Append(context.UserId);
+        }
+
+        return ids
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Select(id => id!)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
     }
 
     /// <summary>The JSON string the Notifier stores and pushes: <c>{event, title, description, isSuccess?, ids…, occurredAt}</c>.</summary>
@@ -208,43 +148,18 @@ public sealed class BuiltInNotificationSender : IBuiltInNotificationSender
         return JsonSerializer.Serialize(payload, PayloadJson);
     }
 
-    private static string ResolveTenantId(string? explicitTenantId)
+    private static string ResolveTenantId(string? explicitTenantId, BlocksContext? context)
     {
         if (!string.IsNullOrWhiteSpace(explicitTenantId))
         {
             return explicitTenantId;
         }
 
-        var context = BlocksContext.GetContext();
         if (!string.IsNullOrWhiteSpace(context?.OriginalTenantId))
         {
             return context.OriginalTenantId;
         }
 
         return context?.TenantId ?? string.Empty;
-    }
-
-    private static void ObserveLater(Task task) =>
-        _ = task.ContinueWith(t => _ = t.Exception, TaskScheduler.Default);
-
-    /// <summary>Body of the Notifier send endpoint. Typed so a misspelled field cannot compile.</summary>
-    public sealed class NotifierRequest
-    {
-        public string ConnectionId { get; set; } = string.Empty;
-        public List<string> Roles { get; set; } = [];
-        public List<string> UserIds { get; set; } = [];
-        public string DenormalizedPayload { get; set; } = string.Empty;
-        public bool SaveDenormalizedPayloadAsAnObject { get; set; }
-        public string ConfigurationName { get; set; } = string.Empty;
-        public bool ContentAvailable { get; set; } = true;
-        public string ResponseKey { get; set; } = string.Empty;
-        public string ResponseValue { get; set; } = string.Empty;
-    }
-
-    /// <summary>Notifier answer; property names match its JSON.</summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "Matches the Notifier JSON.")]
-    public sealed class NotifierResponse
-    {
-        public bool isSuccess { get; set; }
     }
 }

@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Blocks.Genesis;
 using Blocks.Genesis.Entities.Os;
 using Microsoft.Extensions.Logging;
+using Os.DataAccess.Notifications;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
@@ -18,8 +19,11 @@ namespace Configuration.DomainService.Notification.Propagation
     /// Rules per target:
     /// <list type="bullet">
     /// <item><description>Missing: insert a copy, enabled.</description></item>
-    /// <item><description>Existing built-in: overwrite every field except <c>IsDisabled</c>, <c>ItemId</c>,
-    /// <c>CreatedDate</c> and <c>CreatedBy</c>.</description></item>
+    /// <item><description>Existing built-in: overwrite every field except what the tenant set: <c>Audience</c>,
+    /// <c>IsDisabled</c>, the channels (<c>LiveEnabled</c>, <c>PushEnabled</c>, <c>EnablePersistence</c>),
+    /// <c>PushTemplate</c> and <c>RateLimitPerMinute</c>, and the identity (<c>ItemId</c>, <c>CreatedDate</c>,
+    /// <c>CreatedBy</c>).</description></item>
+    /// <item><description>Console-only built-in, or a dropped name: not copied; a built-in copy is deleted.</description></item>
     /// <item><description>Existing custom config with that name: leave it, count a conflict.</description></item>
     /// <item><description>Delete: remove the target only when it is built-in.</description></item>
     /// </list>
@@ -90,7 +94,8 @@ namespace Configuration.DomainService.Notification.Propagation
             }
             else if (current.IsBuiltIn)
             {
-                desired = current;
+                // A Console-only or dropped built-in lives in the root tenant only: tenant copies are removed.
+                desired = IsCopiedToTenants(current) ? current : null;
             }
             else
             {
@@ -281,17 +286,7 @@ namespace Configuration.DomainService.Notification.Propagation
 
             var existing = kv ?? legacy;
             var copy = Clone(source);
-            if (existing is not null)
-            {
-                copy.ItemId = existing.ItemId;
-                copy.CreatedDate = existing.CreatedDate;
-                copy.CreatedBy = existing.CreatedBy;
-                copy.IsDisabled = existing.IsDisabled;
-            }
-            else
-            {
-                copy.IsDisabled = false;
-            }
+            KeepTenantFields(copy, existing);
 
             if (legacyExists)
             {
@@ -305,6 +300,39 @@ namespace Configuration.DomainService.Notification.Propagation
             await WriteKeyValueAsync(database, copy);
 
             return existing is null ? NotificationPropagationOutcome.Inserted : NotificationPropagationOutcome.Updated;
+        }
+
+        /// <summary>App and Both built-ins go to the tenants. Console ones, and dropped names, stay out.</summary>
+        public static bool IsCopiedToTenants(NotificationConfiguration source) =>
+            source.Scope != NotificationScope.Console && !RetiredNotificationNames.Contains(source.Name);
+
+        /// <summary>
+        /// What the tenant set stays: Audience, IsDisabled, channels (live, push, inbox), push message and rate limit.
+        /// A new copy starts without the root tenant's own Audience and enabled. A tenant without a push message,
+        /// or a locked (personal) notice whose message is fixed, takes the root's.
+        /// </summary>
+        private static void KeepTenantFields(NotificationConfiguration copy, NotificationConfiguration? existing)
+        {
+            copy.Audience = existing?.Audience;
+            copy.IsDisabled = existing?.IsDisabled ?? false;
+
+            if (existing is null)
+            {
+                return;
+            }
+
+            copy.ItemId = existing.ItemId;
+            copy.CreatedDate = existing.CreatedDate;
+            copy.CreatedBy = existing.CreatedBy;
+            copy.LiveEnabled = existing.LiveEnabled;
+            copy.PushEnabled = existing.PushEnabled;
+            copy.EnablePersistence = existing.EnablePersistence;
+            copy.RateLimitPerMinute = existing.RateLimitPerMinute;
+
+            if (existing.PushTemplate is not null && !copy.AudienceLocked)
+            {
+                copy.PushTemplate = existing.PushTemplate;
+            }
         }
 
         private static async Task<NotificationPropagationOutcome> ApplyDeleteAsync(IMongoDatabase database, string name)

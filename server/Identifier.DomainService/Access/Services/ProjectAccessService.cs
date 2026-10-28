@@ -259,8 +259,7 @@ namespace DomainService.Access.Services
                         ["projectGroupId"] = request.ProjectGroupId,
                         ["userId"] = request.UserId
                     },
-                    UserIds = [request.UserId],
-                    ConnectionId = request.ProjectGroupId
+                    UserIds = [request.UserId]
                 }, cancellationToken);
             }
 

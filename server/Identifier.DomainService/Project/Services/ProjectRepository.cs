@@ -440,6 +440,8 @@ namespace DomainService.Projects
                 CopyStorageConfigurationsAsync(sourceDatabase, consumerDb, project),
                 // Built-in notification configs + MFA config: without them the project's notifications find no config.
                 KeyValueSeedCopier.CopyAsync(sourceDatabase, consumerDb, project.CreatedBy),
+                // Texts of the built-in push messages (Localization module "notifications"), insert-only.
+                NotificationLocalizationSeedCopier.CopyAsync(sourceDatabase, consumerDb, project.TenantId, project.CreatedBy),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "BlocksLanguages", project),
                 // The remaining localization collections (UilmFiles, BlocksLanguageModules,
                 // BlocksLanguageKeys) are deliberately not seeded here. DataCleanupAsync still

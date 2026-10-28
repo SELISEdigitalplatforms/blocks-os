@@ -1,0 +1,293 @@
+{
+  "Module": "notifications",
+  "Keys": [
+    {
+      "KeyName": "NOTIF_LOGIC_MAIL_SEND_FAILED_TITLE",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "Mail not sent"
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_LOGIC_MAIL_SEND_FAILED_BODY",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "An outgoing mail was not sent. Check the mail template and the mail server settings."
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_IAM_USER_ROLES_CHANGED_TITLE",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "Your roles changed"
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_IAM_USER_ROLES_CHANGED_BODY",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "Your access roles were changed. Open the app to review your access."
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_IAM_USER_DEACTIVATED_TITLE",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "Account deactivated"
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_IAM_USER_DEACTIVATED_BODY",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "Your account was deactivated. Contact your administrator for help."
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_IAM_PASSWORD_CHANGED_TITLE",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "Password changed"
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_IAM_PASSWORD_CHANGED_BODY",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "Your password was changed. If this was not you, secure your account now."
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_IAM_MFA_CHANGED_TITLE",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "Security settings changed"
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_IAM_MFA_CHANGED_BODY",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "Your two-factor authentication settings were changed. If this was not you, secure your account now."
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_IAM_NEW_LOGIN_TITLE",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "New sign-in"
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_IAM_NEW_LOGIN_BODY",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "A new sign-in to your account was detected. If this was not you, secure your account now."
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_IAM_USER_ACTIVATED_TITLE",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "Account activated"
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_IAM_USER_ACTIVATED_BODY",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "Your account was activated. You can sign in now."
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_IAM_ORGANIZATION_SETUP_FINISHED_TITLE",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "{{title}}"
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_IAM_ORGANIZATION_SETUP_FINISHED_BODY",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "{{description}}"
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_DATA_STORAGE_OBJECT_SHARED_TITLE",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "{{title}}"
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_DATA_STORAGE_OBJECT_SHARED_BODY",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "{{description}}"
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_IAM_SESSION_REVOKED_TITLE",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "Signed out"
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_IAM_SESSION_REVOKED_BODY",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "One of your sessions was ended. If this was not you, secure your account now."
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_IAM_INVITATION_MAIL_FAILED_TITLE",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "Invitation not sent"
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_IAM_INVITATION_MAIL_FAILED_BODY",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "An invitation mail could not be sent. Check the mail settings and try again."
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_DATA_BULK_CHANGE_PROGRESS_TITLE",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "{{title}}"
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_DATA_BULK_CHANGE_PROGRESS_BODY",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "{{description}}"
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_IAM_USER_UPDATED_TITLE",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "Account updated"
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_IAM_USER_UPDATED_BODY",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "An administrator updated your account details."
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_IAM_ACCOUNT_LOCKED_TITLE",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "Account locked"
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_IAM_ACCOUNT_LOCKED_BODY",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "An account was locked. Open the app to review it."
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_IAM_ACCOUNT_UNLOCKED_TITLE",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "Account unlocked"
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_IAM_ACCOUNT_UNLOCKED_BODY",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "An account was unlocked. Open the app to review it."
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_DATA_RECORD_CHANGED_TITLE",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "Data changed"
+        }
+      ]
+    },
+    {
+      "KeyName": "NOTIF_DATA_RECORD_CHANGED_BODY",
+      "Resources": [
+        {
+          "Culture": "en",
+          "Value": "A record was changed in a data schema you follow."
+        }
+      ]
+    }
+  ]
+}

@@ -40,9 +40,6 @@ namespace XUnitTest.Services
         private readonly Mock<IConfiguration> _configuration = new();
         private readonly Mock<ILmtArchiveRestoreConfigurationRepository> _configRepository = new();
         private readonly MailPreCheckDb _mailDb = new();
-        private readonly Mock<IHttpService> _httpService = new();
-        private readonly Mock<ICryptoService> _cryptoService = new();
-        private readonly Mock<ITenants> _tenants = new();
         private readonly Mock<IArchiveRestoreRepository> _archiveRepository = new();
         private readonly Mock<IRestoreUserRepository> _userRepository = new();
 
@@ -92,9 +89,6 @@ namespace XUnitTest.Services
             _configuration.Object,
             _configRepository.Object,
             _mailDb.Object,
-            _httpService.Object,
-            _cryptoService.Object,
-            _tenants.Object,
             _archiveRepository.Object,
             _userRepository.Object, new XUnitTest.TestHelpers.PassThroughOsDataAccess());
 

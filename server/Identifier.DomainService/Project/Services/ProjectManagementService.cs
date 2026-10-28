@@ -114,8 +114,7 @@ namespace DomainService.Projects
                     ["projectKey"] = project.TenantId,
                     ["tenantGroupId"] = project.TenantGroupId
                 },
-                UserIds = [project.CreatedBy],
-                ConnectionId = project.TenantId
+                UserIds = [project.CreatedBy]
             });
         }
 
@@ -1118,8 +1117,6 @@ namespace DomainService.Projects
 
             await _projectRepository.UpdateProjectAsync(project);
 
-            // Read before the member rows go: afterwards nobody owns the environment any more.
-            var ownerUserId = await TryGetOwnerUserIdAsync(project.TenantId);
             await _projectRepository.DeletePrjectPeopleAsync(project.TenantId);
 
             await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
@@ -1152,57 +1149,7 @@ namespace DomainService.Projects
                 ProjectId = project.TenantId
             });
 
-            if (_notificationSender is not null)
-            {
-                // Owner + caller: there is no cheap lookup of every member (SPEC5 D4).
-                await _notificationSender.SendAsync(new BuiltInNotification
-                {
-                    ConfigurationName = BuiltInNotificationNames.ProjectDisabledOrDeleted,
-                    Event = "project-disabled",
-                    // One call disables one environment (tenant), not the whole project.
-                    Title = "Environment deleted",
-                    Description = DescribeDeletedEnvironment(project),
-                    Ids = new Dictionary<string, string?>
-                    {
-                        ["projectKey"] = project.TenantId,
-                        ["tenantGroupId"] = project.TenantGroupId
-                    },
-                    UserIds = [ownerUserId, BlocksContext.GetContext()?.UserId],
-                    ConnectionId = project.TenantId
-                });
-            }
-
             return new BaseResponse { IsSuccess = true };
-        }
-
-        private static string DescribeDeletedEnvironment(Tenant project)
-        {
-            var environment = project.Environment?.Trim();
-            var projectName = project.Name?.Trim();
-
-            if (string.IsNullOrEmpty(environment))
-            {
-                return "An environment you belong to was deleted.";
-            }
-
-            return string.IsNullOrEmpty(projectName)
-                ? $"An environment you belong to ({environment}) was deleted."
-                : $"An environment you belong to ({environment} of {projectName}) was deleted.";
-        }
-
-        private async Task<string?> TryGetOwnerUserIdAsync(string tenantId)
-        {
-            if (_notificationSender is null) return null;
-
-            try
-            {
-                return await _projectRepository.GetOwnerUserIdAsync(tenantId);
-            }
-            catch (Exception)
-            {
-                // Only the notification recipient is lost; disabling goes on.
-                return null;
-            }
         }
 
         public async Task<GetAssetResponse> GetAssetAsync(GetAssetRequest request)

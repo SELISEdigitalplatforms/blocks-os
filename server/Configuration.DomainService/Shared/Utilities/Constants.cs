@@ -66,6 +66,21 @@ namespace Configuration.DomainService.Shared.Utilities
         public const string NotificationConfigurationCannotBeDisabled = "Notification_Configuration_Cannot_Be_Disabled";
         public const string NotificationConfigurationPropagationNotQueued = "Notification_Configuration_Propagation_Not_Queued";
 
+        // Receivers, channels and push message of a notification configuration. Each key has a message in the client's
+        // NOTIFICATION_CONFIG_ERROR_MESSAGES map.
+        public const string OnlyRootTenantCanSetDefaultAudience = "Only_Root_Tenant_Can_Set_Default_Audience";
+        public const string NotificationAudienceIsLocked = "Notification_Audience_Is_Locked";
+        public const string NotificationAudienceNotAllowed = "Notification_Audience_Not_Allowed";
+        public const string NotificationGrantScopeUnavailable = "Notification_Grant_Scope_Unavailable";
+        public const string NotificationSendToInvalid = "Notification_Send_To_Invalid";
+        public const string NotificationAudienceInvalid = "Notification_Audience_Invalid";
+        public const string NotificationAudienceListTooLong = "Notification_Audience_List_Too_Long";
+        public const string NotificationAudienceItemTooLong = "Notification_Audience_Item_Too_Long";
+        public const string NotificationFilterContextRequired = "Notification_Filter_Context_Required";
+        public const string NotificationChannelRequired = "Notification_Channel_Required";
+        public const string NotificationPushKeysRequired = "Notification_Push_Keys_Required";
+        public const string NotificationRateLimitOutOfRange = "Notification_Rate_Limit_Out_Of_Range";
+
         /// <summary>Adds the notification-config queue to a worker's message configuration (Rabbit or Azure).</summary>
         public static MessageConfiguration WithNotificationConfigurationQueue(MessageConfiguration configuration)
         {

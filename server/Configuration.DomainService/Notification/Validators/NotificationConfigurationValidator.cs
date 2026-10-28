@@ -1,4 +1,6 @@
 using Configuration.DomainService.Notification.RequestModel;
+using Configuration.DomainService.Notification.Services;
+using Configuration.DomainService.Shared.Utilities;
 using Configuration.DomainService.Shared.Services;
 using FluentValidation;
 
@@ -54,6 +56,50 @@ namespace Configuration.DomainService.Notification.Validators
 
             RuleFor(x => x.ConsumerAppNote)
                 .MaximumLength(2000).WithMessage("ConsumerAppNote must not exceed 2000 characters.");
+
+            AddDeliveryRules();
+        }
+
+        /// <summary>Receivers, channels and push message: shape and limits only. Rules that need the stored row are in the save rules.</summary>
+        private void AddDeliveryRules()
+        {
+            RuleFor(x => x.Scope!.Value)
+                .IsInEnum().WithMessage(Constants.NotificationSendToInvalid)
+                .OverridePropertyName(nameof(SaveNotificationConfigurationRequest.Scope))
+                .When(x => x.Scope.HasValue);
+
+            RuleFor(x => x.Audience!).SetValidator(new NotificationAudienceValidator()).When(x => x.Audience is not null);
+            RuleFor(x => x.DefaultAudience!).SetValidator(new NotificationAudienceValidator()).When(x => x.DefaultAudience is not null);
+
+            RuleFor(x => x.RateLimitPerMinute!.Value)
+                .InclusiveBetween(0, NotificationLimits.RateLimitMax).WithMessage(Constants.NotificationRateLimitOutOfRange)
+                .OverridePropertyName(nameof(SaveNotificationConfigurationRequest.RateLimitPerMinute))
+                .When(x => x.RateLimitPerMinute.HasValue);
+
+            RuleFor(x => x.LiveEnabled)
+                .Must(live => live != false).WithMessage(Constants.NotificationChannelRequired)
+                .When(x => x.PushEnabled == false);
+
+            RuleFor(x => x.PushTemplate!.TitleKey)
+                .MaximumLength(NotificationLimits.ItemLength).WithMessage(Constants.NotificationAudienceItemTooLong)
+                .OverridePropertyName("PushTemplate")
+                .When(x => x.PushTemplate is not null);
+
+            RuleFor(x => x.PushTemplate!.BodyKey)
+                .MaximumLength(NotificationLimits.ItemLength).WithMessage(Constants.NotificationAudienceItemTooLong)
+                .OverridePropertyName("PushTemplate")
+                .When(x => x.PushTemplate is not null);
+
+            RuleFor(x => x.PushTemplate!.Link)
+                .MaximumLength(NotificationLimits.ItemLength).WithMessage(Constants.NotificationAudienceItemTooLong)
+                .OverridePropertyName("PushTemplate")
+                .When(x => x.PushTemplate is not null);
+
+            RuleFor(x => x.PushTemplate!)
+                .Must(t => !string.IsNullOrWhiteSpace(t.TitleKey) && !string.IsNullOrWhiteSpace(t.BodyKey))
+                .WithMessage(Constants.NotificationPushKeysRequired)
+                .OverridePropertyName("PushTemplate")
+                .When(x => x.PushEnabled == true && x.PushTemplate is not null);
         }
 
         private async Task<bool> IsUniqueNameAsync(string name, CancellationToken cancellationToken)

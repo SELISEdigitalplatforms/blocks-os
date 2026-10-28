@@ -352,6 +352,130 @@ namespace XUnitTest.Integration
             (await GetKvAsync(TenantA))!.Description.Should().Be("legacy-root");
         }
 
+        private static NotificationAudience SelectedRole(string role) => new() { Level = NotificationAudienceLevel.Selected, Roles = [role] };
+
+        [Fact]
+        public async Task Upsert_OverwriteKeepsWhatTheTenantSet_AndTakesTheRootDefaults()
+        {
+            await SeedRegistryAsync();
+            var root = BuiltIn("v2");
+            root.DefaultAudience = SelectedRole("root-default");
+            root.AudienceLocked = false;
+            root.RateLimitPerMinute = 60;
+            root.PushTemplate = new NotificationPushTemplate { TitleKey = "ROOT_T", BodyKey = "ROOT_B" };
+            await PutKvAsync(RootTenantDb, root);
+
+            var tenantCopy = BuiltIn("v1");
+            tenantCopy.Audience = SelectedRole("tenant-role");
+            tenantCopy.LiveEnabled = false;
+            tenantCopy.PushEnabled = true;
+            tenantCopy.EnablePersistence = false;
+            tenantCopy.RateLimitPerMinute = 10;
+            tenantCopy.PushTemplate = new NotificationPushTemplate { TitleKey = "TENANT_T", BodyKey = "TENANT_B" };
+            await PutKvAsync(TenantA, tenantCopy);
+
+            await Propagator().PropagateAsync(Event());
+
+            var copy = (await GetKvAsync(TenantA))!;
+            copy.Description.Should().Be("v2");
+            copy.DefaultAudience!.Roles.Should().Equal("root-default");
+            copy.Audience!.Roles.Should().Equal("tenant-role");
+            copy.LiveEnabled.Should().BeFalse();
+            copy.PushEnabled.Should().BeTrue();
+            copy.EnablePersistence.Should().BeFalse();
+            copy.RateLimitPerMinute.Should().Be(10);
+            copy.PushTemplate!.TitleKey.Should().Be("TENANT_T");
+        }
+
+        [Fact]
+        public async Task Upsert_NewCopyDoesNotCarryTheRootTenantsOwnAudience()
+        {
+            await SeedRegistryAsync();
+            var root = BuiltIn();
+            root.Audience = SelectedRole("root-only");
+            root.DefaultAudience = SelectedRole("default");
+            await PutKvAsync(RootTenantDb, root);
+
+            await Propagator().PropagateAsync(Event());
+
+            var copy = (await GetKvAsync(TenantA))!;
+            copy.Audience.Should().BeNull();
+            copy.DefaultAudience!.Roles.Should().Equal("default");
+        }
+
+        [Fact]
+        public async Task Upsert_LockedNoticeTakesTheRootsFixedPushMessage()
+        {
+            await SeedRegistryAsync();
+            var root = BuiltIn();
+            root.AudienceLocked = true;
+            root.PushTemplate = new NotificationPushTemplate { TitleKey = "FIXED_T", BodyKey = "FIXED_B" };
+            await PutKvAsync(RootTenantDb, root);
+            var tenantCopy = BuiltIn();
+            tenantCopy.PushTemplate = new NotificationPushTemplate { TitleKey = "OLD_T", BodyKey = "OLD_B" };
+            await PutKvAsync(TenantA, tenantCopy);
+
+            await Propagator().PropagateAsync(Event());
+
+            (await GetKvAsync(TenantA))!.PushTemplate!.TitleKey.Should().Be("FIXED_T");
+        }
+
+        [Fact]
+        public async Task ConsoleScope_IsNeverCopied_AndAnEarlierBuiltInCopyIsRemoved()
+        {
+            await SeedRegistryAsync();
+            var root = BuiltIn();
+            root.Scope = NotificationScope.Console;
+            await PutKvAsync(RootTenantDb, root);
+            await PutKvAsync(TenantA, BuiltIn("old copy"));
+            await PutKvAsync(TenantB, new NotificationConfiguration { ItemId = "mine", Name = Name, NotifyMethod = "custom" });
+
+            var summary = await Propagator().PropagateAsync(Event());
+
+            summary.Action.Should().Be(NotificationConfigurationChangeAction.Delete);
+            (await KvCountAsync(TenantA)).Should().Be(0);
+            (await KvCountAsync(SeedDb)).Should().Be(0);
+            (await GetKvAsync(TenantB))!.NotifyMethod.Should().Be("custom", "a tenant's own config is never deleted");
+            (await KvCountAsync(RootTenantDb)).Should().Be(1, "the root tenant keeps it");
+        }
+
+        [Fact]
+        public async Task BothScope_IsCopiedToTenantsLikeApp()
+        {
+            await SeedRegistryAsync();
+            var root = BuiltIn();
+            root.Scope = NotificationScope.Both;
+            await PutKvAsync(RootTenantDb, root);
+
+            await Propagator().PropagateAsync(Event());
+
+            (await GetKvAsync(TenantA))!.Scope.Should().Be(NotificationScope.Both);
+            (await GetKvAsync(SeedDb))!.Scope.Should().Be(NotificationScope.Both);
+        }
+
+        [Fact]
+        public async Task ADroppedName_IsRemovedFromTenantsEvenIfRootStillHasIt_ButOnlyBuiltInRows()
+        {
+            const string dropped = "os-secret-changed";
+            await SeedRegistryAsync();
+            var root = BuiltIn();
+            root.Name = dropped;
+            await PutKvAsync(RootTenantDb, root);
+            var tenantCopy = BuiltIn();
+            tenantCopy.Name = dropped;
+            await PutKvAsync(TenantA, tenantCopy);
+            await PutKvAsync(TenantB, new NotificationConfiguration { ItemId = "mine", Name = dropped, NotifyMethod = "custom" });
+
+            await Propagator().PropagateAsync(new BuiltInNotificationConfigurationChangedEvent
+            {
+                Action = NotificationConfigurationChangeAction.Upsert, Name = dropped, SourceTenantId = "ROOT", Snapshot = root
+            });
+
+            (await KvCountAsync(TenantA, dropped)).Should().Be(0);
+            (await KvCountAsync(SeedDb, dropped)).Should().Be(0);
+            (await GetKvAsync(TenantB, dropped))!.NotifyMethod.Should().Be("custom");
+        }
+
         [Fact]
         public async Task IncompleteEvent_ChangesNothing()
         {
