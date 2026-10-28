@@ -270,6 +270,17 @@ namespace Configuration.DomainService.Mail.Services
                 return MailConfigurationMutationResult.Invalid(ConfigurationIdField, ConfigurationNotFound);
             }
 
+            // The default record is platform-provisioned: its credentials belong to the platform,
+            // not the project. A copy would read the platform password and store it as a secret
+            // the project can read back, so it is refused before any secret call or write.
+            if (config.IsDefault)
+            {
+                _logger.LogInformation("Duplicating mail configuration end -- Default configuration cannot be duplicated");
+                return MailConfigurationMutationResult.Invalid(
+                    ConfigurationIdField,
+                    "The default configuration cannot be duplicated.");
+            }
+
             if (!_providers.TryGet(config.Provider, out var definition))
             {
                 _logger.LogInformation("Duplicating mail configuration end -- Unsupported provider");

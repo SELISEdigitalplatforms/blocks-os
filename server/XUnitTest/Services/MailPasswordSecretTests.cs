@@ -956,6 +956,67 @@ namespace XUnitTest.Services
             _secrets.VerifyNoOtherCalls();
         }
 
+        // ---------- Q12: the default record cannot be duplicated ----------
+
+        /// <summary>
+        /// Every shape the platform-provisioned default can take: each registered provider, both
+        /// Office 365 authentication modes, and an inbound default.
+        /// </summary>
+        public static TheoryData<string> DefaultSources => new()
+        {
+            "ses", "zoho", "gmail", "o365-password", "o365-oauth", "o365-oauth-inbound"
+        };
+
+        private static MailServerConfiguration DefaultSource(string shape)
+        {
+            var source = shape switch
+            {
+                "ses" => StoredFor(MailServiceProvider.AmazonSes, "pw-default"),
+                "zoho" => StoredFor(MailServiceProvider.Zoho, "pw-default"),
+                "gmail" => StoredFor(MailServiceProvider.Gmail, "pw-default"),
+                "o365-password" => StoredOffice365SmtpBasicAuth("pw-default"),
+                _ => new MailServerConfiguration
+                {
+                    ItemId = "o365-oauth",
+                    Name = "Microsoft 365 Primary",
+                    Provider = MailServiceProvider.Office365Smtp,
+                    AuthenticationType = MailAuthenticationType.OAuthClientCredentials,
+                    ClientSecretReference = "pw-default",
+                    IsInbound = shape == "o365-oauth-inbound"
+                }
+            };
+            source.IsDefault = true;
+            return source;
+        }
+
+        [Theory]
+        [MemberData(nameof(DefaultSources))]
+        public async Task Duplicate_DefaultRecord_IsAFieldErrorWithNoSecretCallAndNoWrite(string shape)
+        {
+            using var _ = new BlocksTestContext();
+            var stored = DefaultSource(shape);
+            GivenStored(stored);
+
+            // A client secret is supplied so the OAuth shapes would otherwise pass provider validation.
+            var result = await Service().DuplicateAsync(new DuplicateMailConfigurationRequest
+            {
+                ConfigurationId = stored.ItemId,
+                ClientSecret = "copy-secret"
+            });
+
+            result.Outcome.Should().Be(MailConfigurationOutcome.Invalid);
+            result.Response.Errors.Should().Equal(new Dictionary<string, string>
+            {
+                ["ConfigurationId"] = "The default configuration cannot be duplicated."
+            });
+            _saved.Should().BeEmpty();
+            _repo.Verify(r => r.SaveMailConfigurationAsync(It.IsAny<MailServerConfiguration>()), Times.Never);
+            _repo.Verify(r => r.UpdateMailSenderNameAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<string>()), Times.Never);
+            _repo.Verify(r => r.DeleteMailConfigurationAsync(It.IsAny<string>()), Times.Never);
+            AllLogMessages().Should().NotContain(m => m.Contains("pw-default") || m.Contains("copy-secret"));
+            _secrets.VerifyNoOtherCalls();
+        }
+
         // ---------- C4 / C1 / C2: duplicate failures ----------
 
         public static TheoryData<Exception> UnreadableSource => new()

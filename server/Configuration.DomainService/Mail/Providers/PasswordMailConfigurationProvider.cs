@@ -59,7 +59,8 @@ namespace Configuration.DomainService.Mail.Providers
         /// <summary>
         /// True, which is the existing behaviour: a copy has always carried the source's default
         /// flag. Left alone rather than corrected, because changing it would alter which
-        /// configuration a tenant's templates resolve to.
+        /// configuration a tenant's templates resolve to. Since blocks-os#710 the service refuses to
+        /// duplicate the default record before this is read, so no copy ends up default in practice.
         /// </summary>
         public bool DuplicateInheritsDefault => true;
 

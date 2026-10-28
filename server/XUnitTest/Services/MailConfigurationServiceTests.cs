@@ -721,13 +721,7 @@ namespace XUnitTest.Services
         public async Task Duplicate_Office365WithASecret_CreatesAnIndependentNonDefaultCopy()
         {
             using var _ = new BlocksTestContext();
-            _repo.Setup(r => r.GetMailConfigurationByIdAsync("cfg-1"))
-                 .ReturnsAsync(() =>
-                 {
-                     var source = StoredOffice365();
-                     source.IsDefault = true;
-                     return source;
-                 });
+            _repo.Setup(r => r.GetMailConfigurationByIdAsync("cfg-1")).ReturnsAsync(StoredOffice365());
             _secrets.Setup(s => s.SetAsync(It.IsAny<SetSecretRequest>(), It.IsAny<CancellationToken>()))
                     .ReturnsAsync("secret-2");
 
@@ -761,8 +755,7 @@ namespace XUnitTest.Services
                      Name = "Primary",
                      Host = "smtp.zoho.com",
                      Provider = MailServiceProvider.Zoho,
-                     AccountPassword = "password1",
-                     IsDefault = true
+                     AccountPassword = "password1"
                  });
 
             MailServerConfiguration? saved = null;
@@ -776,7 +769,7 @@ namespace XUnitTest.Services
             saved!.Name.Should().Be("Primary - Copy");
             saved.AccountPassword.Should().BeEmpty();
             saved.AccountPasswordReference.Should().Be("secret-1");
-            saved.IsDefault.Should().BeTrue();
+            saved.IsDefault.Should().BeFalse();
 
             // The source still holds its password in the document, so there is no value to read.
             _secrets.Verify(

@@ -159,6 +159,23 @@ namespace XUnitTest.Controllers
             result.Should().BeOfType<OkObjectResult>();
         }
 
+        [Fact]
+        public async Task Duplicate_DefaultConfiguration_ReturnsBadRequestWithTheFieldError()
+        {
+            _service.Setup(s => s.DuplicateAsync(It.IsAny<DuplicateMailConfigurationRequest>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(MailConfigurationMutationResult.Invalid("ConfigurationId", "The default configuration cannot be duplicated."));
+
+            var result = await Controller().Duplicate(new DuplicateMailConfigurationRequest { ConfigurationId = "default-1" });
+
+            var response = result.Should().BeOfType<BadRequestObjectResult>()
+                                 .Which.Value.Should().BeOfType<BaseMutationResponse>().Subject;
+            response.IsSuccess.Should().BeFalse();
+            response.Errors.Should().Equal(new Dictionary<string, string>
+            {
+                ["ConfigurationId"] = "The default configuration cannot be duplicated."
+            });
+        }
+
         private readonly Mock<IMailTemplateService> _templateService = new();
         private readonly Mock<IMailboxService> _mailboxService = new();
         private MailController FullController() =>
