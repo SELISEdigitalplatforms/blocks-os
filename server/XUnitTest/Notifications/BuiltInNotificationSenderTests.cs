@@ -87,6 +87,18 @@ namespace XUnitTest.Notifications
         }
 
         [Fact]
+        public async Task A_console_user_in_a_project_sends_in_the_root_tenant_without_the_projects_organization()
+        {
+            // The project's organization would filter out every root user, so the send would reach nobody.
+            using var _ = new BlocksTestContext(tenantId: "project-1", userId: "root-admin", impersonated: true, originalTenantId: "portal-root");
+
+            await Sender().SendAsync(Notification(tenantId: null, organizationId: null, "root-admin"));
+
+            _published!.TenantId.Should().Be("portal-root");
+            _published.OrganizationId.Should().BeNull();
+        }
+
+        [Fact]
         public async Task An_explicit_organization_wins_over_the_token()
         {
             using var _ = new BlocksTestContext();

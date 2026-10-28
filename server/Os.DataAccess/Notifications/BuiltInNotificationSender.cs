@@ -40,7 +40,7 @@ public sealed class BuiltInNotification
     /// </summary>
     public string? TenantId { get; init; }
 
-    /// <summary>Organization of the send. Null: the organization of the caller's token.</summary>
+    /// <summary>Organization of the send. Null: the organization of the caller's token when the send is in the token's tenant.</summary>
     public string? OrganizationId { get; init; }
 }
 
@@ -86,7 +86,7 @@ public sealed class BuiltInNotificationSender : IBuiltInNotificationSender
             {
                 Name = name,
                 TenantId = tenantId,
-                OrganizationId = notification.OrganizationId ?? context?.OrganizationId,
+                OrganizationId = notification.OrganizationId ?? ContextOrganization(context, tenantId),
                 NamedUserIds = NamedUsers(notification, context),
                 Payload = BuildPayload(notification),
                 ResponseKey = name,
@@ -147,6 +147,13 @@ public sealed class BuiltInNotificationSender : IBuiltInNotificationSender
         payload["occurredAt"] = DateTime.UtcNow;
         return JsonSerializer.Serialize(payload, PayloadJson);
     }
+
+    /// <summary>
+    /// The token's organization, only when the send stays in the token's tenant. A console user acting in a project
+    /// sends in the root tenant; the project's organization there would filter out every root user.
+    /// </summary>
+    private static string? ContextOrganization(BlocksContext? context, string tenantId) =>
+        context is not null && string.Equals(context.TenantId, tenantId, StringComparison.Ordinal) ? context.OrganizationId : null;
 
     private static string ResolveTenantId(string? explicitTenantId, BlocksContext? context)
     {

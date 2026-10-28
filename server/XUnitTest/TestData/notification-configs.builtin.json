@@ -771,7 +771,7 @@
     "NotifyMethod": "data-bulk-change-progress",
     "EnablePersistence": false,
     "IsBuiltIn": true,
-    "Scope": 0,
+    "Scope": 2,
     "Description": "Progress of a bulk insert, update or delete. Sent to the user who started it.",
     "Importance": 1,
     "Kind": 2,
