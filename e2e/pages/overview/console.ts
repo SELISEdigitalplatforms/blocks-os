@@ -1,4 +1,5 @@
 import { type Page, expect } from "@playwright/test";
+import { waitForOsDashboardReady } from "../../support/create-and-delete-project";
 
 export async function verifyConsolePageResourceLinksFlow(
   page: Page,
@@ -12,7 +13,7 @@ export async function verifyConsolePageResourceLinksFlow(
   const docsLink = page.getByRole("link", { name: /Docs/ }).first();
   if (!(await docsLink.isVisible({ timeout: 8000 }).catch(() => false))) {
     await page.goto(dashboardUrl);
-    await expect(page.getByText("X-Blocks-Key:")).toBeVisible({ timeout: 15000 });
+    await waitForOsDashboardReady(page);
     return;
   }
 
@@ -34,6 +35,8 @@ export async function verifyConsolePageResourceLinksFlow(
     await expect(cloudLink).toHaveAttribute("target", "_blank");
   }
 
+  // Coming back from the console, the app shows "Opening <project>…" while it loads the
+  // project again; 15 s was not always enough. Wait for the dashboard the way suite setup does.
   await page.goto(dashboardUrl);
-  await expect(page.getByText("X-Blocks-Key:")).toBeVisible({ timeout: 15000 });
+  await waitForOsDashboardReady(page);
 }

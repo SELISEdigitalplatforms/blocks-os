@@ -120,23 +120,28 @@ export async function sortByNameColumnFlow(page: Page) {
 }
 
 export async function paginateRolesFlow(page: Page) {
-  // The Pagination component only renders when totalCount > pageSize
-  // (default 10). With few roles in the test tenant, pagination may not
-  // be on screen at all — skip cleanly. Otherwise anchor to its unique
-  // "Page X of Y" indicator text so the chevron-right locator can't
-  // pick up unrelated icons elsewhere on the page (sidebar nav, etc.).
-  const paginationRoot = page
-    .locator("div")
-    .filter({ has: page.locator("text=/^Page \\d+ of \\d+$/") })
-    .first();
-  const nextPageButton = paginationRoot.locator("button:has(svg.lucide-chevron-right)").first();
-  if (!(await nextPageButton.isVisible({ timeout: 3_000 }).catch(() => false))) {
+  // The Pagination component only renders once the list has loaded and only when
+  // totalCount > pageSize (default 10). Wait for the loaded list (a role card or
+  // the empty copy) instead of an instant isVisible() check, then decide.
+  // Locate the pager by its own controls: a `div` filtered by the "Page X of Y"
+  // text matches the page's outer wrappers too, and its first chevron-right
+  // button was the sidebar's, which navigated to Secrets & Configs.
+  const loadedList = page
+    .getByRole("button", { name: /^Open role / })
+    .first()
+    .or(page.getByText("No roles found. Please create new roles."));
+  await expect(loadedList).toBeVisible({ timeout: 30_000 });
+  const pageIndicator = page.getByText(/^Page \d+ of \d+$/);
+  if ((await pageIndicator.count()) === 0) {
     return;
   }
+  await expect(pageIndicator).toHaveText(/^Page 1 of \d+$/);
+  const nextPageButton = page.getByRole("button", { name: "Go to next page" });
   await expect(nextPageButton).toBeEnabled({ timeout: 5_000 });
   await nextPageButton.click();
-  // Strict: paginating MUST update the URL.
+  // Strict: paginating MUST update the URL and the page shown.
   await expect(page).toHaveURL(/[?&]page=1/, { timeout: 8_000 });
+  await expect(pageIndicator).toHaveText(/^Page 2 of \d+$/, { timeout: 15_000 });
 
   await openIam(page, "role", "Roles");
   await expect(page.getByRole("button", { name: "Add Role" })).toBeVisible({ timeout: 30_000 });
