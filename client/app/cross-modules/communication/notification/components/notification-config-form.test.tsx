@@ -119,15 +119,25 @@ describe("NotificationConfigForm", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("shows the Selected pickers only for the Selected level", async () => {
+  it("starts Targeted with the event owner ticked and hides the pickers for All users", async () => {
     const user = userEvent.setup();
     renderForm();
-    expect(screen.queryByTestId("user-picker")).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Selected users" }));
+    expect(
+      (screen.getByLabelText(NOTIFICATION_TEXT.alsoNamed) as HTMLButtonElement).dataset.state,
+    ).toBe("checked");
     expect(screen.getByTestId("user-picker")).toBeTruthy();
     expect(screen.getByTestId("role-picker")).toBeTruthy();
     expect(screen.getByTestId("permission-picker")).toBeTruthy();
-    expect(screen.getByLabelText(NOTIFICATION_TEXT.alsoNamed)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "All users" }));
+    expect(screen.queryByTestId("user-picker")).toBeNull();
+  });
+
+  it("warns before a built-in goes to all users", async () => {
+    const user = userEvent.setup();
+    renderForm({ ...ROW, isBuiltIn: true });
+    expect(screen.queryByText(NOTIFICATION_TEXT.allUsersBuiltInWarning)).toBeNull();
+    await user.click(screen.getByRole("button", { name: "All users" }));
+    expect(screen.getByText(NOTIFICATION_TEXT.allUsersBuiltInWarning)).toBeTruthy();
   });
 
   it("shows the push message block only when Mobile push is ticked, with the set-up hint when not ready", async () => {
@@ -153,10 +163,10 @@ describe("NotificationConfigForm", () => {
     });
     expect(screen.getByText(/Account owner only/)).toBeTruthy();
     expect(screen.queryByLabelText(PROJECT_USERS)).toBeNull();
-    expect(screen.queryByRole("button", { name: "Selected users" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Targeted" })).toBeNull();
     expect(screen.getByTestId(PUSH_MESSAGE_ID).dataset.locked).toBe("true");
 
-    await user.click(screen.getByLabelText("Save to inbox"));
+    await user.click(screen.getByLabelText(NOTIFICATION_TEXT.saveToInbox));
     await user.click(screen.getByRole("button", SAVE));
     await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
     const payload = h.mutateAsync.mock.calls[0][0];

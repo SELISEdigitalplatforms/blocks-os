@@ -35,6 +35,15 @@ function SubRow({ label, children }: Readonly<{ label: string; children: React.R
 function SelectedRules({ values, onPatch }: Readonly<ReceiversFieldProps>) {
   return (
     <div className="flex flex-col gap-2.5 rounded-md bg-muted/40 p-3">
+      <div className="flex flex-col gap-1">
+        <CheckRow
+          id="also-named"
+          label={NOTIFICATION_TEXT.alsoNamed}
+          checked={values.alsoNamedUsers}
+          onChange={(alsoNamedUsers) => onPatch({ alsoNamedUsers })}
+        />
+        <HelpText>{NOTIFICATION_TEXT.alsoNamedHelp}</HelpText>
+      </div>
       <SubRow label={NOTIFICATION_TEXT.match}>
         <Select
           value={String(values.match)}
@@ -64,21 +73,12 @@ function SelectedRules({ values, onPatch }: Readonly<ReceiversFieldProps>) {
           onChange={(permissions) => onPatch({ permissions })}
         />
       </SubRow>
-      <div className="flex flex-col gap-1">
-        <CheckRow
-          id="also-named"
-          label={NOTIFICATION_TEXT.alsoNamed}
-          checked={values.alsoNamedUsers}
-          onChange={(alsoNamedUsers) => onPatch({ alsoNamedUsers })}
-        />
-        <HelpText>{NOTIFICATION_TEXT.alsoNamedHelp}</HelpText>
-      </div>
       <SubscriptionFilters filters={values.filters} onChange={(filters) => onPatch({ filters })} />
     </div>
   );
 }
 
-/** Recipients: all users, event-related users, or a chosen set of users, roles and permissions. */
+/** Recipients: all users, or Targeted — the event owner and/or the users, roles and permissions picked. */
 export function ReceiversField({ values, onPatch }: Readonly<ReceiversFieldProps>) {
   return (
     <>
@@ -91,6 +91,11 @@ export function ReceiversField({ values, onPatch }: Readonly<ReceiversFieldProps
       <HelpText>
         {RECEIVER_HELP[values.level]} {NOTIFICATION_TEXT.receiversNarrowHelp}
       </HelpText>
+      {values.level === AUDIENCE_LEVEL.AllUsers && values.isBuiltIn && (
+        <p className="text-xs text-warning" role="alert">
+          {NOTIFICATION_TEXT.allUsersBuiltInWarning}
+        </p>
+      )}
       {values.level === AUDIENCE_LEVEL.Selected && (
         <SelectedRules values={values} onPatch={onPatch} />
       )}

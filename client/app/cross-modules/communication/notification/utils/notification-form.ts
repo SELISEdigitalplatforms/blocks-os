@@ -49,13 +49,13 @@ export const EMPTY_FORM_VALUES: NotificationFormValues = {
   isBuiltIn: false,
   sendProject: true,
   sendConsole: false,
-  level: AUDIENCE_LEVEL.AffectedOnly,
+  level: AUDIENCE_LEVEL.Selected,
   match: AUDIENCE_MATCH.Any,
   userIds: [],
   roles: [],
   permissions: [],
   filters: [],
-  alsoNamedUsers: false,
+  alsoNamedUsers: true,
   liveEnabled: true,
   pushEnabled: false,
   enablePersistence: false,
@@ -90,19 +90,22 @@ const rateToText = (rate: number | undefined) => String(rate || LIMITS.rateDefau
 export const toFormValues = (row?: INotificationConfigRow): NotificationFormValues => {
   if (!row) return EMPTY_FORM_VALUES;
   const audience = effectiveAudience(row);
+  // "Event owner only" (AffectedOnly, also the default) shows as Targeted with the owner ticked.
+  const ownerOnly =
+    (audience?.level ?? AUDIENCE_LEVEL.AffectedOnly) === AUDIENCE_LEVEL.AffectedOnly;
   return {
     name: row.name,
     description: row.description ?? "",
     isEnabled: !(row.isDisabled ?? false),
     isBuiltIn: row.isBuiltIn ?? false,
     ...scopeToSides(row.scope),
-    level: audience?.level ?? AUDIENCE_LEVEL.AffectedOnly,
+    level: ownerOnly ? AUDIENCE_LEVEL.Selected : (audience?.level ?? AUDIENCE_LEVEL.Selected),
     match: audience?.match ?? AUDIENCE_MATCH.Any,
     userIds: audience?.userIds ?? [],
     roles: audience?.roles ?? [],
     permissions: audience?.permissions ?? [],
     filters: audience?.filters ?? [],
-    alsoNamedUsers: audience?.alsoNamedUsers ?? false,
+    alsoNamedUsers: ownerOnly || (audience?.alsoNamedUsers ?? false),
     liveEnabled: row.liveEnabled ?? true,
     pushEnabled: row.pushEnabled ?? false,
     enablePersistence: row.enablePersistence ?? false,
@@ -133,11 +136,14 @@ const filtersError = (filters: INotificationSubscriptionFilter[]): string | null
   const used = filters.filter((f) => !isBlankFilter(f));
   const invalid =
     used.length > LIMITS.filters ||
-    used.some(
-      (f) => !f.context.trim() || tooLong([f.context, f.actionName, f.value]),
-    );
+    used.some((f) => !f.context.trim() || tooLong([f.context, f.actionName, f.value]));
   return invalid ? NOTIFICATION_TEXT.errors.filters : null;
 };
+
+const cleanList = (items: string[]) => [...new Set(items.map((i) => i.trim()).filter(Boolean))];
+
+const hasPicks = (v: NotificationFormValues) =>
+  cleanList(v.userIds).length + cleanList(v.roles).length + cleanList(v.permissions).length > 0;
 
 const selectedErrors = (v: NotificationFormValues): string[] => {
   if (v.level !== AUDIENCE_LEVEL.Selected) return [];
@@ -147,6 +153,7 @@ const selectedErrors = (v: NotificationFormValues): string[] => {
     v.roles.length > LIMITS.roles ||
     v.permissions.length > LIMITS.permissions;
   if (tooMany) errors.push(NOTIFICATION_TEXT.errors.limits);
+  if (!v.alsoNamedUsers && !hasPicks(v)) errors.push(NOTIFICATION_TEXT.errors.targeted);
   const filterError = filtersError(v.filters);
   if (filterError) errors.push(filterError);
   return errors;
@@ -210,11 +217,24 @@ export const buildBuiltInPayload = (
   return out;
 };
 
-const cleanList = (items: string[]) => [...new Set(items.map((i) => i.trim()).filter(Boolean))];
-
-/** Only the Selected level carries rules; the other levels send them empty so nothing stale stays. */
+/**
+ * Only Targeted (Selected) carries rules; All users sends them empty so nothing stale stays.
+ * Targeted with just the event owner is saved as AffectedOnly, the level the servers already know.
+ */
 export const buildAudience = (v: NotificationFormValues): INotificationAudience => {
   const selected = v.level === AUDIENCE_LEVEL.Selected;
+  const usedFilters = v.filters.some((f) => !isBlankFilter(f));
+  if (selected && v.alsoNamedUsers && !hasPicks(v) && !usedFilters) {
+    return {
+      level: AUDIENCE_LEVEL.AffectedOnly,
+      match: AUDIENCE_MATCH.Any,
+      userIds: [],
+      roles: [],
+      permissions: [],
+      filters: [],
+      alsoNamedUsers: false,
+    };
+  }
   return {
     level: v.level,
     match: selected ? v.match : AUDIENCE_MATCH.Any,

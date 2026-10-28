@@ -118,12 +118,12 @@ describe("NotificationConfigurationList", () => {
       "Importance",
       "In-app",
       "Mobile push",
-      "Inbox",
+      "Offline",
       "Status",
     ]);
     const row = screen.getByText(REALTIME_ALERTS).closest("tr") as HTMLElement;
     expect(within(row).getByText("Project users")).toBeTruthy();
-    expect(within(row).getByText("Event-related users")).toBeTruthy();
+    expect(within(row).getByText("Targeted: event owner")).toBeTruthy();
     // Old rows keep in-app on and push off; inbox follows the saved flag.
     expect(within(row).getAllByLabelText("Yes")).toHaveLength(2);
     expect(within(row).getAllByLabelText("No")).toHaveLength(1);
@@ -295,7 +295,7 @@ describe("NotificationConfigurationList built-in metadata", () => {
     expect(within(row).getByText(/Account owner only/)).toBeTruthy();
   });
 
-  it("filters by Send to and Receivers over the loaded rows", () => {
+  it("filters by Audience and Recipients; Targeted includes event-owner-only rows", () => {
     h.sendTo = "1";
     h.receivers = "2";
     h.useGetNotificationConfigs.mockReturnValue({
@@ -325,8 +325,14 @@ describe("NotificationConfigurationList built-in metadata", () => {
             scope: 1,
             audience: { level: 1, userIds: [], roles: [], permissions: [] },
           },
+          {
+            ...rows[0],
+            name: "console-owner",
+            scope: 1,
+            audience: { level: 0, userIds: [], roles: [], permissions: [] },
+          },
         ],
-        totalCount: 4,
+        totalCount: 5,
       },
       isLoading: false,
       isFetching: false,
@@ -336,7 +342,8 @@ describe("NotificationConfigurationList built-in metadata", () => {
     expect(screen.getByText("to-both")).toBeTruthy();
     expect(screen.queryByText("project-only")).toBeNull();
     expect(screen.queryByText("console-all")).toBeNull();
-    expect(screen.getAllByText("Selected users (1)")).toHaveLength(2);
+    expect(screen.getByText("console-owner")).toBeTruthy();
+    expect(screen.getAllByText("Targeted: 1 picked")).toHaveLength(2);
   });
 
   it("marks only the disabled row as Inactive", () => {

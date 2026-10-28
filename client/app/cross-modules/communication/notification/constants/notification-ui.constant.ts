@@ -26,17 +26,18 @@ export const SEND_TO_LABELS: Record<number, string> = {
   [NOTIFICATION_SCOPE.Both]: "Project & Console users",
 };
 
+/**
+ * Two choices on screen. "Targeted" is the Selected level; the event owner tick is its alsoNamedUsers
+ * flag, and "event owner only" is still saved as the AffectedOnly level, so stored data keeps its meaning.
+ */
 export const RECEIVER_OPTIONS = [
   { value: AUDIENCE_LEVEL.AllUsers, label: "All users" },
-  { value: AUDIENCE_LEVEL.AffectedOnly, label: "Event-related users" },
-  { value: AUDIENCE_LEVEL.Selected, label: "Selected users" },
+  { value: AUDIENCE_LEVEL.Selected, label: "Targeted" },
 ] as const;
 
 export const RECEIVER_HELP: Record<number, string> = {
-  [AUDIENCE_LEVEL.AllUsers]: "Every user who can receive this notification.",
-  [AUDIENCE_LEVEL.AffectedOnly]:
-    "Only the users the event is about, named by the sending service (for example the record owner).",
-  [AUDIENCE_LEVEL.Selected]: "Only the users, roles and permissions selected below.",
+  [AUDIENCE_LEVEL.AllUsers]: "Every user in the audience gets every event.",
+  [AUDIENCE_LEVEL.Selected]: "Only the event owner and the users, roles and permissions you pick.",
 };
 
 export const MATCH_OPTIONS = [
@@ -56,15 +57,15 @@ export const NOTIFICATION_TEXT = {
     importance: "Importance",
     inApp: "In-app",
     push: MOBILE_PUSH,
-    inbox: "Inbox",
+    inbox: "Offline",
     status: "Status",
   },
   /** Help for the merged Recipients column: the audience group and who in it gets the notice. */
   recipientsHelp: [
     "Audience: Project users use your application; Console users work in Blocks Console.",
-    "All users: everyone in the audience.",
-    "Event-related users: only the users the event is about, such as the record owner.",
-    "Selected users: only the chosen users, roles and permissions.",
+    "All users: everyone in the audience gets every event.",
+    "Targeted: only the event owner and the users, roles and permissions picked.",
+    "Event owner: the user the event is about, named by the sending service.",
     "Account owner only: a personal notice; it always goes to the account owner.",
   ],
   recipientsHelpLabel: "What recipients mean",
@@ -100,9 +101,14 @@ export const NOTIFICATION_TEXT = {
   searchPermissions: "Search permissions",
   noOptionMatches: "No matches",
   loading: "Loading...",
-  alsoNamed: "Also notify event-related users",
+  alsoNamed: "Event owner",
   alsoNamedHelp:
-    "Adds the users the event is about (for example the record owner) to the selected users.",
+    "The user the event is about, such as the account owner or the person who started the job. The sending service names this user.",
+  targeted: "Targeted",
+  eventOwner: "event owner",
+  picked: "picked",
+  allUsersBuiltInWarning:
+    "Every user will get this notice, also for events about other users. Use Targeted to keep it to the event owner.",
   filterSummary: "Subscription filter (optional)",
   filterContext: "Context",
   filterAction: "Action",
@@ -113,7 +119,9 @@ export const NOTIFICATION_TEXT = {
   channels: "Delivery channels",
   inApp: "In-app",
   mobilePushChannel: MOBILE_PUSH,
-  saveToInbox: "Save to inbox",
+  saveToInbox: "Offline",
+  saveToInboxHelp:
+    "Offline keeps the notification, so users who are offline see it when they come back.",
   rateLimit: "Rate limit",
   rateLimitAria: "Rate limit per minute",
   perMinute: "/ min",
@@ -154,6 +162,7 @@ export const NOTIFICATION_TEXT = {
     channel: "Select at least one channel: in-app or mobile push.",
     pushKeys: "Choose a title key and a message key for the push message.",
     rate: `Rate limit must be a whole number from 0 to ${LIMITS.rateMax}.`,
+    targeted: "Targeted needs the event owner or at least one user, role or permission.",
     limits: "A list has too many entries.",
     filters: `Use at most ${LIMITS.filters} subscription filters; each needs a context.`,
     link: `The link must be at most ${LIMITS.textLength} characters.`,

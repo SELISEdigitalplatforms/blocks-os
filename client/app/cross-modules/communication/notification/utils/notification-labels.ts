@@ -2,6 +2,7 @@ import type { INotificationConfigRow } from "../models/notification-config.model
 import {
   AUDIENCE_LEVEL,
   NOTIFICATION_SCOPE,
+  NOTIFICATION_TEXT,
   OWNER_ONLY_LABEL,
   RECEIVER_OPTIONS,
   SEND_TO_LABELS,
@@ -18,18 +19,26 @@ export const sendToLabel = (row: INotificationConfigRow): string =>
     : (SEND_TO_LABELS[row.scope ?? NOTIFICATION_SCOPE.Project] ??
       SEND_TO_LABELS[NOTIFICATION_SCOPE.Project]);
 
-/** "Selected (4)" counts the users, roles and permissions picked. */
+/** "Targeted: event owner + 4 picked" — the owner tick and the users, roles and permissions picked. */
 export const receiversLabel = (row: INotificationConfigRow): string => {
   if (row.audienceLocked) return OWNER_ONLY_LABEL;
   const audience = effectiveAudience(row);
   const level = audience?.level ?? AUDIENCE_LEVEL.AffectedOnly;
-  const label = RECEIVER_OPTIONS.find((o) => o.value === level)?.label ?? "";
-  if (level !== AUDIENCE_LEVEL.Selected) return label;
+  if (level === AUDIENCE_LEVEL.AllUsers) return RECEIVER_OPTIONS[0].label;
+  const owner = level === AUDIENCE_LEVEL.AffectedOnly || !!audience?.alsoNamedUsers;
   const count =
-    (audience?.userIds.length ?? 0) +
-    (audience?.roles.length ?? 0) +
-    (audience?.permissions.length ?? 0);
-  return `${label} (${count})`;
+    level === AUDIENCE_LEVEL.Selected
+      ? (audience?.userIds.length ?? 0) +
+        (audience?.roles.length ?? 0) +
+        (audience?.permissions.length ?? 0)
+      : 0;
+  const parts = [
+    owner ? NOTIFICATION_TEXT.eventOwner : "",
+    count > 0 ? `${count} ${NOTIFICATION_TEXT.picked}` : "",
+  ].filter(Boolean);
+  return parts.length > 0
+    ? `${NOTIFICATION_TEXT.targeted}: ${parts.join(" + ")}`
+    : NOTIFICATION_TEXT.targeted;
 };
 
 /** Rows without the new fields keep in-app on and push off, as the server reads them. */
@@ -51,5 +60,8 @@ export const matchesReceivers = (row: INotificationConfigRow, filter: string): b
   const level = row.audienceLocked
     ? AUDIENCE_LEVEL.AffectedOnly
     : (effectiveAudience(row)?.level ?? AUDIENCE_LEVEL.AffectedOnly);
-  return String(level) === filter;
+  // Event owner only is part of Targeted on screen.
+  const shown =
+    level === AUDIENCE_LEVEL.AllUsers ? AUDIENCE_LEVEL.AllUsers : AUDIENCE_LEVEL.Selected;
+  return String(shown) === filter;
 };

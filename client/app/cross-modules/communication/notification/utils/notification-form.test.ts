@@ -10,6 +10,7 @@ import {
 import { NOTIFICATION_TEXT } from "../constants/notification-ui.constant";
 
 const EVENT_NAME = "orders-paid";
+const CREATE = { locked: false, isEdit: false };
 
 const valid = (patch: Partial<NotificationFormValues> = {}): NotificationFormValues => ({
   ...EMPTY_FORM_VALUES,
@@ -86,29 +87,45 @@ describe("validateNotificationForm", () => {
   });
 
   it("does not re-check the name of an existing notification", () => {
-    expect(validateNotificationForm(valid({ name: "x" }), { locked: false, isEdit: true })).toEqual([]);
+    expect(validateNotificationForm(valid({ name: "x" }), { locked: false, isEdit: true })).toEqual(
+      [],
+    );
   });
 });
 
 describe("toFormValues", () => {
-  it("reads an old row as in-app on, push off, project users", () => {
+  it("reads an old row as in-app on, push off, project users, Targeted to the event owner", () => {
     const values = toFormValues(row());
     expect(values).toMatchObject({
       sendProject: true,
       sendConsole: false,
       liveEnabled: true,
       pushEnabled: false,
-      level: 0,
+      level: 2,
+      alsoNamedUsers: true,
       rateLimit: "120",
     });
   });
 
   it("uses the tenant audience, else the built-in default, and ignores it when locked", () => {
-    const audience = { level: 2, match: 1, userIds: ["u"], roles: [], permissions: [], filters: [], alsoNamedUsers: true };
+    const audience = {
+      level: 2,
+      match: 1,
+      userIds: ["u"],
+      roles: [],
+      permissions: [],
+      filters: [],
+      alsoNamedUsers: true,
+    };
     const fallback = { ...audience, level: 1, userIds: [] };
-    expect(toFormValues(row({ audience, defaultAudience: fallback }))).toMatchObject({ level: 2, match: 1 });
+    expect(toFormValues(row({ audience, defaultAudience: fallback }))).toMatchObject({
+      level: 2,
+      match: 1,
+    });
     expect(toFormValues(row({ defaultAudience: fallback }))).toMatchObject({ level: 1 });
-    expect(toFormValues(row({ audience, defaultAudience: fallback, audienceLocked: true }))).toMatchObject({
+    expect(
+      toFormValues(row({ audience, defaultAudience: fallback, audienceLocked: true })),
+    ).toMatchObject({
       level: 1,
     });
   });
@@ -158,6 +175,33 @@ describe("buildSavePayload", () => {
     });
   });
 
+  it("saves Targeted with only the event owner as the owner-only level the servers know", () => {
+    const payload = buildSavePayload(
+      valid({ level: 2, alsoNamedUsers: true }),
+      undefined,
+      false,
+      "t",
+    );
+    expect(payload.audience).toEqual({
+      level: 0,
+      match: 0,
+      userIds: [],
+      roles: [],
+      permissions: [],
+      filters: [],
+      alsoNamedUsers: false,
+    });
+  });
+
+  it("refuses Targeted with no event owner and nothing picked, which would reach nobody", () => {
+    expect(validateNotificationForm(valid({ level: 2, alsoNamedUsers: false }), CREATE)).toContain(
+      NOTIFICATION_TEXT.errors.targeted,
+    );
+    expect(
+      validateNotificationForm(valid({ level: 2, alsoNamedUsers: false, roles: ["r"] }), CREATE),
+    ).not.toContain(NOTIFICATION_TEXT.errors.targeted);
+  });
+
   it("keeps the push keys while push is off so they survive switching it back on", () => {
     const payload = buildSavePayload(
       valid({ pushEnabled: false, titleKey: "T", bodyKey: "B", link: " app://x " }),
@@ -203,12 +247,22 @@ describe("buildSavePayload", () => {
 
   it("sends isDisabled only when the on/off switch changed", () => {
     const previous = row();
-    const payload = buildSavePayload({ ...toFormValues(previous), isEnabled: false }, previous, true, "t");
+    const payload = buildSavePayload(
+      { ...toFormValues(previous), isEnabled: false },
+      previous,
+      true,
+      "t",
+    );
     expect(payload.isDisabled).toBe(true);
   });
 
   it("uses the name as notify method for a new notification and marks it built-in on request", () => {
-    const payload = buildSavePayload(valid({ name: " orders-paid ", isBuiltIn: true }), undefined, false, "t");
+    const payload = buildSavePayload(
+      valid({ name: " orders-paid ", isBuiltIn: true }),
+      undefined,
+      false,
+      "t",
+    );
     expect(payload).toMatchObject({ name: EVENT_NAME, notifyMethod: EVENT_NAME, isBuiltIn: true });
   });
 });
