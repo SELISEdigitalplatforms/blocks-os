@@ -46,7 +46,7 @@ export const localizationUrl = (): string => {
     url.hash = "";
     url.pathname = "/";
     url.searchParams.set("module", NOTIFICATION_LOCALIZATION_MODULE);
-    return url.toString();
+    return url.href;
   } catch {
     return "";
   }

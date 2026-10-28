@@ -131,7 +131,7 @@ export const pushOptionsErrors = (values: PushOptionValues): string[] => {
     ios.sound,
     ios.threadId,
   ].map((value) => value.trim());
-  if (tokens.some(badToken)) errors.push(PUSH_FORM_TEXT.textError);
+  if (tokens.some((value) => badToken(value))) errors.push(PUSH_FORM_TEXT.textError);
   if (android.color.trim() && !COLOR.test(android.color.trim())) {
     errors.push(PUSH_FORM_TEXT.colorError);
   }

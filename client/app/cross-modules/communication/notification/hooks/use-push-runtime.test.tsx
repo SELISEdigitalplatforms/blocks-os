@@ -81,7 +81,7 @@ describe("push runtime hooks", () => {
     const { result } = renderHook(() => useRemovePushDevice(), { wrapper });
     await act(() => result.current.mutateAsync("d1"));
     expect(service.removeDevice).toHaveBeenCalledWith("d1");
-    expect(invalidated(spy).sort()).toEqual([
+    expect(invalidated(spy).sort((a, b) => a.localeCompare(b))).toEqual([
       "notification-push-devices",
       "notification-push-status",
     ]);

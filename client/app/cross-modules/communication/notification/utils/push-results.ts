@@ -9,11 +9,11 @@ export const resultLabel = (code: string | null | undefined): string =>
 export const resultFix = (code: string): string | null =>
   PUSH_RESULT_FIX[code as PushResultCode] ?? null;
 
-const APNS_CODES: readonly string[] = ["apnsKeyMissing", "apnsKeyRejected"];
+const APNS_CODES: ReadonlySet<string> = new Set(["apnsKeyMissing", "apnsKeyRejected"]);
 
 /** True when the failure is about the Apple key, so the iOS row can show the fix hint. */
 export const isApnsFailure = (platform: PushPlatform, reason: string | null | undefined): boolean =>
-  platform === "ios" && !!reason && APNS_CODES.includes(reason);
+  platform === "ios" && !!reason && APNS_CODES.has(reason);
 
 /** Test devices have no id: the key is the device's own text, plus a counter when two rows read the same. */
 export const keyedDevices = <
