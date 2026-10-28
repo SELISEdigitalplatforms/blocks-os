@@ -14,20 +14,20 @@ import {
 import { ConfigsTableShell } from "@/components/configs-table-shell/configs-table-shell";
 import { EmptyState } from "@/components/ui-kits/empty-state";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { Bell, Plus, Smartphone } from "lucide-react";
+import { Bell } from "lucide-react";
 import { NOTIFICATION_CONFIG_ERROR_MESSAGES } from "../constants/notification.constant";
 import { NOTIFICATION_TEXT } from "../constants/notification-ui.constant";
 import { matchesReceivers, matchesSendTo } from "../utils/notification-labels";
 import { NotificationConfigRow } from "./notification-config-row";
 import { NotificationConfigPage } from "./notification-config-page";
 import { PushSettingsPage } from "./push-settings-page";
+import { RecipientsHeader } from "./recipients-header";
 import { getErrorMessage, isErrorWithErrors } from "@/lib/error";
 import type { INotificationConfigRow } from "../models/notification-config.model";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import { toast } from "@/hooks/use-toast";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
-import { Button } from "@/components/ui-kits/button/button";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import {
   NotificationConfigsFilterToolBar,
@@ -35,10 +35,11 @@ import {
 } from "./notification-configs-filter-toolbar";
 import { useQueryState, parseAsBoolean, parseAsString } from "nuqs";
 
-const columns = [
+const columns: { key: string; label: React.ReactNode }[] = [
   { key: "name", label: NOTIFICATION_TEXT.columns.name },
-  { key: "sendTo", label: NOTIFICATION_TEXT.columns.sendTo },
-  { key: "receivers", label: NOTIFICATION_TEXT.columns.receivers },
+  { key: "recipients", label: <RecipientsHeader /> },
+  { key: "service", label: NOTIFICATION_TEXT.columns.service },
+  { key: "importance", label: NOTIFICATION_TEXT.columns.importance },
   { key: "inApp", label: NOTIFICATION_TEXT.columns.inApp },
   { key: "push", label: NOTIFICATION_TEXT.columns.push },
   { key: "inbox", label: NOTIFICATION_TEXT.columns.inbox },
@@ -54,10 +55,6 @@ interface NotificationConfigurationListProps {
   onEdit: (itemId: string) => void;
 }
 
-/** "blocks-iam" reads as "iam": every built-in service carries the same prefix. */
-export const serviceLabel = (service?: string | null): string =>
-  (service ?? "").replace(/^blocks-/, "");
-
 const describeDeleteError = (error: unknown): string => {
   if (isErrorWithErrors(error)) {
     const message = getErrorMessage(error.errors, NOTIFICATION_CONFIG_ERROR_MESSAGES);
@@ -66,23 +63,16 @@ const describeDeleteError = (error: unknown): string => {
   return JSON.stringify(error);
 };
 
-export const distinctServices = (rows: INotificationConfigRow[] = []): string[] =>
-  Array.from(new Set(rows.map((row) => row.sourceService).filter((x): x is string => !!x))).sort(
-    (a, b) => a.localeCompare(b),
-  );
-
-/** Importance and service are filtered over the loaded rows: the list API has no such filter. */
+/** Importance, audience and recipients are filtered over the loaded rows: the list API has no such filter. */
 export const filterConfigRows = (
   rows: INotificationConfigRow[],
   importance: string,
-  service: string,
   sendTo = "",
   receivers = "",
 ): INotificationConfigRow[] =>
   rows.filter(
     (row) =>
       (!importance || String(row.importance ?? 0) === importance) &&
-      (!service || row.sourceService === service) &&
       matchesSendTo(row, sendTo) &&
       matchesReceivers(row, receivers),
   );
@@ -103,7 +93,6 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
   const visibleRows = filterConfigRows(
     data?.configurations ?? [],
     queryParams.notificationImportance,
-    queryParams.notificationService,
     queryParams.notificationSendTo,
     queryParams.notificationReceivers,
   );
@@ -145,6 +134,7 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
   return (
     <>
       <ConfigsTableShell
+        toolbar={<NotificationConfigsFilterToolBar />}
         footer={
           <Pagination
             page={queryParams.notificationPage}
@@ -188,7 +178,7 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
               {visibleRows.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={columns.length} className="text-center text-medium-emphasis">
-                    No configurations match the current filters.
+                    {NOTIFICATION_TEXT.noMatches}
                   </TableCell>
                 </TableRow>
               )}
@@ -242,15 +232,12 @@ export function NotificationConfigurationListPage() {
     searchText: queryParams.notificationSearch || undefined,
   });
   const loading = isLoading || isFetching;
-  const configurations = data?.configurations ?? [];
   const hasFilters =
     !!queryParams.notificationSearch ||
     !!queryParams.notificationImportance ||
-    !!queryParams.notificationService ||
     !!queryParams.notificationSendTo ||
     !!queryParams.notificationReceivers;
-  const isEmpty = !loading && configurations.length === 0 && !hasFilters;
-  const serviceOptions = distinctServices(configurations);
+  const isEmpty = !loading && (data?.configurations ?? []).length === 0 && !hasFilters;
 
   const backToList = () => {
     setAddOpen(false);
@@ -273,33 +260,14 @@ export function NotificationConfigurationListPage() {
     );
   }
 
-  return (
-    <div className="flex flex-col gap-4">
-      {isEmpty ? (
-        <EmptyState
-          icon={Bell}
-          title="No notifications yet"
-          description="Use Add Configuration to create one."
-        />
-      ) : (
-        <>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm text-medium-emphasis">{NOTIFICATION_TEXT.listSubtitle}</p>
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => setPushOpen(true)}>
-                <Smartphone className="mr-2 h-4 w-4" />
-                <span>{NOTIFICATION_TEXT.mobilePush}</span>
-              </Button>
-              <Button type="button" size="sm" onClick={() => setAddOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                <span>{NOTIFICATION_TEXT.newNotification}</span>
-              </Button>
-            </div>
-          </div>
-          <NotificationConfigsFilterToolBar serviceOptions={serviceOptions} />
-          <NotificationConfigurationList isLoading={loading} onEdit={setEditId} />
-        </>
-      )}
-    </div>
+  // Add Configuration and Mobile push live in the page header, like the other Secrets & Configs pages.
+  return isEmpty ? (
+    <EmptyState
+      icon={Bell}
+      title="No notifications yet"
+      description="Use Add notification to create one."
+    />
+  ) : (
+    <NotificationConfigurationList isLoading={loading} onEdit={setEditId} />
   );
 }

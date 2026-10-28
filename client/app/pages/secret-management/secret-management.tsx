@@ -15,7 +15,7 @@ import {
   useOidcBrandingHeaderOptional,
 } from "@blocks-idp/authentication/contexts/oidc-branding-header-context";
 import { useProjectStore } from "@seliseblocks/genesis-os";
-import { Plus, Loader2, Notebook, LayoutTemplate } from "lucide-react";
+import { Plus, Loader2, Notebook, LayoutTemplate, Smartphone } from "lucide-react";
 import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
@@ -26,17 +26,19 @@ function SecretManagementHeaderActions({
   setIsAddIdpOpen,
   setIsEmailConfigOpen,
   setIsNotificationConfigOpen,
+  setIsNotificationPushOpen,
   setIsManagedServicesGuideOpen,
   setIsClientCredentialOpen,
-}: {
+}: Readonly<{
   isOidcBranding: boolean;
   currentPath: string;
   setIsAddIdpOpen: (value: boolean) => void;
   setIsEmailConfigOpen: (value: boolean) => void;
   setIsNotificationConfigOpen: (value: boolean) => void;
+  setIsNotificationPushOpen: (value: boolean) => void;
   setIsManagedServicesGuideOpen: (value: boolean) => void;
   setIsClientCredentialOpen: (value: boolean) => void;
-}) {
+}>) {
   const brandingHeader = useOidcBrandingHeaderOptional();
   const navigate = useNavigate();
   const scoped = useScopedPath();
@@ -144,12 +146,20 @@ function SecretManagementHeaderActions({
         </Button>
       )}
       {currentPath === "notification" && (
-        <Button size="sm" onClick={() => setIsNotificationConfigOpen(true)}>
-          <Plus className="h-5 w-5" />
-          <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
-            Add Configuration
-          </span>
-        </Button>
+        <>
+          <Button variant="outline" size="sm" onClick={() => setIsNotificationPushOpen(true)}>
+            <Smartphone className="h-4 w-4" />
+            <span className="sr-only sm:not-sr-only sm:ml-2 sm:text-sm sm:whitespace-nowrap">
+              Mobile push
+            </span>
+          </Button>
+          <Button size="sm" onClick={() => setIsNotificationConfigOpen(true)}>
+            <Plus className="h-5 w-5" />
+            <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
+              Add notification
+            </span>
+          </Button>
+        </>
       )}
       {currentPath === "secret" && <CreateSecretButton />}
     </>
@@ -180,7 +190,7 @@ export default function SecretManagementLayout() {
     parseAsBoolean.withDefault(false),
   );
   const [notificationEditId] = useQueryState("notificationEdit", parseAsString.withDefault(""));
-  const [isNotificationPushOpen] = useQueryState(
+  const [isNotificationPushOpen, setIsNotificationPushOpen] = useQueryState(
     "notificationPush",
     parseAsBoolean.withDefault(false),
   );
@@ -223,6 +233,7 @@ export default function SecretManagementLayout() {
       setIsAddIdpOpen={setIsAddIdpOpen}
       setIsEmailConfigOpen={setIsEmailConfigOpen}
       setIsNotificationConfigOpen={setIsNotificationConfigOpen}
+      setIsNotificationPushOpen={setIsNotificationPushOpen}
       setIsManagedServicesGuideOpen={setIsManagedServicesGuideOpen}
       setIsClientCredentialOpen={setIsClientCredentialOpen}
     />

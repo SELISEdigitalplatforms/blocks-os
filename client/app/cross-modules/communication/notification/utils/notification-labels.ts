@@ -8,6 +8,10 @@ import {
 } from "../constants/notification-ui.constant";
 import { effectiveAudience } from "./notification-form";
 
+/** "blocks-iam" reads as "iam": every built-in service carries the same prefix. */
+export const serviceLabel = (service?: string | null): string =>
+  (service ?? "").replace(/^blocks-/, "");
+
 export const sendToLabel = (row: INotificationConfigRow): string =>
   row.audienceLocked
     ? SEND_TO_LABELS[NOTIFICATION_SCOPE.Project]

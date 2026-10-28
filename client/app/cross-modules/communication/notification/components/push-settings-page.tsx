@@ -1,5 +1,7 @@
 import { useRef, useState } from "react";
+import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
+import { Card } from "@/components/ui-kits/card/card";
 import { Input } from "@/components/ui-kits/input/input";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { showErrorToast, toast } from "@/hooks/use-toast";
@@ -13,6 +15,7 @@ import {
 } from "../hooks/use-push-settings";
 import { NOTIFICATION_TEXT, PUSH_TEXT } from "../constants/notification-ui.constant";
 import { CheckRow, FormRow, HelpText } from "./notification-form/form-row";
+import { NotificationPageHeader } from "./notification-page-header";
 
 const MAX_KEY_BYTES = 20_000;
 const NOT_SET_UP: IPushSettings = { projectId: null, enabled: false, hasKey: false };
@@ -22,10 +25,7 @@ export const isServiceAccountKey = (text: string): boolean => {
   try {
     const key = JSON.parse(text) as Record<string, unknown>;
     return (
-      key?.type === "service_account" &&
-      !!key.project_id &&
-      !!key.private_key &&
-      !!key.client_email
+      key?.type === "service_account" && !!key.project_id && !!key.private_key && !!key.client_email
     );
   } catch {
     return false;
@@ -34,7 +34,8 @@ export const isServiceAccountKey = (text: string): boolean => {
 
 const keyUploadedText = (settings: IPushSettings): string => {
   const parts: string[] = [PUSH_TEXT.keyUploaded];
-  if (settings.keyUploadedAt) parts.push("on", new Date(settings.keyUploadedAt).toLocaleDateString());
+  if (settings.keyUploadedAt)
+    parts.push("on", new Date(settings.keyUploadedAt).toLocaleDateString());
   if (settings.keyUploadedBy) parts.push("by", settings.keyUploadedBy);
   return parts.join(" ");
 };
@@ -78,7 +79,11 @@ function PushSettingsForm({ settings, onClose }: Readonly<PushSettingsFormProps>
   const onSave = async () => {
     try {
       const serviceAccountJson = keyFile.current ? await keyFile.current.text() : undefined;
-      const res = await save.mutateAsync({ projectId: projectId.trim(), enabled, serviceAccountJson });
+      const res = await save.mutateAsync({
+        projectId: projectId.trim(),
+        enabled,
+        serviceAccountJson,
+      });
       clearKey();
       if (res.isSuccess) {
         toast({ variant: "success", title: "Success", description: PUSH_TEXT.saved });
@@ -106,99 +111,101 @@ function PushSettingsForm({ settings, onClose }: Readonly<PushSettingsFormProps>
 
   const ready = isPushReady(settings);
   return (
-    <div className="flex flex-col gap-4">
-      <nav className="text-sm text-medium-emphasis">{PUSH_TEXT.breadcrumb}</nav>
-      <div>
-        <h1 className="text-xl font-semibold">{PUSH_TEXT.title}</h1>
-        <p className="text-sm text-medium-emphasis">{PUSH_TEXT.subtitle}</p>
-      </div>
-      <form
-        className="max-w-[880px] rounded-md border bg-card"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void onSave();
-        }}
-      >
-        <FormRow label={PUSH_TEXT.status}>
-          <output className="flex items-center gap-2 text-sm">
-            <span className={`h-2 w-2 rounded-full ${ready ? "bg-success" : "bg-low-emphasis"}`} />
-            {ready ? PUSH_TEXT.ready : PUSH_TEXT.notSetUp}
-          </output>
-        </FormRow>
-        <FormRow label={PUSH_TEXT.firebaseProject}>
-          <Input
-            aria-label={PUSH_TEXT.projectId}
-            placeholder={PUSH_TEXT.projectIdPlaceholder}
-            maxLength={100}
-            value={projectId}
-            onChange={(event) => setProjectId(event.target.value)}
-          />
-        </FormRow>
-        <FormRow label={PUSH_TEXT.keyLabel}>
-          <div className="flex flex-wrap items-center gap-3">
-            {settings.hasKey && <span className="text-sm">{keyUploadedText(settings)}</span>}
-            <input
-              ref={fileInput}
-              type="file"
-              accept="application/json,.json"
-              hidden
-              aria-label={PUSH_TEXT.upload}
-              onChange={(event) => void onPickFile(event.target.files?.[0])}
+    <div className="flex flex-col">
+      <NotificationPageHeader
+        title={PUSH_TEXT.title}
+        description={PUSH_TEXT.subtitle}
+        onBack={onClose}
+      />
+      <Card className="max-w-[880px]">
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            void onSave();
+          }}
+        >
+          <FormRow label={PUSH_TEXT.status}>
+            <output>
+              <Badge variant={ready ? "success" : "secondary"} className="w-fit font-normal">
+                {ready ? PUSH_TEXT.ready : PUSH_TEXT.notSetUp}
+              </Badge>
+            </output>
+          </FormRow>
+          <FormRow label={PUSH_TEXT.firebaseProject}>
+            <Input
+              aria-label={PUSH_TEXT.projectId}
+              placeholder={PUSH_TEXT.projectIdPlaceholder}
+              maxLength={100}
+              value={projectId}
+              onChange={(event) => setProjectId(event.target.value)}
             />
-            <Button
-              type="button"
-              variant="outline"
-              size="xs"
-              onClick={() => fileInput.current?.click()}
-            >
-              {settings.hasKey ? PUSH_TEXT.replace : PUSH_TEXT.upload}
-            </Button>
-            {fileName && (
-              <span className="text-sm">
-                {PUSH_TEXT.chosenFile} {fileName}
-              </span>
-            )}
-          </div>
-          {keyError && (
-            <p className="text-xs text-error" role="alert">
-              {PUSH_TEXT.invalidKey}
-            </p>
-          )}
-          <HelpText>{PUSH_TEXT.keyHelp}</HelpText>
-        </FormRow>
-        <FormRow label="">
-          <CheckRow
-            id="push-enabled"
-            label={PUSH_TEXT.enable}
-            checked={enabled}
-            onChange={setEnabled}
-          />
-        </FormRow>
-        {ready && (
-          <FormRow label={PUSH_TEXT.testTitle}>
-            <div>
+          </FormRow>
+          <FormRow label={PUSH_TEXT.keyLabel}>
+            <div className="flex flex-wrap items-center gap-3">
+              {settings.hasKey && <span className="text-sm">{keyUploadedText(settings)}</span>}
+              <input
+                ref={fileInput}
+                type="file"
+                accept="application/json,.json"
+                hidden
+                aria-label={PUSH_TEXT.upload}
+                onChange={(event) => void onPickFile(event.target.files?.[0])}
+              />
               <Button
                 type="button"
                 variant="outline"
                 size="xs"
-                disabled={test.isPending}
-                onClick={() => void onTest()}
+                onClick={() => fileInput.current?.click()}
               >
-                {PUSH_TEXT.sendTest}
+                {settings.hasKey ? PUSH_TEXT.replace : PUSH_TEXT.upload}
               </Button>
+              {fileName && (
+                <span className="text-sm">
+                  {PUSH_TEXT.chosenFile} {fileName}
+                </span>
+              )}
             </div>
-            <HelpText>{PUSH_TEXT.testHelp}</HelpText>
+            {keyError && (
+              <p className="text-xs text-error" role="alert">
+                {PUSH_TEXT.invalidKey}
+              </p>
+            )}
+            <HelpText>{PUSH_TEXT.keyHelp}</HelpText>
           </FormRow>
-        )}
-        <div className="flex justify-end gap-2 border-t px-5 py-3.5">
-          <Button type="button" variant="outline" disabled={save.isPending} onClick={onClose}>
-            {NOTIFICATION_TEXT.cancel}
-          </Button>
-          <Button type="submit" disabled={save.isPending}>
-            {save.isPending ? NOTIFICATION_TEXT.saving : NOTIFICATION_TEXT.save}
-          </Button>
-        </div>
-      </form>
+          <FormRow label="">
+            <CheckRow
+              id="push-enabled"
+              label={PUSH_TEXT.enable}
+              checked={enabled}
+              onChange={setEnabled}
+            />
+          </FormRow>
+          {ready && (
+            <FormRow label={PUSH_TEXT.testTitle}>
+              <div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="xs"
+                  disabled={test.isPending}
+                  onClick={() => void onTest()}
+                >
+                  {PUSH_TEXT.sendTest}
+                </Button>
+              </div>
+              <HelpText>{PUSH_TEXT.testHelp}</HelpText>
+            </FormRow>
+          )}
+          <div className="flex justify-end gap-2 border-t px-5 py-3.5">
+            <Button type="button" variant="outline" disabled={save.isPending} onClick={onClose}>
+              {NOTIFICATION_TEXT.cancel}
+            </Button>
+            <Button type="submit" disabled={save.isPending}>
+              {save.isPending ? NOTIFICATION_TEXT.saving : NOTIFICATION_TEXT.save}
+            </Button>
+          </div>
+        </form>
+      </Card>
     </div>
   );
 }

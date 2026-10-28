@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
+import { Card } from "@/components/ui-kits/card/card";
 import { Input } from "@/components/ui-kits/input/input";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { showErrorToast, toast } from "@/hooks/use-toast";
@@ -15,11 +16,7 @@ import {
   PROPAGATION_WARNING_MESSAGE,
   canNotificationConfigBeDisabled,
 } from "../constants/notification.constant";
-import {
-  LIMITS,
-  NOTIFICATION_TEXT,
-  OWNER_ONLY_LABEL,
-} from "../constants/notification-ui.constant";
+import { LIMITS, NOTIFICATION_TEXT, OWNER_ONLY_LABEL } from "../constants/notification-ui.constant";
 import {
   buildSavePayload,
   toFormValues,
@@ -31,6 +28,7 @@ import { ReceiversField } from "./notification-form/receivers-field";
 import { ChannelsField } from "./notification-form/channels-field";
 import { PushMessageField } from "./notification-form/push-message-field";
 import { DeveloperNotes } from "./notification-form/developer-notes";
+import { NotificationPageHeader } from "./notification-page-header";
 
 interface NotificationConfigFormProps {
   /** The row being edited; none for a new notification. */
@@ -179,7 +177,10 @@ export function NotificationConfigForm({
       handleResult(await mutateAsync(buildSavePayload(values, previous, isEdit, tenantId)));
     } catch (error) {
       if (isErrorWithErrors(error)) {
-        showErrorToast({ errors: error.errors, customMessages: NOTIFICATION_CONFIG_ERROR_MESSAGES });
+        showErrorToast({
+          errors: error.errors,
+          customMessages: NOTIFICATION_CONFIG_ERROR_MESSAGES,
+        });
       } else {
         showErrorToast({ errors: "Something went wrong" });
       }
@@ -187,75 +188,77 @@ export function NotificationConfigForm({
   };
 
   const title = values.name || NOTIFICATION_TEXT.newBreadcrumb;
-  const subtitle = isEdit && previous?.isBuiltIn
-    ? (previous.description ?? NOTIFICATION_TEXT.noBuiltInSubtitle)
-    : NOTIFICATION_TEXT.customSubtitle;
+  const subtitle =
+    isEdit && previous?.isBuiltIn
+      ? (previous.description ?? NOTIFICATION_TEXT.noBuiltInSubtitle)
+      : NOTIFICATION_TEXT.customSubtitle;
 
   return (
-    <div className="flex flex-col gap-4">
-      <nav className="text-sm text-medium-emphasis">
-        {NOTIFICATION_TEXT.breadcrumb} / {title}
-      </nav>
-      <div>
-        <h1 className="flex items-center gap-2 text-xl font-semibold">
-          <span>{title}</span>
-          {isEdit && previous?.isBuiltIn && <Badge variant="info">{NOTIFICATION_TEXT.builtIn}</Badge>}
-        </h1>
-        <p className="text-sm text-medium-emphasis">{subtitle}</p>
-      </div>
-      <form
-        className="max-w-[880px] rounded-md border bg-card"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void save();
-        }}
-      >
-        <EventRow
-          values={values}
-          isEdit={isEdit}
-          locked={locked}
-          canBeDisabled={canBeDisabled}
-          onPatch={patch}
-        />
-        <SendToRow values={values} locked={locked} onPatch={patch} />
-        {!locked && (
-          <FormRow label={NOTIFICATION_TEXT.receiversLabel}>
-            <ReceiversField values={values} onPatch={patch} />
+    <div className="flex flex-col">
+      <NotificationPageHeader
+        title={title}
+        description={subtitle}
+        titleSuffix={
+          isEdit && previous?.isBuiltIn ? (
+            <Badge variant="info">{NOTIFICATION_TEXT.builtIn}</Badge>
+          ) : undefined
+        }
+        onBack={onClose}
+      />
+      <Card className="max-w-[880px]">
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            void save();
+          }}
+        >
+          <EventRow
+            values={values}
+            isEdit={isEdit}
+            locked={locked}
+            canBeDisabled={canBeDisabled}
+            onPatch={patch}
+          />
+          <SendToRow values={values} locked={locked} onPatch={patch} />
+          {!locked && (
+            <FormRow label={NOTIFICATION_TEXT.receiversLabel}>
+              <ReceiversField values={values} onPatch={patch} />
+            </FormRow>
+          )}
+          <FormRow label={NOTIFICATION_TEXT.channels}>
+            <ChannelsField values={values} onPatch={patch} />
           </FormRow>
-        )}
-        <FormRow label={NOTIFICATION_TEXT.channels}>
-          <ChannelsField values={values} onPatch={patch} />
-        </FormRow>
-        {values.pushEnabled && (
-          <FormRow label={NOTIFICATION_TEXT.pushMessage}>
-            <PushMessageField
-              values={values}
-              onPatch={patch}
-              locked={locked}
-              pushReady={pushReady}
-              onSetUpPush={onSetUpPush}
-            />
-          </FormRow>
-        )}
-        {!locked && (
-          <FormRow label="">
-            <DeveloperNotes values={values} onPatch={patch} canMarkBuiltIn={!isEdit} />
-          </FormRow>
-        )}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t px-5 py-3.5">
-          <div className="text-sm text-warning" role="alert">
-            {errors.join(" ")}
+          {values.pushEnabled && (
+            <FormRow label={NOTIFICATION_TEXT.pushMessage}>
+              <PushMessageField
+                values={values}
+                onPatch={patch}
+                locked={locked}
+                pushReady={pushReady}
+                onSetUpPush={onSetUpPush}
+              />
+            </FormRow>
+          )}
+          {!locked && (
+            <FormRow label="">
+              <DeveloperNotes values={values} onPatch={patch} canMarkBuiltIn={!isEdit} />
+            </FormRow>
+          )}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t px-5 py-3.5">
+            <div className="text-sm text-warning" role="alert">
+              {errors.join(" ")}
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" disabled={isPending} onClick={onClose}>
+                {NOTIFICATION_TEXT.cancel}
+              </Button>
+              <Button type="submit" disabled={isPending || errors.length > 0}>
+                {isPending ? NOTIFICATION_TEXT.saving : NOTIFICATION_TEXT.save}
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" disabled={isPending} onClick={onClose}>
-              {NOTIFICATION_TEXT.cancel}
-            </Button>
-            <Button type="submit" disabled={isPending || errors.length > 0}>
-              {isPending ? NOTIFICATION_TEXT.saving : NOTIFICATION_TEXT.save}
-            </Button>
-          </div>
-        </div>
-      </form>
+        </form>
+      </Card>
     </div>
   );
 }

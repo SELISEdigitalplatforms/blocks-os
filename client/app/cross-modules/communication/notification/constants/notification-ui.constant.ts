@@ -23,19 +23,19 @@ const MOBILE_PUSH = "Mobile push";
 export const SEND_TO_LABELS: Record<number, string> = {
   [NOTIFICATION_SCOPE.Project]: "Project users",
   [NOTIFICATION_SCOPE.Console]: "Console users",
-  [NOTIFICATION_SCOPE.Both]: "Project and Console users",
+  [NOTIFICATION_SCOPE.Both]: "Project & Console users",
 };
 
 export const RECEIVER_OPTIONS = [
   { value: AUDIENCE_LEVEL.AllUsers, label: "All users" },
-  { value: AUDIENCE_LEVEL.AffectedOnly, label: "Affected users only" },
-  { value: AUDIENCE_LEVEL.Selected, label: "Selected" },
+  { value: AUDIENCE_LEVEL.AffectedOnly, label: "Event-related users" },
+  { value: AUDIENCE_LEVEL.Selected, label: "Selected users" },
 ] as const;
 
 export const RECEIVER_HELP: Record<number, string> = {
   [AUDIENCE_LEVEL.AllUsers]: "Every user who can receive this notification.",
   [AUDIENCE_LEVEL.AffectedOnly]:
-    "Only the users the sending service names, such as the record owner.",
+    "Only the users the event is about, named by the sending service (for example the record owner).",
   [AUDIENCE_LEVEL.Selected]: "Only the users, roles and permissions selected below.",
 };
 
@@ -44,26 +44,36 @@ export const MATCH_OPTIONS = [
   { value: AUDIENCE_MATCH.All, label: "All of these" },
 ] as const;
 
-export const OWNER_ONLY_LABEL = "Account owner only \u{1F512}";
+export const OWNER_ONLY_LABEL = "Account owner only";
 
 export const NOTIFICATION_TEXT = {
-  listTitle: "Notifications",
-  listSubtitle: "Choose who receives each notification and how it is delivered.",
-  newNotification: "New notification",
   mobilePush: MOBILE_PUSH,
-  searchPlaceholder: "Search notifications",
+  searchPlaceholder: "Search by name",
   columns: {
     name: "Name",
-    sendTo: "Send to",
-    receivers: "Receivers",
+    recipients: "Recipients",
+    service: "Service",
+    importance: "Importance",
     inApp: "In-app",
-    push: "Push",
+    push: MOBILE_PUSH,
     inbox: "Inbox",
     status: "Status",
   },
+  /** Help for the merged Recipients column: the audience group and who in it gets the notice. */
+  recipientsHelp: [
+    "Audience: Project users use your application; Console users work in Blocks Console.",
+    "All users: everyone in the audience.",
+    "Event-related users: only the users the event is about, such as the record owner.",
+    "Selected users: only the chosen users, roles and permissions.",
+    "Account owner only: a personal notice; it always goes to the account owner.",
+  ],
+  recipientsHelpLabel: "What recipients mean",
+  noMatches: "No notifications match the current filters.",
+  active: "Active",
+  inactive: "Inactive",
   filters: {
-    sendTo: "Send to",
-    receivers: "Receivers",
+    sendTo: "Audience",
+    receivers: "Recipients",
   },
   custom: "Custom",
   builtIn: "Built-in",
@@ -73,13 +83,13 @@ export const NOTIFICATION_TEXT = {
   eventName: "Event name",
   enabled: "Enabled",
   description: "Description",
-  sendToLabel: "Send to",
+  sendToLabel: "Audience",
   projectUsers: "Project users",
   consoleUsers: "Console users",
   sendToHelp: "Project users use your application. Console users work in Blocks Console.",
   personalHelp:
     "Personal account notice. It is always sent to the account owner and cannot be redirected.",
-  receiversLabel: "Receivers",
+  receiversLabel: "Recipients",
   receiversNarrowHelp: "The sending service can narrow this list, but never extend it.",
   match: "Match",
   users: "Users",
@@ -88,9 +98,11 @@ export const NOTIFICATION_TEXT = {
   searchUsers: "Search users",
   searchRoles: "Search roles",
   searchPermissions: "Search permissions",
-  noMatches: "No matches",
+  noOptionMatches: "No matches",
   loading: "Loading...",
-  alsoNamed: "Also notify the users named by the sending service",
+  alsoNamed: "Also notify event-related users",
+  alsoNamedHelp:
+    "Adds the users the event is about (for example the record owner) to the selected users.",
   filterSummary: "Subscription filter (optional)",
   filterContext: "Context",
   filterAction: "Action",
@@ -98,7 +110,7 @@ export const NOTIFICATION_TEXT = {
   addFilter: "+ Add filter",
   removeFilter: "Remove",
   filterHelp: "Narrows receivers to users subscribed to a matching context. Never adds receivers.",
-  channels: "Channels",
+  channels: "Delivery channels",
   inApp: "In-app",
   mobilePushChannel: MOBILE_PUSH,
   saveToInbox: "Save to inbox",
@@ -132,7 +144,7 @@ export const NOTIFICATION_TEXT = {
   cancel: "Cancel",
   save: "Save",
   saving: "Saving...",
-  breadcrumb: "Notifications",
+  breadcrumb: "Notification",
   newBreadcrumb: "New notification",
   errors: {
     name: `Event name must be between ${LIMITS.nameMin} and ${LIMITS.nameMax} characters.`,
@@ -156,10 +168,9 @@ export const MISSING_LANGUAGE_NOTE = (languages: string[]) =>
 export const PUSH_TEXT = {
   title: MOBILE_PUSH,
   subtitle: "Send notifications to your users' phones through Firebase Cloud Messaging.",
-  breadcrumb: "Notifications / Mobile push",
   status: "Status",
-  ready: "Ready",
-  notSetUp: "Not set up",
+  ready: "Configured",
+  notSetUp: "Not configured",
   firebaseProject: "Firebase project",
   projectId: "Project ID",
   projectIdPlaceholder: "e.g. my-app-123",
@@ -171,7 +182,7 @@ export const PUSH_TEXT = {
   chosenFile: "Selected file:",
   invalidKey: "This file is not a Firebase service account key.",
   enable: "Enable mobile push for this project",
-  testTitle: "Test",
+  testTitle: "Test delivery",
   sendTest: "Send a test notification to my devices",
   testHelp: "Your signed-in devices receive a test message within a few seconds.",
   saved: "Mobile push settings saved.",

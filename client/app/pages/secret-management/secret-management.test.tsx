@@ -84,6 +84,7 @@ vi.mock("@/components/ui-kits/dialog/dialog", () => ({
 import SecretManagementLayout from "./secret-management";
 
 const ADD_CONFIGURATION = "Add Configuration";
+const ADD_NOTIFICATION = "Add notification";
 
 describe("SecretManagementLayout", () => {
   beforeEach(() => {
@@ -103,11 +104,12 @@ describe("SecretManagementLayout", () => {
     expect(screen.getByTestId("create-secret-button")).toBeTruthy();
   });
 
-  it("shows the list header with Add Configuration on the notification list", () => {
+  it("shows the list header with Mobile push and Add notification on the notification list", () => {
     h.pathname = "/app/proj/secret-management/notification";
     render(<SecretManagementLayout />);
     expect(screen.getByRole("heading", { level: 1 })).toBeTruthy();
-    expect(screen.getByText(ADD_CONFIGURATION)).toBeTruthy();
+    expect(screen.getByText("Mobile push")).toBeTruthy();
+    expect(screen.getByText(ADD_NOTIFICATION)).toBeTruthy();
   });
 
   it.each([
@@ -119,7 +121,7 @@ describe("SecretManagementLayout", () => {
     h.query = { [key]: value };
     render(<SecretManagementLayout />);
     expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
-    expect(screen.queryByText(ADD_CONFIGURATION)).toBeNull();
+    expect(screen.queryByText(ADD_NOTIFICATION)).toBeNull();
     expect(screen.getByTestId("outlet")).toBeTruthy();
   });
 

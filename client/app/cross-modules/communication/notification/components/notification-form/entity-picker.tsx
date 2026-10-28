@@ -93,9 +93,15 @@ export function EntityPicker({
           aria-label={label}
           className="absolute left-0 top-full z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-sm border bg-popover p-1 shadow-md"
         >
-          {isLoading && <li className="px-2 py-1.5 text-sm text-medium-emphasis">{NOTIFICATION_TEXT.loading}</li>}
+          {isLoading && (
+            <li className="px-2 py-1.5 text-sm text-medium-emphasis">
+              {NOTIFICATION_TEXT.loading}
+            </li>
+          )}
           {!isLoading && choices.length === 0 && (
-            <li className="px-2 py-1.5 text-sm text-medium-emphasis">{NOTIFICATION_TEXT.noMatches}</li>
+            <li className="px-2 py-1.5 text-sm text-medium-emphasis">
+              {NOTIFICATION_TEXT.noOptionMatches}
+            </li>
           )}
           {choices.map((option) => (
             <li key={option.value}>

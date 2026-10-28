@@ -1,4 +1,10 @@
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui-kits/select/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui-kits/select/select";
 import type { NotificationFormValues } from "../../utils/notification-form";
 import {
   AUDIENCE_LEVEL,
@@ -58,18 +64,21 @@ function SelectedRules({ values, onPatch }: Readonly<ReceiversFieldProps>) {
           onChange={(permissions) => onPatch({ permissions })}
         />
       </SubRow>
-      <CheckRow
-        id="also-named"
-        label={NOTIFICATION_TEXT.alsoNamed}
-        checked={values.alsoNamedUsers}
-        onChange={(alsoNamedUsers) => onPatch({ alsoNamedUsers })}
-      />
+      <div className="flex flex-col gap-1">
+        <CheckRow
+          id="also-named"
+          label={NOTIFICATION_TEXT.alsoNamed}
+          checked={values.alsoNamedUsers}
+          onChange={(alsoNamedUsers) => onPatch({ alsoNamedUsers })}
+        />
+        <HelpText>{NOTIFICATION_TEXT.alsoNamedHelp}</HelpText>
+      </div>
       <SubscriptionFilters filters={values.filters} onChange={(filters) => onPatch({ filters })} />
     </div>
   );
 }
 
-/** Receivers: all users, affected users only, or a chosen set of users, roles and permissions. */
+/** Recipients: all users, event-related users, or a chosen set of users, roles and permissions. */
 export function ReceiversField({ values, onPatch }: Readonly<ReceiversFieldProps>) {
   return (
     <>

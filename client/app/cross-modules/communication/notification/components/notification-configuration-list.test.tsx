@@ -11,15 +11,21 @@ const h = vi.hoisted(() => ({
   toast: vi.fn(),
   setQueryParams: vi.fn(),
   importance: "",
-  service: "",
   sendTo: "",
   receivers: "",
   onEdit: vi.fn(),
 }));
 
-vi.mock("@seliseblocks/genesis-os", () => ({
-  useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
-}));
+vi.mock("@seliseblocks/genesis-os", () => {
+  const Passthrough = ({ children }: { children: ReactNode }) => children;
+  return {
+    useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
+    Tooltip: Passthrough,
+    TooltipTrigger: Passthrough,
+    TooltipContent: () => null,
+    TooltipProvider: Passthrough,
+  };
+});
 vi.mock("../hooks/use-notification-config", () => ({
   useGetNotificationConfigs: (args: unknown) => h.useGetNotificationConfigs(args),
   useDeleteNotificationConfig: () => ({
@@ -34,7 +40,6 @@ vi.mock("./notification-configs-filter-toolbar", () => ({
       notificationPageSize: 10,
       notificationSearch: "",
       notificationImportance: h.importance,
-      notificationService: h.service,
       notificationSendTo: h.sendTo,
       notificationReceivers: h.receivers,
     },
@@ -88,7 +93,6 @@ describe("NotificationConfigurationList", () => {
     vi.clearAllMocks();
     h.isDeletePending = false;
     h.importance = "";
-    h.service = "";
     h.sendTo = "";
     h.receivers = "";
     h.useGetNotificationConfigs.mockReturnValue({
@@ -104,25 +108,26 @@ describe("NotificationConfigurationList", () => {
     expect(document.body.querySelectorAll("[class*='animate-pulse']").length).toBeGreaterThan(0);
   });
 
-  it("shows the columns of the receiver model with who gets it and the channels", () => {
+  it("shows recipients (merged audience and receivers), source and the channels", () => {
     render(<NotificationConfigurationList onEdit={h.onEdit} />, { wrapper });
     const headers = screen.getAllByRole("columnheader").map((c) => c.textContent);
-    expect(headers.slice(0, 7)).toEqual([
+    expect(headers.slice(0, 8)).toEqual([
       "Name",
-      "Send to",
-      "Receivers",
+      "Recipients",
+      "Service",
+      "Importance",
       "In-app",
-      "Push",
+      "Mobile push",
       "Inbox",
       "Status",
     ]);
     const row = screen.getByText(REALTIME_ALERTS).closest("tr") as HTMLElement;
     expect(within(row).getByText("Project users")).toBeTruthy();
-    expect(within(row).getByText("Affected users only")).toBeTruthy();
+    expect(within(row).getByText("Event-related users")).toBeTruthy();
     // Old rows keep in-app on and push off; inbox follows the saved flag.
     expect(within(row).getAllByLabelText("Yes")).toHaveLength(2);
     expect(within(row).getAllByLabelText("No")).toHaveLength(1);
-    expect(screen.getAllByText("On")).toHaveLength(2);
+    expect(screen.getAllByText("Active")).toHaveLength(2);
   });
 
   it("opens the edit page from the row and from the row actions", async () => {
@@ -200,16 +205,14 @@ describe("NotificationConfigurationListPage", () => {
     expect(screen.queryByText(REALTIME_ALERTS)).toBeNull();
   });
 
-  it("opens the mobile push page from the list", async () => {
-    h.useGetNotificationConfigs.mockReturnValue({
-      data: { configurations, totalCount: 2 },
-      isLoading: false,
-      isFetching: false,
+  it("opens the mobile push page that the header button asks for", () => {
+    render(<NotificationConfigurationListPage />, {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <NuqsTestingAdapter searchParams="?notificationPush=true">{children}</NuqsTestingAdapter>
+      ),
     });
-    const user = userEvent.setup();
-    render(<NotificationConfigurationListPage />, { wrapper });
-    await user.click(screen.getByRole("button", { name: "Mobile push" }));
-    expect(await screen.findByTestId("push-page")).toBeTruthy();
+    expect(screen.getByTestId("push-page")).toBeTruthy();
+    expect(screen.queryByText(REALTIME_ALERTS)).toBeNull();
   });
 
   it("renders the configuration list when configurations exist", () => {
@@ -261,7 +264,6 @@ describe("NotificationConfigurationList built-in metadata", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     h.importance = "";
-    h.service = "";
     h.sendTo = "";
     h.receivers = "";
     h.useGetNotificationConfigs.mockReturnValue({
@@ -298,10 +300,30 @@ describe("NotificationConfigurationList built-in metadata", () => {
     h.useGetNotificationConfigs.mockReturnValue({
       data: {
         configurations: [
-          { ...rows[0], name: "to-console", scope: 1, audience: { level: 2, userIds: ["u"], roles: [], permissions: [] } },
-          { ...rows[0], name: "to-both", scope: 2, audience: { level: 2, userIds: [], roles: ["r"], permissions: [] } },
-          { ...rows[0], name: "project-only", scope: 0, audience: { level: 2, userIds: [], roles: [], permissions: [] } },
-          { ...rows[0], name: "console-all", scope: 1, audience: { level: 1, userIds: [], roles: [], permissions: [] } },
+          {
+            ...rows[0],
+            name: "to-console",
+            scope: 1,
+            audience: { level: 2, userIds: ["u"], roles: [], permissions: [] },
+          },
+          {
+            ...rows[0],
+            name: "to-both",
+            scope: 2,
+            audience: { level: 2, userIds: [], roles: ["r"], permissions: [] },
+          },
+          {
+            ...rows[0],
+            name: "project-only",
+            scope: 0,
+            audience: { level: 2, userIds: [], roles: [], permissions: [] },
+          },
+          {
+            ...rows[0],
+            name: "console-all",
+            scope: 1,
+            audience: { level: 1, userIds: [], roles: [], permissions: [] },
+          },
         ],
         totalCount: 4,
       },
@@ -313,19 +335,26 @@ describe("NotificationConfigurationList built-in metadata", () => {
     expect(screen.getByText("to-both")).toBeTruthy();
     expect(screen.queryByText("project-only")).toBeNull();
     expect(screen.queryByText("console-all")).toBeNull();
-    expect(screen.getAllByText("Selected (1)")).toHaveLength(2);
+    expect(screen.getAllByText("Selected users (1)")).toHaveLength(2);
   });
 
-  it("marks only the disabled row as Off", () => {
+  it("marks only the disabled row as Inactive", () => {
     render(<NotificationConfigurationList onEdit={h.onEdit} />, { wrapper });
-    expect(screen.getAllByText("Off")).toHaveLength(1);
+    expect(screen.getAllByText("Inactive")).toHaveLength(1);
+  });
+
+  it("shows the source service without its prefix and the importance", () => {
+    render(<NotificationConfigurationList onEdit={h.onEdit} />, { wrapper });
+    const row = screen.getByText(PASSWORD_RESET).closest("tr") as HTMLElement;
+    expect(within(row).getByText("iam")).toBeTruthy();
+    expect(within(row).getByText("High")).toBeTruthy();
   });
 
   it("shows a legacy row without the new fields as a plain custom row", () => {
     render(<NotificationConfigurationList onEdit={h.onEdit} />, { wrapper });
     const row = screen.getByText(LEGACY_CUSTOM).closest("tr") as HTMLElement;
     expect(within(row).queryByText("Built-in")).toBeNull();
-    expect(within(row).queryByText("Off")).toBeNull();
+    expect(within(row).queryByText("Inactive")).toBeNull();
   });
 
   it("filters by importance over the loaded rows", () => {
@@ -336,15 +365,10 @@ describe("NotificationConfigurationList built-in metadata", () => {
     expect(screen.queryByText(LEGACY_CUSTOM)).toBeNull();
   });
 
-  it("filters by service and shows a message when nothing matches", () => {
-    h.service = "blocks-os";
-    const { unmount } = render(<NotificationConfigurationList onEdit={h.onEdit} />, { wrapper });
-    expect(screen.getByText(EXPORT_READY)).toBeTruthy();
-    expect(screen.queryByText(PASSWORD_RESET)).toBeNull();
-    unmount();
-    h.service = "nope";
+  it("shows a message when nothing matches the filters", () => {
+    h.importance = "2";
     render(<NotificationConfigurationList onEdit={h.onEdit} />, { wrapper });
-    expect(screen.getByText("No configurations match the current filters.")).toBeTruthy();
+    expect(screen.getByText("No notifications match the current filters.")).toBeTruthy();
   });
 
   it("offers Edit and Delete for a built-in row; the server decides who may use them", async () => {

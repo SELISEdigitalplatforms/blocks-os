@@ -10,7 +10,20 @@ import {
 } from "@/components/ui-kits/dropdown-menu/dropdown-menu";
 import type { INotificationConfigRow } from "../models/notification-config.model";
 import { NOTIFICATION_TEXT } from "../constants/notification-ui.constant";
-import { channelFlags, receiversLabel, sendToLabel } from "../utils/notification-labels";
+import { notificationImportances } from "../constants/notification.constant";
+import {
+  channelFlags,
+  receiversLabel,
+  sendToLabel,
+  serviceLabel,
+} from "../utils/notification-labels";
+
+const EMPTY = "–";
+
+/** Importance 0 means "not set", so it shows as a dash like a missing value. */
+const importanceText = (importance?: number): string =>
+  notificationImportances.find((item) => item.value > 0 && item.value === importance)?.label ??
+  EMPTY;
 
 const YesNo = ({ value }: Readonly<{ value: boolean }>) =>
   value ? (
@@ -19,7 +32,7 @@ const YesNo = ({ value }: Readonly<{ value: boolean }>) =>
     </span>
   ) : (
     <span aria-label="No" className="text-low-emphasis">
-      {"–"}
+      {EMPTY}
     </span>
   );
 
@@ -29,7 +42,7 @@ interface NotificationConfigRowProps {
   onDelete: (config: INotificationConfigRow) => void;
 }
 
-/** One table row: name, who it goes to, the channels and on/off. */
+/** One table row: name, recipients, source, the channels and status. */
 export function NotificationConfigRow({
   config,
   onEdit,
@@ -45,9 +58,9 @@ export function NotificationConfigRow({
         if (event.key === "Enter" && event.target === event.currentTarget) onEdit(config);
       }}
     >
-      <TableCell className="max-w-[420px]">
+      <TableCell className="min-w-[280px] max-w-[460px] py-3">
         <div className="flex items-center gap-2">
-          <span className="truncate font-mono text-sm font-medium">{config.name}</span>
+          <span className="break-all font-mono text-sm font-medium">{config.name}</span>
           {config.audienceLocked && (
             <Lock className="h-3.5 w-3.5 shrink-0" aria-label="Personal notice" />
           )}
@@ -58,13 +71,17 @@ export function NotificationConfigRow({
           )}
         </div>
         {config.description && (
-          <div className="truncate text-xs text-medium-emphasis" title={config.description}>
-            {config.description}
-          </div>
+          <div className="mt-0.5 text-xs text-medium-emphasis">{config.description}</div>
         )}
       </TableCell>
-      <TableCell>{sendToLabel(config)}</TableCell>
-      <TableCell>{receiversLabel(config)}</TableCell>
+      <TableCell className="whitespace-nowrap">
+        <div className="text-sm">{receiversLabel(config)}</div>
+        <div className="text-xs text-medium-emphasis">{sendToLabel(config)}</div>
+      </TableCell>
+      <TableCell className="whitespace-nowrap">
+        {serviceLabel(config.sourceService) || EMPTY}
+      </TableCell>
+      <TableCell>{importanceText(config.importance)}</TableCell>
       <TableCell>
         <YesNo value={channels.inApp} />
       </TableCell>
@@ -75,17 +92,21 @@ export function NotificationConfigRow({
         <YesNo value={channels.inbox} />
       </TableCell>
       <TableCell>
-        <span className="inline-flex items-center gap-1.5">
-          <span
-            className={`h-2 w-2 rounded-full ${config.isDisabled ? "bg-low-emphasis" : "bg-success"}`}
-          />
-          {config.isDisabled ? "Off" : "On"}
-        </span>
+        <Badge
+          variant={config.isDisabled ? "secondary" : "success"}
+          className="w-fit whitespace-nowrap font-normal"
+        >
+          {config.isDisabled ? NOTIFICATION_TEXT.inactive : NOTIFICATION_TEXT.active}
+        </Badge>
       </TableCell>
       <TableCell onClick={(event) => event.stopPropagation()}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-5 w-5 p-0" aria-label={`Actions for ${config.name}`}>
+            <Button
+              variant="ghost"
+              className="h-5 w-5 p-0"
+              aria-label={`Actions for ${config.name}`}
+            >
               <EllipsisVertical width={20} height={20} />
             </Button>
           </DropdownMenuTrigger>
@@ -94,7 +115,10 @@ export function NotificationConfigRow({
               <Pencil className="mr-2 h-4 w-4" />
               <span>Edit</span>
             </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer text-error" onClick={() => onDelete(config)}>
+            <DropdownMenuItem
+              className="cursor-pointer text-error"
+              onClick={() => onDelete(config)}
+            >
               <Trash className="mr-2 h-4 w-4" />
               <span>Delete</span>
             </DropdownMenuItem>

@@ -63,7 +63,9 @@ const ROW = {
 const renderForm = (previous?: INotificationConfigRow) => {
   const onClose = vi.fn();
   const onSetUpPush = vi.fn();
-  render(<NotificationConfigForm previous={previous} onClose={onClose} onSetUpPush={onSetUpPush} />);
+  render(
+    <NotificationConfigForm previous={previous} onClose={onClose} onSetUpPush={onSetUpPush} />,
+  );
   return { onClose, onSetUpPush };
 };
 
@@ -118,7 +120,7 @@ describe("NotificationConfigForm", () => {
     const user = userEvent.setup();
     renderForm();
     expect(screen.queryByTestId("user-picker")).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Selected" }));
+    await user.click(screen.getByRole("button", { name: "Selected users" }));
     expect(screen.getByTestId("user-picker")).toBeTruthy();
     expect(screen.getByTestId("role-picker")).toBeTruthy();
     expect(screen.getByTestId("permission-picker")).toBeTruthy();
@@ -139,10 +141,16 @@ describe("NotificationConfigForm", () => {
 
   it("locks an existing name and shows a personal notice as account owner only", async () => {
     const user = userEvent.setup();
-    renderForm({ ...ROW, name: "iam-new-login", isBuiltIn: true, audienceLocked: true, pushEnabled: true });
+    renderForm({
+      ...ROW,
+      name: "iam-new-login",
+      isBuiltIn: true,
+      audienceLocked: true,
+      pushEnabled: true,
+    });
     expect(screen.getByText(/Account owner only/)).toBeTruthy();
     expect(screen.queryByLabelText(PROJECT_USERS)).toBeNull();
-    expect(screen.queryByRole("button", { name: "Selected" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Selected users" })).toBeNull();
     expect(screen.getByTestId(PUSH_MESSAGE_ID).dataset.locked).toBe("true");
 
     await user.click(screen.getByLabelText("Save to inbox"));

@@ -10,7 +10,6 @@ import {
 type NotificationConfigFilter = {
   search: string;
   importance: string;
-  service: string;
   sendTo: string;
   receivers: string;
 };
@@ -25,7 +24,6 @@ export const useNotificationConfigsFilterQueryParams = () => {
   const [queryParams, setQueryParams] = useQueryStates({
     notificationSearch: parseAsString.withDefault(""),
     notificationImportance: parseAsString.withDefault(""),
-    notificationService: parseAsString.withDefault(""),
     notificationSendTo: parseAsString.withDefault(""),
     notificationReceivers: parseAsString.withDefault(""),
     notificationPage: parseAsInteger.withDefault(0),
@@ -34,14 +32,7 @@ export const useNotificationConfigsFilterQueryParams = () => {
   return { queryParams, setQueryParams };
 };
 
-interface NotificationConfigsFilterToolBarProps {
-  /** Distinct source services of the loaded rows; the service filter hides when there are none. */
-  serviceOptions?: string[];
-}
-
-export function NotificationConfigsFilterToolBar({
-  serviceOptions = [],
-}: Readonly<NotificationConfigsFilterToolBarProps>) {
+export function NotificationConfigsFilterToolBar() {
   const { queryParams, setQueryParams } = useNotificationConfigsFilterQueryParams();
 
   const changeHandler = (key: string, value: unknown) => {
@@ -69,12 +60,6 @@ export function NotificationConfigsFilterToolBar({
         notificationReceivers: (value as string) ?? "",
         notificationPage: 0,
       }));
-    } else if (key === "service") {
-      setQueryParams((params) => ({
-        ...params,
-        notificationService: (value as string) ?? "",
-        notificationPage: 0,
-      }));
     }
   };
 
@@ -83,7 +68,6 @@ export function NotificationConfigsFilterToolBar({
       ...params,
       notificationSearch: "",
       notificationImportance: "",
-      notificationService: "",
       notificationSendTo: "",
       notificationReceivers: "",
       notificationPage: 0,
@@ -92,11 +76,16 @@ export function NotificationConfigsFilterToolBar({
   return (
     <FilterToolbar<NotificationConfigFilter>
       filters={[
-        { key: "search", type: "SearchInput", label: "", props: { placeholder: "Search by name" } },
+        {
+          key: "search",
+          type: "SearchInput",
+          label: "",
+          props: { placeholder: NOTIFICATION_TEXT.searchPlaceholder },
+        },
         {
           key: "importance",
           type: "Radio",
-          label: "Importance",
+          label: NOTIFICATION_TEXT.columns.importance,
           props: {
             options: notificationImportances
               .filter((item) => item.value > 0)
@@ -117,30 +106,14 @@ export function NotificationConfigsFilterToolBar({
             options: RECEIVER_OPTIONS.map((o) => ({ label: o.label, value: String(o.value) })),
           },
         },
-        ...(serviceOptions.length > 0
-          ? [
-              {
-                key: "service" as const,
-                type: "Radio" as const,
-                label: "Service",
-                props: {
-                  options: serviceOptions.map((service) => ({
-                    label: service.replace(/^blocks-/, ""),
-                    value: service,
-                  })),
-                },
-              },
-            ]
-          : []),
       ]}
       values={{
         search: queryParams.notificationSearch,
         importance: queryParams.notificationImportance,
-        service: queryParams.notificationService,
         sendTo: queryParams.notificationSendTo,
         receivers: queryParams.notificationReceivers,
       }}
-      defaultValues={{ search: "", importance: "", service: "", sendTo: "", receivers: "" }}
+      defaultValues={{ search: "", importance: "", sendTo: "", receivers: "" }}
       onChange={changeHandler}
       onReset={resetHandler}
     />
