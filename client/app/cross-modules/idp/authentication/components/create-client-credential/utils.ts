@@ -10,10 +10,19 @@ import { z } from "zod";
 export const buildCreateClientSchema = (isMultiOrgEnabled: boolean, isEdit: boolean) =>
   z.object({
     itemId: z.string().trim().optional().nullable(),
-    clientNameService: z.string().trim().min(1, "Client name is required").max(80),
+    // zod 3's default messages, kept so the form reads the same after the zod 4 upgrade.
+    clientNameService: z
+      .string()
+      .trim()
+      .min(1, "Client name is required")
+      .max(80, "String must contain at most 80 character(s)"),
     accessTokenValidForNumberMinutes: z
-      .number({ invalid_type_error: "Enter a number of minutes" })
-      .int()
+      .number({
+        error: (issue) => (issue.input === undefined ? "Required" : "Enter a number of minutes"),
+      })
+      // Number.isInteger, not .int(): zod 4's .int() also rejects unsafe integers and stops the
+      // checks after it. zod 3 showed the invalid_type_error above for a fraction.
+      .refine(Number.isInteger, "Enter a number of minutes")
       .min(5, "Must be at least 5 minutes")
       .max(120, "Must be at most 120 minutes"),
     isActive: z.boolean(),

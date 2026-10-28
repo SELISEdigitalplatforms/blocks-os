@@ -463,6 +463,7 @@ export async function deleteOidcClientFlow(page: Page, clientRow: Locator, clien
   await deleteButton.click();
   await expect(page.getByRole("heading", { name: "Delete OIDC Client" })).toBeVisible();
   await expect(
+    // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp -- input is escaped with escapeRegex
     page.getByText(new RegExp(`delete.*${escapeRegex(clientName)}`, "i")),
   ).toBeVisible();
   await page.getByRole("button", { name: "Delete", exact: true }).last().click();

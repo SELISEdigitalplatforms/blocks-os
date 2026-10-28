@@ -25,13 +25,17 @@ export const buildStorageConfigurationFormSchema = (isEditMode: boolean) =>
     cloudStorageRegionEndPoint: z.string().trim().nullable(),
     connectionString: z.string().trim().nullable(),
     host: z.string().trim().nullable(),
+    // abort: a failed number check skips the superRefine below, as zod 3 did (its transform
+    // aborted); zod 4 runs it unless the failing check aborts. Number.isInteger, not .int(),
+    // because zod 4's .int() also rejects unsafe integers; zod 3's did not.
     port: z
       .string()
       .trim()
       .pipe(
+        // zod 3's default messages, kept so the form reads the same after the zod 4 upgrade.
         z.coerce
-          .number()
-          .min(0)
+          .number<string>({ error: "Expected number, received nan" })
+          .min(0, { error: "Number must be greater than or equal to 0", abort: true })
           .transform((arg) => arg.toString()),
       )
       .nullable(),
@@ -43,10 +47,13 @@ export const buildStorageConfigurationFormSchema = (isEditMode: boolean) =>
       .trim()
       .pipe(
         z.coerce
-          .number({ invalid_type_error: "Must be a number" })
-          .int("Must be a whole number of seconds")
-          .min(1, "Must be at least 1 second")
-          .max(MAX_EXPIRY_SECONDS, "Must be at most 604,800 seconds (7 days)")
+          .number<string>({ error: "Must be a number" })
+          .refine(Number.isInteger, { error: "Must be a whole number of seconds", abort: true })
+          .min(1, { error: "Must be at least 1 second", abort: true })
+          .max(MAX_EXPIRY_SECONDS, {
+            error: "Must be at most 604,800 seconds (7 days)",
+            abort: true,
+          })
           .transform((arg) => arg.toString()),
       ),
     downloadUrlExpirySeconds: z
@@ -54,10 +61,13 @@ export const buildStorageConfigurationFormSchema = (isEditMode: boolean) =>
       .trim()
       .pipe(
         z.coerce
-          .number({ invalid_type_error: "Must be a number" })
-          .int("Must be a whole number of seconds")
-          .min(1, "Must be at least 1 second")
-          .max(MAX_EXPIRY_SECONDS, "Must be at most 604,800 seconds (7 days)")
+          .number<string>({ error: "Must be a number" })
+          .refine(Number.isInteger, { error: "Must be a whole number of seconds", abort: true })
+          .min(1, { error: "Must be at least 1 second", abort: true })
+          .max(MAX_EXPIRY_SECONDS, {
+            error: "Must be at most 604,800 seconds (7 days)",
+            abort: true,
+          })
           .transform((arg) => arg.toString()),
       ),
     maxFileSizeInMb: z
@@ -65,9 +75,9 @@ export const buildStorageConfigurationFormSchema = (isEditMode: boolean) =>
       .trim()
       .pipe(
         z.coerce
-          .number({ invalid_type_error: "Must be a number" })
-          .positive("Must be greater than 0")
-          .max(MAX_FILE_SIZE_MB, `Must be at most ${MAX_FILE_SIZE_MB} MB`)
+          .number<string>({ error: "Must be a number" })
+          .positive({ error: "Must be greater than 0", abort: true })
+          .max(MAX_FILE_SIZE_MB, { error: `Must be at most ${MAX_FILE_SIZE_MB} MB`, abort: true })
           .transform((arg) => arg.toString()),
       ),
     uploadCompletionRequiredFor: z.array(z.enum(["Public", "Private"])),
@@ -82,7 +92,7 @@ export const buildStorageConfigurationFormSchema = (isEditMode: boolean) =>
         if (!data[field]) {
           ctx.addIssue({
             path: [field],
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: messages[field] || `${field} is required`,
           });
         }

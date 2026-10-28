@@ -114,7 +114,7 @@ export const InvitePeople = ({ existingEmails = [], canInvite = false }: InviteP
           const duplicates = emails.filter((email) => existingEmailSet.has(email));
           if (duplicates.length > 0) {
             ctx.addIssue({
-              code: z.ZodIssueCode.custom,
+              code: "custom",
               message: `Already invited: ${duplicates.join(", ")}`,
               path: ["invitations", index, "recipients"],
             });
@@ -124,7 +124,7 @@ export const InvitePeople = ({ existingEmails = [], canInvite = false }: InviteP
           const finalDuplicates = uniqueDuplicates.filter((email) => !existingEmailSet.has(email));
           if (finalDuplicates.length > 0) {
             ctx.addIssue({
-              code: z.ZodIssueCode.custom,
+              code: "custom",
               message: `Duplicate email: ${finalDuplicates.join(", ")}`,
               path: ["invitations", index, "recipients"],
             });

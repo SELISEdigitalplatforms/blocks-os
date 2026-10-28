@@ -50,7 +50,7 @@ export const signupLinkConfigurationFormSchema = z
       .optional()
       .or(z.literal("")),
     mode: z.enum(["Oidc", "Embedded"], {
-      required_error: "Mode is required",
+      error: (issue) => (issue.input === undefined ? "Mode is required" : undefined),
     }),
     // Required in OIDC mode only — enforced in superRefine, because a field that is
     // mandatory in one mode and forbidden in the other cannot be expressed per-field.
@@ -59,14 +59,16 @@ export const signupLinkConfigurationFormSchema = z
     joinUrl: z.string().trim().optional().or(z.literal("")),
     defaultForwardedTo: relativePath,
     credentialMode: z.enum(["Passwordless", "PasswordRequired"], {
-      required_error: "Credential mode is required",
+      error: (issue) => (issue.input === undefined ? "Credential mode is required" : undefined),
     }),
     // Defaulted rather than required: it is a preference, not an answer the author
     // has to give, and an omitted one should mean the recommended ending.
     signInAfterActivation: z.boolean().default(true),
+    // Number.isInteger, not .int(): zod 4's .int() also rejects unsafe integers and skips the
+    // superRefine below; zod 3's did neither.
     defaultLifetimeMinutes: z.coerce
-      .number({ invalid_type_error: "Must be between 5 and 10080" })
-      .int("Must be between 5 and 10080")
+      .number<number>({ error: "Must be between 5 and 10080" })
+      .refine(Number.isInteger, "Must be between 5 and 10080")
       .min(5, "Must be between 5 and 10080")
       .max(10080, "Must be between 5 and 10080"),
     // A string, not z.coerce.number(): Number("") is 0, which IAM reads as unlimited.
@@ -89,7 +91,7 @@ export const signupLinkConfigurationFormSchema = z
     if (values.mode === "Oidc") {
       if (!values.clientId) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           path: ["clientId"],
           message: "Client is required",
         });
@@ -97,13 +99,13 @@ export const signupLinkConfigurationFormSchema = z
 
       if (!values.redirectUri) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           path: ["redirectUri"],
           message: "Redirect URI is required",
         });
       } else if (!isAbsoluteHttpUrl(values.redirectUri)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           path: ["redirectUri"],
           message: "Redirect URI must be an absolute URL",
         });
@@ -116,7 +118,7 @@ export const signupLinkConfigurationFormSchema = z
     // able to send one — the fields are hidden, and this catches a stale value behind them.
     if (values.joinUrl && !isValidJoinUrl(values.joinUrl)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["joinUrl"],
         message: "Join URL must be an absolute https URL with no query or fragment",
       });
