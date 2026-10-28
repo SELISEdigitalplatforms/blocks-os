@@ -3,10 +3,12 @@ using Azure.Messaging.ServiceBus.Administration;
 using Azure.ResourceManager;
 using Azure.ResourceManager.ServiceBus;
 using Blocks.Genesis;
+using Blocks.Secrets;
 using DomainService.Shared;
 using DomainService.Shared.Entities;
 using FluentValidation;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver.Linq;
 using SeliseBlocks.LMT.Client;
@@ -20,6 +22,14 @@ namespace DomainService.ManagedService.Services
     {
         private const string FallbackEncryptionKey = "LMT";
 
+        /// <summary>
+        /// Every connection string secret carries this name; the row's reference is what links it
+        /// to a value. Read by blocks-logic's service listing through the same reference.
+        /// </summary>
+        public const string ConnectionStringSecretName = "service-bus-connection";
+
+        public const string SecretStoreUnavailableError = "secret_store_unavailable";
+
         private readonly ILogger<ServiceManagement> _logger;
         private readonly IValidator<RegisterServiceRequest> _registerServiceRequestValidator;
         private readonly IServiceManagementRepository _serviceManagementRepository;
@@ -31,7 +41,13 @@ namespace DomainService.ManagedService.Services
         private readonly string? _azureSubscriptionId;
         private readonly string? _azureResourceGroupName;
         private readonly IConfiguration configuration;
+        private readonly IServiceScopeFactory _scopeFactory;
 
+        /// <param name="scopeFactory">
+        /// This service is a singleton and <c>ISecretService</c> is scoped (it reads the
+        /// request-scoped <see cref="BlocksContext"/>), so every secret call opens its own scope
+        /// rather than capturing one service for the process lifetime.
+        /// </param>
         [ExcludeFromCodeCoverage]
         public ServiceManagement(ILogger<ServiceManagement> logger,
                                  IServiceManagementRepository serviceManagementRepository,
@@ -39,9 +55,11 @@ namespace DomainService.ManagedService.Services
                                  IBlocksSecret blocksSecret,
                                  ICacheClient cacheClient,
                                  ITenants tenants,
-                                 IConfiguration configuration)
+                                 IConfiguration configuration,
+                                 IServiceScopeFactory scopeFactory)
         {
             _logger = logger;
+            _scopeFactory = scopeFactory;
             _serviceManagementRepository = serviceManagementRepository;
             _registerServiceRequestValidator = registerServiceRequestValidator;
             _blocksSecret = blocksSecret;
@@ -91,21 +109,50 @@ namespace DomainService.ManagedService.Services
                 connectionString = await ProcessLmtAsync(service);
             }
 
-            var tenantId = ResolveEncryptionTenantId();
-            var tenant = _tenants.GetTenantByID(tenantId);
-
-            if (tenant is null)
+            // The connection string goes to Blocks Secrets in the caller's own context, whose
+            // tenant is the row's TenantId (see Map), and the row keeps only the reference.
+            string reference;
+            try
             {
-                // Encrypting under the fallback key writes a value that only decrypts while
-                // the tenant stays unresolvable, so this is worth knowing about at write time.
+                reference = await WithSecretServiceAsync(secrets => secrets.SetAsync(new SetSecretRequest
+                {
+                    Name = ConnectionStringSecretName,
+                    Type = SecretTypes.Service,
+                    Value = connectionString,
+                    Description = $"Managed service {service.ServiceId}"
+                }));
+            }
+            catch (SecretVaultException exception)
+            {
+                // Only an unreachable vault is an availability answer; any other secret failure
+                // propagates to the global SecretExceptionFilter. The exception itself is not
+                // logged: the vault's inner error can name the secret.
                 _logger.LogWarning(
-                    "Tenant {TenantId} did not resolve; encrypting service {ServiceId} with the fallback key",
-                    tenantId, service.ServiceId);
+                    "Secret store unavailable ({FailureType}); service {ServiceId} was not saved and its provisioned bus resources were left in place",
+                    exception.GetType().Name, service.ServiceId);
+
+                return new RegisterServiceResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string>
+                    {
+                        [SecretStoreUnavailableError] = "The secret store is unavailable. Try again later."
+                    }
+                };
             }
 
-            service.ServiceBusConnectionString = EncryptionHelper.Encrypt(connectionString, tenant?.TenantSalt ?? FallbackEncryptionKey);
+            service.ServiceBusConnectionStringReference = reference;
+            service.ServiceBusConnectionString = string.Empty;
 
-            await _serviceManagementRepository.SaveAsync(service);
+            try
+            {
+                await _serviceManagementRepository.SaveAsync(service);
+            }
+            catch
+            {
+                await RetireUnsavedSecretAsync(service.ServiceId, reference);
+                throw;
+            }
 
             var jsonString = JsonSerializer.Serialize(new ServiceUpdateMessage
             {
@@ -258,11 +305,13 @@ namespace DomainService.ManagedService.Services
 
             var serviceList = data.ToList();
 
-            if (tenant is null && serviceList.Count > 0)
+            var legacyCount = serviceList.Count(item => string.IsNullOrEmpty(item.ServiceBusConnectionStringReference));
+
+            if (tenant is null && legacyCount > 0)
             {
                 _logger.LogWarning(
                     "Tenant {TenantId} did not resolve; decrypting {Count} service(s) with the fallback key",
-                    tenantId, serviceList.Count);
+                    tenantId, legacyCount);
             }
 
             // After the move to the root DB, rows of one TenantId can carry two salts: the project salt
@@ -275,9 +324,25 @@ namespace DomainService.ManagedService.Services
             var extraSalts = new Lazy<List<string>>(() => BuildExtraSalts(firstSalt));
             var keySource = tenant is null ? "fallback" : "tenant salt";
 
+            var contextTenantId = BlocksContext.GetContext()?.TenantId;
+
+            // One row at a time: a batch value read fails as a whole on one bad secret, and one
+            // unreadable row must only blank that row.
             foreach (var item in serviceList)
             {
-                DecryptServiceItem(item, firstSalt, extraSalts, tenantId, keySource);
+                // A non-empty reference is authoritative and the ciphertext field is not used.
+                if (string.IsNullOrEmpty(item.ServiceBusConnectionStringReference))
+                {
+                    DecryptServiceItem(item, firstSalt, extraSalts, tenantId, keySource);
+                }
+                else
+                {
+                    item.ServiceBusConnectionString = await ReadReferencedConnectionStringAsync(item, contextTenantId);
+                    item.ServiceType ??= "backend";
+                }
+
+                // The reference never leaves this service.
+                item.ServiceBusConnectionStringReference = null;
             }
 
             return new GetAllServiceResponse
@@ -285,6 +350,100 @@ namespace DomainService.ManagedService.Services
                 Data = serviceList.AsQueryable(),
                 TotalCount = count
             };
+        }
+
+        /// <summary>
+        /// One value read for one referenced row, in the caller's context. Any failure blanks only
+        /// this row; the log carries the service id and the failure type, never the reference
+        /// (an exception message can carry it).
+        /// </summary>
+        /// <remarks>
+        /// The caller's tenant is the store the read reaches. The repository already lists only
+        /// that tenant's rows; a row of another tenant is still refused here rather than looked up
+        /// in the wrong store.
+        /// </remarks>
+        private async Task<string> ReadReferencedConnectionStringAsync(BlocksManagedService item, string? contextTenantId)
+        {
+            if (string.IsNullOrEmpty(contextTenantId)
+                || (!string.IsNullOrEmpty(item.TenantId) && !string.Equals(item.TenantId, contextTenantId, StringComparison.Ordinal)))
+            {
+                _logger.LogError(
+                    "Connection string for service {ServiceId} (tenant {RowTenantId}) was not read in tenant {ContextTenantId}; returning it empty",
+                    item.ServiceId, item.TenantId, contextTenantId);
+                return string.Empty;
+            }
+
+            try
+            {
+                return await WithSecretServiceAsync(secrets => secrets.GetValueAsync(item.ServiceBusConnectionStringReference!));
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                _logger.LogError(
+                    "Connection string for service {ServiceId} could not be read from Blocks Secrets ({FailureType}); returning it empty",
+                    item.ServiceId, exception.GetType().Name);
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// Retires the secret a registration created when the row that would reference it was not
+        /// saved. Every failure here is logged and swallowed so the save failure is what propagates.
+        /// </summary>
+        /// <remarks>
+        /// An insert can fail after the server applied it (a lost acknowledgement), and retiring the
+        /// secret then would blank a live service. So the row is read back first, and the secret is
+        /// kept when the row turns out to reference it or the read-back itself fails: an orphaned
+        /// secret is recoverable, a broken service is not.
+        /// </remarks>
+        private async Task RetireUnsavedSecretAsync(string serviceId, string reference)
+        {
+            try
+            {
+                var (rows, _) = await _serviceManagementRepository.GetAllServicesAsync(new GetAllServiceRequest
+                {
+                    Page = 0,
+                    PageSize = 1,
+                    Filter = new GetAllServiceFilter { ServiceId = serviceId }
+                });
+
+                if (rows.Any(row => string.Equals(row.ServiceBusConnectionStringReference, reference, StringComparison.Ordinal)))
+                {
+                    _logger.LogWarning(
+                        "Saving service {ServiceId} reported a failure but the row was written; its connection string secret is kept",
+                        serviceId);
+                    return;
+                }
+            }
+            catch (Exception exception)
+            {
+                _logger.LogWarning(
+                    "Service {ServiceId} could not be read back after a failed save ({FailureType}); its connection string secret is kept",
+                    serviceId, exception.GetType().Name);
+                return;
+            }
+
+            try
+            {
+                await WithSecretServiceAsync(async secrets =>
+                {
+                    await secrets.DeleteAsync(reference);
+                    return true;
+                });
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    "Service {ServiceId} was not saved and its new connection string secret could not be retired ({FailureType}). Reconcile it.",
+                    serviceId, exception.GetType().Name);
+            }
+        }
+
+        /// <summary>One secret call in its own DI scope, under the caller's context.</summary>
+        private async Task<T> WithSecretServiceAsync<T>(Func<ISecretService, Task<T>> operation)
+        {
+            using var scope = _scopeFactory.CreateScope();
+            return await operation(scope.ServiceProvider.GetRequiredService<ISecretService>());
         }
 
         private List<string> BuildExtraSalts(string firstSalt)

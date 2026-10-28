@@ -126,15 +126,17 @@ namespace Configuration.DomainService.Mail.Services
                 // Only the vault being unreachable becomes an availability answer. An
                 // authorization or state failure is a different problem with a different fix, and
                 // is left to the global filter to classify as 403/409/404.
+                // The type only: a secret-store exception, or the vault error inside it, can name
+                // the secret, and a reference must never reach a log.
                 _logger.LogError(
-                    exception,
-                    "Saving mail configuration end -- Secret store unavailable for configuration {ConfigurationId}",
+                    "Saving mail configuration end -- Secret store unavailable ({FailureType}) for configuration {ConfigurationId}",
+                    exception.GetType().Name,
                     configuration.ConfigurationId);
 
                 return MailConfigurationMutationResult.SecretStoreUnavailable();
             }
 
-            var entity = MapToEntity(configuration, existing, credential.Reference);
+            var entity = MapToEntity(configuration, existing, definition, credential.Reference);
 
             try
             {
@@ -203,13 +205,15 @@ namespace Configuration.DomainService.Mail.Services
             {
                 try
                 {
-                    retiredHere = await definition.DeleteCredentialAsync(config.ClientSecretReference, cancellationToken).ConfigureAwait(false);
+                    retiredHere = await definition
+                        .DeleteCredentialAsync(definition.CredentialReferenceOf(config), cancellationToken)
+                        .ConfigureAwait(false);
                 }
                 catch (SecretVaultException exception)
                 {
                     _logger.LogError(
-                        exception,
-                        "Deleting mail configuration end -- Secret store unavailable for configuration {ConfigurationId}",
+                        "Deleting mail configuration end -- Secret store unavailable ({FailureType}) for configuration {ConfigurationId}",
+                        exception.GetType().Name,
                         config.ItemId);
 
                     return MailConfigurationMutationResult.SecretStoreUnavailable();
@@ -265,22 +269,32 @@ namespace Configuration.DomainService.Mail.Services
                 return MailConfigurationMutationResult.Invalid(errors);
             }
 
+            // Built before the credential step so the copy's own id and name are what its new
+            // secret's description records.
+            var newConfig = CopyForDuplicate(config, definition);
+
             MailCredentialResult credential;
             try
             {
-                credential = await definition.DuplicateCredentialAsync(config, request, cancellationToken).ConfigureAwait(false);
+                credential = await definition.DuplicateCredentialAsync(config, newConfig, request, cancellationToken).ConfigureAwait(false);
             }
             catch (SecretVaultException exception)
             {
                 _logger.LogError(
-                    exception,
-                    "Duplicating mail configuration end -- Secret store unavailable for configuration {ConfigurationId}",
+                    "Duplicating mail configuration end -- Secret store unavailable ({FailureType}) for configuration {ConfigurationId}",
+                    exception.GetType().Name,
                     config.ItemId);
 
                 return MailConfigurationMutationResult.SecretStoreUnavailable();
             }
 
-            var newConfig = CopyForDuplicate(config, definition, credential.Reference);
+            if (credential.Error is { } credentialError)
+            {
+                _logger.LogInformation("Duplicating mail configuration end -- Source credential unavailable");
+                return MailConfigurationMutationResult.Invalid(credentialError.Key, credentialError.Value);
+            }
+
+            definition.ApplyCredential(newConfig, credential.Reference);
 
             try
             {
@@ -350,7 +364,8 @@ namespace Configuration.DomainService.Mail.Services
         }
 
         /// <summary>
-        /// Copies the request's non-secret fields onto the stored document.
+        /// Copies the request's non-secret fields onto the stored document, then lets the provider
+        /// store the credential reference in the field it owns.
         /// </summary>
         /// <remarks>
         /// Provider-agnostic: the flat fields stay the persistence contract for every provider,
@@ -361,6 +376,7 @@ namespace Configuration.DomainService.Mail.Services
         private static MailServerConfiguration MapToEntity(
             MailConfiguration configuration,
             MailServerConfiguration? existing,
+            IMailConfigurationProvider definition,
             string? credentialReference)
         {
             var entity = existing ?? new MailServerConfiguration
@@ -376,7 +392,10 @@ namespace Configuration.DomainService.Mail.Services
             entity.SenderName = configuration.SenderName;
             entity.SenderUserName = configuration.SenderUserName ?? string.Empty;
             entity.SenderAddress = configuration.SenderAddress;
-            entity.AccountPassword = configuration.AccountPassword ?? string.Empty;
+
+            // Never the request's plaintext: a password lives only in Blocks Secrets, and a record
+            // saved before that loses its document copy here, on the save that links its secret.
+            entity.AccountPassword = string.Empty;
             entity.EnableSSL = configuration.EnableSSL;
             entity.CreatedBy = BlocksContext.GetContext()?.UserId ?? "";
             entity.LastUpdatedBy = BlocksContext.GetContext()?.UserId ?? "";
@@ -389,17 +408,20 @@ namespace Configuration.DomainService.Mail.Services
             entity.ClientId = configuration.ClientId;
             entity.MailboxAddress = configuration.MailboxAddress;
 
-            // Only ever a reference, and only one the provider just handed back. The plaintext on
-            // the request is not assigned anywhere in this method.
-            entity.ClientSecretReference = credentialReference;
+            // Only ever a reference, and only one the provider just handed back, in the field of
+            // the provider's own mode. The plaintext on the request is not assigned anywhere here.
+            definition.ApplyCredential(entity, credentialReference);
 
             return entity;
         }
 
+        /// <summary>
+        /// The copy's non-secret fields. It carries no password and no reference until the
+        /// provider applies the copy's own credential.
+        /// </summary>
         private static MailServerConfiguration CopyForDuplicate(
             MailServerConfiguration source,
-            IMailConfigurationProvider definition,
-            string? credentialReference) => new()
+            IMailConfigurationProvider definition) => new()
             {
                 ItemId = Guid.NewGuid().ToString(),
                 CreatedDate = DateTime.UtcNow,
@@ -414,7 +436,7 @@ namespace Configuration.DomainService.Mail.Services
                 SenderName = source.SenderName,
                 SenderAddress = source.SenderAddress,
                 SenderUserName = source.SenderUserName,
-                AccountPassword = source.AccountPassword,
+                AccountPassword = string.Empty,
                 UseDefaultCredentials = source.UseDefaultCredentials,
                 SmtpClient = source.SmtpClient,
                 IsDefault = source.IsDefault && definition.DuplicateInheritsDefault,
@@ -425,8 +447,7 @@ namespace Configuration.DomainService.Mail.Services
                 SecurityMode = source.SecurityMode,
                 TenantId = source.TenantId,
                 ClientId = source.ClientId,
-                MailboxAddress = source.MailboxAddress,
-                ClientSecretReference = credentialReference
+                MailboxAddress = source.MailboxAddress
             };
 
         /// <summary>
@@ -501,11 +522,11 @@ namespace Configuration.DomainService.Mail.Services
             {
                 // Secret-free on purpose: the configuration id and the operation are enough for an
                 // operator to find both sides, and the reference must not reach a log that is
-                // shipped off-box.
+                // shipped off-box. Hence the exception type only: a not-found message carries the id.
                 _logger.LogError(
-                    exception,
-                    "Mail configuration {Operation} failed and its new secret could not be retired. Reconcile configuration {ConfigurationId}.",
+                    "Mail configuration {Operation} failed and its new secret could not be retired ({FailureType}). Reconcile configuration {ConfigurationId}.",
                     operation,
+                    exception.GetType().Name,
                     configurationId);
             }
         }
@@ -518,14 +539,15 @@ namespace Configuration.DomainService.Mail.Services
             MailServerConfiguration config,
             CancellationToken cancellationToken)
         {
-            if (string.IsNullOrEmpty(config.ClientSecretReference))
+            var reference = definition.CredentialReferenceOf(config);
+            if (string.IsNullOrEmpty(reference))
             {
                 return;
             }
 
             try
             {
-                await definition.RestoreCredentialAsync(config.ClientSecretReference, cancellationToken).ConfigureAwait(false);
+                await definition.RestoreCredentialAsync(reference, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception exception)
             {
@@ -533,8 +555,8 @@ namespace Configuration.DomainService.Mail.Services
                 // points at a secret that is now soft-deleted, which is visible and fixable,
                 // where deleting it would leave nothing to reconcile against.
                 _logger.LogError(
-                    exception,
-                    "Mail configuration delete failed and its secret could not be restored. Reconcile configuration {ConfigurationId}.",
+                    "Mail configuration delete failed and its secret could not be restored ({FailureType}). Reconcile configuration {ConfigurationId}.",
+                    exception.GetType().Name,
                     config.ItemId);
             }
         }

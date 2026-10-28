@@ -18,7 +18,9 @@ namespace Configuration.DomainService.Mail.Providers
     /// receive. Token acquisition and its scopes, Graph <c>sendMail</c>, the Graph inbox delta read
     /// and SMTP STARTTLS belong to blocks-logic, which reads
     /// <see cref="MailServerConfiguration.ClientSecretReference"/> and resolves the value at use
-    /// time. OAuth records in both directions still carry the SMTP or IMAP host and port set below;
+    /// time. In password mode the mailbox password is a linked secret too
+    /// (<see cref="LinkedPasswordCredential"/>), the same one the other password providers use.
+    /// OAuth records in both directions still carry the SMTP or IMAP host and port set below;
     /// blocks-logic goes through Graph regardless, so the stored shape did not change when the
     /// transport did. The Entra app needs <c>Mail.Send</c> for outbound and <c>Mail.Read</c> for
     /// inbound, as application permissions with admin consent.
@@ -51,6 +53,7 @@ namespace Configuration.DomainService.Mail.Providers
 
         private readonly ISecretService _secretService;
         private readonly ILogger<Office365SmtpMailConfigurationProvider> _logger;
+        private readonly LinkedPasswordCredential _password;
 
         public Office365SmtpMailConfigurationProvider(
             ISecretService secretService,
@@ -58,6 +61,7 @@ namespace Configuration.DomainService.Mail.Providers
         {
             _secretService = secretService;
             _logger = logger;
+            _password = new LinkedPasswordCredential(secretService, logger);
         }
 
         public MailServiceProvider Provider => MailServiceProvider.Office365Smtp;
@@ -189,7 +193,7 @@ namespace Configuration.DomainService.Mail.Providers
 
             if (source.AuthenticationType == MailAuthenticationType.Password)
             {
-                // A password configuration owns no secret, so a copy needs nothing new.
+                // The copy gets its own secret from the source's password; nothing is submitted.
                 return errors;
             }
 
@@ -222,8 +226,11 @@ namespace Configuration.DomainService.Mail.Providers
         {
             if (request.AuthenticationType == MailAuthenticationType.Password)
             {
-                // The password stays in the document, as it does for the other password providers.
-                return MailCredentialResult.None;
+                // Validate has already rejected a change of mode on edit, so a stored record here
+                // is a password record and its status is that of its password secret.
+                return await _password
+                    .SaveAsync(request.ConfigurationId, request.ConfigurationName, request.AccountPassword, existing, existingCredentialStatus, cancellationToken)
+                    .ConfigureAwait(false);
             }
 
             var reference = existing?.ClientSecretReference;
@@ -267,12 +274,15 @@ namespace Configuration.DomainService.Mail.Providers
 
         public async Task<MailCredentialResult> DuplicateCredentialAsync(
             MailServerConfiguration source,
+            MailServerConfiguration copy,
             DuplicateMailConfigurationRequest request,
             CancellationToken cancellationToken = default)
         {
+            ArgumentNullException.ThrowIfNull(copy);
+
             if (source.AuthenticationType == MailAuthenticationType.Password)
             {
-                return MailCredentialResult.None;
+                return await _password.DuplicateAsync(source, copy, cancellationToken).ConfigureAwait(false);
             }
 
             var created = await _secretService.SetAsync(
@@ -281,11 +291,33 @@ namespace Configuration.DomainService.Mail.Providers
                     Name = SecretName,
                     Type = SecretTypes.Service,
                     Value = request.ClientSecret!,
-                    Description = DescribeFor(source.ItemId, source.Name + " - Copy")
+                    Description = DescribeFor(copy.ItemId, copy.Name)
                 },
                 cancellationToken).ConfigureAwait(false);
 
             return new MailCredentialResult { Reference = created, Created = true };
+        }
+
+        public string? CredentialReferenceOf(MailServerConfiguration entity)
+        {
+            ArgumentNullException.ThrowIfNull(entity);
+
+            return entity.AuthenticationType == MailAuthenticationType.Password
+                ? entity.AccountPasswordReference
+                : entity.ClientSecretReference;
+        }
+
+        public void ApplyCredential(MailServerConfiguration entity, string? credentialReference)
+        {
+            ArgumentNullException.ThrowIfNull(entity);
+
+            if (entity.AuthenticationType == MailAuthenticationType.Password)
+            {
+                LinkedPasswordCredential.Apply(entity, credentialReference);
+                return;
+            }
+
+            entity.ClientSecretReference = credentialReference;
         }
 
         public async Task<bool> DeleteCredentialAsync(string? credentialReference, CancellationToken cancellationToken = default)
@@ -310,7 +342,7 @@ namespace Configuration.DomainService.Mail.Providers
         {
             if (entity.AuthenticationType == MailAuthenticationType.Password)
             {
-                return null;
+                return await _password.ResolveStatusAsync(entity, cancellationToken).ConfigureAwait(false);
             }
 
             return await LinkedSecretStatus

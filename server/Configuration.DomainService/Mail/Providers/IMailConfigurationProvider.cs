@@ -113,12 +113,38 @@ namespace Configuration.DomainService.Mail.Providers
             CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Provisions an <b>independent</b> credential for a copy of <paramref name="source"/>.
+        /// Provisions an <b>independent</b> credential for <paramref name="copy"/>, a copy of
+        /// <paramref name="source"/> that is not yet written.
         /// </summary>
+        /// <param name="copy">
+        /// The copy as it will be stored, already carrying its own id and name, so a secret
+        /// description names the copy rather than the source.
+        /// </param>
+        /// <returns>
+        /// A result with <see cref="MailCredentialResult.Error"/> set when the source's credential
+        /// cannot be carried over; no credential was created and no copy may be written.
+        /// </returns>
         Task<MailCredentialResult> DuplicateCredentialAsync(
             MailServerConfiguration source,
+            MailServerConfiguration copy,
             DuplicateMailConfigurationRequest request,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// The reference field this provider owns on <paramref name="entity"/>: the one a delete
+        /// retires and a failed delete restores. Null when the record links no secret.
+        /// </summary>
+        string? CredentialReferenceOf(MailServerConfiguration entity);
+
+        /// <summary>
+        /// Stores a reference a credential operation returned in the field this provider owns.
+        /// </summary>
+        /// <remarks>
+        /// The orchestrator never assigns a reference field or a plaintext itself, so a provider's
+        /// mode decides where the reference lands: <c>AccountPasswordReference</c> for a password
+        /// (which also blanks <c>AccountPassword</c>), <c>ClientSecretReference</c> for OAuth.
+        /// </remarks>
+        void ApplyCredential(MailServerConfiguration entity, string? credentialReference);
 
         /// <summary>
         /// Retires the owned credential. Called before the configuration is deleted, and as
@@ -169,5 +195,14 @@ namespace Configuration.DomainService.Mail.Providers
         public string? Reference { get; init; }
 
         public bool Created { get; init; }
+
+        /// <summary>
+        /// A field error that stops the operation before anything is written, keyed by request
+        /// field. Null on success.
+        /// </summary>
+        public KeyValuePair<string, string>? Error { get; init; }
+
+        public static MailCredentialResult Rejected(string field, string message) =>
+            new() { Error = new KeyValuePair<string, string>(field, message) };
     }
 }

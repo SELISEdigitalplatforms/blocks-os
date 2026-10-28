@@ -10,7 +10,11 @@ namespace XUnitTest.TestSupport
     /// </summary>
     public sealed class RecordingLogger<T> : ILogger<T>
     {
-        public List<(LogLevel Level, string Message)> Entries { get; } = new();
+        /// <summary>
+        /// The formatted message, plus the exception passed alongside it: a test that a value never
+        /// reaches a log has to look at both, because a sink renders the exception too.
+        /// </summary>
+        public List<(LogLevel Level, string Message, Exception? Exception)> Entries { get; } = new();
 
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
@@ -22,6 +26,6 @@ namespace XUnitTest.TestSupport
             TState state,
             Exception? exception,
             Func<TState, Exception?, string> formatter) =>
-            Entries.Add((logLevel, formatter(state, exception)));
+            Entries.Add((logLevel, formatter(state, exception), exception));
     }
 }

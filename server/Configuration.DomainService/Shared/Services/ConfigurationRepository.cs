@@ -254,9 +254,9 @@ namespace Configuration.DomainService.Shared.Services
             return scope.ForView(await scope.Apply(collection).SortByDescending(doc => doc.IsDefault).ToListAsync());
         }
 
-        public async Task<List<MailServerConfiguration>> GetMailConfigurationsByClientSecretReferenceAsync(string clientSecretReference)
+        public async Task<List<MailServerConfiguration>> GetMailConfigurationsBySecretReferenceAsync(string secretReference)
         {
-            if (string.IsNullOrWhiteSpace(clientSecretReference))
+            if (string.IsNullOrWhiteSpace(secretReference))
             {
                 // An empty reference is what every configuration without a secret carries, so
                 // matching on it would report unrelated configurations as dependents.
@@ -264,9 +264,12 @@ namespace Configuration.DomainService.Shared.Services
             }
 
             var collection = _dbContextProvider.GetCollection<MailServerConfiguration>(_mailConfigurationCollectionName);
-            var filter = Builders<MailServerConfiguration>.Filter.Eq(mc => mc.ClientSecretReference, clientSecretReference);
+            // Either reference field: an Office 365 OAuth client secret or a mailbox password.
+            var filter = Builders<MailServerConfiguration>.Filter.Or(
+                Builders<MailServerConfiguration>.Filter.Eq(mc => mc.ClientSecretReference, secretReference),
+                Builders<MailServerConfiguration>.Filter.Eq(mc => mc.AccountPasswordReference, secretReference));
 
-            var scope = await _dataAccess.ReadAsync(OsSchemas.MailServerConfiguration, filter, "ConfigurationRepository.GetMailConfigurationsByClientSecretReferenceAsync");
+            var scope = await _dataAccess.ReadAsync(OsSchemas.MailServerConfiguration, filter, "ConfigurationRepository.GetMailConfigurationsBySecretReferenceAsync");
             return scope.Granted ? await scope.Apply(collection).ToListAsync() : new List<MailServerConfiguration>();
         }
 
