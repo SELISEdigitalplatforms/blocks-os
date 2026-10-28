@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { checkWebConfig, parseWebConfig, type IWebConfigFields } from "./push-web-config";
 
-const API_KEY = "AIzaSyA1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q";
+const API_KEY = `test-web-api-key-${"x".repeat(22)}`;
 const SENDER = "123456789012";
 const APP_ID = `1:${SENDER}:web:abc123def456`;
 const VAPID = "B".repeat(87);
