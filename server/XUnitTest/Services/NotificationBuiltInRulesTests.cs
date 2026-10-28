@@ -50,12 +50,17 @@ namespace XUnitTest.Services
             _tenants.Setup(t => t.GetTenantByID(OtherTenant)).Returns(NewTenant(OtherTenant, false));
         }
 
+        private readonly XUnitTest.TestHelpers.InMemoryKeyValueStore _pushKv = new();
+
         private ConfigurationService Service() => new(
             _repo.Object,
             _validator.Object,
             _messageClient.Object,
             _tenants.Object,
             Mock.Of<Configuration.DomainService.Notification.Services.INotificationAudienceGrantGuard>(),
+            new Configuration.DomainService.Notification.Push.NotificationPushOptionsService(
+                new Configuration.DomainService.Notification.Push.NotificationPushOptionsRepository(_pushKv),
+                NullLogger<Configuration.DomainService.Notification.Push.NotificationPushOptionsService>.Instance),
             NullLogger<ConfigurationService>.Instance);
 
         private static Tenant NewTenant(string id, bool isRoot) => new()

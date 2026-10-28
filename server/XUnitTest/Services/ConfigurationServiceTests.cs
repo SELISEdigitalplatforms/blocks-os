@@ -23,12 +23,17 @@ namespace XUnitTest.Services
         private readonly Mock<IMessageClient> _messageClient = new();
         private readonly Mock<INotificationAudienceGrantGuard> _grantGuard = new();
 
+        private readonly XUnitTest.TestHelpers.InMemoryKeyValueStore _pushKv = new();
+
         private ConfigurationService Service() => new(
             _repo.Object,
             _notifValidator.Object,
             _messageClient.Object,
             new Mock<ITenants>().Object,
             _grantGuard.Object,
+            new Configuration.DomainService.Notification.Push.NotificationPushOptionsService(
+                new Configuration.DomainService.Notification.Push.NotificationPushOptionsRepository(_pushKv),
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<Configuration.DomainService.Notification.Push.NotificationPushOptionsService>.Instance),
             Microsoft.Extensions.Logging.Abstractions.NullLogger<ConfigurationService>.Instance);
 
         private static ValidationResult Valid() => new();
@@ -70,7 +75,7 @@ namespace XUnitTest.Services
 
             response.IsSuccess.Should().BeTrue();
             saved.Should().NotBeNull();
-            saved!.Name.Should().Be("notif");
+            saved.Name.Should().Be("notif");
             saved.CreatedBy.Should().Be("u1");
         }
 
@@ -87,14 +92,16 @@ namespace XUnitTest.Services
         }
 
         [Fact]
-        public async Task GetNotificationConfiguration_DelegatesToRepository()
+        public async Task GetNotificationConfiguration_KeepsEveryStoredField_AndHasNoPushOptionsWhenNoneAreStored()
         {
-            var expected = new NotificationConfiguration { ItemId = "n-1" };
+            var expected = new NotificationConfiguration { ItemId = "n-1", Name = "n", NotifyMethod = "m", RateLimitPerMinute = 5 };
             _repo.Setup(r => r.GetNotificationConfigurationByIdAsync("n-1")).ReturnsAsync(expected);
 
             var result = await Service().GetNotificationConfigurationAsync(new GetNotificationConfigurationRequest { ItemId = "n-1" });
 
-            result.Should().BeSameAs(expected);
+            result.Should().BeEquivalentTo(expected);
+            result.PushPlatforms.Should().BeNull();
+            result.PushOptions.Should().BeNull();
         }
 
         [Fact]

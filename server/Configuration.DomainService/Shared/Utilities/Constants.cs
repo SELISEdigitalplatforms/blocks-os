@@ -79,6 +79,14 @@ namespace Configuration.DomainService.Shared.Utilities
         public const string NotificationChannelRequired = "Notification_Channel_Required";
         public const string NotificationPushKeysRequired = "Notification_Push_Keys_Required";
         public const string NotificationRateLimitOutOfRange = "Notification_Rate_Limit_Out_Of_Range";
+        public const string NotificationPushPlatformRequired = "Notification_Push_Platform_Required";
+        public const string NotificationPushPlatformInvalid = "Notification_Push_Platform_Invalid";
+        public const string NotificationPushOptionInvalid = "Notification_Push_Option_Invalid";
+        public const string NotificationPushLinkInvalid = "Notification_Push_Link_Invalid";
+        public const string NotificationPushExpiryOutOfRange = "Notification_Push_Expiry_Out_Of_Range";
+        public const string NotificationPushColorInvalid = "Notification_Push_Color_Invalid";
+        public const string NotificationPushBadgeOutOfRange = "Notification_Push_Badge_Out_Of_Range";
+        public const string NotificationPushOptionsNotStored = "Notification_Push_Options_Not_Stored";
 
         /// <summary>Adds the notification-config queue to a worker's message configuration (Rabbit or Azure).</summary>
         public static MessageConfiguration WithNotificationConfigurationQueue(MessageConfiguration configuration)

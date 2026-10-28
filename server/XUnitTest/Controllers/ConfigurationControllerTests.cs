@@ -349,7 +349,7 @@ namespace XUnitTest.Controllers
         [Fact]
         public async Task Get_DelegatesToService()
         {
-            var expected = new NotificationConfiguration { ItemId = "n1" };
+            var expected = new Configuration.DomainService.Notification.ResponseModel.NotificationConfigurationDetail { ItemId = "n1" };
             _service.Setup(s => s.GetNotificationConfigurationAsync(It.IsAny<GetNotificationConfigurationRequest>()))
                     .ReturnsAsync(expected);
 

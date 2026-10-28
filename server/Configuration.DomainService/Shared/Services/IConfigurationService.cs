@@ -12,7 +12,7 @@ namespace Configuration.DomainService.Shared.Services
 
         Task<BaseResponse> SaveNotificationConfigurationAsync(SaveNotificationConfigurationRequest configuration);
         Task<GetNotificationConfigurationsResponse> GetNotificationConfigurationsAsync(GetNotificationConfigurationsRequest request);
-        Task<NotificationConfiguration> GetNotificationConfigurationAsync(GetNotificationConfigurationRequest request);
+        Task<NotificationConfigurationDetail?> GetNotificationConfigurationAsync(GetNotificationConfigurationRequest request);
         Task<BaseResponse> DeleteNotificationConfigurationAsync(DeleteNotificationConfigurationRequest request);
 
         #endregion

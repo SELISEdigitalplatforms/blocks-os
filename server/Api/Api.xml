@@ -272,6 +272,12 @@
             accepted at all.
             </summary>
         </member>
+        <member name="T:BlocksOs.Api.Controllers.PushSettingsController">
+            <summary>
+            Mobile push (Firebase) settings of the project. Routing only; every rule is in <see cref="T:Configuration.DomainService.Notification.Push.IPushSettingsService"/>.
+            No action ever returns a Firebase value.
+            </summary>
+        </member>
         <member name="T:BlocksOs.Api.Controllers.ReleaseController">
             <summary>
             Release and repository operations, served out of blocks-os. This is the move of what blocks-logic

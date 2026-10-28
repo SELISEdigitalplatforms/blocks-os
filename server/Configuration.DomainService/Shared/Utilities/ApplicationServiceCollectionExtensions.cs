@@ -31,6 +31,8 @@ using Configuration.DomainService.Integration.RequestModel;
 using Configuration.DomainService.Integration.Services;
 using Configuration.DomainService.Integration.Validators;
 using Configuration.DomainService.Shared.Secrets;
+using Configuration.DomainService.Notification.Push;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Configuration.DomainService.Shared.Utilities
 {
@@ -51,6 +53,8 @@ namespace Configuration.DomainService.Shared.Utilities
             serviceCollection.AddSingleton<IIntegrationConnectService, IntegrationConnectService>();
             serviceCollection.AddSingleton<IIamClient, IamClient>();
             serviceCollection.AddSingleton<INotificationAudienceGrantGuard, NotificationAudienceGrantGuard>();
+            serviceCollection.AddSingleton<INotificationPushOptionsRepository, NotificationPushOptionsRepository>();
+            serviceCollection.AddSingleton<INotificationPushOptionsService, NotificationPushOptionsService>();
             serviceCollection.AddSingleton<IIntegrationRateLimiter, IntegrationRateLimiter>();
 
             // Storage configurations: settings in KeyValueStores, secrets in SecretStore (blocks-data driver store).
@@ -63,6 +67,12 @@ namespace Configuration.DomainService.Shared.Utilities
             // because they read the request-scoped BlocksContext. A Singleton here would either
             // fail to resolve (scope validation) or capture the first request's identity forever.
             serviceCollection.AddScoped<ICaptchaConfigService, CaptchaConfigService>();
+
+            // Mobile push settings: scoped because the secret writer uses the scoped ISecretService.
+            serviceCollection.TryAddSingleton(TimeProvider.System);
+            serviceCollection.AddSingleton<IPushSettingsRepository, PushSettingsRepository>();
+            serviceCollection.AddScoped<IPushSecretWriter, PushSecretWriter>();
+            serviceCollection.AddScoped<IPushSettingsService, PushSettingsService>();
 
             // Mail configuration is scoped for the same reason: the Office 365 provider
             // definition resolves the client secret through ISecretService. The provider

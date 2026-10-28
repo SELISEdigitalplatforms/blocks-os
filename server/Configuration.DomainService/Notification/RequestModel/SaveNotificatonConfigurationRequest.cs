@@ -1,4 +1,5 @@
 using Blocks.Genesis.Entities.Os;
+using Configuration.DomainService.Notification.Push;
 
 namespace Configuration.DomainService.Notification.RequestModel
 {
@@ -50,5 +51,11 @@ namespace Configuration.DomainService.Notification.RequestModel
 
         /// <summary>Most sends per minute, 0 to 600. 0 means the notifier's default.</summary>
         public int? RateLimitPerMinute { get; set; }
+
+        /// <summary>Push platforms ("android", "ios", "web"); empty = all three. Null = not sent, the stored value is kept.</summary>
+        public List<string>? PushPlatforms { get; set; }
+
+        /// <summary>Web link and per-platform push options. Null = not sent, the stored value is kept.</summary>
+        public NotificationPushOptions? PushOptions { get; set; }
     }
 }

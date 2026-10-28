@@ -1,3 +1,4 @@
+using Configuration.DomainService.Notification.Push;
 using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Notification.Services;
 using Configuration.DomainService.Shared.Utilities;
@@ -100,6 +101,24 @@ namespace Configuration.DomainService.Notification.Validators
                 .WithMessage(Constants.NotificationPushKeysRequired)
                 .OverridePropertyName(nameof(SaveNotificationConfigurationRequest.PushTemplate))
                 .When(x => x.PushEnabled == true && x.PushTemplate is not null);
+
+            AddPushOptionRules();
+        }
+
+        /// <summary>Push platforms and per-platform options (shared contract §2).</summary>
+        private void AddPushOptionRules()
+        {
+            RuleFor(x => x.PushPlatforms!)
+                .Must(p => p.All(v => PushOptionRules.Platforms.Contains(v, StringComparer.Ordinal)))
+                .WithMessage(Constants.NotificationPushPlatformInvalid)
+                .When(x => x.PushPlatforms is not null);
+
+            RuleFor(x => x.PushPlatforms!)
+                .Must(p => p.Count > 0)
+                .WithMessage(Constants.NotificationPushPlatformRequired)
+                .When(x => x.PushEnabled == true && x.PushPlatforms is not null);
+
+            RuleFor(x => x.PushOptions!).SetValidator(new NotificationPushOptionsValidator()).When(x => x.PushOptions is not null);
         }
 
         private async Task<bool> IsUniqueNameAsync(string name, CancellationToken cancellationToken)

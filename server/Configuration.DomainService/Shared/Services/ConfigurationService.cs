@@ -6,6 +6,7 @@ using Configuration.DomainService.Notification.ResponseModel;
 using Blocks.Genesis.Entities.Data;
 using Blocks.Genesis.Entities.Os;
 using Configuration.DomainService.Notification.Propagation;
+using Configuration.DomainService.Notification.Push;
 using Configuration.DomainService.Notification.Services;
 using Microsoft.Extensions.Logging;
 
@@ -18,6 +19,7 @@ namespace Configuration.DomainService.Shared.Services
         private readonly IMessageClient _messageClient;
         private readonly ITenants _tenants;
         private readonly INotificationAudienceGrantGuard _grantGuard;
+        private readonly INotificationPushOptionsService _pushOptions;
         private readonly ILogger<ConfigurationService> _logger;
 
 
@@ -26,8 +28,10 @@ namespace Configuration.DomainService.Shared.Services
                                     IMessageClient messageClient,
                                     ITenants tenants,
                                     INotificationAudienceGrantGuard grantGuard,
+                                    INotificationPushOptionsService pushOptions,
                                     ILogger<ConfigurationService> logger)
         {
+            _pushOptions = pushOptions;
             _grantGuard = grantGuard;
             _tenants = tenants;
             _logger = logger;
@@ -58,7 +62,9 @@ namespace Configuration.DomainService.Shared.Services
             var storedIsBuiltIn = stored?.IsBuiltIn == true;
             var isRoot = NotificationSaveRules.NeedsRootCheck(stored, configuration) && IsRootCaller();
 
-            var refusal = NotificationSaveRules.FindRefusal(stored, configuration, isRoot) ?? await FindGrantRefusalAsync(stored, configuration, isRoot);
+            var refusal = NotificationSaveRules.FindRefusal(stored, configuration, isRoot)
+                ?? await FindGrantRefusalAsync(stored, configuration, isRoot)
+                ?? await FindPushOptionsRefusalAsync(stored, configuration, isRoot);
             if (refusal is not null)
             {
                 return Refused(refusal.Value.Field, refusal.Value.Key);
@@ -73,6 +79,13 @@ namespace Configuration.DomainService.Shared.Services
             }
 
             await _configurationRepository.SaveNotificationConfigurationAsync(repoConfig);
+
+            // After the config: options without a config would be read for nothing. The config save stands if this
+            // fails; saving again stores the options (same values, idempotent).
+            if (!NotificationSaveRules.IsLocked(stored, configuration, isRoot) && !await _pushOptions.SaveAsync(configuration))
+            {
+                return Refused(nameof(configuration.PushOptions), Constants.NotificationPushOptionsNotStored);
+            }
 
             // Only a root change to a built-in config reaches the other tenants. Custom configs never travel.
             if (isRoot && (repoConfig.IsBuiltIn || storedIsBuiltIn))
@@ -95,14 +108,31 @@ namespace Configuration.DomainService.Shared.Services
             return key is null ? null : new SaveRefusal(nameof(request.Audience), key);
         }
 
+        /// <summary>A personal (audience-locked) notice: push platforms and options stay as stored, like the push message.</summary>
+        private async Task<SaveRefusal?> FindPushOptionsRefusalAsync(NotificationConfiguration? stored, SaveNotificationConfigurationRequest request, bool isRoot)
+        {
+            if (!NotificationSaveRules.IsLocked(stored, request, isRoot) || !await _pushOptions.ChangesStoredAsync(request))
+            {
+                return null;
+            }
+
+            return new SaveRefusal(nameof(request.PushOptions), Constants.NotificationAudienceIsLocked);
+        }
+
         public async Task<GetNotificationConfigurationsResponse> GetNotificationConfigurationsAsync(GetNotificationConfigurationsRequest request)
         {
             return await _configurationRepository.GetNotificationConfigurationsAsync(request);
         }
 
-        public async Task<NotificationConfiguration> GetNotificationConfigurationAsync(GetNotificationConfigurationRequest request)
+        public async Task<NotificationConfigurationDetail?> GetNotificationConfigurationAsync(GetNotificationConfigurationRequest request)
         {
-            return await _configurationRepository.GetNotificationConfigurationByIdAsync(request.ItemId);
+            var configuration = await _configurationRepository.GetNotificationConfigurationByIdAsync(request.ItemId);
+            if (configuration is null)
+            {
+                return null;
+            }
+
+            return NotificationConfigurationDetail.From(configuration, await _pushOptions.GetAsync(configuration.Name));
         }
 
         public async Task<BaseResponse> DeleteNotificationConfigurationAsync(DeleteNotificationConfigurationRequest request)
@@ -113,7 +143,9 @@ namespace Configuration.DomainService.Shared.Services
 
             if (stored?.IsBuiltIn != true)
             {
-                return await _configurationRepository.DeleteNotificationConfigurationAsync(request!);
+                var deleted = await _configurationRepository.DeleteNotificationConfigurationAsync(request!);
+                await DeletePushOptionsAsync(stored, deleted);
+                return deleted;
             }
 
             if (!IsRootCaller())
@@ -122,12 +154,21 @@ namespace Configuration.DomainService.Shared.Services
             }
 
             var response = await _configurationRepository.DeleteNotificationConfigurationAsync(request!);
+            await DeletePushOptionsAsync(stored, response);
             if (!response.IsSuccess)
             {
                 return response;
             }
 
             return await PublishBuiltInChangeAsync(NotificationConfigurationChangeAction.Delete, stored);
+        }
+
+        private async Task DeletePushOptionsAsync(NotificationConfiguration? stored, BaseResponse deleteResponse)
+        {
+            if (stored is not null && deleteResponse.IsSuccess)
+            {
+                await _pushOptions.DeleteAsync(stored.Name);
+            }
         }
 
         private static BaseResponse Refused(string field, string errorKey) => new()

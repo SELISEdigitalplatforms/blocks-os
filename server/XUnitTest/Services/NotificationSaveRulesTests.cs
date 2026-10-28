@@ -7,6 +7,7 @@ using Blocks.Genesis;
 using Blocks.Genesis.Entities.Os;
 using Configuration.DomainService.Integration.Services;
 using Configuration.DomainService.Notification.Propagation;
+using Configuration.DomainService.Notification.Push;
 using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Notification.Services;
 using Configuration.DomainService.Notification.Validators;
@@ -46,12 +47,17 @@ namespace XUnitTest.Services
             _tenants.Setup(t => t.GetTenantByID(OtherTenant)).Returns(NewTenant(OtherTenant, false));
         }
 
+        private readonly XUnitTest.TestHelpers.InMemoryKeyValueStore _pushKv = new();
+
         private ConfigurationService Service() => new(
             _repo.Object,
             new NotificationConfigurationValidator(_repo.Object),
             _messageClient.Object,
             _tenants.Object,
             new NotificationAudienceGrantGuard(_iam.Object),
+            new Configuration.DomainService.Notification.Push.NotificationPushOptionsService(
+                new Configuration.DomainService.Notification.Push.NotificationPushOptionsRepository(_pushKv),
+                NullLogger<Configuration.DomainService.Notification.Push.NotificationPushOptionsService>.Instance),
             NullLogger<ConfigurationService>.Instance);
 
         private static Tenant NewTenant(string id, bool isRoot) => new()
@@ -402,6 +408,200 @@ namespace XUnitTest.Services
 
             response.IsSuccess.Should().BeFalse();
             response.Errors!.Keys.Should().ContainSingle(k => k.StartsWith("Audience"));
+        }
+
+        // ---------------- push platforms and options (KV notification-push-options:{Name}) ----------------
+
+        private const string PushConfigName = "order-shipped";
+        private const string PushConfigId = "c-push";
+        private const string PlatformAndroid = "android";
+        private const string PlatformWeb = "web";
+        private const string UrgencyHigh = "high";
+        private const string StoredWebLink = "https://a.example.com";
+
+        private static SaveNotificationConfigurationRequest CustomWithPush(Action<SaveNotificationConfigurationRequest> change)
+        {
+            var request = new SaveNotificationConfigurationRequest
+            {
+                Name = PushConfigName, NotifyMethod = PushConfigName, IsUpdateRequest = true, LiveEnabled = true, PushEnabled = true,
+                PushTemplate = new NotificationPushTemplate { TitleKey = "T", BodyKey = "B" }
+            };
+            change(request);
+            return request;
+        }
+
+        private NotificationPushOptionsRecord? StoredOptions(string name) =>
+            _pushKv.Rows.TryGetValue(NotificationPushOptionsRecord.KeyOf(name), out var row) ? (NotificationPushOptionsRecord)row : null;
+
+        [Fact]
+        public async Task PushOptions_AreStoredInTheirOwnKvEntry_AfterTheConfig()
+        {
+            using var _ = new BlocksTestContext(tenantId: OtherTenant);
+            var request = CustomWithPush(r =>
+            {
+                r.PushPlatforms = [PlatformWeb, PlatformAndroid, PlatformAndroid];
+                r.PushOptions = new NotificationPushOptions
+                {
+                    WebLink = "https://app.example.com/orders/{orderId}",
+                    Android = new AndroidPushOptions { Priority = UrgencyHigh, TtlSeconds = 3600, Color = "#1A2B3C", ChannelId = "" },
+                    Web = new WebPushOptions { Urgency = "low", RequireInteraction = true }
+                };
+            });
+
+            var response = await Service().SaveNotificationConfigurationAsync(request);
+
+            response.IsSuccess.Should().BeTrue();
+            _saved.Should().NotBeNull();
+            var stored = StoredOptions(PushConfigName)!;
+            stored.ConfigName.Should().Be(PushConfigName);
+            stored.Platforms.Should().Equal(PlatformAndroid, PlatformWeb);
+            stored.Android!.ChannelId.Should().BeNull("an empty text is stored as not set");
+            stored.Web!.Urgency.Should().Be("low");
+        }
+
+        [Fact]
+        public async Task PushOptions_NotSent_KeepTheStoredOnes()
+        {
+            using var _ = new BlocksTestContext(tenantId: OtherTenant);
+            _pushKv.Rows[NotificationPushOptionsRecord.KeyOf(PushConfigName)] = new NotificationPushOptionsRecord { ConfigName = PushConfigName, Platforms = ["ios"], WebLink = StoredWebLink };
+
+            var response = await Service().SaveNotificationConfigurationAsync(CustomWithPush(r => r.PushPlatforms = [PlatformAndroid]));
+
+            response.IsSuccess.Should().BeTrue();
+            var stored = StoredOptions(PushConfigName)!;
+            stored.Platforms.Should().Equal(PlatformAndroid);
+            stored.WebLink.Should().Be(StoredWebLink);
+        }
+
+        [Fact]
+        public async Task PushOn_WithAnEmptyPlatformList_IsRefused()
+        {
+            using var _ = new BlocksTestContext(tenantId: OtherTenant);
+
+            await AssertRefusedAsync(CustomWithPush(r => r.PushPlatforms = []), Constants.NotificationPushPlatformRequired);
+        }
+
+        [Fact]
+        public async Task UnknownPushPlatform_IsRefused()
+        {
+            using var _ = new BlocksTestContext(tenantId: OtherTenant);
+
+            await AssertRefusedAsync(CustomWithPush(r => r.PushPlatforms = ["windows"]), Constants.NotificationPushPlatformInvalid);
+        }
+
+        [Fact]
+        public async Task WebUrgency_OutsideTheList_IsRefused()
+        {
+            using var _ = new BlocksTestContext(tenantId: OtherTenant);
+            var request = CustomWithPush(r => r.PushOptions = new NotificationPushOptions { Web = new WebPushOptions { Urgency = "urgent" } });
+
+            await AssertRefusedAsync(request, Constants.NotificationPushOptionInvalid);
+        }
+
+        [Fact]
+        public async Task Expiry_Over28Days_IsRefused()
+        {
+            using var _ = new BlocksTestContext(tenantId: OtherTenant);
+            var request = CustomWithPush(r => r.PushOptions = new NotificationPushOptions { Ios = new IosPushOptions { TtlSeconds = PushOptionRules.TtlMaxSeconds + 1 } });
+
+            await AssertRefusedAsync(request, Constants.NotificationPushExpiryOutOfRange);
+        }
+
+        [Fact]
+        public async Task WebLink_OverPlainHttp_IsRefused()
+        {
+            using var _ = new BlocksTestContext(tenantId: OtherTenant);
+            var request = CustomWithPush(r => r.PushOptions = new NotificationPushOptions { WebLink = "http://app.example.com" });
+
+            await AssertRefusedAsync(request, Constants.NotificationPushLinkInvalid);
+        }
+
+        [Fact]
+        public async Task AndroidColor_NotRrggbb_IsRefused()
+        {
+            using var _ = new BlocksTestContext(tenantId: OtherTenant);
+            var request = CustomWithPush(r => r.PushOptions = new NotificationPushOptions { Android = new AndroidPushOptions { Color = "red" } });
+
+            await AssertRefusedAsync(request, Constants.NotificationPushColorInvalid);
+        }
+
+        [Fact]
+        public async Task PersonalNotice_TenantCannotChangePushOptions()
+        {
+            using var _ = new BlocksTestContext(tenantId: OtherTenant);
+            var stored = BuiltIn(locked: true);
+            Stored(stored);
+            _pushKv.Rows[NotificationPushOptionsRecord.KeyOf(stored.Name)] = new NotificationPushOptionsRecord { ConfigName = stored.Name, Platforms = [PlatformAndroid] };
+            var request = SameAs(stored);
+            request.PushPlatforms = [PlatformAndroid, PlatformWeb];
+
+            await AssertRefusedAsync(request, Constants.NotificationAudienceIsLocked);
+            StoredOptions(stored.Name)!.Platforms.Should().Equal(PlatformAndroid);
+        }
+
+        [Fact]
+        public async Task PersonalNotice_SameOptionsSentBack_IsNotAChange()
+        {
+            using var _ = new BlocksTestContext(tenantId: OtherTenant);
+            var stored = BuiltIn(locked: true);
+            Stored(stored);
+            _pushKv.Rows[NotificationPushOptionsRecord.KeyOf(stored.Name)] = new NotificationPushOptionsRecord { ConfigName = stored.Name, Platforms = [PlatformAndroid] };
+            var request = SameAs(stored);
+            request.PushPlatforms = [PlatformAndroid];
+
+            var response = await Service().SaveNotificationConfigurationAsync(request);
+
+            response.IsSuccess.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task PushOptionsStoreFails_ConfigStaysSaved_AndTheAnswerSaysSo()
+        {
+            using var _ = new BlocksTestContext(tenantId: OtherTenant);
+            _pushKv.FailOnSet = true;
+
+            var response = await Service().SaveNotificationConfigurationAsync(CustomWithPush(r => r.PushPlatforms = ["ios"]));
+
+            response.IsSuccess.Should().BeFalse();
+            response.Errors.Should().ContainKey(nameof(SaveNotificationConfigurationRequest.PushOptions))
+                .WhoseValue.Should().Be(Constants.NotificationPushOptionsNotStored);
+            _saved.Should().NotBeNull();
+        }
+
+        [Fact]
+        public async Task DeletingAConfig_DeletesItsPushOptions()
+        {
+            using var _ = new BlocksTestContext(tenantId: OtherTenant);
+            var stored = new NotificationConfiguration { ItemId = PushConfigId, Name = PushConfigName };
+            _repo.Setup(r => r.GetNotificationConfigurationByIdAsync(PushConfigId)).ReturnsAsync(stored);
+            _repo.Setup(r => r.DeleteNotificationConfigurationAsync(It.IsAny<DeleteNotificationConfigurationRequest>()))
+                 .ReturnsAsync(new BaseResponse { IsSuccess = true });
+            _pushKv.Rows[NotificationPushOptionsRecord.KeyOf(PushConfigName)] = new NotificationPushOptionsRecord { ConfigName = PushConfigName };
+
+            var response = await Service().DeleteNotificationConfigurationAsync(new DeleteNotificationConfigurationRequest { ItemId = PushConfigId });
+
+            response.IsSuccess.Should().BeTrue();
+            StoredOptions(PushConfigName).Should().BeNull();
+        }
+
+        [Fact]
+        public async Task Get_ReturnsTheConfigFlat_WithItsPushOptions()
+        {
+            var stored = new NotificationConfiguration { ItemId = PushConfigId, Name = PushConfigName, PushEnabled = true, Description = "d" };
+            _repo.Setup(r => r.GetNotificationConfigurationByIdAsync(PushConfigId)).ReturnsAsync(stored);
+            _pushKv.Rows[NotificationPushOptionsRecord.KeyOf(PushConfigName)] = new NotificationPushOptionsRecord
+            {
+                ConfigName = PushConfigName, Platforms = [PlatformWeb], WebLink = StoredWebLink, Web = new WebPushOptions { Urgency = UrgencyHigh }
+            };
+
+            var detail = await Service().GetNotificationConfigurationAsync(new GetNotificationConfigurationRequest { ItemId = PushConfigId });
+
+            detail!.ItemId.Should().Be(PushConfigId);
+            detail.Description.Should().Be("d");
+            detail.PushEnabled.Should().BeTrue();
+            detail.PushPlatforms.Should().Equal(PlatformWeb);
+            detail.PushOptions!.WebLink.Should().Be(StoredWebLink);
+            detail.PushOptions.Web!.Urgency.Should().Be(UrgencyHigh);
         }
     }
 }

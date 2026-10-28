@@ -34,7 +34,7 @@ namespace BlocksOs.Api.Controllers
 
         [HttpGet]
         [ProtectedEndPoint("blocks-os::notification::gets")]
-        public async Task<NotificationConfiguration> Get([FromQuery] GetNotificationConfigurationRequest request)
+        public async Task<NotificationConfigurationDetail?> Get([FromQuery] GetNotificationConfigurationRequest request)
         {
             return await _configurationService.GetNotificationConfigurationAsync(request);
         }
