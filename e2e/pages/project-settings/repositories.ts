@@ -14,6 +14,78 @@ export async function verifyEmptyStateFlow(page: Page) {
   await expect(page.getByPlaceholder("Search repositories...")).toHaveCount(0);
 }
 
+function repositoryRows(page: Page) {
+  // Data rows only: the header row has column headers, not cells.
+  return page.getByRole("table").getByRole("row").filter({ has: page.getByRole("cell") });
+}
+
+/** The repositories a project shows: [] for the empty state, else the connected names. */
+export type RepositoriesState = string[];
+
+/**
+ * A project shows the "No repositories yet" empty state until a repository is
+ * connected, and the connected list after that. The shared E2E project has
+ * had one connected since 12/10/2026, so assert whichever the project is in:
+ * the empty state when none is connected, otherwise the list with each
+ * repository row and its controls. Waits for one of the two to render
+ * instead of reading the page before the list has loaded.
+ */
+export async function verifyEmptyStateOrConnectedListFlow(page: Page): Promise<RepositoriesState> {
+  const emptyState = page.getByText("No repositories yet");
+  const firstRow = repositoryRows(page).first();
+  await expect(emptyState.or(firstRow)).toBeVisible({ timeout: 15000 });
+
+  if ((await repositoryRows(page).count()) === 0) {
+    await verifyEmptyStateFlow(page);
+    return [];
+  }
+
+  await expect(emptyState).toHaveCount(0);
+  await expect(page.getByPlaceholder("Search repositories...")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add repository" })).toBeEnabled();
+  for (const header of ["Name", "Repo Link", "Source", "Created", "Actions"]) {
+    await expect(page.getByRole("columnheader", { name: header, exact: true })).toBeVisible();
+  }
+
+  const rows = repositoryRows(page);
+  const names: string[] = [];
+  for (let i = 0; i < (await rows.count()); i++) {
+    const row = rows.nth(i);
+    const cells = row.getByRole("cell");
+    await expect(cells).toHaveCount(5);
+    const name = (await cells.nth(0).innerText()).trim();
+    expect(name, `repository row ${i + 1} has a name`).toMatch(/^\S+\/\S+$/);
+    await expect(cells.nth(1)).toHaveText(/^https?:\/\/\S+$/);
+    const link = (await cells.nth(1).innerText()).trim();
+    expect(link.endsWith(`/${name}`), `repository link ${link} points at ${name}`).toBe(true);
+    await expect(cells.nth(2)).not.toBeEmpty();
+    await expect(cells.nth(3)).toHaveText(/^\d{1,2}\/\d{1,2}\/\d{4}$/);
+    const removeButton = row.getByRole("button", { name: `Remove ${name}`, exact: true });
+    await expect(removeButton).toBeVisible();
+    await expect(removeButton).toBeEnabled();
+    names.push(name);
+  }
+  return names;
+}
+
+/** After the dialogs close, the page shows the same state it started in. */
+export async function verifyRepositoriesUnchangedFlow(page: Page, before: RepositoriesState) {
+  await expect(page.getByRole("heading", { name: "Repositories" })).toBeVisible({
+    timeout: 15000,
+  });
+  if (before.length === 0) {
+    await expect(page.getByText("No repositories yet")).toBeVisible({ timeout: 15000 });
+    return;
+  }
+  await expect(page.getByText("No repositories yet")).toHaveCount(0);
+  await expect(repositoryRows(page)).toHaveCount(before.length, { timeout: 15000 });
+  for (const name of before) {
+    await expect(
+      repositoryRows(page).filter({ has: page.getByRole("cell", { name, exact: true }) }),
+    ).toHaveCount(1);
+  }
+}
+
 export type RepositoryDialogKind = "connect" | "select";
 
 export async function openAddRepositoryDialogFlow(page: Page): Promise<RepositoryDialogKind> {
@@ -102,11 +174,4 @@ export async function exerciseSelectRepositoryDialogFlow(
   await page.getByRole("button", { name: "Cancel", exact: true }).click({ timeout: 15000 });
   await expect(selectHeading).toBeHidden({ timeout: 10000 });
   return true;
-}
-
-export async function verifyEmptyStateAfterFlow(page: Page) {
-  await expect(page.getByRole("heading", { name: "Repositories" })).toBeVisible({
-    timeout: 15000,
-  });
-  await expect(page.getByText("No repositories yet")).toBeVisible({ timeout: 15000 });
 }

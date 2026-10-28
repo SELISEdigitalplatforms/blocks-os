@@ -57,7 +57,12 @@ export async function createRoleFlow(page: Page, roleName: string, roleSlug: str
   });
 }
 
-export async function searchRoleByNameFlow(page: Page, roleName: string) {
+/**
+ * Enters `roleName` in the Roles search and waits until its row is listed.
+ * The list shows 10 roles per page and the shared E2E project has more than
+ * that, so a role can sit on a later page of the unfiltered list.
+ */
+async function findRoleBySearch(page: Page, roleName: string) {
   // Creating a role invalidates the list, which shows skeletons while it
   // refetches, and a slow or failed roles request on a shared dev backend
   // then renders as "No roles found". Re-enter the search until the new role
@@ -71,7 +76,11 @@ export async function searchRoleByNameFlow(page: Page, roleName: string) {
     await searchInput.fill(roleName);
     await expect(editRoleButton).toBeVisible({ timeout: 10_000 });
   }).toPass({ timeout: 45_000 });
-  await searchInput.fill("");
+}
+
+export async function searchRoleByNameFlow(page: Page, roleName: string) {
+  await findRoleBySearch(page, roleName);
+  await page.getByPlaceholder("Search...").first().fill("");
 }
 
 export async function organizationFilterFlow(page: Page) {
@@ -152,8 +161,10 @@ export async function editRoleNameAndDescriptionFlow(
   originalName: string,
   updatedName: string,
 ) {
+  // The search keeps the role (and, after the rename below, "<name> Updated")
+  // listed whatever page it would sit on in the unfiltered list.
+  await findRoleBySearch(page, originalName);
   const editRoleButton = page.getByRole("button", { name: `Edit role ${originalName}` });
-  await expect(editRoleButton).toBeVisible({ timeout: 15_000 });
   await editRoleButton.click();
   await expect(page.getByRole("heading", { name: "Update Role" })).toBeVisible();
 
