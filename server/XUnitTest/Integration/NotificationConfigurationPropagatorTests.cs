@@ -452,7 +452,10 @@ namespace XUnitTest.Integration
             var root = BuiltIn();
             root.Scope = NotificationScope.Console;
             await PutKvAsync(RootTenantDb, root);
-            await PutKvAsync(TenantA, BuiltIn("old copy"));
+            var consoleCopy = BuiltIn("old copy");
+            consoleCopy.Scope = NotificationScope.Console;
+            await PutKvAsync(TenantA, consoleCopy);
+            await PutKvAsync(SeedDb, BuiltIn("seed copy"));
             await PutKvAsync(TenantB, new NotificationConfiguration { ItemId = "mine", Name = Name, NotifyMethod = "custom" });
 
             var summary = await Propagator().PropagateAsync(Event());
@@ -462,6 +465,51 @@ namespace XUnitTest.Integration
             (await KvCountAsync(SeedDb)).Should().Be(0);
             (await GetKvAsync(TenantB))!.NotifyMethod.Should().Be("custom", "a tenant's own config is never deleted");
             (await KvCountAsync(RootTenantDb)).Should().Be(1, "the root tenant keeps it");
+        }
+
+        [Theory]
+        [InlineData(NotificationScope.App, false, false)]
+        [InlineData(NotificationScope.Both, false, false)]
+        [InlineData(NotificationScope.Console, true, false)]
+        [InlineData(NotificationScope.Console, false, true)]
+        public async Task ConsoleScope_KeepsATenantCopyTheProjectChoseToKeep(NotificationScope ownScope, bool disabled, bool hasAudience)
+        {
+            await SeedRegistryAsync();
+            var root = BuiltIn("v2");
+            root.Scope = NotificationScope.Console;
+            await PutKvAsync(RootTenantDb, root);
+            var copy = BuiltIn();
+            copy.Scope = ownScope;
+            copy.IsDisabled = disabled;
+            copy.Audience = hasAudience ? SelectedRole("tenant-role") : null;
+            await PutKvAsync(TenantA, copy);
+
+            var summary = await Propagator().PropagateAsync(Event());
+
+            summary.Results.Single(r => r.TargetId == "A").Outcome.Should().Be(NotificationPropagationOutcome.Kept);
+            var kept = (await GetKvAsync(TenantA))!;
+            kept.Scope.Should().Be(ownScope);
+            kept.Description.Should().Be("v1", "a kept copy is left as the project has it");
+        }
+
+        [Fact]
+        public async Task ConsoleScope_RemovesAnOldCollectionConsoleCopy_AndKeepsAnAppOne()
+        {
+            await SeedRegistryAsync();
+            var root = BuiltIn();
+            root.Scope = NotificationScope.Console;
+            await PutKvAsync(RootTenantDb, root);
+            var consoleCopy = BuiltIn();
+            consoleCopy.Scope = NotificationScope.Console;
+            await TenantA.GetCollection<NotificationConfiguration>("NotificationConfigurations").InsertOneAsync(consoleCopy);
+            await TenantDisabled.GetCollection<NotificationConfiguration>("NotificationConfigurations").InsertOneAsync(BuiltIn());
+
+            var summary = await Propagator().PropagateAsync(Event());
+
+            summary.Results.Single(r => r.TargetId == "A").Outcome.Should().Be(NotificationPropagationOutcome.Deleted);
+            summary.Results.Single(r => r.TargetId == "OFF").Outcome.Should().Be(NotificationPropagationOutcome.Kept);
+            (await TenantA.GetCollection<NotificationConfiguration>("NotificationConfigurations").CountDocumentsAsync(FilterDefinition<NotificationConfiguration>.Empty)).Should().Be(0);
+            (await TenantDisabled.GetCollection<NotificationConfiguration>("NotificationConfigurations").CountDocumentsAsync(FilterDefinition<NotificationConfiguration>.Empty)).Should().Be(1);
         }
 
         [Fact]
