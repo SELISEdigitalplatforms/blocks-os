@@ -14,25 +14,17 @@ import {
 import { ConfigsTableShell } from "@/components/configs-table-shell/configs-table-shell";
 import { EmptyState } from "@/components/ui-kits/empty-state";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { Bell, EllipsisVertical, Pencil, Trash } from "lucide-react";
-import NewNotificationConfiguration from "../modals/new-notification-configuration";
-import {
-  NOTIFICATION_CONFIG_ERROR_MESSAGES,
-  notificationImportances,
-  notificationKinds,
-  notificationTypes,
-} from "../constants/notification.constant";
+import { Bell, Plus, Smartphone } from "lucide-react";
+import { NOTIFICATION_CONFIG_ERROR_MESSAGES } from "../constants/notification.constant";
+import { NOTIFICATION_TEXT } from "../constants/notification-ui.constant";
+import { matchesReceivers, matchesSendTo } from "../utils/notification-labels";
+import { NotificationConfigRow } from "./notification-config-row";
+import { NotificationConfigPage } from "./notification-config-page";
+import { PushSettingsPage } from "./push-settings-page";
 import { getErrorMessage, isErrorWithErrors } from "@/lib/error";
-import { Badge } from "@/components/ui-kits/badge/badge";
 import type { INotificationConfigRow } from "../models/notification-config.model";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui-kits/dropdown-menu/dropdown-menu";
 import { toast } from "@/hooks/use-toast";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { Button } from "@/components/ui-kits/button/button";
@@ -41,15 +33,16 @@ import {
   NotificationConfigsFilterToolBar,
   useNotificationConfigsFilterQueryParams,
 } from "./notification-configs-filter-toolbar";
-import { useQueryState, parseAsBoolean } from "nuqs";
+import { useQueryState, parseAsBoolean, parseAsString } from "nuqs";
 
 const columns = [
-  { key: "name", label: "Name" },
-  { key: "importance", label: "Importance" },
-  { key: "kind", label: "Kind" },
-  { key: "sourceService", label: "Service" },
-  { key: "notificationType", label: "Receiver" },
-  { key: "status", label: "Status" },
+  { key: "name", label: NOTIFICATION_TEXT.columns.name },
+  { key: "sendTo", label: NOTIFICATION_TEXT.columns.sendTo },
+  { key: "receivers", label: NOTIFICATION_TEXT.columns.receivers },
+  { key: "inApp", label: NOTIFICATION_TEXT.columns.inApp },
+  { key: "push", label: NOTIFICATION_TEXT.columns.push },
+  { key: "inbox", label: NOTIFICATION_TEXT.columns.inbox },
+  { key: "status", label: NOTIFICATION_TEXT.columns.status },
   { key: "actions", label: "" },
 ];
 
@@ -57,14 +50,13 @@ const SKELETON_ROWS = ["s1", "s2", "s3", "s4", "s5"];
 
 interface NotificationConfigurationListProps {
   isLoading?: boolean;
+  /** Opens the edit page of a notification. */
+  onEdit: (itemId: string) => void;
 }
 
 /** "blocks-iam" reads as "iam": every built-in service carries the same prefix. */
 export const serviceLabel = (service?: string | null): string =>
   (service ?? "").replace(/^blocks-/, "");
-
-const labelOf = (items: { label: string; value: number }[], value?: number) =>
-  items.find((x) => x.value === value)?.label;
 
 const describeDeleteError = (error: unknown): string => {
   if (isErrorWithErrors(error)) {
@@ -73,12 +65,6 @@ const describeDeleteError = (error: unknown): string => {
   }
   return JSON.stringify(error);
 };
-
-const IMPORTANCE_VARIANTS = {
-  1: "secondary",
-  2: "warning",
-  3: "error",
-} as const;
 
 export const distinctServices = (rows: INotificationConfigRow[] = []): string[] =>
   Array.from(new Set(rows.map((row) => row.sourceService).filter((x): x is string => !!x))).sort(
@@ -90,15 +76,20 @@ export const filterConfigRows = (
   rows: INotificationConfigRow[],
   importance: string,
   service: string,
+  sendTo = "",
+  receivers = "",
 ): INotificationConfigRow[] =>
   rows.filter(
     (row) =>
       (!importance || String(row.importance ?? 0) === importance) &&
-      (!service || row.sourceService === service),
+      (!service || row.sourceService === service) &&
+      matchesSendTo(row, sendTo) &&
+      matchesReceivers(row, receivers),
   );
 
 const NotificationConfigurationList: React.FC<NotificationConfigurationListProps> = ({
   isLoading: isLoadingProp,
+  onEdit,
 }) => {
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const { queryParams, setQueryParams } = useNotificationConfigsFilterQueryParams();
@@ -113,9 +104,10 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
     data?.configurations ?? [],
     queryParams.notificationImportance,
     queryParams.notificationService,
+    queryParams.notificationSendTo,
+    queryParams.notificationReceivers,
   );
 
-  const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedConfigData, setSelectedConfigData] = useState<INotificationConfigRow | null>(null);
 
@@ -124,11 +116,6 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
 
   const onPageChangeHandler = (page: number) => {
     setQueryParams((params) => ({ ...params, notificationPage: page }));
-  };
-
-  const onEditNotificationConfig = (rowData: INotificationConfigRow) => {
-    setSelectedConfigData(rowData);
-    setIsEditOpen(true);
   };
 
   const onDeleteNotificationConfig = (rowData: INotificationConfigRow) => {
@@ -206,98 +193,12 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
                 </TableRow>
               )}
               {visibleRows.map((config) => (
-                <TableRow key={config.itemId}>
-                  <TableCell className="max-w-[420px]">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate font-medium">{config.name}</span>
-                      {config.isBuiltIn && (
-                        <Badge variant="info" className="w-fit shrink-0 px-1.5 py-0">
-                          Built-in
-                        </Badge>
-                      )}
-                    </div>
-                    {config.description && (
-                      <div
-                        className="truncate text-xs text-medium-emphasis"
-                        title={config.description}
-                      >
-                        {config.description}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {config.importance ? (
-                      <Badge
-                        className="w-fit px-1.5 py-0"
-                        variant={
-                          IMPORTANCE_VARIANTS[
-                            config.importance as keyof typeof IMPORTANCE_VARIANTS
-                          ] ?? "outline"
-                        }
-                      >
-                        {labelOf(notificationImportances, config.importance)}
-                      </Badge>
-                    ) : (
-                      <span className="text-low-emphasis">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {config.kind ? (
-                      labelOf(notificationKinds, config.kind)
-                    ) : (
-                      <span className="text-low-emphasis">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {config.sourceService ? (
-                      serviceLabel(config.sourceService)
-                    ) : (
-                      <span className="text-low-emphasis">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell>{labelOf(notificationTypes, config.notificationType)}</TableCell>
-                  <TableCell>
-                    <span className="inline-flex items-center gap-1.5">
-                      <span
-                        className={`h-2 w-2 rounded-full ${
-                          config.isDisabled ? "bg-low-emphasis" : "bg-success"
-                        }`}
-                      />
-                      {config.isDisabled ? "Off" : "On"}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-5 w-5 p-0">
-                          <EllipsisVertical width={20} height={20} />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          className="cursor-pointer"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onEditNotificationConfig(config);
-                          }}
-                        >
-                          <Pencil className="mr-2 h-4 w-4" />
-                          <span>Edit</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="cursor-pointer text-error"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDeleteNotificationConfig(config);
-                          }}
-                        >
-                          <Trash className="mr-2 h-4 w-4" />
-                          <span>Delete</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
+                <NotificationConfigRow
+                  key={config.itemId}
+                  config={config}
+                  onEdit={(row) => onEdit(row.itemId)}
+                  onDelete={onDeleteNotificationConfig}
+                />
               ))}
             </TableBody>
           </Table>
@@ -316,17 +217,6 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
           />
         )}
       </Dialog>
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        {selectedConfigData && (
-          <NewNotificationConfiguration
-            key={`${selectedConfigData.itemId}-${isEditOpen}`}
-            dialogTitle="Edit notification"
-            previousData={selectedConfigData}
-            isEdit={true}
-            onClose={setIsEditOpen}
-          />
-        )}
-      </Dialog>
     </>
   );
 };
@@ -336,6 +226,11 @@ export default NotificationConfigurationList;
 export function NotificationConfigurationListPage() {
   const [addOpen, setAddOpen] = useQueryState(
     "notificationConfig",
+    parseAsBoolean.withDefault(false),
+  );
+  const [editId, setEditId] = useQueryState("notificationEdit", parseAsString.withDefault(""));
+  const [pushOpen, setPushOpen] = useQueryState(
+    "notificationPush",
     parseAsBoolean.withDefault(false),
   );
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
@@ -351,20 +246,35 @@ export function NotificationConfigurationListPage() {
   const hasFilters =
     !!queryParams.notificationSearch ||
     !!queryParams.notificationImportance ||
-    !!queryParams.notificationService;
+    !!queryParams.notificationService ||
+    !!queryParams.notificationSendTo ||
+    !!queryParams.notificationReceivers;
   const isEmpty = !loading && configurations.length === 0 && !hasFilters;
   const serviceOptions = distinctServices(configurations);
 
+  const backToList = () => {
+    setAddOpen(false);
+    setEditId("");
+    setPushOpen(false);
+  };
+
+  if (pushOpen) return <PushSettingsPage onClose={backToList} />;
+  if (addOpen || editId) {
+    return (
+      <NotificationConfigPage
+        itemId={editId}
+        onClose={backToList}
+        onSetUpPush={() => {
+          setAddOpen(false);
+          setEditId("");
+          setPushOpen(true);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <NewNotificationConfiguration
-          key={addOpen ? "open" : "closed"}
-          dialogTitle="Add notification"
-          onClose={() => setAddOpen(false)}
-          isEdit={false}
-        />
-      </Dialog>
       {isEmpty ? (
         <EmptyState
           icon={Bell}
@@ -373,8 +283,21 @@ export function NotificationConfigurationListPage() {
         />
       ) : (
         <>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-medium-emphasis">{NOTIFICATION_TEXT.listSubtitle}</p>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setPushOpen(true)}>
+                <Smartphone className="mr-2 h-4 w-4" />
+                <span>{NOTIFICATION_TEXT.mobilePush}</span>
+              </Button>
+              <Button type="button" size="sm" onClick={() => setAddOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                <span>{NOTIFICATION_TEXT.newNotification}</span>
+              </Button>
+            </div>
+          </div>
           <NotificationConfigsFilterToolBar serviceOptions={serviceOptions} />
-          <NotificationConfigurationList isLoading={loading} />
+          <NotificationConfigurationList isLoading={loading} onEdit={setEditId} />
         </>
       )}
     </div>

@@ -12,6 +12,9 @@ const h = vi.hoisted(() => ({
   setQueryParams: vi.fn(),
   importance: "",
   service: "",
+  sendTo: "",
+  receivers: "",
+  onEdit: vi.fn(),
 }));
 
 vi.mock("@seliseblocks/genesis-os", () => ({
@@ -32,15 +35,20 @@ vi.mock("./notification-configs-filter-toolbar", () => ({
       notificationSearch: "",
       notificationImportance: h.importance,
       notificationService: h.service,
+      notificationSendTo: h.sendTo,
+      notificationReceivers: h.receivers,
     },
     setQueryParams: h.setQueryParams,
   }),
   NotificationConfigsFilterToolBar: () => <div data-testid="filter-toolbar" />,
 }));
-vi.mock("../modals/new-notification-configuration", () => ({
-  default: ({ dialogTitle }: { dialogTitle: string }) => (
-    <div data-testid="notification-config-modal">{dialogTitle}</div>
+vi.mock("./notification-config-page", () => ({
+  NotificationConfigPage: ({ itemId }: { itemId: string }) => (
+    <div data-testid="config-page">{itemId || "new"}</div>
   ),
+}));
+vi.mock("./push-settings-page", () => ({
+  PushSettingsPage: () => <div data-testid="push-page" />,
 }));
 vi.mock("@/hooks/use-toast", () => ({ toast: h.toast }));
 
@@ -81,6 +89,8 @@ describe("NotificationConfigurationList", () => {
     h.isDeletePending = false;
     h.importance = "";
     h.service = "";
+    h.sendTo = "";
+    h.receivers = "";
     h.useGetNotificationConfigs.mockReturnValue({
       data: { configurations, totalCount: 2 },
       isLoading: false,
@@ -90,30 +100,45 @@ describe("NotificationConfigurationList", () => {
   });
 
   it("renders a skeleton table while loading", () => {
-    render(<NotificationConfigurationList isLoading />, { wrapper });
+    render(<NotificationConfigurationList isLoading onEdit={h.onEdit} />, { wrapper });
     expect(document.body.querySelectorAll("[class*='animate-pulse']").length).toBeGreaterThan(0);
   });
 
-  it("renders configuration rows with short receiver labels and status", () => {
-    render(<NotificationConfigurationList />, { wrapper });
-    expect(screen.getByText(REALTIME_ALERTS)).toBeTruthy();
-    expect(screen.getByText("Broadcast")).toBeTruthy();
-    expect(screen.getByText("Users")).toBeTruthy();
+  it("shows the columns of the receiver model with who gets it and the channels", () => {
+    render(<NotificationConfigurationList onEdit={h.onEdit} />, { wrapper });
+    const headers = screen.getAllByRole("columnheader").map((c) => c.textContent);
+    expect(headers.slice(0, 7)).toEqual([
+      "Name",
+      "Send to",
+      "Receivers",
+      "In-app",
+      "Push",
+      "Inbox",
+      "Status",
+    ]);
+    const row = screen.getByText(REALTIME_ALERTS).closest("tr") as HTMLElement;
+    expect(within(row).getByText("Project users")).toBeTruthy();
+    expect(within(row).getByText("Affected users only")).toBeTruthy();
+    // Old rows keep in-app on and push off; inbox follows the saved flag.
+    expect(within(row).getAllByLabelText("Yes")).toHaveLength(2);
+    expect(within(row).getAllByLabelText("No")).toHaveLength(1);
     expect(screen.getAllByText("On")).toHaveLength(2);
   });
 
-  it("opens the edit modal from the row actions", async () => {
+  it("opens the edit page from the row and from the row actions", async () => {
     const user = userEvent.setup();
-    render(<NotificationConfigurationList />, { wrapper });
+    render(<NotificationConfigurationList onEdit={h.onEdit} />, { wrapper });
+    await user.click(screen.getByText(REALTIME_ALERTS));
+    expect(h.onEdit).toHaveBeenLastCalledWith("c-1");
     const rowMenus = screen.getAllByRole("button").filter((b) => b.className.includes("h-5 w-5"));
-    await user.click(rowMenus[0]);
+    await user.click(rowMenus[1]);
     await user.click(await screen.findByText("Edit"));
-    expect(await screen.findByText("Edit notification")).toBeTruthy();
+    expect(h.onEdit).toHaveBeenLastCalledWith("c-2");
   });
 
   it("deletes a configuration after confirmation", async () => {
     const user = userEvent.setup();
-    render(<NotificationConfigurationList />, { wrapper });
+    render(<NotificationConfigurationList onEdit={h.onEdit} />, { wrapper });
     const rowMenus = screen.getAllByRole("button").filter((b) => b.className.includes("h-5 w-5"));
     await user.click(rowMenus[0]);
     await user.click(await screen.findByText("Delete"));
@@ -133,7 +158,7 @@ describe("NotificationConfigurationList", () => {
   it("reports a destructive toast when deletion fails", async () => {
     h.deleteConfig.mockRejectedValue(new Error("nope"));
     const user = userEvent.setup();
-    render(<NotificationConfigurationList />, { wrapper });
+    render(<NotificationConfigurationList onEdit={h.onEdit} />, { wrapper });
     const rowMenus = screen.getAllByRole("button").filter((b) => b.className.includes("h-5 w-5"));
     await user.click(rowMenus[0]);
     await user.click(await screen.findByText("Delete"));
@@ -158,6 +183,33 @@ describe("NotificationConfigurationListPage", () => {
     });
     render(<NotificationConfigurationListPage />, { wrapper });
     expect(screen.getByText("No notifications yet")).toBeTruthy();
+  });
+
+  it("shows the edit page when a notification id is in the address", () => {
+    h.useGetNotificationConfigs.mockReturnValue({
+      data: { configurations, totalCount: 2 },
+      isLoading: false,
+      isFetching: false,
+    });
+    render(<NotificationConfigurationListPage />, {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <NuqsTestingAdapter searchParams="?notificationEdit=c-2">{children}</NuqsTestingAdapter>
+      ),
+    });
+    expect(screen.getByTestId("config-page").textContent).toBe("c-2");
+    expect(screen.queryByText(REALTIME_ALERTS)).toBeNull();
+  });
+
+  it("opens the mobile push page from the list", async () => {
+    h.useGetNotificationConfigs.mockReturnValue({
+      data: { configurations, totalCount: 2 },
+      isLoading: false,
+      isFetching: false,
+    });
+    const user = userEvent.setup();
+    render(<NotificationConfigurationListPage />, { wrapper });
+    await user.click(screen.getByRole("button", { name: "Mobile push" }));
+    expect(await screen.findByTestId("push-page")).toBeTruthy();
   });
 
   it("renders the configuration list when configurations exist", () => {
@@ -210,6 +262,8 @@ describe("NotificationConfigurationList built-in metadata", () => {
     vi.clearAllMocks();
     h.importance = "";
     h.service = "";
+    h.sendTo = "";
+    h.receivers = "";
     h.useGetNotificationConfigs.mockReturnValue({
       data: { configurations: rows, totalCount: 3 },
       isLoading: false,
@@ -217,24 +271,58 @@ describe("NotificationConfigurationList built-in metadata", () => {
     });
   });
 
-  it("marks built-in rows and shows importance, kind, service and description", () => {
-    render(<NotificationConfigurationList />, { wrapper });
-    expect(screen.getAllByText("Built-in")).toHaveLength(2);
-    expect(screen.getByText("High")).toBeTruthy();
-    expect(screen.getByText("Low")).toBeTruthy();
-    expect(screen.getByText("Security")).toBeTruthy();
-    expect(screen.getByText("Job")).toBeTruthy();
-    expect(screen.getByText("iam")).toBeTruthy();
+  it("tags only custom rows and shows the description of a built-in", () => {
+    render(<NotificationConfigurationList onEdit={h.onEdit} />, { wrapper });
+    expect(screen.getAllByText("Custom")).toHaveLength(1);
     expect(screen.getByText("Sent on reset")).toBeTruthy();
   });
 
+  it("marks a personal notice with a lock and its owner-only receivers", () => {
+    h.useGetNotificationConfigs.mockReturnValue({
+      data: {
+        configurations: [{ ...rows[0], audienceLocked: true, name: "iam-new-login" }],
+        totalCount: 1,
+      },
+      isLoading: false,
+      isFetching: false,
+    });
+    render(<NotificationConfigurationList onEdit={h.onEdit} />, { wrapper });
+    const row = screen.getByText("iam-new-login").closest("tr") as HTMLElement;
+    expect(within(row).getByLabelText("Personal notice")).toBeTruthy();
+    expect(within(row).getByText(/Account owner only/)).toBeTruthy();
+  });
+
+  it("filters by Send to and Receivers over the loaded rows", () => {
+    h.sendTo = "1";
+    h.receivers = "2";
+    h.useGetNotificationConfigs.mockReturnValue({
+      data: {
+        configurations: [
+          { ...rows[0], name: "to-console", scope: 1, audience: { level: 2, userIds: ["u"], roles: [], permissions: [] } },
+          { ...rows[0], name: "to-both", scope: 2, audience: { level: 2, userIds: [], roles: ["r"], permissions: [] } },
+          { ...rows[0], name: "project-only", scope: 0, audience: { level: 2, userIds: [], roles: [], permissions: [] } },
+          { ...rows[0], name: "console-all", scope: 1, audience: { level: 1, userIds: [], roles: [], permissions: [] } },
+        ],
+        totalCount: 4,
+      },
+      isLoading: false,
+      isFetching: false,
+    });
+    render(<NotificationConfigurationList onEdit={h.onEdit} />, { wrapper });
+    expect(screen.getByText("to-console")).toBeTruthy();
+    expect(screen.getByText("to-both")).toBeTruthy();
+    expect(screen.queryByText("project-only")).toBeNull();
+    expect(screen.queryByText("console-all")).toBeNull();
+    expect(screen.getAllByText("Selected (1)")).toHaveLength(2);
+  });
+
   it("marks only the disabled row as Off", () => {
-    render(<NotificationConfigurationList />, { wrapper });
+    render(<NotificationConfigurationList onEdit={h.onEdit} />, { wrapper });
     expect(screen.getAllByText("Off")).toHaveLength(1);
   });
 
   it("shows a legacy row without the new fields as a plain custom row", () => {
-    render(<NotificationConfigurationList />, { wrapper });
+    render(<NotificationConfigurationList onEdit={h.onEdit} />, { wrapper });
     const row = screen.getByText(LEGACY_CUSTOM).closest("tr") as HTMLElement;
     expect(within(row).queryByText("Built-in")).toBeNull();
     expect(within(row).queryByText("Off")).toBeNull();
@@ -242,7 +330,7 @@ describe("NotificationConfigurationList built-in metadata", () => {
 
   it("filters by importance over the loaded rows", () => {
     h.importance = "3";
-    render(<NotificationConfigurationList />, { wrapper });
+    render(<NotificationConfigurationList onEdit={h.onEdit} />, { wrapper });
     expect(screen.getByText(PASSWORD_RESET)).toBeTruthy();
     expect(screen.queryByText(EXPORT_READY)).toBeNull();
     expect(screen.queryByText(LEGACY_CUSTOM)).toBeNull();
@@ -250,18 +338,18 @@ describe("NotificationConfigurationList built-in metadata", () => {
 
   it("filters by service and shows a message when nothing matches", () => {
     h.service = "blocks-os";
-    const { unmount } = render(<NotificationConfigurationList />, { wrapper });
+    const { unmount } = render(<NotificationConfigurationList onEdit={h.onEdit} />, { wrapper });
     expect(screen.getByText(EXPORT_READY)).toBeTruthy();
     expect(screen.queryByText(PASSWORD_RESET)).toBeNull();
     unmount();
     h.service = "nope";
-    render(<NotificationConfigurationList />, { wrapper });
+    render(<NotificationConfigurationList onEdit={h.onEdit} />, { wrapper });
     expect(screen.getByText("No configurations match the current filters.")).toBeTruthy();
   });
 
   it("offers Edit and Delete for a built-in row; the server decides who may use them", async () => {
     const user = userEvent.setup();
-    render(<NotificationConfigurationList />, { wrapper });
+    render(<NotificationConfigurationList onEdit={h.onEdit} />, { wrapper });
     const row = screen.getByText(PASSWORD_RESET).closest("tr") as HTMLElement;
     await user.click(within(row).getByRole("button"));
     expect(await screen.findByText("Edit")).toBeTruthy();
@@ -270,7 +358,7 @@ describe("NotificationConfigurationList built-in metadata", () => {
 
   it("keeps Delete for a custom row", async () => {
     const user = userEvent.setup();
-    render(<NotificationConfigurationList />, { wrapper });
+    render(<NotificationConfigurationList onEdit={h.onEdit} />, { wrapper });
     const row = screen.getByText(LEGACY_CUSTOM).closest("tr") as HTMLElement;
     await user.click(within(row).getByRole("button"));
     expect(await screen.findByText("Delete")).toBeTruthy();
@@ -281,7 +369,7 @@ describe("NotificationConfigurationList built-in metadata", () => {
       errors: { ItemId: "Only_Root_Tenant_Can_Manage_Built_In_Notification_Configuration" },
     });
     const user = userEvent.setup();
-    render(<NotificationConfigurationList />, { wrapper });
+    render(<NotificationConfigurationList onEdit={h.onEdit} />, { wrapper });
     const row = screen.getByText(PASSWORD_RESET).closest("tr") as HTMLElement;
     await user.click(within(row).getByRole("button"));
     await user.click(await screen.findByText("Delete"));

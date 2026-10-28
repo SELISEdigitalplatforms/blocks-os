@@ -7,6 +7,8 @@ const h = vi.hoisted(() => ({
     notificationSearch: "",
     notificationImportance: "",
     notificationService: "",
+    notificationSendTo: "",
+    notificationReceivers: "",
     notificationPage: 0,
     notificationPageSize: 10,
   },
@@ -53,6 +55,18 @@ vi.mock("@/components/filter-toolbar", () => ({
         >
           change service
         </button>
+        <button
+          data-testid="change-send-to"
+          onClick={() => (props.onChange as (k: string, v: unknown) => void)("sendTo", "1")}
+        >
+          change send to
+        </button>
+        <button
+          data-testid="change-receivers"
+          onClick={() => (props.onChange as (k: string, v: unknown) => void)("receivers", "2")}
+        >
+          change receivers
+        </button>
         <button data-testid="reset" onClick={() => (props.onReset as () => void)()}>
           reset
         </button>
@@ -98,6 +112,23 @@ describe("NotificationConfigsFilterToolBar", () => {
     expect(second({})).toMatchObject({ notificationService: IAM_SERVICE, notificationPage: 0 });
   });
 
+  it("maps Send to and Receivers changes onto their query params and resets the page", () => {
+    render(<NotificationConfigsFilterToolBar />);
+    fireEvent.click(screen.getByTestId("change-send-to"));
+    fireEvent.click(screen.getByTestId("change-receivers"));
+    const first = h.setQueryParams.mock.calls[0][0] as (p: object) => object;
+    const second = h.setQueryParams.mock.calls[1][0] as (p: object) => object;
+    expect(first({})).toMatchObject({ notificationSendTo: "1", notificationPage: 0 });
+    expect(second({})).toMatchObject({ notificationReceivers: "2", notificationPage: 0 });
+  });
+
+  it("clears every filter on reset", () => {
+    render(<NotificationConfigsFilterToolBar />);
+    fireEvent.click(screen.getByTestId("reset"));
+    const updater = h.setQueryParams.mock.calls[0][0] as (p: object) => object;
+    expect(updater({})).toMatchObject({ notificationSendTo: "", notificationReceivers: "" });
+  });
+
   it("clears importance and service on reset", () => {
     render(<NotificationConfigsFilterToolBar />);
     fireEvent.click(screen.getByTestId("reset"));
@@ -108,8 +139,8 @@ describe("NotificationConfigsFilterToolBar", () => {
   it("offers the service filter only when services are known", () => {
     const keys = () => (h.lastProps?.filters as { key: string }[]).map((f) => f.key);
     render(<NotificationConfigsFilterToolBar />);
-    expect(keys()).toEqual(["search", "importance"]);
+    expect(keys()).toEqual(["search", "importance", "sendTo", "receivers"]);
     render(<NotificationConfigsFilterToolBar serviceOptions={[IAM_SERVICE]} />);
-    expect(keys()).toEqual(["search", "importance", "service"]);
+    expect(keys()).toEqual(["search", "importance", "sendTo", "receivers", "service"]);
   });
 });

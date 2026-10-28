@@ -6,6 +6,7 @@ import {
 } from "../models/notification-config.model";
 
 const CONFIGS_QUERY_KEY = "notification-configs";
+const CONFIG_QUERY_KEY = "notification-config";
 
 export const notificationConfigsQueryKey = (options: IGetNotificationConfigsPayload) =>
   [
@@ -27,14 +28,22 @@ export const useGetNotificationConfigs = (
   });
 };
 
+export const useGetNotificationConfig = (itemId: string) =>
+  useQuery({
+    queryKey: [CONFIG_QUERY_KEY, itemId],
+    queryFn: () => notificationConfigService.getNotificationConfig(itemId),
+    enabled: !!itemId,
+  });
+
 export const useSaveNotificationConfig = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationKey: ["notification-config", "save"],
+    mutationKey: [CONFIG_QUERY_KEY, "save"],
     mutationFn: (payload: ISaveNotificationConfigPayload) =>
       notificationConfigService.saveNotificationConfig(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [CONFIGS_QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: [CONFIG_QUERY_KEY] });
     },
   });
 };
@@ -42,7 +51,7 @@ export const useSaveNotificationConfig = () => {
 export const useDeleteNotificationConfig = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationKey: ["notification-config", "delete"],
+    mutationKey: [CONFIG_QUERY_KEY, "delete"],
     mutationFn: (itemId: string) => notificationConfigService.deleteNotificationConfig(itemId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [CONFIGS_QUERY_KEY] });
