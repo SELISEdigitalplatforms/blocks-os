@@ -363,9 +363,11 @@ namespace XUnitTest.Integration
             root.AudienceLocked = false;
             root.RateLimitPerMinute = 60;
             root.PushTemplate = new NotificationPushTemplate { TitleKey = "ROOT_T", BodyKey = "ROOT_B" };
+            root.Scope = NotificationScope.App;
             await PutKvAsync(RootTenantDb, root);
 
             var tenantCopy = BuiltIn("v1");
+            tenantCopy.Scope = NotificationScope.Both;
             tenantCopy.Audience = SelectedRole("tenant-role");
             tenantCopy.LiveEnabled = false;
             tenantCopy.PushEnabled = true;
@@ -385,6 +387,29 @@ namespace XUnitTest.Integration
             copy.EnablePersistence.Should().BeFalse();
             copy.RateLimitPerMinute.Should().Be(10);
             copy.PushTemplate!.TitleKey.Should().Be("TENANT_T");
+            copy.Scope.Should().Be(NotificationScope.Both);
+        }
+
+        [Fact]
+        public async Task Upsert_TenantKeepsItsOwnScope_TheSeedFollowsTheRoot()
+        {
+            await SeedRegistryAsync();
+            var root = BuiltIn("v2");
+            root.Scope = NotificationScope.Both;
+            await PutKvAsync(RootTenantDb, root);
+
+            var consoleCopy = BuiltIn("v1");
+            consoleCopy.Scope = NotificationScope.Console;
+            await PutKvAsync(TenantA, consoleCopy);
+            await PutKvAsync(SeedDb, BuiltIn("v1"));
+
+            await Propagator().PropagateAsync(Event());
+
+            var tenant = (await GetKvAsync(TenantA))!;
+            tenant.Description.Should().Be("v2");
+            tenant.Scope.Should().Be(NotificationScope.Console, "the project chose to send it to console users only");
+            (await GetKvAsync(TenantB))!.Scope.Should().Be(NotificationScope.Both, "a new copy starts from the root's Scope");
+            (await GetKvAsync(SeedDb))!.Scope.Should().Be(NotificationScope.Both, "the seed is the source for new projects");
         }
 
         [Fact]

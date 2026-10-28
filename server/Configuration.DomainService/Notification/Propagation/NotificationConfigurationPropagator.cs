@@ -19,10 +19,11 @@ namespace Configuration.DomainService.Notification.Propagation
     /// Rules per target:
     /// <list type="bullet">
     /// <item><description>Missing: insert a copy, enabled.</description></item>
-    /// <item><description>Existing built-in: overwrite every field except what the tenant set: <c>Audience</c>,
-    /// <c>IsDisabled</c>, the channels (<c>LiveEnabled</c>, <c>PushEnabled</c>, <c>EnablePersistence</c>),
+    /// <item><description>Existing built-in: overwrite every field except what the tenant set: <c>Scope</c>,
+    /// <c>Audience</c>, <c>IsDisabled</c>, the channels (<c>LiveEnabled</c>, <c>PushEnabled</c>, <c>EnablePersistence</c>),
     /// <c>PushTemplate</c> and <c>RateLimitPerMinute</c>, and the identity (<c>ItemId</c>, <c>CreatedDate</c>,
-    /// <c>CreatedBy</c>).</description></item>
+    /// <c>CreatedBy</c>). The seed database is not a tenant: it takes the root's <c>Scope</c>, so a new project
+    /// starts from the root's choice.</description></item>
     /// <item><description>Console-only built-in, or a dropped name: not copied; a built-in copy is deleted.</description></item>
     /// <item><description>Existing custom config with that name: leave it, count a conflict.</description></item>
     /// <item><description>Delete: remove the target only when it is built-in.</description></item>
@@ -199,7 +200,7 @@ namespace Configuration.DomainService.Notification.Propagation
                 var database = OpenDatabase(target.DbConnectionString, target.DbName);
                 var outcome = desired is null
                     ? await ApplyDeleteAsync(database, name)
-                    : await ApplyUpsertAsync(database, desired);
+                    : await ApplyUpsertAsync(database, desired, keepScope: target.TargetId != SeedTargetId);
 
                 results.Add(new NotificationPropagationResult { TargetId = target.TargetId, Outcome = outcome });
             }
@@ -272,7 +273,7 @@ namespace Configuration.DomainService.Notification.Propagation
                 .Find(Builders<NotificationConfiguration>.Filter.Eq(c => c.Name, name))
                 .FirstOrDefaultAsync();
 
-        private static async Task<NotificationPropagationOutcome> ApplyUpsertAsync(IMongoDatabase database, NotificationConfiguration source)
+        private static async Task<NotificationPropagationOutcome> ApplyUpsertAsync(IMongoDatabase database, NotificationConfiguration source, bool keepScope)
         {
             var (kv, _) = await ReadKeyValueAsync(database, source.Name);
             var legacyExists = await LegacyExistsAsync(database);
@@ -286,7 +287,7 @@ namespace Configuration.DomainService.Notification.Propagation
 
             var existing = kv ?? legacy;
             var copy = Clone(source);
-            KeepTenantFields(copy, existing);
+            KeepTenantFields(copy, existing, keepScope);
 
             if (legacyExists)
             {
@@ -302,16 +303,20 @@ namespace Configuration.DomainService.Notification.Propagation
             return existing is null ? NotificationPropagationOutcome.Inserted : NotificationPropagationOutcome.Updated;
         }
 
-        /// <summary>App and Both built-ins go to the tenants. Console ones, and dropped names, stay out.</summary>
+        /// <summary>
+        /// App and Both built-ins go to the tenants. Console ones, and dropped names, stay out: console users live in
+        /// the root tenant. This reads the root's Scope only; a tenant copy keeps its own Scope (see <c>KeepTenantFields</c>).
+        /// </summary>
         public static bool IsCopiedToTenants(NotificationConfiguration source) =>
             source.Scope != NotificationScope.Console && !RetiredNotificationNames.Contains(source.Name);
 
         /// <summary>
-        /// What the tenant set stays: Audience, IsDisabled, channels (live, push, inbox), push message and rate limit.
-        /// A new copy starts without the root tenant's own Audience and enabled. A tenant without a push message,
-        /// or a locked (personal) notice whose message is fixed, takes the root's.
+        /// What the tenant set stays: Scope (Send to), Audience, IsDisabled, channels (live, push, inbox), push message
+        /// and rate limit. A new copy starts with the root's Scope, without the root tenant's own Audience, and enabled.
+        /// A tenant without a push message, or a locked (personal) notice whose message is fixed, takes the root's.
+        /// <paramref name="keepScope"/> is false for the seed database, which follows the root's Scope.
         /// </summary>
-        private static void KeepTenantFields(NotificationConfiguration copy, NotificationConfiguration? existing)
+        private static void KeepTenantFields(NotificationConfiguration copy, NotificationConfiguration? existing, bool keepScope)
         {
             copy.Audience = existing?.Audience;
             copy.IsDisabled = existing?.IsDisabled ?? false;
@@ -324,6 +329,11 @@ namespace Configuration.DomainService.Notification.Propagation
             copy.ItemId = existing.ItemId;
             copy.CreatedDate = existing.CreatedDate;
             copy.CreatedBy = existing.CreatedBy;
+            if (keepScope)
+            {
+                copy.Scope = existing.Scope;
+            }
+
             copy.LiveEnabled = existing.LiveEnabled;
             copy.PushEnabled = existing.PushEnabled;
             copy.EnablePersistence = existing.EnablePersistence;
