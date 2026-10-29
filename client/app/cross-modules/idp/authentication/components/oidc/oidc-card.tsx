@@ -26,6 +26,8 @@ import {
   IOidcConfig,
   ISaveOidcCredentialPayload,
 } from "@blocks-idp/authentication/models/auth.oidc.model";
+import type { IOidcClientLoginPolicy } from "@blocks-idp/authentication/models/login-policy.model";
+import { describeClientLoginPolicy } from "@blocks-idp/authentication/utils/login-policy.util";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { CreateOIDC } from "../create-oidc/create-oidc";
 import { KVDetailItem } from "../kv-detail-item";
@@ -34,10 +36,12 @@ import { OneTimeSecret, OneTimeSecretDialog } from "../one-time-secret-dialog";
 
 interface OIDCRowProps {
   item: IOidcConfig;
+  /** From the list response; missing means the client follows the project setting. */
+  loginPolicy?: IOidcClientLoginPolicy;
   defaultExpanded?: boolean;
 }
 
-const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
+const OIDCRow = ({ item, loginPolicy, defaultExpanded = false }: OIDCRowProps) => {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
@@ -230,6 +234,11 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
               <p className="truncate font-mono text-xs text-muted-foreground">
                 {maskId(item.itemId)}
               </p>
+              {!item.isDeviceFlowClient && (
+                <p className="truncate text-xs text-muted-foreground">
+                  {describeClientLoginPolicy(loginPolicy)}
+                </p>
+              )}
             </div>
           </div>
         </TableCell>
@@ -456,6 +465,12 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
 
 export const OIDCRowExport = OIDCRow;
 
-export const OIDCCard = ({ oidc }: { oidc: IOidcConfig }) => {
-  return <OIDCRow item={oidc} defaultExpanded />;
+export const OIDCCard = ({
+  oidc,
+  loginPolicy,
+}: {
+  oidc: IOidcConfig;
+  loginPolicy?: IOidcClientLoginPolicy;
+}) => {
+  return <OIDCRow item={oidc} loginPolicy={loginPolicy} defaultExpanded />;
 };

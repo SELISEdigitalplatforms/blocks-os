@@ -1,5 +1,7 @@
 import { z } from "zod";
 import type { IOidcClientTokenLifetimes } from "@blocks-idp/authentication/models/auth.oidc.model";
+import type { IOidcClientLoginPolicy } from "@blocks-idp/authentication/models/login-policy.model";
+import { DEFAULT_CLIENT_LOGIN_POLICY } from "@blocks-idp/authentication/utils/login-policy.util";
 
 const PUBLIC_TLD_PATTERN = /^([a-z0-9-]+\.)+[a-z]{2,}$/i;
 
@@ -283,6 +285,51 @@ const addTokenLifetimeIssues = (value: TokenLifetimeFormValues, ctx: z.Refinemen
   }
 };
 
+export const SELECT_PROVIDER_MESSAGE = "Select at least one provider, or choose Default.";
+
+/** The sign-in inputs as the form holds them. */
+export type LoginPolicyFormValues = {
+  loginMethod: IOidcClientLoginPolicy["method"];
+  loginProviders: IOidcClientLoginPolicy["providers"];
+  loginProviderIds: string[];
+};
+
+export const DEFAULT_LOGIN_POLICY_FORM: LoginPolicyFormValues = {
+  loginMethod: "default",
+  loginProviders: "default",
+  loginProviderIds: [],
+};
+
+/** Maps the stored policy (null or absent = Default) to the form inputs. */
+export const loginPolicyToForm = (policy?: IOidcClientLoginPolicy | null): LoginPolicyFormValues => {
+  const source = policy ?? DEFAULT_CLIENT_LOGIN_POLICY;
+  return {
+    loginMethod: source.method,
+    loginProviders: source.providers,
+    loginProviderIds: [...source.selectedProviderIds],
+  };
+};
+
+/** Social providers only matter when the method can use them. */
+export const usesSocialProviders = (method: LoginPolicyFormValues["loginMethod"]) =>
+  method !== "password";
+
+/** The `loginPolicy` of the save payload. Providers are dropped when the method is Password. */
+export const buildLoginPolicyPayload = (values: LoginPolicyFormValues): IOidcClientLoginPolicy => {
+  const selected = usesSocialProviders(values.loginMethod) && values.loginProviders === "selected";
+  return {
+    method: values.loginMethod,
+    providers: selected ? "selected" : "default",
+    selectedProviderIds: selected ? values.loginProviderIds : [],
+  };
+};
+
+/** Spread into the save payload: device-flow clients have no sign-in rule, so nothing is sent. */
+export const buildLoginPolicyFields = (
+  values: LoginPolicyFormValues & { isDeviceFlowClient: boolean },
+): { loginPolicy?: IOidcClientLoginPolicy } =>
+  values.isDeviceFlowClient ? {} : { loginPolicy: buildLoginPolicyPayload(values) };
+
 const tokenLifetimeInputs = z.object({
   accessTokenLifetime: z.string(),
   refreshTokenLifetime: z.string(),
@@ -308,6 +355,9 @@ export const createOidcSchema = z
     refreshTokenLifetime: z.string(),
     absoluteRefreshTokenLifetime: z.string(),
     loadedTokenLifetimes: tokenLifetimeInputs,
+    loginMethod: z.enum(["default", "password", "social"]),
+    loginProviders: z.enum(["default", "selected"]),
+    loginProviderIds: z.array(z.string()),
   })
   .superRefine((value, ctx) => {
     // Lifetimes apply to every client type, device flow included, so they are checked first.
@@ -315,6 +365,18 @@ export const createOidcSchema = z
 
     if (value.isDeviceFlowClient) {
       return;
+    }
+
+    if (
+      usesSocialProviders(value.loginMethod) &&
+      value.loginProviders === "selected" &&
+      value.loginProviderIds.length === 0
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["loginProviderIds"],
+        message: SELECT_PROVIDER_MESSAGE,
+      });
     }
 
     const redirectResult = getRedirectUriSchema(value.applicationType).safeParse(
@@ -357,4 +419,5 @@ export const createOIDCFormDefaultValue: CreateOIDCFormValues = {
   loadedApplicationType: null,
   ...EMPTY_TOKEN_LIFETIMES,
   loadedTokenLifetimes: EMPTY_TOKEN_LIFETIMES,
+  ...DEFAULT_LOGIN_POLICY_FORM,
 };

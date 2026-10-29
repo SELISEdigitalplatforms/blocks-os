@@ -1,3 +1,5 @@
+import type { IOidcClientLoginPolicy } from "@blocks-idp/authentication/models/login-policy.model";
+
 export interface IGetOidcPayload {
   projectKey: string;
   clientId?: string;
@@ -43,12 +45,16 @@ export interface IGetOidcCredentialResponse {
   oIDCClientCredential: IOidcConfig;
   /** Absent on servers without per-client lifetimes; `null` when the client uses the project settings. */
   tokenLifetimes?: IOidcClientTokenLifetimes | null;
+  /** Absent on older servers; `null` means Default (follow the project setting). */
+  loginPolicy?: IOidcClientLoginPolicy | null;
   errors: Record<string, string> | null;
   isSuccess: boolean;
 }
 
 export interface IGetOidcCredentialsResponse {
   oIDCClientCredentials: IOidcConfig[];
+  /** Keyed by client item id; only clients that have a sign-in policy are listed. */
+  loginPolicies?: Record<string, IOidcClientLoginPolicy>;
   errors: Record<string, string> | null;
   isSuccess: boolean;
 }
@@ -73,6 +79,11 @@ export interface ISaveOidcCredentialPayload {
    * field means "use the project setting".
    */
   tokenLifetimes?: IOidcClientTokenLifetimes;
+  /**
+   * Sent by the edit/create form. Absent (or null) keeps the stored policy, so the status toggle
+   * and device-flow clients leave it out.
+   */
+  loginPolicy?: IOidcClientLoginPolicy;
 }
 
 export interface ISaveOidcCredentialResponse {

@@ -25,11 +25,16 @@ vi.mock("@blocks-idp/settings/components/config-error-state", () => ({
 vi.mock("@blocks-idp/settings/components/settings-tab-loading-state", () => ({
   SignupTabLoadingState: () => <div data-testid="loading-state" />,
 }));
+vi.mock("@blocks-idp/settings/components/sign-in-methods-card", () => ({
+  SignInMethodsCard: () => <div data-testid="sign-in-card" />,
+}));
 vi.mock("@blocks-idp/settings/components/signup-settings-form", () => ({
   SignupSettingsForm: ({ config }: { config: unknown }) => (
     <div data-testid="signup-form">{JSON.stringify(config)}</div>
   ),
 }));
+
+const ERROR_ID = "error-state";
 
 import { SignupSettingsTab } from "./signup-settings-tab";
 
@@ -55,12 +60,19 @@ describe("SignupSettingsTab", () => {
   it("renders the error state when a query errors", () => {
     h.perms = { isPending: false, isError: true };
     render(<SignupSettingsTab />);
-    expect(screen.getByTestId("error-state")).toBeTruthy();
+    expect(screen.getByTestId(ERROR_ID)).toBeTruthy();
   });
 
   it("renders the error state when there is no config data", () => {
     h.tabState = { showLoader: false, showError: false, data: null as never };
     render(<SignupSettingsTab />);
-    expect(screen.getByTestId("error-state")).toBeTruthy();
+    expect(screen.getByTestId(ERROR_ID)).toBeTruthy();
+  });
+
+  it("still shows the sign-in card when the signup config failed to load", () => {
+    h.perms = { isPending: false, isError: true };
+    render(<SignupSettingsTab />);
+    expect(screen.getByTestId(ERROR_ID)).toBeTruthy();
+    expect(screen.getByTestId("sign-in-card")).toBeTruthy();
   });
 });

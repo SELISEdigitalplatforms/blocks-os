@@ -35,6 +35,7 @@ vi.mock("../create-oidc/create-oidc", () => ({
 }));
 
 import { OIDCCard } from "./oidc-card";
+import type { IOidcClientLoginPolicy } from "@blocks-idp/authentication/models/login-policy.model";
 
 const makeItem = (overrides = {}) => ({
   itemId: "oidc-123",
@@ -50,11 +51,11 @@ const makeItem = (overrides = {}) => ({
   ...overrides,
 });
 
-const renderCard = (item = makeItem()) =>
+const renderCard = (item = makeItem(), loginPolicy?: IOidcClientLoginPolicy) =>
   render(
     <table>
       <tbody>
-        <OIDCCard oidc={item as never} />
+        <OIDCCard oidc={item as never} loginPolicy={loginPolicy} />
       </tbody>
     </table>,
   );
@@ -227,5 +228,57 @@ describe("OIDCCard", () => {
     const buttons = await screen.findAllByRole("button", { name: "Delete" });
     await user.click(buttons[buttons.length - 1]);
     await waitFor(() => expect(h.showErrorToast).toHaveBeenCalledWith({ errors: "del failed" }));
+  });
+
+  describe("sign-in summary", () => {
+    const policy = (
+      method: IOidcClientLoginPolicy["method"],
+      providers: IOidcClientLoginPolicy["providers"] = "default",
+      selectedProviderIds: string[] = [],
+    ): IOidcClientLoginPolicy => ({ method, providers, selectedProviderIds });
+
+    it("says Follow project when the list has no policy for the client", () => {
+      renderCard();
+      expect(screen.getByText("Sign-in: Follow project")).toBeTruthy();
+    });
+
+    it.each([
+      ["default", policy("default"), "Sign-in: Password + Social"],
+      ["password", policy("password"), "Sign-in: Password only"],
+      ["social", policy("social"), "Sign-in: Social only"],
+      [
+        "default with selected providers",
+        policy("default", "selected", ["a", "b"]),
+        "Sign-in: Password + Social (2 providers)",
+      ],
+      [
+        "social with one selected provider",
+        policy("social", "selected", ["a"]),
+        "Sign-in: Social only (1 provider)",
+      ],
+    ])("shows the %s summary", (_name, value, text) => {
+      renderCard(makeItem(), value);
+      expect(screen.getByText(text)).toBeTruthy();
+    });
+
+    it("ignores stored providers when the method is Password only", () => {
+      renderCard(makeItem(), policy("password", "selected", ["a"]));
+      expect(screen.getByText("Sign-in: Password only")).toBeTruthy();
+    });
+
+    it("shows no summary for a device-flow client", () => {
+      renderCard(makeItem({ isDeviceFlowClient: true }), policy("password"));
+      expect(screen.queryByText(/^Sign-in:/)).toBeNull();
+    });
+
+    it("never sends loginPolicy when the active toggle is saved", async () => {
+      h.saveOidc.mockResolvedValueOnce({ isSuccess: true });
+      const user = userEvent.setup();
+      renderCard(makeItem(), policy("social"));
+      await user.click(screen.getByRole("button", { name: "Disable OIDC client" }));
+      await user.click(await screen.findByRole("button", { name: "Disable" }));
+      await waitFor(() => expect(h.saveOidc).toHaveBeenCalledTimes(1));
+      expect(h.saveOidc.mock.calls[0][0]).not.toHaveProperty("loginPolicy");
+    });
   });
 });

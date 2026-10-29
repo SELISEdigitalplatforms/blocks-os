@@ -111,7 +111,12 @@ export const OidcList = () => {
           </TableHeader>
           <TableBody className="[&_tr:last-child]:border-b">
             {sortedOidcData.map((item, index) => (
-              <OIDCRowExport key={item.itemId} item={item} defaultExpanded={index === 0} />
+              <OIDCRowExport
+                key={item.itemId}
+                item={item}
+                loginPolicy={data?.loginPolicies?.[item.itemId]}
+                defaultExpanded={index === 0}
+              />
             ))}
           </TableBody>
         </Table>
