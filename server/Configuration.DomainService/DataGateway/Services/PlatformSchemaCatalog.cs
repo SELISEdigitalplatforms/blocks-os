@@ -44,6 +44,7 @@ namespace Configuration.DomainService.DataGateway.Services
                 "SecurityStamp", "TokenVersion", "MfaMethods", "AllowedLogInType", "TermsAcceptedAtUtc", "PrivacyAcceptedAtUtc",
                 "DeactivatedBy", "ActivatedAtUtc", "ActivatedBy", "ExternalUserId"),
             ["IdentityProvider"] = Set("JwksUri", "ClientSecretReference", "PrivateKeyReference"),
+            ["ClientCredential"] = Set("ClientSecretReference"),
             ["SignupLink"] = Set("CodeHash", "MaxRedemptions", "RedemptionCount", "CreatedUserId", "CreatedByClientId",
                 "CreatedByOrganizationId", "RevokedAtUtc", "RevokedBy"),
             ["IntegrationSetup"] = Set("RevokedBy", "RevokedDate"),
