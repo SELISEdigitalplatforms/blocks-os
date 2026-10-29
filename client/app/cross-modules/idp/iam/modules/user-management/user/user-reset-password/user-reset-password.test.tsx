@@ -2,7 +2,6 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
-  user: { data: { data: { email: "user@x.com" } } as unknown },
   mutateAsync: vi.fn(),
   isPending: false,
   showSuccessToast: vi.fn(),
@@ -13,23 +12,19 @@ vi.mock("@/hooks/use-toast", () => ({
   showSuccessToast: h.showSuccessToast,
   showErrorToast: h.showErrorToast,
 }));
-vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
-  useGetUserById: () => h.user,
-}));
 vi.mock("@blocks-idp/iam/hooks/use-account", () => ({
-  useAccountRecover: () => ({ mutateAsync: h.mutateAsync, isPending: h.isPending }),
+  useAdminResetPassword: () => ({ mutateAsync: h.mutateAsync, isPending: h.isPending }),
 }));
 
 import { UserResetPassword } from "./user-reset-password";
 
 const renderReset = (setOpen = vi.fn()) =>
-  render(<UserResetPassword userId="u1" projectKey="t1" open setOpen={setOpen} />);
+  render(<UserResetPassword userId="u1" open setOpen={setOpen} />);
 
 const confirm = () => fireEvent.click(screen.getByRole("button", { name: "Reset" }));
 
 beforeEach(() => {
   vi.clearAllMocks();
-  h.user = { data: { data: { email: "user@x.com" } } };
   h.isPending = false;
 });
 
@@ -39,7 +34,8 @@ describe("UserResetPassword", () => {
     expect(screen.getByText("Reset password")).toBeTruthy();
   });
 
-  it("sends the reset email and shows a success toast", async () => {
+  // The public forgot-password flow fails when the project has a captcha; the admin reset sends only the user id.
+  it("sends the admin reset by user id only and shows a success toast", async () => {
     const setOpen = vi.fn();
     h.mutateAsync.mockResolvedValue({ isSuccess: true });
     renderReset(setOpen);
@@ -47,37 +43,27 @@ describe("UserResetPassword", () => {
     confirm();
 
     await waitFor(() => expect(h.mutateAsync).toHaveBeenCalled());
-    expect(h.mutateAsync.mock.calls[0][0]).toMatchObject({ email: "user@x.com", tenantId: "t1" });
+    expect(h.mutateAsync.mock.calls[0][0]).toEqual({ userId: "u1" });
     expect(h.showSuccessToast).toHaveBeenCalled();
     expect(setOpen).toHaveBeenCalledWith(false);
   });
 
-  it("shows an error toast when recovery is unsuccessful", async () => {
-    h.mutateAsync.mockResolvedValue({ isSuccess: false, errors: "bad" });
+  it("shows the server reason when the reset is refused", async () => {
+    const errors = { ResetMail: "A reset mail was sent to this user less than a minute ago. Try again later" };
+    h.mutateAsync.mockResolvedValue({ isSuccess: false, errors });
     renderReset();
 
     confirm();
-    await waitFor(() => expect(h.showErrorToast).toHaveBeenCalledWith({ errors: "bad" }));
+    await waitFor(() => expect(h.showErrorToast).toHaveBeenCalledWith({ errors }));
   });
 
-  it("shows a generic error toast when no email is available", async () => {
-    h.user = { data: { data: { email: "" } } };
+  it("shows the mapped error toast when the call throws with errors", async () => {
+    h.mutateAsync.mockRejectedValue({ errors: { UserId: "No user found with this id" } });
     renderReset();
 
     confirm();
     await waitFor(() =>
-      expect(h.showErrorToast).toHaveBeenCalledWith({ errors: "Something went wrong" }),
-    );
-    expect(h.mutateAsync).not.toHaveBeenCalled();
-  });
-
-  it("shows the mapped error toast when recovery throws with errors", async () => {
-    h.mutateAsync.mockRejectedValue({ errors: { email: "invalid" } });
-    renderReset();
-
-    confirm();
-    await waitFor(() =>
-      expect(h.showErrorToast).toHaveBeenCalledWith({ errors: { email: "invalid" } }),
+      expect(h.showErrorToast).toHaveBeenCalledWith({ errors: { UserId: "No user found with this id" } }),
     );
   });
 });

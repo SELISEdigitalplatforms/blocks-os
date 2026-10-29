@@ -32,6 +32,8 @@ export const USER_ENDPOINTS = {
   // and PERMISSION_ENDPOINTS.GET_PERMISSIONS; there is no /user/* lookup.
   GET_USER_TIMELINES: `${API_BASES.IAM}${IAM_SUBPATH}/user/timelines`,
   DEACTIVATE: `${API_BASES.IAM}${IAM_SUBPATH}/users/deactivate`,
+  // Admin reset: protected, no captcha (the public auth/recover asks one when the project has it).
+  RESET_PASSWORD: `${API_BASES.IAM}${IAM_SUBPATH}/users/reset-password`,
   UPDATE_ACCOUNT: `${API_BASES.IAM}${IAM_SUBPATH}/account/update`,
   GET_ACCOUNTS: `${API_BASES.IAM}${IAM_SUBPATH}/accounts`,
   GET_ACCOUNT: `${API_BASES.IAM}${IAM_SUBPATH}/account`,
