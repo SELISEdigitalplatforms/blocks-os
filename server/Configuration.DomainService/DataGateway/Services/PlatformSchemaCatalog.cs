@@ -14,6 +14,7 @@ namespace Configuration.DomainService.DataGateway.Services
         private const string Logic = "Logic";
         private const string Release = "Release";
         private const string Monitor = "Monitor";
+        private const string ClientSecretReference = "ClientSecretReference";
 
         /// <summary>Schemas the page offers, by owning service. A system schema not listed here is hidden.</summary>
         public static readonly IReadOnlyDictionary<string, string> Owners = new Dictionary<string, string>
@@ -43,13 +44,13 @@ namespace Configuration.DomainService.DataGateway.Services
                 "FailedLoginCount", "LastFailedLoginUtc", "FailedMfaCount", "LastFailedMfaUtc", "LockoutCount", "LastLockoutUtc",
                 "SecurityStamp", "TokenVersion", "MfaMethods", "AllowedLogInType", "TermsAcceptedAtUtc", "PrivacyAcceptedAtUtc",
                 "DeactivatedBy", "ActivatedAtUtc", "ActivatedBy", "ExternalUserId"),
-            ["IdentityProvider"] = Set("JwksUri", "ClientSecretReference", "PrivateKeyReference"),
-            ["ClientCredential"] = Set("ClientSecretReference"),
-            ["OidcClientRegistration"] = Set("ClientSecretReference"),
+            ["IdentityProvider"] = Set("JwksUri", ClientSecretReference, "PrivateKeyReference"),
+            ["ClientCredential"] = Set(ClientSecretReference),
+            ["OidcClientRegistration"] = Set(ClientSecretReference),
             ["SignupLink"] = Set("CodeHash", "MaxRedemptions", "RedemptionCount", "CreatedUserId", "CreatedByClientId",
                 "CreatedByOrganizationId", "RevokedAtUtc", "RevokedBy"),
             ["IntegrationSetup"] = Set("RevokedBy", "RevokedDate"),
-            ["MailServerConfiguration"] = Set("UseDefaultCredentials", "SmtpClient", "IsEnableSnsConfiguration", "ClientSecretReference",
+            ["MailServerConfiguration"] = Set("UseDefaultCredentials", "SmtpClient", "IsEnableSnsConfiguration", ClientSecretReference,
                 "AccountPasswordReference"),
             ["WorkflowEntity"] = Set("LastPublishedVersionId", "PublishedMeta", "TestMeta", "PublishedVersionId"),
             ["WorkflowVersionEntity"] = Set("Snapshot.PublishedVersionId", "Snapshot.LastPublishedVersionId",
