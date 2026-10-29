@@ -55,6 +55,7 @@ const EVENT_NAME = "orders-paid";
 const EVENT_NAME_LABEL = "Event name";
 const PUSH_MESSAGE_ID = "push-message";
 const PROJECT_USERS = "Consumer users";
+const CHECKED = "aria-checked";
 const ROW = {
   itemId: "n-1",
   name: EVENT_NAME,
@@ -133,6 +134,17 @@ describe("NotificationConfigForm", () => {
     expect(screen.getByTestId("permission-picker")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "All users" }));
     expect(screen.queryByTestId("user-picker")).toBeNull();
+  });
+
+  it("picks Match with two radio choices, starting at least one rule", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const anyRule = screen.getByRole("radio", { name: /At least one rule/ });
+    const allRules = screen.getByRole("radio", { name: /All rules/ });
+    expect(anyRule.getAttribute(CHECKED)).toBe("true");
+    await user.click(allRules);
+    expect(allRules.getAttribute(CHECKED)).toBe("true");
+    expect(anyRule.getAttribute(CHECKED)).toBe("false");
   });
 
   it("warns before a built-in goes to all users", async () => {

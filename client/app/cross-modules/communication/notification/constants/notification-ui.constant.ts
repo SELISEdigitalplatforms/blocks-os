@@ -41,8 +41,16 @@ export const RECEIVER_HELP: Record<number, string> = {
 };
 
 export const MATCH_OPTIONS = [
-  { value: AUDIENCE_MATCH.Any, label: "Any of these" },
-  { value: AUDIENCE_MATCH.All, label: "All of these" },
+  {
+    value: AUDIENCE_MATCH.Any,
+    label: "At least one rule",
+    help: "Example: every Manager, plus everyone with the Approve permission.",
+  },
+  {
+    value: AUDIENCE_MATCH.All,
+    label: "All rules",
+    help: "Example: only Managers who also have the Approve permission.",
+  },
 ] as const;
 
 export const OWNER_ONLY_LABEL = "Account owner only";
@@ -95,7 +103,8 @@ export const NOTIFICATION_TEXT = {
     "Personal account notice. It is always sent to the account owner and cannot be redirected.",
   receiversLabel: "Recipients",
   receiversNarrowHelp: "The sending service can narrow this list, but never extend it.",
-  match: "Match",
+  match: "Also send to people who match",
+  matchHelp: "Empty lists are skipped. The owner is not part of these rules.",
   users: "Users",
   roles: "Roles",
   permissions: "Permissions",

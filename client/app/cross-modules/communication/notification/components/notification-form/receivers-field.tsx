@@ -1,10 +1,4 @@
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui-kits/select/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui-kits/radio-group/radio-group";
 import type { NotificationFormValues } from "../../utils/notification-form";
 import {
   AUDIENCE_LEVEL,
@@ -32,9 +26,35 @@ function SubRow({ label, children }: Readonly<{ label: string; children: React.R
   );
 }
 
+function MatchChoice({ values, onPatch }: Readonly<ReceiversFieldProps>) {
+  return (
+    <fieldset className="flex flex-col gap-1.5">
+      <legend className="mb-1 text-sm font-medium">{NOTIFICATION_TEXT.match}</legend>
+      <RadioGroup
+        aria-label={NOTIFICATION_TEXT.match}
+        value={String(values.match)}
+        onValueChange={(value) => onPatch({ match: Number(value) })}
+        className="gap-1.5"
+      >
+        {MATCH_OPTIONS.map((option) => (
+          <label key={option.value} className="flex items-start gap-2 text-sm">
+            <RadioGroupItem value={String(option.value)} className="mt-0.5" />
+            <span>
+              {option.label}
+              <span className="block text-xs text-medium-emphasis">{option.help}</span>
+            </span>
+          </label>
+        ))}
+      </RadioGroup>
+      <HelpText>{NOTIFICATION_TEXT.matchHelp}</HelpText>
+    </fieldset>
+  );
+}
+
+/** Targeted: the owner tick on its own, then one box with Match and the lists it combines. */
 function SelectedRules({ values, onPatch }: Readonly<ReceiversFieldProps>) {
   return (
-    <div className="flex flex-col gap-2.5 rounded-md bg-muted/40 p-3">
+    <div className="flex flex-col gap-2.5">
       <div className="flex flex-col gap-1">
         <CheckRow
           id="also-named"
@@ -44,41 +64,27 @@ function SelectedRules({ values, onPatch }: Readonly<ReceiversFieldProps>) {
         />
         <HelpText>{NOTIFICATION_TEXT.alsoNamedHelp}</HelpText>
       </div>
-      <SubRow label={NOTIFICATION_TEXT.match}>
-        <Select
-          value={String(values.match)}
-          onValueChange={(value) => onPatch({ match: Number(value) })}
-        >
-          <SelectTrigger aria-label={NOTIFICATION_TEXT.match} className="max-w-60">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {MATCH_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={String(option.value)}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </SubRow>
-      <SubRow label={NOTIFICATION_TEXT.users}>
-        <UserPicker values={values.userIds} onChange={(userIds) => onPatch({ userIds })} />
-      </SubRow>
-      <SubRow label={NOTIFICATION_TEXT.roles}>
-        <RolePicker values={values.roles} onChange={(roles) => onPatch({ roles })} />
-      </SubRow>
-      <SubRow label={NOTIFICATION_TEXT.permissions}>
-        <PermissionPicker
-          values={values.permissions}
-          onChange={(permissions) => onPatch({ permissions })}
-        />
-      </SubRow>
+      <div className="flex flex-col gap-2.5 rounded-md border bg-muted/40 p-3">
+        <MatchChoice values={values} onPatch={onPatch} />
+        <SubRow label={NOTIFICATION_TEXT.users}>
+          <UserPicker values={values.userIds} onChange={(userIds) => onPatch({ userIds })} />
+        </SubRow>
+        <SubRow label={NOTIFICATION_TEXT.roles}>
+          <RolePicker values={values.roles} onChange={(roles) => onPatch({ roles })} />
+        </SubRow>
+        <SubRow label={NOTIFICATION_TEXT.permissions}>
+          <PermissionPicker
+            values={values.permissions}
+            onChange={(permissions) => onPatch({ permissions })}
+          />
+        </SubRow>
+      </div>
       <SubscriptionFilters filters={values.filters} onChange={(filters) => onPatch({ filters })} />
     </div>
   );
 }
 
-/** Recipients: all users, or Targeted — the event owner and/or the users, roles and permissions picked. */
+/** Recipients: all users, or Targeted — the owner and/or the users, roles and permissions picked. */
 export function ReceiversField({ values, onPatch }: Readonly<ReceiversFieldProps>) {
   return (
     <>
