@@ -23,6 +23,7 @@ public class PlatformSchemaCatalogTests
     [InlineData("IdentityProvider", "PrivateKeyReference", true)]
     [InlineData("IdentityProvider", "JwksUri", true)]
     [InlineData("ClientCredential", "ClientSecretReference", true)]
+    [InlineData("OidcClientRegistration", "ClientSecretReference", true)]
     public void IsHiddenField_HidesThePropertyAndItsChildrenOnly(string schema, string path, bool hidden) =>
         PlatformSchemaCatalog.IsHiddenField(schema, path).Should().Be(hidden);
 
