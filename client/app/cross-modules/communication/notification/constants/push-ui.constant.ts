@@ -101,7 +101,7 @@ export const TEST_DIALOG_TEXT = {
 
 export const DEVICES_TEXT = {
   title: "Registered devices",
-  back: "Mobile push",
+  back: "Push",
   subtitle: "Devices the apps registered for push. Unused devices are removed after 60 days.",
   filter: "Platform filter",
   all: "All",
@@ -124,7 +124,7 @@ export const DEVICES_TEXT = {
 
 export const PUSH_FORM_TEXT = {
   platforms: "Push platforms",
-  platformsHelp: "Only platforms turned on in Mobile push settings are shown as active.",
+  platformsHelp: "Only platforms turned on in Push settings are shown as active.",
   offInSettings: "off in settings",
   atLeastOne: "Select at least one push platform.",
   openOnTap: "Open on tap",

@@ -104,11 +104,11 @@ describe("SecretManagementLayout", () => {
     expect(screen.getByTestId("create-secret-button")).toBeTruthy();
   });
 
-  it("shows the list header with Mobile push and Add notification on the notification list", () => {
+  it("shows the list header with Push and Add notification on the notification list", () => {
     h.pathname = "/app/proj/secret-management/notification";
     render(<SecretManagementLayout />);
     expect(screen.getByRole("heading", { level: 1 })).toBeTruthy();
-    expect(screen.getByText("Mobile push")).toBeTruthy();
+    expect(screen.getByText("Push")).toBeTruthy();
     expect(screen.getByText(ADD_NOTIFICATION)).toBeTruthy();
   });
 
@@ -123,10 +123,10 @@ describe("SecretManagementLayout", () => {
     },
   );
 
-  it("opens Mobile push and Add notification by path, not by query parameter", () => {
+  it("opens Push and Add notification by path, not by query parameter", () => {
     h.pathname = "/app/proj/secret-management/notification";
     render(<SecretManagementLayout />);
-    screen.getByText("Mobile push").click();
+    screen.getByText("Push").click();
     expect(h.navigate).toHaveBeenLastCalledWith(
       { pathname: "/app/proj/secret-management/notification/push", search: "" },
       { replace: false },

@@ -250,7 +250,7 @@ export function NotificationConfigurationListPage() {
     );
   }
 
-  // Add Configuration and Mobile push live in the page header, like the other Secrets & Configs pages.
+  // Add Configuration and Push live in the page header, like the other Secrets & Configs pages.
   return isEmpty ? (
     <EmptyState
       icon={Bell}

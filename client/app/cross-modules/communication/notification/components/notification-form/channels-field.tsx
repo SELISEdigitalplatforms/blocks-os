@@ -8,7 +8,7 @@ interface ChannelsFieldProps {
   onPatch: (patch: Partial<NotificationFormValues>) => void;
 }
 
-/** In-app, mobile push and inbox switches, with the rate limit per minute. */
+/** In-app, push and inbox switches, with the rate limit per minute. */
 export function ChannelsField({ values, onPatch }: Readonly<ChannelsFieldProps>) {
   return (
     <div className="flex flex-col gap-2">

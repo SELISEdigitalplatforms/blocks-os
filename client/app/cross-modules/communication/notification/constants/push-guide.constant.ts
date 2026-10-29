@@ -6,7 +6,7 @@ export interface IGuideSection {
 }
 
 export const GUIDE_TEXT = {
-  title: "Setup guide — Mobile push",
+  title: "Setup guide — Push",
   intro: "All steps are in the Firebase console (console.firebase.google.com) unless marked Apple.",
   failHeading: "5. iOS test failed — what to do",
 } as const;

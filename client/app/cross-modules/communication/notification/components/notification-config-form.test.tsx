@@ -41,7 +41,7 @@ vi.mock("./notification-form/push-message-field", () => ({
     <div data-testid="push-message" data-locked={String(locked)}>
       {!pushReady && (
         <button type="button" onClick={onSetUpPush as () => void}>
-          Set up mobile push
+          Set up push
         </button>
       )}
     </div>
@@ -143,15 +143,15 @@ describe("NotificationConfigForm", () => {
     expect(screen.getByText(NOTIFICATION_TEXT.allUsersBuiltInWarning)).toBeTruthy();
   });
 
-  it("shows the push message block only when Mobile push is ticked, with the set-up hint when not ready", async () => {
+  it("shows the push message block only when Push is ticked, with the set-up hint when not ready", async () => {
     h.pushSettings = { data: { projectId: null, enabled: false, hasKey: false }, isLoading: false };
     const user = userEvent.setup();
     const { onSetUpPush } = renderForm(ROW);
     expect(screen.queryByTestId(PUSH_MESSAGE_ID)).toBeNull();
-    await user.click(screen.getByLabelText("Mobile push"));
+    await user.click(screen.getByLabelText("Push"));
     expect(screen.getByTestId(PUSH_MESSAGE_ID)).toBeTruthy();
     expect((screen.getByRole("button", SAVE) as HTMLButtonElement).disabled).toBe(true);
-    await user.click(screen.getByRole("button", { name: "Set up mobile push" }));
+    await user.click(screen.getByRole("button", { name: "Set up push" }));
     expect(onSetUpPush).toHaveBeenCalled();
   });
 

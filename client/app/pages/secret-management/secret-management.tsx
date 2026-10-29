@@ -151,7 +151,7 @@ function SecretManagementHeaderActions({
           <Button variant="outline" size="sm" onClick={openNotificationPush}>
             <Smartphone className="h-4 w-4" />
             <span className="sr-only sm:not-sr-only sm:ml-2 sm:text-sm sm:whitespace-nowrap">
-              Mobile push
+              Push
             </span>
           </Button>
           <Button size="sm" onClick={openNotificationNew}>
@@ -189,7 +189,7 @@ export default function SecretManagementLayout() {
   const [, setIsAddIdpOpen] = useQueryState("addIdp", parseAsBoolean.withDefault(false));
   const [, setIsEmailConfigOpen] = useQueryState("emailConfig", parseAsBoolean.withDefault(false));
   const notificationNav = useNotificationNavigation();
-  // The notification form and the mobile push page show their own title, so the list header steps aside.
+  // The notification form and the push page show their own title, so the list header steps aside.
   const isNotificationPageOpen = Boolean(notificationMatch?.[1]);
   const [, setIsManagedServicesGuideOpen] = useQueryState(
     "guideOpen",

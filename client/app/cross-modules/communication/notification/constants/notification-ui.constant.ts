@@ -18,7 +18,7 @@ export const LIMITS = {
 /** The Localization module that holds the push texts. */
 export const NOTIFICATION_LOCALIZATION_MODULE = "notifications";
 
-const MOBILE_PUSH = "Mobile push";
+const PUSH = "Push";
 
 export const SEND_TO_LABELS: Record<number, string> = {
   [NOTIFICATION_SCOPE.Project]: "Consumer users",
@@ -48,7 +48,7 @@ export const MATCH_OPTIONS = [
 export const OWNER_ONLY_LABEL = "Account owner only";
 
 export const NOTIFICATION_TEXT = {
-  mobilePush: MOBILE_PUSH,
+  mobilePush: PUSH,
   searchPlaceholder: "Search by name",
   columns: {
     name: "Name",
@@ -56,7 +56,7 @@ export const NOTIFICATION_TEXT = {
     service: "Service",
     importance: "Importance",
     inApp: "In-app",
-    push: MOBILE_PUSH,
+    push: PUSH,
     inbox: "Offline",
     delivery: "Delivery channels",
     status: "Status",
@@ -121,15 +121,15 @@ export const NOTIFICATION_TEXT = {
   filterHelp: "Narrows receivers to users subscribed to a matching context. Never adds receivers.",
   channels: "Delivery channels",
   inApp: "In-app",
-  mobilePushChannel: MOBILE_PUSH,
+  mobilePushChannel: PUSH,
   saveToInbox: "Offline",
   saveToInboxHelp:
     "Offline keeps the notification, so users who are offline see it when they come back.",
   rateLimit: "Rate limit",
   rateLimitAria: "Rate limit per minute",
   perMinute: "/ min",
-  pushNotReady: "Mobile push is not set up for this project yet.",
-  setUpPush: "Set up mobile push",
+  pushNotReady: "Push is not set up for this project yet.",
+  setUpPush: "Set up push",
   pushMessage: "Push message",
   titleKey: "Title key",
   messageKey: "Message key",
@@ -162,7 +162,7 @@ export const NOTIFICATION_TEXT = {
   errors: {
     name: `Event name must be between ${LIMITS.nameMin} and ${LIMITS.nameMax} characters.`,
     sendTo: "Select at least one group to send to.",
-    channel: "Select at least one channel: in-app or mobile push.",
+    channel: "Select at least one channel: in-app or push.",
     pushKeys: "Choose a title key and a message key for the push message.",
     rate: `Rate limit must be a whole number from 0 to ${LIMITS.rateMax}.`,
     targeted: "Targeted needs the owner or at least one user, role or permission.",
@@ -180,7 +180,7 @@ export const MISSING_LANGUAGE_NOTE = (languages: string[]) =>
   `No ${languages.join(", ")} text yet — the default language is used.`;
 
 export const PUSH_TEXT = {
-  title: MOBILE_PUSH,
+  title: PUSH,
   subtitle:
     "Send notifications to your users' phones and browsers through Firebase Cloud Messaging.",
   connection: "Connection",
@@ -215,8 +215,8 @@ export const PUSH_TEXT = {
   otherProject:
     "This key is for another Firebase project. Phones registered with the old project stop getting push.",
   otherProjectWeb: "The stored web config is for the old project and will be removed.",
-  pushOn: "Send mobile push",
-  saved: "Mobile push settings saved.",
+  pushOn: "Send push",
+  saved: "Push settings saved.",
   needKey: "Add a service account key to finish setup.",
   howToFind: "How to find these?",
 } as const;

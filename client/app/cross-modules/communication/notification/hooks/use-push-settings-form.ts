@@ -16,7 +16,7 @@ import { isPushReady, useSavePushSettings } from "./use-push-settings";
 const SOMETHING_WRONG = "Something went wrong";
 
 /**
- * State and actions of the Mobile push settings page: the three switches, the key and web config drafts, one save
+ * State and actions of the Push settings page: the three switches, the key and web config drafts, one save
  * and the test sends. Key and web values stay inside the drafts (refs) and are dropped after every save.
  */
 export const usePushSettingsForm = (settings: IPushSettings) => {

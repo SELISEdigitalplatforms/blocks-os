@@ -12,7 +12,7 @@ export const usePushSettings = (options?: { enabled?: boolean }) =>
     enabled: options?.enabled ?? true,
   });
 
-/** Mobile push counts as ready when a project id and a key are stored and it is switched on. */
+/** Push counts as ready when a project id and a key are stored and it is switched on. */
 export const isPushReady = (settings?: {
   projectId: string | null;
   enabled: boolean;

@@ -57,7 +57,7 @@ describe("PushMessageField", () => {
     ).toBe("https://loc.example/?module=notifications");
   });
 
-  it("tells the user when mobile push is not set up and opens the set-up page", async () => {
+  it("tells the user when push is not set up and opens the set-up page", async () => {
     const user = userEvent.setup();
     render(<PushMessageField {...props} pushReady={false} />);
     expect(screen.getByText(NOTIFICATION_TEXT.pushNotReady)).toBeTruthy();

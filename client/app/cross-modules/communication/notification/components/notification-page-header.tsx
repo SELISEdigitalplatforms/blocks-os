@@ -18,7 +18,7 @@ interface NotificationPageHeaderProps {
   onBack: () => void;
 }
 
-/** Breadcrumb and title of the notification form and the mobile push page, styled like the list header. */
+/** Breadcrumb and title of the notification form and the push page, styled like the list header. */
 export function NotificationPageHeader({
   title,
   description,

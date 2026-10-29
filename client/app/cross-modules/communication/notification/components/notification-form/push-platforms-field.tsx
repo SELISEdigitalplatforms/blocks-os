@@ -4,7 +4,7 @@ import { CheckRow, HelpText } from "./form-row";
 
 interface PushPlatformsFieldProps {
   selected: PushPlatform[];
-  /** The Mobile push settings; platforms switched off there show as not active. Unknown while loading. */
+  /** The Push settings; platforms switched off there show as not active. Unknown while loading. */
   settings?: IPushSettings;
   onChange: (platforms: PushPlatform[]) => void;
 }

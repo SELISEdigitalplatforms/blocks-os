@@ -144,7 +144,7 @@ describe("NotificationConfigurationList", () => {
     expect(within(row).getByText("Targeted: owner")).toBeTruthy();
     // Old rows keep in-app on and push off; inbox follows the saved flag.
     expect(within(row).getByText("In-app: on")).toBeTruthy();
-    expect(within(row).getByText("Mobile push: off")).toBeTruthy();
+    expect(within(row).getByText("Push: off")).toBeTruthy();
     expect(within(row).getByText("Offline: on")).toBeTruthy();
     expect(screen.getAllByText("Active")).toHaveLength(2);
   });
@@ -225,7 +225,7 @@ describe("NotificationConfigurationListPage", () => {
     expect(screen.queryByText(REALTIME_ALERTS)).toBeNull();
   });
 
-  it("shows the mobile push page at /notification/push", () => {
+  it("shows the push page at /notification/push", () => {
     render(<NotificationConfigurationListPage />, { wrapper: at(`${NOTIFICATION_PATH}/push`) });
     expect(screen.getByTestId("push-page")).toBeTruthy();
     expect(screen.queryByText(REALTIME_ALERTS)).toBeNull();

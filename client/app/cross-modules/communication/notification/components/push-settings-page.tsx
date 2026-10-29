@@ -115,7 +115,7 @@ interface PushSettingsPageProps {
   onViewDevices: () => void;
 }
 
-/** Mobile push settings: service account key, platform switches with web config, tests and one Save. */
+/** Push settings: service account key, platform switches with web config, tests and one Save. */
 export function PushSettingsPage({ onClose, onViewDevices }: Readonly<PushSettingsPageProps>) {
   const { data, isLoading } = usePushSettings();
   if (isLoading) return <Skeleton className="h-64 w-full max-w-[880px] rounded" />;

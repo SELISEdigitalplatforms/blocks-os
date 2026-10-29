@@ -57,7 +57,7 @@ export const NOTIFICATION_CONFIG_ERROR_MESSAGES: Record<string, string> = {
     "A receivers list has too many entries (users 500, roles 50, permissions 50, filters 20).",
   Notification_Audience_Item_Too_Long: "An entry is longer than 200 characters.",
   Notification_Filter_Context_Required: "Each subscription filter needs a context.",
-  Notification_Channel_Required: "Select at least one channel: in-app or mobile push.",
+  Notification_Channel_Required: "Select at least one channel: in-app or push.",
   Notification_Push_Keys_Required: "Choose a title key and a message key for the push message.",
   Notification_Rate_Limit_Out_Of_Range: "Rate limit must be a whole number from 0 to 600.",
 };

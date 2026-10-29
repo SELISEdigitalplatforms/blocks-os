@@ -51,7 +51,7 @@ function DeviceRow({
 }
 
 interface PushDevicesPageProps {
-  /** Back to the Mobile push settings. */
+  /** Back to the Push settings. */
   onBack: () => void;
 }
 

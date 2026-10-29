@@ -44,12 +44,12 @@ describe("validateNotificationForm", () => {
     expect(errors).toEqual([NOTIFICATION_TEXT.errors.sendTo]);
   });
 
-  it("needs in-app or mobile push", () => {
+  it("needs in-app or push", () => {
     const errors = validateNotificationForm(valid({ liveEnabled: false, pushEnabled: false }), ctx);
     expect(errors).toEqual([NOTIFICATION_TEXT.errors.channel]);
   });
 
-  it("needs both keys when mobile push is on", () => {
+  it("needs both keys when push is on", () => {
     const errors = validateNotificationForm(valid({ pushEnabled: true, titleKey: "T" }), ctx);
     expect(errors).toEqual([NOTIFICATION_TEXT.errors.pushKeys]);
   });
