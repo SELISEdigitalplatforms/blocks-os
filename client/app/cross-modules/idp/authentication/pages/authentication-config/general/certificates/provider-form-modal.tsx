@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Eye, EyeOff, Paperclip, UploadCloud } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Paperclip, UploadCloud } from "lucide-react";
 import {
   FileInput,
   FileUploader,
@@ -29,6 +29,7 @@ import {
 } from "@/components/ui-kits/select/select";
 import { Switch } from "@/components/ui-kits/switch/switch";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import { providers } from "@blocks-idp/authentication/constants/authentication.constant";
 import { useSaveThirdPartyJwtProvider } from "@blocks-idp/authentication/hooks/use-third-party-jwt-provider";
 import { usePublicCertificateFile } from "@blocks-storage/hooks/use-storage-file";
@@ -47,6 +48,7 @@ import {
   type ClaimsMapping,
   type ThirdPartyJwtProvider,
 } from "@/cross-modules/identifier/models/third-party-jwt-provider.model";
+import { EXTERNAL_IDP_CARD_INFO, externalIdpCardId } from "./external-idp-visual.constant";
 
 const KEY_CHARACTERS = /^[A-Za-z0-9._-]+$/;
 const KEY_CHARACTERS_MESSAGE = "Use letters, digits, dot, dash or underscore only";
@@ -135,6 +137,8 @@ type ProviderFormModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   existing?: ThirdPartyJwtProvider | null;
+  /** Provider pre-selected on an add, from the gallery card it was opened from. */
+  presetProviderName?: string | null;
   /** Issuers already in use by other active providers, for the shared-issuer warning. */
   siblingIssuers?: string[];
   /** Tenant the certificate is uploaded under. */
@@ -145,6 +149,7 @@ export function ProviderFormModal({
   open,
   onOpenChange,
   existing,
+  presetProviderName,
   siblingIssuers = [],
   projectKey,
 }: Readonly<ProviderFormModalProps>) {
@@ -160,7 +165,7 @@ export function ProviderFormModal({
       // Blank on an edit, like the signing secret: the stored key is masked, so pre-filling it
       // would only offer the mask back.
       key: "",
-      providerName: existing?.providerName ?? "",
+      providerName: existing?.providerName ?? presetProviderName ?? "",
       isActive: existing?.isActive ?? true,
       issuer: existing?.issuer ?? "",
       audiences: existing?.audiences?.join(", ") ?? "",
@@ -410,7 +415,22 @@ export function ProviderFormModal({
               <SelectContent>
                 {providers.map((p) => (
                   <SelectItem key={p.id} value={p.name}>
-                    {p.name}
+                    <span className="flex items-center gap-2">
+                      {p.icon ? (
+                        <img
+                          src={p.icon}
+                          alt=""
+                          className={cn(
+                            "h-4 w-4 object-contain",
+                            EXTERNAL_IDP_CARD_INFO[externalIdpCardId(p.name)].darkInvert &&
+                              "dark:invert",
+                          )}
+                        />
+                      ) : (
+                        <KeyRound className="h-4 w-4 text-muted-foreground" />
+                      )}
+                      {p.name}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>
