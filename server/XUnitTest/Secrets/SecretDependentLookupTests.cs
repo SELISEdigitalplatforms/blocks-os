@@ -27,7 +27,7 @@ namespace XUnitTest.Secrets
         public SecretDependentLookupTests()
         {
             GivenCaptchas();
-            _repo.Setup(r => r.GetMailConfigurationsByClientSecretReferenceAsync(It.IsAny<string>()))
+            _repo.Setup(r => r.GetMailConfigurationsBySecretReferenceAsync(It.IsAny<string>()))
                  .ReturnsAsync(new List<MailServerConfiguration>());
         }
 
@@ -53,7 +53,7 @@ namespace XUnitTest.Secrets
         public async Task FindAsync_ReturnsExactlyTheConfigurationsThatReferenceTheSecret()
         {
             GivenCaptchas(("c1", "reCAPTCHA", "s2"), ("c2", "hCaptcha", "s-other"), ("c3", "Turnstile", null));
-            _repo.Setup(r => r.GetMailConfigurationsByClientSecretReferenceAsync("s2"))
+            _repo.Setup(r => r.GetMailConfigurationsBySecretReferenceAsync("s2"))
                  .ReturnsAsync(new List<MailServerConfiguration>
                  {
                      new() { ItemId = "m2", Name = "Support mailbox", ClientSecretReference = "s2" }
@@ -65,6 +65,25 @@ namespace XUnitTest.Secrets
             result.Dependents.Select(d => (d.Kind, d.Id, d.Name)).Should().Equal(
                 ("captcha", "c1", "reCAPTCHA"),
                 ("mail", "m2", "Support mailbox"));
+        }
+
+        [Fact]
+        public async Task FindAsync_NamesMailConfigurationsThatUseTheSecretAsTheirPassword()
+        {
+            // H10: the repository matches either reference field; the lookup names whatever it
+            // returns, OAuth client secret and mailbox password alike.
+            _repo.Setup(r => r.GetMailConfigurationsBySecretReferenceAsync("pw-1"))
+                 .ReturnsAsync(new List<MailServerConfiguration>
+                 {
+                     new() { ItemId = "z1", Name = "Zoho Primary", AccountPasswordReference = "pw-1" },
+                     new() { ItemId = "z1-copy", Name = "Zoho Primary - Copy", AccountPasswordReference = "pw-1" }
+                 });
+
+            var result = await Lookup().FindAsync("pw-1");
+
+            result.Dependents.Select(d => (d.Kind, d.Id, d.Name)).Should().Equal(
+                ("mail", "z1", "Zoho Primary"),
+                ("mail", "z1-copy", "Zoho Primary - Copy"));
         }
 
         [Fact]
@@ -88,7 +107,7 @@ namespace XUnitTest.Secrets
             await Lookup().FindAsync("s2");
 
             _store.Verify(s => s.GetAllAsync<CaptchaConfigResult>("captcha", null, true, It.IsAny<CancellationToken>()), Times.Once);
-            _repo.Verify(r => r.GetMailConfigurationsByClientSecretReferenceAsync("s2"), Times.Once);
+            _repo.Verify(r => r.GetMailConfigurationsBySecretReferenceAsync("s2"), Times.Once);
         }
 
         [Fact]
@@ -96,7 +115,7 @@ namespace XUnitTest.Secrets
         {
             // The client turns a failed lookup into its "couldn't check" notice; an empty answer
             // here would instead claim, wrongly, that nothing uses the secret.
-            _repo.Setup(r => r.GetMailConfigurationsByClientSecretReferenceAsync(It.IsAny<string>()))
+            _repo.Setup(r => r.GetMailConfigurationsBySecretReferenceAsync(It.IsAny<string>()))
                  .ThrowsAsync(new InvalidOperationException("mongo down"));
 
             var act = () => Lookup().FindAsync("s2");

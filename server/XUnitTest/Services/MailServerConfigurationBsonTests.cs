@@ -82,6 +82,42 @@ namespace XUnitTest.Services
             rewritten["AuthenticationType"].AsInt32.Should().Be((int)MailAuthenticationType.Password);
             rewritten["SecurityMode"].AsInt32.Should().Be((int)MailSecurityMode.Legacy);
             rewritten["ClientSecretReference"].IsBsonNull.Should().BeTrue();
+
+            // The password reference is [BsonIgnoreIfNull]: a legacy record round-trips without it,
+            // so the readers keep taking its password from the document.
+            rewritten.Contains("AccountPasswordReference").Should().BeFalse();
+        }
+
+        [Fact]
+        public void PreChangeDocument_RoundTripsWithExactlyItsOwnElementsPlusTheEarlierAdditiveOnes()
+        {
+            var original = BsonDocument.Parse(PreChangeDocument);
+
+            var rewritten = BsonSerializer.Deserialize<MailServerConfiguration>(original).ToBsonDocument();
+
+            foreach (var element in original)
+            {
+                rewritten[element.Name].Should().Be(element.Value, $"{element.Name} keeps its stored value");
+            }
+
+            rewritten.Names.Should().NotContain("AccountPasswordReference");
+        }
+
+        [Fact]
+        public void APasswordConfigurationSavedByThisBuild_CarriesTheReferenceUnderTheReadersElementName()
+        {
+            var entity = BsonSerializer.Deserialize<MailServerConfiguration>(BsonDocument.Parse(PreChangeDocument));
+            entity.AccountPassword = string.Empty;
+            entity.AccountPasswordReference = "pw-1";
+
+            var document = entity.ToBsonDocument();
+
+            // blocks-logic and blocks-monitor read exactly "AccountPasswordReference".
+            document["AccountPasswordReference"].AsString.Should().Be("pw-1");
+            document["AccountPassword"].AsString.Should().BeEmpty();
+            document["ClientSecretReference"].IsBsonNull.Should().BeTrue();
+
+            BsonSerializer.Deserialize<MailServerConfiguration>(document).AccountPasswordReference.Should().Be("pw-1");
         }
 
         [Fact]

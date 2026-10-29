@@ -1,22 +1,31 @@
+using Blocks.Secrets;
 using Configuration.DomainService.Mail.RequestModel;
 using Configuration.DomainService.Mail.ResponseModel;
 using Blocks.Genesis.Entities.Os;
+using Microsoft.Extensions.Logging;
 
 namespace Configuration.DomainService.Mail.Providers
 {
     /// <summary>
-    /// The pre-existing username/password providers, unchanged.
+    /// The username/password providers.
     /// </summary>
     /// <remarks>
-    /// Deliberately inert: it normalizes nothing, validates nothing of its own, and owns no
-    /// credential. Amazon SES and Zoho keep their form fields, their FluentValidation rules,
-    /// their password-in-the-document persistence and their <c>EnableSSL</c> behaviour, and the
-    /// registry is the only thing that changed for them. The value of the definition is that the
-    /// orchestrator can treat every provider the same way.
+    /// Amazon SES and Zoho keep their form fields, their FluentValidation rules and their
+    /// <c>EnableSSL</c> behaviour. The password itself is a linked secret
+    /// (<see cref="LinkedPasswordCredential"/>): a save stores it in Blocks Secrets and leaves only
+    /// <c>AccountPasswordReference</c> on the document. A record saved before that keeps its
+    /// password in the document until its next save, and every save carries the password.
     /// </remarks>
     public abstract class PasswordMailConfigurationProvider : IMailConfigurationProvider
     {
         private const string MaskedSecretValue = "********";
+
+        private readonly LinkedPasswordCredential _password;
+
+        protected PasswordMailConfigurationProvider(ISecretService secretService, ILogger logger)
+        {
+            _password = new LinkedPasswordCredential(secretService, logger);
+        }
 
         public abstract MailServiceProvider Provider { get; }
 
@@ -27,8 +36,13 @@ namespace Configuration.DomainService.Mail.Providers
 
         public virtual void Normalize(MailConfiguration request)
         {
+            ArgumentNullException.ThrowIfNull(request);
+
             // Host, port, EnableSSL, username and password are all caller-supplied for these
             // providers, and SecurityMode stays Legacy so EnableSSL remains authoritative.
+            // Password is the only mode they have. Forcing it is what makes the shared validator
+            // require the password, so a request claiming another mode cannot save an empty secret.
+            request.AuthenticationType = MailAuthenticationType.Password;
         }
 
         public IDictionary<string, string> Validate(
@@ -45,7 +59,8 @@ namespace Configuration.DomainService.Mail.Providers
         /// <summary>
         /// True, which is the existing behaviour: a copy has always carried the source's default
         /// flag. Left alone rather than corrected, because changing it would alter which
-        /// configuration a tenant's templates resolve to.
+        /// configuration a tenant's templates resolve to. Since blocks-os#710 the service refuses to
+        /// duplicate the default record before this is read, so no copy ends up default in practice.
         /// </summary>
         public bool DuplicateInheritsDefault => true;
 
@@ -53,35 +68,67 @@ namespace Configuration.DomainService.Mail.Providers
             MailConfiguration request,
             MailServerConfiguration? existing,
             string? existingCredentialStatus,
-            CancellationToken cancellationToken = default) =>
-            Task.FromResult(MailCredentialResult.None);
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+
+            return _password.SaveAsync(
+                request.ConfigurationId,
+                request.ConfigurationName,
+                request.AccountPassword,
+                existing,
+                existingCredentialStatus,
+                cancellationToken);
+        }
 
         public Task<MailCredentialResult> DuplicateCredentialAsync(
             MailServerConfiguration source,
+            MailServerConfiguration copy,
             DuplicateMailConfigurationRequest request,
             CancellationToken cancellationToken = default) =>
-            Task.FromResult(MailCredentialResult.None);
+            _password.DuplicateAsync(source, copy, cancellationToken);
+
+        public string? CredentialReferenceOf(MailServerConfiguration entity)
+        {
+            ArgumentNullException.ThrowIfNull(entity);
+
+            return entity.AccountPasswordReference;
+        }
+
+        public void ApplyCredential(MailServerConfiguration entity, string? credentialReference) =>
+            LinkedPasswordCredential.Apply(entity, credentialReference);
 
         public Task<bool> DeleteCredentialAsync(string? credentialReference, CancellationToken cancellationToken = default) =>
-            Task.FromResult(false);
+            _password.RetireAsync(credentialReference, cancellationToken);
 
         public Task RestoreCredentialAsync(string? credentialReference, CancellationToken cancellationToken = default) =>
-            Task.CompletedTask;
+            _password.RestoreAsync(credentialReference, cancellationToken);
 
-        /// <summary>Null: the password lives in the document, so there is no linked secret to check.</summary>
+        /// <summary>Null for a record that still holds its password in the document.</summary>
         public Task<string?> ResolveCredentialStatusAsync(MailServerConfiguration entity, CancellationToken cancellationToken = default) =>
-            Task.FromResult<string?>(null);
+            _password.ResolveStatusAsync(entity, cancellationToken);
+
+        /// <summary>
+        /// False: the response shows only the fixed mask, so a read makes no metadata read for
+        /// the password secret.
+        /// </summary>
+        public bool ProjectsCredentialStatus(MailServerConfiguration entity) => false;
 
         public void ProjectResponse(MailServerConfiguration entity, MailConfigurationResponse response, string? credentialStatus)
         {
             // The existing mask, byte for byte: the UI has always shown a fixed-width mask here
-            // and the edit form has always posted a blank password to mean "unchanged".
+            // and the edit form has always posted the password again on every save.
             response.AccountPassword = MaskedSecretValue;
         }
     }
 
     public sealed class AmazonSesMailConfigurationProvider : PasswordMailConfigurationProvider
     {
+        public AmazonSesMailConfigurationProvider(ISecretService secretService, ILogger<AmazonSesMailConfigurationProvider> logger)
+            : base(secretService, logger)
+        {
+        }
+
         public override MailServiceProvider Provider => MailServiceProvider.AmazonSes;
 
         /// <summary>Outbound only, matching the existing client behaviour.</summary>
@@ -90,6 +137,11 @@ namespace Configuration.DomainService.Mail.Providers
 
     public sealed class ZohoMailConfigurationProvider : PasswordMailConfigurationProvider
     {
+        public ZohoMailConfigurationProvider(ISecretService secretService, ILogger<ZohoMailConfigurationProvider> logger)
+            : base(secretService, logger)
+        {
+        }
+
         public override MailServiceProvider Provider => MailServiceProvider.Zoho;
 
         public override MailDirections SupportedDirections => MailDirections.Both;
@@ -110,6 +162,11 @@ namespace Configuration.DomainService.Mail.Providers
         public const int SmtpPort = 587;
         public const string ImapHost = "imap.gmail.com";
         public const int ImapPort = 993;
+
+        public GmailMailConfigurationProvider(ISecretService secretService, ILogger<GmailMailConfigurationProvider> logger)
+            : base(secretService, logger)
+        {
+        }
 
         public override MailServiceProvider Provider => MailServiceProvider.Gmail;
 

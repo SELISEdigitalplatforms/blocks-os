@@ -448,13 +448,16 @@ export async function paginateHistoryListFlow(page: Page) {
   await expect(historyPanel).toBeVisible({ timeout: 8_000 });
 
   const nextPageButton = historyPanel.locator("button:has(svg.lucide-chevron-right)").first();
-  // Strict: if the paginator exists, it MUST be clickable AND it MUST
-  // navigate. If it doesn't exist (fewer than 10 history entries on a
-  // fresh project), that's the empty state and we skip — not a failure.
+  // Since 0457c66a (pinned pagination) the paginator is always rendered.
+  // A disabled "next" means a single page: nothing to paginate, so the URL
+  // must not move. An enabled "next" MUST navigate to page 1.
   if (!(await nextPageButton.isVisible({ timeout: 3_000 }))) {
     return;
   }
-  await expect(nextPageButton).toBeEnabled();
+  if (await nextPageButton.isDisabled()) {
+    await expect(page).not.toHaveURL(/[?&]page=[1-9]/);
+    return;
+  }
   await nextPageButton.click();
   await expect(page).toHaveURL(/[?&]page=1/, { timeout: 8_000 });
 }

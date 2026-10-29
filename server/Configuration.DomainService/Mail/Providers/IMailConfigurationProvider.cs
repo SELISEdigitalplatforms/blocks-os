@@ -34,8 +34,9 @@ namespace Configuration.DomainService.Mail.Providers
     /// client label entry, and nothing else: the orchestrating service keeps name/id validation,
     /// repository writes, authorization and response envelopes, and has no branch on
     /// <see cref="MailServiceProvider"/>. Existing flat fields stay the persistence contract for
-    /// the password providers — a definition maps records into a normalized view, it does not
-    /// rewrite them or introduce a polymorphic discriminator.
+    /// the password providers — a definition maps records into a normalized view and introduces
+    /// no polymorphic discriminator. The one rewrite is the password itself: a save moves it to
+    /// Blocks Secrets, blanks <c>AccountPassword</c> and stores <c>AccountPasswordReference</c>.
     /// <para>
     /// Definitions are <b>scoped</b>, because the ones that own a secret depend on the scoped
     /// <c>ISecretService</c>, which reads the request-scoped <c>BlocksContext</c>.
@@ -113,12 +114,38 @@ namespace Configuration.DomainService.Mail.Providers
             CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Provisions an <b>independent</b> credential for a copy of <paramref name="source"/>.
+        /// Provisions an <b>independent</b> credential for <paramref name="copy"/>, a copy of
+        /// <paramref name="source"/> that is not yet written.
         /// </summary>
+        /// <param name="copy">
+        /// The copy as it will be stored, already carrying its own id and name, so a secret
+        /// description names the copy rather than the source.
+        /// </param>
+        /// <returns>
+        /// A result with <see cref="MailCredentialResult.Error"/> set when the source's credential
+        /// cannot be carried over; no credential was created and no copy may be written.
+        /// </returns>
         Task<MailCredentialResult> DuplicateCredentialAsync(
             MailServerConfiguration source,
+            MailServerConfiguration copy,
             DuplicateMailConfigurationRequest request,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// The reference field this provider owns on <paramref name="entity"/>: the one a delete
+        /// retires and a failed delete restores. Null when the record links no secret.
+        /// </summary>
+        string? CredentialReferenceOf(MailServerConfiguration entity);
+
+        /// <summary>
+        /// Stores a reference a credential operation returned in the field this provider owns.
+        /// </summary>
+        /// <remarks>
+        /// The orchestrator never assigns a reference field or a plaintext itself, so a provider's
+        /// mode decides where the reference lands: <c>AccountPasswordReference</c> for a password
+        /// (which also blanks <c>AccountPassword</c>), <c>ClientSecretReference</c> for OAuth.
+        /// </remarks>
+        void ApplyCredential(MailServerConfiguration entity, string? credentialReference);
 
         /// <summary>
         /// Retires the owned credential. Called before the configuration is deleted, and as
@@ -145,10 +172,24 @@ namespace Configuration.DomainService.Mail.Providers
         Task<string?> ResolveCredentialStatusAsync(MailServerConfiguration entity, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Whether <see cref="ProjectResponse"/> shows the linked secret's status for
+        /// <paramref name="entity"/>. When false, a read projects the record without resolving
+        /// the status, so a list or a lookup makes no secret-store call for it.
+        /// </summary>
+        /// <remarks>
+        /// Read paths only. A save still resolves the status, because whether the stored
+        /// reference is broken decides between rotating and replacing it.
+        /// </remarks>
+        bool ProjectsCredentialStatus(MailServerConfiguration entity);
+
+        /// <summary>
         /// Copies this provider's non-secret fields and "configured" flags onto the response.
         /// Never the plaintext and never the reference.
         /// </summary>
-        /// <param name="credentialStatus">What <see cref="ResolveCredentialStatusAsync"/> returned for <paramref name="entity"/>.</param>
+        /// <param name="credentialStatus">
+        /// What <see cref="ResolveCredentialStatusAsync"/> returned for <paramref name="entity"/>, or
+        /// null when <see cref="ProjectsCredentialStatus"/> is false and no status was resolved.
+        /// </param>
         void ProjectResponse(MailServerConfiguration entity, MailConfigurationResponse response, string? credentialStatus);
     }
 
@@ -169,5 +210,14 @@ namespace Configuration.DomainService.Mail.Providers
         public string? Reference { get; init; }
 
         public bool Created { get; init; }
+
+        /// <summary>
+        /// A field error that stops the operation before anything is written, keyed by request
+        /// field. Null on success.
+        /// </summary>
+        public KeyValuePair<string, string>? Error { get; init; }
+
+        public static MailCredentialResult Rejected(string field, string message) =>
+            new() { Error = new KeyValuePair<string, string>(field, message) };
     }
 }

@@ -85,7 +85,7 @@ public class OsRepositoryDenialTests
         (await repo.GetMailConfigurationByIdAsync("1")).Should().BeNull();
         (await repo.GetMailConfigurationByNameAsync("n")).Should().BeNull();
         (await repo.GetAllMailConfigurationsAsync()).Should().BeEmpty();
-        (await repo.GetMailConfigurationsByClientSecretReferenceAsync("ref")).Should().BeEmpty();
+        (await repo.GetMailConfigurationsBySecretReferenceAsync("ref")).Should().BeEmpty();
         await repo.UpdateMailSenderNameAsync("1", "s", DateTime.UtcNow, "u");
         await repo.DeleteMailConfigurationAsync("1");
         await FluentActions.Invoking(() => repo.SaveMailConfigurationAsync(new MailServerConfiguration { ItemId = "1" })).Should().ThrowAsync<UnauthorizedAccessException>();

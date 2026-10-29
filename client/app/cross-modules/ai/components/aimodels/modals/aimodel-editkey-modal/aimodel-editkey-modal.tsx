@@ -62,7 +62,10 @@ export const ModelEditKeyModal = ({
     [model.Provider, model.ServicePlatform, modelOptions],
   );
   const schema = useMemo(
-    () => (baseSchema as z.AnyZodObject).extend({ apiKey: z.string().optional() }),
+    () =>
+      (
+        baseSchema as z.ZodObject<Record<string, z.ZodType<string | undefined, string | undefined>>>
+      ).extend({ apiKey: z.string().optional() }),
     [baseSchema],
   );
   const initialValues = useMemo(() => {

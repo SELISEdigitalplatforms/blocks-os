@@ -29,7 +29,7 @@ import { useGetEmailConfigs } from "@blocks-communication/mail/hooks/use-email-c
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { useGetLanguages } from "@blocks-localization/hooks/use-language-manager";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { z } from "zod";
 import { isErrorWithErrors } from "@/lib/error";
 import { useSaveMailTemplate } from "../../../../hooks/use-email-template";
@@ -67,7 +67,7 @@ const EditCommunication = (props: EditCommunicationProps) => {
           generatedBy: props.templateData.generatedBy,
         }
       : undefined,
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as unknown as Resolver<IEmailTemplate>,
   });
   const formSubmitHandler = async (data: IEmailTemplate) => {
     try {

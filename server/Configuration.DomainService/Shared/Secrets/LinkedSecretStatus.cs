@@ -62,8 +62,8 @@ namespace Configuration.DomainService.Shared.Secrets
         /// the vault and no <c>GetValue</c> audit row is written. Never throws for a secret-store
         /// failure: a list or get must not fail because one linked secret could not be checked,
         /// so any exception becomes <see cref="Unavailable"/>. The warning names the configuration
-        /// only; the secret id is left out because for mail it is the reference that must never
-        /// reach a log.
+        /// and the exception type only; the secret id is left out because for mail it is the
+        /// reference that must never reach a log, and a secret-store exception can carry it.
         /// </remarks>
         public static async Task<string> ResolveAsync(
             ISecretService secretService,
@@ -78,6 +78,7 @@ namespace Configuration.DomainService.Shared.Secrets
                 return None;
             }
 
+            string failureType;
             try
             {
                 var metadata = await secretService.GetAsync(secretId, cancellationToken).ConfigureAwait(false);
@@ -89,14 +90,18 @@ namespace Configuration.DomainService.Shared.Secrets
             }
             catch (Exception exception)
             {
-                logger.LogWarning(
-                    exception,
-                    "Could not check the linked secret of {ConfigurationKind} configuration {ConfigurationId}.",
-                    configurationKind,
-                    configurationId);
-
-                return Unavailable;
+                // Only the type name leaves the catch: the exception object is deliberately not
+                // logged, because its message can carry the secret id.
+                failureType = exception.GetType().Name;
             }
+
+            logger.LogWarning(
+                "Could not check the linked secret of {ConfigurationKind} configuration {ConfigurationId} ({FailureType}).",
+                configurationKind,
+                LogSafe.Value(configurationId),
+                failureType);
+
+            return Unavailable;
         }
     }
 }

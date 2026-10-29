@@ -39,7 +39,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { ChevronLeft, Plus, SquarePlus } from "lucide-react";
 import { useRef, useState } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
+import { type Resolver, useFieldArray, useForm } from "react-hook-form";
 import { z } from "zod";
 import {
   createRuleBuilderHelpers,
@@ -64,7 +64,7 @@ const ruleRowSchema = z
     // An access attribute is `attributes.<name>`; the name must be typed and a plain identifier.
     if (isAuthAttributeField(data.field) && !ATTRIBUTE_NAME_PATTERN.test(getAuthAttributeName(data.field))) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "Attribute name is required (letters, digits and _)",
         path: ["field"],
       });
@@ -77,7 +77,7 @@ const ruleRowSchema = z
       !ATTRIBUTE_NAME_PATTERN.test(getAuthAttributeName(data.compareValue))
     ) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "Attribute name is required (letters, digits and _)",
         path: ["compareValue"],
       });
@@ -87,7 +87,7 @@ const ruleRowSchema = z
     if (directValueOps.includes(data.operator)) {
       if (!data.compareValue) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message: "Value is required",
           path: ["compareValue"],
         });
@@ -97,14 +97,14 @@ const ruleRowSchema = z
 
     if (!data.compareSource) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "Compare source is required",
         path: ["compareSource"],
       });
     }
     if (!data.compareValue) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "Compare value is required",
         path: ["compareValue"],
       });
@@ -120,10 +120,10 @@ const groupHasContent = (group: { rules: unknown[]; nestedGroups: unknown[] }) =
   group.rules.length + group.nestedGroups.length > 0;
 
 const logicalOperatorSchema = z.enum(["AND", "OR"], {
-  required_error: "Please select a rule relation",
+  error: (issue) => (issue.input === undefined ? "Please select a rule relation" : undefined),
 });
 
-const ruleGroupSchema: z.ZodType<RuleGroupValues, z.ZodTypeDef, unknown> = z
+const ruleGroupSchema: z.ZodType<RuleGroupValues, unknown> = z
   .object({
     logicalOperator: logicalOperatorSchema,
     rules: z.array(ruleRowSchema),
@@ -206,7 +206,7 @@ export const RuleSetForm = ({
   const isEditMode = !!editingPolicy;
 
   const form = useForm<RuleSetFormValues>({
-    resolver: zodResolver(ruleSetSchema),
+    resolver: zodResolver(ruleSetSchema) as Resolver<RuleSetFormValues>,
     mode: "onChange",
     defaultValues: {
       name: editingPolicy?.policyName ?? seed?.name ?? "",

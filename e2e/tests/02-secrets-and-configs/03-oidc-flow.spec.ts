@@ -13,7 +13,6 @@ import {
   openEditOidcAndCloseFlow,
   openManageTemplateFlow,
   openNewOidcClientDialogFlow,
-  revealAndCopyClientSecretFlow,
   rotateClientSecretFlow,
   saveTemplateAndReturnToOidcListFlow,
   setThemeColorsFlow,
@@ -25,6 +24,7 @@ import {
   verifyLoginHeadingRequiredFlow,
   verifyLogoUploadRejectsNonImageFlow,
   verifyLogoUploadRejectsOversizedFlow,
+  verifySecretHiddenAndCopyClientIdFlow,
   verifyThemeInvalidHexFlow,
   verifyUndoRevertsLogoFlow,
 } from "../../pages/secrets-and-configs/oidc";
@@ -61,8 +61,9 @@ test.describe("flows", () => {
 
     const clientName = `Flow OIDC Client ${Date.now()}`;
 
-    await test.step("Fill a valid Client Name, toggle PKCE/Auto-Redirect/Identity-Provider, then save", async () => {
-      await createOidcClientFlow(page, clientName);
+    let issuedSecret = "";
+    await test.step("Fill a valid Client Name, toggle PKCE/Auto-Redirect/Identity-Provider, save, then close the one-time secret dialog", async () => {
+      issuedSecret = await createOidcClientFlow(page, clientName);
     });
 
     let clientRow: Awaited<ReturnType<typeof findOidcClientRowFlow>>;
@@ -145,14 +146,14 @@ test.describe("flows", () => {
       await saveTemplateAndReturnToOidcListFlow(page, branding.brandingSaveButton, clientRow);
     });
 
-    await test.step("Reveal and copy the Client Secret, copy the Client Id", async () => {
+    await test.step("The details keep the Client Secret hidden; copy the Client Id", async () => {
       await ensureOidcClientRowVisibleFlow(page, clientRow);
-      await revealAndCopyClientSecretFlow(page, clientRow);
+      await verifySecretHiddenAndCopyClientIdFlow(page, clientRow, issuedSecret);
     });
 
-    await test.step("Rotate the client's secret and view the new value", async () => {
+    await test.step("Rotate the client's secret and view the new value once", async () => {
       await ensureOidcClientRowVisibleFlow(page, clientRow);
-      await rotateClientSecretFlow(page, clientRow, clientName);
+      await rotateClientSecretFlow(page, clientRow, clientName, issuedSecret);
     });
 
     await test.step("Reopen the client for editing and close without changes", async () => {

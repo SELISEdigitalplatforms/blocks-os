@@ -82,7 +82,7 @@ namespace XUnitTest.Controllers
             objectResult.StatusCode.Should().Be(503);
             objectResult.Value.Should().BeOfType<BaseMutationResponse>()
                         .Which.Errors.Should().ContainKey("ClientSecret")
-                        .WhoseValue.Should().Be("The client secret could not be stored. Try again.");
+                        .WhoseValue.Should().Be("The secret store is unavailable. Try again later.");
         }
 
         [Fact]
@@ -157,6 +157,23 @@ namespace XUnitTest.Controllers
             var result = await Controller().Duplicate(new DuplicateMailConfigurationRequest { ConfigurationId = "c1" });
 
             result.Should().BeOfType<OkObjectResult>();
+        }
+
+        [Fact]
+        public async Task Duplicate_DefaultConfiguration_ReturnsBadRequestWithTheFieldError()
+        {
+            _service.Setup(s => s.DuplicateAsync(It.IsAny<DuplicateMailConfigurationRequest>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(MailConfigurationMutationResult.Invalid("ConfigurationId", "The default configuration cannot be duplicated."));
+
+            var result = await Controller().Duplicate(new DuplicateMailConfigurationRequest { ConfigurationId = "default-1" });
+
+            var response = result.Should().BeOfType<BadRequestObjectResult>()
+                                 .Which.Value.Should().BeOfType<BaseMutationResponse>().Subject;
+            response.IsSuccess.Should().BeFalse();
+            response.Errors.Should().Equal(new Dictionary<string, string>
+            {
+                ["ConfigurationId"] = "The default configuration cannot be duplicated."
+            });
         }
 
         private readonly Mock<IMailTemplateService> _templateService = new();

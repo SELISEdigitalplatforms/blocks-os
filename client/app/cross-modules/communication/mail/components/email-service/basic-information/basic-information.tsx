@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui-kits/select/select";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -126,7 +126,7 @@ const BasicInformation = forwardRef(function Inner(
       templateSubject: templateData.templateSubject,
       generatedBy: templateData.generatedBy,
     },
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as unknown as Resolver<IEmailTemplate>,
     mode: "onChange",
     reValidateMode: "onChange",
   });

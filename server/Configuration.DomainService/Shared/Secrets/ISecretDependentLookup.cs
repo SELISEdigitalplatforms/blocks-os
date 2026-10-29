@@ -6,7 +6,8 @@ namespace Configuration.DomainService.Shared.Secrets
     /// <remarks>
     /// The secret itself records no owner, so the only way to answer "what breaks if I archive
     /// this?" is to search the owners. Covers the two blocks-os configuration types that own a
-    /// service secret: CAPTCHA and Office 365 mail. Advisory only — nothing may refuse an archive
+    /// service secret: CAPTCHA, and mail (the Office 365 OAuth client secret and the mailbox
+    /// password of every password-mode configuration). Advisory only — nothing may refuse an archive
     /// or purge because of the answer, or cleaning up a broken configuration would deadlock.
     /// </remarks>
     public interface ISecretDependentLookup

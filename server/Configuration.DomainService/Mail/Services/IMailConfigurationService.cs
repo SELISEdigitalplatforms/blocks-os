@@ -69,6 +69,14 @@ namespace Configuration.DomainService.Mail.Services
         public static MailConfigurationMutationResult Invalid(string field, string message) =>
             Invalid(new Dictionary<string, string> { [field] = message });
 
+        /// <summary>
+        /// The secret store could not be reached while creating, rotating, reading or retiring a
+        /// linked secret, for a password or an OAuth configuration alike.
+        /// </summary>
+        /// <remarks>
+        /// The text names no credential kind because the same answer covers both. The
+        /// <c>ClientSecret</c> key is kept as it was, so existing callers keep matching it.
+        /// </remarks>
         public static MailConfigurationMutationResult SecretStoreUnavailable() => new()
         {
             Response = new BaseMutationResponse
@@ -76,7 +84,7 @@ namespace Configuration.DomainService.Mail.Services
                 IsSuccess = false,
                 Errors = new Dictionary<string, string>
                 {
-                    ["ClientSecret"] = "The client secret could not be stored. Try again."
+                    ["ClientSecret"] = "The secret store is unavailable. Try again later."
                 }
             },
             Outcome = MailConfigurationOutcome.SecretStoreUnavailable

@@ -16,6 +16,12 @@ public class PlatformSchemaCatalogTests
     [InlineData("Repo", "DeploySettings.Region.Id", true)]
     [InlineData("Repo", "Deploy", false)] // a name prefix is not a parent
     [InlineData("Repo", "OrganizationId", false)] // common fields stay, so row rules still work
+    [InlineData("MailServerConfiguration", "AccountPasswordReference", true)]
+    [InlineData("MailServerConfiguration", "ClientSecretReference", true)]
+    [InlineData("MailServerConfiguration", "AccountPassword", false)] // already masked by its own column rule; not backend-only
+    [InlineData("IdentityProvider", "ClientSecretReference", true)]
+    [InlineData("IdentityProvider", "PrivateKeyReference", true)]
+    [InlineData("IdentityProvider", "JwksUri", true)]
     public void IsHiddenField_HidesThePropertyAndItsChildrenOnly(string schema, string path, bool hidden) =>
         PlatformSchemaCatalog.IsHiddenField(schema, path).Should().Be(hidden);
 

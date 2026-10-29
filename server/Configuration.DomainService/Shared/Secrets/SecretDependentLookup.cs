@@ -8,7 +8,8 @@ namespace Configuration.DomainService.Shared.Secrets
     /// <inheritdoc />
     /// <remarks>
     /// Two reads, both against the caller's own tenant database: every CAPTCHA record under the
-    /// shared store key, and the mail configurations whose reference equals the id. No secret is
+    /// shared store key, and the mail configurations whose client secret or password reference
+    /// equals the id. No secret is
     /// read, so the answer is the same whether the secret is active, archived or already purged —
     /// which is what lets the Purge dialog still name the configurations it is about to break.
     /// </remarks>
@@ -32,7 +33,7 @@ namespace Configuration.DomainService.Shared.Secrets
                 .ConfigureAwait(false);
 
             var mails = await _configurationRepository
-                .GetMailConfigurationsByClientSecretReferenceAsync(secretId)
+                .GetMailConfigurationsBySecretReferenceAsync(secretId)
                 .ConfigureAwait(false);
 
             var dependents = captchas

@@ -88,7 +88,7 @@ const buildRedirectUriSchema = (entryError: (value: string) => string | null) =>
       entries.forEach((entry, idx) => {
         if (!entry.value) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             path: [idx, "value"],
             message: "Redirect URI is required",
           });
@@ -97,7 +97,7 @@ const buildRedirectUriSchema = (entryError: (value: string) => string | null) =>
         const message = entryError(entry.value);
         if (message) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             path: [idx, "value"],
             message,
           });
@@ -250,14 +250,14 @@ const addTokenLifetimeIssues = (value: TokenLifetimeFormValues, ctx: z.Refinemen
     if (parsed === null) return null;
     if (Number.isNaN(parsed)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: [key],
         message: TOKEN_LIFETIME_MESSAGES.wholeNumber,
       });
       return null;
     }
     if (parsed < limits.min || parsed > limits.max) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: [key], message: rangeMessage });
+      ctx.addIssue({ code: "custom", path: [key], message: rangeMessage });
       return null;
     }
     return parsed;
@@ -276,7 +276,7 @@ const addTokenLifetimeIssues = (value: TokenLifetimeFormValues, ctx: z.Refinemen
   );
   if (refresh !== null && absolute !== null && absolute < refresh) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: "custom",
       path: ["absoluteRefreshTokenLifetime"],
       message: TOKEN_LIFETIME_MESSAGES.absoluteBelowRefresh,
     });
@@ -323,7 +323,7 @@ export const createOidcSchema = z
     if (!redirectResult.success) {
       redirectResult.error.issues.forEach((issue) => {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           path: ["redirectUris", ...issue.path],
           message: issue.message,
         });
@@ -332,7 +332,7 @@ export const createOidcSchema = z
 
     if (value.allowedResponseTypes.length === 0) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["allowedResponseTypes"],
         message: "At least one response type is required",
       });
