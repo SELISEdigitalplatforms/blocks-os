@@ -1,7 +1,7 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 import { openSecretManagement } from "../../support/os-helpers";
 
-/** The dialog and the empty-state CTA share the name "Add provider", so every field lookup is scoped. */
+/** The dialog's submit button is named "Add provider", so every field lookup is scoped. */
 const dialog = (page: Page): Locator => page.getByRole("dialog");
 
 const IDP_HEADER = "x-blocks-idp";
@@ -23,18 +23,22 @@ export async function navigateToExternalIdpFlow(page: Page) {
   await openSecretManagement(page, "external-idp", "External IdP");
 }
 
-export async function verifyEmptyStateFlow(page: Page) {
-  const empty = page.getByText("No external IdP yet");
-  if (!(await empty.isVisible({ timeout: 15000 }))) return;
+/** The page header's add action, the same one identity providers carries. */
+const headerAddButton = (page: Page): Locator =>
+  page.getByRole("button", { name: "Add", exact: true });
 
-  await expect(empty).toBeVisible();
-  // The empty state has to carry its own call to action: with no provider configured there is
-  // no list to hang one off, and the page header no longer offers one.
-  await expect(page.getByRole("button", { name: "Add provider" })).toBeVisible();
+export async function verifyEmptyStateFlow(page: Page) {
+  // The gallery replaces the empty state: every platform card is shown, configured or not, and
+  // each carries its own add action.
+  await expect(page.getByText("How external token trust works")).toBeVisible({ timeout: 15000 });
+  for (const name of ["Keycloak", "Okta", "Auth0", "Azure", "Custom issuer"]) {
+    await expect(page.getByRole("button", { name: `Add ${name}`, exact: true })).toBeVisible();
+  }
+  await expect(headerAddButton(page)).toBeVisible();
 }
 
 export async function openAddProviderDialogFlow(page: Page) {
-  await page.getByRole("button", { name: "Add provider" }).first().click();
+  await headerAddButton(page).click();
   await expect(dialog(page).getByRole("heading", { name: "Add provider" })).toBeVisible({
     timeout: 15000,
   });
@@ -240,7 +244,7 @@ export async function openDetailsAndVerifyIntegrationFlow(page: Page, key: strin
 
 export async function backToListFlow(page: Page) {
   await page.getByRole("button", { name: "All providers" }).click();
-  await expect(page.getByRole("button", { name: "Add provider" })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText("How external token trust works")).toBeVisible({ timeout: 15000 });
 }
 
 export async function editProviderAndSaveFlow(page: Page, key: string, newIssuer: string) {

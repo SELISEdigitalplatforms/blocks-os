@@ -10,7 +10,9 @@ import {
   SIGNING_ALGORITHMS,
   type ThirdPartyJwtProvider,
 } from "@/cross-modules/identifier/models/third-party-jwt-provider.model";
+import { cn } from "@/lib/utils";
 import { ApiIntegrationCard } from "./api-integration-card";
+import { EXTERNAL_IDP_CARD_INFO, externalIdpCardId } from "./external-idp-visual.constant";
 
 const algorithmLabel = (value: number) =>
   SIGNING_ALGORITHMS.find((a) => a.value === value)?.label ?? "—";
@@ -179,7 +181,17 @@ export function ProviderDetails({
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex items-center gap-2">
               {icon ? (
-                <img src={icon} alt="" width={20} height={20} className="h-5 w-5 object-contain" />
+                <img
+                  src={icon}
+                  alt=""
+                  width={20}
+                  height={20}
+                  className={cn(
+                    "h-5 w-5 object-contain",
+                    EXTERNAL_IDP_CARD_INFO[externalIdpCardId(provider.providerName)].darkInvert &&
+                      "dark:invert",
+                  )}
+                />
               ) : (
                 <div className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600">
                   <div className="h-2 w-2 rounded-full bg-white" />

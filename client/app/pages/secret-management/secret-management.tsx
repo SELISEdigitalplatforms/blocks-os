@@ -25,6 +25,7 @@ function SecretManagementHeaderActions({
   isOidcBranding,
   currentPath,
   setIsAddIdpOpen,
+  setIsAddExternalIdpOpen,
   setIsEmailConfigOpen,
   openNotificationNew,
   openNotificationPush,
@@ -34,6 +35,7 @@ function SecretManagementHeaderActions({
   isOidcBranding: boolean;
   currentPath: string;
   setIsAddIdpOpen: (value: boolean) => void;
+  setIsAddExternalIdpOpen: (value: boolean) => void;
   setIsEmailConfigOpen: (value: boolean) => void;
   openNotificationNew: () => void;
   openNotificationPush: () => void;
@@ -97,6 +99,14 @@ function SecretManagementHeaderActions({
       )}
       {currentPath === "identity-providers" && (
         <Button size="sm" onClick={() => setIsAddIdpOpen(true)}>
+          <Plus className="h-5 w-5" />
+          <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
+            Add
+          </span>
+        </Button>
+      )}
+      {currentPath === "external-idp" && (
+        <Button size="sm" onClick={() => setIsAddExternalIdpOpen(true)}>
           <Plus className="h-5 w-5" />
           <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
             Add
@@ -187,6 +197,10 @@ export default function SecretManagementLayout() {
 
   // Shared via URL so child routes can read/close the same modal
   const [, setIsAddIdpOpen] = useQueryState("addIdp", parseAsBoolean.withDefault(false));
+  const [, setIsAddExternalIdpOpen] = useQueryState(
+    "editExternalIdp",
+    parseAsBoolean.withDefault(false),
+  );
   const [, setIsEmailConfigOpen] = useQueryState("emailConfig", parseAsBoolean.withDefault(false));
   const notificationNav = useNotificationNavigation();
   // The notification form and the mobile push page show their own title, so the list header steps aside.
@@ -224,6 +238,7 @@ export default function SecretManagementLayout() {
       isOidcBranding={isOidcBranding}
       currentPath={currentPath}
       setIsAddIdpOpen={setIsAddIdpOpen}
+      setIsAddExternalIdpOpen={setIsAddExternalIdpOpen}
       setIsEmailConfigOpen={setIsEmailConfigOpen}
       openNotificationNew={notificationNav.openNew}
       openNotificationPush={notificationNav.openPush}

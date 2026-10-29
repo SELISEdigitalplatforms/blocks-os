@@ -168,10 +168,10 @@ describe("SecretManagementLayout", () => {
     expect(screen.getByTestId("create-client-credential")).toBeTruthy();
   });
 
-  it("leaves the external idp header empty, since providers are managed from the page body", () => {
+  it("offers only the Add action in the external idp header, like identity providers", () => {
     h.pathname = "/app/proj/secret-management/external-idp";
     render(<SecretManagementLayout />);
-    expect(screen.queryByText("Add")).toBeNull();
+    expect(screen.getByText("Add")).toBeTruthy();
     expect(screen.queryByText("Edit")).toBeNull();
     expect(screen.queryByText("Map JWT Claim")).toBeNull();
   });

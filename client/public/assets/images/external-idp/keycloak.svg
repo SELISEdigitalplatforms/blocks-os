@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Keycloak">
+  <path fill="#4D4D4D" d="M50.6 8H13.4L2 32l11.4 24h37.2L62 32 50.6 8z"/>
+  <path fill="#E1E1E1" d="M13.4 56 2 32 13.4 8h6.4L8.6 32l11.2 24z" opacity=".25"/>
+  <path fill="#00B8E3" d="M28.6 18.5 21.2 32l7.4 13.5h-6.8L14.4 32l7.4-13.5z"/>
+  <path fill="#33C6E9" d="M35.4 18.5 42.8 32l-7.4 13.5h6.8L49.6 32l-7.4-13.5z"/>
+  <path fill="#008AAA" d="M21.2 32h-6.8l7.4 13.5h6.8zM42.8 32h6.8l-7.4 13.5h-6.8z" opacity=".55"/>
+</svg>

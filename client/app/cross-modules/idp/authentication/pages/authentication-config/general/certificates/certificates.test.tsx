@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -106,15 +106,23 @@ describe("Certificates", () => {
     h.isProjectError = false;
   });
 
-  it("offers a way to add the first provider from the empty state", async () => {
-    // With no provider configured there is no list to hang an action off, and the page header
-    // carries none — so the empty state is the only entry point into the form.
+  it("shows every platform card even with nothing configured", () => {
+    // The gallery stands in for the old empty state: each card is its own way in.
     render(<Certificates />);
 
-    const add = screen.getByRole("button", { name: "Add provider" });
-    await userEvent.click(add);
+    for (const name of ["Keycloak", "Okta", "Auth0", "Azure", "Custom issuer"]) {
+      expect(screen.getByRole("button", { name: `Add ${name}` })).toBeTruthy();
+    }
+    expect(screen.getAllByText("Not configured")).toHaveLength(5);
+  });
+
+  it("pre-selects the platform when adding from its card", async () => {
+    render(<Certificates />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Add Keycloak" }));
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Add provider" })).toBeTruthy());
+    expect(screen.getByRole("combobox", { name: /Provider/ }).textContent).toContain("Keycloak");
   });
 
   it("names the key source of a certificate-backed provider rather than an em dash", () => {
@@ -133,15 +141,25 @@ describe("Certificates", () => {
     expect(screen.getByText("Certificate (.crt)")).toBeTruthy();
   });
 
-  it("lists a configured provider with its key source and an add action", () => {
+  it("lists a configured provider on its platform's card, with its key source", () => {
     h.providers = [provider];
     render(<Certificates />);
 
     // Integration details live on the details page now, so the list shows the key exactly once.
     expect(screen.getAllByText("auth0-web")).toHaveLength(1);
-    expect(screen.getByText(provider.issuer)).toBeTruthy();
-    expect(screen.getByText(provider.jwksUrl)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Add provider" })).toBeTruthy();
+    const list = screen.getByRole("list", { name: "Configured Auth0 providers" });
+    expect(within(list).getByText(provider.issuer)).toBeTruthy();
+    expect(within(list).getByText(provider.jwksUrl)).toBeTruthy();
+    expect(screen.getByText("1 configured")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Add Auth0" })).toBeTruthy();
+  });
+
+  it("files a provider with an unlisted name under the custom card", () => {
+    h.providers = [{ ...provider, providerName: "Cognito" }];
+    render(<Certificates />);
+
+    const list = screen.getByRole("list", { name: "Configured Custom issuer providers" });
+    expect(within(list).getByText("auth0-web")).toBeTruthy();
   });
 
   it("opens claim mapping for the provider whose row was clicked", async () => {

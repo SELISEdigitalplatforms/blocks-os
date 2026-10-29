@@ -111,9 +111,9 @@ export const GRANT_TYPES_OPTIONS: { id: GRANT_TYPES; label: string; value: strin
 // ];
 
 export const providers = [
-  { id: "keycloak", name: "Keycloak", icon: "/assets/images/keycloak_icon.png" },
-  { id: "okta", name: "Okta", icon: "/assets/images/okta_symbol.png" },
-  { id: "auth0", name: "Auth0", icon: "/assets/images/auth0.png" },
-  { id: "azure", name: "Azure", icon: "/assets/images/azure.png" },
+  { id: "keycloak", name: "Keycloak", icon: "/assets/images/external-idp/keycloak.svg" },
+  { id: "okta", name: "Okta", icon: "/assets/images/external-idp/okta.svg" },
+  { id: "auth0", name: "Auth0", icon: "/assets/images/external-idp/auth0.svg" },
+  { id: "azure", name: "Azure", icon: "/assets/images/external-idp/azure.svg" },
   { id: "others", name: "Others", icon: "" },
 ];
