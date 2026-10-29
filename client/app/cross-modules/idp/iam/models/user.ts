@@ -1,6 +1,18 @@
 import { IPermission } from "./permission";
 import { IRole } from "./role";
 
+/** An org's access attributes: attribute name to its values (`Auth.Attributes.<name>` in policies). */
+export type AccessAttributes = Record<string, string[]>;
+
+/**
+ * Free-form user attributes. Only `access` is read by the console: organization id, then
+ * attribute name, then values. Other keys belong to other features and are carried untouched.
+ */
+export interface UserAttributes {
+  access?: Record<string, AccessAttributes>;
+  [key: string]: unknown;
+}
+
 export interface User {
   itemId: string;
   createdDate: string;
@@ -17,6 +29,10 @@ export interface User {
   roles: Record<string, string[]>;
   permissions: Record<string, string[]>;
   active: boolean;
+  lockoutUntilUtc: string | null;
+  isLockedOut: boolean;
+  /** IAM's derived lifecycle state; read it through `resolveUserAccountState`. */
+  accountState?: string;
   status: number;
   statusReason: string | null;
   deactivatedAtUtc: string | null;
@@ -43,6 +59,7 @@ export interface User {
   organizations: IMembership[];
   OrganizationsRoles?: Record<string, string[]>;
   OrganizationsPermissions?: Record<string, string[]>;
+  attributes?: UserAttributes;
 }
 
 export interface IMembership {
@@ -63,14 +80,58 @@ export interface IGetUsersPayload {
     name: string;
     userIds?: string[];
     status?: { active?: boolean; inactive?: boolean };
+    /** Users in ANY of these states; see USER_ACCOUNT_STATE_FILTER_OPTIONS. */
+    accountStates?: string[];
     mfa?: { enabled?: boolean; disabled?: boolean };
     joinedOn?: string;
     lastLogin?: string;
     lastUpdatedDate?: string;
-    organizationId?: string;
+    organizationIds?: string[];
+    roles?: string[];
   };
   projectKey: string;
 }
+/**
+ * Who a bulk role change applies to. Exactly one form is sent.
+ *
+ * The filter form carries the same shape the user list already posts, so the set
+ * the operator saw on screen and the set the server acts on are computed from one
+ * input rather than enumerated client-side and re-resolved server-side.
+ */
+export type IBulkRoleTarget =
+  | { userIds: string[]; filter?: never }
+  | { filter: NonNullable<IGetUsersPayload["filter"]>; userIds?: never };
+
+/**
+ * A role delta inside ONE organization: roles are stored per organization
+ * (`User.roles` is `Record<organizationId, string[]>`), so a change has no meaning
+ * without one. Add and remove rather than replace, so a bulk caller never has to
+ * know what each target already holds.
+ */
+export interface IBulkRoleChangePayload {
+  organizationId: string;
+  addRoles: string[];
+  removeRoles: string[];
+  target: IBulkRoleTarget;
+}
+
+/** Dry run. `matchedCount === affectedCount + unchangedCount`; there is no skip category. */
+export interface IBulkRolePreviewResponse {
+  errors: unknown;
+  isSuccess: boolean;
+  matchedCount: number;
+  affectedCount: number;
+  unchangedCount: number;
+}
+
+/** Accepted and queued, not applied. `batchId` correlates worker logs; it is not pollable. */
+export interface IBulkRoleSubmitResponse {
+  errors: unknown;
+  isSuccess: boolean;
+  batchId: string;
+  matchedCount: number;
+}
+
 export interface IGetUsersResponse {
   errors: unknown;
   data: User[];
@@ -96,6 +157,8 @@ export interface ICreateUserPayload {
   projectKey?: string;
   organizationId?: string;
   organizationIds?: string[];
+  /** Server default is true. Only used when the email already has an account. */
+  notifyUser?: boolean;
 }
 export interface ICreateUserResponse {
   errors: unknown;
@@ -127,6 +190,8 @@ export interface IUpdateUserPayload {
   organizations?: string[] | IMembership[];
   profileImageId?: string | null;
   profileImageUrl?: string | null;
+  /** The whole attributes object: the update replaces it, so keep the keys you did not change. */
+  attributes?: UserAttributes;
 }
 
 export interface IUpdateUserResponse {
@@ -151,6 +216,8 @@ export interface IUpdateUserAccessControlPayload {
   roles: string[];
   permissions: string[];
   organizationId: string;
+  /** Server default is true. Mails only when this adds the user to the organization. */
+  notifyUser?: boolean;
 }
 export interface IUpdateUserAccessControlResponse {
   errors: unknown | null;
@@ -160,6 +227,8 @@ export interface IUpdateUserAccessControlResponse {
 export interface IRevokeAccessPayload {
   userId: string;
   organizationId: string;
+  /** Server default is true. Mails only when the user was a member. */
+  notifyUser?: boolean;
 }
 
 export interface IRevokeAccessResponse {
@@ -177,12 +246,6 @@ export interface IGetHistoriesPayload {
   pageSize: number;
   filter: { UserId: string };
   projectKey: string;
-}
-
-export interface IGeneratePATPayload {
-  note?: string;
-  codeTtlInMinute: number;
-  clientId: string;
 }
 
 export interface IGetUserRolesPayload {
@@ -278,21 +341,6 @@ export interface IDeviceSessionResponse {
   totalCount: number;
   data: IDeviceSession[];
   errors: unknown;
-}
-
-export interface IPATResponse {
-  note: string;
-  itemId: string;
-  createdDate: Date;
-  expiryDate: Date;
-  createdBy: string;
-  language: string;
-  lastUpdatedBy: string;
-  organizationIds: string[];
-  tags: string[];
-  code: string;
-  userId: string;
-  clientId: string;
 }
 
 export const status = [

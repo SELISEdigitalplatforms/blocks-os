@@ -1,4 +1,4 @@
-using DomainService.Migration.Entities;
+using Blocks.Genesis.Entities.Os;
 
 namespace DomainService.Migration
 {

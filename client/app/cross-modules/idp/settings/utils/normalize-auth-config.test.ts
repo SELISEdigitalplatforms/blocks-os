@@ -39,6 +39,22 @@ describe("normalizeAuthConfigResponse", () => {
     expect(result.publicCertificatePath).toContain("blocksdev.blob.core.windows.net");
     expect(result.useAccountActionBaseUrlAsDefault).toBe(true);
     expect(result.logoutOnPasswordChange).toBe(true);
+    expect(result.collectPasswordOnActivation).toBe(true);
+  });
+
+  it("reads an explicit collectPasswordOnActivation in either casing", () => {
+    expect(
+      normalizeAuthConfigResponse({ collectPasswordOnActivation: false })
+        .collectPasswordOnActivation,
+    ).toBe(false);
+    expect(
+      normalizeAuthConfigResponse({ CollectPasswordOnActivation: false })
+        .collectPasswordOnActivation,
+    ).toBe(false);
+  });
+
+  it("defaults collectPasswordOnActivation to true when the server omits it", () => {
+    expect(normalizeAuthConfigResponse({}).collectPasswordOnActivation).toBe(true);
   });
 
   it("reads PascalCase AllowedGrantTypes and canonicalizes client credential aliases", () => {

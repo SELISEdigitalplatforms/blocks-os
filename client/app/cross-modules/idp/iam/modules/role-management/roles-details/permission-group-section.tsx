@@ -21,6 +21,15 @@ export const PermissionGroupSection = ({ group, onTrigger }: PermissionGroupSect
   );
   const permissionMap = useRoleDetailsStore((state) => state.permissionMap);
   const isEditMode = useRoleDetailsStore((state) => state.isEditMode);
+  const grantableResources = useRoleDetailsStore((state) => state.grantableResources);
+  // The group box only touches what the caller may change; with nothing changeable it is inert.
+  const grantable = useMemo(
+    () =>
+      grantableResources
+        ? group.permissions.filter((perm) => grantableResources.has(perm.resource))
+        : group.permissions,
+    [group.permissions, grantableResources],
+  );
   const checkedPermissions = useMemo(() => {
     return group.permissions.filter((perm) => isChecked(perm.resource, permissionMap));
   }, [group.permissions, permissionMap]);
@@ -54,11 +63,11 @@ export const PermissionGroupSection = ({ group, onTrigger }: PermissionGroupSect
               id={`group-${group.name}`}
               checked={checked}
               onCheckedChange={(checked) =>
-                changePermissionGroupSelection(group.permissions, !!checked)
+                changePermissionGroupSelection(grantable, !!checked)
               }
               onClick={(e) => e.stopPropagation()}
               className="mt-0.5"
-              disabled={!isEditMode}
+              disabled={!isEditMode || grantable.length === 0}
             />
             <div className="text-left">
               <div className="flex items-center gap-1">

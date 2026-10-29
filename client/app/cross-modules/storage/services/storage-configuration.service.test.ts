@@ -11,6 +11,7 @@ import {
   mockDeleteConfigPayload,
 } from "../test-utils/__mocks__";
 import { http } from "@/lib/http/http-client";
+import type { IStorageConfigurationSavePayload } from "../models/storage.model";
 import { StorageConfiguration } from "./storage-configuration.service";
 import { TEST_PROJECT_KEY } from "@/test-utils/__mocks__/data.mock";
 import { STORAGE_CONFIG_ENDPOINTS } from "../constants/endpoint.constant";
@@ -149,25 +150,35 @@ describe("StorageConfiguration", () => {
       );
     });
 
-    it("should override reset values with provided payload values", async () => {
+    it("sends an update payload untouched, without padding provider fields back in", async () => {
       vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
 
-      const payload = {
-        ...mockSaveAmazonConfigPayload,
-        name: "Updated Config",
+      const payload: IStorageConfigurationSavePayload = {
+        projectKey: TEST_PROJECT_KEY,
         updateRequest: true,
         itemId: "config-1",
+        uploadUrlExpirySeconds: 900,
+        downloadUrlExpirySeconds: 120,
+        maxFileSizeInBytes: 10_485_760,
+        uploadCompletionRequiredFor: ["Private"],
       };
       await service.save(payload);
 
-      expect(http.post).toHaveBeenCalledWith(
-        STORAGE_CONFIG_ENDPOINTS.SAVE_CONFIG,
-        expect.objectContaining({
-          name: "Updated Config",
-          updateRequest: true,
-          itemId: "config-1",
-        }),
-      );
+      // The per-provider blanking above exists to clear fields that don't belong to the provider
+      // chosen at creation time. Letting it run on an update would put name/accessKey/secretKey/
+      // connectionString back on the wire as empty strings - the exact properties an update is not
+      // allowed to carry, and ones the server would have to defend itself against.
+      expect(http.post).toHaveBeenCalledWith(STORAGE_CONFIG_ENDPOINTS.SAVE_CONFIG, payload);
+      const sent = vi.mocked(http.post).mock.calls[0][1] as Record<string, unknown>;
+      expect(Object.keys(sent).sort()).toEqual([
+        "downloadUrlExpirySeconds",
+        "itemId",
+        "maxFileSizeInBytes",
+        "projectKey",
+        "updateRequest",
+        "uploadCompletionRequiredFor",
+        "uploadUrlExpirySeconds",
+      ]);
     });
 
     it("should return the service response", async () => {

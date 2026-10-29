@@ -92,7 +92,10 @@ export interface IPermission {
 }
 
 export interface IPermissionFilter {
+  /** Cache discriminator only -- not sent. Scope with `organizationId`. */
   projectKey: string;
+  /** The organization whose permissions to return; see `GetRolesPayload.organizationId`. */
+  organizationId?: string;
   type?: number | null;
   page: number;
   pageSize: number;
@@ -128,6 +131,7 @@ export interface IGetPermissionsPayload {
     permissionSeverity?: number;
   };
   roles: string[];
+  /** Cache discriminator only -- stripped by the service before the request is sent. */
   projectKey: string;
   organizationId?: string;
 }
@@ -191,8 +195,6 @@ export enum ResourceType {
   Endpoint = 1,
   /** Permission guards a client-side user action / UI affordance. */
   "FE action" = 2,
-  /** Permission guards access to a specific data record or data class. */
-  "Data protection" = 3,
 }
 
 export const RESOURCE_TYPE = [
@@ -203,10 +205,6 @@ export const RESOURCE_TYPE = [
   {
     value: "2",
     label: "FE action",
-  },
-  {
-    value: "3",
-    label: "Data protection",
   },
 ];
 

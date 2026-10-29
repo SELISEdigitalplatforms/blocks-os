@@ -1,3 +1,4 @@
+import { useGrantScope } from "@blocks-idp/iam/hooks/use-grant-scope";
 import { useGetRoleById } from "@blocks-idp/iam/hooks/use-roles";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import { IRole } from "@blocks-idp/iam/models/role";
@@ -24,6 +25,9 @@ interface RoleDetailsState {
   permissionMap: PermissionMap;
   isInitialized: boolean;
   isEditMode: boolean;
+  /** Resources the caller may grant; `null` means no limit (the system user). */
+  grantableResources: ReadonlySet<string> | null;
+  setGrantableResources: (resources: ReadonlySet<string> | null) => void;
   initializeStore: (permissions: IPermission[]) => void;
   changePermissionSelection: (
     changes: { permissionResource: string; isChecked: boolean }[],
@@ -41,12 +45,14 @@ const createRoleDetailsStore = () => {
     permissionMap: new Map<string, PermissionState>(),
     isInitialized: false,
     isEditMode: false,
+    grantableResources: null,
+    setGrantableResources: (grantableResources) => set({ grantableResources }),
     initializeStore: (permissions: IPermission[]) => {
       const { role } = get();
       const permissionMap: PermissionMap = new Map();
       const pendingParents = new Map<string, string[]>();
       for (const p of permissions) {
-        const isInitiallyAssigned = p.roles.includes(role.slug);
+        const isInitiallyAssigned = (p.roles ?? []).includes(role.slug);
         const parents = pendingParents.get(p.resource) || [];
         permissionMap.set(p.resource, {
           ...p,
@@ -56,7 +62,7 @@ const createRoleDetailsStore = () => {
           parents: [...parents],
         });
         // register this permission as a parent for its dependents
-        for (const depResource of p.dependentPermissions) {
+        for (const depResource of p.dependentPermissions ?? []) {
           if (permissionMap.has(depResource)) {
             const depPerm = permissionMap.get(depResource)!;
             depPerm.parents = [...depPerm.parents, p.resource];
@@ -75,10 +81,12 @@ const createRoleDetailsStore = () => {
     },
     changePermissionSelection(changes: { permissionResource: string; isChecked: boolean }[]) {
       if (!get().isEditMode) return;
-      const { permissionMap } = get();
+      const { permissionMap, grantableResources } = get();
       for (const { permissionResource, isChecked: checked } of changes) {
         const permission = permissionMap.get(permissionResource);
         if (!permission) continue;
+        // Adding or removing a permission the caller does not hold would be refused by the server.
+        if (grantableResources && !grantableResources.has(permissionResource)) continue;
         const modified = checked !== permission.isInitiallyAssigned;
         const changeState = checked ? (modified ? "added" : null) : modified ? "removed" : null;
         permission.modified = modified;
@@ -136,6 +144,7 @@ export const RoleDetailsProvider = ({
 }) => {
   const [store] = useState(() => createRoleDetailsStore());
   const { data: role } = useGetRoleById({ id, projectKey });
+  const { isDescendant, rolePermissionCap } = useGrantScope();
   const organizationId = role?.data?.organizationId;
   const { data: permissionsData } = useQuery({
     queryKey: ["permissions", projectKey, organizationId],
@@ -153,6 +162,11 @@ export const RoleDetailsProvider = ({
       }),
     enabled: !!organizationId,
   });
+
+  useEffect(() => {
+    // A descendant may put on a role only what its own roles carry; everybody else is not capped.
+    store.setState({ grantableResources: isDescendant ? new Set(rolePermissionCap) : null });
+  }, [isDescendant, rolePermissionCap, store]);
 
   useEffect(() => {
     store.setState({ isEditMode: false, isInitialized: false });

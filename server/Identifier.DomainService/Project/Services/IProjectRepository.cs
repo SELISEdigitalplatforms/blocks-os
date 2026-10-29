@@ -4,33 +4,63 @@ using DomainService.Dtos;
 using DomainService.Shared.Entities;
 using MongoDB.Driver;
 using DomainService.Shared;
+using Blocks.Genesis.Entities.Os;
 
 namespace DomainService.Projects
 {
     public interface IProjectRepository
     {
         Task<Tenant> GetByDomainAsync(string name);
+
+        /// <summary>
+        /// True when a project other than <paramref name="tenantId"/> has an application on
+        /// <paramref name="normalizedDomain"/> (host only, lower case), stored in any of its forms.
+        /// </summary>
+        Task<bool> IsDomainUsedByAnotherProjectAsync(string normalizedDomain, string tenantId);
+
+        /// <summary>The live environments in a project group; deleted (disabled) ones are left out.</summary>
+        Task<List<Tenant>> GetByGroupIdAsync(string tenantGroupId);
+
         Task<Tenant> GetByIdAsync(string itemId);
         Task InsertProjectAsync(Tenant project);
         Task UpdateProjectAsync(Tenant project);
+        Task SetPublicCertificatePathAsync(string itemId, string publicCertificatePath);
         Task<List<GroupedProjectsDto>> GetAllByLastModifiedDateAsync(GetProjectsRequest request);
         Task SaveStatusTracerAsync(ProjectStatusTracer statusTrace);
         Task<List<ProjectStatusTracer>> GetAllUnfinishedProjectAsync();
         Task CreateDefaultConfigurationAsync(ProjectStatusTracer statusTrace, Tenant project);
-        Task<long> GetProjectCountAsync();
+        Task<long> GetOwnedProjectGroupCountAsync();
+        Task<string?> GetOwnerUserIdAsync(string tenantId);
+
+        /// <summary>
+        /// The owner's membership row anywhere in a project group, or null for a group that has
+        /// none yet. Used when provisioning a further environment so the new row is attributed to
+        /// the group's owner rather than to whoever triggered the provisioning.
+        /// </summary>
+        Task<ProjectPeople?> GetGroupOwnerAsync(string tenantGroupId);
+
         Task InsertPeopleAsync(ProjectPeople projectPeople);
         Task<bool> SaveTenantCertificateAsync(TenantCertificate tenantCertificate);
         Task<Tenant> GetByTenantIdAsync(string tenantId);
         Task<List<SsoInfo>> GetSsoInfoAsync();
         Task UpdateTenantAssetAsync(TenantAsset asset);
         Task<(TenantAsset assets, long totalCount)> GetTenantAssetAsync(GetAssetRequest request);
+        Task<TenantAsset?> GetTenantAssetByGroupIdAsync(string tenantGroupId);
         Task SaveTenantAssetAsync(TenantAsset asset);
         Task UpdateRepoResourceAsync(AddAssetRequest request);
+        Task UpdateRepoResourceInfoAsync(AddAssetRequest request);
+        Task ArchiveRepoResourceAsync(DeleteAssetRequest request);
         Task SaveRepoInfoAsync(Tenant project, List<Resource>? resources);
-        Task UpdateIamConfigurationAsync(Tenant project);
         Task<BlocksGuid> GetBlocksGuidAsync(string tenantGroupId);
         Task<BaseResponse> SaveJWTClaimsAsync(ThirdPartyJWTClaims mapper);
         Task<ThirdPartyJWTClaims> GetThirdPartyJWTClaimsAsync(string itemId);
+        /// <summary>The claims as the caller may see them: properties a column rule hides are left out. Never save them back.</summary>
+        Task<ThirdPartyJWTClaims> GetThirdPartyJWTClaimsForViewAsync();
+
+        Task<List<ThirdPartyJwtProvider>> GetThirdPartyJwtProvidersAsync(string tenantId);
+        Task<ThirdPartyJwtProvider?> GetThirdPartyJwtProviderAsync(string tenantId, string itemId);
+        Task SaveThirdPartyJwtProviderAsync(ThirdPartyJwtProvider provider);
+        Task<bool> DeleteThirdPartyJwtProviderAsync(string tenantId, string itemId);
         Task<bool> IsExistingEnviroment(List<string> enviroments, string tenantGroupId);
         Task<List<Project>> GetSharedProjectsAsync(string? tenantGroupId);
         Task<List<Project>> GetProjectPeoplesAsync(string tenantGroupId);

@@ -3,6 +3,8 @@ import { StorageConfiguration } from "./storage-configuration.service";
 import { StorageFile } from "./storage-file.service";
 import { STORAGE_FILE_ENDPOINTS } from "../constants/endpoint.constant";
 import {
+  ICreateDirectoryPayload,
+  ICreateDirectoryResponse,
   ICreateDmsFolderPayload,
   IGetDmsFileAndFolderPayload,
   IGetDmsFileAndFolderResponse,
@@ -55,8 +57,12 @@ export class StorageService {
       payload.file,
       (payload.file as File)?.name ?? "public-certificate.pfx",
     );
+    const providerRef = payload.ProviderRef
+      ? `&ProviderRef=${encodeURIComponent(payload.ProviderRef)}`
+      : "";
+
     return http.post(
-      `${STORAGE_FILE_ENDPOINTS.UPLOAD_PUBLIC_CERTIFICATE}?TenantId=${payload.TenantId}&IsThirdParty=true`,
+      `${STORAGE_FILE_ENDPOINTS.UPLOAD_PUBLIC_CERTIFICATE}?TenantId=${payload.TenantId}&IsThirdParty=true${providerRef}`,
       formData,
       { Accept: "*/*" },
       { absoluteUrl: true },
@@ -71,6 +77,12 @@ export class StorageService {
 
   uploadDmsFile(payload: IUploadDmsFilePayload): Promise<IUploadDmsFileResponse> {
     return http.post(STORAGE_FILE_ENDPOINTS.UPLOAD_DMS_FILE, payload, undefined, {
+      absoluteUrl: true,
+    });
+  }
+
+  createDirectory(payload: ICreateDirectoryPayload): Promise<ICreateDirectoryResponse> {
+    return http.post(STORAGE_FILE_ENDPOINTS.CREATE_DIRECTORY, payload, undefined, {
       absoluteUrl: true,
     });
   }

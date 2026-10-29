@@ -9,7 +9,6 @@ const h = vi.hoisted(() => ({
 
 vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
 vi.mock("@/hooks/use-lmt-base-path", () => ({ useLmtBasePath: () => "/app/proj-1/lmt" }));
-vi.mock("@/lib/runtime-env", () => ({ getRuntimeEnv: () => "https://os.example.com" }));
 vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useCopyToClipboard: () => ({ copy: h.copy }),
 }));
@@ -17,9 +16,9 @@ vi.mock("@/hooks/use-toast", () => ({
   showSuccessToast: (...a: unknown[]) => h.showSuccessToast(...a),
 }));
 
-import { Accordion, AccordionItem } from "@/components/ui-kits/accordion/accordion";
+import { Accordion, AccordionItem } from "../../../../components/ui-kits/accordion/accordion";
 import { ServiceCard } from "./service-card";
-import type { RegisteredService } from "@blocks-identifier/models/service.model";
+import type { RegisteredService } from "../../models/service.model";
 
 const baseService = {
   serviceId: "svc-123",
@@ -59,9 +58,13 @@ describe("ServiceCard", () => {
   it("navigates to logs and traces from the quick links", () => {
     renderCard(baseService);
     fireEvent.click(screen.getByText("Logs"));
-    expect(h.navigate).toHaveBeenCalledWith(expect.stringContaining("/app/proj-1/lmt/logs"));
+    expect(h.navigate).toHaveBeenCalledWith(
+      "/app/proj-1/lmt/logs?source=managed&service=svc-123&name=Orders%20API",
+    );
     fireEvent.click(screen.getByText("Traces"));
-    expect(h.navigate).toHaveBeenCalledWith(expect.stringContaining("/app/proj-1/lmt/tracing"));
+    expect(h.navigate).toHaveBeenCalledWith(
+      "/app/proj-1/lmt/tracing?services=svc-123",
+    );
   });
 
   it("copies an id and fires the success toast", () => {

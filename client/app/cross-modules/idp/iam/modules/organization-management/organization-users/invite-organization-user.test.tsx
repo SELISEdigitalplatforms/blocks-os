@@ -11,6 +11,7 @@ const h = vi.hoisted(() => ({
   config: { data: { isMultiOrgEnabled: false }, isLoading: false },
   showSuccessToast: vi.fn(),
   showErrorToast: vi.fn(),
+  orgQueryOptions: undefined as undefined | { enabled?: boolean },
 }));
 
 vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
@@ -19,7 +20,17 @@ vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
   useUpdateUserAccessControl: () => ({ mutateAsync: h.updateUserAccess, isPending: false }),
 }));
 vi.mock("@blocks-idp/iam/hooks/use-organization", () => ({
-  useGetOrganizations: () => h.orgs,
+  // Mirrors the real hook's `enabled` gate: when the call site passes
+  // enabled:false the query is idle (no data, not loading); once enabled
+  // returns to true the real h.orgs data is exposed.
+  useGetOrganizations: (options: { enabled?: boolean }) => {
+    h.orgQueryOptions = options;
+    if (options && options.enabled === false) {
+      return { data: undefined, isLoading: false };
+    }
+    return h.orgs;
+  },
+  useGetOrganizationById: () => ({ data: undefined }),
   useGetOrganizationConfig: () => h.config,
 }));
 vi.mock("@seliseblocks/genesis-os", () => ({
@@ -40,6 +51,7 @@ beforeEach(() => {
   h.checkExists = { data: undefined, isFetching: false };
   h.orgs = { data: { organizations: [] as unknown[] }, isLoading: false };
   h.config = { data: { isMultiOrgEnabled: false }, isLoading: false };
+  h.orgQueryOptions = undefined;
 });
 
 describe("InviteOrganizationUser", () => {
@@ -169,9 +181,40 @@ describe("InviteOrganizationUser", () => {
     await user.click(submit);
 
     await waitFor(() => expect(h.updateUserAccess).toHaveBeenCalled());
+    expect(h.updateUserAccess.mock.calls[0][0]).toMatchObject({ notifyUser: true });
     expect(h.showSuccessToast).toHaveBeenCalledWith({
       description: "User granted access to the organization",
     });
+  });
+
+  it("sends notifyUser false when an existing user is granted access with the box unchecked", async () => {
+    h.checkExists = { data: { userId: "u1", organizationIds: [] }, isFetching: false };
+    h.updateUserAccess.mockResolvedValue({ isSuccess: true });
+    const user = userEvent.setup();
+    renderInvite();
+    await user.click(screen.getByRole("button", { name: /invite member/i }));
+    await user.type(screen.getByPlaceholderText("name@company.com"), "existing@org.com");
+
+    const checkbox = await screen.findByRole("checkbox", { name: "Notify user by email" });
+    expect(checkbox.getAttribute("data-state")).toBe("checked");
+    await user.click(checkbox);
+
+    const submit = await screen.findByRole("button", { name: /grant access/i });
+    await waitFor(() => expect(submit as HTMLButtonElement).toHaveProperty("disabled", false));
+    await user.click(submit);
+
+    await waitFor(() => expect(h.updateUserAccess).toHaveBeenCalled());
+    expect(h.updateUserAccess.mock.calls[0][0]).toMatchObject({ notifyUser: false });
+  });
+
+  it("does not offer the notify choice for a brand-new email", async () => {
+    const user = userEvent.setup();
+    renderInvite();
+    await user.click(screen.getByRole("button", { name: /invite member/i }));
+    await user.type(screen.getByPlaceholderText("name@company.com"), "new@org.com");
+
+    await screen.findByRole("button", { name: /send invite/i });
+    expect(screen.queryByRole("checkbox", { name: "Notify user by email" })).toBeNull();
   });
 
   it("shows the first array error when granting access fails", async () => {
@@ -253,7 +296,7 @@ describe("InviteOrganizationUser", () => {
     await waitFor(() => expect(combobox.textContent).toContain("Default"));
   });
 
-  it("drops the selection when the existing user already belongs to that org", async () => {
+  it("keeps the existing organization selected and marks it with a green tick", async () => {
     h.config = { data: { isMultiOrgEnabled: true }, isLoading: false };
     h.orgs = {
       data: { organizations: [{ itemId: "org-1", name: "Acme", isDisabled: false }] },
@@ -269,6 +312,40 @@ describe("InviteOrganizationUser", () => {
     await user.type(screen.getByPlaceholderText("name@company.com"), "existing@org.com");
 
     const combobox = await screen.findByRole("combobox");
-    await waitFor(() => expect(combobox.textContent).toContain("Select organization"));
+    await waitFor(() => expect(combobox.textContent).toContain("org-1"));
+    expect(
+      (screen.getByRole("button", { name: /grant access/i }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    expect(
+      screen.getByText("This user already has access to the selected organization."),
+    ).toBeTruthy();
+    await user.click(combobox);
+    const existingOption = await screen.findByRole("option", { name: "Acme" });
+    expect(existingOption.getAttribute("aria-selected")).toBe("true");
+    expect(existingOption.getAttribute("aria-disabled")).toBe("true");
+    expect(existingOption.querySelector(".text-green-600")).not.toBeNull();
+  });
+
+  it("does not enable the org-picker organizations query until the dialog is opened", async () => {
+    renderInvite();
+    // On mount the dialog is closed and the query must be gated off so the
+    // Organizations page does not see an extra paginated picker fetch on load.
+    expect(h.orgQueryOptions).toBeDefined();
+    expect(h.orgQueryOptions?.enabled).toBe(false);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /invite member/i }));
+    // Once the dialog opens, the picker's ready to fetch.
+    await waitFor(() => expect(h.orgQueryOptions?.enabled).toBe(true));
+  });
+
+  it("returns the picker to a gated (idle) state after the dialog is closed", async () => {
+    const user = userEvent.setup();
+    renderInvite();
+    await user.click(screen.getByRole("button", { name: /invite member/i }));
+    await waitFor(() => expect(h.orgQueryOptions?.enabled).toBe(true));
+
+    await user.click(screen.getByRole("button", { name: /cancel/i }));
+    await waitFor(() => expect(h.orgQueryOptions?.enabled).toBe(false));
   });
 });

@@ -30,5 +30,10 @@ namespace DomainService.Projects
         public string ResourceId { get; set; }
         public string Name { get; set; }
         public string Link { get; set; }
+        public DateTime CreatedDate { get; set; }
+        public DateTime LastUpdatedDate { get; set; }
+        /// <summary>Removing a repository archives it: the row is kept so re-adding the same
+        /// repository restores it instead of creating a second entry. Reads filter these out.</summary>
+        public bool IsArchived { get; set; }
     }
 }

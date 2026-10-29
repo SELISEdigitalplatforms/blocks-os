@@ -1,6 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { normalizeArchiveErrors } from "../constants/archive-error-messages";
 import { roleService } from "@blocks-idp/iam/services/role.service";
-import { GetRolesPayload } from "@blocks-idp/iam/models/role";
+import { GetRolesPayload, GetRolesResponse, IRole } from "@blocks-idp/iam/models/role";
+import { useGrantScope } from "@blocks-idp/iam/hooks/use-grant-scope";
+
+const DEFAULT_ORGANIZATION_ID = "default";
+const ROLE_OPTIONS_PAGE_SIZE = 100;
 
 export const useGetRoles = (
   option: GetRolesPayload,
@@ -10,6 +15,86 @@ export const useGetRoles = (
     queryKey: ["roles", option],
     queryFn: () => roleService.getRoles(option),
     enabled,
+  });
+};
+
+const NO_ROLES: GetRolesResponse = { data: [], errors: null, totalCount: 0 };
+
+/**
+ * The roles the caller may give ("Assignable roles"). Same query as `useGetRoles`, but for a
+ * limited caller the list is narrowed to the assignable slugs on the server side, so paging and
+ * totals stay right. The system user (and a tenant that only audits) gets today's list.
+ */
+export const useGetAssignableRoles = (
+  option: GetRolesPayload,
+  { enabled = true }: { enabled?: boolean } = {},
+) => {
+  const { isLoading: isScopeLoading, isRestricted, assignableRoles } = useGrantScope();
+  // A caller that already narrows by slugs (the bulk "remove" list) keeps only the assignable ones.
+  const requested = option.filter?.slugs ?? [];
+  const slugs =
+    requested.length > 0 ? requested.filter((slug) => assignableRoles.includes(slug)) : assignableRoles;
+  // An empty slug list means "no filter" to the server, so "nothing assignable" must not be sent.
+  const nothingToAssign = isRestricted && slugs.length === 0;
+  const scoped: GetRolesPayload = isRestricted
+    ? { ...option, filter: { ...option.filter, slugs } }
+    : option;
+  const query = useGetRoles(scoped, {
+    enabled: enabled && !isScopeLoading && !nothingToAssign,
+  });
+
+  if (nothingToAssign) {
+    return { ...query, data: NO_ROLES, isLoading: false };
+  }
+  return { ...query, isLoading: query.isLoading || (enabled && isScopeLoading) };
+};
+
+export const useGetRoleFilterOptions = (
+  option: { projectKey: string; organizationIds: string[] },
+  { enabled = true }: { enabled?: boolean } = {},
+) => {
+  const organizationIds = [...new Set(option.organizationIds)].filter(Boolean);
+
+  return useQuery({
+    queryKey: ["roles", "filter-options", option.projectKey, organizationIds],
+    queryFn: async () => {
+      const roles: IRole[] = [];
+
+      for (const organizationId of organizationIds) {
+        let page = 0;
+        let totalCount = 0;
+        const organizationRoles: IRole[] = [];
+
+        do {
+          const response = await roleService.getRoles({
+            projectKey: option.projectKey,
+            organizationId,
+            page,
+            pageSize: ROLE_OPTIONS_PAGE_SIZE,
+          });
+          const pageRoles = response.data ?? [];
+          organizationRoles.push(...pageRoles);
+          totalCount = response.totalCount ?? organizationRoles.length;
+          page += 1;
+        } while (organizationRoles.length < totalCount);
+
+        roles.push(...organizationRoles);
+      }
+
+      const bySlug = new Map<string, IRole>();
+      roles.forEach((role) => {
+        const existing = bySlug.get(role.slug);
+        if (!existing || role.organizationId === DEFAULT_ORGANIZATION_ID) {
+          bySlug.set(role.slug, role);
+        }
+      });
+
+      return [...bySlug.values()].map((role) => ({
+        label: role.name,
+        value: role.slug,
+      }));
+    },
+    enabled: enabled && !!option.projectKey && organizationIds.length > 0,
   });
 };
 
@@ -27,6 +112,45 @@ export const useAddRole = () => {
     mutationFn: roleService.addRole,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["roles"] });
+    },
+  });
+};
+
+/**
+ * Archives a role.
+ *
+ * The `isSuccess === false` check lives here rather than in the component on purpose: `mutateAsync`
+ * only resolves after react-query has already classified the result and run `onSuccess`, so a
+ * component-level guard would show the right error toast while the list had *already* refetched.
+ * Throwing inside `mutationFn` keeps `onSuccess` — and therefore invalidation — honest.
+ *
+ * These endpoints return 400 on failure, so this path should be unreachable; it costs nothing and
+ * the contract lives in another repo on another deploy cadence.
+ */
+export const useDeleteRole = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: ["role", "delete"],
+    mutationFn: async ({
+      id,
+      confirmRevokeFromUsers = false,
+    }: {
+      id: string;
+      confirmRevokeFromUsers?: boolean;
+    }) => {
+      const response = await roleService.deleteRole(id, confirmRevokeFromUsers);
+      if (response?.isSuccess === false) {
+        throw Object.assign(new Error("Archive failed"), {
+          errors: normalizeArchiveErrors(response) ?? { general: "Archive failed" },
+        });
+      }
+      return response;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["roles"] });
+      // The impact counts describe a role that no longer exists in the list; leaving them cached
+      // would show stale numbers if the dialog were reopened for the same id.
+      queryClient.invalidateQueries({ queryKey: ["role-archive-impact", variables.id] });
     },
   });
 };

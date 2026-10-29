@@ -1,22 +1,28 @@
 using Blocks.Genesis;
+using Cloud.LmtService.Models.BlocksServices;
 using Cloud.LmtService.Models.Trace;
+using Cloud.LmtService.Services.BlocksServices;
 using Cloud.LmtService.Services.Trace;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics.CodeAnalysis;
 
 namespace BlocksOs.Api.Controllers
 {
 
     [ApiController]
     [Route("[controller]/[action]")]
+    [SuppressMessage("Major Code Smell", "S6960:Controllers should not have mixed responsibilities", Justification = "Splitting would change controller names, Swagger grouping and operation ids that clients rely on.")]
     public class TraceController : ControllerBase
     {
         private readonly ITraceService _traceService;
+  private readonly IBlocksServicesService _blocksServicesService;
 
-        public TraceController(ITraceService traceService)
+  public TraceController (ITraceService traceService, IBlocksServicesService blocksServicesService)
         {
             _traceService = traceService;
+            _blocksServicesService = blocksServicesService;
         }
 
 
@@ -48,5 +54,12 @@ namespace BlocksOs.Api.Controllers
             return await _traceService.GetServiceAnalytics(request);
         }
 
-    }
+        [HttpGet]
+        [ProtectedEndPoint("blocks-os::trace::gets")]
+        public async Task<List<BlocksServiceItem>> GetBlocksServices ( )
+        {
+         return await _blocksServicesService.GetBlocksServicesAsync();
+        }
+
+     }
 }

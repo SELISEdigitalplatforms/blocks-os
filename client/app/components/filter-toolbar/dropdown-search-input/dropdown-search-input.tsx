@@ -45,14 +45,14 @@ export const DropdownSearchInput: React.FC<DropdownSearchInputProps> = ({
     setState(value);
   }
   const inputRef = useRef<HTMLInputElement>(null);
-  // See search-input.tsx: the debounced wrapper stays stable while the ref keeps the latest
+  // See search-input.tsx: the debounced wrapper stays stable and each call carries the current
   // onChange, so a caller passing a new inline callback each render is still called correctly.
-  const onChangeRef = useRef(onChange);
-  useEffect(() => {
-    onChangeRef.current = onChange;
-  });
   const debounced = useMemo(
-    () => debounce((val: ValueType) => onChangeRef.current(val), debounceMs),
+    () =>
+      debounce(
+        (callback: (params: ValueType) => void, val: ValueType) => callback(val),
+        debounceMs,
+      ),
     [debounceMs],
   );
   useEffect(() => {
@@ -67,7 +67,7 @@ export const DropdownSearchInput: React.FC<DropdownSearchInputProps> = ({
     // Only search once the term is long enough; below the minimum, clear the active search so the
     // list falls back to showing everything rather than filtering on one or two characters.
     const meetsMin = raw.trim().length >= minSearchLength;
-    debounced({ selected: state.selected, value: meetsMin ? raw : "" });
+    debounced(onChange, { selected: state.selected, value: meetsMin ? raw : "" });
   };
   const handleClear = (e: MouseEvent) => {
     e.stopPropagation();
@@ -83,7 +83,7 @@ export const DropdownSearchInput: React.FC<DropdownSearchInputProps> = ({
     onChange({ selected: value, value: nextValue });
   };
   return (
-    <div className="flex items-center gap-2 rounded-md border pr-2">
+    <div className="flex min-w-0 items-center gap-2 rounded-md border pr-2">
       <Select onValueChange={handleSelect} value={state.selected}>
         <SelectTrigger className="h-8 w-fit gap-1 rounded-e-none border-0 border-r focus:ring-0 focus:ring-ring focus:ring-offset-0">
           <SelectValue></SelectValue>
@@ -102,7 +102,7 @@ export const DropdownSearchInput: React.FC<DropdownSearchInputProps> = ({
         value={state.value}
         onChange={handleChange}
         className={cn(
-          "h-8 w-52 border-none p-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+          "h-8 min-w-0 w-52 border-none p-0 focus-visible:ring-0 focus-visible:ring-offset-0",
           className?.input,
         )}
       />

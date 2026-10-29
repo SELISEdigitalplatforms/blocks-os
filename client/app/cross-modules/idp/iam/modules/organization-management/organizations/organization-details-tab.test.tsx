@@ -1,12 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { IOrganization } from "@blocks-idp/iam/models/organization";
-
-const h = vi.hoisted(() => ({ roles: [] as { slug: string; name: string }[] }));
-
-vi.mock("@blocks-idp/iam/hooks/use-roles", () => ({
-  useGetRoles: () => ({ data: { data: h.roles } }),
-}));
 
 import { OrganizationDetailsTab } from "./organization-details-tab";
 
@@ -21,11 +15,6 @@ const org = {
   defaultRoleForMembers: ["admin"],
 } as unknown as IOrganization;
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  h.roles = [{ slug: "admin", name: "Administrator" }];
-});
-
 describe("OrganizationDetailsTab", () => {
   it("renders the core organization details", () => {
     render(<OrganizationDetailsTab organization={org} />);
@@ -38,19 +27,14 @@ describe("OrganizationDetailsTab", () => {
     );
   });
 
-  it("resolves default role slugs to their display names", () => {
-    render(<OrganizationDetailsTab organization={org} />);
-    expect(screen.getByText("Administrator")).toBeTruthy();
-  });
-
   it("shows the disabled status", () => {
     render(<OrganizationDetailsTab organization={{ ...org, isDisabled: true } as IOrganization} />);
     expect(screen.getByText("Disabled")).toBeTruthy();
   });
 
-  it("falls back to the raw slug when a role name is unknown", () => {
-    h.roles = [];
+  it("no longer shows the default role for new members", () => {
     render(<OrganizationDetailsTab organization={org} />);
-    expect(screen.getByText("admin")).toBeTruthy();
+    expect(screen.queryByText("Default role for new members")).toBeNull();
+    expect(screen.queryByText("admin")).toBeNull();
   });
 });

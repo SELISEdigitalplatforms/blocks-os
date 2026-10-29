@@ -5,6 +5,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui-kits/sheet/sheet";
+import { DisabledReason } from "@blocks-idp/iam/components/disabled-reason";
 import { Button } from "@/components/ui-kits/button/button";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import {
@@ -30,6 +31,8 @@ type SessionDetailsDrawerProps = {
   onOpenChange: (open: boolean) => void;
   onRevoked?: () => void;
   userId?: string;
+  /** When set, signing the device out is off, for this reason. */
+  readOnlyReason?: string;
 };
 
 const InfoItem = ({
@@ -62,6 +65,7 @@ export const SessionDetailsDrawer = ({
   onOpenChange,
   onRevoked,
   userId,
+  readOnlyReason,
 }: SessionDetailsDrawerProps) => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const { data, isLoading, isError, error } = useSessionDetails(sessionId ?? "", userId, {
@@ -146,13 +150,16 @@ export const SessionDetailsDrawer = ({
                   </span>
                   {!vm.overview.isCurrent && (
                     <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-                      <Button
-                        variant="destructive-outline"
-                        size="sm"
-                        onClick={() => setIsConfirmOpen(true)}
-                      >
-                        Sign out of this device
-                      </Button>
+                      <DisabledReason reason={readOnlyReason}>
+                        <Button
+                          variant="destructive-outline"
+                          size="sm"
+                          disabled={Boolean(readOnlyReason)}
+                          onClick={() => setIsConfirmOpen(true)}
+                        >
+                          Sign out of this device
+                        </Button>
+                      </DisabledReason>
                       <DialogContent className="sm:max-w-[400px]">
                         <DialogHeader>
                           <DialogTitle>Sign out of this device?</DialogTitle>
@@ -243,7 +250,7 @@ export const SessionDetailsDrawer = ({
                       {vm.timeline.map((event) => (
                         <li key={`${event.type}-${event.timestampDisplay}`} className="relative">
                           <span
-                            className={`absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full border-2 bg-background ${TONE_CLASS[event.tone]} border-current`}
+                            className={`absolute left-[-21px] top-1 h-2.5 w-2.5 rounded-full border-2 bg-background ${TONE_CLASS[event.tone]} border-current`}
                           />
                           <p className="text-sm font-medium text-high-emphasis">{event.label}</p>
                           <p className="text-xs text-muted-foreground">

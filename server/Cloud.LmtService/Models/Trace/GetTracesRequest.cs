@@ -17,6 +17,10 @@ namespace Cloud.LmtService.Models.Trace
         public List<string> Services { get; set; } = new List<string>();
         public List<string> Excepts { get; set; } = new List<string>();
         public List<int> StatusCodes { get; set; } = new List<int>();
+
+        // Leading digit of the HTTP status: 2 matches any 2xx, 5 any 5xx. Kept separate from
+        // StatusCodes so the UI can offer classes without enumerating every code that exists.
+        public List<int> StatusCodeClasses { get; set; } = new List<int>();
     }
     public class GetTracesResponse : BaseQueryListResponse<IQueryable<object>>
     {

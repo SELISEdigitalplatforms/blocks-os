@@ -56,17 +56,28 @@ export interface SharedEnvironment {
 
 export interface PeopleDetails {
   salutation: string;
-  firstName: string;
-  lastName: string;
+  /** API returns null for invited/unactivated users who have no profile yet. */
+  firstName: string | null;
+  lastName: string | null;
   email: string;
   profileImageUrl: string | null;
   userId: string;
   allowResendActivation: boolean;
+  /** False only for a deactivated user; a pending invitee is still true. Absent on older servers. */
+  isActive?: boolean;
 }
 
 export interface PeopleGroupedByEnvironments {
   peopleDetails: PeopleDetails;
   sharedEnviroments: SharedEnvironment[];
+  /**
+   * What this person may do in the project pages, unioned across their environment rows.
+   * Carried on the list rather than behind a per-person endpoint — the list already reads
+   * every row this needs.
+   */
+  accessPolicies: string[];
+  /** "owner" or "contributor", derived server-side from the rows. */
+  role: "owner" | "contributor";
 }
 
 // Legacy interface for backward compatibility

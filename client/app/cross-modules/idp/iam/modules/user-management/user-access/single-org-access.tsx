@@ -27,9 +27,14 @@ export const SingleOrgAccess = ({ userId, projectKey }: SingleOrgAccessProps) =>
     sort: { property: "Name", isDescending: false },
     filter: { search: "" },
     projectKey,
+    // Stated rather than left to the fallback. This screen only ever edits the
+    // "default" organization -- that is what makes it the single-org editor -- and
+    // the fallback happens to agree today only because the caller is tenant-wide.
+    organizationId: DEFAULT_ORG_ID,
   });
   const { data: permissionsData, isLoading: isPermissionsLoading } = useGetPermissions({
     projectKey,
+    organizationId: DEFAULT_ORG_ID,
     page: 0,
     pageSize: 1000,
     search: "",
@@ -42,11 +47,11 @@ export const SingleOrgAccess = ({ userId, projectKey }: SingleOrgAccessProps) =>
     () => new Map((rolesData?.data || []).map((role) => [role.slug, role])),
     [rolesData?.data],
   );
-  const permissionByName = useMemo(
+  const permissionByResource = useMemo(
     () =>
       new Map(
         (permissionsData?.data || []).map(
-          (permission: IPermission) => [permission.name, permission] as const,
+          (permission: IPermission) => [permission.resource, permission] as const,
         ),
       ),
     [permissionsData?.data],
@@ -56,13 +61,13 @@ export const SingleOrgAccess = ({ userId, projectKey }: SingleOrgAccessProps) =>
   const orgId = DEFAULT_ORG_ID;
   const roleSlugs =
     user?.OrganizationsRoles?.[orgId] ?? user?.roles?.[orgId] ?? [];
-  const permissionNames =
+  const permissionResources =
     user?.OrganizationsPermissions?.[orgId] ?? user?.permissions?.[orgId] ?? [];
 
   // Serialised keys, so the memo deps stay simple identifiers while still
   // re-deriving only when the user's own role/permission lists actually change.
   const roleSlugsKey = JSON.stringify(roleSlugs);
-  const permissionNamesKey = JSON.stringify(permissionNames);
+  const permissionResourcesKey = JSON.stringify(permissionResources);
 
   const initialRoles: IRole[] = useMemo(() => {
     return roleSlugs
@@ -73,14 +78,14 @@ export const SingleOrgAccess = ({ userId, projectKey }: SingleOrgAccessProps) =>
   }, [user?.itemId, roleSlugsKey]);
 
   const initialPermissions: IPermission[] = useMemo(() => {
-    return permissionNames
+    return permissionResources
       .map(
-        (name) =>
-          permissionByName.get(name) ??
+        (resource) =>
+          permissionByResource.get(resource) ??
           ({
-            itemId: name,
-            name,
-            resource: name,
+            itemId: resource,
+            name: resource,
+            resource,
             resourceGroup: "Other",
             type: 0,
             description: "",
@@ -97,7 +102,7 @@ export const SingleOrgAccess = ({ userId, projectKey }: SingleOrgAccessProps) =>
       )
       .filter(Boolean);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.itemId, permissionNamesKey]);
+  }, [user?.itemId, permissionResourcesKey]);
 
   const [selectedRoles, setSelectedRoles] = useState<IRole[]>(initialRoles);
   const [selectedPermissions, setSelectedPermissions] = useState<IPermission[]>(initialPermissions);
@@ -175,6 +180,8 @@ export const SingleOrgAccess = ({ userId, projectKey }: SingleOrgAccessProps) =>
       rolesDescription="Roles assigned to you."
       permissionsDescription="Permissions assigned to you."
       onSave={onSave}
+      organizationId={DEFAULT_ORG_ID}
     />
   );
 };
+ 

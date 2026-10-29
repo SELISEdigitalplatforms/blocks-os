@@ -46,7 +46,7 @@ export const ModelEditKeyModal = ({
   setEditKeyModalOpen,
   model,
 }: ModelEditKeyModalProps) => {
-  const project_key = useProjectStore().selectedProject?.tenantId || "";
+  const projectKey = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useUpdateModel();
   const {
     schema: baseSchema,
@@ -62,7 +62,10 @@ export const ModelEditKeyModal = ({
     [model.Provider, model.ServicePlatform, modelOptions],
   );
   const schema = useMemo(
-    () => (baseSchema as z.AnyZodObject).extend({ apiKey: z.string().optional() }),
+    () =>
+      (
+        baseSchema as z.ZodObject<Record<string, z.ZodType<string | undefined, string | undefined>>>
+      ).extend({ apiKey: z.string().optional() }),
     [baseSchema],
   );
   const initialValues = useMemo(() => {
@@ -91,10 +94,10 @@ export const ModelEditKeyModal = ({
   };
   const onSubmitHandler = async (data: z.infer<typeof schema>) => {
     try {
-      const rawApiKey = (data.apiKey ?? "") as string;
+      const rawApiKey = data.apiKey ?? "";
       const trimmedApiKey = rawApiKey.trim();
       const payload: IUpdateModelPayload & { model_name: string } = {
-        project_key,
+        project_key: projectKey,
         display_name: model.DisplayName,
         base_url: data.url ?? model.BaseUrl ?? "",
         openai_organization_id: data.organizationId ?? model.OpenAiOrganizationId,

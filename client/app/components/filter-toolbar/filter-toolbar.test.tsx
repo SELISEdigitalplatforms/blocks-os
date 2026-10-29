@@ -106,4 +106,37 @@ describe("FilterToolbar", () => {
 
     expect(onChange).toHaveBeenCalledWith("q", "abc", { q: "abc" });
   });
+
+  it("keeps all controls in a single sheet when sheet display mode is selected", async () => {
+    const user = userEvent.setup();
+    render(
+      <FilterToolbar
+        filters={searchFilter as never}
+        values={{ q: "changed" }}
+        defaultValues={{ q: "" }}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        displayMode="sheet"
+      />,
+    );
+
+    expect(screen.queryByPlaceholderText("Search here")).toBeNull();
+    expect(screen.getByLabelText("1 active filters")).toBeTruthy();
+
+    const trigger = screen.getByRole("button", { name: "Filters" });
+    expect(trigger.className).toContain("border-dashed");
+    expect(trigger.className).toContain("h-[34px]");
+
+    await user.click(trigger);
+
+    expect(screen.getByPlaceholderText("Search here")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Show Results" }).className).toContain("h-8");
+    expect(screen.getByRole("button", { name: "Reset" }).className).toContain("h-8");
+    const overlay = document.querySelector(".bg-transparent");
+    expect(overlay).toBeTruthy();
+    expect(overlay?.className).toContain("top-[60px]");
+    const sheet = screen.getByRole("dialog");
+    expect(sheet.className).toContain("top-[60px]");
+    expect(sheet.className).toContain("h-[calc(100dvh-60px)]");
+  });
 });

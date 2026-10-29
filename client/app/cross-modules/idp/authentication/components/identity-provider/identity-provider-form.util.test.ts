@@ -48,6 +48,7 @@ describe("buildIdentityProviderPayload", () => {
       cleanedUris: ["https://example.com/callback"],
       selectedRoles: [],
       selectedPermissions: [],
+      scopes: [],
       requirePkce: false,
       blocksOidcWellKnownUrl: "https://tenant/.well-known/openid-configuration",
       editedProvider,
@@ -59,7 +60,8 @@ describe("buildIdentityProviderPayload", () => {
     expect(payload.providerType).toBe("blocks-oidc");
     expect(payload.protocol).toBe("oidc");
     expect(payload.clientId).toBe("dfasdf");
-    expect(payload.clientSecret).toBe("fda");
+    // The stored secret is never echoed back: empty means "keep it" on the server.
+    expect(payload.clientSecret).toBe("");
     expect(payload.itemId).toBe(editedProvider.itemId);
   });
 
@@ -77,6 +79,7 @@ describe("buildIdentityProviderPayload", () => {
       cleanedUris: ["https://example.com/callback"],
       selectedRoles: [],
       selectedPermissions: [],
+      scopes: [],
       requirePkce: false,
       blocksOidcWellKnownUrl: "https://tenant/.well-known/openid-configuration",
       isEditing: false,

@@ -1,0 +1,263 @@
+import { render, screen } from "@testing-library/react";
+import React from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const h = vi.hoisted(() => ({
+  pathname: "/app/proj/secret-management/secret",
+  clientsData: [] as unknown[],
+  brandingActions: undefined as unknown,
+  navigate: vi.fn(),
+  breadcrumbProps: undefined as unknown,
+  toast: vi.fn(),
+  query: {} as Record<string, unknown>,
+}));
+
+vi.mock("react-router", () => ({
+  useLocation: () => ({ pathname: h.pathname, search: "" }),
+  useNavigate: () => h.navigate,
+  Outlet: () => <div data-testid="outlet" />,
+}));
+vi.mock("@seliseblocks/genesis-os", () => ({
+  useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
+}));
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
+  useScopedPath: () => (p: string) => `/app/proj/${p}`,
+}));
+vi.mock("@blocks-idp/authentication/hooks/use-auth-clients", () => ({
+  useListAuthClientCredentials: () => ({ data: h.clientsData }),
+}));
+vi.mock("@/hooks/use-toast", () => ({ toast: (...a: unknown[]) => h.toast(...a) }));
+vi.mock("nuqs", () => {
+  const parser = { withDefault: (d: unknown) => ({ defaultValue: d }) };
+  return {
+    parseAsBoolean: parser,
+    parseAsString: parser,
+    useQueryState: (k: string, opts: { defaultValue: unknown }) =>
+      React.useState(h.query[k] ?? opts.defaultValue),
+  };
+});
+vi.mock("@blocks-idp/authentication/contexts/oidc-branding-header-context", () => ({
+  OidcBrandingHeaderProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useOidcBrandingHeaderOptional: () => (h.brandingActions ? { actions: h.brandingActions } : null),
+}));
+vi.mock("@/cross-modules/secrets/components/secret-form-modal/create-secret-button", () => ({
+  CreateSecretButton: () => <div data-testid="create-secret-button" />,
+}));
+vi.mock(
+  "@blocks-idp/authentication/components/create-client-credential/create-client-credential",
+  () => ({
+    CreateClientCredential: () => <div data-testid="create-client-credential" />,
+  }),
+);
+vi.mock("@blocks-identifier/components/add-service/add-service", () => ({
+  AddService: () => <div data-testid="add-service" />,
+}));
+vi.mock("@blocks-idp/authentication/components/create-oidc", () => ({
+  CreateOIDC: () => <div data-testid="create-oidc" />,
+}));
+vi.mock("@blocks-idp/captcha/modals/configure-captcha-modal", () => ({
+  ConfigureCaptchaModal: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+vi.mock("@blocks-utilities/components/magic-url-config-dialog/configure-magic-url-modal", () => ({
+  ConfigureMagicUrlModal: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+vi.mock("@/components/page-header/page-header", () => ({
+  PageHeader: ({ title, actions }: { title: string; actions: React.ReactNode }) => (
+    <div>
+      <h1>{title}</h1>
+      <div>{actions}</div>
+    </div>
+  ),
+}));
+vi.mock("@/components/breadcrumb/breadcrumb", () => ({
+  default: (props: unknown) => {
+    h.breadcrumbProps = props;
+    return <nav />;
+  },
+}));
+// The captcha/magic-url actions wrap DialogTrigger; the real Dialog wrapper is
+// mocked away above, so provide a context-free trigger passthrough.
+vi.mock("@/components/ui-kits/dialog/dialog", () => ({
+  DialogTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+import SecretManagementLayout from "./secret-management";
+
+const ADD_CONFIGURATION = "Add Configuration";
+const ADD_NOTIFICATION = "Add notification";
+
+describe("SecretManagementLayout", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    h.pathname = "/app/proj/secret-management/secret";
+    h.clientsData = [];
+    h.brandingActions = undefined;
+    h.breadcrumbProps = undefined;
+    h.query = {};
+  });
+
+  it("renders the page header and outlet for a known nav item", () => {
+    render(<SecretManagementLayout />);
+    expect(screen.getByText("Secret")).toBeTruthy();
+    expect(screen.getByTestId("outlet")).toBeTruthy();
+    // The secret page shows the create-secret action.
+    expect(screen.getByTestId("create-secret-button")).toBeTruthy();
+  });
+
+  it("shows the list header with Mobile push and Add notification on the notification list", () => {
+    h.pathname = "/app/proj/secret-management/notification";
+    render(<SecretManagementLayout />);
+    expect(screen.getByRole("heading", { level: 1 })).toBeTruthy();
+    expect(screen.getByText("Mobile push")).toBeTruthy();
+    expect(screen.getByText(ADD_NOTIFICATION)).toBeTruthy();
+  });
+
+  it.each(["new", "item-1", "push"])(
+    "hides the list header while the notification page at /notification/%s is shown",
+    (segment) => {
+      h.pathname = `/app/proj/secret-management/notification/${segment}`;
+      render(<SecretManagementLayout />);
+      expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
+      expect(screen.queryByText(ADD_NOTIFICATION)).toBeNull();
+      expect(screen.getByTestId("outlet")).toBeTruthy();
+    },
+  );
+
+  it("opens Mobile push and Add notification by path, not by query parameter", () => {
+    h.pathname = "/app/proj/secret-management/notification";
+    render(<SecretManagementLayout />);
+    screen.getByText("Mobile push").click();
+    expect(h.navigate).toHaveBeenLastCalledWith(
+      { pathname: "/app/proj/secret-management/notification/push", search: "" },
+      { replace: false },
+    );
+    screen.getByText(ADD_NOTIFICATION).click();
+    expect(h.navigate).toHaveBeenLastCalledWith(
+      { pathname: "/app/proj/secret-management/notification/new", search: "" },
+      { replace: false },
+    );
+  });
+
+  it("shows Manage Template immediately before Create on the OIDC page", () => {
+    h.pathname = "/app/proj/secret-management/oidc";
+    render(<SecretManagementLayout />);
+    const manageTemplate = screen.getByRole("button", { name: "Manage Template" });
+    const create = screen.getByTestId("create-oidc");
+    expect(
+      manageTemplate.compareDocumentPosition(create) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("navigates Manage Template to the tenant-level branding route", () => {
+    h.pathname = "/app/proj/secret-management/oidc";
+    render(<SecretManagementLayout />);
+    screen.getByRole("button", { name: "Manage Template" }).click();
+    expect(h.navigate).toHaveBeenCalledWith("/app/proj/secret-management/oidc/branding");
+  });
+
+  it("shows the add-service action and setup guide on my-services", () => {
+    h.pathname = "/app/proj/secret-management/my-services";
+    render(<SecretManagementLayout />);
+    expect(screen.getByTestId("add-service")).toBeTruthy();
+    expect(screen.getByText("Setup Guide")).toBeTruthy();
+  });
+
+  it("renders the client credential dialog on the client-credentials page", () => {
+    h.pathname = "/app/proj/secret-management/client-credentials";
+    render(<SecretManagementLayout />);
+    expect(screen.getByTestId("create-client-credential")).toBeTruthy();
+  });
+
+  it("leaves the external idp header empty, since providers are managed from the page body", () => {
+    h.pathname = "/app/proj/secret-management/external-idp";
+    render(<SecretManagementLayout />);
+    expect(screen.queryByText("Add")).toBeNull();
+    expect(screen.queryByText("Edit")).toBeNull();
+    expect(screen.queryByText("Map JWT Claim")).toBeNull();
+  });
+
+  it("always shows the Add Configuration action on the captcha page, since a tenant may configure more than one", () => {
+    h.pathname = "/app/proj/secret-management/captcha";
+    render(<SecretManagementLayout />);
+    expect(screen.getByText(ADD_CONFIGURATION)).toBeTruthy();
+  });
+
+  it("renders the branding save/undo actions in branding mode", () => {
+    h.pathname = "/app/proj/secret-management/oidc/branding";
+    h.brandingActions = {
+      onSave: vi.fn(),
+      onUndo: vi.fn(),
+      isBusy: false,
+      isDirty: true,
+      isValid: true,
+    };
+    render(<SecretManagementLayout />);
+    expect(screen.getByText("Save")).toBeTruthy();
+    expect(screen.getByText("Undo")).toBeTruthy();
+    expect(h.breadcrumbProps).toEqual(
+      expect.objectContaining({
+        breadcrumbIndex: 3,
+        customTitles: {
+          "/app/proj/secret-management/oidc": "OIDC",
+          "/app/proj/secret-management/oidc/branding": null,
+        },
+      }),
+    );
+  });
+
+  it("disables the branding save/undo actions when nothing is dirty", () => {
+    h.pathname = "/app/proj/secret-management/oidc/branding";
+    h.brandingActions = {
+      onSave: vi.fn(),
+      onUndo: vi.fn(),
+      isBusy: false,
+      isDirty: false,
+      isValid: true,
+    };
+    render(<SecretManagementLayout />);
+    expect((screen.getByText("Save").closest("button") as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByText("Undo").closest("button") as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("enables the branding save/undo actions when dirty", () => {
+    h.pathname = "/app/proj/secret-management/oidc/branding";
+    h.brandingActions = {
+      onSave: vi.fn(),
+      onUndo: vi.fn(),
+      isBusy: false,
+      isDirty: true,
+      isValid: true,
+    };
+    render(<SecretManagementLayout />);
+    expect((screen.getByText("Save").closest("button") as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getByText("Undo").closest("button") as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("keeps Undo enabled but blocks Save when dirty branding is invalid", () => {
+    h.pathname = "/app/proj/secret-management/oidc/branding";
+    h.brandingActions = {
+      onSave: vi.fn(),
+      onUndo: vi.fn(),
+      isBusy: false,
+      isDirty: true,
+      isValid: false,
+    };
+    render(<SecretManagementLayout />);
+    expect((screen.getByText("Save").closest("button") as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByText("Undo").closest("button") as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("does not treat the retired per-client branding URL as branding mode", () => {
+    h.pathname = "/app/proj/secret-management/oidc/client-9/branding";
+    h.brandingActions = {
+      onSave: vi.fn(),
+      onUndo: vi.fn(),
+      isBusy: false,
+      isDirty: true,
+      isValid: true,
+    };
+    render(<SecretManagementLayout />);
+    expect(screen.queryByText("Save")).toBeNull();
+    expect(screen.queryByText("Undo")).toBeNull();
+  });
+});

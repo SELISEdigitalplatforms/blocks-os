@@ -1,5 +1,7 @@
 import fs from "fs";
 import path from "path";
+import { assertE2eHostResolvable } from "./support/navigation";
+import { acquireRunLock } from "./support/run-lock";
 
 /**
  * Point the locally-served Blocks OS at itself (:5000), not the remote dev host.
@@ -16,16 +18,25 @@ import path from "path";
  * after the host's own startup replacement. Because the command in
  * playwright.config.ts is `run.sh -b` (no FE rebuild), nothing overwrites it.
  */
-export default function globalSetup() {
+export default async function globalSetup() {
+  // First — refuse to start if another e2e invocation is already running
+  // against the same shared project (see support/run-lock.ts for why).
+  acquireRunLock();
+
   const baseURL = process.env.E2E_BASE_URL;
   if (!baseURL) return; // playwright.config.ts already throws when unset
 
+  await assertE2eHostResolvable();
+
   const indexHtml = path.resolve(__dirname, "../server/Api/wwwroot/index.html");
   if (!fs.existsSync(indexHtml)) {
-    console.warn(
-      `[e2e] index.html not found at ${indexHtml} — skipping BLOCKS_OS_BASE_URL patch. ` +
-        `Build the FE first (cd client && npm run build, or run.sh -a).`,
-    );
+    const isLocalTarget = /localhost|127\.0\.0\.1|:5000/.test(baseURL);
+    if (isLocalTarget) {
+      console.warn(
+        `[e2e] index.html not found at ${indexHtml} — skipping BLOCKS_OS_BASE_URL patch. ` +
+          `Build the FE first (cd client && npm run build, or run.sh -a).`,
+      );
+    }
     return;
   }
 

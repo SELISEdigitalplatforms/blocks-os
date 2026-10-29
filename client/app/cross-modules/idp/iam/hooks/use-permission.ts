@@ -1,13 +1,13 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { normalizeArchiveErrors } from "../constants/archive-error-messages";
 import {
   IGetPermissionByIdPayload,
   IGetPermissionsSeverityRequestPayload,
   IGetResourceGroupPayload,
   IPermissionFilter,
-  getSeverityOptionsFromResponse,
 } from "@blocks-idp/iam/models/permission";
 import { iamService } from "@blocks-idp/iam/services/iam.service";
+import { useGrantScope } from "@blocks-idp/iam/hooks/use-grant-scope";
 
 export const useGetPermissions = (
   options: IPermissionFilter,
@@ -20,6 +20,7 @@ export const useGetPermissions = (
         page: options.page,
         pageSize: options.pageSize,
         projectKey: options.projectKey,
+        organizationId: options.organizationId,
         roles: options.roles,
         ...(options.sort && {
           sort: { property: options.sort.property, isDescending: options.sort.isDescending },
@@ -42,6 +43,28 @@ export const useGetPermissions = (
   });
 };
 
+const NO_PERMISSIONS = { data: [], errors: null, totalCount: 0 };
+
+/**
+ * The permissions the caller may give directly (to a user, a client credential or SSO defaults).
+ * Same query as `useGetPermissions`. The system user and a top user may give any; a descendant
+ * none -- it gives power through roles below it.
+ */
+export const useGetGrantablePermissions = (
+  options: IPermissionFilter,
+  { enabled = true }: { enabled?: boolean } = {},
+) => {
+  const { isLoading: isScopeLoading, isDescendant } = useGrantScope();
+  const query = useGetPermissions(options, {
+    enabled: enabled && !isScopeLoading && !isDescendant,
+  });
+
+  if (isDescendant) {
+    return { ...query, data: NO_PERMISSIONS, isLoading: false };
+  }
+  return { ...query, isLoading: query.isLoading || (enabled && isScopeLoading) };
+};
+
 export const useGetPermissionById = (options: IGetPermissionByIdPayload) => {
   return useQuery({
     queryKey: ["permission", options],
@@ -56,6 +79,36 @@ export const useAddPermission = () => {
     mutationFn: iamService.permission.addPermission,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["permissions"] });
+    },
+  });
+};
+
+/**
+ * Archives a permission. Same reasoning as useDeleteRole for why the resolved-failure guard lives
+ * in mutationFn rather than in the component.
+ */
+export const useDeletePermission = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: ["permission", "delete"],
+    mutationFn: async ({
+      id,
+      confirmRevokeFromUsers = false,
+    }: {
+      id: string;
+      confirmRevokeFromUsers?: boolean;
+    }) => {
+      const response = await iamService.permission.deletePermission(id, confirmRevokeFromUsers);
+      if (response?.isSuccess === false) {
+        throw Object.assign(new Error("Archive failed"), {
+          errors: normalizeArchiveErrors(response) ?? { general: "Archive failed" },
+        });
+      }
+      return response;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["permissions"] });
+      queryClient.invalidateQueries({ queryKey: ["permission-archive-impact", variables.id] });
     },
   });
 };

@@ -1,192 +1,213 @@
+import { FilterControls, SortValue } from "@/components/filter-toolbar";
+import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui-kits/table/table";
-import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import { Pencil } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
-import { UpdateRole } from "../update-role/update-role";
-import { useNavigate } from "react-router";
-import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
+import { ArchiveAction } from "@blocks-idp/iam/components/archive-action";
+import { DisabledReason } from "@blocks-idp/iam/components/disabled-reason";
+import { useDeleteRole } from "@blocks-idp/iam/hooks/use-roles";
+import { useGrantScope } from "@blocks-idp/iam/hooks/use-grant-scope";
 import { IRole } from "@blocks-idp/iam/models/role";
-import { FilterControls, SortValue } from "@/components/filter-toolbar";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
+import { Pencil, ShieldCheck } from "lucide-react";
+import { useCallback, useState } from "react";
+import { useNavigate } from "react-router";
+import { UpdateRole } from "../update-role/update-role";
 import { useRolesSortQueryParams } from "./roles-filter-toolbar";
+
 type RolesTableProps = {
   roles: IRole[];
   isLoading: boolean;
+  showDefaultOriginBadge?: boolean;
 };
+
+const BASE_GRID = "md:grid-cols-[minmax(200px,1fr)_140px_120px_minmax(200px,1fr)_88px]";
+const MANAGED_BY_GRID =
+  "md:grid-cols-[minmax(200px,1fr)_140px_120px_minmax(140px,0.8fr)_minmax(200px,1fr)_88px]";
+
 const LoadingSkelton = () => (
-  <div className="grid w-full gap-2">
+  <div className="flex flex-col gap-3">
     {Array.from({ length: 5 }).map((_, index) => (
-      <Skeleton key={index} className="h-12 w-full rounded-xl" />
+      <Skeleton key={index} className="h-[72px] w-full rounded-xl" />
     ))}
   </div>
 );
-export const RolesList = ({ roles, isLoading }: RolesTableProps) => {
+
+const RoleRowActions = ({ row, onEdit }: { row: IRole; onEdit: (role: IRole) => void }) => {
+  const { mutateAsync, isPending } = useDeleteRole();
+  const { roleEditBlock } = useGrantScope();
+  const blockedReason = roleEditBlock(row);
+  return (
+    <div
+      className="flex justify-end"
+      role="presentation"
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => event.stopPropagation()}
+    >
+      {blockedReason ? (
+        <DisabledReason reason={blockedReason}>
+          <Button size="icon" className="rounded-full" variant="ghost" aria-label={`Edit role ${row.name}`} disabled>
+            <Pencil className="h-4 w-4" />
+          </Button>
+        </DisabledReason>
+      ) : (
+        <Button
+          size="icon"
+          className="rounded-full"
+          variant="ghost"
+          aria-label={`Edit role ${row.name}`}
+          onClick={() => onEdit(row)}
+        >
+          <Pencil className="h-4 w-4" />
+        </Button>
+      )}
+      {!row.createdFromDefault && !blockedReason && (
+        <ArchiveAction
+          entity="role"
+          name={row.name}
+          itemId={row.itemId}
+          archive={mutateAsync}
+          isPending={isPending}
+        />
+      )}
+    </div>
+  );
+};
+
+export const RolesList = ({
+  roles,
+  isLoading,
+  showDefaultOriginBadge = false,
+}: RolesTableProps) => {
   const { sortQueryParams, setSortQueryParams } = useRolesSortQueryParams();
   const [selectedRole, setSelectedRole] = useState<IRole | null>(null);
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const sortHandler = useCallback(
-    (value: SortValue) => {
-      setSortQueryParams(value);
-    },
+    (value: SortValue) => setSortQueryParams(value),
     [setSortQueryParams],
   );
-  const columns = useMemo<ColumnDef<IRole>[]>(
-    () => [
-      {
-        id: "name",
-        accessorFn: (row) => `${row.name}`.trim(),
-        header: () => (
-          <FilterControls.SortHeader
-            id="Name"
-            label="Name"
-            value={sortQueryParams}
-            onChange={sortHandler}
-          />
-        ),
-        cell: (roles) => <div className="w-[130px] truncate">{roles.row.original.name}</div>,
-      },
-      {
-        id: "slug",
-        accessorFn: (row) => `${row.slug}`.trim(),
-        header: () => (
-          <FilterControls.SortHeader
-            id="Slug"
-            label="Slug"
-            value={sortQueryParams}
-            onChange={sortHandler}
-          />
-        ),
-        cell: (roles) => (
-          <div className="w-[150px] truncate">
-            <span className="rounded-sm bg-blocks-primary-shades-300 px-2 py-1">
-              {roles.row.original.slug}
-            </span>
-          </div>
-        ),
-      },
-      {
-        id: "count",
-        accessorFn: (row) => `${row.count}`.trim(),
-        header: () => (
-          <FilterControls.SortHeader
-            id="Count"
-            label="Permissions"
-            value={sortQueryParams}
-            onChange={sortHandler}
-          />
-        ),
-        cell: (roles) => <div className="w-[180px] truncate">{roles.row.original.count}</div>,
-      },
-      {
-        id: "description",
-        accessorFn: (row) => `${row.description}`.trim(),
-        header: () => (
-          <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">Description</span>
-          </div>
-        ),
-        cell: (roles) => (
-          <div className="w-[200px] truncate md:w-[260px]">{roles.row.original.description}</div>
-        ),
-      },
-      {
-        id: "actions",
-        enableHiding: false,
-        cell: ({ row }) => (
-          <div className="flex">
-            <Button
-              size="icon"
-              className="rounded-full"
-              variant="ghost"
-              onClick={(event) => {
-                event.stopPropagation();
-                setSelectedRole(row.original);
-              }}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-          </div>
-        ),
-      },
-    ],
-    [sortHandler, sortQueryParams],
-  );
-  const table = useReactTable({
-    data: roles,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  });
-  const onRowClickHandler = (itemId: number | string) => {
-    navigate(scoped(`iam/role-detail/${itemId}`));
-  };
+  const { scope } = useGrantScope();
+  // Shown once the grant scope has loaded (system user too), or when a role already has a parent.
+  const showManagedBy = Boolean(scope) || roles.some((role) => Boolean(role.parentRoleSlug));
+  const gridColumns = showManagedBy ? MANAGED_BY_GRID : BASE_GRID;
+  const nameBySlug = new Map(roles.map((role) => [role.slug, role.name]));
+  const openRole = (itemId: string) => navigate(scoped(`iam/role-detail/${itemId}`));
+
   if (isLoading) return <LoadingSkelton />;
+  if (!roles.length) {
+    return (
+      <div className="flex min-h-[420px] flex-col items-center justify-center gap-3 rounded-xl py-16 text-center text-sm text-muted-foreground">
+        <ShieldCheck className="h-6 w-6" />
+        No roles found. Please create new roles.
+      </div>
+    );
+  }
+
   return (
     <>
-      <Table>
-        <TableHeader>
-          <TableRow className="px-4 py-3 hover:bg-transparent">
-            {table
-              .getHeaderGroups()
-              .map((headerGroup) =>
-                headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                )),
+      <div className="scrollbar-hidden-x overflow-x-hidden md:overflow-x-auto">
+        <div className="flex flex-col gap-3 md:min-w-[840px]">
+          <div
+            className={`hidden items-center gap-4 px-4 md:grid ${gridColumns}`}
+          >
+            <FilterControls.SortHeader
+              id="Name"
+              label="Name"
+              value={sortQueryParams}
+              onChange={sortHandler}
+            />
+            <FilterControls.SortHeader
+              id="Slug"
+              label="Slug"
+              value={sortQueryParams}
+              onChange={sortHandler}
+            />
+            <FilterControls.SortHeader
+              id="Count"
+              label="Permissions"
+              value={sortQueryParams}
+              onChange={sortHandler}
+            />
+            {showManagedBy && <span className="font-bold text-medium-emphasis">Managed by</span>}
+            <span className="font-bold text-medium-emphasis">Description</span>
+            <span />
+          </div>
+
+          {roles.map((role) => (
+            <div
+              key={role.itemId}
+              role="button"
+              aria-label={`Open role ${role.name}`}
+              tabIndex={0}
+              onClick={() => openRole(role.itemId)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  openRole(role.itemId);
+                }
+              }}
+              className={`group flex cursor-pointer flex-col gap-3 rounded-xl border bg-card p-4 outline-hidden transition-colors hover:border-primary/30 focus-visible:border-primary/30 md:grid md:items-center md:gap-4 ${gridColumns}`}
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <ShieldCheck className="h-4 w-4" />
+                </div>
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <p
+                    className="truncate text-sm font-semibold text-high-emphasis"
+                    title={role.name}
+                  >
+                    {role.name}
+                  </p>
+                  {showDefaultOriginBadge && role.createdFromDefault && (
+                    <Badge variant="secondary" className="shrink-0 font-normal">
+                      Default
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs text-muted-foreground md:hidden">Slug</span>
+                <Badge variant="secondary" className="w-fit max-w-full font-normal">
+                  <span className="truncate" title={role.slug}>
+                    {role.slug}
+                  </span>
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between gap-3 md:block">
+                <span className="text-xs text-muted-foreground md:hidden">Permissions</span>
+                <Badge variant="secondary" className="w-fit">
+                  <span>{role.count}</span>&nbsp;{role.count === 1 ? "permission" : "permissions"}
+                </Badge>
+              </div>
+              {showManagedBy && (
+                <div className="min-w-0">
+                  <span className="text-xs text-muted-foreground md:hidden">Managed by</span>
+                  <p className="truncate text-sm text-muted-foreground" data-testid="managed-by-cell">
+                    {role.parentRoleSlug ? (nameBySlug.get(role.parentRoleSlug) ?? role.parentRoleSlug) : "-"}
+                  </p>
+                </div>
               )}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {!roles.length ? (
-            <TableRow>
-              <TableCell
-                colSpan={columns.length}
-                className="h-24 text-center text-muted-foreground"
-              >
-                No roles found. Please create new roles.
-              </TableCell>
-            </TableRow>
-          ) : (
-            table.getRowModel().rows.map((row) => (
-              <TableRow
-                key={row.id}
-                className="cursor-pointer"
-                onClick={() => onRowClickHandler(row.original.itemId)}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+              <div className="min-w-0">
+                <span className="text-xs text-muted-foreground md:hidden">Description</span>
+                <p className="truncate text-sm text-muted-foreground" title={role.description}>
+                  {role.description || "-"}
+                </p>
+              </div>
+              <RoleRowActions row={role} onEdit={setSelectedRole} />
+            </div>
+          ))}
+        </div>
+      </div>
       {selectedRole && (
         <Dialog
-          open={!!selectedRole}
+          open
           onOpenChange={(value) => {
             if (!value) setSelectedRole(null);
           }}
         >
-          <UpdateRole
-            role={selectedRole}
-            isOpen={!!selectedRole}
-            onClose={() => setSelectedRole(null)}
-          />
+          <UpdateRole role={selectedRole} isOpen onClose={() => setSelectedRole(null)} />
         </Dialog>
       )}
     </>

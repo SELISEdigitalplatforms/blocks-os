@@ -1,4 +1,4 @@
-using Blocks.Genesis;
+﻿using Blocks.Genesis;
 
 namespace DomainService.Migration
 {
@@ -22,6 +22,12 @@ namespace DomainService.Migration
     {
         public string Code { get; set; } = string.Empty;
         public MigrationRequest Request { get; set; } = null!;
+
+        /// <summary>
+        /// Who started this migration. Verify asserts against it, so a verification id alone is
+        /// not enough to finish somebody else's migration.
+        /// </summary>
+        public string IssuedToUserId { get; set; } = string.Empty;
     }
 
     public enum MigrationServiceNames

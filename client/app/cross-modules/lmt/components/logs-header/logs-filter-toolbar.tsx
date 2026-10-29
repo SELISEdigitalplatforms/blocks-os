@@ -1,34 +1,37 @@
 import { FilterItem, FilterToolbar } from "@/components/filter-toolbar";
+import { TimeRangeValue } from "@/components/filter-toolbar/time-range/time-range";
+import { deepEqual } from "@/lib/utils";
 import { useContext, useMemo } from "react";
-import { LogsViewerContext } from "../logs-viewer";
-import { LOG_LEVEL } from "../../utils";
-
-const SUB_SERVICE_OPTIONS = [
-  { label: "All", value: "all" },
-  { label: "API", value: "api" },
-  { label: "Worker", value: "worker" },
-];
+import { DEFAULT_LOG_FILTER, LogsViewerContext } from "../logs-viewer";
+import {
+  LOG_LEVEL,
+  getLogLevelLabel,
+  getRangeStartDate,
+  serviceKeyToTreeValues,
+} from "../../utils";
+import { restoreWindowBounds } from "../../utils/restore-window";
 
 type LogsFilterValues = {
   search?: string;
   level?: string;
   service: string;
-  subService: string;
-  date: { from?: Date; to?: Date } | null;
+  timeRange: TimeRangeValue;
 };
 
 export const LogsFilterToolbar = () => {
   const {
     services,
-    selectedService,
-    changeService,
+    serviceFilterValue,
+    changeServices,
     filter,
     setFilter,
     resetFilter,
-    isSourceBlocks,
-    subService,
-    setSubService,
+    restoreRequestId,
+    restoreWindow,
   } = useContext(LogsViewerContext);
+  // Reading a restore means reading a closed set of days: no relative default to fall back on,
+  // no streaming to promise, and nothing outside the window worth offering.
+  const isRestored = Boolean(restoreRequestId);
   const { level, startDate, endDate, search } = filter || {
     level: "",
     startDate: "",
@@ -36,7 +39,7 @@ export const LogsFilterToolbar = () => {
     search: "",
   };
   const levels = Object.entries(LOG_LEVEL).map((item) => ({
-    label: item[0],
+    label: getLogLevelLabel(item[0]),
     value: item[1],
   }));
   const serviceOptions = services.map((s) => ({ label: s.label, value: s.id }));
@@ -46,30 +49,40 @@ export const LogsFilterToolbar = () => {
       [key]: value,
     }));
   };
-  const updateDate = (value: { from?: Date; to?: Date } | null) => {
-    const { from, to } = value || {};
+  // The relative default and an explicit window would otherwise both apply and fight over the
+  // same period, so applying a window clears the default and resetting restores it. The
+  // default stays relative because that is what lets the list keep tailing new logs.
+  const updateTimeRange = (value: TimeRangeValue) => {
+    if (!value) {
+      setFilter((filter) => ({
+        ...filter,
+        // Over a restore there is no default to fall back to: its days are all older than any
+        // relative window, so restoring one here would match nothing at all.
+        range: isRestored ? "" : (DEFAULT_LOG_FILTER.range ?? ""),
+        startDate: "",
+        endDate: "",
+      }));
+      return;
+    }
     setFilter((filter) => ({
       ...filter,
-      startDate: from ? from.toISOString() : "",
-      endDate: to ? to.toISOString() : "",
+      range: "",
+      startDate: value.from ? value.from.toISOString() : "",
+      endDate: value.to ? value.to.toISOString() : "",
     }));
   };
-  const handleServiceChange = (serviceId: string) => {
-    const service = services.find((s) => s.id === serviceId);
-    if (service) {
-      changeService(service);
-    }
-  };
-  const handleSubServiceChange = (value: string) => {
-    setSubService(value);
+  const handleServiceChange = (serviceId: string | null) => {
+    // Logs are read one service at a time. A service that is no longer registered, or a
+    // cleared selection, falls back to the viewer's default rather than landing in the URL.
+    const isKnown = services.some((service) => service.id === serviceId);
+    changeServices(serviceId && isKnown ? [serviceId] : []);
   };
   const onChange = (
     key: keyof LogsFilterValues,
     value: LogsFilterValues[keyof LogsFilterValues],
   ) => {
-    if (key === "service") return handleServiceChange(value as string);
-    if (key === "subService") return handleSubServiceChange(value as string);
-    if (key === "date") return updateDate(value as { from?: Date; to?: Date } | null);
+    if (key === "service") return handleServiceChange(value as string | null);
+    if (key === "timeRange") return updateTimeRange(value as TimeRangeValue);
     return updateFilter(key as keyof typeof filter, value);
   };
 
@@ -78,8 +91,7 @@ export const LogsFilterToolbar = () => {
       search: "",
       level: "",
       service: "",
-      subService: "all",
-      date: null,
+      timeRange: null,
     }),
     [], // static — never changes
   );
@@ -88,9 +100,10 @@ export const LogsFilterToolbar = () => {
     () => ({
       search,
       level,
-      service: selectedService?.id || "",
-      subService,
-      date:
+      service: serviceKeyToTreeValues(serviceFilterValue)[0] ?? "",
+      // The relative default counts as "no window chosen", so the Reset chip stays hidden
+      // until someone picks one -- and the picker shows the default rather than owning it.
+      timeRange:
         startDate || endDate
           ? {
               from: startDate ? new Date(startDate) : undefined,
@@ -98,23 +111,61 @@ export const LogsFilterToolbar = () => {
             }
           : null,
     }),
-    [search, level, selectedService?.id, subService, startDate, endDate], // re-compute only when these change
+    [search, level, serviceFilterValue, startDate, endDate], // re-compute only when these change
   );
 
-  // Check if only service or subService are changed from defaults
-  const isOnlyServiceChanged = useMemo(() => {
+  // What the list is actually showing while no window is chosen: the last 30 minutes, left
+  // open at the end. Pinned to the relative default rather than recomputed per render, so
+  // the popover does not drift while it is open.
+  const defaultRange = useMemo<TimeRangeValue>(() => {
+    if (isRestored) return null;
+    const start = getRangeStartDate(DEFAULT_LOG_FILTER.range ?? "");
+    return start ? { from: new Date(start) } : null;
+  }, [isRestored]);
+
+  const bounds = useMemo(
+    () =>
+      isRestored
+        ? restoreWindowBounds(restoreWindow?.startDate, restoreWindow?.endDate)
+        : undefined,
+    [isRestored, restoreWindow?.startDate, restoreWindow?.endDate],
+  );
+
+  // The first service is what the page starts on, so that selection counts as
+  // "no service filter applied" for the Reset button.
+  const defaultServiceSelection = services[0]?.id ?? "";
+
+  // The Reset button is offered as soon as anything — the service selection included —
+  // differs from what the page opens with.
+  const isPristine = useMemo(() => {
     const searchChanged = currentValues.search !== defaultValues.search;
     const levelChanged = currentValues.level !== defaultValues.level;
-    const dateChanged =
-      (currentValues.date?.from?.getTime() ?? 0) !== (defaultValues.date?.from?.getTime() ?? 0) ||
-      (currentValues.date?.to?.getTime() ?? 0) !== (defaultValues.date?.to?.getTime() ?? 0);
-    return !searchChanged && !levelChanged && !dateChanged;
-  }, [currentValues, defaultValues]);
+    const timeRangeChanged = !deepEqual(currentValues.timeRange, defaultValues.timeRange);
+    const serviceChanged = currentValues.service !== defaultServiceSelection;
+    return !searchChanged && !levelChanged && !timeRangeChanged && !serviceChanged;
+  }, [currentValues, defaultValues, defaultServiceSelection]);
+
+  const handleReset = () => {
+    resetFilter();
+    // An empty selection puts the service filter back on the whole first service.
+    changeServices([]);
+  };
 
   // ✅ Use FilterItem<LogsFilterValues> directly — it's already the right discriminated union
   const filters: FilterItem<LogsFilterValues>[] = [
     { key: "search", type: "SearchInput", label: "label" },
-    { key: "date", type: "DateRange", label: "Date", props: {} },
+    {
+      key: "timeRange",
+      type: "TimeRange",
+      label: "Time range",
+      // Log rows are rendered in UTC, so the window has to be written in UTC to match them.
+      props: {
+        defaultRange,
+        timeZone: "utc",
+        openEndHint: isRestored ? "the end of the window" : "now — keeps streaming",
+        bounds,
+      },
+    },
     {
       key: "service",
       type: "Radio",
@@ -122,15 +173,6 @@ export const LogsFilterToolbar = () => {
       props: { options: serviceOptions },
     },
   ];
-
-  if (isSourceBlocks) {
-    filters.push({
-      key: "subService",
-      type: "Radio",
-      label: "Sub-Service",
-      props: { options: SUB_SERVICE_OPTIONS },
-    });
-  }
 
   filters.push({
     key: "level",
@@ -144,11 +186,8 @@ export const LogsFilterToolbar = () => {
       values={currentValues}
       defaultValues={defaultValues}
       onChange={onChange}
-      onReset={() => {
-        resetFilter();
-        setSubService("all");
-      }}
-      hideGlobalResetButton={isOnlyServiceChanged}
+      onReset={handleReset}
+      hideGlobalResetButton={isPristine}
     />
   );
 };

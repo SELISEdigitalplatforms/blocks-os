@@ -16,7 +16,7 @@ export const formatDate = (date: Date, withoutTime?: boolean): string => {
   return `${dateStr}, ${timeStr}`;
 };
 
-export const formatFullDate = (date: Date, withoutTime?: boolean): string => {
+export const formatFullDate = (date: Date, withoutTime?: boolean, useUtc = false): string => {
   const monthNames = [
     "Jan",
     "Feb",
@@ -31,8 +31,13 @@ export const formatFullDate = (date: Date, withoutTime?: boolean): string => {
     "Nov",
     "Dec",
   ];
-  const dateStr = `${monthNames[date.getMonth()]} ${pad(date.getDate())}, ${date.getFullYear()}`;
-  const timeStr = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  const month = useUtc ? date.getUTCMonth() : date.getMonth();
+  const day = useUtc ? date.getUTCDate() : date.getDate();
+  const year = useUtc ? date.getUTCFullYear() : date.getFullYear();
+  const hours = useUtc ? date.getUTCHours() : date.getHours();
+  const minutes = useUtc ? date.getUTCMinutes() : date.getMinutes();
+  const dateStr = `${monthNames[month]} ${pad(day)}, ${year}`;
+  const timeStr = `${pad(hours)}:${pad(minutes)}`;
   if (withoutTime) return dateStr;
   return `${dateStr} at ${timeStr}`;
 };

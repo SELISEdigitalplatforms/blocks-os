@@ -39,6 +39,7 @@ const config: ISettingsAuthConfig = {
   logoutOnPasswordChange: false,
   isOidcEnabled: false,
   passwordStrengthCheckerRegex: "",
+  collectPasswordOnActivation: true,
   allowedGrantTypes: ["authorization_code"],
 } as unknown as ISettingsAuthConfig;
 

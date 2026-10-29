@@ -1,14 +1,17 @@
 import { MouseEvent, useState } from "react";
 import { Check, Copy, Eye, EyeOff } from "lucide-react";
-import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { MaskedText } from "@/components/masked-text";
+import { maskId } from "../utils/mask-id.util";
 import { Button } from "@/components/ui-kits/button/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
 
 interface KVDetailItemProps {
   label: string;
   value: string;
   copyable?: boolean;
   sensitive?: boolean;
+  /** Shows the value masked, with no reveal. Display only: copy still copies the full value. */
+  masked?: boolean;
 }
 
 const SENSITIVE_MASK_LENGTH = 30;
@@ -31,11 +34,38 @@ const copyTextToClipboard = async (text: string) => {
   document.body.removeChild(textArea);
 };
 
+const CopyIconButton = ({
+  value,
+  isCopying,
+  onCopy,
+}: {
+  value: string;
+  isCopying: boolean;
+  onCopy: (event: MouseEvent<HTMLButtonElement>) => void;
+}) => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <Button
+        type="button"
+        variant="ghost"
+        className="h-auto shrink-0 p-1 text-gray-600 hover:bg-gray-100 hover:text-gray-800"
+        aria-label="Copy value"
+        disabled={isCopying || !value}
+        onClick={onCopy}
+      >
+        {isCopying ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent>{isCopying ? "Copied" : "Copy value"}</TooltipContent>
+  </Tooltip>
+);
+
 export const KVDetailItem = ({
   label,
   value,
   copyable = false,
   sensitive = false,
+  masked = false,
 }: KVDetailItemProps) => {
   const [revealed, setRevealed] = useState(false);
   const [isCopying, setIsCopying] = useState(false);
@@ -72,41 +102,38 @@ export const KVDetailItem = ({
           ) : (
             <MaskedText text={value} length={SENSITIVE_MASK_LENGTH} />
           )}
-          <Button
-            type="button"
-            variant="ghost"
-            className="h-auto shrink-0 p-1 text-muted-foreground hover:text-high-emphasis"
-            aria-label={revealed ? "Hide value" : "Show value"}
-            onClick={() => setRevealed((current) => !current)}
-          >
-            {revealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            className="h-auto shrink-0 p-1 text-gray-600 hover:bg-gray-100 hover:text-gray-800"
-            aria-label="Copy value"
-            disabled={isCopying}
-            onClick={handleCopy}
-          >
-            {isCopying ? (
-              <Check className="h-4 w-4 text-green-600" />
-            ) : (
-              <Copy className="h-4 w-4" />
-            )}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-auto shrink-0 p-1 text-muted-foreground hover:text-high-emphasis"
+                aria-label={revealed ? "Hide value" : "Show value"}
+                onClick={() => setRevealed((current) => !current)}
+              >
+                {revealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{revealed ? "Hide value" : "Show value"}</TooltipContent>
+          </Tooltip>
+          <CopyIconButton value={value} isCopying={isCopying} onCopy={handleCopy} />
         </span>
       );
     }
 
+    const shown = (
+      <span className="break-all text-high-emphasis">{masked ? maskId(value) : value}</span>
+    );
+
     if (!copyable) {
-      return <span className="break-all text-high-emphasis">{value}</span>;
+      return shown;
     }
 
     return (
-      <CopyToClipboardButton textToCopy={value} isHoverable>
-        <span className="break-all text-high-emphasis">{value}</span>
-      </CopyToClipboardButton>
+      <span className="inline-flex items-center gap-1">
+        {shown}
+        <CopyIconButton value={value} isCopying={isCopying} onCopy={handleCopy} />
+      </span>
     );
   };
 

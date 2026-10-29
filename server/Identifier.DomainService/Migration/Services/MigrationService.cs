@@ -1,58 +1,66 @@
 using Blocks.Genesis;
-using Blocks.MailDriver;
 using DomainService.Dtos;
-using DomainService.Migration.Entities;
 using DomainService.Migration.Services;
 using DomainService.Shared;
 using FluentValidation;
 using Identifier.DomainService.Shared.Dtos;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Text.Json;
-using SendMail = Blocks.MailDriver.SendMail;
+using Blocks.Genesis.Entities.Os;
+using Os.DataAccess;
 
 namespace DomainService.Migration
 {
     public class MigrationService : IMigrationService
     {
+        private const string ErrorMessageKey = "message";
+        private const string InvalidTwoFactorIdError = "invalid_two_factor_id";
+        private const string RootTenantIdConfigKey = "RootTenantId";
+        private const string MigrationFailedText = "Migration failed";
+
         private readonly ICacheClient _cacheClient;
-        private readonly IMailDriverService _mailDriverService;
         private readonly IMessageClient _messageClient;
+        private readonly IDbContextProvider _dbContextProvider;
+        private readonly IOsDataAccess _dataAccess;
         private readonly IValidator<MigrationRequest> _migrationRequestValidator;
         private readonly IMigrationRepository _migrationRepository;
         private readonly IConfiguration _configuration;
         private readonly ITenants _tenants;
         private readonly ICryptoService _cryptoService;
         private readonly IHttpService _httpService;
-        //private readonly IUserRepository _userRepository;
         private readonly ILogger<MigrationService> _logger;
 
+        [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "DI constructor: each parameter is an injected dependency.")]
         public MigrationService(
             ICacheClient cacheClient,
-            IMailDriverService mailDriverService,
             IMessageClient messageClient,
+            IDbContextProvider dbContextProvider,
             IValidator<MigrationRequest> migrationRequestValidator,
             IMigrationRepository migrationRepository,
             IConfiguration configuration,
             ITenants tenants,
             ICryptoService cryptoService,
             IHttpService httpService,
-            //IUserRepository userRepository,
-            ILogger<MigrationService> logger)
+            ILogger<MigrationService> logger,
+            IOsDataAccess dataAccess)
         {
+            _dataAccess = dataAccess;
             _cacheClient = cacheClient;
-            _mailDriverService = mailDriverService;
             _messageClient = messageClient;
+            _dbContextProvider = dbContextProvider;
             _migrationRequestValidator = migrationRequestValidator;
             _configuration = configuration;
             _migrationRepository = migrationRepository;
             _tenants = tenants;
             _cryptoService = cryptoService;
             _httpService = httpService;
-           // _userRepository = userRepository;
             _logger = logger;
         }
+
+        [SuppressMessage("Major Code Smell", "S2139:Exceptions should be either logged or rethrown but not both", Justification = "The global exception middleware logs this exception but not the ProjectKey/TargetedProjectKey logged here; wrapping is not possible because the middleware maps the exception type to the HTTP status and returns its message as the problem detail.")]
         public async Task<MigrationOtpGenerationResponse> Migrate(MigrationRequest request)
         {
             try
@@ -75,13 +83,21 @@ namespace DomainService.Migration
                 {
                     _logger.LogWarning("User details not found or missing email during migration. ProjectKey: {ProjectKey}, UserId: {UserId}",
                         request.ProjectKey, bc.UserId);
-                    return new MigrationOtpGenerationResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "message", "user_details_not_found" } } };
+                    return new MigrationOtpGenerationResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { ErrorMessageKey, "user_details_not_found" } } };
                 }
 
                 var code = GenerateSecureRandomNumber();
                 var verificationId = Guid.NewGuid().ToString();
 
-                var serializedData = JsonSerializer.Serialize(new { Code = code, Request = request });
+                // IssuedToUserId binds the code to whoever started the migration: Verify
+                // asserts against it, so holding a verification id is not on its own enough
+                // to finish somebody else's migration.
+                var serializedData = JsonSerializer.Serialize(new
+                {
+                    Code = code,
+                    Request = request,
+                    IssuedToUserId = BlocksContext.GetContext()?.UserId ?? string.Empty
+                });
 
                 await _cacheClient.AddStringValueAsync(verificationId, serializedData, 600);
                 _logger.LogInformation("Migration OTP cached successfully. VerificationId: {VerificationId}, Email: {Email}, ExpirySeconds: {ExpirySeconds}",
@@ -134,18 +150,33 @@ namespace DomainService.Migration
                 To = [email]
             };
 
-            var response = await _mailDriverService.SendAsync(sendMailCommand);
-
-            if (!response.IsSuccess)
+            // Same checks the retired mail driver ran in the request; a failure queues nothing.
+            var failedCheck = await MailPreCheck.FindFailureAsync(
+                _dbContextProvider, _dataAccess, sendMailCommand.Purpose, sendMailCommand.Language, sendMailCommand.To, sendPhoneNumberAsEmail: false, sendMailCommand.BodyDataContext);
+            if (failedCheck != null)
             {
-                _logger.LogError("MailDriver failed to send MFA email. Email: {Email}, Purpose: {Purpose}", email, sendMailCommand.Purpose);
-            }
-            else
-            {
-                _logger.LogDebug("MFA email dispatched via MailDriver successfully. Email: {Email}", email);
+                _logger.LogError("MailDriver failed to send MFA email. Email: {Email}, Purpose: {Purpose}, FailedCheck: {FailedCheck}", email, sendMailCommand.Purpose, failedCheck);
+                return false;
             }
 
-            return response.IsSuccess;
+            try
+            {
+                await _messageClient.SendToConsumerAsync(
+                    new ConsumerMessage<SendMail>
+                    {
+                        ConsumerName = IdentifierConstants.MailQueue,
+                        Payload = sendMailCommand
+                    });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to queue MFA email. Email: {Email}, Purpose: {Purpose}", email, sendMailCommand.Purpose);
+                return false;
+            }
+
+            _logger.LogDebug("MFA email dispatched via MailDriver successfully. Email: {Email}", email);
+
+            return true;
         }
 
         public async Task<MigrationOtpVerificationResponse> VerifyAsync(MigrationVerifyOtpRequest request)
@@ -154,19 +185,27 @@ namespace DomainService.Migration
 
             if (!isKeyExist)
             {
-                return new MigrationOtpVerificationResponse { Errors = new Dictionary<string, string> { { "message", "invalid_two_factor_id" } }, IsSuccess = false, IsValid = false };
+                return new MigrationOtpVerificationResponse { Errors = new Dictionary<string, string> { { ErrorMessageKey, InvalidTwoFactorIdError } }, IsSuccess = false, IsValid = false };
             }
 
             var keyValue = await _cacheClient.GetStringValueAsync(request.VerificationId);
             if (string.IsNullOrEmpty(keyValue))
             {
-                return new MigrationOtpVerificationResponse { Errors = new Dictionary<string, string> { { "message", "invalid_two_factor_id" } }, IsSuccess = false, IsValid = false };
+                return new MigrationOtpVerificationResponse { Errors = new Dictionary<string, string> { { ErrorMessageKey, InvalidTwoFactorIdError } }, IsSuccess = false, IsValid = false };
             }
 
             var data = JsonSerializer.Deserialize<MigrationOtpData>(keyValue);
             if (data == null)
             {
-                return new MigrationOtpVerificationResponse { Errors = new Dictionary<string, string> { { "message", "invalid_two_factor_id" } }, IsSuccess = false, IsValid = false };
+                return new MigrationOtpVerificationResponse { Errors = new Dictionary<string, string> { { ErrorMessageKey, InvalidTwoFactorIdError } }, IsSuccess = false, IsValid = false };
+            }
+
+            // The endpoint's ProjectPolicy attribute decides whether this person may migrate this project,
+            // and this check decides whether the migration is theirs. Both must pass, not either.
+            var callerId = BlocksContext.GetContext()?.UserId ?? string.Empty;
+            if (!string.IsNullOrEmpty(data.IssuedToUserId) && data.IssuedToUserId != callerId)
+            {
+                return new MigrationOtpVerificationResponse { Errors = new Dictionary<string, string> { { ErrorMessageKey, InvalidTwoFactorIdError } }, IsSuccess = false, IsValid = false };
             }
 
             if (data.Code == request.VerificationCode)
@@ -177,7 +216,7 @@ namespace DomainService.Migration
                 return new MigrationOtpVerificationResponse { IsSuccess = true, IsValid = true };
             }
 
-            return new MigrationOtpVerificationResponse { Errors = new Dictionary<string, string> { { "message", "invalid_two_factor_code" } }, IsSuccess = false, IsValid = false };
+            return new MigrationOtpVerificationResponse { Errors = new Dictionary<string, string> { { ErrorMessageKey, "invalid_two_factor_code" } }, IsSuccess = false, IsValid = false };
         }
 
         private async Task HandleServiceMigrations(MigrationRequest request)
@@ -210,13 +249,13 @@ namespace DomainService.Migration
             var trackerId = await _migrationRepository.CreateMigrationTrackerAsync(migrationTracker);
 
             // Process each service
-            foreach (var service in request.Services)
+            foreach (var serviceName in request.Services.Select(service => service.ServiceName))
             {
-                var queueName = GetQueueNameForService(service.ServiceName);
+                var queueName = GetQueueNameForService(serviceName);
                 if (!string.IsNullOrEmpty(queueName))
                 {
-                    Console.WriteLine($"Sending migration event for service: {service.ServiceName}, Queue: {queueName}, TrackerId: {trackerId}");
-                    await SendMigrationEvent(request, service.ServiceName, queueName, trackerId);
+                    Console.WriteLine($"Sending migration event for service: {serviceName}, Queue: {queueName}, TrackerId: {trackerId}");
+                    await SendMigrationEvent(request, serviceName, queueName, trackerId);
                 }
                 // If queueName is null/empty, service migration is not yet implemented
             }
@@ -263,12 +302,12 @@ namespace DomainService.Migration
                 MigrationServiceNames.Language => IdentifierConstants.LanguageDataMigrationQueue,
                 MigrationServiceNames.IAM => IdentifierConstants.IamQueue,
                 MigrationServiceNames.Email => IdentifierConstants.GenericMigrationQueue,
-                MigrationServiceNames.Authentication => "", // TODO: Define queue name for Authentication service
-                MigrationServiceNames.MFA => "", // TODO: Define queue name for MFA service
-                MigrationServiceNames.CAPTCHA => "", // TODO: Define queue name for CAPTCHA service
+                MigrationServiceNames.Authentication => "", // Not migrated yet: no queue name defined for the Authentication service
+                MigrationServiceNames.MFA => "", // Not migrated yet: no queue name defined for the MFA service
+                MigrationServiceNames.CAPTCHA => "", // Not migrated yet: no queue name defined for the CAPTCHA service
                 MigrationServiceNames.DataGateway => IdentifierConstants.GenericMigrationQueue,
-                MigrationServiceNames.Notifications => "", // TODO: Define queue name for Notifications service
-                MigrationServiceNames.Storage => "", // TODO: Define queue name for Storage service
+                MigrationServiceNames.Notifications => "", // Not migrated yet: no queue name defined for the Notifications service
+                MigrationServiceNames.Storage => "", // Not migrated yet: no queue name defined for the Storage service
                 _ => "" // Unknown service
             };
         }
@@ -301,7 +340,7 @@ namespace DomainService.Migration
                 DenormalizedPayload = JsonSerializer.Serialize(new
                 {
                     IsSuccess = response,
-                    title = "Migration Completed",
+                    title = response ? "Migration Completed": MigrationFailedText,
                     projectKey = projectKey,
                     targetedProjectKey = targetedProjectKey
                 }),
@@ -309,11 +348,11 @@ namespace DomainService.Migration
                 ConfigurationName = "DataMigrationProgress",
                 ContentAvailable = true,
                 ResponseKey = "Environment Data Migration",
-                ResponseValue = response ? "Migration completed" : "Migration failed"
+                ResponseValue = response ? "Migration completed" : MigrationFailedText
             };
 
-            var blocksKey = _configuration["RootTenantId"];
-            var rootTenantId = _configuration["RootTenantId"];
+            var blocksKey = _configuration[RootTenantIdConfigKey];
+            var rootTenantId = _configuration[RootTenantIdConfigKey];
             var salt = _tenants.GetTenantByID(rootTenantId)?.TenantSalt;
             var actulalSecret = _cryptoService.Hash(rootTenantId, salt);
 
@@ -324,8 +363,8 @@ namespace DomainService.Migration
                 { "Secret", actulalSecret}
             };
 
-            var (data, rawResponse) = await _httpService.Post<NotificationResponse>(requestData, url, "application/json", headers);
-            return data == null ? false : data.isSuccess;
+            var (data, _) = await _httpService.Post<NotificationResponse>(requestData, url, "application/json", headers);
+            return data != null && data.isSuccess;
         }
 
         public async Task<bool> NotifyEnvironmentDataMigration(bool response, string projectKey, string targetedProjectKey)
@@ -338,7 +377,7 @@ namespace DomainService.Migration
                 DenormalizedPayload = JsonSerializer.Serialize(new
                 {
                     IsSuccess = response,
-                    title = "Migration Completed",
+                    title = response ? "Migration Completed" : MigrationFailedText,
                     description = $"Migration {(response ? "completed successfully" : "failed")}",
                     projectKey = projectKey,
                     targetedProjectKey = targetedProjectKey
@@ -347,11 +386,11 @@ namespace DomainService.Migration
                 ConfigurationName = "EnvironmentDataMigration",
                 ContentAvailable = true,
                 ResponseKey = "Environment Data Migration",
-                ResponseValue = response ? "Migration completed" : "Migration failed"
+                ResponseValue = response ? "Migration completed" : MigrationFailedText
             };
 
-            var blocksKey = _configuration["RootTenantId"];
-            var rootTenantId = _configuration["RootTenantId"];
+            var blocksKey = _configuration[RootTenantIdConfigKey];
+            var rootTenantId = _configuration[RootTenantIdConfigKey];
             var salt = _tenants.GetTenantByID(rootTenantId)?.TenantSalt;
             var actulalSecret = _cryptoService.Hash(rootTenantId, salt);
 
@@ -362,8 +401,8 @@ namespace DomainService.Migration
                 { "Secret", actulalSecret}
             };
 
-            var (data, rawResponse) = await _httpService.Post<NotificationResponse>(requestData, url, "application/json", headers);
-            return data == null ? false : data.isSuccess;
+            var (data, _) = await _httpService.Post<NotificationResponse>(requestData, url, "application/json", headers);
+            return data != null && data.isSuccess;
         }
 
         public async Task<bool> NotifyServiceDataMigrationProgress(bool response, string projectKey, string targetedProjectKey)
@@ -398,8 +437,8 @@ namespace DomainService.Migration
                 ResponseValue = "Migration started"
             };
 
-            var blocksKey = _configuration["RootTenantId"];
-            var rootTenantId = _configuration["RootTenantId"];
+            var blocksKey = _configuration[RootTenantIdConfigKey];
+            var rootTenantId = _configuration[RootTenantIdConfigKey];
             var salt = _tenants.GetTenantByID(rootTenantId)?.TenantSalt;
             var actulalSecret = _cryptoService.Hash(rootTenantId, salt);
 
@@ -410,8 +449,8 @@ namespace DomainService.Migration
                 { "Secret", actulalSecret}
             };
 
-            var (data, rawResponse) = await _httpService.Post<NotificationResponse>(requestData, url, "application/json", headers);
-            return data == null ? false : data.isSuccess;
+            var (data, _) = await _httpService.Post<NotificationResponse>(requestData, url, "application/json", headers);
+            return data != null && data.isSuccess;
         }
 
         public bool AreAllServicesCompleted(MigrationTracker tracker)
@@ -479,7 +518,7 @@ namespace DomainService.Migration
             }
         }
 
-        private List<MigrationServiceNames> GetIncompleteServicesUsingGenericQueue(MigrationTracker tracker)
+        private static List<MigrationServiceNames> GetIncompleteServicesUsingGenericQueue(MigrationTracker tracker)
         {
             var incompleteServices = new List<MigrationServiceNames>();
 
@@ -523,7 +562,6 @@ namespace DomainService.Migration
             {
                 MigrationServiceNames.DataGateway => new List<string>
                 {
-                    "DataServiceConfigurations",
                     "SchemaDefinitions",
                     "DataAccessPolicys",
                     "DataValidations"
@@ -590,13 +628,14 @@ namespace DomainService.Migration
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during collection migration for service {ServiceName}", serviceName);
+                // Logged by the caller (MigrateEnvironmentDataAsync) with ServiceName and TrackerId.
                 // Send completion event for failed migration
                 await SendMigrationCompletionEvent(trackerId, serviceName, false, ex.Message);
                 throw;
             }
         }
 
+        [SuppressMessage("Major Code Smell", "S2139:Exceptions should be either logged or rethrown but not both", Justification = "Only this log names the failing collection; wrapping would change ex.Message, which callers persist as the tracker ErrorMessage in the migration completion event.")]
         private async Task MigrateCollection(string sourceProjectKey, string targetProjectKey,
             string collectionName, bool shouldOverwriteExistingData)
         {

@@ -1,5 +1,7 @@
 import { http } from "@/lib/http/http-client";
 import {
+  ICompleteUploadPayload,
+  ICompleteUploadResponse,
   IDeleteFilePayload,
   IDeleteFolderPayload,
   IDeleteResourceResponse,
@@ -7,8 +9,10 @@ import {
   IGetFileByFileIDResponse,
   IGetFilesInfoPayload,
   IGetFilesInfoResponse,
+  IGetFilesPayload,
   IGetPreSignedUrlForUploadPayload,
   IGetPreSignedUrlForUploadResponse,
+  IStorageFileResponse,
   IUpdateFileAdditionalInfoPayload,
   IUpdateFileAdditionalInfoResponse,
 } from "../models/storage.model";
@@ -43,8 +47,20 @@ export class StorageFile {
     });
   }
 
+  completeUpload(payload: ICompleteUploadPayload): Promise<ICompleteUploadResponse> {
+    return http.post(STORAGE_FILE_ENDPOINTS.COMPLETE_UPLOAD, payload, undefined, {
+      absoluteUrl: true,
+    });
+  }
+
   getFilesInfoUrlForUpload(payload: IGetFilesInfoPayload): Promise<IGetFilesInfoResponse> {
     return http.post(STORAGE_FILE_ENDPOINTS.GET_FILES_INFO, payload, undefined, {
+      absoluteUrl: true,
+    });
+  }
+
+  getFiles(payload: IGetFilesPayload): Promise<IStorageFileResponse[]> {
+    return http.post(STORAGE_FILE_ENDPOINTS.GET_FILES, payload, undefined, {
       absoluteUrl: true,
     });
   }

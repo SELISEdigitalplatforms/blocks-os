@@ -31,6 +31,14 @@ const readString = (raw: TenantConfigApiDict, ...keys: string[]): string => {
   return "";
 };
 
+const readNullableString = (raw: TenantConfigApiDict, ...keys: string[]): string | null => {
+  for (const key of keys) {
+    const value = raw[key];
+    if (typeof value === "string" && value.length > 0) return value;
+  }
+  return null;
+};
+
 const readStringArray = (raw: TenantConfigApiDict, ...keys: string[]): string[] => {
   for (const key of keys) {
     const value = raw[key];
@@ -100,6 +108,12 @@ export const mapOrganizationConfigFromApi = (
     true,
     "KeepOrgPermissionsSameAsDefaultPermissions",
     "keepOrgPermissionsSameAsDefaultPermissions",
+  ),
+  isSignupAutoJoinEnabled: readBool(raw, "IsSignupAutoJoinEnabled", "isSignupAutoJoinEnabled"),
+  signupAutoJoinOrganizationId: readNullableString(
+    raw,
+    "SignupAutoJoinOrganizationId",
+    "signupAutoJoinOrganizationId",
   ),
 });
 

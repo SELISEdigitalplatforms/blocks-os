@@ -9,7 +9,7 @@ import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
 // };
 
 // const SummaryTile = ({ label, value }: SummaryTileProps) => (
-//   <div className="rounded-sm border bg-card px-5 py-4 shadow-sm">
+//   <div className="rounded-sm border bg-card px-5 py-4 shadow-xs">
 //     <p className="text-xs font-medium uppercase tracking-wide text-low-emphasis">
 //       {label}
 //     </p>
@@ -19,7 +19,7 @@ import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
 
 export const ClientCredentials = () => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-  const { data, isLoading, isFetching } = useListAuthClientCredentials({
+  const { data, isLoading } = useListAuthClientCredentials({
     projectKey: tenantId,
   });
   const [, setIsClientCredentialOpen] = useQueryState(
@@ -58,7 +58,9 @@ export const ClientCredentials = () => {
       <div className="relative">
         <ClientCredentialList
           data={credentials}
-          isLoading={isLoading || isFetching}
+          // Only the first load shows the skeleton. A background refetch (after save, rotate or
+          // delete) must keep the rows mounted, or the one-time secret dialog of a row closes.
+          isLoading={isLoading}
           onEdit={handleEdit}
         />
       </div>

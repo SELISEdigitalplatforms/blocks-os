@@ -1,0 +1,160 @@
+import { describe, expect, it } from "vitest";
+import { DEFAULT_OIDC_UI_TEMPLATE } from "./oidc-template-defaults";
+import {
+  HEX_COLOR_MESSAGE,
+  HEX_OR_RGBA_COLOR_MESSAGE,
+  PAGE_FIELDS,
+  PAGE_OPTIONS,
+  TEXT_MESSAGE,
+  THEME_FIELDS,
+  URL_MESSAGE,
+  isRgbaColor,
+  validateOidcUiTemplate,
+} from "./oidc-template-validation";
+
+const template = () => structuredClone(DEFAULT_OIDC_UI_TEMPLATE);
+
+describe("validateOidcUiTemplate", () => {
+  it("accepts the complete compiled-in template", () => {
+    expect(validateOidcUiTemplate(template())).toEqual({});
+  });
+
+  it.each(["light", "dark"] as const)(
+    "requires and validates every color in the %s palette independently",
+    (mode) => {
+      for (const { key, acceptsRgba } of THEME_FIELDS) {
+        const draft = template();
+        draft.theme[mode][key] = "";
+        expect(validateOidcUiTemplate(draft)[`theme.${mode}.${key}`]).toBe(
+          acceptsRgba ? HEX_OR_RGBA_COLOR_MESSAGE : HEX_COLOR_MESSAGE,
+        );
+      }
+    },
+  );
+
+  it("allows rgba only for border, strong border, and soft accent", () => {
+    for (const key of ["border", "borderStrong", "accentSoft"] as const) {
+      const draft = template();
+      draft.theme.light[key] = "rgba(12, 34, 255, .45)";
+      expect(validateOidcUiTemplate(draft)[`theme.light.${key}`]).toBeUndefined();
+    }
+
+    const draft = template();
+    draft.theme.light.primary = "rgba(0, 0, 0, 1)";
+    expect(validateOidcUiTemplate(draft)["theme.light.primary"]).toBe(HEX_COLOR_MESSAGE);
+  });
+
+  it.each([
+    "rgba(256, 0, 0, 1)",
+    "rgba(0, 256, 0, 1)",
+    "rgba(0, 0, 256, 1)",
+    "rgba(0, 0, 0, 1.1)",
+    "rgb(0, 0, 0)",
+    "rgba(nope)",
+  ])("rejects malformed or out-of-range rgba value %s", (value) => {
+    expect(isRgbaColor(value)).toBe(false);
+  });
+
+  it("treats the SSO separator as optional on both pages that offer SSO", () => {
+    for (const pageKey of ["login", "signup"] as const) {
+      const field = PAGE_FIELDS[pageKey].find(({ key }) => key === "ssoSeparatorText");
+      expect(field?.optional).toBe(true);
+      expect(field?.placeholder).toBe("or");
+      expect(DEFAULT_OIDC_UI_TEMPLATE.pages[pageKey].ssoSeparatorText).toBe("or");
+
+      const draft = template();
+      draft.pages[pageKey].ssoSeparatorText = null;
+      expect(validateOidcUiTemplate(draft)[`pages.${pageKey}.ssoSeparatorText`]).toBeUndefined();
+    }
+  });
+
+  it.each([" ", "", "  ", "or", "x".repeat(300)])(
+    "accepts %j as an SSO separator - any divider the tenant wants is legitimate",
+    (value) => {
+      for (const pageKey of ["login", "signup"] as const) {
+        const draft = template();
+        draft.pages[pageKey].ssoSeparatorText = value;
+        expect(validateOidcUiTemplate(draft)[`pages.${pageKey}.ssoSeparatorText`]).toBeUndefined();
+      }
+    },
+  );
+
+  it("lets a tenant point the consent links at its own terms and privacy pages", () => {
+    const draft = template();
+    draft.pages.signup.termsLinkUrl = "https://acme.example/legal/terms";
+    draft.pages.signup.privacyLinkUrl = "https://acme.example/legal/privacy";
+    expect(validateOidcUiTemplate(draft)).toEqual({});
+
+    // Unset falls back to the Blocks default on the real page, so null is allowed.
+    draft.pages.signup.termsLinkUrl = null;
+    draft.pages.signup.privacyLinkUrl = null;
+    expect(validateOidcUiTemplate(draft)).toEqual({});
+  });
+
+  it("rejects consent link targets that aren't absolute http(s) URLs", () => {
+    const draft = template();
+    draft.pages.signup.termsLinkUrl = "/legal/terms";
+    draft.pages.signup.privacyLinkUrl = "javascript:alert(1)";
+    expect(validateOidcUiTemplate(draft)).toMatchObject({
+      "pages.signup.termsLinkUrl": URL_MESSAGE,
+      "pages.signup.privacyLinkUrl": URL_MESSAGE,
+    });
+  });
+
+  it("requires every page field except the nullable copy fields", () => {
+    for (const { key: pageKey } of PAGE_OPTIONS) {
+      for (const { key, optional } of PAGE_FIELDS[pageKey]) {
+        const draft = template();
+        const page = draft.pages[pageKey] as unknown as Record<string, string | null>;
+        page[key] = optional ? null : "";
+        const error = validateOidcUiTemplate(draft)[`pages.${pageKey}.${key}`];
+        expect(error).toBe(optional ? undefined : TEXT_MESSAGE);
+      }
+    }
+  });
+
+  it("orders signup consent fields before the submit-button field", () => {
+    const keys = PAGE_FIELDS.signup.map(({ key }) => key);
+    expect(keys.indexOf("termsPrefix")).toBeLessThan(keys.indexOf("submitButton"));
+    expect(keys.indexOf("privacyLinkText")).toBeLessThan(keys.indexOf("submitButton"));
+  });
+
+  it("enforces the 200-character page and shared-footer limit", () => {
+    const draft = template();
+    draft.pages.signup.heading = "x".repeat(201);
+    draft.pages.shared.footerText = "x".repeat(201);
+    const errors = validateOidcUiTemplate(draft);
+    expect(errors["pages.signup.heading"]).toBe(TEXT_MESSAGE);
+    expect(errors["pages.shared.footerText"]).toBe(TEXT_MESSAGE);
+  });
+
+  it("enforces brand-name and optional-logo rules for both light and dark independently", () => {
+    const invalid = template();
+    invalid.branding.brandName = "x".repeat(81);
+    invalid.branding.logoUrlLight = "/relative.png";
+    invalid.branding.logoUrlDark = "/also-relative.png";
+    expect(validateOidcUiTemplate(invalid)).toMatchObject({
+      "branding.brandName": "must be between 1 and 80 characters",
+      "branding.logoUrlLight": "must be an absolute http or https URL",
+      "branding.logoUrlDark": "must be an absolute http or https URL",
+    });
+
+    const valid = template();
+    valid.branding.logoUrlLight = null;
+    valid.branding.logoUrlDark = null;
+    expect(validateOidcUiTemplate(valid)).toEqual({});
+    valid.branding.logoUrlLight = "https://cdn.example.com/logo.svg";
+    expect(validateOidcUiTemplate(valid)).toEqual({});
+    valid.branding.logoUrlDark = "https://cdn.example.com/logo-dark.svg";
+    expect(validateOidcUiTemplate(valid)).toEqual({});
+  });
+
+  it("rejects only the invalid logo slot, leaving a valid sibling slot untouched", () => {
+    const draft = template();
+    draft.branding.logoUrlLight = "https://cdn.example.com/logo.svg";
+    draft.branding.logoUrlDark = "/relative.png";
+    const errors = validateOidcUiTemplate(draft);
+    expect(errors["branding.logoUrlLight"]).toBeUndefined();
+    expect(errors["branding.logoUrlDark"]).toBe("must be an absolute http or https URL");
+  });
+});

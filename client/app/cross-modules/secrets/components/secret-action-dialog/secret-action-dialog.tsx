@@ -1,0 +1,162 @@
+import { useState } from "react";
+import { Banner } from "@/components/ui-kits/banner/banner";
+import { Button } from "@/components/ui-kits/button/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui-kits/dialog/dialog";
+import {
+  useDeleteSecret,
+  useLockSecret,
+  usePurgeSecret,
+  useRestoreSecret,
+  useSecretDependents,
+  useUnlockSecret,
+} from "@/cross-modules/secrets/hooks/use-secret-management";
+import { describeSecretError } from "@/cross-modules/secrets/utils/secret-error";
+import type { SecretResult } from "@/cross-modules/secrets/models/secret.model";
+import {
+  SecretDependentsNotice,
+  type SecretDependentsAction,
+} from "@/cross-modules/secrets/components/secret-dependents-notice/secret-dependents-notice";
+
+export type SecretLifecycleAction = "lock" | "unlock" | "delete" | "restore" | "purge";
+
+interface Copy {
+  title: (name: string) => string;
+  body: string;
+  confirm: string;
+  pending: string;
+  destructive?: boolean;
+}
+
+const COPY: Record<SecretLifecycleAction, Copy> = {
+  lock: {
+    title: (name) => `Lock ${name}?`,
+    body: "While locked, the value cannot be read by anyone, including administrators. Metadata stays visible and the value stays in the store. You can unlock it again at any time.",
+    confirm: "Lock",
+    pending: "Locking…",
+  },
+  unlock: {
+    title: (name) => `Unlock ${name}?`,
+    body: "The value becomes readable again to whoever the access list allows.",
+    confirm: "Unlock",
+    pending: "Unlocking…",
+  },
+  // The backend's soft delete, presented as archive: the vault value is deliberately retained
+  // so restore can bring the secret back. Saying "cannot be undone" here would simply be false.
+  delete: {
+    title: (name) => `Archive ${name}?`,
+    body: "The secret stops working immediately and is archived. You can restore it later, or purge it to remove it for good — use the Archived filter to find it.",
+    confirm: "Archive",
+    pending: "Archiving…",
+  },
+  restore: {
+    title: (name) => `Restore ${name}?`,
+    body: "The secret becomes active again with its previous value.",
+    confirm: "Restore",
+    pending: "Restoring…",
+  },
+  purge: {
+    title: (name) => `Purge ${name}?`,
+    body: "The secret and its value are permanently removed from the store and cannot be restored. Anything still referencing it will keep failing. The audit trail is kept.",
+    confirm: "Purge",
+    pending: "Purging…",
+    destructive: true,
+  },
+};
+
+/** The actions that break a configuration still pointing at the secret. */
+const warnsAboutDependents = (action: SecretLifecycleAction): action is SecretDependentsAction =>
+  action === "delete" || action === "purge";
+
+interface SecretActionDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  secret: SecretResult;
+  action: SecretLifecycleAction;
+}
+
+/**
+ * Confirmation for the lifecycle transitions. Nothing here fires without a click.
+ *
+ * Mount this only while it is open; a fresh mount is what clears a previous error.
+ */
+export function SecretActionDialog({
+  open,
+  onOpenChange,
+  secret,
+  action,
+}: SecretActionDialogProps) {
+  const [error, setError] = useState<string | null>(null);
+
+  const lock = useLockSecret();
+  const unlock = useUnlockSecret();
+  const remove = useDeleteSecret();
+  const restore = useRestoreSecret();
+  const purge = usePurgeSecret();
+
+  const mutation = { lock, unlock, delete: remove, restore, purge }[action];
+  const copy = COPY[action];
+
+  // Only Archive and Purge ask, and only while the dialog is open. The answer never blocks the
+  // action; confirm waits only for the lookup itself, so the warning is not skipped by a fast click.
+  const checksDependents = warnsAboutDependents(action);
+  const dependents = useSecretDependents(secret.secretId, open && checksDependents);
+  const isCheckingDependents = checksDependents && dependents.isLoading;
+
+  const confirm = async () => {
+    setError(null);
+    try {
+      await mutation.mutateAsync(secret.secretId);
+      onOpenChange(false);
+    } catch (cause) {
+      const verb = action === "delete" ? "archive" : action;
+      setError(describeSecretError(cause, `Could not ${verb} the secret.`).message);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-md sm:w-full">
+        <DialogHeader>
+          <DialogTitle className="text-left">{copy.title(secret.name)}</DialogTitle>
+          {checksDependents && (
+            <SecretDependentsNotice
+              action={action}
+              isLoading={dependents.isLoading}
+              isError={dependents.isError}
+              dependents={dependents.data?.dependents}
+            />
+          )}
+          <DialogDescription className="text-left">{copy.body}</DialogDescription>
+        </DialogHeader>
+
+        {error && <Banner variant="destructive">{error}</Banner>}
+
+        <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={mutation.isPending}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant={copy.destructive ? "destructive" : "default"}
+            onClick={confirm}
+            disabled={mutation.isPending || isCheckingDependents}
+          >
+            {mutation.isPending ? copy.pending : copy.confirm}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

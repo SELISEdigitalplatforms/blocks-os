@@ -2,16 +2,56 @@ import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { User } from "@blocks-idp/iam/models/user";
+import { useUserManageability } from "@blocks-idp/iam/hooks/use-user-manageability";
+import {
+  CANNOT_MANAGE_USER_TOOLTIP,
+  OWN_ROLES_TOOLTIP,
+} from "@blocks-idp/iam/utils/grant-scope";
 import { useNavigate } from "react-router";
 import { useUsersSortQueryParams } from "./users-filter-toolbar";
 import { FilterControls } from "@/components/filter-toolbar";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { checkValidDate, formatDate, parseDateString } from "@/lib/utils";
+import { getUserDisplayName, getUserInitials } from "@blocks-idp/iam/utils/user-display-name";
 import { Users as UsersIcon } from "lucide-react";
+import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
+import { cn } from "@/lib/utils";
+import {
+  USER_ACCOUNT_STATE_META,
+  resolveUserAccountState,
+} from "@blocks-idp/iam/utils/user-account-state";
 
 type UserTableProps = {
   users: User[];
   isLoading: boolean;
+  /** When off, every prop below is ignored and the table behaves exactly as before. */
+  selectionMode?: boolean;
+  selectedUserIds?: Set<string>;
+  onToggleUser?: (itemId: string, checked: boolean) => void;
+  onToggleAllOnPage?: (checked: boolean) => void;
+};
+
+// One extra leading column while selecting, so the header and the rows stay aligned
+// without either of them knowing why the other shifted.
+//
+// Name and email share the spare width instead of email taking all of it: with a fixed
+// name column, email was the only flexible one and a wide screen opened a large empty
+// gap between the address and Status. Email gets the larger share since addresses run
+// longer than names.
+const GRID_COLUMNS =
+  "md:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)_110px_150px_150px]";
+const GRID_COLUMNS_SELECTING =
+  "md:grid-cols-[32px_minmax(0,1fr)_minmax(0,1.25fr)_110px_150px_150px]";
+
+// Radix renders the same tick for "mixed" as for "checked", which would read as
+// "everything is selected" when only some rows are. The tick is hidden in that state
+// and replaced with a dash drawn on the box itself, so no new primitive is needed.
+const INDETERMINATE_BOX =
+  "relative data-[state=indeterminate]:border-blocks-primary-500 data-[state=indeterminate]:bg-blocks-primary-500 data-[state=indeterminate]:text-primary-foreground [&[data-state=indeterminate]_svg]:hidden after:absolute after:left-1/2 after:top-1/2 after:hidden after:h-[2px] after:w-2 after:-translate-x-1/2 after:-translate-y-1/2 after:rounded-full after:bg-current data-[state=indeterminate]:after:block";
+
+const getSelectionBlockedReason = (isSelf: boolean, canManage: boolean): string | undefined => {
+  if (isSelf) return OWN_ROLES_TOOLTIP;
+  return canManage ? undefined : CANNOT_MANAGE_USER_TOOLTIP;
 };
 
 const LoadingSkelton = () => (
@@ -22,20 +62,35 @@ const LoadingSkelton = () => (
   </div>
 );
 
-const getInitials = (firstName?: string, lastName?: string, email?: string) => {
-  const initials = `${firstName?.trim()?.[0] ?? ""}${lastName?.trim()?.[0] ?? ""}`;
-  // A pending (not-yet-activated) user has no name; fall back to the email's first letter.
-  return initials.toUpperCase() || email?.trim()?.[0]?.toUpperCase() || "?";
-};
-
-export const UsersTable = ({ users, isLoading }: UserTableProps) => {
+export const UsersTable = ({
+  users,
+  isLoading,
+  selectionMode = false,
+  selectedUserIds,
+  onToggleUser,
+  onToggleAllOnPage,
+}: UserTableProps) => {
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const { sortQueryParams, setSortQueryParams } = useUsersSortQueryParams();
+  const { isSelf, canManage } = useUserManageability();
 
   const handleRowClick = (itemId: string) => {
+    // Navigating mid-selection would throw away what the operator has ticked, so
+    // while selecting the row is inert and only its checkbox responds.
+    if (selectionMode) return;
     navigate(scoped(`iam/user-detail/${itemId}`));
   };
+
+  const selectedCountOnPage = selectionMode
+    ? users.filter((user) => selectedUserIds?.has(user.itemId)).length
+    : 0;
+  const headerChecked: boolean | "indeterminate" =
+    selectedCountOnPage === 0
+      ? false
+      : selectedCountOnPage === users.length
+        ? true
+        : "indeterminate";
 
   if (isLoading) return <LoadingSkelton />;
 
@@ -50,38 +105,71 @@ export const UsersTable = ({ users, isLoading }: UserTableProps) => {
 
   return (
     <div className="scrollbar-hidden-x overflow-x-hidden md:overflow-x-auto">
-      <div className="flex flex-col gap-3 md:min-w-[1080px]">
-        <div className="hidden grid-cols-[200px_minmax(0,1fr)_90px_130px_130px_140px] items-center gap-4 px-4 md:grid">
+      <div className="flex flex-col gap-3 md:min-w-[940px]">
+        <div
+          className={cn(
+            "hidden items-center gap-4 px-4 md:grid",
+            selectionMode ? GRID_COLUMNS_SELECTING : GRID_COLUMNS,
+          )}
+        >
+          {selectionMode && (
+            <div className="shrink-0">
+              <Checkbox
+                aria-label="Select all users on this page"
+                data-testid="users-select-all-on-page"
+                className={INDETERMINATE_BOX}
+                checked={headerChecked}
+                onCheckedChange={(value) => onToggleAllOnPage?.(value === true)}
+              />
+            </div>
+          )}
           <div className="min-w-0">
-            <FilterControls.SortHeader id="FirstName" label="Name" value={sortQueryParams} onChange={setSortQueryParams} />
+            <FilterControls.SortHeader
+              id="FirstName"
+              label="Name"
+              value={sortQueryParams}
+              onChange={setSortQueryParams}
+            />
           </div>
           <div className="min-w-0">
-            <FilterControls.SortHeader id="Email" label="Email" value={sortQueryParams} onChange={setSortQueryParams} />
+            <FilterControls.SortHeader
+              id="Email"
+              label="Email"
+              value={sortQueryParams}
+              onChange={setSortQueryParams}
+            />
           </div>
           <div className="shrink-0">
-            <FilterControls.SortHeader id="Active" label="Status" value={sortQueryParams} onChange={setSortQueryParams} />
+            <FilterControls.SortHeader
+              id="Active"
+              label="Status"
+              value={sortQueryParams}
+              onChange={setSortQueryParams}
+            />
           </div>
           <div className="shrink-0">
-            <FilterControls.SortHeader id="CreatedDate" label="Created on" value={sortQueryParams} onChange={setSortQueryParams} />
+            <FilterControls.SortHeader
+              id="CreatedDate"
+              label="Created on"
+              value={sortQueryParams}
+              onChange={setSortQueryParams}
+            />
           </div>
           <div className="shrink-0">
-            <FilterControls.SortHeader id="LastUpdatedDate" label="Last updated" value={sortQueryParams} onChange={setSortQueryParams} />
-          </div>
-          <div className="shrink-0">
-            <FilterControls.SortHeader id="LastLoggedInTime" label="Last login" value={sortQueryParams} onChange={setSortQueryParams} />
+            <FilterControls.SortHeader
+              id="LastLoggedInTime"
+              label="Last login"
+              value={sortQueryParams}
+              onChange={setSortQueryParams}
+            />
           </div>
         </div>
 
         {users.map((user) => {
-          // Before activation a user has no name, so show the email's local part
-          // (the text before "@"), matching the project-people list.
-          const fullName =
-            `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
-            user.email?.split("@")[0] ||
-            "-";
+          const fullName = getUserDisplayName(user);
           const hasLastLogin = checkValidDate(user.lastLoggedInTime);
           const hasCreated = checkValidDate(user.createdDate);
-          const hasUpdated = checkValidDate(user.lastUpdatedDate);
+          const accountState = USER_ACCOUNT_STATE_META[resolveUserAccountState(user)];
 
           return (
             <div
@@ -92,11 +180,32 @@ export const UsersTable = ({ users, isLoading }: UserTableProps) => {
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") handleRowClick(user.itemId);
               }}
-              className="group flex cursor-pointer flex-col gap-3 rounded-xl border bg-card p-4 transition-colors hover:border-primary/30 md:grid md:grid-cols-[200px_minmax(0,1fr)_90px_130px_130px_140px] md:items-center md:gap-4"
+              className={cn(
+                "group flex flex-col gap-3 rounded-xl border bg-card p-4 transition-colors md:grid md:items-center md:gap-4",
+                selectionMode ? "cursor-default" : "cursor-pointer hover:border-primary/30",
+                selectionMode ? GRID_COLUMNS_SELECTING : GRID_COLUMNS,
+              )}
             >
+              {selectionMode && (
+                <div
+                  className="shrink-0"
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => event.stopPropagation()}
+                  role="presentation"
+                >
+                  <Checkbox
+                    aria-label={`Select ${fullName}`}
+                    data-testid={`users-select-${user.itemId}`}
+                    checked={selectedUserIds?.has(user.itemId) ?? false}
+                    disabled={isSelf(user.itemId) || !canManage(user)}
+                    title={getSelectionBlockedReason(isSelf(user.itemId), canManage(user))}
+                    onCheckedChange={(value) => onToggleUser?.(user.itemId, value === true)}
+                  />
+                </div>
+              )}
               <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                  {getInitials(user.firstName, user.lastName, user.email)}
+                  {getUserInitials(user)}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-high-emphasis">{fullName}</p>
@@ -112,24 +221,32 @@ export const UsersTable = ({ users, isLoading }: UserTableProps) => {
                 </div>
               </div>
 
-              {user.email && (
-                <div className="hidden min-w-0 md:block">
+              {/* The cell itself always renders: dropping it would pull the
+                  status and date columns one place left for a user with no
+                  email, breaking alignment with the header row. */}
+              <div className="hidden min-w-0 md:block">
+                {user.email && (
                   <CopyToClipboardButton textToCopy={user.email} isHoverable>
                     <span className="truncate text-sm lowercase text-muted-foreground">
                       {user.email}
                     </span>
                   </CopyToClipboardButton>
-                </div>
-              )}
+                )}
+              </div>
 
-              {/* Status + dates: paired on one row on mobile; on md+ this
+              {/* Status + dates: grouped on one row on mobile; on md+ this
                   wrapper becomes `contents` so its children fall back into
-                  their own grid columns (3-6), matching the header. */}
+                  their own grid columns (3-5), matching the header. */}
               <div className="flex flex-wrap items-center justify-between gap-3 md:contents">
-                <div className="md:shrink-0">
-                  <Badge variant={user.active ? "success" : "error"} className="w-fit">
-                    {user.active ? "Active" : "Inactive"}
+                <div className="flex flex-wrap items-center gap-1 md:shrink-0">
+                  <Badge variant={accountState.variant} className="w-fit whitespace-nowrap">
+                    {accountState.label}
                   </Badge>
+                  {user.isLockedOut === true && (
+                    <Badge variant="error" className="w-fit">
+                      Locked out
+                    </Badge>
+                  )}
                 </div>
 
                 <div className="text-right md:shrink-0 md:text-left md:text-sm md:text-muted-foreground">
@@ -138,13 +255,10 @@ export const UsersTable = ({ users, isLoading }: UserTableProps) => {
                 </div>
 
                 <div className="text-right md:shrink-0 md:text-left md:text-sm md:text-muted-foreground">
-                  <span className="block text-xs text-muted-foreground md:hidden">Last updated</span>
-                  {hasUpdated ? formatDate(parseDateString(user.lastUpdatedDate)) : "-"}
-                </div>
-
-                <div className="text-right md:shrink-0 md:text-left md:text-sm md:text-muted-foreground">
                   <span className="block text-xs text-muted-foreground md:hidden">Last login</span>
-                  {hasLastLogin ? formatDate(parseDateString(user.lastLoggedInTime)) : "Never logged in"}
+                  {hasLastLogin
+                    ? formatDate(parseDateString(user.lastLoggedInTime))
+                    : "Never logged in"}
                 </div>
               </div>
             </div>

@@ -23,10 +23,11 @@ import {
   TableRow,
 } from "@/components/ui-kits/table/table";
 import { useProjectStore } from "@seliseblocks/genesis-os";
-import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
+import { useGetGrantablePermissions } from "@blocks-idp/iam/hooks/use-permission";
 import { IPermission, RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
 import { CirclePlus } from "lucide-react";
 import { useMemo, useState } from "react";
+import { GrantHint } from "@blocks-idp/iam/components/grant-hint";
 
 const MAX_SIGNUP_PERMISSIONS = 5;
 
@@ -50,7 +51,7 @@ export const AssignSignupPermissionsDialog = ({
     search: "",
   });
 
-  const { data, isLoading } = useGetPermissions(
+  const { data, isLoading } = useGetGrantablePermissions(
     {
       ...filter,
       projectKey: tenantId,
@@ -131,6 +132,7 @@ export const AssignSignupPermissionsDialog = ({
             to the list, then use Save on the page to persist them.
           </DialogDescription>
         </DialogHeader>
+        <GrantHint kind="permissions" />
         <FilterControls.SearchInput
           placeholder="Search by permission name"
           onChange={(search) => setFilter((current) => ({ ...current, search, page: 0 }))}

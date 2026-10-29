@@ -5,6 +5,7 @@ import {
   IGetClientsPayload,
   ISaveClientCredentialPayload,
   ISaveClientCredentialResponse,
+  IRotateClientCredentialSecretResponse,
 } from "@blocks-idp/authentication/models/auth.oidc.model";
 import { AUTH_CLIENT_ENDPOINTS } from "../constants/endpoint.constant";
 
@@ -15,10 +16,20 @@ export class AuthClientsService {
     });
   }
 
-  save(payload: ISaveClientCredentialPayload): Promise<APIResponse<ISaveClientCredentialResponse>> {
+  save(payload: ISaveClientCredentialPayload): Promise<ISaveClientCredentialResponse> {
     return http.post(AUTH_CLIENT_ENDPOINTS.SAVE, payload, undefined, {
       absoluteUrl: true,
     });
+  }
+
+  /** Makes a new secret; the response is the only time it is returned. The old secret stops working. */
+  rotateSecret(payload: { itemId: string }): Promise<IRotateClientCredentialSecretResponse> {
+    return http.post(
+      `${AUTH_CLIENT_ENDPOINTS.ROTATE_SECRET}/${payload.itemId}/rotate-secret`,
+      {},
+      undefined,
+      { absoluteUrl: true },
+    );
   }
 
   delete(payload: { itemId: string }): Promise<APIResponse<{ isSuccess: boolean }>> {

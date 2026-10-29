@@ -28,15 +28,15 @@ export const ToggleCaptchaStatusModal = ({
   const onConfirm = async () => {
     try {
       if (!configuration) return showErrorToast({ errors: "Something went wrong" });
-      const res = await mutateAsync({
-        itemId: configuration.itemId,
+      // No captchaSecret here: omitting it tells the backend to leave the stored secret
+      // untouched, which is exactly what a pure enable/disable toggle should do.
+      await mutateAsync({
+        id: configuration.id,
         isEnable: !configuration.isEnable,
         provider: configuration.provider,
         captchaKey: configuration.captchaKey,
-        captchaSecret: configuration.captchaSecret,
         captchaGenerator: configuration.captchaGenerator,
       });
-      if (!res.isSuccess) return showErrorToast({ errors: res.errors });
       showSuccessToast({
         description: `${providerType.label} is ${configuration.isEnable ? "disabled" : "enabled"} successfully`,
       });

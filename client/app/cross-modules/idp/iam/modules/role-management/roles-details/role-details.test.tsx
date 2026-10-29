@@ -18,6 +18,20 @@ const h = vi.hoisted(() => ({
   isPending: false,
   showSuccessToast: vi.fn(),
   showErrorToast: vi.fn(),
+  isMultiOrgEnabled: false,
+  impact: {
+    isSuccess: true,
+    slug: "admin",
+    name: "Admin",
+    isMultiOrgEnabled: true,
+    canPropagate: true,
+    addCount: 1,
+    removeCount: 1,
+    organizationCount: 2,
+    skippedOrganizationCount: 0,
+    affectedUserCount: 3,
+    activeUserCount: 2,
+  },
 }));
 
 vi.mock("@seliseblocks/genesis-os", () => ({
@@ -37,8 +51,28 @@ vi.mock("./role-details-state", () => ({
   RoleDetailsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useRoleDetailsStore: (selector: (s: StoreShape) => unknown) => selector(h.store as StoreShape),
 }));
+const EDIT_PERMISSIONS = "Edit Permissions";
+const grantBlock = vi.hoisted(() => ({ reason: undefined as string | undefined }));
+vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => ({
+  useGrantScope: () => ({ roleEditBlock: () => grantBlock.reason }),
+}));
+vi.mock("@/components/ui-kits/tooltip/tooltip", () => import("@/test-utils/__mocks__/tooltip.mock"));
 vi.mock("@blocks-idp/iam/hooks/use-roles", () => ({
   useSetRoles: () => ({ isPending: h.isPending, mutateAsync: h.mutateAsync }),
+}));
+// The propagation consent control is gated on this: single-org tenants must never see it, and
+// must never send the field. Defaults to disabled so the existing tests describe that tenant.
+vi.mock("@blocks-idp/iam/hooks/use-organization", () => ({
+  useGetOrganizationConfig: () => ({ data: { isMultiOrgEnabled: h.isMultiOrgEnabled } }),
+}));
+// The confirmation dialog's numbers. Stubbed rather than exercised here: what this file asserts is
+// which path a save takes, not how the dialog renders a count.
+vi.mock("@blocks-idp/iam/hooks/use-role-permission-change-impact", () => ({
+  useRolePermissionChangeImpact: () => ({
+    data: h.impact,
+    isLoading: false,
+    isError: false,
+  }),
 }));
 
 import { RoleDetailsContainer } from "./role-details";
@@ -64,12 +98,28 @@ describe("RoleDetailsContainer", () => {
     h.isPending = false;
     h.mutateAsync = vi.fn().mockResolvedValue({});
     h.store = baseStore();
+    // Reset rather than mutate-and-hope: individual tests narrow these, and a leaked value would
+    // silently change which branch the next test exercises.
+    h.isMultiOrgEnabled = false;
+    h.impact = {
+      isSuccess: true,
+      slug: "admin",
+      name: "Admin",
+      isMultiOrgEnabled: true,
+      canPropagate: true,
+      addCount: 1,
+      removeCount: 1,
+      organizationCount: 2,
+      skippedOrganizationCount: 0,
+      affectedUserCount: 3,
+      activeUserCount: 2,
+    };
   });
 
   it("shows the skeleton until the store is initialized", () => {
     h.store = baseStore({ isInitialized: false });
     render(<RoleDetailsContainer />);
-    expect(screen.queryByText("Edit Permissions")).toBeNull();
+    expect(screen.queryByText(EDIT_PERMISSIONS)).toBeNull();
     expect(screen.queryByTestId("panel")).toBeNull();
   });
 
@@ -78,8 +128,17 @@ describe("RoleDetailsContainer", () => {
     h.store = store;
     render(<RoleDetailsContainer />);
     expect(screen.getByTestId("panel")).toBeTruthy();
-    await userEvent.click(screen.getByText("Edit Permissions"));
+    await userEvent.click(screen.getByText(EDIT_PERMISSIONS));
     expect(store.changeEditMode).toHaveBeenCalledWith(true);
+  });
+
+  it("locks Edit Permissions with the reason when the caller may not change the role", () => {
+    grantBlock.reason = "Comes from default. Only the system user can change it.";
+    h.store = baseStore();
+    render(<RoleDetailsContainer />);
+    expect(screen.getByRole("button", { name: EDIT_PERMISSIONS })).toHaveProperty("disabled", true);
+    expect(screen.getAllByText("Comes from default. Only the system user can change it.").length).toBeGreaterThan(0);
+    grantBlock.reason = undefined;
   });
 
   it("shows Discard and Save actions in edit mode and discards on demand", async () => {
@@ -127,5 +186,98 @@ describe("RoleDetailsContainer", () => {
     await userEvent.click(screen.getByText("Save Changes"));
     await waitFor(() => expect(h.showErrorToast).toHaveBeenCalledTimes(1));
     expect(store.commitChanges).not.toHaveBeenCalled();
+  });
+
+  describe("cross-organization propagation consent", () => {
+    const label = "Apply this change to all organizations";
+    const confirmAll = "Apply to all organizations";
+
+    // The dialog is offered only where the backend would honour the answer: multi-organization
+    // mode ON and the role being edited is the default organization's copy. Anywhere else, Save
+    // stays the single click it has always been.
+    it("saves straight through for a single-organization tenant", async () => {
+      h.isMultiOrgEnabled = false;
+      h.store = baseStore({ isEditMode: true, role: { itemId: "role-1", name: "Admin", slug: "admin", organizationId: "default" } });
+      h.mutateAsync = vi.fn().mockResolvedValue({});
+
+      render(<RoleDetailsContainer />);
+      await userEvent.click(screen.getByText("Save Changes"));
+
+      await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+      expect(screen.queryByLabelText(label)).toBeNull();
+      // The field must be absent, not false: a single-org tenant's payload stays byte-for-byte
+      // what it was before this feature existed.
+      expect(h.mutateAsync.mock.calls[0][0]).not.toHaveProperty("propagateToAllOrganizations");
+    });
+
+    it("saves straight through for an organization-scoped role, even in multi-org mode", async () => {
+      h.isMultiOrgEnabled = true;
+      // organizationId is "org-1", not "default" -- the backend ignores the flag for this caller,
+      // so asking the question would promise something that never happens.
+      h.store = baseStore({ isEditMode: true });
+      h.mutateAsync = vi.fn().mockResolvedValue({});
+
+      render(<RoleDetailsContainer />);
+      await userEvent.click(screen.getByText("Save Changes"));
+
+      await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+      expect(h.mutateAsync.mock.calls[0][0]).not.toHaveProperty("propagateToAllOrganizations");
+    });
+
+    it("confirms before saving from the default organization, with propagation pre-selected", async () => {
+      h.isMultiOrgEnabled = true;
+      h.store = baseStore({ isEditMode: true, role: { itemId: "role-1", name: "Admin", slug: "admin", organizationId: "default" } });
+      h.mutateAsync = vi.fn().mockResolvedValue({});
+
+      render(<RoleDetailsContainer />);
+      await userEvent.click(screen.getByText("Save Changes"));
+
+      // Nothing is written until the dialog is confirmed.
+      expect(h.mutateAsync).not.toHaveBeenCalled();
+
+      const checkbox = await screen.findByLabelText(label);
+      expect(checkbox.getAttribute("data-state")).toBe("checked");
+
+      await userEvent.click(screen.getByText(confirmAll));
+
+      await waitFor(() =>
+        expect(h.mutateAsync).toHaveBeenCalledWith(
+          expect.objectContaining({ propagateToAllOrganizations: true }),
+        ),
+      );
+    });
+
+    it("omits the flag when propagation is unticked in the dialog", async () => {
+      h.isMultiOrgEnabled = true;
+      h.store = baseStore({ isEditMode: true, role: { itemId: "role-1", name: "Admin", slug: "admin", organizationId: "default" } });
+      h.mutateAsync = vi.fn().mockResolvedValue({});
+
+      render(<RoleDetailsContainer />);
+      await userEvent.click(screen.getByText("Save Changes"));
+
+      await userEvent.click(await screen.findByLabelText(label));
+      await userEvent.click(screen.getByText("Save changes"));
+
+      await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+      expect(h.mutateAsync.mock.calls[0][0]).not.toHaveProperty("propagateToAllOrganizations");
+    });
+
+    it("withholds propagation when the impact preview could not be loaded", async () => {
+      h.isMultiOrgEnabled = true;
+      // canPropagate false stands in for the degraded dialog: saving stays possible, changing every
+      // organization on the strength of numbers that failed to load does not.
+      h.impact = { ...h.impact, canPropagate: false };
+      h.store = baseStore({ isEditMode: true, role: { itemId: "role-1", name: "Admin", slug: "admin", organizationId: "default" } });
+      h.mutateAsync = vi.fn().mockResolvedValue({});
+
+      render(<RoleDetailsContainer />);
+      await userEvent.click(screen.getByText("Save Changes"));
+
+      expect(screen.queryByLabelText(label)).toBeNull();
+      await userEvent.click(screen.getByText("Save changes"));
+
+      await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+      expect(h.mutateAsync.mock.calls[0][0]).not.toHaveProperty("propagateToAllOrganizations");
+    });
   });
 });

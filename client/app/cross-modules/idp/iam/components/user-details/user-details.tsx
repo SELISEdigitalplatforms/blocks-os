@@ -25,12 +25,12 @@
 //       <div className="relative col-span-full lg:col-span-3">
 //         {fullName && (
 //           <div className="pointer-events-auto absolute inset-x-0 top-2 z-10 flex flex-col items-center gap-1 px-4 text-center sm:hidden">
-//             <p className="truncate text-base font-semibold leading-tight text-foreground drop-shadow">
+//             <p className="truncate text-base font-semibold leading-tight text-foreground drop-shadow-sm">
 //               {fullName}
 //             </p>
 //             {user?.email && (
 //               <CopyToClipboardButton textToCopy={user.email}>
-//                 <span className="truncate text-xs text-muted-foreground drop-shadow">
+//                 <span className="truncate text-xs text-muted-foreground drop-shadow-sm">
 //                   {user.email}
 //                 </span>
 //               </CopyToClipboardButton>

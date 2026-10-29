@@ -1,3 +1,5 @@
+import type { LinkedSecretStatus } from "@/cross-modules/secrets/models/secret.model";
+
 export const CAPTCHA_PROVIDERS = {
   recaptcha: { value: "recaptcha", label: "Google reCAPTCHA" },
   hcaptcha: { value: "hcaptcha", label: "hCAPTCHA" },
@@ -7,73 +9,47 @@ export const CAPTCHA_GENERATOR_TYPE = {
   HardCaptchaGenerator: { value: "HardCaptchaGenerator", label: "Hard" },
 } as const;
 
-export type CAPTCHA_PROVIDERS_KEY = keyof typeof CAPTCHA_PROVIDERS;
+export type CaptchaProvidersKey = keyof typeof CAPTCHA_PROVIDERS;
 
+/**
+ * A tenant may have multiple captcha configurations, each identified by `id`. The backend never
+ * returns the secret itself — only whether one is set (`secretId` present) — so the edit form
+ * must treat the secret field as write-only, never pre-filled with a real value.
+ */
 export interface ICaptchaConfig {
-  itemId: string;
-  createdDate: string;
-  lastUpdatedDate: string;
-  createdBy: string;
-  lastUpdatedBy: string;
-  organizationIds: string[];
-  tags: string[];
+  id: string;
+  provider: CaptchaProvidersKey;
   captchaKey: string;
-  captchaSecret: string;
-  provider: CAPTCHA_PROVIDERS_KEY;
   captchaGenerator: keyof typeof CAPTCHA_GENERATOR_TYPE;
   isEnable: boolean;
+  secretId: string | null;
+  /**
+   * The linked secret's state, computed by the server on every read. `archived` or `missing`
+   * means the configuration cannot work until a new secret is entered, and an edit then
+   * requires one. After such a repair `secretId` is a new id.
+   */
+  secretStatus?: LinkedSecretStatus;
 }
 
-export interface ICaptchaSecretKeyValuePairs {
-  captchaKey: string;
-  captchaSecret: string;
-  provider: string;
-  captchaGenerator: string;
-  isEnable: boolean | string;
-  itemId: string;
-}
-
-export interface ICaptchaSecretResponse {
-  secretKey: string;
-  keyValuePairs: ICaptchaSecretKeyValuePairs;
-  itemId: string;
-  createdDate: string;
-  lastUpdatedDate: string;
-  createdBy: string;
-  lastUpdatedBy: string;
-  organizationIds: string[];
-  tags: string[];
-}
-
-export interface IGetCaptchaConfigsPayload {
+export interface IGetCaptchaConfigPayload {
   projectKey: string;
 }
-export interface IGetCaptchaConfigsResponse {
-  configurations: ICaptchaConfig[];
-}
 
-export interface ISaveCaptchaConfigsPayload {
-  itemId?: string;
-  captchaKey: string;
-  captchaSecret: string;
-  provider: string;
-  captchaGenerator: string;
-  isEnable: boolean;
-  projectKey: string;
-}
-export interface ISaveCaptchaConfigsResponse {
-  errors: null | unknown;
-  isSuccess: boolean;
-  itemId: string;
-}
-
-export interface IEnableCaptchaConfigsStatusPayload {
-  itemId: string;
-  isEnable: boolean;
+export interface ISaveCaptchaConfigPayload {
+  /** Omit to create a new configuration; supply an existing `id` to update it instead. */
+  id?: string;
   provider: string;
   captchaKey: string;
-  captchaSecret: string;
   captchaGenerator: string;
+  isEnable: boolean;
+  /** Omit, or leave empty, to keep the previously-saved secret untouched. */
+  captchaSecret?: string;
 }
 
-export interface IEnableCaptchaConfigsStatusResponse extends ISaveCaptchaConfigsResponse {}
+export interface IToggleCaptchaConfigStatusPayload {
+  id: string;
+  provider: string;
+  captchaKey: string;
+  captchaGenerator: string;
+  isEnable: boolean;
+}

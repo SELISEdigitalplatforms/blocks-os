@@ -17,7 +17,7 @@ export const AiModelsList = ({ servicePlatform, providerList }: ProviderListProp
   };
   return (
     <div className="flex flex-col gap-5">
-      <p className="border-b-1 border-gray-150 flex w-full border-b pb-2 text-base font-normal text-low-emphasis">
+      <p className="border-b border-gray-150 flex w-full border-b pb-2 text-base font-normal text-low-emphasis">
         {servicePlatform}
       </p>
       {providerList.length ? (

@@ -1,37 +1,49 @@
 using Blocks.Genesis;
-using DomainService.Migration.Entities;
 using DomainService.People;
 using DomainService.Shared;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using Blocks.Genesis.Entities.Iam;
+using Blocks.Genesis.Entities.Os;
+using Os.DataAccess;
 
 namespace DomainService.Migration.Services
 {
     public class MigrationRepository : IMigrationRepository
     {
-        private readonly IMongoCollection<MigrationTracker> _collection;
-        private readonly IMongoCollection<User> _userCollection;
+        // Process documents in batches to optimize memory usage
+        private const int MigrationBatchSize = 1000;
+
+        // Resolve for the current operation, not the singleton's first request/message.
+        private IMongoCollection<MigrationTracker> Collection =>
+            _dbContextProvider.GetCollection<MigrationTracker>(IdentifierConstants.MigrationTrackerCollectionName);
+        private IMongoCollection<User> UserCollection => _dbContextProvider.GetCollection<User>("Users");
         private readonly IDbContextProvider _dbContextProvider;
         private readonly IBlocksSecret _blocksSecret;
+        private readonly IOsDataAccess _dataAccess;
 
-        public MigrationRepository(IDbContextProvider dbContextProvider, IBlocksSecret blocksSecret)
+        public MigrationRepository(IDbContextProvider dbContextProvider, IBlocksSecret blocksSecret, IOsDataAccess dataAccess)
         {
             _dbContextProvider = dbContextProvider;
-            _collection = dbContextProvider.GetCollection<MigrationTracker>(IdentifierConstants.MigrationTrackerCollectionName);
-            _userCollection = dbContextProvider.GetCollection<User>("Users");
             _blocksSecret = blocksSecret;
+            _dataAccess = dataAccess;
         }
 
         public async Task<string> CreateMigrationTrackerAsync(MigrationTracker migrationTracker)
         {
-            await _collection.InsertOneAsync(migrationTracker);
+            if (!await _dataAccess.InsertAllowedAsync(OsSchemas.MigrationTracker, "MigrationRepository.CreateMigrationTrackerAsync"))
+                throw new UnauthorizedAccessException("Access to the migration tracker was denied by the data access policy.");
+
+            await _dataAccess.PrepareWriteAsync(OsSchemas.MigrationTracker, migrationTracker, isInsert: true, "MigrationRepository.CreateMigrationTrackerAsync");
+            await Collection.InsertOneAsync(migrationTracker);
             return migrationTracker.ItemId;
         }
 
         public async Task<MigrationTracker?> GetMigrationTrackerAsync(string trackerId)
         {
             var filter = Builders<MigrationTracker>.Filter.Eq(m => m.ItemId, trackerId);
-            return await _collection.Find(filter).FirstOrDefaultAsync();
+            var scope = await _dataAccess.ReadAsync(OsSchemas.MigrationTracker, filter, "MigrationRepository.GetMigrationTrackerAsync");
+            return scope.Granted ? await scope.Apply(Collection).FirstOrDefaultAsync() : null;
         }
 
         public async Task<bool> UpdateServiceStatusAsync(string trackerId, MigrationServiceNames serviceName, bool isCompleted, string? errorMessage = null)
@@ -42,10 +54,16 @@ namespace DomainService.Migration.Services
             var update = Builders<MigrationTracker>.Update
                 .Set($"{propertyName}.IsCompleted", isCompleted)
                 .Set($"{propertyName}.CompletedAt", isCompleted ? DateTime.UtcNow : (DateTime?)null)
-                .Set($"{propertyName}.ErrorMessage", errorMessage)
+                .Set($"{propertyName}.ErrorMessage", FinalErrorMessage(isCompleted, errorMessage))
                 .Set(m => m.LastUpdatedDate, DateTime.UtcNow);
 
-            var result = await _collection.UpdateOneAsync(filter, update);
+            var editFilter = await _dataAccess.EditFilterAsync(OsSchemas.MigrationTracker, filter, "MigrationRepository.UpdateServiceStatusAsync");
+            if (editFilter is null)
+            {
+                return false;
+            }
+
+            var result = await Collection.UpdateOneAsync(editFilter, update);
             return result.ModifiedCount > 0;
         }
 
@@ -56,7 +74,7 @@ namespace DomainService.Migration.Services
                 Builders<MigrationTracker>.Filter.In(m => m.TargetedProjectKey, projectKeys)
             );
 
-            var trackers = await _collection.Find(filter)
+            var trackers = await Collection.Find(filter)
                 .SortByDescending(m => m.CreatedDate)
                 .ToListAsync();
 
@@ -68,13 +86,33 @@ namespace DomainService.Migration.Services
         {
             var filter = Builders<MigrationTracker>.Filter.Eq(m => m.TenantGroupId, tenantGroupId);
 
-            var trackers = await _collection.Find(filter)
+            var scope = await _dataAccess.ReadAsync(OsSchemas.MigrationTracker, filter, "MigrationRepository.GetMigrationsByTenantGroupIdAsync");
+            if (!scope.Granted)
+            {
+                return new List<MigrationTracker>();
+            }
+
+            var trackers = await scope.Apply(Collection)
                 .SortByDescending(m => m.CreatedDate)
                 .ToListAsync();
 
             // Filter to only include trackers with at least one incomplete service
-            return trackers.Where(HasIncompleteServices).ToList();
+            // The API lists these: View column (property) rules clear what the caller may not see.
+            return scope.ForView(trackers.Where(HasIncompleteServices).ToList());
         }
+
+        /// <summary>
+        /// A failed service is told apart from a running one only by its error message
+        /// (IsCompleted is false for both). A failure reported without a message would look
+        /// "in progress" forever, so it gets a default one. Success clears the message.
+        /// </summary>
+        public static string? FinalErrorMessage(bool isCompleted, string? errorMessage)
+        {
+            if (isCompleted) return null;
+            return string.IsNullOrWhiteSpace(errorMessage) ? DefaultFailureMessage : errorMessage;
+        }
+
+        public const string DefaultFailureMessage = "Migration failed";
 
         private static string GetServicePropertyName(MigrationServiceNames serviceName)
         {
@@ -124,74 +162,89 @@ namespace DomainService.Migration.Services
                 return (0, 0); // No data to migrate
             }
 
-            const int batchSize = 1000; // Process documents in batches to optimize memory usage
-            var totalProcessed = 0;
             var totalDocuments = (int)sourceCount;
 
-            if (shouldOverwriteExistingData)
-            {
-                // Process documents in batches for upsert operations
-                using var cursor = await sourceCollection.FindAsync(new BsonDocument());
-
-                while (await cursor.MoveNextAsync())
-                {
-                    var batch = cursor.Current.Take(batchSize).ToList();
-                    if (!batch.Any()) break;
-
-                    var bulkOps = batch.Select(document =>
-                        new ReplaceOneModel<BsonDocument>(
-                            Builders<BsonDocument>.Filter.Eq("_id", document["_id"]),
-                            document)
-                        {
-                            IsUpsert = true
-                        } as WriteModel<BsonDocument>).ToList();
-
-                    if (bulkOps.Any())
-                    {
-                        await targetCollection.BulkWriteAsync(bulkOps, new BulkWriteOptions { IsOrdered = false });
-                        totalProcessed += bulkOps.Count;
-                    }
-                }
-            }
-            else
-            {
-                // Insert-only mode using UpdateOneModel with $setOnInsert
-                // This approach is more explicit and avoids exceptions
-                using var cursor = await sourceCollection.FindAsync(new BsonDocument());
-
-                while (await cursor.MoveNextAsync())
-                {
-                    var batch = cursor.Current.Take(batchSize).ToList();
-                    if (!batch.Any()) break;
-
-                    var bulkOps = batch.Select(document =>
-                    {
-                        var filter = Builders<BsonDocument>.Filter.Eq("_id", document["_id"]);
-
-                        // Build update with $setOnInsert for all fields
-                        var updateBuilder = Builders<BsonDocument>.Update;
-                        UpdateDefinition<BsonDocument>? update = null;
-
-                        foreach (var element in document.Elements)
-                        {
-                            if (update == null)
-                                update = updateBuilder.SetOnInsert(element.Name, element.Value);
-                            else
-                                update = update.SetOnInsert(element.Name, element.Value);
-                        }
-
-                        return new UpdateOneModel<BsonDocument>(filter, update!) { IsUpsert = true };
-                    }).ToList();
-
-                    if (bulkOps.Any())
-                    {
-                        var bulkResult = await targetCollection.BulkWriteAsync(bulkOps, new BulkWriteOptions { IsOrdered = false });
-                        totalProcessed += bulkResult.Upserts.Count; // Count actual upserts (inserts in this case)
-                    }
-                }
-            }
+            var totalProcessed = shouldOverwriteExistingData
+                ? await ReplaceAllDocumentsAsync(sourceCollection, targetCollection)
+                : await InsertMissingDocumentsAsync(sourceCollection, targetCollection);
 
             return (totalDocuments, totalProcessed);
+        }
+
+        private static async Task<int> ReplaceAllDocumentsAsync(IMongoCollection<BsonDocument> sourceCollection,
+            IMongoCollection<BsonDocument> targetCollection)
+        {
+            var totalProcessed = 0;
+
+            // Process documents in batches for upsert operations
+            using var cursor = await sourceCollection.FindAsync(new BsonDocument());
+
+            while (await cursor.MoveNextAsync())
+            {
+                var batch = cursor.Current.Take(MigrationBatchSize).ToList();
+                if (!batch.Any()) break;
+
+                var bulkOps = batch.Select(document =>
+                    new ReplaceOneModel<BsonDocument>(
+                        Builders<BsonDocument>.Filter.Eq("_id", document["_id"]),
+                        document)
+                    {
+                        IsUpsert = true
+                    } as WriteModel<BsonDocument>).ToList();
+
+                if (bulkOps.Any())
+                {
+                    await targetCollection.BulkWriteAsync(bulkOps, new BulkWriteOptions { IsOrdered = false });
+                    totalProcessed += bulkOps.Count;
+                }
+            }
+
+            return totalProcessed;
+        }
+
+        private static async Task<int> InsertMissingDocumentsAsync(IMongoCollection<BsonDocument> sourceCollection,
+            IMongoCollection<BsonDocument> targetCollection)
+        {
+            var totalProcessed = 0;
+
+            // Insert-only mode using UpdateOneModel with $setOnInsert
+            // This approach is more explicit and avoids exceptions
+            using var cursor = await sourceCollection.FindAsync(new BsonDocument());
+
+            while (await cursor.MoveNextAsync())
+            {
+                var batch = cursor.Current.Take(MigrationBatchSize).ToList();
+                if (!batch.Any()) break;
+
+                var bulkOps = batch.Select(BuildSetOnInsertModel).ToList();
+
+                if (bulkOps.Any())
+                {
+                    var bulkResult = await targetCollection.BulkWriteAsync(bulkOps, new BulkWriteOptions { IsOrdered = false });
+                    totalProcessed += bulkResult.Upserts.Count; // Count actual upserts (inserts in this case)
+                }
+            }
+
+            return totalProcessed;
+        }
+
+        private static UpdateOneModel<BsonDocument> BuildSetOnInsertModel(BsonDocument document)
+        {
+            var filter = Builders<BsonDocument>.Filter.Eq("_id", document["_id"]);
+
+            // Build update with $setOnInsert for all fields
+            var updateBuilder = Builders<BsonDocument>.Update;
+            UpdateDefinition<BsonDocument>? update = null;
+
+            foreach (var element in document.Elements)
+            {
+                if (update == null)
+                    update = updateBuilder.SetOnInsert(element.Name, element.Value);
+                else
+                    update = update.SetOnInsert(element.Name, element.Value);
+            }
+
+            return new UpdateOneModel<BsonDocument>(filter, update!) { IsUpsert = true };
         }
 
         public async Task<bool> CleanupCollectionAsync(string projectKey, string collectionName)
@@ -253,7 +306,7 @@ namespace DomainService.Migration.Services
         }
        public async Task<User> GetUserByIdAsync ( string itemId )
        {
-          return await _userCollection.Find(x => x.ItemId == itemId).FirstOrDefaultAsync();
+          return await UserCollection.Find(x => x.ItemId == itemId).FirstOrDefaultAsync();
        }
   }
 }

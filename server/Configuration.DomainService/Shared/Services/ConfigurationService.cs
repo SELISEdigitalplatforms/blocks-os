@@ -1,44 +1,43 @@
-using Blocks.Genesis;
+﻿using Blocks.Genesis;
 using FluentValidation;
 using Configuration.DomainService.Shared.Utilities;
 using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Notification.ResponseModel;
-using Configuration.DomainService.Notification.Entities;
-using Configuration.DomainService.Storage.RequestModel;
-using Configuration.DomainService.Storage.Entities;
-using Configuration.DomainService.Storage.Enums;
-using System.Collections.Immutable;
-using Configuration.DomainService.Mail.Entities;
-using Configuration.DomainService.Mail.RequestModel;
+using Blocks.Genesis.Entities.Data;
+using Blocks.Genesis.Entities.Os;
+using Configuration.DomainService.Notification.Propagation;
+using Configuration.DomainService.Notification.Push;
+using Configuration.DomainService.Notification.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Configuration.DomainService.Shared.Services
 {
     public class ConfigurationService : IConfigurationService
     {
-        private const string MaskedSecretValue = "********";
-
         private readonly IConfigurationRepository _configurationRepository;
         private readonly IValidator<SaveNotificationConfigurationRequest> _notificatonConfigurationValidator;
-        private readonly IValidator<SaveStorageConfigurationRequest> _storageConfigurationValidator;
-        private readonly IValidator<MailConfiguration> _mailConfigurationValidator;
         private readonly IMessageClient _messageClient;
+        private readonly ITenants _tenants;
+        private readonly INotificationAudienceGrantGuard _grantGuard;
+        private readonly INotificationPushOptionsService _pushOptions;
         private readonly ILogger<ConfigurationService> _logger;
 
 
         public ConfigurationService(IConfigurationRepository configurationRepository,
                                     IValidator<SaveNotificationConfigurationRequest> notificatonConfigurationValidator,
-                                    IValidator<SaveStorageConfigurationRequest> storageConfigurationValidator,
-                                    IValidator<MailConfiguration> mailConfigurationValidator,
                                     IMessageClient messageClient,
+                                    ITenants tenants,
+                                    INotificationAudienceGrantGuard grantGuard,
+                                    INotificationPushOptionsService pushOptions,
                                     ILogger<ConfigurationService> logger)
         {
+            _pushOptions = pushOptions;
+            _grantGuard = grantGuard;
+            _tenants = tenants;
+            _logger = logger;
             _configurationRepository = configurationRepository;
             _notificatonConfigurationValidator = notificatonConfigurationValidator;
-            _storageConfigurationValidator = storageConfigurationValidator;
-            _mailConfigurationValidator = mailConfigurationValidator;
             _messageClient = messageClient;
-            _logger = logger;
         }
 
         #region Notification
@@ -52,13 +51,72 @@ namespace Configuration.DomainService.Shared.Services
                 return new BaseResponse
                 {
                     IsSuccess = false,
-                    Errors = validationResult.Errors.ToDictionary(e => e.PropertyName, e => e.ErrorMessage)
+                    // One message per field: two rules failing on the same field must not break the response.
+                    Errors = validationResult.Errors
+                        .GroupBy(e => e.PropertyName)
+                        .ToDictionary(g => g.Key, g => g.First().ErrorMessage)
                 };
             }
 
-            var repoConfig = await MapAsync(configuration);
+            var stored = await _configurationRepository.GetNotificationConfigurationByNameAsync(configuration.Name);
+            var storedIsBuiltIn = stored?.IsBuiltIn == true;
+            var isRoot = NotificationSaveRules.NeedsRootCheck(stored, configuration) && IsRootCaller();
+
+            var refusal = NotificationSaveRules.FindRefusal(stored, configuration, isRoot)
+                ?? await FindGrantRefusalAsync(stored, configuration, isRoot)
+                ?? await FindPushOptionsRefusalAsync(stored, configuration, isRoot);
+            if (refusal is not null)
+            {
+                return Refused(refusal.Value.Field, refusal.Value.Key);
+            }
+
+            var repoConfig = NotificationSaveRules.Apply(stored, configuration, isRoot);
+
+            refusal = NotificationSaveRules.FindMergedRefusal(repoConfig, configuration);
+            if (refusal is not null)
+            {
+                return Refused(refusal.Value.Field, refusal.Value.Key);
+            }
+
             await _configurationRepository.SaveNotificationConfigurationAsync(repoConfig);
+
+            // After the config: options without a config would be read for nothing. The config save stands if this
+            // fails; saving again stores the options (same values, idempotent).
+            if (!NotificationSaveRules.IsLocked(stored, configuration, isRoot) && !await _pushOptions.SaveAsync(configuration))
+            {
+                return Refused(nameof(configuration.PushOptions), Constants.NotificationPushOptionsNotStored);
+            }
+
+            // Only a root change to a built-in config reaches the other tenants. Custom configs never travel.
+            if (isRoot && (repoConfig.IsBuiltIn || storedIsBuiltIn))
+            {
+                return await PublishBuiltInChangeAsync(NotificationConfigurationChangeAction.Upsert, repoConfig);
+            }
+
             return new BaseResponse { IsSuccess = true };
+        }
+
+        /// <summary>A non-root editor may add only roles and permissions they hold or manage (IAM grant scope).</summary>
+        private async Task<SaveRefusal?> FindGrantRefusalAsync(NotificationConfiguration? stored, SaveNotificationConfigurationRequest request, bool isRoot)
+        {
+            if (isRoot || !NotificationSaveRules.PicksRolesOrPermissions(request.Audience) || NotificationSaveRules.IsLocked(stored, request, isRoot))
+            {
+                return null;
+            }
+
+            var key = await _grantGuard.FindRefusalAsync(request.Audience!, stored?.Audience);
+            return key is null ? null : new SaveRefusal(nameof(request.Audience), key);
+        }
+
+        /// <summary>A personal (audience-locked) notice: push platforms and options stay as stored, like the push message.</summary>
+        private async Task<SaveRefusal?> FindPushOptionsRefusalAsync(NotificationConfiguration? stored, SaveNotificationConfigurationRequest request, bool isRoot)
+        {
+            if (!NotificationSaveRules.IsLocked(stored, request, isRoot) || !await _pushOptions.ChangesStoredAsync(request))
+            {
+                return null;
+            }
+
+            return new SaveRefusal(nameof(request.PushOptions), Constants.NotificationAudienceIsLocked);
         }
 
         public async Task<GetNotificationConfigurationsResponse> GetNotificationConfigurationsAsync(GetNotificationConfigurationsRequest request)
@@ -66,313 +124,121 @@ namespace Configuration.DomainService.Shared.Services
             return await _configurationRepository.GetNotificationConfigurationsAsync(request);
         }
 
-        public async Task<NotificationConfiguration> GetNotificationConfigurationAsync(GetNotificationConfigurationRequest request)
+        public async Task<NotificationConfigurationDetail?> GetNotificationConfigurationAsync(GetNotificationConfigurationRequest request)
         {
-            return await _configurationRepository.GetNotificationConfigurationByIdAsync(request.ItemId);
-        }
-
-        public async Task<BaseResponse> DeleteNotificationConfigurationAsync(DeleteNotificationConfigurationRequest request)
-        {
-            return await _configurationRepository.DeleteNotificationConfigurationAsync(request);
-        }
-
-        private async Task<NotificationConfiguration> MapAsync(SaveNotificationConfigurationRequest configuration)
-        {
-            var repoConfig = await _configurationRepository.GetNotificationConfigurationByNameAsync(configuration.Name);
-
-            repoConfig = repoConfig ?? new NotificationConfiguration { ItemId = Guid.NewGuid().ToString(), CreatedDate = DateTime.UtcNow, CreatedBy = BlocksContext.GetContext()?.UserId };
-
-            repoConfig.LastUpdatedDate = DateTime.UtcNow;
-            repoConfig.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
-            repoConfig.Name = configuration.Name;
-            repoConfig.ChannelToNotify = configuration.ChannelToNotify;
-            repoConfig.NotificationType = configuration.NotificationType;
-            repoConfig.EnablePersistence = configuration.EnablePersistence;
-            repoConfig.NotifyMethod = configuration.NotifyMethod;
-
-            return repoConfig;
-        }
-
-        #endregion
-
-        #region Storage
-
-        public async Task<BaseMutationResponse> SaveStorageConfigurationAsync(SaveStorageConfigurationRequest request)
-        {
-            var validationResult = await _storageConfigurationValidator.ValidateAsync(request);
-
-            if (!validationResult.IsValid)
-                return new BaseMutationResponse { IsSuccess = false, Errors = validationResult.Errors.ToDictionary(e => e.PropertyName, e => e.ErrorMessage) };
-
-            var repoConfiguration = await MappedIntoRepoConfigurationAsync(request);
-
-            await _configurationRepository.SaveStorageConfigurationAsync(repoConfiguration);
-
-            await _messageClient.SendToConsumerAsync(new ConsumerMessage<CreateDefaultFolderEvent>
-            {
-                Payload = new CreateDefaultFolderEvent
-                {
-                    ItemId = repoConfiguration.ItemId,
-                    ConfigurationName = repoConfiguration.Name,
-                    StorageStrategy = repoConfiguration.StorageStrategy
-                },
-                ConsumerName = Constants.StorageQueue,
-            });
-
-            return new BaseMutationResponse { IsSuccess = true, ItemId = repoConfiguration.ItemId };
-        }
-
-        private async Task<StorageConfiguration> MappedIntoRepoConfigurationAsync(SaveStorageConfigurationRequest request)
-        {
-            var repoConfiguration = request.UpdateRequest ?
-                                    await _configurationRepository.GetStorageConfigurationByIdAsync(request.ItemId ?? "") :
-                                    await _configurationRepository.GetStorageConfigurationByNameAsync(request.Name);
-
-            if (repoConfiguration == null)
-            {
-                repoConfiguration = new StorageConfiguration { ItemId = Guid.NewGuid().ToString(), CreatedDate = DateTime.UtcNow };
-            }
-
-            repoConfiguration.CreatedBy = BlocksContext.GetContext()?.UserId;
-            repoConfiguration.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
-            repoConfiguration.LastUpdatedDate = DateTime.UtcNow;
-            repoConfiguration.Name = request.Name;
-            repoConfiguration.ConnectionString = request.ConnectionString;
-            repoConfiguration.SecretKey = request.SecretKey;
-            repoConfiguration.StorageStrategy = request.StorageStrategy;
-            repoConfiguration.AccessKey = request.AccessKey;
-            repoConfiguration.CloudStorageRegionEndPoint = request.CloudStorageRegionEndPoint;
-
-
-            #region LocalStorage
-
-            _ = StorageTypes.TryGetCategory(request.StorageStrategy, out var category);
-
-            repoConfiguration.Host = request.Host ?? "";
-            repoConfiguration.Port = request.Port ?? "";
-            repoConfiguration.UserName = request.UserName ?? "";
-            repoConfiguration.Password = request.Password ?? "";
-            repoConfiguration.RemoteBasePath = request.RemoteBasePath ?? "";
-            repoConfiguration.StorageStrategy = request.StorageStrategy ?? "";
-            repoConfiguration.SftpSecretKey = category == StorageStrategyCategory.Local ? Helper.GenerateAesKey() : "";
-
-            #endregion
-
-            return repoConfiguration;
-        }
-
-        public static class StorageTypes
-        {
-            private static readonly ImmutableDictionary<string, StorageStrategyCategory> TypeToCategory =
-                ImmutableDictionary.CreateRange(StringComparer.OrdinalIgnoreCase, new[]
-                {
-                   new KeyValuePair<string, StorageStrategyCategory>("azure", StorageStrategyCategory.Cloud),
-                   new KeyValuePair<string, StorageStrategyCategory>("aws", StorageStrategyCategory.Cloud),
-                   new KeyValuePair<string, StorageStrategyCategory>("sftpstorage", StorageStrategyCategory.Local)
-                });
-
-            public static bool TryGetCategory(string type, out StorageStrategyCategory category)
-            {
-                return TypeToCategory.TryGetValue(type.ToLower(), out category);
-            }
-        }
-
-        public async Task<List<StorageConfiguration>> GetStorageConfigurationsAsync()
-        {
-            var configurations = await _configurationRepository.GetAllStorageConfigurationsByDateAsync();
-
-            foreach (var configuration in configurations)
-            {
-                //To do masking if required
-                if (configuration.StorageStrategy == "SftpStorage")
-                {
-                    configuration.Password = MaskedSecretValue;
-                    configuration.SftpSecretKey = MaskedSecretValue;
-                }
-                else
-                {
-                    configuration.ConnectionString = Helper.GetMaskedCloudStorageRegionEndPoint(configuration.ConnectionString);
-                }
-            }
-
-            return configurations;
-        }
-
-        public async Task<StorageConfiguration> GetStorageConfigurationAsync(string configurationName)
-        {
-            var configuration = await _configurationRepository.GetStorageConfigurationByNameAsync(configurationName);
-
-            //To do masking if required
-            if (configuration.StorageStrategy == "SftpStorage")
-            {
-                configuration.Password = MaskedSecretValue;
-                configuration.SftpSecretKey = MaskedSecretValue;
-            }
-            else
-            {
-                configuration.ConnectionString = Helper.GetMaskedCloudStorageRegionEndPoint(configuration.ConnectionString);
-            }
-
-            return configuration;
-        }
-
-        public async Task<BaseResponse> DeleteStorageConfigurationAsync(string configurationName)
-        {
-            await _configurationRepository.DeleteStorageConfigurationByNameAsync(configurationName);
-
-            return new BaseResponse { IsSuccess = true };
-        }
-
-        #endregion
-
-
-        #region Mail
-
-        public async Task<BaseMutationResponse> SaveMailConfigurationAsync(MailConfiguration configuration)
-        {
-            _logger.LogInformation("Saving mail configuration start");
-            var validationResult = await _mailConfigurationValidator.ValidateAsync(configuration);
-
-            if (!validationResult.IsValid)
-            {
-                _logger.LogInformation("Saving mail configuration end -- Validation Error");
-                return new BaseMutationResponse
-                {
-                    IsSuccess = false,
-                    Errors = validationResult.Errors.ToDictionary(e => e.PropertyName, e => e.ErrorMessage)
-                };
-            }
-
-            var repoConfiguration = await MappedIntoMailRepoConfigurationAsync(configuration);
-            await _configurationRepository.SaveMailConfigurationAsync(repoConfiguration);
-
-            _logger.LogInformation("Saving mail configuration end -- Success");
-            return new BaseMutationResponse { IsSuccess = true };
-        }
-
-        public async Task<MailConfiguration> GetMailConfigurationAsync(GetMailConfigurationRequest request)
-        {
-            var configuration = await _configurationRepository.GetMailConfigurationByNameAsync(request.ConfigurationName);
-            if (configuration == null)
+            var configuration = await _configurationRepository.GetNotificationConfigurationByIdAsync(request.ItemId);
+            if (configuration is null)
             {
                 return null;
             }
 
-            configuration.AccountPassword = MaskedSecretValue;
-            return configuration;
+            return NotificationConfigurationDetail.From(configuration, await _pushOptions.GetAsync(configuration.Name));
         }
 
-        public async Task<List<MailServerConfiguration>> GetAllMailConfigurationsAsync()
+        public async Task<BaseResponse> DeleteNotificationConfigurationAsync(DeleteNotificationConfigurationRequest request)
         {
-            var configurations = await _configurationRepository.GetAllMailConfigurationsAsync();
+            var stored = string.IsNullOrWhiteSpace(request?.ItemId)
+                ? null
+                : await _configurationRepository.GetNotificationConfigurationByIdAsync(request.ItemId);
 
-            foreach (var config in configurations)
+            if (stored?.IsBuiltIn != true)
             {
-                config.AccountPassword = MaskedSecretValue;
+                var deleted = await _configurationRepository.DeleteNotificationConfigurationAsync(request!);
+                await DeletePushOptionsAsync(stored, deleted);
+                return deleted;
             }
 
-            return configurations;
+            if (!IsRootCaller())
+            {
+                return Refused(nameof(request.ItemId), Constants.OnlyRootTenantCanManageBuiltInNotificationConfiguration);
+            }
+
+            var response = await _configurationRepository.DeleteNotificationConfigurationAsync(request!);
+            await DeletePushOptionsAsync(stored, response);
+            if (!response.IsSuccess)
+            {
+                return response;
+            }
+
+            return await PublishBuiltInChangeAsync(NotificationConfigurationChangeAction.Delete, stored);
         }
 
-        public async Task<BaseMutationResponse> DeleteMailConfigurationAsync(DeleteMailConfigurationRequest request)
+        private async Task DeletePushOptionsAsync(NotificationConfiguration? stored, BaseResponse deleteResponse)
         {
-            _logger.LogInformation("Deleting mail configuration start");
-
-            var config = await _configurationRepository.GetMailConfigurationByIdAsync(request.ConfigurationId);
-            if (config == null)
+            if (stored is not null && deleteResponse.IsSuccess)
             {
-                _logger.LogInformation("Deleting mail configuration end -- Configuration not found");
+                await _pushOptions.DeleteAsync(stored.Name);
+            }
+        }
 
-                return new BaseMutationResponse
+        private static BaseResponse Refused(string field, string errorKey) => new()
+        {
+            IsSuccess = false,
+            Errors = new Dictionary<string, string> { { field, errorKey } }
+        };
+
+        /// <summary>
+        /// Root = the caller's tenant is flagged <c>IsRootTenant</c>. Same signal as blocks-iam
+        /// <c>IsRoot()</c> and <c>SecretAuthorizationService.IsRootTenant</c>. A lookup failure is never read as root.
+        /// </summary>
+        private bool IsRootCaller()
+        {
+            var tenantId = BlocksContext.GetContext()?.TenantId;
+            if (string.IsNullOrWhiteSpace(tenantId))
+            {
+                return false;
+            }
+
+            try
+            {
+                return _tenants.GetTenantByID(tenantId)?.IsRootTenant == true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Tenant lookup failed while checking the root tenant. ErrorType={ErrorType}", ex.GetType().Name);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// The change is already saved for the root tenant. If queuing fails, the save stands and the response says
+        /// that the copy to other tenants was not queued; saving the config again queues it again (the copy is idempotent).
+        /// </summary>
+        private async Task<BaseResponse> PublishBuiltInChangeAsync(NotificationConfigurationChangeAction action, NotificationConfiguration configuration)
+        {
+            try
+            {
+                await _messageClient.SendToConsumerAsync(new ConsumerMessage<BuiltInNotificationConfigurationChangedEvent>
                 {
-                    IsSuccess = false,
-                    Errors = new Dictionary<string, string>
+                    ConsumerName = Constants.NotificationConfigurationQueue,
+                    Payload = new BuiltInNotificationConfigurationChangedEvent
                     {
-                        { "ConfigurationId", "Configuration not found" }
+                        Action = action,
+                        Name = configuration.Name,
+                        SourceTenantId = BlocksContext.GetContext()?.TenantId ?? string.Empty,
+                        Snapshot = configuration
                     }
+                });
+
+                return new BaseResponse { IsSuccess = true };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Built-in notification config saved but its copy to other tenants was not queued. Name={Name} Action={Action} ErrorType={ErrorType}",
+                    configuration.Name, action, ex.GetType().Name);
+
+                return new BaseResponse
+                {
+                    IsSuccess = true,
+                    Errors = new Dictionary<string, string> { { "Propagation", Constants.NotificationConfigurationPropagationNotQueued } }
                 };
             }
-
-            await _configurationRepository.DeleteMailConfigurationAsync(request.ConfigurationId);
-
-            _logger.LogInformation("Deleting mail configuration end -- Success");
-            return new BaseMutationResponse { IsSuccess = true };
-        }
-
-        public async Task<BaseMutationResponse> DuplicateMailConfigurationAsync(DuplicateMailConfigurationRequest request)
-        {
-            _logger.LogInformation("Duplicating mail configuration start");
-
-            var config = await _configurationRepository.GetMailConfigurationByIdAsync(request.ConfigurationId);
-            if (config == null)
-            {
-                _logger.LogInformation("Duplicating mail configuration end -- Configuration not found");
-
-                return new BaseMutationResponse
-                {
-                    IsSuccess = false,
-                    Errors = new Dictionary<string, string>
-                    {
-                        { "ConfigurationId", "Configuration not found" }
-                    }
-                };
-            }
-
-            var newConfig = new MailServerConfiguration
-            {
-                ItemId = Guid.NewGuid().ToString(),
-                CreatedDate = DateTime.UtcNow,
-                LastUpdatedDate = DateTime.UtcNow,
-                CreatedBy = BlocksContext.GetContext()?.UserId,
-                LastUpdatedBy = BlocksContext.GetContext()?.UserId,
-               // OrganizationIds = config.OrganizationIds,
-                Tags = config.Tags,
-                Name = config.Name + " - Copy",
-                Host = config.Host,
-                Port = config.Port,
-                EnableSSL = config.EnableSSL,
-                SenderName = config.SenderName,
-                SenderAddress = config.SenderAddress,
-                SenderUserName = config.SenderUserName,
-                AccountPassword = config.AccountPassword,
-                UseDefaultCredentials = config.UseDefaultCredentials,
-                SmtpClient = config.SmtpClient,
-                IsDefault = config.IsDefault,
-                Provider = config.Provider,
-                IsInbound = config.IsInbound
-            };
-
-            await _configurationRepository.SaveMailConfigurationAsync(newConfig);
-
-            _logger.LogInformation("Duplicating mail configuration end -- Success");
-            return new BaseMutationResponse { IsSuccess = true };
-        }
-
-        private async Task<MailServerConfiguration> MappedIntoMailRepoConfigurationAsync(MailConfiguration configuration)
-        {
-            var repoConfiguration = await _configurationRepository.GetMailConfigurationByIdAsync(configuration.ConfigurationId);
-
-            repoConfiguration ??= new MailServerConfiguration { ItemId = Guid.NewGuid().ToString(), CreatedDate = DateTime.UtcNow };
-
-            repoConfiguration.LastUpdatedDate = DateTime.UtcNow;
-            repoConfiguration.Host = configuration.Host;
-            repoConfiguration.Port = configuration.Port;
-            repoConfiguration.Name = configuration.ConfigurationName;
-            repoConfiguration.SenderName = configuration.SenderName;
-            repoConfiguration.SenderUserName = configuration.SenderUserName;
-            repoConfiguration.SenderAddress = configuration.SenderAddress;
-            repoConfiguration.AccountPassword = configuration.AccountPassword;
-            repoConfiguration.EnableSSL = configuration.EnableSSL;
-            repoConfiguration.CreatedBy = BlocksContext.GetContext()?.UserId ?? "";
-            repoConfiguration.LastUpdatedBy = BlocksContext.GetContext()?.UserId ?? "";
-            repoConfiguration.IsInbound = configuration.IsInbound;
-            repoConfiguration.Provider = configuration.Provider;
-            return repoConfiguration;
         }
 
         #endregion
 
-        
     }
 }
 

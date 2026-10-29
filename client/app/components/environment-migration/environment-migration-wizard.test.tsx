@@ -6,8 +6,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => ({ resetFormData: vi.fn(), selectedTenantGroup: "grp-1" }));
 
 vi.mock("@seliseblocks/genesis-os", () => ({
-  useProjectStore: (selector: (s: { selectedTenantGroup: string }) => unknown) =>
-    selector({ selectedTenantGroup: h.selectedTenantGroup }),
+  useProjectStore: (selector?: (s: { selectedTenantGroup: string }) => unknown) => {
+    const state = { selectedTenantGroup: h.selectedTenantGroup };
+    return selector ? selector(state) : state;
+  },
 }));
 vi.mock("./environment-service-selection-form", () => ({
   EnvironmentServiceSelectionForm: () => <div data-testid="selection-form" />,

@@ -3,6 +3,7 @@ import { IStorageConfiguration, StorageStrategyType } from "@blocks-storage/mode
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui-kits/sheet/sheet";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { cn, formatDate } from "@/lib/utils";
+import { StorageSecretStatusList } from "./storage-secret-status";
 interface StorageDetailsDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -41,7 +42,7 @@ export function StorageDetailsDrawer({ open, onOpenChange, storage }: StorageDet
               <SheetTitle className="text-lg font-semibold">Details</SheetTitle>
               <button
                 onClick={() => onOpenChange(false)}
-                className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2"
               >
                 <X className="h-4 w-4" />
                 <span className="sr-only">Close</span>
@@ -88,6 +89,7 @@ export function StorageDetailsDrawer({ open, onOpenChange, storage }: StorageDet
                       <span className="text-sm font-medium">{providerLabel}</span>
                     </div>
                   </div>
+                  <StorageSecretStatusList storage={storage} />
                   <div>
                     <div className="mb-1 text-xs text-muted-foreground">Owner</div>
                     <div className="text-sm font-medium">{storage.createdBy || "Me"}</div>

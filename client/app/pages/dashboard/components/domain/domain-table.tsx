@@ -1,25 +1,30 @@
 import { useUpdateProject } from "@/hooks/use-project";
+import { useDomainSetupGuide } from "@/hooks/use-domain-setup";
 import { cn } from "@/lib/utils";
-import type { IDomain } from "@seliseblocks/genesis-os/models";
+import type { IDomain } from "@/models/project.model";
+import type { IDomainSetupGuideItem } from "@/models/domain-setup.model";
 import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
+  getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { Settings, ShieldCheck, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Plug, Settings, ShieldCheck, Trash2 } from "lucide-react";
+import { useLayoutEffect, useMemo, useState } from "react";
+import { FilterControls } from "@/components/filter-toolbar";
+import { Pagination } from "@/components/ui-kits/pagination/pagination";
+import { DASHBOARD_TABLE_PAGE_SIZE } from "../dashboard.constant";
 import { DomainFormDialog } from "./domain-form-dialog";
 import { DomainAction } from "./domain.constant";
 import { showErrorToast, showSuccessToast } from "@seliseblocks/genesis-os/utils";
-import { CnameValidatorDialog } from "../cname/dialog";
+import { DomainSetupDialog } from "../domain-setup";
 import {
   Button,
   CopyToClipboardButton,
   RenderConditionally,
 } from "@seliseblocks/genesis-os/components";
-import { Dialog } from "@/components/ui-kits/dialog/dialog";
-import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
+import { DomainDeleteDialog } from "./domain-delete-dialog";
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
@@ -48,10 +53,34 @@ const CopyableDomainValue = ({ value, muted = false }: { value: string; muted?: 
   </CopyToClipboardButton>
 );
 
+const ApiBaseUrlCell = ({
+  domain,
+  guide,
+  isGuideLoading,
+}: {
+  domain: IDomain;
+  guide?: IDomainSetupGuideItem;
+  isGuideLoading: boolean;
+}) => {
+  if (!domain.isDomainVerified) {
+    return <span className="text-sm text-muted-foreground">Available after verification</span>;
+  }
+  if (!guide?.apiBaseUrl) {
+    return <span className="text-sm text-muted-foreground">{isGuideLoading ? "…" : "—"}</span>;
+  }
+  return (
+    <CopyToClipboardButton textToCopy={guide.apiBaseUrl} isHoverable className="min-w-0">
+      <code className="break-all font-mono text-[13px] text-high-emphasis">{guide.apiBaseUrl}</code>
+    </CopyToClipboardButton>
+  );
+};
+
 const buildColumns = (
   onEdit: (domain: IDomain) => void,
   onDeleteRequest: (domain: IDomain) => void,
-  onCname: (domain: IDomain) => void,
+  onSetup: (domain: IDomain) => void,
+  guideByDomain: Map<string, IDomainSetupGuideItem>,
+  isGuideLoading: boolean,
 ) => [
   columnHelper.accessor("domain", {
     header: "Domain",
@@ -64,6 +93,17 @@ const buildColumns = (
   columnHelper.accessor("cookieDomain", {
     header: "Cookie Domain",
     cell: (info) => <CopyableDomainValue value={info.getValue()} muted />,
+  }),
+  columnHelper.display({
+    id: "apiBaseUrl",
+    header: "API Base URL",
+    cell: ({ row }) => (
+      <ApiBaseUrlCell
+        domain={row.original}
+        guide={guideByDomain.get(row.original.domain)}
+        isGuideLoading={isGuideLoading}
+      />
+    ),
   }),
   columnHelper.display({
     id: "actions",
@@ -82,12 +122,13 @@ const buildColumns = (
             <Trash2 className="h-4 w-4" />
           </Button>
 
-          {/* Configure + CNAME lookup — only for unverified domains */}
+          {/* Editing and setup — only while a domain is unverified */}
           <RenderConditionally condition={!domain.isDomainVerified}>
             <Button
               variant="ghost"
               size="icon"
               title="Configure domain"
+              aria-label="Configure domain"
               onClick={() => onEdit(domain)}
             >
               <Settings className="h-4 w-4 text-muted-foreground" />
@@ -95,10 +136,24 @@ const buildColumns = (
             <Button
               variant="ghost"
               size="icon"
-              title="Validate CNAME"
-              onClick={() => onCname(domain)}
+              title="Set up domain"
+              aria-label="Set up domain"
+              onClick={() => onSetup(domain)}
             >
               <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+            </Button>
+          </RenderConditionally>
+
+          {/* How to call Blocks from an app on this domain — once it is verified */}
+          <RenderConditionally condition={domain.isDomainVerified}>
+            <Button
+              variant="ghost"
+              size="icon"
+              title="Connect app"
+              aria-label="Connect app"
+              onClick={() => onSetup(domain)}
+            >
+              <Plug className="h-4 w-4 text-muted-foreground" />
             </Button>
           </RenderConditionally>
         </div>
@@ -115,6 +170,12 @@ interface DomainTableProps {
 
 export const DomainTable = ({ data }: DomainTableProps) => {
   const { mutateAsync, isPending } = useUpdateProject();
+  const { data: setupGuide, isLoading: isGuideLoading } = useDomainSetupGuide();
+  const guideByDomain = useMemo(
+    () => new Map((setupGuide?.applications ?? []).map((item) => [item.domain, item])),
+    [setupGuide],
+  );
+  const [search, setSearch] = useState("");
 
   // ── Edit dialog ────────────────────────────────────────────────────────────
   const [editTarget, setEditTarget] = useState<IDomain | null>(null);
@@ -134,13 +195,14 @@ export const DomainTable = ({ data }: DomainTableProps) => {
     setDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = async (deleteSharedApiHost: boolean) => {
     if (!deleteTarget) return;
     try {
       const res = await mutateAsync({
         action: DomainAction.Delete,
         application: deleteTarget,
         applicationDomain: deleteTarget.domain,
+        deleteSharedApiHost,
       });
       if (res.isSuccess) {
         showSuccessToast({ description: "Domain deleted successfully" });
@@ -155,22 +217,53 @@ export const DomainTable = ({ data }: DomainTableProps) => {
     }
   };
 
-  // ── CNAME dialog ───────────────────────────────────────────────────────────
-  const [cnameTarget, setCnameTarget] = useState<IDomain | null>(null);
-  const [cnameDialogOpen, setCnameDialogOpen] = useState(false);
+  // ── Setup dialog ───────────────────────────────────────────────────────────
+  const [setupTarget, setSetupTarget] = useState<IDomain | null>(null);
+  const [setupDialogOpen, setSetupDialogOpen] = useState(false);
 
-  const handleCname = (domain: IDomain) => {
-    setCnameTarget(domain);
-    setCnameDialogOpen(true);
+  const handleSetup = (domain: IDomain) => {
+    setSetupTarget(domain);
+    setSetupDialogOpen(true);
   };
 
   // ── Table ──────────────────────────────────────────────────────────────────
-  const columns = buildColumns(handleEdit, handleDeleteRequest, handleCname);
+  const columns = buildColumns(
+    handleEdit,
+    handleDeleteRequest,
+    handleSetup,
+    guideByDomain,
+    isGuideLoading,
+  );
+  const filteredData = useMemo(() => {
+    const normalizedSearch = search.toLowerCase();
+    return data.filter((domain) => domain.domain.toLowerCase().includes(normalizedSearch));
+  }, [data, search]);
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: { pagination: { pageSize: DASHBOARD_TABLE_PAGE_SIZE } },
+    // A data change otherwise queues a reset of the page index back to the first page.
+    // That reset would race the clamp below and win, throwing a reader back to page 1 on
+    // every background refetch, so the index is kept and corrected explicitly instead.
+    autoResetPageIndex: false,
   });
+
+  const { pageIndex } = table.getState().pagination;
+  const lastPageIndex = Math.max(0, table.getPageCount() - 1);
+
+  // Deleting the last row of the last page leaves the index past the end of the data,
+  // which renders an empty table body. Clamp in a layout effect so that blank frame is
+  // never painted.
+  useLayoutEffect(() => {
+    if (pageIndex > lastPageIndex) table.setPageIndex(lastPageIndex);
+  }, [pageIndex, lastPageIndex, table]);
+
+  const handleSearchChange = (value: string) => {
+    table.setPageIndex(0);
+    setSearch(value);
+  };
 
   return (
     <>
@@ -185,42 +278,43 @@ export const DomainTable = ({ data }: DomainTableProps) => {
       />
 
       {/* Delete confirmation — one instance, target swaps per row */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <ConfirmationModal
-          data={{
-            dialogTitle: "Delete Domain",
-            dialogSubtitle: (
-              <>
-                Are you sure you want to delete{" "}
-                <span className="break-all font-semibold">{deleteTarget?.domain}</span>? This action
-                cannot be undone.
-              </>
-            ),
-            confirmButton: "Delete",
-            cancelButton: "Cancel",
-          }}
-          onCancel={() => setDeleteDialogOpen(false)}
-          onConfirm={handleDeleteConfirm}
-          buttonState={{ confirm: { disable: isPending } }}
-        />
-      </Dialog>
+      <DomainDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        domain={deleteTarget}
+        isPending={isPending}
+        onConfirm={handleDeleteConfirm}
+      />
 
-      {/* CNAME validator dialog — one instance, target swaps per row.
+      {/* Setup / connect dialog — one instance, target swaps per row.
           Re-resolve the target from `data` so the open dialog reflects the
           refetched verification status instead of a stale click-time snapshot */}
-      <CnameValidatorDialog
-        open={cnameDialogOpen}
-        domain={(cnameTarget && data.find((d) => d.domain === cnameTarget.domain)) || cnameTarget}
+      <DomainSetupDialog
+        open={setupDialogOpen}
+        domain={(setupTarget && data.find((d) => d.domain === setupTarget.domain)) || setupTarget}
+        guide={setupTarget ? guideByDomain.get(setupTarget.domain) : undefined}
+        isGuideLoading={isGuideLoading}
         onOpenChange={(open) => {
-          setCnameDialogOpen(open);
-          if (!open) setCnameTarget(null);
+          setSetupDialogOpen(open);
+          if (!open) setSetupTarget(null);
         }}
       />
+
+      {data.length > 0 && (
+        <div className="mb-4 flex justify-start">
+          <FilterControls.SearchInput
+            value={search}
+            onChange={handleSearchChange}
+            placeholder="Search domains..."
+            className="w-64"
+          />
+        </div>
+      )}
 
       {/* Table — min width keeps columns readable and scrolls horizontally
           on narrow screens, matching the repo table's behavior */}
       <div className="relative w-full overflow-x-auto">
-        <table className="w-full min-w-[640px] text-sm">
+        <table className="w-full min-w-[800px] text-sm">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} className="border-b border-border">
@@ -245,12 +339,14 @@ export const DomainTable = ({ data }: DomainTableProps) => {
                   colSpan={columns.length}
                   className="py-10 text-center text-sm text-muted-foreground"
                 >
-                  No domains configured yet.
+                  {data.length === 0
+                    ? "No domains configured yet."
+                    : "No domains match your search."}
                 </td>
               </tr>
             ) : (
               table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="border-b border-border last:border-0 hover:bg-muted/50">
+                <tr key={row.id} className="border-b border-border last:border-0">
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="p-2 md:px-4 md:py-3">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -262,6 +358,20 @@ export const DomainTable = ({ data }: DomainTableProps) => {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination — omitted entirely when there is nothing to page through, so the
+          empty state is not captioned "Page 1 of 1". No page-size selector: the size is
+          fixed at five. */}
+      {filteredData.length > 0 && (
+        <nav aria-label="Domains pagination" className="mt-4 flex items-center md:justify-end">
+          <Pagination
+            page={pageIndex}
+            pageSize={DASHBOARD_TABLE_PAGE_SIZE}
+            totalCount={filteredData.length}
+            onChange={(nextPageIndex) => table.setPageIndex(nextPageIndex)}
+          />
+        </nav>
+      )}
     </>
   );
 };

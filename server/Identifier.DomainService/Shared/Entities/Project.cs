@@ -7,7 +7,13 @@ namespace DomainService.Entities
     public class Project : BaseEntity
     {
         public string Name { get; set; }
-        public List<Applications> Applications { get; set; }
+
+        /// <summary>
+        /// The project's registered applications. Responses carrying this go through
+        /// ProjectManagementService.VisibleApplications first, which drops the platform's own
+        /// shared hosts — they are in every project's list and belong to none of them.
+        /// </summary>
+        public List<ApplicationDto> Applications { get; set; }
         public string TenantId { get; set; }
         public string TenantGroupId { get; set; }
         public bool IsDomainVerified { get; set; }

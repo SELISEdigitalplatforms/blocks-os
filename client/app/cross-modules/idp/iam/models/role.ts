@@ -8,6 +8,12 @@ export interface IRole {
   canCreateOwn: boolean;
   count: number;
   createdFromDefault: boolean;
+  /**
+   * Soft-delete flag from the backend. Optional because the roles list endpoint already excludes
+   * archived roles, so the client never receives `true` today -- it documents the contract without
+   * forcing every fixture to carry a value that is always absent.
+   */
+  isArchived?: boolean;
   createdDate: string;
   lastUpdatedDate: string;
   createdBy: string;
@@ -30,11 +36,25 @@ export interface GetRolesPayload {
   page?: number;
   pageSize?: number;
   /**
-   * Scopes the role list to a tenant or organization. The service posts the
-   * payload straight through, so callers that manage per-organization access
-   * (the user-detail Access tab) can narrow the list to one organization.
+   * Client-side cache discriminator only -- **this is not sent to IAM**.
+   *
+   * `iam/roles` has no `projectKey` on its request model, so anything put here
+   * was silently dropped by model binding. It is kept because it still varies the
+   * React Query key, which is what stops one tenant's or organization's role list
+   * being served from another's cache entry.
+   *
+   * To actually scope the query, set {@link GetRolesPayload.organizationId}.
    */
   projectKey?: string;
+  /**
+   * The organization whose roles to return. Roles are stored per organization
+   * (`Role.OrganizationId`), so omitting this falls back to the caller token's own
+   * organization -- `"default"` for a tenant-wide admin -- which is rarely what an
+   * organization-scoped screen means.
+   *
+   * Only a tenant-wide caller may name one; an organization-scoped token is pinned
+   * to its own by IAM regardless of what is sent.
+   */
   organizationId?: string;
 }
 export interface GetRolesResponse {
@@ -56,6 +76,38 @@ export interface CreateRolePayload {
   name: string;
   description: string;
   slug: string;
+  /** "Managed by": the role above this one. Empty or absent means a top-level role. */
+  parentRoleSlug?: string | null;
+  /**
+   * Acknowledges that other organizations already have a role with this name, and that creating
+   * this one gives them a second role sharing it. Sent only on the second attempt, after the
+   * administrator has seen the count and confirmed.
+   */
+  confirmDuplicateName?: boolean;
+}
+
+/**
+ * What `roles/create` returns.
+ *
+ * The advisory fields carry counts only -- never the names or ids of other organizations, which
+ * would hand one administrator another organization's role inventory. They are populated for
+ * default-organization callers; an organization-scoped caller is never shown the advisory, because
+ * its only possible collisions are with its own roles (already refused by name) or with sibling
+ * organizations (none of its business).
+ */
+export interface CreateRoleResponse {
+  isSuccess: boolean;
+  itemId?: string;
+  errors?: Record<string, string>;
+  /** True on the one refusal a second attempt can clear by confirming. */
+  requiresDuplicateNameConfirmation?: boolean;
+  /** Other organizations already using this name. */
+  duplicateNameOrganizationCount?: number;
+  /**
+   * Of those, the ones that will keep their own role instead of receiving this one -- the insert
+   * skips any organization already holding the slug. Normally zero.
+   */
+  slugConflictOrganizationCount?: number;
 }
 export interface UpdateRolePayload extends Partial<Omit<CreateRolePayload, "slug">> {
   itemId: string;
@@ -88,6 +140,12 @@ export interface SetRoles {
   removePermissions: string[];
   slug: string;
   organizationId: string;
+  /**
+   * Apply this change to every organization's copy of the role. Delta only -- it applies exactly
+   * the permissions added or removed here and does not otherwise reconcile an organization that
+   * had already diverged. Omitted for single-organization tenants.
+   */
+  propagateToAllOrganizations?: boolean;
 }
 
 export interface GroupsData {
@@ -111,8 +169,6 @@ export enum ResourceType {
   Endpoint = 1,
   /** Permission guards a client-side user action / UI affordance. */
   "FE action" = 2,
-  /** Permission guards access to a specific data record or data class. */
-  "Data protection" = 3,
 }
 
 export interface IGetRoles {

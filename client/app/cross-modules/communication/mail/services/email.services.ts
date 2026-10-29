@@ -2,6 +2,7 @@ import {
   IEmailConfig,
   IEmailTemplate,
   IEmailUsageResponse,
+  IGetMailBoxMailAttachmentResponse,
   IGetMailBoxMailResponse,
 } from "../models/email";
 import { http } from "@/lib/http/http-client";
@@ -24,6 +25,14 @@ export interface ISaveMailConfigPayload {
   lastUpdatedDate?: string;
   isInbound?: boolean;
   provider?: number;
+  authenticationType?: number;
+  securityMode?: number;
+  /** The Microsoft Entra tenant id, not the Blocks tenant id. */
+  tenantId?: string;
+  clientId?: string;
+  /** Omitted to keep the secret already on file; never read back. */
+  clientSecret?: string;
+  mailboxAddress?: string;
 }
 
 class EmailService {
@@ -83,6 +92,7 @@ class EmailService {
     status?: string,
     startDate?: string,
     endDate?: string,
+    mailServerConfigurationId?: string,
   ): Promise<IEmailUsageResponse> => {
     const params = new URLSearchParams({
       PageNumber: pageNumber.toString(),
@@ -102,14 +112,27 @@ class EmailService {
     if (endDate) {
       params.append("SendDateRange.EndDate", endDate);
     }
+    if (mailServerConfigurationId) {
+      params.append("MailServerConfigurationId", mailServerConfigurationId);
+    }
 
     return http.get(`${MAIL_ENDPOINTS.GET_MAILBOX_MAILS}?${params.toString()}`, undefined, {
       absoluteUrl: true,
     });
   };
 
-  getMailBoxMail = (messageId: string): Promise<IGetMailBoxMailResponse> => {
-    return http.get(`${MAIL_ENDPOINTS.GET_MAILBOX_MAIL}?MessageId=${messageId}`, undefined, {
+  getMailBoxMailAttachment = (
+    messageId: string,
+    index: number,
+  ): Promise<IGetMailBoxMailAttachmentResponse> => {
+    const params = new URLSearchParams({ MessageId: messageId, Index: String(index) });
+    return http.get(`${MAIL_ENDPOINTS.GET_MAILBOX_MAIL_ATTACHMENT}?${params.toString()}`, undefined, {
+      absoluteUrl: true,
+    });
+  };
+
+  getMailBoxMail = (itemId: string): Promise<IGetMailBoxMailResponse> => {
+    return http.get(`${MAIL_ENDPOINTS.GET_MAILBOX_MAIL}?ItemId=${encodeURIComponent(itemId)}`, undefined, {
       absoluteUrl: true,
     });
   };
@@ -125,11 +148,15 @@ class EmailService {
       .post<{
         errors: unknown;
         isSuccess: boolean;
+        itemId?: string;
       }>(MAIL_CONFIG_ENDPOINTS.SAVE_CONFIG, payload, undefined, { absoluteUrl: true })
       .then((response) => ({
         isSuccess: !!response?.isSuccess,
         errors: response?.errors ?? null,
-        itemId: payload.configurationId ?? "",
+        // The server's id, not the one that was sent. On a create the request
+        // carries no id, so echoing the payload back reported an empty string
+        // for the record it had just written.
+        itemId: response?.itemId ?? payload.configurationId ?? "",
       }));
   };
 

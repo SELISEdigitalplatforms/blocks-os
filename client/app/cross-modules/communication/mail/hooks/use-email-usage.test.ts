@@ -52,6 +52,7 @@ describe("Email Usage Hooks", () => {
         "Delivered",
         "2024-01-01",
         "2024-01-31",
+        undefined,
       );
     });
 
@@ -68,6 +69,7 @@ describe("Email Usage Hooks", () => {
         0,
         10,
         true,
+        undefined,
         undefined,
         undefined,
         undefined,
@@ -94,6 +96,7 @@ describe("Email Usage Hooks", () => {
         "Sent",
         "2024-01-01",
         "2024-01-31",
+        undefined,
       );
     });
 
@@ -174,6 +177,7 @@ describe("Email Usage Hooks", () => {
         0,
         10,
         false,
+        undefined,
         undefined,
         undefined,
         undefined,

@@ -1,9 +1,11 @@
 ﻿using Blocks.Genesis;
 using Cloud.LmtService.Models.Trace;
 using Cloud.LmtService.Repositories.Trace;
+using Cloud.LmtService.Utilities;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Cloud.LmtService.Services.Trace
@@ -17,6 +19,32 @@ namespace Cloud.LmtService.Services.Trace
         {
             _logger = logger;
             _traceRepository = traceRepository;
+        }
+
+        // IQueryable<T>.Select binds to Queryable.Select (Expression<Func<...>>), which cannot
+        // hold a statement-bodied lambda with assignments. Materializing first keeps the
+        // mutation as plain, compilable code and still returns an IQueryable for the response.
+        private static IQueryable<SingleTraceProjection> RedactSpans(IQueryable<SingleTraceProjection> spans)
+        {
+            var materialized = spans.ToList();
+            foreach (var span in materialized)
+            {
+                TraceRedactor.RedactAttributes(span.Attributes);
+                TraceRedactor.RedactBaggage(span.Baggage);
+            }
+
+            return materialized.AsQueryable();
+        }
+
+        private static IQueryable<TraceProjection> RedactTraces(IQueryable<TraceProjection> traces)
+        {
+            var materialized = traces.ToList();
+            foreach (var trace in materialized)
+            {
+                TraceRedactor.RedactAttributes(trace.Attributes);
+            }
+
+            return materialized.AsQueryable();
         }
 
         public async Task<BaseQueryListResponse<IQueryable<SingleTraceProjection>>> GetTraceAsync(GetTraceRequest request)
@@ -37,7 +65,7 @@ namespace Cloud.LmtService.Services.Trace
 
             return new BaseQueryListResponse<IQueryable<SingleTraceProjection>>
             {
-                Data = result
+                Data = RedactSpans(result)
             };
         }
 
@@ -48,7 +76,7 @@ namespace Cloud.LmtService.Services.Trace
 
             return new BaseQueryListResponse<IQueryable<TraceProjection>>
             {
-                Data = result,
+                Data = RedactTraces(result),
                 TotalCount = total
             };
         }

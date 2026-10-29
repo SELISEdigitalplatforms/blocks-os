@@ -33,6 +33,12 @@ const h = vi.hoisted(() => ({
   },
 }));
 
+vi.mock("@seliseblocks/genesis-os", () => ({
+  useProjectStore: () => ({ selectedTenantGroup: "tg-1" }),
+}));
+vi.mock("@/hooks/use-project-access", () => ({
+  useProjectPermissions: () => ({ isOwner: true, can: () => true, menus: [] }),
+}));
 vi.mock("@/hooks/use-people", () => ({
   useGetPeople: () => h.people,
 }));
@@ -54,14 +60,14 @@ vi.mock("./people-filter-toolbar", () => ({
 vi.mock("./invite-people", () => ({
   InvitePeople: ({
     existingEmails,
-    isViewerOwner,
+    canInvite,
   }: {
     existingEmails: string[];
-    isViewerOwner: boolean;
+    canInvite: boolean;
   }) => (
     <div>
       <span data-testid="existing-emails">{existingEmails.join(",")}</span>
-      <span data-testid="is-owner">{String(isViewerOwner)}</span>
+      <span data-testid="is-owner">{String(canInvite)}</span>
     </div>
   ),
 }));

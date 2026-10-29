@@ -5,6 +5,7 @@ using DomainService.Shared;
 using DomainService.Shared.Entities;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
+using Blocks.Genesis.Entities.Os;
 
 namespace DomainService.Projects
 {
@@ -20,11 +21,17 @@ namespace DomainService.Projects
         Task<BaseResponse> UpdateProjectAsync(UpdateProjectRequest request);
         Task<BaseResponse> DisableProjectAsync(string projectId);
         Task<GetAssetResponse> GetAssetAsync(GetAssetRequest request);
-        Task<BaseResponse> AddAssetAsync(AddAssetRequest asset);
+        Task<AddAssetResponse> AddAssetAsync(AddAssetRequest asset);
+        Task<BaseResponse> DeleteAssetAsync(DeleteAssetRequest request);
         Task<BaseResponse> UpdateTokenValidationParametersAsync(UpdateTokenValidationParametersRequest request);
         Task<IActionResult> GetProjectTokenValidationParametersAsync(string projectId);
         Task<SaveThirdPartyJWTClaimsResponse> SaveThirdPartyJWTClaimsAsync(SaveThirdPartyJWTClaimsRequest request);
         Task<ThirdPartyJWTClaims?> GetThirdPartyJWTClaimsAsync();
+
+        Task<List<ThirdPartyJwtProviderResult>> GetThirdPartyJwtProvidersAsync();
+        Task<SaveThirdPartyJwtProviderResponse> SaveThirdPartyJwtProviderAsync(SaveThirdPartyJwtProviderRequest request);
+        Task<BaseResponse> DeleteThirdPartyJwtProviderAsync(DeleteThirdPartyJwtProviderRequest request);
+        Task<BaseResponse> UpdateThirdPartyJwtEnabledAsync(UpdateThirdPartyJwtEnabledRequest request);
         Task<BaseResponse> UpdateTenantGroupAsync(UpdateTenantGroupRequest request);
     }
 }

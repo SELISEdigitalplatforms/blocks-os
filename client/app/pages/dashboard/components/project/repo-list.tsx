@@ -1,7 +1,8 @@
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { DashboardSectionCard } from "@seliseblocks/genesis-os/components";
 import { useGetEnvRepositories } from "@/hooks/use-project";
-import type { IProject } from "@seliseblocks/genesis-os/models";
+import type { IProject } from "@/models/project.model";
+import { useState } from "react";
 import { ProjectRepoTable } from "./repo-table";
 
 export const ProjectRepoList = ({
@@ -12,6 +13,14 @@ export const ProjectRepoList = ({
   isLoading: boolean;
 }) => {
   const { applications } = project;
+  // Held here rather than in the table: the skeleton branch below unmounts the table on
+  // every background refetch, which would silently return a reader to the first page.
+  const [repoPageIndex, setRepoPageIndex] = useState(0);
+  const [repoSearch, setRepoSearch] = useState("");
+  const handleRepoSearchChange = (value: string) => {
+    setRepoPageIndex(0);
+    setRepoSearch(value);
+  };
   const {
     data: envRepositoriesResponse,
     isLoading: isLoadingEnvRepos,
@@ -20,7 +29,7 @@ export const ProjectRepoList = ({
 
   if (isLoading || isLoadingEnvRepos || isFetchingEnvRepos) {
     return (
-      <div className="mt-6 rounded-lg border bg-card px-2 py-2 shadow-sm md:mt-0">
+      <div className="mt-6 rounded-lg border bg-card px-2 py-2 shadow-xs md:mt-0">
         <div className="grid-col-1 grid gap-3 px-2 py-4 md:grid-cols-2 md:gap-4 lg:gap-6">
           {Array.from({ length: 6 }).map((_item, index) => (
             <div key={index}>
@@ -44,6 +53,10 @@ export const ProjectRepoList = ({
         domains={applications}
         projectKey={project?.tenantId || ""}
         projectEnv={project?.environment || ""}
+        page={repoPageIndex}
+        onPageChange={setRepoPageIndex}
+        search={repoSearch}
+        onSearchChange={handleRepoSearchChange}
       />
     </DashboardSectionCard>
   );

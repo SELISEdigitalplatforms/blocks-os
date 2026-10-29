@@ -13,4 +13,5 @@ export const updateRoleFormSchema = z.object({
     .min(1, "Name field must not be empty")
     .max(50, "Name must be at most 50 characters"),
   description: z.string().trim().max(150, "Description must be at most 150 characters").optional(),
+  parentRoleSlug: z.string().nullish(),
 });

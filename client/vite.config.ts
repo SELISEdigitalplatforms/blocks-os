@@ -1,6 +1,8 @@
 /// <reference types="vite/client" />
+import crypto from "node:crypto";
 import fs from "fs";
 import path from "path";
+import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
 import { getRuntimeEnv } from "./app/lib/runtime-env";
@@ -22,6 +24,50 @@ function resolveDevHttps(): { cert: Buffer; key: Buffer } | undefined {
   return { cert: fs.readFileSync(certPath), key: fs.readFileSync(keyPath) };
 }
 
+function sriForBuiltHtml() {
+  return {
+    name: "sri-for-built-html",
+    apply: "build" as const,
+    enforce: "post" as const,
+    closeBundle() {
+      const outDir = path.resolve(__dirname, "../server/Api/wwwroot");
+      const indexPath = path.join(outDir, "index.html");
+      let html: string;
+      try {
+        html = fs.readFileSync(indexPath, "utf8");
+      } catch {
+        return; // build output not present
+      }
+      html = html.replace(
+        /<(script|link)\b([^>]*?)(src|href)="([^"]+)"([^>]*)>/g,
+        (full, tag, pre, attr, url, post) => {
+          if (url.startsWith("http") || url.startsWith("//")) return full;
+          if (url.includes("runtime-config.js")) return full; // placeholders rewritten at runtime
+          if (full.includes("integrity=")) return full;
+          const filePath = path.join(outDir, url.replace(/^\//, ""));
+          let buf: Buffer;
+          try {
+            buf = fs.readFileSync(filePath);
+          } catch {
+            return full;
+          }
+          const hash = crypto.createHash("sha384").update(buf).digest("base64");
+          const integrity = `sha384-${hash}`;
+          if (tag === "script") {
+            return `<script${pre}${attr}="${url}" integrity="${integrity}" crossorigin="anonymous"${post}>`;
+          }
+          // only stylesheet links need SRI
+          if (!/\brel=["']stylesheet["']/.test(full) && !/\brel=stylesheet\b/.test(full)) {
+            return full;
+          }
+          return `<link${pre}${attr}="${url}" integrity="${integrity}" crossorigin="anonymous"${post}>`;
+        },
+      );
+      fs.writeFileSync(indexPath, html);
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, "BLOCKS_");
 
@@ -32,10 +78,23 @@ export default defineConfig(({ mode }) => {
 
   return {
     envPrefix: ["BLOCKS_"],
-    plugins: [react()],
+    plugins: [react(), tailwindcss(), sriForBuiltHtml()],
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./app"),
+        "@/layouts": path.resolve(__dirname, "./app/layouts"),
+        "@/lib": path.resolve(__dirname, "./app/lib"),
+        "@/test-utils": path.resolve(__dirname, "./app/test-utils"),
+        "@/routes": path.resolve(__dirname, "./app/routes"),
+        "@/hooks": path.resolve(__dirname, "./app/hooks"),
+        "@/models": path.resolve(__dirname, "./app/models"),
+        "@/constants": path.resolve(__dirname, "./app/constants"),
+        "@/components": path.resolve(__dirname, "./app/components"),
+        "@/pages": path.resolve(__dirname, "./app/pages"),
+        "@/providers": path.resolve(__dirname, "./app/providers"),
+        "@/services": path.resolve(__dirname, "./app/services"),
+        "@/styles": path.resolve(__dirname, "./app/styles"),
+
         "@blocks-idp": path.resolve(__dirname, "./app/cross-modules/idp"),
         "@blocks-lmt": path.resolve(__dirname, "./app/cross-modules/lmt"),
         "@blocks-storage": path.resolve(__dirname, "./app/cross-modules/storage"),

@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useLayoutEffect, useRef, useState } from "react";
 import { useQueryState } from "nuqs";
 import {
   Tabs,
@@ -22,6 +22,7 @@ import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { UserProfileSidebar } from "../user-profile-sidebar";
 import { UpdateUser } from "@blocks-idp/iam/modules/user-management/update-user";
 import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
+import { getUserDisplayName } from "@blocks-idp/iam/utils/user-display-name";
 
 export type UserProfileTab = {
   value: string;
@@ -40,10 +41,11 @@ type UserProfileShellProps = {
   skeleton?: ReactNode;
   isLoading?: boolean;
   /**
-   * Height (px) of the fixed header above this shell in the current layout.
-   * DashboardLayout's header (used by the admin user-detail page) differs
-   * from other layouts, so this must be passed per call site rather than
-   * assumed.
+   * Fallback height (px) of the fixed header above this shell when the real
+   * header height cannot be measured yet (first paint before layout settles),
+   * or for tests that render the shell without a real viewport. The live value
+   * is measured from the rendered shell's offsetTop on every resize, so this
+   * only acts as a safety net.
    */
   fixedHeaderOffsetPx?: number;
 };
@@ -81,21 +83,45 @@ export const UserProfileShell = ({
     [`/app/iam/user-detail/${id}`]: activeTab?.label || "",
   };
 
+  // The header above this shell is fixed and the page scrolls at the document
+  // level, so the shell must fill whatever viewport-anchored height its parent
+  // shells settle on (the surrounding AuthenticationConfigLayout now measures
+  // and anchors itself to the viewport on mount/resize). The prop is still
+  // plumbed through as a fallback for the very first paint before those
+  // measurements settle, and for tests that render without a real viewport.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [headerOffset, setHeaderOffset] = useState<number>(fixedHeaderOffsetPx);
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const node = rootRef.current;
+      if (!node) return;
+      const next = Math.max(0, Math.round(node.getBoundingClientRect().top));
+      setHeaderOffset((prev) => (prev === next ? prev : next));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
   return (
-    // The header above this shell is fixed and the page scrolls at the document level
-    // (no ancestor establishes a definite content height), so `h-full` can't resolve,
-    // pin height explicitly to the viewport minus the fixed header instead. The header
-    // height differs by layout (DashboardLayout vs ConsoleLayout), hence the prop.
     <div
-      className="mx-auto flex w-full flex-col overflow-hidden  md:h-[calc(100vh-var(--profile-shell-header-offset))] md:min-h-0"
-      style={{ ["--profile-shell-header-offset" as string]: `${fixedHeaderOffsetPx}px` }}
+      ref={rootRef}
+      data-testid="user-profile-shell"
+      className="mx-auto flex w-full flex-col md:h-full md:min-h-0 md:overflow-hidden"
+      style={{ ["--profile-shell-header-offset" as string]: `${headerOffset}px` }}
     >
       <div className="mb-4 hidden shrink-0 md:mb-4 md:block">
         <PageBreadcrumb breadcrumbIndex={4} customTitles={breadcrumbTitles} />
       </div>
-      <Tabs value={tabId} className="flex flex-1 flex-col md:min-h-0">
-        {/* md:grid-rows-[auto_1fr] pins row 2 (sidebar + tab content) to the remaining
-            screen height so all cards share a common height regardless of tab. */}
+      <Tabs value={tabId} className="flex flex-col md:min-h-0 md:flex-1">
+        {/* Mobile stacks 3 auto-flow rows (dropdown, sidebar, tab content), each
+            sized to its own natural content height - nothing is height-bound or
+            internally scrolled, so the page itself scrolls (via the ancestor
+            AuthenticationConfigLayout's scroll container) past whatever doesn't
+            fit the viewport. md:grid-rows-[auto_1fr] pins row 2 (sidebar + tab
+            content) to the remaining screen height for the desktop internal-scroll
+            layout instead. */}
         <div className="grid grid-cols-1 gap-4 md:min-h-0 md:flex-1 md:grid-cols-[300px_minmax(0,1fr)] md:grid-rows-[auto_minmax(0,1fr)] md:gap-x-6 md:gap-y-4 lg:gap-x-8">
           {/* Mobile header: tabs dropdown */}
           <div className="flex items-center justify-between gap-3 md:hidden">
@@ -135,20 +161,23 @@ export const UserProfileShell = ({
             {rightSlot}
           </div>
 
-          {/* Sidebar (col 1, row 2), fills the row's height at md+ */}
-          <div className="flex h-full min-h-0 w-full flex-col md:col-start-1 md:row-start-2">
+          {/* Sidebar (col 1, row 2). Sized to its own natural content on mobile;
+              fills the row's height and scrolls internally at md+. */}
+          <div className="flex w-full flex-col md:col-start-1 md:row-start-2 md:h-full md:min-h-0">
             <UserProfileSidebar id={id} projectKey={projectKey} />
           </div>
 
-          {/* Right column (col 2, row 2), fills the same row height; each tab
-              component manages its own internal scroll. */}
-          <div className="flex h-full min-h-0 min-w-0 flex-col md:col-start-2 md:row-start-2">
+          {/* Right column (col 2, row 2). Sized to its own natural content on mobile
+              (the page scrolls); fills the row's height at md+, where the tab
+              scroller owns its own vertical scroll so the user-detail screen stays
+              anchored to the viewport and only the active tab scrolls. */}
+          <div className="flex min-w-0 flex-col md:col-start-2 md:row-start-2 md:h-full md:min-h-0">
             {tabs.map((tab) => (
               <TabsContent
                 key={tab.value}
                 value={tab.value}
                 forceMount
-                className="mt-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden"
+                className="mt-0 flex flex-col data-[state=inactive]:hidden md:h-full md:min-h-0 md:flex-1 md:overflow-y-auto"
               >
                 {tab.render()}
               </TabsContent>
@@ -162,18 +191,21 @@ export const UserProfileShell = ({
 };
 
 const ProfileHeading = ({ id, projectKey }: { id: string; projectKey: string }) => {
-  const { data } = useGetUserById({ id, projectKey });
+  const { data, isLoading } = useGetUserById({ id, projectKey });
   const user = data?.data;
-  const firstName = user?.firstName?.trim() ?? "";
-  const lastName = user?.lastName?.trim() ?? "";
-  const displayName =
-    firstName && lastName ? `${firstName} ${lastName}` : firstName || lastName || "Profile";
   return (
     <div className="flex min-w-0 flex-col gap-0.5">
       <div className="flex min-w-0 items-center gap-2">
-        <h1 className="truncate text-2xl font-semibold tracking-tight text-foreground">
-          {displayName}
-        </h1>
+        {/* The name fallback resolves to a placeholder dash for a user with
+            neither a name nor an email, so it must not stand in for "still
+            loading" as well - show a skeleton until the query settles. */}
+        {isLoading ? (
+          <Skeleton className="h-8 w-48" />
+        ) : (
+          <h1 className="truncate text-2xl font-semibold tracking-tight text-foreground">
+            {getUserDisplayName(user)}
+          </h1>
+        )}
         <UpdateUser id={id} projectKey={projectKey} iconOnly />
       </div>
       {user?.email && (

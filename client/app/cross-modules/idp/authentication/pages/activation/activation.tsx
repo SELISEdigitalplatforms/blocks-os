@@ -21,7 +21,7 @@ type ActivationProps = {
   code?: string;
   lang?: string;
 };
-const x_blocks_key = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
+const xBlocksKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
 
 export const Activation = ({ code }: ActivationProps) => {
   const { isPending: isActivationPending, mutateAsync: activationCodeValidation } =
@@ -33,19 +33,25 @@ export const Activation = ({ code }: ActivationProps) => {
   const [activationUserId, setActivationUserId] = useState<string | null>(null);
   const [resendMessage, setResendMessage] = useState<string | null>(null);
   const [resendSuccess, setResendSuccess] = useState(false);
-  useEffect(() => {
+  // With no code there is nothing to validate: show the invalid state straight away, and again
+  // whenever the code goes away.
+  const [checkedCode, setCheckedCode] = useState<{ code: string | undefined } | null>(null);
+  if (checkedCode === null || checkedCode.code !== code) {
+    setCheckedCode({ code });
     if (!code) {
       setActivationError("invalid");
       setActivationUserId(null);
       setResendMessage(null);
       setResendSuccess(false);
       setIsValidCode(false);
-      return;
     }
+  }
+  useEffect(() => {
+    if (!code) return;
     const validateCode = async () => {
       try {
         const res = await activationCodeValidation({
-          projectKey: x_blocks_key as string,
+          projectKey: xBlocksKey,
           activationCode: code,
         });
         setResendMessage(null);
@@ -95,7 +101,7 @@ export const Activation = ({ code }: ActivationProps) => {
       setResendSuccess(false);
       const response = await resendActivationLink({
         userId: activationUserId,
-        projectKey: x_blocks_key as string,
+        projectKey: xBlocksKey,
       });
       if (response?.isSuccess) {
         setResendSuccess(true);

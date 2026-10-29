@@ -6,12 +6,13 @@ import { InfiniteScroll } from "@/components/infinite-scroller";
 import { useContext, useMemo } from "react";
 import { LogsViewerContext } from "../logs-viewer";
 import { useLogs } from "../../hooks/use-logs";
+import { getRangeStartDate } from "../../utils";
 import { LogsFilterToolbar } from "../logs-header/logs-filter-toolbar";
 import { ILog } from "../../models/log.model";
 // UI: New Data Available Indicator
 const NewDataAvailableIndicator = ({ onBottomClick }: { onBottomClick: () => void }) => (
   <div
-    className="absolute bottom-4 left-1/2 inline-flex h-9 -translate-x-1/2 cursor-pointer items-center justify-center whitespace-nowrap rounded-sm bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+    className="absolute bottom-4 left-1/2 inline-flex h-9 -translate-x-1/2 cursor-pointer items-center justify-center whitespace-nowrap rounded-sm bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
     onClick={(e) => {
       e.stopPropagation();
       onBottomClick();
@@ -27,36 +28,43 @@ const OldDataFetchingIndicator = () => (
   </div>
 );
 export const LogsList = () => {
-  const { selectedService, filter, pageSize, isManagedLoading, isSourceBlocks, services } =
+  const { selectedService, selectedServiceNames, filter, pageSize, isServicesLoading, services } =
     useContext(LogsViewerContext);
-  const { level, startDate, endDate, search } = filter || {
+  const { level, startDate, endDate, search, range } = filter || {
     level: "",
     startDate: "",
     endDate: "",
     search: "",
+    range: "",
   };
-  const { serviceName, serviceNames } = selectedService || {
-    serviceName: "",
-    serviceNames: [],
-  };
+  // Resolved once per preset change rather than on every render. Recomputing it live would
+  // shift the window every minute, and each shift restarts the query -- wiping the loaded
+  // rows and the scroll position mid-read. Pinning it means "the 30 minutes before you
+  // chose this", with the poller appending anything newer.
+  const rangeStartDate = useMemo(() => getRangeStartDate(range ?? ""), [range]);
+  // serviceNames spans every selected service; serviceName stays the primary one so the
+  // API keeps a single-collection fallback when nothing is narrowed.
+  const serviceName = selectedService?.serviceName ?? "";
+  const serviceNames = selectedServiceNames;
   const initialTimeStamp = useMemo(() => (endDate ? endDate : new Date().toISOString()), [endDate]);
   const { initialLogs, isLoading, hasTopMore, fetchOldLogs, fetchNewLogs } = useLogs({
     serviceName,
     serviceNames,
     search: search,
     level,
-    startDate,
+    startDate: rangeStartDate ?? startDate,
     endDate: initialTimeStamp,
     pageSize,
   });
   const fetchNewLogsHandler = async (lastItemTimestamp: string = initialTimeStamp) => {
-    if (search || level || startDate || endDate) return [];
+    // Only a pinned end stops the stream: streaming past the end of a closed window would
+    // return logs the reader excluded. A window left open at the end -- the default view
+    // included -- contains every log that arrives next, so it keeps tailing.
+    if (search || level || endDate) return [];
     return await fetchNewLogs(lastItemTimestamp);
   };
 
-  // Check if we should show managed service specific states
-  const isManaged = !isSourceBlocks;
-  const noManagedServices = isManaged && services.length === 0;
+  const noServices = services.length === 0;
 
   return (
     <Card className="relative">
@@ -64,13 +72,13 @@ export const LogsList = () => {
         <LogsFilterToolbar />
       </CardHeader>
       <CardContent className="h-[calc(100vh-340px)]">
-        {isManagedLoading ? (
+        {isServicesLoading ? (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            Loading managed services...
+            Loading services...
           </div>
-        ) : noManagedServices ? (
+        ) : noServices ? (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            No managed services found.
+            No services found.
           </div>
         ) : isLoading ? (
           <div className="grid h-full w-full gap-2 overflow-hidden">
@@ -80,6 +88,9 @@ export const LogsList = () => {
           </div>
         ) : (
           <InfiniteScroll<ILog>
+            // InfiniteScroll seeds its rows from initialData once, so changing the
+            // queried collections needs a fresh instance to drop the previous logs.
+            key={serviceNames.join("|")}
             loadingIndicator={<OldDataFetchingIndicator />}
             initialData={initialLogs}
             hasTopMore={hasTopMore}
@@ -89,10 +100,13 @@ export const LogsList = () => {
             }}
             pollingInterval={5000}
             pollingFn={(item) => fetchNewLogsHandler(item?.timestamp)}
-            renderItem={(log, index) => (
+            renderItem={(log) => (
+              // Keyed on the log's own identity rather than its position: polling prepends new
+              // rows every few seconds, so an index-based key would hand a row's expanded stack
+              // trace to whichever log later lands at that index.
               <div
-                key={log.traceId + "-" + index}
-                className="w-full cursor-default p-3 text-sm text-muted-foreground hover:bg-muted/50"
+                key={`${log.timestamp}-${log.spanId ?? ""}`}
+                className="w-full cursor-default border-b border-border/60 px-3 py-2.5 text-sm text-muted-foreground last:border-b-0 hover:bg-muted/40"
               >
                 <LogItem log={log} />
               </div>

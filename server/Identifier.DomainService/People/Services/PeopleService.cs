@@ -1,4 +1,4 @@
-using Blocks.Genesis;
+﻿using Blocks.Genesis;
 using DomainService.Dtos;
 using DomainService.Entities;
 using DomainService.Projects;
@@ -7,17 +7,13 @@ using FluentValidation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using Blocks.Genesis.Entities.Iam;
+using Os.DataAccess.Notifications;
 
 namespace DomainService.People
 {
     public class PeopleService : IPeopleService
     {
-        private static class CacheConstants
-        {
-            /// <summary>Used when People:InvitationLifetimeInMinutes is unset. Matches IAM's own default activation lifetime.</summary>
-            public const int DefaultInvitationLifetimeInMinutes = 60 * 24;
-        }
-
         private static class ErrorCodes
         {
             public const string EmptyGroupId = "empty_group_id";
@@ -31,28 +27,28 @@ namespace DomainService.People
 
         private readonly ILogger<PeopleService> _logger;
         private readonly IPeopleRepository _peopleRepository;
-        private readonly IMessageClient _messageClient;
-        private readonly IConfiguration _configuration;
+        private readonly IPeopleInvitationMessenger _invitationMessenger;
         private readonly ICacheClient _cacheClient;
         private readonly IProjectRepository _projectRepository;
         private readonly ITenants _tenants;
+        private readonly IBuiltInNotificationSender? _notificationSender;
 
         public PeopleService(
             ILogger<PeopleService> logger,
             IPeopleRepository peopleRepository,
-            IMessageClient messageClient,
-            IConfiguration configuration,
+            IPeopleInvitationMessenger invitationMessenger,
             ICacheClient cacheClient,
             IProjectRepository projectRepository,
-            ITenants tenants)
+            ITenants tenants,
+            IBuiltInNotificationSender? notificationSender = null)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _peopleRepository = peopleRepository ?? throw new ArgumentNullException(nameof(peopleRepository));
-            _messageClient = messageClient ?? throw new ArgumentNullException(nameof(messageClient));
-            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+            _invitationMessenger = invitationMessenger ?? throw new ArgumentNullException(nameof(invitationMessenger));
             _cacheClient = cacheClient ?? throw new ArgumentNullException(nameof(cacheClient));
             _projectRepository = projectRepository;
             _tenants = tenants;
+            _notificationSender = notificationSender;
         }
 
         public async Task<GetPeoplesResponse> GetPeoplesAsync(GetPeoplesRequest request)
@@ -95,6 +91,13 @@ namespace DomainService.People
                     .Select(g => new GetPeoples
                     {
                         peopleDetails = g.Key,
+                        // Grants are group-wide but stored per environment row, so the union is
+                        // the person's answer. Owners hold everything implicitly and store none.
+                        Role = g.Any(p => p.IsCreator) ? "owner" : "contributor",
+                        AccessPolicies = [.. g.SelectMany(p => p.AccessPolicies ?? [])
+                                             .Where(policy => !string.IsNullOrWhiteSpace(policy))
+                                             .Distinct(StringComparer.Ordinal)
+                                             .OrderBy(policy => policy, StringComparer.Ordinal)],
                         SharedEnviroments = g.Select(p => new SharedEnviroment
                         {
                             ItemId = p.ItemId,
@@ -159,19 +162,9 @@ namespace DomainService.People
                     };
                 }
 
-                var userId = BlocksContext.GetContext()?.UserId ?? string.Empty;
-
-                if (!await _peopleRepository.IsOwner(userId, tenants))
-                {
-                    return new InviteResponse
-                    {
-                        IsSuccess = false,
-                        Errors = new Dictionary<string, string>
-                        {
-                            { "own_project", "You are not allowed to share this projects" }
-                        }
-                    };
-                }
+                // Ownership is no longer checked here: [ProjectPolicy("people::invite")] on the
+                // endpoint does it, before this method is reached, and grants a contributor the
+                // same ability when the owner has given it to them.
 
                 // IAM stores every email lowercased, so an address typed with different casing would otherwise
                 // miss the lookup below and have a duplicate account created for it.
@@ -203,6 +196,24 @@ namespace DomainService.People
                 }
 
                 var callerEmail = NormalizeEmail(BlocksContext.GetContext()?.UserName);
+
+                // Checked for the whole request before anything is written, so a mixed request never
+                // half-applies. Pending invitees (never activated) are not inactive and pass.
+                var inactiveEmails = await FindInactiveInviteesAsync(request.Invitations, callerEmail);
+                if (inactiveEmails.Count > 0)
+                {
+                    _logger.LogWarning("InvitePeoplesAsync rejected: {Count} inactive user(s) in the request", inactiveEmails.Count);
+
+                    return new InviteResponse
+                    {
+                        IsSuccess = false,
+                        Errors = new Dictionary<string, string>
+                        {
+                            { UserAccountStatus.InactiveErrorCode, UserAccountStatus.InactiveMessage(string.Join(", ", inactiveEmails)) }
+                        }
+                    };
+                }
+
                 var results = new Dictionary<string, string>();
 
                 foreach (var (email, envDetails) in request.Invitations)
@@ -237,6 +248,42 @@ namespace DomainService.People
         }
 
         private static string NormalizeEmail(string? email) => email?.Trim().ToLowerInvariant() ?? string.Empty;
+
+        /// <summary>
+        /// The addresses in this request that belong to a deactivated account. Only addresses that
+        /// would really be processed are looked up (not the caller, not ones without environments).
+        /// </summary>
+        private async Task<List<string>> FindInactiveInviteesAsync(Dictionary<string, List<EnviromentDetails>> invitations, string callerEmail)
+        {
+            var emails = invitations
+                .Where(entry => entry.Key != callerEmail && entry.Value is { Count: > 0 })
+                .Select(entry => entry.Key)
+                .ToList();
+
+            if (emails.Count == 0) return [];
+
+            var users = await _peopleRepository.GetUsersByEmailAsync(emails) ?? [];
+
+            return [.. users
+                .Where(UserAccountStatus.IsDeactivated)
+                .Select(user => NormalizeEmail(user.Email))
+                .Where(email => emails.Contains(email))
+                .Distinct()
+                .OrderBy(email => email, StringComparer.Ordinal)];
+        }
+
+        private BaseResponse InactiveUserResponse(string operation, string? email)
+        {
+            _logger.LogWarning("{Operation} rejected: the user is inactive", operation);
+            return new BaseResponse
+            {
+                IsSuccess = false,
+                Errors = new Dictionary<string, string>
+                {
+                    { UserAccountStatus.InactiveErrorCode, UserAccountStatus.InactiveMessage(email) }
+                }
+            };
+        }
 
         /// <summary>
         /// Lowercases the addresses and merges any that differed only by casing, so a person cannot be
@@ -302,7 +349,7 @@ namespace DomainService.People
 
             if (hasAcceptedInvitation)
             {
-                await _peopleRepository.InsertPeoplesAsync(BuildProjectPeoples(user, newEnviroments, isInvitationConfirmed: true));
+                await _peopleRepository.InsertPeoplesAsync(BuildProjectPeoples(user, newEnviroments, isInvitationConfirmed: true, existingPeople));
                 _logger.LogInformation("Granted {Count} environments to already-accepted user: {Email}", newEnviroments.Count, user.Email);
                 return InvitationOutcomes.AccessGranted;
             }
@@ -317,7 +364,7 @@ namespace DomainService.People
             }
 
             // They have to accept and can already sign in: no key needed, so blocks-os owns the whole invitation.
-            var projectPeoples = BuildProjectPeoples(user, newEnviroments, isInvitationConfirmed: false);
+            var projectPeoples = BuildProjectPeoples(user, newEnviroments, isInvitationConfirmed: false, existingPeople);
 
             await _peopleRepository.InsertPeoplesAsync(projectPeoples);
             _logger.LogInformation("Inserted {Count} project people records for email: {Email}", projectPeoples.Count, email);
@@ -336,8 +383,14 @@ namespace DomainService.People
             return invitationSent ? InvitationOutcomes.Invited : InvitationOutcomes.InvitationNotSent;
         }
 
-        private static List<ProjectPeople> BuildProjectPeoples(User user, List<EnviromentDetails> enviromentDetails, bool isInvitationConfirmed)
+        private static List<ProjectPeople> BuildProjectPeoples(User user, List<EnviromentDetails> enviromentDetails, bool isInvitationConfirmed, IEnumerable<ProjectPeople>? existingRows = null)
         {
+            // Grants are group-wide but the rows are per-environment, so a row added for a
+            // further environment inherits what the member already holds elsewhere in the group.
+            // Without this, adding someone to a new environment would leave one row disagreeing
+            // with its siblings about what they may do.
+            var seededPolicies = SeedPolicies(existingRows);
+
             return enviromentDetails
                 .Select(env => new ProjectPeople
                 {
@@ -347,9 +400,24 @@ namespace DomainService.People
                     IsInvitationSent = true,
                     IsInvitationConfirmed = isInvitationConfirmed,
                     UserId = user.ItemId,
-                    Roles = env.Roles
+                    Roles = env.Roles,
+                    AccessPolicies = [.. seededPolicies]
                 })
                 .ToList();
+        }
+
+        /// <summary>Union of the grants a member already holds on their rows in this group.</summary>
+        private static List<string> SeedPolicies(IEnumerable<ProjectPeople>? existingRows)
+        {
+            if (existingRows is null) return [];
+
+            return [.. existingRows
+                .Where(row => row.AccessPolicies is not null)
+                .SelectMany(row => row.AccessPolicies)
+                .Where(policy => !string.IsNullOrWhiteSpace(policy))
+                .Select(policy => policy.Trim())
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(policy => policy, StringComparer.Ordinal)];
         }
 
         private ProjectPeople CreateProjectPeople(User user, string tenantId, string email, List<string> roles)
@@ -386,7 +454,7 @@ namespace DomainService.People
             await _cacheClient.AddStringValueAsync(
                 InvitationRolesCacheKey(email),
                 JsonSerializer.Serialize(rolesByTenant),
-                ResolveInvitationLifetimeSeconds(null));
+                _invitationMessenger.ResolveInvitationLifetimeSeconds(null));
         }
 
         private async Task<Dictionary<string, List<string>>> GetCachedInvitationRolesAsync(string email)
@@ -439,13 +507,7 @@ namespace DomainService.People
                     ForceInvitation = forceInvitation
                 };
 
-                await _messageClient.SendToConsumerAsync(
-                    new ConsumerMessage<CreateUserByEmailEvent>
-                    {
-                        ConsumerName = IdentifierConstants.IamQueue,
-                        Payload = createUserCommand
-                    }
-                );
+                await _invitationMessenger.SendInvitationRequestToIamAsync(createUserCommand);
 
                 _logger.LogInformation("Invitation request sent to IAM for email: {Email}, ForceInvitation: {ForceInvitation}", email, forceInvitation);
                 return true;
@@ -471,7 +533,7 @@ namespace DomainService.People
                 return false;
             }
 
-            var invitationLifetimeSeconds = ResolveInvitationLifetimeSeconds(keyExpiresAtUtc);
+            var invitationLifetimeSeconds = _invitationMessenger.ResolveInvitationLifetimeSeconds(keyExpiresAtUtc);
 
             // The link must never outlive the activation key it carries: confirming against a dead key leaves the
             // person looking like a member while being unable to sign in, and that cannot be undone from the UI.
@@ -497,80 +559,8 @@ namespace DomainService.People
             }
         }
 
-        /// <summary>
-        /// How long the invitation link stays valid. IAM owns the activation key's lifetime, so when the mail
-        /// carries a key we never outlive it; otherwise the link is ours alone and takes the configured lifetime.
-        /// </summary>
-        private int ResolveInvitationLifetimeSeconds(DateTime? keyExpiresAtUtc)
-        {
-            var configuredMinutes = int.TryParse(_configuration["InvitationLifetimeInMinutes"], out var minutes) && minutes > 0
-                ? minutes
-                : CacheConstants.DefaultInvitationLifetimeInMinutes;
-
-            var configuredSeconds = configuredMinutes * 60;
-
-            if (!keyExpiresAtUtc.HasValue) return configuredSeconds;
-
-            var keyLifetimeSeconds = (int)(keyExpiresAtUtc.Value - DateTime.UtcNow).TotalSeconds;
-
-            return Math.Min(configuredSeconds, keyLifetimeSeconds);
-        }
-
-        public async Task<string> SendInvitationEmail(User user, Tenant project)
-        {
-            var invitationCode = Guid.NewGuid().ToString("n");
-            var invitationLink = GenerateInvitationLink(invitationCode);
-            var sendMailCommand = CreateSendMailCommand(user, project, invitationLink);
-
-            await _messageClient.SendToConsumerAsync(
-                new ConsumerMessage<SendMail>
-                {
-                    ConsumerName = IdentifierConstants.MailQueue,
-                    Payload = sendMailCommand
-                }
-            );
-
-            _logger.LogInformation("Invitation email queued for {Email}", user.Email);
-            return invitationCode;
-        }
-
-        // The code redeems an invitation and, for an account that was never activated, yields the key that sets its
-        // password. It is a bearer credential: never write it, or the link containing it, to the logs.
-        private string GenerateInvitationLink(string code)
-        {
-            var blocksAppHost = _configuration["FrontendRuntime:BLOCKS_OS_URL"];
-            if (string.IsNullOrWhiteSpace(blocksAppHost))
-            {
-                _logger.LogWarning("BlocksAppHost configuration is missing");
-                blocksAppHost = "https://app.blocks.com";
-            }
-
-            return $"{blocksAppHost}/invitation?code={code}";
-        }
-
-        private SendMail CreateSendMailCommand(User user, Tenant project, string invitationLink)
-        {
-            var displayName = string.IsNullOrWhiteSpace(user.FirstName)
-                ? user.Email
-                : $"{user.FirstName} {user.LastName}".Trim();
-
-            var projectName = project.Name;
-
-            return new SendMail
-            {
-                Cc = Array.Empty<string>(),
-                Bcc = Array.Empty<string>(),
-                BodyDataContext = new Dictionary<string, string>
-                {
-                    { "ProjectInvitationLink", invitationLink },
-                    { "DisplayName", displayName },
-                    { "ProjectName", projectName }
-                },
-                Language = "en-US",
-                Purpose = IdentifierConstants.ProjectPeopleInvitationMailPurpose,
-                To = new[] { user.Email.ToLowerInvariant() }
-            };
-        }
+        public Task<string> SendInvitationEmail(User user, Tenant project)
+            => _invitationMessenger.SendInvitationEmailAsync(user, project);
 
         private async Task CacheInvitation(List<string> ids, string activationKey, string invitationCode, string userId, string tenantGroupId, int lifetimeSeconds)
         {
@@ -623,19 +613,8 @@ namespace DomainService.People
                 };
             }
 
-            var userId = BlocksContext.GetContext()?.UserId ?? string.Empty;
-
-            if (!await _peopleRepository.IsOwner(userId, tenants))
-            {
-                return new InviteResponse
-                {
-                    IsSuccess = false,
-                    Errors = new Dictionary<string, string>
-                        {
-                            { "own_project", "You are not allowed to share this projects" }
-                        }
-                };
-            }
+            // Ownership is no longer checked here: [ProjectPolicy("people::remove")] on the
+            // endpoint does it, before this method is reached.
 
             try
             {
@@ -668,9 +647,31 @@ namespace DomainService.People
                     };
                 }
 
+                if (UserAccountStatus.IsDeactivated(user))
+                {
+                    return InactiveUserResponse(nameof(RemoveAccessFromProjectAsync), request.Email);
+                }
+
                 var result = await _peopleRepository.RemovePeoplesAsync(request.Email, request.TenantIds);
 
                 _logger.LogInformation("Access removed for Email: {Email}, Result: {Result}", request.Email, result);
+
+                if (result && _notificationSender is not null)
+                {
+                    await _notificationSender.SendAsync(new BuiltInNotification
+                    {
+                        ConfigurationName = BuiltInNotificationNames.ProjectMemberRemoved,
+                        Event = "project-member-removed",
+                        Title = "Removed from a project",
+                        Description = "You no longer have access to one or more environments of a project.",
+                        Ids = new Dictionary<string, string?>
+                        {
+                            ["tenantGroupId"] = request.GroupId,
+                            ["projectKeys"] = string.Join(",", request.TenantIds)
+                        },
+                        UserIds = [user.ItemId]
+                    });
+                }
 
                 return new RemoveAccessResponse { IsSuccess = result };
             }
@@ -706,7 +707,8 @@ namespace DomainService.People
                 return false;
             }
 
-            if (!string.Equals(@event.EventType, IdentifierConstants.ProjectPeopleInvitationMailPurpose, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(@event.EventType, IdentifierConstants.ProjectPeopleInvitationMailPurpose, StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(@event.EventType, IdentifierConstants.LegacyProjectPeopleInvitationMailPurpose, StringComparison.OrdinalIgnoreCase))
             {
                 _logger.LogInformation("Ignoring CreateUserByEmailPostEvent with unrelated EventType: {EventType}", @event.EventType);
                 return false;
@@ -936,19 +938,8 @@ namespace DomainService.People
                     };
                 }
 
-                var bc = BlocksContext.GetContext();
-
-                if (!await _peopleRepository.IsOwner(bc.UserId, tenants))
-                {
-                    return new InviteResponse
-                    {
-                        IsSuccess = false,
-                        Errors = new Dictionary<string, string>
-                        {
-                            { "own_project", "You are not allowed to share this projects" }
-                        }
-                    };
-                }
+                // Ownership is no longer checked here: [ProjectPolicy("people::invite")] on the
+                // endpoint does it, before this method is reached.
 
                 var existingUsers = await _peopleRepository.GetUsersByEmailAsync(new List<string> { request.Email });
                 var user = existingUsers?.FirstOrDefault(u => u.Email == request.Email);
@@ -964,6 +955,11 @@ namespace DomainService.People
                             { ErrorCodes.UserNotFound, $"User with email {request.Email} is not found" }
                         }
                     };
+                }
+
+                if (UserAccountStatus.IsDeactivated(user))
+                {
+                    return InactiveUserResponse(nameof(ResendInvitationAsync), request.Email);
                 }
 
                 var existingPeople = await _peopleRepository.GetProjectPeoplesAsync(user.ItemId, tenants);
@@ -1053,20 +1049,27 @@ namespace DomainService.People
             {
                 return new BaseResponse { Errors = new Dictionary<string, string> {{"TransferToUserEmail", "Must be an existing user"}} };
             }
-            
+
+            // Handing a project to a deactivated account would leave it with an owner who cannot sign in.
+            if (UserAccountStatus.IsDeactivated(user))
+            {
+                return InactiveUserResponse(nameof(TransferOwnershipAsync), request.TransferToUserEmail);
+            }
+
 
             var tenantids = await _projectRepository.GetProjectIdsByGroupId(request.TenantGroupId);
             var bc = BlocksContext.GetContext();
 
-            if (!await _peopleRepository.IsOwner(bc.UserId, tenantids) || NormalizeEmail(bc.UserName) == request.TransferToUserEmail)
+            // The ownership half of this check moved to [ProjectPolicy(OwnerOnly = true)] on the
+            // endpoint. Refusing a transfer to yourself is a business rule, not authorization,
+            // so it stays here.
+            if (NormalizeEmail(bc.UserName) == request.TransferToUserEmail)
             {
                 return new BaseResponse { Errors = new Dictionary<string, string> { { "own_project", "You are not allowed to transfer ownership of this projects" } } };
             }
 
             var ownerProjectPeoples = await _peopleRepository.GetProjectPeoplesAsync(bc.UserId, tenantids);
             await _peopleRepository.UpdateProjectPeopleOwnerShipAsync([.. ownerProjectPeoples.Select(p => p.ItemId)], false);
-
-            await _peopleRepository.UpdateProjectOwnerShipAsync([.. ownerProjectPeoples.Select(p => p.TenantId)], user.ItemId);
 
             List<string> projectPeopleIds = [];
 
@@ -1095,6 +1098,24 @@ namespace DomainService.People
 
             if (projectPeopleIds.Count > 0)
                 await _peopleRepository.UpdateProjectPeopleOwnerShipAsync(projectPeopleIds, true);
+
+            if (_notificationSender is not null)
+            {
+                await _notificationSender.SendAsync(new BuiltInNotification
+                {
+                    ConfigurationName = BuiltInNotificationNames.ProjectOwnershipTransferred,
+                    Event = "project-ownership-transferred",
+                    Title = "Project ownership transferred",
+                    Description = "The ownership of a project moved to another user.",
+                    Ids = new Dictionary<string, string?>
+                    {
+                        ["tenantGroupId"] = request.TenantGroupId,
+                        ["previousOwnerId"] = bc.UserId,
+                        ["newOwnerId"] = user.ItemId
+                    },
+                    UserIds = [bc.UserId, user.ItemId]
+                });
+            }
 
             return new BaseResponse { IsSuccess = true };
         }

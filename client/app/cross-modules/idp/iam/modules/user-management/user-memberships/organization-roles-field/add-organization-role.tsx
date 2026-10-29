@@ -22,10 +22,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
 import { useProjectStore } from "@seliseblocks/genesis-os";
-import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
+import { useGetAssignableRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { Info, Plus, ShieldCheck } from "lucide-react";
 import { MINIMUM_ROLE_MESSAGE } from "./role-assignment.constants";
+import { GrantHint } from "@blocks-idp/iam/components/grant-hint";
 
 type AddOrganizationRoleProps = {
   roles: IRole[];
@@ -60,11 +61,15 @@ export const AddOrganizationRole = ({
   const [selectedRoles, setSelectedRoles] = useState<IRole[]>([]);
   const [filter, setFilter] = useState({ page: 0, pageSize: 10, search: "" });
 
-  const { data, isLoading } = useGetRoles(
+  const { data, isLoading } = useGetAssignableRoles(
     {
       page: filter.page,
       pageSize: filter.pageSize,
       projectKey: scopeKey,
+      // The field IAM actually reads. Without it the list falls back to the caller
+      // token's organization -- "default" for a tenant-wide admin -- and offered
+      // roles that do not exist in the organization being edited.
+      organizationId,
       sort: { property: "Name", isDescending: false },
       filter: {
         search: filter.search,
@@ -168,7 +173,7 @@ export const AddOrganizationRole = ({
                   <button
                     type="button"
                     aria-label="Role assignment requirement"
-                    className="inline-flex items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus:outline-none"
+                    className="inline-flex items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus:outline-hidden"
                   >
                     <Info className="h-4 w-4" aria-hidden />
                   </button>
@@ -194,6 +199,7 @@ export const AddOrganizationRole = ({
             You can assign a maximum of {MAX_ROLES_PER_USER} roles per user.
           </DialogDescription>
         </DialogHeader>
+        <GrantHint kind="roles" />
         <div>
           <FilterControls.SearchInput
             value={filter.search}

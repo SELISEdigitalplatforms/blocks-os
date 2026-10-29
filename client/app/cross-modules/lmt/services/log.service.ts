@@ -1,16 +1,22 @@
 import { http } from "@/lib/http/http-client";
 import {
+  IBlocksServiceItem,
   IGetLiveLogsPayload,
   IGetLogsByDatePayload,
   IGetLogsPayload,
+  IGetRestoredLogsPayload,
   ILog,
 } from "../models/log.model";
 import { IAPIResponse } from "@/models/api-response";
-import { LOG_ENDPOINTS } from "../constants/endpoint.constant";
+import { LOG_ENDPOINTS, RESTORE_ENDPOINTS } from "../constants/endpoint.constant";
 
 export class LogService {
   async getLogs(payload: IGetLogsPayload): Promise<IAPIResponse<ILog[]>> {
     return http.post<IAPIResponse<ILog[]>>(LOG_ENDPOINTS.GET_LOGS, payload);
+  }
+
+  async getRestoredLogs(payload: IGetRestoredLogsPayload): Promise<IAPIResponse<ILog[]>> {
+    return http.post<IAPIResponse<ILog[]>>(RESTORE_ENDPOINTS.GET_RESTORED_LOGS, payload);
   }
 
   async getLogsByDate(payload: IGetLogsByDatePayload): Promise<IAPIResponse<ILog[]>> {
@@ -30,5 +36,9 @@ export class LogService {
 
     const url = `${LOG_ENDPOINTS.LIVE}?${params.toString()}`;
     return http.get<IAPIResponse<ILog[]>>(url);
+  }
+
+  async getBlocksServices(): Promise<IBlocksServiceItem[]> {
+    return http.get<IBlocksServiceItem[]>(LOG_ENDPOINTS.GET_BLOCKS_SERVICES);
   }
 }

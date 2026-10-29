@@ -8,15 +8,8 @@ import {
   useValidateAuthorization,
   useGetGithubRepos,
   useGetRepositoryUser,
-  useRemoveAuthorization,
   useGithubBranches,
   useRepoAndGitBranchMatch,
-  useGetRepoDetails,
-  useInitialRepoDeployment,
-  useManualDeployment,
-  useGetSpecs,
-  useChangeBuildSpecs,
-  useChangeRepoSpecs,
 } from "./github-info";
 
 vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
@@ -27,15 +20,8 @@ vi.mock("../services/github-info.service", () => ({
     revokeAccess: vi.fn(),
     getGithubRepos: vi.fn(),
     getRepositoryUser: vi.fn(),
-    removeAuthorization: vi.fn(),
     getGithubBranches: vi.fn(),
     getRepoAndGitBranchMatch: vi.fn(),
-    getRepoDetails: vi.fn(),
-    repoInitialDeploy: vi.fn(),
-    manualDeploy: vi.fn(),
-    getSpecs: vi.fn(),
-    changeBuildSpecs: vi.fn(),
-    changeRepoSpecs: vi.fn(),
   },
 }));
 
@@ -112,79 +98,5 @@ describe("github-info hooks", () => {
     });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(githubInfoService.getRepoAndGitBranchMatch).toHaveBeenCalledWith("r-1", TENANT);
-  });
-
-  it("useGetRepoDetails fetches details with key and repo id", async () => {
-    vi.mocked(githubInfoService.getRepoDetails).mockResolvedValue({} as never);
-    const { result } = renderHook(() => useGetRepoDetails("pk", "r-1"), {
-      wrapper: createWrapper(),
-    });
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(githubInfoService.getRepoDetails).toHaveBeenCalledWith("pk", "r-1");
-  });
-
-  it("useGetSpecs fetches build specs", async () => {
-    vi.mocked(githubInfoService.getSpecs).mockResolvedValue({} as never);
-    const { result } = renderHook(() => useGetSpecs(), { wrapper: createWrapper() });
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(githubInfoService.getSpecs).toHaveBeenCalled();
-  });
-
-  describe("mutations", () => {
-    it("useRemoveAuthorization runs the success side effects", async () => {
-      vi.mocked(githubInfoService.removeAuthorization).mockResolvedValue({ isSuccess: true });
-      const { result } = renderHook(() => useRemoveAuthorization(), {
-        wrapper: createWrapper(),
-      });
-      await result.current.mutateAsync(undefined);
-      expect(githubInfoService.removeAuthorization).toHaveBeenCalled();
-    });
-
-    it("useInitialRepoDeployment deploys and records repo id", async () => {
-      vi.mocked(githubInfoService.repoInitialDeploy).mockResolvedValue({ id: "1" });
-      const { result } = renderHook(() => useInitialRepoDeployment(), {
-        wrapper: createWrapper(),
-      });
-      await result.current.mutateAsync({ repoId: "r" } as never);
-      expect(githubInfoService.repoInitialDeploy).toHaveBeenCalled();
-    });
-
-    it("useInitialRepoDeployment logs on error", async () => {
-      const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-      vi.mocked(githubInfoService.repoInitialDeploy).mockRejectedValue(new Error("x"));
-      const { result } = renderHook(() => useInitialRepoDeployment(), {
-        wrapper: createWrapper(),
-      });
-      await expect(result.current.mutateAsync({} as never)).rejects.toThrow("x");
-      await waitFor(() => expect(errSpy).toHaveBeenCalled());
-      errSpy.mockRestore();
-    });
-
-    it("useManualDeployment deploys manually", async () => {
-      vi.mocked(githubInfoService.manualDeploy).mockResolvedValue({ id: "1" });
-      const { result } = renderHook(() => useManualDeployment(), {
-        wrapper: createWrapper(),
-      });
-      await result.current.mutateAsync({} as never);
-      expect(githubInfoService.manualDeploy).toHaveBeenCalled();
-    });
-
-    it("useChangeBuildSpecs changes build specs", async () => {
-      vi.mocked(githubInfoService.changeBuildSpecs).mockResolvedValue({} as never);
-      const { result } = renderHook(() => useChangeBuildSpecs(), {
-        wrapper: createWrapper(),
-      });
-      await result.current.mutateAsync({} as never);
-      expect(githubInfoService.changeBuildSpecs).toHaveBeenCalled();
-    });
-
-    it("useChangeRepoSpecs changes repo specs", async () => {
-      vi.mocked(githubInfoService.changeRepoSpecs).mockResolvedValue({} as never);
-      const { result } = renderHook(() => useChangeRepoSpecs(), {
-        wrapper: createWrapper(),
-      });
-      await result.current.mutateAsync({} as never);
-      expect(githubInfoService.changeRepoSpecs).toHaveBeenCalled();
-    });
   });
 });

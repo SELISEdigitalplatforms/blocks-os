@@ -1,32 +1,51 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
-using Configuration.DomainService.Mail.Entities;
 using Configuration.DomainService.Mail.RequestModel;
 using Configuration.DomainService.Mail.Validators;
-using Configuration.DomainService.Notification.Enums;
 using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Notification.Validators;
 using Configuration.DomainService.Shared.Services;
+using Configuration.DomainService.Shared.Utilities;
 using Configuration.DomainService.Storage.Entities;
 using Configuration.DomainService.Storage.RequestModel;
+using Configuration.DomainService.Storage.Repositories;
 using Configuration.DomainService.Storage.Validators;
+using StorageSettings = DomainService.Configuration.StorageSettings;
 using FluentAssertions;
 using Moq;
+using Blocks.Genesis.Entities.Data;
+using Blocks.Genesis.Entities.Os;
 
 namespace XUnitTest.Validators
 {
     public class StorageConfigurationValidatorTests
     {
-        private readonly Mock<IConfigurationRepository> _repo = new();
+        private readonly Mock<IStorageConfigurationRepository> _repo = new();
 
         private StorageConfigurationValidator Validator() => new(_repo.Object);
 
         [Fact]
+        public async Task Validate_Create_NameAlreadyTaken_FailsOnName()
+        {
+            // Uniqueness was once bound to ConnectionString, so a taken name passed.
+            _repo.Setup(r => r.GetByNameAsync("az"))
+                 .ReturnsAsync(new StoredStorageConfiguration(new StorageSettings { Name = "az" }, null));
+
+            var request = new SaveStorageConfigurationRequest
+            {
+                Name = "az",
+                StorageStrategy = "Azure",
+                ConnectionString = "DefaultEndpointsProtocol=https;AccountName=acct;AccountKey=abc123==;EndpointSuffix=core.windows.net"
+            };
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.Errors.Should().ContainSingle(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.Name));
+        }
+
+        [Fact]
         public async Task Validate_Azure_ValidConnectionString_IsValid()
         {
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
             var request = new SaveStorageConfigurationRequest
             {
                 Name = "az",
@@ -42,9 +61,6 @@ namespace XUnitTest.Validators
         [Fact]
         public async Task Validate_Azure_InvalidConnectionString_Fails()
         {
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
             var request = new SaveStorageConfigurationRequest
             {
                 Name = "az",
@@ -60,9 +76,6 @@ namespace XUnitTest.Validators
         [Fact]
         public async Task Validate_EmptyName_Fails()
         {
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
             // Provide a valid Azure connection string so only the Name rule fails.
             var request = new SaveStorageConfigurationRequest
             {
@@ -80,9 +93,6 @@ namespace XUnitTest.Validators
         [Fact]
         public async Task Validate_UnknownStorageStrategy_Fails()
         {
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
             var request = new SaveStorageConfigurationRequest { Name = "x", StorageStrategy = "GoogleCloud" };
 
             var result = await Validator().ValidateAsync(request);
@@ -93,9 +103,6 @@ namespace XUnitTest.Validators
         [Fact]
         public async Task Validate_Sftp_Valid_IsValid()
         {
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
             var request = new SaveStorageConfigurationRequest
             {
                 Name = "sftp",
@@ -114,9 +121,6 @@ namespace XUnitTest.Validators
         [Fact]
         public async Task Validate_Sftp_RelativeRemotePath_Fails()
         {
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
             var request = new SaveStorageConfigurationRequest
             {
                 Name = "sftp",
@@ -136,9 +140,6 @@ namespace XUnitTest.Validators
         [Fact]
         public async Task Validate_Aws_MissingKeys_Fails()
         {
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
             var request = new SaveStorageConfigurationRequest { Name = "aws", StorageStrategy = "AWS" };
 
             var result = await Validator().ValidateAsync(request);
@@ -149,12 +150,6 @@ namespace XUnitTest.Validators
         [Fact]
         public async Task Validate_UpdateRequest_WithoutItemId_Fails()
         {
-            // IsNameUpdated reads the existing config by id, so it must resolve to a value.
-            _repo.Setup(r => r.GetStorageConfigurationByIdAsync(It.IsAny<string>()))
-                 .ReturnsAsync(new StorageConfiguration { Name = "existing-name" });
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
             var request = new SaveStorageConfigurationRequest
             {
                 Name = "x",
@@ -168,6 +163,233 @@ namespace XUnitTest.Validators
 
             result.IsValid.Should().BeFalse();
             result.Errors.Should().Contain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.ItemId));
+        }
+
+        [Fact]
+        public async Task Validate_UpdateRequest_CarryingOnlyMutableSettings_IsValid()
+        {
+            // The client sends nothing but the settings an update may change plus the target's id.
+            // Requiring a name, a provider or credentials here would reject a perfectly good update,
+            // since StorageConfigurationService ignores all of them on an update anyway.
+            var request = new SaveStorageConfigurationRequest
+            {
+                UpdateRequest = true,
+                ItemId = "cfg-1",
+                UploadUrlExpirySeconds = 900,
+                DownloadUrlExpirySeconds = 120,
+                MaxFileSizeInBytes = 10_485_760,
+                UploadCompletionRequiredFor = new List<string> { "Private" }
+            };
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task Validate_UpdateRequest_WithMaskedAzureConnectionString_IsValid()
+        {
+            // A client can only ever echo back the masked connection string the read endpoint gave
+            // it ("D****...t"), which can never match the real Azure format rule. Enforcing that rule
+            // on an update made every Azure configuration permanently unsaveable.
+            var masked = Helper.GetMaskedCloudStorageRegionEndPoint(
+                "DefaultEndpointsProtocol=https;AccountName=acct;AccountKey=abc123==;EndpointSuffix=core.windows.net");
+
+            var request = new SaveStorageConfigurationRequest
+            {
+                Name = "Default",
+                StorageStrategy = "Azure",
+                ConnectionString = masked,
+                UpdateRequest = true,
+                ItemId = "cfg-1",
+                UploadUrlExpirySeconds = 600,
+                DownloadUrlExpirySeconds = 300,
+                MaxFileSizeInBytes = 5_242_880
+            };
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task Validate_UpdateRequest_StillValidatesTheMutableSettings()
+        {
+            var request = new SaveStorageConfigurationRequest
+            {
+                UpdateRequest = true,
+                ItemId = "cfg-1",
+                UploadUrlExpirySeconds = 604_801,
+                MaxFileSizeInBytes = 0,
+                UploadCompletionRequiredFor = new List<string> { "Secure" }
+            };
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeFalse();
+            result.Errors.Should().Contain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.UploadUrlExpirySeconds));
+            result.Errors.Should().Contain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.MaxFileSizeInBytes));
+            result.Errors.Should().Contain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.UploadCompletionRequiredFor));
+        }
+
+        [Fact]
+        public async Task Validate_CreateRequest_StillRequiresNameAndProviderCredentials()
+        {
+            // The relaxation above must apply to updates only - creating a configuration is still the
+            // one request that has to supply a name, a provider and that provider's credentials.
+            var request = new SaveStorageConfigurationRequest
+            {
+                UpdateRequest = false,
+                UploadUrlExpirySeconds = 600
+            };
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeFalse();
+            result.Errors.Should().Contain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.Name));
+            result.Errors.Should().Contain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.StorageStrategy));
+        }
+
+        private static SaveStorageConfigurationRequest ValidAzureRequest() => new()
+        {
+            Name = "az",
+            StorageStrategy = "Azure",
+            ConnectionString = "DefaultEndpointsProtocol=https;AccountName=acct;AccountKey=abc123==;EndpointSuffix=core.windows.net"
+        };
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        [InlineData(604_801)]
+        public async Task Validate_UploadUrlExpirySeconds_OutOfRange_Fails(int value)
+        {
+            var request = ValidAzureRequest();
+            request.UploadUrlExpirySeconds = value;
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeFalse();
+            result.Errors.Should().Contain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.UploadUrlExpirySeconds));
+        }
+
+        [Theory]
+        [InlineData(1)]
+        [InlineData(600)]
+        [InlineData(604_800)]
+        public async Task Validate_UploadUrlExpirySeconds_InRange_IsValid(int value)
+        {
+            var request = ValidAzureRequest();
+            request.UploadUrlExpirySeconds = value;
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.Errors.Should().NotContain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.UploadUrlExpirySeconds));
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        [InlineData(604_801)]
+        public async Task Validate_DownloadUrlExpirySeconds_OutOfRange_Fails(int value)
+        {
+            var request = ValidAzureRequest();
+            request.DownloadUrlExpirySeconds = value;
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeFalse();
+            result.Errors.Should().Contain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.DownloadUrlExpirySeconds));
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        public async Task Validate_MaxFileSizeInBytes_NotPositive_Fails(long value)
+        {
+            var request = ValidAzureRequest();
+            request.MaxFileSizeInBytes = value;
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeFalse();
+            result.Errors.Should().Contain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.MaxFileSizeInBytes));
+        }
+
+        [Fact]
+        public async Task Validate_MaxFileSizeInBytes_Positive_IsValid()
+        {
+            var request = ValidAzureRequest();
+            request.MaxFileSizeInBytes = 5_242_880;
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.Errors.Should().NotContain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.MaxFileSizeInBytes));
+        }
+
+        [Fact]
+        public async Task Validate_MaxFileSizeInBytes_ExceedsFiftyMb_Fails()
+        {
+            var request = ValidAzureRequest();
+            request.MaxFileSizeInBytes = 50 * 1024 * 1024 + 1;
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeFalse();
+            result.Errors.Should().Contain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.MaxFileSizeInBytes));
+        }
+
+        [Fact]
+        public async Task Validate_MaxFileSizeInBytes_ExactlyFiftyMb_IsValid()
+        {
+            var request = ValidAzureRequest();
+            request.MaxFileSizeInBytes = 50 * 1024 * 1024;
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.Errors.Should().NotContain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.MaxFileSizeInBytes));
+        }
+
+        [Theory]
+        [MemberData(nameof(AllowedUploadCompletionCombinations))]
+        public async Task Validate_UploadCompletionRequiredFor_AllowedCombinations_IsValid(List<string> accessModifiers)
+        {
+            var request = ValidAzureRequest();
+            request.UploadCompletionRequiredFor = accessModifiers;
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.Errors.Should().NotContain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.UploadCompletionRequiredFor));
+        }
+
+        public static TheoryData<List<string>> AllowedUploadCompletionCombinations => new()
+        {
+            new List<string> { "Public" },
+            new List<string> { "Private" },
+            new List<string> { "Public", "Private" },
+        };
+
+        [Fact]
+        public async Task Validate_UploadCompletionRequiredFor_DisallowedValue_Fails()
+        {
+            var request = ValidAzureRequest();
+            request.UploadCompletionRequiredFor = new List<string> { "Secure" };
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeFalse();
+            result.Errors.Should().Contain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.UploadCompletionRequiredFor));
+        }
+
+        [Fact]
+        public async Task Validate_UploadCompletionRequiredFor_DuplicateValue_Fails()
+        {
+            var request = ValidAzureRequest();
+            request.UploadCompletionRequiredFor = new List<string> { "Public", "Public" };
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeFalse();
+            result.Errors.Should().Contain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.UploadCompletionRequiredFor));
         }
     }
 
@@ -194,7 +416,7 @@ namespace XUnitTest.Validators
         public async Task Validate_HappyPathOutbound_IsValid()
         {
             _repo.Setup(r => r.GetMailConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((MailConfiguration?)null);
+                 .ReturnsAsync((MailServerConfiguration?)null);
 
             var result = await Validator().ValidateAsync(ValidOutbound());
 
@@ -204,8 +426,9 @@ namespace XUnitTest.Validators
         [Fact]
         public async Task Validate_DuplicateName_Fails()
         {
+            // A different record holds the name, so the edit collides.
             _repo.Setup(r => r.GetMailConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync(ValidOutbound());
+                 .ReturnsAsync(new MailServerConfiguration { ItemId = "someone-else", Name = "Primary" });
 
             var result = await Validator().ValidateAsync(ValidOutbound());
 
@@ -217,7 +440,7 @@ namespace XUnitTest.Validators
         public async Task Validate_InvalidHost_Fails()
         {
             _repo.Setup(r => r.GetMailConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((MailConfiguration?)null);
+                 .ReturnsAsync((MailServerConfiguration?)null);
 
             var request = ValidOutbound();
             request.Host = "not a host";
@@ -231,7 +454,7 @@ namespace XUnitTest.Validators
         public async Task Validate_OutboundMissingSenderAddress_Fails()
         {
             _repo.Setup(r => r.GetMailConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((MailConfiguration?)null);
+                 .ReturnsAsync((MailServerConfiguration?)null);
 
             var request = ValidOutbound();
             request.SenderAddress = "";
@@ -245,7 +468,7 @@ namespace XUnitTest.Validators
         public async Task Validate_InboundDoesNotRequireSender_IsValid()
         {
             _repo.Setup(r => r.GetMailConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((MailConfiguration?)null);
+                 .ReturnsAsync((MailServerConfiguration?)null);
 
             var request = ValidOutbound();
             request.IsInbound = true;
@@ -261,7 +484,7 @@ namespace XUnitTest.Validators
         public async Task Validate_ShortPassword_Fails()
         {
             _repo.Setup(r => r.GetMailConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((MailConfiguration?)null);
+                 .ReturnsAsync((MailServerConfiguration?)null);
 
             var request = ValidOutbound();
             request.AccountPassword = "123";
@@ -269,6 +492,51 @@ namespace XUnitTest.Validators
             var result = await Validator().ValidateAsync(request);
 
             result.IsValid.Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task Validate_NameHeldByTheRecordBeingEdited_IsValid()
+        {
+            // Without excluding the current record, every edit that leaves the name alone would
+            // collide with itself and nothing could be saved twice.
+            _repo.Setup(r => r.GetMailConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync(new MailServerConfiguration { ItemId = "cfg-1", Name = "Primary" });
+
+            var result = await Validator().ValidateAsync(ValidOutbound());
+
+            result.IsValid.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task Validate_CreateWithoutConfigurationId_IsValid()
+        {
+            // An empty id is how a caller asks for a create; requiring one here rejected every
+            // create once the controller stopped minting them.
+            _repo.Setup(r => r.GetMailConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync((MailServerConfiguration?)null);
+
+            var request = ValidOutbound();
+            request.ConfigurationId = "";
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task Validate_OAuthConfiguration_DoesNotRequireUsernameOrPassword()
+        {
+            _repo.Setup(r => r.GetMailConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync((MailServerConfiguration?)null);
+
+            var request = ValidOutbound();
+            request.AuthenticationType = MailAuthenticationType.OAuthClientCredentials;
+            request.SenderUserName = "";
+            request.AccountPassword = "";
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeTrue();
         }
     }
 
@@ -292,11 +560,57 @@ namespace XUnitTest.Validators
         public async Task Validate_HappyPath_IsValid()
         {
             _repo.Setup(r => r.GetNotificationConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((Configuration.DomainService.Notification.Entities.NotificationConfiguration?)null);
+                 .ReturnsAsync((NotificationConfiguration?)null);
 
             var result = await Validator().ValidateAsync(Valid());
 
             result.IsValid.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task Validate_BuiltInFieldsInRange_IsValid()
+        {
+            _repo.Setup(r => r.GetNotificationConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync((NotificationConfiguration?)null);
+            var request = Valid();
+            request.IsBuiltIn = true;
+            request.IsDisabled = false;
+            request.Importance = NotificationImportance.High;
+            request.Kind = NotificationKind.Security;
+            request.Description = new string('d', 1000);
+            request.SourceService = "blocks-iam";
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeTrue();
+        }
+
+        [Theory]
+        [InlineData("Importance")]
+        [InlineData("Kind")]
+        [InlineData("Description")]
+        [InlineData("SourceService")]
+        [InlineData("ConsumerAppRecommendation")]
+        [InlineData("ConsumerAppNote")]
+        public async Task Validate_BuiltInFieldOutOfRange_Fails(string field)
+        {
+            _repo.Setup(r => r.GetNotificationConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync((NotificationConfiguration?)null);
+            var request = Valid();
+            switch (field)
+            {
+                case "Importance": request.Importance = (NotificationImportance)99; break;
+                case "Kind": request.Kind = (NotificationKind)99; break;
+                case "Description": request.Description = new string('d', 1001); break;
+                case "SourceService": request.SourceService = new string('s', 101); break;
+                case "ConsumerAppRecommendation": request.ConsumerAppRecommendation = new string('r', 2001); break;
+                case "ConsumerAppNote": request.ConsumerAppNote = new string('n', 2001); break;
+            }
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeFalse();
+            result.Errors.Should().Contain(e => e.PropertyName == field);
         }
 
         [Fact]
@@ -314,7 +628,7 @@ namespace XUnitTest.Validators
         public async Task Validate_DuplicateName_OnCreate_Fails()
         {
             _repo.Setup(r => r.GetNotificationConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync(new Configuration.DomainService.Notification.Entities.NotificationConfiguration());
+                 .ReturnsAsync(new NotificationConfiguration());
 
             var result = await Validator().ValidateAsync(Valid());
 
@@ -326,7 +640,7 @@ namespace XUnitTest.Validators
         public async Task Validate_UpdateRequest_SkipsUniquenessCheck()
         {
             _repo.Setup(r => r.GetNotificationConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync(new Configuration.DomainService.Notification.Entities.NotificationConfiguration());
+                 .ReturnsAsync(new NotificationConfiguration());
 
             var request = Valid();
             request.IsUpdateRequest = true;
@@ -340,7 +654,7 @@ namespace XUnitTest.Validators
         public async Task Validate_EmptyNotifyMethod_Fails()
         {
             _repo.Setup(r => r.GetNotificationConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((Configuration.DomainService.Notification.Entities.NotificationConfiguration?)null);
+                 .ReturnsAsync((NotificationConfiguration?)null);
 
             var request = Valid();
             request.NotifyMethod = "";

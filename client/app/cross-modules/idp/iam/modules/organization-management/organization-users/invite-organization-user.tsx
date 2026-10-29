@@ -32,11 +32,12 @@ import {
 } from "@blocks-idp/iam/hooks/use-organization";
 import { z } from "zod";
 import { useProjectStore } from "@seliseblocks/genesis-os";
-import { ChevronsUpDown, Check, Loader, Plus } from "lucide-react";
+import { Check, CircleCheck, Loader, Plus } from "lucide-react";
 import { isErrorWithErrors } from "@/lib/error";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui-kits/popover/popover";
+import { OrganizationCombobox } from "@blocks-idp/iam/components/organization-combobox";
+import { NotifyUserCheckbox } from "@blocks-idp/iam/components/notify-user-checkbox";
 
 const DEFAULT_ORGANIZATION_ID = "default";
 
@@ -49,13 +50,14 @@ const inviteOrganizationUserFormSchema = z.object({
     .string()
     .trim()
     .min(1, "Email is required")
-    .email({ message: "Please enter a valid email address" }),
+    .check(z.email("Please enter a valid email address")),
 });
 
 type InviteFormValues = z.infer<typeof inviteOrganizationUserFormSchema>;
 
 interface InviteOrganizationUserProps {
   organizationId: string;
+  organizationName?: string;
 }
 
 const extractFirstErrorMessage = (errors: unknown, fallback: string): string => {
@@ -69,19 +71,23 @@ const extractFirstErrorMessage = (errors: unknown, fallback: string): string => 
   return fallback;
 };
 
-export const InviteOrganizationUser = ({ organizationId }: InviteOrganizationUserProps) => {
+export const InviteOrganizationUser = ({
+  organizationId,
+  organizationName,
+}: InviteOrganizationUserProps) => {
   const { isPending: isCreatingUser, mutateAsync: createUser } = useAddUser();
   const queryClient = useQueryClient();
 
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const [open, setOpen] = useState(false);
-  const [orgPopoverOpen, setOrgPopoverOpen] = useState(false);
   const [selectedOrgId, setSelectedOrgId] = useState(organizationId);
+  const [notifyUser, setNotifyUser] = useState(true);
 
-  const { data: orgsData, isLoading: isOrgsLoading } = useGetOrganizations({
+  const { data: orgsData } = useGetOrganizations({
     page: 0,
-    pageSize: 1000,
+    pageSize: 10,
     projectKey: tenantId,
+    enabled: open,
   });
   const { data: configData, isLoading: isConfigLoading } = useGetOrganizationConfig(tenantId);
   const isMultiOrgEnabled = configData?.isMultiOrgEnabled ?? true;
@@ -93,15 +99,10 @@ export const InviteOrganizationUser = ({ organizationId }: InviteOrganizationUse
     () =>
       (orgsData?.organizations ?? []).some(
         (org) => org.isDisabled !== true && org.itemId !== DEFAULT_ORGANIZATION_ID,
-      ),
-    [orgsData?.organizations],
-  );
-
-  // Treat a missing/undefined isDisabled as enabled. Only explicitly disabled
-  // orgs (isDisabled === true) should be excluded from the picker.
-  const enabledOrgs = useMemo(
-    () => (orgsData?.organizations ?? []).filter((org) => org.isDisabled !== true),
-    [orgsData?.organizations],
+      ) ||
+      (orgsData?.totalCount ?? orgsData?.organizations?.length ?? 0) >
+        (orgsData?.organizations?.length ?? 0),
+    [orgsData?.organizations, orgsData?.totalCount],
   );
 
   const form = useForm<InviteFormValues>({
@@ -149,29 +150,11 @@ export const InviteOrganizationUser = ({ organizationId }: InviteOrganizationUse
 
   const isPending = isCreatingUser || isGrantingAccess;
 
-  // Dropdown list: enabled orgs with a synthetic "Default" entry pinned at the top.
-  // When the email maps to an existing user, hide orgs (including Default) they are already in.
-  const orgOptions = useMemo(() => {
-    const hideDefault = existingUserOrgIds.has(DEFAULT_ORGANIZATION_ID);
-    const list = enabledOrgs.filter(
-      (org) => org.itemId !== DEFAULT_ORGANIZATION_ID && !existingUserOrgIds.has(org.itemId),
-    );
-    return hideDefault
-      ? list
-      : [{ itemId: DEFAULT_ORGANIZATION_ID, name: "Default", isDisabled: false }, ...list];
-  }, [enabledOrgs, existingUserOrgIds]);
-
-  const orgIdToName = useMemo(() => {
-    const map = new Map<string, string>();
-    orgOptions.forEach((o) => map.set(o.itemId, o.name));
-    return map;
-  }, [orgOptions]);
-
   useEffect(() => {
     if (!open) {
       form.reset();
-      setOrgPopoverOpen(false);
       setSelectedOrgId(organizationId);
+      setNotifyUser(true);
       return;
     }
     // When multi-org is disabled we do not show an org picker, and the parent
@@ -188,17 +171,9 @@ export const InviteOrganizationUser = ({ organizationId }: InviteOrganizationUse
     }
   }, [open, isMultiOrgEnabled, orgsData, hasNonDefaultOrgs, form, organizationId]);
 
-  // If the current selected org becomes hidden (because the existing user is
-  // already a member of it), drop the selection so the trigger label and the
-  // submit-time org id stay in sync with the filtered dropdown.
-  useEffect(() => {
-    if (!open) return;
-    if (selectedOrgId && existingUserOrgIds.has(selectedOrgId)) {
-      setSelectedOrgId("");
-    }
-  }, [open, existingUserOrgIds, selectedOrgId]);
-
   const isFormInvalid = !isValidEmailFormat || (exists && !existingUserId);
+  const selectedOrganizationAlreadyAssigned =
+    exists && !!selectedOrgId && existingUserOrgIds.has(selectedOrgId);
 
   const onSubmitHandler = async (values: InviteFormValues) => {
     try {
@@ -213,6 +188,7 @@ export const InviteOrganizationUser = ({ organizationId }: InviteOrganizationUse
           organizationId: selectedOrgId,
           roles: [],
           permissions: [],
+          notifyUser,
         });
         if (!res.isSuccess) {
           showErrorToast({
@@ -237,6 +213,7 @@ export const InviteOrganizationUser = ({ organizationId }: InviteOrganizationUse
         userCreationType: 1,
         platform: "blocks_portal",
         organizationId: selectedOrgId,
+        notifyUser,
       });
       if (!res.isSuccess) {
         showErrorToast({
@@ -269,7 +246,7 @@ export const InviteOrganizationUser = ({ organizationId }: InviteOrganizationUse
       <DialogContent className="flex max-h-[90vh] flex-col sm:max-w-[480px]">
         <DialogHeader className="shrink-0">
           <DialogTitle>Invite Member</DialogTitle>
-          <DialogDescription className="!mt-2 text-sm text-medium-emphasis">
+          <DialogDescription className="mt-2! text-sm text-medium-emphasis">
             Add a member to this organization.
           </DialogDescription>
         </DialogHeader>
@@ -316,59 +293,39 @@ export const InviteOrganizationUser = ({ organizationId }: InviteOrganizationUse
               {isValidEmailFormat && !isConfigLoading && isMultiOrgEnabled && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Organization</label>
-                  <Popover open={orgPopoverOpen} onOpenChange={setOrgPopoverOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={orgPopoverOpen}
-                        className="w-full justify-between"
-                      >
-                        <span className="truncate text-sm font-normal">
-                          {selectedOrgId
-                            ? (orgIdToName.get(selectedOrgId) ?? selectedOrgId)
-                            : "Select organization"}
-                        </span>
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                      <div className="max-h-[260px] overflow-y-auto p-1">
-                        {orgOptions.length === 0 && !isOrgsLoading && (
-                          <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                            {exists
-                              ? "This user is already a member of all organizations"
-                              : "No organizations available"}
-                          </div>
-                        )}
-                        {orgOptions.map((org) => {
-                          const isSelected = selectedOrgId === org.itemId;
-                          return (
-                            <button
-                              key={org.itemId}
-                              type="button"
-                              onClick={() => {
-                                setSelectedOrgId(org.itemId);
-                                setOrgPopoverOpen(false);
-                              }}
-                              className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-muted/50"
-                            >
-                              <span className="flex-1 truncate">{org.name}</span>
-                              {isSelected && <Check className="h-4 w-4 text-primary" />}
-                            </button>
-                          );
-                        })}
-                        {isOrgsLoading && (
-                          <div className="flex items-center gap-2 px-2 py-1.5 text-sm text-muted-foreground">
-                            <Loader className="h-3.5 w-3.5 animate-spin" />
-                            Loading organizations...
-                          </div>
-                        )}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
+                  <OrganizationCombobox
+                    projectKey={tenantId}
+                    value={selectedOrgId}
+                    onValueChange={setSelectedOrgId}
+                    preselectedOrganizationIds={existingUserOrgIds}
+                    initialSelectedName={organizationName}
+                    emptyMessage={
+                      exists
+                        ? "This user is already a member of all organizations"
+                        : "No organizations available"
+                    }
+                  />
+                  {selectedOrganizationAlreadyAssigned && (
+                    <p
+                      role="status"
+                      className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400"
+                    >
+                      <CircleCheck className="h-3.5 w-3.5 shrink-0" />
+                      This user already has access to the selected organization.
+                    </p>
+                  )}
                 </div>
+              )}
+
+              {/* A new account always gets its activation mail, so the choice only
+                  applies when an existing user is being added to an organization. */}
+              {exists && !selectedOrganizationAlreadyAssigned && (
+                <NotifyUserCheckbox
+                  checked={notifyUser}
+                  onCheckedChange={setNotifyUser}
+                  disabled={isPending}
+                  description="Send them an email saying they were added to this organization."
+                />
               )}
             </div>
             <DialogFooter className="shrink-0 pt-4">
@@ -383,7 +340,10 @@ export const InviteOrganizationUser = ({ organizationId }: InviteOrganizationUse
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isPending || isFormInvalid}>
+              <Button
+                type="submit"
+                disabled={isPending || isFormInvalid || selectedOrganizationAlreadyAssigned}
+              >
                 {isPending ? (
                   <>
                     <Loader className="mr-2 h-4 w-4 animate-spin" />

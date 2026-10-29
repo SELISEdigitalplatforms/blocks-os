@@ -15,7 +15,7 @@ const LoadingSkelton = () => (
   <div className="grid w-full grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
     {Array.from({ length: 5 }).map((_, index) => (
       <div key={index} className="col-span-1 flex items-center py-2">
-        <div className="flex w-full items-center rounded-2xl border border-border px-4 py-2 shadow-sm">
+        <div className="flex w-full items-center rounded-2xl border border-border px-4 py-2 shadow-xs">
           <div className="flex min-w-0 flex-1 flex-col space-y-1">
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-3 w-16" />
@@ -43,7 +43,7 @@ export const UserRolesList = ({
           roles.length > 0 &&
           roles.map((item) => (
             <div key={item.itemId} className="col-span-1 flex items-center py-2">
-              <div className="flex w-full items-center rounded-2xl border border-border px-4 py-2 shadow-sm">
+              <div className="flex w-full items-center rounded-2xl border border-border px-4 py-2 shadow-xs">
                 <div className="flex min-w-0 flex-1 flex-col">
                   <span
                     className="truncate text-base font-medium leading-tight"

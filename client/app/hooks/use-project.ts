@@ -1,6 +1,6 @@
-import { shortGuidGenerator, useCreateProjectFormState } from "@/components/create-project/utils";
+import { useCreateProjectFormState } from "@/components/create-project/utils";
+import { buildCreateProjectPayload } from "@/utils/create-project-payload";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-import { getRuntimeEnv } from "@/lib/runtime-env";
 import {
   IRestoreProjectPayload,
   IUpdateProjectPayload,
@@ -9,9 +9,13 @@ import {
 import { projectService } from "@/services/project.service";
 import { projectService as crossProjectService } from "@blocks-identifier/services/project.service";
 import { useImpersonateStore, useProjectStore } from "@seliseblocks/genesis-os";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useNavigate } from "react-router";
+
+const GET_ASSETS_KEY = "get-assets";
+const ENV_REPOSITORIES_KEY = "env-repositories";
+const MIGRATION_STATUS_KEY = "migration-status";
 
 export const useGetProjects = ({
   tenantGroupId,
@@ -26,7 +30,7 @@ export const useGetProjects = ({
     queryKey: ["identifier", "projects", tenantGroupId],
     queryFn: () => projectService.getProjects(0, 100, tenantGroupId),
     enabled: enabled,
-    staleTime: 5 * 60 * 1000, // 5 minutes - prevent unnecessary re-fetches during navigation
+    staleTime: 30 * 1000, // short, so lists do not show stale environments; mutations also invalidate
   });
 
   useEffect(() => {
@@ -63,8 +67,11 @@ export const useGetAssets = (
   search: string = "",
 ) => {
   return useQuery({
-    queryKey: ["get-assets", tenantGroupId, page, pageSize, search],
-    queryFn: () => crossProjectService.getAssets(tenantGroupId),
+    queryKey: [GET_ASSETS_KEY, tenantGroupId, page, pageSize, search],
+    queryFn: () => crossProjectService.getAssets(tenantGroupId, page, pageSize, search),
+    // Paging and searching are server side, so hold the previous page on screen while the
+    // next one loads instead of dropping back to the skeleton on every keystroke.
+    placeholderData: keepPreviousData,
   });
 };
 
@@ -74,15 +81,27 @@ export const useAddAssets = () => {
     mutationKey: ["assets", "add"],
     mutationFn: crossProjectService.addAssets,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["get-assets"] });
-      queryClient.invalidateQueries({ queryKey: ["env-repositories"] });
+      queryClient.invalidateQueries({ queryKey: [GET_ASSETS_KEY] });
+      queryClient.invalidateQueries({ queryKey: [ENV_REPOSITORIES_KEY] });
+    },
+  });
+};
+
+export const useDeleteAsset = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: ["assets", "delete"],
+    mutationFn: crossProjectService.deleteAsset,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [GET_ASSETS_KEY] });
+      queryClient.invalidateQueries({ queryKey: [ENV_REPOSITORIES_KEY] });
     },
   });
 };
 
 export const useGetEnvRepositories = (projectKey: string) => {
   return useQuery({
-    queryKey: ["env-repositories", projectKey],
+    queryKey: [ENV_REPOSITORIES_KEY, projectKey],
     queryFn: () => crossProjectService.getEnvRepositories(),
     enabled: !!projectKey,
   });
@@ -91,10 +110,10 @@ export const useGetEnvRepositories = (projectKey: string) => {
 export const useUpdateRepositories = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationKey: ["env-repositories", "update"],
+    mutationKey: [ENV_REPOSITORIES_KEY, "update"],
     mutationFn: crossProjectService.repoUpdate,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["env-repositories"] });
+      queryClient.invalidateQueries({ queryKey: [ENV_REPOSITORIES_KEY] });
     },
   });
 };
@@ -120,8 +139,8 @@ export const useUpdateTenantGroup = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["identifier", "projects"] });
       queryClient.invalidateQueries({ queryKey: ["identifier", "project"] });
-      queryClient.invalidateQueries({ queryKey: ["get-assets"] });
-      queryClient.invalidateQueries({ queryKey: ["env-repositories"] });
+      queryClient.invalidateQueries({ queryKey: [GET_ASSETS_KEY] });
+      queryClient.invalidateQueries({ queryKey: [ENV_REPOSITORIES_KEY] });
     },
   });
 };
@@ -145,10 +164,13 @@ export const useDisableProject = (options: { projectKey: string }) => {
     mutationKey: ["identifier", "projects", "disable"],
     mutationFn: () => crossProjectService.disableProject(options),
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["identifier", "project", options],
-      });
+      // "project" is keyed by tenant id, so match the whole prefix.
+      queryClient.invalidateQueries({ queryKey: ["identifier", "project"] });
       queryClient.invalidateQueries({ queryKey: ["identifier", "projects"] });
+      // Disabling an environment changes who has access and what the plan counts.
+      queryClient.invalidateQueries({ queryKey: ["people"] });
+      queryClient.invalidateQueries({ queryKey: ["subscription-usage"] });
+      queryClient.invalidateQueries({ queryKey: [ENV_REPOSITORIES_KEY] });
     },
   });
 };
@@ -175,6 +197,9 @@ export const useRestoreProject = () => {
   });
 };
 
+// Environments are provisioned by a background worker, so the first refetch can miss the new one.
+export const PROJECT_LATE_REFETCH_MS = 3000;
+
 export const useCreateProject = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -182,17 +207,39 @@ export const useCreateProject = () => {
     mutationFn: crossProjectService.createProject,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["identifier", "projects"] });
-      queryClient.invalidateQueries({ queryKey: ["get-assets"] });
-      queryClient.invalidateQueries({ queryKey: ["env-repositories"] });
+      queryClient.invalidateQueries({ queryKey: [GET_ASSETS_KEY] });
+      queryClient.invalidateQueries({ queryKey: [ENV_REPOSITORIES_KEY] });
+      // One more refetch shortly after, so the new environment shows without a reload.
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["identifier", "projects"] });
+      }, PROJECT_LATE_REFETCH_MS);
     },
   });
 };
 
+// The server only returns trackers with unfinished services, and the environments page treats
+// one as ongoing for ten minutes after it was created.
+export const MIGRATION_ONGOING_WINDOW_MS = 10 * 60 * 1000;
+const MIGRATION_STATUS_POLL_MS = 5000;
+
 export const useGetMigrationStatus = (tenantGroupId: string) => {
   return useQuery({
-    queryKey: ["identifier", "migration-status", tenantGroupId],
+    queryKey: ["identifier", MIGRATION_STATUS_KEY, tenantGroupId],
     queryFn: () => crossProjectService.getMigrationStatus(tenantGroupId),
     enabled: !!tenantGroupId,
+    // The completion push alone is not enough. The wizard redirects from the console layout to
+    // the project layout, and genesis-os tears the notification socket down and rebuilds it on
+    // that switch; a migration that finishes a couple of seconds later pushes into the gap and
+    // SignalR does not replay it. Poll while a migration is in its ongoing window.
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (!Array.isArray(data)) return false;
+      const cutoff = Date.now() - MIGRATION_ONGOING_WINDOW_MS;
+      const hasOngoing = data.some(
+        (d) => !!d.createdDate && new Date(d.createdDate).getTime() > cutoff,
+      );
+      return hasOngoing ? MIGRATION_STATUS_POLL_MS : false;
+    },
   });
 };
 
@@ -203,7 +250,7 @@ export const useInitiateMigration = () => {
     mutationFn: crossProjectService.initiateMigration,
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["identifier", "migration-status"],
+        queryKey: ["identifier", MIGRATION_STATUS_KEY],
       });
     },
   });
@@ -216,7 +263,7 @@ export const useVerifyMigration = () => {
     mutationFn: crossProjectService.verifyMigration,
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["identifier", "migration-status"],
+        queryKey: ["identifier", MIGRATION_STATUS_KEY],
       });
       queryClient.invalidateQueries({ queryKey: ["identifier", "projects"] });
     },
@@ -233,28 +280,17 @@ export const useProjectForm = () => {
   const saveProject = async () => {
     try {
       const environments = formData[2]?.environments || [];
-      const shortGuid = shortGuidGenerator(5);
-      const baseDomain = getRuntimeEnv("BLOCKS_BASE_DOMAIN") || "seliseblocks.com";
-      const applicationContexts =
-        environments.map((env: { value: string }) => ({
-          environment: env.value,
-          domain: `https://${env.value === "main" ? "" : env.value}-${shortGuid}.${baseDomain}`,
-          cookieDomain: baseDomain,
-        })) || [];
-
       const assets = formData[1]?.assets || [];
 
-      const response = await mutateAsync({
-        name: formData[0].name,
-        isAcceptBlocksTerms: formData[0].isAcceptBlocksTerms,
-        isUseBlocksExclusively: formData[0].isUseBlocksExclusively,
-        resources: assets.map((asset) => ({
-          name: asset.full_name,
-          link: asset.html_url,
-          resourceId: asset.id !== undefined ? String(asset.id) : "",
-        })),
-        applicationContexts,
-      });
+      const response = await mutateAsync(
+        buildCreateProjectPayload({
+          name: formData[0].name,
+          isAcceptBlocksTerms: formData[0].isAcceptBlocksTerms,
+          isUseBlocksExclusively: formData[0].isUseBlocksExclusively,
+          environments,
+          assets,
+        }),
+      );
       if (response?.isSuccess) {
         showSuccessToast({ description: "Your project has been created." });
         setTenantGroup(response.tenantGroupId);

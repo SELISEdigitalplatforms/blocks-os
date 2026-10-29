@@ -11,12 +11,20 @@ export const USER_ENDPOINTS = {
   USER_INFO: `${API_BASES.IAM}/idp/UserInfo`,
   CREATE: `${API_BASES.IAM}${IAM_SUBPATH}/users/create`,
   UPDATE: `${API_BASES.IAM}${IAM_SUBPATH}/users/update`,
-  GET_SIGNUP_SETTING: `${API_BASES.IAM}${IAM_SUBPATH}/signup-settings`,
+  // The authenticated read. The bare GET /signup-settings is anonymous (for OIDC login and
+  // public signup) and resolves its tenant from X-Blocks-Key, which here names the root
+  // tenant -- so without a valid token it answers 200 with the root tenant's settings.
+  GET_SIGNUP_SETTING: `${API_BASES.IAM}${IAM_SUBPATH}/signup-settings/admin`,
   SAVE_SIGNUP_SETTING: `${API_BASES.IAM}${IAM_SUBPATH}/signup-settings`,
   SAVE_ROLES_AND_PERMISSIONS: `${API_BASES.IAM}${IAM_SUBPATH}/roles-permissions`,
 
   UPDATE_ME: `${API_BASES.IAM}${IAM_SUBPATH}/me`,
   ACCESS_CONTROL: `${API_BASES.IAM}${IAM_SUBPATH}/users/access`,
+  // Bulk role delta. The preview is read-only and answers how many users would
+  // change; the submit queues the work on IAM's background worker and returns 202
+  // before anything has been written.
+  BULK_ROLES_PREVIEW: `${API_BASES.IAM}${IAM_SUBPATH}/users/roles/bulk/preview`,
+  BULK_ROLES: `${API_BASES.IAM}${IAM_SUBPATH}/users/roles/bulk`,
   REVOKE_ACCESS: `${API_BASES.IAM}${IAM_SUBPATH}/users/revoke-access`,
   EXISTS: `${API_BASES.IAM}${IAM_SUBPATH}/users/exists`,
 
@@ -33,11 +41,6 @@ export const USER_ENDPOINTS = {
 
   GET_SESSIONS: `${API_BASES.IAM}${IAM_SUBPATH}/sessions`,
   GET_HISTORIES: `${API_BASES.IAM}${IAM_SUBPATH}/history`,
-  // Personal access tokens live under /auth/user-codes (GET lists, POST issues).
-  // The old /auth/PascalCase pair does not exist and falls through to the IAM
-  // SPA, so the client got an HTML document back instead of JSON.
-  GET_USER_CODES: `${API_BASES.IAM}/auth/user-codes`,
-  GENERATE_USER_CODE: `${API_BASES.IAM}/auth/user-codes`,
 } as const;
 
 // ─── Account endpoints (account.service) ────────────────────────────────────
@@ -60,7 +63,16 @@ export const ROLE_ENDPOINTS = {
   CREATE_ROLE: `${API_BASES.IAM}${IAM_SUBPATH}/roles/create`,
   UPDATE_ROLE: `${API_BASES.IAM}${IAM_SUBPATH}/roles/update`,
   SET_ROLES: `${API_BASES.IAM}${IAM_SUBPATH}/roles/assign-permissions`,
+  // POST despite being a read: the diff it previews is two id lists.
+  PERMISSION_CHANGE_IMPACT: `${API_BASES.IAM}${IAM_SUBPATH}/roles/permission-change-impact`,
   GET_ALL_ASSIGNED_ROLES: `${API_BASES.IAM}${IAM_SUBPATH}/roles/assignable`,
+} as const;
+
+// ─── Access grant (grant-scope.service) ──────────────────────────
+
+export const GRANT_ENDPOINTS = {
+  // What the token's user may grant in the token's organization. Read-only.
+  SCOPE: `${API_BASES.IAM}${IAM_SUBPATH}/grant-scope`,
 } as const;
 
 // ─── Permission endpoints (permission.service) ─────────────────────────────
@@ -83,13 +95,31 @@ export const ORGANIZATION_ENDPOINTS = {
   GET_ORGANIZATION: `${API_BASES.IAM}${IAM_SUBPATH}/organizations`,
   // Base path for the update route, POST /organizations/{id}.
   SAVE_ORGANIZATION: `${API_BASES.IAM}${IAM_SUBPATH}/organizations`,
-  GET_ORGANIZATION_CONFIG: `${API_BASES.IAM}${IAM_SUBPATH}/organizations/config`,
+  // Authenticated read, for the same reason as USER_ENDPOINTS.GET_SIGNUP_SETTING: the bare
+  // GET /organizations/config is anonymous and answers for the X-Blocks-Key (root) tenant.
+  GET_ORGANIZATION_CONFIG: `${API_BASES.IAM}${IAM_SUBPATH}/organizations/config/admin`,
   SAVE_ORGANIZATION_CONFIG: `${API_BASES.IAM}${IAM_SUBPATH}/organizations/config`,
 } as const;
 
 // ─── IAM configuration endpoints (configuration.service) ───────────────────
 
+export const SIGNUP_LINK_CONFIGURATION_ENDPOINTS = {
+  // Collection root. Create is POST here; query is POST to /query (filter in body), same as roles.
+  BASE: `${API_BASES.IAM}${IAM_SUBPATH}/signup-links/configurations`,
+  QUERY: `${API_BASES.IAM}${IAM_SUBPATH}/signup-links/configurations/query`,
+} as const;
+
 export const IAM_CONFIGURATION_ENDPOINTS = {
   GET: `${API_BASES.IAM}${IAM_SUBPATH}/config`,
   SAVE: `${API_BASES.IAM}${IAM_SUBPATH}/config`,
+} as const;
+
+// ─── Signup link activity (portal summary only) ─────────────────────────────
+
+export const SIGNUP_LINK_ENDPOINTS = {
+  // The portal's ONLY signup-link endpoint. Generation, listing and revocation are
+  // permission-protected API surfaces for the calling service, not portal actions --
+  // a generated link is a bearer credential and this console is not in its delivery
+  // path. Do not add BASE / QUERY / REVOKE here.
+  SUMMARY: `${API_BASES.IAM}${IAM_SUBPATH}/signup-links/summary`,
 } as const;

@@ -54,6 +54,7 @@ type BuildIdentityProviderPayloadArgs = {
   cleanedUris: string[];
   selectedRoles: IRole[];
   selectedPermissions: IPermission[];
+  scopes: string[];
   requirePkce: boolean;
   blocksOidcWellKnownUrl: string;
   editedProvider?: IdentityProvider;
@@ -66,6 +67,7 @@ export const buildIdentityProviderPayload = ({
   cleanedUris,
   selectedRoles,
   selectedPermissions,
+  scopes,
   requirePkce,
   blocksOidcWellKnownUrl,
   editedProvider,
@@ -92,7 +94,7 @@ export const buildIdentityProviderPayload = ({
     audience: values.audience || editedProvider?.audience,
     wellKnownUrl,
     tokenEndpointAuthMethod: editedProvider?.tokenEndpointAuthMethod ?? "client_secret_basic",
-    scope: editedProvider?.scope ?? "openid",
+    scope: scopes.length ? scopes.join(" ") : (editedProvider?.scope ?? "openid"),
     redirectUris: cleanedUris,
     requirePkce,
     initialRoles: selectedRoles.map((role) => role.slug),
@@ -103,7 +105,8 @@ export const buildIdentityProviderPayload = ({
     return {
       ...editedProvider,
       ...sharedFields,
-      clientSecret: values.clientSecret || editedProvider.clientSecret,
+      // The API never returns the stored secret. Empty keeps it; a typed value replaces it.
+      clientSecret: values.clientSecret,
       isActive: editedProvider.isActive,
       itemId: editId ?? editedProvider.itemId,
     };

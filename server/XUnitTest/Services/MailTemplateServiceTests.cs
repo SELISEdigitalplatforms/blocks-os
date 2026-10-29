@@ -1,8 +1,11 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Configuration.DomainService.Mail.Entities;
+using Blocks.Genesis;
 using Configuration.DomainService.Mail.Template;
 using Configuration.DomainService.Mail.Template.Services;
 using FluentAssertions;
@@ -10,6 +13,7 @@ using FluentValidation;
 using FluentValidation.Results;
 using Moq;
 using XUnitTest.TestSupport;
+using Blocks.Genesis.Entities.Os;
 
 namespace XUnitTest.Services
 {
@@ -17,8 +21,23 @@ namespace XUnitTest.Services
     {
         private readonly Mock<IValidator<SaveMailTemplateRequest>> _validator = new();
         private readonly Mock<IMailTemplateRepository> _repo = new();
+        private readonly Mock<IMailTemplateHtmlChecker> _htmlChecker = new();
 
-        private MailTemplateService Service() => new(_validator.Object, _repo.Object);
+        private MailTemplateService Service() =>
+            new(_validator.Object, _repo.Object, _htmlChecker.Object);
+
+        [Fact]
+        public async Task CloneTemplateAsync_WhenTheSourceBodyBreaksTheHtmlRules_SavesNothing()
+        {
+            _repo.Setup(r => r.GetByIdAsync("src")).ReturnsAsync(new EmailTemplate { ItemId = "src", Name = "Old", TemplateBody = "<a href=\"https://evil.example\">x</a>" });
+            _htmlChecker.Setup(c => c.FindProblem(It.IsAny<string?>())).Returns("A link to evil.example is not allowed.");
+
+            var response = await Service().CloneTemplateAsync(new CloneMailTemplateRequest { ItemId = "src" });
+
+            response.IsSuccess.Should().BeFalse();
+            response.Errors.Should().ContainKey(nameof(EmailTemplate.TemplateBody));
+            _repo.Verify(r => r.SaveAsync(It.IsAny<EmailTemplate>()), Times.Never);
+        }
 
         private void ValidationSucceeds() =>
             _validator.Setup(v => v.ValidateAsync(It.IsAny<SaveMailTemplateRequest>(), It.IsAny<CancellationToken>()))
@@ -150,10 +169,10 @@ namespace XUnitTest.Services
         }
 
         [Fact]
-        public async Task GetAsync_DelegatesToRepository()
+        public async Task GetAsync_ReadsTheTemplateAsTheCallerMayView()
         {
             var template = new EmailTemplate { ItemId = "t1" };
-            _repo.Setup(r => r.GetByIdAsync("t1")).ReturnsAsync(template);
+            _repo.Setup(r => r.GetForViewAsync("t1")).ReturnsAsync(template);
 
             var response = await Service().GetAsync(new GetMailTemplateRequest { ItemId = "t1" });
 

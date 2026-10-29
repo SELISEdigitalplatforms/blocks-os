@@ -55,13 +55,20 @@ export const ManageOrganizationDialog = ({
   const hydratedKeyRef = useRef("");
 
   const { data: userData } = useGetUserById({ id: userId, projectKey: tenantId }, { enabled: open });
+  // Scoped to the organization being edited, not the tenant: what is picked here is
+  // written into that organization's key, so listing another organization's roles
+  // would let the operator assign something that does not exist there. Before an
+  // organization is chosen this is "default", the one every account belongs to.
+  const scopedOrganizationId = selectedOrgId || DEFAULT_ORGANIZATION_ID;
+
   const { data: rolesData } = useGetRoles(
     {
       page: 0,
       pageSize: 1000,
       sort: { property: "Name", isDescending: false },
       filter: { search: "" },
-      projectKey: tenantId,
+      projectKey: scopedOrganizationId,
+      organizationId: scopedOrganizationId,
     },
     // Don't fetch roles/permissions until the dialog is opened. They aren't
     // needed otherwise, and this avoids a tenant-scoped duplicate call on
@@ -70,7 +77,8 @@ export const ManageOrganizationDialog = ({
   );
   const { data: permissionsData } = useGetPermissions(
     {
-      projectKey: tenantId,
+      projectKey: scopedOrganizationId,
+      organizationId: scopedOrganizationId,
       page: 0,
       pageSize: 1000,
       search: "",
@@ -105,18 +113,18 @@ export const ManageOrganizationDialog = ({
     () => new Map((rolesData?.data || []).map((role) => [role.slug, role])),
     [rolesData?.data],
   );
-  const permissionByName = useMemo(
-    () => new Map((permissionsData?.data || []).map((permission) => [permission.name, permission])),
+  const permissionByResource = useMemo(
+    () => new Map((permissionsData?.data || []).map((permission) => [permission.resource, permission])),
     [permissionsData?.data],
   );
 
   const getExistingSelection = (orgId: string) => {
     const user = userData?.data;
-    if (!user || !orgId) return { roleSlugs: [], permissionNames: [] };
+    if (!user || !orgId) return { roleSlugs: [], permissionResources: [] };
 
     const membership = user.organizations?.find((item) => item.organizationId === orgId);
     if (membership) {
-      return { roleSlugs: membership.roles ?? [], permissionNames: membership.permissions ?? [] };
+      return { roleSlugs: membership.roles ?? [], permissionResources: membership.permissions ?? [] };
     }
 
     return {
@@ -124,7 +132,7 @@ export const ManageOrganizationDialog = ({
         user.OrganizationsRoles?.[orgId] ??
         user.roles?.[orgId] ??
         [],
-      permissionNames:
+      permissionResources:
         user.OrganizationsPermissions?.[orgId] ??
         user.permissions?.[orgId] ??
         [],
@@ -134,15 +142,15 @@ export const ManageOrganizationDialog = ({
   const handleOrgChange = (orgId: string) => {
     setSelectedOrgId(orgId);
 
-    const { roleSlugs, permissionNames } = getExistingSelection(orgId);
+    const { roleSlugs, permissionResources } = getExistingSelection(orgId);
     setSelectedRoles(
       roleSlugs.map((slug) => roleBySlug.get(slug) ?? createRoleStub({ slug })),
     );
     setSelectedPermissions(
-      permissionNames.map(
-        (name) =>
-          permissionByName.get(name) ??
-          ({ itemId: name, name, resource: name, resourceGroup: "Other" } as IPermission),
+      permissionResources.map(
+        (resource) =>
+          permissionByResource.get(resource) ??
+          ({ itemId: resource, name: resource, resource, resourceGroup: "Other" } as IPermission),
       ),
     );
   };
@@ -264,10 +272,15 @@ export const ManageOrganizationDialog = ({
                 </p>
               ) : (
                 <div className="animate-in fade-in-0 slide-in-from-top-1 flex flex-col gap-5 pt-0.5 duration-300">
-                  <OrganizationRolesField roles={selectedRoles} onChange={setSelectedRoles} />
+                  <OrganizationRolesField
+                    roles={selectedRoles}
+                    onChange={setSelectedRoles}
+                    organizationId={scopedOrganizationId}
+                  />
                   <OrganizationPermissionsField
                     permissions={selectedPermissions}
                     onChange={setSelectedPermissions}
+                    organizationId={scopedOrganizationId}
                   />
                 </div>
               )}
@@ -296,3 +309,4 @@ export const ManageOrganizationDialog = ({
     </Dialog>
   );
 };
+ 

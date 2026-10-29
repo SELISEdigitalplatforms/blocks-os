@@ -5,6 +5,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
+import { Badge } from "@/components/ui-kits/badge/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui-kits/popover/popover";
 import { Building2, ListFilter, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -36,6 +37,20 @@ const formatUpdatedAgo = (value?: string) => {
 type StatusFilter = "active" | "disabled";
 
 const ALL_STATUSES: StatusFilter[] = ["active", "disabled"];
+
+// The list endpoint is only queried once the term is long enough (see
+// normalizeSearchQueryText); below that the box looks like it is doing nothing,
+// so say why.
+const SEARCH_MIN_LENGTH = 3;
+const SEARCH_HINT = `Type at least ${SEARCH_MIN_LENGTH} characters to search`;
+const SEARCH_HINT_ID = "organizations-search-hint";
+
+// The scroll container fills whatever height the parent grid cell hands it
+// (the grid is sized to `calc(100vh - --org-page-offset)` at lg+, so it tracks
+// the real viewport instead of a fixed px value). `flex-1` plus the card's
+// `h-full` is what makes the existing IntersectionObserver `onLoadMore` keep
+// working with the page-size accumulating in the parent.
+const SIDEBAR_LIST_HEIGHT = "flex-1";
 
 type OrganizationsSidebarListProps = {
   organizations: IOrganization[];
@@ -74,9 +89,18 @@ export const OrganizationsSidebarList = ({
   };
 
   const handleClearSearch = () => {
+    // Drop the keystroke still waiting on the debounce, otherwise it fires a
+    // moment later and re-applies the term the user just cleared.
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     setLocalSearch("");
     onSearchChange("");
   };
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   const toggleStatus = (status: StatusFilter) => {
     setStatusFilter((prev) =>
@@ -104,60 +128,74 @@ export const OrganizationsSidebarList = ({
     statusFilter.includes(org.isDisabled ? "disabled" : "active"),
   );
   const isFiltered = statusFilter.length !== ALL_STATUSES.length;
+  // Driven by the immediate value rather than the debounced prop, so the hint
+  // tracks the keystroke instead of trailing it by 300ms.
+  const trimmedSearchLength = localSearch.trim().length;
+  const showSearchHint = trimmedSearchLength > 0 && trimmedSearchLength < SEARCH_MIN_LENGTH;
 
   return (
     <div className="flex h-full min-h-0 flex-col rounded-lg border bg-card">
-      <div className="flex items-center gap-2 border-b p-3">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={localSearch}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            placeholder="Search organizations..."
-            className="pl-9 pr-8"
-          />
-          {localSearch && (
-            <button
-              onClick={handleClearSearch}
-              aria-label="Clear search"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              className={cn("shrink-0", isFiltered && "border-primary text-primary")}
-              aria-label="Filter organizations"
-            >
-              <ListFilter className="h-4 w-4" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-48 p-2">
-            <p className="mb-1 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Status
-            </p>
-            {ALL_STATUSES.map((status) => (
-              <label
-                key={status}
-                className="flex cursor-pointer items-center gap-2 rounded px-1 py-1.5 text-sm hover:bg-muted/50"
+      <div className="border-b p-3">
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={localSearch}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              placeholder="Search organizations..."
+              className="pl-9 pr-8"
+              aria-describedby={showSearchHint ? SEARCH_HINT_ID : undefined}
+            />
+            {localSearch && (
+              <button
+                onClick={handleClearSearch}
+                aria-label="Clear search"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
               >
-                <Checkbox
-                  checked={statusFilter.includes(status)}
-                  onCheckedChange={() => toggleStatus(status)}
-                />
-                <span className="capitalize">{status}</span>
-              </label>
-            ))}
-          </PopoverContent>
-        </Popover>
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className={cn("shrink-0", isFiltered && "border-primary text-primary")}
+                aria-label="Filter organizations"
+              >
+                <ListFilter className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-48 p-2">
+              <p className="mb-1 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Status
+              </p>
+              {ALL_STATUSES.map((status) => (
+                <label
+                  key={status}
+                  className="flex cursor-pointer items-center gap-2 rounded px-1 py-1.5 text-sm hover:bg-muted/50"
+                >
+                  <Checkbox
+                    checked={statusFilter.includes(status)}
+                    onCheckedChange={() => toggleStatus(status)}
+                  />
+                  <span className="capitalize">{status}</span>
+                </label>
+              ))}
+            </PopoverContent>
+          </Popover>
+        </div>
+        {/* role=status so the hint is announced when it appears, not only when
+            the input happens to be re-read. */}
+        {showSearchHint && (
+          <p id={SEARCH_HINT_ID} role="status" className="mt-1.5 text-xs text-muted-foreground">
+            {SEARCH_HINT}
+          </p>
+        )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2">
+      <div className={cn("overflow-y-auto p-2", SIDEBAR_LIST_HEIGHT)}>
         {isLoading ? (
           <div className="space-y-2 p-1">
             {Array.from({ length: 5 }).map((_, index) => (
@@ -204,9 +242,16 @@ export const OrganizationsSidebarList = ({
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <span className="truncate text-sm font-semibold text-high-emphasis">
-                      {org.name}
-                    </span>
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <span className="truncate text-sm font-semibold text-high-emphasis">
+                        {org.name}
+                      </span>
+                      {org.isDisabled && (
+                        <Badge variant="error" className="shrink-0 px-1.5 py-0 text-[10px]">
+                          Disabled
+                        </Badge>
+                      )}
+                    </div>
                     <p className="mt-0.5 truncate text-xs text-muted-foreground">
                       {updatedLabel && <>Updated {updatedLabel}</>}
                     </p>

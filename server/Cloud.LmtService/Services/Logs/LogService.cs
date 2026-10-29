@@ -1,5 +1,6 @@
 ﻿using Cloud.LmtService.Models.Logs;
 using Cloud.LmtService.Repositories.Logs;
+using Cloud.LmtService.Utilities;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -28,6 +29,21 @@ namespace Cloud.LmtService.Services.Logs
                    serviceNames?.Any(name => !string.IsNullOrWhiteSpace(name)) == true;
         }
 
+        // IQueryable<T>.Select binds to Queryable.Select (Expression<Func<...>>), which cannot
+        // hold a statement-bodied lambda with assignments. Materializing first keeps the
+        // mutation as plain, compilable code and still returns an IQueryable for the response.
+        private static IQueryable<LogProjection> RedactLogs(IQueryable<LogProjection> logs)
+        {
+            var materialized = logs.ToList();
+            foreach (var log in materialized)
+            {
+                log.Message = LogRedactor.Redact(log.Message);
+                log.Exception = LogRedactor.Redact(log.Exception);
+            }
+
+            return materialized.AsQueryable();
+        }
+
         public async Task<GetLogsResponse> GetLiveLogsAsync(LiveLogRequest request)
         {
             _logger.LogInformation("Start of GetLiveLogsAsync");
@@ -41,7 +57,7 @@ namespace Cloud.LmtService.Services.Logs
 
             var result = await _logRepository.GetLogs(request);
 
-            return new GetLogsResponse { Data = result };
+            return new GetLogsResponse { Data = RedactLogs(result) };
         }
 
         public async Task<GetLogsResponse> GetLogsAsync(GetLogsRequest request)
@@ -57,7 +73,7 @@ namespace Cloud.LmtService.Services.Logs
 
             var (result, total) = await _logRepository.GetLogs(request);
 
-            return new GetLogsResponse { Data = result, TotalCount = total };
+            return new GetLogsResponse { Data = RedactLogs(result), TotalCount = total };
         }
 
         public async Task<GetLogsResponse> GetLogsByDateAsync(LogsByDateRequest request)
@@ -73,7 +89,7 @@ namespace Cloud.LmtService.Services.Logs
 
             var (result, total) = await _logRepository.GetLogs(request);
 
-            return new GetLogsResponse { Data = result, TotalCount = total };
+            return new GetLogsResponse { Data = RedactLogs(result), TotalCount = total };
         }
     }
 }

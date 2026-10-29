@@ -24,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui-kits/table/table";
 import { useProjectStore } from "@seliseblocks/genesis-os";
-import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
+import { useGetGrantablePermissions } from "@blocks-idp/iam/hooks/use-permission";
 import { IPermission, RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
 import { Plus, KeyRound } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -34,15 +34,19 @@ import {
   getNewlySelectedPermissions,
   getTotalPermissionCount,
   isAtMaxPermissions,
-  isPermissionAssigned,
-  isSelectedInModal,
+  isPermissionInList,
   shouldDisablePermissionCheckbox,
   togglePermissionSelection,
 } from "./permission-selection.utils";
+import { GrantHint } from "@blocks-idp/iam/components/grant-hint";
 
 type AddOrganizationPermissionProps = {
   permissions: IPermission[];
-  /** Called with the picked new permissions on confirm. */
+  /**
+   * Called with the final selection state on confirm. The argument contains
+   * every permission that should remain assigned — pre-existing assignments
+   * that the user unchecked are removed, and newly checked ones are added.
+   */
   onAdd: (data: IPermission[]) => void;
   onSave?: () => void;
   organizationId?: string;
@@ -57,7 +61,7 @@ export const AddOrganizationPermission = ({
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const scopeKey = organizationId || tenantId;
   const [open, setOpen] = useState<boolean>(false);
-  const [selectedPermissions, setSelectedPermissions] = useState<IPermission[]>([]);
+  const [selectedPermissions, setSelectedPermissions] = useState<IPermission[]>(permissions);
   const [filter, setFilter] = useState({
     page: 0,
     pageSize: 5,
@@ -66,22 +70,38 @@ export const AddOrganizationPermission = ({
     search: "",
   });
 
-  const { data, isLoading } = useGetPermissions(
+  const { data, isLoading } = useGetGrantablePermissions(
     {
       ...filter,
       projectKey: scopeKey,
+      // See the matching note in add-organization-role: projectKey is a cache
+      // discriminator, organizationId is what scopes the query.
+      organizationId,
     },
     { enabled: open && !!scopeKey },
   );
 
   const reset = () => {
-    setSelectedPermissions([]);
+    setSelectedPermissions(permissions);
     setFilter({ page: 0, pageSize: 5, isBuiltIn: "", roles: [], search: "" });
   };
 
   const newlySelectedPermissions = useMemo(
     () => getNewlySelectedPermissions(selectedPermissions, permissions),
     [selectedPermissions, permissions],
+  );
+
+  const deselectedPermissions = useMemo(
+    () =>
+      permissions.filter(
+        (assigned) => !isPermissionInList(assigned, selectedPermissions),
+      ),
+    [permissions, selectedPermissions],
+  );
+
+  const finalSelection = useMemo(
+    () => [...permissions.filter((p) => !isPermissionInList(p, deselectedPermissions)), ...newlySelectedPermissions],
+    [permissions, newlySelectedPermissions, deselectedPermissions],
   );
 
   const totalPermissionCount = getTotalPermissionCount(permissions, selectedPermissions);
@@ -106,12 +126,9 @@ export const AddOrganizationPermission = ({
   };
 
   const getCheckboxAriaLabel = (item: IPermission) => {
-    const selected = isSelectedInModal(item, permissions, selectedPermissions);
+    const selected = isPermissionInList(item, selectedPermissions);
     const disabled = shouldDisablePermissionCheckbox(item, permissions, selectedPermissions);
 
-    if (isPermissionAssigned(item, permissions)) {
-      return `${item.name} already assigned`;
-    }
     if (disabled && atMaxPermissions) {
       return `${item.name} unavailable, maximum of ${MAX_PERMISSIONS_PER_USER} permissions reached`;
     }
@@ -155,6 +172,7 @@ export const AddOrganizationPermission = ({
             You can assign a maximum of {MAX_PERMISSIONS_PER_USER} permissions per user.
           </DialogDescription>
         </DialogHeader>
+        <GrantHint kind="permissions" />
         <div>
           <FilterControls.SearchInput
             placeholder="Search by permission name"
@@ -199,7 +217,7 @@ export const AddOrganizationPermission = ({
             </TableHeader>
             <TableBody>
               {data.data.map((item) => {
-                const checked = isSelectedInModal(item, permissions, selectedPermissions);
+                const checked = isPermissionInList(item, selectedPermissions);
                 const disabled = shouldDisablePermissionCheckbox(
                   item,
                   permissions,
@@ -260,15 +278,17 @@ export const AddOrganizationPermission = ({
           </DialogClose>
           <Button
             size="default"
-            disabled={newlySelectedPermissions.length === 0}
+            disabled={
+              newlySelectedPermissions.length === 0 && deselectedPermissions.length === 0
+            }
             onClick={() => {
-              onAdd(newlySelectedPermissions);
+              onAdd(finalSelection);
               reset();
               setOpen(false);
               setTimeout(() => onSave?.(), 0);
             }}
           >
-            Add
+            Save
           </Button>
         </DialogFooter>
       </DialogContent>

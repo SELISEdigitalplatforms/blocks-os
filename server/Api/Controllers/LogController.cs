@@ -1,22 +1,29 @@
 using Blocks.Genesis;
+using Cloud.LmtService.Models.BlocksServices;
 using Cloud.LmtService.Models.Logs;
+using Cloud.LmtService.Services.BlocksServices;
 using Cloud.LmtService.Services.Logs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics.CodeAnalysis;
 
 namespace BlocksOs.Api.Controllers
 {
     [ApiController]
     [Route("[controller]/[action]")]
+    [SuppressMessage("Major Code Smell", "S6960:Controllers should not have mixed responsibilities", Justification = "Splitting would change controller names, Swagger grouping and operation ids that clients rely on.")]
     public class LogController : ControllerBase
     {
         private readonly ILogService _logService;
+        private readonly IBlocksServicesService _blocksServicesService;
 
         public LogController(
-            ILogService logService)
+            ILogService logService,
+            IBlocksServicesService blocksServicesService)
         {
             _logService = logService;
+            _blocksServicesService = blocksServicesService;
         }
 
 
@@ -47,6 +54,13 @@ namespace BlocksOs.Api.Controllers
         {
             var result = await _logService.GetLiveLogsAsync(request);
             return Ok(result);
+        }
+
+        [HttpGet]
+        [ProtectedEndPoint("blocks-os::log::gets")]
+        public async Task<List<BlocksServiceItem>> GetBlocksServices()
+        {
+            return await _blocksServicesService.GetBlocksServicesAsync();
         }
 
     }

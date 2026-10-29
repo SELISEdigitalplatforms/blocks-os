@@ -15,14 +15,38 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui-kits/command/command";
+import { ChevronRight } from "lucide-react";
+import { useMemo, useState } from "react";
+
+interface MultiSelectOption {
+  label: string;
+  value: string;
+  children?: { label: string; value: string }[];
+}
 interface MultiSelectProps {
   label?: string;
-  options: { label: string; value: string }[];
+  options: MultiSelectOption[];
   value: string[];
   onChange: (selected: string[]) => void;
+  disabled?: boolean;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
+  portalled?: boolean;
 }
-export function MultiSelect({ label, options, onChange, value: selectedValues }: MultiSelectProps) {
+export function MultiSelect({
+  label,
+  options,
+  onChange,
+  value: selectedValues,
+  disabled = false,
+  hasMore = false,
+  isLoadingMore = false,
+  onLoadMore,
+  portalled = true,
+}: MultiSelectProps) {
   const [buttonRef, popoverWidth] = usePopoverWidth();
+  const [expanded, setExpanded] = useState<string | null>(null);
   const onSelectHandler = (value: string) => {
     const nextValues = selectedValues.includes(value)
       ? selectedValues.filter((item) => item !== value)
@@ -33,10 +57,22 @@ export function MultiSelect({ label, options, onChange, value: selectedValues }:
     onChange([]);
   };
   const isMobile = useIsMobile();
+  // Flattened so badge/selection-count lookups can resolve a selected child's
+  // label without the caller needing to know which options are nested.
+  const flatOptions = useMemo(
+    () => options.flatMap((option) => [option, ...(option.children ?? [])]),
+    [options],
+  );
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button ref={buttonRef} variant="outline" size="sm" className="h-8 border-dashed">
+        <Button
+          ref={buttonRef}
+          variant="outline"
+          size="sm"
+          className="h-8 border-dashed"
+          disabled={disabled}
+        >
           <div className="flex w-full items-center justify-between">
             <div className="flex items-center">
               <PlusCircledIcon className="mr-2 h-4 w-4" />
@@ -52,7 +88,7 @@ export function MultiSelect({ label, options, onChange, value: selectedValues }:
                       {selectedValues.length} selected
                     </Badge>
                   ) : (
-                    options
+                    flatOptions
                       .filter((option) => selectedValues.includes(option.value))
                       .map((option) => (
                         <Badge
@@ -73,32 +109,99 @@ export function MultiSelect({ label, options, onChange, value: selectedValues }:
       <PopoverContent
         className="w-auto p-0 sm:w-full"
         align="start"
+        portalled={portalled}
         style={isMobile ? { width: popoverWidth ? `${popoverWidth}px` : "auto" } : undefined}
       >
         <Command>
           <CommandInput placeholder={label} />
-          <CommandList>
+          <CommandList
+            className="overscroll-contain touch-pan-y"
+            onScroll={(event) => {
+              const list = event.currentTarget;
+              const isNearBottom = list.scrollHeight - list.scrollTop - list.clientHeight <= 32;
+              if (isNearBottom && hasMore && !isLoadingMore) onLoadMore?.();
+            }}
+          >
             <CommandEmpty>No results found.</CommandEmpty>
             <CommandGroup>
               {options.map((option) => {
                 const isSelected = selectedValues.includes(option.value);
+                const hasChildren = !!option.children?.length;
+                const isExpanded = hasChildren && expanded === option.value;
                 return (
-                  <CommandItem key={option.value} onSelect={() => onSelectHandler(option.value)}>
-                    <div
-                      className={cn(
-                        "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                        isSelected
-                          ? "bg-primary text-primary-foreground"
-                          : "opacity-50 [&_svg]:invisible",
+                  <div key={option.value}>
+                    <div className="flex items-center">
+                      <CommandItem
+                        className="flex-1"
+                        onSelect={() => onSelectHandler(option.value)}
+                      >
+                        <div
+                          className={cn(
+                            "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                            isSelected
+                              ? "bg-primary text-primary-foreground"
+                              : "opacity-50 [&_svg]:invisible",
+                          )}
+                        >
+                          <CheckIcon className={cn("h-4 w-4")} />
+                        </div>
+                        <span>{option.label}</span>
+                      </CommandItem>
+                      {hasChildren && (
+                        <button
+                          type="button"
+                          aria-label={
+                            isExpanded ? `Collapse ${option.label}` : `Expand ${option.label}`
+                          }
+                          className="mr-2 rounded-sm p-1 text-muted-foreground hover:bg-accent-foreground/10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpanded(isExpanded ? null : option.value);
+                          }}
+                        >
+                          <ChevronRight
+                            className={cn(
+                              "h-3.5 w-3.5 transition-transform",
+                              isExpanded && "rotate-90",
+                            )}
+                          />
+                        </button>
                       )}
-                    >
-                      <CheckIcon className={cn("h-4 w-4")} />
                     </div>
-                    <span>{option.label}</span>
-                  </CommandItem>
+                    {hasChildren && isExpanded && (
+                      <div className="ml-4 border-l pl-2">
+                        {option.children!.map((child) => {
+                          const isChildSelected = selectedValues.includes(child.value);
+                          return (
+                            <CommandItem
+                              key={child.value}
+                              onSelect={() => onSelectHandler(child.value)}
+                            >
+                              <div
+                                className={cn(
+                                  "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                                  isChildSelected
+                                    ? "bg-primary text-primary-foreground"
+                                    : "opacity-50 [&_svg]:invisible",
+                                )}
+                              >
+                                <CheckIcon className={cn("h-4 w-4")} />
+                              </div>
+                              <span>{child.label}</span>
+                            </CommandItem>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </CommandGroup>
+            {isLoadingMore && (
+              <div className="py-2 text-center text-xs text-muted-foreground" role="status">
+                Loading more…
+              </div>
+            )}
             {selectedValues.length > 0 && (
               <>
                 <CommandSeparator />

@@ -56,4 +56,40 @@ describe("PermissionSeverity", () => {
     expect(screen.queryByText("03")).toBeNull();
     expect(screen.queryByText("Permissions")).toBeNull();
   });
+
+  it("shows a compact skeleton sized for the reduced tile height while loading", () => {
+    // H4
+    const { container } = render(<PermissionSeverity data={data} isLoading />);
+    const skeletons = container.querySelectorAll(".animate-pulse");
+    expect(skeletons).toHaveLength(5);
+    skeletons.forEach((skeleton) => {
+      expect(skeleton.className).toContain("h-6");
+      expect(skeleton.className).not.toContain("h-8");
+    });
+  });
+
+  it("lays out all 5 tiles in a single row from the tablet breakpoint up, not capped at 4", () => {
+    // H1, H2 - `md:grid-cols-5` fits all 5 tiles in one row at tablet width and stays that way at
+    // any wider viewport too, unlike the old `xl:grid-cols-4` cap which could never fit 5 in a row.
+    const { container } = render(<PermissionSeverity data={data} isLoading={false} />);
+    const grid = container.querySelector(".grid");
+    expect(grid?.className).toContain("md:grid-cols-5");
+    expect(grid?.className).not.toContain("xl:grid-cols-4");
+  });
+
+  it("wraps rather than forcing a single row below the tablet breakpoint", () => {
+    // C1
+    const { container } = render(<PermissionSeverity data={data} isLoading={false} />);
+    const grid = container.querySelector(".grid");
+    expect(grid?.className).toContain("grid-cols-2");
+    expect(grid?.className).not.toContain("grid-cols-1");
+  });
+
+  it("uses a smaller count font size than the old text-4xl treatment", () => {
+    // H3
+    render(<PermissionSeverity data={data} isLoading={false} />);
+    const count = screen.getByText("03");
+    expect(count.className).toContain("text-2xl");
+    expect(count.className).not.toContain("text-4xl");
+  });
 });

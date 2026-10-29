@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
 import { http } from "@/lib/http/http-client";
 import { LogService } from "./log.service";
-import { LOG_ENDPOINTS } from "../constants/endpoint.constant";
+import { LOG_ENDPOINTS, RESTORE_ENDPOINTS } from "../constants/endpoint.constant";
 import { TEST_PROJECT_KEY } from "@/test-utils/__mocks__/data.mock";
 import {
   mockLogsResponse,
@@ -39,6 +39,18 @@ describe("LogService", () => {
       vi.mocked(http.post).mockRejectedValue(new Error("Network error"));
 
       await expect(service.getLogs(mockGetLogsPayload)).rejects.toThrow("Network error");
+    });
+  });
+
+  describe("getRestoredLogs", () => {
+    it("should POST to the restored logs endpoint with request id", async () => {
+      vi.mocked(http.post).mockResolvedValue(mockLogsResponse);
+      const payload = { ...mockGetLogsPayload, requestId: "request-1" };
+
+      const result = await service.getRestoredLogs(payload);
+
+      expect(http.post).toHaveBeenCalledWith(RESTORE_ENDPOINTS.GET_RESTORED_LOGS, payload);
+      expect(result).toEqual(mockLogsResponse);
     });
   });
 

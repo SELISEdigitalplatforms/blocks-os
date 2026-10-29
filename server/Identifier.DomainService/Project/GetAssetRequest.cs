@@ -10,6 +10,8 @@ namespace DomainService.Projects
 
     public class GetAssetFilter
     {
+        /// <summary>Free text matched against either the repository name or its link.</summary>
+        public string Search { get; set; }
         public string Name { get; set; }
         public string Link { get; set; }
     }

@@ -19,25 +19,28 @@ import {
 import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
 import { Switch } from "@/components/ui-kits/switch/switch";
-import { Plus, KeyRound } from "lucide-react";
+import { Plus } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useSaveAuthClient } from "@blocks-idp/authentication/hooks/use-auth-clients";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import {
   IClientCredentialsConfig,
   ISaveClientCredentialPayload,
 } from "@blocks-idp/authentication/models/auth.oidc.model";
 import {
+  buildCreateClientSchema,
   CreateClientModalFormDefaultValues,
   CreateClientModalFormValues,
-  createClientSchema,
 } from "./utils";
 import { isErrorWithErrors } from "@/lib/error";
 import { ClientCredentialRolesSection } from "./client-credential-roles-section";
 import { ClientCredentialPermissionsSection } from "./client-credential-permissions-section";
+import { useGetOrganizationConfig } from "@blocks-idp/iam/hooks/use-organization";
+import { OrganizationCombobox } from "@blocks-idp/iam/components/organization-combobox";
+import { OneTimeSecret, OneTimeSecretDialog } from "../one-time-secret-dialog";
 
 const MAX_PERMISSIONS = 10;
 
@@ -74,6 +77,7 @@ export const CreateClientCredential = ({
   hideTrigger = false,
 }: CreateClientCredentialProps) => {
   const [internalOpen, setInternalOpen] = useState<boolean>(false);
+  const [createdSecret, setCreatedSecret] = useState<OneTimeSecret | null>(null);
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
   const setOpen = (v: boolean) => {
@@ -88,15 +92,34 @@ export const CreateClientCredential = ({
     projectKey: tenantId,
   });
 
+  const { data: organizationConfig, isLoading: isConfigLoading } =
+    useGetOrganizationConfig(tenantId);
+  const isMultiOrgEnabled = organizationConfig?.isMultiOrgEnabled ?? false;
+
+  // The organization is fixed when the credential is created: it becomes the organization_id
+  // claim on every token the client_credentials grant later mints, and the token endpoint
+  // authenticates a client id and secret with no caller context that could re-scope it.
+  const showOrganizationPicker = isMultiOrgEnabled && !isEdit;
+
+  const schema = useMemo(
+    () => buildCreateClientSchema(isMultiOrgEnabled, isEdit),
+    [isMultiOrgEnabled, isEdit],
+  );
   const form = useForm<CreateClientModalFormValues>({
-    resolver: zodResolver(createClientSchema),
+    resolver: zodResolver(schema),
     defaultValues: CreateClientModalFormDefaultValues,
     mode: "onChange",
   });
   const {
-    formState: { isDirty, isValid },
+    formState: { isDirty },
     reset,
   } = form;
+
+  // Errors appear only on fields the user has touched, as in the OIDC dialog. Submit readiness
+  // is read from the values instead of `formState.isValid`, which `reset` leaves stale; forcing
+  // it with `trigger()` would paint every empty required field red the moment the dialog opens.
+  const values = useWatch({ control: form.control });
+  const isValid = schema.safeParse(values).success;
 
   useEffect(() => {
     if (!open) return;
@@ -106,6 +129,7 @@ export const CreateClientCredential = ({
         clientNameService: editClient.name,
         accessTokenValidForNumberMinutes: editClient.accessTokenValidForNumberMinutes,
         isActive: editClient.isActive,
+        organizationId: editClient.organizationId ?? "",
         roles: editClient.roles ?? [],
         permissions: editClient.permissions ?? [],
       });
@@ -131,6 +155,11 @@ export const CreateClientCredential = ({
         roles: data.roles,
         permissions: data.permissions,
         projectKey: tenantId,
+        // Omitted on edit and when multi-org is off. The server ignores it in both cases;
+        // sending it anyway would suggest the update re-scopes the credential, which it does not.
+        ...(showOrganizationPicker && data.organizationId
+          ? { organizationId: data.organizationId }
+          : {}),
       };
       const res = await saveServiceClient(payload);
       if (!res?.isSuccess) {
@@ -144,17 +173,27 @@ export const CreateClientCredential = ({
           ? "Client credential updated successfully"
           : "Client credential created successfully",
       });
+      // Create is the only time the API returns the secret; the list never does.
+      if (!isEdit && res.clientSecret) {
+        setCreatedSecret({
+          label: data.clientNameService,
+          clientId: res.itemId,
+          clientSecret: res.clientSecret,
+          reason: "created",
+        });
+      }
+      reset();
       setOpen(false);
     } catch (error) {
       if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
       return showErrorToast({ errors: "Something went wrong" });
-    } finally {
-      reset();
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
+      {/* Its own dialog: it stays open after this form closes. */}
+      <OneTimeSecretDialog secret={createdSecret} onClose={() => setCreatedSecret(null)} />
       {!hideTrigger && (
         <DialogTrigger asChild>
           <Button size="sm">
@@ -166,7 +205,7 @@ export const CreateClientCredential = ({
         </DialogTrigger>
       )}
       <DialogContent className="max-w-2xl flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0">
-        <DialogHeader className="shrink-0 border-b px-6 pb-4 pt-6 pr-12">
+        <DialogHeader className="shrink-0 px-6 pb-4 pt-6 pr-12">
           <DialogTitle>{isEdit ? "Edit Client Credential" : "Add Client Credential"}</DialogTitle>
           <DialogDescription>
             {isEdit
@@ -181,16 +220,15 @@ export const CreateClientCredential = ({
           >
             <div className="min-h-0 w-full min-w-0 flex-1 space-y-8 overflow-y-auto px-6 py-4">
               <section className="space-y-4">
-                <div className="flex items-center gap-2 border-b pb-2 text-xs font-semibold uppercase tracking-wider text-medium-emphasis">
-                  <KeyRound className="h-4 w-4" />
-                  General
-                </div>
+              
                 <FormField
                   control={form.control}
                   name="clientNameService"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Client Name</FormLabel>
+                      <FormLabel>
+                        Client Name <span className="text-destructive">*</span>
+                      </FormLabel>
                       <FormControl>
                         <Input placeholder="Enter client name" {...field} />
                       </FormControl>
@@ -203,12 +241,18 @@ export const CreateClientCredential = ({
                   name="accessTokenValidForNumberMinutes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Access Token Lifetime (minutes)</FormLabel>
+                      <FormLabel>
+                        Access Token Lifetime (minutes){" "}
+                        <span className="text-xs font-normal text-muted-foreground">(5–120)</span>
+                      </FormLabel>
                       <FormControl>
                         <Input
-                          type="text"
+                          type="number"
                           inputMode="numeric"
                           autoComplete="off"
+                          min={5}
+                          max={120}
+                          step={1}
                           placeholder="15"
                           aria-label="Access Token Lifetime in minutes"
                           value={
@@ -219,7 +263,9 @@ export const CreateClientCredential = ({
                           onChange={(e) => {
                             const raw = e.target.value.trim();
                             if (raw !== "" && !/^\d+$/.test(raw)) return;
-                            field.onChange(raw === "" ? 0 : Number(raw));
+                            const parsed = raw === "" ? 0 : Number(raw);
+                            const clamped = parsed === 0 ? 0 : Math.min(120, Math.max(5, parsed));
+                            field.onChange(clamped);
                             void form.trigger("accessTokenValidForNumberMinutes");
                           }}
                           onBlur={field.onBlur}
@@ -230,6 +276,34 @@ export const CreateClientCredential = ({
                     </FormItem>
                   )}
                 />
+                {showOrganizationPicker && !isConfigLoading && (
+                  <FormField
+                    control={form.control}
+                    name="organizationId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          Organization <span className="text-destructive">*</span>
+                        </FormLabel>
+                        <OrganizationCombobox
+                          projectKey={tenantId}
+                          value={field.value ?? ""}
+                          onValueChange={(organizationId) =>
+                            form.setValue("organizationId", organizationId, {
+                              shouldValidate: true,
+                              shouldDirty: true,
+                            })
+                          }
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Tokens issued for this credential are scoped to this organization. It
+                          cannot be changed later.
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
                 <FormField
                   control={form.control}
                   name="isActive"
@@ -288,14 +362,20 @@ export const CreateClientCredential = ({
                 )}
               />
             </div>
-            <DialogFooter className="shrink-0 border-t bg-muted/20 px-6 py-4 pr-12">
+            <DialogFooter className="shrink-0 px-6 py-4">
               <DialogClose asChild>
                 <Button type="button" variant="outline">
                   Cancel
                 </Button>
               </DialogClose>
-              <Button disabled={isPending || !isDirty || !isValid} type="submit">
-                {isPending ? "Saving..." : isEdit ? "Save Changes" : "Add"}
+              <Button disabled={isPending || isConfigLoading || !isDirty || !isValid} type="submit">
+                {isPending
+                  ? isEdit
+                    ? "Updating..."
+                    : "Saving..."
+                  : isEdit
+                    ? "Update Changes"
+                    : "Add"}
               </Button>
             </DialogFooter>
           </form>

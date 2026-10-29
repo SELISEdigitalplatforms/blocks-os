@@ -1,17 +1,6 @@
 import { IOrganization } from "@blocks-idp/iam/models/organization";
-import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
-import {
-  Calendar,
-  Clock,
-  ExternalLink,
-  Globe,
-  Mail,
-  Phone,
-  Power,
-  SquarePen,
-  UserCog,
-} from "lucide-react";
+import { Calendar, Clock, ExternalLink, Globe, Mail, Phone, Power, SquarePen } from "lucide-react";
 
 type DetailRowProps = {
   icon: React.ReactNode;
@@ -48,19 +37,6 @@ const formatDateTime = (value?: string) => {
 };
 
 export const OrganizationDetailsTab = ({ organization }: { organization: IOrganization }) => {
-  // The OS GetRolesPayload carries no projectKey; the role service scopes by the
-  // active tenant itself, so the iam-side projectKey argument is dropped here.
-  const { data: rolesData } = useGetRoles({
-    page: 0,
-    pageSize: 1000,
-    sort: { property: "Name", isDescending: false },
-    filter: { search: "" },
-  });
-  const roleNameBySlug = new Map((rolesData?.data || []).map((role) => [role.slug, role.name]));
-  const defaultRoleNames = (organization.defaultRoleForMembers || [])
-    .map((slug) => roleNameBySlug.get(slug) ?? slug)
-    .join(", ");
-
   return (
     <Card className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
       <CardContent className="min-h-0 flex-1 overflow-y-auto">
@@ -106,11 +82,6 @@ export const OrganizationDetailsTab = ({ organization }: { organization: IOrgani
           icon={<Clock className="h-4 w-4" />}
           label="Last updated"
           value={formatDateTime(organization.lastUpdatedDate)}
-        />
-        <DetailRow
-          icon={<UserCog className="h-4 w-4" />}
-          label="Default role for new members"
-          value={defaultRoleNames || undefined}
         />
       </CardContent>
     </Card>

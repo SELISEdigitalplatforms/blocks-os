@@ -55,7 +55,9 @@ namespace DomainService.Certificate
             BigInteger serialNumber = BigInteger.ProbablePrime(128, secureRandom);
 
             certificateGenerator.SetSerialNumber(serialNumber);
-            certificateGenerator.SetIssuerDN(new X509Name($"CN={parameters.Issuer}"));
+                        // Certificate subject stays CN=SeliseBlocks even when JwtTokenParameters.Issuer
+            // is the per-tenant OIDC issuer URL (blocks-os#606).
+            certificateGenerator.SetIssuerDN(new X509Name($"CN={IdentifierConstants.Issuer}"));
             certificateGenerator.SetSubjectDN(new X509Name($"CN={parameters.Subject}"));
             certificateGenerator.SetNotAfter(notAfter);
             certificateGenerator.SetNotBefore(notBefore);

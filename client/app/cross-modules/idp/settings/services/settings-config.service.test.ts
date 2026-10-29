@@ -131,9 +131,13 @@ describe("SettingsConfigService", () => {
         defaultPermissionOnOrgCreation: [],
         keepOrgRolesSameAsDefaultRoles: true,
         keepOrgPermissionsSameAsDefaultPermissions: true,
+        isSignupAutoJoinEnabled: true,
+        signupAutoJoinOrganizationId: "org-sales",
       });
 
       const result = await settingsConfigService.getOrganizationConfig();
+      expect(result.isSignupAutoJoinEnabled).toBe(true);
+      expect(result.signupAutoJoinOrganizationId).toBe("org-sales");
 
       expect(organizationService.getOrganizationConfig).toHaveBeenCalledWith();
       expect(result.allowCreationFromCloud).toBe(true);

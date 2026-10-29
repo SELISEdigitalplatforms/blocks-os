@@ -36,6 +36,10 @@ export interface ISsoProviderFrontendMeta {
   imageSrc: string;
   imageSrcDark?: string;
   isAvailable?: boolean;
+  /** Title for the "Add Identity Provider" dialog's contextual help box. */
+  helpTitle?: string;
+  /** Body copy for the "Add Identity Provider" dialog's contextual help box. */
+  helpBody?: string;
 }
 
 export type ISsoProviderConfigurationWithMeta = ISsoProviderConfiguration &

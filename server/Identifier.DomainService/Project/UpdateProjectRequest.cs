@@ -6,6 +6,16 @@ namespace DomainService.Projects
         public ApplicationAction Action { get; set; }
         public Application Application { get; set; }
         public string? ApplicationDomain { get; set; }
+
+        /// <summary>
+        /// Opt in to tearing down the shared API host
+        /// ("&lt;cname-label&gt;.&lt;cookie-domain&gt;") along with the application. Off by
+        /// default, and for good reason: that host serves every application under
+        /// the same cookie domain, in this project and in others, so removing it
+        /// stops their API traffic until someone re-runs domain configuration.
+        /// Only honoured when deleting a verified, customer-owned domain.
+        /// </summary>
+        public bool DeleteSharedApiHost { get; set; }
     }
 
     /// <summary>

@@ -1,4 +1,6 @@
+using Blocks.Secrets;
 using Blocks.Genesis;
+using Blocks.Genesis.Notifications;
 using DomainService.Dtos;
 using DomainService.Projects;
 using DomainService.Shared;
@@ -9,6 +11,9 @@ using Worker;
 using Worker.Configuration;
 using Worker.Consumers.Identifier;
 using Worker.Consumers.Migration;
+using Worker.Consumers.Notification;
+using Configuration.DomainService.Notification.Propagation;
+using ConfigurationConstants = Configuration.DomainService.Shared.Utilities.Constants;
 
 const string _serviceName = "blocks-os-worker";
 
@@ -41,6 +46,10 @@ IHostBuilder CreateHostBuilder(string[] args) =>
 
             #region Identifier Service Consumers
             services.AddApplicationServices();
+            // The migration-failed notification goes through the Genesis publisher.
+            services.AddBlocksNotifications();
+            // Project create makes the default data-source secret (Identifier DataGatewayRootProvisioner).
+            services.AddBlocksSecrets();
             services.AddSingleton<IConsumer<Tenant>, ConfigureProjectConsumer>();
             services.AddSingleton<IConsumer<DisableDomainBindingRequest>, DisableDomainBindingConsumer>();
             services.AddSingleton<IConsumer<RestoreProjectRequest>, RestoreProjectConsumer>();
@@ -48,7 +57,14 @@ IHostBuilder CreateHostBuilder(string[] args) =>
             services.AddSingleton<IConsumer<UpdateResourceUsageCommand_Identifier>, UpdateResourceUsageConsumer>();
             services.AddSingleton<IConsumer<CreateUserByEmailPostEvent>, CreateUserByEmailPostConsumer>();
             services.AddSingleton<IConsumer<MigrationCompletionEvent>, MigrationCompletionConsumer>();
-         ApplicationConfigurations.ConfigureWorker(services, IdentifierConstants.GetMessageConfiguration(secret.MessageConnectionString));
+            #endregion
+
+            #region Configuration Service Consumers
+            // Root built-in notification config changes, copied to the seed database and every other tenant.
+            services.AddSingleton<INotificationConfigurationPropagator, NotificationConfigurationPropagator>();
+            services.AddSingleton<IConsumer<BuiltInNotificationConfigurationChangedEvent>, BuiltInNotificationConfigurationConsumer>();
+         ApplicationConfigurations.ConfigureWorker(services, ConfigurationConstants.WithNotificationConfigurationQueue(
+             IdentifierConstants.GetMessageConfiguration(secret.MessageConnectionString)));
             #endregion
         });
 

@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { Input } from "@/components/ui-kits/input/input";
 import {
   DialogDescription,
@@ -8,7 +8,7 @@ import {
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
 import { Button } from "@/components/ui-kits/button/button";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -19,8 +19,20 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui-kits/form/form";
-import { IEmailConfig, MailServiceProvider } from "../../../../models/email";
+import {
+  getAuthenticationOptions,
+  getFixedTransport,
+  getMailProvider,
+  getMailProvidersFor,
+  IEmailConfig,
+  MAIL_AUTHENTICATION_LABELS,
+  MailAuthenticationType,
+  MailServiceProvider,
+  MailSecurityMode,
+  usesPasswordAuthentication,
+} from "../../../../models/email";
 import { useSaveEmailConfig } from "../../../../hooks/use-email-config";
+import type { ISaveMailConfigPayload } from "../../../../services/email.services";
 import {
   Select,
   SelectContent,
@@ -31,87 +43,157 @@ import {
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { showErrorToast, toast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
+import { Banner } from "@/components/ui-kits/banner/banner";
+import { isBrokenLinkedSecretStatus } from "@/cross-modules/secrets/models/secret.model";
+import {
+  LINKED_SECRET_REPAIR_NOTICE,
+  LINKED_SECRET_REPAIR_REQUIRED_MESSAGE,
+} from "@/cross-modules/secrets/components/linked-secret-status/linked-secret-status";
 interface NewConfigurationProps {
   dialogTitle: string;
   onClose: () => void;
   previousData?: IEmailConfig;
   isEdit?: boolean;
 }
-const schema = z
-  .object({
-    configurationName: z
-      .string()
-      .min(3, { message: "Configuration name must be at least 3 characters" })
-      .max(100, { message: "Configuration name must be at most 100 characters" }),
-    host: z
-      .string()
-      .regex(/^([\w-]+\.)*[\w-]+\.[a-z]{2,}$/, { message: "Host must be a valid domain" }),
-    port: z.coerce
-      .number()
-      .min(1, { message: "Port must be between 1 and 65535" })
-      .max(65535, { message: "Port must be between 1 and 65535" }),
-    enableSSL: z.boolean(),
-    senderName: z.string().optional(),
-    senderAddress: z.string().optional(),
-    senderUserName: z.string().min(1, { message: "Sender username is required" }),
-    accountPassword: z.string().superRefine((val, ctx) => {
-      if (!val || val.length === 0) {
+const EMAIL_PATTERN = /^(?=.{1,320}$)[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+/**
+ * The form's rules, built per render because two of them depend on state the
+ * schema cannot see: whether this is an edit, and whether the record already
+ * has a client secret on file. Without that, an Office 365 edit would demand a
+ * secret the user has no reason to retype.
+ */
+const createSchema = ({
+  hasClientSecretOnFile,
+  needsNewClientSecret = false,
+}: {
+  hasClientSecretOnFile: boolean;
+  /** The linked secret is archived or missing, so the required-secret error explains a repair. */
+  needsNewClientSecret?: boolean;
+}) =>
+  z
+    .object({
+      configurationName: z
+        .string()
+        .min(3, { message: "Configuration name must be at least 3 characters" })
+        .max(100, { message: "Configuration name must be at most 100 characters" }),
+      host: z
+        .string()
+        .regex(/^([\w-]+\.)*[\w-]+\.[a-z]{2,}$/, { message: "Host must be a valid domain" }),
+      port: z.coerce
+        .number<number>()
+        .min(1, { message: "Port must be between 1 and 65535" })
+        .max(65535, { message: "Port must be between 1 and 65535" }),
+      enableSSL: z.boolean(),
+      senderName: z.string().optional(),
+      senderAddress: z.string().optional(),
+      senderUserName: z.string().optional(),
+      accountPassword: z.string().optional(),
+      isInbound: z.boolean(),
+      provider: z.coerce.number<number>(),
+      authenticationType: z.coerce.number<number>().optional(),
+      tenantId: z.string().optional(),
+      clientId: z.string().optional(),
+      clientSecret: z.string().optional(),
+      mailboxAddress: z.string().optional(),
+    })
+    .superRefine((data, ctx) => {
+      const provider = getMailProvider(data.provider);
+
+      if (provider && (data.isInbound ? !provider.supportsInbound : !provider.supportsOutbound)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Password is required",
-        });
-      } else if (val.length < 6) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Password must be at least 6 characters long",
-        });
-      }
-    }),
-    isInbound: z.boolean(),
-    provider: z.coerce.number(),
-  })
-  .superRefine((data, ctx) => {
-    if (data.isInbound && data.provider === MailServiceProvider.AmazonSes) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Amazon SES is not supported for inbound configurations",
-        path: ["provider"],
-      });
-    }
-    if (!data.isInbound) {
-      if (!data.senderName || data.senderName.length < 3 || data.senderName.length > 100) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Amazon SES is not supported for inbound configurations",
+          code: "custom",
+          message: `${provider.label} is not supported for ${data.isInbound ? "inbound" : "outbound"} configurations`,
           path: ["provider"],
         });
       }
+
       if (!data.isInbound) {
         if (!data.senderName || data.senderName.length < 3 || data.senderName.length > 100) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: "Sender name must be between 3 and 100 characters",
             path: ["senderName"],
           });
         }
-        if (
-          !data.senderAddress ||
-          !/^(?=.{1,320}$)[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(data.senderAddress)
-        ) {
+        if (!data.senderAddress || !EMAIL_PATTERN.test(data.senderAddress)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: "Sender Address must be a valid email",
             path: ["senderAddress"],
           });
         }
       }
-    }
-  });
-const INBOUND_PROVIDERS = [{ value: MailServiceProvider.Zoho, label: "Zoho" }];
-const OUTBOUND_PROVIDERS = [
-  { value: MailServiceProvider.AmazonSes, label: "Amazon SES" },
-  { value: MailServiceProvider.Zoho, label: "Zoho" },
-];
+
+      // Username and password belong to password authentication, not to a
+      // particular provider id, so a later OAuth provider needs no change here.
+      if (usesPasswordAuthentication(data.provider, data.isInbound, data.authenticationType)) {
+        if (!data.senderUserName) {
+          ctx.addIssue({
+            code: "custom",
+            message: "Sender username is required",
+            path: ["senderUserName"],
+          });
+        }
+        if (!data.accountPassword) {
+          ctx.addIssue({
+            code: "custom",
+            message: "Password is required",
+            path: ["accountPassword"],
+          });
+        } else if (data.accountPassword.length < 6) {
+          ctx.addIssue({
+            code: "custom",
+            message: "Password must be at least 6 characters long",
+            path: ["accountPassword"],
+          });
+        }
+        return;
+      }
+
+      if (!data.tenantId?.trim()) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Tenant ID is required",
+          path: ["tenantId"],
+        });
+      }
+      if (!data.clientId?.trim()) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Client ID is required",
+          path: ["clientId"],
+        });
+      }
+      if (!data.mailboxAddress || !EMAIL_PATTERN.test(data.mailboxAddress)) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Mailbox address must be a valid email",
+          path: ["mailboxAddress"],
+        });
+      }
+
+      // Empty means "keep the secret on file", which is only an option when
+      // there is one. A value of pure whitespace is a mistake either way.
+      if (!data.clientSecret) {
+        if (!hasClientSecretOnFile) {
+          ctx.addIssue({
+            code: "custom",
+            message: needsNewClientSecret
+              ? LINKED_SECRET_REPAIR_REQUIRED_MESSAGE
+              : "Client secret is required",
+            path: ["clientSecret"],
+          });
+        }
+      } else if (!data.clientSecret.trim()) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Client secret must not be blank",
+          path: ["clientSecret"],
+        });
+      }
+    });
+
 const NewConfiguration: React.FC<NewConfigurationProps> = ({
   dialogTitle,
   onClose,
@@ -120,7 +202,28 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
 }) => {
   // const { saveEmailConfig, isPending } = useSaveEmailConfig();
   const { isPending, mutateAsync } = useSaveEmailConfig();
-   
+
+  // Only an existing record can have a secret on file, and the API reports it
+  // as a flag because the value and its reference never leave the server.
+  const hasClientSecretOnFile = Boolean(isEdit && previousData?.isClientSecretConfigured);
+  // Repair mode: the reference points at an archived or missing secret. There is nothing to
+  // keep, so a new value is required, and the server stores it as a new secret.
+  const clientSecretStatus = isEdit ? previousData?.clientSecretStatus : undefined;
+  const brokenClientSecretStatus = isBrokenLinkedSecretStatus(clientSecretStatus)
+    ? clientSecretStatus
+    : null;
+  const needsNewClientSecret = !!brokenClientSecretStatus;
+  const schema = useMemo(
+    () =>
+      createSchema({
+        // A broken secret is never "on file", whatever the flag says.
+        hasClientSecretOnFile: hasClientSecretOnFile && !needsNewClientSecret,
+        needsNewClientSecret,
+      }),
+    [hasClientSecretOnFile, needsNewClientSecret],
+  );
+  const keepsSecretOnFile = hasClientSecretOnFile && !needsNewClientSecret;
+
   const form = useForm<IEmailConfig>({
     defaultValues:
       isEdit && previousData && previousData.itemId !== ""
@@ -137,6 +240,13 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
             accountPassword: "",
             isInbound: previousData?.isInbound,
             provider: previousData?.provider,
+            authenticationType: previousData?.authenticationType,
+            tenantId: previousData?.tenantId ?? "",
+            clientId: previousData?.clientId ?? "",
+            mailboxAddress: previousData?.mailboxAddress ?? "",
+            // Never prefilled, for the same reason the password is not: a value
+            // rendered here is a value that can be read back out.
+            clientSecret: "",
           }
         : {
             configurationId: "",
@@ -150,40 +260,116 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
             accountPassword: "",
             isInbound: false,
             provider: 0,
+            authenticationType: MailAuthenticationType.Password,
+            tenantId: "",
+            clientId: "",
+            mailboxAddress: "",
+            clientSecret: "",
           },
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as unknown as Resolver<IEmailConfig>,
     mode: "onChange",
   });
   const isInbound = form.watch("isInbound");
+  const provider = form.watch("provider");
+  const authenticationType = form.watch("authenticationType");
+  const authenticationOptions = getAuthenticationOptions(provider, isInbound);
+  const usesPassword = usesPasswordAuthentication(provider, isInbound, authenticationType);
+  const fixedTransport = getFixedTransport(provider, isInbound);
+  const isGmail = provider === MailServiceProvider.Gmail;
+
+  const availableProviders = useMemo(() => getMailProvidersFor(isInbound), [isInbound]);
+
   useEffect(() => {
-    if (isInbound && form.getValues("provider") === MailServiceProvider.AmazonSes) {
-      form.setValue("provider", MailServiceProvider.Zoho);
+    // Switching direction can leave a provider selected that the new direction
+    // does not offer. Fall back to the first one that does.
+    if (availableProviders.length > 0 && !availableProviders.some((p) => p.value === provider)) {
+      form.setValue("provider", availableProviders[0].value, { shouldValidate: true });
     }
-  }, [isInbound, form]);
+  }, [availableProviders, provider, form]);
+
+  // The provider/direction the authentication method was last chosen for, so a
+  // change resets it while the initial render keeps an edited record's method.
+  const authenticationScope = useRef(`${provider}|${isInbound}`);
+
+  useEffect(() => {
+    // A provider or direction change starts from that provider's default (its
+    // first option), and nothing may stay selected that is not offered, e.g. a
+    // password on Office 365 inbound.
+    const scope = `${provider}|${isInbound}`;
+    const scopeChanged = authenticationScope.current !== scope;
+    authenticationScope.current = scope;
+
+    if (
+      scopeChanged ||
+      authenticationType === undefined ||
+      !authenticationOptions.includes(authenticationType)
+    ) {
+      if (authenticationType !== authenticationOptions[0]) {
+        form.setValue("authenticationType", authenticationOptions[0], { shouldValidate: true });
+      }
+    }
+  }, [provider, isInbound, authenticationOptions, authenticationType, form]);
+
+  useEffect(() => {
+    // A provider whose transport is part of the integration prefills and locks
+    // the host and port, so the read-only fields and the payload agree.
+    if (!fixedTransport) {
+      return;
+    }
+    form.setValue("host", fixedTransport.host, { shouldValidate: true });
+    form.setValue("port", fixedTransport.port, { shouldValidate: true });
+    form.setValue("enableSSL", fixedTransport.enableSSL);
+  }, [fixedTransport, form]);
+
   if (isEdit && previousData?.itemId == "") {
     return <div>loading</div>;
   }
   const formSubmitHandler = async (data: IEmailConfig) => {
     try {
-      const payload = {
+      const transport = getFixedTransport(data.provider, data.isInbound);
+      const options = getAuthenticationOptions(data.provider, data.isInbound);
+      const selectedAuthentication =
+        data.authenticationType !== undefined && options.includes(data.authenticationType)
+          ? data.authenticationType
+          : options[0];
+      const isPasswordProvider = selectedAuthentication === MailAuthenticationType.Password;
+
+      const payload: ISaveMailConfigPayload = {
         configurationName: data.configurationName,
         configurationId: isEdit && previousData?.itemId ? previousData.itemId : "",
-        host: data.host,
-        port: data.port,
-        enableSSL: data.enableSSL,
+        host: transport?.host ?? data.host,
+        port: transport?.port ?? data.port,
+        enableSSL: transport?.enableSSL ?? data.enableSSL,
         senderName: data.senderName || "",
         senderAddress: data.senderAddress || "",
-        senderUserName: data.senderUserName,
-        accountPassword: data.accountPassword || "",
         isInbound: data.isInbound,
         provider: data.provider,
+        authenticationType: selectedAuthentication,
+        securityMode: transport?.securityMode ?? MailSecurityMode.Legacy,
       };
+
+      if (isPasswordProvider) {
+        payload.senderUserName = data.senderUserName;
+        payload.accountPassword = data.accountPassword || "";
+      } else {
+        payload.tenantId = data.tenantId?.trim();
+        payload.clientId = data.clientId?.trim();
+        payload.mailboxAddress = data.mailboxAddress?.trim();
+        // Omitted when blank, which the server reads as "keep the secret on
+        // file". Sending "" would mean the same thing, but leaving the key out
+        // keeps a secret-shaped field out of the request entirely.
+        if (data.clientSecret) {
+          payload.clientSecret = data.clientSecret;
+        }
+      }
       const res = await mutateAsync(payload);
       if (res?.isSuccess) {
         toast({
           variant: "success",
           title: "Success",
-          description: isEdit ? "Configuration updated" : "New configuration added",
+          description: isEdit
+            ? "Configuration updated successfully."
+            : "Configuration created successfully.",
         });
         form.reset();
         onClose();
@@ -277,13 +463,11 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {(isInbound ? INBOUND_PROVIDERS : OUTBOUND_PROVIDERS).map(
-                              (provider) => (
-                                <SelectItem key={provider.value} value={provider.value.toString()}>
-                                  {provider.label}
-                                </SelectItem>
-                              ),
-                            )}
+                            {availableProviders.map((available) => (
+                              <SelectItem key={available.value} value={available.value.toString()}>
+                                {available.label}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -306,6 +490,8 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                           <Input
                             placeholder={isInbound ? "Enter Server Name" : "Enter Host"}
                             className="border-default col-span-3 mt-1 border shadow-none"
+                            readOnly={Boolean(fixedTransport)}
+                            disabled={Boolean(fixedTransport)}
                             {...field}
                           />
                         </FormControl>
@@ -327,6 +513,8 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                             type="number"
                             placeholder="Enter port"
                             className="border-default col-span-3 mt-1 border shadow-none"
+                            readOnly={Boolean(fixedTransport)}
+                            disabled={Boolean(fixedTransport)}
                             {...field}
                           />
                         </FormControl>
@@ -335,6 +523,42 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                     )}
                   />
                 </div>
+                {authenticationOptions.length > 1 && (
+                  <div className="mt-4 grid grid-cols-2 gap-4">
+                    <FormField
+                      name="authenticationType"
+                      control={form.control}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-left font-medium text-high-emphasis">
+                            Authentication <span className="text-destructive">*</span>
+                          </FormLabel>
+                          <Select
+                            onValueChange={(value) => field.onChange(parseInt(value))}
+                            value={field.value?.toString()}
+                            // The server refuses to switch an existing record's
+                            // method, since that would strand or lack a secret.
+                            disabled={isEdit}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="border-default col-span-3 mt-1 border shadow-none">
+                                <SelectValue placeholder="Select authentication" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {authenticationOptions.map((option) => (
+                                <SelectItem key={option} value={option.toString()}>
+                                  {MAIL_AUTHENTICATION_LABELS[option]}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
                 {!isInbound && (
                   <div className="mt-4 grid grid-cols-2 gap-4">
                     <div>
@@ -383,73 +607,181 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                     </div>
                   </div>
                 )}
-                <div className="mt-4 grid grid-cols-2 gap-4">
-                  <div>
-                    <FormField
-                      name="senderUserName"
-                      control={form.control}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-left font-medium text-high-emphasis">
-                            {" "}
-                            {isInbound ? "Username" : "Sender Username"}{" "}
-                            <span className="text-destructive">*</span>
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder={isInbound ? "Enter username" : "Enter sender username"}
-                              className="border-default col-span-3 mt-1 border shadow-none"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                {usesPassword ? (
+                  <div className="mt-4 grid grid-cols-2 gap-4">
+                    <div>
+                      <FormField
+                        name="senderUserName"
+                        control={form.control}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-left font-medium text-high-emphasis">
+                              {" "}
+                              {isInbound ? "Username" : "Sender Username"}{" "}
+                              <span className="text-destructive">*</span>
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder={isInbound ? "Enter username" : "Enter sender username"}
+                                className="border-default col-span-3 mt-1 border shadow-none"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <div>
+                      <FormField
+                        name="accountPassword"
+                        control={form.control}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-left font-medium text-high-emphasis">
+                              {" "}
+                              {isGmail ? "App password" : "Account password"}{" "}
+                              <span className="text-destructive">*</span>
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                type="password"
+                                placeholder={isGmail ? "Enter Google app password" : "Enter password"}
+                                className="border-default col-span-3 mt-1 border shadow-none"
+                                {...field}
+                              />
+                            </FormControl>
+                            {isGmail && (
+                              <p className="mt-1 text-xs text-medium-emphasis">
+                                Google requires an App Password (2-Step Verification must be on).
+                              </p>
+                            )}
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <FormField
-                      name="accountPassword"
-                      control={form.control}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-left font-medium text-high-emphasis">
-                            {" "}
-                            Account password <span className="text-destructive">*</span>
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              type="password"
-                              placeholder="Enter password"
-                              className="border-default col-span-3 mt-1 border shadow-none"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <FormField
-                    name="enableSSL"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Checkbox
-                            className="mr-2"
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                        <FormLabel className="flex-start inline-flex"> Enable SSL </FormLabel>
-                      </FormItem>
+                ) : (
+                  <>
+                    <div className="mt-4 grid grid-cols-2 gap-4">
+                      <FormField
+                        name="tenantId"
+                        control={form.control}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-left font-medium text-high-emphasis">
+                              Tenant ID <span className="text-destructive">*</span>
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Enter Microsoft Entra tenant ID"
+                                className="border-default col-span-3 mt-1 border shadow-none"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        name="clientId"
+                        control={form.control}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-left font-medium text-high-emphasis">
+                              Client ID <span className="text-destructive">*</span>
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Enter client ID"
+                                className="border-default col-span-3 mt-1 border shadow-none"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    {brokenClientSecretStatus && (
+                      <Banner variant="warning" compact className="mb-0 mt-4">
+                        {LINKED_SECRET_REPAIR_NOTICE[brokenClientSecretStatus]}
+                      </Banner>
                     )}
-                  />
-                </div>
+                    <div className="mt-4 grid grid-cols-2 gap-4">
+                      <FormField
+                        name="clientSecret"
+                        control={form.control}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-left font-medium text-high-emphasis">
+                              Client Secret{" "}
+                              {keepsSecretOnFile ? null : (
+                                <span className="text-destructive">*</span>
+                              )}
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                type="password"
+                                placeholder={
+                                  needsNewClientSecret
+                                    ? "Enter a new client secret"
+                                    : keepsSecretOnFile
+                                      ? "Leave blank to keep the current secret"
+                                      : "Enter client secret"
+                                }
+                                className="border-default col-span-3 mt-1 border shadow-none"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        name="mailboxAddress"
+                        control={form.control}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-left font-medium text-high-emphasis">
+                              Mailbox Address <span className="text-destructive">*</span>
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Enter mailbox address"
+                                className="border-default col-span-3 mt-1 border shadow-none"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </>
+                )}
+                {!fixedTransport && (
+                  <div className="mt-4">
+                    <FormField
+                      name="enableSSL"
+                      control={form.control}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Checkbox
+                              className="mr-2"
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                          <FormLabel className="flex-start inline-flex"> Enable SSL </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
               </div>
             </DialogDescription>
           </DialogHeader>
@@ -460,8 +792,19 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                   Cancel
                 </Button>
               </DialogTrigger>
-              <Button disabled={isPending || !form.formState.isValid} size="default">
-                Save
+              {/* In repair mode the button stays enabled so an empty submit can explain, inline,
+                  that a new secret is required — rather than sitting disabled with no reason. */}
+              <Button
+                disabled={isPending || (!needsNewClientSecret && !form.formState.isValid)}
+                size="default"
+              >
+                {isPending
+                  ? isEdit
+                    ? "Updating..."
+                    : "Saving..."
+                  : isEdit
+                    ? "Update Changes"
+                    : "Save"}
               </Button>
             </div>
           </div>

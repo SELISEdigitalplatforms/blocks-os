@@ -76,7 +76,7 @@ const PageBreadcrumb: React.FC<{
 
   return (
     <Breadcrumb className={cn("hidden md:flex", className)}>
-      <BreadcrumbList className={cn("flex text-base sm:text-lg", listClassName)}>
+      <BreadcrumbList className={cn("flex", listClassName)}>
         {breadcrumbs.map((breadcrumb, index) => {
           const title =
             getBreadcrumbTitle(breadcrumb.href, breadcrumb.label, titles) ?? breadcrumb.label;
@@ -86,12 +86,10 @@ const PageBreadcrumb: React.FC<{
             <React.Fragment key={breadcrumb.href}>
               <BreadcrumbItem>
                 {index === breadcrumbs.length - 1 || disabledHrefs.includes(breadcrumb.href) ? (
-                  <BreadcrumbPage className="text-low-emphasis">{title}</BreadcrumbPage>
+                  <BreadcrumbPage>{title}</BreadcrumbPage>
                 ) : (
                   <BreadcrumbLink asChild>
-                    <Link to={linkHref} className="text-foreground hover:text-foreground">
-                      {title}
-                    </Link>
+                    <Link to={linkHref}>{title}</Link>
                   </BreadcrumbLink>
                 )}
               </BreadcrumbItem>

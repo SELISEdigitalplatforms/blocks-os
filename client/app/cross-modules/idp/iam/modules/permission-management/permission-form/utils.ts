@@ -10,7 +10,7 @@ export const BUILTIN_PERMISSION_READONLY_MESSAGE =
 
 export const isPermissionFormReadOnly = (isBuiltIn?: boolean): boolean => Boolean(isBuiltIn);
 
-export const permissionFormDefaultValue: permissionFormSchemaType = {
+export const permissionFormDefaultValue: PermissionFormSchemaType = {
   name: "",
   type: 0,
   tags: [],
@@ -23,11 +23,11 @@ export const permissionFormDefaultValue: permissionFormSchemaType = {
 
 const normalizeResourceType = (value: unknown): number => {
   const numericValue = Number(value);
-  if ([1, 2, 3].includes(numericValue)) return numericValue;
+  if ([1, 2].includes(numericValue)) return numericValue;
   return 0;
 };
 
-export const mapPermissionToFormValues = (permission: IPermission): permissionFormSchemaType => {
+export const mapPermissionToFormValues = (permission: IPermission): PermissionFormSchemaType => {
   const normalizedSeverity = normalizePermissionSeverity(permission.permissionSeverity);
   return {
     name: permission.name ?? "",
@@ -48,7 +48,7 @@ export const permissionFormSchema = z
       .min(1, "Name is required")
       .max(100, "Name must be at most 100 characters")
       .trim(),
-    type: z.coerce.number().min(1, "Type is required"),
+    type: z.coerce.number<number>().min(1, "Type is required"),
     resource: z
       .string()
       .min(1, "Resource is required")
@@ -60,8 +60,8 @@ export const permissionFormSchema = z
     description: z.string().max(150, "Description must be at most 150 characters"),
     dependentPermissions: z.array(z.string()),
     permissionSeverity: z
-      .nativeEnum(PermissionSeverityLevel, {
-        message: "Severity is required",
+      .enum(PermissionSeverityLevel, {
+        error: "Severity is required",
       })
       .optional(),
   })
@@ -79,4 +79,4 @@ export const permissionFormSchema = z
     },
   );
 
-export type permissionFormSchemaType = z.infer<typeof permissionFormSchema>;
+export type PermissionFormSchemaType = z.infer<typeof permissionFormSchema>;

@@ -1,6 +1,20 @@
 import { FilterToolbar, useSortQueryParams } from "@/components/filter-toolbar";
+import {
+  getEnabledOrganizationsFromPages,
+  useGetEnabledOrganizationsInfinite,
+  useGetOrganizationConfig,
+} from "@blocks-idp/iam/hooks/use-organization";
+import { useGetRoleFilterOptions } from "@blocks-idp/iam/hooks/use-roles";
+import {
+  USER_ACCOUNT_STATE_FILTER_OPTIONS,
+  toAccountStatesFilter,
+} from "@blocks-idp/iam/utils/user-account-state";
 import { Mail, User } from "lucide-react";
-import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
+import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
+import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useMemo } from "react";
+
+const DEFAULT_ORGANIZATION_ID = "default";
 
 type DateRange = { from?: Date | string; to?: Date | string };
 
@@ -9,6 +23,9 @@ type SearchFilter = {
 };
 
 type DateFilters = {
+  organizationIds: string[];
+  roles: string[];
+  accountStates: string[];
   joinedOn: DateRange;
   lastLogin: DateRange;
   lastUpdatedDate: DateRange;
@@ -21,6 +38,10 @@ export const useUsersFilterQueryParams = () => {
     "selected-filter": parseAsString.withDefault("name"),
     name: parseAsString.withDefault(""),
     email: parseAsString.withDefault(""),
+    organizationIds: parseAsArrayOf(parseAsString).withDefault([]),
+    roles: parseAsArrayOf(parseAsString).withDefault([]),
+    // Account states, matched by ANY: the lifecycle states plus LockedOut. Empty means all.
+    accountStates: parseAsArrayOf(parseAsString).withDefault([]),
     "joinedOn-start": parseAsString.withDefault(""),
     "joinedOn-end": parseAsString.withDefault(""),
     "lastLogin-start": parseAsString.withDefault(""),
@@ -39,11 +60,7 @@ export const useUsersSortQueryParams = () =>
 const rangeToIso = (value: DateRange | null | undefined) => {
   if (!value) return { from: undefined, to: undefined };
   const toIso = (v: Date | string | undefined) =>
-    v
-      ? typeof v === "string"
-        ? v
-        : v.toISOString()
-      : undefined;
+    v ? (typeof v === "string" ? v : v.toISOString()) : undefined;
   return { from: toIso(value.from), to: toIso(value.to) };
 };
 
@@ -89,6 +106,7 @@ export const UsersSearchFilter = () => {
             className: {
               selectContent: "min-w-fit",
               SelectItem: "[&>*:first-child]:hidden flex justify-center px-2",
+              input: "w-full sm:w-52",
             },
             options: [
               { label: <Mail className="aspect-square w-4" />, value: "email" },
@@ -100,10 +118,7 @@ export const UsersSearchFilter = () => {
       values={{
         search: {
           selected: queryParams["selected-filter"] as "name" | "email",
-          value:
-            queryParams["selected-filter"] === "email"
-              ? queryParams.email
-              : queryParams.name,
+          value: queryParams["selected-filter"] === "email" ? queryParams.email : queryParams.name,
         },
       }}
       defaultValues={{ search: { selected: "name", value: "" } }}
@@ -116,6 +131,60 @@ export const UsersSearchFilter = () => {
 
 export const UsersDateFilters = () => {
   const { queryParams, setQueryParams } = useUsersFilterQueryParams();
+  const tenantId = useProjectStore().selectedProject?.tenantId || "";
+  const { data: orgConfig } = useGetOrganizationConfig(tenantId);
+  const showOrganizationFilter = orgConfig?.isMultiOrgEnabled === true;
+  const selectedOrganizationIds = useMemo(
+    () => queryParams.organizationIds ?? [],
+    [queryParams.organizationIds],
+  );
+  const selectedRoles = queryParams.roles ?? [];
+  const {
+    data: organizationsData,
+    isLoading: isOrganizationsLoading,
+    hasNextPage: hasMoreOrganizations,
+    isFetchingNextPage: isLoadingMoreOrganizations,
+    fetchNextPage: fetchMoreOrganizations,
+  } = useGetEnabledOrganizationsInfinite(tenantId, {
+    enabled: showOrganizationFilter || orgConfig?.isMultiOrgEnabled === false,
+  });
+  const organizations = useMemo(
+    () => getEnabledOrganizationsFromPages(organizationsData?.pages),
+    [organizationsData?.pages],
+  );
+
+  const organizationOptions = useMemo(
+    () =>
+      organizations.map((organization) => ({
+        label: organization.name,
+        value: organization.itemId,
+      })),
+    [organizations],
+  );
+  const hasOrganizationOptions = organizationOptions.length > 0;
+  const showOrganizationSelection =
+    showOrganizationFilter &&
+    (hasOrganizationOptions || isOrganizationsLoading || hasMoreOrganizations === true);
+  const showRoleSelection = orgConfig?.isMultiOrgEnabled === false || hasOrganizationOptions;
+  const isRoleSelectionWaitingForOrganizations =
+    showOrganizationSelection && selectedOrganizationIds.length === 0;
+
+  const roleOrganizationIds = useMemo(() => {
+    if (orgConfig?.isMultiOrgEnabled === false) return [DEFAULT_ORGANIZATION_ID];
+    if (!hasOrganizationOptions) return [];
+    if (showOrganizationFilter && selectedOrganizationIds.length === 0) return [];
+    return selectedOrganizationIds;
+  }, [
+    hasOrganizationOptions,
+    orgConfig?.isMultiOrgEnabled,
+    selectedOrganizationIds,
+    showOrganizationFilter,
+  ]);
+
+  const { data: roleOptions = [], isLoading: isRolesLoading } = useGetRoleFilterOptions(
+    { projectKey: tenantId, organizationIds: roleOrganizationIds },
+    { enabled: !!tenantId && roleOrganizationIds.length > 0 },
+  );
 
   const setRangeQueryParams = (
     key: "joinedOn" | "lastLogin" | "lastUpdatedDate",
@@ -131,15 +200,17 @@ export const UsersDateFilters = () => {
   };
 
   const changeHandler = (key: string, value: unknown) => {
-    if (
-      key === "joinedOn" ||
-      key === "lastLogin" ||
-      key === "lastUpdatedDate"
-    ) {
-      return setRangeQueryParams(
-        key,
-        value as { from?: Date; to?: Date } | null,
-      );
+    if (key === "organizationIds") {
+      return setQueryParams((params) => ({
+        ...params,
+        organizationIds: value as string[],
+        roles: [],
+        page: 0,
+      }));
+    }
+
+    if (key === "joinedOn" || key === "lastLogin" || key === "lastUpdatedDate") {
+      return setRangeQueryParams(key, value as { from?: Date; to?: Date } | null);
     }
 
     setQueryParams((params) => ({
@@ -149,53 +220,102 @@ export const UsersDateFilters = () => {
     }));
   };
   const resetHandler = () => {
-    setQueryParams(null);
+    setQueryParams((params) => ({
+      ...params,
+      organizationIds: [],
+      roles: [],
+      accountStates: [],
+      "joinedOn-start": "",
+      "joinedOn-end": "",
+      "lastLogin-start": "",
+      "lastLogin-end": "",
+      "lastUpdatedDate-start": "",
+      "lastUpdatedDate-end": "",
+      page: 0,
+    }));
   };
 
   return (
     <FilterToolbar<DateFilters>
       filters={[
+        ...(showOrganizationSelection
+          ? [
+              {
+                key: "organizationIds" as const,
+                type: "MultiSelect" as const,
+                label: "Organizations",
+                props: {
+                  options: organizationOptions,
+                  disabled: isOrganizationsLoading,
+                  hasMore: hasMoreOrganizations,
+                  isLoadingMore: isLoadingMoreOrganizations,
+                  onLoadMore: fetchMoreOrganizations,
+                  portalled: false,
+                },
+              },
+            ]
+          : []),
+        ...(showRoleSelection
+          ? [
+              {
+                key: "roles" as const,
+                type: "MultiSelect" as const,
+                label: "Roles",
+                props: {
+                  options: roleOptions,
+                  disabled: isRoleSelectionWaitingForOrganizations || isRolesLoading,
+                },
+              },
+            ]
+          : []),
+        {
+          key: "accountStates",
+          type: "MultiSelect",
+          label: "Status",
+          props: { options: USER_ACCOUNT_STATE_FILTER_OPTIONS },
+        },
         {
           key: "joinedOn",
           type: "DateRange",
-          label: "Created date",
-          props: {},
+          label: "Created On",
+          props: { numberOfMonths: 1 },
         },
         {
           key: "lastLogin",
           type: "DateRange",
           label: "Last login",
-          props: {},
+          props: { numberOfMonths: 1 },
         },
         {
           key: "lastUpdatedDate",
           type: "DateRange",
           label: "Last updated",
-          props: {},
+          props: { numberOfMonths: 1 },
         },
       ]}
       values={{
-        joinedOn: isoToRange(
-          queryParams["joinedOn-start"],
-          queryParams["joinedOn-end"],
-        ),
-        lastLogin: isoToRange(
-          queryParams["lastLogin-start"],
-          queryParams["lastLogin-end"],
-        ),
+        organizationIds: showOrganizationSelection ? selectedOrganizationIds : [],
+        roles: showRoleSelection && !isRoleSelectionWaitingForOrganizations ? selectedRoles : [],
+        accountStates: toAccountStatesFilter(queryParams.accountStates),
+        joinedOn: isoToRange(queryParams["joinedOn-start"], queryParams["joinedOn-end"]),
+        lastLogin: isoToRange(queryParams["lastLogin-start"], queryParams["lastLogin-end"]),
         lastUpdatedDate: isoToRange(
           queryParams["lastUpdatedDate-start"],
           queryParams["lastUpdatedDate-end"],
         ),
       }}
       defaultValues={{
+        organizationIds: [],
+        roles: [],
+        accountStates: [],
         joinedOn: { from: undefined, to: undefined },
         lastLogin: { from: undefined, to: undefined },
         lastUpdatedDate: { from: undefined, to: undefined },
       }}
       onChange={changeHandler}
       onReset={resetHandler}
-      hideGlobalResetButton
+      displayMode="sheet"
+      sheetTriggerLabel="Filters"
     />
   );
 };

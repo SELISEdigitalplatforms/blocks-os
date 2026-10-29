@@ -1,24 +1,23 @@
 import { AuthResolver, ProtectedGuard, PublicGuard } from "@seliseblocks/genesis-os/guards";
 import { ConsoleLayout, DashboardRoute } from "@seliseblocks/genesis-os/layouts";
 import { CallbackPage, ConsolePage, LoginPage, ProfilePage } from "@seliseblocks/genesis-os/pages";
-import { createBrowserRouter, Navigate, Outlet, useLocation, useParams } from "react-router";
-import { navigationMenus } from "./constants/navigation-menus";
+import { createBrowserRouter, matchRoutes, Navigate, Outlet, useLocation } from "react-router";
+import { navigationMenus } from "@/constants/navigation-menus";
+import { DeepLinkRedirect } from "@/components/deep-link-redirect/deep-link-redirect";
+import { PendingConnectRedirect } from "@/components/pending-connect-redirect/pending-connect-redirect";
 // Temporarily disabled
 // import { AIModels } from "./cross-modules/ai/pages/ai-models";
-import {
-  EmailConfigurationPage,
-  EmailCommunicationDetails,
-  EmailServiceTable,
-  NewCommunication,
-} from "./cross-modules/communication/mail";
-import { EditEmailTemplate } from "./cross-modules/communication/mail/email/email-template-edit/email-template-edit";
-import { EmailUsageDetails } from "./cross-modules/communication/mail/email/email-usage/email-usage-details";
-import { NotificationConfigurationListPage } from "./cross-modules/communication/notification/components/notification-configuration-list";
+import { EmailConfigurationPage, NewCommunication } from "@/cross-modules/communication/mail";
+import { NotificationConfigurationListPage } from "@/cross-modules/communication/notification/components/notification-configuration-list";
+import { DataGatewayContents } from "@/cross-modules/data-gateway/pages/data-gateway/data-gateway-contents";
+import { AiCreditsPage } from "@/cross-modules/ai-credits/pages/ai-credits/ai-credits-page";
+import { SecretList } from "@/cross-modules/secrets/components/secret-list/secret-list";
+import { StorageContents } from "@/cross-modules/storage/pages/storage/storage-contents";
 // Temporarily disabled
-// import { SecretsList } from "./cross-modules/secrets/components/secrets-list/secrets-list";
-import { StorageContents } from "./cross-modules/storage/pages/storage/storage-contents";
-// Temporarily disabled
-// import { MagicUrls } from "./cross-modules/utilities/pages/magic-urls/magic-urls";
+// import { MagicUrls } from "@/cross-modules/utilities/pages/magic-urls/magic-urls";
+import ActivatePage from "@/pages/auth/activate-page";
+import ConnectPage from "@/pages/connect/connect";
+import GitHubCallbackPage from "@/pages/github-callback/github-callback";
 import { ClientCredentials } from "@blocks-idp/authentication/components/client-credentials";
 import { OIDC } from "@blocks-idp/authentication/components/oidc";
 import OidcTemplate from "@blocks-idp/authentication/components/oidc/oidc-template";
@@ -27,46 +26,57 @@ import { Certificates } from "@blocks-idp/authentication/pages/authentication-co
 import { SSO } from "@blocks-idp/authentication/pages/authentication-config/sso";
 import { ConfigureCaptcha } from "@blocks-idp/captcha/pages/configure-captcha";
 import { Organizations } from "@blocks-idp/iam/modules/organization-management";
-import { Users } from "@blocks-idp/iam/modules/user-management";
 import { Permissions } from "@blocks-idp/iam/modules/permission-management";
 import { Roles } from "@blocks-idp/iam/modules/role-management";
+import {
+  SignupLinkActivity,
+  SignupLinkConfigurations,
+} from "@blocks-idp/iam/modules/signup-link-management";
+import { Users } from "@blocks-idp/iam/modules/user-management";
 import { ConfigureMFA } from "@blocks-idp/mfa/pages/configure-mfa/configure-mfa";
 import { IdpSettingsPage } from "@blocks-idp/settings/pages/settings-page";
-import { CreateProjectWrapper } from "./pages/create-project/create-project";
-import { EnvironmentMigrationPage, EnvironmentsPage } from "./pages/environments/environments";
-import { InvitationConfirmPage } from "./pages/invitation/invitation-confirm-page";
-import { InvitationResultPage } from "./pages/invitation/invitation-result-page";
-import { LogsRoute } from "./pages/lmt/logs";
-import { LmtServiceLogTraceRoute } from "./pages/lmt/service-log-trace";
-import { LmtServiceLogsRoute } from "./pages/lmt/service-logs";
-import { LmtTraceDetailRoute } from "./pages/lmt/trace-detail";
-import { TracingRoute } from "./pages/lmt/tracing";
-import { UsageRoute } from "./pages/lmt/usage";
-import { PeopleManagement } from "./pages/people/people-management";
-import { PersonDetailPage } from "./pages/people/person-detail-page";
-import { RepositoriesPage } from "./pages/repositories/repositories";
-import { SettingsPage } from "./pages/settings/settings";
-import { SubscriptionUsagePage } from "./pages/subscription-usage/subscription-usage-page";
-import ActivatePage from "./routes/auth/activate-page";
-import GitHubCallbackPage from "./routes/github-callback/github-callback";
+import { CreateProjectWrapper } from "@/pages/create-project/create-project";
+import { EnvironmentMigrationPage, EnvironmentsPage } from "@/pages/environments/environments";
+import { InvitationConfirmPage } from "@/pages/invitation/invitation-confirm-page";
+import { InvitationResultPage } from "@/pages/invitation/invitation-result-page";
+import { LogsRoute } from "@/pages/lmt/logs";
+import { LmtServiceLogTraceRoute } from "@/pages/lmt/service-log-trace";
+import { LmtServiceLogsRoute } from "@/pages/lmt/service-logs";
+import { LmtTraceDetailRoute } from "@/pages/lmt/trace-detail";
+import { TracingRoute } from "@/pages/lmt/tracing";
+import { UsageRoute } from "@/pages/lmt/usage";
+import { PeopleManagement } from "@/pages/people/people-management";
+import { PersonDetailPage } from "@/pages/people/person-detail-page";
+import { RepositoriesPage } from "@/pages/repositories/repositories";
+import { SettingsPage } from "@/pages/settings/settings";
 // Temporarily disabled
-// import AiModelSelectedRoute from "./routes/dashboard/ai-model-selected";
-import ApiSettingsPage from "./routes/dashboard/api-settings";
-import IamAddPermissionPage from "./routes/dashboard/iam-add-permission";
-import IamOrgDetailPage from "./routes/dashboard/iam-org-detail";
-import IamPermissionDetailPage from "./routes/dashboard/iam-permission-detail";
-import IamRoleDetailPage from "./routes/dashboard/iam-role-detail";
-import IamUserDetailPage from "./routes/dashboard/iam-user-detail";
-import LmtTraceDetailsRedirect from "./routes/dashboard/lmt-trace-details";
+// import { SubscriptionUsagePage } from "@/pages/subscription-usage/subscription-usage-page";
 // Temporarily disabled
-// import MagicUrlDetailsPage from "./routes/dashboard/magic-url-details";
+// import AiModelSelectedRoute from "@/pages/dashboard/ai-model-selected";
+import ApiSettingsPage from "@/pages/api-settings/api-settings";
+import IamAddPermissionPage from "@/pages/permission/iam-add-permission";
+import IamOrgDetailPage from "@/pages/organization/iam-org-detail";
+import IamPermissionDetailPage from "@/pages/permission/iam-permission-detail";
+import IamRoleDetailPage from "@/pages/role/iam-role-detail";
+import IamUserDetailPage from "@/pages/user/iam-user-detail";
+import LmtTraceDetailsRedirect from "@/pages/lmt/lmt-trace-details";
+// Temporarily disabled
+// import MagicUrlDetailsPage from "@/pages/dashboard/magic-url-details";
 import LmtLayout from "@/layouts/lmt/lmt-layout";
-import { ProjectOverviewRoute } from "@/layouts/project-overview-route";
 import { DashboardOverview } from "@/pages/dashboard/dashboard-overview";
-import MyServicesPage from "./routes/dashboard/my-services";
-import OidcBrandingPage from "./routes/dashboard/oidc-branding";
-import SecretManagementLayout from "./routes/dashboard/secret-management";
+import IntegrationPage from "@/pages/integration/integration";
+import MyServicesPage from "@/pages/my-services/my-services";
+import OidcBrandingPage from "@/pages/auth/oidc/oidc-branding";
+import SecretManagementLayout from "@/pages/secret-management/secret-management";
+import { ProjectOverviewRoute } from "@/routes/project-overview/project-overview-route";
+import { OIDC_BRANDING_ROUTE_PATH } from "@/routes/oidc-branding-route";
 import { IdentityProviderPage } from "@blocks-idp/authentication/components/identity-provider/identity-provider";
+import { EmailPage } from "@/pages/email-management/email";
+import { EmailCommunicationDetailsPage } from "@/pages/email-management/email-communication-details";
+import { EmailTemplateEditPage } from "@/pages/email-management/email-template-edit";
+import { EmailUsageDetailsPage } from "@/pages/email-management/email-usage-details";
+import { EmailManagementLayout } from "@/layouts/email-management/email-management-layout";
+import { DataAccessPage } from "@blocks-idp/data-access/data-access-page";
 
 const redirectPaths: Record<string, string> = {
   "/app/iam/user-detail/*": "/app/iam/users",
@@ -82,45 +92,11 @@ function LegacyIdpRedirect() {
   return <Navigate to={target} replace />;
 }
 
-const emailPageShellClassName = "flex flex-col gap-6 p-6";
-
-function EmailPage() {
-  return (
-    <div className={emailPageShellClassName}>
-      <EmailServiceTable />
-    </div>
-  );
-}
-
-function EmailCommunicationDetailsPage() {
-  const { id } = useParams<{ id: string }>();
-
-  return (
-    <div className={emailPageShellClassName}>
-      <EmailCommunicationDetails params={{ id: id || "" }} />
-    </div>
-  );
-}
-
-function EmailTemplateEditPage() {
-  const { id } = useParams<{ id: string }>();
-
-  return (
-    <div className={emailPageShellClassName}>
-      <EditEmailTemplate params={{ id: id || "" }} />
-    </div>
-  );
-}
-
-function EmailUsageDetailsPage() {
-  const { id } = useParams<{ id: string }>();
-
-  return (
-    <div className={emailPageShellClassName}>
-      <EmailUsageDetails id={id || ""} />
-    </div>
-  );
-}
+// Read at render time, after `router` below is initialised. The catch-all `*` is not a route.
+const isAppRoute = (pathname: string): boolean => {
+  const matches = matchRoutes(router.routes, pathname);
+  return !!matches && matches[matches.length - 1].route.path !== "*";
+};
 
 export const router = createBrowserRouter([
   // ── Public invitation accept flow (no auth guard) ──
@@ -155,11 +131,19 @@ export const router = createBrowserRouter([
             children: [{ path: "/login", element: <LoginPage /> }],
           },
 
+          // ── "Connect with Blocks" (linked from a CMS) ──
+          // A sibling of the PublicGuard block, not under /app: the visitor may be logged
+          // out, and ConsoleLayout's ImpersonationTerminator must not run before Approve.
+          { path: "/connect", element: <ConnectPage /> },
+
           // protected
           {
             path: "/app",
             element: (
               <ProtectedGuard>
+                {/* After login (direct or activation → login), a pending /connect request
+                    resumes from here; no-op without one. */}
+                <PendingConnectRedirect />
                 <Outlet />
               </ProtectedGuard>
             ),
@@ -168,7 +152,7 @@ export const router = createBrowserRouter([
                 index: true,
                 element: <Navigate to="console" replace />,
               },
-              // ── Console routes (profile, console, create-project, etc.) ──
+              // ── Console pages (profile, console, create-project, etc.) ──
               {
                 element: (
                   <ConsoleLayout>
@@ -227,10 +211,11 @@ export const router = createBrowserRouter([
                     path: "settings",
                     element: <SettingsPage />,
                   },
-                  {
-                    path: "subscription-usage",
-                    element: <SubscriptionUsagePage />,
-                  },
+                  // Temporarily disabled
+                  // {
+                  //   path: "subscription-usage",
+                  //   element: <SubscriptionUsagePage />,
+                  // },
                 ],
               },
 
@@ -247,7 +232,12 @@ export const router = createBrowserRouter([
                   },
                   {
                     path: "dashboard",
-                    element: <DashboardOverview />,
+                    element: (
+                      <>
+                        <DeepLinkRedirect isRoute={isAppRoute} />
+                        <DashboardOverview />
+                      </>
+                    ),
                   },
                   {
                     path: "secret-management",
@@ -257,11 +247,10 @@ export const router = createBrowserRouter([
                         index: true,
                         element: <Navigate to="my-services" replace />,
                       },
-                      // Temporarily disabled
-                      // {
-                      //   path: "my-secret",
-                      //   element: <SecretsList />,
-                      // },
+                      {
+                        path: "secret",
+                        element: <SecretList />,
+                      },
                       {
                         path: "my-services",
                         element: <MyServicesPage />,
@@ -279,7 +268,7 @@ export const router = createBrowserRouter([
                             element: <OIDC />,
                           },
                           {
-                            path: ":clientId/branding",
+                            path: OIDC_BRANDING_ROUTE_PATH,
                             element: <OidcBrandingPage />,
                           },
                         ],
@@ -324,16 +313,25 @@ export const router = createBrowserRouter([
                         element: <StorageContents />,
                       },
                       {
+                        path: "data-gateway",
+                        element: <DataGatewayContents />,
+                      },
+                      {
                         path: "email",
                         element: <EmailConfigurationPage />,
                       },
                       {
-                        path: "notification",
+                        // /notification, /notification/new, /notification/push, /notification/push/devices, /notification/<id>
+                        path: "notification/:notificationId?/:notificationSub?",
                         element: <NotificationConfigurationListPage />,
                       },
                       {
                         path: "external-idp",
                         element: <Certificates />,
+                      },
+                      {
+                        path: "integration",
+                        element: <IntegrationPage />,
                       },
                       // Temporarily disabled
                       // {
@@ -421,6 +419,18 @@ export const router = createBrowserRouter([
                         element: <Permissions />,
                       },
                       {
+                        path: "data-access",
+                        element: <DataAccessPage />,
+                      },
+                      {
+                        path: "signup-link-configurations",
+                        element: <SignupLinkConfigurations />,
+                      },
+                      {
+                        path: "signup-link-activity",
+                        element: <SignupLinkActivity />,
+                      },
+                      {
                         path: "permission",
                         element: <Navigate to="../permissions" replace />,
                       },
@@ -444,6 +454,7 @@ export const router = createBrowserRouter([
                   },
                   {
                     path: "email-management",
+                    element: <EmailManagementLayout />,
                     children: [
                       {
                         index: true,
@@ -466,6 +477,10 @@ export const router = createBrowserRouter([
                         element: <EmailUsageDetailsPage />,
                       },
                     ],
+                  },
+                  {
+                    path: "ai-credits",
+                    element: <AiCreditsPage />,
                   },
                   {
                     path: "lmt",
@@ -510,8 +525,10 @@ export const router = createBrowserRouter([
             ],
           },
 
-          // ── Root redirect: authenticated users go to console ──
-          // { path: "/", element: <Navigate to="/console" replace /> },
+          // Entering the local app at the bare origin should always begin at
+          // the public login route. PublicGuard will forward an already
+          // authenticated user to the application as usual.
+          { path: "/", element: <Navigate to="/login" replace /> },
           // ── Catch-all: redirect to login ──
 
           { path: "*", element: <Navigate to="/app/console" replace /> },

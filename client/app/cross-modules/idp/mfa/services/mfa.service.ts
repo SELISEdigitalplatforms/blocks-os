@@ -1,8 +1,8 @@
 import { http } from "@/lib/http/http-client";
 import type { MfaConfigControllerResponse } from "../models/mfa.model";
 import {
-  IGenerateUserMFA_OtpPayload,
-  IGenerateUserMFA_OtpResponse,
+  IGenerateUserMfaOtpPayload,
+  IGenerateUserMfaOtpResponse,
   IGetConfigurationPayload,
   IGetConfigurationResponse,
   IConfigureUserMFAPayload,
@@ -82,7 +82,7 @@ export class MFAService {
       });
   }
 
-  generateUserMfaOTP(payload: IGenerateUserMFA_OtpPayload): Promise<IGenerateUserMFA_OtpResponse> {
+  generateUserMfaOTP(payload: IGenerateUserMfaOtpPayload): Promise<IGenerateUserMfaOtpResponse> {
     return http.post(MFA_ENDPOINTS.GENERATE_OTP, payload, undefined, {
       absoluteUrl: true,
     });

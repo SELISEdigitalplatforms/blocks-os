@@ -1,8 +1,6 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router";
-import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { format } from "date-fns";
-import { ChevronRight, LayoutTemplate, RotateCw, Shield, Trash2 } from "lucide-react";
+import { ChevronRight, Power, PowerOff, RotateCw, Shield, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
 import {
@@ -21,15 +19,18 @@ import { cn } from "@/lib/utils";
 import {
   useDeleteAuthOidc,
   useRotateAuthOidcSecret,
+  useSaveAuthOidc,
 } from "@blocks-idp/authentication/hooks/use-auth-oidc";
 import {
   IDeleteOidcClientPayload,
   IOidcConfig,
+  ISaveOidcCredentialPayload,
 } from "@blocks-idp/authentication/models/auth.oidc.model";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { CreateOIDC } from "../create-oidc/create-oidc";
 import { KVDetailItem } from "../kv-detail-item";
-import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
+import { maskId } from "../../utils/mask-id.util";
+import { OneTimeSecret, OneTimeSecretDialog } from "../one-time-secret-dialog";
 
 interface OIDCRowProps {
   item: IOidcConfig;
@@ -39,11 +40,9 @@ interface OIDCRowProps {
 const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [showRotateDialog, setShowRotateDialog] = useState(false);
-  const [showRotatedSecretDialog, setShowRotatedSecretDialog] = useState(false);
-  const [rotatedSecret, setRotatedSecret] = useState<string | null>(null);
-  const navigate = useNavigate();
-  const scoped = useScopedPath();
+  const [rotatedSecret, setRotatedSecret] = useState<OneTimeSecret | null>(null);
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync: deleteOidc, isPending: isDeleting } = useDeleteAuthOidc({
     projectKey: tenantId,
@@ -51,8 +50,10 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
   const { mutateAsync: rotateSecret, isPending: isRotating } = useRotateAuthOidcSecret({
     projectKey: tenantId,
   });
+  const { mutateAsync: saveOidc, isPending: isUpdating } = useSaveAuthOidc();
 
-  const clientSecret = rotatedSecret ?? item.clientSecret;
+  const isActive = item.isActive;
+  const willEnable = !isActive;
 
   const createdAt = item.createdDate ? format(new Date(item.createdDate), "dd MMM yyyy") : "—";
 
@@ -70,9 +71,9 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
     value: string;
     copyable?: boolean;
     sensitive?: boolean;
+    masked?: boolean;
   }[] = [
-    { key: "Client Id", value: item.itemId, copyable: true },
-    { key: "Client Secret", value: clientSecret, sensitive: true },
+    { key: "Client Id", value: item.itemId, copyable: true, masked: true },
     {
       key: "Redirect URI(s)",
       value: redirectUris.join(", "),
@@ -102,14 +103,10 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
             value: item.isAutoRedirect ? "true" : "false",
           },
         ]),
-    {
-      key: "Status",
-      value: item.isActive ? "active" : "inactive",
-    },
   ].filter((pair) => pair.value);
 
   const clientLabel = useMemo(
-    () => item.clientDisplayName || item.itemId,
+    () => item.clientDisplayName || maskId(item.itemId),
     [item.clientDisplayName, item.itemId],
   );
 
@@ -129,21 +126,59 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
     }
   };
 
+  const handleConfirmStatusChange = async () => {
+    try {
+      // The save endpoint replaces the whole client, so resend its current configuration and
+      // flip only isActive -- the same shape the edit form submits.
+      const payload: ISaveOidcCredentialPayload = {
+        itemId: item.itemId,
+        clientDisplayName: item.clientDisplayName,
+        redirectUris: item.isDeviceFlowClient ? [] : redirectUris,
+        scope: item.scope,
+        isAutoRedirect: item.isDeviceFlowClient ? false : item.isAutoRedirect,
+        isActive: !item.isActive,
+        requirePkce: item.isDeviceFlowClient ? false : item.requirePkce,
+        registerAsIdentityProvider: item.isDeviceFlowClient
+          ? false
+          : (item.registerAsIdentityProvider ?? false),
+        isDeviceFlowClient: item.isDeviceFlowClient ?? false,
+        allowedResponseTypes: item.isDeviceFlowClient ? [] : responseTypes,
+        allowedServiceAccessResources: item.allowedServiceAccessResources,
+        // Resend the stored client type and token delivery so a status toggle never turns a
+        // public (for example Mobile app) client confidential or back to cookie delivery.
+        clientType: item.clientType,
+        useTokensCookie: item.useTokensCookie,
+      };
+      const res = await saveOidc(payload);
+      if (!res.isSuccess) return showErrorToast({ errors: res.error });
+      showSuccessToast({
+        description: `OIDC client ${item.isActive ? "disabled" : "enabled"} successfully`,
+      });
+      setShowStatusDialog(false);
+    } catch (error) {
+      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
+      showErrorToast({ errors: "Something went wrong" });
+    }
+  };
+
   const handleConfirmRotate = async () => {
     try {
       const res = await rotateSecret({
         itemId: item.itemId,
         projectKey: tenantId,
       });
-      if (!res.isSuccess) {
+      if (!res.isSuccess || !res.clientSecret) {
         return showErrorToast({
           errors: res.errors ?? "Failed to rotate secret",
         });
       }
-      setRotatedSecret(res.clientSecret);
       setShowRotateDialog(false);
-      setShowRotatedSecretDialog(true);
-      setExpanded(true);
+      setRotatedSecret({
+        label: clientLabel,
+        clientId: res.clientId || item.itemId,
+        clientSecret: res.clientSecret,
+        reason: "rotated",
+      });
       showSuccessToast({ description: "Client secret rotated successfully" });
     } catch (error) {
       if (isErrorWithErrors(error)) {
@@ -160,6 +195,7 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
           "hover:bg-muted/50",
           kvPairs.length > 0 && "cursor-pointer",
           expanded && kvPairs.length > 0 ? "border-b-0" : "border-b-2 border-border",
+          !isActive && "opacity-75",
         )}
         onClick={() => kvPairs.length > 0 && setExpanded((e) => !e)}
       >
@@ -174,14 +210,26 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
         </TableCell>
         <TableCell className="py-3.5">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-950">
-              <Shield className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <div
+              className={cn(
+                "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+                isActive ? "bg-emerald-100 dark:bg-emerald-950" : "bg-muted",
+              )}
+            >
+              <Shield
+                className={cn(
+                  "h-4 w-4",
+                  isActive ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground",
+                )}
+              />
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">
-                {item.clientDisplayName || item.itemId}
+                {item.clientDisplayName || "OIDC client"}
               </p>
-              <p className="truncate font-mono text-xs text-muted-foreground">{item.itemId}</p>
+              <p className="truncate font-mono text-xs text-muted-foreground">
+                {maskId(item.itemId)}
+              </p>
             </div>
           </div>
         </TableCell>
@@ -204,25 +252,25 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
             )}
           </div>
         </TableCell>
+        <TableCell className="hidden py-3.5 sm:table-cell">
+          <Badge
+            variant="outline"
+            className="w-fit gap-1.5 border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis"
+          >
+            <span
+              className={cn(
+                "h-1.5 w-1.5 shrink-0 rounded-full",
+                isActive ? "bg-emerald-500" : "bg-muted-foreground/40",
+              )}
+            />
+            {isActive ? "Active" : "Inactive"}
+          </Badge>
+        </TableCell>
         <TableCell className="hidden py-3.5 text-sm text-muted-foreground md:table-cell">
           {createdAt}
         </TableCell>
-        <TableCell className="py-3.5 pr-4 text-right" onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center justify-end gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
-                  aria-label="Template"
-                  onClick={() => navigate(scoped(`secret-management/oidc/${item.itemId}/branding`))}
-                >
-                  <LayoutTemplate className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Template</TooltipContent>
-            </Tooltip>
+        <TableCell className="py-3.5 pl-4 text-left" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-start gap-1">
             <CreateOIDC itemId={item.itemId} triggerVariant="ghost" />
             {!item.isDeviceFlowClient && (
               <Tooltip>
@@ -241,6 +289,30 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
                 <TooltipContent>Rotate Secret</TooltipContent>
               </Tooltip>
             )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "h-7 w-7 p-0",
+                    isActive
+                      ? "text-emerald-600 hover:text-destructive"
+                      : "text-muted-foreground hover:text-emerald-600",
+                  )}
+                  aria-label={isActive ? "Disable OIDC client" : "Enable OIDC client"}
+                  onClick={() => setShowStatusDialog(true)}
+                  disabled={isUpdating}
+                >
+                  {isActive ? (
+                    <Power className="h-3.5 w-3.5" />
+                  ) : (
+                    <PowerOff className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{isActive ? "Disable" : "Enable"}</TooltipContent>
+            </Tooltip>
             <span className="mx-0.5 h-4 w-px shrink-0 bg-border" aria-hidden />
             <Tooltip>
               <TooltipTrigger asChild>
@@ -263,17 +335,18 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
       {expanded && (
         <TableRow className="border-b-2 border-border hover:bg-transparent">
           <TableCell
-            colSpan={5}
+            colSpan={6}
             className="max-w-0 bg-muted/20 px-3 py-3 pl-8 sm:px-6 sm:py-4 sm:pl-12"
           >
             <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
-              {kvPairs.map(({ key, value, copyable, sensitive }) => (
+              {kvPairs.map(({ key, value, copyable, sensitive, masked }) => (
                 <KVDetailItem
                   key={key}
                   label={key}
                   value={value}
                   copyable={copyable}
                   sensitive={sensitive}
+                  masked={masked}
                 />
               ))}
             </div>
@@ -281,12 +354,58 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
         </TableRow>
       )}
 
+      <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{willEnable ? "Enable OIDC client" : "Disable OIDC client"}</DialogTitle>
+            <DialogDescription>
+              {willEnable ? (
+                <>
+                  <strong>{clientLabel}</strong> will be able to sign users in again. Are you sure
+                  you want to enable it?
+                </>
+              ) : (
+                <>
+                  <strong>{clientLabel}</strong> will no longer be able to sign users in. Are you
+                  sure you want to disable it?
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowStatusDialog(false)}
+              disabled={isUpdating}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant={willEnable ? "default" : "destructive"}
+              size="sm"
+              onClick={handleConfirmStatusChange}
+              disabled={isUpdating}
+            >
+              {isUpdating
+                ? willEnable
+                  ? "Enabling…"
+                  : "Disabling…"
+                : willEnable
+                  ? "Enable"
+                  : "Disable"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={showRotateDialog} onOpenChange={setShowRotateDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Rotate client secret</DialogTitle>
             <DialogDescription>
-              Do you want to rotate the client secret for <strong>{clientLabel}</strong>?
+              A new secret will be made for <strong>{clientLabel}</strong>. The current secret stops
+              working at once, so every app that uses it must be updated.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2">
@@ -305,30 +424,7 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showRotatedSecretDialog} onOpenChange={setShowRotatedSecretDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>New client secret</DialogTitle>
-            <DialogDescription>
-              Copy the new secret for <strong>{clientLabel}</strong> now. The previous secret no
-              longer works.
-            </DialogDescription>
-          </DialogHeader>
-          {rotatedSecret ? (
-            <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
-              <code className="min-w-0 flex-1 break-all text-sm">{rotatedSecret}</code>
-              <CopyToClipboardButton textToCopy={rotatedSecret}>
-                <span />
-              </CopyToClipboardButton>
-            </div>
-          ) : null}
-          <DialogFooter>
-            <Button size="sm" onClick={() => setShowRotatedSecretDialog(false)}>
-              Done
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <OneTimeSecretDialog secret={rotatedSecret} onClose={() => setRotatedSecret(null)} />
 
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>

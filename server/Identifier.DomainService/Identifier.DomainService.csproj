@@ -1,21 +1,29 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <ProjectReference Include="..\Os.DataAccess\Os.DataAccess.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
 	  <!--<PackageReference Include="Azure.Identity" />-->
 	  <PackageReference Include="Azure.ResourceManager.ServiceBus" />
+	  <!-- Referenced directly by CertificateUploadService, which writes the uploaded certificate
+	       through the BlobClient handed back by IStorageDriverService. -->
+	  <PackageReference Include="Azure.Storage.Blobs" />
 	  <PackageReference Include="FluentValidation" />
 	  <PackageReference Include="MongoDB.Driver" />
 	  <PackageReference Include="SeliseBlocks.Genesis.OS" />
-	  <PackageReference Include="SeliseBlocks.MailDriver.OS" />
 	  <PackageReference Include="SeliseBlocks.StorageDriver.OS" />
    <PackageReference Include="MimeKit" />
    <PackageReference Include="MailKit" />
+   <PackageReference Include="System.Security.Cryptography.Pkcs" />
 	  <PackageReference Include="SixLabors.Fonts" />
     <PackageReference Include="SSH.NET" />
   </ItemGroup>
 
-  <ItemGroup>
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\Blocks.Secrets\Blocks.Secrets.csproj" />
+	</ItemGroup>
 
 
 

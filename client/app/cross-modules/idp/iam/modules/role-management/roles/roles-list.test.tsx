@@ -1,6 +1,19 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+const grant = vi.hoisted(() => ({
+  scope: undefined as { isSystemUser: boolean } | undefined,
+  block: undefined as string | undefined,
+}));
+vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => ({
+  useGrantScope: () => ({ scope: grant.scope, roleEditBlock: () => grant.block }),
+}));
+
+// See the mock for why the tooltip barrel cannot be imported under jsdom.
+vi.mock(
+  "@/components/ui-kits/tooltip/tooltip",
+  () => import("@/test-utils/__mocks__/tooltip.mock"),
+);
 
 // blocks-kit's theme store reads matchMedia at import time, which jsdom does not provide.
 vi.stubGlobal("matchMedia", (query: string) => ({
@@ -46,6 +59,45 @@ vi.mock("@/components/filter-toolbar", () => ({
   },
 }));
 
+const successToast = vi.fn();
+const errorToast = vi.fn();
+vi.mock("@/hooks/use-toast", () => ({
+  showSuccessToast: (...a: unknown[]) => successToast(...a),
+  showErrorToast: (...a: unknown[]) => errorToast(...a),
+}));
+
+// ArchiveAction now previews the archive's blast radius. These list tests are about the list, not
+// the preview, so it is stubbed to "loaded, nothing affected" -- the shape that yields a plain
+// one-click confirm with no consent checkbox, exactly as before impact counts existed.
+const impactData = { value: undefined as unknown, isLoading: false, isError: false };
+vi.mock("@blocks-idp/iam/hooks/use-archive-impact", () => ({
+  useRoleArchiveImpact: () => ({
+    data: impactData.value,
+    isLoading: impactData.isLoading,
+    isError: impactData.isError,
+  }),
+  usePermissionArchiveImpact: () => ({
+    data: impactData.value,
+    isLoading: impactData.isLoading,
+    isError: impactData.isError,
+  }),
+}));
+
+const archiveRole = vi.fn();
+const archivePending = { value: false, perCall: [] as boolean[] };
+const useDeleteRoleSpy = vi.fn();
+vi.mock("@blocks-idp/iam/hooks/use-roles", () => ({
+  useDeleteRole: () => {
+    useDeleteRoleSpy();
+    // perCall lets a test give each row its own pending value, which is the only way to observe
+    // whether the state is really per row rather than shared.
+    const pending = archivePending.perCall.length
+      ? (archivePending.perCall.shift() ?? false)
+      : archivePending.value;
+    return { mutateAsync: archiveRole, isPending: pending };
+  },
+}));
+
 vi.mock("../update-role/update-role", () => ({
   UpdateRole: ({ role }: { role: { name: string } }) => (
     <div data-testid="update-role-dialog">Editing {role.name}</div>
@@ -54,6 +106,7 @@ vi.mock("../update-role/update-role", () => ({
 
 import { RolesList } from "./roles-list";
 import { IRole } from "@blocks-idp/iam/models/role";
+import { ARCHIVE_ERROR_MESSAGES } from "@blocks-idp/iam/constants/archive-error-messages";
 
 const role = {
   itemId: "role-1",
@@ -74,19 +127,95 @@ const role = {
   tags: [],
 } as IRole;
 
+const MANAGED_BY = "Managed by";
+const EDIT_ADMIN = "Edit role Administrator";
+
 describe("RolesList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    grant.scope = undefined;
+    grant.block = undefined;
+  });
+
+  describe("Managed by column", () => {
+    const child = { ...role, itemId: "role-child", name: "Member", slug: "member", parentRoleSlug: "administrator" } as IRole;
+
+    it("is left out while the grant scope is not loaded and no role has a parent", () => {
+      render(<RolesList roles={[role]} isLoading={false} />);
+      expect(screen.queryByText(MANAGED_BY)).toBeNull();
+    });
+
+    it("appears once a role has a parent, naming it", () => {
+      render(<RolesList roles={[role, child]} isLoading={false} />);
+      expect(screen.getAllByText(MANAGED_BY).length).toBeGreaterThan(0);
+      const cells = screen.getAllByTestId("managed-by-cell").map((cell) => cell.textContent);
+      expect(cells).toEqual(["-", "Administrator"]);
+    });
+
+    it.each([
+      ["the system user", true],
+      ["a limited caller", false],
+    ])("always appears for %s", (_who, isSystemUser) => {
+      grant.scope = { isSystemUser };
+      render(<RolesList roles={[role]} isLoading={false} />);
+      expect(screen.getAllByText(MANAGED_BY).length).toBeGreaterThan(0);
+    });
+
+    it("falls back to the slug when the parent is not on this page", () => {
+      render(<RolesList roles={[child]} isLoading={false} />);
+      expect(screen.getByTestId("managed-by-cell").textContent).toBe("administrator");
+    });
+  });
+
+  describe("default-origin badge", () => {
+    const copy = { ...role, itemId: "role-copy", createdFromDefault: true } as IRole;
+    const own = { ...role, itemId: "role-own", slug: "administrator_f47ac10b" } as IRole;
+
+    it("marks a role that came from the default organization", () => {
+      render(<RolesList roles={[copy]} isLoading={false} showDefaultOriginBadge />);
+      expect(screen.getByText("Default")).toBeTruthy();
+    });
+
+    it("leaves the organization's own role unmarked", () => {
+      render(<RolesList roles={[own]} isLoading={false} showDefaultOriginBadge />);
+      expect(screen.queryByText("Default")).toBeNull();
+    });
+
+    it("marks only the copy when both are listed together", () => {
+      render(<RolesList roles={[copy, own]} isLoading={false} showDefaultOriginBadge />);
+      expect(screen.getAllByText("Default")).toHaveLength(1);
+    });
+
+    it("renders no badge in a single-organization tenant", () => {
+      render(<RolesList roles={[copy]} isLoading={false} showDefaultOriginBadge={false} />);
+      expect(screen.queryByText("Default")).toBeNull();
+    });
+
+    it("defaults to no badge when the flag is not passed", () => {
+      render(<RolesList roles={[copy]} isLoading={false} />);
+      expect(screen.queryByText("Default")).toBeNull();
+    });
+
+    it("still shows the name and slug next to the badge", () => {
+      render(<RolesList roles={[copy]} isLoading={false} showDefaultOriginBadge />);
+      expect(screen.getByText("Administrator")).toBeTruthy();
+      expect(screen.getByText("administrator")).toBeTruthy();
+    });
   });
 
   it("renders loading skeletons and no table while loading", () => {
+    // C5. "No table" alone is satisfied by `return null`; the skeleton and its row count are what
+    // actually say the loading state renders as it does today.
     const { container } = render(<RolesList roles={[]} isLoading />);
     expect(container.querySelector("table")).toBeNull();
+    expect(container.querySelectorAll(".animate-pulse")).toHaveLength(5);
   });
 
   it("shows the empty-state message for no roles", () => {
-    render(<RolesList roles={[]} isLoading={false} />);
+    const { container } = render(<RolesList roles={[]} isLoading={false} />);
     expect(screen.getByText("No roles found. Please create new roles.")).toBeTruthy();
+    expect(container.querySelectorAll(".animate-pulse")).toHaveLength(0);
+    expect(screen.queryByRole("button", { name: /^Archive role/ })).toBeNull();
   });
 
   it("renders role rows with name, slug, permission count and description", () => {
@@ -104,15 +233,263 @@ describe("RolesList", () => {
     expect(navigate).toHaveBeenCalledWith("/scoped/iam/role-detail/role-1");
   });
 
+  it("renders an accessible card row and activates it with Enter and Space", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<RolesList roles={[role]} isLoading={false} />);
+    const row = screen.getByRole("button", { name: "Open role Administrator" });
+
+    expect(row.getAttribute("tabindex")).toBe("0");
+    expect(row.className).toContain("rounded-xl");
+    expect(row.className).toContain("hover:border-primary/30");
+    expect(container.querySelector("table")).toBeNull();
+
+    row.focus();
+    await user.keyboard("{Enter}");
+    await user.keyboard(" ");
+    expect(navigate).toHaveBeenCalledTimes(2);
+  });
+
   it("opens the update-role dialog when the edit button is clicked", async () => {
     const user = userEvent.setup();
     render(<RolesList roles={[role]} isLoading={false} />);
     expect(screen.queryByTestId("update-role-dialog")).toBeNull();
-    // The only button in a row is the edit (Pencil) action.
-    await user.click(screen.getByRole("button"));
+    // There are two actions per row now, so select the edit button by its accessible name
+    // rather than by being the only button.
+    await user.click(screen.getByRole("button", { name: EDIT_ADMIN }));
     expect(screen.getByTestId("update-role-dialog")).toBeTruthy();
     expect(screen.getByText("Editing Administrator")).toBeTruthy();
     // Editing must not trigger row navigation.
     expect(navigate).not.toHaveBeenCalled();
+  });
+});
+
+describe("RolesList archive action", () => {
+  const renderList = (roles: IRole[]) => render(<RolesList roles={roles} isLoading={false} />);
+  const trash = (name = "Administrator") =>
+    screen.getByRole("button", { name: `Archive role ${name}` });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    archivePending.value = false;
+    archivePending.perCall = [];
+    archiveRole.mockResolvedValue({ isSuccess: true });
+  });
+
+  it("locks edit and hides archive with the reason when the caller may not change the role", () => {
+    grant.block = "This role is not below your role.";
+    renderList([role]);
+
+    expect(screen.getByRole("button", { name: EDIT_ADMIN })).toHaveProperty("disabled", true);
+    expect(screen.queryByRole("button", { name: "Archive role Administrator" })).toBeNull();
+    expect(screen.getAllByText("This role is not below your role.").length).toBeGreaterThan(0);
+    grant.block = undefined;
+  });
+
+  it("renders an archive action for a normal role", () => {
+    renderList([role]);
+    expect(trash()).toBeTruthy();
+  });
+
+  it("hides the archive action for a role copied from the default organization", () => {
+    // H3
+    renderList([{ ...role, createdFromDefault: true }]);
+    expect(screen.queryByRole("button", { name: "Archive role Administrator" })).toBeNull();
+  });
+
+  it("opens a confirm dialog without sending a request", async () => {
+    // H4
+    const user = userEvent.setup();
+    renderList([role]);
+    await user.click(trash());
+    expect(screen.getByText("Archive this role?")).toBeTruthy();
+    expect(archiveRole).not.toHaveBeenCalled();
+  });
+
+  it("cancels without sending a request", async () => {
+    // H5
+    const user = userEvent.setup();
+    renderList([role]);
+    await user.click(trash());
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(archiveRole).not.toHaveBeenCalled();
+  });
+
+  it("archives on confirm, toasts success and closes", async () => {
+    // H2
+    const user = userEvent.setup();
+    renderList([role]);
+    await user.click(trash());
+    await user.click(screen.getByRole("button", { name: "Archive" }));
+
+    expect(archiveRole).toHaveBeenCalledWith(expect.objectContaining({ id: "role-1" }));
+    expect(successToast).toHaveBeenCalled();
+    expect(errorToast).not.toHaveBeenCalled();
+    expect(screen.queryByText("Archive this role?")).toBeNull();
+  });
+
+  it("toasts the mapped reason on rejection and keeps the dialog open", async () => {
+    // C1. A rejection arrives thrown, so a handler written as `if (!res.isSuccess)` would fall
+    // through to the success path -- this is the assertion that catches that.
+    archiveRole.mockRejectedValue(
+      Object.assign(new Error("bad request"), {
+        errors: { dependency: "Role_Has_Child_Roles" },
+      }),
+    );
+    const user = userEvent.setup();
+    renderList([role]);
+    await user.click(trash());
+    await user.click(screen.getByRole("button", { name: "Archive" }));
+
+    expect(successToast).not.toHaveBeenCalled();
+    // The raw dictionary and the map, not a pre-mapped array: showErrorToast does the lookup,
+    // and handing it an array would collapse to "An unexpected error occurred."
+    expect(errorToast).toHaveBeenCalledWith({
+      errors: { dependency: "Role_Has_Child_Roles" },
+      customMessages: ARCHIVE_ERROR_MESSAGES,
+    });
+    expect(screen.getByText("Archive this role?")).toBeTruthy();
+  });
+
+  it("handles a transport-style failure through the same path", async () => {
+    // C2. No special-cased branch: an error with no usable dictionary still produces copy.
+    archiveRole.mockRejectedValue(new TypeError("Failed to fetch"));
+    const user = userEvent.setup();
+    renderList([role]);
+    await user.click(trash());
+    await user.click(screen.getByRole("button", { name: "Archive" }));
+
+    expect(successToast).not.toHaveBeenCalled();
+    expect(errorToast).toHaveBeenCalledWith({
+      errors: "Something went wrong while archiving.",
+      customMessages: ARCHIVE_ERROR_MESSAGES,
+    });
+  });
+
+  it("never navigates from the trash button, the dialog or its cancel", async () => {
+    // H6. The row navigates on click and React events bubble through the component tree even
+    // though the dialog is portalled, so the dialog's own buttons are checked too.
+    const user = userEvent.setup();
+    renderList([role]);
+    await user.click(trash());
+    expect(navigate).not.toHaveBeenCalled();
+
+    // Confirm: the click that both mutates and could bubble to the row.
+    await user.click(screen.getByRole("button", { name: "Archive" }));
+    expect(navigate).not.toHaveBeenCalled();
+
+    // And Cancel on a freshly opened dialog.
+    await user.click(trash());
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("keeps the open dialog targeted to the same role when the list changes underneath", async () => {
+    // The dangerous shape here would be a row component reused with a stale open=true and a new
+    // itemId, so Confirm archives a role the user never picked. Measured behaviour is the safe
+    // one: the row remounts and the dialog closes with no archive call. Asserted so that a
+    // regression to a reused-and-still-open dialog fails here instead of in production.
+    const other: IRole = { ...role, itemId: "role-other", name: "Auditor" };
+    const user = userEvent.setup();
+    const { rerender } = render(<RolesList roles={[other, role]} isLoading={false} />);
+
+    await user.click(screen.getByRole("button", { name: "Archive role Administrator" }));
+    expect(screen.getByRole("dialog")).toBeTruthy();
+
+    // A refetch drops the other row.
+    rerender(<RolesList roles={[role]} isLoading={false} />);
+
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(screen.getByText(/Administrator will be archived/)).toBeTruthy();
+    expect(archiveRole).not.toHaveBeenCalled();
+  });
+
+  it("keeps the confirmation open on a parent re-render", async () => {
+    // Documents real behaviour rather than desired behaviour, so it fails loudly if either
+    // changes. Root cause is outside this ticket: useSortQueryParams returns a fresh
+    // sortQueryParams object every render, which invalidates the columns useMemo, which gives
+    // flexRender a new cell function -- a new component type, so the row subtree remounts and the
+    // dialog state goes with it. A background refetch therefore dismisses an open confirmation.
+    // Benign (nothing is archived, the user re-clicks) but worth fixing where sortQueryParams is
+    // memoised, which would also make this assertion flip.
+    const user = userEvent.setup();
+    const { rerender } = render(<RolesList roles={[role]} isLoading={false} />);
+
+    await user.click(screen.getByRole("button", { name: "Archive role Administrator" }));
+    expect(document.querySelector('[role="dialog"]')).toBeTruthy();
+
+    rerender(<RolesList roles={[role]} isLoading={false} />);
+
+    expect(document.querySelector('[role="dialog"]')).toBeTruthy();
+    expect(archiveRole).not.toHaveBeenCalled();
+  });
+
+  it("does not navigate when the trash button is reached by keyboard", async () => {
+    // Enter on a button dispatches a click, so the same stopPropagation covers the keyboard path.
+    // Worth pinning: this is why there is no separate onKeyDown guard on the actions cell.
+    const user = userEvent.setup();
+    renderList([role]);
+
+    await user.tab();
+    await user.tab();
+    await user.tab();
+    await user.keyboard("{Enter}");
+
+    expect(navigate).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toBeTruthy();
+  });
+
+  it("gives every row its own archive mutation", () => {
+    // C4, part one: a hoisted hook would be called once for the whole list.
+    useDeleteRoleSpy.mockClear();
+    renderList([role, { ...role, itemId: "role-2", name: "Auditor" }]);
+    expect(useDeleteRoleSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not disable one row's confirm button because another row is archiving", async () => {
+    // C4, part two -- the assertion that actually matters. Row one is mid-archive, row two is
+    // idle: row two's confirm must still be usable. Counting hook calls alone would pass even if
+    // both rows read the same pending flag.
+    archivePending.perCall = [true, false];
+    const user = userEvent.setup();
+    renderList([role, { ...role, itemId: "role-2", name: "Auditor" }]);
+
+    await user.click(trash("Auditor"));
+    const confirm = screen.getByRole("button", { name: "Archive" }) as HTMLButtonElement;
+    expect(confirm.disabled).toBe(false);
+    expect(screen.queryByRole("button", { name: "Archiving..." })).toBeNull();
+  });
+
+  it("shows the pending label while archiving", async () => {
+    // C3
+    archivePending.value = true;
+    const user = userEvent.setup();
+    renderList([role]);
+    await user.click(trash());
+    expect(
+      (screen.getByRole("button", { name: "Archiving..." }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+  });
+
+  it("renders no archive actions in the empty state", () => {
+    // C5
+    render(<RolesList roles={[]} isLoading={false} />);
+    expect(screen.getByText("No roles found. Please create new roles.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^Archive role/ })).toBeNull();
+  });
+
+  it("keeps the edit dialog and the archive dialog independent", async () => {
+    // C6, both directions -- proving only one of them would leave the other regression open.
+    const user = userEvent.setup();
+    const { unmount } = renderList([role]);
+
+    await user.click(trash());
+    expect(screen.getByText("Archive this role?")).toBeTruthy();
+    expect(screen.queryByTestId("update-role-dialog")).toBeNull();
+    unmount();
+
+    renderList([role]);
+    await user.click(screen.getByRole("button", { name: EDIT_ADMIN }));
+    expect(screen.getByTestId("update-role-dialog")).toBeTruthy();
+    expect(screen.queryByText("Archive this role?")).toBeNull();
   });
 });

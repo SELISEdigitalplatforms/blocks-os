@@ -55,12 +55,12 @@ vi.mock(
   }),
 );
 
-// The bee plugin editor is a heavy iframe wrapper; expose a button that fires
-// its save callback with the html/json payload.
-vi.mock("@blocks-communication/mail/components/bee-plugin-starter/bee-plugin-starter", () => ({
-  default: ({ onBeeSave }: { onBeeSave: (d: { htmlFile: string; jsonFile: string }) => void }) => (
-    <button type="button" onClick={() => onBeeSave({ htmlFile: "<html/>", jsonFile: "{}" })}>
-      bee-save
+// The mailcraft editor mounts a Web Component; expose a button that fires
+// its save callback with the exported HTML.
+vi.mock("@blocks-communication/mail/components/mailcraft-editor/mailcraft-editor", () => ({
+  default: ({ onSave }: { onSave: (d: { htmlFile: string }) => void }) => (
+    <button type="button" onClick={() => onSave({ htmlFile: "<html/>" })}>
+      editor-save
     </button>
   ),
 }));
@@ -100,10 +100,10 @@ describe("NewCommunication", () => {
     render(<NewCommunication />);
 
     await user.click(screen.getByRole("button", { name: "submit-basic" }));
-    await screen.findByRole("button", { name: "bee-save" });
+    await screen.findByRole("button", { name: "editor-save" });
 
     h.saveTemplate.mockResolvedValue({ isSuccess: true, itemId: "tpl-99" });
-    await user.click(screen.getByRole("button", { name: "bee-save" }));
+    await user.click(screen.getByRole("button", { name: "editor-save" }));
 
     await waitFor(() =>
       expect(h.navigate).toHaveBeenCalledWith("/scoped/email-management/communications/tpl-99"),
@@ -115,10 +115,10 @@ describe("NewCommunication", () => {
     render(<NewCommunication />);
 
     await user.click(screen.getByRole("button", { name: "submit-basic" }));
-    await screen.findByRole("button", { name: "bee-save" });
+    await screen.findByRole("button", { name: "editor-save" });
 
     h.saveTemplate.mockResolvedValue({ isSuccess: false, errors: { body: "bad" } });
-    await user.click(screen.getByRole("button", { name: "bee-save" }));
+    await user.click(screen.getByRole("button", { name: "editor-save" }));
 
     await waitFor(() =>
       expect(h.toast).toHaveBeenCalledWith(
@@ -133,10 +133,10 @@ describe("NewCommunication", () => {
     render(<NewCommunication />);
 
     await user.click(screen.getByRole("button", { name: "submit-basic" }));
-    await screen.findByRole("button", { name: "bee-save" });
+    await screen.findByRole("button", { name: "editor-save" });
 
     h.saveTemplate.mockRejectedValue(new Error("boom"));
-    await user.click(screen.getByRole("button", { name: "bee-save" }));
+    await user.click(screen.getByRole("button", { name: "editor-save" }));
 
     await waitFor(() =>
       expect(h.toast).toHaveBeenCalledWith(

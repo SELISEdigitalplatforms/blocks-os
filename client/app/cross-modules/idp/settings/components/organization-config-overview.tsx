@@ -33,7 +33,7 @@ type SourceTileProps = {
 const SourceTile = ({ label, enabled }: SourceTileProps) => (
   <div
     className={cn(
-      "flex min-h-[4.5rem] flex-col items-center justify-center gap-1.5 rounded-lg border px-2 py-3 text-center transition-colors",
+      "flex min-h-18 flex-col items-center justify-center gap-1.5 rounded-lg border px-2 py-3 text-center transition-colors",
       enabled
         ? "border-emerald-200/80 bg-emerald-50/60 dark:border-emerald-900/40 dark:bg-emerald-950/20"
         : "border-border/80 bg-muted/20",

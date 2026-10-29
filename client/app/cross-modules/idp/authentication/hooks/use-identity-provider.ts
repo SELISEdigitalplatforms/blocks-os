@@ -11,7 +11,7 @@ const QUERY_KEY = ["identity-providers"] as const;
 
 export const useGetIdentityProviders = ({ projectId }: {projectId:Id}) => {
   return useQuery({
-   queryKey: [QUERY_KEY, projectId],
+   queryKey: [...QUERY_KEY, projectId],
    queryFn: () => identityProviderService.getAll(),
    enabled: !!projectId
   });

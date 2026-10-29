@@ -95,15 +95,18 @@ describe("use-auth-oidc hooks", () => {
 
   describe("useSaveAuthOidc", () => {
     it("should save OIDC credential successfully", async () => {
+      const client = makeClient();
+      const invalidate = vi.spyOn(client, "invalidateQueries");
       vi.mocked(authOidc.clients.saveOidcCredential).mockResolvedValue(undefined as never);
 
       const { result } = renderHook(() => useSaveAuthOidc(), {
-        wrapper: createWrapper(),
+        wrapper: WrapperWith(client),
       });
 
       result.current.mutate(mockSaveOidcPayload);
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(authOidc.clients.saveOidcCredential).toHaveBeenCalledWith(mockSaveOidcPayload);
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ["secrets", "list"] });
     });
 
     it("should add externalDiscoveryEndpoint when registerAsIdentityProvider is true", async () => {

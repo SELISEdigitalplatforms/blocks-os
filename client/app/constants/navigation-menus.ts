@@ -1,10 +1,12 @@
 import { Menu } from "@/models/menu-models";
 import {
+  // Activity,  // restore with the signup-link-activity entry below
   BarChart3,
   Bell,
   BookMinus,
-  // BrainCircuit, // Temporarily hidden (AI Models)
+  BrainCircuit,
   Building2,
+  Coins,
   CreditCard,
   Database,
   Fingerprint,
@@ -12,18 +14,21 @@ import {
   Globe,
   Home,
   Key,
-  // KeyRound, // Temporarily hidden (My Secret)
+  KeyRound,
   Layers,
-  // Link2, // Temporarily hidden (Magic URL)
+  Link2,
   Lock,
   Mail,
+  Network,
   Package,
+  Plug,
   ScrollText,
   Settings,
   ShieldAlert,
   ShieldCheck,
   SlidersHorizontal,
   Smartphone,
+  Ticket,
   Users,
   Zap,
 } from "lucide-react";
@@ -77,6 +82,7 @@ export const navigationMenus: Menu[] = [
     path: "/app/project/subscription-usage",
     icon: CreditCard,
     desc: "View subscription details and usage metrics",
+    disabled: true, // Temporarily disabled
   },
   { type: "separator", id: "separator-identity" },
   {
@@ -87,17 +93,16 @@ export const navigationMenus: Menu[] = [
     icon: Lock,
     desc: "Manage secrets, configs, and credentials",
     children: [
-      // Temporarily hidden
-      // {
-      //   id: "my-secret",
-      //   type: "menu",
-      //   name: "My Secret",
-      //   path: "/app/secret-management/my-secret",
-      //   icon: KeyRound,
-      //   desc: "Personal secrets and credentials",
-      // },
       {
-        id: "managed-services",
+        id: "secret-management",
+        type: "menu",
+        name: "Secret",
+        path: "/app/secret-management/secret",
+        icon: KeyRound,
+        desc: "Securely manage API and service secrets for this environment",
+      },
+      {
+        id: "my-services",
         type: "menu",
         name: "My Services",
         path: "/app/secret-management/my-services",
@@ -153,15 +158,16 @@ export const navigationMenus: Menu[] = [
         desc: "Multi-factor authentication settings",
         type: "menu",
       },
-      // Temporarily hidden
-      // {
-      //   id: "magic-url",
-      //   name: "Magic URL",
-      //   path: "/app/secret-management/magic-url",
-      //   icon: Link2,
-      //   desc: "Password less magic link settings",
-      //   type: "menu",
-      // },
+
+      {
+        id: "magic-url",
+        name: "Magic URL",
+        path: "/app/secret-management/magic-url",
+        icon: Link2,
+        desc: "Password less magic link settings",
+        type: "menu",
+        disabled: true, // Temporarily disabled
+      },
       {
         id: "email",
         name: "Email",
@@ -186,24 +192,42 @@ export const navigationMenus: Menu[] = [
         desc: "File and object storage",
         type: "menu",
       },
-      // Temporarily hidden
-      // {
-      //   id: "ai-models",
-      //   name: "AI Models",
-      //   path: "/app/secret-management/ai-models",
-      //   icon: BrainCircuit,
-      //   desc: "AI model integrations",
-      //   type: "menu",
-      // },
+      {
+        id: "data-gateway",
+        name: "Data Gateway",
+        path: "/app/secret-management/data-gateway",
+        icon: Network,
+        desc: "Per-project data source configuration",
+        type: "menu",
+      },
+      {
+        id: "ai-models",
+        name: "AI Models",
+        path: "/app/secret-management/ai-models",
+        icon: BrainCircuit,
+        desc: "AI model integrations",
+        type: "menu",
+        disabled: true, // Temporarily disabled
+      },
+      {
+        id: "integration",
+        name: "Integrations",
+        path: "/app/secret-management/integration",
+        icon: Plug,
+        desc: "Set up this project's Blocks services for external plugins and apps",
+        type: "menu",
+      },
     ],
   },
-  // {
-  //   id: "service-identity__api-settings",
-  //   type: "menu",
-  //   name: "API Settings",
-  //   path: "/app/api-settings",
-  //   icon: Settings,
-  // },
+  {
+    id: "service-identity__api-settings",
+    type: "menu",
+    name: "API Settings",
+    path: "/app/api-settings",
+    icon: Settings,
+    desc: "Manage API keys and settings",
+    disabled: true, // Temporarily disabled
+  },
   {
     id: "service-identity__email-management",
     type: "menu",
@@ -228,14 +252,6 @@ export const navigationMenus: Menu[] = [
         type: "menu",
       },
 
-      // {
-      //   id: "oidc-template",
-      //   name: "OIDC Template",
-      //   path: "/app/iam/oidc-template",
-      //   icon: FileCode,
-      //   desc: "Configure OIDC template",
-      //   type: "menu",
-      // },
       {
         id: "users",
         name: "Users",
@@ -280,6 +296,37 @@ export const navigationMenus: Menu[] = [
         desc: "Manage permissions",
         type: "menu",
       },
+      {
+        id: "data-access",
+        name: "Data Access",
+        path: "/app/iam/data-access",
+        icon: Database,
+        desc: "Manage update access for platform collections",
+        type: "menu",
+      },
+      {
+        id: "signup-link-configurations",
+        name: "One-Click Signup",
+        // Plural is safe here, unlike the siblings above: this screen edits in dialogs
+        // rather than detail routes, so there is no sibling path for startsWith to swallow.
+        // It shares the "/app/iam/signup-link" prefix with the hidden activity route below,
+        // but neither path is a prefix of the other, so expansion highlights exactly one.
+        path: "/app/iam/signup-link-configurations",
+        icon: Ticket,
+        desc: "Manage configurations that one-click signup links are generated from",
+        type: "menu",
+      },
+      // Hidden from the sidebar for now. The route, the page and its summary endpoint are
+      // all still live, so /app/iam/signup-link-activity works if you go to it directly --
+      // restoring the entry is uncommenting this and the Activity icon import.
+      // {
+      //   id: "signup-link-activity",
+      //   name: "Signup Link Activity",
+      //   path: "/app/iam/signup-link-activity",
+      //   icon: Activity,
+      //   desc: "Review per-configuration signup link activity counts",
+      //   type: "menu",
+      // },
     ],
   },
   { type: "separator", id: "separator-lmt" },
@@ -315,5 +362,14 @@ export const navigationMenus: Menu[] = [
         type: "menu",
       },
     ],
+  },
+  { type: "separator", id: "separator-ai-credits" },
+  {
+    id: "ai-credits",
+    type: "menu",
+    name: "AI Credits",
+    path: "/app/ai-credits",
+    icon: Coins,
+    desc: "Agent credit balance for this project and voucher redemption",
   },
 ];

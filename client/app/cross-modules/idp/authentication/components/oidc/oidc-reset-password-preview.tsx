@@ -1,0 +1,39 @@
+import {
+  OidcPreviewShell,
+  PreviewButton,
+  PreviewField,
+  PreviewHeading,
+  PreviewSuccess,
+  type OidcPagePreviewProps,
+} from "./oidc-preview-shared";
+
+export const OidcResetPasswordPreview = (props: OidcPagePreviewProps) => {
+  const copy = props.template.pages.resetPassword;
+  return (
+    <OidcPreviewShell {...props} pageLabel="Reset Password">
+      <PreviewHeading>{copy.heading}</PreviewHeading>
+      <div className="flex flex-col gap-3 sm:gap-4">
+        <PreviewField label={copy.passwordLabel} password />
+        <PreviewField label={copy.confirmPasswordLabel} password />
+      </div>
+      <div className="mt-4 flex items-start gap-2 text-xs text-(--muted) sm:mt-5">
+        <span
+          className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border border-(--border-strong) text-[10px] text-(--accent)"
+          aria-hidden
+        >
+          ✓
+        </span>
+        <p>{copy.logoutFromDevicesLabel}</p>
+      </div>
+      <PreviewButton>{copy.submitButton}</PreviewButton>
+      <p className="mt-3 text-center text-xs text-(--accent) sm:mt-4">
+        {copy.backToLoginButton}
+      </p>
+      <div className="mt-3 rounded-lg border border-(--border-strong) p-2.5 sm:mt-4 sm:p-3">
+        <p className="text-xs text-(--danger)">{copy.missingCodeMessage}</p>
+        <p className="mt-2 text-xs text-(--accent)">{copy.requestNewLinkButton}</p>
+      </div>
+      <PreviewSuccess title={copy.successTitle} subtitle={copy.successSubtitle} />
+    </OidcPreviewShell>
+  );
+};

@@ -73,6 +73,28 @@ describe("OrganizationUsersTable", () => {
     expect(screen.getByText("Active")).toBeTruthy();
   });
 
+  it("names a member with no first or last name after their email", () => {
+    renderTable({
+      users: [user({ firstName: null, lastName: null, email: "john.doe@yopmail.com" })],
+    });
+    expect(screen.getByText("john.doe")).toBeTruthy();
+    expect(screen.getByText("J")).toBeTruthy();
+  });
+
+  it("falls back to placeholders when a member has neither a name nor an email", () => {
+    renderTable({ users: [user({ firstName: null, lastName: null, email: null })] });
+    expect(screen.getByText("-")).toBeTruthy();
+    expect(screen.getByText("?")).toBeTruthy();
+  });
+
+  it("keeps the desktop grid aligned when a member has no email", () => {
+    const { container: withEmail } = renderTable({ users: [user()] });
+    const withEmailCells = withEmail.querySelectorAll(".md\\:grid > *").length;
+    const { container: withoutEmail } = renderTable({ users: [user({ email: null })] });
+    const withoutEmailCells = withoutEmail.querySelectorAll(".md\\:grid > *").length;
+    expect(withoutEmailCells).toBe(withEmailCells);
+  });
+
   it("shows the empty state when there are no users", () => {
     renderTable({ users: [] });
     expect(screen.getByText("No users found.")).toBeTruthy();
@@ -90,8 +112,24 @@ describe("OrganizationUsersTable", () => {
     fireEvent.click(screen.getAllByLabelText("Revoke from organization")[0]);
     await waitFor(() => expect(screen.getByText("Revoke access")).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Revoke" }));
-    await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledWith({ organizationId: "org-1" }));
+    await waitFor(() =>
+      expect(h.mutateAsync).toHaveBeenCalledWith({ organizationId: "org-1", notifyUser: true }),
+    );
     await waitFor(() => expect(h.showSuccess).toHaveBeenCalled());
+  });
+
+  it("sends notifyUser false when the notify checkbox is unchecked", async () => {
+    h.mutateAsync.mockResolvedValue({ isSuccess: true });
+    renderTable({ users: [user()] });
+    fireEvent.click(screen.getAllByLabelText("Revoke from organization")[0]);
+    await waitFor(() => expect(screen.getByText("Revoke access")).toBeTruthy());
+    const checkbox = screen.getByRole("checkbox", { name: "Notify user by email" });
+    expect(checkbox.getAttribute("data-state")).toBe("checked");
+    fireEvent.click(checkbox);
+    fireEvent.click(screen.getByRole("button", { name: "Revoke" }));
+    await waitFor(() =>
+      expect(h.mutateAsync).toHaveBeenCalledWith({ organizationId: "org-1", notifyUser: false }),
+    );
   });
 
   it("renders the loading skeleton while loading", () => {

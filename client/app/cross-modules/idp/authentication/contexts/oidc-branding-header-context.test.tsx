@@ -14,7 +14,13 @@ describe("OidcBrandingHeaderContext", () => {
   it("stores and exposes header actions through the provider", () => {
     const { result } = renderHook(() => useOidcBrandingHeader(), { wrapper });
     expect(result.current.actions).toBeNull();
-    const actions = { onSave: vi.fn(), onUndo: vi.fn(), isBusy: false };
+    const actions = {
+      onSave: vi.fn(),
+      onUndo: vi.fn(),
+      isBusy: false,
+      isDirty: true,
+      isValid: true,
+    };
     act(() => result.current.setActions(actions));
     expect(result.current.actions).toBe(actions);
     act(() => result.current.setActions(null));

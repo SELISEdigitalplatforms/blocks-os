@@ -1,135 +1,111 @@
-import { expect, type Page } from "@playwright/test";
+import dns from "node:dns/promises"
+import { type Page } from "@playwright/test"
+import { e2eBaseUrl } from "./env"
 
-// Navigation helpers for the sidebar product groups defined in
-// client/app/constants/navigation-menus.ts. These specs do NOT depend on the
-// [setup] project — they reuse the storageState at fixtures/auth.json.
+export function buildProjectRouteUrl(itemId: string, route: string): string {
+  const normalizedRoute = route.replace(/^\//, "")
+  return `${e2eBaseUrl()}/app/${itemId}/${normalizedRoute}`
+}
 
-const username = process.env.E2E_USERNAME;
-const password = process.env.E2E_PASSWORD;
+export function canonicalDashboardUrl(fixture: { itemId: string }): string {
+  return buildProjectRouteUrl(fixture.itemId, "dashboard")
+}
 
-/**
- * Perform the real OIDC login flow against the deployed IAM host.
- *
- * The standard [setup] project already does this and writes
- * fixtures/auth.json; callers that bypass [setup] (see
- * playwright.skip-setup.config.ts) must invoke this themselves. To keep the
- * call sites simple, callers should normally just rely on storageState — this
- * helper exists for ad-hoc / headed debugging sessions.
- *
- * When storageState already carries an authenticated session (no Log in CTA on
- * the landing page), this short-circuits to the console without re-running
- * OIDC. The IAM OIDC login page is currently broken on the deployed host (it
- * hangs after credential submission), so prefer the storageState path.
- */
-export async function loginFresh(page: Page): Promise<void> {
-  if (!username || !password) {
-    throw new Error("E2E_USERNAME / E2E_PASSWORD are not set. Fill them in e2e/.env.e2e.");
+/** Rewrite a stored absolute URL to use the current `E2E_BASE_URL` origin. */
+export function resolveE2eUrl(urlOrPath: string): string {
+  try {
+    const parsed = new URL(urlOrPath)
+    const origin = new URL(e2eBaseUrl()).origin
+    return `${origin}${parsed.pathname}${parsed.search}${parsed.hash}`
+  } catch {
+    if (urlOrPath.startsWith("/")) {
+      return `${e2eBaseUrl()}${urlOrPath}`
+    }
+    return urlOrPath
   }
+}
 
-  // Probe the landing page first — if storageState is already authenticated
-  // we land directly on the console and skip the whole IAM dance.
-  await page.goto("/app/console");
-  if (/\/app\/console/.test(page.url())) return;
+function formatDnsHelp(hostname: string): string {
+  return (
+    `Host "${hostname}" is not resolvable. ` +
+    `Set E2E_BASE_URL in e2e/.env.e2e to a reachable target. ` +
+    `For local runs with a named domain, add to /etc/hosts: 127.0.0.1 ${hostname} ` +
+    `(see e2e/.env.e2e.example).`
+  )
+}
 
-  await page.goto("/login");
-  const loginButton = page.getByRole("button", { name: "Log in to your account" });
-  if (!(await loginButton.isVisible().catch(() => false))) {
-    // Already authenticated but landed somewhere unexpected — let the caller
-    // assert against the actual URL.
-    return;
+/** Fail fast before the suite when the configured host cannot be resolved. */
+export async function assertE2eHostResolvable(): Promise<void> {
+  const hostname = new URL(e2eBaseUrl()).hostname
+  try {
+    await dns.lookup(hostname)
+  } catch {
+    throw new Error(formatDnsHelp(hostname))
   }
+}
 
-  await loginButton.click();
+const NAV_TIMEOUT_MS = 45_000
+const SHELL_PAINT_TIMEOUT_MS = 15_000
 
-  const emailField = page.locator("#oidc-email");
-  await emailField.waitFor({ timeout: 30_000 });
-  await emailField.fill(username);
-  await page.locator("#oidc-password").fill(password);
-  await page.getByRole("button", { name: "Login", exact: true }).click();
-
-  await page.waitForURL("**/app/console", { timeout: 60_000 });
-  await expect(page).toHaveURL(/\/app\/console/);
+/**
+ * Did *anything* render after this navigation? A hard goto to a live prod
+ * target can complete "domcontentloaded" while the SPA itself stalls (a slow
+ * bundle/API call on a cold deep link) and paints nothing — the page stays
+ * blank white until a much later, unrelated assertion times out. The Logo
+ * image is present on every page state this app renders (login, marketing,
+ * authenticated console/app), so its visibility is a cheap "shell painted"
+ * signal independent of which page we ended up on — except with the left
+ * sidebar collapsed: genesis-os then renders a plain icon (no alt="Logo")
+ * inside the same console link. The collapsed state is saved in localStorage
+ * ("layout-settings") and so in the shared session file once any test runs at
+ * a narrow viewport, after which every navigation waited the full 15 s here
+ * and then navigated a second time. Accept the collapsed icon too.
+ */
+async function waitForAppShell(page: Page, timeout: number): Promise<boolean> {
+  return page
+    .locator('img[alt="Logo"], a[href$="/console"] :is(img, svg)')
+    .first()
+    .waitFor({ state: "visible", timeout })
+    .then(() => true)
+    .catch(() => false)
 }
 
 /**
- * Land on the console (/app/console) and wait for the page to settle.
- * The kit's ConsolePage renders either "Welcome to SELISE Blocks" (empty
- * account) or "Your Blocks Projects" (≥ 1 project). We don't pin a specific
- * heading because both branches are valid landing states.
+ * Navigate with a bounded timeout instead of Playwright's unlimited default.
+ * Against a live target, a navigation can stall on real network/backend
+ * latency; without a timeout that stall silently eats the whole test's
+ * budget (observed: a single hung goto exhausting a 180s test timeout)
+ * instead of failing fast. Retries once — most stalls here are transient —
+ * before surfacing the error, and after a completed navigation also retries
+ * once if the app shell never paints (blank page, see waitForAppShell).
  */
-export async function enterConsole(page: Page): Promise<void> {
-  await page.goto("/app/console");
-  await page.waitForURL(/\/app\/console(\/|$)/, { timeout: 30_000 });
-  await expect(page.locator("main")).toBeVisible({ timeout: 30_000 });
-}
-
-/**
- * Enter a project by clicking the first environment chip on the first project
- * card. The console's ProjectCard component navigates to
- * `/app/<itemId>/dashboard` (which is the only route that mounts the full
- * sidebar containing API Settings / Identity & Access / Secrets & Configs / Logs & Traces).
- *
- * Returns the resulting `:itemId` so callers can build direct URLs.
- */
-export async function enterProject(page: Page): Promise<string> {
-  await enterConsole(page);
-
-  // Wait for at least one project card to render. The console shows a "Your
-  // Blocks Projects" heading once the projects API has returned.
-  await expect(page.getByRole("heading", { name: "Your Blocks Projects" })).toBeVisible({
-    timeout: 30_000,
-  });
-
-  // The first environment chip is the entry point into the dashboard layout.
-  // The chip label comes from environmentOptions (e.g. "Development" /
-  // "Testing" / "Staging"). The first one is always present after the project
-  // is created with at least one environment.
-  const firstChip = page
-    .locator("button")
-    .filter({ hasText: /^(Development|Testing|Staging|Production)$/ })
-    .first();
-  await expect(firstChip, "no project environment chip visible on console").toBeVisible({
-    timeout: 30_000,
-  });
-  await firstChip.click();
-
-  await page.waitForURL(/\/app\/[^/]+\/dashboard/, { timeout: 30_000 });
-  const itemId = page.url().match(/\/app\/([^/]+)\/dashboard/)?.[1] ?? "";
-  expect(itemId, "could not read itemId from URL").not.toBe("");
-  return itemId;
-}
-
-/**
- * Open a top-level sidebar group by visible name and wait for its expanded
- * child items. The sidebar uses accordion semantics — clicking the parent
- * triggers navigation to its `path` and reveals `children`.
- *
- * `childLabel` is optional: when provided, the function asserts the named
- * child is visible after the parent is opened.
- */
-export async function openSidebarItem(
+export async function gotoE2e(
   page: Page,
-  parentLabel: string,
-  childLabel?: string,
-): Promise<void> {
-  const parent = page
-    .getByRole("link", { name: parentLabel })
-    .or(page.getByRole("button", { name: parentLabel }))
-    .first();
+  url: string,
+  options?: Parameters<Page["goto"]>[1],
+) {
+  const target = resolveE2eUrl(url)
+  const maxAttempts = 2
 
-  await expect(parent, `sidebar item "${parentLabel}" not visible`).toBeVisible({
-    timeout: 30_000,
-  });
-  await parent.click();
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      await page.goto(target, {
+        waitUntil: "domcontentloaded",
+        timeout: NAV_TIMEOUT_MS,
+        ...options,
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      if (/ERR_NAME_NOT_RESOLVED|ENOTFOUND|ERR_CONNECTION_REFUSED/i.test(message)) {
+        const hostname = new URL(target).hostname
+        throw new Error(`${formatDnsHelp(hostname)} Original: ${message}`, { cause: error })
+      }
+      if (attempt === maxAttempts - 1) throw error
+      continue // stalled/timed-out navigation — retry instead of burning the test budget
+    }
 
-  if (childLabel) {
-    const child = page
-      .getByRole("link", { name: childLabel })
-      .or(page.getByRole("button", { name: childLabel }))
-      .first();
-    await expect(
-      child,
-      `sidebar child "${childLabel}" not visible after opening "${parentLabel}"`,
-    ).toBeVisible({ timeout: 30_000 });
+    if (await waitForAppShell(page, SHELL_PAINT_TIMEOUT_MS)) return
+    if (attempt === maxAttempts - 1) return // let the caller's own assertions report the failure
+    // Navigation completed but the app never painted — retry the goto once.
   }
 }

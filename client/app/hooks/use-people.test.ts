@@ -54,6 +54,16 @@ describe("use-people hooks", () => {
     });
   });
 
+  it("useGetPeople skips the request when disabled", async () => {
+    // The person page only runs its unfiltered fallback lookup when the email search misses.
+    const { result } = renderHook(
+      () => useGetPeople({ page: 0, pageSize: 10, filter: "", enabled: false }),
+      { wrapper: createWrapper() },
+    );
+    await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));
+    expect(peopleService.getPeople).not.toHaveBeenCalled();
+  });
+
   const mutations: Array<{
     name: string;
     hook: () => { mutateAsync: (v: unknown) => Promise<unknown> };

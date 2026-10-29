@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
-import type { IDomain } from "@seliseblocks/genesis-os/models";
+import type { IDomain } from "@/models/project.model";
 import { DomainForm } from "./domain-form";
 
 interface DomainFormDialogProps {

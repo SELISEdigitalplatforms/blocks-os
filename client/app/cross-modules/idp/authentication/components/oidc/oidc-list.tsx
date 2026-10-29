@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui-kits/table/table";
 import { OIDCRowExport } from "./oidc-card";
+import { useFindSecrets } from "@/cross-modules/secrets/hooks/use-secret-management";
 
 const LoadingSkeleton = () => (
   <Card>
@@ -34,8 +35,11 @@ const LoadingSkeleton = () => (
             </div>
           </div>
           <Skeleton className="h-5 w-16 rounded-full" />
+          <Skeleton className="h-5 w-16 rounded-full" />
           <Skeleton className="h-3 w-24" />
           <div className="ml-auto flex gap-1.5">
+            <Skeleton className="h-7 w-7 rounded" />
+            <Skeleton className="h-7 w-7 rounded" />
             <Skeleton className="h-7 w-7 rounded" />
             <Skeleton className="h-7 w-7 rounded" />
           </div>
@@ -47,9 +51,12 @@ const LoadingSkeleton = () => (
 
 export const OidcList = () => {
   const { tenantId } = useProjectStore().selectedProject || { tenantId: "" };
-  const { isLoading, isFetching, data } = useGetAuthOidcCredentials({
+  const { isLoading, data } = useGetAuthOidcCredentials({
     projectKey: tenantId,
   });
+  // OIDC client credentials are backed by Secret Management. Keep its default list query
+  // active so create/update invalidation immediately refreshes the sibling Secret page.
+  useFindSecrets({ pageNumber: 1, pageSize: 10 }, !!tenantId);
   const sortedOidcData = useMemo(() => {
     if (!data || !data.oIDCClientCredentials) return [];
     const dataArray = Array.isArray(data.oIDCClientCredentials)
@@ -63,7 +70,10 @@ export const OidcList = () => {
     });
   }, [data]);
 
-  if (isLoading || isFetching) return <LoadingSkeleton />;
+  // Only the first load shows the skeleton. Swapping it in on every refetch unmounts the rows,
+  // which closes any dialog a row has open, including the one-time "New client secret" reveal
+  // that opens right as the rotate mutation invalidates this list.
+  if (isLoading) return <LoadingSkeleton />;
 
   if (!sortedOidcData.length) {
     return (
@@ -88,10 +98,15 @@ export const OidcList = () => {
               <TableHead className="hidden w-32 text-xs font-semibold uppercase tracking-wide text-high-emphasis sm:table-cell">
                 Type
               </TableHead>
+              <TableHead className="hidden w-32 text-xs font-semibold uppercase tracking-wide text-high-emphasis sm:table-cell">
+                Status
+              </TableHead>
               <TableHead className="hidden w-40 text-xs font-semibold uppercase tracking-wide text-high-emphasis md:table-cell">
                 Created On
               </TableHead>
-              <TableHead className="w-28" />
+              <TableHead className="w-36 text-left text-xs font-semibold uppercase tracking-wide text-high-emphasis">
+                Actions
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody className="[&_tr:last-child]:border-b">

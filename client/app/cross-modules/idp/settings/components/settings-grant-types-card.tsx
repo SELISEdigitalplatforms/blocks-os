@@ -90,7 +90,7 @@ export const SettingsGrantTypesCard = ({ config }: SettingsGrantTypesCardProps) 
                         }}
                       />
                     </FormControl>
-                    <FormLabel className="!mt-0">{item.label}</FormLabel>
+                    <FormLabel className="mt-0!">{item.label}</FormLabel>
                   </FormItem>
                 )}
               />

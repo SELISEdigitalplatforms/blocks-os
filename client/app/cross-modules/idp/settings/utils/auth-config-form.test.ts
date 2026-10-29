@@ -29,6 +29,7 @@ const iamConfigFormValues = (
   logoutOnPasswordChange: true,
   isOidcEnabled: false,
   passwordStrengthCheckerRegex: "",
+  collectPasswordOnActivation: true,
   ...overrides,
 });
 
@@ -52,6 +53,7 @@ const savedConfig = {
   recoverAccountUrlLifetimeInMinutes: 10,
   logoutOnPasswordChange: true,
   passwordStrengthCheckerRegex: "",
+  collectPasswordOnActivation: true,
   allowedGrantTypes: ["password"],
 };
 
@@ -91,6 +93,29 @@ describe("applyOidcIamConfigOverrides", () => {
 
     expect(payload.accountActionBaseUrl).toBe(IAM_BASE_URL);
     expect(payload.useAccountActionBaseUrlAsDefault).toBe(false);
+  });
+});
+
+describe("collectPasswordOnActivation", () => {
+  it("carries the stored value into the form", () => {
+    const values = toIamConfigFormValues({ ...savedConfig, collectPasswordOnActivation: false });
+
+    expect(values.collectPasswordOnActivation).toBe(false);
+  });
+
+  it("sends the edited value rather than the saved one", () => {
+    const payload = buildSavePayload(
+      savedConfig,
+      iamConfigFormValues({ collectPasswordOnActivation: false }),
+    );
+
+    expect(payload.collectPasswordOnActivation).toBe(false);
+  });
+
+  it("falls back to the saved value when the form does not override it", () => {
+    const payload = buildSavePayload({ ...savedConfig, collectPasswordOnActivation: false }, {});
+
+    expect(payload.collectPasswordOnActivation).toBe(false);
   });
 });
 

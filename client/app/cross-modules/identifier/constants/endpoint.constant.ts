@@ -12,6 +12,12 @@ export const PEOPLE_ENDPOINTS = {
   REMOVE_ACCESS: `/api${PEOPLE_SUBPATH}/RemoveAccess`,
   SIGNUP: `/api${PEOPLE_SUBPATH}/Signup`,
   TRANSFER_OWNERSHIP: `/api${PEOPLE_SUBPATH}/TransferOwnerShip`,
+
+  // ── Project access (owner / contributor grants) ─────────────────────────────
+  /** The caller's own grants for a project group. Drives the route gate and the sidebar. */
+  GET_MY_ACCESS: `/api${PEOPLE_SUBPATH}/GetMyAccess`,
+  /** Replaces a member's grants. Owner only. */
+  SAVE_ACCESS_POLICY: `/api${PEOPLE_SUBPATH}/SaveAccessPolicy`,
 } as const;
 
 // ─── Project endpoints ────────────────────────────────────────────────────────
@@ -32,11 +38,16 @@ export const PROJECT_ENDPOINTS = {
 
   GET_ASSET: `/api${PROJECT_SUBPATH}/GetAsset`,
   ADD_ASSET: `/api${PROJECT_SUBPATH}/AddAsset`,
+  DELETE_ASSET: `/api${PROJECT_SUBPATH}/DeleteAsset`,
   UPDATE_TOKEN_VALIDATION: `/api${PROJECT_SUBPATH}/UpdateTokenValidationParameters`,
   GET_TOKEN_VALIDATION: `/api${PROJECT_SUBPATH}/GetTokenValidationParameters`,
   ADD_JWT_CLAIM: `/api${PROJECT_SUBPATH}/AddJwtClaim`,
   GET_JWT_CLAIMS: `/api${PROJECT_SUBPATH}/GetThirdPartyJWTClaims`,
   SAVE_JWT_CLAIMS: `/api${PROJECT_SUBPATH}/SaveThirdPartyJWTClaims`,
+  GET_THIRD_PARTY_JWT_PROVIDERS: `/api${PROJECT_SUBPATH}/GetThirdPartyJwtProviders`,
+  SAVE_THIRD_PARTY_JWT_PROVIDER: `/api${PROJECT_SUBPATH}/SaveThirdPartyJwtProvider`,
+  DELETE_THIRD_PARTY_JWT_PROVIDER: `/api${PROJECT_SUBPATH}/DeleteThirdPartyJwtProvider`,
+  UPDATE_THIRD_PARTY_JWT_ENABLED: `/api${PROJECT_SUBPATH}/UpdateThirdPartyJwtEnabled`,
 } as const;
 
 // ─── Domain endpoints ─────────────────────────────────────────────────────────
@@ -45,6 +56,8 @@ const DOMAIN_SUBPATH = "/Domain";
 
 export const DOMAIN_ENDPOINTS = {
   CONFIGURE: `/api${DOMAIN_SUBPATH}/Configure`,
+  SETUP_GUIDE: `/api${DOMAIN_SUBPATH}/SetupGuide`,
+  CONFIGURE_STREAM: `/api${DOMAIN_SUBPATH}/ConfigureStream`,
 } as const;
 
 // ─── Migration endpoints ──────────────────────────────────────────────────────
@@ -79,6 +92,6 @@ export const SERVICE_REGISTRY_ENDPOINTS = {
 // const BUILD_SUBPATH = "/build";
 
 export const CLOUD_BUILD_ENDPOINTS = {
-  REPOS_LIST: `${API_BASES.LOGIC}/Deployment/GetReposList`,
-  REPO_UPDATE: `${API_BASES.LOGIC}/Deployment/UpdateRepoDomain`,
+  REPOS_LIST: `${API_BASES.OS}/Release/GetReposList`,
+  REPO_UPDATE: `${API_BASES.OS}/Release/UpdateRepoDomain`,
 } as const;

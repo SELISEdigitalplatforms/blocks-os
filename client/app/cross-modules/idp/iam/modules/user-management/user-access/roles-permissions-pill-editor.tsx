@@ -30,7 +30,7 @@ export const RolesPermissionsPillEditor = ({
   organizationId,
 }: RolesPermissionsPillEditorProps) => {
   return (
-    <div className="scrollbar-slim flex min-h-0 flex-1 flex-col gap-6 pr-1">
+    <div className="scrollbar-slim flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pr-1">
       <OrganizationRolesField
         roles={roles}
         onChange={onRolesChange}

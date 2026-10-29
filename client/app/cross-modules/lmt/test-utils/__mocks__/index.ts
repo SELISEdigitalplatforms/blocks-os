@@ -48,7 +48,6 @@ export const mockGetLogsPayload: IGetLogsPayload = {
   },
   search: "",
   serviceName: "blocks-idp-api",
-  projectKey: "test-project-key-123",
 };
 
 export const mockGetLogsByDatePayload: IGetLogsByDatePayload = {
@@ -137,7 +136,6 @@ export const mockGetTracesPayload: IGetTracesPayload = {
     excepts: [],
   },
   search: "",
-  projectKey: "test-project-key-123",
 };
 
 export const mockGetTraceByIdPayload: IGetTraceByTraceIdPayload = {
@@ -182,12 +180,15 @@ export const mockLmtServiceFactory = () => ({
   lmtService: {
     log: {
       getLogs: vi.fn(),
+      getRestoredLogs: vi.fn(),
       getLogsByDate: vi.fn(),
       getLiveLog: vi.fn(),
+      getBlocksServices: vi.fn(),
     },
     trace: {
       getTraces: vi.fn(),
       getTraceByTraceId: vi.fn(),
+      getBlocksServices: vi.fn(),
     },
     usage: {
       getOperationalAnalytics: vi.fn(),

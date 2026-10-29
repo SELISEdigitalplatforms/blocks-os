@@ -5,11 +5,18 @@ interface CopyToClipboardButtonProps {
   textToCopy: string;
   children: ReactNode;
   isHoverable?: boolean;
+  /**
+   * Accessible name for the button. The control is icon-only, so without this a screen
+   * reader announces just "button" -- and on a row with several copy targets there is no
+   * way to tell them apart. Say what is being copied, e.g. "Copy stack trace".
+   */
+  label?: string;
 }
 export const CopyToClipboardButton: React.FC<CopyToClipboardButtonProps> = ({
   textToCopy,
   children,
   isHoverable = false,
+  label = "Copy",
 }) => {
   const [isCopying, setIsCopying] = useState(false);
   const copyToClipBoard = async (event: MouseEvent<HTMLButtonElement>) => {
@@ -54,6 +61,7 @@ export const CopyToClipboardButton: React.FC<CopyToClipboardButtonProps> = ({
           className="peer h-auto p-1 transition-colors hover:bg-gray-100"
           onClick={copyToClipBoard}
           type="button"
+          aria-label={label}
           disabled={isCopying}
         >
           {isCopying ? (

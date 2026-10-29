@@ -1,4 +1,4 @@
-using DomainService.Shared;
+﻿using DomainService.Shared;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Controllers;
@@ -21,6 +21,18 @@ namespace XUnitTest.Helpers
         }
 
         [Theory]
+        [InlineData("app.example.com", "example.com")]
+        [InlineData("example.com", "example.com")]
+        [InlineData("a.b.example.com", "example.com")]
+        [InlineData("app.example.co.uk", "example.co.uk")]
+        [InlineData("example.co.uk", "example.co.uk")]
+        [InlineData("localhost", "localhost")]
+        public void GetRegistrableDomain_ReturnsZoneRoot(string host, string expected)
+        {
+            IdentifierHelper.GetRegistrableDomain(host).Should().Be(expected);
+        }
+
+        [Theory]
         [InlineData("https://sub.example.com", "example.com")]
         [InlineData("http://a.b.example.co", "example.co")]
         [InlineData("example.com", "example.com")]
@@ -30,6 +42,29 @@ namespace XUnitTest.Helpers
         public void ExtractMainDomain_ReturnsLastTwoLabels(string input, string expected)
         {
             IdentifierHelper.ExtractMainDomain(input).Should().Be(expected);
+        }
+
+        [Theory]
+        // A cookie domain on record wins, whether the host sits under it or is it.
+        [InlineData("app.example.com", "example.com", "example.com")]
+        [InlineData("example.com", "example.com", "example.com")]
+        [InlineData("shop.example.co.uk", "example.co.uk", "example.co.uk")]
+        // ...but not when it cannot possibly be this host's cookie domain.
+        [InlineData("app.example.com", "unrelated.org", "example.com")]
+        [InlineData("app.example.com", "ample.com", "example.com")]
+        // Nothing on record: the parent of the site host, unless the host is
+        // already the registrable domain — the apex case that used to collapse
+        // to a bare public suffix.
+        [InlineData("app.example.com", "", "example.com")]
+        [InlineData("example.com", "", "example.com")]
+        [InlineData("example.shop", "", "example.shop")]
+        [InlineData("example.co.uk", "", "example.co.uk")]
+        [InlineData("app.example.co.uk", "", "example.co.uk")]
+        [InlineData("localhost", "", "localhost")]
+        [InlineData("", "", "")]
+        public void ResolveCookieDomain_ReturnsExpected(string siteHost, string storedCookieDomain, string expected)
+        {
+            IdentifierHelper.ResolveCookieDomain(siteHost, storedCookieDomain).Should().Be(expected);
         }
 
         [Theory]

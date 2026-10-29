@@ -1,5 +1,4 @@
 using Blocks.Genesis;
-using Cloud.DomainService.Models;
 using Cloud.DomainService.Repositories;
 using Cloud.DomainService.Requests;
 using Cloud.DomainService.Responses;

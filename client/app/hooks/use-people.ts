@@ -13,13 +13,16 @@ export const useGetPeople = (option: {
   pageSize: number;
   filter: string;
   searchField: "name" | "email";
+  /** Skip the request without changing the cache key, for lookups that are only a fallback. */
+  enabled?: boolean;
 }) => {
+  const { enabled = true, ...params } = option;
   const projectGroupId = useProjectStore().selectedTenantGroup || "";
   return useQuery({
-    queryKey: ["people", option, projectGroupId],
+    queryKey: ["people", params, projectGroupId],
     queryFn: () =>
       peopleService.getPeople({
-        ...option,
+        ...params,
         projectGroupId,
       }),
     select: (response) => ({
@@ -27,7 +30,7 @@ export const useGetPeople = (option: {
       totalCount: response.peoplesTotalCount,
       isOwner: response.isOwner,
     }),
-    enabled: !!projectGroupId,
+    enabled: enabled && !!projectGroupId,
   });
 };
 

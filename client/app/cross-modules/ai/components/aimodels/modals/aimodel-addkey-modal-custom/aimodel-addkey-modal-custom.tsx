@@ -1,7 +1,8 @@
 import React, { Dispatch, SetStateAction } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { isParsableUrl } from "@/lib/url-format";
 import {
   Dialog,
   DialogClose,
@@ -35,7 +36,7 @@ import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 const CustomAddKeyFormSchema = z.object({
   model: z.string().trim().min(1, "Model name is required"),
   providerName: z.string().trim().min(1, "Provider name is required"),
-  url: z.string().trim().url("Must be a valid URL"),
+  url: z.string().trim().refine(isParsableUrl, "Must be a valid URL"),
   apiKey: z.string().min(1, "API key is required"),
   apiVersion: z.string().trim().min(1, "API version is required"),
   DefaultTemp: z.number().min(0).max(2),
@@ -72,11 +73,11 @@ export const CustomModelAddKeyModal = ({
   setAddKeyModalOpen,
 }: CustomModelAddKeyModalProps) => {
   const provider = "CUSTOM";
-  const project_key = useProjectStore().selectedProject?.tenantId || "";
+  const projectKey = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useCreateModel();
   const form = useForm<FormSchema>({
     defaultValues: CustomAddKeyFormDefaultValue,
-    resolver: zodResolver(CustomAddKeyFormSchema),
+    resolver: zodResolver(CustomAddKeyFormSchema) as Resolver<FormSchema>,
     mode: "onChange",
   });
   const { control, handleSubmit } = form;
@@ -89,7 +90,7 @@ export const CustomModelAddKeyModal = ({
       const headersObject = Object.fromEntries(
         (data.customHeaders || []).filter((h) => h.key && h.value).map((h) => [h.key!, h.value!]),
       );
-      const payload = transformToUniversal(provider.toLowerCase(), project_key, {
+      const payload = transformToUniversal(provider.toLowerCase(), projectKey, {
         ...data,
         customHeaders: headersObject,
       });

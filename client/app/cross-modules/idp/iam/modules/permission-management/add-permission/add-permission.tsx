@@ -1,8 +1,9 @@
 import { CreatePermissionPayload } from "@blocks-idp/iam/models/permission";
 import { useAddPermission } from "@blocks-idp/iam/hooks/use-permission";
+import { useSystemOnlyReason } from "@blocks-idp/iam/hooks/use-grant-scope";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { PermissionForm } from "../permission-form";
-import { permissionFormSchemaType } from "../permission-form/utils";
+import { PermissionFormSchemaType } from "../permission-form/utils";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { useNavigate } from "react-router";
@@ -16,7 +17,9 @@ export const AddPermission = () => {
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const { isPending, mutateAsync } = useAddPermission();
-  const onSubmit = async (data: permissionFormSchemaType) => {
+  const readOnlyReason = useSystemOnlyReason();
+  const onSubmit = async (data: PermissionFormSchemaType) => {
+    if (readOnlyReason) return;
     // None is a valid severity (0), so only an unset value counts as missing.
     if (data.permissionSeverity === undefined || data.permissionSeverity === null) {
       showErrorToast({ errors: "Severity is required" });
@@ -46,7 +49,7 @@ export const AddPermission = () => {
       </div>
       <div className="mt-4 text-xl font-semibold">New Permission</div>
       <div className="mt-4">
-        <PermissionForm onSave={onSubmit} isPending={isPending} />
+        <PermissionForm onSave={onSubmit} isPending={isPending} readOnlyReason={readOnlyReason} />
       </div>
     </div>
   );

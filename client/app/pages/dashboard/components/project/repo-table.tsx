@@ -1,15 +1,21 @@
 import { Button } from "@/components/ui-kits/button/button";
 import { cn } from "@/lib/utils";
-import type { IDomain, IEnvRepository } from "@seliseblocks/genesis-os/models";
+import type { IEnvRepository } from "@seliseblocks/genesis-os/models";
+import type { IDomain } from "@/models/project.model";
 import { formatFullDate } from "@seliseblocks/genesis-os/utils";
 import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
+  getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import { Pencil } from "lucide-react";
-import { useState } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
+import { FilterControls } from "@/components/filter-toolbar";
+import { Pagination } from "@/components/ui-kits/pagination/pagination";
+import { DASHBOARD_TABLE_PAGE_SIZE } from "../dashboard.constant";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
 import { SetCustomDomainDialog } from "../custom-domain/dialog";
 
 // ─── Column helper ────────────────────────────────────────────────────────────
@@ -61,17 +67,26 @@ const buildColumns = (onSet: (repo: IEnvRepository) => void) => [
     cell: ({ row }) => {
       const repo = row.original;
       const hasCustomDomain = !!repo.customDeploymentUrl;
+      const tooltipText = hasCustomDomain
+        ? "Edit custom domain"
+        : "Set a custom domain first to enable editing";
       return (
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            title="Edit custom domain"
-            disabled={!hasCustomDomain}
-            onClick={() => onSet(repo)}
-          >
-            <Pencil className="h-4 w-4 text-muted-foreground" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Edit custom domain"
+                disabled={!hasCustomDomain}
+                onClick={() => onSet(repo)}
+                className="disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Pencil className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{tooltipText}</TooltipContent>
+          </Tooltip>
         </div>
       );
     },
@@ -85,6 +100,12 @@ interface ProjectRepoTableProps {
   domains: IDomain[];
   projectKey: string;
   projectEnv: string;
+  /** Page index is owned by the parent: this table is unmounted and remounted on every
+   *  background refetch (see repo-list.tsx), which would destroy state held here. */
+  page: number;
+  onPageChange: (pageIndex: number) => void;
+  search: string;
+  onSearchChange: (value: string) => void;
 }
 
 export const ProjectRepoTable = ({
@@ -92,6 +113,10 @@ export const ProjectRepoTable = ({
   domains,
   projectKey,
   projectEnv,
+  page,
+  onPageChange,
+  search,
+  onSearchChange,
 }: ProjectRepoTableProps) => {
   // ── Set custom domain dialog ────────────────────────────────────────────────
   const [setTarget, setSetTarget] = useState<IEnvRepository | null>(null);
@@ -104,11 +129,36 @@ export const ProjectRepoTable = ({
 
   // ── Table ──────────────────────────────────────────────────────────────────
   const columns = buildColumns(handleSet);
+  const filteredData = useMemo(() => {
+    const normalizedSearch = search.toLowerCase();
+    return data.filter((repo) => repo.repoName.toLowerCase().includes(normalizedSearch));
+  }, [data, search]);
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    // See `autoResetPageIndex` in domain-table.tsx: the queued reset would override the
+    // clamp below.
+    autoResetPageIndex: false,
+    state: { pagination: { pageIndex: page, pageSize: DASHBOARD_TABLE_PAGE_SIZE } },
+    onPaginationChange: (updater) => {
+      const next =
+        typeof updater === "function"
+          ? updater({ pageIndex: page, pageSize: DASHBOARD_TABLE_PAGE_SIZE })
+          : updater;
+      onPageChange(next.pageIndex);
+    },
   });
+
+  const lastPageIndex = Math.max(0, table.getPageCount() - 1);
+
+  // Clamp a now-out-of-range page back to the last one that exists, before paint.
+  // Routed through the table (not straight to onPageChange) so every page change
+  // takes the same path out through onPaginationChange.
+  useLayoutEffect(() => {
+    if (page > lastPageIndex) table.setPageIndex(lastPageIndex);
+  }, [page, lastPageIndex, table]);
 
   return (
     <>
@@ -124,6 +174,17 @@ export const ProjectRepoTable = ({
         projectKey={projectKey}
         projectEnv={projectEnv}
       />
+
+      {data.length > 0 && (
+        <div className="mb-4 flex justify-start">
+          <FilterControls.SearchInput
+            value={search}
+            onChange={onSearchChange}
+            placeholder="Search repositories..."
+            className="w-64"
+          />
+        </div>
+      )}
 
       {/* Table */}
       <div className="relative w-full overflow-x-auto">
@@ -152,12 +213,14 @@ export const ProjectRepoTable = ({
                   colSpan={columns.length}
                   className="py-10 text-center text-sm text-muted-foreground"
                 >
-                  No repositories found for this project.
+                  {data.length === 0
+                    ? "No repositories found for this project."
+                    : "No repositories match your search."}
                 </td>
               </tr>
             ) : (
               table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="border-b border-border last:border-0 hover:bg-muted/50">
+                <tr key={row.id} className="border-b border-border last:border-0">
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="p-2 md:px-4 md:py-3">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -169,6 +232,18 @@ export const ProjectRepoTable = ({
           </tbody>
         </table>
       </div>
+
+      {/* Pagination — same component and same rules as the Domains section. */}
+      {filteredData.length > 0 && (
+        <nav aria-label="Repositories pagination" className="mt-4 flex items-center md:justify-end">
+          <Pagination
+            page={page}
+            pageSize={DASHBOARD_TABLE_PAGE_SIZE}
+            totalCount={filteredData.length}
+            onChange={(nextPageIndex) => table.setPageIndex(nextPageIndex)}
+          />
+        </nav>
+      )}
     </>
   );
 };

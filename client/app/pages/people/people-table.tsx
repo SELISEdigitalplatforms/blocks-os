@@ -29,27 +29,37 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { EllipsisVertical, ArrowRightLeft, Mail, RefreshCw, User } from "lucide-react";
+import { EllipsisVertical, ArrowRightLeft, Mail, RefreshCw, User, UserMinus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { useRemoveAccess, useResendInvitation, useTransferOwnership } from "@/hooks/use-people";
-import { useAccountResendActivation } from "@blocks-idp/iam/hooks/use-account";
 import { useNavigate, useParams } from "react-router";
 import { PeopleGroupedByEnvironments } from "@/models/people";
 import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useAuthStore } from "@seliseblocks/genesis-os/store";
 import { environmentOptions } from "@/constants/environment-options";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { PeopleStatusBadge } from "@/components/people/status-badge";
-import { getRuntimeEnv } from "@/lib/runtime-env";
+import { getUserDisplayName } from "@blocks-idp/iam/utils/user-display-name";
 
 type PeopleTableProps = {
   people: PeopleGroupedByEnvironments[];
   isLoading: boolean;
-  isViewerOwner?: boolean;
+  /** Resend invitation and activation both go through the invite endpoint. */
+  canInvite?: boolean;
+  canRemove?: boolean;
+  /** Transferring ownership is never delegable, so it stays owner-only. */
+  isOwner?: boolean;
 };
 
-export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: PeopleTableProps) => {
+export const PeopleTable = ({
+  people,
+  isLoading,
+  canInvite = false,
+  canRemove = false,
+  isOwner: isViewerOwner = false,
+}: PeopleTableProps) => {
   const navigate = useNavigate();
   const { tenantGroupId = "" } = useParams<{ tenantGroupId: string }>();
   const [isResendInvitationDialogOpen, setIsResendInvitationDialogOpen] = useState(false);
@@ -60,12 +70,16 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
     null,
   );
 
-  const xBlocksKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
   const { mutateAsync: removeAsync } = useRemoveAccess();
   const { mutateAsync: resendInvitation } = useResendInvitation();
-  const { mutateAsync: resendActivation } = useAccountResendActivation();
   const { mutateAsync: transferOwnership, isPending: isTransferring } = useTransferOwnership();
   const groupId = useProjectStore().selectedTenantGroup || "";
+  const viewerUserId = useAuthStore((state) => state.user?.sub);
+
+  const openRemoveAccessDialog = (rowData: PeopleGroupedByEnvironments) => {
+    setIsRemoveAccessDialogOpen(true);
+    setSelectedPeopleData(rowData);
+  };
 
   const openResendDialog = (rowData: PeopleGroupedByEnvironments) => {
     setIsResendInvitationDialogOpen(true);
@@ -92,11 +106,15 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
 
       if (!groupId || tenantIds.length === 0) return;
 
-      await removeAsync({
+      const res = await removeAsync({
         email: selectedPeopleData.peopleDetails.email,
         tenantIds,
         groupId,
       });
+      if (!res?.isSuccess) {
+        showErrorToast({ errors: res?.errors });
+        return;
+      }
 
       showSuccessToast({ description: "Removed access successfully" });
       setIsRemoveAccessDialogOpen(false);
@@ -108,10 +126,14 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
   const onConfirmResendInvitation = async () => {
     if (!selectedPeopleData) return;
     try {
-      await resendInvitation({
+      const res = await resendInvitation({
         email: selectedPeopleData.peopleDetails.email,
         groupId,
       });
+      if (!res?.isSuccess) {
+        showErrorToast({ errors: res?.errors });
+        return;
+      }
       showSuccessToast({ description: "Resend invitation mail successfully" });
       setIsResendInvitationDialogOpen(false);
     } catch (error) {
@@ -122,10 +144,16 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
   const onConfirmResendActivation = async () => {
     if (!selectedPeopleData) return;
     try {
-      await resendActivation({
-        userId: selectedPeopleData.peopleDetails.userId,
-        projectKey: xBlocksKey,
+      // The first mail comes from blocks-os (a /invitation?code= link), so the resend must too.
+      // The IAM resend sends a different mail with an IAM link.
+      const res = await resendInvitation({
+        email: selectedPeopleData.peopleDetails.email,
+        groupId,
       });
+      if (!res?.isSuccess) {
+        showErrorToast({ errors: res?.errors });
+        return;
+      }
       showSuccessToast({ description: "Resend activation mail successfully" });
       setIsResendActivationDialogOpen(false);
     } catch (error) {
@@ -151,18 +179,14 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
     () => [
       {
         id: "name",
-        accessorFn: (row) =>
-          `${row.peopleDetails.firstName} ${row.peopleDetails.lastName || ""}`.trim(),
+        accessorFn: (row) => getUserDisplayName(row.peopleDetails),
         header: () => (
           <div className="flex w-[220px] items-center">
             <span className="font-bold text-medium-emphasis">Name</span>
           </div>
         ),
         cell: (info) => {
-          const fullName =
-            `${info.row.original.peopleDetails.firstName} ${info.row.original.peopleDetails.lastName || ""}`.trim();
-          const displayName =
-            fullName || info.row.original.peopleDetails.email?.split("@")[0] || "---";
+          const displayName = getUserDisplayName(info.row.original.peopleDetails);
 
           return (
             <div className="ml-2 flex items-center gap-3 sm:ml-0">
@@ -178,12 +202,6 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
                 )}
               </div>
               <span className="truncate">{displayName}</span>
-              {info.row.original.sharedEnviroments.some((env) => env.isCreator) && (
-                <PeopleStatusBadge
-                  status="Owner"
-                  className="w-fit bg-primary/10 px-2 py-0.5 text-[10px] text-xs font-normal text-primary"
-                />
-              )}
               {/* Pending Invite: they were sent an invitation but have not accepted it yet. */}
               {info.row.original.sharedEnviroments.some(
                 (env) => env.isInvitationSent && !env.isInvitationConfirmed,
@@ -196,13 +214,45 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
                 )}
               {/* Inactive: the account itself is not activated yet (no password / unverified).
                   Independent of invite acceptance — accepting an invite does not activate the account. */}
-              {info.row.original.peopleDetails.allowResendActivation &&
+              {(info.row.original.peopleDetails.allowResendActivation ||
+                info.row.original.peopleDetails.isActive === false) &&
                 !info.row.original.sharedEnviroments.some((env) => env.isCreator) && (
                   <PeopleStatusBadge
                     status="Inactive"
                     className="w-fit bg-blocks-error-100 px-2 py-0.5 text-[10px] text-xs font-normal text-blocks-error-800"
                   />
                 )}
+            </div>
+          );
+        },
+      },
+      {
+        // Role is identity, not state. It used to share the name cell with Pending Invite and
+        // Inactive, which are two different kinds of fact about a person.
+        //
+        // Owner means IsCreator on every environment of the group; anyone else with a
+        // membership row is a contributor, whatever they have or have not been granted.
+        id: "role",
+        header: () => (
+          <div className="flex w-[110px] items-center">
+            <span className="font-bold text-medium-emphasis">Role</span>
+          </div>
+        ),
+        cell: ({ row }: CellContext<PeopleGroupedByEnvironments, unknown>) => {
+          const isOwner =
+            row.original.sharedEnviroments.length > 0 &&
+            row.original.sharedEnviroments.every((env) => env.isCreator);
+
+          return (
+            <div className="ml-2 sm:ml-0">
+              <PeopleStatusBadge
+                status={isOwner ? "Owner" : "Contributor"}
+                className={
+                  isOwner
+                    ? "w-fit bg-primary/10 px-2 py-0.5 text-xs font-normal text-primary"
+                    : "w-fit bg-neutral-100 px-2 py-0.5 text-xs font-normal text-medium-emphasis dark:bg-primary/10 dark:text-primary"
+                }
+              />
             </div>
           );
         },
@@ -262,7 +312,7 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
           );
         },
       },
-      ...(isViewerOwner
+      ...(canInvite || canRemove || isViewerOwner
         ? [
             {
               id: "actions",
@@ -270,14 +320,25 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
                 const isRowUserOwner = row.original.sharedEnviroments.some((env) => env.isCreator);
                 if (isRowUserOwner) return null;
 
+                // A deactivated user has no actions: access cannot change and mail would bounce.
+                if (row.original.peopleDetails.isActive === false) return null;
+
                 const hasPending = row.original.sharedEnviroments.some(
                   (env) => !env.isInvitationConfirmed,
                 );
                 const isOwner = row.original.sharedEnviroments.some((env) => env.isCreator);
-                const showResendInvite = hasPending && !isOwner;
+                const showResendInvite = hasPending && !isOwner && canInvite;
                 const showResendActivation =
+                  canInvite &&
                   row.original.peopleDetails.allowResendActivation &&
                   row.original.sharedEnviroments.some((env) => env.isInvitationConfirmed);
+
+                // The owner row is already skipped above; never offer a person removing themselves.
+                const showRemoveAccess =
+                  canRemove && row.original.peopleDetails.userId !== viewerUserId;
+
+                if (!showResendInvite && !showResendActivation && !showRemoveAccess && !isViewerOwner)
+                  return null;
 
                 return (
                   <DropdownMenu>
@@ -310,7 +371,18 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
                           <span>Resend Activation</span>
                         </DropdownMenuItem>
                       )}
-                      {!showResendInvite && (
+                      {showRemoveAccess && (
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openRemoveAccessDialog(row.original);
+                          }}
+                        >
+                          <UserMinus className="mr-2 h-4 w-4" />
+                          <span>Remove access</span>
+                        </DropdownMenuItem>
+                      )}
+                      {!showResendInvite && isViewerOwner && (
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
@@ -329,7 +401,7 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
           ]
         : []),
     ],
-    [isViewerOwner],
+    [canInvite, canRemove, isViewerOwner, viewerUserId],
   );
 
   const table = useReactTable({
@@ -403,7 +475,7 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
             onConfirm={onRemoveConfirm}
             data={{
               dialogTitle: "Revoke Access",
-              dialogSubtitle: `Are you sure you want to revoke access for ${selectedPeopleData.peopleDetails.firstName} ${selectedPeopleData.peopleDetails.lastName}?`,
+              dialogSubtitle: `Are you sure you want to revoke access for ${getUserDisplayName(selectedPeopleData.peopleDetails)}?`,
               confirmButton: "Revoke",
               cancelButton: "Cancel",
             }}

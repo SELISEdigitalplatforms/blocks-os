@@ -7,14 +7,18 @@ const h = vi.hoisted(() => ({
     isLoading: false,
     isFetching: false,
   },
+  lastPayload: undefined as Record<string, unknown> | undefined,
 }));
 
 vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
-  useGetUsers: () => ({
-    data: h.users.data,
-    isLoading: h.users.isLoading,
-    isFetching: h.users.isFetching,
-  }),
+  useGetUsers: (payload: Record<string, unknown>) => {
+    h.lastPayload = payload;
+    return {
+      data: h.users.data,
+      isLoading: h.users.isLoading,
+      isFetching: h.users.isFetching,
+    };
+  },
 }));
 vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "t1" } }),
@@ -25,6 +29,7 @@ import { OrganizationMemberCount } from "./organization-member-count";
 beforeEach(() => {
   vi.clearAllMocks();
   h.users = { data: undefined, isLoading: false, isFetching: false };
+  h.lastPayload = undefined;
 });
 
 describe("OrganizationMemberCount", () => {
@@ -49,5 +54,15 @@ describe("OrganizationMemberCount", () => {
   it("defaults to zero members when there is no data", () => {
     render(<OrganizationMemberCount organizationId="o1" />);
     expect(screen.getByText("0 members")).toBeTruthy();
+  });
+
+  // The API takes an array of organization ids. Sending the old singular `organizationId`
+  // binds to nothing server-side, so the filter is dropped and the count silently becomes the
+  // whole tenant -- every organization then reports the same number.
+  it("scopes the count with an organizationIds array", () => {
+    h.users.data = { totalCount: 2 };
+    render(<OrganizationMemberCount organizationId="o1" />);
+    expect((h.lastPayload as { filter: { organizationIds: string[] } }).filter.organizationIds).toEqual(["o1"]);
+    expect(h.lastPayload).not.toHaveProperty("filter.organizationId");
   });
 });

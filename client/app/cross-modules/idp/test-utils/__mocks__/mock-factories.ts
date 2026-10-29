@@ -43,6 +43,8 @@ export const mockAuthOidcServiceFactory = () => ({
       saveOidcCredential: vi.fn(),
       deleteOidcCredential: vi.fn(),
       rotateOidcClientSecret: vi.fn(),
+      getOidcTemplate: vi.fn(),
+      saveOidcTemplate: vi.fn(),
     },
   },
 });
@@ -99,8 +101,6 @@ export const mockUserServiceFactory = () => ({
     saveRolesAndPermissions: vi.fn(),
     getSessions: vi.fn(),
     getHistories: vi.fn(),
-    getPats: vi.fn(),
-    generatePats: vi.fn(),
     getUserRoles: vi.fn(),
     getUserPermissions: vi.fn(),
     accountDeactivate: vi.fn(),
@@ -121,6 +121,7 @@ export const mockRoleServiceFactory = () => ({
     addRole: vi.fn(),
     updateRole: vi.fn(),
     setRoles: vi.fn(),
+    deleteRole: vi.fn(),
   },
 });
 
@@ -130,6 +131,7 @@ export const mockPermissionServiceFactory = () => ({
     getPermissionById: vi.fn(),
     addPermission: vi.fn(),
     updatePermission: vi.fn(),
+    deletePermission: vi.fn(),
     getResourceGroup: vi.fn(),
   },
 });
@@ -164,6 +166,7 @@ export const mockIamServiceFactory = () => ({
       getPermissions: vi.fn(),
       getPermissionById: vi.fn(),
       addPermission: vi.fn(),
+      deletePermission: vi.fn(),
       updatePermission: vi.fn(),
       getResourceGroup: vi.fn(),
     },
@@ -174,9 +177,11 @@ export const mockIamServiceFactory = () => ({
 
 export const mockCaptchaServiceFactory = () => ({
   captchaService: {
-    getCaptchaConfigs: vi.fn(),
+    getCaptchaConfig: vi.fn(),
+    getCaptchaConfigList: vi.fn(),
     saveCaptcha: vi.fn(),
     updateCaptchaConfigStatus: vi.fn(),
+    deleteCaptchaConfig: vi.fn(),
   },
 });
 

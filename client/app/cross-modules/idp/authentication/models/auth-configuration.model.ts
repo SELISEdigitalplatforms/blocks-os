@@ -22,6 +22,8 @@ export interface IAuthConfiguration {
   recoverAccountUrlLifetimeInMinutes?: number;
   logoutOnPasswordChange?: boolean;
   passwordStrengthCheckerRegex?: string;
+  /** Absent on servers predating the setting, where a password is always collected. */
+  collectPasswordOnActivation?: boolean;
 }
 
 export interface IAuthConfigPayload {
@@ -50,13 +52,13 @@ export interface ISaveAuthConfigResponse {
   isSuccess: boolean;
 }
 
-type SSO_INFO = {
+type SsoInfo = {
   provider: SSO_PROVIDERS;
   audience: string;
 };
 
 export type LoginOption = {
   allowedGrantTypes: GRANT_TYPES[];
-  ssoInfo: SSO_INFO[];
+  ssoInfo: SsoInfo[];
 };
 export type IGetProjectLoginOptionResponse = LoginOption;

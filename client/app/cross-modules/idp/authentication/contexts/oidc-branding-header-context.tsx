@@ -4,6 +4,8 @@ export type OidcBrandingHeaderActions = {
   onSave: () => void;
   onUndo: () => void;
   isBusy: boolean;
+  isDirty: boolean;
+  isValid: boolean;
 };
 
 type OidcBrandingHeaderContextValue = {

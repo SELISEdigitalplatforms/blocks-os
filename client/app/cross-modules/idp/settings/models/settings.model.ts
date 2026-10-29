@@ -21,6 +21,7 @@ export interface ISettingsAuthConfig {
   recoverAccountUrlLifetimeInMinutes: number;
   logoutOnPasswordChange: boolean;
   passwordStrengthCheckerRegex: string;
+  collectPasswordOnActivation: boolean;
 }
 
 export interface ISettingsOrganizationConfig {
@@ -35,6 +36,8 @@ export interface ISettingsOrganizationConfig {
   defaultPermissionsOnOrgCreation: string[];
   keepOrgRolesSameAsDefaultRoles: boolean;
   keepOrgPermissionsSameAsDefaultPermissions: boolean;
+  isSignupAutoJoinEnabled: boolean;
+  signupAutoJoinOrganizationId: string | null;
 }
 
 export interface ISettingsSaveOrganizationConfigPayload {
@@ -48,6 +51,8 @@ export interface ISettingsSaveOrganizationConfigPayload {
   defaultPermissionsOnOrgCreation: string[];
   keepOrgRolesSameAsDefaultRoles: boolean;
   keepOrgPermissionsSameAsDefaultPermissions: boolean;
+  isSignupAutoJoinEnabled: boolean;
+  signupAutoJoinOrganizationId?: string | null;
 }
 
 export interface ISettingsSaveAuthConfigPayload {
@@ -69,6 +74,7 @@ export interface ISettingsSaveAuthConfigPayload {
   recoverAccountUrlLifetimeInMinutes: number;
   logoutOnPasswordChange: boolean;
   passwordStrengthCheckerRegex: string;
+  collectPasswordOnActivation: boolean;
   allowedGrantTypes: string[];
 }
 

@@ -13,11 +13,13 @@ import {
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
+import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { useProjectStore } from "@seliseblocks/genesis-os";
-import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
+import { useGetAssignableRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
+import { GrantHint } from "@blocks-idp/iam/components/grant-hint";
 
 type AddClientCredentialRoleProps = {
   selectedSlugs: string[];
@@ -30,7 +32,7 @@ export const AddClientCredentialRole = ({ onAdd, selectedSlugs }: AddClientCrede
   const [pendingRoles, setPendingRoles] = useState<IRole[]>([]);
   const [filter, setFilter] = useState({ page: 0, pageSize: 10, search: "" });
 
-  const { data, isLoading } = useGetRoles(
+  const { data, isLoading } = useGetAssignableRoles(
     {
       page: filter.page,
       pageSize: filter.pageSize,
@@ -76,6 +78,7 @@ export const AddClientCredentialRole = ({ onAdd, selectedSlugs }: AddClientCrede
           <DialogTitle className="text-left">Assign roles</DialogTitle>
           <DialogDescription />
         </DialogHeader>
+        <GrantHint kind="roles" />
         <div>
           <FilterControls.SearchInput
             value={filter.search}
@@ -88,11 +91,11 @@ export const AddClientCredentialRole = ({ onAdd, selectedSlugs }: AddClientCrede
           <CardContent className="max-h-[min(50vh,360px)] overflow-y-auto">
             <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
               {isLoading ? (
-                Array.from({ length: filter.pageSize }).map((_, idx) => (
-                  <div key={idx} className="flex animate-pulse items-center space-x-2 py-2">
-                    <div className="h-4 w-4 rounded bg-gray-200" />
-                    <div className="h-4 w-24 rounded bg-gray-200" />
-                    <div className="h-4 w-20 rounded bg-gray-200" />
+                Array.from({ length: filter.pageSize }, (_, idx) => `skeleton-${idx}`).map((id) => (
+                  <div key={id} className="flex items-center space-x-2 py-2">
+                    <Skeleton className="h-4 w-4 rounded" />
+                    <Skeleton className="h-4 w-24 rounded" />
+                    <Skeleton className="h-4 w-20 rounded" />
                   </div>
                 ))
               ) : data?.data?.length ? (
@@ -119,7 +122,9 @@ export const AddClientCredentialRole = ({ onAdd, selectedSlugs }: AddClientCrede
                   </div>
                 ))
               ) : (
-                <div className="flex h-24 items-center justify-center">No roles are found</div>
+                <div className="flex h-24 items-center justify-center sm:col-span-2">
+                  No roles are found
+                </div>
               )}
             </div>
           </CardContent>

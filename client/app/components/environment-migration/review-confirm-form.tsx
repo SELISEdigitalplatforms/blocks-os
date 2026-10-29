@@ -128,6 +128,7 @@ export const ReviewConfirmForm = () => {
       const response = await verifyMigration({
         verificationId,
         verificationCode: values.verificationCode,
+        tenantGroupId: groupId ?? "",
       });
 
       if (response.isSuccess && response.isValid) {
@@ -278,7 +279,7 @@ export const ReviewConfirmForm = () => {
                     <Button
                       type="button"
                       variant="link"
-                      className="p-0 text-sm font-medium !no-underline"
+                      className="p-0 text-sm font-medium no-underline!"
                       disabled={!!remainingTime || isInitiating}
                       onClick={handleResendVerification}
                     >

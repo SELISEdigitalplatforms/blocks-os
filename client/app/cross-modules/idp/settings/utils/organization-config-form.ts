@@ -4,13 +4,31 @@ import type {
   ISettingsSaveOrganizationConfigPayload,
 } from "@blocks-idp/settings/models/settings.model";
 
-export const organizationConfigFormSchema = z.object({
-  allowOrgCreationFromCloud: z.boolean(),
-  allowOrgCreationFromConstruct: z.boolean(),
-  allowOrgCreationFromSignup: z.boolean(),
-  allowOrgCreationFromPortal: z.boolean(),
-  isMultiOrgEnabled: z.boolean(),
-});
+export const SIGNUP_AUTO_JOIN_REQUIRED_MESSAGE = "Choose the organization new sign-ups join.";
+
+export const organizationConfigFormSchema = z
+  .object({
+    allowOrgCreationFromCloud: z.boolean(),
+    allowOrgCreationFromConstruct: z.boolean(),
+    allowOrgCreationFromSignup: z.boolean(),
+    allowOrgCreationFromPortal: z.boolean(),
+    isMultiOrgEnabled: z.boolean(),
+    isSignupAutoJoinEnabled: z.boolean(),
+    signupAutoJoinOrganizationId: z.string(),
+  })
+  .superRefine((values, ctx) => {
+    if (
+      values.isMultiOrgEnabled &&
+      values.isSignupAutoJoinEnabled &&
+      values.signupAutoJoinOrganizationId.trim().length === 0
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["signupAutoJoinOrganizationId"],
+        message: SIGNUP_AUTO_JOIN_REQUIRED_MESSAGE,
+      });
+    }
+  });
 
 export type OrganizationConfigFormValues = z.infer<typeof organizationConfigFormSchema>;
 
@@ -22,6 +40,8 @@ export const toOrganizationConfigFormValues = (
   allowOrgCreationFromSignup: config.allowOrgCreationFromSignup,
   allowOrgCreationFromPortal: config.allowOrgCreationFromPortal,
   isMultiOrgEnabled: config.isMultiOrgEnabled,
+  isSignupAutoJoinEnabled: config.isSignupAutoJoinEnabled ?? false,
+  signupAutoJoinOrganizationId: config.signupAutoJoinOrganizationId ?? "",
 });
 
 export const buildOrganizationConfigSavePayload = (
@@ -39,4 +59,9 @@ export const buildOrganizationConfigSavePayload = (
   defaultPermissionsOnOrgCreation: config.defaultPermissionsOnOrgCreation,
   keepOrgRolesSameAsDefaultRoles: config.keepOrgRolesSameAsDefaultRoles,
   keepOrgPermissionsSameAsDefaultPermissions: config.keepOrgPermissionsSameAsDefaultPermissions,
+  isSignupAutoJoinEnabled: values.isSignupAutoJoinEnabled,
+  // The target is sent only while the toggle is on; off keeps the stored choice in IAM.
+  ...(values.isSignupAutoJoinEnabled
+    ? { signupAutoJoinOrganizationId: values.signupAutoJoinOrganizationId }
+    : {}),
 });

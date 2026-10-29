@@ -9,6 +9,8 @@ using DomainService.Projects;
 using FluentAssertions;
 using MongoDB.Driver;
 using Moq;
+using XUnitTest.TestSupport;
+using Blocks.Genesis.Entities.Iam;
 
 namespace XUnitTest.Integration
 {
@@ -25,7 +27,9 @@ namespace XUnitTest.Integration
         private readonly Mock<ITenants> _tenants = new();
         private readonly Mock<IProjectRepository> _projectRepo = new();
 
-        private PeopleRepository NewRepository()
+        private PeopleRepository NewRepository() => NewRepository(_fixture.DbContextProvider);
+
+        private PeopleRepository NewRepository(IDbContextProvider provider)
         {
             _tenants.Setup(t => t.GetTenantByID(It.IsAny<string>()))
                     .Returns(new Tenant
@@ -34,7 +38,10 @@ namespace XUnitTest.Integration
                         DbConnectionString = "mongodb://x",
                         JwtTokenParameters = new JwtTokenParameters { IssueDate = DateTime.UtcNow, PrivateCertificatePassword = "p" }
                     });
-            return new PeopleRepository(_fixture.DbContextProvider, _tenants.Object, _projectRepo.Object);
+            var secret = new Mock<IBlocksSecret>();
+            secret.SetupGet(s => s.DatabaseConnectionString).Returns("mongodb://localhost:27017");
+            secret.SetupGet(s => s.RootDatabaseName).Returns("BlocksRootDb");
+            return new PeopleRepository(provider, _tenants.Object, _projectRepo.Object, secret.Object);
         }
 
         private Task InsertPeopleAsync(params ProjectPeople[] people)
@@ -89,6 +96,41 @@ namespace XUnitTest.Integration
             isOwner.Should().BeTrue();
             peoples.Should().Contain(p => p.peopleDetails.Email == "owner@x.com");
             peoples.Should().Contain(p => p.peopleDetails.FirstName == "Mike");
+        }
+
+        [Fact]
+        public async Task GetPeoplesAsync_FlagsOnlyDeactivatedPeopleAsInactive()
+        {
+            var suffix = Guid.NewGuid().ToString("N");
+            var tenant = "t-" + suffix;
+            using var _ = new IntegrationContext("ctx-" + suffix);
+            _projectRepo.Setup(r => r.GetProjectIdsByGroupId("grp-" + suffix))
+                        .ReturnsAsync(new List<string> { tenant });
+
+            var deactivated = NewUser("off-" + suffix, "off@x.com", "Off", "User");
+            deactivated.Active = false;
+            deactivated.Status = UserLifecycleStatus.Disabled;
+            deactivated.DeactivatedAtUtc = DateTime.UtcNow;
+            // Invited, never activated: still active, and may get a fresh activation mail.
+            var pending = NewUser("pending-" + suffix, "pending@x.com", "Pen", "Ding");
+            pending.Active = false;
+            pending.IsVerified = false;
+
+            await InsertPeopleAsync(
+                Person("on-" + suffix, tenant, "on@x.com"),
+                Person(deactivated.ItemId, tenant, "off@x.com"),
+                Person(pending.ItemId, tenant, "pending@x.com", confirmed: false));
+            await InsertUsersAsync(NewUser("on-" + suffix, "on@x.com", "On", "User"), deactivated, pending);
+
+            var (peoples, _, _, _) = await NewRepository().GetPeoplesAsync(
+                new GetPeoplesRequest { ProjectGroupId = "grp-" + suffix, Page = 0, PageSize = 10 });
+
+            var byEmail = peoples.ToDictionary(p => p.peopleDetails.Email!, p => p.peopleDetails);
+            byEmail["on@x.com"].IsActive.Should().BeTrue();
+            byEmail["off@x.com"].IsActive.Should().BeFalse();
+            byEmail["off@x.com"].AllowResendActivation.Should().BeFalse();
+            byEmail["pending@x.com"].IsActive.Should().BeTrue();
+            byEmail["pending@x.com"].AllowResendActivation.Should().BeTrue();
         }
 
         [Fact]
@@ -217,6 +259,46 @@ namespace XUnitTest.Integration
         }
 
         [Fact]
+        public async Task GetProjectByIdAsync_SkipsDeletedRowWithSameTenantId()
+        {
+            var suffix = Guid.NewGuid().ToString("N");
+            using var _ = new IntegrationContext("ctx-" + suffix);
+            await _fixture.Collection<Tenant>("Tenants").InsertManyAsync(new[]
+            {
+                NewTenantRow("old-" + suffix, "tid-" + suffix, "Deleted", isDisabled: true),
+                NewTenantRow("new-" + suffix, "tid-" + suffix, "Live", isDisabled: false)
+            });
+
+            var result = await NewRepository().GetProjectByIdAsync("tid-" + suffix);
+
+            result.Should().NotBeNull();
+            result.ItemId.Should().Be("new-" + suffix);
+        }
+
+        [Fact]
+        public async Task GetProjectByIdAsync_OnlyDeletedRow_ReturnsNull()
+        {
+            var suffix = Guid.NewGuid().ToString("N");
+            using var _ = new IntegrationContext("ctx-" + suffix);
+            await _fixture.Collection<Tenant>("Tenants").InsertOneAsync(
+                NewTenantRow("old-" + suffix, "tid-" + suffix, "Deleted", isDisabled: true));
+
+            var result = await NewRepository().GetProjectByIdAsync("tid-" + suffix);
+
+            result.Should().BeNull();
+        }
+
+        private static Tenant NewTenantRow(string itemId, string tenantId, string name, bool isDisabled) => new()
+        {
+            ItemId = itemId,
+            TenantId = tenantId,
+            Name = name,
+            IsDisabled = isDisabled,
+            DbConnectionString = "x",
+            JwtTokenParameters = new JwtTokenParameters { IssueDate = DateTime.UtcNow, PrivateCertificatePassword = "p" }
+        };
+
+        [Fact]
         public async Task Users_GetByEmailListAndById()
         {
             var suffix = Guid.NewGuid().ToString("N");
@@ -277,26 +359,40 @@ namespace XUnitTest.Integration
         }
 
         [Fact]
-        public async Task UpdateProjectOwnerShipAsync_UpdatesTenantCreatedBy()
+        public async Task IsOwner_IsFalse_ForAnEmptyTenantList()
         {
+            using var _ = new IntegrationContext("ctx-" + Guid.NewGuid().ToString("N"));
+            (await NewRepository().IsOwner("u1", new List<string>())).Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task ProjectPeoples_IsReadFromTheRootDb_WhenImpersonating()
+        {
+            // Every request made from inside a project is impersonated, so BlocksContext.TenantId
+            // is the project's own tenant and the bare IDbContextProvider.GetCollection resolves
+            // to that project's database. ProjectPeoples is never written there -- ProjectRepository
+            // pins all of its writes to the root database -- so these reads came back empty, and
+            // because ProjectAccessService decides ownership from exactly these rows, the owner of
+            // a project was refused as a non-member of it: Project/Create and Project/Disable both
+            // answered "Only the project owner can do this" with rows=0; ownerRows=0.
             var suffix = Guid.NewGuid().ToString("N");
-            var tenant = "tid-" + suffix;
-            using var _ = new IntegrationContext("ctx-" + suffix);
-            await _fixture.Collection<Tenant>("Tenants").InsertOneAsync(new Tenant
-            {
-                ItemId = "p-" + suffix,
-                TenantId = tenant,
-                Name = "Proj",
-                CreatedBy = "old-owner",
-                DbConnectionString = "x",
-                JwtTokenParameters = new JwtTokenParameters { IssueDate = DateTime.UtcNow, PrivateCertificatePassword = "p" }
-            });
+            var tenant = "t-" + suffix;
+            var user = "u-" + suffix;
 
-            var repo = NewRepository();
-            (await repo.UpdateProjectOwnerShipAsync(new List<string> { tenant }, "new-owner")).Should().BeTrue();
+            var provider = new SplitDatabaseContextProvider(_fixture.Client, _fixture.Database, "tenantdb_" + suffix);
+            using var _ = new BlocksTestContext(tenantId: tenant, userId: user, impersonated: true,
+                                                originalTenantId: "root-" + suffix);
+            var repo = NewRepository(provider);
 
-            var reloaded = await repo.GetProjectByIdAsync(tenant);
-            reloaded.CreatedBy.Should().Be("new-owner");
+            // Written the way provisioning writes it: through the root database, not through the
+            // repository under test.
+            await InsertPeopleAsync(Person(user, tenant, "own@x.com", creator: true));
+
+            (await repo.GetProjectPeoplesAsync(user, new List<string> { tenant })).Should().HaveCount(1);
+            (await repo.IsOwner(user, new List<string> { tenant })).Should().BeTrue();
+            (await repo.GetProjectPeopleByTenantIdAndUserIdAsync(tenant, user)).Should().NotBeNull();
+
+            provider.Drop();
         }
     }
 }

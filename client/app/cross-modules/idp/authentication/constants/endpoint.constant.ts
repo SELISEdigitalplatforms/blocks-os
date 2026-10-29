@@ -18,6 +18,7 @@ export const AUTH_CLIENT_ENDPOINTS = {
   LIST: `${API_BASES.IAM}${AUTH_SUBPATH}/client-credentials`,
   SAVE: `${API_BASES.IAM}${AUTH_SUBPATH}/client-credentials`,
   DELETE: `${API_BASES.IAM}${AUTH_SUBPATH}/client-credentials`,
+  ROTATE_SECRET: `${API_BASES.IAM}${AUTH_SUBPATH}/client-credentials`,
 } as const;
 
 // ─── OIDC client endpoints (auth-clients-oidc.service) ──────────────────────
@@ -30,6 +31,11 @@ export const AUTH_OIDC_ENDPOINTS = {
   ROTATE_OIDC_CLIENT_SECRET: `${API_BASES.IAM}/oidc-clients`,
   OIDC_TOKEN: `${API_BASES.IAM}/${AUTH_OIDC_SUBPATH}/token`,
   OIDC_CALL_BACK: `${API_BASES.IAM}/${AUTH_OIDC_SUBPATH}/oidc/callback`,
+} as const;
+
+export const AUTH_OIDC_TEMPLATE_ENDPOINTS = {
+  GET_OIDC_TEMPLATE: `${API_BASES.IAM}/oidc-template`,
+  SAVE_OIDC_TEMPLATE: `${API_BASES.IAM}/oidc-template`,
 } as const;
 
 // ─── Auth configuration endpoints (auth-config.service) ─────────────────────

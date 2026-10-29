@@ -3,7 +3,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
   setQueryParams: vi.fn(),
-  queryParams: { page: 0, pageSize: 10, search: "", isBuiltIn: "", type: "1", permissionSeverity: "" },
+  queryParams: {
+    page: 0,
+    pageSize: 10,
+    search: "",
+    isBuiltIn: "",
+    type: "1",
+    permissionSeverity: "",
+  },
   getArgs: undefined as unknown,
   data: { data: [{ itemId: "p1" }, { itemId: "p2" }], totalCount: 2 },
   isLoading: false,
@@ -33,17 +40,21 @@ vi.mock("./permissions-filter-toolbar", () => ({
     queryParams: h.queryParams,
     setQueryParams: h.setQueryParams,
   }),
-  usePermissionsSortQuaryParams: () => ({ sortQueryParams: { property: "Name", isDescending: false } }),
+  usePermissionsSortQuaryParams: () => ({
+    sortQueryParams: { property: "Name", isDescending: false },
+  }),
 }));
 vi.mock("@/components/ui-kits/pagination/pagination", () => ({
   Pagination: ({
     onChange,
     onPageSizeChange,
+    compact,
   }: {
     onChange: (p: number) => void;
     onPageSizeChange: (s: number) => void;
+    compact?: boolean;
   }) => (
-    <div>
+    <div data-testid="pagination" data-compact={String(compact)}>
       <button data-testid="page" onClick={() => onChange(2)}>
         page
       </button>
@@ -75,6 +86,7 @@ describe("Permissions", () => {
     render(<Permissions />);
     expect(screen.getByTestId("list").textContent).toBe("count:2");
     expect(screen.getByTestId("page")).toBeTruthy();
+    expect(screen.getByTestId("pagination").getAttribute("data-compact")).toBe("true");
   });
 
   it("hides pagination while loading", () => {

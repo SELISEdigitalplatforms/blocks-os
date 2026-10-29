@@ -18,7 +18,14 @@ namespace DomainService.Shared
         public const string ProjectPeopleCollectionName = "ProjectPeoples";
         public const string MigrationTrackerCollectionName = "MigrationTrackers";
         public const string ThirdPartyJWTClaimsCollectionName = "ThirdPartyJWTClaims";
-        public const string CookieDomainPrefix = "blocksapi.";
+        public const string JwtThirdPartyProvidersCollectionName = "JwtThirdPartyProviders";
+
+        /// <summary>
+        /// The one database every cross-project collection lives in. ProjectPeoples in
+        /// particular is only ever written here, so anything deciding project membership or
+        /// ownership has to read it from here too rather than from the caller's tenant database.
+        /// </summary>
+        public const string RootDatabaseName = "BlocksRootDb";
 
         public const string IdentifierQueueName = "blocks_project_listener";
         public const string DataCleanupQueue = "blocks_data_cleanup_listener";
@@ -26,8 +33,15 @@ namespace DomainService.Shared
         public const string IamQueue = "blocks_iam_listener_user";
         public const string MailQueue = "blocks_email_listener";
         public const string GenericMigrationQueue = "blocks_generic_migration_listener";
+        // Published to, never consumed here — blocks-release's worker owns this queue and is what
+        // declares it. Deliberately absent from the MessageConfiguration below: binding a queue this
+        // service has no consumer for would let the broker hand it deletes it would silently drop.
+        public const string ReleaseProjectDeleteQueue = "blocks_release_project_delete_listener";
         public const string MigrationCompletionTopic = "blocks_migration_topic";
-        public const string ProjectPeopleInvitationMailPurpose = "project_invitation";
+        public const string ProjectPeopleInvitationMailPurpose = "ProjectInvitation";
+        // The pre-rename value. IAM echoes the EventType it was sent, so a reply queued before the
+        // rename still carries this one and must not be dropped as unrelated.
+        public const string LegacyProjectPeopleInvitationMailPurpose = "project_invitation";
         public const string BlocksDomain = "seliseblocks.com";
         public const string ConstructCookieDomain = "slsblx.com";
 
@@ -36,7 +50,10 @@ namespace DomainService.Shared
         public const string RemoteFeTemplate = "/home/nginxreverseproxy/fe-domain.conf";
         public const string RemoteBlocksapiTemplate = "/home/nginxreverseproxy/blocksapi-domain.conf";
 
-
+        // The LMT queue names deliberately live only in Cloud.LmtService.Utilities.Constants.
+        // They were duplicated here too, which meant renaming one queue required editing two files
+        // in lockstep; miss one and Api publishes to a queue no host is listening on. Nothing in
+        // this project consumes or publishes to them — the senders all reference the LMT constants.
         private const string DefaultProvider = "azure";
         private const string RabbitMqProvider = "rabbitmq";
 
@@ -72,10 +89,14 @@ namespace DomainService.Shared
             {
                 RabbitMqConfiguration = new RabbitMqConfiguration
                 {
+                    // The LMT backup/restore queues are deliberately absent: this host registers no
+                    // consumers for those message types, and binding them would let it win messages
+                    // that only LmtColdArchiveRestoreWorker can actually handle. Same for the Azure
+                    // queue list below — see the note there.
                     ConsumerSubscriptions = [ConsumerSubscription.BindToQueue(IdentifierQueueName),
                                              ConsumerSubscription.BindToQueue(GenericMigrationQueue),
                                              ConsumerSubscription.BindToQueue(DataCleanupQueue),
-                                             ConsumerSubscription.BindToQueue(MigrationCompletionTopic)],
+                                             ConsumerSubscription.BindToQueue(MigrationCompletionTopic),],
                 }
             };
         }
@@ -86,6 +107,16 @@ namespace DomainService.Shared
             {
                 AzureServiceBusConfiguration = new AzureServiceBusConfiguration
                 {
+                    // Declaring a queue here attaches a receiver to it, and a Service Bus queue has
+                    // competing consumers: exactly one host gets each message. With the LMT queues
+                    // listed, blocks-os-worker won restore messages, found no IConsumer for the
+                    // type, logged "No consumer found for message type ColdRestoreMessage" and
+                    // completed them anyway — losing the work, and only appearing to function when
+                    // that host happened to be stopped.
+                    //
+                    // Api still publishes to those queues: SendToConsumerAsync names the queue on
+                    // each ConsumerMessage, so sending never needed them declared. This mirrors
+                    // ReleaseProjectDeleteQueue above, which is published to and likewise unbound.
                     Queues = [IdentifierQueueName, GenericMigrationQueue, DataCleanupQueue],
                     Topics = [MigrationCompletionTopic]
                 }

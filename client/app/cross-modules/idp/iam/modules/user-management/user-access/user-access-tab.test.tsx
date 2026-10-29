@@ -1,5 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => import("@/test-utils/__mocks__/grant-scope.mock"));
+vi.mock("@/components/ui-kits/tooltip/tooltip", () => import("@/test-utils/__mocks__/tooltip.mock"));
+vi.mock("../user-access-attributes", () => ({
+  UserAccessAttributes: () => <div data-testid="access-attributes" />,
+}));
+vi.mock("@blocks-idp/iam/hooks/use-user-manageability", () => import("@/test-utils/__mocks__/user-manageability.mock"));
 
 const h = vi.hoisted(() => ({
   config: undefined as { isMultiOrgEnabled: boolean } | undefined,
@@ -22,9 +28,14 @@ vi.mock("./multi-org-access", () => ({
 }));
 
 import { UserAccessTab } from "./user-access-tab";
+import { manageability, resetManageability } from "@/test-utils/__mocks__/user-manageability.mock";
+
+
+const LOCKED_ID = "user-access-locked";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetManageability();
   h.config = { isMultiOrgEnabled: false };
   h.isConfigLoading = false;
   h.user = { data: { organizationIds: [] } };
@@ -32,26 +43,113 @@ beforeEach(() => {
 });
 
 describe("UserAccessTab", () => {
-  it("renders skeletons while config or user data loads", () => {
+  it("H5: renders skeletons while config or user data loads", () => {
     h.isConfigLoading = true;
     const { container } = render(<UserAccessTab userId="u1" projectKey="p1" />);
     expect(container.querySelectorAll("[class*='animate-pulse']").length).toBeGreaterThan(0);
+    expect(screen.queryByTestId("multi-org")).toBeNull();
+    expect(screen.queryByTestId("single-org")).toBeNull();
   });
 
-  it("renders the multi-org view when multi-org is enabled", () => {
-    h.config = { isMultiOrgEnabled: true };
+  it("H5: renders skeletons while user data loads (no premature flash)", () => {
+    h.isUserLoading = true;
     render(<UserAccessTab userId="u1" projectKey="p1" />);
-    expect(screen.getByTestId("multi-org")).toBeTruthy();
+    expect(screen.queryByTestId("multi-org")).toBeNull();
+    expect(screen.queryByTestId("single-org")).toBeNull();
   });
 
-  it("renders the multi-org view when the user belongs to organizations", () => {
+  it("H1: multi-org enabled with multiple orgs shows multi-org view", () => {
+    h.config = { isMultiOrgEnabled: true };
     h.user = { data: { organizationIds: ["o1", "o2"] } };
     render(<UserAccessTab userId="u1" projectKey="p1" />);
     expect(screen.getByTestId("multi-org")).toBeTruthy();
+    expect(screen.queryByTestId("single-org")).toBeNull();
+  });
+
+  it("H2: multi-org enabled with exactly one org still shows multi-org view", () => {
+    h.config = { isMultiOrgEnabled: true };
+    h.user = { data: { organizationIds: ["o1"] } };
+    render(<UserAccessTab userId="u1" projectKey="p1" />);
+    expect(screen.getByTestId("multi-org")).toBeTruthy();
+    expect(screen.queryByTestId("single-org")).toBeNull();
+  });
+
+  it("H3 / C1: multi-org disabled with one default org hides organizations section", () => {
+    h.config = { isMultiOrgEnabled: false };
+    h.user = { data: { organizationIds: ["default"] } };
+    render(<UserAccessTab userId="u1" projectKey="p1" />);
+    expect(screen.getByTestId("single-org")).toBeTruthy();
+    expect(screen.queryByTestId("multi-org")).toBeNull();
+  });
+
+  it("H3 / C1: multi-org disabled with stale/multiple org ids still hides organizations section", () => {
+    h.config = { isMultiOrgEnabled: false };
+    h.user = { data: { organizationIds: ["o1", "o2"] } };
+    render(<UserAccessTab userId="u1" projectKey="p1" />);
+    expect(screen.getByTestId("single-org")).toBeTruthy();
+    expect(screen.queryByTestId("multi-org")).toBeNull();
+  });
+
+  it("H4: switching from enabled tenant to disabled tenant hides organizations section", () => {
+    h.config = { isMultiOrgEnabled: true };
+    h.user = { data: { organizationIds: ["o1", "o2"] } };
+    const { rerender } = render(<UserAccessTab userId="u1" projectKey="p1" />);
+    expect(screen.getByTestId("multi-org")).toBeTruthy();
+
+    h.config = { isMultiOrgEnabled: false };
+    rerender(<UserAccessTab userId="u1" projectKey="p1" />);
+    expect(screen.getByTestId("single-org")).toBeTruthy();
+    expect(screen.queryByTestId("multi-org")).toBeNull();
+
+    h.config = { isMultiOrgEnabled: true };
+    rerender(<UserAccessTab userId="u1" projectKey="p1" />);
+    expect(screen.getByTestId("multi-org")).toBeTruthy();
+  });
+
+  it("C2: fails closed when config returns no data (isMultiOrgEnabled defaults to false)", () => {
+    h.config = undefined;
+    h.user = { data: { organizationIds: ["o1", "o2", "o3"] } };
+    render(<UserAccessTab userId="u1" projectKey="p1" />);
+    expect(screen.getByTestId("single-org")).toBeTruthy();
+    expect(screen.queryByTestId("multi-org")).toBeNull();
+  });
+
+  it("C4: multi-org enabled with zero orgs/roles still renders multi-org view (flag is primary gate)", () => {
+    h.config = { isMultiOrgEnabled: true };
+    h.user = { data: { organizationIds: [], OrganizationsRoles: {} } };
+    render(<UserAccessTab userId="u1" projectKey="p1" />);
+    expect(screen.getByTestId("multi-org")).toBeTruthy();
+    expect(screen.queryByTestId("single-org")).toBeNull();
   });
 
   it("renders the single-org view when multi-org is disabled and no orgs exist", () => {
+    h.config = { isMultiOrgEnabled: false };
+    h.user = { data: { organizationIds: [] } };
     render(<UserAccessTab userId="u1" projectKey="p1" />);
     expect(screen.getByTestId("single-org")).toBeTruthy();
+    expect(screen.queryByTestId("multi-org")).toBeNull();
+  });
+
+  it("shows the Access attributes section under the access editor", () => {
+    render(<UserAccessTab userId="u1" projectKey="p1" />);
+    expect(screen.getByTestId("single-org")).toBeTruthy();
+    expect(screen.getByTestId("access-attributes")).toBeTruthy();
+    expect(screen.queryByTestId(LOCKED_ID)).toBeNull();
+  });
+
+  it("locks the whole tab, with the reason, for a user the caller cannot manage", () => {
+    manageability.blockedIds.add("u1");
+    h.user = { data: { itemId: "u1", organizationIds: [] } };
+    render(<UserAccessTab userId="u1" projectKey="p1" />);
+    const locked = screen.getByTestId(LOCKED_ID);
+    expect(locked.querySelector("fieldset")?.disabled).toBe(true);
+    expect(screen.getAllByText("You can't manage this user.").length).toBeGreaterThan(0);
+  });
+
+  it("locks the tab on the caller's own row, where role edits are not allowed", () => {
+    manageability.selfId = "u1";
+    render(<UserAccessTab userId="u1" projectKey="p1" />);
+    expect(screen.getAllByText("You can't change your own roles.").length).toBeGreaterThan(0);
+    expect(screen.getByTestId(LOCKED_ID).querySelector("fieldset")?.disabled).toBe(true);
   });
 });

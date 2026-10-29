@@ -34,8 +34,8 @@ export const OrganizationPermissionsField = ({
       filter.page * filter.pageSize + filter.pageSize,
     ) || [];
 
-  const onAddHandler = (newPermissions: IPermission[]) => {
-    onChange([...permissions, ...newPermissions]);
+  const onAddHandler = (finalSelection: IPermission[]) => {
+    onChange(finalSelection);
   };
 
   const onRemoveHandler = (permission: IPermission) => {
@@ -98,7 +98,6 @@ export const OrganizationPermissionsField = ({
                 page={filter.page}
                 onChange={onPageChangeHandler}
                 totalCount={permissions.length || 0}
-                pageSizeOptions={[filter.pageSize]}
                 pageSize={filter.pageSize}
               />
             </div>

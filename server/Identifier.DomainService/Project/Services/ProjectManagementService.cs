@@ -1,4 +1,4 @@
-using Blocks.Genesis;
+﻿using Blocks.Genesis;
 using DomainService.Certificate;
 using DomainService.Dtos;
 using DomainService.Entities;
@@ -10,9 +10,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using MongoDB.Driver;
+using Storage.DomainService.Enums;
 using StorageDriver;
 using System.Net.Http.Headers;
 using System.Security.Cryptography.X509Certificates;
+using Blocks.Genesis.Entities.Data;
+using Blocks.Genesis.Entities.Os;
+using Os.DataAccess.Notifications;
 
 namespace DomainService.Projects
 {
@@ -27,8 +31,14 @@ namespace DomainService.Projects
         private readonly IStorageDriverService _storageDriverService;
         private readonly IEncodingService _urlEncodingService;
         private readonly ICacheClient _cacheClient;
+        private readonly ICryptoService _cryptoService;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IBuiltInNotificationSender? _notificationSender;
 
         private const string _tenantTokenPublicCertificateCachePrefix = "tetocertpublic::";
+        private const string UpsertAction = "upsert";
+        // Error code clients match on; the value is part of the API contract.
+        private const string ProjectNotFoundErrorCode = "project_not_found";
 
 
         public ProjectManagementService(IProjectRepository projectRepository,
@@ -39,7 +49,10 @@ namespace DomainService.Projects
                                         ITenants tenants,
                                         ICertificateManager certificateManager,
                                         IEncodingService urlEncodingService,
-                                        ICacheClient cacheClient)
+                                        ICacheClient cacheClient,
+                                        ICryptoService cryptoService,
+                                        IHttpClientFactory httpClientFactory,
+                                        IBuiltInNotificationSender? notificationSender = null)
         {
             _projectRepository = projectRepository;
             _blocksSecret = blocksSecret;
@@ -50,6 +63,9 @@ namespace DomainService.Projects
             _certificateManager = certificateManager;
             _urlEncodingService = urlEncodingService;
             _cacheClient = cacheClient;
+            _cryptoService = cryptoService;
+            _httpClientFactory = httpClientFactory;
+            _notificationSender = notificationSender;
         }
 
         public async Task ConfigureProjectAsync(Tenant project, ProjectStatusTracer? projectStatus = null)
@@ -67,33 +83,126 @@ namespace DomainService.Projects
 
                 await Task.WhenAll(UpdateProjectIfNeeded(projectStatus, project),
                                    _projectRepository.CreateDefaultConfigurationAsync(projectStatus, project));
+
+                await AnnounceTenantUpdateIfNeeded(project);
             }
             catch (Exception ex)
             {
                 await HandleConfigurationErrorAsync(projectStatus, ex.Message);
+                await NotifyProjectSetupFailedAsync(project);
             }
+        }
+
+        /// <summary>
+        /// Tells the project creator that setup failed. Sent only after the error is saved on the
+        /// status tracer; the error text itself is not sent.
+        /// </summary>
+        private Task NotifyProjectSetupFailedAsync(Tenant project)
+        {
+            if (_notificationSender is null) return Task.CompletedTask;
+
+            return _notificationSender.SendAsync(new BuiltInNotification
+            {
+                ConfigurationName = BuiltInNotificationNames.ProjectSetupFailed,
+                Event = "project-setup-failed",
+                Title = "Project setup failed",
+                Description = "Setting up the project or environment did not finish. You can retry it from the project page.",
+                IsSuccess = false,
+                Ids = new Dictionary<string, string?>
+                {
+                    ["projectId"] = project.ItemId,
+                    ["projectKey"] = project.TenantId,
+                    ["tenantGroupId"] = project.TenantGroupId
+                },
+                UserIds = [project.CreatedBy]
+            });
+        }
+
+        /// <summary>
+        /// Broadcasts the provisioned tenant, as stored, so every service replaces the copy it
+        /// may have cached while the certificate was still being generated.
+        /// </summary>
+        /// <remarks>
+        /// Provisioning is the only write that sets <c>JwtTokenParameters.PublicCertificatePath</c>,
+        /// and it was the only project write that never announced itself. Any service that read
+        /// this tenant between <c>InsertProjectAsync</c> and here holds a copy with no certificate
+        /// path, and cannot validate tokens for the tenant until that process restarts.
+        /// </remarks>
+        private async Task AnnounceTenantUpdateIfNeeded(Tenant project)
+        {
+            // The stored row, not the copy this run was handed at creation. Provisioning takes
+            // long enough for the tenant to change underneath it — adding a repository registers
+            // its host and broadcasts — and announcing the creation-time copy afterwards put every
+            // service's cache back to before that change.
+            var stored = await _projectRepository.GetByIdAsync(project.ItemId);
+
+            // A resumed run can find the certificates marked uploaded and the path never saved.
+            // Broadcasting that would replace good cached copies with a useless one, which is
+            // worse than staying quiet.
+            if (string.IsNullOrWhiteSpace(stored?.JwtTokenParameters?.PublicCertificatePath))
+            {
+                return;
+            }
+
+            await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
+            {
+                Action = UpsertAction,
+                TenantId = stored.TenantId,
+                Tenant = stored
+            });
         }
 
         private async Task InsertIntoProjectPeopleAsync(ProjectStatusTracer statusTracer, Tenant project)
         {
             if (statusTracer.InsertedIntoProjectPeople) return;
 
-            await _projectRepository.InsertPeopleAsync(new ProjectPeople
+            // Idempotent per environment, which the tracer flag alone does not make it: a
+            // brand-new group's environments are claimed by the API before they are queued, and
+            // a resumed run can arrive here with the row already written and the flag not yet
+            // saved. Both used to leave the same person holding two creator rows on one tenant.
+            if (await _projectRepository.GetOwnerUserIdAsync(project.TenantId) is not null)
+            {
+                statusTracer.InsertedIntoProjectPeople = true;
+                return;
+            }
+
+            // Ownership of a new environment belongs to the group's existing owner, never to
+            // whoever created it. Ownership is "IsCreator on every tenant in the group", so
+            // stamping the caller here would hand the whole group to anyone who could add an
+            // environment to it. Creating an environment is owner-only today, which makes this
+            // a no-op — and a permanent guard if that ever changes.
+            var groupOwner = await _projectRepository.GetGroupOwnerAsync(project.TenantGroupId);
+
+            await InsertCreatorRowAsync(project,
+                groupOwner?.UserId ?? project.CreatedBy,
+                // Taken from the owner's existing row rather than the caller's context: on the
+                // restore path those are two different people, which used to stamp the
+                // restorer's address onto the creator's row.
+                groupOwner?.Email ?? BlocksContext.GetContext()?.UserName ?? "");
+
+            statusTracer.InsertedIntoProjectPeople = true;
+
+        }
+
+        /// <summary>
+        /// Records who owns one environment. <c>ProjectPeople.IsCreator</c> is the only place
+        /// ownership is ever written — see docs/specs/transfer-ownership-createdby-decoupling.md
+        /// — so both the API and the provisioning worker go through here rather than each
+        /// composing the row themselves.
+        /// </summary>
+        private Task InsertCreatorRowAsync(Tenant project, string? userId, string email) =>
+            _projectRepository.InsertPeopleAsync(new ProjectPeople
             {
                 ItemId = Guid.NewGuid().ToString(),
-                UserId = project.CreatedBy,
+                UserId = userId,
                 TenantId = project.TenantId,
                 IsCreator = true,
                 CreatedDate = DateTime.UtcNow,
                 LastUpdatedDate = DateTime.UtcNow,
                 IsInvitationConfirmed = true,
                 IsInvitationSent = true,
-                Email = BlocksContext.GetContext()?.UserName?? ""
+                Email = email
             });
-
-            statusTracer.InsertedIntoProjectPeople = true;
-
-        }
 
         private async Task UploadPrivateCertificateIfNeeded(ProjectStatusTracer statusTracer, X509Certificate2 privateKeyCertificate, Tenant project)
         {
@@ -116,7 +225,9 @@ namespace DomainService.Projects
         {
             if (statusTracer.IsProjectUpdated) return;
 
-            await _projectRepository.UpdateProjectAsync(project);
+            // The certificate path is the only thing provisioning changes on the tenant. Replacing
+            // the whole document with this run's copy undid anything saved since creation.
+            await _projectRepository.SetPublicCertificatePathAsync(project.ItemId, project.JwtTokenParameters.PublicCertificatePath);
             statusTracer.IsProjectUpdated = true;
         }
 
@@ -179,11 +290,26 @@ namespace DomainService.Projects
         {
             var fileName = $"{project.TenantId}.pfx";
             var fileId = Guid.NewGuid().ToString();
-            var preSingedUri = await GetPreSingedUriForUpload(fileId, fileName);
+            var presignedUrlResponse = await GetPreSingedUriForUpload(fileId, fileName);
 
             var content = GetByteArrayContent(publicKeyCertificate, project.JwtTokenParameters.PublicCertificatePassword);
 
-            await UploadContentAsync(content, preSingedUri);
+            await UploadContentAsync(content, presignedUrlResponse.UploadUrl);
+
+            if (presignedUrlResponse.UploadCompletionRequired)
+            {
+                var completion = await _storageDriverService.CompleteUploadAsync(new CompleteUploadRequest
+                {
+                    FileId = fileId,
+                    FileVersionId = presignedUrlResponse.FileVersionId,
+                });
+
+                if (completion?.VerificationStatus != FileVerificationStatus.Verified)
+                {
+                    throw new InvalidOperationException(
+                        $"Certificate upload was not verified: {completion?.RejectionReason}");
+                }
+            }
 
             var getFileResponse = await _storageDriverService.GetUrlForDownloadFileAsync(new GetFileRequest { FileId = fileId });
             if (getFileResponse == null || string.IsNullOrWhiteSpace(getFileResponse.Url))
@@ -206,7 +332,7 @@ namespace DomainService.Projects
             response.EnsureSuccessStatusCode();
         }
 
-        private async Task<string> GetPreSingedUriForUpload(string fileId, string fileName)
+        private async Task<GetPreSignedUrlForUploadResponse> GetPreSingedUriForUpload(string fileId, string fileName)
         {
             var preSignedUriRequest = new GetPreSignedUrlForUploadRequest
             {
@@ -218,8 +344,7 @@ namespace DomainService.Projects
                 AccessModifier = "Public"
             };
 
-            var presignedUrlResponse = await _storageDriverService.GetPerSignedUrlForUploadAsync(preSignedUriRequest);
-            return presignedUrlResponse.UploadUrl;
+            return await _storageDriverService.GetPerSignedUrlForUploadAsync(preSignedUriRequest);
         }
 
         private static ByteArrayContent GetByteArrayContent(X509Certificate2 certificate, string password)
@@ -233,14 +358,90 @@ namespace DomainService.Projects
 
         public async Task<CreateProjectResponse> SaveProjectAsync(CreateProjectRequest project)
         {
-            var groupId = string.IsNullOrEmpty(project.TenantGroupId) ? Guid.NewGuid().ToString("n") : project.TenantGroupId;
+            // Resolve all placements before creating assets, tenant records, or messages.
+            // Existing tenants retain their stored connection; this only provisions new ones.
+            var connections = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (project.applicationContexts is null || project.applicationContexts.Count == 0)
+            {
+                return new CreateProjectResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string> { ["environment"] = "At least one environment is required." }
+                };
+            }
+            foreach (var application in project.applicationContexts)
+            {
+                if (application is null || !IdentifierHelper.IsSupportedEnvironment(application.Environment))
+                {
+                    return new CreateProjectResponse
+                    {
+                        IsSuccess = false,
+                        Errors = new Dictionary<string, string> { ["environment"] = "One or more projects have unsupported environment." }
+                    };
+                }
+
+                if (connections.ContainsKey(application.Environment))
+                {
+                    return new CreateProjectResponse
+                    {
+                        IsSuccess = false,
+                        Errors = new Dictionary<string, string> { ["environment"] = "Projects should not contain duplicate environments." }
+                    };
+                }
+
+                try
+                {
+                    connections[application.Environment] = ResolveDatabaseConnectionString(application.Environment);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    return new CreateProjectResponse
+                    {
+                        IsSuccess = false,
+                        Errors = new Dictionary<string, string> { ["database_configuration"] = ex.Message }
+                    };
+                }
+            }
+
+            // Issuer host is required before any tenant is written. A blank issuer would make
+            // Genesis set ValidateIssuer=false for that tenant forever, so fail loudly here
+            // (same shape as database_configuration) rather than half-building a group.
+            try
+            {
+                _ = ResolveIamBaseUrl();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return new CreateProjectResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string> { ["iam_configuration"] = ex.Message }
+                };
+            }
+
+            var isNewGroup = string.IsNullOrEmpty(project.TenantGroupId);
+            var groupId = isNewGroup ? Guid.NewGuid().ToString("n") : project.TenantGroupId;
             await ManageTenantAssetAsync(project, groupId);
 
             foreach (var applicationContext in project.applicationContexts)
             {
-                var tenant = await MapAsync(project, applicationContext, groupId);
+                var tenant = await MapAsync(project, applicationContext, groupId, connections[applicationContext.Environment]);
                 await Task.WhenAll(_projectRepository.SaveRepoInfoAsync(tenant, project.Resources),
                                    _projectRepository.InsertProjectAsync(tenant));
+
+                // Ownership is recorded here rather than being left to the worker. Provisioning
+                // is asynchronous, so the creator row appeared only once the worker had picked
+                // the project up; until then the group had environments and no owner, and every
+                // [ProjectPolicy(OwnerOnly)] endpoint refused the person who had just created
+                // it — adding an environment and deleting the project among them.
+                //
+                // Only for a brand-new group, where the caller is the creator by definition.
+                // Appending an environment to an existing group must leave ownership exactly
+                // where it is, which is what the worker's GetGroupOwnerAsync goes on to do.
+                if (isNewGroup)
+                {
+                    await InsertCreatorRowAsync(tenant, tenant.CreatedBy, BlocksContext.GetContext()?.UserName ?? "");
+                }
 
                 await Task.WhenAll(_messageClient.SendToConsumerAsync(new ConsumerMessage<Tenant> { ConsumerName = IdentifierConstants.IdentifierQueueName, Payload = tenant }));
             }
@@ -252,7 +453,32 @@ namespace DomainService.Projects
         {
             var tenantSlug = await _urlEncodingService.EncodeToBase26Async(tenantIdGroupId, tenantIdGroupId, 5);
             var repoSlug = await _urlEncodingService.EncodeToBase26Async(resource?.ResourceId ?? string.Empty, tenantIdGroupId, 5);
-            return !string.IsNullOrEmpty(repoSlug) ? $"https://{IdentifierHelper.EnvironmentMapper(application.Environment)}{tenantSlug}-{repoSlug}{_configuration["KbtclIdentifier"]}" : $"https://{IdentifierHelper.EnvironmentMapper(application.Environment)}{tenantSlug}{_configuration["KbtclIdentifier"]}";
+            return IdentifierHelper.BuildPlatformSubdomain(application.Environment, tenantSlug, repoSlug, _configuration["KbtclIdentifier"] ?? string.Empty);
+        }
+
+        // Every repository the group owns gets its own generated host in this environment, and
+        // each of those has to be a registered application or it fails the origin allow-list the
+        // moment it serves a request. A project created with several repositories, and every
+        // environment added to a group that already has them, both land here — which is why this
+        // walks the whole list rather than the first entry. The first resource stays first: several
+        // callers still read Applications[0] as the project's own domain.
+        private async Task<List<string>> GetDefaultDomainsAsync(List<Resource>? resources, ApplicationContext application, string tenantIdGroupId)
+        {
+            // No repositories yet. The project still needs one host of its own, derived from the
+            // group alone — the same domain GetDefaultDomainAsync returns for a null resource.
+            if (resources is null || resources.Count == 0)
+            {
+                return [await GetDefaultDomainAsync(null, application, tenantIdGroupId)];
+            }
+
+            var domains = new List<string>(resources.Count);
+
+            foreach (var resource in resources)
+            {
+                domains.Add(await GetDefaultDomainAsync(resource, application, tenantIdGroupId));
+            }
+
+            return domains;
         }
 
         private async Task ManageTenantAssetAsync(CreateProjectRequest project, string customGroupId)
@@ -264,8 +490,10 @@ namespace DomainService.Projects
                 return;
             }
 
-           var (assets, _) = await _projectRepository.GetTenantAssetAsync(new GetAssetRequest { TenantGroupId = project.TenantGroupId });
-           project.Resources = assets.Resources ?? [];
+           // Unpaged: a new environment has to inherit every repository the group owns, not the
+           // first page of them. Archived ones were deleted from the project, so they stay out.
+           var assets = await _projectRepository.GetTenantAssetByGroupIdAsync(project.TenantGroupId);
+           project.Resources = assets?.Resources?.Where(r => !r.IsArchived).ToList() ?? [];
 
         }
 
@@ -283,15 +511,157 @@ namespace DomainService.Projects
             };
         }
 
-        private async Task<Tenant> MapAsync(CreateProjectRequest createProjectRequest, ApplicationContext applicationContext, string groupId)
+        // The generated host of every repository in the group, plus the platform apps that must
+        // be able to sign in against the new tenant. Studio's host is not an appsettings value:
+        // it is deployed into the "FrontendRuntime" section from the Mongo secrets document
+        // (see ApplyFrontendRuntimeSettings), so it is read from the same key the
+        // frontend is served with. A deployment without that secret simply leaves
+        // Studio out instead of writing an empty domain.
+        //
+        // The repository hosts are PlatformSubdomain and the two platform apps are
+        // PlatformDefault: the former are unique to this tenant, while IAM and Studio are the
+        // same hosts in every tenant's list. The type is set here rather than derived from the
+        // host, so a deployment whose KbtclIdentifier sits outside the platform domains still
+        // labels its own generated hosts correctly.
+        private List<Applications> BuildDefaultApplications(IReadOnlyList<string> applicationDomains)
+        {
+            var applications = new List<Applications>();
+
+            foreach (var domain in applicationDomains)
+            {
+                if (string.IsNullOrWhiteSpace(domain) || ContainsDomain(applications, domain))
+                {
+                    continue;
+                }
+
+                applications.Add(new Applications
+                {
+                    Domain = domain,
+                    CookieDomain = IdentifierConstants.ConstructCookieDomain,
+                    IsDomainVerified = true,
+                    DomainType = DomainType.PlatformSubdomain
+                });
+            }
+
+            applications.Add(new Applications
+            {
+                Domain = _configuration["IamDomain"],
+                CookieDomain = _configuration["IamCookieDomain"],
+                IsDomainVerified = true,
+                DomainType = DomainType.PlatformDefault
+            });
+
+            var studioDomain = ResolveFrontendRuntimeValue("BLOCKS_STUDIO_BASE_URL");
+
+            if (!string.IsNullOrWhiteSpace(studioDomain))
+            {
+                studioDomain = studioDomain.TrimEnd('/');
+                applications.Add(new Applications
+                {
+                    Domain = studioDomain,
+                    CookieDomain = IdentifierHelper.ExtractMainDomain(studioDomain),
+                    IsDomainVerified = true,
+                    DomainType = DomainType.PlatformDefault
+                });
+            }
+
+            return applications;
+        }
+
+        // Stored domains vary by protocol, case and trailing slash, so membership is decided on
+        // the normalized form. Nothing is ever removed from Applications — a deleted repository
+        // is archived, not dropped — so every append has to check first or a repository that is
+        // removed and added back leaves a second copy behind.
+        private static bool ContainsDomain(IEnumerable<Applications> applications, string domain)
+        {
+            var normalized = NormalizeDomain(domain);
+
+            return applications.Any(a => NormalizeDomain(a.Domain) == normalized);
+        }
+
+
+        // Env var FrontendRuntime__{key} wins over the FrontendRuntime:{key} configuration
+        // entry (Mongo secrets / appsettings). Empty env values are treated as unset so a
+        // blank override does not shadow a configured secret.
+        private string? ResolveFrontendRuntimeValue(string key)
+        {
+            var fromEnv = Environment.GetEnvironmentVariable($"FrontendRuntime__{key}");
+            if (!string.IsNullOrEmpty(fromEnv))
+            {
+                return fromEnv;
+            }
+
+            return _configuration[$"FrontendRuntime:{key}"];
+        }
+
+        private string ResolveIamBaseUrl()
+        {
+            return Blocks.Secrets.FrontendRuntimeUrl.ResolveIamBaseUrl(
+                _configuration,
+                "FrontendRuntime:BLOCKS_IAM_BASE_URL is not configured; a tenant cannot be created without a JWT issuer.");
+        }
+
+        // Issuer format forced by blocks-iam OidcServices.ResolveEndpoints:
+        // issuer + "/.well-known/jwks.json" == the JWKS URL served for this TenantId.
+        private string BuildJwtIssuer(string tenantId)
+        {
+            if (string.IsNullOrEmpty(tenantId))
+            {
+                throw new InvalidOperationException(
+                    "TenantId is required to build a JWT issuer; refusing a host-only issuer.");
+            }
+
+            return ResolveIamBaseUrl().TrimEnd('/') + "/" + tenantId;
+        }
+
+        private string ResolveDatabaseConnectionString(string environment)
+        {
+            var connectionString = environment switch
+            {
+                "prod" => _blocksSecret.DatabaseConnectionString,
+                "dev" => _blocksSecret.DevDatabaseConnectionString,
+                _ => _blocksSecret.OtherDatabaseConnectionString
+            };
+
+            // A missing optional placement secret deliberately falls back to main.
+            if (string.IsNullOrWhiteSpace(connectionString))
+                connectionString = _blocksSecret.DatabaseConnectionString;
+
+            if (string.IsNullOrWhiteSpace(connectionString))
+                throw new InvalidOperationException($"No database connection is configured for environment '{environment}'.");
+
+            connectionString = connectionString.Trim();
+            try
+            {
+                _ = MongoUrl.Create(connectionString);
+            }
+            catch (Exception ex) when (ex is ArgumentException or FormatException or MongoConfigurationException)
+            {
+                // Do not include a connection string (or a parser exception containing it).
+                throw new InvalidOperationException($"The database connection configured for environment '{environment}' is invalid.");
+            }
+
+            return connectionString;
+        }
+
+        private async Task<Tenant> MapAsync(CreateProjectRequest createProjectRequest, ApplicationContext applicationContext, string groupId, string connectionString)
         {
             var certificateStorageType = GetCertificateStorageType();
-            var applicationDomain = createProjectRequest.Resources?.Count > 0 ? await GetDefaultDomainAsync(createProjectRequest.Resources.First(), applicationContext, groupId) : await GetDefaultDomainAsync(createProjectRequest.Resources?.FirstOrDefault(), applicationContext, groupId);
+            var applicationDomains = await GetDefaultDomainsAsync(createProjectRequest.Resources, applicationContext, groupId);
+
+            // The first repository's host is the project's own: it is what the token audience
+            // and the IAM account-action urls are built from, and what Applications[0] means to
+            // every caller that reads it.
+            var applicationDomain = applicationDomains[0];
+
+            // TenantId is stamped before JwtTokenParameters so the issuer can append it
+            // byte-for-byte (uppercase environment letter + lowercase group GUID).
+            var tenantId = IdentifierHelper.EnvironmentMapper(applicationContext.Environment).ToUpper() + groupId;
 
             var project = new Tenant
             {
                 ItemId = Guid.NewGuid().ToString(),
-                TenantId = IdentifierHelper.EnvironmentMapper(applicationContext.Environment).ToUpper() + groupId,
+                TenantId = tenantId,
                 TenantGroupId = groupId,
                 Environment = applicationContext.Environment,
                 CreatedDate = DateTime.UtcNow,
@@ -302,15 +672,15 @@ namespace DomainService.Projects
                 IsAcceptBlocksTerms = createProjectRequest.IsAcceptBlocksTerms,
                 IsUseBlocksExclusively = createProjectRequest.IsUseBlocksExclusively,
                // ApplicationDomain = applicationDomain,
-                DbConnectionString = _blocksSecret.DatabaseConnectionString,
+                DbConnectionString = connectionString,
                // CookieDomain = applicationContext.CookieDomain,
                // IsDomainVerified = applicationContext.CookieDomain == IdentifierConstants.BlocsDomain,
 
-                Applications = [ new Applications { Domain = applicationDomain, CookieDomain = IdentifierConstants.ConstructCookieDomain, IsDomainVerified = true }, new Applications{ Domain = _configuration["IamDomain"], CookieDomain = _configuration["IamCookieDomain"], IsDomainVerified = true } ],
+                Applications = BuildDefaultApplications(applicationDomains),
 
                 JwtTokenParameters = new JwtTokenParameters
                 {
-                    Issuer = IdentifierConstants.Issuer,
+                    Issuer = BuildJwtIssuer(tenantId),
                     Subject = IdentifierConstants.Subject,
                     CertificateValidForNumberOfDays = 2 * 365,
                     IssueDate = DateTime.UtcNow,
@@ -342,8 +712,41 @@ namespace DomainService.Projects
 
         public async Task<List<GroupedProjectsDto>> GetAllAsync(GetProjectsRequest request)
         {
-            return await _projectRepository.GetAllByLastModifiedDateAsync(request);
+            var groups = await _projectRepository.GetAllByLastModifiedDateAsync(request);
+
+            foreach (var project in groups.SelectMany(g => g.Projects.Concat(g.NonSharedProject ?? [])))
+            {
+                project.Applications = VisibleApplications(project.Applications);
+            }
+
+            return groups;
         }
+
+        /// <summary>
+        /// The applications a project owns, as opposed to the ones it merely has to trust. IAM
+        /// and Studio are written into every tenant's list so their hosts pass the origin
+        /// allow-list, but they are the same two hosts everywhere and no project can act on
+        /// them — showing them made every environment look like it had two domains it did not.
+        /// <para>
+        /// Only PlatformDefault is dropped. Entries written before the type existed read back as
+        /// Unspecified and are kept, so nothing disappears from a project until it is
+        /// backfilled.
+        /// </para>
+        /// </summary>
+        private static List<ApplicationDto> VisibleApplications(IEnumerable<ApplicationDto>? applications) =>
+            [.. (applications ?? []).Where(a => a.DomainType != DomainType.PlatformDefault)];
+
+        // The detail endpoint reads a Tenant rather than a Project, so its applications arrive
+        // as the Genesis type and are copied across. A copy, not the list itself: the entries
+        // belong to a Tenant that may have come from the cache, and filtering must not reach it.
+        private static List<ApplicationDto> VisibleApplications(IEnumerable<Applications>? applications) =>
+            VisibleApplications((applications ?? []).Select(a => new ApplicationDto
+            {
+                Domain = a.Domain,
+                CookieDomain = a.CookieDomain,
+                IsDomainVerified = a.IsDomainVerified,
+                DomainType = a.DomainType
+            }));
 
         public async Task RestoreUnfinishedProjectAsync()
         {
@@ -367,8 +770,6 @@ namespace DomainService.Projects
 
         public async Task<RestoreProjectResponse> RestoreProjectAsync(RestoreProjectRequest restoreProjectRequest)
         {
-           //await _messageClient.SendToConsumerAsync(new ConsumerMessage<RestoreProjectRequest> { ConsumerName = IdentifierConstants.IdentifierQueueName, Payload = restoreProjectRequest });
-
            var project = await _projectRepository.GetByIdAsync(restoreProjectRequest.ItemId);
            ProjectStatusTracer? projectStatusTracer = await _projectRepository.GetUnfinishedProjectByIdAsync(restoreProjectRequest.ItemId);
 
@@ -417,16 +818,21 @@ namespace DomainService.Projects
                 tenantSlug = $"{IdentifierHelper.EnvironmentMapper(tenant.Environment)}{blocksGuid.EncodedValue}";
             }
 
+            // The owner can change via People/TransferOwnerShip, which only updates
+            // ProjectPeople.IsCreator — CreatedBy is a creation-time audit stamp, not the
+            // current owner. See docs/specs/transfer-ownership-createdby-decoupling.md.
+            var ownerUserId = await _projectRepository.GetOwnerUserIdAsync(tenant.TenantId);
+
             var project = new GetProjectResponseData
             {
                 Name = tenant.Name,
-                Applications = tenant.Applications,
+                Applications = VisibleApplications(tenant.Applications),
                 ItemId = tenant.ItemId,
                 CreatedDate = tenant.CreatedDate,
                 LastUpdatedDate = tenant.LastUpdatedDate,
                 LastUpdatedBy = tenant.LastUpdatedBy,
               //  OrganizationIds = tenant.OrganizationIds,
-                CreatedBy = tenant.CreatedBy,
+                CreatedBy = ownerUserId ?? tenant.CreatedBy,
                 Tags = tenant.Tags,
                 TenantId = tenant.TenantId,
                 IsDomainVerified = tenant.Applications.FirstOrDefault()?.IsDomainVerified ?? false,
@@ -434,7 +840,8 @@ namespace DomainService.Projects
                 IsDisabled = tenant.IsDisabled,
                 Environment = tenant.Environment,
                 TenantGroupId = tenant.TenantGroupId,
-                TenantSlug = tenantSlug
+                TenantSlug = tenantSlug,
+                IsThirdPartyJwtEnabled = tenant.IsThirdPartyJwtEnabled
             };
 
             return new GetProjectResponse { Data = project };
@@ -446,14 +853,95 @@ namespace DomainService.Projects
             var blocksContext = BlocksContext.GetContext();
             var project = await _projectRepository.GetByTenantIdAsync(blocksContext.TenantId);
 
+            // Null before root-tenant: the root-tenant guard was added above this one and
+            // dereferenced a project that may not exist, so an unknown tenant threw instead of
+            // being reported as one.
             if (project == null)
             {
-                return new BaseResponse() { IsSuccess = false, Errors = new Dictionary<string, string> { { "project_not_found", $"No project found with id {blocksContext.TenantId}" } } };
+                return new BaseResponse() { IsSuccess = false, Errors = new Dictionary<string, string> { { ProjectNotFoundErrorCode, $"No project found with id {blocksContext.TenantId}" } } };
+            }
+
+            if(project.IsRootTenant)
+            {
+             return new BaseResponse() { IsSuccess = false, Errors = new Dictionary<string, string> { { "root_tenant", $"Root tenant cannot be updated" } } };
             }
 
             project.LastUpdatedDate = DateTime.UtcNow;
             project.LastUpdatedBy = blocksContext.UserId;
 
+            // Snapshotted before the switch runs: Edit mutates this record in
+            // place, so afterwards there is no way to tell which host the
+            // application used to answer on. Deleting an application, or moving it
+            // to a different host, leaves the nginx vhost and Let's Encrypt
+            // certificate provisioned for the old host stranded on the proxy.
+            var applicationBeforeUpdate = request.Action == ApplicationAction.Add
+                ? null
+                : project.Applications?.FirstOrDefault(a => a.Domain == request.ApplicationDomain);
+            var previousDomain = applicationBeforeUpdate?.Domain;
+            var previousCookieDomain = applicationBeforeUpdate?.CookieDomain;
+            var previousDomainWasProvisioned = applicationBeforeUpdate is not null && IsSelfProvisioned(applicationBeforeUpdate);
+
+            var domainInUse = await RejectDomainOfAnotherProjectAsync(project, request);
+            if (domainInUse != null)
+                return domainInUse;
+
+            var applicationActionFailure = ApplyApplicationAction(project, request);
+            if (applicationActionFailure != null)
+                return applicationActionFailure;
+
+            await _projectRepository.UpdateProjectAsync(project);
+            await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
+            {
+                Action = UpsertAction,
+                TenantId = project.TenantId,
+                Tenant = project
+            });
+
+            // Released only once the change is persisted — tearing the vhost and
+            // certificate down for an update that failed to save would take a live
+            // site offline.
+            if (previousDomainWasProvisioned && ReleasesPreviousHost(request, previousDomain))
+            {
+                // Delete means delete: the certificate goes with the vhost, so
+                // nothing is left renewing for a host the project no longer has. A
+                // rename is a move, not a removal, so its lineage survives for the
+                // domain it may well be moved back to.
+                var isDelete = request.Action == ApplicationAction.Delete;
+
+                await SendDisableDomainBindingAsync(project.TenantId, previousDomain!, deleteCertificate: isDelete);
+
+                if (isDelete && request.DeleteSharedApiHost)
+                {
+                    await ReleaseSharedApiHostAsync(project.TenantId, previousDomain!, previousCookieDomain);
+                }
+            }
+
+            return new BaseResponse { IsSuccess = true };
+        }
+
+        // A request without a tenant key finds its tenant by domain, and the first match wins, so
+        // two projects on one domain would send requests to the wrong one. Only a new or changed
+        // domain is checked; duplicates saved before this check are left as they are.
+        private async Task<BaseResponse?> RejectDomainOfAnotherProjectAsync(Tenant project, UpdateProjectRequest request)
+        {
+            var domain = NormalizeDomain(request.Application?.Domain);
+            var isNewDomain = request.Action == ApplicationAction.Add
+                || (request.Action == ApplicationAction.Edit && domain != NormalizeDomain(request.ApplicationDomain));
+
+            if (!isNewDomain || domain.Length == 0
+                || !await _projectRepository.IsDomainUsedByAnotherProjectAsync(domain, project.TenantId))
+            {
+                return null;
+            }
+
+            return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "domain_in_use", $"The domain {request.Application!.Domain} is already used by another project" } } };
+        }
+
+        // Applies the requested add/edit/delete to the project in memory. Returns the failed
+        // response when the action was rejected, or null when the project is ready to be saved
+        // (including for an action this method does not recognise, which changes nothing).
+        private BaseResponse? ApplyApplicationAction(Tenant project, UpdateProjectRequest request)
+        {
             switch (request.Action)
             {
                 case ApplicationAction.Add:
@@ -475,20 +963,99 @@ namespace DomainService.Projects
                     break;
             }
 
-            await _projectRepository.UpdateProjectAsync(project);
-            await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
+            return null;
+        }
+
+        // The API host serves every application under the same cookie domain, so
+        // this only runs when the caller ticked the box that says so in as many
+        // words. It is derived here rather than in the worker because the
+        // application record — and with it the cookie domain the host is built
+        // from — is already gone by the time the worker picks the message up.
+        private async Task ReleaseSharedApiHostAsync(string tenantId, string domain, string? cookieDomain)
+        {
+            var cnameLabel = _configuration["CnameRecordDomain"];
+            var resolvedCookieDomain = IdentifierHelper.ResolveCookieDomain(NormalizeDomain(domain), NormalizeDomain(cookieDomain));
+
+            // Without both halves the result is something like ".example.com" —
+            // a string that must never reach a shell command on the proxy. The
+            // worker rejects malformed hostnames too; this just stops the message
+            // from being sent at all.
+            if (string.IsNullOrWhiteSpace(cnameLabel) || string.IsNullOrWhiteSpace(resolvedCookieDomain))
             {
-                Action = "upsert",
-                TenantId = project.TenantId,
-                Tenant = project
+                return;
+            }
+
+            var apiHost = IdentifierHelper.BuildApiHost(cnameLabel, NormalizeDomain(domain), resolvedCookieDomain);
+
+            await SendDisableDomainBindingAsync(tenantId, apiHost, deleteCertificate: true);
+        }
+
+        // A delete always leaves the old host with nothing pointing at it; an edit
+        // only when the host itself moved (changing just the cookie domain keeps
+        // the same vhost in use).
+        private static bool ReleasesPreviousHost(UpdateProjectRequest request, string? previousDomain) =>
+            request.Action == ApplicationAction.Delete
+            || (request.Action == ApplicationAction.Edit
+                && NormalizeDomain(request.Application?.Domain) != NormalizeDomain(previousDomain));
+
+        // Only hosts this platform put on the reverse proxy have a vhost and a
+        // certificate lineage to remove. Applications on the platform's own
+        // domains are served by shared infrastructure that no single project may
+        // tear down, and a host that never passed verification was never
+        // provisioned in the first place.
+        private static bool IsSelfProvisioned(Applications application)
+        {
+            var mainDomain = IdentifierHelper.ExtractMainDomain(application.Domain);
+
+            return application.IsDomainVerified
+                && mainDomain != IdentifierConstants.ConstructCookieDomain
+                && mainDomain != IdentifierConstants.BlocksDomain;
+        }
+
+        // Handing the teardown to the worker keeps the SSH/certbot round trip off
+        // the request thread; ProjectId carries the tenant id, which is what the
+        // consumer needs to find the project again.
+        private Task SendDisableDomainBindingAsync(string tenantId, string domain, bool deleteCertificate) =>
+            _messageClient.SendToConsumerAsync(new ConsumerMessage<DisableDomainBindingRequest>
+            {
+                ConsumerName = IdentifierConstants.IdentifierQueueName,
+                Payload = new DisableDomainBindingRequest
+                {
+                    ProjectId = tenantId,
+                    Domain = domain,
+                    DeleteCertificate = deleteCertificate
+                }
             });
 
-            return new BaseResponse { IsSuccess = true };
+        // Tells blocks-release to destroy the deployments behind whatever was just deleted. Deliberately
+        // best-effort: the delete is already committed by the time this runs, so a broker that is down
+        // must not turn a completed delete into an error the user is asked to retry. The cost of a lost
+        // message is a deployment left running, which the same message re-sent later still settles.
+        private async Task SendReleaseTeardownAsync(ProjectDeleteQueue payload)
+        {
+            if (string.IsNullOrWhiteSpace(payload.TenantGroupId))
+            {
+                // The consumer drops a message with no group, so sending one only costs a round trip.
+                return;
+            }
+
+            try
+            {
+                await _messageClient.SendToConsumerAsync(new ConsumerMessage<ProjectDeleteQueue>
+                {
+                    ConsumerName = IdentifierConstants.ReleaseProjectDeleteQueue,
+                    Payload = payload
+                });
+            }
+            catch (Exception)
+            {
+                // Swallowed on purpose — see above. Nothing here is recoverable by the caller.
+            }
         }
 
         // Domains are stored inconsistently ("https://x", "x", trailing slash,
         // mixed case) — normalize before comparing so duplicates can't sneak in
-        private static string NormalizeDomain(string domain) =>
+        private static string NormalizeDomain(string? domain) =>
             (domain ?? string.Empty)
                 .Trim()
                 .Replace("https://", string.Empty, StringComparison.OrdinalIgnoreCase)
@@ -505,11 +1072,15 @@ namespace DomainService.Projects
             }
 
             var mainDomain = IdentifierHelper.ExtractMainDomain(request.Application.Domain);
+
+            // Derived here, never read from the request: a caller that could name its own type
+            // could pass its domain off as one of the platform's.
             var newApp = new Applications
             {
                 Domain = request.Application.Domain,
                 CookieDomain = request.Application.CookieDomain,
-                IsDomainVerified = (mainDomain == IdentifierConstants.ConstructCookieDomain) || (mainDomain == IdentifierConstants.BlocksDomain)
+                IsDomainVerified = IdentifierHelper.IsPlatformOwnedDomain(mainDomain),
+                DomainType = IdentifierHelper.ResolveDomainType(request.Application.Domain)
             };
             project.Applications.Add(newApp);
             return new BaseResponse { IsSuccess = true };
@@ -529,10 +1100,14 @@ namespace DomainService.Projects
                 return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "duplicate_domain", $"The domain {request.Application.Domain} is already configured for this project" } } };
             }
 
+            // An edit re-runs the same classification an add would, so moving a domain on or off
+            // a platform host retypes it. This used to test ConstructCookieDomain alone, which
+            // left a seliseblocks.com host verified on add and unverified on the next edit.
             var mainDomain = IdentifierHelper.ExtractMainDomain(request.Application.Domain);
             existingApp.Domain = request.Application.Domain;
             existingApp.CookieDomain = request.Application.CookieDomain;
-            existingApp.IsDomainVerified = mainDomain == IdentifierConstants.ConstructCookieDomain;
+            existingApp.IsDomainVerified = IdentifierHelper.IsPlatformOwnedDomain(mainDomain);
+            existingApp.DomainType = IdentifierHelper.ResolveDomainType(request.Application.Domain);
 
             return new BaseResponse { IsSuccess = true };
         }
@@ -555,7 +1130,7 @@ namespace DomainService.Projects
 
             if (project == null)
             {
-                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "project_not_found", $"No project exist with {projectId}" } } };
+                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { ProjectNotFoundErrorCode, $"No project exist with {projectId}" } } };
             }
 
             project.IsDisabled = true;
@@ -563,17 +1138,38 @@ namespace DomainService.Projects
             project.LastUpdatedDate = DateTime.UtcNow;
 
             await _projectRepository.UpdateProjectAsync(project);
+
             await _projectRepository.DeletePrjectPeopleAsync(project.TenantId);
 
             await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
             {
-                Action = "upsert",
+                Action = UpsertAction,
                 TenantId = project.TenantId,
                 Tenant = project
             });
 
-            var domain = IdentifierConstants.CookieDomainPrefix + project.Applications.FirstOrDefault()?.CookieDomain;
-            await _messageClient.SendToConsumerAsync(new ConsumerMessage<DisableDomainBindingRequest> { ConsumerName = IdentifierConstants.IdentifierQueueName, Payload = new DisableDomainBindingRequest { ProjectId = project.ItemId, Domain = domain } });
+            // Every host this project put on the reverse proxy loses its vhost —
+            // all of them, not just the first application. The blocksapi host is
+            // deliberately left alone: it is shared by every application under the
+            // same root domain, including other projects', so disabling one project
+            // must not take it down.
+            //
+            // Certificates stay put. Disabling is reversible, and keeping the
+            // lineages means a restored project re-uses them instead of re-issuing
+            // every host against Let's Encrypt's weekly limit.
+            foreach (var application in project.Applications?.Where(IsSelfProvisioned) ?? [])
+            {
+                await SendDisableDomainBindingAsync(project.TenantId, application.Domain, deleteCertificate: false);
+            }
+
+            // Group + project, which reaches every repository of this one project. No ResourceId: a
+            // project delete retires all of them, and naming one would narrow the teardown to that
+            // repository across the whole group — other projects included.
+            await SendReleaseTeardownAsync(new ProjectDeleteQueue
+            {
+                TenantGroupId = project.TenantGroupId,
+                ProjectId = project.TenantId
+            });
 
             return new BaseResponse { IsSuccess = true };
         }
@@ -584,9 +1180,9 @@ namespace DomainService.Projects
             return new GetAssetResponse { Assets = assets, TotalCount = totalCount, IsSuccess = true };
         }
 
-        public async Task<BaseResponse> AddAssetAsync(AddAssetRequest asset)
+        public async Task<AddAssetResponse> AddAssetAsync(AddAssetRequest asset)
         {
-            var (tenantAsset, _) = await _projectRepository.GetTenantAssetAsync(new GetAssetRequest { TenantGroupId = asset.TenantGroupId });
+            var tenantAsset = await _projectRepository.GetTenantAssetByGroupIdAsync(asset.TenantGroupId);
 
             tenantAsset ??= new TenantAsset
             {
@@ -599,18 +1195,156 @@ namespace DomainService.Projects
                 LastUpdatedBy = BlocksContext.GetContext()?.UserId
             };
 
-            bool isAlreadyExists = tenantAsset.Resources.Any(r => r.ResourceId == asset.Resource.ResourceId);
+            tenantAsset.Resources ??= [];
 
-            if (!isAlreadyExists)
+            // A renamed repository comes back with the same ResourceId and a new name and link,
+            // so an id that is already known is an update, not a duplicate to discard.
+            var existingResource = tenantAsset.Resources.FirstOrDefault(r => r.ResourceId == asset.Resource.ResourceId);
+
+            if (existingResource == null)
             {
+                // The timestamps and the archive flag belong to the server, never to the request.
+                asset.Resource.CreatedDate = DateTime.UtcNow;
+                asset.Resource.LastUpdatedDate = DateTime.UtcNow;
+                asset.Resource.IsArchived = false;
+
                 tenantAsset.Resources.Add(asset.Resource);
-                tenantAsset.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
-                tenantAsset.LastUpdatedDate = DateTime.UtcNow;
+                StampTenantAsset(tenantAsset);
                 await Task.WhenAll(_projectRepository.SaveTenantAssetAsync(tenantAsset),
                                _projectRepository.UpdateRepoResourceAsync(asset));
+
+                await RegisterRepositoryDomainsAsync(asset.TenantGroupId, asset.Resource);
+
+                return AssetResponse(AssetMutationStatus.Added);
             }
 
+            // A deleted repository is archived, not removed, so adding it again revives that row
+            // instead of creating a second entry for the same id.
+            var wasArchived = existingResource.IsArchived;
+            var hasNewDetails = existingResource.Name != asset.Resource.Name
+                             || existingResource.Link != asset.Resource.Link;
+
+            if (!wasArchived && !hasNewDetails)
+            {
+                return AssetResponse(AssetMutationStatus.Unchanged);
+            }
+
+            existingResource.Name = asset.Resource.Name;
+            existingResource.Link = asset.Resource.Link;
+            existingResource.IsArchived = false;
+            existingResource.LastUpdatedDate = DateTime.UtcNow;
+            StampTenantAsset(tenantAsset);
+            // The per-tenant Repos rows survive a delete, so this refreshes them; it never inserts.
+            await Task.WhenAll(_projectRepository.SaveTenantAssetAsync(tenantAsset),
+                           _projectRepository.UpdateRepoResourceInfoAsync(asset));
+
+            // A restore brings a repository's deployments back, so its hosts have to be
+            // registered again. They are normally still there — deleting a repository archives
+            // it and leaves Applications alone — but a repository that predates this, or one
+            // whose entry was removed by hand, is put right here. A rename changes neither the
+            // resource id nor the domain, so an Updated has nothing to register.
+            if (wasArchived)
+            {
+                await RegisterRepositoryDomainsAsync(asset.TenantGroupId, asset.Resource);
+            }
+
+            return AssetResponse(wasArchived ? AssetMutationStatus.Restored : AssetMutationStatus.Updated);
+        }
+
+        // One generated host per environment, because the environment letter is the only part of
+        // the domain that varies across a group — the tenant and repo slugs are keyed on the
+        // group and resource ids. Each tenant is saved and its cache entry republished on its
+        // own: the allow-list these entries feed is read from the tenant cache, so a project
+        // that is not republished keeps refusing the host it was just given.
+        private async Task RegisterRepositoryDomainsAsync(string tenantGroupId, Resource resource)
+        {
+            var projects = await _projectRepository.GetByGroupIdAsync(tenantGroupId);
+
+            if (projects is null || projects.Count == 0)
+            {
+                return;
+            }
+
+            var tenantSlug = await _urlEncodingService.EncodeToBase26Async(tenantGroupId, tenantGroupId, 5);
+            var repoSlug = await _urlEncodingService.EncodeToBase26Async(resource.ResourceId, tenantGroupId, 5);
+            var identifier = _configuration["KbtclIdentifier"] ?? string.Empty;
+
+            foreach (var project in projects)
+            {
+                var domain = IdentifierHelper.BuildPlatformSubdomain(project.Environment, tenantSlug, repoSlug, identifier);
+
+                project.Applications ??= [];
+
+                if (ContainsDomain(project.Applications, domain))
+                {
+                    continue;
+                }
+
+                project.Applications.Add(new Applications
+                {
+                    Domain = domain,
+                    CookieDomain = IdentifierConstants.ConstructCookieDomain,
+                    IsDomainVerified = true,
+                    DomainType = DomainType.PlatformSubdomain
+                });
+
+                project.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
+                project.LastUpdatedDate = DateTime.UtcNow;
+
+                await _projectRepository.UpdateProjectAsync(project);
+                await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
+                {
+                    Action = UpsertAction,
+                    TenantId = project.TenantId,
+                    Tenant = project
+                });
+            }
+        }
+
+        public async Task<BaseResponse> DeleteAssetAsync(DeleteAssetRequest request)
+        {
+            var tenantAsset = await _projectRepository.GetTenantAssetByGroupIdAsync(request.TenantGroupId);
+            var resource = tenantAsset?.Resources?
+                .FirstOrDefault(r => r.ResourceId == request.ResourceId && !r.IsArchived);
+
+            if (tenantAsset == null || resource == null)
+            {
+                return new BaseResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string> { { "resource_not_found", $"No repository found with id {request.ResourceId}" } }
+                };
+            }
+
+            // Archived, not removed: keeping the row is what lets a later re-add restore it. The
+            // copy each tenant in the group holds is flagged the same way.
+            resource.IsArchived = true;
+            resource.LastUpdatedDate = DateTime.UtcNow;
+            StampTenantAsset(tenantAsset);
+            await Task.WhenAll(_projectRepository.SaveTenantAssetAsync(tenantAsset),
+                           _projectRepository.ArchiveRepoResourceAsync(request));
+
+            // Group + resource, which reaches this repository in every project of the group — the same
+            // set the archive above just wrote to. Published only once those writes have landed, so a
+            // delete that failed here never tears a running deployment down.
+            await SendReleaseTeardownAsync(new ProjectDeleteQueue
+            {
+                TenantGroupId = request.TenantGroupId,
+                ResourceId = request.ResourceId
+            });
+
             return new BaseResponse { IsSuccess = true, Errors = new Dictionary<string, string>() };
+        }
+
+        private static void StampTenantAsset(TenantAsset tenantAsset)
+        {
+            tenantAsset.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
+            tenantAsset.LastUpdatedDate = DateTime.UtcNow;
+        }
+
+        private static AddAssetResponse AssetResponse(AssetMutationStatus status)
+        {
+            return new AddAssetResponse { IsSuccess = true, Status = status, Errors = new Dictionary<string, string>() };
         }
 
         public async Task<BaseResponse> UpdateTokenValidationParametersAsync(UpdateTokenValidationParametersRequest request)
@@ -621,7 +1355,7 @@ namespace DomainService.Projects
 
             if (project == null)
             {
-                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "project_not_found", $"No project found with id {tenantId}" } } };
+                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { ProjectNotFoundErrorCode, $"No project found with id {tenantId}" } } };
             }
 
             project.ThirdPartyJwtTokenParameters ??= new();
@@ -639,7 +1373,7 @@ namespace DomainService.Projects
 
             await Task.WhenAll( _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
             {
-                Action = "upsert",
+                Action = UpsertAction,
                 TenantId = project.TenantId,
                 Tenant = project
             }), _cacheClient.RemoveKeyAsync($"{_tenantTokenPublicCertificateCachePrefix}{tenantId}"));
@@ -684,13 +1418,13 @@ namespace DomainService.Projects
         public async Task<SaveThirdPartyJWTClaimsResponse> SaveThirdPartyJWTClaimsAsync(SaveThirdPartyJWTClaimsRequest request)
         {
             var claimsMapper = await MapJWTClaims(request);
-            await _projectRepository.SaveJWTClaimsAsync(claimsMapper);
-            return new SaveThirdPartyJWTClaimsResponse { IsSuccess = true , ItemId = claimsMapper.ItemId};
+            var saved = await _projectRepository.SaveJWTClaimsAsync(claimsMapper);
+            return new SaveThirdPartyJWTClaimsResponse { IsSuccess = saved.IsSuccess, ItemId = claimsMapper.ItemId };
         }
 
         public async Task<ThirdPartyJWTClaims?> GetThirdPartyJWTClaimsAsync()
         {
-            return await _projectRepository.GetThirdPartyJWTClaimsAsync(string.Empty);
+            return await _projectRepository.GetThirdPartyJWTClaimsForViewAsync();
         }
 
         private async Task<ThirdPartyJWTClaims> MapJWTClaims(SaveThirdPartyJWTClaimsRequest request)
@@ -711,6 +1445,641 @@ namespace DomainService.Projects
             return thirdPartyClaims;
 
         }
+
+        #region Third-party JWT providers
+
+        public async Task<List<ThirdPartyJwtProviderResult>> GetThirdPartyJwtProvidersAsync()
+        {
+            var tenantId = BlocksContext.GetContext()?.TenantId ?? string.Empty;
+            var providers = await _projectRepository.GetThirdPartyJwtProvidersAsync(tenantId);
+
+            return [.. providers.Select(ToResult)];
+        }
+
+        public async Task<SaveThirdPartyJwtProviderResponse> SaveThirdPartyJwtProviderAsync(SaveThirdPartyJwtProviderRequest request)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+
+            var tenantId = BlocksContext.GetContext()?.TenantId ?? string.Empty;
+            var tenant = await _projectRepository.GetByTenantIdAsync(tenantId);
+
+            if (tenant == null)
+            {
+                return Failed(ProjectNotFoundErrorCode, $"No project found with id {tenantId}");
+            }
+
+            var siblings = await _projectRepository.GetThirdPartyJwtProvidersAsync(tenantId);
+            var existing = string.IsNullOrWhiteSpace(request.ItemId)
+                ? null
+                : siblings.FirstOrDefault(p => p.ItemId == request.ItemId);
+
+            if (!string.IsNullOrWhiteSpace(request.ItemId) && existing == null)
+            {
+                return Failed("provider_not_found", $"No provider found with id {request.ItemId}");
+            }
+
+            // Two ways an untouched key reaches here, both meaning "leave it alone": blank, from a
+            // form that starts empty the way the signing-secret field does, and the mask itself,
+            // from a caller echoing back what it was shown. Resolving both here means validation
+            // and the write see the real key.
+            if (existing != null
+                && (string.IsNullOrWhiteSpace(request.Key)
+                    || string.Equals(request.Key.Trim(), MaskProviderKey(existing.Key), StringComparison.Ordinal)))
+            {
+                request.Key = existing.Key;
+            }
+
+            var validation = ValidateProvider(request, existing, siblings);
+            if (validation != null)
+            {
+                return validation;
+            }
+
+            var isSymmetric = request.Algorithms[0].IsSymmetric();
+            var provider = existing ?? new ThirdPartyJwtProvider
+            {
+                ItemId = Guid.NewGuid().ToString(),
+                TenantId = tenantId,
+                CreatedBy = BlocksContext.GetContext()?.UserId,
+                CreatedDate = DateTime.UtcNow
+            };
+
+            provider.Key = request.Key.Trim();
+            provider.ProviderName = request.ProviderName?.Trim() ?? string.Empty;
+            provider.IsActive = request.IsActive;
+            // Blank is a real configuration, not a missing value: it means "this provider receives
+            // the tokens that name no issuer".
+            provider.Issuer = request.Issuer?.Trim() ?? string.Empty;
+            provider.Audiences = request.Audiences ?? [];
+            provider.Algorithms = request.Algorithms;
+            provider.CookieKey = request.CookieKey?.Trim() ?? string.Empty;
+            provider.ClaimsMapping = ToMapping(request.ClaimsMapping);
+            provider.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
+            provider.LastUpdatedDate = DateTime.UtcNow;
+
+            if (isSymmetric)
+            {
+                ApplySymmetricKeySource(provider, request, tenant);
+            }
+            else
+            {
+                var rejection = await ApplyAsymmetricKeySourceAsync(provider, request, tenant);
+                if (rejection != null)
+                {
+                    return rejection;
+                }
+            }
+
+            await _projectRepository.SaveThirdPartyJwtProviderAsync(provider);
+
+            var flagSync = await SyncThirdPartyJwtEnabledAfterProviderWriteAsync(tenantId, tenant);
+            if (!flagSync.IsSuccess)
+            {
+                return new SaveThirdPartyJwtProviderResponse
+                {
+                    IsSuccess = false,
+                    Errors = flagSync.Errors
+                };
+            }
+
+            return new SaveThirdPartyJwtProviderResponse { IsSuccess = true, ItemId = provider.ItemId };
+        }
+
+        public async Task<BaseResponse> DeleteThirdPartyJwtProviderAsync(DeleteThirdPartyJwtProviderRequest request)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+
+            var tenantId = BlocksContext.GetContext()?.TenantId ?? string.Empty;
+            var deleted = await _projectRepository.DeleteThirdPartyJwtProviderAsync(tenantId, request.ItemId);
+
+            // The encrypted secret lives on the row, so deleting the row is what revokes it —
+            // there is no separate vault entry left behind.
+            if (!deleted)
+            {
+                return new BaseResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string> { { "provider_not_found", $"No provider found with id {request.ItemId}" } }
+                };
+            }
+
+            var tenant = await _projectRepository.GetByTenantIdAsync(tenantId);
+            if (tenant == null)
+            {
+                return new BaseResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string> { { ProjectNotFoundErrorCode, $"No project found with id {tenantId}" } }
+                };
+            }
+
+            return await SyncThirdPartyJwtEnabledAfterProviderWriteAsync(tenantId, tenant);
+        }
+
+        public async Task<BaseResponse> UpdateThirdPartyJwtEnabledAsync(UpdateThirdPartyJwtEnabledRequest request)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+
+            var tenantId = BlocksContext.GetContext()?.TenantId ?? string.Empty;
+            var project = await _projectRepository.GetByTenantIdAsync(tenantId);
+
+            if (project == null)
+            {
+                return new BaseResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string> { { ProjectNotFoundErrorCode, $"No project found with id {tenantId}" } }
+                };
+            }
+
+            // Raising the flag requires at least one active provider. Lowering it is never guarded —
+            // an operator kill switch must always stick.
+            if (request.IsEnabled)
+            {
+                var providers = await _projectRepository.GetThirdPartyJwtProvidersAsync(tenantId);
+                if (providers == null || !providers.Any(p => p.IsActive))
+                {
+                    return new BaseResponse
+                    {
+                        IsSuccess = false,
+                        Errors = new Dictionary<string, string>
+                        {
+                            {
+                                "no_active_provider",
+                                "This tenant has no active external identity provider, so third-party token trust cannot be enabled. Add or activate a provider first."
+                            }
+                        }
+                    };
+                }
+            }
+
+            project.IsThirdPartyJwtEnabled = request.IsEnabled;
+            project.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
+            project.LastUpdatedDate = DateTime.UtcNow;
+
+            await _projectRepository.UpdateProjectAsync(project);
+
+            // The flag rides on the cached Tenant, so a write alone would take effect only when
+            // that cache happened to expire.
+            await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
+            {
+                Action = UpsertAction,
+                TenantId = project.TenantId,
+                Tenant = project
+            });
+
+            return new BaseResponse { IsSuccess = true };
+        }
+
+        /// <summary>
+        /// After a provider save or delete, lower <see cref="Tenant.IsThirdPartyJwtEnabled"/> when
+        /// no active provider remains. Never raises the flag — that stays a deliberate enable.
+        /// Evaluates the provider list as it stands after the write.
+        /// </summary>
+        private async Task<BaseResponse> SyncThirdPartyJwtEnabledAfterProviderWriteAsync(string tenantId, Tenant tenant)
+        {
+            var providers = await _projectRepository.GetThirdPartyJwtProvidersAsync(tenantId);
+            var activeCount = providers?.Count(p => p.IsActive) ?? 0;
+
+            if (activeCount > 0 || !tenant.IsThirdPartyJwtEnabled)
+            {
+                return new BaseResponse { IsSuccess = true };
+            }
+
+            try
+            {
+                tenant.IsThirdPartyJwtEnabled = false;
+                tenant.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
+                tenant.LastUpdatedDate = DateTime.UtcNow;
+
+                await _projectRepository.UpdateProjectAsync(tenant);
+
+                await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
+                {
+                    Action = UpsertAction,
+                    TenantId = tenant.TenantId,
+                    Tenant = tenant
+                });
+
+                return new BaseResponse { IsSuccess = true };
+            }
+            catch (Exception)
+            {
+                return new BaseResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string>
+                    {
+                        {
+                            "third_party_flag_update_failed",
+                            "The provider change was saved, but third-party token trust could not be switched off. Retry the provider change."
+                        }
+                    }
+                };
+            }
+        }
+
+        private void ApplySymmetricKeySource(
+            ThirdPartyJwtProvider provider,
+            SaveThirdPartyJwtProviderRequest request,
+            Tenant tenant)
+        {
+            provider.JwksUrl = string.Empty;
+
+            // Switching a provider to the HMAC family drops the certificate for the same
+            // reason the reverse drops the secret: an unused key source left behind is a
+            // dormant signing authority waiting for the algorithm to be switched back.
+            provider.PublicCertificatePath = string.Empty;
+            provider.PublicCertificatePasswordCipher = string.Empty;
+            provider.CertificateSubject = string.Empty;
+            provider.CertificateThumbprint = string.Empty;
+            provider.CertificateNotAfter = null;
+
+            // Empty means untouched, never cleared: a masked field round-trips as "" from most
+            // frontends, and treating that as a clear would silently break authentication.
+            if (!string.IsNullOrEmpty(request.SigningSecret))
+            {
+                provider.SigningSecretCipher = _cryptoService.Encrypt(request.SigningSecret, tenant.TenantSalt);
+            }
+        }
+
+        // Returns the rejection when the uploaded certificate cannot be used, otherwise null.
+        private async Task<SaveThirdPartyJwtProviderResponse?> ApplyAsymmetricKeySourceAsync(
+            ThirdPartyJwtProvider provider,
+            SaveThirdPartyJwtProviderRequest request,
+            Tenant tenant)
+        {
+            // Switching a provider away from the HMAC family drops the stored secret. Leaving
+            // it would keep a dormant signing authority alive for the moment someone switches
+            // the algorithm back.
+            provider.SigningSecretCipher = string.Empty;
+
+            // Validation has already established exactly one of the two is set.
+            if (!string.IsNullOrWhiteSpace(request.PublicCertificatePath))
+            {
+                ApplyCertificateKeySource(provider, request, tenant);
+
+                var inspection = await InspectCertificateAsync(provider, tenant);
+                if (inspection.Rejection != null)
+                {
+                    return inspection.Rejection;
+                }
+
+                provider.CertificateSubject = inspection.Subject;
+                provider.CertificateThumbprint = inspection.Thumbprint;
+                provider.CertificateNotAfter = inspection.NotAfter;
+            }
+            else
+            {
+                provider.JwksUrl = request.JwksUrl!.Trim();
+                provider.PublicCertificatePath = string.Empty;
+                provider.PublicCertificatePasswordCipher = string.Empty;
+                provider.CertificateSubject = string.Empty;
+                provider.CertificateThumbprint = string.Empty;
+                provider.CertificateNotAfter = null;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Enforces the rules that cannot be recovered at validation time: one key source per
+        /// provider, a usable subject mapping, and audiences wherever two providers share an issuer.
+        /// </summary>
+        /// <summary>
+        /// Points a provider at an uploaded public certificate and settles what happens to the
+        /// passphrase that unlocks it.
+        /// </summary>
+        /// <remarks>
+        /// A passphrase belongs to one specific file, so the three cases are kept apart
+        /// deliberately. A new passphrase replaces the stored one. An explicit clear removes it,
+        /// which is the only way to go from a protected certificate to an unprotected one — empty
+        /// on its own cannot mean that, because empty is also what a form sends for "keep what is
+        /// stored". A certificate uploaded to a different path drops the passphrase regardless,
+        /// since it unlocked the file that is no longer configured.
+        /// </remarks>
+        private void ApplyCertificateKeySource(
+            ThirdPartyJwtProvider provider,
+            SaveThirdPartyJwtProviderRequest request,
+            Tenant tenant)
+        {
+            var path = request.PublicCertificatePath!.Trim();
+            var pathChanged = !string.Equals(provider.PublicCertificatePath, path, StringComparison.Ordinal);
+
+            provider.JwksUrl = string.Empty;
+            provider.PublicCertificatePath = path;
+
+            if (!string.IsNullOrEmpty(request.PublicCertificatePassword))
+            {
+                provider.PublicCertificatePasswordCipher =
+                    _cryptoService.Encrypt(request.PublicCertificatePassword, tenant.TenantSalt);
+            }
+            else if (request.ClearCertificatePassword || pathChanged)
+            {
+                provider.PublicCertificatePasswordCipher = string.Empty;
+            }
+        }
+
+        /// <summary>What reading the configured certificate produced.</summary>
+        private readonly record struct CertificateInspection(
+            SaveThirdPartyJwtProviderResponse? Rejection,
+            string Subject,
+            string Thumbprint,
+            DateTime? NotAfter);
+
+        /// <summary>
+        /// Reads the certificate the provider now points at, to describe it and to prove it can be
+        /// opened at all.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The point is <b>when</b> a mistake surfaces. A passphrase that does not match the file,
+        /// or a file that is not a certificate, is otherwise discovered by Genesis on the first
+        /// real request — and the symptom there is a 401 carrying a perfectly valid token, which
+        /// sends people looking at the token. Opening it here turns that into an error on the form
+        /// where it can still be corrected.
+        /// </para>
+        /// <para>
+        /// A parse failure is therefore refused, but a <b>fetch</b> failure is not: the blob may be
+        /// momentarily unreachable, and blocking configuration on a transient network fault would
+        /// be worse than saving without the descriptive fields. Genesis reports the same fetch
+        /// problem with <c>third_party_certificate_unreadable</c> if it persists.
+        /// </para>
+        /// </remarks>
+        private async Task<CertificateInspection> InspectCertificateAsync(
+            ThirdPartyJwtProvider provider,
+            Tenant tenant)
+        {
+            byte[] data;
+
+            try
+            {
+                data = await _httpClientFactory
+                    .CreateClient()
+                    .GetByteArrayAsync(provider.PublicCertificatePath);
+            }
+            catch (Exception)
+            {
+                // Saved without the descriptive fields rather than refused. Deliberate: see above.
+                return new CertificateInspection(null, string.Empty, string.Empty, null);
+            }
+
+            // Empty means untouched, in which case the stored cipher is the only copy there is.
+            var passphrase = string.IsNullOrWhiteSpace(provider.PublicCertificatePasswordCipher)
+                ? null
+                : _cryptoService.Decrypt(provider.PublicCertificatePasswordCipher, tenant.TenantSalt);
+
+            try
+            {
+                using var certificate = LoadCertificate(data, passphrase);
+
+                return new CertificateInspection(
+                    null,
+                    certificate.Subject,
+                    certificate.Thumbprint,
+                    certificate.NotAfter.ToUniversalTime());
+            }
+            catch (Exception)
+            {
+                return new CertificateInspection(
+                    Failed(
+                        "certificate_unreadable",
+                        string.IsNullOrEmpty(passphrase)
+                            ? "The uploaded file could not be read as a certificate. A PKCS#12 file (.pfx, .p12) " +
+                              "that is passphrase protected needs its passphrase supplied here."
+                            : "The uploaded file could not be opened with that passphrase. Check the passphrase, " +
+                              "or re-upload the certificate."),
+                    string.Empty,
+                    string.Empty,
+                    null);
+            }
+        }
+
+        /// <summary>
+        /// Opens a certificate in any of the forms the upload accepts: PKCS#12 first, since only
+        /// that one can be passphrase protected, then PEM or DER.
+        /// </summary>
+        private static X509Certificate2 LoadCertificate(byte[] data, string? passphrase)
+        {
+            try
+            {
+                return X509CertificateLoader.LoadPkcs12(data, passphrase);
+            }
+            catch
+            {
+                // Not a PKCS#12 container. A bare certificate carries no passphrase, so one being
+                // present does not change how it is read -- it simply does not apply.
+                return X509CertificateLoader.LoadCertificate(data);
+            }
+        }
+
+        private static SaveThirdPartyJwtProviderResponse? ValidateProvider(
+            SaveThirdPartyJwtProviderRequest request,
+            ThirdPartyJwtProvider? existing,
+            List<ThirdPartyJwtProvider> siblings)
+        {
+            if (string.IsNullOrWhiteSpace(request.Key))
+            {
+                return Failed("key_required", "Key is required; it is what the x-blocks-idp header names.");
+            }
+
+            if (siblings.Any(p => p.ItemId != existing?.ItemId
+                                  && string.Equals(p.Key, request.Key.Trim(), StringComparison.Ordinal)))
+            {
+                return Failed("duplicate_key", $"Another provider already uses the key '{request.Key}'.");
+            }
+
+            // Issuer is optional on purpose. A provider that leaves it blank receives the tokens
+            // that carry no `iss` claim at all -- which some third parties simply do not emit --
+            // and is reached by the x-blocks-idp header when more than one does so. A blank issuer
+            // is not a wildcard: Genesis will not route an issuer-bearing token to it.
+            if (!request.Algorithms.IsSingleKeySource())
+            {
+                return Failed(
+                    "invalid_algorithms",
+                    "Configure at least one algorithm, none of them Unspecified, and all from the same family. " +
+                    "Mixing families would give one provider two independent signing authorities.");
+            }
+
+            var isSymmetric = request.Algorithms[0].IsSymmetric();
+
+            var hasJwksUrl = !string.IsNullOrWhiteSpace(request.JwksUrl);
+            var hasCertificate = !string.IsNullOrWhiteSpace(request.PublicCertificatePath);
+
+            var keySourceFailure = isSymmetric
+                ? ValidateSymmetricKeySource(request, existing, hasJwksUrl, hasCertificate)
+                : ValidateAsymmetricKeySource(request, hasJwksUrl, hasCertificate);
+            if (keySourceFailure != null)
+            {
+                return keySourceFailure;
+            }
+
+            if (string.IsNullOrWhiteSpace(request.ClaimsMapping?.UserId))
+            {
+                return Failed(
+                    "user_id_mapping_required",
+                    "ClaimsMapping.UserId is required. Without it every token collapses onto the same principal.");
+            }
+
+            // Two providers sharing an issuer AND an audience validate identically, so nothing
+            // cryptographic tells their tokens apart and the caller's header alone selects the
+            // claim mapping. Requiring audiences keeps that choice out of the caller's hands.
+            //
+            // Deliberately not applied to a blank issuer. A token with no `iss` normally carries
+            // no `aud` either, so demanding audiences there would produce a provider that can
+            // never match anything -- the rule would create the dead configuration it exists to
+            // prevent. Those providers are separated by the header instead, which the integration
+            // card already marks as required once there are two of them.
+            var issuer = request.Issuer?.Trim() ?? string.Empty;
+
+            if (issuer.Length == 0)
+            {
+                return null;
+            }
+
+            var sharesIssuer = siblings.Any(p => p.ItemId != existing?.ItemId
+                                                 && p.IsActive
+                                                 && string.Equals(p.Issuer, issuer, StringComparison.Ordinal));
+
+            if (sharesIssuer && (request.Audiences == null || request.Audiences.Count == 0))
+            {
+                return Failed(
+                    "audiences_required_for_shared_issuer",
+                    "Another active provider already uses this issuer, so both must declare audiences. " +
+                    "Without them the two cannot be told apart and the caller chooses which mapping applies.");
+            }
+
+            return null;
+        }
+
+        private static SaveThirdPartyJwtProviderResponse? ValidateSymmetricKeySource(
+            SaveThirdPartyJwtProviderRequest request,
+            ThirdPartyJwtProvider? existing,
+            bool hasJwksUrl,
+            bool hasCertificate)
+        {
+            var hasStoredSecret = !string.IsNullOrWhiteSpace(existing?.SigningSecretCipher);
+
+            if (string.IsNullOrEmpty(request.SigningSecret) && !hasStoredSecret)
+            {
+                return Failed("signing_secret_required", "An HMAC provider needs a signing secret.");
+            }
+
+            if (hasJwksUrl)
+            {
+                return Failed("unexpected_jwks_url", "An HMAC provider must not carry a JWKS URL.");
+            }
+
+            if (hasCertificate)
+            {
+                return Failed(
+                    "unexpected_certificate",
+                    "An HMAC provider must not carry a public certificate. HMAC verifies with the shared " +
+                    "secret; a certificate would be a second, unrelated signing authority.");
+            }
+
+            return null;
+        }
+
+        private static SaveThirdPartyJwtProviderResponse? ValidateAsymmetricKeySource(
+            SaveThirdPartyJwtProviderRequest request,
+            bool hasJwksUrl,
+            bool hasCertificate)
+        {
+            if (!hasJwksUrl && !hasCertificate)
+            {
+                return Failed(
+                    "key_source_required",
+                    "An asymmetric provider needs a key source: either a JWKS URL, or a public certificate " +
+                    "to pin a single key.");
+            }
+
+            // Which of the two got consulted would otherwise come down to the order this code
+            // happens to check them in, and the other would sit there looking configured.
+            if (hasJwksUrl && hasCertificate)
+            {
+                return Failed(
+                    "ambiguous_key_source",
+                    "Configure a JWKS URL or a public certificate, not both. Two key sources for one " +
+                    "provider is two independent signing authorities behind a single claim mapping.");
+            }
+
+            if (!string.IsNullOrEmpty(request.SigningSecret))
+            {
+                return Failed("unexpected_signing_secret", "An asymmetric provider must not carry a signing secret.");
+            }
+
+            if (hasJwksUrl && !string.IsNullOrEmpty(request.PublicCertificatePassword))
+            {
+                return Failed(
+                    "unexpected_certificate_password",
+                    "A JWKS URL needs no passphrase; a passphrase only ever unlocks a PKCS#12 certificate.");
+            }
+
+            return null;
+        }
+
+        private static SaveThirdPartyJwtProviderResponse Failed(string code, string message) => new()
+        {
+            IsSuccess = false,
+            Errors = new Dictionary<string, string> { { code, message } }
+        };
+
+        private static ThirdPartyClaimsMapping ToMapping(ThirdPartyClaimsMappingRequest? request) => new()
+        {
+            UserId = request?.UserId?.Trim() ?? string.Empty,
+            Email = request?.Email?.Trim() ?? string.Empty,
+            UserName = request?.UserName?.Trim() ?? string.Empty,
+            Name = request?.Name?.Trim() ?? string.Empty,
+            Roles = request?.Roles?.Trim() ?? string.Empty
+        };
+
+        /// <summary>
+        /// Masks a provider key for display: <c>abc***xyz</c>. Anything six characters or shorter
+        /// has no middle to hide, so it is masked whole rather than leaked by a partial reveal.
+        /// </summary>
+        public static string MaskProviderKey(string? key)
+        {
+            if (string.IsNullOrEmpty(key))
+            {
+                return string.Empty;
+            }
+
+            return key.Length <= 6
+                ? new string('*', key.Length)
+                : $"{key[..3]}***{key[^3..]}";
+        }
+
+        // Deliberately omits SigningSecretCipher: the stored ciphertext is no more the UI's
+        // business than the plaintext is.
+        private static ThirdPartyJwtProviderResult ToResult(ThirdPartyJwtProvider provider) => new()
+        {
+            ItemId = provider.ItemId,
+            Key = MaskProviderKey(provider.Key),
+            ProviderName = provider.ProviderName,
+            IsActive = provider.IsActive,
+            Issuer = provider.Issuer,
+            Audiences = provider.Audiences,
+            Algorithms = provider.Algorithms,
+            JwksUrl = provider.JwksUrl,
+            PublicCertificatePath = provider.PublicCertificatePath,
+            CertificateSubject = provider.CertificateSubject,
+            CertificateThumbprint = provider.CertificateThumbprint,
+            CertificateNotAfter = provider.CertificateNotAfter,
+            CookieKey = provider.CookieKey,
+            HasSigningSecret = !string.IsNullOrWhiteSpace(provider.SigningSecretCipher),
+            HasCertificatePassword = !string.IsNullOrWhiteSpace(provider.PublicCertificatePasswordCipher),
+            ClaimsMapping = new ThirdPartyClaimsMappingRequest
+            {
+                UserId = provider.ClaimsMapping?.UserId ?? string.Empty,
+                Email = provider.ClaimsMapping?.Email ?? string.Empty,
+                UserName = provider.ClaimsMapping?.UserName ?? string.Empty,
+                Name = provider.ClaimsMapping?.Name ?? string.Empty,
+                Roles = provider.ClaimsMapping?.Roles ?? string.Empty
+            }
+        };
+
+        #endregion
 
         public async Task<BaseResponse> UpdateTenantGroupAsync(UpdateTenantGroupRequest request)
         {

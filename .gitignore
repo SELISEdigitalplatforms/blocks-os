@@ -197,6 +197,7 @@ builds/
 *.cdx.json
 zap-*.xml
 *-semgrep.sarif
+.npm-*
 
 # ---------------------------------------------------------------------------
 # Markdown policy: no .md files in the repository except README.md (any
@@ -273,3 +274,21 @@ results/
 QWEN.md
 .clinerules
 .windsurfrules
+
+# --- local tooling scripts (Windows + bash) - do not commit ---
+scripts/scan.ps1
+scripts/deploy.sh
+scripts/deploy.ps1
+scripts/th_transform.py
+scripts/secrets.local.ps1
+deploy.log
+
+# --- local Playwright MCP and npm caches (never commit) ---
+.playwright-mcp/
+npm-cache/
+test-results/
+/server/_tmpbuild/Debug/net10.0
+
+# Developer-specific project references and build overrides
+/server/Directory.Build.local.props
+.loop/

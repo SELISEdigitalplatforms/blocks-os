@@ -1,10 +1,12 @@
 using Blocks.Genesis;
+using DomainService.Access;
 using DomainService.Dtos;
 using DomainService.Entities;
 using DomainService.Projects;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Blocks.Genesis.Entities.Os;
 
 
 namespace BlocksOs.Api.Controllers
@@ -29,6 +31,10 @@ namespace BlocksOs.Api.Controllers
 
         [HttpPost]
         [ProtectedEndPoint("blocks-os::project::mutate-project")]
+        // Optional: a blank TenantGroupId is a brand-new project, which belongs to nobody
+        // yet. When a group IS supplied this appends an environment to it, and only the
+        // owner may do that.
+        [ProjectPolicy(OwnerOnly = true)]
         public async Task<CreateProjectResponse> Create([FromBody] CreateProjectRequest request)
         {
             var validationResult = await _createProjectValidator.ValidateAsync(request);
@@ -51,13 +57,14 @@ namespace BlocksOs.Api.Controllers
 
         [HttpPost]
         [ProtectedEndPoint("blocks-os::project::restore-project")]
+        [ProjectPolicy(OwnerOnly = true)]
         public async Task<RestoreProjectResponse> Restore([FromBody] RestoreProjectRequest restoreProjectRequest)
         {
             return await _projectManagementService.RestoreProjectAsync(restoreProjectRequest);
         }
 
         [HttpGet]
-        [Authorize]  
+        [ProtectedEndPoint("blocks-os::project::projects")]
         public async Task<bool> GetProjectStatus([FromQuery] GetProjectStatusRequest request)
         {
             return await _projectManagementService.GetProjectStatusAsync(request.ItemId);
@@ -89,6 +96,7 @@ namespace BlocksOs.Api.Controllers
 
         [HttpPost]
         [ProtectedEndPoint("blocks-os::project::mutate-project")]
+        [ProjectPolicy("settings::rename")]
         public async Task<BaseResponse> UpdateProjectGroup([FromBody] UpdateProjectGroupRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.ProjectGroupId))
@@ -103,6 +111,7 @@ namespace BlocksOs.Api.Controllers
         [Obsolete("Renamed to UpdateProjectGroup.")]
         [HttpPost]
         [ProtectedEndPoint("blocks-os::project::mutate-project")]
+        [ProjectPolicy("settings::rename")]
         public async Task<BaseResponse> UpdateTenantGroup([FromBody] UpdateTenantGroupRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.TenantGroupId))
@@ -116,6 +125,7 @@ namespace BlocksOs.Api.Controllers
 
         [HttpPost]
         [ProtectedEndPoint("blocks-os::project::delete-project")]
+        [ProjectPolicy(OwnerOnly = true)]
         public async Task<BaseResponse> Disable([FromBody] DisableProjectRequest request)
         {
             return await _projectManagementService.DisableProjectAsync(BlocksContext.GetContext()?.TenantId ?? string.Empty);
@@ -123,6 +133,7 @@ namespace BlocksOs.Api.Controllers
 
         [HttpGet]
         [ProtectedEndPoint("blocks-os::project::asset")]
+        [ProjectPolicy("repositories::view")]
         public async Task<GetAssetResponse> GetAsset([FromQuery] GetAssetRequest request)
         {
             return await _projectManagementService.GetAssetAsync(request);   
@@ -130,15 +141,28 @@ namespace BlocksOs.Api.Controllers
 
         [HttpPost]
         [ProtectedEndPoint("blocks-os::project::add-asset")]
-        public async Task<BaseResponse> AddAsset([FromBody] AddAssetRequest asset)
+        [ProjectPolicy("repositories::add")]
+        public async Task<AddAssetResponse> AddAsset([FromBody] AddAssetRequest asset)
         {
             if (string.IsNullOrWhiteSpace(asset.TenantGroupId) || asset.Resource == null)
             {
-                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "invalid_asset", "Asset or GroupId cannot be null or empty" } } };
+                return new AddAssetResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "invalid_asset", "Asset or GroupId cannot be null or empty" } } };
             }
 
-            await _projectManagementService.AddAssetAsync(asset);
-            return new BaseResponse { IsSuccess = true };
+            return await _projectManagementService.AddAssetAsync(asset);
+        }
+
+        [HttpPost]
+        [ProtectedEndPoint("blocks-os::project::delete-asset")]
+        [ProjectPolicy("repositories::delete")]
+        public async Task<BaseResponse> DeleteAsset([FromBody] DeleteAssetRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.TenantGroupId) || string.IsNullOrWhiteSpace(request.ResourceId))
+            {
+                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "invalid_asset", "ResourceId or GroupId cannot be null or empty" } } };
+            }
+
+            return await _projectManagementService.DeleteAssetAsync(request);
         }
 
         [HttpPost]
@@ -167,6 +191,49 @@ namespace BlocksOs.Api.Controllers
         public async Task<ThirdPartyJWTClaims?> GetThirdPartyJWTClaims()
         {
             return await _projectManagementService.GetThirdPartyJWTClaimsAsync();
+        }
+
+        /// <summary>
+        /// External identity providers this tenant accepts tokens from. Never returns a signing
+        /// secret in any form -- only whether one is stored.
+        /// </summary>
+        [HttpGet]
+        [ProtectedEndPoint("blocks-os::project::3rd-party-claims")]
+        public async Task<List<ThirdPartyJwtProviderResult>> GetThirdPartyJwtProviders()
+        {
+            return await _projectManagementService.GetThirdPartyJwtProvidersAsync();
+        }
+
+        /// <summary>
+        /// Creates or updates one provider. An omitted signing secret leaves the stored one
+        /// untouched rather than clearing it.
+        /// </summary>
+        [HttpPost]
+        [ProtectedEndPoint("blocks-os::project::mutate-3rd-party-claims")]
+        public async Task<SaveThirdPartyJwtProviderResponse> SaveThirdPartyJwtProvider([FromBody] SaveThirdPartyJwtProviderRequest request)
+        {
+            return await _projectManagementService.SaveThirdPartyJwtProviderAsync(request);
+        }
+
+        /// <summary>
+        /// Removes a provider and, with it, the encrypted signing secret it carried.
+        /// </summary>
+        [HttpPost]
+        [ProtectedEndPoint("blocks-os::project::mutate-3rd-party-claims")]
+        public async Task<BaseResponse> DeleteThirdPartyJwtProvider([FromBody] DeleteThirdPartyJwtProviderRequest request)
+        {
+            return await _projectManagementService.DeleteThirdPartyJwtProviderAsync(request);
+        }
+
+        /// <summary>
+        /// Turns third-party token trust on or off for the tenant. Off means such tokens are not
+        /// accepted at all.
+        /// </summary>
+        [HttpPost]
+        [ProtectedEndPoint("blocks-os::project::mutate-token-validation-params")]
+        public async Task<BaseResponse> UpdateThirdPartyJwtEnabled([FromBody] UpdateThirdPartyJwtEnabledRequest request)
+        {
+            return await _projectManagementService.UpdateThirdPartyJwtEnabledAsync(request);
         }
     }
 }

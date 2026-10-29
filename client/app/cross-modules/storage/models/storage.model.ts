@@ -1,3 +1,5 @@
+import type { LinkedSecretStatus } from "@/cross-modules/secrets/models/secret.model";
+
 // "Azure"
 export type StorageStrategyType = "AWS" | "Azure" | "SftpStorage" | "S3Compatible";
 
@@ -13,11 +15,43 @@ export const STORAGE_STRATEGIES: StorageStrategyOption[] = [
   { id: "sftp", label: "SFTP", value: "SftpStorage" },
   { id: "s3compatible", label: "AWS S3 Compatible", value: "S3Compatible" },
 ];
-export interface IStorageConfiguration {
+/**
+ * State of each secret of a configuration, from the server. A secret value (or a masked one) is
+ * never returned; "none" = not set for this provider.
+ */
+export interface IStorageSecretStatuses {
+  connectionStringStatus: LinkedSecretStatus;
+  secretKeyStatus: LinkedSecretStatus;
+  accessKeyStatus: LinkedSecretStatus;
+  passwordStatus: LinkedSecretStatus;
+  sftpSecretKeyStatus: LinkedSecretStatus;
+}
+
+export type StorageSecretStatusKey = keyof IStorageSecretStatuses;
+
+/** The secrets each provider uses, in display order. */
+export const STORAGE_SECRET_FIELDS: Record<
+  StorageStrategyType,
+  { key: StorageSecretStatusKey; label: string }[]
+> = {
+  AWS: [
+    { key: "accessKeyStatus", label: "Access Key" },
+    { key: "secretKeyStatus", label: "Secret Key" },
+  ],
+  Azure: [{ key: "connectionStringStatus", label: "Connection String" }],
+  SftpStorage: [
+    { key: "passwordStatus", label: "Password" },
+    { key: "sftpSecretKeyStatus", label: "SFTP Secret Key" },
+  ],
+  S3Compatible: [
+    { key: "accessKeyStatus", label: "Access Key" },
+    { key: "secretKeyStatus", label: "Secret Key" },
+  ],
+};
+
+export interface IStorageConfiguration extends IStorageSecretStatuses {
   storageStrategy: StorageStrategyType;
-  accessKey: string | null;
   cloudStorageRegionEndPoint: string | null;
-  connectionString: string | null;
   createdBy: string;
   createdDate: string;
   itemId: string;
@@ -25,16 +59,32 @@ export interface IStorageConfiguration {
   lastUpdatedDate: string;
   name: string;
   organizationIds: string[];
-  secretKey: string | null;
   tags: string[];
   host: string | null;
   port: string | null;
   userName: string | null;
-  password: string | null;
   remoteBasePath: string | null;
+  /**
+   * Phase 1 upload-security fields. Optional because a configuration predating Phase 1, or one
+   * that never set these, omits them - callers must fall back to the same documented defaults
+   * the backend itself uses when they are absent.
+   */
+  uploadUrlExpirySeconds?: number;
+  downloadUrlExpirySeconds?: number;
+  maxFileSizeInBytes?: number;
+  uploadCompletionRequiredFor?: ("Public" | "Private")[];
 }
 
-export interface IStorageConfigurationSavePayload {
+/** The upload/verification settings, the only part of a configuration an update may change. */
+export interface IStorageConfigurationMutableSettings {
+  uploadUrlExpirySeconds: number;
+  downloadUrlExpirySeconds: number;
+  maxFileSizeInBytes: number;
+  uploadCompletionRequiredFor: ("Public" | "Private")[];
+}
+
+/** A brand new configuration: the only request that may set a provider identity and its credentials. */
+export interface IStorageConfigurationCreatePayload extends IStorageConfigurationMutableSettings {
   name: string;
   projectKey: string;
   storageStrategy: StorageStrategyType;
@@ -42,14 +92,28 @@ export interface IStorageConfigurationSavePayload {
   accessKey: string | null;
   cloudStorageRegionEndPoint: string | null;
   connectionString: string | null;
-  updateRequest: boolean;
-  itemId: string | null;
+  updateRequest: false;
+  itemId: null;
   host: string | null;
   port: string | null;
   userName: string | null;
   password: string | null;
   remoteBasePath: string | null;
 }
+
+/**
+ * An update carries nothing but the settings it is allowed to change, plus what identifies the
+ * configuration being changed. The name, provider and credentials are deliberately absent: the
+ * server ignores them on an update anyway, and the read endpoint never returns a secret.
+ */
+export interface IStorageConfigurationUpdatePayload extends IStorageConfigurationMutableSettings {
+  projectKey: string;
+  updateRequest: true;
+  itemId: string;
+}
+
+export type IStorageConfigurationSavePayload =
+  IStorageConfigurationCreatePayload | IStorageConfigurationUpdatePayload;
 export interface IStorageConfigurationDeletePayload {
   projectKey: string;
   configurationName: string;
@@ -59,9 +123,9 @@ export interface IGetPreSignedUrlForUploadPayload {
   itemId?: string;
   name: string;
   configurationName: string;
-  projectKey: string;
+  projectKey?: string;
   metaData: string;
-  parentDirectoryId: string;
+  parentDirectoryId: string | null;
   tags: string;
   accessModifier: string;
   agentId?: string;
@@ -69,16 +133,43 @@ export interface IGetPreSignedUrlForUploadPayload {
   moduleName: number;
 }
 
+/** Mirrors `Storage.DomainService.Enums.FileVerificationStatus` server-side. */
+export type FileVerificationStatus = "Unverified" | "Quarantined" | "Verified" | "Rejected";
+
 export interface IGetPreSignedUrlForUploadResponse {
   errors: null | unknown;
   isSuccess: boolean;
   fileId: string;
   uploadUrl: string;
+  /** Identifies the exact version this upload created; required to call `completeUpload` when completion is required. */
+  fileVersionId?: string;
+  uploadUrlExpiresAtUtc?: string | null;
+  /** Headers the client must send with the provider PUT (e.g. Azure's blob-type header). */
+  requiredHeaders?: Record<string, string> | null;
+  /** True when the client must call `completeUpload` after the provider PUT succeeds. */
+  uploadCompletionRequired?: boolean;
+  verificationStatus?: FileVerificationStatus;
+}
+
+export interface ICompleteUploadPayload {
+  fileId: string;
+  fileVersionId: string;
+}
+
+export interface ICompleteUploadResponse {
+  errors: null | unknown;
+  isSuccess: boolean;
+  fileId: string;
+  fileVersionId: string;
+  verificationStatus: FileVerificationStatus;
+  /** Safe, non-sensitive explanation set only when `verificationStatus` is "Rejected". */
+  rejectionReason?: string | null;
 }
 
 export interface IGetFileByFileIDPayload {
   itemId: string;
-  projectKey: string;
+  /** Not on the server contract -- the tenant comes from the caller's token. */
+  projectKey?: string;
   configurationName?: string;
 }
 
@@ -98,6 +189,8 @@ export interface IGetFileByFileIDResponse {
   language: string;
   tenantId: string;
   sizeInBytes: number;
+  /** When `url` is a provider-signed URL, when it stops working. Null for an intentionally anonymous (never-expiring) Public URL. */
+  downloadUrlExpiresAtUtc?: string | null;
   errors: unknown;
   isSuccess: boolean;
 }
@@ -109,6 +202,12 @@ export interface IUploadImagePayload {
 export interface IPublicCertificatePayload {
   TenantId: string;
   file: File;
+  /**
+   * Which external provider the certificate belongs to. The blob name is derived from it, so
+   * without it every provider on a tenant shares one slot and each upload replaces the previous
+   * provider's certificate.
+   */
+  ProviderRef?: string;
 }
 
 export interface IUploadFileToLocalStorage {
@@ -124,7 +223,8 @@ export interface IUploadFileToLocalStorage {
 }
 
 export interface IDeleteResourceBasePayload {
-  projectKey: string;
+  /** Not on the server contract -- the tenant comes from the caller's token. */
+  projectKey?: string;
   configurationName?: string;
 }
 
@@ -148,13 +248,47 @@ export interface IGetFilesInfoPayload {
     isDescending: boolean;
   };
   filter?: {
+    /** Exact match, not a substring search. */
     name?: string;
-    additionalProperties?: {
-      agentId?: string;
-      agentStatus?: string;
-    };
+    tenantId?: string;
+    /**
+     * Each entry becomes an `AdditionalProperties.<key> == <value>` term,
+     * AND-ed together -- the one server-side way to select a subset of files.
+     */
+    additionalProperties?: Record<string, string>;
   };
-  projectKey: string;
+}
+
+/**
+ * The current Logic storage API resolves files from the authenticated project.
+ * It requires a fileIds array (empty for the root library) and accepts a
+ * storage configuration rather than the
+ * retired, server-side paginated GetFilesInfo request.
+ */
+export interface IGetFilesPayload {
+  fileIds: string[];
+  configurationName?: string;
+}
+
+export interface IStorageFileResponse {
+  itemId: string;
+  name: string;
+  url: string;
+  sizeInBytes?: number;
+  /**
+   * Directory the file lives in. The live /Storage API exposes no endpoint
+   * that creates a directory, so this is the only way a client can discover a
+   * usable one.
+   */
+  parentDirectoryID?: string;
+  /**
+   * Tags stamped at upload. GetFiles takes no filter inputs, so tags are the
+   * only marker a caller can both write and read back -- AdditionalProperties
+   * is persisted but absent from this response.
+   */
+  tags?: string[];
+  /** Owning tenant, resolved server-side from the caller's token. */
+  tenantId?: string;
 }
 
 export type IFile = {
@@ -175,7 +309,7 @@ export type IFile = {
       value: string;
     };
   };
-  additionalProperties: Record<string, unknown>;
+  additionalProperties: Record<string, string>;
   name: string;
   parentDirectoryID: string;
   systemName: string;
@@ -296,4 +430,21 @@ export interface ICreateDmsFolderPayload {
   fileStorageId: string;
   projectKey: string;
   configurationName: string;
+}
+
+/** Mirrors DomainService.Storage.Dms.CreateDirectoryRequest. */
+export interface ICreateDirectoryPayload {
+  name: string;
+  /** Blank creates the directory at the root of the tenant. */
+  parentDirectoryId?: string;
+  description?: string;
+  configurationName?: string;
+  moduleName?: number;
+  allowedFileExtensions?: string[];
+}
+
+/** DirectoryOperationResult: Status is "Succeeded" when DirectoryId is set. */
+export interface ICreateDirectoryResponse {
+  status?: string;
+  directoryId?: string;
 }

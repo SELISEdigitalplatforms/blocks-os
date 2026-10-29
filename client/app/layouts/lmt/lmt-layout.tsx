@@ -66,7 +66,9 @@ export default function LmtLayout() {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto px-6 pb-6 pt-4">
-        {currentItem && !isLmtDetail && currentSegment !== "tracing" && (
+        {/* Tracing and Logs render their own header, so that each can put its actions --
+            the guide, the agent -- beside its own title. */}
+        {currentItem && !isLmtDetail && !["tracing", "logs"].includes(currentSegment) && (
           <PageHeader
             title={currentItem.label}
             description={currentItem.desc}

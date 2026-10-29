@@ -1,5 +1,3 @@
-import { SERVICES } from "./services.constant";
-
 /**
  * Storage tier used to keep tracing telemetry. Determines how traces are
  * routed and how long they remain queryable.
@@ -13,7 +11,18 @@ export enum TRACE_PROVIDERS {
   archive = "archive",
 }
 
-export const CLOUD_BUILTIN_SERVICES = SERVICES.filter((s) => s.showInTraces).map((s) => ({
-  label: s.label,
-  value: `blocks-${s.serviceName}-api` as const,
-}));
+export enum TRACE_REQUEST_SOURCE_TYPE {
+  hot = "Hot",
+  cold = "Cold",
+  archive = "Archive",
+}
+
+export enum TRACE_REQUEST_STATUS {
+  pending = "Pending",
+  processing = "InProgress",
+  completed = "Completed",
+  partialSuccess = "PartialSuccess",
+  failed = "Failed",
+  cancelled = "Cancelled",
+}
+

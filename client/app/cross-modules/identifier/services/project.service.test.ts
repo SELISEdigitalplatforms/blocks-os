@@ -70,15 +70,35 @@ describe("ProjectService", () => {
   // ─── getAssets ──────────────────────────────────────────────────────────────
 
   describe("getAssets", () => {
-    it("should call correct endpoint with tenantGroupId", async () => {
+    it("should request the first page by default", async () => {
       vi.mocked(http.get).mockResolvedValue(mockGetAssetsResponse);
 
       const result = await service.getAssets("tenant-group-1");
 
       expect(http.get).toHaveBeenCalledWith(
-        `${PROJECT_ENDPOINTS.GET_ASSET}?TenantGroupId=tenant-group-1`,
+        `${PROJECT_ENDPOINTS.GET_ASSET}?TenantGroupId=tenant-group-1&Page=0&PageSize=12`,
       );
       expect(result).toEqual(mockGetAssetsResponse);
+    });
+
+    it("should send the requested page window and search term", async () => {
+      vi.mocked(http.get).mockResolvedValue(mockGetAssetsResponse);
+
+      await service.getAssets("tenant-group-1", 2, 25, "acme");
+
+      expect(http.get).toHaveBeenCalledWith(
+        `${PROJECT_ENDPOINTS.GET_ASSET}?TenantGroupId=tenant-group-1&Page=2&PageSize=25&Filter.Search=acme`,
+      );
+    });
+
+    it("should omit the search filter when the term is blank", async () => {
+      vi.mocked(http.get).mockResolvedValue(mockGetAssetsResponse);
+
+      await service.getAssets("tenant-group-1", 0, 12, "   ");
+
+      expect(http.get).toHaveBeenCalledWith(
+        `${PROJECT_ENDPOINTS.GET_ASSET}?TenantGroupId=tenant-group-1&Page=0&PageSize=12`,
+      );
     });
 
     it("should handle API errors", async () => {
@@ -107,6 +127,28 @@ describe("ProjectService", () => {
       await expect(
         service.addAssets({ tenantGroupId: "group-1", resource: mockResource }),
       ).rejects.toThrow("Failed to add asset");
+    });
+  });
+
+  // ─── deleteAsset ────────────────────────────────────────────────────────────
+
+  describe("deleteAsset", () => {
+    it("should call correct endpoint with payload", async () => {
+      vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
+
+      const payload = { tenantGroupId: "group-1", resourceId: "r-1" };
+      const result = await service.deleteAsset(payload);
+
+      expect(http.post).toHaveBeenCalledWith(PROJECT_ENDPOINTS.DELETE_ASSET, payload);
+      expect(result).toEqual(mockSuccessResponse);
+    });
+
+    it("should handle API errors", async () => {
+      vi.mocked(http.post).mockRejectedValue(new Error("Failed to delete asset"));
+
+      await expect(
+        service.deleteAsset({ tenantGroupId: "group-1", resourceId: "r-1" }),
+      ).rejects.toThrow("Failed to delete asset");
     });
   });
 

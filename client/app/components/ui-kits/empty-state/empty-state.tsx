@@ -1,15 +1,24 @@
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 
 interface EmptyStateProps {
   icon: LucideIcon;
   title: string;
   description: string;
   className?: string;
+  /** Call to action rendered under the description, e.g. the button that creates the first item. */
+  action?: ReactNode;
 }
 
-export function EmptyState({ icon: Icon, title, description, className }: EmptyStateProps) {
+export function EmptyState({
+  icon: Icon,
+  title,
+  description,
+  className,
+  action,
+}: EmptyStateProps) {
   return (
     <Card className={className}>
       <CardContent className="flex flex-col items-center justify-center py-16">
@@ -18,6 +27,7 @@ export function EmptyState({ icon: Icon, title, description, className }: EmptyS
         </div>
         <p className="text-base font-medium text-high-emphasis">{title}</p>
         <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+        {action && <div className="mt-6">{action}</div>}
       </CardContent>
     </Card>
   );

@@ -14,8 +14,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The built-in notification seed as shipped: project creation is tested against the real rows. -->
+    <None Update="TestData\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
 	<ProjectReference Include="..\Api\Api.csproj" />
 	<ProjectReference Include="..\Worker\Worker.csproj" />
+	<ProjectReference Include="..\LmtColdArchiveRestoreWorker\LmtColdArchiveRestoreWorker.csproj" />
+	<!-- Direct, so this project wins over the SeliseBlocks.Secrets.OS package the storage driver depends on. -->
+	<ProjectReference Include="..\Blocks.Secrets\Blocks.Secrets.csproj" />
   </ItemGroup>
 
 </Project>

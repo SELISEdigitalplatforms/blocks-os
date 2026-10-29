@@ -16,6 +16,11 @@ namespace Cloud.LmtService.Models.Trace
         public double Duration { get; set; }
         public Dictionary<string, object?> Attributes { get; set; }
         public string ServiceName { get; set; }
+
+        // Fallback for the list's status column. HTTP entry points already carry
+        // Attributes["response.status.code"], but message-worker roots have no HTTP code and
+        // only set the span status.
+        public string Status { get; set; } = string.Empty;
     }
 
     [BsonIgnoreExtraElements]

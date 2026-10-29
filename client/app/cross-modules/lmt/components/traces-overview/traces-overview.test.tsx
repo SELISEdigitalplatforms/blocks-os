@@ -7,6 +7,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
   useGetTraces: vi.fn(),
+  useGetBlocksServices: vi.fn(),
+  useGetRequestId: vi.fn(),
+  useGetTraceStatus: vi.fn(),
+  useStartColdTrace: vi.fn(),
+  useStartArchiveTrace: vi.fn(),
+  useCancelRestoreRequest: vi.fn(),
+  useGetRestoredTraces: vi.fn(),
+  useGetRestoredDataRetentionDays: vi.fn(),
   isMobile: false,
   navigate: vi.fn(),
   getAllServices: vi.fn(),
@@ -23,6 +31,19 @@ vi.mock("@seliseblocks/genesis-os/hooks", async (importOriginal) => {
 });
 vi.mock("@blocks-lmt/hooks/use-trace", () => ({
   useGetTraces: (opt: unknown) => h.useGetTraces(opt),
+  useGetBlocksServices: () => h.useGetBlocksServices(),
+  useGetRequestId: () => ({ mutateAsync: h.useGetRequestId }),
+  useGetTraceStatus: () => ({ mutateAsync: h.useGetTraceStatus }),
+  useStartColdTrace: () => ({ mutateAsync: h.useStartColdTrace, isPending: false }),
+  useStartArchiveTrace: () => ({ mutateAsync: h.useStartArchiveTrace, isPending: false }),
+  useCancelRestoreRequest: () => ({ mutateAsync: h.useCancelRestoreRequest, isPending: false }),
+  useGetRestoredTraces: (opt: unknown, queryOptions: unknown) =>
+    h.useGetRestoredTraces(opt, queryOptions),
+  useGetRestoredDataRetentionDays: (queryOptions: unknown) =>
+    h.useGetRestoredDataRetentionDays(queryOptions),
+}));
+vi.mock("@seliseblocks/genesis-os/store", () => ({
+  useAuthStore: () => ({ user: { email: "tester@example.com" } }),
 }));
 vi.mock("@/cross-modules/identifier/services/service-registry.service", () => ({
   serviceRegistryService: { getAllServices: (args: unknown) => h.getAllServices(args) },
@@ -47,16 +68,20 @@ const trace = {
   timestamp: "2024-06-01T12:00:00Z",
 };
 
-const wrapper = ({ children }: { children: ReactNode }) => {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
-  return (
-    <QueryClientProvider client={qc}>
-      <NuqsTestingAdapter>{children}</NuqsTestingAdapter>
-    </QueryClientProvider>
-  );
+const makeWrapper = (searchParams?: string) => {
+  const Wrapper = ({ children }: { children: ReactNode }) => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    return (
+      <QueryClientProvider client={qc}>
+        <NuqsTestingAdapter searchParams={searchParams}>{children}</NuqsTestingAdapter>
+      </QueryClientProvider>
+    );
+  };
+  return Wrapper;
 };
 
-const renderOverview = () => render(<TracesOverview projectKey="proj-1" />, { wrapper });
+const renderOverview = (searchParams?: string) =>
+  render(<TracesOverview projectKey="proj-1" />, { wrapper: makeWrapper(searchParams) });
 
 describe("TracesOverview", () => {
   beforeEach(() => {
@@ -65,11 +90,33 @@ describe("TracesOverview", () => {
     h.getAllServices.mockResolvedValue({
       data: [{ name: "Service One", serviceId: "svc-1" }],
     });
+    h.useGetBlocksServices.mockReturnValue({
+      data: [
+        {
+          key: "os",
+          label: "OS",
+          sortOrder: 1,
+          apiServiceName: "blocks-os",
+          workerServiceNames: ["blocks-os-worker"],
+        },
+      ],
+      isLoading: false,
+    });
     h.useGetTraces.mockReturnValue({
       data: { data: [trace], totalCount: 1 },
       isLoading: false,
       isFetching: false,
     });
+    h.useGetRequestId.mockResolvedValue({ requestId: "" });
+    h.useGetTraceStatus.mockResolvedValue({ status: "NoRequest" });
+    h.useStartColdTrace.mockResolvedValue({});
+    h.useStartArchiveTrace.mockResolvedValue({});
+    h.useGetRestoredTraces.mockReturnValue({
+      data: { data: [], totalCount: 0 },
+      isLoading: false,
+      isFetching: false,
+    });
+    h.useGetRestoredDataRetentionDays.mockReturnValue({ data: undefined });
   });
 
   it("renders the page header and the three trace mode cards", () => {
@@ -90,9 +137,23 @@ describe("TracesOverview", () => {
     renderOverview();
     expect(await screen.findByText("GetUsers")).toBeTruthy();
     expect(screen.getByText("get")).toBeTruthy();
-    expect(screen.getByText("125ms")).toBeTruthy();
+    // Durations render to two decimals with a unit, not raw driver precision.
+    expect(screen.getByText("125.00 ms")).toBeTruthy();
     // Registered service name resolves from the serviceId.
     await waitFor(() => expect(screen.getByText("Service One")).toBeTruthy());
+  });
+
+  it("resolves a blocks service label from the fetched blocks services list", async () => {
+    h.useGetTraces.mockReturnValue({
+      data: { data: [{ ...trace, traceId: "trace-2", serviceName: "blocks-os" }], totalCount: 1 },
+      isLoading: false,
+      isFetching: false,
+    });
+    renderOverview();
+    // Looks for the row's own cell, not just any "OS" text on the page.
+    await waitFor(() =>
+      expect(screen.getByRole("cell", { name: "OS" })).toBeTruthy(),
+    );
   });
 
   it("shows the no-data state when there are no traces and no filter", () => {
@@ -126,11 +187,12 @@ describe("TracesOverview", () => {
     expect(h.navigate).toHaveBeenCalledWith("/lmt-base/lmt/tracing/trace-1");
   });
 
-  it("switches to the cold tab and shows the coming-soon placeholder", async () => {
+  it("switches to the cold tab and shows the restored trace request state", async () => {
     const user = userEvent.setup();
     renderOverview();
     await user.click(screen.getByText("Cold"));
-    expect(await screen.findAllByText("Coming soon")).toBeTruthy();
+    expect(await screen.findByText("No Request Found")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Request Cold Traces" })).toBeTruthy();
   });
 
   it("toggles the setup guideline open when the guide button is pressed", async () => {
@@ -140,6 +202,81 @@ describe("TracesOverview", () => {
     await user.click(screen.getByRole("button", { name: /Guide/i }));
     await waitFor(() =>
       expect(screen.getByTestId("guideline").getAttribute("data-open")).toBe("true"),
+    );
+  });
+
+  it("lists one option per service, without API/Worker children", async () => {
+    const user = userEvent.setup();
+    renderOverview();
+    await user.click(screen.getByRole("button", { name: /Service/i }));
+    expect(await screen.findByLabelText("OS")).toBeTruthy();
+    expect(screen.getByLabelText("Service One")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Expand OS" })).toBeNull();
+    expect(screen.queryByLabelText("Worker")).toBeNull();
+  });
+
+  it("sends no service filter until a service is picked", () => {
+    renderOverview();
+    expect(h.useGetTraces).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        filter: expect.objectContaining({ services: [] }),
+      }),
+    );
+  });
+
+  it("queries only the API collection when a service is checked", async () => {
+    const user = userEvent.setup();
+    renderOverview();
+    await user.click(screen.getByRole("button", { name: /Service/i }));
+    await user.click(await screen.findByLabelText("OS"));
+    await waitFor(() =>
+      expect(h.useGetTraces).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          // objectContaining: this test is about how a service selection resolves to
+          // collection names, not about which other filters the payload carries.
+          filter: expect.objectContaining({
+            services: ["blocks-os"],
+            excepts: ["blocks-lmt-api"],
+          }),
+        }),
+      ),
+    );
+  });
+
+  it("offers a local-time window picker instead of relative presets", async () => {
+    const user = userEvent.setup();
+    renderOverview();
+
+    await user.click(screen.getByRole("button", { name: /Time range/i }));
+
+    // Trace timestamps are listed in local time, so the window is written in local time.
+    expect(await screen.findByText(/local timezone/i)).toBeTruthy();
+    expect(screen.queryByText("Last 30 minutes")).toBeNull();
+    expect(screen.queryByText("Last 24 hours")).toBeNull();
+  });
+
+  it("carries a chosen window through to the trace query", async () => {
+    const from = new Date(2026, 8, 8, 11, 9).toISOString();
+    const to = new Date(2026, 8, 8, 11, 39).toISOString();
+
+    renderOverview(`?startDate=${encodeURIComponent(from)}&endDate=${encodeURIComponent(to)}`);
+
+    await waitFor(() =>
+      expect(h.useGetTraces).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          filter: expect.objectContaining({ startDate: from, endDate: to }),
+        }),
+      ),
+    );
+  });
+
+  it("leaves both ends unbounded when no window is chosen", () => {
+    renderOverview();
+
+    expect(h.useGetTraces).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        filter: expect.objectContaining({ startDate: undefined, endDate: undefined }),
+      }),
     );
   });
 

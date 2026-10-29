@@ -21,6 +21,11 @@ export interface ILog {
   message: string;
   traceId: string;
   serviceName?: string;
+  // Returned by every log endpoint, but only ever used as part of a row's identity.
+  spanId?: string;
+  // The full ex.ToString() -- message, frames and inner exceptions. Absent on logs that
+  // carried no exception, and deliberately omitted from the live tail response.
+  exception?: string;
 }
 
 export interface IGetLogsPayload {
@@ -40,7 +45,12 @@ export interface IGetLogsPayload {
   search?: string;
   serviceName: string;
   serviceNames?: string[];
-  projectKey: string;
+}
+
+export interface IGetRestoredLogsPayload extends Omit<IGetLogsPayload, "projectKey"> {
+  requestId: string;
+  /** Unused by the restore endpoints -- they scope to the caller's tenant -- but harmless. */
+  projectKey?: string;
 }
 
 export interface IGetLiveLogsPayload {
@@ -67,4 +77,12 @@ export interface IGetLogsByDatePayload {
   search?: string;
   serviceName: string;
   serviceNames?: string[];
+}
+
+export interface IBlocksServiceItem {
+  key: string;
+  label: string;
+  sortOrder: number;
+  apiServiceName: string;
+  workerServiceNames: string[];
 }

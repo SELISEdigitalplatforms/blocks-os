@@ -1,10 +1,11 @@
 import { ICreateModelPayload } from "@blocks-ai/types/aimodel.service.type";
 import { z } from "zod";
+import { isParsableUrl } from "@/lib/url-format";
 import { ProviderToPlatformMap, ServicePlatform } from "./aimodel-provider.utils";
 
 export const OpenAIModelSchema = z.object({
   model: z.string().trim().min(1, "Model is required"),
-  url: z.string().trim().url("Enter a valid URL"),
+  url: z.string().trim().refine(isParsableUrl, "Enter a valid URL"),
   apiKey: z.string().min(1, "API key is required"),
   organizationId: z.string().trim().optional(),
   projectId: z.string().trim().optional(),
@@ -20,7 +21,7 @@ export const OpenAIModelDefaults = (defaultModel: string): FormSchemaOpenai => (
 
 export const OfficialApiModelSchema = z.object({
   model: z.string().trim().min(1, "Model is required"),
-  url: z.string().trim().url("Enter a valid URL"),
+  url: z.string().trim().refine(isParsableUrl, "Enter a valid URL"),
   apiKey: z.string().min(1, "API key is required"),
 });
 type FormSchemaOfficialApi = z.infer<typeof OfficialApiModelSchema>;
@@ -32,7 +33,7 @@ export const OfficialApiModelDefaults = (defaultModel: string): FormSchemaOffici
 
 export const OpenDeploymentModelSchema = z.object({
   model: z.string().trim().min(1, "Model is required"),
-  url: z.string().trim().url("Enter a valid URL"),
+  url: z.string().trim().refine(isParsableUrl, "Enter a valid URL"),
   deploymentName: z.string().trim().min(1, "Deployment name is required"),
   apiKey: z.string().min(1, "API key is required"),
 });
@@ -62,7 +63,7 @@ export interface UniversalFormInput {
 
 export const transformToUniversal = (
   provider: string,
-  project_key: string,
+  projectKey: string,
   form: UniversalFormInput,
 ): ICreateModelPayload => {
   return {
@@ -77,7 +78,7 @@ export const transformToUniversal = (
     openai_project_id: form.projectId ?? "",
     api_version: form.apiVersion ?? "",
     deployment_name: form.deploymentName ?? "",
-    project_key: project_key,
+    project_key: projectKey,
     DefaultTemp: form.DefaultTemp ?? 0.3,
     MaxTokens: form.MaxTokens ?? 10922,
     custom_parameters: form.customParameters ?? {},

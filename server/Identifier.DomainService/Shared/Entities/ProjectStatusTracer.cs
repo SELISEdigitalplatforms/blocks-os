@@ -19,5 +19,11 @@ namespace DomainService.Entities
         public bool IsProjectCreationSuccess { get; set; }
         public bool IsDefaultConfigurationCopied { get; set; }
         public bool InsertedIntoProjectPeople { get; set; }
+
+        /// <summary>Every BlocksConfiguration collection and index now exists in the project DB.</summary>
+        public bool IsSeedSchemaApplied { get; set; }
+
+        /// <summary>Indexes that could not be built (e.g. seed data breaks a unique index). They never block the project.</summary>
+        public List<string> SeedSchemaErrors { get; set; } = [];
     }
 }

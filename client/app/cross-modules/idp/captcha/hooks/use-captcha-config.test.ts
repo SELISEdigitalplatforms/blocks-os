@@ -1,18 +1,21 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { QueryClient } from "@tanstack/react-query";
 import { createWrapper } from "@/test-utils/test-providers/query-client";
 import {
   mockCaptchaServiceFactory,
-  mockGetCaptchaConfigsPayload,
-  mockCaptchaConfigsResponse,
+  mockGetCaptchaConfigPayload,
+  mockCaptchaConfig,
+  mockCaptchaConfigList,
   mockSaveCaptchaPayload,
-  mockUpdateCaptchaStatusPayload,
+  mockToggleCaptchaStatusPayload,
 } from "../../test-utils/__mocks__";
 import { captchaService } from "../services/captcha.service";
 import {
-  useGetCaptchaConfigs,
+  useGetCaptchaConfigList,
   useSaveCaptcha,
   useToggleCaptchaConfigStatus,
+  useDeleteCaptcha,
 } from "./use-captcha-config";
 
 vi.mock("@blocks-idp/captcha/services/captcha.service", () => mockCaptchaServiceFactory());
@@ -22,23 +25,32 @@ describe("use-captcha-config hooks", () => {
     vi.resetAllMocks();
   });
 
-  describe("useGetCaptchaConfigs", () => {
-    it("should fetch captcha configs successfully", async () => {
-      vi.mocked(captchaService.getCaptchaConfigs).mockResolvedValue(mockCaptchaConfigsResponse);
+  describe("useGetCaptchaConfigList", () => {
+    it("should fetch the captcha config list successfully", async () => {
+      vi.mocked(captchaService.getCaptchaConfigList).mockResolvedValue(mockCaptchaConfigList);
 
-      const { result } = renderHook(() => useGetCaptchaConfigs(mockGetCaptchaConfigsPayload), {
+      const { result } = renderHook(() => useGetCaptchaConfigList(mockGetCaptchaConfigPayload), {
         wrapper: createWrapper(),
       });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(result.current.data).toEqual(mockCaptchaConfigsResponse);
-      expect(captchaService.getCaptchaConfigs).toHaveBeenCalledWith();
+      expect(result.current.data).toEqual(mockCaptchaConfigList);
+      expect(captchaService.getCaptchaConfigList).toHaveBeenCalledWith();
+    });
+
+    it("should not fetch when no project is selected", () => {
+      renderHook(() => useGetCaptchaConfigList({ projectKey: "" }), {
+        wrapper: createWrapper(),
+      });
+
+      expect(captchaService.getCaptchaConfigList).not.toHaveBeenCalled();
     });
   });
 
   describe("useSaveCaptcha", () => {
     it("should save captcha config successfully", async () => {
-      vi.mocked(captchaService.saveCaptcha).mockResolvedValue(undefined as never);
+      const invalidate = vi.spyOn(QueryClient.prototype, "invalidateQueries");
+      vi.mocked(captchaService.saveCaptcha).mockResolvedValue(mockCaptchaConfig);
 
       const { result } = renderHook(() => useSaveCaptcha(), {
         wrapper: createWrapper(),
@@ -50,21 +62,43 @@ describe("use-captcha-config hooks", () => {
         mockSaveCaptchaPayload,
         expect.anything(),
       );
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ["captcha-config"] });
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ["secrets", "list"] });
     });
   });
 
   describe("useToggleCaptchaConfigStatus", () => {
     it("should update captcha config status successfully", async () => {
-      vi.mocked(captchaService.updateCaptchaConfigStatus).mockResolvedValue(undefined as never);
+      vi.mocked(captchaService.updateCaptchaConfigStatus).mockResolvedValue({
+        ...mockCaptchaConfig,
+        isEnable: false,
+      });
 
       const { result } = renderHook(() => useToggleCaptchaConfigStatus(), {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate(mockUpdateCaptchaStatusPayload);
+      result.current.mutate(mockToggleCaptchaStatusPayload);
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(captchaService.updateCaptchaConfigStatus).toHaveBeenCalledWith(
-        mockUpdateCaptchaStatusPayload,
+        mockToggleCaptchaStatusPayload,
+        expect.anything(),
+      );
+    });
+  });
+
+  describe("useDeleteCaptcha", () => {
+    it("should delete a captcha config successfully", async () => {
+      vi.mocked(captchaService.deleteCaptchaConfig).mockResolvedValue(undefined);
+
+      const { result } = renderHook(() => useDeleteCaptcha(), {
+        wrapper: createWrapper(),
+      });
+
+      result.current.mutate(mockCaptchaConfig.id);
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(captchaService.deleteCaptchaConfig).toHaveBeenCalledWith(
+        mockCaptchaConfig.id,
         expect.anything(),
       );
     });

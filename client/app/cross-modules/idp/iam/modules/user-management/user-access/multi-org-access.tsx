@@ -35,8 +35,6 @@ type MultiOrgAccessProps = {
   projectKey: string;
 };
 
-const DEFAULT_ORGANIZATION_ID = "default";
-
 const encodeOrgSelection = (userId: string, orgId: string) => `${userId}:${orgId}`;
 const decodeOrgSelection = (value: string): { userId: string; orgId: string } | null => {
   const idx = value.indexOf(":");
@@ -91,17 +89,17 @@ export const MultiOrgAccess = ({ userId, projectKey }: MultiOrgAccessProps) => {
 
   const getExistingSelection = (orgId: string) => {
     const user = userData?.data;
-    if (!user || !orgId) return { roleSlugs: [], permissionNames: [] };
+    if (!user || !orgId) return { roleSlugs: [], permissionResources: [] };
     const membership = user.organizations?.find((item) => item.organizationId === orgId);
     if (membership) {
-      return { roleSlugs: membership.roles ?? [], permissionNames: membership.permissions ?? [] };
+      return { roleSlugs: membership.roles ?? [], permissionResources: membership.permissions ?? [] };
     }
     return {
       roleSlugs:
         user.OrganizationsRoles?.[orgId] ??
         user.roles?.[orgId] ??
         [],
-      permissionNames:
+      permissionResources:
         user.OrganizationsPermissions?.[orgId] ??
         user.permissions?.[orgId] ??
         [],
@@ -116,14 +114,14 @@ export const MultiOrgAccess = ({ userId, projectKey }: MultiOrgAccessProps) => {
         ? user.organizationIds
         : (user as { OrganizationIds?: string[] }).OrganizationIds ?? [];
     return orgIds.map((orgId) => {
-      const { roleSlugs, permissionNames } = getExistingSelection(orgId);
+      const { roleSlugs, permissionResources } = getExistingSelection(orgId);
       const org = orgById.get(orgId);
       return {
         organizationId: orgId,
         name: org?.name || orgId,
         isEnabled: org ? !org.isDisabled : true,
         roleCount: roleSlugs.length,
-        permissionCount: permissionNames.length,
+        permissionCount: permissionResources.length,
       };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -141,9 +139,11 @@ export const MultiOrgAccess = ({ userId, projectKey }: MultiOrgAccessProps) => {
     sort: { property: "Name", isDescending: false },
     filter: { search: "" },
     projectKey: organizationIdForQueries,
+    organizationId: organizationIdForQueries,
   });
   const { data: permissionsData } = useGetPermissions({
     projectKey: organizationIdForQueries,
+    organizationId: organizationIdForQueries,
     page: 0,
     pageSize: 1000,
     search: "",
@@ -159,21 +159,21 @@ export const MultiOrgAccess = ({ userId, projectKey }: MultiOrgAccessProps) => {
     () => new Map((rolesData?.data || []).map((role) => [role.slug, role])),
     [rolesData?.data],
   );
-  const permissionByName = useMemo(
-    () => new Map((permissionsData?.data || []).map((permission) => [permission.name, permission])),
+  const permissionByResource = useMemo(
+    () => new Map((permissionsData?.data || []).map((permission) => [permission.resource, permission])),
     [permissionsData?.data],
   );
 
   const applyOrgSelection = (orgId: string) => {
-    const { roleSlugs, permissionNames } = getExistingSelection(orgId);
+    const { roleSlugs, permissionResources } = getExistingSelection(orgId);
     setSelectedRoles(
       roleSlugs.map((slug) => roleBySlug.get(slug) ?? createRoleStub({ slug })),
     );
     setSelectedPermissions(
-      permissionNames.map(
-        (name) =>
-          permissionByName.get(name) ??
-          ({ itemId: name, name, resource: name, resourceGroup: "Other" } as IPermission),
+      permissionResources.map(
+        (resource) =>
+          permissionByResource.get(resource) ??
+          ({ itemId: resource, name: resource, resource, resourceGroup: "Other" } as IPermission),
       ),
     );
   };
@@ -204,7 +204,7 @@ export const MultiOrgAccess = ({ userId, projectKey }: MultiOrgAccessProps) => {
     rolesData?.data,
     permissionsData?.data,
     roleBySlug,
-    permissionByName,
+    permissionByResource,
   ]);
 
   // Refs so the deferred `onSave` callback always reads the latest selection.
@@ -246,8 +246,6 @@ export const MultiOrgAccess = ({ userId, projectKey }: MultiOrgAccessProps) => {
   };
 
   const selectedOrgRow = organizationRows.find((org) => org.organizationId === selectedOrgId);
-  const isDefaultOrganization =
-    selectedOrgRow?.organizationId === DEFAULT_ORGANIZATION_ID;
   const isLoading = isUserLoading || isOrgsLoading;
 
   return (
@@ -304,23 +302,18 @@ export const MultiOrgAccess = ({ userId, projectKey }: MultiOrgAccessProps) => {
                         size="icon"
                         className="h-8 w-8 bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground disabled:pointer-events-none disabled:opacity-50"
                         onClick={() => setRevokeTarget(selectedOrgRow)}
-                        disabled={isDefaultOrganization}
                         aria-label={`Revoke user's access from ${selectedOrgRow.name}`}
                       >
                         <UserMinus className="h-4 w-4" />
                       </Button>
                     </span>
                   </TooltipTrigger>
-                  <TooltipContent side="left">
-                    {isDefaultOrganization
-                      ? "Default organization access cannot be revoked"
-                      : "Revoke user access"}
-                  </TooltipContent>
+                  <TooltipContent side="left">Revoke user access</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             )}
           </div>
-          <div className="scrollbar-slim flex min-h-0 flex-1 flex-col pt-4 pr-1">
+          <div className="scrollbar-slim flex min-h-0 flex-1 flex-col overflow-y-auto pt-4 pr-1">
           {selectedOrgRow ? (
             <RolesPermissionsPillEditor
               roles={selectedRoles}
@@ -380,3 +373,4 @@ export const MultiOrgAccess = ({ userId, projectKey }: MultiOrgAccessProps) => {
     </div>
   );
 };
+ 

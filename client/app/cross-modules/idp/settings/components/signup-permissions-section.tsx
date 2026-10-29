@@ -11,22 +11,22 @@ type SignupPermissionsSectionProps = {
   permissions: IPermission[];
   /** Saved in the DB but dropped from the selection; shown struck through until saved. */
   removedPermissions: IPermission[];
-  /** Permission names currently persisted in the DB, used to mark the rest as unsaved. */
-  savedNames: string[];
+  /** Permission resources currently persisted in the DB, used to mark the rest as unsaved. */
+  savedResources: string[];
   onChange: (permissions: IPermission[]) => void;
 };
 
 export const SignupPermissionsSection = ({
   permissions,
   removedPermissions,
-  savedNames,
+  savedResources,
   onChange,
 }: SignupPermissionsSectionProps) => {
-  const savedNameSet = useMemo(() => new Set(savedNames), [savedNames]);
+  const savedResourceSet = useMemo(() => new Set(savedResources), [savedResources]);
 
   const hasUnsavedChanges =
     removedPermissions.length > 0 ||
-    permissions.some((permission) => !savedNameSet.has(permission.name));
+    permissions.some((permission) => !savedResourceSet.has(permission.resource));
 
   return (
     <Card>
@@ -50,16 +50,16 @@ export const SignupPermissionsSection = ({
           >
             {permissions.map((permission) => (
               <SettingsAssignmentChip
-                key={permission.name}
+                key={permission.resource}
                 label={permission.name}
                 meta={permission.resource}
-                variant={savedNameSet.has(permission.name) ? "saved" : "unsaved"}
+                variant={savedResourceSet.has(permission.resource) ? "saved" : "unsaved"}
                 className="sm:max-w-[320px]"
               />
             ))}
             {removedPermissions.map((permission) => (
               <SettingsAssignmentChip
-                key={permission.name}
+                key={permission.resource}
                 label={permission.name}
                 meta={permission.resource}
                 variant="removed"

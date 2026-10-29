@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   useDeleteNotificationConfig,
   useGetNotificationConfigs,
@@ -14,44 +14,74 @@ import {
 import { ConfigsTableShell } from "@/components/configs-table-shell/configs-table-shell";
 import { EmptyState } from "@/components/ui-kits/empty-state";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { Bell, EllipsisVertical, Pencil, Trash } from "lucide-react";
-import NewNotificationConfiguration from "../modals/new-notification-configuration";
-import { channelsToNotify, notificationTypes } from "../constants/notification.constant";
+import { Bell } from "lucide-react";
+import { NOTIFICATION_CONFIG_ERROR_MESSAGES } from "../constants/notification.constant";
+import { NOTIFICATION_TEXT } from "../constants/notification-ui.constant";
+import { matchesReceivers, matchesSendTo } from "../utils/notification-labels";
+import { NotificationConfigRow } from "./notification-config-row";
+import { NotificationConfigPage } from "./notification-config-page";
+import { PushDevicesPage } from "./push-devices-page";
+import { PushSettingsPage } from "./push-settings-page";
+import { RecipientsHeader } from "./recipients-header";
+import { getErrorMessage, isErrorWithErrors } from "@/lib/error";
 import type { INotificationConfigRow } from "../models/notification-config.model";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui-kits/dropdown-menu/dropdown-menu";
 import { toast } from "@/hooks/use-toast";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
-import { Button } from "@/components/ui-kits/button/button";
 import { useProjectStore } from "@seliseblocks/genesis-os";
-import { useNotificationConfigsFilterQueryParams } from "./notification-configs-filter-toolbar";
-import { useQueryState, parseAsBoolean } from "nuqs";
+import {
+  NotificationConfigsFilterToolBar,
+  useNotificationConfigsFilterQueryParams,
+} from "./notification-configs-filter-toolbar";
+import {
+  useNotificationNavigation,
+  useNotificationView,
+} from "../hooks/use-notification-navigation";
 
-const columns = [
-  { key: "name", label: "Name" },
-  { key: "channelToNotify", label: "Channel" },
-  { key: "notificationType", label: "Type" },
-  { key: "enablePersistence", label: "Persistence" },
+const columns: { key: string; label: React.ReactNode }[] = [
+  { key: "name", label: NOTIFICATION_TEXT.columns.name },
+  { key: "recipients", label: <RecipientsHeader /> },
+  { key: "service", label: NOTIFICATION_TEXT.columns.service },
+  { key: "importance", label: NOTIFICATION_TEXT.columns.importance },
+  { key: "delivery", label: NOTIFICATION_TEXT.columns.delivery },
+  { key: "status", label: NOTIFICATION_TEXT.columns.status },
   { key: "actions", label: "" },
 ];
 
+const SKELETON_ROWS = ["s1", "s2", "s3", "s4", "s5"];
+
 interface NotificationConfigurationListProps {
-  addConfigOpen?: boolean;
-  onAddConfigOpenChange?: (open: boolean) => void;
   isLoading?: boolean;
-  configurationsLength?: number;
+  /** Opens the edit page of a notification. */
+  onEdit: (itemId: string) => void;
 }
 
+const describeDeleteError = (error: unknown): string => {
+  if (isErrorWithErrors(error)) {
+    const message = getErrorMessage(error.errors, NOTIFICATION_CONFIG_ERROR_MESSAGES);
+    return Array.isArray(message) ? message.join(" ") : message;
+  }
+  return JSON.stringify(error);
+};
+
+/** Importance, audience and recipients are filtered over the loaded rows: the list API has no such filter. */
+export const filterConfigRows = (
+  rows: INotificationConfigRow[],
+  importance: string,
+  sendTo = "",
+  receivers = "",
+): INotificationConfigRow[] =>
+  rows.filter(
+    (row) =>
+      (!importance || String(row.importance ?? 0) === importance) &&
+      matchesSendTo(row, sendTo) &&
+      matchesReceivers(row, receivers),
+  );
+
 const NotificationConfigurationList: React.FC<NotificationConfigurationListProps> = ({
-  addConfigOpen,
-  onAddConfigOpenChange,
   isLoading: isLoadingProp,
+  onEdit,
 }) => {
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const { queryParams, setQueryParams } = useNotificationConfigsFilterQueryParams();
@@ -62,23 +92,21 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
     searchText: queryParams.notificationSearch || undefined,
   });
   const loading = isLoadingProp ?? (isLoading || isFetching);
+  const visibleRows = filterConfigRows(
+    data?.configurations ?? [],
+    queryParams.notificationImportance,
+    queryParams.notificationSendTo,
+    queryParams.notificationReceivers,
+  );
 
-  const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedConfigData, setSelectedConfigData] = useState<INotificationConfigRow | null>(null);
-  const internalOpen = addConfigOpen ?? false;
-  const setOpen = onAddConfigOpenChange ?? (() => {});
 
   const { isPending: isDeletePending, mutateAsync: deleteNotificationConfig } =
     useDeleteNotificationConfig();
 
   const onPageChangeHandler = (page: number) => {
     setQueryParams((params) => ({ ...params, notificationPage: page }));
-  };
-
-  const onEditNotificationConfig = (rowData: INotificationConfigRow) => {
-    setSelectedConfigData(rowData);
-    setIsEditOpen(true);
   };
 
   const onDeleteNotificationConfig = (rowData: INotificationConfigRow) => {
@@ -93,35 +121,27 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
       toast({
         variant: "success",
         title: "Success",
-        description: "Configuration deleted successfully",
+        description: "Notification deleted.",
       });
       setIsDeleteDialogOpen(false);
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: JSON.stringify(error),
+        description: describeDeleteError(error),
       });
     }
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <Dialog open={internalOpen} onOpenChange={setOpen}>
-        <NewNotificationConfiguration
-          key={internalOpen ? "open" : "closed"}
-          dialogTitle="Add Configuration"
-          onClose={setOpen}
-          isEdit={false}
-        />
-      </Dialog>
+    <>
       <ConfigsTableShell
+        toolbar={<NotificationConfigsFilterToolBar />}
         footer={
           <Pagination
             page={queryParams.notificationPage}
             pageSize={queryParams.notificationPageSize}
             totalCount={data?.totalCount ?? 0}
-            pageSizeOptions={[queryParams.notificationPageSize]}
             onChange={onPageChangeHandler}
           />
         }
@@ -136,8 +156,8 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
               </TableRow>
             </TableHeader>
             <TableBody>
-              {Array.from({ length: 5 }).map((_, idx) => (
-                <TableRow key={idx}>
+              {SKELETON_ROWS.map((row) => (
+                <TableRow key={row}>
                   {columns.map((col) => (
                     <TableCell key={col.key}>
                       <Skeleton className="h-6 w-full rounded" />
@@ -157,48 +177,20 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data?.configurations?.map((config) => (
-                <TableRow key={config.itemId}>
-                  <TableCell>{config.name}</TableCell>
-                  <TableCell>
-                    {channelsToNotify.find((x) => x.value === config.channelToNotify)?.label}
-                  </TableCell>
-                  <TableCell>
-                    {notificationTypes.find((x) => x.value === config.notificationType)?.label}
-                  </TableCell>
-                  <TableCell>{config.enablePersistence ? "Yes" : "No"}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-5 w-5 p-0">
-                          <EllipsisVertical width={20} height={20} />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          className="cursor-pointer"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onEditNotificationConfig(config);
-                          }}
-                        >
-                          <Pencil className="mr-2 h-4 w-4" />
-                          <span>Edit</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="cursor-pointer text-error"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDeleteNotificationConfig(config);
-                          }}
-                        >
-                          <Trash className="mr-2 h-4 w-4" />
-                          <span>Delete</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+              {visibleRows.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="text-center text-medium-emphasis">
+                    {NOTIFICATION_TEXT.noMatches}
                   </TableCell>
                 </TableRow>
+              )}
+              {visibleRows.map((config) => (
+                <NotificationConfigRow
+                  key={config.itemId}
+                  config={config}
+                  onEdit={(row) => onEdit(row.itemId)}
+                  onDelete={onDeleteNotificationConfig}
+                />
               ))}
             </TableBody>
           </Table>
@@ -210,35 +202,24 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
             onCancel={() => setIsDeleteDialogOpen(false)}
             onConfirm={() => onConfirmDeleteConfig()}
             data={{
-              dialogTitle: "Confirmation",
-              dialogSubtitle: `Are you sure you want to delete the ${selectedConfigData?.name} configuration?`,
+              dialogTitle: "Delete notification?",
+              dialogSubtitle: `"${selectedConfigData?.name}" will be deleted.`,
             }}
             buttonState={{ confirm: { disable: isDeletePending } }}
           />
         )}
       </Dialog>
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        {selectedConfigData && (
-          <NewNotificationConfiguration
-            key={`${selectedConfigData.itemId}-${isEditOpen}`}
-            dialogTitle="Edit Configuration"
-            previousData={selectedConfigData}
-            isEdit={true}
-            onClose={setIsEditOpen}
-          />
-        )}
-      </Dialog>
-    </div>
+    </>
   );
 };
 
 export default NotificationConfigurationList;
 
 export function NotificationConfigurationListPage() {
-  const [addOpen, setAddOpen] = useQueryState(
-    "notificationConfig",
-    parseAsBoolean.withDefault(false),
-  );
+  const view = useNotificationView();
+  const nav = useNotificationNavigation();
+  const { redirectLegacyLink } = nav;
+  useEffect(redirectLegacyLink, [redirectLegacyLink]);
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const { queryParams } = useNotificationConfigsFilterQueryParams();
   const { data, isLoading, isFetching } = useGetNotificationConfigs({
@@ -248,33 +229,35 @@ export function NotificationConfigurationListPage() {
     searchText: queryParams.notificationSearch || undefined,
   });
   const loading = isLoading || isFetching;
-  const configurations = data?.configurations ?? [];
-  const isEmpty = !loading && configurations.length === 0;
+  const hasFilters =
+    !!queryParams.notificationSearch ||
+    !!queryParams.notificationImportance ||
+    !!queryParams.notificationSendTo ||
+    !!queryParams.notificationReceivers;
+  const isEmpty = !loading && (data?.configurations ?? []).length === 0 && !hasFilters;
 
-  return (
-    <>
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <NewNotificationConfiguration
-          key={addOpen ? "open" : "closed"}
-          dialogTitle="Add Configuration"
-          onClose={() => setAddOpen(false)}
-          isEdit={false}
-        />
-      </Dialog>
-      {isEmpty ? (
-        <EmptyState
-          icon={Bell}
-          title="No notification configurations found"
-          description="Use Add Configuration to create one."
-        />
-      ) : (
-        <NotificationConfigurationList
-          addConfigOpen={false}
-          onAddConfigOpenChange={() => {}}
-          isLoading={loading}
-          configurationsLength={configurations.length}
-        />
-      )}
-    </>
+  if (view.kind === "devices") return <PushDevicesPage onBack={nav.openPush} />;
+  if (view.kind === "push") {
+    return <PushSettingsPage onClose={nav.openList} onViewDevices={nav.openDevices} />;
+  }
+  if (view.kind === "new" || view.kind === "edit") {
+    return (
+      <NotificationConfigPage
+        itemId={view.kind === "edit" ? view.id : ""}
+        onClose={nav.openList}
+        onSetUpPush={nav.openPush}
+      />
+    );
+  }
+
+  // Add Configuration and Mobile push live in the page header, like the other Secrets & Configs pages.
+  return isEmpty ? (
+    <EmptyState
+      icon={Bell}
+      title="No notifications yet"
+      description="Use Add notification to create one."
+    />
+  ) : (
+    <NotificationConfigurationList isLoading={loading} onEdit={nav.openEdit} />
   );
 }

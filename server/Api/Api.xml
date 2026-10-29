@@ -4,6 +4,177 @@
         <name>Api</name>
     </assembly>
     <members>
+        <member name="T:BlocksOs.Api.Controllers.CaptchaConfigController">
+            <summary>
+            Captcha configuration endpoints.
+            </summary>
+            <remarks>
+            Routing and request/response mapping only, mirroring <see cref="T:BlocksOs.Api.Controllers.SecretsController"/>. Every
+            domain rule lives in <see cref="T:Configuration.DomainService.Captcha.Services.ICaptchaConfigService"/>, which delegates any secret-value
+            handling to the existing, unmodified <c>ISecretService</c> — nothing here calls the vault
+            directly.
+            <para>
+            No action here ever returns a secret value. Reads carry <see cref="P:Configuration.DomainService.Captcha.ResponseModel.CaptchaConfigResult.SecretId"/>
+            instead — a pointer a caller with the right permission can resolve via
+            <c>GET /secrets/value</c> on <see cref="T:BlocksOs.Api.Controllers.SecretsController"/>, an endpoint this controller
+            neither calls nor duplicates.
+            </para>
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.CertificateController.UploadCertificate(Microsoft.AspNetCore.Http.IFormFile,System.Boolean,System.String)">
+             <summary>
+             Stores a public certificate for the calling tenant and returns the URL to read it back.
+             </summary>
+             <remarks>
+             The file arrives as multipart form data while the flag arrives on the query string, so
+             both are bound explicitly - a single complex parameter would be inferred as
+             <c>[FromBody]</c> and reject the upload. Callers also send a <c>TenantId</c> query
+             parameter; it is ignored, because the tenant comes from the request context.
+            
+             <para>
+             Gated by the same permission as UpdateTokenValidationParameters, which persists the URL
+             this returns. The certificate is what token validation actually trusts, so it must not
+             be writable by someone who cannot edit the configuration pointing at it.
+             </para>
+             </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.DataGatewayController.SaveConfig(Configuration.DomainService.DataGateway.RequestModel.SaveDataGatewayConfigurationRequest)">
+            <summary>A refused save (invalid input, unknown ItemId) answers 400 with the errors; ItemId not found answers 404.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.DomainController.ConfigureStream(DomainService.Shared.ConfigureDomainRequest)">
+            <summary>
+            Configures a domain like <see cref="M:BlocksOs.Api.Controllers.DomainController.Configure(DomainService.Shared.ConfigureDomainRequest)"/>, streaming each step as a server-sent
+            event: "step" events (<see cref="T:DomainService.Shared.DomainSetupProgress"/>) while it runs, then one "result"
+            event (<see cref="T:Blocks.Genesis.BaseResponse"/>). The run does not depend on the connection: a browser
+            that goes away mid-run leaves it to finish, and the domain's status shows the outcome.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.DomainController.NotifyDomainStatusAsync(System.String,Blocks.Genesis.BaseResponse)">
+            <summary>
+            Tells the caller how the custom domain setup ended. Only the final result is sent, not each step,
+            and no error text: the domain's status shows the details.
+            </summary>
+        </member>
+        <member name="T:BlocksOs.Api.Controllers.IntegrationClientIp">
+            <summary>Gets the caller address after trusted forwarded-header processing has run.</summary>
+        </member>
+        <member name="T:BlocksOs.Api.Controllers.IntegrationController">
+            <summary>
+            Integration setup endpoints. Routing only; the rules live in <see cref="T:Configuration.DomainService.Integration.Services.IIntegrationService"/>.
+            </summary>
+            <remarks>
+            Protected by their own permissions, like Storage and Notification, so access to Integration can
+            be granted apart from Secrets. Both permissions are seeded from
+            <c>server/seed/integration-permissions.upsert.json</c> into the root tenant's <c>Permissions</c>.
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.GetTemplates(System.String)">
+            <summary>
+            Lists the active integration templates, optionally narrowed to one family, sorted by <c>SortOrder</c>.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.GetTemplate(System.String,System.Boolean)">
+            <summary>
+            Fetches one template by key, including inactive ones when asked, so legacy setups can
+            still resolve their base URL.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.GetConnections">
+            <summary>
+            Lists the environment's integration connections. Replaces the old <c>GetSetup</c>.
+            </summary>
+            <remarks>
+            The response never contains a client secret: rows carry the client id and metadata only,
+            so a list read can never leak credential material. Records predating per-connection
+            setups are labelled "Legacy connection".
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.RunSetup(Configuration.DomainService.Integration.RequestModel.RunIntegrationSetupRequest)">
+            <summary>
+            Creates a connection in one server-side call. Replaces the old browser-run setup and <c>SaveSetup</c>.
+            </summary>
+            <remarks>
+            Resolves the template's permissions, reuses or creates its IAM role, and creates a client
+            credential named for this connection. This and <see cref="M:BlocksOs.Api.Controllers.IntegrationController.RegenerateSecret(Configuration.DomainService.Integration.RequestModel.IntegrationConnectionRequest)"/> are the only
+            endpoints that return a client secret, and they return it exactly once. An interrupted run
+            can be repeated without leaving duplicates behind.
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.Disconnect(Configuration.DomainService.Integration.RequestModel.IntegrationConnectionRequest)">
+            <summary>
+            Disconnects a connection: deletes its IAM client credential and marks the record revoked.
+            </summary>
+            <remarks>
+            If IAM cannot delete the credential the record stays active and <c>iam_error</c> is
+            returned, so a live credential is never recorded as disconnected.
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.RegenerateSecret(Configuration.DomainService.Integration.RequestModel.IntegrationConnectionRequest)">
+            <summary>
+            Rotates a connection's client secret. The client id is unchanged; the new secret is
+            returned once, here and nowhere else.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.CheckReadiness(System.String)">
+            <summary>
+            Reports whether the environment's permission store has every permission the template
+            grants, so the connect flow can wait for freshly provisioned environments.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.GetRequest(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Reads a connect request for the Approve screen. The first call by a logged-in user
+            claims the request; after that only the claimer can see, approve or cancel it.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.Cancel(Configuration.DomainService.Integration.RequestModel.CancelIntegrationRequest,System.Threading.CancellationToken)">
+            <summary>
+            Cancels a claimed connect request and redirects the browser back to the CMS with
+            <c>error=access_denied</c> and the original state.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.Approve(Configuration.DomainService.Integration.RequestModel.ApproveIntegrationRequest,System.Threading.CancellationToken)">
+            <summary>
+            Approves a claimed connect request: runs the server-side setup, stores a one-time code
+            hash and the credential secret encrypted, and returns the redirect to the CMS carrying
+            code, state and blocks_key. Double-approve returns the same redirect idempotently.
+            </summary>
+            <remarks>
+            Must run inside the chosen environment (impersonated) with <c>blocks-os::integration::save</c>.
+            The user must be the request's claimer.
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.Exchange(Configuration.DomainService.Integration.RequestModel.ExchangeIntegrationRequest,System.Threading.CancellationToken)">
+            <summary>
+            Redeems a one-time code server to server: verifies PKCE S256 and the redirect URI,
+            returns the connection's keys, and removes the stored secret. A failed attempt burns
+            the code. Rate limited per IP; over the limit responds 429.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.IntegrationController.CreateRequest(Configuration.DomainService.Integration.RequestModel.CreateIntegrationRequest,System.Threading.CancellationToken)">
+            <summary>
+            Opens an anonymous "Connect with Blocks" request from a CMS and returns its id and expiry.
+            Rate limited per IP; over the limit responds 429 with the <c>rate_limited</c> error.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.LogAndTraceRestoreController.CancelRestoreProcess(Cloud.LmtService.Models.ColdRestore.CancelRestoreRequest)">
+            <summary>
+            Cancels an unfinished cold or archive restore and discards whatever it had restored so
+            far, freeing the user to request a different range straight away.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.MailController.ToActionResult(Configuration.DomainService.Mail.Services.MailConfigurationMutationResult)">
+            <summary>
+            Turns a mail configuration outcome into a status code.
+            </summary>
+            <remarks>
+            Only an unreachable secret store becomes 503. Every other secret failure —
+            authorization, state, a missing secret — propagates to the global
+            <c>SecretExceptionFilter</c>, which already classifies it as 403/409/404; collapsing
+            them all into an availability error would tell an operator to retry something that
+            will never succeed.
+            </remarks>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.MigrationController.#ctor(DomainService.Migration.IMigrationService,DomainService.Migration.Services.IMigrationRepository,Blocks.Genesis.IMessageClient)">
             <summary>
             Initializes a new instance of the MigrationController.
@@ -32,6 +203,179 @@
             <param name="tenantGroupId">The tenant group ID to check for migrations.</param>
             <returns>List of migration trackers with incomplete services.</returns>
         </member>
+        <member name="M:BlocksOs.Api.Controllers.PeopleController.GetMyAccess(DomainService.Access.GetMyAccessRequest)">
+            <summary>
+            What the caller may see and do in one project group.
+            </summary>
+            <remarks>
+            Deliberately <c>[Authorize]</c> only, with no resource name and no project policy: it
+            is scoped to the caller's own access, and a member who lacks some permission still has
+            to be able to ask what they may do or the frontend cannot render at all. Gating this
+            behind a grant would be circular.
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PeopleController.SaveAccessPolicy(DomainService.Access.SaveAccessPolicyRequest)">
+            <summary>Owner-only, always — a grant must never be able to widen itself.</summary>
+        </member>
+        <member name="T:BlocksOs.Api.Controllers.PlatformDataAccessController">
+            <summary>The Data Access page for platform (system) schemas. The work is in <see cref="T:Configuration.DomainService.DataGateway.Services.IPlatformDataAccessService"/>.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.#ctor(Configuration.DomainService.DataGateway.Services.IPlatformDataAccessService)">
+            <summary>The Data Access page for platform (system) schemas. The work is in <see cref="T:Configuration.DomainService.DataGateway.Services.IPlatformDataAccessService"/>.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.Validation(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>The field's validation rules; null when it has none.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.SaveValidation(Configuration.DomainService.DataGateway.RequestModel.SavePlatformValidationRequest,System.Threading.CancellationToken)">
+            <summary>
+            Replaces the field's validation rules; an empty list removes them. Only properties the Genesis allow-list
+            opens; Reference rules point at system Entity schemas; every rule is saved as version 1.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.BulkValidation(Configuration.DomainService.DataGateway.RequestModel.BulkPlatformValidationRequest,System.Threading.CancellationToken)">
+            <summary>
+            The same validation rules on several default properties (the base entity's own: Language, Tags, Read.Roles, …)
+            of several system schemas. <c>Replace</c> gives each property exactly these rules (an empty list removes
+            them); otherwise they are added after the ones it has. Every pair is checked first, as a single save would
+            be; if any is refused nothing is written, and each refusal is named by Schema.Property.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.FieldDefault(Configuration.DomainService.DataGateway.RequestModel.SetPlatformFieldDefaultRequest,System.Threading.CancellationToken)">
+            <summary>Sets or (null) clears the field's default value. Only properties the Genesis allow-list opens.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.BulkFieldDefault(Configuration.DomainService.DataGateway.RequestModel.BulkPlatformFieldDefaultRequest,System.Threading.CancellationToken)">
+            <summary>
+            Sets or (null) clears the same default value on several default properties of several system schemas.
+            Every pair is checked first; if any is refused nothing is written, and each refusal is named by Schema.Property.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.ProjectController.GetThirdPartyJwtProviders">
+            <summary>
+            External identity providers this tenant accepts tokens from. Never returns a signing
+            secret in any form -- only whether one is stored.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.ProjectController.SaveThirdPartyJwtProvider(DomainService.Projects.SaveThirdPartyJwtProviderRequest)">
+            <summary>
+            Creates or updates one provider. An omitted signing secret leaves the stored one
+            untouched rather than clearing it.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.ProjectController.DeleteThirdPartyJwtProvider(DomainService.Projects.DeleteThirdPartyJwtProviderRequest)">
+            <summary>
+            Removes a provider and, with it, the encrypted signing secret it carried.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.ProjectController.UpdateThirdPartyJwtEnabled(DomainService.Projects.UpdateThirdPartyJwtEnabledRequest)">
+            <summary>
+            Turns third-party token trust on or off for the tenant. Off means such tokens are not
+            accepted at all.
+            </summary>
+        </member>
+        <member name="T:BlocksOs.Api.Controllers.PushSettingsController">
+            <summary>
+            Mobile push (Firebase) settings of the project. Routing only; every rule is in <see cref="T:Configuration.DomainService.Notification.Push.IPushSettingsService"/>.
+            No action ever returns a Firebase value.
+            </summary>
+        </member>
+        <member name="T:BlocksOs.Api.Controllers.ReleaseController">
+            <summary>
+            Release and repository operations, served out of blocks-os. This is the move of what blocks-logic
+            exposed as <c>logic/deployment/*</c>; the action names are kept identical so only the
+            <c>logic/deployment</c> prefix changes to <c>os/release</c> for callers.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.ReleaseController.#ctor(ReleaseDriver.IReleaseDriverService)">
+            <summary>
+            Release and repository operations, served out of blocks-os. This is the move of what blocks-logic
+            exposed as <c>logic/deployment/*</c>; the action names are kept identical so only the
+            <c>logic/deployment</c> prefix changes to <c>os/release</c> for callers.
+            </summary>
+        </member>
+        <member name="T:BlocksOs.Api.Controllers.SecretsController">
+            <summary>
+            Secret management endpoints.
+            </summary>
+            <remarks>
+            Routing, permissions and request/response mapping only. Every domain rule — tenant scope,
+            access lists, status, rotation, audit — lives in <see cref="T:Blocks.Secrets.ISecretService"/>, which
+            re-checks everything regardless of what the transport did.
+            <para>
+            No action returns a <see cref="T:Blocks.Secrets.Secret"/> entity. Metadata goes out as
+            <see cref="T:Blocks.Secrets.SecretResult"/>, which has no value and no vault coordinates.
+            </para>
+            </remarks>
+        </member>
+        <member name="F:BlocksOs.Api.Controllers.SecretsController.StatusDeletedReason">
+            <summary>
+            The reason code <c>ISecretService</c> attaches when a value read targets an archived secret.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.SecretsController.Dependents(System.String,Configuration.DomainService.Shared.Secrets.ISecretDependentLookup,System.Threading.CancellationToken)">
+            <summary>
+            The CAPTCHA and Office 365 mail configurations that point at a secret, so the Archive and
+            Purge dialogs can warn before breaking them.
+            </summary>
+            <remarks>
+            Shares the metadata read permission: the answer names configurations, not values.
+            Advisory only — nothing refuses an archive or purge because of it. An unknown id, or one
+            from another tenant, answers an empty list rather than 404 so existence is not revealed.
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.SecretsController.Tags(System.Threading.CancellationToken)">
+            <summary>
+            The tenant's tag catalogue, for a tag picker or a tag filter.
+            </summary>
+            <remarks>
+            Shares the list permission rather than having its own: the catalogue is a list of
+            labels, and anyone who may see the secret list may see the labels on it.
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.SecretsController.Value(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Reads a secret's plaintext value. Always audited.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.SecretsController.Unlock(Blocks.Secrets.SecretIdRequest,System.Threading.CancellationToken)">
+            <summary>Unlocks a secret. Shares the lock permission — they are one capability.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.SecretsController.Purge(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Permanently deletes an already-deleted secret: metadata and vault value. Shares the delete
+            permission — it is the second half of the same capability, and only reaches secrets the
+            soft delete has already taken out of service.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.SecretsController.ReadArchivedAsBadRequest``1(System.Func{System.Threading.Tasks.Task{``0}})">
+            <summary>
+            Re-raises a value read on an archived secret as a validation error, which the existing
+            <see cref="T:Blocks.Secrets.SecretExceptionFilter"/> turns into 400 with reason <c>STATUS_DELETED</c>.
+            </summary>
+            <remarks>
+            Done here rather than in the filter because the filter ships in the
+            <c>SeliseBlocks.Secrets.OS</c> package, and changing it would change status codes for every
+            service that consumes it. Every other state failure — locked included — keeps its 409, and
+            the read has already been audited by the service, so the audit trail is unchanged.
+            </remarks>
+        </member>
+        <member name="T:BlocksOs.Api.Controllers.UserPreferenceController">
+            <summary>
+            The signed-in user's own settings, by key (<see cref="T:DomainService.Preference.UserPreferenceKeys"/>), such as the
+            console sidebar's favourites and app order, so they follow the user across browsers.
+            </summary>
+            <remarks>
+            Deliberately <c>[Authorize]</c> only, with no resource name and no project policy, like
+            <see cref="M:BlocksOs.Api.Controllers.PeopleController.GetMyAccess(DomainService.Access.GetMyAccessRequest)"/>: every action reads or writes the caller's own
+            rows and no one else's, so there is nothing a grant could add. Routing and response mapping
+            only; the rules live in <see cref="T:DomainService.Preference.Services.IUserPreferenceService"/>.
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.UserPreferenceController.Get(DomainService.Preference.GetUserPreferenceRequest,System.Threading.CancellationToken)">
+            <summary>The caller's value for a key; <c>value</c> is null when never saved.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.UserPreferenceController.Save(DomainService.Preference.SaveUserPreferenceRequest,System.Threading.CancellationToken)">
+            <summary>Sets the caller's value for a key, replacing any earlier one.</summary>
+        </member>
         <member name="T:BlocksOs.Api.Controllers.VersionController">
             <summary>
             Reports the running API assembly version. Public by design (no auth) so health/deploy
@@ -44,6 +388,188 @@
         </member>
         <member name="M:BlocksOs.Api.GlobalApiRoutePrefixConvention.#ctor(System.String)">
             <summary>Prepends a segment (e.g. <c>api</c>) to every controller’s attribute route template.</summary>
+        </member>
+        <member name="T:BlocksOs.Api.Middleware.DataValidationExceptionFilter">
+            <summary>
+            A save refused by a system schema's validation rules (Os.DataAccess PrepareWriteAsync / CheckUpdateAsync)
+            is the caller's mistake, not a server error: 400 with one message per property, the field's path as key.
+            </summary>
+        </member>
+        <member name="T:BlocksOs.Api.Middleware.HostAccessCookieBearerMiddleware">
+            <summary>
+            IAM's OIDC callback sets an httpOnly access-token cookie named after the
+            redirect host (e.g. <c>dev-os-612.blocksdevelopers.com</c> on PR previews,
+            <c>dev-os.blocksdevelopers.com</c> on the shared dev host). JwtBearer auth
+            in Blocks.Genesis reads the <c>Authorization</c> header (and a fixed cookie
+            key that does not track preview hosts), so API calls from the SPA — which
+            only send <c>credentials: include</c> — arrive unauthenticated on previews.
+            Promote the host-named cookie into <c>Authorization: Bearer …</c> when the
+            header is absent so preview and main hosts both authenticate.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Middleware.HostAccessCookieBearerMiddleware.#ctor(Microsoft.AspNetCore.Http.RequestDelegate)">
+            <summary>
+            IAM's OIDC callback sets an httpOnly access-token cookie named after the
+            redirect host (e.g. <c>dev-os-612.blocksdevelopers.com</c> on PR previews,
+            <c>dev-os.blocksdevelopers.com</c> on the shared dev host). JwtBearer auth
+            in Blocks.Genesis reads the <c>Authorization</c> header (and a fixed cookie
+            key that does not track preview hosts), so API calls from the SPA — which
+            only send <c>credentials: include</c> — arrive unauthenticated on previews.
+            Promote the host-named cookie into <c>Authorization: Bearer …</c> when the
+            header is absent so preview and main hosts both authenticate.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Middleware.HostAccessCookieBearerMiddleware.InvokeAsync(Microsoft.AspNetCore.Http.HttpContext)">
+            <summary>Invokes the middleware.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Middleware.HostAccessCookieBearerMiddleware.PromoteHostAccessCookie(Microsoft.AspNetCore.Http.HttpContext)">
+            <summary>Promote host-named IAM access cookie to Authorization when missing.</summary>
+        </member>
+        <member name="T:BlocksOs.Api.Middleware.SpaFallbackGuard">
+            <summary>
+            Paths that must not be served by the SPA <c>index.html</c> fallback.
+            Returning 200 for VCS/backup probes makes OWASP ZAP report "Hidden File Found".
+            </summary>
+        </member>
+        <member name="T:BlocksOs.Api.ProgramStartup">
+            <summary>
+            Startup steps called from <c>Program.cs</c>, kept out of the top-level statements so the
+            host's registration and pipeline order stays readable there. Each method does exactly what
+            the inline code it replaced did, at the same point in the startup sequence.
+            </summary>
+        </member>
+        <member name="F:BlocksOs.Api.ProgramStartup.StyleNonceItemKey">
+            <summary>Key of the per-request style nonce in <see cref="P:Microsoft.AspNetCore.Http.HttpContext.Items"/>.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.ProgramStartup.AddKnownForwardedHeaders(Microsoft.Extensions.DependencyInjection.IServiceCollection,Microsoft.Extensions.Configuration.IConfiguration)">
+            <summary>
+            Trusts forwarded headers only from the configured ingress proxies/networks. Without
+            configuration nothing is registered, which keeps ASP.NET's default trusted-proxy behaviour.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.ProgramStartup.UseSecurityHeaders(Microsoft.AspNetCore.Builder.WebApplication,System.String,BlocksOs.Api.Security.StyleNonce)">
+            <summary>
+            Browser-facing security headers for the SPA and static assets, and the per-request style
+            nonce the SPA shell is rendered with.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.ProgramStartup.IsSpaShellRequest(Microsoft.AspNetCore.Http.HttpRequest)">
+            <summary>
+            A GET or HEAD for "/" or "/index.html", which the static file middleware would otherwise
+            serve verbatim with the nonce placeholder still in it.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.ProgramStartup.ApplyFrontendRuntimeSettings(Microsoft.Extensions.Configuration.IConfiguration,System.String)">
+            <summary>
+            Replaces the frontend runtime placeholders in the published SPA files with configured values.
+            </summary>
+        </member>
+        <member name="T:BlocksOs.Api.Security.ContentSecurityPolicy">
+            <summary>
+            Builds the SPA's Content-Security-Policy from configuration.
+            <para>
+            The origins are derived from the same <c>FrontendRuntime</c> section that fills the
+            SPA's runtime config, so the policy describes whatever environment the host is
+            actually running in. They used to be a hardcoded list of <c>dev-*</c> hosts, which
+            meant the policy was correct on dev and would have blocked the SPA from reaching its
+            own IAM and API everywhere else.
+            </para>
+            </summary>
+        </member>
+        <member name="F:BlocksOs.Api.Security.ContentSecurityPolicy.ConnectOriginKeys">
+            <summary>
+            <c>FrontendRuntime</c> keys holding an origin the SPA makes requests to. Anything
+            not derivable from these (a CDN, a third-party service) goes in
+            <c>Csp:ExtraConnectSrc</c> / <c>Csp:ExtraImgSrc</c> rather than back into code.
+            </summary>
+        </member>
+        <member name="F:BlocksOs.Api.Security.ContentSecurityPolicy.WebSocketOriginKeys">
+            <summary>
+            Hosts the SPA opens a WebSocket to: the notification hub on blocks-logic. CSP does not
+            let an <c>https:</c> source match a <c>wss:</c> URL, so without the <c>wss:</c> twin the
+            browser refuses the socket before sending it and no live notification ever arrives.
+            </summary>
+        </member>
+        <member name="F:BlocksOs.Api.Security.ContentSecurityPolicy.FormActionOriginKeys">
+            <summary>Where a login POST may be sent: the identity host and the SPA's own host.</summary>
+        </member>
+        <member name="F:BlocksOs.Api.Security.ContentSecurityPolicy.StyleNoncePlaceholder">
+            <summary>
+            Stands in for the style nonce (see <see cref="T:BlocksOs.Api.Security.StyleNonce"/>): in the policy built at
+            startup and in the built index.html (meta[name=csp-nonce]). Replaced on every response.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.ContentSecurityPolicy.WithStyleNonce(System.String,System.String)">
+            <summary>The policy for one response, with the placeholder swapped for its nonce.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.ContentSecurityPolicy.RenderIndex(System.String,System.String)">
+            <summary>The SPA shell for one response, carrying the same nonce as its header.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.ContentSecurityPolicy.BuildPolicy(System.Collections.Generic.IEnumerable{System.String},System.Collections.Generic.IEnumerable{System.String},System.Collections.Generic.IEnumerable{System.String})">
+            <summary>
+            The policy itself, separated from configuration so it can be asserted directly.
+            Public rather than internal because the test project has no InternalsVisibleTo.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.ContentSecurityPolicy.Normalize(System.Collections.Generic.IEnumerable{System.String})">
+            <summary>Reduce configured values to distinct, sorted origins.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.ContentSecurityPolicy.ToOrigin(System.String)">
+            <summary>
+            A CSP source is an origin, so any path, query or trailing slash is dropped. A value
+            that is not an absolute http(s) or ws(s) URL is ignored rather than emitted verbatim, so
+            a malformed secret cannot inject a directive.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.ContentSecurityPolicy.ToWebSocketOrigin(System.String)">
+            <summary>
+            The wss origin a browser uses to open a socket to an https host, or null. Plain http and
+            ws hosts get no socket allowance: an unencrypted socket would carry the session token and
+            notification payloads in clear text.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.ContentSecurityPolicy.Split(System.String)">
+            <summary>Space- or comma-separated list, for origins no runtime key describes.</summary>
+        </member>
+        <member name="T:BlocksOs.Api.Security.StyleNonce">
+            <summary>
+            The CSP style nonce for a browser.
+            <para>
+            A fresh nonce on every response changes the HTML body on every request, and a scanner
+            comparing two responses for the same page (ZAP rule 10104, User Agent Fuzzer) then reports
+            every page. So the nonce is derived from a random per-browser seed held in an HttpOnly
+            cookie, keyed with a secret that never leaves the process. The same browser gets the same
+            shell; another browser, or the same one after the cookie expires, gets a different nonce.
+            A page cannot read the seed, and the nonce itself is hidden from CSS and the DOM.
+            </para>
+            </summary>
+        </member>
+        <member name="F:BlocksOs.Api.Security.StyleNonce.SeedCookieName">
+            <summary>Host-only, Secure, HttpOnly cookie carrying the per-browser seed.</summary>
+        </member>
+        <member name="F:BlocksOs.Api.Security.StyleNonce.SeedLifetime">
+            <summary>The seed is rotated by expiry, which also rotates the nonce.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.StyleNonce.CreateWithRandomKey">
+            <summary>A process-local key: every response from this process uses it.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.StyleNonce.NewSeed">
+            <summary>A new random seed, base64url without padding (cookie-safe).</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.StyleNonce.IsValidSeed(System.String)">
+            <summary>True for a value <see cref="M:BlocksOs.Api.Security.StyleNonce.NewSeed"/> could have produced.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.StyleNonce.For(System.String)">
+            <summary>The nonce for a seed: 128 bits of HMAC-SHA256(key, seed), base64.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.StyleNonce.ForRequest(Microsoft.AspNetCore.Http.HttpContext)">
+            <summary>
+            The nonce for one response. A request without a valid seed that may render the SPA shell
+            gets a new seed cookie; API calls and static files get a throwaway nonce and no cookie.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.StyleNonce.MayServeShell(System.String)">
+            <summary>True for "/index.html" and extension-less paths outside /api (SPA routes).</summary>
         </member>
         <member name="T:Program">
             <summary>

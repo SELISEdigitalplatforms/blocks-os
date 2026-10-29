@@ -138,7 +138,12 @@ export const OrganizationWorkspacePanel = ({
           >
             <OrganizationUsers
               organizationId={organization.itemId}
-              action={<InviteOrganizationUser organizationId={organization.itemId} />}
+              action={
+                <InviteOrganizationUser
+                  organizationId={organization.itemId}
+                  organizationName={organization.name}
+                />
+              }
             />
           </TabsContent>
         </div>

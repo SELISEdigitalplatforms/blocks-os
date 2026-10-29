@@ -199,7 +199,6 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
                     page={queryParams.pageNumber}
                     pageSize={queryParams.pageSize}
                     totalCount={data?.totalCount || 0}
-                    pageSizeOptions={[10]}
                     onChange={onPageChangeHandler}
                   />
                 </div>

@@ -1,5 +1,10 @@
 // ─── Captcha endpoints (captcha.service) ────────────────────────────────────
 
+const BASE = "/api/captcha";
+
 export const CAPTCHA_ENDPOINTS = {
-  GETS: `/api/Secrets/Gets`,
+  SAVE: `${BASE}/save`,
+  LIST: `${BASE}/list`,
+  GET: (id: string) => `${BASE}/get/${id}`,
+  DELETE: (id: string) => `${BASE}/delete/${id}`,
 } as const;

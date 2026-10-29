@@ -1,16 +1,17 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => import("@/test-utils/__mocks__/grant-scope.mock"));
 
 const h = vi.hoisted(() => ({
-  useGetRoles: vi.fn(),
+  useGetAssignableRoles: vi.fn(),
 }));
 
 vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 vi.mock("@blocks-idp/iam/hooks/use-roles", () => ({
-  useGetRoles: (...args: unknown[]) => h.useGetRoles(...args),
+  useGetAssignableRoles: (...args: unknown[]) => h.useGetAssignableRoles(...args),
 }));
 
 import { AddClientCredentialRole } from "./add-client-credential-role";
@@ -18,7 +19,7 @@ import { AddClientCredentialRole } from "./add-client-credential-role";
 const makeRole = (i: number) => ({ itemId: `role-${i}`, name: `Role ${i}`, slug: `role_${i}` });
 
 const setRoles = (count: number, totalCount = count) => {
-  h.useGetRoles.mockReturnValue({
+  h.useGetAssignableRoles.mockReturnValue({
     data: {
       data: Array.from({ length: count }, (_, i) => makeRole(i + 1)),
       totalCount,
@@ -98,7 +99,7 @@ describe("AddClientCredentialRole", () => {
 
     await user.type(screen.getByPlaceholderText("Search by role name"), "adm");
     await waitFor(() =>
-      expect(h.useGetRoles).toHaveBeenLastCalledWith(
+      expect(h.useGetAssignableRoles).toHaveBeenLastCalledWith(
         expect.objectContaining({ filter: { search: "adm" } }),
         expect.anything(),
       ),

@@ -1,51 +1,56 @@
-import { defineConfig, devices } from "@playwright/test";
-import dotenv from "dotenv";
-import path from "path";
+import { defineConfig, devices } from "@playwright/test"
+import dotenv from "dotenv"
+import fs from "fs"
+import path from "path"
+import { e2eBrowserLaunchArgs } from "./support/env"
 
-// Load credentials + target host from the gitignored .env.e2e file.
-dotenv.config({ path: path.resolve(__dirname, ".env.e2e") });
+dotenv.config({ path: path.resolve(__dirname, ".env.e2e") })
 
-const baseURL = process.env.E2E_BASE_URL;
+const baseURL = process.env.E2E_BASE_URL
 
-// No localhost fallback on purpose: the app is served on a named domain, so a
-// missing value should fail loudly instead of silently hitting the wrong host.
 if (!baseURL) {
   throw new Error(
     "E2E_BASE_URL is not set. Copy e2e/.env.e2e.example to e2e/.env.e2e and set E2E_BASE_URL to your named domain.",
-  );
+  )
 }
 
-// Set E2E_NO_WEBSERVER=1 to skip auto-start (e.g. when you already have the app
-// running yourself, or on a machine without Git Bash's `bash` on PATH).
-const autoStartServer = process.env.E2E_NO_WEBSERVER !== "1";
+const autoStartServer = process.env.E2E_NO_WEBSERVER !== "1"
+const osSessionPath = path.resolve(__dirname, "fixtures/os-session.json")
 
 export default defineConfig({
   testDir: "./tests",
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  // Serial: these tests mutate shared backend state (create/delete real
-  // projects on dev), so running them in parallel would race.
   workers: 1,
-  reporter: [["html", { open: "never" }], ["list"]],
-  // Patches the served index.html so BLOCKS_OS_BASE_URL points at the local
-  // :5000 host (E2E_BASE_URL) instead of the remote dev server.
+  timeout: 180_000,
+  // "json" feeds scripts/test-report.mjs (npm run test:report) — a compact
+  // pass/fail summary with the failure reason for every test, instead of
+  // scrolling back through the list reporter's scattered per-test blocks.
+  reporter: [
+    ["html", { open: "never" }],
+    ["list"],
+    ["json", { outputFile: "test-results/results.json" }],
+  ],
   globalSetup: "./global-setup.ts",
+  // Deletes the shared project every run, pass or fail — a globalTeardown
+  // always runs once per invocation regardless of which project/file/grep
+  // filter was passed on the command line. The old "os-teardown" project
+  // (see git history) only ran when it was actually selected, which a
+  // filtered `playwright test tests/some-file.spec.ts` never does — that
+  // was silently skipping cleanup on anything but a bare full-suite run.
+  globalTeardown: "./global-teardown.ts",
   use: {
     baseURL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
     ignoreHTTPSErrors: true,
-    // Slow each action down so the flow is watchable in headed mode.
-    // e.g. E2E_SLOWMO=600 npm run test:headed
     launchOptions: {
       slowMo: process.env.E2E_SLOWMO ? Number(process.env.E2E_SLOWMO) : 0,
+      args: e2eBrowserLaunchArgs(),
     },
   },
-  // One command runs everything: build the FE + start API/Worker (run.sh -a),
-  // wait until baseURL responds, run the tests, then tear the server down.
-  // If a server is already listening at baseURL it is reused instead.
   ...(autoStartServer
     ? {
         webServer: {
@@ -57,9 +62,6 @@ export default defineConfig({
           timeout: 600_000,
           stdout: "pipe" as const,
           stderr: "pipe" as const,
-          // Documented override (Program.cs): FrontendRuntime__BLOCKS_* env vars
-          // win over the Mongo secret. Ensures a fresh build (run.sh -a) also
-          // bakes the local :5000 host. No-op for -b (no placeholder left).
           env: {
             FrontendRuntime__BLOCKS_OS_BASE_URL: baseURL,
           },
@@ -67,23 +69,45 @@ export default defineConfig({
       }
     : {}),
   projects: [
-    // Setup: performs the real login once and saves the session to
-    // fixtures/auth.json (see login.spec.ts).
     {
       name: "setup",
       testMatch: /auth[\\/]login\.spec\.ts/,
+      timeout: 120_000,
       use: { ...devices["Desktop Chrome"] },
     },
-    // All other tests run authenticated by reusing that saved session, and
-    // only after "setup" (login) has succeeded.
     {
-      name: "chromium",
-      testIgnore: /auth[\\/]login\.spec\.ts/,
-      dependencies: ["setup"],
+      name: "os-setup",
+      testMatch: /suite\.setup\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "os",
+      testMatch: /.*\.spec\.ts/,
+      // capture-snapshots.spec.ts is not a correctness test — it regenerates
+      // reference .yml snapshots on demand via `npm run snapshots:capture`.
+      testIgnore: [/auth[\\/]login\.spec\.ts/, /suite\.setup\.spec\.ts/, /capture-snapshots\.spec\.ts/],
+      dependencies: ["os-setup"],
       use: {
         ...devices["Desktop Chrome"],
-        storageState: "fixtures/auth.json",
+        ...(fs.existsSync(osSessionPath) ? { storageState: "fixtures/os-session.json" } : {}),
       },
     },
+    // Opt-in only. A bare `playwright test` / `npm test` must not run this
+    // 25-route walk (it was suite test #28 and added ~1.5m plus a stale
+    // token for globalTeardown). `npm run snapshots:capture` sets the env.
+    ...(process.env.E2E_CAPTURE_SNAPSHOTS === "1"
+      ? [
+          {
+            name: "snapshot-capture",
+            testMatch: /capture-snapshots\.spec\.ts/,
+            dependencies: ["os-setup"],
+            timeout: 900_000,
+            use: {
+              ...devices["Desktop Chrome"],
+              ...(fs.existsSync(osSessionPath) ? { storageState: "fixtures/os-session.json" } : {}),
+            },
+          },
+        ]
+      : []),
   ],
-});
+})

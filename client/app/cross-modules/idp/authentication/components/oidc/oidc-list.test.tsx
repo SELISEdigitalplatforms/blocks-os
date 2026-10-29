@@ -5,6 +5,7 @@ const h = vi.hoisted(() => ({
   isLoading: false,
   isFetching: false,
   data: undefined as unknown,
+  useFindSecrets: vi.fn(),
 }));
 
 vi.mock("@seliseblocks/genesis-os", () => ({
@@ -16,6 +17,9 @@ vi.mock("@blocks-idp/authentication/hooks/use-auth-oidc", () => ({
     isFetching: h.isFetching,
     data: h.data,
   }),
+}));
+vi.mock("@/cross-modules/secrets/hooks/use-secret-management", () => ({
+  useFindSecrets: h.useFindSecrets,
 }));
 // Isolate the row from its own data-fetching so the list logic is under test.
 vi.mock("./oidc-card", () => ({
@@ -39,22 +43,27 @@ describe("OidcList", () => {
   it("renders the skeleton while loading", () => {
     h.isLoading = true;
     const { container } = render(<OidcList />);
-    expect(container.querySelectorAll(".animate-pulse, [class*='skeleton']").length).toBeGreaterThan(
-      0,
-    );
+    expect(
+      container.querySelectorAll(".animate-pulse, [class*='skeleton']").length,
+    ).toBeGreaterThan(0);
     expect(screen.queryByText("Client")).toBeNull();
   });
 
-  it("renders the skeleton while refetching", () => {
+  it("keeps the rows mounted while refetching, so an open row dialog survives", () => {
     h.isFetching = true;
+    h.data = {
+      oIDCClientCredentials: [{ itemId: "1", clientId: "kept", createdDate: "2024-01-01" }],
+    };
     render(<OidcList />);
-    expect(screen.queryByText("Client")).toBeNull();
+    expect(screen.getByText("Client")).toBeTruthy();
+    expect(screen.getByText("kept")).toBeTruthy();
   });
 
   it("shows the empty state when there are no credentials", () => {
     h.data = { oIDCClientCredentials: [] };
     render(<OidcList />);
     expect(screen.getByText("No OIDC clients yet")).toBeTruthy();
+    expect(h.useFindSecrets).toHaveBeenCalledWith({ pageNumber: 1, pageSize: 10 }, true);
   });
 
   it("normalises a single credential object into a table row", () => {

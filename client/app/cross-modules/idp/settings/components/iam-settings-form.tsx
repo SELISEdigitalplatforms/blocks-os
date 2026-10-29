@@ -9,6 +9,7 @@ import {
 } from "@/components/ui-kits/form/form";
 import { Input } from "@/components/ui-kits/input/input";
 import { Switch } from "@/components/ui-kits/switch/switch";
+import { Textarea } from "@/components/ui-kits/textarea/textarea";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,7 @@ import {
   SettingsTabActions,
 } from "@blocks-idp/settings/components/settings-tab-actions";
 import { SettingsToggleCard } from "@blocks-idp/settings/components/settings-toggle-card";
+import { PasswordPolicyRegexBuilder } from "@blocks-idp/settings/components/password-policy-regex-builder";
 import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout";
 import { useSaveSettingsAuthConfig } from "@blocks-idp/settings/hooks/use-settings-config";
 import type { ISettingsAuthConfig } from "@blocks-idp/settings/models/settings.model";
@@ -121,7 +123,7 @@ const AccountActionBaseUrlInput = ({
       className={cn(
         "h-full min-w-0 flex-1 rounded-none border-0 py-2 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0",
         readOnly
-          ? "cursor-not-allowed bg-muted/80 text-muted-foreground opacity-100 focus-visible:outline-none"
+          ? "cursor-not-allowed bg-muted/80 text-muted-foreground opacity-100 focus-visible:outline-hidden"
           : "bg-transparent",
       )}
       placeholder="console.enterprise.cloud"
@@ -140,7 +142,7 @@ type SwitchRowProps = {
 const SwitchRow = ({ label, description, checked, onCheckedChange, disabled }: SwitchRowProps) => (
   <FormItem className={cn(SETTINGS_FORM_LAYOUT.toggleRow, "pb-2")}>
     <div className={SETTINGS_FORM_LAYOUT.toggleLabelGroup}>
-      <FormLabel className={cn("!mt-0", SETTINGS_FORM_LAYOUT.toggleTitle)}>{label}</FormLabel>
+      <FormLabel className={cn("mt-0!", SETTINGS_FORM_LAYOUT.toggleTitle)}>{label}</FormLabel>
       {description ? <p className={SETTINGS_FORM_LAYOUT.toggleDescription}>{description}</p> : null}
     </div>
     <FormControl className="shrink-0 self-start sm:self-center">
@@ -308,7 +310,7 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
                         <FormItem className="flex shrink-0 items-center gap-2 space-y-0 self-start sm:self-center">
                           <FormLabel
                             htmlFor="use-account-action-base-url-as-default"
-                            className="!mt-0 cursor-pointer font-normal text-muted-foreground"
+                            className="mt-0! cursor-pointer font-normal text-muted-foreground"
                           >
                             Use as default
                           </FormLabel>
@@ -390,6 +392,22 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
 
           <SettingsFormSection title="Security">
             <div className={SETTINGS_FORM_LAYOUT.stackedFields}>
+              {/* Only the IAM-hosted OIDC activation page reads this, so it is offered only
+                  while OIDC is on. App-hosted activation pages own their own form. */}
+              {isOidcEnabled ? (
+                <FormField
+                  name="collectPasswordOnActivation"
+                  control={form.control}
+                  render={({ field }) => (
+                    <SwitchRow
+                      label="Set Password During Activation"
+                      description="Ask users to create a password on the activation page. Turn this off to activate on confirmation alone and send users to login."
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  )}
+                />
+              ) : null}
               <FormField
                 name="logoutOnPasswordChange"
                 control={form.control}
@@ -407,10 +425,23 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password Strength Regex</FormLabel>
+                    <div
+                      data-testid="password-strength-regex-header"
+                      className="flex flex-wrap items-center justify-between gap-2"
+                    >
+                      <FormLabel>Password Strength Regex</FormLabel>
+                      <PasswordPolicyRegexBuilder onChange={field.onChange} />
+                    </div>
+                    <FormDescription>
+                      Use the policy builder to compose and preview
+                      common IAM password requirements.
+                    </FormDescription>
                     <FormControl>
-                      <Input
-                        className={cn(SETTINGS_FORM_LAYOUT.inputFull, "font-mono text-sm")}
+                      <Textarea
+                        className={cn(
+                          SETTINGS_FORM_LAYOUT.inputFull,
+                          "min-h-20 resize-y font-mono text-sm",
+                        )}
                         placeholder={DEFAULT_PASSWORD_STRENGTH_REGEX_PLACEHOLDER}
                         {...field}
                       />

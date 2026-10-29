@@ -64,6 +64,12 @@ describe("ClientCredentials", () => {
     expect(h.setOpen).toHaveBeenCalledWith(true);
   });
 
+  it("keeps the list mounted while it refetches, so a row's secret dialog stays open", () => {
+    h.isFetching = true;
+    render(<ClientCredentials />);
+    expect(h.listProps?.isLoading).toBe(false);
+  });
+
   it("passes an empty list through when there is no data", () => {
     h.data = undefined;
     render(<ClientCredentials />);

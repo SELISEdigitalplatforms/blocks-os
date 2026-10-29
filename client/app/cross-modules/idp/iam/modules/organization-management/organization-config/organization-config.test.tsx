@@ -21,6 +21,17 @@ describe("OrganizationConfig", () => {
     expect(link.getAttribute("href")).toBe("/app/t1/iam/settings?settingsTab=organization-config");
   });
 
+  it("uses the outline button variant on the default trigger so it does not outrank the primary Add organization button", () => {
+    renderConfig(<OrganizationConfig />);
+    const link = screen.getByRole("link", { name: /configure organization/i });
+    const button = link.querySelector("button");
+    expect(button).toBeTruthy();
+    expect(button!.className).toContain("border");
+    expect(button!.className).toContain("border-input");
+    expect(button!.className).toContain("bg-background");
+    expect(button!.className).not.toContain("bg-secondary");
+  });
+
   it("wraps a custom trigger element in the same link", () => {
     renderConfig(<OrganizationConfig trigger={<button>Custom Trigger</button>} />);
     expect(screen.getByRole("button", { name: "Custom Trigger" })).toBeTruthy();

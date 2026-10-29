@@ -1,0 +1,512 @@
+import {
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui-kits/form/form";
+import { Banner } from "@/components/ui-kits/banner/banner";
+import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
+import { Input } from "@/components/ui-kits/input/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui-kits/select/select";
+import { Switch } from "@/components/ui-kits/switch/switch";
+import { Textarea } from "@/components/ui-kits/textarea/textarea";
+import { ClientCredentialPermissionsSection } from "@blocks-idp/authentication/components/create-client-credential/client-credential-permissions-section";
+import { ClientCredentialRolesSection } from "@blocks-idp/authentication/components/create-client-credential/client-credential-roles-section";
+import { useGetAuthOidcCredentials } from "@blocks-idp/authentication/hooks/use-auth-oidc";
+import { IOidcConfig } from "@blocks-idp/authentication/models/auth.oidc.model";
+import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useEffect, useMemo } from "react";
+import { UseFormReturn } from "react-hook-form";
+import { SignupLinkConfigurationFormValues } from "./configuration-form-schema";
+
+type Props = {
+  form: UseFormReturn<SignupLinkConfigurationFormValues>;
+  formLevelError?: string | null;
+  /** While a save is in flight, the fields whose value was already read into the request lock. */
+  isPending?: boolean;
+};
+
+/** The red marker the rest of the console uses on mandatory fields. */
+const Required = () => <span className="text-destructive"> *</span>;
+
+const UNREGISTERED_CLIENT_HINT = "Register as a Blocks OIDC identity provider first";
+
+/**
+ * A link finishes at /idp/callback through the identity provider that "Register as a Blocks OIDC
+ * identity provider" creates for the client, so a client without it is shown but cannot be
+ * picked. IAM refuses it on save either way.
+ */
+const isRegisteredProvider = (client: IOidcConfig) => client.registerAsIdentityProvider === true;
+
+export const ConfigurationFormFields = ({ form, formLevelError, isPending = false }: Props) => {
+  const tenantId = useProjectStore().selectedProject?.tenantId || "";
+  const mode = form.watch("mode");
+  const selectedClientId = form.watch("clientId");
+  const credentialMode = form.watch("credentialMode");
+  const requireExistingUserPassword = form.watch("requireExistingUserPassword");
+
+  const { data: oidcData, isLoading: clientsLoading } = useGetAuthOidcCredentials({
+    projectKey: tenantId,
+  });
+
+  // A signup link lands a browser on a client's registered redirect, so a device-flow client
+  // (no browser redirect) and an inactive one are not valid targets. IAM rejects both anyway;
+  // leaving them out means the rejection never has to happen.
+  const clients = useMemo(() => {
+    const raw = oidcData?.oIDCClientCredentials;
+    const list = Array.isArray(raw) ? raw : raw ? [raw] : [];
+    return list.filter((client) => client.isActive && !client.isDeviceFlowClient);
+  }, [oidcData?.oIDCClientCredentials]);
+
+  const selectedClient = useMemo(
+    () => clients.find((client) => client.itemId === selectedClientId),
+    [clients, selectedClientId],
+  );
+
+  // A client's own registered URIs are the only legal values, so offering anything else just
+  // produces "RedirectUri is not registered for this client" after a round trip.
+  const redirectOptions = useMemo(() => {
+    if (!selectedClient) return [];
+    const uris = selectedClient.redirectUris?.length
+      ? selectedClient.redirectUris
+      : selectedClient.redirectUri
+        ? [selectedClient.redirectUri]
+        : [];
+    return [...new Set(uris.filter(Boolean))];
+  }, [selectedClient]);
+
+  // Changing the client invalidates a redirect belonging to the previous one.
+  useEffect(() => {
+    if (mode !== "Oidc" || !selectedClientId) return;
+    const current = form.getValues("redirectUri");
+    if (current && !redirectOptions.includes(current)) {
+      form.setValue("redirectUri", redirectOptions.length === 1 ? redirectOptions[0] : "", {
+        shouldDirty: true,
+      });
+    } else if (!current && redirectOptions.length === 1) {
+      form.setValue("redirectUri", redirectOptions[0], { shouldDirty: true });
+    }
+  }, [form, mode, redirectOptions, selectedClientId]);
+
+  return (
+    <div className="flex flex-col gap-5">
+      {formLevelError && (
+        <p className="text-sm text-destructive" role="alert" data-testid="form-level-error">
+          {formLevelError}
+        </p>
+      )}
+
+      <FormField
+        name="name"
+        control={form.control}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>
+              Name
+              <Required />
+            </FormLabel>
+            <FormControl>
+              <Input {...field} placeholder="Partner onboarding" />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        name="description"
+        control={form.control}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Description</FormLabel>
+            <FormControl>
+              <Textarea {...field} placeholder="Optional description" />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        name="mode"
+        control={form.control}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>
+              Mode
+              <Required />
+            </FormLabel>
+            <Select onValueChange={field.onChange} value={field.value}>
+              <FormControl>
+                <SelectTrigger data-testid="mode-select">
+                  <SelectValue placeholder="Select mode" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {/* "Blocks OIDC" is the name the rest of the console already uses for this --
+                    the client form offers "Register as a Blocks OIDC identity provider", and
+                    that registration is exactly what this mode depends on. "Construct" is
+                    left out of both labels: whoever is authoring an invitation is thinking
+                    about their app, not about what the platform calls it. */}
+                <SelectItem value="Oidc">Blocks OIDC</SelectItem>
+                <SelectItem value="Embedded">Embedded</SelectItem>
+              </SelectContent>
+            </Select>
+            <FormDescription>
+              {field.value === "Embedded"
+                ? "Your app hosts the join page and receives the session directly. No OIDC client needed."
+                : "The invitee signs in through the application you pick below. Choose this if your app uses Blocks-hosted sign-in."}
+            </FormDescription>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {mode === "Oidc" && (
+        <>
+          <FormField
+            name="clientId"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Client
+                  <Required />
+                </FormLabel>
+                <Select onValueChange={field.onChange} value={field.value || ""}>
+                  <FormControl>
+                    <SelectTrigger data-testid="client-select">
+                      <SelectValue
+                        placeholder={clientsLoading ? "Loading clients…" : "Select an OIDC client"}
+                      />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {clients.map((client) => {
+                      const registered = isRegisteredProvider(client);
+                      // A saved value that cannot be picked is shown once, below.
+                      if (!registered && client.itemId === field.value) return null;
+                      return (
+                        <SelectItem
+                          key={client.itemId}
+                          value={client.itemId}
+                          disabled={!registered}
+                        >
+                          {client.clientDisplayName || client.itemId}
+                          {!registered && (
+                            <span className="text-muted-foreground">
+                              {" "}
+                              — {UNREGISTERED_CLIENT_HINT}
+                            </span>
+                          )}
+                        </SelectItem>
+                      );
+                    })}
+                    {/* An archived, deleted or unregistered client would otherwise vanish from
+                        the form and be PATCHed away on the next save. */}
+                    {field.value &&
+                      !clients.some((c) => c.itemId === field.value && isRegisteredProvider(c)) && (
+                        <SelectItem value={field.value}>
+                          {selectedClient?.clientDisplayName || field.value} (unavailable)
+                        </SelectItem>
+                      )}
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  The application the invitee is signed in to when they open the link.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            name="redirectUri"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Redirect URI
+                  <Required />
+                </FormLabel>
+                {redirectOptions.length > 0 ? (
+                  <Select onValueChange={field.onChange} value={field.value || ""}>
+                    <FormControl>
+                      <SelectTrigger data-testid="redirect-select">
+                        <SelectValue placeholder="Select a registered redirect URI" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {redirectOptions.map((uri) => (
+                        <SelectItem key={uri} value={uri}>
+                          {uri}
+                        </SelectItem>
+                      ))}
+                      {field.value && !redirectOptions.includes(field.value) && (
+                        <SelectItem value={field.value}>{field.value} (unregistered)</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <FormControl>
+                    <Input {...field} placeholder="https://example.com/callback" />
+                  </FormControl>
+                )}
+                <FormDescription>
+                  {selectedClient
+                    ? "Must be one of this client's registered redirect URIs."
+                    : "Choose a client first to list its registered redirect URIs."}
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </>
+      )}
+
+      {mode === "Embedded" && (
+        <FormField
+          name="joinUrl"
+          control={form.control}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Join URL</FormLabel>
+              <FormControl>
+                <Input {...field} placeholder="https://app.example.com/join (optional)" />
+              </FormControl>
+              <FormDescription>
+                Where your construct hosts its join screen. Used only to build the link handed back
+                at generation — leave it empty to compose the link yourself.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
+
+      <FormField
+        name="defaultForwardedTo"
+        control={form.control}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Forwarded path</FormLabel>
+            <FormControl>
+              <Input {...field} placeholder="/welcome (optional)" />
+            </FormControl>
+            <FormDescription>Where inside the application the invitee lands.</FormDescription>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        name="credentialMode"
+        control={form.control}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>
+              Credential mode
+              <Required />
+            </FormLabel>
+            <Select onValueChange={field.onChange} value={field.value}>
+              <FormControl>
+                <SelectTrigger data-testid="credential-mode-select">
+                  <SelectValue placeholder="Select credential mode" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="Passwordless">Passwordless</SelectItem>
+                <SelectItem value="PasswordRequired">Password required</SelectItem>
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {credentialMode === "PasswordRequired" && (
+        <FormField
+          name="signInAfterActivation"
+          control={form.control}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>After activation</FormLabel>
+              <div className="flex items-start gap-2">
+                <FormControl>
+                  <Checkbox
+                    id="signInAfterActivation"
+                    className="mt-0.5 shrink-0"
+                    data-testid="sign-in-after-activation"
+                    checked={!!field.value}
+                    onCheckedChange={(checked) => field.onChange(!!checked)}
+                  />
+                </FormControl>
+                <label
+                  htmlFor="signInAfterActivation"
+                  className="cursor-pointer text-sm text-high-emphasis"
+                >
+                  Sign the invitee in once they set their password
+                </label>
+              </div>
+              <FormDescription>
+                Otherwise they finish on the sign-in screen and type the password they just chose.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
+
+      {/* Offered only for PasswordRequired: Passwordless issues no activation key, so there
+          is no activation for this to act on and the server rejects it. */}
+
+      {/* Shown in every mode and credential mode: it governs how a link treats someone who
+          already has an account, which is independent of how new users get a password. */}
+      <FormField
+        name="requireExistingUserPassword"
+        control={form.control}
+        render={({ field }) => (
+          <FormItem>
+            <div className="flex items-center justify-between gap-4 rounded-sm border p-3">
+              <div className="space-y-0.5">
+                <FormLabel className="text-sm">
+                  Existing users must confirm their password
+                </FormLabel>
+                <FormDescription className="text-xs">
+                  When on, someone who already has an account must enter their password before an
+                  invitation link signs them in.
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Switch
+                  size="md"
+                  data-testid="require-existing-user-password"
+                  checked={field.value !== false}
+                  onCheckedChange={(checked) => field.onChange(checked)}
+                  onBlur={field.onBlur}
+                  ref={field.ref}
+                  disabled={isPending}
+                />
+              </FormControl>
+            </div>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {requireExistingUserPassword === false && (
+        <Banner
+          variant="warning"
+          className="mb-0"
+          compact={false}
+          title="Existing users won't be asked for a password"
+        >
+          Anyone who can generate links from this configuration will be able to sign in as an
+          existing user without their password.
+        </Banner>
+      )}
+
+      <FormField
+        name="defaultLifetimeMinutes"
+        control={form.control}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>
+              Lifetime (minutes)
+              <Required />
+            </FormLabel>
+            <FormControl>
+              <Input
+                type="number"
+                {...field}
+                value={field.value === undefined || field.value === null ? "" : field.value}
+                onChange={(event) => {
+                  const raw = event.target.value;
+                  if (raw === "") {
+                    // Empty falls back to 1440 on submit rather than null.
+                    field.onChange(1440);
+                    return;
+                  }
+                  field.onChange(Number(raw));
+                }}
+              />
+            </FormControl>
+            <FormDescription>Between 5 and 10080 (7 days).</FormDescription>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        name="defaultMaxRedemptions"
+        control={form.control}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Max redemptions</FormLabel>
+            <FormControl>
+              <Input
+                type="text"
+                inputMode="numeric"
+                data-testid="default-max-redemptions"
+                placeholder="1 (single use)"
+                {...field}
+                value={field.value ?? ""}
+                disabled={isPending}
+              />
+            </FormControl>
+            <FormDescription>
+              Leave empty for single use. 0 = unlimited until the link expires.
+            </FormDescription>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        name="defaultRoles"
+        control={form.control}
+        render={({ field }) => (
+          <FormItem>
+            <ClientCredentialRolesSection
+              selectedSlugs={field.value}
+              onChange={field.onChange}
+              label="Default roles"
+              // Not marked required: a configuration may grant no roles by default and rely
+              // on the generating service to supply them per link.
+              required={false}
+              description="Granted to the invitee unless the service generating the link sends its own."
+              emptyTitle="No default roles"
+              emptyHint="Links from this configuration will grant only what the caller sends"
+            />
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        name="defaultPermissions"
+        control={form.control}
+        render={({ field }) => (
+          <FormItem>
+            <ClientCredentialPermissionsSection
+              selectedResources={field.value}
+              onChange={field.onChange}
+              maxPermissions={50}
+              label="Default permissions"
+              description="Granted alongside the roles above unless the caller sends its own."
+            />
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </div>
+  );
+};

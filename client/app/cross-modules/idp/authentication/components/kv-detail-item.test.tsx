@@ -23,6 +23,16 @@ vi.stubGlobal(
   },
 );
 
+vi.mock("@/components/ui-kits/tooltip/tooltip", () => {
+  const Passthrough = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
+  return {
+    Tooltip: Passthrough,
+    TooltipTrigger: Passthrough,
+    TooltipContent: Passthrough,
+    TooltipProvider: Passthrough,
+  };
+});
+
 import { KVDetailItem } from "./kv-detail-item";
 
 describe("KVDetailItem", () => {
@@ -59,9 +69,22 @@ describe("KVDetailItem", () => {
     expect(screen.queryByText("super-secret-value")).toBeNull();
   });
 
-  it("renders a copyable value inside the hoverable copy control", () => {
+  it("renders a copyable value with a copy button", () => {
     render(<KVDetailItem label="Client ID" value="copy-me-123" copyable />);
     expect(screen.getByText("copy-me-123")).toBeTruthy();
+    expect(screen.getByLabelText("Copy value")).toBeTruthy();
+  });
+
+  it("copies a copyable value through the clipboard API", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    Object.defineProperty(window, "isSecureContext", { value: true, configurable: true });
+
+    render(<KVDetailItem label="Client ID" value="clip-copyable" copyable />);
+    await user.click(screen.getByLabelText("Copy value"));
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("clip-copyable"));
   });
 
   it("copies a sensitive value through the clipboard API", async () => {
@@ -75,6 +98,21 @@ describe("KVDetailItem", () => {
     await user.click(screen.getByLabelText("Copy value"));
 
     await waitFor(() => expect(writeText).toHaveBeenCalledWith("clip-secret"));
+  });
+
+  it("shows a masked value without the full text, but copies the full value", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    Object.defineProperty(globalThis, "isSecureContext", { value: true, configurable: true });
+
+    render(<KVDetailItem label="Client Id" value="abcd-1234-5678-wxyz" copyable masked />);
+    expect(screen.queryByText("abcd-1234-5678-wxyz")).toBeNull();
+    expect(screen.getByText("abcd********wxyz")).toBeTruthy();
+    expect(screen.queryByLabelText("Show value")).toBeNull();
+    await user.click(screen.getByLabelText("Copy value"));
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("abcd-1234-5678-wxyz"));
   });
 
   it("falls back to execCommand when the clipboard API is unavailable", async () => {

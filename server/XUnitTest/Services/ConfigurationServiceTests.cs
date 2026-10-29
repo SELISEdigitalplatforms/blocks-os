@@ -1,21 +1,18 @@
+﻿using Configuration.DomainService.Notification.Services;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Blocks.Genesis;
-using Configuration.DomainService.Mail.Entities;
-using Configuration.DomainService.Mail.RequestModel;
-using Configuration.DomainService.Notification.Entities;
 using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Notification.ResponseModel;
 using Configuration.DomainService.Shared.Services;
-using Configuration.DomainService.Storage.Entities;
-using Configuration.DomainService.Storage.RequestModel;
 using FluentAssertions;
 using FluentValidation;
 using FluentValidation.Results;
-using Microsoft.Extensions.Logging;
 using Moq;
 using XUnitTest.TestSupport;
+using Blocks.Genesis.Entities.Data;
+using Blocks.Genesis.Entities.Os;
 
 namespace XUnitTest.Services
 {
@@ -23,18 +20,21 @@ namespace XUnitTest.Services
     {
         private readonly Mock<IConfigurationRepository> _repo = new();
         private readonly Mock<IValidator<SaveNotificationConfigurationRequest>> _notifValidator = new();
-        private readonly Mock<IValidator<SaveStorageConfigurationRequest>> _storageValidator = new();
-        private readonly Mock<IValidator<MailConfiguration>> _mailValidator = new();
         private readonly Mock<IMessageClient> _messageClient = new();
-        private readonly Mock<ILogger<ConfigurationService>> _logger = new();
+        private readonly Mock<INotificationAudienceGrantGuard> _grantGuard = new();
+
+        private readonly XUnitTest.TestHelpers.InMemoryKeyValueStore _pushKv = new();
 
         private ConfigurationService Service() => new(
             _repo.Object,
             _notifValidator.Object,
-            _storageValidator.Object,
-            _mailValidator.Object,
             _messageClient.Object,
-            _logger.Object);
+            new Mock<ITenants>().Object,
+            _grantGuard.Object,
+            new Configuration.DomainService.Notification.Push.NotificationPushOptionsService(
+                new Configuration.DomainService.Notification.Push.NotificationPushOptionsRepository(_pushKv),
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<Configuration.DomainService.Notification.Push.NotificationPushOptionsService>.Instance),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<ConfigurationService>.Instance);
 
         private static ValidationResult Valid() => new();
         private static ValidationResult Invalid() => new(new[] { new ValidationFailure("Name", "bad") });
@@ -75,7 +75,7 @@ namespace XUnitTest.Services
 
             response.IsSuccess.Should().BeTrue();
             saved.Should().NotBeNull();
-            saved!.Name.Should().Be("notif");
+            saved.Name.Should().Be("notif");
             saved.CreatedBy.Should().Be("u1");
         }
 
@@ -92,14 +92,16 @@ namespace XUnitTest.Services
         }
 
         [Fact]
-        public async Task GetNotificationConfiguration_DelegatesToRepository()
+        public async Task GetNotificationConfiguration_KeepsEveryStoredField_AndHasNoPushOptionsWhenNoneAreStored()
         {
-            var expected = new NotificationConfiguration { ItemId = "n-1" };
+            var expected = new NotificationConfiguration { ItemId = "n-1", Name = "n", NotifyMethod = "m", RateLimitPerMinute = 5 };
             _repo.Setup(r => r.GetNotificationConfigurationByIdAsync("n-1")).ReturnsAsync(expected);
 
             var result = await Service().GetNotificationConfigurationAsync(new GetNotificationConfigurationRequest { ItemId = "n-1" });
 
-            result.Should().BeSameAs(expected);
+            result.Should().BeEquivalentTo(expected);
+            result.PushPlatforms.Should().BeNull();
+            result.PushOptions.Should().BeNull();
         }
 
         [Fact]
@@ -114,225 +116,5 @@ namespace XUnitTest.Services
             response.Should().BeSameAs(expected);
         }
 
-        // ---------- Storage ----------
-
-        [Fact]
-        public async Task SaveStorageConfiguration_Invalid_ReturnsErrors()
-        {
-            _storageValidator.Setup(v => v.ValidateAsync(It.IsAny<SaveStorageConfigurationRequest>(), It.IsAny<CancellationToken>()))
-                             .ReturnsAsync(Invalid());
-
-            var response = await Service().SaveStorageConfigurationAsync(new SaveStorageConfigurationRequest());
-
-            response.IsSuccess.Should().BeFalse();
-            _messageClient.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<CreateDefaultFolderEvent>>()), Times.Never);
-        }
-
-        [Fact]
-        public async Task SaveStorageConfiguration_Valid_SavesAndPublishesEvent()
-        {
-            using var _ = new BlocksTestContext();
-            _storageValidator.Setup(v => v.ValidateAsync(It.IsAny<SaveStorageConfigurationRequest>(), It.IsAny<CancellationToken>()))
-                             .ReturnsAsync(Valid());
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-
-            var response = await Service().SaveStorageConfigurationAsync(new SaveStorageConfigurationRequest
-            {
-                Name = "az",
-                StorageStrategy = "Azure",
-                ConnectionString = "conn"
-            });
-
-            response.IsSuccess.Should().BeTrue();
-            response.ItemId.Should().NotBeNullOrEmpty();
-            _messageClient.Verify(m => m.SendToConsumerAsync(It.Is<ConsumerMessage<CreateDefaultFolderEvent>>(
-                e => e.Payload.ConfigurationName == "az")), Times.Once);
-        }
-
-        [Fact]
-        public async Task SaveStorageConfiguration_Sftp_GeneratesSecretKey()
-        {
-            using var _ = new BlocksTestContext();
-            _storageValidator.Setup(v => v.ValidateAsync(It.IsAny<SaveStorageConfigurationRequest>(), It.IsAny<CancellationToken>()))
-                             .ReturnsAsync(Valid());
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((StorageConfiguration?)null);
-            StorageConfiguration? saved = null;
-            _repo.Setup(r => r.SaveStorageConfigurationAsync(It.IsAny<StorageConfiguration>()))
-                 .Callback<StorageConfiguration>(c => saved = c)
-                 .Returns(Task.CompletedTask);
-
-            await Service().SaveStorageConfigurationAsync(new SaveStorageConfigurationRequest
-            {
-                Name = "sftp",
-                StorageStrategy = "sftpstorage",
-                Host = "h",
-                UserName = "u",
-                Password = "p",
-                RemoteBasePath = "/b"
-            });
-
-            saved!.SftpSecretKey.Should().NotBeNullOrEmpty();
-        }
-
-        [Fact]
-        public async Task GetStorageConfigurations_MasksSecrets()
-        {
-            _repo.Setup(r => r.GetAllStorageConfigurationsByDateAsync()).ReturnsAsync(new List<StorageConfiguration>
-            {
-                new() { StorageStrategy = "SftpStorage", Password = "secret", SftpSecretKey = "key" },
-                new() { StorageStrategy = "Azure", ConnectionString = "endpoint-value" }
-            });
-
-            var configs = await Service().GetStorageConfigurationsAsync();
-
-            configs[0].Password.Should().Be("********");
-            configs[0].SftpSecretKey.Should().Be("********");
-            configs[1].ConnectionString.Should().NotBe("endpoint-value"); // masked
-        }
-
-        [Fact]
-        public async Task GetStorageConfiguration_Sftp_MasksSecrets()
-        {
-            _repo.Setup(r => r.GetStorageConfigurationByNameAsync("sftp"))
-                 .ReturnsAsync(new StorageConfiguration { StorageStrategy = "SftpStorage", Password = "p", SftpSecretKey = "k" });
-
-            var config = await Service().GetStorageConfigurationAsync("sftp");
-
-            config.Password.Should().Be("********");
-        }
-
-        [Fact]
-        public async Task DeleteStorageConfiguration_ReturnsSuccess()
-        {
-            _repo.Setup(r => r.DeleteStorageConfigurationByNameAsync("az")).Returns(Task.CompletedTask);
-
-            var response = await Service().DeleteStorageConfigurationAsync("az");
-
-            response.IsSuccess.Should().BeTrue();
-            _repo.Verify(r => r.DeleteStorageConfigurationByNameAsync("az"), Times.Once);
-        }
-
-        // ---------- Mail ----------
-
-        [Fact]
-        public async Task SaveMailConfiguration_Invalid_ReturnsErrors()
-        {
-            _mailValidator.Setup(v => v.ValidateAsync(It.IsAny<MailConfiguration>(), It.IsAny<CancellationToken>()))
-                          .ReturnsAsync(Invalid());
-
-            var response = await Service().SaveMailConfigurationAsync(new MailConfiguration());
-
-            response.IsSuccess.Should().BeFalse();
-            _repo.Verify(r => r.SaveMailConfigurationAsync(It.IsAny<MailServerConfiguration>()), Times.Never);
-        }
-
-        [Fact]
-        public async Task SaveMailConfiguration_Valid_NewConfig_Saves()
-        {
-            using var _ = new BlocksTestContext();
-            _mailValidator.Setup(v => v.ValidateAsync(It.IsAny<MailConfiguration>(), It.IsAny<CancellationToken>()))
-                          .ReturnsAsync(Valid());
-            _repo.Setup(r => r.GetMailConfigurationByIdAsync(It.IsAny<string>()))
-                 .ReturnsAsync((MailServerConfiguration?)null);
-
-            var response = await Service().SaveMailConfigurationAsync(new MailConfiguration
-            {
-                ConfigurationId = "c-1",
-                ConfigurationName = "Primary",
-                Host = "smtp.example.com",
-                Port = 587
-            });
-
-            response.IsSuccess.Should().BeTrue();
-            _repo.Verify(r => r.SaveMailConfigurationAsync(It.Is<MailServerConfiguration>(m => m.Name == "Primary")), Times.Once);
-        }
-
-        [Fact]
-        public async Task GetMailConfiguration_MasksPassword()
-        {
-            _repo.Setup(r => r.GetMailConfigurationByNameAsync("Primary"))
-                 .ReturnsAsync(new MailConfiguration { AccountPassword = "actual" });
-
-            var config = await Service().GetMailConfigurationAsync(new GetMailConfigurationRequest { ConfigurationName = "Primary" });
-
-            config.AccountPassword.Should().Be("********");
-        }
-
-        [Fact]
-        public async Task GetMailConfiguration_Missing_ReturnsNull()
-        {
-            _repo.Setup(r => r.GetMailConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((MailConfiguration?)null!);
-
-            var config = await Service().GetMailConfigurationAsync(new GetMailConfigurationRequest { ConfigurationName = "missing" });
-
-            config.Should().BeNull();
-        }
-
-        [Fact]
-        public async Task GetAllMailConfigurations_MasksAllPasswords()
-        {
-            _repo.Setup(r => r.GetAllMailConfigurationsAsync()).ReturnsAsync(new List<MailServerConfiguration>
-            {
-                new() { AccountPassword = "a" },
-                new() { AccountPassword = "b" }
-            });
-
-            var configs = await Service().GetAllMailConfigurationsAsync();
-
-            configs.Should().OnlyContain(c => c.AccountPassword == "********");
-        }
-
-        [Fact]
-        public async Task DeleteMailConfiguration_NotFound_ReturnsError()
-        {
-            _repo.Setup(r => r.GetMailConfigurationByIdAsync("missing")).ReturnsAsync((MailServerConfiguration?)null);
-
-            var response = await Service().DeleteMailConfigurationAsync(new DeleteMailConfigurationRequest { ConfigurationId = "missing" });
-
-            response.IsSuccess.Should().BeFalse();
-            response.Errors.Should().ContainKey("ConfigurationId");
-        }
-
-        [Fact]
-        public async Task DeleteMailConfiguration_Found_Deletes()
-        {
-            _repo.Setup(r => r.GetMailConfigurationByIdAsync("c-1")).ReturnsAsync(new MailServerConfiguration());
-            _repo.Setup(r => r.DeleteMailConfigurationAsync("c-1")).Returns(Task.CompletedTask);
-
-            var response = await Service().DeleteMailConfigurationAsync(new DeleteMailConfigurationRequest { ConfigurationId = "c-1" });
-
-            response.IsSuccess.Should().BeTrue();
-            _repo.Verify(r => r.DeleteMailConfigurationAsync("c-1"), Times.Once);
-        }
-
-        [Fact]
-        public async Task DuplicateMailConfiguration_NotFound_ReturnsError()
-        {
-            _repo.Setup(r => r.GetMailConfigurationByIdAsync("missing")).ReturnsAsync((MailServerConfiguration?)null);
-
-            var response = await Service().DuplicateMailConfigurationAsync(new DuplicateMailConfigurationRequest { ConfigurationId = "missing" });
-
-            response.IsSuccess.Should().BeFalse();
-        }
-
-        [Fact]
-        public async Task DuplicateMailConfiguration_Found_SavesCopy()
-        {
-            using var _ = new BlocksTestContext();
-            _repo.Setup(r => r.GetMailConfigurationByIdAsync("c-1"))
-                 .ReturnsAsync(new MailServerConfiguration { Name = "Primary", Host = "h" });
-            MailServerConfiguration? saved = null;
-            _repo.Setup(r => r.SaveMailConfigurationAsync(It.IsAny<MailServerConfiguration>()))
-                 .Callback<MailServerConfiguration>(m => saved = m)
-                 .Returns(Task.CompletedTask);
-
-            var response = await Service().DuplicateMailConfigurationAsync(new DuplicateMailConfigurationRequest { ConfigurationId = "c-1" });
-
-            response.IsSuccess.Should().BeTrue();
-            saved!.Name.Should().Be("Primary - Copy");
-        }
     }
 }

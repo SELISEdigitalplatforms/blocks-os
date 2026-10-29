@@ -42,17 +42,6 @@ export interface IRepositoryUser {
   login?: string;
 }
 
-export interface ICloneRepo {
-  projectKey: string;
-  repoName: string;
-  branch: string;
-  repoUrl: string;
-  buildCommand?: string;
-  outputDirectory?: string;
-  installCommand?: string;
-  environmentVariables?: Record<string, string>;
-}
-
 export interface IBranchMatchResponse {
   isSuccess: boolean;
   message: string;

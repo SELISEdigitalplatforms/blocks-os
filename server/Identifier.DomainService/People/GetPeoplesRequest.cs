@@ -25,6 +25,18 @@ namespace DomainService.People
     {
         public PeopleDetails peopleDetails { get; set; }
         public List<SharedEnviroment> SharedEnviroments { get; set; }
+
+        /// <summary>
+        /// What this person may do in the project pages, unioned across their environment rows.
+        /// </summary>
+        /// <remarks>
+        /// Carried here rather than behind a per-person endpoint: the People list already reads
+        /// every row this needs, so a second round trip per person bought nothing.
+        /// </remarks>
+        public List<string> AccessPolicies { get; set; } = [];
+
+        /// <summary>"owner" or "contributor", derived from the rows. Never stored.</summary>
+        public string Role { get; set; } = "contributor";
     }
 
     public class GetPeoplesResponse : BaseResponse

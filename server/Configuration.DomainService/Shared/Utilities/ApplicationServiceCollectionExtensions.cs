@@ -1,4 +1,7 @@
+﻿using Configuration.DomainService.Notification.Services;
 using FluentValidation;
+using Os.DataAccess;
+using Os.DataAccess;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Protocols;
@@ -13,6 +16,23 @@ using Configuration.DomainService.Mail.Template.Validators;
 using Configuration.DomainService.Mail.Validators;
 using Configuration.DomainService.Storage.RequestModel;
 using Configuration.DomainService.Storage.Validators;
+using Configuration.DomainService.Storage.Repositories;
+using Configuration.DomainService.Storage.Services;
+using Blocks.Extension.DependencyInjection;
+using Configuration.DomainService.DataGateway.RequestModel;
+using Configuration.DomainService.DataGateway.Services;
+using Configuration.DomainService.DataGateway.Validators;
+using Configuration.DomainService.Captcha.RequestModel;
+using Configuration.DomainService.Captcha.Services;
+using Configuration.DomainService.Captcha.Validators;
+using Configuration.DomainService.Mail.Providers;
+using Configuration.DomainService.Mail.Services;
+using Configuration.DomainService.Integration.RequestModel;
+using Configuration.DomainService.Integration.Services;
+using Configuration.DomainService.Integration.Validators;
+using Configuration.DomainService.Shared.Secrets;
+using Configuration.DomainService.Notification.Push;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Configuration.DomainService.Shared.Utilities
 {
@@ -20,22 +40,70 @@ namespace Configuration.DomainService.Shared.Utilities
     {
         public static void AddConfigurationServices(this IServiceCollection serviceCollection)
         {
+            serviceCollection.AddOsDataAccess();
             serviceCollection.AddSingleton<IConfigurationService, ConfigurationService>();
             serviceCollection.AddSingleton<IConfigurationRepository, ConfigurationRepository>();
             serviceCollection.AddSingleton<IMailTemplateService, MailTemplateService>();
             serviceCollection.AddSingleton<IMailTemplateRepository, MailTemplateRepository>();
             serviceCollection.AddSingleton<IMailboxService, MailboxService>();
             serviceCollection.AddSingleton<IMailboxRepository, MailboxRepository>();
+            serviceCollection.AddSingleton<IIntegrationService, IntegrationService>();
+            serviceCollection.AddSingleton<IIntegrationRepository, IntegrationRepository>();
+            serviceCollection.AddSingleton<IIntegrationRequestRepository, IntegrationRequestRepository>();
+            serviceCollection.AddSingleton<IIntegrationConnectService, IntegrationConnectService>();
+            serviceCollection.AddSingleton<IIamClient, IamClient>();
+            serviceCollection.AddSingleton<INotificationAudienceGrantGuard, NotificationAudienceGrantGuard>();
+            serviceCollection.AddSingleton<INotificationPushOptionsRepository, NotificationPushOptionsRepository>();
+            serviceCollection.AddSingleton<INotificationPushOptionsService, NotificationPushOptionsService>();
+            serviceCollection.AddSingleton<IIntegrationRateLimiter, IntegrationRateLimiter>();
+
+            // Storage configurations: settings in KeyValueStores, secrets in SecretStore (blocks-data driver store).
+            serviceCollection.AddBlocksStorageConfiguration();
+            serviceCollection.AddSingleton<IStorageConfigurationRepository, StorageConfigurationRepository>();
+            serviceCollection.AddSingleton<IStorageConfigurationService, StorageConfigurationService>();
+
+            // Scoped, unlike the services above: it depends on Blocks.Secrets' ISecretService/
+            // ISecretAuditService/ISecretAuthorizationService, which are themselves Scoped
+            // because they read the request-scoped BlocksContext. A Singleton here would either
+            // fail to resolve (scope validation) or capture the first request's identity forever.
+            serviceCollection.AddScoped<ICaptchaConfigService, CaptchaConfigService>();
+
+            // Mobile push settings: scoped because the secret writer uses the scoped ISecretService.
+            serviceCollection.TryAddSingleton(TimeProvider.System);
+            serviceCollection.AddSingleton<IPushSettingsRepository, PushSettingsRepository>();
+            serviceCollection.AddScoped<IPushSecretWriter, PushSecretWriter>();
+            serviceCollection.AddScoped<IPushSettingsService, PushSettingsService>();
+
+            // Mail configuration is scoped for the same reason: the Office 365 provider
+            // definition resolves the client secret through ISecretService. The provider
+            // definitions are registered individually and collected by the registry, so adding a
+            // provider is one more AddScoped and nothing else.
+            serviceCollection.AddScoped<IMailConfigurationProvider, AmazonSesMailConfigurationProvider>();
+            serviceCollection.AddScoped<IMailConfigurationProvider, ZohoMailConfigurationProvider>();
+            serviceCollection.AddScoped<IMailConfigurationProvider, Office365SmtpMailConfigurationProvider>();
+            serviceCollection.AddScoped<IMailConfigurationProvider, GmailMailConfigurationProvider>();
+            serviceCollection.AddScoped<IMailConfigurationProviderRegistry, MailConfigurationProviderRegistry>();
+            serviceCollection.AddScoped<IMailConfigurationService, MailConfigurationService>();
+
+            // Data-source page: scoped (the connection string goes through ISecretService); the root store is a singleton.
+            serviceCollection.AddSingleton<IDataGatewayRootStore, DataGatewayRootStore>();
+            serviceCollection.AddScoped<IDataGatewayConfigurationService, DataGatewayConfigurationService>();
+
+            // Data Access page for platform (system) schemas: reads the tenant database per request.
+            serviceCollection.AddScoped<IPlatformDataAccessService, PlatformDataAccessService>();
+
+            // Finds the CAPTCHA and mail configurations that point at a secret, for the warning
+            // shown before it is archived or purged.
+            serviceCollection.AddScoped<ISecretDependentLookup, SecretDependentLookup>();
 
             serviceCollection.AddSingleton<IValidator<SaveNotificationConfigurationRequest>, NotificationConfigurationValidator>();
             serviceCollection.AddSingleton<IValidator<SaveStorageConfigurationRequest>, StorageConfigurationValidator>();
+            serviceCollection.AddSingleton<IValidator<SaveDataGatewayConfigurationRequest>, DataGatewayConfigurationValidator>();
             serviceCollection.AddSingleton<IValidator<MailConfiguration>, MailConfigurationValidator>();
+            serviceCollection.AddSingleton<IMailTemplateHtmlChecker, MailTemplateHtmlChecker>();
             serviceCollection.AddSingleton<IValidator<SaveMailTemplateRequest>, MailTemplateValidator>();
+            serviceCollection.AddSingleton<IValidator<SaveCaptchaConfigRequest>, CaptchaConfigValidator>();
+            serviceCollection.AddSingleton<IValidator<RunIntegrationSetupRequest>, RunIntegrationSetupRequestValidator>();
         }
     }
 }
-
-
-
-
-

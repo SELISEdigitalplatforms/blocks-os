@@ -36,8 +36,10 @@ vi.mock("@blocks-communication/mail/hooks/use-email-config", () => ({
   }),
 }));
 vi.mock("@seliseblocks/genesis-os/store", () => ({
-  useUserStore: (selector: (state: { userDetails: { email: string } | null }) => unknown) =>
-    selector({ userDetails: h.userDetails }),
+  useUserStore: (selector?: (state: { userDetails: { email: string } | null }) => unknown) => {
+    const state = { userDetails: h.userDetails };
+    return selector ? selector(state) : state;
+  },
 }));
 vi.mock("@blocks-localization/hooks/use-language-manager", () => ({
   useGetLanguages: () => ({ isLoading: false, data: { data: [] } }),
@@ -106,7 +108,19 @@ describe("EmailCommunicationDetails", () => {
     expect(screen.getByText("Welcome Email")).toBeTruthy();
     expect(screen.getByText("Welcome!")).toBeTruthy();
     expect(screen.getByText("Default SMTP")).toBeTruthy();
-    expect(screen.getByText("Template")).toBeTruthy();
+    expect(screen.getByText("Template preview")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Welcome Email" })).toBeTruthy();
+    expect(screen.getByTitle("Welcome Email preview").className).toContain("w-full");
+    const previewGrid = screen.getByTitle("Welcome Email preview").closest(".grid");
+    expect(previewGrid?.className).toContain("flex-none");
+    expect(previewGrid?.className).toContain("grid-cols-[minmax(0,1.4fr)_minmax(10rem,0.8fr)]");
+    expect(previewGrid?.className).not.toContain("grid-cols-1");
+    expect(screen.getByTitle("Welcome Email preview").closest("section")?.className).toContain(
+      "sm:min-h-152",
+    );
+    expect(screen.getByTitle("Welcome Email preview").closest("section")?.className).toContain(
+      "border-r",
+    );
   });
 
   it("calls the onBack handler when provided", async () => {

@@ -46,14 +46,39 @@ const isPlaceholder = (value?: string) =>
   !!value && value.startsWith(PLACEHOLDER_PREFIX) && value.endsWith("__");
 
 /**
+ * Self-referential keys: the OS SPA is served from the OS API's own `wwwroot`, so its base URL is
+ * always the origin the page was loaded from. Deriving it from `window.location` instead of the
+ * injected secret is what lets a preview host (e.g. `dev-os-546.blocksdevelopers.com`) call its own
+ * backend rather than whatever host the shared environment secret happens to name.
+ */
+const SELF_ORIGIN_KEYS = new Set<RuntimeKey>(["BLOCKS_OS_BASE_URL"]);
+
+/** Empty unless we are in a browser on a real origin (jsdom/SSR/Node give `undefined` or "null"). */
+const selfOrigin = (): string => {
+  if (typeof window === "undefined") return "";
+  const origin = window.location?.origin;
+  return origin && origin !== "null" ? origin : "";
+};
+
+/**
  * @param loadEnvMap When set (e.g. Vite `loadEnv` in `vite.config.ts`), used first so Node-side
- *   tooling matches `.env` / mode files before `window` / `import.meta.env`.
+ *   tooling matches `.env` / mode files before `window` / `import.meta.env`. This also keeps the
+ *   Vite dev-server proxy target reading the configured `.env` value for `SELF_ORIGIN_KEYS`, which
+ *   is what it needs -- resolving those against the browser origin would make the proxy target
+ *   itself.
  */
 export const getRuntimeEnv = (key: RuntimeKey, loadEnvMap?: Record<string, string>): string => {
   if (loadEnvMap) {
     const fromLoadEnv = loadEnvMap[key];
     if (fromLoadEnv && !isPlaceholder(fromLoadEnv)) {
       return fromLoadEnv;
+    }
+  }
+
+  if (SELF_ORIGIN_KEYS.has(key)) {
+    const origin = selfOrigin();
+    if (origin) {
+      return origin;
     }
   }
 

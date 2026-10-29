@@ -4,7 +4,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { DashboardSectionCard } from "@seliseblocks/genesis-os/components";
 import { DomainFormDialog } from "./domain-form-dialog";
 import { DomainTable } from "./domain-table";
-import type { IDomain } from "@seliseblocks/genesis-os/models";
+import type { IDomain } from "@/models/project.model";
 
 interface DomainsSectionProps {
   applications: IDomain[];
@@ -24,7 +24,7 @@ export const DomainsSection = ({ applications }: DomainsSectionProps) => {
 
       <DashboardSectionCard
         title="Domains"
-        description="Domains and cookie domains configured for this project"
+        description="Domains where your apps are deployed. Apps on a verified domain call Blocks through its API base URL."
         contentClassName="p-0"
         headerRight={
           <Button
