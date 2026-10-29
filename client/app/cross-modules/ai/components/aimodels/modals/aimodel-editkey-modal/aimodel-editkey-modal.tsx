@@ -94,7 +94,7 @@ export const ModelEditKeyModal = ({
   };
   const onSubmitHandler = async (data: z.infer<typeof schema>) => {
     try {
-      const rawApiKey = (data.apiKey ?? "") as string;
+      const rawApiKey = data.apiKey ?? "";
       const trimmedApiKey = rawApiKey.trim();
       const payload: IUpdateModelPayload & { model_name: string } = {
         project_key: projectKey,
