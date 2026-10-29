@@ -37,6 +37,7 @@ export interface NotificationFormValues {
   permissions: string[];
   filters: INotificationSubscriptionFilter[];
   alsoNamedUsers: boolean;
+  alsoDoneBy: boolean;
   liveEnabled: boolean;
   pushEnabled: boolean;
   enablePersistence: boolean;
@@ -69,6 +70,7 @@ export const EMPTY_FORM_VALUES: NotificationFormValues = {
   permissions: [],
   filters: [],
   alsoNamedUsers: true,
+  alsoDoneBy: false,
   liveEnabled: true,
   pushEnabled: false,
   enablePersistence: false,
@@ -121,6 +123,7 @@ export const toFormValues = (row?: INotificationConfigRow): NotificationFormValu
     permissions: audience?.permissions ?? [],
     filters: audience?.filters ?? [],
     alsoNamedUsers: ownerOnly || (audience?.alsoNamedUsers ?? false),
+    alsoDoneBy: audience?.alsoDoneBy ?? false,
     liveEnabled: row.liveEnabled ?? true,
     pushEnabled: row.pushEnabled ?? false,
     enablePersistence: row.enablePersistence ?? false,
@@ -170,7 +173,8 @@ const selectedErrors = (v: NotificationFormValues): string[] => {
     v.roles.length > LIMITS.roles ||
     v.permissions.length > LIMITS.permissions;
   if (tooMany) errors.push(NOTIFICATION_TEXT.errors.limits);
-  if (!v.alsoNamedUsers && !hasPicks(v)) errors.push(NOTIFICATION_TEXT.errors.targeted);
+  if (!v.alsoNamedUsers && !v.alsoDoneBy && !hasPicks(v))
+    errors.push(NOTIFICATION_TEXT.errors.targeted);
   const filterError = filtersError(v.filters);
   if (filterError) errors.push(filterError);
   return errors;
@@ -247,7 +251,7 @@ export const buildBuiltInPayload = (
 export const buildAudience = (v: NotificationFormValues): INotificationAudience => {
   const selected = v.level === AUDIENCE_LEVEL.Selected;
   const usedFilters = v.filters.some((f) => !isBlankFilter(f));
-  if (selected && v.alsoNamedUsers && !hasPicks(v) && !usedFilters) {
+  if (selected && v.alsoNamedUsers && !v.alsoDoneBy && !hasPicks(v) && !usedFilters) {
     return {
       level: AUDIENCE_LEVEL.AffectedOnly,
       match: AUDIENCE_MATCH.Any,
@@ -256,6 +260,7 @@ export const buildAudience = (v: NotificationFormValues): INotificationAudience 
       permissions: [],
       filters: [],
       alsoNamedUsers: false,
+      alsoDoneBy: false,
     };
   }
   return {
@@ -274,6 +279,7 @@ export const buildAudience = (v: NotificationFormValues): INotificationAudience 
           }))
       : [],
     alsoNamedUsers: selected && v.alsoNamedUsers,
+    alsoDoneBy: selected && v.alsoDoneBy,
   };
 };
 

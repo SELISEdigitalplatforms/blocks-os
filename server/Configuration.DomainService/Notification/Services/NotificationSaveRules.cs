@@ -175,7 +175,8 @@ namespace Configuration.DomainService.Notification.Services
                 ActionName = f.ActionName?.Trim() ?? string.Empty,
                 Value = f.Value?.Trim() ?? string.Empty
             }).ToList(),
-            AlsoNamedUsers = audience.AlsoNamedUsers
+            AlsoNamedUsers = audience.AlsoNamedUsers,
+            AlsoDoneBy = audience.AlsoDoneBy
         };
 
         public static NotificationPushTemplate Normalize(NotificationPushTemplate template) => new()

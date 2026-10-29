@@ -37,7 +37,7 @@ export const RECEIVER_OPTIONS = [
 
 export const RECEIVER_HELP: Record<number, string> = {
   [AUDIENCE_LEVEL.AllUsers]: "Every user in the audience gets every event.",
-  [AUDIENCE_LEVEL.Selected]: "Only the owner and the users, roles and permissions you pick.",
+  [AUDIENCE_LEVEL.Selected]: "Only the people you tick or pick below.",
 };
 
 export const MATCH_OPTIONS = [
@@ -75,8 +75,9 @@ export const NOTIFICATION_TEXT = {
   recipientsHelp: [
     "Audience: Consumer users use your application; OS users work in Blocks OS.",
     "All users: everyone in the audience gets every event.",
-    "Targeted: only the owner and the users, roles and permissions picked.",
+    "Targeted: only the owner, the person who did it, and the users, roles and permissions picked.",
     "Owner: the person who owns the record, job or account.",
+    "Done by: the person who did the action.",
     "Account owner only: a personal notice; it always goes to the account owner.",
   ],
   recipientsHelpLabel: "What recipients mean",
@@ -116,6 +117,10 @@ export const NOTIFICATION_TEXT = {
   alsoNamed: "Owner",
   alsoNamedHelp:
     "The person who owns the record, job or account. Example: Sara, whose record was changed.",
+  alsoDoneBy: "Done by",
+  alsoDoneByHelp:
+    "The person who did the action. Example: Ali, who changed Sara's record. Skipped when no person did it, such as a system job.",
+  doneByShort: "done by",
   targeted: "Targeted",
   eventOwner: "owner",
   picked: "picked",
@@ -174,7 +179,7 @@ export const NOTIFICATION_TEXT = {
     channel: "Select at least one channel: in-app or push.",
     pushKeys: "Choose a title key and a message key for the push message.",
     rate: `Rate limit must be a whole number from 0 to ${LIMITS.rateMax}.`,
-    targeted: "Targeted needs the owner or at least one user, role or permission.",
+    targeted: "Targeted needs Owner, Done by, or at least one user, role or permission.",
     limits: "A list has too many entries.",
     filters: `Use at most ${LIMITS.filters} subscription filters; each needs a context.`,
     link: `The link must be at most ${LIMITS.textLength} characters.`,

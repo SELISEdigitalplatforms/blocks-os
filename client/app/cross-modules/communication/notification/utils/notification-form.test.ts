@@ -165,6 +165,7 @@ describe("buildSavePayload", () => {
       permissions: ["orders::read"],
       filters: [{ context: "orders", actionName: "", value: "" }],
       alsoNamedUsers: true,
+      alsoDoneBy: false,
     });
     const all = buildSavePayload(valid({ level: 1, ...rules }), undefined, false, "t");
     expect(all.audience).toEqual({
@@ -175,6 +176,7 @@ describe("buildSavePayload", () => {
       permissions: [],
       filters: [],
       alsoNamedUsers: false,
+      alsoDoneBy: false,
     });
   });
 
@@ -193,6 +195,7 @@ describe("buildSavePayload", () => {
       permissions: [],
       filters: [],
       alsoNamedUsers: false,
+      alsoDoneBy: false,
     });
   });
 
@@ -203,6 +206,27 @@ describe("buildSavePayload", () => {
     expect(
       validateNotificationForm(valid({ level: 2, alsoNamedUsers: false, roles: ["r"] }), CREATE),
     ).not.toContain(NOTIFICATION_TEXT.errors.targeted);
+  });
+
+  it("saves Done by as Targeted, never as the owner-only level", () => {
+    const payload = buildSavePayload(
+      valid({ level: 2, alsoNamedUsers: true, alsoDoneBy: true }),
+      undefined,
+      false,
+      "t",
+    );
+    expect(payload.audience).toMatchObject({ level: 2, alsoNamedUsers: true, alsoDoneBy: true });
+    expect(
+      validateNotificationForm(
+        valid({ level: 2, alsoNamedUsers: false, alsoDoneBy: true }),
+        CREATE,
+      ),
+    ).not.toContain(NOTIFICATION_TEXT.errors.targeted);
+  });
+
+  it("drops Done by when All users is chosen", () => {
+    const payload = buildSavePayload(valid({ level: 1, alsoDoneBy: true }), undefined, false, "t");
+    expect(payload.audience?.alsoDoneBy).toBe(false);
   });
 
   it("keeps the push keys while push is off so they survive switching it back on", () => {

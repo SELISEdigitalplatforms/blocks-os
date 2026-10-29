@@ -19,7 +19,7 @@ export const sendToLabel = (row: INotificationConfigRow): string =>
     : (SEND_TO_LABELS[row.scope ?? NOTIFICATION_SCOPE.Project] ??
       SEND_TO_LABELS[NOTIFICATION_SCOPE.Project]);
 
-/** "Targeted: event owner + 4 picked" — the owner tick and the users, roles and permissions picked. */
+/** "Targeted: owner + done by + 4 picked" — the two ticks and the users, roles and permissions picked. */
 export const receiversLabel = (row: INotificationConfigRow): string => {
   if (row.audienceLocked) return OWNER_ONLY_LABEL;
   const audience = effectiveAudience(row);
@@ -34,6 +34,7 @@ export const receiversLabel = (row: INotificationConfigRow): string => {
       : 0;
   const parts = [
     owner ? NOTIFICATION_TEXT.eventOwner : "",
+    level === AUDIENCE_LEVEL.Selected && audience?.alsoDoneBy ? NOTIFICATION_TEXT.doneByShort : "",
     count > 0 ? `${count} ${NOTIFICATION_TEXT.picked}` : "",
   ].filter(Boolean);
   return parts.length > 0

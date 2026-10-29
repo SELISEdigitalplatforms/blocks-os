@@ -37,6 +37,8 @@ export interface INotificationAudience {
   filters: INotificationSubscriptionFilter[];
   /** Also notify the users the sending service names (Selected only) */
   alsoNamedUsers: boolean;
+  /** Also notify the user who did the action, when a person did it (Selected only). Missing on older servers. */
+  alsoDoneBy?: boolean;
 }
 
 /** Text lives in Localization (module `notifications`); the config only holds the keys. */

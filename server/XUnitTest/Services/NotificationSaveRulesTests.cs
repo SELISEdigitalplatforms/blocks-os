@@ -603,5 +603,16 @@ namespace XUnitTest.Services
             detail.PushOptions!.WebLink.Should().Be(StoredWebLink);
             detail.PushOptions.Web!.Urgency.Should().Be(UrgencyHigh);
         }
+
+        [Fact]
+        public void NormalizeKeepsTheOwnerAndDoneByTicks()
+        {
+            var audience = new NotificationAudience { Level = NotificationAudienceLevel.Selected, AlsoNamedUsers = true, AlsoDoneBy = true };
+
+            var normalized = NotificationSaveRules.Normalize(audience);
+
+            normalized.AlsoNamedUsers.Should().BeTrue();
+            normalized.AlsoDoneBy.Should().BeTrue();
+        }
     }
 }

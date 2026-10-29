@@ -51,7 +51,7 @@ function MatchChoice({ values, onPatch }: Readonly<ReceiversFieldProps>) {
   );
 }
 
-/** Targeted: the owner tick on its own, then one box with Match and the lists it combines. */
+/** Targeted: the Owner and Done by ticks on their own, then one box with Match and the lists it combines. */
 function SelectedRules({ values, onPatch }: Readonly<ReceiversFieldProps>) {
   return (
     <div className="flex flex-col gap-2.5">
@@ -63,6 +63,15 @@ function SelectedRules({ values, onPatch }: Readonly<ReceiversFieldProps>) {
           onChange={(alsoNamedUsers) => onPatch({ alsoNamedUsers })}
         />
         <HelpText>{NOTIFICATION_TEXT.alsoNamedHelp}</HelpText>
+      </div>
+      <div className="flex flex-col gap-1">
+        <CheckRow
+          id="also-done-by"
+          label={NOTIFICATION_TEXT.alsoDoneBy}
+          checked={values.alsoDoneBy}
+          onChange={(alsoDoneBy) => onPatch({ alsoDoneBy })}
+        />
+        <HelpText>{NOTIFICATION_TEXT.alsoDoneByHelp}</HelpText>
       </div>
       <div className="flex flex-col gap-2.5 rounded-md border bg-muted/40 p-3">
         <MatchChoice values={values} onPatch={onPatch} />
@@ -84,7 +93,7 @@ function SelectedRules({ values, onPatch }: Readonly<ReceiversFieldProps>) {
   );
 }
 
-/** Recipients: all users, or Targeted — the owner and/or the users, roles and permissions picked. */
+/** Recipients: all users, or Targeted — Owner, Done by and/or the users, roles and permissions picked. */
 export function ReceiversField({ values, onPatch }: Readonly<ReceiversFieldProps>) {
   return (
     <>
