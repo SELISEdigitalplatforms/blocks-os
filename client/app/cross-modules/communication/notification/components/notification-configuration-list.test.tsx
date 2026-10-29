@@ -140,7 +140,7 @@ describe("NotificationConfigurationList", () => {
       "Status",
     ]);
     const row = screen.getByText(REALTIME_ALERTS).closest("tr") as HTMLElement;
-    expect(within(row).getByText("Project users")).toBeTruthy();
+    expect(within(row).getByText("Consumer users")).toBeTruthy();
     expect(within(row).getByText("Targeted: owner")).toBeTruthy();
     // Old rows keep in-app on and push off; inbox follows the saved flag.
     expect(within(row).getByText("In-app: on")).toBeTruthy();

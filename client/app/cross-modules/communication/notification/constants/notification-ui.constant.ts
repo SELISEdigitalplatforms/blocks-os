@@ -21,9 +21,9 @@ export const NOTIFICATION_LOCALIZATION_MODULE = "notifications";
 const MOBILE_PUSH = "Mobile push";
 
 export const SEND_TO_LABELS: Record<number, string> = {
-  [NOTIFICATION_SCOPE.Project]: "Project users",
-  [NOTIFICATION_SCOPE.Console]: "Console users",
-  [NOTIFICATION_SCOPE.Both]: "Project & Console users",
+  [NOTIFICATION_SCOPE.Project]: "Consumer users",
+  [NOTIFICATION_SCOPE.Console]: "OS users",
+  [NOTIFICATION_SCOPE.Both]: "Consumer & OS users",
 };
 
 /**
@@ -65,7 +65,7 @@ export const NOTIFICATION_TEXT = {
   channelOff: "off",
   /** Help for the merged Recipients column: the audience group and who in it gets the notice. */
   recipientsHelp: [
-    "Audience: Project users use your application; Console users work in Blocks Console.",
+    "Audience: Consumer users use your application; OS users work in Blocks OS.",
     "All users: everyone in the audience gets every event.",
     "Targeted: only the owner and the users, roles and permissions picked.",
     "Owner: the person who owns the record, job or account.",
@@ -88,9 +88,9 @@ export const NOTIFICATION_TEXT = {
   enabled: "Enabled",
   description: "Description",
   sendToLabel: "Audience",
-  projectUsers: "Project users",
-  consoleUsers: "Console users",
-  sendToHelp: "Project users use your application. Console users work in Blocks Console.",
+  projectUsers: "Consumer users",
+  consoleUsers: "OS users",
+  sendToHelp: "Consumer users use your application. OS users work in Blocks OS.",
   personalHelp:
     "Personal account notice. It is always sent to the account owner and cannot be redirected.",
   receiversLabel: "Recipients",

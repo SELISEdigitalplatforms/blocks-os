@@ -54,7 +54,7 @@ const SAVE = { name: "Save" } as const;
 const EVENT_NAME = "orders-paid";
 const EVENT_NAME_LABEL = "Event name";
 const PUSH_MESSAGE_ID = "push-message";
-const PROJECT_USERS = "Project users";
+const PROJECT_USERS = "Consumer users";
 const ROW = {
   itemId: "n-1",
   name: EVENT_NAME,
@@ -96,7 +96,7 @@ describe("NotificationConfigForm", () => {
     expect(save.disabled).toBe(true);
     expect(screen.getByRole("alert").textContent).toContain(NOTIFICATION_TEXT.errors.sendTo);
 
-    await user.click(screen.getByLabelText("Console users"));
+    await user.click(screen.getByLabelText("OS users"));
     await user.click(screen.getByLabelText("In-app"));
     expect(screen.getByRole("alert").textContent).toContain(NOTIFICATION_TEXT.errors.channel);
   });
@@ -105,7 +105,7 @@ describe("NotificationConfigForm", () => {
     const user = userEvent.setup();
     const { onClose } = renderForm();
     await user.type(screen.getByLabelText(EVENT_NAME_LABEL), EVENT_NAME);
-    await user.click(screen.getByLabelText("Console users"));
+    await user.click(screen.getByLabelText("OS users"));
     await user.click(screen.getByRole("button", SAVE));
 
     await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));

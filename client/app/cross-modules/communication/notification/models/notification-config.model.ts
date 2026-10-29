@@ -48,7 +48,7 @@ export interface INotificationPushTemplate {
 
 /** Delivery and receiver fields. Rows from older servers lack them: read the defaults in the form mapper. */
 export interface INotificationConfigDeliveryFields {
-  /** 0 Project users, 1 Console users, 2 Both */
+  /** 0 Consumer users, 1 OS users, 2 Both */
   scope?: number;
   audience?: INotificationAudience | null;
   defaultAudience?: INotificationAudience | null;

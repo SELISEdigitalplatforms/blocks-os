@@ -97,7 +97,7 @@ describe("validateNotificationForm", () => {
 });
 
 describe("toFormValues", () => {
-  it("reads an old row as in-app on, push off, project users, Targeted to the event owner", () => {
+  it("reads an old row as in-app on, push off, consumer users, Targeted to the owner", () => {
     const values = toFormValues(row());
     expect(values).toMatchObject({
       sendProject: true,

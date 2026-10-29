@@ -101,7 +101,7 @@ export const effectiveAudience = (row?: INotificationConfigRow): INotificationAu
 
 const rateToText = (rate: number | undefined) => String(rate || LIMITS.rateDefault);
 
-/** Rows from older servers lack the new fields: they read as in-app on, push off, project users. */
+/** Rows from older servers lack the new fields: they read as in-app on, push off, consumer users. */
 export const toFormValues = (row?: INotificationConfigRow): NotificationFormValues => {
   if (!row) return EMPTY_FORM_VALUES;
   const audience = effectiveAudience(row);
