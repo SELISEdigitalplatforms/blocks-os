@@ -390,5 +390,28 @@ namespace XUnitTest.Integration
             rows.Single(r => r["Key"] == "mfa-config")["CreatedBy"].AsString.Should().Be("creator");
             rows.Single(r => r["Key"] == notificationKey)["Value"].AsString.Should().Be("changed by the project");
         }
+
+        [Fact]
+        public async Task KeyValueSeedCopier_CopiesTheBlocksEventTriggerCatalog_WithItsEventsUnchanged()
+        {
+            var suffix = Guid.NewGuid().ToString("N");
+            var seed = _fixture.DbContextProvider.GetDatabase("", "kvseed-" + suffix[..8]);
+            var projectDb = _fixture.DbContextProvider.GetDatabase("", "kvproj-" + suffix[..8]);
+            var events = new BsonArray
+            {
+                new BsonDocument { { "EventName", "UserMutationEvent" }, { "IsValidForWorkflow", false }, { "IsValidForFunction", false } },
+            };
+            await seed.GetCollection<BsonDocument>(KeyValueSeedCopier.CollectionName).InsertOneAsync(new BsonDocument
+            {
+                { "_id", Guid.NewGuid().ToString("N") }, { "Key", KeyValueSeedCopier.BlocksEventTriggersKey }, { "Value", events }, { "Tags", new BsonArray() },
+            });
+
+            var inserted = await KeyValueSeedCopier.CopyAsync(seed, projectDb, "creator");
+
+            inserted.Should().Be(1);
+            var row = await projectDb.GetCollection<BsonDocument>(KeyValueSeedCopier.CollectionName)
+                .Find(Builders<BsonDocument>.Filter.Eq("Key", KeyValueSeedCopier.BlocksEventTriggersKey)).SingleAsync();
+            row["Value"].Should().Be(events);
+        }
     }
 }
