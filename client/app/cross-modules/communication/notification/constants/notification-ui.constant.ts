@@ -37,7 +37,7 @@ export const RECEIVER_OPTIONS = [
 
 export const RECEIVER_HELP: Record<number, string> = {
   [AUDIENCE_LEVEL.AllUsers]: "Every user in the audience gets every event.",
-  [AUDIENCE_LEVEL.Selected]: "Only the event owner and the users, roles and permissions you pick.",
+  [AUDIENCE_LEVEL.Selected]: "Only the related user and the users, roles and permissions you pick.",
 };
 
 export const MATCH_OPTIONS = [
@@ -67,8 +67,8 @@ export const NOTIFICATION_TEXT = {
   recipientsHelp: [
     "Audience: Project users use your application; Console users work in Blocks Console.",
     "All users: everyone in the audience gets every event.",
-    "Targeted: only the event owner and the users, roles and permissions picked.",
-    "Event owner: the user the event is about, named by the sending service.",
+    "Targeted: only the related user and the users, roles and permissions picked.",
+    "Related user: the user this event is about, e.g. the owner of the changed record.",
     "Account owner only: a personal notice; it always goes to the account owner.",
   ],
   recipientsHelpLabel: "What recipients mean",
@@ -104,14 +104,14 @@ export const NOTIFICATION_TEXT = {
   searchPermissions: "Search permissions",
   noOptionMatches: "No matches",
   loading: "Loading...",
-  alsoNamed: "Event owner",
+  alsoNamed: "Related user",
   alsoNamedHelp:
-    "The user the event is about, such as the account owner or the person who started the job. The sending service names this user.",
+    "The user this event is about. Example: when a record changes, the owner of that record; when a job ends, the person who started it.",
   targeted: "Targeted",
-  eventOwner: "event owner",
+  eventOwner: "related user",
   picked: "picked",
   allUsersBuiltInWarning:
-    "Every user will get this notice, also for events about other users. Use Targeted to keep it to the event owner.",
+    "Every user will get this notice, also for events about other users. Use Targeted to keep it to the related user.",
   filterSummary: "Subscription filter (optional)",
   filterContext: "Context",
   filterAction: "Action",
@@ -165,7 +165,7 @@ export const NOTIFICATION_TEXT = {
     channel: "Select at least one channel: in-app or mobile push.",
     pushKeys: "Choose a title key and a message key for the push message.",
     rate: `Rate limit must be a whole number from 0 to ${LIMITS.rateMax}.`,
-    targeted: "Targeted needs the event owner or at least one user, role or permission.",
+    targeted: "Targeted needs the related user or at least one user, role or permission.",
     limits: "A list has too many entries.",
     filters: `Use at most ${LIMITS.filters} subscription filters; each needs a context.`,
     link: `The link must be at most ${LIMITS.textLength} characters.`,
