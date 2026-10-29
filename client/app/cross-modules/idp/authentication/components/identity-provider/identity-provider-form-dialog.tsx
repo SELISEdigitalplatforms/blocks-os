@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Eye, EyeOff, Info, Plus, X } from "lucide-react";
+import { AlertTriangle, Eye, EyeOff, Info, Plus, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -42,7 +42,11 @@ import {
   toPermissionStubs,
   toRoleStubs,
   buildIdentityProviderPayload,
+  getSocialLoginRedirectUri,
+  hasRedirectUri,
+  addRedirectUriToList,
 } from "./identity-provider-form.util";
+import { getBlocksIamBaseUrl } from "@blocks-idp/settings/utils/auth-config-form";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { getBlocksOidcWellKnownUrl } from "@/lib/get-api-path";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
@@ -173,6 +177,13 @@ export function IdentityProviderFormDialog({
   const providerType = watch("providerType");
   const blocksOidcWellKnownUrl = tenantId ? getBlocksOidcWellKnownUrl(tenantId) : "";
   const selectedSocialProvider = SOCIAL_AUTH_PROVIDERS_CONFIG[watch("provider") as SSO_PROVIDERS];
+  const loginRedirectUri = getSocialLoginRedirectUri(
+    getBlocksIamBaseUrl(),
+    providerType,
+    watch("provider"),
+    tenantId,
+  );
+  const loginRedirectUriListed = hasRedirectUri(redirectUris, loginRedirectUri);
 
   // Google and Microsoft can each hold several entries (one per app registration), so
   // both stay selectable no matter what is already configured.
@@ -337,6 +348,8 @@ export function IdentityProviderFormDialog({
   };
 
   const addRedirectUri = () => setRedirectUris((prev) => [...prev, ""]);
+  const addLoginRedirectUri = () =>
+    setRedirectUris((prev) => addRedirectUriToList(prev, loginRedirectUri));
   const removeRedirectUri = (idx: number) =>
     setRedirectUris((prev) => prev.filter((_, i) => i !== idx));
   const updateRedirectUri = (idx: number, val: string) =>
@@ -621,6 +634,51 @@ export function IdentityProviderFormDialog({
                 <Label>
                   Redirect URI(s) <span className="text-destructive">*</span>
                 </Label>
+                {loginRedirectUri && (
+                  <div
+                    className="space-y-1.5 rounded-lg border bg-muted/40 p-3"
+                    data-testid="login-redirect-uri"
+                  >
+                    <p className="text-xs font-semibold text-high-emphasis">
+                      Redirect URI for the IAM login page
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        aria-label="Redirect URI for the IAM login page"
+                        readOnly
+                        aria-readonly="true"
+                        tabIndex={-1}
+                        value={loginRedirectUri}
+                        className="cursor-default bg-muted font-mono text-xs focus-visible:ring-0 focus-visible:ring-offset-0"
+                      />
+                      <CopyToClipboardButton textToCopy={loginRedirectUri}>
+                        <span />
+                      </CopyToClipboardButton>
+                    </div>
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      Social sign-in works only when this exact URI is in the list below and is
+                      also registered at the provider (for example, in the Google or Microsoft
+                      console). Case and a trailing &quot;/&quot; count.
+                    </p>
+                    {!loginRedirectUriListed && (
+                      <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-warning-200 bg-warning-50 px-2.5 py-1.5">
+                        <p className="flex items-center gap-1.5 text-xs text-warning-800">
+                          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                          Not in the list yet.
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={addLoginRedirectUri}
+                        >
+                          Add to list
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {redirectUris.map((uri, idx) => (
                   <div key={idx} className="flex items-center gap-2">
                     <Input
