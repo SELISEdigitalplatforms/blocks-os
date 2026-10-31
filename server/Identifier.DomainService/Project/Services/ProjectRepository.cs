@@ -25,6 +25,7 @@ namespace DomainService.Projects
         private readonly IDataGatewayRootProvisioner _dataGatewayRoot;
         private readonly IOsDataAccess _dataAccess;
         private readonly IStorageConfigurationSeedCopier _storageSeedCopier;
+        private readonly IMailConfigurationSeedCopier _mailSeedCopier;
 
         private const string _projectStatusTraceCollectionName = "ProjectStatusTracers";
         private const string _legacyDefaultUserRoleSlug = "user";
@@ -38,10 +39,12 @@ namespace DomainService.Projects
                                  IEncodingService urlEncodingService,
                                  IDataGatewayRootProvisioner dataGatewayRoot,
                                  IOsDataAccess dataAccess,
-                                 IStorageConfigurationSeedCopier storageSeedCopier)
+                                 IStorageConfigurationSeedCopier storageSeedCopier,
+                                 IMailConfigurationSeedCopier mailSeedCopier)
         {
             _dataAccess = dataAccess;
             _storageSeedCopier = storageSeedCopier;
+            _mailSeedCopier = mailSeedCopier;
             _dbContextProvider = dbContextProvider;
             _blocksSecret = blocksSecret;
             _configuration = configuration;
@@ -449,7 +452,8 @@ namespace DomainService.Projects
             var sourceDatabase = _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, "BlocksConfiguration");
 
             await Task.WhenAll(
-                CopyDocumentAsync(sourceDatabase, consumerDb, "MailServerConfigurations", project),
+                // The project's own mail secrets, not a raw copy (the seed's secret ids belong to the root tenant).
+                CopyMailConfigurationsAsync(sourceDatabase, consumerDb, project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "EmailTemplates", project),
                 // Settings rows + the project's own secrets, not a raw copy (the seed's secret ids belong to the root tenant).
                 CopyStorageConfigurationsAsync(sourceDatabase, consumerDb, project),
@@ -479,6 +483,10 @@ namespace DomainService.Projects
         /// <summary>The seed's storage secrets live in the root tenant (config <c>RootTenantId</c>).</summary>
         private Task CopyStorageConfigurationsAsync(IMongoDatabase sourceDb, IMongoDatabase targetDb, Tenant project) =>
             _storageSeedCopier.CopyAsync(sourceDb, targetDb, _configuration["RootTenantId"], project.TenantId);
+
+        /// <summary>The seed's mail secrets live in the root tenant (config <c>RootTenantId</c>).</summary>
+        private Task CopyMailConfigurationsAsync(IMongoDatabase sourceDb, IMongoDatabase targetDb, Tenant project) =>
+            _mailSeedCopier.CopyAsync(sourceDb, targetDb, _configuration["RootTenantId"], project.TenantId, project.CreatedBy);
 
         /// <summary>
         /// Copies the system entity schemas (IAM, OS, Logic, Release, Monitor) of the seed into the project, unchanged:

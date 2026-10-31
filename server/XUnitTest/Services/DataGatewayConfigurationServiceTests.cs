@@ -37,8 +37,13 @@ namespace XUnitTest.Services
         public List<SetSecretRequest> SetRequests { get; } = new();
         public List<string> Deleted { get; } = new();
         public List<string> SetTenants { get; } = new();
+        public List<string> GetValueTenants { get; } = new();
+        public List<string> DeleteTenants { get; } = new();
         public Exception? RotateThrows { get; set; }
         public Exception? GetThrows { get; set; }
+        public Exception? GetValueThrows { get; set; }
+        /// <summary>Runs inside SetAsync, after the secret exists: lets a test act between the secret and the write that follows.</summary>
+        public Action? AfterSet { get; set; }
 
         public string Add(string value, string status = SecretStatuses.Active)
         {
@@ -52,7 +57,9 @@ namespace XUnitTest.Services
             _calls.Add("secret.Set");
             SetRequests.Add(request);
             SetTenants.Add(BlocksContext.GetContext()?.TenantId ?? "");
-            return Task.FromResult(Add(request.Value));
+            var id = Add(request.Value);
+            AfterSet?.Invoke();
+            return Task.FromResult(id);
         }
 
         public Task<SecretResult?> GetAsync(string secretId, CancellationToken cancellationToken = default)
@@ -67,6 +74,8 @@ namespace XUnitTest.Services
         public Task<string> GetValueAsync(string secretId, CancellationToken cancellationToken = default)
         {
             _calls.Add("secret.GetValue");
+            GetValueTenants.Add(BlocksContext.GetContext()?.TenantId ?? "");
+            if (GetValueThrows != null) throw GetValueThrows;
             if (!Items.TryGetValue(secretId, out var s)) throw new SecretNotFoundException(secretId);
             if (s.Status != SecretStatuses.Active) throw new SecretStateException(s.Status, "read value");
             return Task.FromResult(s.Value ?? "");
@@ -84,6 +93,7 @@ namespace XUnitTest.Services
         {
             _calls.Add("secret.Delete");
             Deleted.Add(secretId);
+            DeleteTenants.Add(BlocksContext.GetContext()?.TenantId ?? "");
             return Task.CompletedTask;
         }
 

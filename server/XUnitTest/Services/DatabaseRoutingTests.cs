@@ -105,7 +105,8 @@ public class DatabaseRoutingTests
         encoding.Setup(e => e.EncodeToBase26Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>())).ReturnsAsync("abc");
         var dataGatewayRoot = new Mock<IDataGatewayRootProvisioner>();
         var storageSeedCopier = new Mock<IStorageConfigurationSeedCopier>();
-        var repository = new ProjectRepository(provider.Object, new ConfigurationBuilder().Build(), secret, encoding.Object, dataGatewayRoot.Object, new XUnitTest.TestHelpers.PassThroughOsDataAccess(), storageSeedCopier.Object);
+        var mailSeedCopier = new Mock<IMailConfigurationSeedCopier>();
+        var repository = new ProjectRepository(provider.Object, new ConfigurationBuilder().Build(), secret, encoding.Object, dataGatewayRoot.Object, new XUnitTest.TestHelpers.PassThroughOsDataAccess(), storageSeedCopier.Object, mailSeedCopier.Object);
         var tenant = new Tenant
         {
             TenantId = "new-stg", TenantGroupId = "group", Environment = "stg", Name = "Placement test",
@@ -127,6 +128,9 @@ public class DatabaseRoutingTests
         // reads the seed on main and writes to the stored placement.
         Assert.DoesNotContain("StorageConfigurations", writes);
         storageSeedCopier.Verify(c => c.CopyAsync(source.Object, target.Object, It.IsAny<string?>(), "new-stg"), Times.Once);
+        // Mail configurations likewise: their secrets are stored again for the project.
+        Assert.DoesNotContain("MailServerConfigurations", writes);
+        mailSeedCopier.Verify(c => c.CopyAsync(source.Object, target.Object, It.IsAny<string?>(), "new-stg", "creator"), Times.Once);
         Assert.Contains("create:Roles", writes);
         Assert.Contains("index:Roles", writes);
         registry.Verify(c => c.InsertOneAsync(tenant, null, default), Times.Once);
