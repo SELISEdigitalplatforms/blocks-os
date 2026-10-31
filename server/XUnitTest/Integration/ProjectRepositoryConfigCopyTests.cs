@@ -18,6 +18,7 @@ namespace XUnitTest.Integration
     public class ProjectRepositoryConfigCopyTests
     {
         private readonly MongoIntegrationFixture _fixture;
+        private readonly Mock<IMailConfigurationSeedCopier> _mailSeedCopier = new();
 
         public ProjectRepositoryConfigCopyTests(MongoIntegrationFixture fixture)
         {
@@ -35,7 +36,7 @@ namespace XUnitTest.Integration
             var encoding = new Mock<IEncodingService>();
             encoding.Setup(e => e.EncodeToBase26Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>()))
                     .ReturnsAsync("abcde");
-            return new ProjectRepository(_fixture.DbContextProvider, config, secret.Object, encoding.Object, Mock.Of<IDataGatewayRootProvisioner>(), new XUnitTest.TestHelpers.PassThroughOsDataAccess(), Mock.Of<IStorageConfigurationSeedCopier>());
+            return new ProjectRepository(_fixture.DbContextProvider, config, secret.Object, encoding.Object, Mock.Of<IDataGatewayRootProvisioner>(), new XUnitTest.TestHelpers.PassThroughOsDataAccess(), Mock.Of<IStorageConfigurationSeedCopier>(), _mailSeedCopier.Object);
         }
 
         private static Tenant NewProject(string suffix)
@@ -79,10 +80,13 @@ namespace XUnitTest.Integration
             tracer.IsDefaultConfigurationCopied.Should().BeTrue();
 
             var target = TargetDb(project);
-            var copiedMail = await target.GetCollection<BsonDocument>("MailServerConfigurations")
-                .Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
-            copiedMail.Should().ContainSingle();
-            copiedMail[0]["CreatedBy"].AsString.Should().Be(project.CreatedBy);
+            // Mail configurations are not copied raw (the seed's secret ids belong to the root tenant): the mail copier
+            // gets the seed and the project database.
+            (await target.GetCollection<BsonDocument>("MailServerConfigurations").CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(0);
+            _mailSeedCopier.Verify(c => c.CopyAsync(
+                It.Is<IMongoDatabase>(d => d.DatabaseNamespace.DatabaseName == source.DatabaseNamespace.DatabaseName),
+                It.Is<IMongoDatabase>(d => d.DatabaseNamespace.DatabaseName == target.DatabaseNamespace.DatabaseName),
+                null, project.TenantId, project.CreatedBy), Times.Once);
 
             var copiedIdentity = await target.GetCollection<BsonDocument>("IdentityConfigurations")
                 .Find(FilterDefinition<BsonDocument>.Empty).FirstOrDefaultAsync();
@@ -240,7 +244,8 @@ namespace XUnitTest.Integration
             var target = TargetDb(project);
             (await (await target.ListCollectionNamesAsync()).ToListAsync()).Should().Contain(probe);
             // No document copy ran: the documents-copied flag was already set.
-            (await target.GetCollection<BsonDocument>("MailServerConfigurations").CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(0);
+            (await target.GetCollection<BsonDocument>("EmailTemplates").CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(0);
+            _mailSeedCopier.Verify(c => c.CopyAsync(It.IsAny<IMongoDatabase>(), It.IsAny<IMongoDatabase>(), It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string?>()), Times.Never);
         }
 
         [Fact]

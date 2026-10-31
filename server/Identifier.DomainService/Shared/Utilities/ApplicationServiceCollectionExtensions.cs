@@ -42,6 +42,7 @@ namespace DomainService.Shared
             services.AddSingleton<IProjectManagementService, ProjectManagementService>();
             services.AddSingleton<IDataGatewayRootProvisioner, DataGatewayRootProvisioner>();
             services.AddSingleton<IStorageConfigurationSeedCopier, StorageConfigurationSeedCopier>();
+            services.AddSingleton<IMailConfigurationSeedCopier, MailConfigurationSeedCopier>();
             services.AddSingleton<IProjectRepository, ProjectRepository>();
 
             services.AddSingleton<IDomainManagementService, DomainManagementService>();
