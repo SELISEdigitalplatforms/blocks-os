@@ -42,6 +42,7 @@ namespace XUnitTest.Services
         public Exception? RotateThrows { get; set; }
         public Exception? GetThrows { get; set; }
         public Exception? GetValueThrows { get; set; }
+        public Exception? DeleteThrows { get; set; }
         /// <summary>Runs inside SetAsync, after the secret exists: lets a test act between the secret and the write that follows.</summary>
         public Action? AfterSet { get; set; }
 
@@ -92,8 +93,9 @@ namespace XUnitTest.Services
         public Task DeleteAsync(string secretId, CancellationToken cancellationToken = default)
         {
             _calls.Add("secret.Delete");
-            Deleted.Add(secretId);
             DeleteTenants.Add(BlocksContext.GetContext()?.TenantId ?? "");
+            if (DeleteThrows != null) throw DeleteThrows;
+            Deleted.Add(secretId);
             return Task.CompletedTask;
         }
 

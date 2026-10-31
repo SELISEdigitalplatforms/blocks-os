@@ -245,6 +245,22 @@ namespace XUnitTest.Integration
             (await ProjectConfigAsync("cfg-1"))["Name"].AsString.Should().Be("parallel run");
         }
 
+        [Fact]
+        public async Task LostInsert_SecretDeleteFails_IsLoggedByTypeOnly_AndTheCopyStillCompletes()
+        {
+            await SeedAsync(PasswordConfig("cfg-1", password: SeedPassword));
+            _secrets.AfterSet = () => ProjectConfigs.InsertOne(new BsonDocument { { "_id", "cfg-1" }, { "Name", "parallel run" } });
+            var failure = new SecretVaultException("vault unavailable", "delete", "orphan-ref");
+            _secrets.DeleteThrows = failure;
+
+            await CopyAsync();
+
+            _secrets.DeleteTenants.Should().Equal(ProjectTenant);
+            (await ProjectConfigAsync("cfg-1"))["Name"].AsString.Should().Be("parallel run");
+            _logger.Entries.Should().Contain(e => e.Level == LogLevel.Error && e.Message.Contains(nameof(SecretVaultException)));
+            _logger.Entries.Should().OnlyContain(e => e.Exception == null && !e.Message.Contains(failure.Message) && !e.Message.Contains("orphan-ref"));
+        }
+
         // ---------- drift ----------
 
         [Fact]

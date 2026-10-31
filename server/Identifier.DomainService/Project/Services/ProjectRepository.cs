@@ -9,6 +9,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using Pipelines.Sockets.Unofficial.Arenas;
 using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using Blocks.Genesis.Entities.Os;
 using Os.DataAccess;
@@ -33,6 +34,7 @@ namespace DomainService.Projects
         // Mongo field name; must match the stored documents exactly.
         private const string LastUpdatedDateField = "LastUpdatedDate";
 
+        [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "DI constructor: each parameter is an injected dependency.")]
         public ProjectRepository(IDbContextProvider dbContextProvider,
                                  IConfiguration configuration,
                                  IBlocksSecret blocksSecret,

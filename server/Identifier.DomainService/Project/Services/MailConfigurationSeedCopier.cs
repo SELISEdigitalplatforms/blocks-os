@@ -201,7 +201,7 @@ namespace DomainService.Projects
             }
             catch (Exception ex)
             {
-                _logger.LogError("[mail-config] seed-copy own-secret-delete result=failed error={ErrorType} tenant={TenantId}", ex.GetType().Name, tenantId);
+                _logger.LogError("[mail-config] seed-copy own-secret-delete result=failed error={ErrorType} tenant={TenantId}", ex.GetType().Name, tenantId); // NOSONAR S6667 — type only: a secret-store message can carry the reference
             }
         }
 
