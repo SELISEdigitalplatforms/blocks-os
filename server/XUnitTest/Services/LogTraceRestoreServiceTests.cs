@@ -32,9 +32,6 @@ namespace XUnitTest.Services
         private readonly Mock<IConfiguration> _configuration = new();
         private readonly Mock<ILmtArchiveRestoreConfigurationRepository> _configRepository = new();
         private readonly MailPreCheckDb _mailDb = new();
-        private readonly Mock<IHttpService> _httpService = new();
-        private readonly Mock<ICryptoService> _cryptoService = new();
-        private readonly Mock<ITenants> _tenants = new();
         private readonly Mock<IArchiveRestoreRepository> _archiveRestoreRepository = new();
         private readonly Mock<IRestoreUserRepository> _userRepository = new();
 
@@ -48,9 +45,6 @@ namespace XUnitTest.Services
             _configuration.Object,
             _configRepository.Object,
             _mailDb.Object,
-            _httpService.Object,
-            _cryptoService.Object,
-            _tenants.Object,
             _archiveRestoreRepository.Object,
             _userRepository.Object, new XUnitTest.TestHelpers.PassThroughOsDataAccess());
 
@@ -216,65 +210,6 @@ namespace XUnitTest.Services
         }
 
         /// <summary>
-        /// The in-app notification must not be collateral damage of a missing email address — the
-        /// UI relies on it to drop its progress overlay.
-        /// </summary>
-        [Fact]
-        public async Task UpdateFileRequestStatus_StillNotifiesInApp_WhenNoEmailWasCaptured()
-        {
-            GivenRequest(new RestoreRequestRecord
-            {
-                RequestId = "req-1",
-                TenantId = "tenant-a",
-                Status = RestoreRequestStatus.InProgress,
-                UserEmail = null
-            });
-
-            GivenAllFilesCompleted();
-            GivenCompletionTransitionWon();
-            GivenNotificationEndpointAccepts();
-
-            await Service().UpdateFileRequestStatus("req-1");
-
-            _httpService.Verify(h => h.Post<NotificationResponse>(
-                It.IsAny<object>(),
-                "https://notify.example.com/send",
-                It.IsAny<string>(),
-                It.IsAny<Dictionary<string, string>>(),
-                It.IsAny<CancellationToken>(),
-                It.IsAny<int?>()), Times.Once);
-        }
-
-        /// <summary>
-        /// The worker has no ambient request context, so the tenant used to sign the notification
-        /// has to come from the persisted request rather than BlocksContext.
-        /// </summary>
-        [Fact]
-        public async Task UpdateFileRequestStatus_SignsTheNotificationWithTheRequestsTenant()
-        {
-            GivenRequest(new RestoreRequestRecord
-            {
-                RequestId = "req-1",
-                TenantId = "tenant-from-record",
-                Status = RestoreRequestStatus.InProgress
-            });
-
-            GivenAllFilesCompleted();
-            GivenCompletionTransitionWon();
-            GivenNotificationEndpointAccepts();
-
-            await Service().UpdateFileRequestStatus("req-1");
-
-            _httpService.Verify(h => h.Post<NotificationResponse>(
-                It.IsAny<object>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.Is<Dictionary<string, string>>(headers => headers["x-blocks-key"] == "tenant-from-record"),
-                It.IsAny<CancellationToken>(),
-                It.IsAny<int?>()), Times.Once);
-        }
-
-        /// <summary>
         /// The cold window can overlap blobs the lifecycle policy has already moved to Archive.
         /// Reading one fails with HTTP 409, so planning has to reject it up front with a message
         /// that tells the user to use archive restore instead of surfacing a raw Azure error.
@@ -403,18 +338,12 @@ namespace XUnitTest.Services
             });
             GivenAllFilesCompleted();
             GivenCompletionTransitionWon();
-            GivenNotificationEndpointAccepts();
             _configRepository
                 .Setup(r => r.GetLmtArchiveRestoreConfigurationsAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new LmtArchiveRestoreConfigurations
                 {
                     RetentionDay = 7,
-                    EmailTemplateConfig = new LogTraceRestoreEmailTConfig { TemplateName = templateName! },
-                    NotificationConfig = new NotificationConfig
-                    {
-                        NotificationUrl = "https://notify.example.com/send",
-                        NotificationConfigName = "log_trace_restore"
-                    }
+                    EmailTemplateConfig = new LogTraceRestoreEmailTConfig { TemplateName = templateName! }
                 });
         }
 
@@ -519,63 +448,6 @@ namespace XUnitTest.Services
                 .ReturnsAsync(true);
 
         /// <summary>
-        /// The notification API rejects a payload without ConfigurationName with HTTP 400, and the
-        /// send is fire-and-forget, so the only visible symptom was a logged null result. The field
-        /// was being set on an anonymous object under a misspelled name — which the compiler
-        /// accepts silently, since any name is a valid property on an anonymous type.
-        /// </summary>
-        [Fact]
-        public async Task UpdateFileRequestStatus_SendsTheConfigurationNameTheNotificationApiRequires()
-        {
-            GivenRequest(new RestoreRequestRecord
-            {
-                RequestId = "req-1",
-                TenantId = "tenant-a",
-                Status = RestoreRequestStatus.InProgress
-            });
-
-            GivenAllFilesCompleted();
-            GivenCompletionTransitionWon();
-            GivenNotificationEndpointAccepts();
-
-            var posted = CaptureNotificationPayload();
-
-            await Service().UpdateFileRequestStatus("req-1");
-
-            NotificationField(posted, "ConfigurationName").Should().Be("log_trace_restore");
-        }
-
-        /// <summary>Reads a field off the posted payload the way the receiving API binds it: by name,
-        /// case-insensitively. A misspelling therefore reads as absent rather than as a different name.</summary>
-        private static string? NotificationField(IReadOnlyList<object> posted, string name)
-        {
-            posted.Should().HaveCount(1, "exactly one notification should have been posted");
-
-            return posted[0].GetType().GetProperties()
-                .FirstOrDefault(property => string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase))
-                ?.GetValue(posted[0]) as string;
-        }
-
-        private List<object> CaptureNotificationPayload()
-        {
-            var posted = new List<object>();
-
-            _httpService
-                .Setup(h => h.Post<NotificationResponse>(
-                    It.IsAny<object>(),
-                    It.IsAny<string>(),
-                    It.IsAny<string>(),
-                    It.IsAny<Dictionary<string, string>>(),
-                    It.IsAny<CancellationToken>(),
-                    It.IsAny<int?>()))
-                .Callback<object, string, string, Dictionary<string, string>, CancellationToken, int?>(
-                    (payload, _, _, _, _, _) => posted.Add(payload))
-                .ReturnsAsync((new NotificationResponse { isSuccess = true }, "ok"));
-
-            return posted;
-        }
-
-        /// <summary>
         /// A tenant that has never asked for a restore is the normal first-visit state, not a
         /// failure. Throwing here made the overview page's first load raise an exception on every
         /// fresh project, which the client could only absorb with a catch-all that hid real errors
@@ -605,35 +477,6 @@ namespace XUnitTest.Services
                 new GetLatestColdRestoreRequestIdRequest { SourceType = "Cold" });
 
             response.RequestId.Should().Be("req-7");
-        }
-
-        private void GivenNotificationEndpointAccepts()
-        {
-            _configRepository
-                .Setup(r => r.GetLmtArchiveRestoreConfigurationsAsync(It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new LmtArchiveRestoreConfigurations
-                {
-                    RetentionDay = 7,
-                    NotificationConfig = new NotificationConfig
-                    {
-                        NotificationUrl = "https://notify.example.com/send",
-                        NotificationConfigName = "log_trace_restore"
-                    }
-                });
-
-            // GetTenantByID is left returning null: the salt lookup is null-conditional in
-            // production and Tenant has required members that add nothing to these assertions.
-            _cryptoService.Setup(c => c.Hash(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).Returns("hashed");
-
-            _httpService
-                .Setup(h => h.Post<NotificationResponse>(
-                    It.IsAny<object>(),
-                    It.IsAny<string>(),
-                    It.IsAny<string>(),
-                    It.IsAny<Dictionary<string, string>>(),
-                    It.IsAny<CancellationToken>(),
-                    It.IsAny<int?>()))
-                .ReturnsAsync((new NotificationResponse { isSuccess = true }, "ok"));
         }
 
         [Fact]

@@ -13,10 +13,11 @@ export const buildInviteUserFormSchema = (isMultiOrgEnabled: boolean) =>
       .string()
       .trim()
       .min(1, "Email is required")
-      .email({ message: "Please enter a valid email address" }),
+      .check(z.email("Please enter a valid email address")),
     organizationIds: isMultiOrgEnabled
       ? z
-          .array(z.string().min(1))
+          // zod 3's default message, kept so the form reads the same after the zod 4 upgrade.
+          .array(z.string().min(1, "String must contain at least 1 character(s)"))
           .min(1, "Please select an organization")
       : z.array(z.string()).optional(),
     roles: z.array(z.object({ slug: z.string() })),

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { buildIdentityProviderPayload, deriveProtocol } from "./identity-provider-form.util";
+import {
+  addRedirectUriToList,
+  buildIdentityProviderPayload,
+  buildSocialLoginRedirectUri,
+  deriveProtocol,
+  getSocialLoginRedirectUri,
+  hasRedirectUri,
+} from "./identity-provider-form.util";
 import { IdentityProvider } from "@blocks-idp/authentication/models/identity-provider.model";
 
 const editedProvider: IdentityProvider = {
@@ -88,5 +95,44 @@ describe("buildIdentityProviderPayload", () => {
     expect(payload.protocol).toBe("oidc");
     expect(payload.providerType).toBe("blocks-oidc");
     expect(payload.clientId).toBe("client-id");
+  });
+});
+
+describe("social login redirect URI helpers", () => {
+  const URI = "https://a/cb";
+  const IAM = "https://iam.test";
+  it("builds the IAM login page redirect URI and trims trailing slashes from the base", () => {
+    expect(buildSocialLoginRedirectUri(`${IAM}//`, "google", "t1")).toBe(
+      "https://iam.test/oidc/google/callback/t1",
+    );
+  });
+
+  it.each([
+    ["", "google", "t1"],
+    [IAM, "", "t1"],
+    [IAM, "google", ""],
+  ])("returns empty when a part is missing (%s, %s, %s)", (base, provider, tenant) => {
+    expect(buildSocialLoginRedirectUri(base, provider, tenant)).toBe("");
+  });
+
+  it("is empty for a non-social provider type", () => {
+    expect(getSocialLoginRedirectUri(IAM, "byos", "google", "t1")).toBe("");
+    expect(getSocialLoginRedirectUri(IAM, "social", "google", "t1")).toBe(
+      "https://iam.test/oidc/google/callback/t1",
+    );
+  });
+
+  it("matches exactly after trimming, case-sensitive", () => {
+    expect(hasRedirectUri([` ${URI} `], URI)).toBe(true);
+    expect(hasRedirectUri([URI.toUpperCase()], URI)).toBe(false);
+    expect(hasRedirectUri([`${URI}/`], URI)).toBe(false);
+    expect(hasRedirectUri(undefined, URI)).toBe(false);
+    expect(hasRedirectUri([URI], "")).toBe(false);
+  });
+
+  it("fills the first empty row, else appends, and never duplicates", () => {
+    expect(addRedirectUriToList(["https://x", ""], "https://a")).toEqual(["https://x", "https://a"]);
+    expect(addRedirectUriToList(["https://x"], "https://a")).toEqual(["https://x", "https://a"]);
+    expect(addRedirectUriToList(["https://a"], "https://a")).toEqual(["https://a"]);
   });
 });

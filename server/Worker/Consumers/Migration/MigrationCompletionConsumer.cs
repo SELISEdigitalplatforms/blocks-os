@@ -149,8 +149,7 @@ namespace Worker.Consumers.Migration
      ["targetedProjectKey"] = tracker.TargetedProjectKey
      },
     UserIds = [startedBy],
-    TenantId = _configuration?["RootTenantId"],
-    ConnectionId = tracker.ProjectKey
+    TenantId = _configuration?["RootTenantId"]
     });
   }
 

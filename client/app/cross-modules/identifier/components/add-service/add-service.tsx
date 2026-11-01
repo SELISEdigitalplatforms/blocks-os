@@ -31,7 +31,7 @@ import { isErrorWithErrors } from "@/lib/error";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus } from "lucide-react";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { useRegisterService } from "@blocks-identifier/hooks/use-services";
 import { IRegisterServicePayload } from "@blocks-identifier/types/services.type";
 import { addServiceDefaultValues, AddServiceForm, addServiceSchema } from "./utils";
@@ -40,7 +40,7 @@ export const AddService = () => {
   const { mutateAsync: registerService, isPending } = useRegisterService();
   const form = useForm<AddServiceForm>({
     defaultValues: addServiceDefaultValues,
-    resolver: zodResolver(addServiceSchema),
+    resolver: zodResolver(addServiceSchema) as Resolver<AddServiceForm>,
   });
   const {
     formState: { isDirty },

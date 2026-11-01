@@ -16,8 +16,12 @@ vi.mock("@seliseblocks/genesis-os", () => {
     TooltipTrigger: Passthrough,
     TooltipContent: Passthrough,
     TooltipProvider: Passthrough,
+    useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
   };
 });
+vi.mock("@blocks-idp/settings/utils/auth-config-form", () => ({
+  getBlocksIamBaseUrl: () => "https://iam.test",
+}));
 vi.mock("@/hooks/use-toast", () => ({
   showErrorToast: h.showErrorToast,
   showSuccessToast: h.showSuccessToast,
@@ -50,9 +54,52 @@ const provider = {
   initialPermissions: [],
 } as unknown as IdentityProvider;
 
+const LOGIN_REDIRECT_URI = "https://iam.test/oidc/google/callback/tenant-1";
+const MISSING_WARNING = "login-redirect-uri-missing";
+
 describe("ProviderEntryItem", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  const social = (redirectUris: string[]) =>
+    ({
+      ...provider,
+      providerType: "social",
+      provider: "google",
+      displayName: "Google",
+      redirectUris,
+    }) as unknown as IdentityProvider;
+
+  it("warns when a social provider lacks the IAM login redirect URI", async () => {
+    const user = userEvent.setup();
+    render(
+      <ul>
+        <ProviderEntryItem item={social(["https://other/cb"])} />
+      </ul>,
+    );
+    expect(screen.getByTestId(MISSING_WARNING)).toBeTruthy();
+    await user.click(screen.getByText("Google"));
+    expect(screen.getByText("IAM login redirect URI")).toBeTruthy();
+    expect(screen.getByText(LOGIN_REDIRECT_URI)).toBeTruthy();
+  });
+
+  it("shows no warning when the IAM login redirect URI is listed", () => {
+    render(
+      <ul>
+        <ProviderEntryItem item={social([LOGIN_REDIRECT_URI])} />
+      </ul>,
+    );
+    expect(screen.queryByTestId(MISSING_WARNING)).toBeNull();
+  });
+
+  it("shows no warning or login redirect URI for a non-social provider", () => {
+    render(
+      <ul>
+        <ProviderEntryItem item={provider} />
+      </ul>,
+    );
+    expect(screen.queryByTestId(MISSING_WARNING)).toBeNull();
   });
 
   it("renders the entry's name and provider key", () => {

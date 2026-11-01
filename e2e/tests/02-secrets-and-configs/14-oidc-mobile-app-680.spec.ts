@@ -9,6 +9,7 @@ import {
   type OidcClientsApi,
   applicationTypeRadio,
   closeOidcDialogFlow,
+  closeOneTimeSecretDialogFlow,
   countOidcRequests,
   deleteOidcClientFlow,
   expectApplicationTypeFlow,
@@ -100,6 +101,8 @@ test.describe("OIDC client application type (#680)", () => {
         expect(body.registerAsIdentityProvider).toBe(false);
         expect(body.redirectUris).toEqual([MOBILE_URI]);
         await expect(createdToast(page)).toBeVisible({ timeout: 15_000 });
+        // 2c271042: the secret is shown once after create; the dialog closes only with its button.
+        await closeOneTimeSecretDialogFlow(page, clientName, "created");
       });
 
       await test.step("H6, H12, H11: reopen → Mobile preselected with the same URI; exactly one GET oidc-clients/{id}", async () => {
@@ -156,6 +159,7 @@ test.describe("OIDC client application type (#680)", () => {
         const save = nextOidcSave(page);
         await updateButton(page).click();
         const body = await save;
+        expect(body.clientDisplayName).toBe(renamed);
         expect(body.clientType).toBe("public");
         expect(body.useTokensCookie).toBe(true);
         await expect(updatedToast(page)).toBeVisible({ timeout: 15_000 });

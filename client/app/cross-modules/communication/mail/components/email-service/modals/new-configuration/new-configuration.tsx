@@ -8,7 +8,7 @@ import {
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
 import { Button } from "@/components/ui-kits/button/button";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -81,7 +81,7 @@ const createSchema = ({
         .string()
         .regex(/^([\w-]+\.)*[\w-]+\.[a-z]{2,}$/, { message: "Host must be a valid domain" }),
       port: z.coerce
-        .number()
+        .number<number>()
         .min(1, { message: "Port must be between 1 and 65535" })
         .max(65535, { message: "Port must be between 1 and 65535" }),
       enableSSL: z.boolean(),
@@ -90,8 +90,8 @@ const createSchema = ({
       senderUserName: z.string().optional(),
       accountPassword: z.string().optional(),
       isInbound: z.boolean(),
-      provider: z.coerce.number(),
-      authenticationType: z.coerce.number().optional(),
+      provider: z.coerce.number<number>(),
+      authenticationType: z.coerce.number<number>().optional(),
       tenantId: z.string().optional(),
       clientId: z.string().optional(),
       clientSecret: z.string().optional(),
@@ -102,7 +102,7 @@ const createSchema = ({
 
       if (provider && (data.isInbound ? !provider.supportsInbound : !provider.supportsOutbound)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message: `${provider.label} is not supported for ${data.isInbound ? "inbound" : "outbound"} configurations`,
           path: ["provider"],
         });
@@ -111,14 +111,14 @@ const createSchema = ({
       if (!data.isInbound) {
         if (!data.senderName || data.senderName.length < 3 || data.senderName.length > 100) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: "Sender name must be between 3 and 100 characters",
             path: ["senderName"],
           });
         }
         if (!data.senderAddress || !EMAIL_PATTERN.test(data.senderAddress)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: "Sender Address must be a valid email",
             path: ["senderAddress"],
           });
@@ -130,20 +130,20 @@ const createSchema = ({
       if (usesPasswordAuthentication(data.provider, data.isInbound, data.authenticationType)) {
         if (!data.senderUserName) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: "Sender username is required",
             path: ["senderUserName"],
           });
         }
         if (!data.accountPassword) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: "Password is required",
             path: ["accountPassword"],
           });
         } else if (data.accountPassword.length < 6) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: "Password must be at least 6 characters long",
             path: ["accountPassword"],
           });
@@ -153,21 +153,21 @@ const createSchema = ({
 
       if (!data.tenantId?.trim()) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message: "Tenant ID is required",
           path: ["tenantId"],
         });
       }
       if (!data.clientId?.trim()) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message: "Client ID is required",
           path: ["clientId"],
         });
       }
       if (!data.mailboxAddress || !EMAIL_PATTERN.test(data.mailboxAddress)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message: "Mailbox address must be a valid email",
           path: ["mailboxAddress"],
         });
@@ -178,7 +178,7 @@ const createSchema = ({
       if (!data.clientSecret) {
         if (!hasClientSecretOnFile) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: needsNewClientSecret
               ? LINKED_SECRET_REPAIR_REQUIRED_MESSAGE
               : "Client secret is required",
@@ -187,7 +187,7 @@ const createSchema = ({
         }
       } else if (!data.clientSecret.trim()) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message: "Client secret must not be blank",
           path: ["clientSecret"],
         });
@@ -266,7 +266,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
             mailboxAddress: "",
             clientSecret: "",
           },
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as unknown as Resolver<IEmailConfig>,
     mode: "onChange",
   });
   const isInbound = form.watch("isInbound");

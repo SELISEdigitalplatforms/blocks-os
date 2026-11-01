@@ -16,6 +16,9 @@ const h = vi.hoisted(() => ({
 vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
+vi.mock("@blocks-idp/settings/utils/auth-config-form", () => ({
+  getBlocksIamBaseUrl: () => "https://iam.test",
+}));
 vi.mock("@/hooks/use-toast", () => ({
   showErrorToast: h.showErrorToast,
   showSuccessToast: h.showSuccessToast,
@@ -295,6 +298,35 @@ describe("IdentityProviderFormDialog", () => {
       />,
     );
     expect(screen.getAllByText("Google").length).toBeGreaterThan(0);
+  });
+
+  it("shows the IAM login redirect URI for a social provider and adds it to the list", async () => {
+    const user = userEvent.setup();
+    render(
+      <IdentityProviderFormDialog
+        open
+        onOpenChange={vi.fn()}
+        presetProviderType="social"
+        presetProvider="google"
+      />,
+    );
+    const expected = "https://iam.test/oidc/google/callback/tenant-1";
+    const panel = screen.getByTestId("login-redirect-uri");
+    const shown = screen.getByLabelText("Redirect URI for the IAM login page") as HTMLInputElement;
+    expect(shown.value).toBe(expected);
+    expect(panel.textContent).toContain("Not in the list yet.");
+
+    await user.click(screen.getByRole("button", { name: "Add to list" }));
+
+    const rows = screen.getAllByPlaceholderText("https://your-app.com/callback") as HTMLInputElement[];
+    expect(rows).toHaveLength(1);
+    expect(rows[0].value).toBe(expected);
+    expect(panel.textContent).not.toContain("Not in the list yet.");
+  });
+
+  it("does not show the IAM login redirect URI for a non-social provider type", () => {
+    render(<IdentityProviderFormDialog open onOpenChange={vi.fn()} presetProviderType="blocks-oidc" />);
+    expect(screen.queryByTestId("login-redirect-uri")).toBeNull();
   });
 
   it("preselects Blocks OIDC via presetProviderType and reveals its Well Known URL", () => {

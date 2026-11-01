@@ -89,6 +89,19 @@ public sealed class IamClient : IIamClient
         return new(response?.IsSuccess == true, response?.ClientSecret, response?.Errors, error);
     }
 
+    public async Task<IamGrantScope?> GetGrantScopeAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var (response, _) = await _http.Get<GrantScopeResponse>(Url("iam/grant-scope"), Headers(), cancellationToken);
+            return response is null ? null : new IamGrantScope(response.IsSystemUser, response.HeldRoles ?? [], response.ManagedRoles ?? [], response.HeldPermissions ?? []);
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
+    }
+
     private async Task<List<IamRole>> GetRolesAsync(object filter, CancellationToken cancellationToken)
     {
         var (response, _) = await _http.Post<RolesResponse>(new { page = 0, pageSize = 10, filter }, Url("iam/roles"), headers: Headers(), cancellationToken: cancellationToken);
@@ -109,6 +122,7 @@ public sealed class IamClient : IIamClient
 
     private class MutationResponse { [JsonPropertyName("isSuccess")] public bool IsSuccess { get; set; } [JsonPropertyName("itemId")] public string? ItemId { get; set; } [JsonPropertyName("errors")] public Dictionary<string, string>? Errors { get; set; } [JsonPropertyName("requiresDuplicateNameConfirmation")] public bool RequiresDuplicateNameConfirmation { get; set; } }
     private sealed class CredentialResponse : MutationResponse { [JsonPropertyName("clientSecret")] public string? ClientSecret { get; set; } }
+    private sealed class GrantScopeResponse { [JsonPropertyName("isSystemUser")] public bool IsSystemUser { get; set; } [JsonPropertyName("heldRoles")] public List<string>? HeldRoles { get; set; } [JsonPropertyName("managedRoles")] public List<string>? ManagedRoles { get; set; } [JsonPropertyName("heldPermissions")] public List<string>? HeldPermissions { get; set; } }
     private sealed class PermissionsResponse { [JsonPropertyName("data")] public List<PermissionDto>? Data { get; set; } }
     private sealed class PermissionDto { [JsonPropertyName("itemId")] public string? ItemId { get; set; } [JsonPropertyName("resource")] public string? Resource { get; set; } }
     private sealed class RolesResponse { [JsonPropertyName("data")] public List<RoleDto>? Data { get; set; } }

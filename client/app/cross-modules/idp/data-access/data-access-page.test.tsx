@@ -96,7 +96,7 @@ describe("DataAccessPage", () => {
     });
   });
 
-  it("lists every platform schema with its service, and filters by service and name", async () => {
+  it("lists every platform schema with its service, and filters by service and name", { timeout: 15_000 }, async () => {
     const user = userEvent.setup();
     renderPage();
 
@@ -104,13 +104,13 @@ describe("DataAccessPage", () => {
     expect(list).toBeTruthy();
     expect(screen.getByRole("button", { name: /Build/ })).toBeTruthy();
 
-    // The service filter lives in the URL, which updates asynchronously.
+    // The service filter lives in the URL, which updates asynchronously — past the 1s default on a loaded CI runner.
     await user.click(screen.getByRole("button", { name: "Release", pressed: false }));
-    await waitFor(() => expect(screen.queryByRole("button", { name: /^Role/ })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("button", { name: /^Role/ })).toBeNull(), { timeout: 4_000 });
     expect(screen.getByRole("button", { name: /Build/ })).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "All" }));
-    await screen.findByRole("button", { name: "All", pressed: true });
+    await screen.findByRole("button", { name: "All", pressed: true }, { timeout: 4_000 });
     await user.type(screen.getByLabelText("Search schemas"), "rol");
     expect(screen.getByRole("button", { name: /Role/ })).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Build/ })).toBeNull();

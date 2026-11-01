@@ -39,8 +39,10 @@ import {
   deriveApplicationType,
   describeTokenLifetime,
   formatMinutes,
+  buildLoginPolicyFields,
   getRedirectUriSchema,
   knownMinutes,
+  loginPolicyToForm,
   TOKEN_LIFETIME_LIMITS,
   type TokenLifetimeFormValues,
   tokenLifetimesToForm,
@@ -52,6 +54,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui-kits/radio-group/rad
 import { Button } from "@/components/ui-kits/button/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
 import { isErrorWithErrors } from "@/lib/error";
+import { OidcSignInSection } from "./oidc-sign-in-section";
 import { OneTimeSecret, OneTimeSecretDialog } from "../one-time-secret-dialog";
 import { maskId } from "../../utils/mask-id.util";
 
@@ -348,6 +351,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
         loadedApplicationType,
         ...loadedTokenLifetimes,
         loadedTokenLifetimes,
+        ...loginPolicyToForm(existingOidc.loginPolicy),
       });
       const loadedMode = modeForLifetimes(loadedTokenLifetimes);
       setTokenMode(loadedMode);
@@ -431,6 +435,8 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
         itemId: isEditMode ? itemId : "",
         clientDisplayName: data.clientDisplayName,
         ...(tokenLifetimes ? { tokenLifetimes } : {}),
+        // Always sent from this form; device-flow clients have no sign-in rule.
+        ...buildLoginPolicyFields(data),
       };
       const res = await mutateAsync(payload);
       if (!res.isSuccess) {
@@ -810,6 +816,9 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                   )}
                 />
               )}
+
+              {/* Sign-in — not offered for device-flow clients: they never show a login page. */}
+              {!isDeviceFlowClient && <OidcSignInSection form={form} tenantId={tenantId} />}
 
               {/* Token lifetimes — the project values, or this client's own values. An input
                   left empty in Custom still uses the project setting. */}

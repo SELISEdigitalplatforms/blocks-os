@@ -31,20 +31,27 @@ export async function verifyEmptyStateFlow(page: Page) {
   // reuses the shared project), so this "fresh project" check must clean up
   // leftovers instead of hard-failing — otherwise every later step that
   // assumes an empty gallery breaks too.
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const leftovers = enterpriseSection(page).getByRole("listitem");
-    if ((await leftovers.count().catch(() => 1)) === 0) break;
+  const leftovers = enterpriseSection(page).getByRole("listitem");
+  const deletedToast = page
+    .getByRole("region", { name: /Notifications/i })
+    .getByText("Identity provider deleted successfully", { exact: true });
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const before = await leftovers.count();
+    if (before === 0) break;
     const row = leftovers.first();
-    await row.scrollIntoViewIfNeeded().catch(() => undefined);
+    await row.scrollIntoViewIfNeeded();
     const deleteButton = row.getByRole("button", { name: "Delete provider" });
-    if (!(await deleteButton.isVisible({ timeout: 5_000 }).catch(() => false))) break;
-    await deleteButton.click();
+    await expect(deleteButton).toBeVisible({ timeout: 10_000 });
+    await deleteButton.click({ timeout: 15_000 });
     await expect(page.getByRole("heading", { name: "Delete identity provider" })).toBeVisible({
       timeout: 10_000,
     });
     await page.getByRole("button", { name: "Delete", exact: true }).click();
-    await expect(row).toHaveCount(0, { timeout: 15_000 }).catch(() => undefined);
-    await page.waitForTimeout(1_000);
+    await expect(deletedToast.first()).toBeVisible({ timeout: 15_000 });
+    await expect(leftovers).toHaveCount(before - 1, { timeout: 15_000 });
+    // The toast list sits over the cards' Delete buttons and intercepted the next click until
+    // the test timed out; wait for it to go instead of a fixed pause.
+    await expect(deletedToast).toHaveCount(0, { timeout: 15_000 });
   }
   await expect(enterpriseSection(page).getByRole("listitem")).toHaveCount(0, {
     timeout: 15_000,

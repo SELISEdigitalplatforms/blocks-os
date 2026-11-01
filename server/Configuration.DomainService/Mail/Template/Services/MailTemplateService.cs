@@ -8,13 +8,16 @@ namespace Configuration.DomainService.Mail.Template.Services
     {
         private readonly IValidator<SaveMailTemplateRequest> _validator;
         private readonly IMailTemplateRepository _templateRepository;
+        private readonly IMailTemplateHtmlChecker _htmlChecker;
 
         public MailTemplateService(
             IValidator<SaveMailTemplateRequest> validator,
-            IMailTemplateRepository templateRepository)
+            IMailTemplateRepository templateRepository,
+            IMailTemplateHtmlChecker htmlChecker)
         {
             _validator = validator;
             _templateRepository = templateRepository;
+            _htmlChecker = htmlChecker;
         }
 
         public async Task<BaseMutationResponse> SaveTemplateAsync(SaveMailTemplateRequest template)
@@ -67,6 +70,18 @@ namespace Configuration.DomainService.Mail.Template.Services
                 {
                     IsSuccess = false,
                     Errors = new Dictionary<string, string> { { "Template", "Template not found" } }
+                };
+            }
+
+            // A clone is a new template, so its body meets the same rules as a saved one; an old
+            // template saved before the rules existed cannot be copied as it is.
+            var bodyProblem = _htmlChecker.FindProblem(repoTemplate.TemplateBody);
+            if (bodyProblem != null)
+            {
+                return new BaseMutationResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string> { { nameof(EmailTemplate.TemplateBody), bodyProblem } }
                 };
             }
 

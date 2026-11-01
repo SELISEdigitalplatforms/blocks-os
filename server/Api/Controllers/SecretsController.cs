@@ -1,8 +1,6 @@
 using Blocks.Genesis;
 using Blocks.Secrets;
 using Configuration.DomainService.Shared.Secrets;
-using DomainService.Shared.Services;
-using Os.DataAccess.Notifications;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -32,12 +30,10 @@ public class SecretsController : ControllerBase
     internal const string ArchivedValueMessage = "This secret is archived. Restore it to read its value.";
 
     private readonly ISecretService _secretService;
-    private readonly IProjectChangeNotifier? _notifier;
 
-    public SecretsController(ISecretService secretService, IProjectChangeNotifier? notifier = null)
+    public SecretsController(ISecretService secretService)
     {
         _secretService = secretService;
-        _notifier = notifier;
     }
 
     [HttpPost("set")]
@@ -161,7 +157,6 @@ public class SecretsController : ControllerBase
         ArgumentNullException.ThrowIfNull(request);
 
         await _secretService.RotateAsync(request.SecretId, new RotateSecretRequest { Value = request.Value }, cancellationToken);
-        await NotifySecretChangedAsync("secret-rotated", "Secret rotated", request.SecretId, cancellationToken);
         return Success();
     }
 
@@ -172,7 +167,6 @@ public class SecretsController : ControllerBase
         ArgumentNullException.ThrowIfNull(request);
 
         await _secretService.LockAsync(request.SecretId, cancellationToken);
-        await NotifySecretChangedAsync("secret-locked", "Secret locked", request.SecretId, cancellationToken);
         return Success();
     }
 
@@ -184,7 +178,6 @@ public class SecretsController : ControllerBase
         ArgumentNullException.ThrowIfNull(request);
 
         await _secretService.UnlockAsync(request.SecretId, cancellationToken);
-        await NotifySecretChangedAsync("secret-unlocked", "Secret unlocked", request.SecretId, cancellationToken);
         return Success();
     }
 
@@ -193,7 +186,6 @@ public class SecretsController : ControllerBase
     public async Task<BaseResponse> Delete([FromQuery] string secretId, CancellationToken cancellationToken)
     {
         await _secretService.DeleteAsync(secretId, cancellationToken);
-        await NotifySecretChangedAsync("secret-deleted", "Secret deleted", secretId, cancellationToken);
         return Success();
     }
 
@@ -217,7 +209,6 @@ public class SecretsController : ControllerBase
     public async Task<BaseResponse> Purge([FromQuery] string secretId, CancellationToken cancellationToken)
     {
         await _secretService.PurgeAsync(secretId, cancellationToken);
-        await NotifySecretChangedAsync("secret-purged", "Secret permanently deleted", secretId, cancellationToken);
         return Success();
     }
 
@@ -228,7 +219,6 @@ public class SecretsController : ControllerBase
         ArgumentNullException.ThrowIfNull(request);
 
         await _secretService.UpdateAccessAsync(request.SecretId, request.Access, cancellationToken);
-        await NotifySecretChangedAsync("secret-access-changed", "Secret access changed", request.SecretId, cancellationToken);
         return Success();
     }
 
@@ -239,19 +229,6 @@ public class SecretsController : ControllerBase
 
     private static BaseResponse Success() => new() { IsSuccess = true };
 
-    /// <summary>
-    /// Tells the project owner and the caller, after the change succeeded. Only the secret id is
-    /// sent, never its name or value. Done here, not in the service, so in-process secret writes
-    /// (mail and captcha configurations) do not notify.
-    /// </summary>
-    private Task NotifySecretChangedAsync(string eventName, string title, string secretId, CancellationToken cancellationToken) =>
-        _notifier?.NotifyProjectAdminsAsync(
-            BuiltInNotificationNames.SecretChanged,
-            eventName,
-            title,
-            "A project secret was changed. If you did not expect this, review it on the Secrets page.",
-            new Dictionary<string, string?> { ["secretId"] = secretId },
-            cancellationToken) ?? Task.CompletedTask;
 
     /// <summary>
     /// Re-raises a value read on an archived secret as a validation error, which the existing

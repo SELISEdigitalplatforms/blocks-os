@@ -384,6 +384,9 @@ export interface IAccountResendActivationResponse {
   errors: unknown | null;
   isSuccess: boolean;
 }
+export interface IAdminResetPasswordPayload {
+  userId: string;
+}
 export interface IAccountRecoverPayload {
   email: string;
   captchaCode?: string;

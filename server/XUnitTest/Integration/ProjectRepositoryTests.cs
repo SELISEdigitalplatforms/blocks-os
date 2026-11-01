@@ -42,7 +42,7 @@ namespace XUnitTest.Integration
             var encoding = new Mock<IEncodingService>();
             encoding.Setup(e => e.EncodeToBase26Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>()))
                     .ReturnsAsync("abcde");
-            return new ProjectRepository(provider, config, secret.Object, encoding.Object, Mock.Of<IDataGatewayRootProvisioner>(), new XUnitTest.TestHelpers.PassThroughOsDataAccess(), Mock.Of<IStorageConfigurationSeedCopier>());
+            return new ProjectRepository(provider, config, secret.Object, encoding.Object, Mock.Of<IDataGatewayRootProvisioner>(), new XUnitTest.TestHelpers.PassThroughOsDataAccess(), Mock.Of<IStorageConfigurationSeedCopier>(), Mock.Of<IMailConfigurationSeedCopier>());
         }
 
         private static string UserOf(string tenant) => "user-" + tenant;
@@ -155,6 +155,20 @@ namespace XUnitTest.Integration
 
             result.Should().NotBeNull();
             result.Applications.Should().Contain(a => a.Domain == domain);
+        }
+
+        [Fact]
+        public async Task IsDomainUsedByAnotherProjectAsync_MatchesEveryStoredForm_ButNotTheSameProject()
+        {
+            var tenant = MongoIntegrationFixture.NewTenantId();
+            var host = "app-" + tenant + ".example.com";
+            using var _ = new IntegrationContext(tenant);
+            var repo = NewRepository();
+            await repo.InsertProjectAsync(NewTenant("s-" + tenant, "grp-" + tenant, UserOf(tenant), domain: "HTTPS://" + host.ToUpperInvariant() + "/"));
+
+            (await repo.IsDomainUsedByAnotherProjectAsync(host, "other-" + tenant)).Should().BeTrue();
+            (await repo.IsDomainUsedByAnotherProjectAsync(host, "s-" + tenant)).Should().BeFalse();
+            (await repo.IsDomainUsedByAnotherProjectAsync("x" + host, "other-" + tenant)).Should().BeFalse();
         }
 
         [Fact]

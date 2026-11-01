@@ -263,6 +263,13 @@ namespace XUnitTest.Controllers
         [InlineData(typeof(ReleaseController), nameof(ReleaseController.GetRepos), "blocks-release::github::repos")]
         [InlineData(typeof(ReleaseController), nameof(ReleaseController.GetBranches), "blocks-release::github::branches")]
         [InlineData(typeof(ReleaseController), nameof(ReleaseController.GithubBranchExists), "blocks-release::github::branch-exists")]
+        // Mail templates are protected again (owner 2026-10-28): with plain [Authorize] any
+        // signed-in user could rewrite the system mails.
+        [InlineData(typeof(MailController), nameof(MailController.SaveTemplate), "blocks-os::mail-template::save")]
+        [InlineData(typeof(MailController), nameof(MailController.CloneTemplate), "blocks-os::mail-template::save")]
+        [InlineData(typeof(MailController), nameof(MailController.GetTemplate), "blocks-os::mail-template::gets")]
+        [InlineData(typeof(MailController), nameof(MailController.GetTemplates), "blocks-os::mail-template::gets")]
+        [InlineData(typeof(MailController), nameof(MailController.DeleteTemplate), "blocks-os::mail-template::delete")]
         [InlineData(typeof(ReleaseController), nameof(ReleaseController.UpdateRepoDomain), "blocks-release::build::repo-domain-update")]
         public void ActionCarriesItsProtectedResource(System.Type controller, string action, string expectedResource)
         {
@@ -275,14 +282,9 @@ namespace XUnitTest.Controllers
             method.GetCustomAttribute<AllowAnonymousAttribute>().Should().BeNull();
         }
 
-        // Kept on plain [Authorize] by the owner: mail templates (his 732843c7), GetMyAccess
-        // (gating it is circular) and the claimer-bound Integration connect steps.
+        // Kept on plain [Authorize] by the owner: GetMyAccess (gating it is circular) and the
+        // claimer-bound Integration connect steps.
         [Theory]
-        [InlineData(typeof(MailController), nameof(MailController.SaveTemplate))]
-        [InlineData(typeof(MailController), nameof(MailController.GetTemplate))]
-        [InlineData(typeof(MailController), nameof(MailController.GetTemplates))]
-        [InlineData(typeof(MailController), nameof(MailController.CloneTemplate))]
-        [InlineData(typeof(MailController), nameof(MailController.DeleteTemplate))]
         [InlineData(typeof(PeopleController), nameof(PeopleController.GetMyAccess))]
         [InlineData(typeof(IntegrationController), nameof(IntegrationController.GetRequest))]
         [InlineData(typeof(IntegrationController), nameof(IntegrationController.Cancel))]

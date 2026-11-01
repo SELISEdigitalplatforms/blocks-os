@@ -1,6 +1,26 @@
 import { type Locator, type Page, expect } from "@playwright/test";
 import { openSecretManagement } from "../../support/os-helpers";
 
+/**
+ * ServiceList renders a skeleton (no service headings, no pager) for as long as the query is
+ * fetching, and the pager only with the loaded list. Wait for the loaded list — a service
+ * heading or the empty state — before reading the pager or the cards.
+ */
+async function waitForServiceListSettled(page: Page) {
+  const empty = page.getByText("No services yet", { exact: true });
+  const serviceHeading = page.getByRole("heading", { level: 3 }).first();
+  await expect(serviceHeading.or(empty)).toBeVisible({ timeout: 30_000 });
+}
+
+/** Moves the pager and waits for the URL and the loaded list of that page. */
+async function goToServicesPage(page: Page, button: Locator, pageIndex: number) {
+  await button.click();
+  // nuqs drops ?page=0 (the default) from the URL.
+  const expected = pageIndex === 0 ? null : String(pageIndex);
+  await expect(page).toHaveURL((url) => url.searchParams.get("page") === expected, { timeout: 15_000 });
+  await waitForServiceListSettled(page);
+}
+
 export async function findServiceTriggerFlow(page: Page, name: string): Promise<Locator> {
   // AccordionTrigger is a button that also wraps Logs/Traces buttons. Scope to
   // the trigger that contains the service heading so those nested buttons
@@ -13,20 +33,20 @@ export async function findServiceTriggerFlow(page: Page, name: string): Promise<
   const firstPageButton = page.getByRole("button", { name: "Go to first page" });
   const nextPageButton = page.getByRole("button", { name: "Go to next page" });
 
-  if (await trigger.waitFor({ state: "visible", timeout: 5000 }).then(() => true, () => false)) {
+  await waitForServiceListSettled(page);
+  if (await trigger.isVisible()) {
     return trigger;
   }
   if ((await firstPageButton.isVisible()) && (await firstPageButton.isEnabled())) {
-    await firstPageButton.click();
+    await goToServicesPage(page, firstPageButton, 0);
   }
 
-  for (let attempt = 0; attempt < 10; attempt++) {
-    if (await trigger.waitFor({ state: "visible", timeout: 3000 }).then(() => true, () => false)) {
+  for (let pageIndex = 1; pageIndex <= 20; pageIndex++) {
+    if (await trigger.isVisible()) {
       return trigger;
     }
-    if (!(await nextPageButton.isVisible())) break;
-    if (await nextPageButton.isDisabled()) break;
-    await nextPageButton.click();
+    if (!(await nextPageButton.isVisible()) || (await nextPageButton.isDisabled())) break;
+    await goToServicesPage(page, nextPageButton, pageIndex);
   }
 
   return trigger;
@@ -79,11 +99,15 @@ export async function registerServiceFlow(page: Page, serviceName: string, typeO
   const saveButton = page.getByRole("button", { name: "Save", exact: true });
   await expect(saveButton).toBeEnabled({ timeout: 10000 });
   await saveButton.click();
-  if (
-    await page.getByText("Service Registered successfully", { exact: true }).isVisible({ timeout: 15000 })
-  ) {
-    await expect(page.getByText("Service Registered successfully", { exact: true })).toBeVisible();
-  }
+  // Wait for the save to finish; an instant isVisible() check let the next step read the list
+  // while the request (and the list refetch it triggers) was still in flight. The register call
+  // has taken over 15 s on the preview (dialog still pending; the service was created).
+  await expect(page.getByText("Service Registered successfully", { exact: true })).toBeVisible({
+    timeout: 60000,
+  });
+  await expect(page.getByRole("heading", { name: "Register New Service" })).toBeHidden({
+    timeout: 15000,
+  });
 }
 
 export async function expandServiceRowAndVerifyFlow(page: Page, serviceName: string): Promise<Locator> {

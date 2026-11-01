@@ -1,10 +1,11 @@
 import { ICreateModelPayload } from "@blocks-ai/types/aimodel.service.type";
 import { z } from "zod";
+import { isParsableUrl } from "@/lib/url-format";
 import { ProviderToPlatformMap, ServicePlatform } from "./aimodel-provider.utils";
 
 export const OpenAIModelSchema = z.object({
   model: z.string().trim().min(1, "Model is required"),
-  url: z.string().trim().url("Enter a valid URL"),
+  url: z.string().trim().refine(isParsableUrl, "Enter a valid URL"),
   apiKey: z.string().min(1, "API key is required"),
   organizationId: z.string().trim().optional(),
   projectId: z.string().trim().optional(),
@@ -20,7 +21,7 @@ export const OpenAIModelDefaults = (defaultModel: string): FormSchemaOpenai => (
 
 export const OfficialApiModelSchema = z.object({
   model: z.string().trim().min(1, "Model is required"),
-  url: z.string().trim().url("Enter a valid URL"),
+  url: z.string().trim().refine(isParsableUrl, "Enter a valid URL"),
   apiKey: z.string().min(1, "API key is required"),
 });
 type FormSchemaOfficialApi = z.infer<typeof OfficialApiModelSchema>;
@@ -32,7 +33,7 @@ export const OfficialApiModelDefaults = (defaultModel: string): FormSchemaOffici
 
 export const OpenDeploymentModelSchema = z.object({
   model: z.string().trim().min(1, "Model is required"),
-  url: z.string().trim().url("Enter a valid URL"),
+  url: z.string().trim().refine(isParsableUrl, "Enter a valid URL"),
   deploymentName: z.string().trim().min(1, "Deployment name is required"),
   apiKey: z.string().min(1, "API key is required"),
 });

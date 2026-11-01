@@ -7,7 +7,9 @@ import { LINKED_SECRET_REPAIR_REQUIRED_MESSAGE } from "@/cross-modules/secrets/c
 // archived or missing there is nothing to keep, so an edit needs a new value too.
 export const buildConfigureCaptchaFormSchema = (isEditing: boolean, needsNewSecret = false) =>
   z.object({
-    provider: z.enum(["recaptcha", "hcaptcha"], { required_error: "Captcha provider is required" }),
+    provider: z.enum(["recaptcha", "hcaptcha"], {
+      error: (issue) => (issue.input === undefined ? "Captcha provider is required" : undefined),
+    }),
     captchaKey: z.string().min(1, "Site key is required"),
     captchaGenerator: z.string().min(1, "Generator type is required"),
     captchaSecret: !isEditing

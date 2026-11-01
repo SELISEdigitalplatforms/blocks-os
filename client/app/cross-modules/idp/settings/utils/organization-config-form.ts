@@ -23,7 +23,7 @@ export const organizationConfigFormSchema = z
       values.signupAutoJoinOrganizationId.trim().length === 0
     ) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["signupAutoJoinOrganizationId"],
         message: SIGNUP_AUTO_JOIN_REQUIRED_MESSAGE,
       });

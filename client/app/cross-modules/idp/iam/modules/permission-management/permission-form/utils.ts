@@ -48,7 +48,7 @@ export const permissionFormSchema = z
       .min(1, "Name is required")
       .max(100, "Name must be at most 100 characters")
       .trim(),
-    type: z.coerce.number().min(1, "Type is required"),
+    type: z.coerce.number<number>().min(1, "Type is required"),
     resource: z
       .string()
       .min(1, "Resource is required")
@@ -60,8 +60,8 @@ export const permissionFormSchema = z
     description: z.string().max(150, "Description must be at most 150 characters"),
     dependentPermissions: z.array(z.string()),
     permissionSeverity: z
-      .nativeEnum(PermissionSeverityLevel, {
-        message: "Severity is required",
+      .enum(PermissionSeverityLevel, {
+        error: "Severity is required",
       })
       .optional(),
   })

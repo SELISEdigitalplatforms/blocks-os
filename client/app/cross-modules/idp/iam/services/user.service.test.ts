@@ -432,6 +432,25 @@ describe("UserService", () => {
     });
   });
 
+  // ─── adminResetPassword ───────────────────────────────────────────────────
+  describe("adminResetPassword", () => {
+    // Must hit the protected admin endpoint, not the public auth/recover (which asks a captcha).
+    it("should POST the user id to the admin reset endpoint", async () => {
+      vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
+
+      const result = await service.adminResetPassword({ userId: "u1" });
+
+      expect(http.post).toHaveBeenCalledWith(
+        USER_ENDPOINTS.RESET_PASSWORD,
+        { userId: "u1" },
+        undefined,
+        { absoluteUrl: true },
+      );
+      expect(USER_ENDPOINTS.RESET_PASSWORD).toMatch(/\/iam\/users\/reset-password$/);
+      expect(result).toEqual(mockSuccessResponse);
+    });
+  });
+
   // ─── accountDeactivate ────────────────────────────────────────────────────
   describe("accountDeactivate", () => {
     it("should POST to the correct endpoint with payload", async () => {
