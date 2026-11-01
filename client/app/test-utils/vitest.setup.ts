@@ -169,3 +169,5 @@ if (typeof window !== "undefined") {
   const browserWindow = window as Window & { __BLOCKS_ENV__?: Record<string, string | undefined> };
   browserWindow.__BLOCKS_ENV__ = { ...process.env, ...browserWindow.__BLOCKS_ENV__ };
 }
+
+import "@/i18n";
