@@ -14,6 +14,7 @@ import { DeleteCaptchaModal } from "@blocks-idp/captcha/modals/delete-captcha-mo
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
 import { ReactNode } from "react";
 import { LinkedSecretStatusValue } from "@/cross-modules/secrets/components/linked-secret-status/linked-secret-status";
+import { useT } from "@seliseblocks/genesis-os";
 
 const LoadingSkelton = () => (
   <Card>
@@ -42,11 +43,12 @@ const LoadingSkelton = () => (
 );
 
 const EmptyCaptchaConfig = () => {
+  const { t } = useT("os.idp.captcha");
   return (
     <EmptyState
       icon={Settings}
-      title="Captcha is not configured"
-      description="Configure a captcha provider to protect your forms."
+      title={t("CONFIGURE_CAPTCHA_LIST.EMPTY_TITLE")}
+      description={t("CONFIGURE_CAPTCHA_LIST.EMPTY_DESCRIPTION")}
     />
   );
 };
@@ -64,6 +66,7 @@ const CaptchaSwitcher = ({ enabled }: { enabled: boolean }) =>
   enabled ? <Power className="h-3.5 w-3.5" /> : <PowerOff className="h-3.5 w-3.5" />;
 
 const CaptchaConfigCard = ({ configuration }: { configuration: ICaptchaConfig }) => {
+  const { t } = useT("os.idp.captcha");
   const provider = CAPTCHA_PROVIDERS[configuration.provider];
   if (!provider) return null;
 
@@ -85,14 +88,14 @@ const CaptchaConfigCard = ({ configuration }: { configuration: ICaptchaConfig })
                     variant="ghost"
                     size="sm"
                     className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
-                    aria-label="Edit"
+                    aria-label={t("common:EDIT")}
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
                 </DialogTrigger>
               </ConfigureCaptchaModal>
             </TooltipTrigger>
-            <TooltipContent>Edit</TooltipContent>
+            <TooltipContent>{t("common:EDIT")}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -105,14 +108,14 @@ const CaptchaConfigCard = ({ configuration }: { configuration: ICaptchaConfig })
                       "h-7 w-7 p-0 hover:bg-transparent",
                       enabled ? "text-emerald-600" : "text-destructive",
                     )}
-                    aria-label={enabled ? "Disable" : "Enable"}
+                    aria-label={enabled ? t("CONFIGURE_CAPTCHA_LIST.DISABLE") : t("CONFIGURE_CAPTCHA_LIST.ENABLE")}
                   >
                     <CaptchaSwitcher enabled={enabled} />
                   </Button>
                 </DialogTrigger>
               </ToggleCaptchaStatusModal>
             </TooltipTrigger>
-            <TooltipContent>{enabled ? "Disable" : "Enable"}</TooltipContent>
+            <TooltipContent>{enabled ? t("CONFIGURE_CAPTCHA_LIST.DISABLE") : t("CONFIGURE_CAPTCHA_LIST.ENABLE")}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -122,32 +125,32 @@ const CaptchaConfigCard = ({ configuration }: { configuration: ICaptchaConfig })
                     variant="ghost"
                     size="sm"
                     className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                    aria-label="Delete"
+                    aria-label={t("common:DELETE")}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </DialogTrigger>
               </DeleteCaptchaModal>
             </TooltipTrigger>
-            <TooltipContent>Delete</TooltipContent>
+            <TooltipContent>{t("common:DELETE")}</TooltipContent>
           </Tooltip>
         </div>
       </CardHeader>
       <CardContent className="border-t pt-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Item label="Site Key">
+          <Item label={t("CONFIGURE_CAPTCHA_LIST.SITE_KEY")}>
             <CopyToClipboardButton textToCopy={configuration.captchaKey}>
               <MaskedText text={configuration.captchaKey} length={30} />
             </CopyToClipboardButton>
           </Item>
-          <Item label="Secret Key">
+          <Item label={t("CONFIGURE_CAPTCHA_LIST.SECRET_KEY")}>
             {/* The backend never returns the secret itself — only whether one is set and,
                 when one is, whether it still works. */}
             <LinkedSecretStatusValue
               status={configuration.secretStatus}
               fallback={
                 <span className="text-muted-foreground">
-                  {configuration.secretId ? "Configured" : "Not set"}
+                  {configuration.secretId ? t("CONFIGURE_CAPTCHA_LIST.CONFIGURED") : t("CONFIGURE_CAPTCHA_LIST.NOT_SET")}
                 </span>
               }
             />

@@ -14,6 +14,7 @@ import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { CAPTCHA_PROVIDERS, ICaptchaConfig } from "../models/captcha";
 import { isErrorWithErrors } from "@/lib/error";
 import { Check, X } from "lucide-react";
+import { useT } from "@seliseblocks/genesis-os";
 type ToggleCaptchaStatusModalProps = {
   configuration: ICaptchaConfig;
   children?: React.ReactNode;
@@ -22,12 +23,13 @@ export const ToggleCaptchaStatusModal = ({
   configuration,
   children,
 }: ToggleCaptchaStatusModalProps) => {
+  const { t } = useT("os.idp.captcha");
   const [open, setOpen] = useState<boolean>(false);
   const { isPending, mutateAsync } = useToggleCaptchaConfigStatus();
   const providerType = CAPTCHA_PROVIDERS[configuration.provider];
   const onConfirm = async () => {
     try {
-      if (!configuration) return showErrorToast({ errors: "Something went wrong" });
+      if (!configuration) return showErrorToast({ errors: t("TOGGLE_CAPTCHA_STATUS_MODAL.GENERIC_ERROR") });
       // No captchaSecret here: omitting it tells the backend to leave the stored secret
       // untouched, which is exactly what a pure enable/disable toggle should do.
       await mutateAsync({
@@ -38,7 +40,9 @@ export const ToggleCaptchaStatusModal = ({
         captchaGenerator: configuration.captchaGenerator,
       });
       showSuccessToast({
-        description: `${providerType.label} is ${configuration.isEnable ? "disabled" : "enabled"} successfully`,
+        description: configuration.isEnable
+          ? t("TOGGLE_CAPTCHA_STATUS_MODAL.DISABLED_SUCCESS", { provider: providerType.label })
+          : t("TOGGLE_CAPTCHA_STATUS_MODAL.ENABLED_SUCCESS", { provider: providerType.label }),
       });
       setOpen(false);
     } catch (error) {
@@ -54,26 +58,31 @@ export const ToggleCaptchaStatusModal = ({
         {children ?? (
           <Button size="sm" variant="outline">
             <IconComponent className="h-4 w-4" />
-            <span className="ml-2.5">{configuration?.isEnable ? "Disable" : "Enable"}</span>
+            <span className="ml-2.5">
+              {configuration?.isEnable ? t("TOGGLE_CAPTCHA_STATUS_MODAL.DISABLE") : t("TOGGLE_CAPTCHA_STATUS_MODAL.ENABLE")}
+            </span>
           </Button>
         )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{configuration?.isEnable ? "Disable" : "Enable"} CAPTCHA?</DialogTitle>
+          <DialogTitle>
+            {configuration?.isEnable ? t("TOGGLE_CAPTCHA_STATUS_MODAL.TITLE_DISABLE") : t("TOGGLE_CAPTCHA_STATUS_MODAL.TITLE_ENABLE")}
+          </DialogTitle>
           <DialogDescription>
-            Are you sure you want to {configuration?.isEnable ? "disable" : "enable"}{" "}
-            {providerType.label}
+            {configuration?.isEnable
+              ? t("TOGGLE_CAPTCHA_STATUS_MODAL.DESCRIPTION_DISABLE", { provider: providerType.label })
+              : t("TOGGLE_CAPTCHA_STATUS_MODAL.DESCRIPTION_ENABLE", { provider: providerType.label })}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm">
-              Cancel
+              {t("common:CANCEL")}
             </Button>
           </DialogTrigger>
           <Button size="sm" onClick={onConfirm} disabled={isPending}>
-            Yes
+            {t("common:YES")}
           </Button>
         </DialogFooter>
       </DialogContent>

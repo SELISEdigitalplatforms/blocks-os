@@ -14,6 +14,7 @@ import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { useState } from "react";
 import { useGetMFAConfig, useSaveMFAConfig } from "@blocks-idp/mfa/hooks/use-mfa-config";
 import { useGetEmailTemplates } from "@blocks-communication/mail/hooks/use-email-template";
+import { useT } from "@seliseblocks/genesis-os";
 type ChooseEmailTemplateProps = {
   open: boolean;
   setOpen: (value: boolean) => void;
@@ -32,6 +33,7 @@ const LoadingSkelton = () => {
   );
 };
 export const ChooseEmailTemplate = ({ open, setOpen }: ChooseEmailTemplateProps) => {
+  const { t } = useT("os.idp.mfa");
   const { data: mfaConfigData } = useGetMFAConfig();
   const [filter, setFilter] = useState({ page: 0, pageSize: 10 });
   const { data, isLoading, isFetching } = useGetEmailTemplates(
@@ -55,22 +57,24 @@ export const ChooseEmailTemplate = ({ open, setOpen }: ChooseEmailTemplateProps)
       if (res.isSuccess) {
         toast({
           variant: "success",
-          title: "Success",
-          description: "Template successfully selected",
+          title: t("common:SUCCESS"),
+          description: t("CHOOSE_EMAIL_TEMPLATE.TEMPLATE_SELECTED"),
         });
         setOpen(false);
       } else {
         toast({
           variant: "destructive",
-          title: "Error",
-          description: "Something went wrong",
+          title: t("common:ERROR"),
+          description: t("CHOOSE_EMAIL_TEMPLATE.GENERIC_ERROR"),
         });
       }
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: `Something went wrong | ${JSON.stringify((error as { error: { errors: unknown } }).error.errors)}`,
+        title: t("common:ERROR"),
+        description: t("CHOOSE_EMAIL_TEMPLATE.ERROR_WITH_DETAILS", {
+          details: JSON.stringify((error as { error: { errors: unknown } }).error.errors),
+        }),
       });
     }
   };
@@ -85,7 +89,7 @@ export const ChooseEmailTemplate = ({ open, setOpen }: ChooseEmailTemplateProps)
     >
       <DialogContent className="max-w-4xl">
         <DialogHeader>
-          <DialogTitle>Choose a template </DialogTitle>
+          <DialogTitle>{t("CHOOSE_EMAIL_TEMPLATE.TITLE")}</DialogTitle>
         </DialogHeader>
         <div className="mt-4 grid grid-cols-5 gap-4">
           {loading ? (
@@ -106,10 +110,12 @@ export const ChooseEmailTemplate = ({ open, setOpen }: ChooseEmailTemplateProps)
                 >
                   <img
                     src={`/assets/images/services/email/email-template-sample-1.png`}
-                    alt="email-template"
+                    alt={t("CHOOSE_EMAIL_TEMPLATE.TEMPLATE_ALT")}
                   />
                 </div>
-                <div className="mt-2 flex items-center justify-between text-sm">Default</div>
+                <div className="mt-2 flex items-center justify-between text-sm">
+                  {t("CHOOSE_EMAIL_TEMPLATE.DEFAULT_TEMPLATE")}
+                </div>
               </div>
               {data?.templates?.map((template) => (
                 <div
@@ -122,7 +128,7 @@ export const ChooseEmailTemplate = ({ open, setOpen }: ChooseEmailTemplateProps)
                   >
                     <img
                       src={`/assets/images/services/email/email-template-sample-1.png`}
-                      alt="email-template"
+                      alt={t("CHOOSE_EMAIL_TEMPLATE.TEMPLATE_ALT")}
                     />
                   </div>
                   <div className="mt-2 flex items-center justify-between text-sm">
@@ -150,7 +156,7 @@ export const ChooseEmailTemplate = ({ open, setOpen }: ChooseEmailTemplateProps)
           <div>
             <DialogTrigger asChild>
               <Button className="min-w-[80px]" variant="outline" size="default">
-                Cancel
+                {t("common:CANCEL")}
               </Button>
             </DialogTrigger>
             <Button
@@ -159,7 +165,7 @@ export const ChooseEmailTemplate = ({ open, setOpen }: ChooseEmailTemplateProps)
               onClick={onSaveHandler}
               disabled={isPending || !seletedTemplate || isLoading || isFetching}
             >
-              Choose
+              {t("CHOOSE_EMAIL_TEMPLATE.CHOOSE")}
             </Button>
           </div>
         </DialogFooter>

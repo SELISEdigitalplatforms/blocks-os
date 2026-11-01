@@ -1,3 +1,5 @@
+import { tStatic } from "@seliseblocks/genesis-os";
+
 const API_ENDPOINT_CONFIG_SUBPATH = "/ApiEndpointConfig";
 
 export const API_SETTINGS_ENDPOINTS = {
@@ -7,35 +9,52 @@ export const API_SETTINGS_ENDPOINTS = {
   REMOVE: `/api${API_ENDPOINT_CONFIG_SUBPATH}/Remove`,
 } as const;
 
-/** Client-side metadata for known service groups. */
+/**
+ * Client-side metadata for known service groups. `description` is a getter so the text is
+ * looked up when it is shown and follows the language.
+ */
 export const SERVICE_META: Record<string, { description: string; icon: string }> = {
   Authentication: {
-    description: "Authentication and user identity provisioning endpoints.",
+    get description() {
+      return tStatic("os.idp.api-settings", "ENDPOINT_CONSTANT.AUTHENTICATION");
+    },
     icon: "Lock",
   },
   Captcha: {
-    description: "Captcha verification and challenge endpoints.",
+    get description() {
+      return tStatic("os.idp.api-settings", "ENDPOINT_CONSTANT.CAPTCHA");
+    },
     icon: "Shield",
   },
   Iam: {
-    description: "Identity and access management endpoints.",
+    get description() {
+      return tStatic("os.idp.api-settings", "ENDPOINT_CONSTANT.IAM");
+    },
     icon: "Users",
   },
   Mfa: {
-    description: "Multi-factor authentication endpoints.",
+    get description() {
+      return tStatic("os.idp.api-settings", "ENDPOINT_CONSTANT.MFA");
+    },
     icon: "Smartphone",
   },
   Storage: {
-    description: "S3-compatible object storage and bucket management.",
+    get description() {
+      return tStatic("os.idp.api-settings", "ENDPOINT_CONSTANT.STORAGE");
+    },
     icon: "HardDrive",
   },
   Communication: {
-    description: "Email, SMS, and notification delivery endpoints.",
+    get description() {
+      return tStatic("os.idp.api-settings", "ENDPOINT_CONSTANT.COMMUNICATION");
+    },
     icon: "Mail",
   },
 };
 
 export const DEFAULT_SERVICE_META = {
-  description: "Service endpoints.",
+  get description() {
+    return tStatic("os.idp.api-settings", "ENDPOINT_CONSTANT.DEFAULT");
+  },
   icon: "Settings",
 };

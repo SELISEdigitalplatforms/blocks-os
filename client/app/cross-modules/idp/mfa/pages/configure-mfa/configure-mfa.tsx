@@ -25,6 +25,7 @@ import { MFA_PROVIDER_DATA } from "../../utils/mfa-config";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import { useT } from "@seliseblocks/genesis-os";
 type MethodInfo = {
   enable: boolean;
   name: string;
@@ -40,6 +41,7 @@ const LoadingSkelton = () => {
   );
 };
 export const ConfigureMFA = () => {
+  const { t } = useT("os.idp.mfa");
   const { isLoading, isFetching, data } = useGetMFAConfig();
   const [openEnableDisableModal, setOpenEnableDisableModal] = useState<boolean>(false);
   const [methodInfo, setMethodInfo] = useState<MethodInfo>({
@@ -51,7 +53,7 @@ export const ConfigureMFA = () => {
     () => [
       {
         accessorKey: "provider",
-        header: "Provider",
+        header: t("CONFIGURE_MFA.COLUMN_PROVIDER"),
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
             {<row.original.Icon className="h-4 w-4" />}
@@ -61,11 +63,11 @@ export const ConfigureMFA = () => {
       },
       {
         accessorKey: "status",
-        header: "Status",
+        header: t("common:STATUS"),
         cell: ({ row }) => (
           <div className="flex max-w-[200px]">
             <Badge variant={data?.allowedMethods.includes(row.original.type) ? "success" : "error"}>
-              {data?.allowedMethods.includes(row.original.type) ? "Enabled" : "Disabled"}
+              {data?.allowedMethods.includes(row.original.type) ? t("common:ENABLED") : t("common:DISABLED")}
             </Badge>
           </div>
         ),
@@ -92,7 +94,9 @@ export const ConfigureMFA = () => {
                     }));
                   }}
                 >
-                  {data?.allowedMethods.includes(row.original.type) ? "Disable" : "Enable"}
+                  {data?.allowedMethods.includes(row.original.type)
+                    ? t("CONFIGURE_MFA.ACTION_DISABLE")
+                    : t("CONFIGURE_MFA.ACTION_ENABLE")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -100,7 +104,7 @@ export const ConfigureMFA = () => {
         ),
       },
     ],
-    [data?.allowedMethods],
+    [data?.allowedMethods, t],
   );
   const { isPending, mutateAsync } = useSaveMFAConfig();
   const onSaveHandler = async (methodInfo: MethodInfo) => {
@@ -121,7 +125,9 @@ export const ConfigureMFA = () => {
     const res = await mutateAsync(payload);
     if (!res.isSuccess) return showErrorToast({ errors: res.errors });
     showSuccessToast({
-      description: `${methodInfo.name} MFA ${methodInfo.enable ? "enabled" : "disabled"} successfully`,
+      description: methodInfo.enable
+        ? t("CONFIGURE_MFA.MFA_ENABLED", { name: methodInfo.name })
+        : t("CONFIGURE_MFA.MFA_DISABLED", { name: methodInfo.name }),
     });
     setOpenEnableDisableModal(false);
   };
@@ -143,8 +149,8 @@ export const ConfigureMFA = () => {
         ) : mfaConfigData.length === 0 ? (
           <EmptyState
             icon={ShieldCheck}
-            title="No configurations found"
-            description="MFA is not yet configured for this project."
+            title={t("CONFIGURE_MFA.EMPTY_TITLE")}
+            description={t("CONFIGURE_MFA.EMPTY_DESCRIPTION")}
           />
         ) : (
           <Card className="border-none shadow-none">
@@ -182,8 +188,10 @@ export const ConfigureMFA = () => {
           onCancel={() => {}}
           onConfirm={() => onSaveHandler(methodInfo)}
           data={{
-            dialogTitle: "Confirmation",
-            dialogSubtitle: `Are you sure you want to ${methodInfo.enable ? "enable" : "disable"} ${methodInfo.name} MFA?`,
+            dialogTitle: t("CONFIGURE_MFA.CONFIRM_TITLE"),
+            dialogSubtitle: methodInfo.enable
+              ? t("CONFIGURE_MFA.CONFIRM_ENABLE", { name: methodInfo.name })
+              : t("CONFIGURE_MFA.CONFIRM_DISABLE", { name: methodInfo.name }),
           }}
           buttonState={{ confirm: { disable: isPending } }}
         />

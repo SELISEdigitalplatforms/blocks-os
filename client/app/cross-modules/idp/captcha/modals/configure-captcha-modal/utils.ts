@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { tStatic } from "@seliseblocks/genesis-os";
 import { LINKED_SECRET_REPAIR_REQUIRED_MESSAGE } from "@/cross-modules/secrets/components/linked-secret-status/linked-secret-status";
 
 // The secret is required to create a configuration but optional to edit one — the backend
@@ -8,12 +9,12 @@ import { LINKED_SECRET_REPAIR_REQUIRED_MESSAGE } from "@/cross-modules/secrets/c
 export const buildConfigureCaptchaFormSchema = (isEditing: boolean, needsNewSecret = false) =>
   z.object({
     provider: z.enum(["recaptcha", "hcaptcha"], {
-      error: (issue) => (issue.input === undefined ? "Captcha provider is required" : undefined),
+      error: (issue) => (issue.input === undefined ? tStatic("os.idp.captcha", "CONFIGURE_CAPTCHA_FORM.PROVIDER_REQUIRED") : undefined),
     }),
-    captchaKey: z.string().min(1, "Site key is required"),
-    captchaGenerator: z.string().min(1, "Generator type is required"),
+    captchaKey: z.string().min(1, tStatic("os.idp.captcha", "CONFIGURE_CAPTCHA_FORM.SITE_KEY_REQUIRED")),
+    captchaGenerator: z.string().min(1, tStatic("os.idp.captcha", "CONFIGURE_CAPTCHA_FORM.GENERATOR_REQUIRED")),
     captchaSecret: !isEditing
-      ? z.string().min(1, "Secret key is required")
+      ? z.string().min(1, tStatic("os.idp.captcha", "CONFIGURE_CAPTCHA_FORM.SECRET_REQUIRED"))
       : needsNewSecret
         ? z.string().min(1, LINKED_SECRET_REPAIR_REQUIRED_MESSAGE)
         : z.string().optional(),
