@@ -17,6 +17,7 @@ import {
 } from "@/components/ui-kits/command/command";
 import { ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 
 interface MultiSelectOption {
   label: string;
@@ -45,6 +46,7 @@ export function MultiSelect({
   onLoadMore,
   portalled = true,
 }: MultiSelectProps) {
+  const { t } = useT("os.shared");
   const [buttonRef, popoverWidth] = usePopoverWidth();
   const [expanded, setExpanded] = useState<string | null>(null);
   const onSelectHandler = (value: string) => {
@@ -122,7 +124,7 @@ export function MultiSelect({
               if (isNearBottom && hasMore && !isLoadingMore) onLoadMore?.();
             }}
           >
-            <CommandEmpty>No results found.</CommandEmpty>
+            <CommandEmpty>{t("MULTI_SELECT.NO_RESULTS_FOUND")}</CommandEmpty>
             <CommandGroup>
               {options.map((option) => {
                 const isSelected = selectedValues.includes(option.value);
@@ -210,7 +212,7 @@ export function MultiSelect({
                     onSelect={() => onResetHandler()}
                     className="justify-center text-center"
                   >
-                    Clear
+                    {t("common:CLEAR")}
                   </CommandItem>
                 </CommandGroup>
               </>

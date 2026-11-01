@@ -280,7 +280,9 @@ describe("use-project hooks", () => {
     it("useCreateProject refetches the project list once more after provisioning had time", async () => {
       vi.useFakeTimers();
       try {
-        vi.mocked(crossProjectService.createProject).mockResolvedValue({ isSuccess: true } as never);
+        vi.mocked(crossProjectService.createProject).mockResolvedValue({
+          isSuccess: true,
+        } as never);
         const { spy, wrapper } = setup();
         const { result } = renderHook(() => useCreateProject(), { wrapper });
         await act(async () => {

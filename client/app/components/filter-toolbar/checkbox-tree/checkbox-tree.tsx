@@ -11,6 +11,7 @@ import { Input } from "@/components/ui-kits/input/input";
 import { ChevronRight, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 
 export interface CheckboxTreeOption {
   label: string;
@@ -60,6 +61,7 @@ export function CheckboxTree({
   onChange,
   value: selectedValues,
 }: CheckboxTreeProps) {
+  const { t } = useT("os.shared");
   const [search, setSearch] = useState("");
   const [expandedOverrides, setExpandedOverrides] = useState<Record<string, boolean>>({});
   const [buttonRef, popoverWidth] = usePopoverWidth();
@@ -238,7 +240,9 @@ export function CheckboxTree({
             })}
           </div>
         ) : (
-          <div className="py-6 text-center text-sm text-popover-foreground!">No results found.</div>
+          <div className="py-6 text-center text-sm text-popover-foreground!">
+            {t("CHECKBOX_TREE.NO_RESULTS_FOUND")}
+          </div>
         )}
       </PopoverContent>
     </Popover>

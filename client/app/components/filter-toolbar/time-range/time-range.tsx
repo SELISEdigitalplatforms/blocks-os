@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui-kits/separator/separator";
 import { formatFullDate } from "@/lib/utils";
 import { Clock, Info } from "lucide-react";
 import { useState } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 
 /** An absolute window. A missing `to` means "up to now", which keeps the list streaming. */
 export type TimeRangeValue = { from?: Date; to?: Date } | null;
@@ -85,14 +86,20 @@ const carryTime = (
     utc,
   );
 
-const summarize = ({ from, to }: { from?: Date; to?: Date }, utc: boolean) => {
+const summarize = (
+  { from, to }: { from?: Date; to?: Date },
+  utc: boolean,
+  t: (key: string, values?: Record<string, string>) => string,
+) => {
   if (!from) return null;
   const zone = utc ? " UTC" : "";
   const start = `${dayLabel(from, utc)} ${timeLabel(from, utc)}`;
-  if (!to) return `${start} → now${zone}`;
-  return dayLabel(from, utc) === dayLabel(to, utc)
-    ? `${start} → ${timeLabel(to, utc)}${zone}`
-    : `${start} → ${dayLabel(to, utc)} ${timeLabel(to, utc)}${zone}`;
+  if (!to) return t("TIME_RANGE.SUMMARY_UNTIL_NOW", { start, zone });
+  const end =
+    dayLabel(from, utc) === dayLabel(to, utc)
+      ? timeLabel(to, utc)
+      : `${dayLabel(to, utc)} ${timeLabel(to, utc)}`;
+  return t("TIME_RANGE.SUMMARY_RANGE", { start, end, zone });
 };
 
 export function TimeRange({
@@ -101,9 +108,10 @@ export function TimeRange({
   onChange,
   defaultRange = null,
   timeZone = "utc",
-  openEndHint = "now",
+  openEndHint,
   bounds,
 }: TimeRangeProps) {
+  const { t } = useT("os.shared");
   const utc = timeZone === "utc";
   const effective = value ?? defaultRange;
   const [open, setOpen] = useState(false);
@@ -112,7 +120,7 @@ export function TimeRange({
     to: effective?.to,
   });
 
-  const summary = summarize({ from: effective?.from, to: effective?.to }, utc);
+  const summary = summarize({ from: effective?.from, to: effective?.to }, utc, t);
   const endsBeforeItStarts = !!draft.from && !!draft.to && draft.to <= draft.from;
   // Only the ends that were given are enforced, so a half-known window still narrows the picker.
   const disabledDays = [
@@ -159,7 +167,10 @@ export function TimeRange({
           </span>
           <input
             type="time"
-            aria-label={`${caption} time (${utc ? "UTC" : "local"})`}
+            aria-label={t("TIME_RANGE.BOUNDARY_TIME_LABEL", {
+              caption,
+              zone: utc ? t("TIME_RANGE.ZONE_UTC") : t("TIME_RANGE.ZONE_LOCAL"),
+            })}
             value={timeLabel(instant, utc)}
             onChange={(event) => onTimeChange(event.target.value)}
             className="h-8 w-[92px] rounded-md border border-input bg-background px-2 text-xs tabular-nums"
@@ -198,11 +209,7 @@ export function TimeRange({
       <PopoverContent className="w-auto p-0" align="start">
         <div className="flex items-start gap-2 border-b px-3 py-2 text-xs text-medium-emphasis">
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          <span>
-            {utc
-              ? "All times are UTC, matching the timestamps in the list."
-              : "All times are in your local timezone, matching the timestamps in the list."}
-          </span>
+          <span>{utc ? t("TIME_RANGE.TIMES_ARE_UTC") : t("TIME_RANGE.TIMES_ARE_LOCAL")}</span>
         </div>
         <div className="flex flex-col sm:flex-row">
           <Calendar
@@ -225,19 +232,19 @@ export function TimeRange({
             onSelect={handleCalendarSelect}
           />
           <div className="flex w-full flex-col gap-3 border-t p-3 sm:w-60 sm:border-l sm:border-t-0">
-            {boundary("From", draft.from, "Pick a start day", (time) =>
+            {boundary(t("TIME_RANGE.FROM"), draft.from, t("TIME_RANGE.PICK_A_START_DAY"), (time) =>
               setDraft((current) =>
                 current.from ? { ...current, from: withTime(current.from, time, utc) } : current,
               ),
             )}
-            {boundary("To", draft.to, openEndHint, (time) =>
+            {boundary(t("TIME_RANGE.TO"), draft.to, openEndHint ?? t("TIME_RANGE.NOW"), (time) =>
               setDraft((current) =>
                 current.to ? { ...current, to: withTime(current.to, time, utc) } : current,
               ),
             )}
             {endsBeforeItStarts && (
               <p role="alert" className="text-xs text-error">
-                The end of the window must be after its start.
+                {t("TIME_RANGE.END_BEFORE_START")}
               </p>
             )}
             <div className="mt-auto flex flex-col gap-2 pt-1">
@@ -247,10 +254,10 @@ export function TimeRange({
                 onClick={handleApply}
                 disabled={endsBeforeItStarts || !draft.from}
               >
-                Apply
+                {t("common:APPLY")}
               </Button>
               <Button type="button" variant="outline" className="w-full" onClick={handleReset}>
-                Reset to default
+                {t("TIME_RANGE.RESET_TO_DEFAULT")}
               </Button>
             </div>
           </div>

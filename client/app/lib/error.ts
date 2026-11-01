@@ -1,11 +1,14 @@
+import { tStatic } from "@seliseblocks/genesis-os";
+
 /** Access grant: the server refused a grant the caller does not hold (HTTP 403). */
 export const ACCESS_GRANT_NOT_ALLOWED = "Access_Grant_Not_Allowed";
-export const ACCESS_GRANT_NOT_ALLOWED_MESSAGE = "You can't grant access you don't hold.";
+export const getAccessGrantNotAllowedMessage = () =>
+  tStatic("os.shared", "ERROR.ACCESS_GRANT_NOT_ALLOWED");
 
 /** Messages every toast gets, so no screen has to map these server keys itself. */
-const DEFAULT_ERROR_MESSAGES: Record<string, string> = {
-  [ACCESS_GRANT_NOT_ALLOWED]: ACCESS_GRANT_NOT_ALLOWED_MESSAGE,
-};
+const defaultErrorMessages = (): Record<string, string> => ({
+  [ACCESS_GRANT_NOT_ALLOWED]: getAccessGrantNotAllowedMessage(),
+});
 
 export const isErrorWithErrors = (
   error: unknown,
@@ -42,7 +45,7 @@ export const getErrorMessage = (
   messageMap: Record<string, string> = {},
 ): string | string[] => {
   if (!error || Object.keys(error).length === 0) {
-    return "Something went wrong.";
+    return tStatic("os.shared", "ERROR.SOMETHING_WENT_WRONG");
   }
 
   const messages: string[] = [];
@@ -78,7 +81,7 @@ export const getErrorMessage = (
     }
   }
 
-  return messages.length ? messages : "Something went wrong.";
+  return messages.length ? messages : tStatic("os.shared", "ERROR.SOMETHING_WENT_WRONG");
 };
 
 export const handleErrorMessages = (
@@ -89,10 +92,10 @@ export const handleErrorMessages = (
 
   if (errors && typeof errors === "object" && !Array.isArray(errors)) {
     return getErrorMessage(errors as Record<string, string | string[]>, {
-      ...DEFAULT_ERROR_MESSAGES,
+      ...defaultErrorMessages(),
       ...customMessages,
     });
   }
 
-  return "An unexpected error occurred.";
+  return tStatic("os.shared", "ERROR.UNEXPECTED");
 };
