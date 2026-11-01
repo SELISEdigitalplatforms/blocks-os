@@ -1,4 +1,4 @@
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT, tStatic } from "@seliseblocks/genesis-os";
 import { useGetAssets, useAddAssets, useDeleteAsset } from "@/hooks/use-project";
 import { useProjectPermissions } from "@/hooks/use-project-access";
 import { Plus, Github, FolderGit2, Trash2 } from "lucide-react";
@@ -43,10 +43,10 @@ const formatCreatedDate = (value?: string) => {
   return formatDate(parsed, true);
 };
 const ADD_REPOSITORY_MESSAGES: Record<AssetMutationStatus, string> = {
-  Added: "Repository added successfully",
-  Updated: "Repository details updated successfully",
-  Unchanged: "Repository is already up to date",
-  Restored: "Repository restored successfully",
+  get Added() { return tStatic("os.repositories", "REPOSITORIES.REPOSITORY_ADDED_SUCCESSFULLY"); },
+  get Updated() { return tStatic("os.repositories", "REPOSITORIES.REPOSITORY_DETAILS_UPDATED_SUCCESSFULLY"); },
+  get Unchanged() { return tStatic("os.repositories", "REPOSITORIES.REPOSITORY_IS_ALREADY_UP"); },
+  get Restored() { return tStatic("os.repositories", "REPOSITORIES.REPOSITORY_RESTORED_SUCCESSFULLY"); },
 };
 const RepositoriesLoading = () => (
   <main className="p-6">
@@ -71,6 +71,7 @@ const RepositoriesLoading = () => (
   </main>
 );
 export const RepositoriesPage = () => {
+  const { t } = useT("os.repositories");
   const groupId = useProjectStore().selectedTenantGroup;
   const [pageNumber, setPageNumber] = useState(0);
   const [pageSize] = useState(12);
@@ -131,15 +132,15 @@ export const RepositoriesPage = () => {
         },
       });
       toast({
-        title: "Success",
+        title: t("common:SUCCESS"),
         description: ADD_REPOSITORY_MESSAGES[result?.status] ?? ADD_REPOSITORY_MESSAGES.Added,
         variant: "success",
       });
       refetch();
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "An error occurred",
+        title: t("common:ERROR"),
+        description: error instanceof Error ? error.message : t("REPOSITORIES.AN_ERROR_OCCURRED"),
         variant: "destructive",
       });
       setSelectRepositoryModalOpen(false);
@@ -157,16 +158,16 @@ export const RepositoriesPage = () => {
       if (pageResources.length === 1 && pageNumber > 0) setPageNumber(pageNumber - 1);
       setRepositoryToRemove(null);
       toast({
-        title: "Success",
-        description: "Repository removed successfully",
+        title: t("common:SUCCESS"),
+        description: t("REPOSITORIES.REPOSITORY_REMOVED_SUCCESSFULLY"),
         variant: "success",
       });
       refetch();
     } catch (error) {
       setRepositoryToRemove(null);
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "An error occurred",
+        title: t("common:ERROR"),
+        description: error instanceof Error ? error.message : t("REPOSITORIES.AN_ERROR_OCCURRED"),
         variant: "destructive",
       });
     }
@@ -178,7 +179,7 @@ export const RepositoriesPage = () => {
         accessorFn: (row) => `${row.name}`.trim(),
         header: () => (
           <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">Name</span>
+            <span className="font-bold text-medium-emphasis">{t("common:NAME")}</span>
           </div>
         ),
         cell: (repos) => <div className="truncate">{repos.row.original.name}</div>,
@@ -188,7 +189,7 @@ export const RepositoriesPage = () => {
         accessorFn: (row) => `${row.link}`.trim(),
         header: () => (
           <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">Repo Link</span>
+            <span className="font-bold text-medium-emphasis">{t("REPOSITORIES.REPO_LINK")}</span>
           </div>
         ),
         cell: (repos) => (
@@ -207,13 +208,13 @@ export const RepositoriesPage = () => {
         accessorFn: (row) => `${row.resourceId}`.trim(),
         header: () => (
           <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">Source</span>
+            <span className="font-bold text-medium-emphasis">{t("REPOSITORIES.SOURCE")}</span>
           </div>
         ),
         cell: () => (
           <div className="flex flex-row">
             <Github className="mr-2 inline-block h-5 w-5" />
-            <div className="truncate">Github</div>
+            <div className="truncate">{t("REPOSITORIES.GITHUB")}</div>
           </div>
         ),
       },
@@ -222,7 +223,7 @@ export const RepositoriesPage = () => {
         accessorFn: (row) => `${row.createdDate ?? ""}`,
         header: () => (
           <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">Created</span>
+            <span className="font-bold text-medium-emphasis">{t("REPOSITORIES.CREATED")}</span>
           </div>
         ),
         cell: (repos) => (
@@ -231,7 +232,7 @@ export const RepositoriesPage = () => {
       },
       {
         id: "actions",
-        header: () => <span className="sr-only">Actions</span>,
+        header: () => <span className="sr-only">{t("common:ACTIONS")}</span>,
         cell: (repos) => (
           <div className="flex justify-end">
             {canDelete && (
@@ -239,7 +240,7 @@ export const RepositoriesPage = () => {
                 variant="ghost"
                 size="sm"
                 className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                aria-label={`Remove ${repos.row.original.name}`}
+                aria-label={t("REPOSITORIES.REMOVE", { name: repos.row.original.name })}
                 onClick={() => setRepositoryToRemove(repos.row.original)}
               >
                 <Trash2 className="h-4 w-4" />
@@ -277,9 +278,9 @@ export const RepositoriesPage = () => {
       <Dialog open={repositoryModalOpen} onOpenChange={setRepositoryModalOpen}>
         <DialogContent className="w-[calc(100%-2rem)] rounded-lg border p-6 shadow-lg md:w-[425px]">
           <DialogHeader>
-            <DialogTitle>Connect repository</DialogTitle>
+            <DialogTitle>{t("REPOSITORIES.CONNECT_REPOSITORY")}</DialogTitle>
             <DialogDescription>
-              Select a Git provider to import an existing project from a Git Repository.
+              {t("REPOSITORIES.SELECT_A_GIT_PROVIDER_TO")}
             </DialogDescription>
           </DialogHeader>
           <ProviderButtons destination="/intermediate-page" onClose={handleProviderClose} />
@@ -289,8 +290,8 @@ export const RepositoriesPage = () => {
         open={selectRepositoryModalOpen}
         onOpenChange={setSelectRepositoryModalOpen}
         onSelectRepository={onAddRepo}
-        title="Select repository"
-        description="Select the repositories you want to link to this project"
+        title={t("REPOSITORIES.SELECT_REPOSITORY")}
+        description={t("REPOSITORIES.SELECT_THE_REPOSITORIES_YOU_WANT")}
       />
       <Dialog
         open={Boolean(repositoryToRemove)}
@@ -300,17 +301,15 @@ export const RepositoriesPage = () => {
           onCancel={() => setRepositoryToRemove(null)}
           onConfirm={onRemoveRepo}
           data={{
-            dialogTitle: "Remove this repository?",
+            dialogTitle: t("REPOSITORIES.REMOVE_THIS_REPOSITORY"),
             dialogSubtitle: (
               <>
                 <p>
-                  <span className="font-medium">{repositoryToRemove?.name}</span> will no longer be
-                  listed for this project.
-                </p>
-                <p>You can add it again later to bring it back.</p>
+                  {t("REPOSITORIES.WILL_NO_LONGER_BE_LISTED", { span: `${repositoryToRemove?.name}` })}</p>
+                <p>{t("REPOSITORIES.YOU_CAN_ADD_IT_AGAIN")}</p>
               </>
             ),
-            confirmButton: "Remove",
+            confirmButton: t("common:REMOVE"),
           }}
           buttonState={{ confirm: { disable: isRemoving } }}
         />
@@ -331,9 +330,9 @@ export const RepositoriesPage = () => {
     <main className="p-6">
       <div className="flex flex-wrap items-end justify-between gap-4 md:items-end">
         <div>
-          <h4 className="text-lg font-semibold md:text-xl">Repositories</h4>
+          <h4 className="text-lg font-semibold md:text-xl">{t("REPOSITORIES.REPOSITORIES")}</h4>
           <p className="mt-0.5 text-sm text-medium-emphasis">
-            Code that builds and deploys into every environment of this project
+            {t("REPOSITORIES.CODE_THAT_BUILDS_AND_DEPLOYS")}
           </p>
         </div>
         {canAdd && (
@@ -344,7 +343,7 @@ export const RepositoriesPage = () => {
             onClick={handleAddRepositoryClick}
           >
             <Plus className="mr-2 h-4 w-4" />
-            <span>Add repository</span>
+            <span>{t("REPOSITORIES.ADD_REPOSITORY")}</span>
           </Button>
         )}
       </div>
@@ -352,8 +351,8 @@ export const RepositoriesPage = () => {
         {isEmptyWithoutSearch ? (
           <EmptyState
             icon={FolderGit2}
-            title="No repositories yet"
-            description="Add your first repository to get started."
+            title={t("REPOSITORIES.NO_REPOSITORIES_YET")}
+            description={t("REPOSITORIES.ADD_YOUR_FIRST_REPOSITORY_TO")}
           />
         ) : (
           <Card>
@@ -361,7 +360,7 @@ export const RepositoriesPage = () => {
               <CardHeader>
                 <div className="w-1/3">
                   <Input
-                    placeholder="Search repositories..."
+                    placeholder={t("REPOSITORIES.SEARCH_REPOSITORIES")}
                     value={searchText}
                     onChange={(e) => setSearchText(e.target.value)}
                   />
@@ -390,7 +389,7 @@ export const RepositoriesPage = () => {
                         colSpan={columns.length}
                         className="h-24 text-center text-sm text-muted-foreground md:text-base"
                       >
-                        {isFetchingAssets ? "Loading repositories..." : "No repositories found."}
+                        {isFetchingAssets ? t("REPOSITORIES.LOADING_REPOSITORIES") : t("REPOSITORIES.NO_REPOSITORIES_FOUND")}
                       </TableCell>
                     </TableRow>
                   ) : (

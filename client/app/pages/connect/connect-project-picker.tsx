@@ -9,6 +9,7 @@ import {
   CommandList,
 } from "@/components/ui-kits/command/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui-kits/popover/popover";
+import { useT } from "@seliseblocks/genesis-os";
 
 export type ConnectProjectOption = {
   tenantGroupId: string;
@@ -22,6 +23,7 @@ type ConnectProjectPickerProps = {
 };
 
 export function ConnectProjectPicker({ projects, value, onValueChange }: Readonly<ConnectProjectPickerProps>) {
+  const { t } = useT("os.connect");
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const selected = projects.find((project) => project.tenantGroupId === value);
@@ -40,27 +42,27 @@ export function ConnectProjectPicker({ projects, value, onValueChange }: Readonl
         <button
           type="button"
           role="combobox"
-          aria-label="Project"
+          aria-label={t("CONNECT_PROJECT_PICKER.PROJECT")}
           aria-expanded={open}
           className="flex h-11 w-full items-center justify-between gap-3 rounded-md border border-input bg-background px-3 text-left text-sm text-high-emphasis transition-colors hover:border-primary/50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span className={`truncate ${selected ? "" : "text-muted-foreground"}`}>
-            {selected?.name ?? "Select a project"}
+            {selected?.name ?? t("CONNECT_PROJECT_PICKER.SELECT_A_PROJECT")}
           </span>
           <ChevronDown className="h-4 w-4 shrink-0 text-medium-emphasis" aria-hidden="true" />
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-(--radix-popover-trigger-width) p-1 shadow-lg">
-        <Command shouldFilter={false} label="Search projects">
+        <Command shouldFilter={false} label={t("CONNECT_PROJECT_PICKER.SEARCH_PROJECTS")}>
           <CommandInput
             autoFocus
             value={search}
             onValueChange={setSearch}
-            placeholder="Search projects..."
-            aria-label="Search projects"
+            placeholder={t("CONNECT_PROJECT_PICKER.SEARCH_PROJECTS_2")}
+            aria-label={t("CONNECT_PROJECT_PICKER.SEARCH_PROJECTS")}
           />
           <CommandList className="max-h-64">
-            {filtered.length === 0 ? <CommandEmpty>No projects found.</CommandEmpty> : null}
+            {filtered.length === 0 ? <CommandEmpty>{t("CONNECT_PROJECT_PICKER.NO_PROJECTS_FOUND")}</CommandEmpty> : null}
             <CommandGroup>
               {filtered.map((project) => (
                 <CommandItem

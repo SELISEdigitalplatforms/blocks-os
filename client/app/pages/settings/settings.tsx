@@ -25,7 +25,7 @@ import {
 } from "@/components/ui-kits/form/form";
 import { useGetProjects, useUpdateTenantGroup } from "@/hooks/use-project";
 import { useProjectPermissions } from "@/hooks/use-project-access";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT, tStatic } from "@seliseblocks/genesis-os";
 import { formatDate } from "@/lib/utils";
 import { EnvironmentsCard, getEnvironmentOrder } from "./environments-card";
 const SettingsLoading = () => (
@@ -56,16 +56,17 @@ const InfoField = ({ label, children }: { label: string; children: ReactNode }) 
     <div className="font-medium">{children}</div>
   </div>
 );
-const projectNameSchema = z.object({
+const createProjectNameSchema = () => z.object({
   name: z
     .string()
     .trim()
-    .min(1, "Name is required")
-    .min(3, "Project name must be at least 3 characters")
-    .max(100, "Project name should be a maximum of 100 characters"),
+    .min(1, tStatic("os.settings", "SETTINGS.NAME_IS_REQUIRED"))
+    .min(3, tStatic("os.settings", "SETTINGS.PROJECT_NAME_MUST_BE_AT"))
+    .max(100, tStatic("os.settings", "SETTINGS.PROJECT_NAME_SHOULD_BE_A")),
 });
-type ProjectNameForm = z.infer<typeof projectNameSchema>;
+type ProjectNameForm = z.infer<ReturnType<typeof createProjectNameSchema>>;
 export const SettingsPage = () => {
+  const { t } = useT("os.settings");
   const { selectedProject, selectedTenantGroup, setSelectedProject } = useProjectStore();
   const { data: projectsData, isLoading } = useGetProjects({
     tenantGroupId: selectedTenantGroup ?? "",
@@ -85,7 +86,7 @@ export const SettingsPage = () => {
   const canRename = can("settings", "rename");
   const [isEditOpen, setIsEditOpen] = useState(false);
   const form = useForm<ProjectNameForm>({
-    resolver: zodResolver(projectNameSchema),
+    resolver: zodResolver(createProjectNameSchema()),
     defaultValues: {
       name: "",
     },
@@ -114,51 +115,51 @@ export const SettingsPage = () => {
       if (res.errors) {
         toast({
           variant: "destructive",
-          title: "Error",
-          description: "Failed to update project name",
+          title: t("common:ERROR"),
+          description: t("SETTINGS.FAILED_TO_UPDATE_PROJECT_NAME"),
         });
       } else {
         toast({
           variant: "success",
-          title: "Success",
-          description: "Project name updated successfully",
+          title: t("common:SUCCESS"),
+          description: t("SETTINGS.PROJECT_NAME_UPDATED_SUCCESSFULLY"),
         });
         setIsEditOpen(false);
       }
     } catch (_error) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "An unexpected error occurred",
+        title: t("common:ERROR"),
+        description: t("SETTINGS.AN_UNEXPECTED_ERROR_OCCURRED"),
       });
     }
   };
   const formattedDate = formatDate(new Date(project?.createdDate || ""));
   return (
     <main className="flex flex-col gap-6 p-6">
-      <h4 className="text-lg font-semibold md:text-xl">Project Settings</h4>
+      <h4 className="text-lg font-semibold md:text-xl">{t("SETTINGS.PROJECT_SETTINGS")}</h4>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle>General Information</CardTitle>
+          <CardTitle>{t("SETTINGS.GENERAL_INFORMATION")}</CardTitle>
           {canRename && (
             <Button
               size="sm"
               variant="outline"
               className="h-10"
-              aria-label="Edit project name"
+              aria-label={t("SETTINGS.EDIT_PROJECT_NAME")}
               onClick={() => setIsEditOpen(true)}
             >
               <Pencil className="mr-2 h-4 w-4" />
-              <span>Edit</span>
+              <span>{t("common:EDIT")}</span>
             </Button>
           )}
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <InfoField label="Name">{project?.name || "-"}</InfoField>
-            <InfoField label="Created On">{formattedDate}</InfoField>
-            <InfoField label="Environments">{environments.length || "-"}</InfoField>
-            <InfoField label="Plan">Free</InfoField>
+            <InfoField label={t("common:NAME")}>{project?.name || "-"}</InfoField>
+            <InfoField label={t("SETTINGS.CREATED_ON")}>{formattedDate}</InfoField>
+            <InfoField label={t("SETTINGS.ENVIRONMENTS")}>{environments.length || "-"}</InfoField>
+            <InfoField label={t("SETTINGS.PLAN")}>{t("SETTINGS.FREE")}</InfoField>
           </div>
         </CardContent>
       </Card>
@@ -167,13 +168,13 @@ export const SettingsPage = () => {
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Edit Project</DialogTitle>
+            <DialogTitle>{t("SETTINGS.EDIT_PROJECT")}</DialogTitle>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSave)}>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="name">Project name</Label>
+                  <Label htmlFor="name">{t("SETTINGS.PROJECT_NAME")}</Label>
                   <FormField
                     name="name"
                     control={form.control}
@@ -202,11 +203,11 @@ export const SettingsPage = () => {
                   onClick={() => setIsEditOpen(false)}
                   disabled={isUpdating}
                 >
-                  Cancel
+                  {t("common:CANCEL")}
                 </Button>
                 <Button type="submit" disabled={isUpdating || !form.formState.isValid}>
                   {isUpdating && <Loader className="mr-2 h-4 w-4 animate-spin" />}
-                  Update
+                  {t("common:UPDATE")}
                 </Button>
               </DialogFooter>
             </form>

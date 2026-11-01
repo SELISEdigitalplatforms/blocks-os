@@ -36,7 +36,7 @@ import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { useRemoveAccess, useResendInvitation, useTransferOwnership } from "@/hooks/use-people";
 import { useNavigate, useParams } from "react-router";
 import { PeopleGroupedByEnvironments } from "@/models/people";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT, tStatic } from "@seliseblocks/genesis-os";
 import { useAuthStore } from "@seliseblocks/genesis-os/store";
 import { environmentOptions } from "@/constants/environment-options";
 import { Badge } from "@/components/ui-kits/badge/badge";
@@ -60,6 +60,7 @@ export const PeopleTable = ({
   canRemove = false,
   isOwner: isViewerOwner = false,
 }: PeopleTableProps) => {
+  const { t } = useT("os.people");
   const navigate = useNavigate();
   const { tenantGroupId = "" } = useParams<{ tenantGroupId: string }>();
   const [isResendInvitationDialogOpen, setIsResendInvitationDialogOpen] = useState(false);
@@ -116,7 +117,7 @@ export const PeopleTable = ({
         return;
       }
 
-      showSuccessToast({ description: "Removed access successfully" });
+      showSuccessToast({ description: t("PEOPLE_TABLE.REMOVED_ACCESS_SUCCESSFULLY") });
       setIsRemoveAccessDialogOpen(false);
     } catch (error) {
       showErrorToast({ errors: error });
@@ -134,7 +135,7 @@ export const PeopleTable = ({
         showErrorToast({ errors: res?.errors });
         return;
       }
-      showSuccessToast({ description: "Resend invitation mail successfully" });
+      showSuccessToast({ description: t("PEOPLE_TABLE.RESEND_INVITATION_MAIL") });
       setIsResendInvitationDialogOpen(false);
     } catch (error) {
       showErrorToast({ errors: error });
@@ -154,7 +155,7 @@ export const PeopleTable = ({
         showErrorToast({ errors: res?.errors });
         return;
       }
-      showSuccessToast({ description: "Resend activation mail successfully" });
+      showSuccessToast({ description: t("PEOPLE_TABLE.RESEND_ACTIVATION_MAIL") });
       setIsResendActivationDialogOpen(false);
     } catch (error) {
       showErrorToast({ errors: error });
@@ -168,7 +169,7 @@ export const PeopleTable = ({
         tenantGroupId: groupId,
         transferToUserEmail: selectedPeopleData.peopleDetails.email,
       });
-      showSuccessToast({ description: "Ownership transferred successfully" });
+      showSuccessToast({ description: t("PEOPLE_TABLE.OWNERSHIP_TRANSFERRED_SUCCESSFULLY") });
       setIsTransferOwnershipDialogOpen(false);
     } catch (error) {
       showErrorToast({ errors: error });
@@ -182,7 +183,7 @@ export const PeopleTable = ({
         accessorFn: (row) => getUserDisplayName(row.peopleDetails),
         header: () => (
           <div className="flex w-[220px] items-center">
-            <span className="font-bold text-medium-emphasis">Name</span>
+            <span className="font-bold text-medium-emphasis">{t("common:NAME")}</span>
           </div>
         ),
         cell: (info) => {
@@ -208,7 +209,7 @@ export const PeopleTable = ({
               ) &&
                 !info.row.original.sharedEnviroments.some((env) => env.isCreator) && (
                   <PeopleStatusBadge
-                    status="Pending Invite"
+                    status={tStatic("os.people", "PEOPLE_TABLE.PENDING_INVITE")}
                     className="w-fit bg-warning-100 px-2 py-0.5 text-[10px] text-xs font-normal text-warning-700"
                   />
                 )}
@@ -235,7 +236,7 @@ export const PeopleTable = ({
         id: "role",
         header: () => (
           <div className="flex w-[110px] items-center">
-            <span className="font-bold text-medium-emphasis">Role</span>
+            <span className="font-bold text-medium-emphasis">{t("PEOPLE_TABLE.ROLE")}</span>
           </div>
         ),
         cell: ({ row }: CellContext<PeopleGroupedByEnvironments, unknown>) => {
@@ -262,7 +263,7 @@ export const PeopleTable = ({
         accessorFn: (row) => row.peopleDetails.email,
         header: () => (
           <div className="flex w-[180px] items-center">
-            <span className="font-bold text-medium-emphasis">Email</span>
+            <span className="font-bold text-medium-emphasis">{t("common:EMAIL")}</span>
           </div>
         ),
         cell: (info) => (
@@ -275,7 +276,7 @@ export const PeopleTable = ({
         id: "environments",
         header: () => (
           <div className="flex w-[180px] items-center">
-            <span className="font-bold text-medium-emphasis">Environments</span>
+            <span className="font-bold text-medium-emphasis">{t("PEOPLE_TABLE.ENVIRONMENTS")}</span>
           </div>
         ),
         cell: ({ row }: CellContext<PeopleGroupedByEnvironments, unknown>) => {
@@ -344,7 +345,7 @@ export const PeopleTable = ({
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Open menu</span>
+                        <span className="sr-only">{t("PEOPLE_TABLE.OPEN_MENU")}</span>
                         <EllipsisVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -357,7 +358,7 @@ export const PeopleTable = ({
                           }}
                         >
                           <Mail className="mr-2 h-4 w-4" />
-                          <span>Resend Invitation</span>
+                          <span>{t("PEOPLE_TABLE.RESEND_INVITATION")}</span>
                         </DropdownMenuItem>
                       )}
                       {showResendActivation && (
@@ -368,7 +369,7 @@ export const PeopleTable = ({
                           }}
                         >
                           <RefreshCw className="mr-2 h-4 w-4" />
-                          <span>Resend Activation</span>
+                          <span>{t("PEOPLE_TABLE.RESEND_ACTIVATION")}</span>
                         </DropdownMenuItem>
                       )}
                       {showRemoveAccess && (
@@ -379,7 +380,7 @@ export const PeopleTable = ({
                           }}
                         >
                           <UserMinus className="mr-2 h-4 w-4" />
-                          <span>Remove access</span>
+                          <span>{t("PEOPLE_TABLE.REMOVE_ACCESS")}</span>
                         </DropdownMenuItem>
                       )}
                       {!showResendInvite && isViewerOwner && (
@@ -390,7 +391,7 @@ export const PeopleTable = ({
                           }}
                         >
                           <ArrowRightLeft className="mr-2 h-4 w-4" />
-                          <span>Transfer Ownership</span>
+                          <span>{t("PEOPLE_TABLE.TRANSFER_OWNERSHIP")}</span>
                         </DropdownMenuItem>
                       )}
                     </DropdownMenuContent>
@@ -443,7 +444,7 @@ export const PeopleTable = ({
                 colSpan={columns.length}
                 className="h-24 text-center text-muted-foreground"
               >
-                No results found.
+                {t("PEOPLE_TABLE.NO_RESULTS_FOUND")}
               </TableCell>
             </TableRow>
           ) : (
@@ -474,10 +475,10 @@ export const PeopleTable = ({
             onCancel={() => setIsRemoveAccessDialogOpen(false)}
             onConfirm={onRemoveConfirm}
             data={{
-              dialogTitle: "Revoke Access",
-              dialogSubtitle: `Are you sure you want to revoke access for ${getUserDisplayName(selectedPeopleData.peopleDetails)}?`,
-              confirmButton: "Revoke",
-              cancelButton: "Cancel",
+              dialogTitle: t("PEOPLE_TABLE.REVOKE_ACCESS"),
+              dialogSubtitle: t("PEOPLE_TABLE.ARE_YOU_SURE_YOU_WANT_4", { peopleDetails: getUserDisplayName(selectedPeopleData.peopleDetails) }),
+              confirmButton: t("PEOPLE_TABLE.REVOKE"),
+              cancelButton: t("common:CANCEL"),
             }}
           />
         )}
@@ -486,17 +487,15 @@ export const PeopleTable = ({
       <Dialog open={isResendInvitationDialogOpen} onOpenChange={setIsResendInvitationDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Resend Invitation</DialogTitle>
+            <DialogTitle>{t("PEOPLE_TABLE.RESEND_INVITATION")}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to resend the invitation to{" "}
-              {selectedPeopleData?.peopleDetails.email}?
-            </DialogDescription>
+              {t("PEOPLE_TABLE.ARE_YOU_SURE_YOU_WANT", { email: selectedPeopleData?.peopleDetails.email ?? "" })}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsResendInvitationDialogOpen(false)}>
-              Cancel
+              {t("common:CANCEL")}
             </Button>
-            <Button onClick={onConfirmResendInvitation}>Resend</Button>
+            <Button onClick={onConfirmResendInvitation}>{t("PEOPLE_TABLE.RESEND")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -504,17 +503,15 @@ export const PeopleTable = ({
       <Dialog open={isResendActivationDialogOpen} onOpenChange={setIsResendActivationDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Resend Activation</DialogTitle>
+            <DialogTitle>{t("PEOPLE_TABLE.RESEND_ACTIVATION")}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to resend the activation mail to{" "}
-              {selectedPeopleData?.peopleDetails.email}?
-            </DialogDescription>
+              {t("PEOPLE_TABLE.ARE_YOU_SURE_YOU_WANT_2", { email: selectedPeopleData?.peopleDetails.email ?? "" })}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsResendActivationDialogOpen(false)}>
-              Cancel
+              {t("common:CANCEL")}
             </Button>
-            <Button onClick={onConfirmResendActivation}>Resend</Button>
+            <Button onClick={onConfirmResendActivation}>{t("PEOPLE_TABLE.RESEND")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -522,11 +519,9 @@ export const PeopleTable = ({
       <Dialog open={isTransferOwnershipDialogOpen} onOpenChange={setIsTransferOwnershipDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Transfer Ownership</DialogTitle>
+            <DialogTitle>{t("PEOPLE_TABLE.TRANSFER_OWNERSHIP")}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to transfer ownership to{" "}
-              {selectedPeopleData?.peopleDetails.email}?
-            </DialogDescription>
+              {t("PEOPLE_TABLE.ARE_YOU_SURE_YOU_WANT_3", { email: selectedPeopleData?.peopleDetails.email ?? "" })}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button
@@ -534,10 +529,10 @@ export const PeopleTable = ({
               onClick={() => setIsTransferOwnershipDialogOpen(false)}
               disabled={isTransferring}
             >
-              Cancel
+              {t("common:CANCEL")}
             </Button>
             <Button onClick={onConfirmTransferOwnership} disabled={isTransferring}>
-              {isTransferring ? "Transferring..." : "Transfer"}
+              {isTransferring ? t("PEOPLE_TABLE.TRANSFERRING") : t("PEOPLE_TABLE.TRANSFER")}
             </Button>
           </DialogFooter>
         </DialogContent>

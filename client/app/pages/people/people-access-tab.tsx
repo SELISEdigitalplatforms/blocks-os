@@ -8,6 +8,7 @@ import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { useSaveAccessPolicy } from "@/hooks/use-project-access";
 import { IMenuGrant, toPolicy, VIEW_ACTION } from "@blocks-identifier/models/project-access.model";
 import { cn } from "@/lib/utils";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
 
 /**
  * Labels and destructive markers for the grant catalog.
@@ -17,10 +18,10 @@ import { cn } from "@/lib/utils";
  * before this map does still renders, falling back to its id, rather than disappearing.
  */
 const MENU_LABELS: Record<string, string> = {
-  environments: "Environments",
-  people: "People",
-  repositories: "Repositories",
-  settings: "Project Settings",
+  get environments() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.ENVIRONMENTS"); },
+  get people() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.PEOPLE"); },
+  get repositories() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.REPOSITORIES"); },
+  get settings() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.PROJECT_SETTINGS"); },
 };
 
 const MENU_ICONS: Record<string, typeof Package> = {
@@ -31,23 +32,23 @@ const MENU_ICONS: Record<string, typeof Package> = {
 };
 
 const ACTION_LABELS: Record<string, string> = {
-  "environments::view": "View environments",
-  "environments::migrate": "Start migration",
-  "people::view": "View members",
-  "people::invite": "Invite people",
-  "people::remove": "Remove access",
-  "repositories::view": "View repositories",
-  "repositories::add": "Add repository",
-  "repositories::delete": "Delete repository",
-  "settings::view": "View settings",
-  "settings::rename": "Rename project",
+  get "environments::view"() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.VIEW_ENVIRONMENTS"); },
+  get "environments::migrate"() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.START_MIGRATION"); },
+  get "people::view"() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.VIEW_MEMBERS"); },
+  get "people::invite"() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.INVITE_PEOPLE"); },
+  get "people::remove"() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.REMOVE_ACCESS"); },
+  get "repositories::view"() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.VIEW_REPOSITORIES"); },
+  get "repositories::add"() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.ADD_REPOSITORY"); },
+  get "repositories::delete"() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.DELETE_REPOSITORY"); },
+  get "settings::view"() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.VIEW_SETTINGS"); },
+  get "settings::rename"() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.RENAME_PROJECT"); },
 };
 
 /** What a grant actually does, where that is not obvious from the label. */
 const ACTION_WARNINGS: Record<string, string> = {
-  "environments::migrate": "Overwrites data in the target environment",
-  "people::remove": "Revokes a person from the project",
-  "repositories::delete": "Tears down running deployments",
+  get "environments::migrate"() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.OVERWRITES_DATA_IN_THE_TARGET"); },
+  get "people::remove"() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.REVOKES_A_PERSON"); },
+  get "repositories::delete"() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.TEARS_DOWN_RUNNING_DEPLOYMENTS"); },
 };
 
 const sameSet = (a: string[], b: string[]) =>
@@ -80,6 +81,7 @@ export const PeopleAccessTab = ({
   isTargetOwner,
   isLoading = false,
 }: PeopleAccessTabProps) => {
+  const { t } = useT("os.people");
   const { mutateAsync: save, isPending } = useSaveAccessPolicy();
 
   const saved = useMemo(() => accessPolicies ?? [], [accessPolicies]);
@@ -137,7 +139,7 @@ export const PeopleAccessTab = ({
       if (response?.isSuccess) {
         // Back to following the server: the refetch this save triggers is now the source again.
         setDraft(null);
-        showSuccessToast({ description: "Access updated." });
+        showSuccessToast({ description: t("PEOPLE_ACCESS_TAB.ACCESS_UPDATED") });
       } else {
         showErrorToast({ errors: response?.errors });
       }
@@ -172,20 +174,18 @@ export const PeopleAccessTab = ({
   return (
     <Card className="overflow-hidden p-0">
       <CardHeader className="border-b p-5">
-        <h2 className="text-base font-semibold">Project access</h2>
+        <h2 className="text-base font-semibold">{t("PEOPLE_ACCESS_TAB.PROJECT_ACCESS")}</h2>
         <p className="mt-1 text-sm text-medium-emphasis">
-          Choose what this person can do in this project. They will only see the menus you grant.
-          Environment access is managed above.
+          {t("PEOPLE_ACCESS_TAB.CHOOSE_WHAT_THIS_PERSON_CAN")}
         </p>
       </CardHeader>
 
       <CardContent className="flex flex-col gap-3 p-5">
         {grantedMenus.length === 0 && (
           <div className="rounded-lg border border-l-[3px] border-l-warning-500 bg-surface p-3 text-sm">
-            <p className="font-semibold">No access yet</p>
+            <p className="font-semibold">{t("PEOPLE_ACCESS_TAB.NO_ACCESS_YET")}</p>
             <p className="text-medium-emphasis">
-              Until at least one menu is granted, this person is sent back to the console when they
-              open the project.
+              {t("PEOPLE_ACCESS_TAB.UNTIL_AT_LEAST_ONE_MENU")}
             </p>
           </div>
         )}
@@ -256,7 +256,7 @@ export const PeopleAccessTab = ({
                         )}
                         {isView && holdsOther && (
                           <span className="mt-0.5 block text-xs text-medium-emphasis">
-                            Included with the actions below
+                            {t("PEOPLE_ACCESS_TAB.INCLUDED_WITH_THE_ACTIONS_BELOW")}
                           </span>
                         )}
                       </span>
@@ -275,15 +275,15 @@ export const PeopleAccessTab = ({
       <div className="flex flex-wrap items-center justify-between gap-3 border-t bg-surface px-5 py-3.5">
         <span className="text-sm text-medium-emphasis">
           {grantedMenus.length === 0
-            ? "No menus granted"
-            : `${grantedMenus.length} of ${menuIds.length} menus granted`}
+            ? t("PEOPLE_ACCESS_TAB.NO_MENUS_GRANTED")
+            : t("PEOPLE_ACCESS_TAB.OF_MENUS_GRANTED", { count: grantedMenus.length, count2: menuIds.length })}
         </span>
         <div className="flex gap-2">
           <Button variant="outline" disabled={!isDirty || isPending} onClick={() => setDraft(null)}>
-            Cancel
+            {t("common:CANCEL")}
           </Button>
           <Button disabled={!isDirty || isPending} onClick={onSave}>
-            {isPending ? "Saving..." : "Save changes"}
+            {isPending ? t("PEOPLE_ACCESS_TAB.SAVING") : t("common:SAVE_CHANGES")}
           </Button>
         </div>
       </div>

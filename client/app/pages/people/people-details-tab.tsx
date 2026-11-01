@@ -3,6 +3,7 @@ import { Card } from "@/components/ui-kits/card/card";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { checkValidDate, formatFullDate } from "@/lib/utils";
 import { getUserDisplayName, getUserInitials } from "@blocks-idp/iam/utils/user-display-name";
+import { useT } from "@seliseblocks/genesis-os";
 
 export const PeopleDetailsTab = ({
   user,
@@ -11,6 +12,7 @@ export const PeopleDetailsTab = ({
   user?: User;
   projectRole?: "Owner" | "Contributor";
 }) => {
+  const { t } = useT("os.people");
   const fullName = getUserDisplayName(user);
 
   return (
@@ -22,11 +24,11 @@ export const PeopleDetailsTab = ({
               {user?.profileImageUrl ? (
                 <img
                   src={user.profileImageUrl}
-                  alt={`${fullName || "Member"} profile`}
+                  alt={t("PEOPLE_DETAILS_TAB.PROFILE", { fullName: fullName || "Member" })}
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <span aria-label="Profile initials">{getUserInitials(user)}</span>
+                <span aria-label={t("PEOPLE_DETAILS_TAB.PROFILE_INITIALS")}>{getUserInitials(user)}</span>
               )}
             </div>
             <div className="min-w-0">
@@ -35,18 +37,18 @@ export const PeopleDetailsTab = ({
                   <span className="truncate text-sm font-medium text-high-emphasis">{user.email}</span>
                 </CopyToClipboardButton>
               ) : (
-                <span className="text-sm text-medium-emphasis">Contact information unavailable</span>
+                <span className="text-sm text-medium-emphasis">{t("PEOPLE_DETAILS_TAB.CONTACT_INFORMATION_UNAVAILABLE")}</span>
               )}
               <p className="mt-1 text-sm text-medium-emphasis">
-                <span className="mr-1.5">Role:</span>
-                <span className="font-medium text-high-emphasis">{projectRole ?? "Contributor"}</span>
+                <span className="mr-1.5">{t("PEOPLE_DETAILS_TAB.ROLE")}</span>
+                <span className="font-medium text-high-emphasis">{projectRole ?? t("PEOPLE_DETAILS_TAB.CONTRIBUTOR")}</span>
               </p>
             </div>
           </div>
 
           <div className="border-t pt-4 sm:border-t-0 sm:pt-0 md:border-l md:pl-6">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Latest login
+              {t("PEOPLE_DETAILS_TAB.LATEST_LOGIN")}
             </p>
             <p className="mt-1.5 text-sm font-medium text-high-emphasis">
               {user?.lastLoggedInTime && checkValidDate(user.lastLoggedInTime)
@@ -55,7 +57,7 @@ export const PeopleDetailsTab = ({
             </p>
           </div>
           <div className="border-t pt-4 sm:border-t-0 sm:pt-0 md:border-l md:pl-6">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Joined</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("PEOPLE_DETAILS_TAB.JOINED")}</p>
             <p className="mt-1.5 text-sm font-medium text-high-emphasis">
               {user?.createdDate && checkValidDate(user.createdDate)
                 ? formatFullDate(new Date(user.createdDate))

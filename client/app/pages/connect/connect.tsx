@@ -11,7 +11,7 @@ import {
   ProjectEnvironmentCheckboxes,
   sortEnvironments,
 } from "@/components/create-project/form/project-environment-checkboxes";
-import { environmentOptions } from "@/components/create-project/form/create-project-environments-form/utils";
+import { getEnvironmentOptions } from "@/components/create-project/form/create-project-environments-form/utils";
 import { ProjectTermsCheckboxes } from "@/components/create-project/form/project-terms-checkboxes";
 import { integrationConnectService } from "@/cross-modules/integration/services/integration-connect.service";
 import {
@@ -31,10 +31,11 @@ import {
 import { hasErrorCode, isErrorWithErrors } from "@/lib/error";
 import { showErrorToast } from "@/hooks/use-toast";
 import { ConnectProjectPicker } from "./connect-project-picker";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
 
 const PROJECTS_QUERY_KEY = ["identifier", "projects", "connect"] as const;
 const environmentLabel = (value: string) =>
-  environmentOptions.find((option) => option.value === value)?.label ?? value;
+  getEnvironmentOptions().find((option) => option.value === value)?.label ?? value;
 
 /**
  * The "Connect with Blocks OS" page (P3-11 entry, P3-13 approve screen, P3-14 no-project branch,
@@ -42,6 +43,7 @@ const environmentLabel = (value: string) =>
  * round-trip via the localStorage pending-request hand-off.
  */
 export default function ConnectPage() {
+  const { t } = useT("os.connect");
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -57,11 +59,11 @@ export default function ConnectPage() {
       try {
         new URL(redirectUri);
       } catch {
-        return "We could not start the connection request. Go back to your site and click Connect again.";
+        return t("CONNECT.WE_COULD_NOT_START_THE");
       }
       return null;
     }
-    return searchParams.get("request") ? null : "This page is missing its connection details. Go back to your site and click Connect again.";
+    return searchParams.get("request") ? null : tStatic("os.connect", "CONNECT.THIS_PAGE_IS_MISSING_ITS");
   }, [searchParams]);
 
   useEffect(() => {
@@ -99,7 +101,7 @@ export default function ConnectPage() {
           setRequestId(response.requestId);
           window.history.replaceState(null, "", `/connect?request=${response.requestId}`);
         })
-        .catch(() => setEntryError("We could not start the connection request. Go back to your site and click Connect again."));
+        .catch(() => setEntryError(t("CONNECT.WE_COULD_NOT_START_THE")));
       return;
     }
     if (searchParams.get("request")) return;
@@ -216,18 +218,18 @@ export default function ConnectPage() {
       clearPendingConnectRequest();
       window.location.assign(result.redirectUrl);
     } catch {
-      showErrorToast({ errors: "Could not cancel the connection request." });
+      showErrorToast({ errors: t("CONNECT.COULD_NOT_CANCEL_THE_CONNECTION") });
     }
   };
 
   // ── Render ──
   if (entryError || queryEntryError) {
-    return <ConnectShell title="Connection problem">{entryError || queryEntryError}</ConnectShell>;
+    return <ConnectShell title={t("CONNECT.CONNECTION_PROBLEM")}>{entryError || queryEntryError}</ConnectShell>;
   }
 
   if (!requestId) {
     return (
-      <ConnectShell title="Connect with Blocks OS">
+      <ConnectShell title={t("CONNECT.CONNECT_WITH_BLOCKS_OS")}>
         <div className="flex justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-medium-emphasis" />
         </div>
@@ -237,7 +239,7 @@ export default function ConnectPage() {
 
   if (!isAuthenticated) {
     return (
-      <ConnectShell title="Connect with Blocks OS">
+      <ConnectShell title={t("CONNECT.CONNECT_WITH_BLOCKS_OS")}>
         <div className="flex justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-medium-emphasis" />
         </div>
@@ -247,15 +249,14 @@ export default function ConnectPage() {
 
   if (successRedirectUrl) {
     return (
-      <ConnectShell title="Connection successful">
+      <ConnectShell title={t("CONNECT.CONNECTION_SUCCESSFUL")}>
         <div className="flex flex-col items-center gap-3 py-4 text-center" role="status">
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500/10 text-green-600 dark:text-green-400">
             <CircleCheck className="h-6 w-6" aria-hidden="true" />
           </span>
-          <p className="text-sm text-high-emphasis">Your site is connected to Blocks OS.</p>
+          <p className="text-sm text-high-emphasis">{t("CONNECT.YOUR_SITE_IS_CONNECTED_TO")}</p>
           <p className="text-sm text-medium-emphasis">
-            Redirecting you to {request?.siteName || request?.redirectHost || "your site"}…
-          </p>
+            {t("CONNECT.REDIRECTING_YOU_TO", { value1: request?.siteName || request?.redirectHost || "your site" })}</p>
         </div>
         <div className="flex justify-center">
           <Button asChild size="sm" className="gap-2">
@@ -266,7 +267,7 @@ export default function ConnectPage() {
                 goToSite();
               }}
             >
-              Go to site now <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              {t("CONNECT.GO_TO_SITE_NOW")} <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </a>
           </Button>
         </div>
@@ -276,7 +277,7 @@ export default function ConnectPage() {
 
   if (requestLoading) {
     return (
-      <ConnectShell title="Connect with Blocks OS">
+      <ConnectShell title={t("CONNECT.CONNECT_WITH_BLOCKS_OS")}>
         <div className="flex justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-medium-emphasis" />
         </div>
@@ -295,9 +296,8 @@ export default function ConnectPage() {
 
     if (claimedByOther) {
       return (
-        <ConnectShell title="This connection request is in use">
-          Someone else is already handling this connection request. Go back to your site and start
-          again if you want to connect it for yourself.
+        <ConnectShell title={t("CONNECT.THIS_CONNECTION_REQUEST_IS_IN")}>
+          {t("CONNECT.SOMEONE_ELSE_IS_ALREADY_HANDLING")}
         </ConnectShell>
       );
     }
@@ -311,18 +311,18 @@ export default function ConnectPage() {
     }
 
     return (
-      <ConnectShell title="Something went wrong">
-        We could not read this connection request. Go back to your site and click Connect again.
+      <ConnectShell title={t("CONNECT.SOMETHING_WENT_WRONG")}>
+        {t("CONNECT.WE_COULD_NOT_READ_THIS")}
       </ConnectShell>
     );
   }
 
   if (projectsQuery.isLoading) {
     return (
-      <ConnectShell title="Connect to Blocks OS">
+      <ConnectShell title={t("CONNECT.CONNECT_TO_BLOCKS_OS")}>
         <div className="flex items-center gap-2 py-4 text-sm text-medium-emphasis" role="status">
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-          Loading projects…
+          {t("CONNECT.LOADING_PROJECTS")}
         </div>
       </ConnectShell>
     );
@@ -330,11 +330,11 @@ export default function ConnectPage() {
 
   if (projectsQuery.isError && !createdProject) {
     return (
-      <ConnectShell title="Connect to Blocks OS">
-        <Banner variant="destructive" title="Projects could not be loaded" compact={false}>
-          Check your connection, then try again.
+      <ConnectShell title={t("CONNECT.CONNECT_TO_BLOCKS_OS")}>
+        <Banner variant="destructive" title={t("CONNECT.PROJECTS_COULD_NOT_BE_LOADED")} compact={false}>
+          {t("CONNECT.CHECK_YOUR_CONNECTION_THEN_TRY")}
         </Banner>
-        <Button size="sm" variant="outline" onClick={() => void projectsQuery.refetch()}>Retry</Button>
+        <Button size="sm" variant="outline" onClick={() => void projectsQuery.refetch()}>{t("common:RETRY")}</Button>
       </ConnectShell>
     );
   }
@@ -343,36 +343,36 @@ export default function ConnectPage() {
   const busy = waiting || approve.isPending;
 
   return (
-    <ConnectShell title="Connect to Blocks OS">
+    <ConnectShell title={t("CONNECT.CONNECT_TO_BLOCKS_OS")}>
       <p className="text-sm leading-relaxed text-medium-emphasis">
-        Choose the project, environment, and access this application can use.
+        {t("CONNECT.CHOOSE_THE_PROJECT_ENVIRONMENT_AND")}
       </p>
-      <section aria-label="Connection request" className="rounded-lg border border-border bg-muted/20 p-4">
+      <section aria-label={t("CONNECT.CONNECTION_REQUEST")} className="rounded-lg border border-border bg-muted/20 p-4">
         <div className="flex items-start gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
             <Plug className="h-4 w-4" aria-hidden="true" />
           </span>
           <div className="min-w-0">
             <p className="wrap-break-word text-sm font-semibold text-high-emphasis">{request.siteName || request.redirectHost}</p>
-            <p className="mt-0.5 text-xs text-medium-emphasis">Requests access to Blocks Localization</p>
+            <p className="mt-0.5 text-xs text-medium-emphasis">{t("CONNECT.REQUESTS_ACCESS_TO_BLOCKS")}</p>
           </div>
         </div>
         <div className="mt-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-t border-border pt-3 text-xs">
-          <span className="text-medium-emphasis">Request origin</span>
+          <span className="text-medium-emphasis">{t("CONNECT.REQUEST_ORIGIN")}</span>
           <code className="break-all font-mono text-high-emphasis">{request.redirectHost}</code>
         </div>
       </section>
 
       {createdProject && !showCreateProject && (
-        <Banner variant="success" title="Project created successfully" compact={false}>
+        <Banner variant="success" title={t("CONNECT.PROJECT_CREATED_SUCCESSFULLY")} compact={false}>
           {selectedGroup
-            ? `Choose an environment for ${createdProject.name} to continue.`
+            ? t("CONNECT.CHOOSE_AN_ENVIRONMENT_FOR_TO", { name: createdProject.name })
             : projectsQuery.isError
-              ? `Could not load environments for ${createdProject.name}.`
-              : `Loading environments for ${createdProject.name}…`}
+              ? t("CONNECT.COULD_NOT_LOAD_ENVIRONMENTS_FOR", { name: createdProject.name })
+              : t("CONNECT.LOADING_ENVIRONMENTS_FOR", { name: createdProject.name })}
           {!selectedGroup && projectsQuery.isError && (
             <button type="button" className="ml-1 font-semibold underline" onClick={() => void projectsQuery.refetch()}>
-              Retry
+              {t("common:RETRY")}
             </button>
           )}
         </Banner>
@@ -391,7 +391,7 @@ export default function ConnectPage() {
       ) : (
         <div className="space-y-6">
           <section>
-            <p className="mb-2 text-sm font-medium text-high-emphasis">Project</p>
+            <p className="mb-2 text-sm font-medium text-high-emphasis">{t("CONNECT.PROJECT")}</p>
             {groups.length > 0 ? <ConnectProjectPicker
               projects={groups.map((group) => ({
                 tenantGroupId: group.tenantGroupId,
@@ -407,20 +407,20 @@ export default function ConnectPage() {
                 approvalStartedFor.current = null;
                 readiness.reset();
               }}
-            /> : <p className="text-sm text-medium-emphasis" role="status">Loading projects…</p>}
+            /> : <p className="text-sm text-medium-emphasis" role="status">{t("CONNECT.LOADING_PROJECTS")}</p>}
             <button
               type="button"
               className="mt-2 text-xs font-medium text-primary hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
               onClick={() => setShowCreateProject(true)}
             >
-              Create new project
+              {t("CONNECT.CREATE_NEW_PROJECT")}
             </button>
           </section>
 
           {selectedGroup ? (
             <section>
-              <h2 id="connect-environment-heading" className="mb-2 text-sm font-medium text-high-emphasis">Environment</h2>
-              <p className="mb-3 text-xs text-medium-emphasis">Select the environment this application can access.</p>
+              <h2 id="connect-environment-heading" className="mb-2 text-sm font-medium text-high-emphasis">{t("CONNECT.ENVIRONMENT")}</h2>
+              <p className="mb-3 text-xs text-medium-emphasis">{t("CONNECT.SELECT_THE_ENVIRONMENT_THIS")}</p>
               <RadioGroup
                 aria-labelledby="connect-environment-heading"
                 value={selectedEnvironment?.tenantId ?? ""}
@@ -466,27 +466,26 @@ export default function ConnectPage() {
             </section>
           ) : (
             <p className="text-xs text-medium-emphasis">
-              {createdProject ? "The new project will appear here when its environments are available." : "Select a project to see its environments."}
+              {createdProject ? t("CONNECT.THE_NEW_PROJECT_WILL_APPEAR") : t("CONNECT.SELECT_A_PROJECT_TO_SEE")}
             </p>
           )}
 
           {selectedEnvironment && (
             <section aria-labelledby="connect-options-heading" className="space-y-3">
               <div>
-                <h2 id="connect-options-heading" className="text-sm font-medium text-high-emphasis">Connect options</h2>
+                <h2 id="connect-options-heading" className="text-sm font-medium text-high-emphasis">{t("CONNECT.CONNECT_OPTIONS")}</h2>
                 <p className="mt-1 text-xs text-medium-emphasis">
-                  Select the level of localization access to grant in {environmentLabel(selectedEnvironment.environment)}.
-                </p>
+                  {t("CONNECT.SELECT_THE_LEVEL_OF_LOCALIZATION", { environment: environmentLabel(selectedEnvironment.environment) })}</p>
               </div>
               <div role="group" aria-labelledby="connect-options-heading" className="grid gap-2">
                 {request.templates.map((template) => {
                   const isSelected = templateKey === template.key;
-                  const accessLabel = template.accessLevel === "read" ? "Read-only" : template.accessLevel === "full" ? "Full access" : template.accessLevel;
+                  const accessLabel = template.accessLevel === "read" ? "Read-only" : template.accessLevel === "full" ? tStatic("os.connect", "CONNECT.FULL_ACCESS") : template.accessLevel;
                   return (
                     <button
                       key={template.key}
                       type="button"
-                      aria-label={`Select ${template.displayName}`}
+                      aria-label={t("CONNECT.SELECT", { displayName: template.displayName })}
                       aria-pressed={isSelected}
                       disabled={busy}
                       onClick={() => {
@@ -515,16 +514,16 @@ export default function ConnectPage() {
                   );
                 })}
               </div>
-              {waiting && <p role="status" className="text-xs text-medium-emphasis">Checking that this environment is ready. This can take a minute after project creation.</p>}
+              {waiting && <p role="status" className="text-xs text-medium-emphasis">{t("CONNECT.CHECKING_THAT_THIS_ENVIRONMENT_IS")}</p>}
               {readiness.state.phase === "timeout" && (
-                <Banner variant="warning" title="This environment is taking longer to set up" compact={false}>
-                  <span>Try the readiness check again. </span>
-                  <button type="button" className="font-semibold underline" onClick={() => void readiness.retry()}>Retry</button>
+                <Banner variant="warning" title={t("CONNECT.THIS_ENVIRONMENT_IS_TAKING_LONGER")} compact={false}>
+                  <span>{t("CONNECT.TRY_THE_READINESS_CHECK_AGAIN")} </span>
+                  <button type="button" className="font-semibold underline" onClick={() => void readiness.retry()}>{t("common:RETRY")}</button>
                 </Banner>
               )}
               {readiness.state.phase === "permissionDenied" && (
-                <Banner variant="destructive" title="Integration permission required" compact={false}>
-                  You don&apos;t have permission to set up integrations in this environment. Choose another environment or ask an administrator for access.
+                <Banner variant="destructive" title={t("CONNECT.INTEGRATION_PERMISSION_REQUIRED")} compact={false}>
+                  {t("CONNECT.YOU_DON_T_HAVE_PERMISSION")}
                 </Banner>
               )}
             </section>
@@ -533,12 +532,12 @@ export default function ConnectPage() {
       )}
       <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
         <Button variant="outline" size="sm" onClick={handleCancel} disabled={approve.isPending || cancel.isPending}>
-          Cancel
+          {t("common:CANCEL")}
         </Button>
         {selectedEnvironment && (
           <Button type="button" className="min-w-32 gap-2 font-semibold" onClick={handleConnect} disabled={!templateKey || busy || cancel.isPending}>
             {busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-            {approve.isPending ? "Connecting…" : waiting ? "Checking…" : "Connect"}
+            {approve.isPending ? t("CONNECT.CONNECTING") : waiting ? t("CONNECT.CHECKING") : t("CONNECT.CONNECT")}
             {!busy && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
           </Button>
         )}
@@ -547,12 +546,14 @@ export default function ConnectPage() {
   );
 }
 
-const ConnectShell = ({ title, children }: { title: string; children: React.ReactNode }) => (
+const ConnectShell = ({ title, children }: { title: string; children: React.ReactNode }) => {
+  const { t } = useT("os.connect");
+  return (
   <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10 sm:px-6">
     <div className="w-full max-w-xl">
       <div className="mb-6 flex justify-center">
-        <img src="/blocks-logos/os_light_mode.svg" alt="Blocks OS" className="h-14 w-auto dark:hidden" />
-        <img src="/blocks-logos/os_dark_mode.svg" alt="Blocks OS" className="hidden h-14 w-auto dark:block" />
+        <img src="/blocks-logos/os_light_mode.svg" alt={t("CONNECT.BLOCKS_OS")} className="h-14 w-auto dark:hidden" />
+        <img src="/blocks-logos/os_dark_mode.svg" alt={t("CONNECT.BLOCKS_OS")} className="hidden h-14 w-auto dark:block" />
       </div>
       <div className="space-y-5 rounded-lg border border-border bg-card p-5 shadow-xs sm:p-8">
         <h1 className="text-lg font-semibold text-high-emphasis">{title}</h1>
@@ -561,17 +562,19 @@ const ConnectShell = ({ title, children }: { title: string; children: React.Reac
     </div>
   </div>
 );
+};
 
 /** Clears the pending id on unmount so re-renders of this screen keep the back button. */
 const ExpiredScreen = ({ backUrl }: { backUrl: string | null }) => {
+  const { t } = useT("os.connect");
   useEffect(() => clearPendingConnectRequest, []);
   return (
-    <ConnectShell title="This connection link has expired">
-      <p>Go back to your site and click Connect again.</p>
+    <ConnectShell title={t("CONNECT.THIS_CONNECTION_LINK_HAS_EXPIRED")}>
+      <p>{t("CONNECT.GO_BACK_TO_YOUR_SITE")}</p>
       {backUrl && (
         <div className="mt-4">
           <Button size="sm" variant="outline" onClick={() => window.location.assign(backUrl)}>
-            Back to your site
+            {t("CONNECT.BACK_TO_YOUR_SITE")}
           </Button>
         </div>
       )}
@@ -591,6 +594,7 @@ const CreateProjectBranch = ({
   onCreated: (tenantGroupId: string, name: string) => void;
   onChooseExisting?: () => void;
 }) => {
+  const { t } = useT("os.connect");
   const { isPending, mutateAsync } = useCreateProject();
   const [created, setCreated] = useState(false);
   const [name, setName] = useState("");
@@ -615,7 +619,7 @@ const CreateProjectBranch = ({
         setCreated(true);
         onCreated(response.tenantGroupId, name.trim());
       } else {
-        showErrorToast({ errors: response?.errors ?? "Could not create the project." });
+        showErrorToast({ errors: response?.errors ?? t("CONNECT.COULD_NOT_CREATE_THE_PROJECT") });
       }
     } catch (error) {
       if (error && typeof error === "object" && "errors" in error) {
@@ -637,22 +641,22 @@ const CreateProjectBranch = ({
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-sm font-semibold text-high-emphasis">{onChooseExisting ? "Create a project" : "You don't have a project yet"}</h2>
-        <p className="mt-1 text-xs text-medium-emphasis">Create a project to continue connecting your site.</p>
+        <h2 className="text-sm font-semibold text-high-emphasis">{onChooseExisting ? t("CONNECT.CREATE_A_PROJECT") : t("CONNECT.YOU_DON_T_HAVE_A")}</h2>
+        <p className="mt-1 text-xs text-medium-emphasis">{t("CONNECT.CREATE_A_PROJECT_TO_CONTINUE")}</p>
       </div>
       <div>
-        <label htmlFor="connect-project-name" className="mb-2 block text-sm font-medium text-high-emphasis">Project name</label>
+        <label htmlFor="connect-project-name" className="mb-2 block text-sm font-medium text-high-emphasis">{t("CONNECT.PROJECT_NAME")}</label>
         <Input
           id="connect-project-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Enter a project name"
+          placeholder={t("CONNECT.ENTER_A_PROJECT_NAME")}
           maxLength={100}
         />
       </div>
       <div>
-        <h3 className="mb-1 text-sm font-medium text-high-emphasis">Environments</h3>
-        <p className="mb-3 text-xs text-medium-emphasis">Select at least one. Each chip shows the matching Git branch.</p>
+        <h3 className="mb-1 text-sm font-medium text-high-emphasis">{t("CONNECT.ENVIRONMENTS")}</h3>
+        <p className="mb-3 text-xs text-medium-emphasis">{t("CONNECT.SELECT_AT_LEAST_ONE_EACH")}</p>
         <ProjectEnvironmentCheckboxes
           variant="compact"
           selected={environments}
@@ -675,14 +679,14 @@ const CreateProjectBranch = ({
         {onChooseExisting ? (
           <Button variant="ghost" size="sm" className="gap-2" onClick={onChooseExisting} disabled={isPending || created}>
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            Go back
+            {t("CONNECT.GO_BACK")}
           </Button>
         ) : (
           <span />
         )}
         <Button onClick={handleSubmit} disabled={!canSubmit}>
           {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {created ? "Project created" : "Create project"}
+          {created ? t("CONNECT.PROJECT_CREATED") : t("CONNECT.CREATE_PROJECT")}
         </Button>
       </div>
     </div>
