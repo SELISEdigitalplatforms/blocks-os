@@ -84,6 +84,7 @@ vi.mock("@blocks-idp/authentication/hooks/use-auth-oidc", () => ({
           redirectUris: ["https://partner.example.com/callback"],
           isActive: true,
           isDeviceFlowClient: false,
+          registerAsIdentityProvider: true,
         },
       ],
     },

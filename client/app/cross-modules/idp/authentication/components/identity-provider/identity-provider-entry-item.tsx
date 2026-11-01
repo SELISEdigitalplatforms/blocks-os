@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronRight, Pencil, Power, PowerOff, Trash2 } from "lucide-react";
+import { AlertTriangle, ChevronRight, Pencil, Power, PowerOff, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import {
   Dialog,
@@ -21,6 +21,9 @@ import {
 import { KVDetailItem } from "../kv-detail-item";
 import { IdentityProviderFormDialog } from "./identity-provider-form-dialog";
 import { PROVIDER_STATUS_DOT } from "./identity-provider-visual.constant";
+import { getSocialLoginRedirectUri, hasRedirectUri } from "./identity-provider-form.util";
+import { getBlocksIamBaseUrl } from "@blocks-idp/settings/utils/auth-config-form";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { format } from "date-fns";
 
 interface ProviderEntryItemProps {
@@ -33,6 +36,9 @@ interface ProviderEntryItemProps {
  * (Blocks OIDC / Bring-your-own-SSO can have more than one entry). Carries the same
  * edit/enable-disable/delete actions and expandable KV details the old table row had.
  */
+const isLoginRedirectUriMissing = (item: IdentityProvider, loginRedirectUri: string): boolean =>
+  loginRedirectUri !== "" && !hasRedirectUri(item.redirectUris ?? item.redirectUri, loginRedirectUri);
+
 export function ProviderEntryItem({ item, defaultExpanded = false }: ProviderEntryItemProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -44,6 +50,14 @@ export function ProviderEntryItem({ item, defaultExpanded = false }: ProviderEnt
   const isActive = item.isActive;
   const statusDotClass = PROVIDER_STATUS_DOT[item.providerType] ?? "bg-emerald-500";
   const createdAt = item.createdDate ? format(new Date(item.createdDate), "dd MMM yyyy") : "—";
+  const tenantId = useProjectStore().selectedProject?.tenantId || "";
+  const loginRedirectUri = getSocialLoginRedirectUri(
+    getBlocksIamBaseUrl(),
+    item.providerType,
+    item.provider,
+    tenantId,
+  );
+  const loginRedirectUriMissing = isLoginRedirectUriMissing(item, loginRedirectUri);
 
   const handleConfirmStatusChange = async () => {
     try {
@@ -103,6 +117,7 @@ export function ProviderEntryItem({ item, defaultExpanded = false }: ProviderEnt
       value: (item.redirectUris ?? item.redirectUri)?.join(", ") ?? "",
       copyable: true,
     },
+    { key: "IAM login redirect URI", value: loginRedirectUri, copyable: true },
     {
       key: "Roles",
       value: item.initialRoles?.length ? item.initialRoles.join(", ") : "",
@@ -142,6 +157,23 @@ export function ProviderEntryItem({ item, defaultExpanded = false }: ProviderEnt
           <p className="truncate text-xs font-medium">{item.displayName}</p>
           <p className="truncate font-mono text-[11px] text-muted-foreground">{item.provider}</p>
         </div>
+        {loginRedirectUriMissing && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                className="flex shrink-0 items-center gap-1 text-[11px] text-warning-700"
+                data-testid="login-redirect-uri-missing"
+              >
+                <AlertTriangle className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Redirect URI missing</span>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              The IAM login redirect URI is not in this provider&apos;s list, so social sign-in
+              from the IAM login page fails. Edit the provider and add it.
+            </TooltipContent>
+          </Tooltip>
+        )}
         <span className="hidden shrink-0 text-[11px] text-muted-foreground sm:inline">
           {createdAt}
         </span>

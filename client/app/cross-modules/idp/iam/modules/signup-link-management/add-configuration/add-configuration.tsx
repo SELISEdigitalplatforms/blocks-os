@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm, SubmitHandler } from "react-hook-form";
+import { useForm, SubmitHandler, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui-kits/button/button";
 import {
@@ -40,7 +40,9 @@ export const AddConfiguration = ({ triggerLabel = "Add Configuration" }: AddConf
   const queryClient = useQueryClient();
   const form = useForm<SignupLinkConfigurationFormValues>({
     defaultValues: signupLinkConfigurationFormDefaults,
-    resolver: zodResolver(signupLinkConfigurationFormSchema),
+    resolver: zodResolver(
+      signupLinkConfigurationFormSchema,
+    ) as Resolver<SignupLinkConfigurationFormValues>,
   });
 
   const close = () => {

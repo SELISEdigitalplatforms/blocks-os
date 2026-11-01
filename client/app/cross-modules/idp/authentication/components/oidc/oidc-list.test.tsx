@@ -23,14 +23,22 @@ vi.mock("@/cross-modules/secrets/hooks/use-secret-management", () => ({
 }));
 // Isolate the row from its own data-fetching so the list logic is under test.
 vi.mock("./oidc-card", () => ({
-  OIDCRowExport: ({ item }: { item: { itemId: string; clientId?: string } }) => (
-    <tr data-testid="oidc-row">
+  OIDCRowExport: ({
+    item,
+    loginPolicy,
+  }: {
+    item: { itemId: string; clientId?: string };
+    loginPolicy?: { method: string };
+  }) => (
+    <tr data-testid="oidc-row" data-policy={loginPolicy?.method ?? "none"}>
       <td>{item.clientId ?? item.itemId}</td>
     </tr>
   ),
 }));
 
 import { OidcList } from "./oidc-list";
+
+const OLDER = "2024-01-01";
 
 describe("OidcList", () => {
   beforeEach(() => {
@@ -52,7 +60,7 @@ describe("OidcList", () => {
   it("keeps the rows mounted while refetching, so an open row dialog survives", () => {
     h.isFetching = true;
     h.data = {
-      oIDCClientCredentials: [{ itemId: "1", clientId: "kept", createdDate: "2024-01-01" }],
+      oIDCClientCredentials: [{ itemId: "1", clientId: "kept", createdDate: OLDER }],
     };
     render(<OidcList />);
     expect(screen.getByText("Client")).toBeTruthy();
@@ -68,7 +76,7 @@ describe("OidcList", () => {
 
   it("normalises a single credential object into a table row", () => {
     h.data = {
-      oIDCClientCredentials: { itemId: "1", clientId: "single", createdDate: "2024-01-01" },
+      oIDCClientCredentials: { itemId: "1", clientId: "single", createdDate: OLDER },
     };
     render(<OidcList />);
     expect(screen.getByText("Client")).toBeTruthy();
@@ -87,5 +95,20 @@ describe("OidcList", () => {
     expect(rows).toHaveLength(2);
     expect(rows[0].textContent).toBe("newer");
     expect(rows[1].textContent).toBe("older");
+  });
+
+  it("passes each client its own sign-in policy from the list response", () => {
+    h.data = {
+      oIDCClientCredentials: [
+        { itemId: "1", createdDate: "2024-01-02" },
+        { itemId: "2", createdDate: OLDER },
+      ],
+      loginPolicies: { "1": { method: "social", providers: "default", selectedProviderIds: [] } },
+    };
+    render(<OidcList />);
+    expect(screen.getAllByTestId("oidc-row").map((row) => row.dataset.policy)).toEqual([
+      "social",
+      "none",
+    ]);
   });
 });

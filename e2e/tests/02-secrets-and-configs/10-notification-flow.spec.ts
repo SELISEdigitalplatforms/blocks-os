@@ -24,11 +24,11 @@ test.describe("flows", () => {
       await navigateToNotificationFlow(page);
     });
 
-    await test.step("A fresh project starts with no notification configurations", async () => {
+    await test.step("The notification list settles (empty state or table)", async () => {
       await verifyEmptyStateFlow(page);
     });
 
-    await test.step("Open the Add Configuration dialog", async () => {
+    await test.step("Add Configuration opens the New notification form", async () => {
       await openAddNotificationDialogFlow(page);
     });
 
@@ -36,13 +36,13 @@ test.describe("flows", () => {
       await verifySaveDisabledFlow(page);
     });
 
-    await test.step("Strict validation: Name max length and Notify Method min/max length", async () => {
+    await test.step("Strict validation: event name length, Send to, channels and rate limit", async () => {
       await verifyNameAndNotifyMethodValidationFlow(page);
     });
 
     const configName = `Flow Notif ${Date.now()}`;
 
-    await test.step("Fill a valid name, Notification Type, Notify Method, enable Persistence, then save", async () => {
+    await test.step("Fill a valid event name, All users, in-app + inbox, then save", async () => {
       await fillAndSaveNotificationConfigFlow(page, configName);
     });
 
@@ -56,15 +56,15 @@ test.describe("flows", () => {
     });
 
     await test.step("Reopen the configuration for editing and close without changes", async () => {
-      await openEditAndCloseFlow(page, configRow);
+      await openEditAndCloseFlow(page, configRow, configName);
     });
 
     await test.step("Edit the configuration and actually save a change", async () => {
-      await editNotificationConfigAndSaveFlow(page, configRow);
+      await editNotificationConfigAndSaveFlow(page, configRow, configName);
     });
 
     await test.step("Delete confirmation: Cancel leaves the configuration intact", async () => {
-      await cancelDeleteConfirmationFlow(page, configRow);
+      await cancelDeleteConfirmationFlow(page, configRow, configName);
     });
 
     await test.step("Delete the configuration via its confirmation dialog", async () => {

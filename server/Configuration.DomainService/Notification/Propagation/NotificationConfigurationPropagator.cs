@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Blocks.Genesis;
 using Blocks.Genesis.Entities.Os;
 using Microsoft.Extensions.Logging;
+using Os.DataAccess.Notifications;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
@@ -18,8 +19,15 @@ namespace Configuration.DomainService.Notification.Propagation
     /// Rules per target:
     /// <list type="bullet">
     /// <item><description>Missing: insert a copy, enabled.</description></item>
-    /// <item><description>Existing built-in: overwrite every field except <c>IsDisabled</c>, <c>ItemId</c>,
-    /// <c>CreatedDate</c> and <c>CreatedBy</c>.</description></item>
+    /// <item><description>Existing built-in: overwrite every field except what the tenant set: <c>Scope</c>,
+    /// <c>Audience</c>, <c>IsDisabled</c>, the channels (<c>LiveEnabled</c>, <c>PushEnabled</c>, <c>EnablePersistence</c>),
+    /// <c>PushTemplate</c> and <c>RateLimitPerMinute</c>, and the identity (<c>ItemId</c>, <c>CreatedDate</c>,
+    /// <c>CreatedBy</c>). The seed database is not a tenant: it takes the root's <c>Scope</c>, so a new project
+    /// starts from the root's choice.</description></item>
+    /// <item><description>Console-only built-in, or a dropped name: not copied; a built-in copy is deleted. When root
+    /// switches a built-in to Console, a tenant copy the project chose to keep stays: its own <c>Scope</c> is App or Both
+    /// (a missing Scope reads as App), it is disabled, or it has an <c>Audience</c>. The seed database copy is deleted.
+    /// A dropped name, or a root row that is gone, deletes every built-in copy.</description></item>
     /// <item><description>Existing custom config with that name: leave it, count a conflict.</description></item>
     /// <item><description>Delete: remove the target only when it is built-in.</description></item>
     /// </list>
@@ -35,6 +43,7 @@ namespace Configuration.DomainService.Notification.Propagation
         public const string KeyPrefix = "notification-config:";
 
         private const int MaxConcurrentTargets = 8;
+        private const string ValueField = "Value.";
 
         private readonly IDbContextProvider _dbContextProvider;
         private readonly IBlocksSecret _blocksSecret;
@@ -84,13 +93,16 @@ namespace Configuration.DomainService.Notification.Propagation
             var current = await ReadAsync(sourceDatabase, summary.Name);
 
             NotificationConfiguration? desired;
+            var tenantMayKeep = false;
             if (current is null)
             {
                 desired = null;
             }
             else if (current.IsBuiltIn)
             {
-                desired = current;
+                // A Console-only or dropped built-in lives in the root tenant only: tenant copies are removed.
+                desired = IsCopiedToTenants(current) ? current : null;
+                tenantMayKeep = desired is null && !RetiredNotificationNames.Contains(current.Name);
             }
             else
             {
@@ -113,17 +125,18 @@ namespace Configuration.DomainService.Notification.Propagation
             var targets = BuildTargets(registry, source);
             var results = new ConcurrentBag<NotificationPropagationResult>();
             using var semaphore = new SemaphoreSlim(MaxConcurrentTargets);
-            await Task.WhenAll(targets.Select(target => ProcessTargetAsync(target, summary.Name, desired, semaphore, results)));
+            await Task.WhenAll(targets.Select(target => ProcessTargetAsync(target, summary.Name, desired, tenantMayKeep, semaphore, results)));
             summary.Results = results.OrderBy(r => r.TargetId, StringComparer.Ordinal).ToList();
 
             _logger.LogInformation(
-                "Notification config propagation complete. Name={Name} Action={Action} Targets={Targets} Inserted={Inserted} Updated={Updated} Deleted={Deleted} NotPresent={NotPresent} Conflicts={Conflicts} Failed={Failed} ConflictTargets={ConflictTargets} FailedTargets={FailedTargets}",
+                "Notification config propagation complete. Name={Name} Action={Action} Targets={Targets} Inserted={Inserted} Updated={Updated} Deleted={Deleted} Kept={Kept} NotPresent={NotPresent} Conflicts={Conflicts} Failed={Failed} ConflictTargets={ConflictTargets} FailedTargets={FailedTargets}",
                 summary.Name,
                 summary.Action,
                 summary.Results.Count,
                 summary.Count(NotificationPropagationOutcome.Inserted),
                 summary.Count(NotificationPropagationOutcome.Updated),
                 summary.Count(NotificationPropagationOutcome.Deleted),
+                summary.Count(NotificationPropagationOutcome.Kept),
                 summary.Count(NotificationPropagationOutcome.NotPresent),
                 summary.Count(NotificationPropagationOutcome.Conflict),
                 summary.Count(NotificationPropagationOutcome.Failed),
@@ -185,6 +198,7 @@ namespace Configuration.DomainService.Notification.Propagation
             Target target,
             string name,
             NotificationConfiguration? desired,
+            bool tenantMayKeep,
             SemaphoreSlim semaphore,
             ConcurrentBag<NotificationPropagationResult> results)
         {
@@ -193,8 +207,8 @@ namespace Configuration.DomainService.Notification.Propagation
             {
                 var database = OpenDatabase(target.DbConnectionString, target.DbName);
                 var outcome = desired is null
-                    ? await ApplyDeleteAsync(database, name)
-                    : await ApplyUpsertAsync(database, desired);
+                    ? await ApplyDeleteAsync(database, name, tenantMayKeep && target.TargetId != SeedTargetId)
+                    : await ApplyUpsertAsync(database, desired, keepScope: target.TargetId != SeedTargetId);
 
                 results.Add(new NotificationPropagationResult { TargetId = target.TargetId, Outcome = outcome });
             }
@@ -267,7 +281,7 @@ namespace Configuration.DomainService.Notification.Propagation
                 .Find(Builders<NotificationConfiguration>.Filter.Eq(c => c.Name, name))
                 .FirstOrDefaultAsync();
 
-        private static async Task<NotificationPropagationOutcome> ApplyUpsertAsync(IMongoDatabase database, NotificationConfiguration source)
+        private static async Task<NotificationPropagationOutcome> ApplyUpsertAsync(IMongoDatabase database, NotificationConfiguration source, bool keepScope)
         {
             var (kv, _) = await ReadKeyValueAsync(database, source.Name);
             var legacyExists = await LegacyExistsAsync(database);
@@ -281,17 +295,7 @@ namespace Configuration.DomainService.Notification.Propagation
 
             var existing = kv ?? legacy;
             var copy = Clone(source);
-            if (existing is not null)
-            {
-                copy.ItemId = existing.ItemId;
-                copy.CreatedDate = existing.CreatedDate;
-                copy.CreatedBy = existing.CreatedBy;
-                copy.IsDisabled = existing.IsDisabled;
-            }
-            else
-            {
-                copy.IsDisabled = false;
-            }
+            KeepTenantFields(copy, existing, keepScope);
 
             if (legacyExists)
             {
@@ -307,7 +311,56 @@ namespace Configuration.DomainService.Notification.Propagation
             return existing is null ? NotificationPropagationOutcome.Inserted : NotificationPropagationOutcome.Updated;
         }
 
-        private static async Task<NotificationPropagationOutcome> ApplyDeleteAsync(IMongoDatabase database, string name)
+        /// <summary>
+        /// App and Both built-ins go to the tenants. Console ones, and dropped names, stay out: console users live in
+        /// the root tenant. This reads the root's Scope only; a tenant copy keeps its own Scope (see <c>KeepTenantFields</c>).
+        /// </summary>
+        public static bool IsCopiedToTenants(NotificationConfiguration source) =>
+            source.Scope != NotificationScope.Console && !RetiredNotificationNames.Contains(source.Name);
+
+        /// <summary>
+        /// What the tenant set stays: Scope (Send to), Audience, IsDisabled, channels (live, push, inbox), push message
+        /// and rate limit. A new copy starts with the root's Scope, without the root tenant's own Audience, and enabled.
+        /// A tenant without a push message, or a locked (personal) notice whose message is fixed, takes the root's.
+        /// <paramref name="keepScope"/> is false for the seed database, which follows the root's Scope.
+        /// </summary>
+        private static void KeepTenantFields(NotificationConfiguration copy, NotificationConfiguration? existing, bool keepScope)
+        {
+            copy.Audience = existing?.Audience;
+            copy.IsDisabled = existing?.IsDisabled ?? false;
+
+            if (existing is null)
+            {
+                return;
+            }
+
+            copy.ItemId = existing.ItemId;
+            copy.CreatedDate = existing.CreatedDate;
+            copy.CreatedBy = existing.CreatedBy;
+            if (keepScope)
+            {
+                copy.Scope = existing.Scope;
+            }
+
+            copy.LiveEnabled = existing.LiveEnabled;
+            copy.PushEnabled = existing.PushEnabled;
+            copy.EnablePersistence = existing.EnablePersistence;
+            copy.RateLimitPerMinute = existing.RateLimitPerMinute;
+
+            if (existing.PushTemplate is not null && !copy.AudienceLocked)
+            {
+                copy.PushTemplate = existing.PushTemplate;
+            }
+        }
+
+        /// <summary>
+        /// True when the project chose to keep a copy root has made Console-only: its own Scope is App or Both (a missing
+        /// Scope reads as App), it is disabled, or it has its own Audience. Same rule as the notification seed script.
+        /// </summary>
+        public static bool IsKeptByTenant(NotificationConfiguration copy) =>
+            copy.Scope != NotificationScope.Console || copy.IsDisabled || copy.Audience is not null;
+
+        private static async Task<NotificationPropagationOutcome> ApplyDeleteAsync(IMongoDatabase database, string name, bool tenantMayKeep)
         {
             var (kv, _) = await ReadKeyValueAsync(database, name);
             var legacyExists = await LegacyExistsAsync(database);
@@ -323,20 +376,40 @@ namespace Configuration.DomainService.Notification.Propagation
                 return NotificationPropagationOutcome.NotPresent;
             }
 
+            if (tenantMayKeep && IsKeptByTenant((kv ?? legacy)!))
+            {
+                return NotificationPropagationOutcome.Kept;
+            }
+
             if (legacy is not null)
             {
                 await database.GetCollection<NotificationConfiguration>(LegacyCollectionName)
-                    .DeleteOneAsync(Builders<NotificationConfiguration>.Filter.Eq(c => c.ItemId, legacy.ItemId));
+                    .DeleteOneAsync(Builders<NotificationConfiguration>.Filter.Eq(c => c.ItemId, legacy.ItemId) & LegacyStillConsoleOnly(tenantMayKeep));
             }
 
             if (kv is not null)
             {
                 await database.GetCollection<KeyValueEntry>(KeyValueCollectionName)
-                    .DeleteManyAsync(Builders<KeyValueEntry>.Filter.Eq(e => e.Key, KeyFor(name)));
+                    .DeleteManyAsync(Builders<KeyValueEntry>.Filter.Eq(e => e.Key, KeyFor(name)) & KeyValueStillConsoleOnly(tenantMayKeep));
             }
 
             return NotificationPropagationOutcome.Deleted;
         }
+
+        // Re-checked in the delete itself, so a copy the project changed after the read is never removed.
+        private static FilterDefinition<NotificationConfiguration> LegacyStillConsoleOnly(bool tenantMayKeep) =>
+            tenantMayKeep
+                ? Builders<NotificationConfiguration>.Filter.Eq(nameof(NotificationConfiguration.Scope), (int)NotificationScope.Console)
+                    & Builders<NotificationConfiguration>.Filter.Ne(nameof(NotificationConfiguration.IsDisabled), true)
+                    & Builders<NotificationConfiguration>.Filter.Eq(nameof(NotificationConfiguration.Audience), BsonNull.Value)
+                : Builders<NotificationConfiguration>.Filter.Empty;
+
+        private static FilterDefinition<KeyValueEntry> KeyValueStillConsoleOnly(bool tenantMayKeep) =>
+            tenantMayKeep
+                ? Builders<KeyValueEntry>.Filter.Eq(ValueField + nameof(NotificationConfiguration.Scope), (int)NotificationScope.Console)
+                    & Builders<KeyValueEntry>.Filter.Ne(ValueField + nameof(NotificationConfiguration.IsDisabled), true)
+                    & Builders<KeyValueEntry>.Filter.Eq(ValueField + nameof(NotificationConfiguration.Audience), BsonNull.Value)
+                : Builders<KeyValueEntry>.Filter.Empty;
 
         /// <summary>Same document shape and upsert as <c>MongoKeyValueStore.SetAsync</c>.</summary>
         private static async Task WriteKeyValueAsync(IMongoDatabase database, NotificationConfiguration value)

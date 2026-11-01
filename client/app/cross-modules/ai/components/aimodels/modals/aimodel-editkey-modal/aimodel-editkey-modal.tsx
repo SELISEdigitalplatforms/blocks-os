@@ -62,7 +62,10 @@ export const ModelEditKeyModal = ({
     [model.Provider, model.ServicePlatform, modelOptions],
   );
   const schema = useMemo(
-    () => (baseSchema as z.AnyZodObject).extend({ apiKey: z.string().optional() }),
+    () =>
+      (
+        baseSchema as z.ZodObject<Record<string, z.ZodType<string | undefined, string | undefined>>>
+      ).extend({ apiKey: z.string().optional() }),
     [baseSchema],
   );
   const initialValues = useMemo(() => {
@@ -91,7 +94,7 @@ export const ModelEditKeyModal = ({
   };
   const onSubmitHandler = async (data: z.infer<typeof schema>) => {
     try {
-      const rawApiKey = (data.apiKey ?? "") as string;
+      const rawApiKey = data.apiKey ?? "";
       const trimmedApiKey = rawApiKey.trim();
       const payload: IUpdateModelPayload & { model_name: string } = {
         project_key: projectKey,

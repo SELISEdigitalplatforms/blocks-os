@@ -21,6 +21,7 @@ import { Textarea } from "@/components/ui-kits/textarea/textarea";
 import { ClientCredentialPermissionsSection } from "@blocks-idp/authentication/components/create-client-credential/client-credential-permissions-section";
 import { ClientCredentialRolesSection } from "@blocks-idp/authentication/components/create-client-credential/client-credential-roles-section";
 import { useGetAuthOidcCredentials } from "@blocks-idp/authentication/hooks/use-auth-oidc";
+import { IOidcConfig } from "@blocks-idp/authentication/models/auth.oidc.model";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useEffect, useMemo } from "react";
 import { UseFormReturn } from "react-hook-form";
@@ -35,6 +36,15 @@ type Props = {
 
 /** The red marker the rest of the console uses on mandatory fields. */
 const Required = () => <span className="text-destructive"> *</span>;
+
+const UNREGISTERED_CLIENT_HINT = "Register as a Blocks OIDC identity provider first";
+
+/**
+ * A link finishes at /idp/callback through the identity provider that "Register as a Blocks OIDC
+ * identity provider" creates for the client, so a client without it is shown but cannot be
+ * picked. IAM refuses it on save either way.
+ */
+const isRegisteredProvider = (client: IOidcConfig) => client.registerAsIdentityProvider === true;
 
 export const ConfigurationFormFields = ({ form, formLevelError, isPending = false }: Props) => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
@@ -180,16 +190,34 @@ export const ConfigurationFormFields = ({ form, formLevelError, isPending = fals
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {clients.map((client) => (
-                      <SelectItem key={client.itemId} value={client.itemId}>
-                        {client.clientDisplayName || client.itemId}
-                      </SelectItem>
-                    ))}
-                    {/* An archived or deleted client would otherwise vanish from the form and
-                        be PATCHed away on the next save. */}
-                    {field.value && !clients.some((c) => c.itemId === field.value) && (
-                      <SelectItem value={field.value}>{field.value} (unavailable)</SelectItem>
-                    )}
+                    {clients.map((client) => {
+                      const registered = isRegisteredProvider(client);
+                      // A saved value that cannot be picked is shown once, below.
+                      if (!registered && client.itemId === field.value) return null;
+                      return (
+                        <SelectItem
+                          key={client.itemId}
+                          value={client.itemId}
+                          disabled={!registered}
+                        >
+                          {client.clientDisplayName || client.itemId}
+                          {!registered && (
+                            <span className="text-muted-foreground">
+                              {" "}
+                              — {UNREGISTERED_CLIENT_HINT}
+                            </span>
+                          )}
+                        </SelectItem>
+                      );
+                    })}
+                    {/* An archived, deleted or unregistered client would otherwise vanish from
+                        the form and be PATCHed away on the next save. */}
+                    {field.value &&
+                      !clients.some((c) => c.itemId === field.value && isRegisteredProvider(c)) && (
+                        <SelectItem value={field.value}>
+                          {selectedClient?.clientDisplayName || field.value} (unavailable)
+                        </SelectItem>
+                      )}
                   </SelectContent>
                 </Select>
                 <FormDescription>

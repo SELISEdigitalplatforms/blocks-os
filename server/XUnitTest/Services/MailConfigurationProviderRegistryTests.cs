@@ -18,10 +18,10 @@ namespace XUnitTest.Services
                 ? definitions
                 : new IMailConfigurationProvider[]
                 {
-                    new AmazonSesMailConfigurationProvider(),
-                    new ZohoMailConfigurationProvider(),
+                    new AmazonSesMailConfigurationProvider(Mock.Of<Blocks.Secrets.ISecretService>(), Microsoft.Extensions.Logging.Abstractions.NullLogger<AmazonSesMailConfigurationProvider>.Instance),
+                    new ZohoMailConfigurationProvider(Mock.Of<Blocks.Secrets.ISecretService>(), Microsoft.Extensions.Logging.Abstractions.NullLogger<ZohoMailConfigurationProvider>.Instance),
                     new Office365SmtpMailConfigurationProvider(Mock.Of<Blocks.Secrets.ISecretService>(), Microsoft.Extensions.Logging.Abstractions.NullLogger<Office365SmtpMailConfigurationProvider>.Instance),
-                    new GmailMailConfigurationProvider()
+                    new GmailMailConfigurationProvider(Mock.Of<Blocks.Secrets.ISecretService>(), Microsoft.Extensions.Logging.Abstractions.NullLogger<GmailMailConfigurationProvider>.Instance)
                 });
 
         [Theory]
@@ -79,9 +79,9 @@ namespace XUnitTest.Services
         }
 
         [Fact]
-        public void PasswordProviders_OwnNoCredentialAndKeepTheExistingMask()
+        public void PasswordProviders_KeepTheirTransportAndTheExistingMask()
         {
-            var definition = new ZohoMailConfigurationProvider();
+            var definition = new ZohoMailConfigurationProvider(Mock.Of<Blocks.Secrets.ISecretService>(), Microsoft.Extensions.Logging.Abstractions.NullLogger<ZohoMailConfigurationProvider>.Instance);
             var request = new MailConfiguration { Host = "smtp.zoho.com", Port = 465, EnableSSL = true };
 
             definition.Normalize(request);
@@ -106,7 +106,7 @@ namespace XUnitTest.Services
         public void Gmail_FixesTransportPerDirection(
             bool isInbound, string host, int port, MailSecurityMode securityMode, bool enableSsl)
         {
-            var definition = new GmailMailConfigurationProvider();
+            var definition = new GmailMailConfigurationProvider(Mock.Of<Blocks.Secrets.ISecretService>(), Microsoft.Extensions.Logging.Abstractions.NullLogger<GmailMailConfigurationProvider>.Instance);
             var request = new MailConfiguration
             {
                 IsInbound = isInbound,

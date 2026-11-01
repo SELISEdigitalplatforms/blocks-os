@@ -271,6 +271,51 @@ namespace XUnitTest.Integration
         }
 
         [Fact]
+        public async Task Mail_GetById_IsUnprojectedSoThePasswordReferenceIsPresent()
+        {
+            // C7: every credential operation reads the stored record by id, and that read must carry
+            // the reference whatever the seeded schema lists.
+            var tag = Guid.NewGuid().ToString("N");
+            var repo = NewRepository();
+            await repo.SaveMailConfigurationAsync(new MailServerConfiguration
+            {
+                ItemId = "p-" + tag,
+                Name = "pw-" + tag,
+                Provider = MailServiceProvider.Zoho,
+                AccountPassword = "",
+                AccountPasswordReference = "ref-" + tag
+            });
+
+            var stored = await repo.GetMailConfigurationByIdAsync("p-" + tag);
+
+            stored!.AccountPasswordReference.Should().Be("ref-" + tag);
+            stored.AccountPassword.Should().BeEmpty();
+
+            await repo.DeleteMailConfigurationAsync("p-" + tag);
+        }
+
+        [Fact]
+        public async Task Mail_BySecretReference_MatchesEitherReferenceFieldAndNeverABlankOne()
+        {
+            // H10: the Purge dialog names mail configurations by client secret or by password.
+            var tag = Guid.NewGuid().ToString("N");
+            var repo = NewRepository();
+            await repo.SaveMailConfigurationAsync(new MailServerConfiguration { ItemId = "o-" + tag, Name = "oauth-" + tag, ClientSecretReference = "s-" + tag });
+            await repo.SaveMailConfigurationAsync(new MailServerConfiguration { ItemId = "p-" + tag, Name = "pw-" + tag, AccountPasswordReference = "s-" + tag });
+            await repo.SaveMailConfigurationAsync(new MailServerConfiguration { ItemId = "x-" + tag, Name = "other-" + tag, AccountPasswordReference = "other-" + tag });
+
+            var matches = await repo.GetMailConfigurationsBySecretReferenceAsync("s-" + tag);
+
+            matches.Select(m => m.ItemId).Should().BeEquivalentTo("o-" + tag, "p-" + tag);
+            (await repo.GetMailConfigurationsBySecretReferenceAsync(" ")).Should().BeEmpty();
+
+            foreach (var id in new[] { "o-", "p-", "x-" })
+            {
+                await repo.DeleteMailConfigurationAsync(id + tag);
+            }
+        }
+
+        [Fact]
         public async Task Mail_UpdateSenderName_ChangesOnlyThatFieldAndKeepsUnmappedOnes()
         {
             var tag = Guid.NewGuid().ToString("N");

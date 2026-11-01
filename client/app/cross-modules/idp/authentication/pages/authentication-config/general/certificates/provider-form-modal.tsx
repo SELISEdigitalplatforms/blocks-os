@@ -85,7 +85,7 @@ const buildSchema = (isEditing: boolean) =>
     // Optional: blank means "this provider receives the tokens that carry no iss claim".
     issuer: z.string().trim(),
     audiences: z.string().trim(),
-    algorithm: z.coerce.number(),
+    algorithm: z.coerce.number<number>(),
     jwksUrl: z.string().trim(),
     signingSecret: z.string(),
     certificatePassphrase: z.string(),

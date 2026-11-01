@@ -42,6 +42,7 @@ namespace DomainService.Shared
             services.AddSingleton<IProjectManagementService, ProjectManagementService>();
             services.AddSingleton<IDataGatewayRootProvisioner, DataGatewayRootProvisioner>();
             services.AddSingleton<IStorageConfigurationSeedCopier, StorageConfigurationSeedCopier>();
+            services.AddSingleton<IMailConfigurationSeedCopier, MailConfigurationSeedCopier>();
             services.AddSingleton<IProjectRepository, ProjectRepository>();
 
             services.AddSingleton<IDomainManagementService, DomainManagementService>();
@@ -60,7 +61,6 @@ namespace DomainService.Shared
             services.AddSingleton<IPeopleInvitationMessenger, PeopleInvitationMessenger>();
             services.AddSingleton<IPeopleRepository, PeopleRepository>();
             // Built-in notifications to project owner + caller
-            services.AddSingleton<IProjectChangeNotifier, ProjectChangeNotifier>();
 
             // User preferences (the caller's own settings, in the root key-value store)
             services.AddTransient<IValidator<SaveUserPreferenceRequest>, SaveUserPreferenceRequestValidator>();

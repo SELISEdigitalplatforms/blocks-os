@@ -104,7 +104,6 @@ export const UserActionMenu = ({ id, projectKey }: UserActionMenuProps) => {
         userId={id}
       />
       <UserResetPassword
-        projectKey={projectKey}
         userId={id}
         open={isResetPasswordModalOpen}
         setOpen={setIsResetPasswordModalOpen}

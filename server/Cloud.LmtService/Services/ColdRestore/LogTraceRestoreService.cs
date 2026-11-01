@@ -20,7 +20,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Text.Json;
 using Os.DataAccess;
-using Os.DataAccess.Notifications;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -43,18 +42,13 @@ namespace Cloud.LmtService.Services.ColdRestore
         private readonly ILmtArchiveRestoreConfigurationRepository _lmtArchiveRestoreConfigurationRepository;
         private readonly IDbContextProvider _dbContextProvider;
         private readonly IOsDataAccess _dataAccess;
-        private readonly IHttpService _httpService;
-        private readonly ICryptoService _cryptoService;
-        private readonly ITenants _tenants;
         private readonly IArchiveRestoreRepository _archiveRestoreRepository;
         private readonly IRestoreUserRepository _userRepository;
-        private readonly IBuiltInNotificationSender? _notificationSender;
         [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "DI constructor: each parameter is an injected dependency.")]
         public LogTraceRestoreService(ILogger<LogTraceRestoreService> logger, ILogTraceRestoreRepository coldRestoreRepository, IMessageClient messageClient, ILogTraceRestoreResultRepository coldRestoreResultRepository,
     ILogTraceRestoreParquetReader coldRestoreParquetReader, IBlobStorage blobStorage, IConfiguration configuration,
     ILmtArchiveRestoreConfigurationRepository lmtArchiveRestoreConfigurationRepository, IDbContextProvider dbContextProvider,
-    IHttpService httpService, ICryptoService cryptoService, ITenants tenants, IArchiveRestoreRepository archiveRestoreRepository,
-    IRestoreUserRepository userRepository, IOsDataAccess dataAccess, IBuiltInNotificationSender? notificationSender = null)
+    IArchiveRestoreRepository archiveRestoreRepository, IRestoreUserRepository userRepository, IOsDataAccess dataAccess)
         {
             _dataAccess = dataAccess;
             _logger = logger;
@@ -66,12 +60,8 @@ namespace Cloud.LmtService.Services.ColdRestore
 
             _lmtArchiveRestoreConfigurationRepository = lmtArchiveRestoreConfigurationRepository;
             _dbContextProvider = dbContextProvider;
-            _httpService = httpService;
-            _cryptoService = cryptoService;
-            _tenants = tenants;
             _archiveRestoreRepository = archiveRestoreRepository;
             _userRepository = userRepository;
-            _notificationSender = notificationSender;
         }
 
 
@@ -144,11 +134,6 @@ namespace Cloud.LmtService.Services.ColdRestore
                     Payload = message
                 });
 
-            if (_notificationSender is not null)
-            {
-                await _notificationSender.SendAsync(RestoreProgressNotification.Accepted(
-                    requestId, nameof(RestoreSourceType.Cold), userId, tenantId));
-            }
 
             return new StartColdRestoreResponse
             {
@@ -278,105 +263,6 @@ namespace Cloud.LmtService.Services.ColdRestore
             }
 
         }
-        /// <summary>
-        /// What a finished restore says to the person who asked for it: a title that names the
-        /// outcome and a line saying what they can do next.
-        /// </summary>
-        /// <remarks>
-        /// Written out per outcome rather than interpolated from the enum, which read as
-        /// "Cold data restoration has been PartialSuccess." -- an internal name in front of a
-        /// reader who never sees the enum.
-        /// </remarks>
-        private static (string Title, string Description) RestoreNotificationText(string tier, string status)
-        {
-            var tierLabel = string.Equals(tier, nameof(RestoreSourceType.Archive), StringComparison.OrdinalIgnoreCase)
-                ? "Archive"
-                : "Cold storage";
-
-            var outcome = status switch
-            {
-                nameof(RestoreRequestStatus.Completed) => "complete",
-                nameof(RestoreRequestStatus.PartialSuccess) => "partly complete",
-                nameof(RestoreRequestStatus.Failed) => "failed",
-                nameof(RestoreRequestStatus.Cancelled) => "cancelled",
-                _ => "update"
-            };
-
-            var description = status switch
-            {
-                nameof(RestoreRequestStatus.Completed) =>
-                    "The logs and traces you requested are restored and ready to view.",
-                nameof(RestoreRequestStatus.PartialSuccess) =>
-                    "Some files could not be read, so the restored logs and traces are incomplete. What came back is ready to view.",
-                nameof(RestoreRequestStatus.Failed) =>
-                    "No logs or traces could be restored. You can request the same date range again from the Tracing page.",
-                nameof(RestoreRequestStatus.Cancelled) =>
-                    "The restore was cancelled, and its partially restored logs and traces were discarded.",
-                _ => "The restore has finished. Open the Tracing page to see what came back."
-            };
-
-            return ($"{tierLabel} restore {outcome}", description);
-        }
-
-        private async Task<bool> NotifyEvent(string tier, string status, string? messageCoRelationId, string tenantId, string? userId, CancellationToken ct = default)
-        {
-            try
-            {
-                var config = await GetNotificationConfig(ct);
-
-                if (string.IsNullOrWhiteSpace(config.NotificationUrl))
-                {
-                    _logger.LogWarning("Notification URL is not configured. Skipping notification for tenant {TenantId}.", tenantId);
-                    return false;
-                }
-
-                var (title, description) = RestoreNotificationText(tier, status);
-
-                var requestData = new NotificationRequest
-                {
-                    ConnectionId = messageCoRelationId,
-                    UserIds = [userId ?? string.Empty],
-                    DenormalizedPayload = JsonSerializer.Serialize(new
-                    {
-                        title,
-                        description
-                    }),
-                    SaveDenormalizedPayloadAsAnObject = false,
-                    ConfigurationName = config.NotificationConfigName,
-                    ContentAvailable = true,
-                    ResponseKey = "Log and Trace Restoration Status Update",
-                    ResponseValue = description,
-                };
-
-                // Prefer the ambient context's originating tenant, which is what the notification
-                // service authenticates against. Falls back to the tenant on the persisted request
-                // because this also runs on a queue consumer, where there may be no ambient context
-                // at all — and dereferencing a missing one threw inside this try, turning a missing
-                // context into a silently skipped notification.
-                var xblocksKey = BlocksContext.GetContext()?.OriginalTenantId ?? tenantId;
-                var salt = _tenants.GetTenantByID(xblocksKey)?.TenantSalt;
-                var signedSecret = _cryptoService.Hash(xblocksKey, salt);
-
-                var headers = new Dictionary<string, string>
-                {
-                    { "x-blocks-key", xblocksKey },
-                    { "Secret", signedSecret }
-                };
-
-                var (response, _) = await _httpService.Post<NotificationResponse>(
-                     requestData, config.NotificationUrl, "application/json", headers, ct);
-
-                _logger.LogInformation("Notification sent with result {Result} for tenant {TenantId} with tier {Tier} and status {Status}.", response?.isSuccess, tenantId, tier, status);
-                return response != null && response.isSuccess;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to send notification for tenant {TenantId} with tier {Tier} and status {Status}.", tenantId, tier, status);
-                return false;
-            }
-
-        }
-
         private async Task<int> GetRetentionDaysAsync(CancellationToken ct = default)
         {
             var config = await _lmtArchiveRestoreConfigurationRepository.GetLmtArchiveRestoreConfigurationsAsync(ct);
@@ -386,11 +272,6 @@ namespace Cloud.LmtService.Services.ColdRestore
         {
             var config = await _lmtArchiveRestoreConfigurationRepository.GetLmtArchiveRestoreConfigurationsAsync(ct);
             return config.EmailTemplateConfig ?? new LogTraceRestoreEmailTConfig {TemplateName = string.Empty };
-        }
-        private async Task<NotificationConfig>GetNotificationConfig(CancellationToken ct = default)
-        {
-            var config = await _lmtArchiveRestoreConfigurationRepository.GetLmtArchiveRestoreConfigurationsAsync(ct);
-            return config.NotificationConfig ?? new NotificationConfig { NotificationUrl = string.Empty, NotificationConfigName = string.Empty };
         }
         public async Task<GetHotDataUploadToBlobInDays> GetHotDataRetentionPeriodInDays(CancellationToken ct = default)
         {
@@ -562,7 +443,7 @@ namespace Cloud.LmtService.Services.ColdRestore
                 return;
             }
 
-            var extendedUntil = await ExtendRetentionFromCompletionAsync(requestId, ct);
+            await ExtendRetentionFromCompletionAsync(requestId, ct);
 
             if (!string.IsNullOrEmpty(requestRecord.UserEmail))
             {
@@ -570,21 +451,7 @@ namespace Cloud.LmtService.Services.ColdRestore
                 _logger.LogInformation("Email sent status {Result} for RequestId {RequestId}", emailed, requestId);
             }
 
-            // Deliberately outside the email guard: the in-app notification is what lets the UI
-            // drop its progress overlay, so a missing address must not suppress it.
-            await NotifyEvent(
-                requestRecord.SourceType.ToString(),
-                finalStatus.ToString(),
-                requestId,
-                requestRecord.TenantId,
-                requestRecord.UserId,
-                ct);
 
-            if (extendedUntil.HasValue && _notificationSender is not null)
-            {
-                await _notificationSender.SendAsync(RestoreProgressNotification.RetentionExtended(
-                    requestId, requestRecord.SourceType.ToString(), requestRecord.UserId, requestRecord.TenantId, extendedUntil.Value), ct);
-            }
         }
 
         private static bool IsTerminal(RestoreRequestStatus status) =>

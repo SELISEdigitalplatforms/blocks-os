@@ -6,7 +6,6 @@ using Configuration.DomainService.Mail.Services;
 using Configuration.DomainService.Mail.Template;
 using Configuration.DomainService.Mail.Template.Services;
 using Configuration.DomainService.Shared.Services;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BlocksOs.Api.Controllers
@@ -129,8 +128,7 @@ namespace BlocksOs.Api.Controllers
             };
 
         [HttpPost]
-        // [ProtectedEndPoint("blocks-os::mail-template::save")]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::mail-template::save")]
         public async Task<IActionResult> SaveTemplate([FromBody] SaveMailTemplateRequest request)
         {
             var result = await _mailTemplateService!.SaveTemplateAsync(request);
@@ -138,8 +136,7 @@ namespace BlocksOs.Api.Controllers
         }
 
         [HttpGet]
-        // [ProtectedEndPoint("blocks-os::mail-template::gets")]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::mail-template::gets")]
         public async Task<IActionResult> GetTemplate([FromQuery] GetMailTemplateRequest request)
         {
             var result = await _mailTemplateService!.GetAsync(request);
@@ -159,16 +156,14 @@ namespace BlocksOs.Api.Controllers
         }
 
         [HttpGet]
-        // [ProtectedEndPoint("blocks-os::mail-template::gets")]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::mail-template::gets")]
         public async Task<GetAllMailTemplatesResponse> GetTemplates([FromQuery] GetAllMailTemplatesRequest request)
         {
             return await _mailTemplateService!.GetAllTemplatesAsync(request);
         }
 
         [HttpPost]
-        // [ProtectedEndPoint("blocks-os::mail-template::save")]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::mail-template::save")]
         public async Task<IActionResult> CloneTemplate([FromBody] CloneMailTemplateRequest request)
         {
             var result = await _mailTemplateService!.CloneTemplateAsync(request);
@@ -176,8 +171,7 @@ namespace BlocksOs.Api.Controllers
         }
 
         [HttpDelete]
-        // [ProtectedEndPoint("blocks-os::mail-template::delete")]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::mail-template::delete")]
         public async Task<IActionResult> DeleteTemplate([FromQuery] DeleteMailTemplateRequest request)
         {
             if (request == null || string.IsNullOrWhiteSpace(request.ItemId))

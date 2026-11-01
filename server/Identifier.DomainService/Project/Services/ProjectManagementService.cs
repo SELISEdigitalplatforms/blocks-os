@@ -114,8 +114,7 @@ namespace DomainService.Projects
                     ["projectKey"] = project.TenantId,
                     ["tenantGroupId"] = project.TenantGroupId
                 },
-                UserIds = [project.CreatedBy],
-                ConnectionId = project.TenantId
+                UserIds = [project.CreatedBy]
             });
         }
 
@@ -882,6 +881,10 @@ namespace DomainService.Projects
             var previousCookieDomain = applicationBeforeUpdate?.CookieDomain;
             var previousDomainWasProvisioned = applicationBeforeUpdate is not null && IsSelfProvisioned(applicationBeforeUpdate);
 
+            var domainInUse = await RejectDomainOfAnotherProjectAsync(project, request);
+            if (domainInUse != null)
+                return domainInUse;
+
             var applicationActionFailure = ApplyApplicationAction(project, request);
             if (applicationActionFailure != null)
                 return applicationActionFailure;
@@ -914,6 +917,24 @@ namespace DomainService.Projects
             }
 
             return new BaseResponse { IsSuccess = true };
+        }
+
+        // A request without a tenant key finds its tenant by domain, and the first match wins, so
+        // two projects on one domain would send requests to the wrong one. Only a new or changed
+        // domain is checked; duplicates saved before this check are left as they are.
+        private async Task<BaseResponse?> RejectDomainOfAnotherProjectAsync(Tenant project, UpdateProjectRequest request)
+        {
+            var domain = NormalizeDomain(request.Application?.Domain);
+            var isNewDomain = request.Action == ApplicationAction.Add
+                || (request.Action == ApplicationAction.Edit && domain != NormalizeDomain(request.ApplicationDomain));
+
+            if (!isNewDomain || domain.Length == 0
+                || !await _projectRepository.IsDomainUsedByAnotherProjectAsync(domain, project.TenantId))
+            {
+                return null;
+            }
+
+            return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "domain_in_use", $"The domain {request.Application!.Domain} is already used by another project" } } };
         }
 
         // Applies the requested add/edit/delete to the project in memory. Returns the failed
@@ -1118,8 +1139,6 @@ namespace DomainService.Projects
 
             await _projectRepository.UpdateProjectAsync(project);
 
-            // Read before the member rows go: afterwards nobody owns the environment any more.
-            var ownerUserId = await TryGetOwnerUserIdAsync(project.TenantId);
             await _projectRepository.DeletePrjectPeopleAsync(project.TenantId);
 
             await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
@@ -1152,57 +1171,7 @@ namespace DomainService.Projects
                 ProjectId = project.TenantId
             });
 
-            if (_notificationSender is not null)
-            {
-                // Owner + caller: there is no cheap lookup of every member (SPEC5 D4).
-                await _notificationSender.SendAsync(new BuiltInNotification
-                {
-                    ConfigurationName = BuiltInNotificationNames.ProjectDisabledOrDeleted,
-                    Event = "project-disabled",
-                    // One call disables one environment (tenant), not the whole project.
-                    Title = "Environment deleted",
-                    Description = DescribeDeletedEnvironment(project),
-                    Ids = new Dictionary<string, string?>
-                    {
-                        ["projectKey"] = project.TenantId,
-                        ["tenantGroupId"] = project.TenantGroupId
-                    },
-                    UserIds = [ownerUserId, BlocksContext.GetContext()?.UserId],
-                    ConnectionId = project.TenantId
-                });
-            }
-
             return new BaseResponse { IsSuccess = true };
-        }
-
-        private static string DescribeDeletedEnvironment(Tenant project)
-        {
-            var environment = project.Environment?.Trim();
-            var projectName = project.Name?.Trim();
-
-            if (string.IsNullOrEmpty(environment))
-            {
-                return "An environment you belong to was deleted.";
-            }
-
-            return string.IsNullOrEmpty(projectName)
-                ? $"An environment you belong to ({environment}) was deleted."
-                : $"An environment you belong to ({environment} of {projectName}) was deleted.";
-        }
-
-        private async Task<string?> TryGetOwnerUserIdAsync(string tenantId)
-        {
-            if (_notificationSender is null) return null;
-
-            try
-            {
-                return await _projectRepository.GetOwnerUserIdAsync(tenantId);
-            }
-            catch (Exception)
-            {
-                // Only the notification recipient is lost; disabling goes on.
-                return null;
-            }
         }
 
         public async Task<GetAssetResponse> GetAssetAsync(GetAssetRequest request)

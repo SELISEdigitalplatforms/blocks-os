@@ -669,8 +669,7 @@ namespace DomainService.People
                             ["tenantGroupId"] = request.GroupId,
                             ["projectKeys"] = string.Join(",", request.TenantIds)
                         },
-                        UserIds = [user.ItemId],
-                        ConnectionId = request.GroupId
+                        UserIds = [user.ItemId]
                     });
                 }
 
@@ -1114,8 +1113,7 @@ namespace DomainService.People
                         ["previousOwnerId"] = bc.UserId,
                         ["newOwnerId"] = user.ItemId
                     },
-                    UserIds = [bc.UserId, user.ItemId],
-                    ConnectionId = request.TenantGroupId
+                    UserIds = [bc.UserId, user.ItemId]
                 });
             }
 

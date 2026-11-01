@@ -50,7 +50,7 @@ const inviteOrganizationUserFormSchema = z.object({
     .string()
     .trim()
     .min(1, "Email is required")
-    .email({ message: "Please enter a valid email address" }),
+    .check(z.email("Please enter a valid email address")),
 });
 
 type InviteFormValues = z.infer<typeof inviteOrganizationUserFormSchema>;

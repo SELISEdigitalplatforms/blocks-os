@@ -195,16 +195,34 @@ export async function createOrganizationFlow(page: Page, orgName: string) {
       .getByText("Organization added successfully", { exact: true });
     await expect(successToast).toBeVisible({ timeout: 15_000 });
     await expect(dialog).toBeHidden({ timeout: 15_000 });
-    await expect(page.getByText(orgName, { exact: true }).first()).toBeVisible({
-      timeout: 15_000,
-    });
+    await findOrganizationInListFlow(page, orgName);
     return;
   }
 }
 
-export async function selectOrgInSidebarFlow(page: Page, orgName: string) {
+/**
+ * Searches the Organizations list for `orgName` and waits until it is listed.
+ * The list shows 10 organizations per page, sorted by name, and the shared E2E
+ * project has accumulated more than that, so a newly created organization is
+ * usually not on the first page. Searching finds it on any page. The create
+ * invalidates the list, which refetches, so re-enter the search until the
+ * organization shows up; an organization that is really missing still fails
+ * after the budget.
+ */
+export async function findOrganizationInListFlow(page: Page, orgName: string) {
+  const searchInput = page.getByPlaceholder("Search organizations...").first();
   const orgEntry = page.getByText(orgName, { exact: true }).first();
-  await expect(orgEntry).toBeVisible({ timeout: 15_000 });
+  await expect(searchInput).toBeVisible({ timeout: 15_000 });
+  await expect(async () => {
+    await searchInput.fill("");
+    await searchInput.fill(orgName);
+    await expect(orgEntry).toBeVisible({ timeout: 10_000 });
+  }).toPass({ timeout: 45_000 });
+}
+
+export async function selectOrgInSidebarFlow(page: Page, orgName: string) {
+  await findOrganizationInListFlow(page, orgName);
+  const orgEntry = page.getByText(orgName, { exact: true }).first();
   await orgEntry.click();
   await expect(page.getByText(orgName, { exact: true }).last()).toBeVisible({ timeout: 15_000 });
 }

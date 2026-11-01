@@ -9,6 +9,8 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using Pipelines.Sockets.Unofficial.Arenas;
 using System.Collections;
+using System.Diagnostics.CodeAnalysis;
+using System.Text.RegularExpressions;
 using Blocks.Genesis.Entities.Os;
 using Os.DataAccess;
 
@@ -24,6 +26,7 @@ namespace DomainService.Projects
         private readonly IDataGatewayRootProvisioner _dataGatewayRoot;
         private readonly IOsDataAccess _dataAccess;
         private readonly IStorageConfigurationSeedCopier _storageSeedCopier;
+        private readonly IMailConfigurationSeedCopier _mailSeedCopier;
 
         private const string _projectStatusTraceCollectionName = "ProjectStatusTracers";
         private const string _legacyDefaultUserRoleSlug = "user";
@@ -31,16 +34,19 @@ namespace DomainService.Projects
         // Mongo field name; must match the stored documents exactly.
         private const string LastUpdatedDateField = "LastUpdatedDate";
 
+        [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "DI constructor: each parameter is an injected dependency.")]
         public ProjectRepository(IDbContextProvider dbContextProvider,
                                  IConfiguration configuration,
                                  IBlocksSecret blocksSecret,
                                  IEncodingService urlEncodingService,
                                  IDataGatewayRootProvisioner dataGatewayRoot,
                                  IOsDataAccess dataAccess,
-                                 IStorageConfigurationSeedCopier storageSeedCopier)
+                                 IStorageConfigurationSeedCopier storageSeedCopier,
+                                 IMailConfigurationSeedCopier mailSeedCopier)
         {
             _dataAccess = dataAccess;
             _storageSeedCopier = storageSeedCopier;
+            _mailSeedCopier = mailSeedCopier;
             _dbContextProvider = dbContextProvider;
             _blocksSecret = blocksSecret;
             _configuration = configuration;
@@ -94,6 +100,20 @@ namespace DomainService.Projects
             var filter = Builders<Tenant>.Filter.ElemMatch(x => x.Applications, app => listDomain.Contains(app.Domain))
                        & Builders<Tenant>.Filter.Ne(mc => mc.IsDisabled, true);
             return await collection.Find(filter).FirstOrDefaultAsync();
+        }
+
+        public async Task<bool> IsDomainUsedByAnotherProjectAsync(string normalizedDomain, string tenantId)
+        {
+            var collection = _clientDb.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
+
+            // Domains are stored as "x", "http://x" or "https://x", with or without a trailing
+            // slash and in any case, so the match covers every form. Disabled projects count too:
+            // one can be restored with its domains.
+            var pattern = new BsonRegularExpression($"^(https?://)?{Regex.Escape(normalizedDomain)}/?$", "i");
+            var filter = Builders<Tenant>.Filter.ElemMatch(x => x.Applications, Builders<Applications>.Filter.Regex(a => a.Domain, pattern))
+                       & Builders<Tenant>.Filter.Ne(x => x.TenantId, tenantId);
+
+            return await collection.Find(filter).AnyAsync();
         }
 
         public async Task InsertProjectAsync(Tenant project)
@@ -434,12 +454,15 @@ namespace DomainService.Projects
             var sourceDatabase = _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, "BlocksConfiguration");
 
             await Task.WhenAll(
-                CopyDocumentAsync(sourceDatabase, consumerDb, "MailServerConfigurations", project),
+                // The project's own mail secrets, not a raw copy (the seed's secret ids belong to the root tenant).
+                CopyMailConfigurationsAsync(sourceDatabase, consumerDb, project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "EmailTemplates", project),
                 // Settings rows + the project's own secrets, not a raw copy (the seed's secret ids belong to the root tenant).
                 CopyStorageConfigurationsAsync(sourceDatabase, consumerDb, project),
                 // Built-in notification configs + MFA config: without them the project's notifications find no config.
                 KeyValueSeedCopier.CopyAsync(sourceDatabase, consumerDb, project.CreatedBy),
+                // Texts of the built-in push messages (Localization module "notifications"), insert-only.
+                NotificationLocalizationSeedCopier.CopyAsync(sourceDatabase, consumerDb, project.TenantId, project.CreatedBy),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "BlocksLanguages", project),
                 // The remaining localization collections (UilmFiles, BlocksLanguageModules,
                 // BlocksLanguageKeys) are deliberately not seeded here. DataCleanupAsync still
@@ -462,6 +485,10 @@ namespace DomainService.Projects
         /// <summary>The seed's storage secrets live in the root tenant (config <c>RootTenantId</c>).</summary>
         private Task CopyStorageConfigurationsAsync(IMongoDatabase sourceDb, IMongoDatabase targetDb, Tenant project) =>
             _storageSeedCopier.CopyAsync(sourceDb, targetDb, _configuration["RootTenantId"], project.TenantId);
+
+        /// <summary>The seed's mail secrets live in the root tenant (config <c>RootTenantId</c>).</summary>
+        private Task CopyMailConfigurationsAsync(IMongoDatabase sourceDb, IMongoDatabase targetDb, Tenant project) =>
+            _mailSeedCopier.CopyAsync(sourceDb, targetDb, _configuration["RootTenantId"], project.TenantId, project.CreatedBy);
 
         /// <summary>
         /// Copies the system entity schemas (IAM, OS, Logic, Release, Monitor) of the seed into the project, unchanged:

@@ -96,6 +96,7 @@ vi.mock("@blocks-idp/authentication/hooks/use-auth-oidc", () => ({
           redirectUris: ["https://partner.example.com/callback"],
           isActive: true,
           isDeviceFlowClient: false,
+          registerAsIdentityProvider: true,
         },
         // Filtered out: a signup link has to land on a browser redirect.
         {

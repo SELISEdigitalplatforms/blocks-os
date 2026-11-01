@@ -38,11 +38,12 @@ namespace Configuration.DomainService.Shared.Services
         Task<List<MailServerConfiguration>> GetAllMailConfigurationsAsync();
 
         /// <summary>
-        /// The configurations whose <see cref="MailServerConfiguration.ClientSecretReference"/>
-        /// equals <paramref name="clientSecretReference"/>, in the caller's tenant. Used to warn
-        /// before a secret is archived or purged; never returns anything for a blank reference.
+        /// The configurations whose <see cref="MailServerConfiguration.ClientSecretReference"/> or
+        /// <see cref="MailServerConfiguration.AccountPasswordReference"/> equals
+        /// <paramref name="secretReference"/>, in the caller's tenant. Used to warn before a secret
+        /// is archived or purged; never returns anything for a blank reference.
         /// </summary>
-        Task<List<MailServerConfiguration>> GetMailConfigurationsByClientSecretReferenceAsync(string clientSecretReference);
+        Task<List<MailServerConfiguration>> GetMailConfigurationsBySecretReferenceAsync(string secretReference);
         Task DeleteMailConfigurationAsync(string configurationId);
 
         #endregion

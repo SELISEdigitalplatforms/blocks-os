@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -9,6 +9,8 @@ const h = vi.hoisted(() => ({
   isPending: false,
   useGetAuthOidcCredential: vi.fn(),
   useGetAuthConfig: vi.fn(),
+  useGetTenantLoginPolicy: vi.fn(),
+  useGetIdentityProviders: vi.fn(),
   showErrorToast: vi.fn(),
   showSuccessToast: vi.fn(),
 }));
@@ -30,6 +32,12 @@ vi.mock("@blocks-idp/authentication/hooks/use-auth-oidc", () => ({
 }));
 vi.mock("@blocks-idp/authentication/hooks/use-auth-config", () => ({
   useGetAuthConfig: (args: unknown, enabled: boolean) => h.useGetAuthConfig(args, enabled),
+}));
+vi.mock("@blocks-idp/authentication/hooks/use-login-policy", () => ({
+  useGetTenantLoginPolicy: () => h.useGetTenantLoginPolicy(),
+}));
+vi.mock("@blocks-idp/authentication/hooks/use-identity-provider", () => ({
+  useGetIdentityProviders: () => h.useGetIdentityProviders(),
 }));
 vi.mock("@/hooks/use-toast", () => ({
   showErrorToast: h.showErrorToast,
@@ -99,6 +107,8 @@ describe("CreateOIDC", () => {
     h.saveOidc.mockResolvedValue({ isSuccess: true });
     h.useGetAuthOidcCredential.mockReturnValue({ data: undefined, isLoading: false });
     h.useGetAuthConfig.mockReturnValue({ data: undefined });
+    h.useGetTenantLoginPolicy.mockReturnValue({ data: undefined });
+    h.useGetIdentityProviders.mockReturnValue({ data: undefined });
   });
 
   it("opens the create dialog from the Create trigger", async () => {
@@ -380,6 +390,7 @@ describe("CreateOIDC", () => {
         allowedResponseTypes: ["code"],
         itemId: "",
         clientDisplayName: "Portal",
+        loginPolicy: { method: "default", providers: "default", selectedProviderIds: [] },
       });
     });
 
@@ -1117,6 +1128,195 @@ describe("CreateOIDC", () => {
       expect(source).toContain('placeholder="Project setting"');
       expect(source).toContain("Custom for this client");
       expect(source).not.toContain("Leave a field empty to use the project setting.");
+    });
+  });
+  describe("sign-in policy", () => {
+    const provider = (itemId: string, displayName: string, extra: Record<string, unknown> = {}) => ({
+      itemId,
+      displayName,
+      provider: displayName.toLowerCase(),
+      providerType: "social",
+      isActive: true,
+      ...extra,
+    });
+
+    const mockProviders = (list: unknown[]) =>
+      h.useGetIdentityProviders.mockReturnValue({ data: { isSuccess: true, data: list } });
+
+    const mockTenantPolicy = (overrides: Record<string, boolean> = {}) =>
+      h.useGetTenantLoginPolicy.mockReturnValue({
+        data: {
+          isSuccess: true,
+          loginPolicy: {
+            allowEmbedded: true,
+            allowOidc: true,
+            allowPassword: true,
+            allowSocial: true,
+            ...overrides,
+          },
+        },
+      });
+
+    const methodRadio = (name: "Default" | "Password" | "Social") =>
+      within(screen.getByRole("radiogroup", { name: "Sign-in method" })).getByRole("radio", {
+        name: new RegExp(name),
+      });
+    const providersRadio = (name: "Default" | "Selected") =>
+      within(screen.getByRole("radiogroup", { name: "Social providers" })).getByRole("radio", {
+        name: new RegExp(name),
+      });
+    const fillValidCreate = async (user: User) => {
+      await user.type(screen.getByPlaceholderText("Enter client name"), "My App");
+      await user.type(uriInput(), "https://app.example.com/callback");
+    };
+
+    beforeEach(() => {
+      mockTenantPolicy();
+      mockProviders([provider("p1", "Google"), provider("p2", "GitHub")]);
+    });
+
+    it("starts on Default / Default and sends it", async () => {
+      const user = userEvent.setup();
+      await openCreate(user);
+      expect(isChecked(methodRadio("Default"))).toBe(true);
+      expect(isChecked(providersRadio("Default"))).toBe(true);
+      await fillValidCreate(user);
+      await user.click(submitButton());
+      await waitFor(() => expect(h.saveOidc).toHaveBeenCalledTimes(1));
+      expect(lastPayload().loginPolicy).toEqual({
+        method: "default",
+        providers: "default",
+        selectedProviderIds: [],
+      });
+    });
+
+    it("disables the options the project turned off", async () => {
+      mockTenantPolicy({ allowPassword: false });
+      const user = userEvent.setup();
+      await openCreate(user);
+      expect((methodRadio("Password") as HTMLButtonElement).disabled).toBe(true);
+      expect((methodRadio("Social") as HTMLButtonElement).disabled).toBe(false);
+      expect(screen.getAllByText("Turned off for this project")).toHaveLength(1);
+    });
+
+    it("disables Social when the project turned social off", async () => {
+      mockTenantPolicy({ allowSocial: false });
+      const user = userEvent.setup();
+      await openCreate(user);
+      expect((methodRadio("Social") as HTMLButtonElement).disabled).toBe(true);
+      expect((methodRadio("Password") as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    it("blocks Save when Selected has no provider checked", async () => {
+      const user = userEvent.setup();
+      await openCreate(user);
+      await fillValidCreate(user);
+      await user.click(providersRadio("Selected"));
+      expect(await screen.findByText("Select at least one provider, or choose Default.")).toBeTruthy();
+      await waitFor(() => expect(submitButton().disabled).toBe(true));
+      expect(h.saveOidc).not.toHaveBeenCalled();
+    });
+
+    it("lists only enabled social providers and sends the checked ones", async () => {
+      mockProviders([
+        provider("p1", "Google"),
+        provider("p2", "GitHub", { isActive: false }),
+        provider("p3", "Corp SSO", { providerType: "oidc" }),
+      ]);
+      const user = userEvent.setup();
+      await openCreate(user);
+      await fillValidCreate(user);
+      await user.click(providersRadio("Selected"));
+      expect(screen.queryByLabelText(/GitHub/)).toBeNull();
+      expect(screen.queryByLabelText(/Corp SSO/)).toBeNull();
+      await user.click(screen.getByLabelText(/Google/));
+      await waitFor(() => expect(submitButton().disabled).toBe(false));
+      await user.click(submitButton());
+      await waitFor(() => expect(h.saveOidc).toHaveBeenCalledTimes(1));
+      expect(lastPayload().loginPolicy).toEqual({
+        method: "default",
+        providers: "selected",
+        selectedProviderIds: ["p1"],
+      });
+    });
+
+    it("hides the provider choice for Password only and sends no providers", async () => {
+      const user = userEvent.setup();
+      await openCreate(user);
+      await fillValidCreate(user);
+      await user.click(providersRadio("Selected"));
+      await user.click(methodRadio("Password"));
+      expect(screen.queryByRole("radiogroup", { name: "Social providers" })).toBeNull();
+      await waitFor(() => expect(submitButton().disabled).toBe(false));
+      await user.click(submitButton());
+      await waitFor(() => expect(h.saveOidc).toHaveBeenCalledTimes(1));
+      expect(lastPayload().loginPolicy).toEqual({
+        method: "password",
+        providers: "default",
+        selectedProviderIds: [],
+      });
+    });
+
+    it("hides the section and sends no loginPolicy for a device-flow client", async () => {
+      const user = userEvent.setup();
+      await openCreate(user);
+      await user.type(screen.getByPlaceholderText("Enter client name"), "My App");
+      await user.click(screen.getByLabelText("Generate this OIDC client only for device flow"));
+      expect(screen.queryByText("Sign-in")).toBeNull();
+      await user.click(submitButton());
+      await waitFor(() => expect(h.saveOidc).toHaveBeenCalledTimes(1));
+      expect(lastPayload()).not.toHaveProperty("loginPolicy");
+    });
+
+    it("loads the stored policy on edit and sends it back", async () => {
+      mockCredential();
+      h.useGetAuthOidcCredential.mockReturnValue({
+        data: {
+          ...h.useGetAuthOidcCredential().data,
+          loginPolicy: { method: "social", providers: "selected", selectedProviderIds: ["p2"] },
+        },
+        isLoading: false,
+      });
+      const user = userEvent.setup();
+      await openEdit(user);
+      expect(isChecked(methodRadio("Social"))).toBe(true);
+      expect(isChecked(providersRadio("Selected"))).toBe(true);
+      expect(screen.getByLabelText(/GitHub/).getAttribute("aria-checked")).toBe("true");
+      await user.click(submitButton("Update"));
+      await waitFor(() => expect(h.saveOidc).toHaveBeenCalledTimes(1));
+      expect(lastPayload().loginPolicy).toEqual({
+        method: "social",
+        providers: "selected",
+        selectedProviderIds: ["p2"],
+      });
+    });
+
+    it("treats a null stored policy as Default / Default on edit", async () => {
+      mockCredential();
+      h.useGetAuthOidcCredential.mockReturnValue({
+        data: { ...h.useGetAuthOidcCredential().data, loginPolicy: null },
+        isLoading: false,
+      });
+      const user = userEvent.setup();
+      await openEdit(user);
+      expect(isChecked(methodRadio("Default"))).toBe(true);
+      expect(isChecked(providersRadio("Default"))).toBe(true);
+    });
+
+    it("drops a stored provider that is no longer enabled", async () => {
+      mockProviders([provider("p1", "Google")]);
+      mockCredential();
+      h.useGetAuthOidcCredential.mockReturnValue({
+        data: {
+          ...h.useGetAuthOidcCredential().data,
+          loginPolicy: { method: "default", providers: "selected", selectedProviderIds: ["gone"] },
+        },
+        isLoading: false,
+      });
+      const user = userEvent.setup();
+      await openEdit(user);
+      expect(await screen.findByText("Select at least one provider, or choose Default.")).toBeTruthy();
+      expect(submitButton("Update").disabled).toBe(true);
     });
   });
 });

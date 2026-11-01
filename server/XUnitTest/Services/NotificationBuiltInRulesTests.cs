@@ -50,11 +50,17 @@ namespace XUnitTest.Services
             _tenants.Setup(t => t.GetTenantByID(OtherTenant)).Returns(NewTenant(OtherTenant, false));
         }
 
+        private readonly XUnitTest.TestHelpers.InMemoryKeyValueStore _pushKv = new();
+
         private ConfigurationService Service() => new(
             _repo.Object,
             _validator.Object,
             _messageClient.Object,
             _tenants.Object,
+            Mock.Of<Configuration.DomainService.Notification.Services.INotificationAudienceGrantGuard>(),
+            new Configuration.DomainService.Notification.Push.NotificationPushOptionsService(
+                new Configuration.DomainService.Notification.Push.NotificationPushOptionsRepository(_pushKv),
+                NullLogger<Configuration.DomainService.Notification.Push.NotificationPushOptionsService>.Instance),
             NullLogger<ConfigurationService>.Instance);
 
         private static Tenant NewTenant(string id, bool isRoot) => new()
@@ -254,7 +260,6 @@ namespace XUnitTest.Services
         [InlineData("NotifyMethod")]
         [InlineData("ChannelToNotify")]
         [InlineData("NotificationType")]
-        [InlineData("EnablePersistence")]
         [InlineData("Description")]
         [InlineData("Importance")]
         [InlineData("Kind")]
@@ -273,7 +278,6 @@ namespace XUnitTest.Services
                 case "NotifyMethod": request.NotifyMethod = "Other"; break;
                 case "ChannelToNotify": request.ChannelToNotify = NotifierTypes.Firebase; break;
                 case "NotificationType": request.NotificationType = NotificationReceiverTypes.BroadcastReceiverType; break;
-                case "EnablePersistence": request.EnablePersistence = false; break;
                 case "Description": request.Description = "Other"; break;
                 case "Importance": request.Importance = NotificationImportance.Low; break;
                 case "Kind": request.Kind = NotificationKind.Security; break;
@@ -324,23 +328,19 @@ namespace XUnitTest.Services
         [Theory]
         [InlineData(NotificationKind.Job)]
         [InlineData(NotificationKind.Progress)]
-        public async Task Disable_BuiltInJobOrProgress_IsRefusedForEveryone(NotificationKind kind)
+        public async Task Disable_BuiltInJobOrProgress_IsAllowed_WhenTheProjectDoesNotNeedIt(NotificationKind kind)
         {
-            foreach (var tenant in new[] { OtherTenant, RootTenant })
-            {
-                using var _ = new BlocksTestContext(tenantId: tenant);
-                var stored = BuiltIn(kind);
-                Stored(stored);
-                var request = SameAs(stored);
-                request.IsDisabled = true;
+            // User, 2026-10-28: a project may turn off any event it does not need, a page waiting on it included.
+            using var _ = new BlocksTestContext(tenantId: OtherTenant);
+            var stored = BuiltIn(kind);
+            Stored(stored);
+            var request = SameAs(stored);
+            request.IsDisabled = true;
 
-                var response = await Service().SaveNotificationConfigurationAsync(request);
+            var response = await Service().SaveNotificationConfigurationAsync(request);
 
-                response.IsSuccess.Should().BeFalse();
-                response.Errors!.Values.Should().Contain(Constants.NotificationConfigurationCannotBeDisabled);
-            }
-
-            _repo.Verify(r => r.SaveNotificationConfigurationAsync(It.IsAny<NotificationConfiguration>()), Times.Never);
+            response.IsSuccess.Should().BeTrue();
+            _saved!.IsDisabled.Should().BeTrue();
         }
 
         [Fact]

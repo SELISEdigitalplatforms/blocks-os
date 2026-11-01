@@ -3,46 +3,40 @@ import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
-import { useAccountRecover } from "@blocks-idp/iam/hooks/use-account";
-import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
+import { useAdminResetPassword } from "@blocks-idp/iam/hooks/use-account";
 
 type UserResetPasswordProps = {
   userId: string;
-  projectKey: string;
   open: boolean;
   setOpen: (value: boolean) => void;
 };
 
+// Uses the protected admin reset (no captcha), not the public forgot-password flow.
 export const UserResetPassword = ({
   userId,
-  projectKey,
   open,
   setOpen,
-}: UserResetPasswordProps) => {
-  const { data } = useGetUserById({ projectKey, id: userId });
-  const { mutateAsync, isPending } = useAccountRecover();
+}: Readonly<UserResetPasswordProps>) => {
+  const { mutateAsync, isPending } = useAdminResetPassword();
 
   const onClickHandler = async () => {
     try {
-      const email = data?.data.email;
-      if (!email) {
-        throw Error("Email is not provided yet");
+      const res = await mutateAsync({ userId });
+      if (res.isSuccess) {
+        showSuccessToast({
+          description:
+            "Password reset email has been sent. Please check your email",
+        });
+        setOpen(false);
+      } else {
+        showErrorToast({ errors: res.errors });
       }
-      const res = await mutateAsync({
-        email: data?.data.email,
-        captchaCode: "",
-        ...(projectKey ? { tenantId: projectKey } : {}),
-      });
-      if (!res.isSuccess) return showErrorToast({ errors: res.errors });
-      showSuccessToast({
-        description:
-          "Password reset email has been sent. Please check your email",
-      });
-      setOpen(false);
     } catch (error) {
-      if (isErrorWithErrors(error))
-        return showErrorToast({ errors: error.errors });
-      showErrorToast({ errors: "Something went wrong" });
+      if (isErrorWithErrors(error)) {
+        showErrorToast({ errors: error.errors });
+      } else {
+        showErrorToast({ errors: "Something went wrong" });
+      }
     }
   };
 
