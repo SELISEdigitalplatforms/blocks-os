@@ -11,6 +11,7 @@ import {
   type ThirdPartyJwtProvider,
 } from "@/cross-modules/identifier/models/third-party-jwt-provider.model";
 import { ApiIntegrationCard } from "./api-integration-card";
+import { useT } from "@seliseblocks/genesis-os";
 
 const algorithmLabel = (value: number) =>
   SIGNING_ALGORITHMS.find((a) => a.value === value)?.label ?? "—";
@@ -45,25 +46,26 @@ function Detail({
  * credentials — so the link exposes nothing that was not already reachable.
  */
 function CertificatePanel({ provider }: Readonly<{ provider: ThirdPartyJwtProvider }>) {
+  const { t } = useT("os.idp.auth");
   const expiry = certificateExpiry(provider);
 
   const copyUrl = async () => {
     await navigator.clipboard.writeText(provider.publicCertificatePath);
-    showSuccessToast({ description: "Certificate URL copied" });
+    showSuccessToast({ description: t("PROVIDER_DETAILS.CERTIFICATE_URL_COPIED") });
   };
 
   return (
     <div className="space-y-4 rounded-md border p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold">Certificate</h3>
+        <h3 className="text-sm font-semibold">{t("PROVIDER_DETAILS.CERTIFICATE")}</h3>
         {expiry && (
           <Badge
             variant={expiry.expired || expiry.expiringSoon ? "destructive" : "secondary"}
             title={expiry.on.toISOString()}
           >
             {expiry.expired
-              ? `Expired ${Math.abs(expiry.daysLeft)} day${Math.abs(expiry.daysLeft) === 1 ? "" : "s"} ago`
-              : `Expires in ${expiry.daysLeft} day${expiry.daysLeft === 1 ? "" : "s"}`}
+              ? t("PROVIDER_DETAILS.EXPIRED_AGO", { count: Math.abs(expiry.daysLeft) })
+              : t("PROVIDER_DETAILS.EXPIRES_IN", { count: expiry.daysLeft })}
           </Badge>
         )}
       </div>
@@ -72,31 +74,29 @@ function CertificatePanel({ provider }: Readonly<{ provider: ThirdPartyJwtProvid
           nothing in the token says why. Worth stating outright rather than leaving to the date. */}
       {expiry?.expired && (
         <p className="text-xs text-destructive">
-          Tokens from this provider are being refused. Upload the replacement certificate to restore
-          it.
+          {t("PROVIDER_DETAILS.EXPIRED_WARNING")}
         </p>
       )}
       {expiry?.expiringSoon && (
         <p className="text-xs text-destructive">
-          Ask the provider for the replacement before this date. A certificate pins a single key, so
-          tokens stop being accepted the moment it lapses.
+          {t("PROVIDER_DETAILS.EXPIRING_WARNING")}
         </p>
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Detail
-          label="Subject"
-          value={provider.certificateSubject || "Not read"}
+          label={t("PROVIDER_DETAILS.SUBJECT")}
+          value={provider.certificateSubject || t("PROVIDER_DETAILS.NOT_READ")}
           muted={!provider.certificateSubject}
         />
         <Detail
-          label="Expires"
-          value={expiry ? expiry.on.toLocaleDateString() : "Not read"}
+          label={t("PROVIDER_DETAILS.EXPIRES")}
+          value={expiry ? expiry.on.toLocaleDateString() : t("PROVIDER_DETAILS.NOT_READ")}
           muted={!expiry}
         />
         <div className="space-y-1 sm:col-span-2">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Thumbprint (SHA-1)
+            {t("PROVIDER_DETAILS.THUMBPRINT")}
           </p>
           <code className="block break-all font-mono text-xs">
             {provider.certificateThumbprint || "—"}
@@ -104,7 +104,7 @@ function CertificatePanel({ provider }: Readonly<{ provider: ThirdPartyJwtProvid
         </div>
         <div className="space-y-1 sm:col-span-2">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Stored at
+            {t("PROVIDER_DETAILS.STORED_AT")}
           </p>
           <code className="block break-all font-mono text-xs">
             {provider.publicCertificatePath}
@@ -115,7 +115,7 @@ function CertificatePanel({ provider }: Readonly<{ provider: ThirdPartyJwtProvid
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="outline" className="h-8" onClick={() => void copyUrl()}>
           <Copy className="mr-2 h-4 w-4" />
-          Copy URL
+          {t("PROVIDER_DETAILS.COPY_URL")}
         </Button>
         {/* download without a value lets the server name the file; rel is set because the
             certificate lives on a storage host rather than this origin. */}
@@ -127,15 +127,14 @@ function CertificatePanel({ provider }: Readonly<{ provider: ThirdPartyJwtProvid
             rel="noreferrer noopener"
           >
             <Download className="mr-2 h-4 w-4" />
-            Download
+            {t("common:DOWNLOAD")}
           </a>
         </Button>
       </div>
 
       {!provider.certificateSubject && (
         <p className="text-xs text-muted-foreground">
-          The certificate could not be read when this provider was saved, so there is nothing to
-          describe here. Check the URL above is reachable, then save the provider again.
+          {t("PROVIDER_DETAILS.UNREADABLE")}
         </p>
       )}
     </div>
@@ -164,6 +163,7 @@ export function ProviderDetails({
   onEdit,
   onMapClaims,
 }: Readonly<ProviderDetailsProps>) {
+  const { t } = useT("os.idp.auth");
   const icon = providerIcon(provider.providerName);
   const mapping = provider.claimsMapping;
 
@@ -171,7 +171,7 @@ export function ProviderDetails({
     <div className="space-y-4">
       <Button variant="ghost" size="sm" className="-ml-2 h-8" onClick={onBack}>
         <ArrowLeft className="mr-2 h-4 w-4" />
-        All providers
+        {t("PROVIDER_DETAILS.ALL_PROVIDERS")}
       </Button>
 
       <Card>
@@ -190,7 +190,7 @@ export function ProviderDetails({
                 {provider.key}
               </code>
               <Badge variant={provider.isActive ? "secondary" : "outline"}>
-                {provider.isActive ? "Active" : "Inactive"}
+                {provider.isActive ? t("PROVIDER_DETAILS.ACTIVE") : t("PROVIDER_DETAILS.INACTIVE")}
               </Badge>
             </div>
             <div className="flex gap-2">
@@ -201,30 +201,32 @@ export function ProviderDetails({
                 onClick={() => onMapClaims(provider)}
               >
                 <Waypoints className="mr-2 h-4 w-4" />
-                Map JWT claim
+                {t("PROVIDER_DETAILS.MAP_JWT_CLAIM")}
               </Button>
               <Button size="sm" className="h-8" onClick={() => onEdit(provider)}>
                 <Pencil className="mr-2 h-4 w-4" />
-                Edit
+                {t("common:EDIT")}
               </Button>
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Detail label="Issuer" value={provider.issuer} />
+            <Detail label={t("PROVIDER_DETAILS.ISSUER")} value={provider.issuer} />
             <Detail
-              label="Audience"
+              label={t("PROVIDER_DETAILS.AUDIENCE")}
               value={
-                provider.audiences?.length ? provider.audiences.join(", ") : "Any (validation off)"
+                provider.audiences?.length
+                  ? provider.audiences.join(", ")
+                  : t("PROVIDER_DETAILS.AUDIENCE_ANY")
               }
               muted={!provider.audiences?.length}
             />
             <Detail
-              label="Algorithm"
+              label={t("PROVIDER_DETAILS.ALGORITHM")}
               value={provider.algorithms?.map(algorithmLabel).join(", ") || "—"}
             />
-            <Detail label="Key source" value={keySourceLabel(provider)} />
-            {provider.cookieKey && <Detail label="Cookie key" value={provider.cookieKey} />}
+            <Detail label={t("PROVIDER_DETAILS.KEY_SOURCE")} value={keySourceLabel(provider)} />
+            {provider.cookieKey && <Detail label={t("PROVIDER_DETAILS.COOKIE_KEY")} value={provider.cookieKey} />}
           </div>
 
           {provider.publicCertificatePath && <CertificatePanel provider={provider} />}
@@ -234,25 +236,31 @@ export function ProviderDetails({
       <Card>
         <CardContent className="space-y-4 pt-6">
           <div>
-            <h3 className="text-sm font-semibold">Claim mapping</h3>
+            <h3 className="text-sm font-semibold">{t("PROVIDER_DETAILS.CLAIM_MAPPING")}</h3>
             <p className="text-xs text-muted-foreground">
-              Which claim of an incoming token supplies each field of the Blocks user.
+              {t("PROVIDER_DETAILS.CLAIM_MAPPING_HINT")}
             </p>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Detail label="User ID" value={mapping?.userId || "—"} muted={!mapping?.userId} />
-            <Detail label="Email" value={mapping?.email || "Not mapped"} muted={!mapping?.email} />
+            <Detail label={t("PROVIDER_DETAILS.USER_ID")} value={mapping?.userId || "—"} muted={!mapping?.userId} />
             <Detail
-              label="Username"
-              value={mapping?.userName || "Not mapped"}
+              label={t("common:EMAIL")}
+              value={mapping?.email || t("PROVIDER_DETAILS.NOT_MAPPED")} muted={!mapping?.email} />
+            <Detail
+              label={t("PROVIDER_DETAILS.USERNAME")}
+              value={mapping?.userName || t("PROVIDER_DETAILS.NOT_MAPPED")}
               muted={!mapping?.userName}
             />
             <Detail
-              label="Display name"
-              value={mapping?.name || "Not mapped"}
+              label={t("PROVIDER_DETAILS.DISPLAY_NAME")}
+              value={mapping?.name || t("PROVIDER_DETAILS.NOT_MAPPED")}
               muted={!mapping?.name}
             />
-            <Detail label="Roles" value={mapping?.roles || "Not mapped"} muted={!mapping?.roles} />
+            <Detail
+              label={t("PROVIDER_DETAILS.ROLES")}
+              value={mapping?.roles || t("PROVIDER_DETAILS.NOT_MAPPED")}
+              muted={!mapping?.roles}
+            />
           </div>
         </CardContent>
       </Card>

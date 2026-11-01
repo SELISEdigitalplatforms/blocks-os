@@ -5,6 +5,7 @@ import { FormDescription, FormLabel } from "@/components/ui-kits/form/form";
 import { Label } from "@/components/ui-kits/label/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui-kits/radio-group/radio-group";
 import { cn } from "@/lib/utils";
+import { tStatic, useT } from "@seliseblocks/genesis-os";
 import { useGetIdentityProviders } from "@blocks-idp/authentication/hooks/use-identity-provider";
 import { useGetTenantLoginPolicy } from "@blocks-idp/authentication/hooks/use-login-policy";
 import type {
@@ -14,38 +15,41 @@ import type {
 import type { IdentityProvider } from "@blocks-idp/authentication/models/identity-provider.model";
 import { usesSocialProviders, type CreateOIDCFormValues } from "./utils";
 
-const TURNED_OFF_NOTE = "Turned off for this project";
-
 type Option<T extends string> = { value: T; id: string; label: string; hint: string };
 
-const METHOD_OPTIONS: Option<OidcLoginMethod>[] = [
+const getMethodOptions = (): Option<OidcLoginMethod>[] => [
   {
     value: "default",
     id: "loginMethod-default",
-    label: "Default",
-    hint: "Follow the project setting",
+    label: tStatic("os.idp.create-oidc", "OIDC_SIGN_IN_SECTION.OPTION_DEFAULT"),
+    hint: tStatic("os.idp.create-oidc", "OIDC_SIGN_IN_SECTION.METHOD_DEFAULT_HINT"),
   },
   {
     value: "password",
     id: "loginMethod-password",
-    label: "Password",
-    hint: "Password only",
+    label: tStatic("os.idp.create-oidc", "OIDC_SIGN_IN_SECTION.METHOD_PASSWORD"),
+    hint: tStatic("os.idp.create-oidc", "OIDC_SIGN_IN_SECTION.METHOD_PASSWORD_HINT"),
   },
-  { value: "social", id: "loginMethod-social", label: "Social", hint: "Social only" },
+  {
+    value: "social",
+    id: "loginMethod-social",
+    label: tStatic("os.idp.create-oidc", "OIDC_SIGN_IN_SECTION.METHOD_SOCIAL"),
+    hint: tStatic("os.idp.create-oidc", "OIDC_SIGN_IN_SECTION.METHOD_SOCIAL_HINT"),
+  },
 ];
 
-const PROVIDER_OPTIONS: Option<OidcLoginProviders>[] = [
+const getProviderOptions = (): Option<OidcLoginProviders>[] => [
   {
     value: "default",
     id: "loginProviders-default",
-    label: "Default",
-    hint: "All enabled providers, new ones included",
+    label: tStatic("os.idp.create-oidc", "OIDC_SIGN_IN_SECTION.OPTION_DEFAULT"),
+    hint: tStatic("os.idp.create-oidc", "OIDC_SIGN_IN_SECTION.PROVIDERS_DEFAULT_HINT"),
   },
   {
     value: "selected",
     id: "loginProviders-selected",
-    label: "Selected",
-    hint: "Only the providers you choose",
+    label: tStatic("os.idp.create-oidc", "OIDC_SIGN_IN_SECTION.PROVIDERS_SELECTED"),
+    hint: tStatic("os.idp.create-oidc", "OIDC_SIGN_IN_SECTION.PROVIDERS_SELECTED_HINT"),
   },
 ];
 
@@ -66,40 +70,43 @@ const OptionCards = <T extends string>({
   options,
   isDisabled,
   onChange,
-}: Readonly<OptionCardsProps<T>>) => (
-  <RadioGroup aria-label={label} value={value} onValueChange={(next) => onChange(next as T)}>
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-      {options.map((option) => {
-        const disabled = isDisabled?.(option.value) ?? false;
-        return (
-          <div
-            key={option.value}
-            className={cn(
-              "flex items-start gap-2 rounded-md border p-3",
-              value === option.value ? "border-primary bg-primary/5" : "border-input",
-              disabled && "opacity-60",
-            )}
-          >
-            <RadioGroupItem
-              value={option.value}
-              id={option.id}
-              disabled={disabled}
-              className="mt-0.5"
-            />
-            <div className="space-y-1">
-              <Label htmlFor={option.id} className="cursor-pointer text-sm">
-                {option.label}
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                {disabled ? TURNED_OFF_NOTE : option.hint}
-              </p>
+}: Readonly<OptionCardsProps<T>>) => {
+  const { t } = useT("os.idp.create-oidc");
+  return (
+    <RadioGroup aria-label={label} value={value} onValueChange={(next) => onChange(next as T)}>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {options.map((option) => {
+          const disabled = isDisabled?.(option.value) ?? false;
+          return (
+            <div
+              key={option.value}
+              className={cn(
+                "flex items-start gap-2 rounded-md border p-3",
+                value === option.value ? "border-primary bg-primary/5" : "border-input",
+                disabled && "opacity-60",
+              )}
+            >
+              <RadioGroupItem
+                value={option.value}
+                id={option.id}
+                disabled={disabled}
+                className="mt-0.5"
+              />
+              <div className="space-y-1">
+                <Label htmlFor={option.id} className="cursor-pointer text-sm">
+                  {option.label}
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {disabled ? t("OIDC_SIGN_IN_SECTION.TURNED_OFF_NOTE") : option.hint}
+                </p>
+              </div>
             </div>
-          </div>
-        );
-      })}
-    </div>
-  </RadioGroup>
-);
+          );
+        })}
+      </div>
+    </RadioGroup>
+  );
+};
 
 type ProviderChecklistProps = {
   providers: IdentityProvider[];
@@ -112,8 +119,11 @@ const ProviderChecklist = ({
   selectedIds,
   onChange,
 }: Readonly<ProviderChecklistProps>) => {
+  const { t } = useT("os.idp.create-oidc");
   if (providers.length === 0) {
-    return <p className="text-xs text-muted-foreground">No social providers are enabled.</p>;
+    return (
+      <p className="text-xs text-muted-foreground">{t("OIDC_SIGN_IN_SECTION.NO_PROVIDERS")}</p>
+    );
   }
   const toggle = (id: string, checked: boolean) =>
     onChange(checked ? [...selectedIds, id] : selectedIds.filter((existing) => existing !== id));
@@ -148,6 +158,7 @@ type OidcSignInSectionProps = {
 
 /** Per-client sign-in rule: the method, and which social providers it may use. */
 export const OidcSignInSection = ({ form, tenantId }: Readonly<OidcSignInSectionProps>) => {
+  const { t } = useT("os.idp.create-oidc");
   const method = form.watch("loginMethod");
   const providersMode = form.watch("loginProviders");
   const selectedIds = form.watch("loginProviderIds");
@@ -192,23 +203,25 @@ export const OidcSignInSection = ({ form, tenantId }: Readonly<OidcSignInSection
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <FormLabel>Sign-in</FormLabel>
-        <FormDescription className="text-xs">Method</FormDescription>
+        <FormLabel>{t("OIDC_SIGN_IN_SECTION.SIGN_IN")}</FormLabel>
+        <FormDescription className="text-xs">{t("OIDC_SIGN_IN_SECTION.METHOD")}</FormDescription>
         <OptionCards
-          label="Sign-in method"
+          label={t("OIDC_SIGN_IN_SECTION.SIGN_IN_METHOD")}
           value={method}
-          options={METHOD_OPTIONS}
+          options={getMethodOptions()}
           isDisabled={isMethodDisabled}
           onChange={handleMethodChange}
         />
       </div>
       {showProviders && (
         <div className="space-y-2">
-          <FormDescription className="text-xs">Social providers</FormDescription>
+          <FormDescription className="text-xs">
+            {t("OIDC_SIGN_IN_SECTION.SOCIAL_PROVIDERS")}
+          </FormDescription>
           <OptionCards
-            label="Social providers"
+            label={t("OIDC_SIGN_IN_SECTION.SOCIAL_PROVIDERS")}
             value={providersMode}
-            options={PROVIDER_OPTIONS}
+            options={getProviderOptions()}
             onChange={handleProvidersChange}
           />
           {providersMode === "selected" && (

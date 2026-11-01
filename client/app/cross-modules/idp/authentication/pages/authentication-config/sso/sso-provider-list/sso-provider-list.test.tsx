@@ -7,7 +7,8 @@ const h = vi.hoisted(() => ({
   cardProps: [] as Array<Record<string, unknown>>,
 }));
 
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 vi.mock("@blocks-idp/authentication/hooks/use-auth-config", () => ({

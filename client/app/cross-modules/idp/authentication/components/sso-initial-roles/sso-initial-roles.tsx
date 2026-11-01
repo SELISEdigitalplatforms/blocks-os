@@ -4,6 +4,7 @@ import { AddSSORole } from "./add-sso-role";
 import { SSORolesList } from "./sso-roles-list";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { Label } from "@/components/ui-kits/label/label";
+import { useT } from "@seliseblocks/genesis-os";
 
 type SSOInitialRolesProps = {
   roles: IRole[];
@@ -11,6 +12,7 @@ type SSOInitialRolesProps = {
 };
 
 export const SSOInitialRoles = ({ roles, onChange }: SSOInitialRolesProps) => {
+  const { t } = useT("os.idp.auth");
   const [filter, setFilter] = useState({ page: 0, pageSize: 5 });
   const onPageChangeHandler = (page: number) => {
     setFilter((filter) => ({ ...filter, page }));
@@ -29,7 +31,7 @@ export const SSOInitialRoles = ({ roles, onChange }: SSOInitialRolesProps) => {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex-1 space-y-1">
           <div className="flex items-center gap-2">
-            <Label className="text-base font-medium">Roles</Label>
+            <Label className="text-base font-medium">{t("SSO_INITIAL_ROLES.TITLE")}</Label>
             {roles.length > 0 && (
               <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                 {roles.length}
@@ -37,7 +39,7 @@ export const SSOInitialRoles = ({ roles, onChange }: SSOInitialRolesProps) => {
             )}
           </div>
           <p className="text-sm text-muted-foreground">
-            Assign default roles to users automatically when they authenticate via SSO
+            {t("SSO_INITIAL_ROLES.DESCRIPTION")}
           </p>
         </div>
         <div className="shrink-0">
@@ -62,8 +64,8 @@ export const SSOInitialRoles = ({ roles, onChange }: SSOInitialRolesProps) => {
               />
             </svg>
           </div>
-          <p className="mt-3 text-sm font-medium text-foreground">No roles added</p>
-          <p className="mt-1 text-xs text-muted-foreground">Add roles for SSO users</p>
+          <p className="mt-3 text-sm font-medium text-foreground">{t("SSO_INITIAL_ROLES.EMPTY_TITLE")}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{t("SSO_INITIAL_ROLES.EMPTY_HINT")}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -73,9 +75,11 @@ export const SSOInitialRoles = ({ roles, onChange }: SSOInitialRolesProps) => {
           {roles.length > filter.pageSize && (
             <div className="flex items-center justify-between border-t pt-3">
               <p className="text-xs text-muted-foreground">
-                Showing {filter.page * filter.pageSize + 1} to{" "}
-                {Math.min((filter.page + 1) * filter.pageSize, roles.length)} of {roles.length}{" "}
-                roles
+                {t("SSO_INITIAL_ROLES.SHOWING", {
+                  from: filter.page * filter.pageSize + 1,
+                  to: Math.min((filter.page + 1) * filter.pageSize, roles.length),
+                  total: roles.length,
+                })}
               </p>
               <Pagination
                 page={filter.page}

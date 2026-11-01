@@ -12,6 +12,7 @@ import { Settings } from "lucide-react";
 import { parseAsBoolean, useQueryState } from "nuqs";
 import { Link, Outlet, useLocation } from "react-router";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
+import { useT } from "@seliseblocks/genesis-os";
 import { PrimaryButton } from "@/components/action-buttons/primary-button";
 import { AddRole } from "@blocks-idp/iam/modules/role-management";
 import {
@@ -25,6 +26,7 @@ import {
 import { InviteUser } from "@blocks-idp/iam/modules/user-management";
 
 export const AuthenticationConfigLayout = () => {
+  const { t } = useT("os.idp.auth");
   const { pathname } = useLocation();
   const scoped = useScopedPath();
   const currentPath = pathname.split("/").pop() ?? "config";
@@ -77,7 +79,7 @@ export const AuthenticationConfigLayout = () => {
       {currentPath === "signup-link-activity" && <ActivityRefreshHeader />}
       {currentPath === "permissions" && (
         <Link to={scoped("iam/permission-detail/new")}>
-          <PrimaryButton label="Add Permission" />
+          <PrimaryButton label={t("AUTHENTICATION_CONFIG.ADD_PERMISSION")} />
         </Link>
       )}
       {currentPath === "email-template" && (
@@ -88,7 +90,7 @@ export const AuthenticationConfigLayout = () => {
           onClick={() => setConfigureOpen(true)}
         >
           <Settings className="h-5 w-5" />
-          <span className="sr-only sm:not-sr-only">Configure</span>
+          <span className="sr-only sm:not-sr-only">{t("AUTHENTICATION_CONFIG.CONFIGURE")}</span>
         </Button>
       )}
     </>
@@ -124,7 +126,7 @@ export const AuthenticationConfigLayout = () => {
       <Dialog open={configureOpen ?? false} onOpenChange={(open) => setConfigureOpen(open)}>
         <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Email Configuration</DialogTitle>
+            <DialogTitle>{t("AUTHENTICATION_CONFIG.EMAIL_CONFIGURATION")}</DialogTitle>
           </DialogHeader>
           <EmailConfiguration />
         </DialogContent>

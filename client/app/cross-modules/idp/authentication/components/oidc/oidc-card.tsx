@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { format } from "date-fns";
 import { ChevronRight, Power, PowerOff, RotateCw, Shield, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui-kits/badge/badge";
@@ -28,7 +28,7 @@ import {
 } from "@blocks-idp/authentication/models/auth.oidc.model";
 import type { IOidcClientLoginPolicy } from "@blocks-idp/authentication/models/login-policy.model";
 import { describeClientLoginPolicy } from "@blocks-idp/authentication/utils/login-policy.util";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { tStatic, useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { CreateOIDC } from "../create-oidc/create-oidc";
 import { KVDetailItem } from "../kv-detail-item";
 import { maskId } from "../../utils/mask-id.util";
@@ -43,6 +43,7 @@ interface OIDCRowProps {
 
 type KvPair = {
   key: string;
+  label: string;
   value: string;
   copyable?: boolean;
   sensitive?: boolean;
@@ -61,17 +62,45 @@ const buildKvPairs = (item: IOidcConfig): KvPair[] => {
   const browserOnly: KvPair[] = item.isDeviceFlowClient
     ? []
     : [
-        { key: "PKCE", value: item.requirePkce ? "required" : "not required" },
         {
-          key: "Redirect automatically after authentication",
-          value: item.isAutoRedirect ? "true" : "false",
+          key: "pkce",
+          label: tStatic("os.idp.oidc", "OIDC_CARD.KV_PKCE"),
+          value: item.requirePkce
+            ? tStatic("os.idp.oidc", "OIDC_CARD.KV_REQUIRED")
+            : tStatic("os.idp.oidc", "OIDC_CARD.KV_NOT_REQUIRED"),
+        },
+        {
+          key: "autoRedirect",
+          label: tStatic("os.idp.oidc", "OIDC_CARD.KV_AUTO_REDIRECT"),
+          value: item.isAutoRedirect
+            ? tStatic("os.idp.oidc", "OIDC_CARD.KV_TRUE")
+            : tStatic("os.idp.oidc", "OIDC_CARD.KV_FALSE"),
         },
       ];
   const pairs: KvPair[] = [
-    { key: "Client Id", value: item.itemId, copyable: true, masked: true },
-    { key: "Redirect URI(s)", value: getRedirectUris(item).join(", "), copyable: true },
-    { key: "Allowed Response Types", value: getResponseTypes(item).join(", ") },
-    { key: "Scope(s)", value: item.scope ?? "" },
+    {
+      key: "clientId",
+      label: tStatic("os.idp.oidc", "OIDC_CARD.KV_CLIENT_ID"),
+      value: item.itemId,
+      copyable: true,
+      masked: true,
+    },
+    {
+      key: "redirectUris",
+      label: tStatic("os.idp.oidc", "OIDC_CARD.KV_REDIRECT_URIS"),
+      value: getRedirectUris(item).join(", "),
+      copyable: true,
+    },
+    {
+      key: "responseTypes",
+      label: tStatic("os.idp.oidc", "OIDC_CARD.KV_RESPONSE_TYPES"),
+      value: getResponseTypes(item).join(", "),
+    },
+    {
+      key: "scopes",
+      label: tStatic("os.idp.oidc", "OIDC_CARD.KV_SCOPES"),
+      value: item.scope ?? "",
+    },
     ...browserOnly,
   ];
   return pairs.filter((pair) => pair.value);
@@ -103,84 +132,112 @@ const buildStatusTogglePayload = (item: IOidcConfig): ISaveOidcCredentialPayload
 };
 
 const statusButtonLabel = (isUpdating: boolean, willEnable: boolean): string => {
-  if (isUpdating) return willEnable ? "Enabling…" : "Disabling…";
-  return willEnable ? "Enable" : "Disable";
+  if (isUpdating) {
+    return willEnable
+      ? tStatic("os.idp.oidc", "OIDC_CARD.STATUS_ENABLING")
+      : tStatic("os.idp.oidc", "OIDC_CARD.STATUS_DISABLING");
+  }
+  return willEnable
+    ? tStatic("os.idp.oidc", "OIDC_CARD.ENABLE")
+    : tStatic("os.idp.oidc", "OIDC_CARD.DISABLE");
 };
 
 const showActionError = (error: unknown) => {
-  showErrorToast({ errors: isErrorWithErrors(error) ? error.errors : "Something went wrong" });
+  showErrorToast({
+    errors: isErrorWithErrors(error)
+      ? error.errors
+      : tStatic("os.idp.oidc", "OIDC_CARD.ERROR_GENERIC"),
+  });
+};
+
+const withBoldName = (text: string, name: string): ReactNode => {
+  if (!name) return text;
+  return text
+    .split(name)
+    .flatMap((part, index) => (index === 0 ? [part] : [<strong key={index}>{name}</strong>, part]));
 };
 
 const OidcClientNameCell = ({
   item,
   loginPolicy,
-}: Readonly<{ item: IOidcConfig; loginPolicy?: IOidcClientLoginPolicy }>) => (
-  <TableCell className="py-3.5">
-    <div className="flex items-center gap-3">
-      <div
-        className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
-          item.isActive ? "bg-emerald-100 dark:bg-emerald-950" : "bg-muted",
-        )}
-      >
-        <Shield
+}: Readonly<{ item: IOidcConfig; loginPolicy?: IOidcClientLoginPolicy }>) => {
+  const { t } = useT("os.idp.oidc");
+  return (
+    <TableCell className="py-3.5">
+      <div className="flex items-center gap-3">
+        <div
           className={cn(
-            "h-4 w-4",
-            item.isActive ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground",
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+            item.isActive ? "bg-emerald-100 dark:bg-emerald-950" : "bg-muted",
           )}
-        />
-      </div>
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium">{item.clientDisplayName || "OIDC client"}</p>
-        <p className="truncate font-mono text-xs text-muted-foreground">{maskId(item.itemId)}</p>
-        {!item.isDeviceFlowClient && (
-          <p className="truncate text-xs text-muted-foreground">
-            {describeClientLoginPolicy(loginPolicy)}
+        >
+          <Shield
+            className={cn(
+              "h-4 w-4",
+              item.isActive ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground",
+            )}
+          />
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium">
+            {item.clientDisplayName || t("OIDC_CARD.CLIENT_FALLBACK_NAME")}
           </p>
+          <p className="truncate font-mono text-xs text-muted-foreground">{maskId(item.itemId)}</p>
+          {!item.isDeviceFlowClient && (
+            <p className="truncate text-xs text-muted-foreground">
+              {describeClientLoginPolicy(loginPolicy)}
+            </p>
+          )}
+        </div>
+      </div>
+    </TableCell>
+  );
+};
+
+const OidcTypeCell = ({ isDeviceFlowClient }: Readonly<{ isDeviceFlowClient?: boolean }>) => {
+  const { t } = useT("os.idp.oidc");
+  return (
+    <TableCell className="hidden py-3.5 sm:table-cell">
+      <div className="flex flex-wrap gap-1.5">
+        <Badge
+          variant="outline"
+          className="w-fit gap-1.5 border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis"
+        >
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+          {"OIDC"}
+        </Badge>
+        {isDeviceFlowClient && (
+          <Badge
+            variant="outline"
+            className="w-fit border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis"
+          >
+            {t("OIDC_CARD.DEVICE_FLOW")}
+          </Badge>
         )}
       </div>
-    </div>
-  </TableCell>
-);
+    </TableCell>
+  );
+};
 
-const OidcTypeCell = ({ isDeviceFlowClient }: Readonly<{ isDeviceFlowClient?: boolean }>) => (
-  <TableCell className="hidden py-3.5 sm:table-cell">
-    <div className="flex flex-wrap gap-1.5">
+const OidcStatusCell = ({ isActive }: Readonly<{ isActive: boolean }>) => {
+  const { t } = useT("os.idp.oidc");
+  return (
+    <TableCell className="hidden py-3.5 sm:table-cell">
       <Badge
         variant="outline"
         className="w-fit gap-1.5 border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis"
       >
-        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
-        {"OIDC"}
+        <span
+          className={cn(
+            "h-1.5 w-1.5 shrink-0 rounded-full",
+            isActive ? "bg-emerald-500" : "bg-muted-foreground/40",
+          )}
+        />
+        {isActive ? t("OIDC_CARD.ACTIVE") : t("OIDC_CARD.INACTIVE")}
       </Badge>
-      {isDeviceFlowClient && (
-        <Badge
-          variant="outline"
-          className="w-fit border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis"
-        >
-          Device Flow
-        </Badge>
-      )}
-    </div>
-  </TableCell>
-);
-
-const OidcStatusCell = ({ isActive }: Readonly<{ isActive: boolean }>) => (
-  <TableCell className="hidden py-3.5 sm:table-cell">
-    <Badge
-      variant="outline"
-      className="w-fit gap-1.5 border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis"
-    >
-      <span
-        className={cn(
-          "h-1.5 w-1.5 shrink-0 rounded-full",
-          isActive ? "bg-emerald-500" : "bg-muted-foreground/40",
-        )}
-      />
-      {isActive ? "Active" : "Inactive"}
-    </Badge>
-  </TableCell>
-);
+    </TableCell>
+  );
+};
 
 type OidcRowActionsProps = Readonly<{
   item: IOidcConfig;
@@ -199,6 +256,7 @@ const OidcRowActions = ({
   onToggleStatus,
   onDelete,
 }: OidcRowActionsProps) => {
+  const { t } = useT("os.idp.oidc");
   const isActive = item.isActive;
   return (
     <TableCell className="py-3.5 pl-4 text-left" onClick={(e) => e.stopPropagation()}>
@@ -211,14 +269,14 @@ const OidcRowActions = ({
                 variant="ghost"
                 size="sm"
                 className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
-                aria-label="Rotate client secret"
+                aria-label={t("OIDC_CARD.ROTATE_SECRET_LABEL")}
                 onClick={onRotate}
                 disabled={isRotating}
               >
                 <RotateCw className={cn("h-3.5 w-3.5", isRotating && "animate-spin")} />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Rotate Secret</TooltipContent>
+            <TooltipContent>{t("OIDC_CARD.ROTATE_SECRET")}</TooltipContent>
           </Tooltip>
         )}
         <Tooltip>
@@ -232,14 +290,16 @@ const OidcRowActions = ({
                   ? "text-emerald-600 hover:text-destructive"
                   : "text-muted-foreground hover:text-emerald-600",
               )}
-              aria-label={isActive ? "Disable OIDC client" : "Enable OIDC client"}
+              aria-label={isActive ? t("OIDC_CARD.DISABLE_CLIENT") : t("OIDC_CARD.ENABLE_CLIENT")}
               onClick={onToggleStatus}
               disabled={isUpdating}
             >
               {isActive ? <Power className="h-3.5 w-3.5" /> : <PowerOff className="h-3.5 w-3.5" />}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{isActive ? "Disable" : "Enable"}</TooltipContent>
+          <TooltipContent>
+            {isActive ? t("OIDC_CARD.DISABLE") : t("OIDC_CARD.ENABLE")}
+          </TooltipContent>
         </Tooltip>
         <span className="mx-0.5 h-4 w-px shrink-0 bg-border" aria-hidden />
         <Tooltip>
@@ -248,13 +308,13 @@ const OidcRowActions = ({
               variant="ghost"
               size="sm"
               className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-              aria-label="Delete"
+              aria-label={t("common:DELETE")}
               onClick={onDelete}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Delete</TooltipContent>
+          <TooltipContent>{t("common:DELETE")}</TooltipContent>
         </Tooltip>
       </div>
     </TableCell>
@@ -265,10 +325,10 @@ const OidcDetailsRow = ({ kvPairs }: Readonly<{ kvPairs: KvPair[] }>) => (
   <TableRow className="border-b-2 border-border hover:bg-transparent">
     <TableCell colSpan={6} className="max-w-0 bg-muted/20 px-3 py-3 pl-8 sm:px-6 sm:py-4 sm:pl-12">
       <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
-        {kvPairs.map(({ key, value, copyable, sensitive, masked }) => (
+        {kvPairs.map(({ key, label, value, copyable, sensitive, masked }) => (
           <KVDetailItem
             key={key}
-            label={key}
+            label={label}
             value={value}
             copyable={copyable}
             sensitive={sensitive}
@@ -295,46 +355,46 @@ const OidcStatusDialog = ({
   isPending,
   onConfirm,
   willEnable,
-}: ConfirmDialogProps & Readonly<{ willEnable: boolean }>) => (
-  <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>{willEnable ? "Enable OIDC client" : "Disable OIDC client"}</DialogTitle>
-        <DialogDescription>
-          {willEnable ? (
-            <>
-              <strong>{clientLabel}</strong> will be able to sign users in again. Are you sure you
-              want to enable it?
-            </>
-          ) : (
-            <>
-              <strong>{clientLabel}</strong> will no longer be able to sign users in. Are you sure
-              you want to disable it?
-            </>
-          )}
-        </DialogDescription>
-      </DialogHeader>
-      <DialogFooter className="flex gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onOpenChange(false)}
-          disabled={isPending}
-        >
-          Cancel
-        </Button>
-        <Button
-          variant={willEnable ? "default" : "destructive"}
-          size="sm"
-          onClick={onConfirm}
-          disabled={isPending}
-        >
-          {statusButtonLabel(isPending, willEnable)}
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
-);
+}: ConfirmDialogProps & Readonly<{ willEnable: boolean }>) => {
+  const { t } = useT("os.idp.oidc");
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {willEnable ? t("OIDC_CARD.ENABLE_CLIENT") : t("OIDC_CARD.DISABLE_CLIENT")}
+          </DialogTitle>
+          <DialogDescription>
+            {withBoldName(
+              willEnable
+                ? t("OIDC_CARD.ENABLE_DESC", { name: clientLabel })
+                : t("OIDC_CARD.DISABLE_DESC", { name: clientLabel }),
+              clientLabel,
+            )}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onOpenChange(false)}
+            disabled={isPending}
+          >
+            {t("common:CANCEL")}
+          </Button>
+          <Button
+            variant={willEnable ? "default" : "destructive"}
+            size="sm"
+            onClick={onConfirm}
+            disabled={isPending}
+          >
+            {statusButtonLabel(isPending, willEnable)}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 const OidcRotateDialog = ({
   open,
@@ -342,32 +402,34 @@ const OidcRotateDialog = ({
   clientLabel,
   isPending,
   onConfirm,
-}: ConfirmDialogProps) => (
-  <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>Rotate client secret</DialogTitle>
-        <DialogDescription>
-          A new secret will be made for <strong>{clientLabel}</strong>. The current secret stops
-          working at once, so every app that uses it must be updated.
-        </DialogDescription>
-      </DialogHeader>
-      <DialogFooter className="flex gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onOpenChange(false)}
-          disabled={isPending}
-        >
-          Cancel
-        </Button>
-        <Button size="sm" onClick={onConfirm} disabled={isPending}>
-          {isPending ? "Rotating…" : "Rotate Secret"}
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
-);
+}: ConfirmDialogProps) => {
+  const { t } = useT("os.idp.oidc");
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t("OIDC_CARD.ROTATE_SECRET_LABEL")}</DialogTitle>
+          <DialogDescription>
+            {withBoldName(t("OIDC_CARD.ROTATE_DESC", { name: clientLabel }), clientLabel)}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onOpenChange(false)}
+            disabled={isPending}
+          >
+            {t("common:CANCEL")}
+          </Button>
+          <Button size="sm" onClick={onConfirm} disabled={isPending}>
+            {isPending ? t("OIDC_CARD.ROTATING") : t("OIDC_CARD.ROTATE_SECRET")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 const OidcDeleteDialog = ({
   open,
@@ -375,29 +437,32 @@ const OidcDeleteDialog = ({
   clientLabel,
   isPending,
   onConfirm,
-}: ConfirmDialogProps) => (
-  <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>Delete OIDC Client</DialogTitle>
-        <DialogDescription>
-          Are you sure you want to delete <strong>{clientLabel}</strong>? This action cannot be
-          undone.
-        </DialogDescription>
-      </DialogHeader>
-      <DialogFooter className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
-          Cancel
-        </Button>
-        <Button variant="destructive" size="sm" onClick={onConfirm} disabled={isPending}>
-          {isPending ? "Deleting…" : "Delete"}
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
-);
+}: ConfirmDialogProps) => {
+  const { t } = useT("os.idp.oidc");
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t("OIDC_CARD.DELETE_TITLE")}</DialogTitle>
+          <DialogDescription>
+            {withBoldName(t("OIDC_CARD.DELETE_DESC", { name: clientLabel }), clientLabel)}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+            {t("common:CANCEL")}
+          </Button>
+          <Button variant="destructive" size="sm" onClick={onConfirm} disabled={isPending}>
+            {isPending ? t("OIDC_CARD.DELETING") : t("common:DELETE")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 const OIDCRow = ({ item, loginPolicy, defaultExpanded = false }: Readonly<OIDCRowProps>) => {
+  const { t } = useT("os.idp.oidc");
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
@@ -433,7 +498,7 @@ const OIDCRow = ({ item, loginPolicy, defaultExpanded = false }: Readonly<OIDCRo
         showErrorToast({ errors: res.error });
         return;
       }
-      showSuccessToast({ description: "OIDC credential deleted successfully" });
+      showSuccessToast({ description: t("OIDC_CARD.TOAST_DELETED") });
       setShowDeleteDialog(false);
     } catch (error) {
       showActionError(error);
@@ -448,7 +513,7 @@ const OIDCRow = ({ item, loginPolicy, defaultExpanded = false }: Readonly<OIDCRo
         return;
       }
       showSuccessToast({
-        description: `OIDC client ${isActive ? "disabled" : "enabled"} successfully`,
+        description: isActive ? t("OIDC_CARD.TOAST_DISABLED") : t("OIDC_CARD.TOAST_ENABLED"),
       });
       setShowStatusDialog(false);
     } catch (error) {
@@ -463,7 +528,7 @@ const OIDCRow = ({ item, loginPolicy, defaultExpanded = false }: Readonly<OIDCRo
         projectKey: tenantId,
       });
       if (!res.isSuccess || !res.clientSecret) {
-        showErrorToast({ errors: res.errors ?? "Failed to rotate secret" });
+        showErrorToast({ errors: res.errors ?? t("OIDC_CARD.ERROR_ROTATE") });
         return;
       }
       setShowRotateDialog(false);
@@ -473,7 +538,7 @@ const OIDCRow = ({ item, loginPolicy, defaultExpanded = false }: Readonly<OIDCRo
         clientSecret: res.clientSecret,
         reason: "rotated",
       });
-      showSuccessToast({ description: "Client secret rotated successfully" });
+      showSuccessToast({ description: t("OIDC_CARD.TOAST_ROTATED") });
     } catch (error) {
       showActionError(error);
     }

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui-kits/button/button";
 import { cn } from "@/lib/utils";
 import { Check, Copy, Download } from "lucide-react";
+import { useT } from "@seliseblocks/genesis-os";
 
 interface UrlWithActionsProps {
   url: string;
@@ -27,11 +28,12 @@ const copyTextToClipboard = async (text: string) => {
 };
 
 export const UrlWithActions = ({ url, className }: UrlWithActionsProps) => {
+  const { t } = useT("os.idp.auth");
   const [isCopying, setIsCopying] = useState(false);
   const certificatePath = url.trim();
 
   if (!certificatePath) {
-    return <span className="text-sm text-muted-foreground">No certificate configured</span>;
+    return <span className="text-sm text-muted-foreground">{t("URL_WITH_ACTIONS.NO_CERTIFICATE")}</span>;
   }
 
   const handleCopy = async (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -77,7 +79,7 @@ export const UrlWithActions = ({ url, className }: UrlWithActionsProps) => {
         className="text-sm font-medium text-high-emphasis underline"
         title={certificatePath}
       >
-        Public Certificate
+        {t("URL_WITH_ACTIONS.PUBLIC_CERTIFICATE")}
       </a>
       <div className="flex shrink-0 items-center gap-1">
         <Button
@@ -85,8 +87,8 @@ export const UrlWithActions = ({ url, className }: UrlWithActionsProps) => {
           className="h-auto p-1 transition-colors hover:bg-gray-100"
           onClick={handleCopy}
           type="button"
-          title={isCopying ? "Copied!" : "Copy URL"}
-          aria-label={isCopying ? "Copied" : "Copy certificate URL"}
+          title={isCopying ? t("URL_WITH_ACTIONS.COPIED") : t("URL_WITH_ACTIONS.COPY_URL")}
+          aria-label={isCopying ? t("common:COPIED") : t("URL_WITH_ACTIONS.COPY_CERTIFICATE_URL")}
         >
           {isCopying ? (
             <Check className="h-4 w-4 text-green-600" />
@@ -99,8 +101,8 @@ export const UrlWithActions = ({ url, className }: UrlWithActionsProps) => {
           className="h-auto p-1 transition-colors hover:bg-gray-100"
           onClick={handleDownload}
           type="button"
-          title="Download certificate"
-          aria-label="Download certificate"
+          title={t("URL_WITH_ACTIONS.DOWNLOAD_CERTIFICATE")}
+          aria-label={t("URL_WITH_ACTIONS.DOWNLOAD_CERTIFICATE")}
         >
           <Download className="h-4 w-4 text-gray-600 hover:text-gray-800" />
         </Button>

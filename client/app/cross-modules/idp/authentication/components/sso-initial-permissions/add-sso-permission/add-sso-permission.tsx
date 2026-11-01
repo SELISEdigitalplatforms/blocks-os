@@ -24,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui-kits/table/table";
 import { cn } from "@/lib/utils";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { useGetGrantablePermissions } from "@blocks-idp/iam/hooks/use-permission";
 import { IPermission, RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
 import { Plus } from "lucide-react";
@@ -35,6 +35,7 @@ type AddSSOPermissionProps = {
   onAdd: (data: IPermission[]) => void;
 };
 export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) => {
+  const { t } = useT("os.idp.auth");
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const [open, setOpen] = useState<boolean>(false);
   const [selectedPermission, setSelectedPermissions] = useState<IPermission[]>([]);
@@ -104,18 +105,18 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
           disabled={permissions.length >= 5}
         >
           <Plus className="h-3.5 w-3.5 md:mr-1.5" />
-          <span className="sr-only sm:not-sr-only">Assign Permissions</span>
+          <span className="sr-only sm:not-sr-only">{t("ADD_SSO_PERMISSION.ASSIGN")}</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="flex max-h-[min(92vh,720px)] w-[calc(100vw-1.5rem)] max-w-3xl flex-col overflow-hidden sm:w-full">
         <DialogHeader>
-          <DialogTitle className="text-left">Assign Permissions</DialogTitle>
+          <DialogTitle className="text-left">{t("ADD_SSO_PERMISSION.ASSIGN")}</DialogTitle>
           <DialogDescription></DialogDescription>
         </DialogHeader>
         <GrantHint kind="permissions" />
         <div>
           <FilterControls.SearchInput
-            placeholder="Search by permission name"
+            placeholder={t("ADD_SSO_PERMISSION.SEARCH_PLACEHOLDER")}
             onChange={(search) => setFilter((prev) => ({ ...prev, search, page: 0 }))}
             value={filter.search}
             className="h-fit w-full py-3"
@@ -124,7 +125,7 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
         <h1
           className={cn("text-sm font-semibold", selectedPermission.length === 5 && "text-error")}
         >
-          *You can select up to 5 permissions. <span>{`(${selectedPermission.length}/5)`}</span>
+          {t("ADD_SSO_PERMISSION.LIMIT_HINT")} <span>{`(${selectedPermission.length}/5)`}</span>
         </h1>
         <Card className="min-h-0 flex-1 overflow-hidden">
           <CardContent className="max-h-[min(50vh,360px)] overflow-x-auto overflow-y-auto">
@@ -132,9 +133,9 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
               <TableHeader>
                 <TableRow>
                   <TableHead></TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Resource</TableHead>
-                  <TableHead>Type</TableHead>
+                  <TableHead>{t("common:NAME")}</TableHead>
+                  <TableHead>{t("ADD_SSO_PERMISSION.COLUMN_RESOURCE")}</TableHead>
+                  <TableHead>{t("common:TYPE")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -194,7 +195,7 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
                 ) : (
                   <TableRow>
                     <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                      No permissions found
+                      {t("ADD_SSO_PERMISSION.EMPTY")}
                     </TableCell>
                   </TableRow>
                 )}
@@ -215,7 +216,7 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
         <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
           <DialogClose asChild>
             <Button variant="outline" size="default">
-              Cancel
+              {t("common:CANCEL")}
             </Button>
           </DialogClose>
           <Button
@@ -223,7 +224,7 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
             onClick={onClickHandler}
             disabled={selectedPermission.length === 0}
           >
-            Add
+            {t("common:ADD")}
           </Button>
         </DialogFooter>
       </DialogContent>

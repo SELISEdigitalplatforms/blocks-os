@@ -10,11 +10,13 @@ import {
 import { useMemo } from "react";
 import { DeleteSSOPermission } from "./delete-sso-permission";
 import { IPermission } from "@blocks-idp/iam/models/permission";
+import { useT } from "@seliseblocks/genesis-os";
 interface SSOPermissionsListProps {
   permissions: IPermission[];
   onDelete: (data: IPermission) => void;
 }
 export const SSOPermissionsList = ({ permissions, onDelete }: SSOPermissionsListProps) => {
+  const { t } = useT("os.idp.auth");
   const columns = useMemo<ColumnDef<IPermission>[]>(
     () => [
       {
@@ -23,7 +25,7 @@ export const SSOPermissionsList = ({ permissions, onDelete }: SSOPermissionsList
         header: () => {
           return (
             <div className="flex items-center">
-              <span className="font-bold text-medium-emphasis">Name</span>
+              <span className="font-bold text-medium-emphasis">{t("common:NAME")}</span>
             </div>
           );
         },
@@ -40,7 +42,7 @@ export const SSOPermissionsList = ({ permissions, onDelete }: SSOPermissionsList
         accessorFn: (row) => `${row.resource}`.trim(),
         header: () => (
           <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">Resource</span>
+            <span className="font-bold text-medium-emphasis">{t("SSO_PERMISSIONS_LIST.COLUMN_RESOURCE")}</span>
           </div>
         ),
         cell: (permission) => (
@@ -64,7 +66,7 @@ export const SSOPermissionsList = ({ permissions, onDelete }: SSOPermissionsList
         ),
       },
     ],
-    [onDelete],
+    [onDelete, t],
   );
   const table = useReactTable({
     data: permissions,
@@ -104,7 +106,7 @@ export const SSOPermissionsList = ({ permissions, onDelete }: SSOPermissionsList
         ) : (
           <TableRow>
             <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
-              No permissions found
+              {t("SSO_PERMISSIONS_LIST.EMPTY")}
             </TableCell>
           </TableRow>
         )}

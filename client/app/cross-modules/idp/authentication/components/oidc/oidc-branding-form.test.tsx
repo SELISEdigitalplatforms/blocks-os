@@ -16,7 +16,8 @@ const h = vi.hoisted(() => ({
   authConfig: undefined as unknown,
 }));
 
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "t1" } }),
 }));
 vi.mock("@blocks-idp/authentication/contexts/oidc-branding-header-context", () => ({

@@ -1,3 +1,4 @@
+import { tStatic } from "@seliseblocks/genesis-os";
 import type {
   IOidcUiTemplate,
   IOidcUiThemePalette,
@@ -7,11 +8,12 @@ export const HEX_COLOR_PATTERN = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 const RGBA_COLOR_PATTERN =
   /^rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*((?:\d+(?:\.\d+)?|\.\d+))\s*\)$/i;
 
-export const HEX_COLOR_MESSAGE = "must be a valid hex color (#RGB or #RRGGBB)";
-export const HEX_OR_RGBA_COLOR_MESSAGE =
-  "must be a valid hex color (#RGB or #RRGGBB) or rgba(r,g,b,a) color";
-export const TEXT_MESSAGE = "must be between 1 and 200 characters";
-export const URL_MESSAGE = "must be an absolute http or https URL";
+export const getHexColorMessage = () =>
+  tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.MESSAGE_HEX_COLOR");
+export const getHexOrRgbaColorMessage = () =>
+  tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.MESSAGE_HEX_OR_RGBA_COLOR");
+export const getTextMessage = () => tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.MESSAGE_TEXT");
+export const getUrlMessage = () => tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.MESSAGE_URL");
 
 export const isAbsoluteHttpUrl = (value: string) => {
   try {
@@ -29,35 +31,92 @@ export const isRgbaColor = (value: string) => {
   return red <= 255 && green <= 255 && blue <= 255 && alpha >= 0 && alpha <= 1;
 };
 
-export const THEME_FIELDS: Array<{
+export const getThemeFields = (): Array<{
   key: keyof IOidcUiThemePalette;
   label: string;
   acceptsRgba: boolean;
-}> = [
-  { key: "primary", label: "Primary", acceptsRgba: false },
-  { key: "secondary", label: "Secondary", acceptsRgba: false },
-  { key: "background", label: "Background", acceptsRgba: false },
-  { key: "surface", label: "Surface", acceptsRgba: false },
-  { key: "text", label: "Text", acceptsRgba: false },
-  { key: "mutedText", label: "Muted text", acceptsRgba: false },
-  { key: "success", label: "Success", acceptsRgba: false },
-  { key: "danger", label: "Danger", acceptsRgba: false },
-  { key: "border", label: "Border", acceptsRgba: true },
-  { key: "borderStrong", label: "Strong border", acceptsRgba: true },
-  { key: "accentSoft", label: "Soft accent", acceptsRgba: true },
-  { key: "buttonText", label: "Button text", acceptsRgba: false },
+}> => [
+  {
+    key: "primary",
+    label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.THEME_PRIMARY"),
+    acceptsRgba: false,
+  },
+  {
+    key: "secondary",
+    label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.THEME_SECONDARY"),
+    acceptsRgba: false,
+  },
+  {
+    key: "background",
+    label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.THEME_BACKGROUND"),
+    acceptsRgba: false,
+  },
+  {
+    key: "surface",
+    label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.THEME_SURFACE"),
+    acceptsRgba: false,
+  },
+  {
+    key: "text",
+    label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.THEME_TEXT"),
+    acceptsRgba: false,
+  },
+  {
+    key: "mutedText",
+    label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.THEME_MUTED_TEXT"),
+    acceptsRgba: false,
+  },
+  {
+    key: "success",
+    label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.THEME_SUCCESS"),
+    acceptsRgba: false,
+  },
+  {
+    key: "danger",
+    label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.THEME_DANGER"),
+    acceptsRgba: false,
+  },
+  {
+    key: "border",
+    label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.THEME_BORDER"),
+    acceptsRgba: true,
+  },
+  {
+    key: "borderStrong",
+    label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.THEME_STRONG_BORDER"),
+    acceptsRgba: true,
+  },
+  {
+    key: "accentSoft",
+    label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.THEME_SOFT_ACCENT"),
+    acceptsRgba: true,
+  },
+  {
+    key: "buttonText",
+    label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.THEME_BUTTON_TEXT"),
+    acceptsRgba: false,
+  },
 ];
 
 export type OidcPageKey = Exclude<keyof IOidcUiTemplate["pages"], "shared">;
 
-export const PAGE_OPTIONS: Array<{ key: OidcPageKey; label: string }> = [
-  { key: "signup", label: "Signup" },
-  { key: "login", label: "Login" },
-  { key: "forgotPassword", label: "Forgot Password" },
-  { key: "resetPassword", label: "Reset Password" },
-  { key: "activation", label: "Activation" },
-  { key: "mfa", label: "MFA" },
-  { key: "accountSelector", label: "Account Selector" },
+export const getPageOptions = (): Array<{ key: OidcPageKey; label: string }> => [
+  { key: "signup", label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.PAGE_SIGNUP") },
+  { key: "login", label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.PAGE_LOGIN") },
+  {
+    key: "forgotPassword",
+    label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.PAGE_FORGOT_PASSWORD"),
+  },
+  {
+    key: "resetPassword",
+    label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.PAGE_RESET_PASSWORD"),
+  },
+  { key: "activation", label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.PAGE_ACTIVATION") },
+  { key: "mfa", label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.PAGE_MFA") },
+  {
+    key: "accountSelector",
+    label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.PAGE_ACCOUNT_SELECTOR"),
+  },
 ];
 
 type PageField = {
@@ -74,145 +133,416 @@ type PageField = {
   type?: "url" | "free";
 };
 
-export const PAGE_FIELDS: Record<OidcPageKey, PageField[]> = {
+export const getPageFields = (): Record<OidcPageKey, PageField[]> => ({
   login: [
-    { key: "heading", label: "Heading" },
-    { key: "emailLabel", label: "Email label" },
-    { key: "passwordLabel", label: "Password label" },
-    { key: "forgotPasswordLink", label: "Forgot password link" },
-    { key: "submitButton", label: "Submit button" },
-    { key: "signupPrompt", label: "Signup prompt" },
-    { key: "signupLink", label: "Signup link" },
+    { key: "heading", label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_HEADING") },
+    {
+      key: "emailLabel",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_EMAIL_LABEL"),
+    },
+    {
+      key: "passwordLabel",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_PASSWORD_LABEL"),
+    },
+    {
+      key: "forgotPasswordLink",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_FORGOT_PASSWORD_LINK"),
+    },
+    {
+      key: "submitButton",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_SUBMIT_BUTTON"),
+    },
+    {
+      key: "signupPrompt",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_SIGNUP_PROMPT"),
+    },
+    {
+      key: "signupLink",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_SIGNUP_LINK"),
+    },
     {
       key: "ssoSeparatorText",
-      label: "SSO separator",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_SSO_SEPARATOR"),
       optional: true,
       type: "free",
-      placeholder: "or",
+      placeholder: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.PLACEHOLDER_OR"),
     },
-    { key: "activationErrorTitle", label: "Activation error title" },
-    { key: "activationErrorMessage", label: "Activation error message", multiline: true },
-    { key: "activateAccountButton", label: "Activate account button" },
-    { key: "backToLoginButton", label: "Back to login button" },
+    {
+      key: "activationErrorTitle",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_ACTIVATION_ERROR_TITLE"),
+    },
+    {
+      key: "activationErrorMessage",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_ACTIVATION_ERROR_MESSAGE"),
+      multiline: true,
+    },
+    {
+      key: "activateAccountButton",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_ACTIVATE_ACCOUNT_BUTTON"),
+    },
+    {
+      key: "backToLoginButton",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_BACK_TO_LOGIN_BUTTON"),
+    },
   ],
   signup: [
-    { key: "heading", label: "Heading" },
-    { key: "firstNameLabel", label: "First name label" },
-    { key: "lastNameLabel", label: "Last name label" },
-    { key: "emailLabel", label: "Email label" },
-    { key: "organizationNameLabel", label: "Organization name label" },
-    { key: "termsPrefix", label: "Terms prefix" },
-    { key: "termsLinkText", label: "Terms link text" },
+    { key: "heading", label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_HEADING") },
+    {
+      key: "firstNameLabel",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_FIRST_NAME_LABEL"),
+    },
+    {
+      key: "lastNameLabel",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_LAST_NAME_LABEL"),
+    },
+    {
+      key: "emailLabel",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_EMAIL_LABEL"),
+    },
+    {
+      key: "organizationNameLabel",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_ORGANIZATION_NAME_LABEL"),
+    },
+    {
+      key: "termsPrefix",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_TERMS_PREFIX"),
+    },
+    {
+      key: "termsLinkText",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_TERMS_LINK_TEXT"),
+    },
     {
       key: "termsLinkUrl",
-      label: "Terms link URL",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_TERMS_LINK_URL"),
       optional: true,
       type: "url",
       placeholder: "https://example.com/terms",
     },
-    { key: "termsConjunction", label: "Terms conjunction" },
-    { key: "privacyLinkText", label: "Privacy link text" },
+    {
+      key: "termsConjunction",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_TERMS_CONJUNCTION"),
+    },
+    {
+      key: "privacyLinkText",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_PRIVACY_LINK_TEXT"),
+    },
     {
       key: "privacyLinkUrl",
-      label: "Privacy link URL",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_PRIVACY_LINK_URL"),
       optional: true,
       type: "url",
       placeholder: "https://example.com/privacy",
     },
-    { key: "submitButton", label: "Submit button" },
-    { key: "creatingButton", label: "Creating button" },
-    { key: "loginPrompt", label: "Login prompt" },
-    { key: "loginLink", label: "Login link" },
+    {
+      key: "submitButton",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_SUBMIT_BUTTON"),
+    },
+    {
+      key: "creatingButton",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_CREATING_BUTTON"),
+    },
+    {
+      key: "loginPrompt",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_LOGIN_PROMPT"),
+    },
+    {
+      key: "loginLink",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_LOGIN_LINK"),
+    },
     {
       key: "ssoSeparatorText",
-      label: "SSO separator",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_SSO_SEPARATOR"),
       optional: true,
       type: "free",
-      placeholder: "or",
+      placeholder: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.PLACEHOLDER_OR"),
     },
-    { key: "successTitle", label: "Success title" },
-    { key: "successSubtitle", label: "Success subtitle" },
-    { key: "emailSentTitle", label: "Email sent title" },
-    { key: "emailSentSubtitle", label: "Email sent subtitle", multiline: true },
-    { key: "resendPromptTitle", label: "Resend prompt title" },
-    { key: "resendPromptSubtitle", label: "Resend prompt subtitle", multiline: true },
-    { key: "resendButton", label: "Resend button" },
-    { key: "loginSentPrompt", label: "Sent page login prompt" },
-    { key: "loginSentLink", label: "Sent page login link" },
-  ],
-  forgotPassword: [
-    { key: "heading", label: "Heading" },
-    { key: "introText", label: "Intro text", multiline: true },
-    { key: "emailLabel", label: "Email label" },
-    { key: "submitButton", label: "Submit button" },
-    { key: "backToLoginButton", label: "Back to login button" },
-    { key: "successTitle", label: "Success title" },
-    { key: "successSubtitle", label: "Success subtitle", multiline: true },
-    { key: "resendPromptTitle", label: "Resend prompt title" },
-    { key: "resendPromptSubtitle", label: "Resend prompt subtitle", multiline: true },
-    { key: "resendButton", label: "Resend button" },
-    { key: "loginPrompt", label: "Login prompt" },
-    { key: "loginLink", label: "Login link" },
-  ],
-  resetPassword: [
-    { key: "heading", label: "Heading" },
-    { key: "passwordLabel", label: "Password label" },
-    { key: "confirmPasswordLabel", label: "Confirm password label" },
-    { key: "logoutFromDevicesLabel", label: "Logout from devices label" },
-    { key: "submitButton", label: "Submit button" },
-    { key: "resettingButton", label: "Resetting button" },
-    { key: "missingCodeMessage", label: "Missing code message", multiline: true },
-    { key: "requestNewLinkButton", label: "Request new link button" },
-    { key: "backToLoginButton", label: "Back to login button" },
-    { key: "successTitle", label: "Success title" },
-    { key: "successSubtitle", label: "Success subtitle" },
-    { key: "readyTitle", label: "Success page action title" },
-    { key: "readySubtitle", label: "Success page action subtitle", multiline: true },
-    { key: "loginButton", label: "Success page login button" },
-  ],
-  activation: [
-    { key: "heading", label: "Heading" },
-    { key: "firstNameLabel", label: "First name label" },
-    { key: "lastNameLabel", label: "Last name label" },
-    { key: "passwordLabel", label: "Password label" },
-    { key: "confirmPasswordLabel", label: "Confirm password label" },
-    { key: "submitButton", label: "Submit button" },
-    { key: "activatingButton", label: "Activating button" },
-    { key: "successTitle", label: "Success title" },
-    { key: "successSubtitle", label: "Success subtitle" },
-    { key: "invalidHeading", label: "Invalid link heading" },
-    { key: "invalidMessage", label: "Invalid link message", multiline: true },
-    { key: "expiredHeading", label: "Expired link heading" },
-    { key: "expiredMessage", label: "Expired link message", multiline: true },
-    { key: "alreadyActiveHeading", label: "Already active heading" },
-    { key: "alreadyActiveMessage", label: "Already active message", multiline: true },
-    { key: "resendButton", label: "Resend button" },
-    { key: "resendSuccessMessage", label: "Resend success message", multiline: true },
-    { key: "resendFailureMessage", label: "Resend failure message", multiline: true },
-    { key: "autoConfirmCaptchaText", label: "Auto activation captcha text", multiline: true },
-    { key: "autoConfirmProgressText", label: "Auto activation progress text", multiline: true },
-    { key: "autoActivatingLabel", label: "Auto activating label" },
-    { key: "readyTitle", label: "Success page action title" },
     {
-      key: "readyWithPasswordSubtitle",
-      label: "Success action password subtitle",
+      key: "successTitle",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_SUCCESS_TITLE"),
+    },
+    {
+      key: "successSubtitle",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_SUCCESS_SUBTITLE"),
+    },
+    {
+      key: "emailSentTitle",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_EMAIL_SENT_TITLE"),
+    },
+    {
+      key: "emailSentSubtitle",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_EMAIL_SENT_SUBTITLE"),
       multiline: true,
     },
-    { key: "readySubtitle", label: "Success action subtitle", multiline: true },
-    { key: "loginButton", label: "Success page login button" },
-    { key: "backToLoginButton", label: "Back to login button" },
+    {
+      key: "resendPromptTitle",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_RESEND_PROMPT_TITLE"),
+    },
+    {
+      key: "resendPromptSubtitle",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_RESEND_PROMPT_SUBTITLE"),
+      multiline: true,
+    },
+    {
+      key: "resendButton",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_RESEND_BUTTON"),
+    },
+    {
+      key: "loginSentPrompt",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_SENT_PAGE_LOGIN_PROMPT"),
+    },
+    {
+      key: "loginSentLink",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_SENT_PAGE_LOGIN_LINK"),
+    },
+  ],
+  forgotPassword: [
+    { key: "heading", label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_HEADING") },
+    {
+      key: "introText",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_INTRO_TEXT"),
+      multiline: true,
+    },
+    {
+      key: "emailLabel",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_EMAIL_LABEL"),
+    },
+    {
+      key: "submitButton",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_SUBMIT_BUTTON"),
+    },
+    {
+      key: "backToLoginButton",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_BACK_TO_LOGIN_BUTTON"),
+    },
+    {
+      key: "successTitle",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_SUCCESS_TITLE"),
+    },
+    {
+      key: "successSubtitle",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_SUCCESS_SUBTITLE"),
+      multiline: true,
+    },
+    {
+      key: "resendPromptTitle",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_RESEND_PROMPT_TITLE"),
+    },
+    {
+      key: "resendPromptSubtitle",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_RESEND_PROMPT_SUBTITLE"),
+      multiline: true,
+    },
+    {
+      key: "resendButton",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_RESEND_BUTTON"),
+    },
+    {
+      key: "loginPrompt",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_LOGIN_PROMPT"),
+    },
+    {
+      key: "loginLink",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_LOGIN_LINK"),
+    },
+  ],
+  resetPassword: [
+    { key: "heading", label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_HEADING") },
+    {
+      key: "passwordLabel",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_PASSWORD_LABEL"),
+    },
+    {
+      key: "confirmPasswordLabel",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_CONFIRM_PASSWORD_LABEL"),
+    },
+    {
+      key: "logoutFromDevicesLabel",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_LOGOUT_FROM_DEVICES_LABEL"),
+    },
+    {
+      key: "submitButton",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_SUBMIT_BUTTON"),
+    },
+    {
+      key: "resettingButton",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_RESETTING_BUTTON"),
+    },
+    {
+      key: "missingCodeMessage",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_MISSING_CODE_MESSAGE"),
+      multiline: true,
+    },
+    {
+      key: "requestNewLinkButton",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_REQUEST_NEW_LINK_BUTTON"),
+    },
+    {
+      key: "backToLoginButton",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_BACK_TO_LOGIN_BUTTON"),
+    },
+    {
+      key: "successTitle",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_SUCCESS_TITLE"),
+    },
+    {
+      key: "successSubtitle",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_SUCCESS_SUBTITLE"),
+    },
+    {
+      key: "readyTitle",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_SUCCESS_PAGE_ACTION_TITLE"),
+    },
+    {
+      key: "readySubtitle",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_SUCCESS_PAGE_ACTION_SUBTITLE"),
+      multiline: true,
+    },
+    {
+      key: "loginButton",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_SUCCESS_PAGE_LOGIN_BUTTON"),
+    },
+  ],
+  activation: [
+    { key: "heading", label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_HEADING") },
+    {
+      key: "firstNameLabel",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_FIRST_NAME_LABEL"),
+    },
+    {
+      key: "lastNameLabel",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_LAST_NAME_LABEL"),
+    },
+    {
+      key: "passwordLabel",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_PASSWORD_LABEL"),
+    },
+    {
+      key: "confirmPasswordLabel",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_CONFIRM_PASSWORD_LABEL"),
+    },
+    {
+      key: "submitButton",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_SUBMIT_BUTTON"),
+    },
+    {
+      key: "activatingButton",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_ACTIVATING_BUTTON"),
+    },
+    {
+      key: "successTitle",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_SUCCESS_TITLE"),
+    },
+    {
+      key: "successSubtitle",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_SUCCESS_SUBTITLE"),
+    },
+    {
+      key: "invalidHeading",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_INVALID_LINK_HEADING"),
+    },
+    {
+      key: "invalidMessage",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_INVALID_LINK_MESSAGE"),
+      multiline: true,
+    },
+    {
+      key: "expiredHeading",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_EXPIRED_LINK_HEADING"),
+    },
+    {
+      key: "expiredMessage",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_EXPIRED_LINK_MESSAGE"),
+      multiline: true,
+    },
+    {
+      key: "alreadyActiveHeading",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_ALREADY_ACTIVE_HEADING"),
+    },
+    {
+      key: "alreadyActiveMessage",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_ALREADY_ACTIVE_MESSAGE"),
+      multiline: true,
+    },
+    {
+      key: "resendButton",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_RESEND_BUTTON"),
+    },
+    {
+      key: "resendSuccessMessage",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_RESEND_SUCCESS_MESSAGE"),
+      multiline: true,
+    },
+    {
+      key: "resendFailureMessage",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_RESEND_FAILURE_MESSAGE"),
+      multiline: true,
+    },
+    {
+      key: "autoConfirmCaptchaText",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_AUTO_ACTIVATION_CAPTCHA_TEXT"),
+      multiline: true,
+    },
+    {
+      key: "autoConfirmProgressText",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_AUTO_ACTIVATION_PROGRESS_TEXT"),
+      multiline: true,
+    },
+    {
+      key: "autoActivatingLabel",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_AUTO_ACTIVATING_LABEL"),
+    },
+    {
+      key: "readyTitle",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_SUCCESS_PAGE_ACTION_TITLE"),
+    },
+    {
+      key: "readyWithPasswordSubtitle",
+      label: tStatic(
+        "os.idp.oidc",
+        "OIDC_TEMPLATE_VALIDATION.FIELD_SUCCESS_ACTION_PASSWORD_SUBTITLE",
+      ),
+      multiline: true,
+    },
+    {
+      key: "readySubtitle",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_SUCCESS_ACTION_SUBTITLE"),
+      multiline: true,
+    },
+    {
+      key: "loginButton",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_SUCCESS_PAGE_LOGIN_BUTTON"),
+    },
+    {
+      key: "backToLoginButton",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_BACK_TO_LOGIN_BUTTON"),
+    },
   ],
   mfa: [
-    { key: "heading", label: "Heading" },
-    { key: "submitButton", label: "Submit button" },
-    { key: "resendButton", label: "Resend button", optional: true },
+    { key: "heading", label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_HEADING") },
+    {
+      key: "submitButton",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_SUBMIT_BUTTON"),
+    },
+    {
+      key: "resendButton",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_RESEND_BUTTON"),
+      optional: true,
+    },
   ],
   accountSelector: [
-    { key: "heading", label: "Heading" },
-    { key: "subheading", label: "Subheading", optional: true },
-    { key: "bodyText", label: "Body text", multiline: true },
+    { key: "heading", label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_HEADING") },
+    {
+      key: "subheading",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_SUBHEADING"),
+      optional: true,
+    },
+    {
+      key: "bodyText",
+      label: tStatic("os.idp.oidc", "OIDC_TEMPLATE_VALIDATION.FIELD_BODY_TEXT"),
+      multiline: true,
+    },
   ],
-};
+});
 
 const validText = (value: string | null | undefined, optional = false) =>
   optional && value === null
@@ -222,43 +552,46 @@ const validText = (value: string | null | undefined, optional = false) =>
 export const validateOidcUiTemplate = (template: IOidcUiTemplate) => {
   const errors: Record<string, string> = {};
   if (!template.branding.brandName.trim() || template.branding.brandName.length > 80) {
-    errors["branding.brandName"] = "must be between 1 and 80 characters";
+    errors["branding.brandName"] = tStatic(
+      "os.idp.oidc",
+      "OIDC_TEMPLATE_VALIDATION.MESSAGE_BRAND_NAME",
+    );
   }
   (["logoUrlLight", "logoUrlDark"] as const).forEach((field) => {
     const value = template.branding[field];
     if (value === null) return;
-    if (!isAbsoluteHttpUrl(value)) errors[`branding.${field}`] = URL_MESSAGE;
+    if (!isAbsoluteHttpUrl(value)) errors[`branding.${field}`] = getUrlMessage();
   });
 
   (["light", "dark"] as const).forEach((mode) => {
-    THEME_FIELDS.forEach(({ key, acceptsRgba }) => {
+    getThemeFields().forEach(({ key, acceptsRgba }) => {
       const value = template.theme[mode][key];
       const isValid = HEX_COLOR_PATTERN.test(value) || (acceptsRgba && isRgbaColor(value));
       if (!isValid) {
         errors[`theme.${mode}.${key}`] = acceptsRgba
-          ? HEX_OR_RGBA_COLOR_MESSAGE
-          : HEX_COLOR_MESSAGE;
+          ? getHexOrRgbaColorMessage()
+          : getHexColorMessage();
       }
     });
   });
 
-  PAGE_OPTIONS.forEach(({ key: pageKey }) => {
+  getPageOptions().forEach(({ key: pageKey }) => {
     const page = template.pages[pageKey] as unknown as Record<string, string | null>;
-    PAGE_FIELDS[pageKey].forEach(({ key, optional, type }) => {
+    getPageFields()[pageKey].forEach(({ key, optional, type }) => {
       if (type === "free") return;
       const value = page[key];
       if (type === "url") {
         if (optional && value === null) return;
         if (typeof value !== "string" || !isAbsoluteHttpUrl(value)) {
-          errors[`pages.${pageKey}.${key}`] = URL_MESSAGE;
+          errors[`pages.${pageKey}.${key}`] = getUrlMessage();
         }
         return;
       }
-      if (!validText(value, optional)) errors[`pages.${pageKey}.${key}`] = TEXT_MESSAGE;
+      if (!validText(value, optional)) errors[`pages.${pageKey}.${key}`] = getTextMessage();
     });
   });
   (["footerText", "helpPrompt", "supportLinkText"] as const).forEach((key) => {
-    if (!validText(template.pages.shared[key])) errors[`pages.shared.${key}`] = TEXT_MESSAGE;
+    if (!validText(template.pages.shared[key])) errors[`pages.shared.${key}`] = getTextMessage();
   });
   return errors;
 };

@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { useGetProject } from "@/hooks/use-project";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { providers as providerCatalogue } from "@blocks-idp/authentication/constants/authentication.constant";
 import {
   useDeleteThirdPartyJwtProvider,
@@ -78,6 +78,7 @@ function ProviderCard({
   onMapClaims,
   onDelete,
 }: Readonly<ProviderCardProps>) {
+  const { t } = useT("os.idp.auth");
   const icon = providerIcon(provider.providerName);
 
   return (
@@ -94,27 +95,27 @@ function ProviderCard({
             )}
             <span className="text-sm font-semibold">{provider.providerName}</span>
             <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{provider.key}</code>
-            {!provider.isActive && <Badge variant="secondary">Inactive</Badge>}
+            {!provider.isActive && <Badge variant="secondary">{t("CERTIFICATES.INACTIVE")}</Badge>}
           </div>
           <div className="flex gap-1">
             <Button
               size="sm"
               variant="outline"
               className="h-8"
-              aria-label={`Map JWT claim for ${provider.key}`}
+              aria-label={t("CERTIFICATES.MAP_JWT_CLAIM_FOR", { key: provider.key })}
               onClick={() => onMapClaims(provider)}
             >
               <Waypoints className="mr-2 h-4 w-4" />
-              Map JWT claim
+              {t("CERTIFICATES.MAP_JWT_CLAIM")}
             </Button>
             <Button
               size="sm"
               variant="ghost"
               className="h-8"
-              aria-label={`View details for ${provider.key}`}
+              aria-label={t("CERTIFICATES.VIEW_DETAILS_FOR", { key: provider.key })}
               onClick={() => onOpen(provider)}
             >
-              Details
+              {t("common:DETAILS")}
               <ChevronRight className="ml-1 h-4 w-4" />
             </Button>
             <Tooltip>
@@ -129,7 +130,9 @@ function ProviderCard({
                       : "text-muted-foreground hover:text-emerald-600",
                   )}
                   aria-label={
-                    provider.isActive ? `Disable ${provider.key}` : `Enable ${provider.key}`
+                    provider.isActive
+                      ? t("CERTIFICATES.DISABLE_KEY", { key: provider.key })
+                      : t("CERTIFICATES.ENABLE_KEY", { key: provider.key })
                   }
                   disabled={isTogglingActive}
                   onClick={() => onToggleActive(provider)}
@@ -141,13 +144,15 @@ function ProviderCard({
                   )}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>{provider.isActive ? "Disable" : "Enable"}</TooltipContent>
+              <TooltipContent>
+                {provider.isActive ? t("CERTIFICATES.DISABLE") : t("CERTIFICATES.ENABLE")}
+              </TooltipContent>
             </Tooltip>
             <Button
               size="icon"
               variant="ghost"
               className="h-8 w-8"
-              aria-label={`Edit ${provider.key}`}
+              aria-label={t("CERTIFICATES.EDIT_KEY", { key: provider.key })}
               onClick={() => onEdit(provider)}
             >
               <Pencil className="h-4 w-4" />
@@ -156,7 +161,7 @@ function ProviderCard({
               size="icon"
               variant="ghost"
               className="h-8 w-8"
-              aria-label={`Delete ${provider.key}`}
+              aria-label={t("CERTIFICATES.DELETE_KEY", { key: provider.key })}
               onClick={() => onDelete(provider)}
             >
               <Trash2 className="h-4 w-4" />
@@ -165,20 +170,22 @@ function ProviderCard({
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Detail label="Issuer" value={provider.issuer} />
+          <Detail label={t("CERTIFICATES.ISSUER")} value={provider.issuer} />
           <Detail
-            label="Audience"
+            label={t("CERTIFICATES.AUDIENCE")}
             value={
-              provider.audiences?.length ? provider.audiences.join(", ") : "Any (validation off)"
+              provider.audiences?.length
+                ? provider.audiences.join(", ")
+                : t("CERTIFICATES.AUDIENCE_ANY")
             }
             muted={!provider.audiences?.length}
           />
           <Detail
-            label="Algorithm"
+            label={t("CERTIFICATES.ALGORITHM")}
             value={provider.algorithms?.map(algorithmLabel).join(", ") || "—"}
           />
-          <Detail label="Key source" value={keySourceLabel(provider)} />
-          <Detail label="User ID claim" value={provider.claimsMapping?.userId || "—"} />
+          <Detail label={t("CERTIFICATES.KEY_SOURCE")} value={keySourceLabel(provider)} />
+          <Detail label={t("CERTIFICATES.USER_ID_CLAIM")} value={provider.claimsMapping?.userId || "—"} />
         </div>
       </CardContent>
     </Card>
@@ -223,10 +230,11 @@ function TrustToggle({
   isPending,
   onToggle,
 }: Readonly<TrustToggleProps>) {
+  const { t } = useT("os.idp.auth");
   const disabled = isLoading || isError || (!checked && !canEnable);
   const helper =
     !isLoading && !isError && !checked && !canEnable
-      ? "Add an active provider to enable third-party token trust."
+      ? t("CERTIFICATES.TRUST_NEEDS_PROVIDER")
       : null;
 
   if (isError) {
@@ -236,10 +244,10 @@ function TrustToggle({
         role="alert"
       >
         <p className="text-sm font-medium text-destructive">
-          Could not load third-party token trust state
+          {t("CERTIFICATES.TRUST_LOAD_ERROR_TITLE")}
         </p>
         <p className="text-xs text-muted-foreground">
-          The provider list below is unaffected. Reload the page to try again.
+          {t("CERTIFICATES.TRUST_LOAD_ERROR_MESSAGE")}
         </p>
       </div>
     );
@@ -249,7 +257,7 @@ function TrustToggle({
     <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
       <div className="space-y-0.5">
         <Label htmlFor="external-idp-trust" className="text-sm font-medium">
-          Accept tokens from external identity providers
+          {t("CERTIFICATES.TRUST_LABEL")}
         </Label>
         {helper ? <p className="text-xs text-muted-foreground">{helper}</p> : null}
         {isLoading ? <Skeleton className="h-3 w-48" /> : null}
@@ -260,7 +268,7 @@ function TrustToggle({
         checked={checked}
         disabled={disabled}
         aria-busy={isPending || undefined}
-        aria-label="Accept tokens from external identity providers"
+        aria-label={t("CERTIFICATES.TRUST_LABEL")}
         onCheckedChange={(next) => {
           if (disabled || isPending) return;
           onToggle(next);
@@ -271,6 +279,7 @@ function TrustToggle({
 }
 
 export const Certificates = () => {
+  const { t } = useT("os.idp.auth");
   const projectKey = useProjectStore().selectedProject?.tenantId ?? "";
   const {
     data: projectResponse,
@@ -309,16 +318,14 @@ export const Certificates = () => {
     try {
       const result = await updateTrust(next);
       if (!result.isSuccess) {
-        showErrorToast({ errors: result.errors ?? "Could not update third-party token trust" });
+        showErrorToast({ errors: result.errors ?? t("CERTIFICATES.TRUST_UPDATE_FAILED") });
         return;
       }
       showSuccessToast({
-        description: next
-          ? "External identity provider trust enabled"
-          : "External identity provider trust disabled",
+        description: next ? t("CERTIFICATES.TRUST_ENABLED") : t("CERTIFICATES.TRUST_DISABLED"),
       });
     } catch {
-      showErrorToast({ errors: "Could not update third-party token trust" });
+      showErrorToast({ errors: t("CERTIFICATES.TRUST_UPDATE_FAILED") });
     } finally {
       setRequestedTrust(null);
     }
@@ -350,7 +357,7 @@ export const Certificates = () => {
       showErrorToast({
         errors:
           Object.values(result.errors ?? {}).join(" ") ||
-          `Could not ${willEnable ? "enable" : "disable"} the provider`,
+          (willEnable ? t("CERTIFICATES.ENABLE_FAILED") : t("CERTIFICATES.DISABLE_FAILED")),
       });
       return;
     }
@@ -358,7 +365,9 @@ export const Certificates = () => {
     setStatusTarget(null);
     // Named by provider, not key: the key comes back masked, so it read as "**** enabled".
     showSuccessToast({
-      description: `${statusTarget.providerName} provider ${willEnable ? "enabled" : "disabled"}`,
+      description: willEnable
+        ? t("CERTIFICATES.PROVIDER_ENABLED", { name: statusTarget.providerName })
+        : t("CERTIFICATES.PROVIDER_DISABLED", { name: statusTarget.providerName }),
     });
   };
 
@@ -369,13 +378,13 @@ export const Certificates = () => {
 
     if (!result.isSuccess) {
       showErrorToast({
-        errors: Object.values(result.errors ?? {}).join(" ") || "Could not delete the provider",
+        errors: Object.values(result.errors ?? {}).join(" ") || t("CERTIFICATES.DELETE_FAILED"),
       });
       return;
     }
 
     if (provider.itemId === openItemId) void setOpenItemId(null);
-    showSuccessToast({ description: `${provider.providerName} provider removed` });
+    showSuccessToast({ description: t("CERTIFICATES.PROVIDER_REMOVED", { name: provider.providerName }) });
   };
 
   const trustToggle = (
@@ -450,20 +459,12 @@ export const Certificates = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {statusTarget?.isActive ? "Disable provider" : "Enable provider"}
+              {statusTarget?.isActive ? t("CERTIFICATES.DISABLE_PROVIDER") : t("CERTIFICATES.ENABLE_PROVIDER")}
             </DialogTitle>
             <DialogDescription>
-              {statusTarget?.isActive ? (
-                <>
-                  Tokens from <strong>{statusTarget?.key}</strong> will no longer be accepted on
-                  your APIs. Its configuration is kept, so you can enable it again at any time.
-                </>
-              ) : (
-                <>
-                  Tokens from <strong>{statusTarget?.key}</strong> will be accepted on your APIs
-                  again.
-                </>
-              )}
+              {statusTarget?.isActive
+                ? t("CERTIFICATES.DISABLE_DESCRIPTION", { key: statusTarget?.key ?? "" })
+                : t("CERTIFICATES.ENABLE_DESCRIPTION", { key: statusTarget?.key ?? "" })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2">
@@ -473,7 +474,7 @@ export const Certificates = () => {
               onClick={() => setStatusTarget(null)}
               disabled={isTogglingActive}
             >
-              Cancel
+              {t("common:CANCEL")}
             </Button>
             <Button
               variant={statusTarget?.isActive ? "destructive" : "default"}
@@ -481,7 +482,7 @@ export const Certificates = () => {
               onClick={confirmStatusChange}
               disabled={isTogglingActive}
             >
-              {statusTarget?.isActive ? "Disable" : "Enable"}
+              {statusTarget?.isActive ? t("CERTIFICATES.DISABLE") : t("CERTIFICATES.ENABLE")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -511,16 +512,14 @@ export const Certificates = () => {
 
       {ambiguous.length > 0 && (
         <Banner variant="warning">
-          {ambiguous.length} provider{ambiguous.length > 1 ? "s" : ""} share an issuer and audience
-          with another, so callers must send <code className="font-mono">x-blocks-idp</code> to
-          reach them. Giving them different audiences removes that requirement.
+          {t("CERTIFICATES.AMBIGUOUS", { count: ambiguous.length, header: "x-blocks-idp" })}
         </Banner>
       )}
 
       <div className="flex justify-end">
         <Button size="sm" onClick={openAdd}>
           <Plus className="mr-2 h-4 w-4" />
-          Add provider
+          {t("CERTIFICATES.ADD_PROVIDER")}
         </Button>
       </div>
 

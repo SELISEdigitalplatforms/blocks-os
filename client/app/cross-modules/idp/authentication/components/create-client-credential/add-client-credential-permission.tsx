@@ -24,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui-kits/table/table";
 import { cn } from "@/lib/utils";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { useGetGrantablePermissions } from "@blocks-idp/iam/hooks/use-permission";
 import { IPermission, RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
 import { Plus } from "lucide-react";
@@ -42,6 +42,7 @@ export const AddClientCredentialPermission = ({
   selectedResources,
   maxPermissions,
 }: AddClientCredentialPermissionProps) => {
+  const { t } = useT("os.idp.client-credentials");
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const [open, setOpen] = useState<boolean>(false);
   const [pendingPermissions, setPendingPermissions] = useState<IPermission[]>([]);
@@ -112,18 +113,18 @@ export const AddClientCredentialPermission = ({
           disabled={selectedResources.length >= maxPermissions}
         >
           <Plus className="h-3.5 w-3.5 md:mr-1.5" />
-          <span className="sr-only sm:not-sr-only">Assign Permissions</span>
+          <span className="sr-only sm:not-sr-only">{t("ADD_CLIENT_CREDENTIAL_PERMISSION.ASSIGN")}</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="flex max-h-[min(92vh,720px)] w-[calc(100vw-1.5rem)] max-w-3xl flex-col overflow-hidden sm:w-full">
         <DialogHeader>
-          <DialogTitle className="text-left">Assign Permissions</DialogTitle>
+          <DialogTitle className="text-left">{t("ADD_CLIENT_CREDENTIAL_PERMISSION.ASSIGN")}</DialogTitle>
           <DialogDescription />
         </DialogHeader>
         <GrantHint kind="permissions" />
         <div>
           <FilterControls.SearchInput
-            placeholder="Search by permission name"
+            placeholder={t("ADD_CLIENT_CREDENTIAL_PERMISSION.SEARCH_PLACEHOLDER")}
             onChange={(search) => setFilter((prev) => ({ ...prev, search, page: 0 }))}
             value={filter.search}
             className="h-fit w-full py-3"
@@ -135,7 +136,7 @@ export const AddClientCredentialPermission = ({
             pendingPermissions.length === maxPermissions && "text-error",
           )}
         >
-          *You can select up to {maxPermissions} permissions.{" "}
+          {t("ADD_CLIENT_CREDENTIAL_PERMISSION.LIMIT_HINT", { max: maxPermissions })}{" "}
           <span>{`(${pendingPermissions.length}/${maxPermissions})`}</span>
         </h1>
         <Card className="min-h-0 flex-1 overflow-hidden">
@@ -144,9 +145,9 @@ export const AddClientCredentialPermission = ({
               <TableHeader>
                 <TableRow>
                   <TableHead />
-                  <TableHead>Name</TableHead>
-                  <TableHead>Resource</TableHead>
-                  <TableHead>Type</TableHead>
+                  <TableHead>{t("common:NAME")}</TableHead>
+                  <TableHead>{t("ADD_CLIENT_CREDENTIAL_PERMISSION.COLUMN_RESOURCE")}</TableHead>
+                  <TableHead>{t("common:TYPE")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -206,7 +207,7 @@ export const AddClientCredentialPermission = ({
                 ) : (
                   <TableRow>
                     <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                      No permissions found
+                      {t("ADD_CLIENT_CREDENTIAL_PERMISSION.EMPTY")}
                     </TableCell>
                   </TableRow>
                 )}
@@ -227,7 +228,7 @@ export const AddClientCredentialPermission = ({
         <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
           <DialogClose asChild>
             <Button variant="outline" size="default">
-              Cancel
+              {t("common:CANCEL")}
             </Button>
           </DialogClose>
           <Button
@@ -240,7 +241,7 @@ export const AddClientCredentialPermission = ({
               setOpen(false);
             }}
           >
-            Add
+            {t("common:ADD")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -3,11 +3,13 @@ import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { X } from "lucide-react";
 import { useState } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 type DeleteUserRoleProps = {
   role: IRole;
   onDelete: (role: IRole) => void;
 };
 export const DeleteSSORole = ({ role, onDelete }: DeleteUserRoleProps) => {
+  const { t } = useT("os.idp.auth");
   const [open, setOpen] = useState<boolean>(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -16,8 +18,8 @@ export const DeleteSSORole = ({ role, onDelete }: DeleteUserRoleProps) => {
       </DialogTrigger>
       <ConfirmationModal
         data={{
-          dialogTitle: "Remove Role",
-          dialogSubtitle: "Are you sure you want to remove the role?",
+          dialogTitle: t("DELETE_SSO_ROLE.TITLE"),
+          dialogSubtitle: t("DELETE_SSO_ROLE.SUBTITLE"),
         }}
         onConfirm={() => onDelete(role)}
         onCancel={() => setOpen(false)}

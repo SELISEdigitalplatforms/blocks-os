@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { tStatic } from "@seliseblocks/genesis-os";
 import type { IOidcClientTokenLifetimes } from "@blocks-idp/authentication/models/auth.oidc.model";
 import type { IOidcClientLoginPolicy } from "@blocks-idp/authentication/models/login-policy.model";
 import { DEFAULT_CLIENT_LOGIN_POLICY } from "@blocks-idp/authentication/utils/login-policy.util";
@@ -26,12 +27,12 @@ const httpsUrlRule = (val: string) => {
 
 export type ApplicationType = "web" | "mobile";
 
-export const HTTPS_REDIRECT_URI_MESSAGE =
-  "Enter a valid HTTPS URL with a public domain (e.g. https://example.com/callback). Localhost may use HTTP.";
-export const WEB_APP_SCHEME_REDIRECT_URI_MESSAGE =
-  "Mobile app redirect URIs need the Mobile app application type.";
-export const MOBILE_INVALID_REDIRECT_URI_MESSAGE =
-  "Enter an HTTPS URL or a mobile app URI such as com.example.app://callback.";
+export const getHttpsRedirectUriMessage = () =>
+  tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.MESSAGE_HTTPS_REDIRECT_URI");
+export const getWebAppSchemeRedirectUriMessage = () =>
+  tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.MESSAGE_WEB_APP_SCHEME_REDIRECT_URI");
+export const getMobileInvalidRedirectUriMessage = () =>
+  tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.MESSAGE_MOBILE_INVALID_REDIRECT_URI");
 
 const APP_SCHEME_PATTERN = /^[A-Za-z][A-Za-z0-9+.-]*$/;
 const BLOCKED_APP_SCHEMES = new Set([
@@ -72,10 +73,10 @@ export const isAppSchemeRedirectUri = (value: string) => {
 export const getRedirectUriError = (value: string, applicationType: ApplicationType) => {
   const isAppScheme = isAppSchemeRedirectUri(value);
   if (applicationType === "mobile") {
-    return isAppScheme || httpsUrlRule(value) ? null : MOBILE_INVALID_REDIRECT_URI_MESSAGE;
+    return isAppScheme || httpsUrlRule(value) ? null : getMobileInvalidRedirectUriMessage();
   }
-  if (isAppScheme) return WEB_APP_SCHEME_REDIRECT_URI_MESSAGE;
-  return httpsUrlRule(value) ? null : HTTPS_REDIRECT_URI_MESSAGE;
+  if (isAppScheme) return getWebAppSchemeRedirectUriMessage();
+  return httpsUrlRule(value) ? null : getHttpsRedirectUriMessage();
 };
 
 const redirectUriEntry = z.object({
@@ -85,14 +86,19 @@ const redirectUriEntry = z.object({
 const buildRedirectUriSchema = (entryError: (value: string) => string | null) =>
   z
     .array(redirectUriEntry)
-    .min(1, "At least one redirect URI is required")
+    .min(1, {
+      error: () => tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.MESSAGE_REDIRECT_URI_MIN"),
+    })
     .superRefine((entries, ctx) => {
       entries.forEach((entry, idx) => {
         if (!entry.value) {
           ctx.addIssue({
             code: "custom",
             path: [idx, "value"],
-            message: "Redirect URI is required",
+            message: tStatic(
+              "os.idp.create-oidc",
+              "CREATE_OIDC_UTILS.MESSAGE_REDIRECT_URI_REQUIRED",
+            ),
           });
           return;
         }
@@ -109,7 +115,7 @@ const buildRedirectUriSchema = (entryError: (value: string) => string | null) =>
 
 /** Web-only redirect URI rule, kept as before for existing callers. */
 export const redirectUriSubmitSchema = buildRedirectUriSchema((value) =>
-  httpsUrlRule(value) ? null : HTTPS_REDIRECT_URI_MESSAGE,
+  httpsUrlRule(value) ? null : getHttpsRedirectUriMessage(),
 );
 
 const typedRedirectUriSchemas: Record<
@@ -145,14 +151,17 @@ export const TOKEN_LIFETIME_LIMITS = {
   refresh: { min: 1, max: 525600 },
 } as const;
 
-export const TOKEN_LIFETIME_MESSAGES = {
-  wholeNumber: "Enter a whole number of minutes.",
-  access: "Access token lifetime must be between 1 and 1440 minutes.",
-  refresh: "Refresh token idle lifetime must be between 1 and 525600 minutes.",
-  absolute: "Refresh token maximum lifetime must be between 1 and 525600 minutes.",
-  absoluteBelowRefresh:
-    "Refresh token maximum lifetime must be at least the refresh token idle lifetime.",
-} as const;
+export const getTokenLifetimeMessages = () =>
+  ({
+    wholeNumber: tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.MESSAGE_WHOLE_NUMBER"),
+    access: tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.MESSAGE_ACCESS_LIFETIME"),
+    refresh: tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.MESSAGE_REFRESH_LIFETIME"),
+    absolute: tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.MESSAGE_ABSOLUTE_LIFETIME"),
+    absoluteBelowRefresh: tStatic(
+      "os.idp.create-oidc",
+      "CREATE_OIDC_UTILS.MESSAGE_ABSOLUTE_BELOW_REFRESH",
+    ),
+  }) as const;
 
 /** The three lifetime inputs as typed. An empty string means "use the project setting". */
 export type TokenLifetimeFormValues = {
@@ -191,16 +200,25 @@ const parseMinutes = (raw: string): number | null => {
 const MINUTES_PER_HOUR = 60;
 const MINUTES_PER_DAY = 1440;
 
-const plural = (count: number, unit: string) => `${count} ${unit}${count === 1 ? "" : "s"}`;
-
 /** 1440 -> "1 day", 90 -> "1 h 30 min", 45 -> "45 min". */
 export const formatMinutes = (minutes: number): string => {
-  if (minutes % MINUTES_PER_DAY === 0) return plural(minutes / MINUTES_PER_DAY, "day");
-  if (minutes % MINUTES_PER_HOUR === 0) return plural(minutes / MINUTES_PER_HOUR, "hour");
-  if (minutes > MINUTES_PER_HOUR) {
-    return `${Math.floor(minutes / MINUTES_PER_HOUR)} h ${minutes % MINUTES_PER_HOUR} min`;
+  if (minutes % MINUTES_PER_DAY === 0) {
+    return tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.DURATION_DAYS", {
+      count: minutes / MINUTES_PER_DAY,
+    });
   }
-  return `${minutes} min`;
+  if (minutes % MINUTES_PER_HOUR === 0) {
+    return tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.DURATION_HOURS", {
+      count: minutes / MINUTES_PER_HOUR,
+    });
+  }
+  if (minutes > MINUTES_PER_HOUR) {
+    return tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.DURATION_HOURS_MINUTES", {
+      hours: Math.floor(minutes / MINUTES_PER_HOUR),
+      minutes: minutes % MINUTES_PER_HOUR,
+    });
+  }
+  return tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.DURATION_MINUTES", { minutes });
 };
 
 /** A project value the UI can show: a positive number, else undefined (not loaded or unset). */
@@ -215,12 +233,19 @@ export const describeTokenLifetime = (raw: string, projectMinutes?: number): str
   const project = projectMinutes === undefined ? undefined : formatMinutes(projectMinutes);
   const value = raw.trim();
   if (value === "") {
-    return project ? `Uses project setting: ${project}.` : "Uses project setting.";
+    return project
+      ? tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.PROJECT_SETTING_VALUE", { value: project })
+      : tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.PROJECT_SETTING");
   }
   const minutes = Number(value);
   if (!WHOLE_NUMBER.test(value) || minutes < 1) return "";
-  const own = `= ${formatMinutes(minutes)}`;
-  return project ? `${own} · project: ${project}` : own;
+  const own = formatMinutes(minutes);
+  return project
+    ? tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.LIFETIME_WITH_PROJECT", {
+        value: own,
+        project,
+      })
+    : tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.LIFETIME_VALUE", { value: own });
 };
 
 /**
@@ -254,7 +279,7 @@ const addTokenLifetimeIssues = (value: TokenLifetimeFormValues, ctx: z.Refinemen
       ctx.addIssue({
         code: "custom",
         path: [key],
-        message: TOKEN_LIFETIME_MESSAGES.wholeNumber,
+        message: getTokenLifetimeMessages().wholeNumber,
       });
       return null;
     }
@@ -265,27 +290,28 @@ const addTokenLifetimeIssues = (value: TokenLifetimeFormValues, ctx: z.Refinemen
     return parsed;
   };
 
-  check("accessTokenLifetime", TOKEN_LIFETIME_LIMITS.access, TOKEN_LIFETIME_MESSAGES.access);
+  check("accessTokenLifetime", TOKEN_LIFETIME_LIMITS.access, getTokenLifetimeMessages().access);
   const refresh = check(
     "refreshTokenLifetime",
     TOKEN_LIFETIME_LIMITS.refresh,
-    TOKEN_LIFETIME_MESSAGES.refresh,
+    getTokenLifetimeMessages().refresh,
   );
   const absolute = check(
     "absoluteRefreshTokenLifetime",
     TOKEN_LIFETIME_LIMITS.refresh,
-    TOKEN_LIFETIME_MESSAGES.absolute,
+    getTokenLifetimeMessages().absolute,
   );
   if (refresh !== null && absolute !== null && absolute < refresh) {
     ctx.addIssue({
       code: "custom",
       path: ["absoluteRefreshTokenLifetime"],
-      message: TOKEN_LIFETIME_MESSAGES.absoluteBelowRefresh,
+      message: getTokenLifetimeMessages().absoluteBelowRefresh,
     });
   }
 };
 
-export const SELECT_PROVIDER_MESSAGE = "Select at least one provider, or choose Default.";
+export const getSelectProviderMessage = () =>
+  tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.MESSAGE_SELECT_PROVIDER");
 
 /** The sign-in inputs as the form holds them. */
 export type LoginPolicyFormValues = {
@@ -301,7 +327,9 @@ export const DEFAULT_LOGIN_POLICY_FORM: LoginPolicyFormValues = {
 };
 
 /** Maps the stored policy (null or absent = Default) to the form inputs. */
-export const loginPolicyToForm = (policy?: IOidcClientLoginPolicy | null): LoginPolicyFormValues => {
+export const loginPolicyToForm = (
+  policy?: IOidcClientLoginPolicy | null,
+): LoginPolicyFormValues => {
   const source = policy ?? DEFAULT_CLIENT_LOGIN_POLICY;
   return {
     loginMethod: source.method,
@@ -340,7 +368,13 @@ export const createOidcSchema = z
   .object({
     redirectUris: redirectUriEntry.array(),
     scope: z.string().trim(),
-    clientDisplayName: z.string().trim().min(1, "Client display name is required"),
+    clientDisplayName: z
+      .string()
+      .trim()
+      .min(1, {
+        error: () =>
+          tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.MESSAGE_CLIENT_NAME_REQUIRED"),
+      }),
     isAutoRedirect: z.boolean(),
     isActive: z.boolean(),
     requirePkce: z.boolean(),
@@ -375,7 +409,7 @@ export const createOidcSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["loginProviderIds"],
-        message: SELECT_PROVIDER_MESSAGE,
+        message: getSelectProviderMessage(),
       });
     }
 
@@ -396,7 +430,7 @@ export const createOidcSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["allowedResponseTypes"],
-        message: "At least one response type is required",
+        message: tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.MESSAGE_RESPONSE_TYPE_REQUIRED"),
       });
     }
   });

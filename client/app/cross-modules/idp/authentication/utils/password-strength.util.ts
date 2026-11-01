@@ -1,3 +1,5 @@
+import { tStatic } from "@seliseblocks/genesis-os";
+
 // const ALLOWED_SPECIAL_CHARS = "!@#$%^&*()_+-=[]{}|;':\",.<>/?`~";
 const PASSWORD_MIN_LENGTH = 8;
 const PASSWORD_MAX_LENGTH = 30;
@@ -37,13 +39,10 @@ export interface PasswordRequirement {
 // const formatSpecialCharsDisplay = (chars: string): string => chars.split("").join("");
 
 export const getPasswordRequirements = (): PasswordRequirement[] => [
-  { key: "length", label: "Between 8 and 30 characters" },
-  { key: "case", label: "At least 1 uppercase and 1 lowercase letter" },
-  { key: "number", label: "At least 1 digit" },
-  {
-    key: "special",
-    label: `${"At least 1 special character"}`,
-  },
+  { key: "length", label: tStatic("os.idp.auth", "PASSWORD_STRENGTH_UTIL.LENGTH") },
+  { key: "case", label: tStatic("os.idp.auth", "PASSWORD_STRENGTH_UTIL.CASE") },
+  { key: "number", label: tStatic("os.idp.auth", "PASSWORD_STRENGTH_UTIL.NUMBER") },
+  { key: "special", label: tStatic("os.idp.auth", "PASSWORD_STRENGTH_UTIL.SPECIAL") },
 ];
 
 export const createInitialChecks = (): PasswordChecks => ({

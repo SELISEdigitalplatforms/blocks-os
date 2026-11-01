@@ -29,6 +29,7 @@ import {
 } from "@/components/ui-kits/select/select";
 import { Switch } from "@/components/ui-kits/switch/switch";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import { useT, type TFunction } from "@seliseblocks/genesis-os";
 import { providers } from "@blocks-idp/authentication/constants/authentication.constant";
 import { useSaveThirdPartyJwtProvider } from "@blocks-idp/authentication/hooks/use-third-party-jwt-provider";
 import { usePublicCertificateFile } from "@blocks-storage/hooks/use-storage-file";
@@ -49,7 +50,6 @@ import {
 } from "@/cross-modules/identifier/models/third-party-jwt-provider.model";
 
 const KEY_CHARACTERS = /^[A-Za-z0-9._-]+$/;
-const KEY_CHARACTERS_MESSAGE = "Use letters, digits, dot, dash or underscore only";
 
 /**
  * The two asymmetric key sources, as the radio group presents them.
@@ -58,9 +58,9 @@ const KEY_CHARACTERS_MESSAGE = "Use letters, digits, dot, dash or underscore onl
  * bound by `htmlFor`, which is what makes the whole option clickable without nesting a second
  * button inside the radio item.
  */
-const KEY_SOURCE_OPTIONS: { value: AsymmetricKeySource; id: string; label: string }[] = [
-  { value: "jwks", id: "key-source-jwks", label: "JWKS URL" },
-  { value: "certificate", id: "key-source-certificate", label: "Upload certificate" },
+const KEY_SOURCE_OPTIONS: { value: AsymmetricKeySource; id: string }[] = [
+  { value: "jwks", id: "key-source-jwks" },
+  { value: "certificate", id: "key-source-certificate" },
 ];
 
 /**
@@ -68,19 +68,19 @@ const KEY_SOURCE_OPTIONS: { value: AsymmetricKeySource; id: string; label: strin
  * blank means untouched, because the stored key is only ever shown masked and there is nothing
  * useful to pre-fill it with.
  */
-const buildSchema = (isEditing: boolean) =>
+const buildSchema = (isEditing: boolean, t: TFunction) =>
   z.object({
     key: isEditing
       ? z
           .string()
           .trim()
-          .refine((value) => value === "" || KEY_CHARACTERS.test(value), KEY_CHARACTERS_MESSAGE)
+          .refine((value) => value === "" || KEY_CHARACTERS.test(value), t("PROVIDER_FORM_MODAL.KEY_CHARACTERS"))
       : z
           .string()
           .trim()
-          .min(1, "Key is required — it is what the x-blocks-idp header names")
-          .regex(KEY_CHARACTERS, KEY_CHARACTERS_MESSAGE),
-    providerName: z.string().trim().min(1, "Pick a provider"),
+          .min(1, t("PROVIDER_FORM_MODAL.KEY_REQUIRED", { header: "x-blocks-idp" }))
+          .regex(KEY_CHARACTERS, t("PROVIDER_FORM_MODAL.KEY_CHARACTERS")),
+    providerName: z.string().trim().min(1, t("PROVIDER_FORM_MODAL.PROVIDER_REQUIRED")),
     isActive: z.boolean(),
     // Optional: blank means "this provider receives the tokens that carry no iss claim".
     issuer: z.string().trim(),
@@ -122,13 +122,13 @@ const splitAudiences = (value: string) =>
  * URL's last segment is an identifier rather than the name anyone recognises. Naming the kind of
  * file is both honest and the part that actually matters — whether it can carry a passphrase.
  */
-const storedCertificateLabel = (path: string) => {
+const storedCertificateLabel = (path: string, t: TFunction) => {
   const extension = /\.([a-z0-9]+)$/i.exec(path)?.[1]?.toLowerCase();
 
-  if (extension === "pfx" || extension === "p12") return "A PKCS#12 certificate is configured";
-  if (extension) return `A certificate is configured (.${extension})`;
+  if (extension === "pfx" || extension === "p12") return t("PROVIDER_FORM_MODAL.STORED_PKCS12");
+  if (extension) return t("PROVIDER_FORM_MODAL.STORED_WITH_EXTENSION", { extension });
 
-  return "A certificate is configured";
+  return t("PROVIDER_FORM_MODAL.STORED_CERTIFICATE");
 };
 
 type ProviderFormModalProps = {
@@ -148,6 +148,7 @@ export function ProviderFormModal({
   siblingIssuers = [],
   projectKey,
 }: Readonly<ProviderFormModalProps>) {
+  const { t } = useT("os.idp.auth");
   const { mutateAsync, isPending } = useSaveThirdPartyJwtProvider();
   const { mutateAsync: uploadCertificate, isPending: isUploading } = usePublicCertificateFile();
 
@@ -155,7 +156,7 @@ export function ProviderFormModal({
   // object changes, which keeps the form in step with the selected provider without a setState
   // inside an effect.
   const form = useForm<FormData>({
-    resolver: zodResolver(buildSchema(!!existing)),
+    resolver: zodResolver(buildSchema(!!existing, t)),
     values: {
       // Blank on an edit, like the signing secret: the stored key is masked, so pre-filling it
       // would only offer the mask back.
@@ -256,18 +257,18 @@ export function ProviderFormModal({
    */
   const passphraseHint = (() => {
     if (keepsStoredCertificate && existing?.hasCertificatePassword) {
-      return "A passphrase is stored. Leave this blank to keep it, or type a new one to replace it.";
+      return t("PROVIDER_FORM_MODAL.PASSPHRASE_STORED");
     }
 
     if (!passphraseUsable) {
-      return "Not needed for this file — a .crt, .pem or .der holds only a public key, so there is nothing to unlock.";
+      return t("PROVIDER_FORM_MODAL.PASSPHRASE_NOT_NEEDED");
     }
 
     if (pendingCertificate) {
-      return "This PKCS#12 file may be password protected. Stored encrypted and never shown again.";
+      return t("PROVIDER_FORM_MODAL.PASSPHRASE_PKCS12");
     }
 
-    return "Only for a password-protected PKCS#12 (.pfx or .p12). Stored encrypted and never shown again.";
+    return t("PROVIDER_FORM_MODAL.PASSPHRASE_ONLY_PKCS12");
   })();
 
   // Stable for as long as this form is open, so a retry after a failed save overwrites the blob it
@@ -302,7 +303,7 @@ export function ProviderFormModal({
 
     if (keySource === "jwks") {
       if (!data.jwksUrl) {
-        setError("jwksUrl", { message: "A JWKS URL is required for this algorithm" });
+        setError("jwksUrl", { message: t("PROVIDER_FORM_MODAL.JWKS_REQUIRED") });
         return null;
       }
 
@@ -318,7 +319,7 @@ export function ProviderFormModal({
     }
 
     if (!pendingCertificate) {
-      showErrorToast({ errors: "Upload a certificate, or switch this provider to a JWKS URL." });
+      showErrorToast({ errors: t("PROVIDER_FORM_MODAL.UPLOAD_OR_JWKS") });
       return null;
     }
 
@@ -326,7 +327,7 @@ export function ProviderFormModal({
     // extensions rather than answering with a code.
     if (!isCertificateFile(pendingCertificate.name)) {
       showErrorToast({
-        errors: `Only certificate files are allowed (${CERTIFICATE_EXTENSIONS.join(", ")})`,
+        errors: t("PROVIDER_FORM_MODAL.ONLY_CERTIFICATE_FILES", { extensions: CERTIFICATE_EXTENSIONS.join(", ") }),
       });
       return null;
     }
@@ -338,7 +339,7 @@ export function ProviderFormModal({
     });
 
     if (!uploaded?.downloadUrl) {
-      showErrorToast({ errors: "The certificate could not be stored, so nothing was saved." });
+      showErrorToast({ errors: t("PROVIDER_FORM_MODAL.STORE_FAILED") });
       return null;
     }
 
@@ -374,11 +375,11 @@ export function ProviderFormModal({
     });
 
     if (!result.isSuccess) {
-      showErrorToast({ errors: Object.values(result.errors ?? {}).join(" ") || "Could not save" });
+      showErrorToast({ errors: Object.values(result.errors ?? {}).join(" ") || t("PROVIDER_FORM_MODAL.SAVE_FAILED") });
       return;
     }
 
-    showSuccessToast({ description: existing ? "Provider updated" : "Provider added" });
+    showSuccessToast({ description: existing ? t("PROVIDER_FORM_MODAL.UPDATED") : t("PROVIDER_FORM_MODAL.ADDED") });
     closeAndReset(false);
   };
 
@@ -388,16 +389,16 @@ export function ProviderFormModal({
     <Dialog open={open} onOpenChange={closeAndReset}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{existing ? "Edit provider" : "Add provider"}</DialogTitle>
+          <DialogTitle>{existing ? t("PROVIDER_FORM_MODAL.EDIT_TITLE") : t("PROVIDER_FORM_MODAL.ADD_TITLE")}</DialogTitle>
           <DialogDescription>
-            Tokens signed by this provider will be accepted on your APIs.
+            {t("PROVIDER_FORM_MODAL.DESCRIPTION")}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div className="space-y-1.5">
             <Label htmlFor="provider-name">
-              Provider
+              {t("PROVIDER_FORM_MODAL.PROVIDER")}
               <Required />
             </Label>
             <Select
@@ -405,12 +406,12 @@ export function ProviderFormModal({
               onValueChange={(value) => setValue("providerName", value, { shouldValidate: true })}
             >
               <SelectTrigger id="provider-name" aria-required>
-                <SelectValue placeholder="Select a provider" />
+                <SelectValue placeholder={t("PROVIDER_FORM_MODAL.SELECT_PROVIDER")} />
               </SelectTrigger>
               <SelectContent>
                 {providers.map((p) => (
                   <SelectItem key={p.id} value={p.name}>
-                    {p.name}
+                    {p.id === "others" ? t("PROVIDER_FORM_MODAL.PROVIDER_OTHERS") : p.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -422,20 +423,20 @@ export function ProviderFormModal({
 
           <div className="space-y-1.5">
             <Label htmlFor="provider-key">
-              Key
+              {t("PROVIDER_FORM_MODAL.KEY")}
               {!existing && <Required />}
             </Label>
             <Input
               id="provider-key"
               aria-required={!existing}
               autoComplete="off"
-              placeholder={existing ? `${existing.key}  (leave blank to keep)` : "auth0-web"}
+              placeholder={existing ? t("PROVIDER_FORM_MODAL.KEY_PLACEHOLDER_EDIT", { key: existing.key }) : "auth0-web"}
               {...register("key")}
             />
             <p className="text-xs text-muted-foreground">
               {existing
-                ? "A key is set. Leave this blank to keep it, or type a new one to replace it."
-                : "The value callers send as x-blocks-idp, if they ever need to."}
+                ? t("PROVIDER_FORM_MODAL.KEY_HINT_EDIT")
+                : t("PROVIDER_FORM_MODAL.KEY_HINT_NEW", { header: "x-blocks-idp" })}
             </p>
             {formState.errors.key && (
               <p className="text-xs text-destructive">{formState.errors.key.message}</p>
@@ -443,25 +444,23 @@ export function ProviderFormModal({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="provider-issuer">Issuer</Label>
+            <Label htmlFor="provider-issuer">{t("PROVIDER_FORM_MODAL.ISSUER")}</Label>
             <Input
               id="provider-issuer"
               placeholder="https://your-tenant.us.auth0.com/"
               {...register("issuer")}
             />
             <p className="text-xs text-muted-foreground">
-              Matched exactly against the token&apos;s <code className="font-mono">iss</code>,
-              trailing slash included. Leave it empty only if this provider&apos;s tokens carry no{" "}
-              <code className="font-mono">iss</code> at all — a blank issuer accepts those and
-              nothing else.
+              {t("PROVIDER_FORM_MODAL.ISSUER_HINT")}
             </p>
             {!issuer && (
               <p className="text-xs text-muted-foreground">
                 {issuerlessSiblings > 0
-                  ? `Another provider already accepts tokens without an issuer, so callers must send x-blocks-idp: ${
-                      existing?.key ?? "this provider's key"
-                    } to reach this one.`
-                  : "Tokens carrying any issuer will not reach this provider."}
+                  ? t("PROVIDER_FORM_MODAL.ISSUERLESS_SHARED", {
+                      header: "x-blocks-idp",
+                      key: existing?.key ?? t("PROVIDER_FORM_MODAL.THIS_PROVIDER_KEY"),
+                    })
+                  : t("PROVIDER_FORM_MODAL.ISSUERLESS_ALONE")}
               </p>
             )}
             {formState.errors.issuer && (
@@ -470,28 +469,25 @@ export function ProviderFormModal({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="provider-audiences">Audiences</Label>
+            <Label htmlFor="provider-audiences">{t("PROVIDER_FORM_MODAL.AUDIENCES")}</Label>
             <Input
               id="provider-audiences"
               placeholder="https://your-api, another-api"
               {...register("audiences")}
             />
             <p className="text-xs text-muted-foreground">
-              Comma separated. Leaving this empty turns audience validation off, so any token from
-              this issuer is accepted.
+              {t("PROVIDER_FORM_MODAL.AUDIENCES_HINT")}
             </p>
             {needsAudiences && (
               <p className="text-xs text-destructive">
-                Another active provider already uses this issuer. Give them different audiences, or
-                neither can be told apart from the other and the caller chooses which mapping
-                applies.
+                {t("PROVIDER_FORM_MODAL.AUDIENCES_CONFLICT")}
               </p>
             )}
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="provider-algorithm">
-              Signing algorithm
+              {t("PROVIDER_FORM_MODAL.SIGNING_ALGORITHM")}
               <Required />
             </Label>
             <Select
@@ -514,10 +510,10 @@ export function ProviderFormModal({
           <div className="flex items-center justify-between rounded-sm border p-3">
             <div className="space-y-0.5">
               <Label htmlFor="provider-active" className="text-sm">
-                Status
+                {t("common:STATUS")}
               </Label>
               <p className="text-xs text-muted-foreground">
-                Tokens from an inactive provider are not accepted.
+                {t("PROVIDER_FORM_MODAL.STATUS_HINT")}
               </p>
             </div>
             <Switch
@@ -531,20 +527,20 @@ export function ProviderFormModal({
           {symmetric && (
             <div className="space-y-1.5">
               <Label htmlFor="provider-secret">
-                Signing secret
+                {t("PROVIDER_FORM_MODAL.SIGNING_SECRET")}
                 {!existing?.hasSigningSecret && <Required />}
               </Label>
               <Input
                 id="provider-secret"
                 type="password"
                 autoComplete="new-password"
-                placeholder={existing?.hasSigningSecret ? "••••••••  (leave blank to keep)" : ""}
+                placeholder={existing?.hasSigningSecret ? t("PROVIDER_FORM_MODAL.KEEP_PLACEHOLDER") : ""}
                 {...register("signingSecret")}
               />
               <p className="text-xs text-muted-foreground">
                 {existing?.hasSigningSecret
-                  ? "A secret is stored. Leave this blank to keep it, or type a new one to replace it."
-                  : "The shared secret your provider signs with. Stored encrypted and never shown again."}
+                  ? t("PROVIDER_FORM_MODAL.SECRET_STORED")
+                  : t("PROVIDER_FORM_MODAL.SECRET_NEW")}
               </p>
             </div>
           )}
@@ -553,7 +549,7 @@ export function ProviderFormModal({
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label className="text-sm">
-                  Key source
+                  {t("PROVIDER_FORM_MODAL.KEY_SOURCE")}
                   <Required />
                 </Label>
                 <RadioGroup
@@ -572,23 +568,21 @@ export function ProviderFormModal({
                       >
                         <RadioGroupItem value={option.value} id={option.id} />
                         <Label htmlFor={option.id} className="cursor-pointer text-sm">
-                          {option.label}
+                          {option.value === "jwks" ? t("PROVIDER_FORM_MODAL.OPTION_JWKS") : t("PROVIDER_FORM_MODAL.OPTION_CERTIFICATE")}
                         </Label>
                       </div>
                     ))}
                   </div>
                 </RadioGroup>
                 <p className="text-xs text-muted-foreground">
-                  A JWKS survives the provider rotating a key; a certificate pins exactly one, so it
-                  has to be re-uploaded when they rotate. Prefer a JWKS wherever the provider
-                  publishes one — upload a certificate for an issuer that publishes none.
+                  {t("PROVIDER_FORM_MODAL.KEY_SOURCE_HINT")}
                 </p>
               </div>
 
               {keySource === "jwks" ? (
                 <div className="space-y-1.5">
                   <Label htmlFor="provider-jwks">
-                    JWKS URL
+                    {t("PROVIDER_FORM_MODAL.JWKS_URL")}
                     <Required />
                   </Label>
                   <Input
@@ -598,7 +592,7 @@ export function ProviderFormModal({
                     {...register("jwksUrl")}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Public keys, fetched over HTTPS. No secret is stored for this algorithm.
+                    {t("PROVIDER_FORM_MODAL.JWKS_HINT")}
                   </p>
                   {formState.errors.jwksUrl && (
                     <p className="text-xs text-destructive">{formState.errors.jwksUrl.message}</p>
@@ -608,7 +602,7 @@ export function ProviderFormModal({
                 <>
                   <div className="space-y-1.5">
                     <Label>
-                      Certificate
+                      {t("PROVIDER_FORM_MODAL.CERTIFICATE")}
                       {!storedCertificatePath && <Required />}
                     </Label>
                     <FileUploader
@@ -626,10 +620,10 @@ export function ProviderFormModal({
                         <div className="flex w-full flex-col items-center justify-center gap-2 py-8">
                           <UploadCloud className="h-6 w-6 text-muted-foreground" />
                           <p className="text-sm font-medium text-foreground">
-                            Click to upload or drag and drop
+                            {t("PROVIDER_FORM_MODAL.UPLOAD_PROMPT")}
                           </p>
                           <p className="text-center text-[10px] leading-tight text-muted-foreground">
-                            Certificate files ({CERTIFICATE_EXTENSIONS.join(", ")}) up to 2 MB
+                            {t("PROVIDER_FORM_MODAL.UPLOAD_LIMITS", { extensions: CERTIFICATE_EXTENSIONS.join(", ") })}
                           </p>
                         </div>
                       </FileInput>
@@ -648,13 +642,15 @@ export function ProviderFormModal({
                     </FileUploader>
                     <p className="text-xs text-muted-foreground">
                       {keepsStoredCertificate
-                        ? `${storedCertificateLabel(storedCertificatePath)}. Upload a file to replace it.`
-                        : "The provider's public certificate. Stored where token validation can read it back."}
+                        ? t("PROVIDER_FORM_MODAL.STORED_REPLACE", { label: storedCertificateLabel(storedCertificatePath, t) })
+                        : t("PROVIDER_FORM_MODAL.CERTIFICATE_HINT")}
                     </p>
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="provider-certificate-passphrase">Passphrase (optional)</Label>
+                    <Label htmlFor="provider-certificate-passphrase">
+                      {t("PROVIDER_FORM_MODAL.PASSPHRASE")}
+                    </Label>
                     <div className="relative">
                       <Input
                         id="provider-certificate-passphrase"
@@ -662,7 +658,7 @@ export function ProviderFormModal({
                         autoComplete="new-password"
                         placeholder={
                           keepsStoredCertificate && existing?.hasCertificatePassword
-                            ? "••••••••  (leave blank to keep)"
+                            ? t("PROVIDER_FORM_MODAL.KEEP_PLACEHOLDER")
                             : ""
                         }
                         {...register("certificatePassphrase")}
@@ -671,7 +667,7 @@ export function ProviderFormModal({
                         type="button"
                         variant="ghost"
                         size="sm"
-                        aria-label={showPassphrase ? "Hide passphrase" : "Show passphrase"}
+                        aria-label={showPassphrase ? t("PROVIDER_FORM_MODAL.HIDE_PASSPHRASE") : t("PROVIDER_FORM_MODAL.SHOW_PASSPHRASE")}
                         className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
                         onClick={() => setShowPassphrase(!showPassphrase)}
                       >
@@ -691,10 +687,10 @@ export function ProviderFormModal({
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => closeAndReset(false)}>
-              Cancel
+              {t("common:CANCEL")}
             </Button>
             <Button type="submit" disabled={isSaving}>
-              {existing ? "Save changes" : "Add provider"}
+              {existing ? t("common:SAVE_CHANGES") : t("PROVIDER_FORM_MODAL.ADD_TITLE")}
             </Button>
           </div>
         </form>

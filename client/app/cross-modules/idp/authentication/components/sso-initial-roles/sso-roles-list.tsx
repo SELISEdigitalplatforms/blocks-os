@@ -13,11 +13,13 @@ import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { DeleteSSORole } from "./delete-sso-role";
+import { useT } from "@seliseblocks/genesis-os";
 type SSORolesListProps = {
   roles: IRole[];
   onDelete: (role: IRole) => void;
 };
 export const SSORolesList = ({ roles, onDelete }: SSORolesListProps) => {
+  const { t } = useT("os.idp.auth");
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const columns = useMemo<ColumnDef<IRole>[]>(
@@ -27,7 +29,7 @@ export const SSORolesList = ({ roles, onDelete }: SSORolesListProps) => {
         accessorFn: (row) => `${row.name}`.trim(),
         header: () => (
           <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">Roles</span>
+            <span className="font-bold text-medium-emphasis">{t("SSO_ROLES_LIST.COLUMN_ROLES")}</span>
           </div>
         ),
         cell: (roles) => <div className="w-[130px] truncate">{roles.row.original.name}</div>,
@@ -37,7 +39,7 @@ export const SSORolesList = ({ roles, onDelete }: SSORolesListProps) => {
         accessorFn: (row) => `${row.slug}`.trim(),
         header: () => (
           <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">Slug</span>
+            <span className="font-bold text-medium-emphasis">{t("SSO_ROLES_LIST.COLUMN_SLUG")}</span>
           </div>
         ),
         cell: ({ row }) => (
@@ -61,7 +63,7 @@ export const SSORolesList = ({ roles, onDelete }: SSORolesListProps) => {
         ),
       },
     ],
-    [onDelete],
+    [onDelete, t],
   );
   const table = useReactTable({
     data: roles,
@@ -94,7 +96,7 @@ export const SSORolesList = ({ roles, onDelete }: SSORolesListProps) => {
                 colSpan={columns.length}
                 className="h-24 text-center text-muted-foreground"
               >
-                No roles found
+                {t("SSO_ROLES_LIST.EMPTY")}
               </TableCell>
             </TableRow>
           ) : (

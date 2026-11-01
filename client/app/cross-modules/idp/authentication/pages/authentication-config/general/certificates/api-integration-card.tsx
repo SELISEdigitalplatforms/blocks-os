@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
 import { cn } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 import { USER_ENDPOINTS } from "@blocks-idp/iam/constants/endpoint.constant";
 import {
   requiresIdpHeader,
@@ -16,6 +17,7 @@ const KEY_HEADER = "x-blocks-key";
 type CopyButtonProps = { label: string; value: string; className?: string };
 
 function CopyButton({ label, value, className }: Readonly<CopyButtonProps>) {
+  const { t } = useT("os.idp.auth");
   const [copied, setCopied] = useState(false);
 
   const copy = async () => {
@@ -35,7 +37,9 @@ function CopyButton({ label, value, className }: Readonly<CopyButtonProps>) {
       size="icon"
       variant="ghost"
       className={cn("h-7 w-7 shrink-0", className)}
-      aria-label={copied ? `${label} copied` : `Copy ${label}`}
+      aria-label={
+        copied ? t("API_INTEGRATION_CARD.LABEL_COPIED", { label }) : t("API_INTEGRATION_CARD.COPY_LABEL", { label })
+      }
       onClick={copy}
     >
       {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
@@ -93,6 +97,7 @@ export function ApiIntegrationCard({
   allProviders,
   projectKey,
 }: Readonly<ApiIntegrationCardProps>) {
+  const { t } = useT("os.idp.auth");
   const headerRequired = requiresIdpHeader(provider, allProviders);
   const bearer = `Bearer <token from ${provider.providerName || "your provider"}>`;
 
@@ -110,15 +115,13 @@ export function ApiIntegrationCard({
       <CardContent className="space-y-5 pt-6">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <h3 className="text-sm font-semibold">
-              Calling the API with this provider&apos;s token
-            </h3>
+            <h3 className="text-sm font-semibold">{t("API_INTEGRATION_CARD.TITLE")}</h3>
             <p className="text-xs text-muted-foreground">
-              Every request carries the token and your project key. These are the headers.
+              {t("API_INTEGRATION_CARD.INTRO")}
             </p>
           </div>
           <Badge variant={headerRequired ? "default" : "secondary"}>
-            {headerRequired ? "Header required" : "Header optional"}
+            {headerRequired ? t("API_INTEGRATION_CARD.HEADER_REQUIRED") : t("API_INTEGRATION_CARD.HEADER_OPTIONAL")}
           </Badge>
         </div>
 
@@ -126,59 +129,50 @@ export function ApiIntegrationCard({
           <HeaderRow
             name="Authorization"
             value={bearer}
-            note="The token your provider issued, as a bearer credential."
+            note={t("API_INTEGRATION_CARD.AUTHORIZATION_NOTE")}
             copyable={false}
           />
           <HeaderRow
             name={KEY_HEADER}
             value={projectKey || "<your project key>"}
-            note="Identifies the project the request belongs to. Always required."
+            note={t("API_INTEGRATION_CARD.KEY_NOTE")}
           />
           <HeaderRow
             name={IDP_HEADER}
             value={provider.key}
             note={
               headerRequired
-                ? "Required here: another active provider cannot be told apart from this one."
-                : "Optional here, and always accepted."
+                ? t("API_INTEGRATION_CARD.IDP_NOTE_REQUIRED")
+                : t("API_INTEGRATION_CARD.IDP_NOTE_OPTIONAL")
             }
           />
         </div>
 
         {headerRequired ? (
           <p className="text-xs text-muted-foreground">
-            Another active provider shares this issuer and audience, so a token alone cannot say
-            which of them it belongs to. Requests that omit{" "}
-            <code className="font-mono">{IDP_HEADER}</code> will be rejected. Giving the two
-            providers different audiences removes the need for it.
+            {t("API_INTEGRATION_CARD.REQUIRED_EXPLANATION", { header: IDP_HEADER })}
           </p>
         ) : (
           <p className="text-xs text-muted-foreground">
-            The issuer and audience in the token already identify this provider, so{" "}
-            <code className="font-mono">{IDP_HEADER}</code> is not read and callers need not send
-            it. It becomes necessary once another provider shares both — and because audience
-            validation is off for any provider left without audiences, several such providers on one
-            issuer are indistinguishable, which is the same case. Sending the header anyway is
-            always accepted, and is the safer default if you expect to add more providers later.
+            {t("API_INTEGRATION_CARD.OPTIONAL_EXPLANATION", { header: IDP_HEADER })}
           </p>
         )}
 
         <div className="space-y-1">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Example — fetch the signed-in user
+              {t("API_INTEGRATION_CARD.EXAMPLE_TITLE")}
             </p>
-            <CopyButton label="example request" value={curl} className="-mr-1" />
+            <CopyButton label={t("API_INTEGRATION_CARD.EXAMPLE_REQUEST")} value={curl} className="-mr-1" />
           </div>
           <pre className="overflow-x-auto rounded bg-muted p-3 font-mono text-xs leading-relaxed">
             {curl}
           </pre>
           <p className="text-xs text-muted-foreground">
-            A successful call returns the Blocks user the token mapped onto, through the claim
-            mapping above.{" "}
+            {t("API_INTEGRATION_CARD.EXAMPLE_RESULT")}{" "}
             {headerRequired
-              ? `${IDP_HEADER} is required here, since another provider shares this issuer and audience.`
-              : `${IDP_HEADER} is not needed here, but it is accepted, so the request works as it stands.`}
+              ? t("API_INTEGRATION_CARD.EXAMPLE_HEADER_REQUIRED", { header: IDP_HEADER })
+              : t("API_INTEGRATION_CARD.EXAMPLE_HEADER_OPTIONAL", { header: IDP_HEADER })}
           </p>
         </div>
       </CardContent>

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { tStatic } from "@seliseblocks/genesis-os";
 
 export type ActivationErrorState = "invalid" | "expired" | "already_activated";
 
@@ -28,20 +29,20 @@ export const activationFormDefaultValue = {
 };
 
 const hasWhitespace = /\s/;
-const noWhitespaceMessage = "Password must not contain spaces";
+const noWhitespaceMessage = () => tStatic("os.idp.auth", "ACTIVATION_UTILS.PASSWORD_NO_SPACES");
 
 const passwordSchema = z
   .string()
   .superRefine((value, ctx) => {
     if (value && hasWhitespace.test(value)) {
-      ctx.addIssue({ code: "custom", message: noWhitespaceMessage });
+      ctx.addIssue({ code: "custom", message: noWhitespaceMessage() });
     }
   })
   .transform((value) => value.trim());
 
 export const activationFormSchema = z.object({
-  firstname: z.string().min(1, "First name is required"),
-  lastname: z.string().min(1, "Last name is required"),
+  firstname: z.string().min(1, { error: () => tStatic("os.idp.auth", "ACTIVATION_UTILS.FIRST_NAME_REQUIRED") }),
+  lastname: z.string().min(1, { error: () => tStatic("os.idp.auth", "ACTIVATION_UTILS.LAST_NAME_REQUIRED") }),
   password: passwordSchema,
   confirmPassword: passwordSchema,
 });

@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import {
   OidcPreviewShell,
   PreviewButton,
@@ -6,9 +7,10 @@ import {
 } from "./oidc-preview-shared";
 
 export const OidcMfaPreview = (props: OidcPagePreviewProps) => {
+  const { t } = useT("os.idp.oidc");
   const copy = props.template.pages.mfa;
   return (
-    <OidcPreviewShell {...props} pageLabel="MFA">
+    <OidcPreviewShell {...props} pageLabel={t("OIDC_MFA_PREVIEW.PAGE_LABEL")}>
       <PreviewHeading>{copy.heading}</PreviewHeading>
       <div className="flex min-w-0 justify-between gap-2">
         {Array.from({ length: 6 }, (_, index) => (
