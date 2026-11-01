@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { Button } from "@/components/ui-kits/button/button";
 import {
   Dialog,
@@ -23,10 +24,11 @@ export const RequiredPermissionsDialog = ({
   onOpenChange,
   open,
 }: PermissionDialogProps) => {
+  const { t } = useT("os.idp.roles");
   const [selectionState, setSelectionState] = useState<SelectionState>({});
   const permissionMap = useRoleDetailsStore((state) => state.permissionMap);
   const changePermissionSelection = useRoleDetailsStore((state) => state.changePermissionSelection);
-  const title = `Review Permission Changes`;
+  const title = t("REQUIRED_PERMISSION_DIALOG.TITLE");
   const dependentPermissions = permission.dependentPermissions.map((dp) => permissionMap.get(dp));
   const onCheckedChangeHandler = (permResource: string, checked: boolean) => {
     setSelectionState((prev) => {
@@ -76,9 +78,9 @@ export const RequiredPermissionsDialog = ({
           )}
         />
         <div className="mt-2">
-          <h5 className=" font-semibold">Dependencies</h5>
+          <h5 className=" font-semibold">{t("REQUIRED_PERMISSION_DIALOG.DEPENDENCIES")}</h5>
           <p className="text-sm text-muted-foreground">
-            The following permissions are required for this permission to work.
+            {t("REQUIRED_PERMISSION_DIALOG.DEPENDENCIES_HINT")}
           </p>
         </div>
         <ScrollArea className="max-h-[400px]">
@@ -96,9 +98,9 @@ export const RequiredPermissionsDialog = ({
         </ScrollArea>
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
+            <Button variant="outline">{t("common:CANCEL")}</Button>
           </DialogClose>
-          <Button onClick={onSaveClick}>Save</Button>
+          <Button onClick={onSaveClick}>{t("common:SAVE")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -164,7 +164,7 @@ describe("PermissionsList", () => {
     expect(screen.getByText("Critical")).toBeTruthy();
     expect(screen.getByText("Low")).toBeTruthy();
     // roles count for the custom permission (2 roles)
-    expect(screen.getByText("2")).toBeTruthy();
+    expect(screen.getByText("2 roles")).toBeTruthy();
   });
 
   it("only renders an edit link for custom (non built-in) permissions", () => {

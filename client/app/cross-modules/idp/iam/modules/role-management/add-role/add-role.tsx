@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { Button } from "@/components/ui-kits/button/button";
@@ -12,7 +13,7 @@ import {
 } from "@/components/ui-kits/dialog/dialog";
 import { Input } from "@/components/ui-kits/input/input";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-import { addRoleFormDefaultValue, addRoleFormSchema } from "./utils";
+import { addRoleFormDefaultValue, createAddRoleFormSchema, AddRoleFormValues } from "./utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Form,
@@ -22,7 +23,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui-kits/form/form";
-import { z } from "zod";
 import { useAddRole } from "@blocks-idp/iam/hooks/use-roles";
 import { PrimaryButton } from "@/components/action-buttons/primary-button";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
@@ -39,6 +39,7 @@ const FIELD_ERROR_CODES: Record<string, "name" | "slug"> = {
   Slug: "slug",
 };
 export const AddRole = () => {
+  const { t } = useT("os.idp.roles");
   const [isAddRoleOpenModal, setIsAddRoleOpenModal] = useState(false);
   // Slug auto-syncs from the name until the user edits it manually.
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
@@ -53,7 +54,7 @@ export const AddRole = () => {
   const { mutateAsync, isPending } = useAddRole();
   const form = useForm({
     defaultValues: addRoleFormDefaultValue,
-    resolver: zodResolver(addRoleFormSchema),
+    resolver: zodResolver(createAddRoleFormSchema()),
   });
   const {
     formState: { isDirty },
@@ -74,7 +75,7 @@ export const AddRole = () => {
         return;
       }
 
-      showSuccessToast({ description: "Role added successfully" });
+      showSuccessToast({ description: t("ADD_ROLE.ADDED_SUCCESS") });
       setDuplicateNamePrompt(null);
       setIsAddRoleOpenModal(false);
       form.reset();
@@ -98,8 +99,8 @@ export const AddRole = () => {
 
         if (httpError.status === 403 && !isAccessGrantRefused(httpError)) {
           showErrorToast({
-            title: "Forbidden",
-            errors: "You are not allowed to perform this action.",
+            title: t("ADD_ROLE.FORBIDDEN_TITLE"),
+            errors: t("ADD_ROLE.FORBIDDEN_MESSAGE"),
           });
           return;
         }
@@ -119,7 +120,9 @@ export const AddRole = () => {
         });
 
         if (Object.keys(unmapped).length > 0 || !routedAField) {
-          showErrorToast({ errors: Object.keys(unmapped).length > 0 ? unmapped : httpError.errors });
+          showErrorToast({
+            errors: Object.keys(unmapped).length > 0 ? unmapped : httpError.errors,
+          });
         }
       } else if (error && typeof error === "object" && "errors" in error) {
         showErrorToast({ errors: error.errors });
@@ -127,7 +130,7 @@ export const AddRole = () => {
     }
   };
 
-  const onSubmit: SubmitHandler<z.infer<typeof addRoleFormSchema>> = async (data) =>
+  const onSubmit: SubmitHandler<AddRoleFormValues> = async (data) =>
     submitRole({
       name: data.name,
       description: data.description || "",
@@ -145,12 +148,12 @@ export const AddRole = () => {
       }}
     >
       <DialogTrigger asChild>
-        <PrimaryButton label="Add Role" />
+        <PrimaryButton label={t("ADD_ROLE.ADD_BUTTON")} />
       </DialogTrigger>
       <DialogContent>
         <DialogHeader className="mb-4">
-          <DialogTitle>Add Role</DialogTitle>
-          <DialogDescription>Please fill in the details to add a new role.</DialogDescription>
+          <DialogTitle>{t("ADD_ROLE.TITLE")}</DialogTitle>
+          <DialogDescription>{t("ADD_ROLE.DESCRIPTION")}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
@@ -159,11 +162,11 @@ export const AddRole = () => {
               control={form.control}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>{t("common:NAME")}</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
-                      placeholder="Enter name"
+                      placeholder={t("ADD_ROLE.NAME_PLACEHOLDER")}
                       onChange={(e) => {
                         field.onChange(e);
                         if (!isSlugManuallyEdited) {
@@ -184,11 +187,11 @@ export const AddRole = () => {
               control={form.control}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Slug</FormLabel>
+                  <FormLabel>{t("ADD_ROLE.SLUG_LABEL")}</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
-                      placeholder="Enter slug"
+                      placeholder={t("ADD_ROLE.SLUG_PLACEHOLDER")}
                       onChange={(e) => {
                         setIsSlugManuallyEdited(true);
                         field.onChange(e);
@@ -204,9 +207,9 @@ export const AddRole = () => {
               control={form.control}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>{t("common:DESCRIPTION")}</FormLabel>
                   <FormControl>
-                    <Textarea {...field} placeholder="Enter description" />
+                    <Textarea {...field} placeholder={t("ADD_ROLE.DESCRIPTION_PLACEHOLDER")} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -226,11 +229,11 @@ export const AddRole = () => {
             <DialogFooter className="mt-6">
               <DialogTrigger asChild>
                 <Button className="min-w-[80px]" variant="outline" disabled={isPending}>
-                  Cancel
+                  {t("common:CANCEL")}
                 </Button>
               </DialogTrigger>
               <Button className="min-w-[80px]" type="submit" disabled={isPending || !isDirty}>
-                {isPending ? "Adding..." : "Add"}
+                {isPending ? t("ADD_ROLE.ADDING") : t("common:ADD")}
               </Button>
             </DialogFooter>
           </form>
@@ -248,21 +251,20 @@ export const AddRole = () => {
         {duplicateNamePrompt && (
           <ConfirmationModal
             data={{
-              dialogTitle: "This name is already used elsewhere",
-              dialogSubtitle: (
-                <>
-                  {duplicateNamePrompt.otherOrganizationCount === 1
-                    ? "1 other organization already has a role with this name. "
-                    : `${duplicateNamePrompt.otherOrganizationCount} other organizations already have a role with this name. `}
-                  Creating this one will give them a second role sharing it.
-                  {duplicateNamePrompt.slugConflictCount > 0 &&
-                    (duplicateNamePrompt.slugConflictCount === 1
-                      ? " 1 of them will keep its own role and will not receive this one."
-                      : ` ${duplicateNamePrompt.slugConflictCount} of them will keep their own role and will not receive this one.`)}
-                </>
-              ),
-              confirmButton: isPending ? "Creating…" : "Create anyway",
-              cancelButton: "Cancel",
+              dialogTitle: t("ADD_ROLE.DUPLICATE_TITLE"),
+              dialogSubtitle: [
+                t("ADD_ROLE.DUPLICATE_OTHER_ORGS", {
+                  count: duplicateNamePrompt.otherOrganizationCount,
+                }),
+                t("ADD_ROLE.DUPLICATE_SHARE"),
+                duplicateNamePrompt.slugConflictCount > 0
+                  ? t("ADD_ROLE.DUPLICATE_KEEP", { count: duplicateNamePrompt.slugConflictCount })
+                  : "",
+              ]
+                .filter(Boolean)
+                .join(" "),
+              confirmButton: isPending ? t("ADD_ROLE.CREATING") : t("ADD_ROLE.CREATE_ANYWAY"),
+              cancelButton: t("common:CANCEL"),
             }}
             onCancel={() => setDuplicateNamePrompt(null)}
             onConfirm={() =>

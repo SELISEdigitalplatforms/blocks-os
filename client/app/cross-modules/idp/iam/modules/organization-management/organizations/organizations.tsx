@@ -9,7 +9,7 @@ import {
   useGetOrganizations,
 } from "@blocks-idp/iam/hooks/use-organization";
 import { IOrganization } from "@blocks-idp/iam/models/organization";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { useOrganizationsSortQueryParams } from "./organizations-filter-toolbar";
 import { OrganizationConfig } from "../organization-config";
 import { OrganizationsSidebarList } from "./organizations-sidebar-list";
@@ -23,6 +23,7 @@ const PAGE_SIZE = 10;
 const PAGE_BOTTOM_GAP = 24;
 
 export function Organizations() {
+  const { t } = useT("os.idp.organizations");
   const { tenantId } = useProjectStore().selectedProject || { tenantId: "" };
   const { sortQueryParams } = useOrganizationsSortQueryParams();
 
@@ -138,18 +139,17 @@ export function Organizations() {
             </div>
             <div className="flex flex-col gap-2">
               <h3 className="text-base font-semibold text-foreground">
-                Multiple Organizations is not enabled
+                {t("ORGANIZATIONS.MULTI_ORG_DISABLED_TITLE")}
               </h3>
               <p className="text-sm leading-relaxed text-muted-foreground">
-                Enable Multiple Organizations in Organization Configuration to view and manage
-                organizations in this workspace.
+                {t("ORGANIZATIONS.MULTI_ORG_DISABLED_BODY")}
               </p>
             </div>
             <OrganizationConfig
               trigger={
                 <Button size="sm" className="gap-2">
                   <Settings2 className="h-4 w-4" />
-                  Configure Organization
+                  {t("ORGANIZATIONS.CONFIGURE")}
                 </Button>
               }
             />
@@ -208,7 +208,7 @@ export function Organizations() {
         ) : (
           <div className="flex h-full min-h-0 min-w-0 flex-col items-center justify-center gap-2 rounded-lg border bg-card text-center text-sm text-muted-foreground">
             <Building2 className="h-6 w-6" />
-            Select an organization to view its details.
+            {t("ORGANIZATIONS.SELECT_PROMPT")}
           </div>
         )}
       </div>

@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import {
   Tooltip,
@@ -10,7 +11,7 @@ import { PERMISSION_SEVERITY_OPTIONS, ResourceType } from "@blocks-idp/iam/model
 import { BadgeAlert, BadgeCheck } from "lucide-react";
 import { useMemo } from "react";
 import { PermissionState, useRoleDetailsStore } from "./role-details-state";
-import { GRANT_PERMISSION_TOOLTIP } from "@blocks-idp/iam/utils/grant-scope";
+import { getGrantPermissionTooltip } from "@blocks-idp/iam/utils/grant-scope";
 type PermissionToggleCardProps = {
   permission: PermissionState;
   checked: boolean;
@@ -27,6 +28,7 @@ export const PermissionToggleCard = ({
   hasDependentPermissions,
   isAllDependentPermissionsChecked,
 }: PermissionToggleCardProps) => {
+  const { t } = useT("os.idp.roles");
   const isEditMode = useRoleDetailsStore((state) => state.isEditMode);
   // A permission the caller does not hold can be neither added nor removed.
   const isLocked = useRoleDetailsStore(
@@ -75,15 +77,15 @@ export const PermissionToggleCard = ({
                   </TooltipTrigger>
                   <TooltipContent side="right">
                     {isAllDependentPermissionsChecked
-                      ? "All dependent permissions are selected"
-                      : "One or more dependent permissions are missing"}
+                      ? t("PERMISSION_TOGGLE_CARD.ALL_DEPENDENTS_SELECTED")
+                      : t("PERMISSION_TOGGLE_CARD.DEPENDENTS_MISSING")}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             )}
           </div>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {permission.description || "No description available."}
+            {permission.description || t("PERMISSION_TOGGLE_CARD.NO_DESCRIPTION")}
           </p>
         </div>
         <div className="md:self-center space-x-2">
@@ -108,7 +110,7 @@ export const PermissionToggleCard = ({
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>{card}</TooltipTrigger>
-        <TooltipContent side="top">{GRANT_PERMISSION_TOOLTIP}</TooltipContent>
+        <TooltipContent side="top">{getGrantPermissionTooltip()}</TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );

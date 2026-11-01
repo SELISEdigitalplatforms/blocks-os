@@ -1,5 +1,7 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { useEffect, useRef, useState } from "react";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, type Locale } from "date-fns";
+import { de } from "date-fns/locale";
 import { IOrganization } from "@blocks-idp/iam/models/organization";
 import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
@@ -25,10 +27,10 @@ const getAvatarPalette = (id: string) => {
   return AVATAR_PALETTES[hash % AVATAR_PALETTES.length];
 };
 
-const formatUpdatedAgo = (value?: string) => {
+const formatUpdatedAgo = (value: string | undefined, locale?: Locale) => {
   if (!value) return undefined;
   try {
-    return formatDistanceToNow(new Date(value), { addSuffix: true });
+    return formatDistanceToNow(new Date(value), { addSuffix: true, locale });
   } catch {
     return undefined;
   }
@@ -42,7 +44,6 @@ const ALL_STATUSES: StatusFilter[] = ["active", "disabled"];
 // normalizeSearchQueryText); below that the box looks like it is doing nothing,
 // so say why.
 const SEARCH_MIN_LENGTH = 3;
-const SEARCH_HINT = `Type at least ${SEARCH_MIN_LENGTH} characters to search`;
 const SEARCH_HINT_ID = "organizations-search-hint";
 
 // The scroll container fills whatever height the parent grid cell hands it
@@ -77,6 +78,7 @@ export const OrganizationsSidebarList = ({
   hasMore,
   onLoadMore,
 }: OrganizationsSidebarListProps) => {
+  const { t, language } = useT("os.idp.organizations");
   const [localSearch, setLocalSearch] = useState(search);
   const [statusFilter, setStatusFilter] = useState<StatusFilter[]>(ALL_STATUSES);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -142,14 +144,14 @@ export const OrganizationsSidebarList = ({
             <Input
               value={localSearch}
               onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder="Search organizations..."
+              placeholder={t("ORGANIZATIONS_SIDEBAR_LIST.SEARCH_PLACEHOLDER")}
               className="pl-9 pr-8"
               aria-describedby={showSearchHint ? SEARCH_HINT_ID : undefined}
             />
             {localSearch && (
               <button
                 onClick={handleClearSearch}
-                aria-label="Clear search"
+                aria-label={t("ORGANIZATIONS_SIDEBAR_LIST.CLEAR_SEARCH")}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
               >
                 <X className="h-3.5 w-3.5" />
@@ -162,14 +164,14 @@ export const OrganizationsSidebarList = ({
                 variant="outline"
                 size="icon"
                 className={cn("shrink-0", isFiltered && "border-primary text-primary")}
-                aria-label="Filter organizations"
+                aria-label={t("ORGANIZATIONS_SIDEBAR_LIST.FILTER_ARIA")}
               >
                 <ListFilter className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-48 p-2">
               <p className="mb-1 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Status
+                {t("common:STATUS")}
               </p>
               {ALL_STATUSES.map((status) => (
                 <label
@@ -180,7 +182,11 @@ export const OrganizationsSidebarList = ({
                     checked={statusFilter.includes(status)}
                     onCheckedChange={() => toggleStatus(status)}
                   />
-                  <span className="capitalize">{status}</span>
+                  <span className="capitalize">
+                    {status === "active"
+                      ? t("ORGANIZATIONS_SIDEBAR_LIST.STATUS_ACTIVE")
+                      : t("common:DISABLED")}
+                  </span>
                 </label>
               ))}
             </PopoverContent>
@@ -190,7 +196,7 @@ export const OrganizationsSidebarList = ({
             the input happens to be re-read. */}
         {showSearchHint && (
           <p id={SEARCH_HINT_ID} role="status" className="mt-1.5 text-xs text-muted-foreground">
-            {SEARCH_HINT}
+            {t("ORGANIZATIONS_SIDEBAR_LIST.SEARCH_HINT", { min: SEARCH_MIN_LENGTH })}
           </p>
         )}
       </div>
@@ -205,14 +211,17 @@ export const OrganizationsSidebarList = ({
         ) : visibleOrgs.length === 0 ? (
           <div className="flex h-40 flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground">
             <Building2 className="h-6 w-6" />
-            No organizations found
+            {t("ORGANIZATIONS_SIDEBAR_LIST.EMPTY")}
           </div>
         ) : (
           <div className="space-y-1">
             {visibleOrgs.map((org) => {
               const palette = getAvatarPalette(org.itemId);
               const isSelected = org.itemId === selectedOrgId;
-              const updatedLabel = formatUpdatedAgo(org.lastUpdatedDate);
+              const updatedLabel = formatUpdatedAgo(
+                org.lastUpdatedDate,
+                language === "de" ? de : undefined,
+              );
 
               return (
                 <button
@@ -248,12 +257,13 @@ export const OrganizationsSidebarList = ({
                       </span>
                       {org.isDisabled && (
                         <Badge variant="error" className="shrink-0 px-1.5 py-0 text-[10px]">
-                          Disabled
+                          {t("common:DISABLED")}
                         </Badge>
                       )}
                     </div>
                     <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                      {updatedLabel && <>Updated {updatedLabel}</>}
+                      {updatedLabel &&
+                        t("ORGANIZATIONS_SIDEBAR_LIST.UPDATED_AGO", { time: updatedLabel })}
                     </p>
                   </div>
                 </button>
@@ -272,8 +282,10 @@ export const OrganizationsSidebarList = ({
 
       {!isLoading && (
         <div className="border-t px-3 py-2 text-xs text-muted-foreground">
-          Showing 1 to {organizations.length} of {totalCount} organization
-          {totalCount === 1 ? "" : "s"}
+          {t("ORGANIZATIONS_SIDEBAR_LIST.SHOWING", {
+            shown: organizations.length,
+            count: totalCount,
+          })}
         </div>
       )}
     </div>

@@ -17,7 +17,8 @@ vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
     return { isLoading: h.isLoading, isFetching: h.isFetching, data: h.data };
   },
 }));
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "t1" } }),
 }));
 vi.mock("./organization-users-filter-toolbar", () => ({

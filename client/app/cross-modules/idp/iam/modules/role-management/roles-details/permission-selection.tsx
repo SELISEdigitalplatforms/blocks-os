@@ -2,7 +2,7 @@
 import { useEffect, useState, forwardRef, useImperativeHandle } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { permissionService } from "@blocks-idp/iam/services/permission.service";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import {
   Accordion,
   AccordionContent,
@@ -26,6 +26,7 @@ export const PermissionSelection = forwardRef(function PermissionSelection(
   { slug, resourceGroups }: PermissionSelectionProps,
   ref,
 ) {
+  const { t } = useT("os.idp.roles");
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const {
     isLoading: isPermissionLoading,
@@ -342,16 +343,22 @@ export const PermissionSelection = forwardRef(function PermissionSelection(
                       <h3 className="text-left text-2xl font-semibold">{groupName}</h3>
                     </div>
                     <span className="text-left text-muted-foreground">
-                      Total Permissions: {groupResource.count} | Selected:{" "}
-                      {getSelectedCount(groupName)}
+                      {t("PERMISSION_SELECTION.GROUP_SUMMARY", {
+                        total: groupResource.count,
+                        selected: getSelectedCount(groupName),
+                      })}
                     </span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
                   {isLoading ? (
-                    <div className="py-4 text-center">Loading group permissions...</div>
+                    <div className="py-4 text-center">
+                      {t("PERMISSION_SELECTION.LOADING_GROUP")}
+                    </div>
                   ) : groupObj.allIds.length === 0 ? (
-                    <div className="py-4 text-center">Click to load permissions for this group</div>
+                    <div className="py-4 text-center">
+                      {t("PERMISSION_SELECTION.CLICK_TO_LOAD")}
+                    </div>
                   ) : (
                     <ul className="ml-4">
                       {groupObj.feActions.map((fa) => (
@@ -369,7 +376,7 @@ export const PermissionSelection = forwardRef(function PermissionSelection(
                               {fa.name}
                             </label>
                             <span className="ml-2 rounded border bg-muted px-2 py-0.5 text-xs">
-                              FE Action
+                              {t("PERMISSION_SELECTION.FE_ACTION")}
                             </span>
                           </div>
                           {fa.dependents.length > 0 && (

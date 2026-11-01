@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
@@ -27,6 +28,7 @@ const LoadingSkeleton = () => (
   </div>
 );
 export const PermissionRolesList = ({ slugs }: RolesTableProps) => {
+  const { t } = useT("os.idp.permissions");
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const [queryParams, setQueryParams] = useQueryStates({
@@ -48,7 +50,7 @@ export const PermissionRolesList = ({ slugs }: RolesTableProps) => {
         accessorFn: (row) => `${row.name}`.trim(),
         header: () => (
           <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">Name</span>
+            <span className="font-bold text-medium-emphasis">{t("common:NAME")}</span>
           </div>
         ),
         cell: (roles) => <div className="w-[130px] truncate">{roles.row.original.name}</div>,
@@ -58,7 +60,9 @@ export const PermissionRolesList = ({ slugs }: RolesTableProps) => {
         accessorFn: (row) => `${row.slug}`.trim(),
         header: () => (
           <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">Slug</span>
+            <span className="font-bold text-medium-emphasis">
+              {t("PERMISSION_ROLES_LIST.COLUMN_SLUG")}
+            </span>
           </div>
         ),
         cell: (roles) => (
@@ -74,7 +78,7 @@ export const PermissionRolesList = ({ slugs }: RolesTableProps) => {
         accessorFn: (row) => `${row.description}`.trim(),
         header: () => (
           <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">Description</span>
+            <span className="font-bold text-medium-emphasis">{t("common:DESCRIPTION")}</span>
           </div>
         ),
         cell: (roles) => (
@@ -82,7 +86,7 @@ export const PermissionRolesList = ({ slugs }: RolesTableProps) => {
         ),
       },
     ],
-    [],
+    [t],
   );
   const table = useReactTable({
     data: data?.data || [],
@@ -106,7 +110,7 @@ export const PermissionRolesList = ({ slugs }: RolesTableProps) => {
   return (
     <Card className="mt-4">
       <CardHeader>
-        <CardTitle>Assigned Roles</CardTitle>
+        <CardTitle>{t("PERMISSION_ROLES_LIST.TITLE")}</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading && <LoadingSkeleton />}
@@ -134,7 +138,7 @@ export const PermissionRolesList = ({ slugs }: RolesTableProps) => {
                     colSpan={columns.length}
                     className="h-24 text-center text-muted-foreground"
                   >
-                    No roles found. Please create new roles.
+                    {t("PERMISSION_ROLES_LIST.EMPTY")}
                   </TableCell>
                 </TableRow>
               ) : (

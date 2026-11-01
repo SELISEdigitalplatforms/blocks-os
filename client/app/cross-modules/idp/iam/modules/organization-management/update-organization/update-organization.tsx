@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { Button } from "@/components/ui-kits/button/button";
 import {
   DialogClose,
@@ -32,6 +33,7 @@ type UpdateOrganizationProps = {
 };
 
 export const UpdateOrganization = ({ organization, isOpen, onClose }: UpdateOrganizationProps) => {
+  const { t } = useT("os.idp.organizations");
   const { mutateAsync, isPending } = useUpdateOrganization();
 
   const form = useForm({
@@ -54,7 +56,7 @@ export const UpdateOrganization = ({ organization, isOpen, onClose }: UpdateOrga
         showErrorToast({ errors: res.errors });
         return;
       }
-      showSuccessToast({ description: "Organization renamed successfully" });
+      showSuccessToast({ description: t("UPDATE_ORGANIZATION.RENAMED_SUCCESS") });
       onClose?.();
     } catch (error: unknown) {
       if (error && typeof error === "object" && "errors" in error) {
@@ -72,8 +74,8 @@ export const UpdateOrganization = ({ organization, isOpen, onClose }: UpdateOrga
   return (
     <DialogContent>
       <DialogHeader className="mb-4">
-        <DialogTitle>Rename Organization</DialogTitle>
-        <DialogDescription>Update the organization name</DialogDescription>
+        <DialogTitle>{t("UPDATE_ORGANIZATION.TITLE")}</DialogTitle>
+        <DialogDescription>{t("UPDATE_ORGANIZATION.DESCRIPTION")}</DialogDescription>
       </DialogHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
@@ -82,9 +84,9 @@ export const UpdateOrganization = ({ organization, isOpen, onClose }: UpdateOrga
             control={form.control}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Name</FormLabel>
+                <FormLabel>{t("common:NAME")}</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="Enter organization name" />
+                  <Input {...field} placeholder={t("UPDATE_ORGANIZATION.NAME_PLACEHOLDER")} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -93,11 +95,11 @@ export const UpdateOrganization = ({ organization, isOpen, onClose }: UpdateOrga
           <DialogFooter className="mt-6">
             <DialogClose asChild>
               <Button className="min-w-[80px]" variant="outline" disabled={isPending}>
-                Cancel
+                {t("common:CANCEL")}
               </Button>
             </DialogClose>
             <Button className="min-w-[80px]" type="submit" disabled={isPending || !isDirty}>
-              {isPending ? "Saving..." : "Save"}
+              {isPending ? t("UPDATE_ORGANIZATION.SAVING") : t("common:SAVE")}
             </Button>
           </DialogFooter>
         </form>

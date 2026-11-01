@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { useState } from "react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
@@ -25,9 +26,6 @@ type ApplyPermissionChangesDialogProps = {
   onConfirm: (propagateToAllOrganizations: boolean) => Promise<unknown>;
 };
 
-const plural = (count: number, singular: string) =>
-  `${count} ${singular}${count === 1 ? "" : "s"}`;
-
 /**
  * Confirms a pending role permission change, and -- only where the backend would honour it --
  * offers to apply the same change to every organization's copy of the role.
@@ -48,6 +46,7 @@ export const ApplyPermissionChangesDialog = ({
   isPending,
   onConfirm,
 }: ApplyPermissionChangesDialogProps) => {
+  const { t } = useT("os.idp.roles");
   const [propagate, setPropagate] = useState(true);
 
   const {
@@ -79,12 +78,33 @@ export const ApplyPermissionChangesDialog = ({
   const addCount = impact?.addCount ?? addPermissions.length;
   const removeCount = impact?.removeCount ?? removePermissions.length;
 
-  const changeSummary = [
-    addCount > 0 ? `adds ${plural(addCount, "permission")}` : "",
-    removeCount > 0 ? `removes ${plural(removeCount, "permission")}` : "",
-  ]
-    .filter(Boolean)
-    .join(" and ");
+  const addsSummary =
+    addCount > 0 ? t("APPLY_PERMISSION_CHANGES_DIALOG.SUMMARY_ADDS", { count: addCount }) : "";
+  const removesSummary =
+    removeCount > 0
+      ? t("APPLY_PERMISSION_CHANGES_DIALOG.SUMMARY_REMOVES", { count: removeCount })
+      : "";
+  const changeSummary =
+    addsSummary && removesSummary
+      ? t("APPLY_PERMISSION_CHANGES_DIALOG.SUMMARY_BOTH", {
+          adds: addsSummary,
+          removes: removesSummary,
+        })
+      : addsSummary || removesSummary;
+
+  const usersHoldText = (): string => {
+    if (!impact) return "";
+    const params = { count: impact.affectedUserCount, active: impact.activeUserCount };
+    const hasActive = impact.activeUserCount !== impact.affectedUserCount;
+    if (willPropagate) {
+      return hasActive
+        ? t("APPLY_PERMISSION_CHANGES_DIALOG.USERS_HOLD_ALL_ACTIVE", params)
+        : t("APPLY_PERMISSION_CHANGES_DIALOG.USERS_HOLD_ALL", params);
+    }
+    return hasActive
+      ? t("APPLY_PERMISSION_CHANGES_DIALOG.USERS_HOLD_ORG_ACTIVE", params)
+      : t("APPLY_PERMISSION_CHANGES_DIALOG.USERS_HOLD_ORG", params);
+  };
 
   const handleConfirm = async () => {
     try {
@@ -100,9 +120,12 @@ export const ApplyPermissionChangesDialog = ({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle>Apply permission changes?</DialogTitle>
+          <DialogTitle>{t("APPLY_PERMISSION_CHANGES_DIALOG.TITLE")}</DialogTitle>
           <DialogDescription>
-            This change {changeSummary || "updates the permissions"} on <strong>{roleName}</strong>.
+            {t("APPLY_PERMISSION_CHANGES_DIALOG.DESCRIPTION", {
+              summary: changeSummary || t("APPLY_PERMISSION_CHANGES_DIALOG.SUMMARY_FALLBACK"),
+              roleName,
+            })}
           </DialogDescription>
         </DialogHeader>
 
@@ -115,9 +138,7 @@ export const ApplyPermissionChangesDialog = ({
 
         {isError && (
           <p className="text-sm text-muted-foreground">
-            The impact of this change could not be loaded. You can still save it for this
-            organization, but the number of affected users and organizations is unknown, so applying
-            it to every organization is not offered.
+            {t("APPLY_PERMISSION_CHANGES_DIALOG.IMPACT_ERROR")}
           </p>
         )}
 
@@ -134,20 +155,22 @@ export const ApplyPermissionChangesDialog = ({
                     : "text-muted-foreground"
                 }
               >
-                <p>
-                  {plural(impact.affectedUserCount, "user")} currently hold this role
-                  {impact.activeUserCount !== impact.affectedUserCount
-                    ? ` (${impact.activeUserCount} active)`
-                    : ""}
-                  {willPropagate ? " across every organization" : " in this organization"}.
-                </p>
+                <p>{usersHoldText()}</p>
                 <p className="mt-1">
-                  {addCount > 0 && <>They gain {plural(addCount, "permission")}. </>}
-                  {removeCount > 0 && <>They lose {plural(removeCount, "permission")}.</>}
+                  {[
+                    addCount > 0
+                      ? t("APPLY_PERMISSION_CHANGES_DIALOG.THEY_GAIN", { count: addCount })
+                      : "",
+                    removeCount > 0
+                      ? t("APPLY_PERMISSION_CHANGES_DIALOG.THEY_LOSE", { count: removeCount })
+                      : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
                 </p>
                 {removeCount > 0 && (
                   <p className="mt-1 text-muted-foreground">
-                    Affected users keep their current access until they next sign in.
+                    {t("APPLY_PERMISSION_CHANGES_DIALOG.KEEP_ACCESS")}
                   </p>
                 )}
               </div>
@@ -159,17 +182,16 @@ export const ApplyPermissionChangesDialog = ({
                   className="mt-0.5 shrink-0"
                   checked={propagate}
                   onCheckedChange={(checked) => setPropagate(checked === true)}
-                  aria-label="Apply this change to all organizations"
+                  aria-label={t("APPLY_PERMISSION_CHANGES_DIALOG.APPLY_TO_ALL_ARIA")}
                 />
                 <span>
-                  Also apply this to{" "}
                   {impact.organizationCount > 0
-                    ? plural(impact.organizationCount, "other organization")
-                    : "every other organization"}
-                  .
+                    ? t("APPLY_PERMISSION_CHANGES_DIALOG.ALSO_APPLY_COUNT", {
+                        count: impact.organizationCount,
+                      })
+                    : t("APPLY_PERMISSION_CHANGES_DIALOG.ALSO_APPLY_ALL")}
                   <span className="mt-0.5 block text-muted-foreground">
-                    Only the permissions added or removed here are applied. Organizations that have
-                    already diverged in other ways are left as they are.
+                    {t("APPLY_PERMISSION_CHANGES_DIALOG.ALSO_APPLY_NOTE")}
                   </span>
                 </span>
               </label>
@@ -179,15 +201,15 @@ export const ApplyPermissionChangesDialog = ({
                 skip nobody is told about is how the organizations drift apart in the first place. */}
             {willPropagate && impact.skippedOrganizationCount > 0 && (
               <p className="text-muted-foreground">
-                {plural(impact.skippedOrganizationCount, "organization")} will be skipped because
-                the role is missing or archived there.
+                {t("APPLY_PERMISSION_CHANGES_DIALOG.SKIPPED", {
+                  count: impact.skippedOrganizationCount,
+                })}
               </p>
             )}
 
             {impact.isMultiOrgEnabled && !canPropagate && (
               <p className="text-muted-foreground">
-                This change applies to this organization only. Other organizations&apos; copies of
-                this role are managed from the default organization.
+                {t("APPLY_PERMISSION_CHANGES_DIALOG.THIS_ORG_ONLY")}
               </p>
             )}
           </div>
@@ -195,7 +217,7 @@ export const ApplyPermissionChangesDialog = ({
 
         <DialogFooter>
           <Button variant="outline" disabled={isPending} onClick={() => handleOpenChange(false)}>
-            Cancel
+            {t("common:CANCEL")}
           </Button>
           <Button
             onClick={handleConfirm}
@@ -203,7 +225,11 @@ export const ApplyPermissionChangesDialog = ({
             // consequence before it is known.
             disabled={isPending || isLoading}
           >
-            {isPending ? "Saving..." : willPropagate ? "Apply to all organizations" : "Save changes"}
+            {isPending
+              ? t("APPLY_PERMISSION_CHANGES_DIALOG.SAVING")
+              : willPropagate
+                ? t("APPLY_PERMISSION_CHANGES_DIALOG.APPLY_TO_ALL")
+                : t("common:SAVE_CHANGES")}
           </Button>
         </DialogFooter>
       </DialogContent>

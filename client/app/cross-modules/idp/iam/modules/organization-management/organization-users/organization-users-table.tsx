@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { useState } from "react";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
@@ -54,39 +55,44 @@ const RevokeConfirmDialog = ({
   isPending: boolean;
   notifyUser: boolean;
   onNotifyUserChange: (notifyUser: boolean) => void;
-}) => (
-  <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent className="sm:max-w-[425px]">
-      <DialogHeader>
-        <DialogTitle>Revoke access</DialogTitle>
-        <DialogDescription>
-          Are you sure you want to revoke &quot;{userName}&quot; from this organization? This will
-          remove all roles and permissions granted within this organization.
-        </DialogDescription>
-      </DialogHeader>
-      <NotifyUserCheckbox
-        checked={notifyUser}
-        onCheckedChange={onNotifyUserChange}
-        disabled={isPending}
-        description="Send them an email saying they were removed from this organization."
-      />
-      <DialogFooter>
-        <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
-          Cancel
-        </Button>
-        <Button variant="destructive" onClick={onConfirm} disabled={isPending}>
-          {isPending ? "Revoking..." : "Revoke"}
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
-);
+}) => {
+  const { t } = useT("os.idp.organizations");
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>{t("ORGANIZATION_USERS_TABLE.REVOKE_TITLE")}</DialogTitle>
+          <DialogDescription>
+            {t("ORGANIZATION_USERS_TABLE.REVOKE_DESCRIPTION", { userName })}
+          </DialogDescription>
+        </DialogHeader>
+        <NotifyUserCheckbox
+          checked={notifyUser}
+          onCheckedChange={onNotifyUserChange}
+          disabled={isPending}
+          description={t("ORGANIZATION_USERS_TABLE.NOTIFY_DESCRIPTION")}
+        />
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
+            {t("common:CANCEL")}
+          </Button>
+          <Button variant="destructive" onClick={onConfirm} disabled={isPending}>
+            {isPending
+              ? t("ORGANIZATION_USERS_TABLE.REVOKING")
+              : t("ORGANIZATION_USERS_TABLE.REVOKE")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 export const OrganizationUsersTable = ({
   users,
   isLoading,
   organizationId,
 }: OrganizationUsersTableProps) => {
+  const { t } = useT("os.idp.organizations");
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const { sortQueryParams, setSortQueryParams } = useOrganizationUsersSortQueryParams();
@@ -115,7 +121,7 @@ export const OrganizationUsersTable = ({
         return;
       }
       showSuccessToast({
-        description: `${confirmRevoke.email} has been revoked from this organization`,
+        description: t("ORGANIZATION_USERS_TABLE.REVOKED_SUCCESS", { email: confirmRevoke.email }),
       });
       closeConfirmRevoke();
     } catch (error) {
@@ -123,7 +129,7 @@ export const OrganizationUsersTable = ({
         errors:
           typeof error === "object" && error !== null && "errors" in error
             ? (error as { errors: unknown }).errors
-            : "Something went wrong",
+            : t("ORGANIZATION_USERS_TABLE.SOMETHING_WENT_WRONG"),
       });
     }
   };
@@ -134,7 +140,7 @@ export const OrganizationUsersTable = ({
     return (
       <div className="flex h-full min-h-[200px] flex-1 flex-col items-center justify-center gap-2 rounded-xl py-16 text-center text-sm text-muted-foreground">
         <UsersIcon className="h-6 w-6" />
-        No users found.
+        {t("ORGANIZATION_USERS_TABLE.EMPTY")}
       </div>
     );
   }
@@ -162,7 +168,7 @@ export const OrganizationUsersTable = ({
             <div className="min-w-0">
               <FilterControls.SortHeader
                 id="FirstName"
-                label="Name"
+                label={t("common:NAME")}
                 value={sortQueryParams}
                 onChange={setSortQueryParams}
               />
@@ -170,7 +176,7 @@ export const OrganizationUsersTable = ({
             <div className="min-w-0">
               <FilterControls.SortHeader
                 id="Email"
-                label="Email"
+                label={t("common:EMAIL")}
                 value={sortQueryParams}
                 onChange={setSortQueryParams}
               />
@@ -178,7 +184,7 @@ export const OrganizationUsersTable = ({
             <div className="shrink-0">
               <FilterControls.SortHeader
                 id="Active"
-                label="Status"
+                label={t("common:STATUS")}
                 value={sortQueryParams}
                 onChange={setSortQueryParams}
               />
@@ -186,7 +192,7 @@ export const OrganizationUsersTable = ({
             <div className="shrink-0">
               <FilterControls.SortHeader
                 id="LastLoggedInTime"
-                label="Last login"
+                label={t("ORGANIZATION_USERS_TABLE.COLUMN_LAST_LOGIN")}
                 value={sortQueryParams}
                 onChange={setSortQueryParams}
               />
@@ -237,8 +243,8 @@ export const OrganizationUsersTable = ({
                       <Button
                         size="icon"
                         variant="ghost"
-                        aria-label="Revoke from organization"
-                        title="Revoke from organization"
+                        aria-label={t("ORGANIZATION_USERS_TABLE.REVOKE_ARIA")}
+                        title={t("ORGANIZATION_USERS_TABLE.REVOKE_ARIA")}
                         className="h-7 w-7 text-destructive hover:bg-destructive/10"
                         onClick={() => setConfirmRevoke(user)}
                       >
@@ -268,18 +274,20 @@ export const OrganizationUsersTable = ({
                     {/* Status */}
                     <div className="md:shrink-0">
                       <Badge variant={user.active ? "success" : "error"} className="w-fit">
-                        {user.active ? "Active" : "Inactive"}
+                        {user.active
+                          ? t("ORGANIZATION_USERS_TABLE.STATUS_ACTIVE")
+                          : t("ORGANIZATION_USERS_TABLE.STATUS_INACTIVE")}
                       </Badge>
                     </div>
 
                     {/* Last login */}
                     <div className="text-right md:shrink-0 md:text-left md:text-xs md:text-muted-foreground">
                       <span className="block text-[11px] text-muted-foreground md:hidden">
-                        Last login
+                        {t("ORGANIZATION_USERS_TABLE.COLUMN_LAST_LOGIN")}
                       </span>
                       {hasLastLogin
                         ? formatDate(parseDateString(user.lastLoggedInTime))
-                        : "Never logged in"}
+                        : t("ORGANIZATION_USERS_TABLE.NEVER_LOGGED_IN")}
                     </div>
                   </div>
 
@@ -292,8 +300,8 @@ export const OrganizationUsersTable = ({
                     <Button
                       size="icon"
                       variant="ghost"
-                      aria-label="Revoke from organization"
-                      title="Revoke from organization"
+                      aria-label={t("ORGANIZATION_USERS_TABLE.REVOKE_ARIA")}
+                      title={t("ORGANIZATION_USERS_TABLE.REVOKE_ARIA")}
                       className="h-6 w-6 text-destructive hover:bg-destructive/10"
                       onClick={() => setConfirmRevoke(user)}
                     >
