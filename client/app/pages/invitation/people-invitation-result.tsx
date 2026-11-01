@@ -9,6 +9,7 @@ import {
 } from "@/components/ui-kits/card/card"
 import { Link } from "react-router"
 import { getRuntimeEnv } from "@/lib/runtime-env"
+import { useT } from "@seliseblocks/genesis-os"
 
 type PeopleInvitationResultProps = {
   success: string;
@@ -103,17 +104,18 @@ export const PeopleInvitationResult = ({
   old,
   code,
 }: PeopleInvitationResultProps) => {
+  const { t } = useT("os.invitation");
   if (success === "0") {
     const errorMessage =
       error === "expired"
-        ? "The invitation link has expired."
-        : "An error occurred during invitation confirmation.";
+        ? t("PEOPLE_INVITATION_RESULT.LINK_EXPIRED")
+        : t("PEOPLE_INVITATION_RESULT.CONFIRMATION_ERROR");
 
     return (
       <InvitationResultShell
-        title="Failed"
+        title={t("PEOPLE_INVITATION_RESULT.FAILED")}
         message={errorMessage}
-        buttonText="Go back"
+        buttonText={t("PEOPLE_INVITATION_RESULT.GO_BACK")}
         buttonTo="/login"
       />
     );
@@ -126,9 +128,9 @@ export const PeopleInvitationResult = ({
     if (iamActivationUrl) {
       return (
         <InvitationResultShell
-          title="Invitation Accepted!"
-          message="You have successfully accepted the invitation. The project has been shared with you. Please proceed to activate your account to get started."
-          buttonText="Activate"
+          title={t("PEOPLE_INVITATION_RESULT.INVITATION_ACCEPTED")}
+          message={t("PEOPLE_INVITATION_RESULT.ACCEPTED_ACTIVATE")}
+          buttonText={t("PEOPLE_INVITATION_RESULT.ACTIVATE")}
           buttonTo={iamActivationUrl}
           external
         />
@@ -141,9 +143,9 @@ export const PeopleInvitationResult = ({
     });
     return (
       <InvitationResultShell
-        title="Invitation Accepted!"
-        message="You have successfully accepted the invitation. The project has been shared with you. Please proceed to activate your account to get started."
-        buttonText="Activate"
+        title={t("PEOPLE_INVITATION_RESULT.INVITATION_ACCEPTED")}
+        message={t("PEOPLE_INVITATION_RESULT.ACCEPTED_ACTIVATE")}
+        buttonText={t("PEOPLE_INVITATION_RESULT.ACTIVATE")}
         buttonTo={`/activate?${activateParams.toString()}`}
       />
     );
@@ -151,9 +153,9 @@ export const PeopleInvitationResult = ({
 
   return (
     <InvitationResultShell
-      title="Invitation Accepted!"
-      message="You have successfully accepted the invitation. The project has been shared with you."
-      buttonText="Go to Console"
+      title={t("PEOPLE_INVITATION_RESULT.INVITATION_ACCEPTED")}
+      message={t("PEOPLE_INVITATION_RESULT.ACCEPTED_SHARED")}
+      buttonText={t("PEOPLE_INVITATION_RESULT.GO_TO_CONSOLE")}
       buttonTo="/login"
     />
   );

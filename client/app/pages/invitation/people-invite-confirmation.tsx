@@ -11,12 +11,14 @@ import { usePeopleAcceptInvitation } from "@/hooks/use-people";
 import { hasErrorCode, isErrorWithErrors } from "@/lib/error";
 import { Link, useNavigate } from "react-router";
 import { buildInvitationResultPath } from "./use-invitation-search-params";
+import { useT } from "@seliseblocks/genesis-os";
 
 type PeopleInviteConfirmationProps = {
   code: string;
 };
 
 export const PeopleInviteConfirmation = ({ code }: PeopleInviteConfirmationProps) => {
+  const { t } = useT("os.invitation");
   const { mutateAsync, isPending } = usePeopleAcceptInvitation();
   const navigate = useNavigate();
 
@@ -59,21 +61,20 @@ export const PeopleInviteConfirmation = ({ code }: PeopleInviteConfirmationProps
         <CardHeader className="text-center">
           <CardTitle className="text-3xl leading-9">Blocks OS</CardTitle>
           <CardDescription className="mt-4 text-xl font-semibold text-foreground">
-            Accept Invitation
+            {t("PEOPLE_INVITE_CONFIRMATION.ACCEPT_INVITATION")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-center text-muted-foreground">
-            You have been invited to join a project. Click the button below to accept the
-            invitation.
+            {t("PEOPLE_INVITE_CONFIRMATION.YOU_HAVE_BEEN_INVITED")}
           </p>
           <div className="mt-8 flex flex-col gap-2">
             <Button disabled={isPending} onClick={() => handleAccept()} className="w-full">
-              Accept
+              {t("PEOPLE_INVITE_CONFIRMATION.ACCEPT")}
             </Button>
             <Link to="/login">
               <Button variant="outline" className="w-full">
-                Go back
+                {t("PEOPLE_INVITE_CONFIRMATION.GO_BACK")}
               </Button>
             </Link>
           </div>

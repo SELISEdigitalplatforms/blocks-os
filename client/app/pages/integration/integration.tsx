@@ -10,8 +10,10 @@ import {
   useDisconnect, useRegenerateSecret,
 } from "@/cross-modules/integration/hooks/use-integration";
 import { IRunIntegrationSetupResponse } from "@/cross-modules/integration/models/integration.model";
+import { useT } from "@seliseblocks/genesis-os";
 
 export default function IntegrationPage() {
+  const { t } = useT("os.integration-page");
   const [isSetupOpen, setIsSetupOpen] = useState(false);
   const [secret, setSecret] = useState<IRunIntegrationSetupResponse | null>(null);
   const { mutate: disconnect, isPending: disconnecting } = useDisconnect();
@@ -32,9 +34,9 @@ export default function IntegrationPage() {
   // Setup: running it again would reach the save step and be refused as already configured.
   if (isError) {
     return (
-      <Banner variant="destructive" title="Could not load Integration setup" compact={false}>
+      <Banner variant="destructive" title={t("INTEGRATION.COULD_NOT_LOAD_SETUP")} compact={false}>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <span>Check your connection and try again.</span>
+          <span>{t("INTEGRATION.CHECK_CONNECTION")}</span>
           <Button
             type="button"
             size="sm"
@@ -43,7 +45,7 @@ export default function IntegrationPage() {
             disabled={isFetching}
           >
             <RotateCw className="h-4 w-4" />
-            <span className="ml-2">Retry</span>
+            <span className="ml-2">{t("common:RETRY")}</span>
           </Button>
         </div>
       </Banner>
@@ -54,17 +56,17 @@ export default function IntegrationPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold text-high-emphasis">Connections</h2>
-          <p className="text-sm text-medium-emphasis">{connections.length} connection{connections.length === 1 ? "" : "s"}</p>
+          <h2 className="text-base font-semibold text-high-emphasis">{t("INTEGRATION.CONNECTIONS")}</h2>
+          <p className="text-sm text-medium-emphasis">{t("INTEGRATION.CONNECTION_COUNT", { count: connections.length })}</p>
         </div>
-        <Button size="sm" onClick={() => setIsSetupOpen(true)}>Add connection</Button>
+        <Button size="sm" onClick={() => setIsSetupOpen(true)}>{t("INTEGRATION.ADD_CONNECTION")}</Button>
       </div>
 
       {connections.length === 0 ? (
         <div className="rounded-lg border border-border bg-card px-6 py-10 text-center">
-          <h2 className="text-base font-semibold">No integrations yet</h2>
+          <h2 className="text-base font-semibold">{t("INTEGRATION.NO_INTEGRATIONS_YET")}</h2>
           <p className="mt-1 text-sm text-medium-emphasis">
-            Add a connection to create its role and client credential.
+            {t("INTEGRATION.ADD_CONNECTION_HINT")}
           </p>
         </div>
       ) : (
