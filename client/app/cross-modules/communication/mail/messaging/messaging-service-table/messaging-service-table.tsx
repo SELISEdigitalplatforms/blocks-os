@@ -44,8 +44,10 @@ import {
 } from "@blocks-communication/mail/constants/messaging";
 import { MessagingTableToolbar } from "@blocks-communication/mail/components/messaging/messaging-table-toolbar/messaging-table-toolbar";
 import TablePagination from "@/components/ui-kits/table-pagination/table-pagination";
+import { useT } from "@seliseblocks/genesis-os";
 const data = messagingServiceData;
 export function MessagingServiceTable() {
+  const { t } = useT("os.communication.mail");
   const navigate = useNavigate();
   const [sorting, setSorting] = useState<SortingState>([{ id: "lastModified", desc: true }]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -60,7 +62,7 @@ export function MessagingServiceTable() {
       header: ({ column }) => {
         return (
           <div className="flex items-center sm:w-[250px]">
-            <span className="font-bold text-medium-emphasis">Name</span>
+            <span className="font-bold text-medium-emphasis">{t("common:NAME")}</span>
             <ArrowUpDown
               onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
               className="ml-2 h-4 w-4 cursor-pointer text-high-emphasis hover:text-low-emphasis"
@@ -77,7 +79,9 @@ export function MessagingServiceTable() {
       header: ({ column }) => {
         return (
           <div className="flex items-center sm:w-[250px]">
-            <span className="font-bold text-medium-emphasis">Configuration</span>
+            <span className="font-bold text-medium-emphasis">
+              {t("MESSAGING_SERVICE_TABLE.COLUMN_CONFIGURATION")}
+            </span>
             <ArrowUpDown
               onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
               className="ml-2 h-4 w-4 cursor-pointer text-high-emphasis hover:text-low-emphasis"
@@ -107,7 +111,9 @@ export function MessagingServiceTable() {
       header: ({ column }) => {
         return (
           <div className="flex items-center sm:w-[100px]">
-            <span className="font-bold text-medium-emphasis">Protocol</span>
+            <span className="font-bold text-medium-emphasis">
+              {t("MESSAGING_SERVICE_TABLE.COLUMN_PROTOCOL")}
+            </span>
             <ArrowUpDown
               onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
               className="ml-2 h-4 w-4 cursor-pointer text-high-emphasis hover:text-low-emphasis"
@@ -134,7 +140,9 @@ export function MessagingServiceTable() {
       accessorKey: "lastModified",
       header: ({ column }) => (
         <div className="flex items-center sm:w-[150px]">
-          <span className="font-bold text-medium-emphasis">Last Modified</span>
+          <span className="font-bold text-medium-emphasis">
+            {t("MESSAGING_SERVICE_TABLE.COLUMN_LAST_MODIFIED")}
+          </span>
           <ArrowUpDown
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
             className="ml-2 h-4 w-4 cursor-pointer text-high-emphasis hover:text-low-emphasis"
@@ -154,7 +162,9 @@ export function MessagingServiceTable() {
       accessorKey: "createdOn",
       header: ({ column }) => (
         <div className="flex w-[150px] items-center">
-          <span className="font-bold text-medium-emphasis">Created on</span>
+          <span className="font-bold text-medium-emphasis">
+            {t("MESSAGING_SERVICE_TABLE.COLUMN_CREATED_ON")}
+          </span>
           <ArrowUpDown
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
             className="ml-2 h-4 w-4 cursor-pointer text-high-emphasis hover:text-low-emphasis"
@@ -175,7 +185,9 @@ export function MessagingServiceTable() {
       header: ({ column }) => {
         return (
           <div className="flex w-[150px] items-center">
-            <span className="font-bold text-medium-emphasis">Created by</span>
+            <span className="font-bold text-medium-emphasis">
+              {t("MESSAGING_SERVICE_TABLE.COLUMN_CREATED_BY")}
+            </span>
             <ArrowUpDown
               onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
               className="ml-2 h-4 w-4 cursor-pointer text-high-emphasis hover:text-low-emphasis"
@@ -219,11 +231,13 @@ export function MessagingServiceTable() {
     <main className="flex flex-col">
       <div className="flex w-full flex-col">
         <div className="flex w-full justify-between text-high-emphasis">
-          <h3 className="text-2xl font-bold tracking-tight">Messaging</h3>
+          <h3 className="text-2xl font-bold tracking-tight">
+            {t("MESSAGING_SERVICE_TABLE.TITLE")}
+          </h3>
           <div>
             <Button variant="outline" size="sm" className="ml-4 gap-1 text-sm font-medium">
               <FileClock className="h-5 w-5" />
-              <span className="sr-only sm:not-sr-only">Logs</span>
+              <span className="sr-only sm:not-sr-only">{t("MESSAGING_SERVICE_TABLE.LOGS")}</span>
             </Button>
             <Button
               variant="outline"
@@ -232,7 +246,7 @@ export function MessagingServiceTable() {
               onClick={() => navigate("/utilities/messaging/configure")}
             >
               <Settings className="h-5 w-5" />
-              <span className="sr-only sm:not-sr-only">Configure</span>
+              <span className="sr-only sm:not-sr-only">{t("MESSAGING_SERVICE_TABLE.CONFIGURE")}</span>
             </Button>
           </div>
         </div>
@@ -240,10 +254,10 @@ export function MessagingServiceTable() {
           <div className="mb-5 flex items-center text-base">
             <TabsList className="h-[42px] bg-blocks-primary-shades-300">
               <TabsTrigger value="users" className="h-8">
-                Messages
+                {t("MESSAGING_SERVICE_TABLE.TAB_MESSAGES")}
               </TabsTrigger>
               <TabsTrigger value="sign-in-methods" className="h-8">
-                Reports
+                {t("MESSAGING_SERVICE_TABLE.TAB_REPORTS")}
               </TabsTrigger>
             </TabsList>
             <div className="ml-auto flex items-center gap-2">
@@ -255,19 +269,21 @@ export function MessagingServiceTable() {
                     className="bg-primary text-primary-foreground shadow-none"
                   >
                     <Plus className="h-5 w-5 lg:mr-2" />
-                    <span className="sr-only lg:not-sr-only">Add</span>
+                    <span className="sr-only lg:not-sr-only">{t("common:ADD")}</span>
                   </Button>
                 </DialogTrigger>
-                <CampaignCreation dialogTitle="Add Messages" />
+                <CampaignCreation dialogTitle={t("MESSAGING_SERVICE_TABLE.ADD_MESSAGES")} />
               </Dialog>
             </div>
           </div>
           <TabsContent value="users">
             <Card className="rounded shadow-none">
               <CardHeader className="px-7">
-                <CardTitle className="mb-3 text-xl text-high-emphasis">Messages</CardTitle>
+                <CardTitle className="mb-3 text-xl text-high-emphasis">
+                  {t("MESSAGING_SERVICE_TABLE.TAB_MESSAGES")}
+                </CardTitle>
                 <CardDescription className="mb-5 text-base font-normal text-medium-emphasis">
-                  Lorem ipsum dolor sit amet consectetur
+                  {t("MESSAGING_SERVICE_TABLE.DESCRIPTION")}
                 </CardDescription>
               </CardHeader>
               <div className="px-7">
@@ -313,7 +329,7 @@ export function MessagingServiceTable() {
                       ) : (
                         <TableRow>
                           <TableCell colSpan={columns.length} className="h-24 text-center">
-                            No results.
+                            {t("MESSAGING_SERVICE_TABLE.NO_RESULTS")}
                           </TableCell>
                         </TableRow>
                       )}

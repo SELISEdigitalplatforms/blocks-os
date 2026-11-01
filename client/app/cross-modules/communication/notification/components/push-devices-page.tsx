@@ -20,6 +20,7 @@ import { isErrorWithErrors } from "@/lib/error";
 import { PUSH_PLATFORMS, type IPushDevice } from "../models/push.model";
 import { usePushDevices, useRemovePushDevice } from "../hooks/use-push-runtime";
 import { DEVICES_TEXT, PLATFORM_LABEL } from "../constants/push-ui.constant";
+import { useNotificationT } from "../i18n";
 import { isStaleDevice, lastSeenText } from "../utils/push-format";
 import { SegmentedControl } from "./notification-form/segmented-control";
 
@@ -32,6 +33,7 @@ function DeviceRow({
   device,
   onRemove,
 }: Readonly<{ device: IPushDevice; onRemove: (device: IPushDevice) => void }>) {
+  useNotificationT();
   const stale = isStaleDevice(device.lastSeenAt);
   return (
     <TableRow>
@@ -57,6 +59,7 @@ interface PushDevicesPageProps {
 
 /** Devices the apps registered for push: platform filter with counts, user search, remove with confirm. */
 export function PushDevicesPage({ onBack }: Readonly<PushDevicesPageProps>) {
+  const { t } = useNotificationT();
   const [filter, setFilter] = useState<number>(ALL);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -73,10 +76,19 @@ export function PushDevicesPage({ onBack }: Readonly<PushDevicesPageProps>) {
 
   const counts = data?.counts;
   const options = [
-    { value: ALL, label: `${DEVICES_TEXT.all} ${counts?.all ?? 0}` },
+    {
+      value: ALL,
+      label: t("PUSH_DEVICES_PAGE.FILTER_OPTION", {
+        label: DEVICES_TEXT.all,
+        count: counts?.all ?? 0,
+      }),
+    },
     ...PUSH_PLATFORMS.map((name, index) => ({
       value: index + 1,
-      label: `${PLATFORM_LABEL[name]} ${counts?.[name] ?? 0}`,
+      label: t("PUSH_DEVICES_PAGE.FILTER_OPTION", {
+        label: PLATFORM_LABEL[name],
+        count: counts?.[name] ?? 0,
+      }),
     })),
   ];
   const pages = Math.max(1, Math.ceil((data?.totalCount ?? 0) / PAGE_SIZE));
@@ -87,7 +99,9 @@ export function PushDevicesPage({ onBack }: Readonly<PushDevicesPageProps>) {
       await remove.mutateAsync(target.id);
       showSuccessToast({ description: DEVICES_TEXT.removed });
     } catch (error) {
-      showErrorToast({ errors: isErrorWithErrors(error) ? error.errors : "Something went wrong" });
+      showErrorToast({
+        errors: isErrorWithErrors(error) ? error.errors : t("PUSH_DEVICES_PAGE.GENERIC_ERROR"),
+      });
     } finally {
       setTarget(null);
     }

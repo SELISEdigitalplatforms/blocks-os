@@ -8,6 +8,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui-kits/breadcrumb/breadcrumb";
 import { PageHeader } from "@/components/page-header/page-header";
+import { useNotificationT } from "../i18n";
 import { NOTIFICATION_TEXT } from "../constants/notification-ui.constant";
 
 interface NotificationPageHeaderProps {
@@ -25,6 +26,7 @@ export function NotificationPageHeader({
   titleSuffix,
   onBack,
 }: Readonly<NotificationPageHeaderProps>) {
+  useNotificationT();
   return (
     <div className="flex flex-col gap-3">
       <Breadcrumb>

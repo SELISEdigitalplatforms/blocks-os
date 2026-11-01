@@ -8,7 +8,9 @@ import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import CampaignCreation from "@blocks-communication/mail/components/messaging/campaign-creation/campaign-creation";
 import { formatDate } from "@/lib/utils";
 import { messagingServiceData } from "@blocks-communication/mail/constants/messaging";
+import { useT } from "@seliseblocks/genesis-os";
 export function CampaignDetails({ params }: { params: { id: string } }) {
+  const { t } = useT("os.communication.mail");
   const { id } = params;
   const [messageDetails, setMessageDetails] = useState<IMessagingServiceData | null>(null);
   const [prevId, setPrevId] = useState<typeof id | undefined>(undefined);
@@ -21,10 +23,10 @@ export function CampaignDetails({ params }: { params: { id: string } }) {
     }
   }
   if (!messageDetails) {
-    return <div>Loading...</div>;
+    return <div>{t("common:LOADING")}</div>;
   }
   const breadcrumbTitles = {
-    "/utilities/messaging/campaigns": "Messaging Messages",
+    "/utilities/messaging/campaigns": t("CAMPAIGN_DETAILS.BREADCRUMB_MESSAGING_MESSAGES"),
     ["/utilities/messaging/campaigns/" + messageDetails?.id]: messageDetails.name,
   };
   return (
@@ -38,10 +40,10 @@ export function CampaignDetails({ params }: { params: { id: string } }) {
           <DialogTrigger asChild>
             <Button size="sm" className="h-10 gap-2 px-4 py-1 shadow-none">
               <Pencil className="h-5 w-5" />
-              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Edit Messages</span>
+              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">{t("CAMPAIGN_DETAILS.EDIT_MESSAGES")}</span>
             </Button>
           </DialogTrigger>
-          <CampaignCreation dialogTitle="Edit Messages" />
+          <CampaignCreation dialogTitle={t("CAMPAIGN_DETAILS.EDIT_MESSAGES")} />
         </Dialog>
       </div>
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -50,34 +52,32 @@ export function CampaignDetails({ params }: { params: { id: string } }) {
           style={{ minHeight: 0, height: "auto" }}
         >
           <CardHeader>
-            <CardTitle className="text-xl">Message</CardTitle>
+            <CardTitle className="text-xl">{t("CAMPAIGN_DETAILS.MESSAGE")}</CardTitle>
           </CardHeader>
           <CardContent className="text-base">
-            Lorem ipsum dolor sit amet consectetur. Dignissim placerat id suscipit amet aliquam
-            malesuada aliquam fusce commodo. Dictum commodo ultrices dui odio eget. Vel amet
-            vestibulum viverra purus risus enim eu nibh. Lorem blandit leo risus dolor.
+            {t("CAMPAIGN_DETAILS.MESSAGE_BODY")}
           </CardContent>
         </Card>
         <Card className="rounded-sm shadow-none">
           <CardHeader>
-            <CardTitle className="text-xl">About</CardTitle>
+            <CardTitle className="text-xl">{t("CAMPAIGN_DETAILS.ABOUT")}</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-4">
             <div className="grid gap-10">
               <div className="grid gap-1">
-                <h3 className="text-sm font-medium text-low-emphasis">Configuration</h3>
+                <h3 className="text-sm font-medium text-low-emphasis">{t("CAMPAIGN_DETAILS.CONFIGURATION")}</h3>
                 <p className="text-base font-normal text-high-emphasis">
                   {messageDetails.configuration}
                 </p>
               </div>
               <div className="grid gap-1">
-                <h3 className="text-sm font-medium text-low-emphasis">Created on</h3>
+                <h3 className="text-sm font-medium text-low-emphasis">{t("CAMPAIGN_DETAILS.CREATED_ON")}</h3>
                 <p className="text-base font-normal text-high-emphasis">
                   {formatDate(messageDetails.createdOn, true)}
                 </p>
               </div>
               <div className="grid gap-1">
-                <h3 className="text-sm font-medium text-low-emphasis">Last modified</h3>
+                <h3 className="text-sm font-medium text-low-emphasis">{t("CAMPAIGN_DETAILS.LAST_MODIFIED")}</h3>
                 <p className="text-base font-normal text-high-emphasis">
                   {formatDate(messageDetails.lastModified)}
                 </p>
@@ -86,13 +86,13 @@ export function CampaignDetails({ params }: { params: { id: string } }) {
             <div>
               <div className="grid gap-10">
                 <div className="grid gap-1">
-                  <h3 className="text-sm font-medium text-low-emphasis">Protocol</h3>
+                  <h3 className="text-sm font-medium text-low-emphasis">{t("CAMPAIGN_DETAILS.PROTOCOL")}</h3>
                   <p className="text-base font-normal text-high-emphasis">
                     {messageDetails.protocol}
                   </p>
                 </div>
                 <div className="grid gap-1">
-                  <h3 className="text-sm font-medium text-low-emphasis">Created by</h3>
+                  <h3 className="text-sm font-medium text-low-emphasis">{t("CAMPAIGN_DETAILS.CREATED_BY")}</h3>
                   <p className="text-base font-normal text-high-emphasis">
                     {messageDetails.createdBy}
                   </p>

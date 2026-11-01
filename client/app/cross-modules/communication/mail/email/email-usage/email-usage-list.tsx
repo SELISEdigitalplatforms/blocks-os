@@ -39,6 +39,7 @@ import {
 import { MailAvatar } from "@blocks-communication/mail/email/email-usage/mail-avatar";
 import { useNavigate } from "react-router";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
+import { useT } from "@seliseblocks/genesis-os";
 
 const LoadingSkeleton = () => (
   <div className="grid w-full gap-1" data-testid="mail-list-skeleton">
@@ -92,6 +93,7 @@ const AddressCell = ({ raw, withAvatar }: { raw: string; withAvatar?: boolean })
 };
 
 export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
+  const { t } = useT("os.communication.mail");
   const scoped = useScopedPath();
   const navigate = useNavigate();
   const { queryParams, setQueryParams } = useEmailUsageFilterQueryParams();
@@ -127,20 +129,20 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
       {
         id: "counterparty",
         accessorKey: isInbound ? "from" : "to",
-        header: isInbound ? "From" : "To",
+        header: isInbound ? t("EMAIL_USAGE_LIST.COLUMN_FROM") : t("EMAIL_USAGE_LIST.COLUMN_TO"),
         cell: ({ row }) => (
           <AddressCell raw={isInbound ? row.original.from : row.original.to} withAvatar />
         ),
       },
       {
         accessorKey: "subject",
-        header: "Subject",
+        header: t("EMAIL_USAGE_LIST.COLUMN_SUBJECT"),
         cell: ({ row }) => {
           const preview = toPreview(row.original.body);
           return (
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-high-emphasis">
-                {row.original.subject || <span className="italic text-muted-foreground">(no subject)</span>}
+                {row.original.subject || <span className="italic text-muted-foreground">{t("EMAIL_USAGE_LIST.NO_SUBJECT")}</span>}
               </p>
               {preview && <p className="truncate text-xs text-muted-foreground">{preview}</p>}
             </div>
@@ -150,7 +152,7 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
       {
         id: "mailbox",
         accessorKey: isInbound ? "to" : "from",
-        header: isInbound ? "Mailbox" : "From",
+        header: isInbound ? t("EMAIL_USAGE_LIST.COLUMN_MAILBOX") : t("EMAIL_USAGE_LIST.COLUMN_FROM"),
         cell: ({ row }) => {
           // Inbound, the configuration that read the mail: a mail's To can name a list or
           // another recipient entirely, and two configurations can share an address.
@@ -177,13 +179,14 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
         },
       },
       {
+        id: "status",
         accessorKey: "status",
-        header: "Status",
+        header: t("common:STATUS"),
         cell: ({ row }) => <StatusBadge status={row.getValue("status")} />,
       },
       {
         accessorKey: "date",
-        header: isInbound ? "Received Date" : "Send Date",
+        header: isInbound ? t("EMAIL_USAGE_LIST.COLUMN_RECEIVED_DATE") : t("EMAIL_USAGE_LIST.COLUMN_SEND_DATE"),
         cell: ({ row }) => {
           const dateValue = row.original.date;
           if (!dateValue) return <span className="text-muted-foreground">-</span>;
@@ -209,7 +212,7 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
                   onClick={(e) => e.stopPropagation()}
                   onKeyDown={(e) => e.stopPropagation()}
                 >
-                  <span className="sr-only">Open menu</span>
+                  <span className="sr-only">{t("EMAIL_USAGE_LIST.OPEN_MENU")}</span>
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -219,7 +222,7 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
                   onSelect={() => navigate(detailsPath(row.original))}
                 >
                   <Eye className="mr-2 h-4 w-4" />
-                  View Details
+                  {t("EMAIL_USAGE_LIST.VIEW_DETAILS")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -228,9 +231,9 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
       },
     ];
     // An inbound mail's status is always "Received", so the column says nothing.
-    return isInbound ? allColumns.filter((col) => col.header !== "Status") : allColumns;
+    return isInbound ? allColumns.filter((col) => col.id !== "status") : allColumns;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isInbound, scoped, navigate, configsById]);
+  }, [isInbound, scoped, navigate, configsById, t]);
 
   const table = useReactTable({
     data: data?.data || [],
@@ -279,7 +282,9 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
                       isHoverable
                       role="link"
                       tabIndex={0}
-                      aria-label={`Open ${row.original.subject || "message"}`}
+                      aria-label={t("EMAIL_USAGE_LIST.OPEN_MESSAGE", {
+                        subject: row.original.subject || t("EMAIL_USAGE_LIST.MESSAGE"),
+                      })}
                       className="cursor-pointer focus-visible:bg-muted/60 focus-visible:outline-hidden"
                       onClick={() => navigate(detailsPath(row.original))}
                       onKeyDown={(e) => {
@@ -303,13 +308,13 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
                         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
                           <EmptyIcon className="h-6 w-6 text-muted-foreground" />
                         </div>
-                        <p className="text-sm font-medium text-high-emphasis">No results.</p>
+                        <p className="text-sm font-medium text-high-emphasis">{t("EMAIL_USAGE_LIST.NO_RESULTS")}</p>
                         <p className="text-xs text-muted-foreground">
                           {search || status || startDate || endDate || (isInbound && configurationId)
-                            ? "No mail matches the current filters."
+                            ? t("EMAIL_USAGE_LIST.EMPTY_FILTERED")
                             : isInbound
-                              ? "Mail received by an inbound configuration will appear here."
-                              : "Mail sent through an outbound configuration will appear here."}
+                              ? t("EMAIL_USAGE_LIST.EMPTY_INBOUND")
+                              : t("EMAIL_USAGE_LIST.EMPTY_OUTBOUND")}
                         </p>
                       </div>
                     </TableCell>
@@ -321,7 +326,11 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
           {totalCount > 0 && (
             <div className="flex flex-col items-center justify-between gap-2 sm:flex-row">
               <p className="text-xs text-muted-foreground">
-                Showing {rangeStart}–{rangeEnd} of {totalCount}
+                {t("EMAIL_USAGE_LIST.SHOWING_RANGE", {
+                  start: rangeStart,
+                  end: rangeEnd,
+                  total: totalCount,
+                })}
               </p>
               {totalCount > pageSize && (
                 <Pagination

@@ -1,6 +1,8 @@
 import { FilterItem, FilterToolbar } from "@/components/filter-toolbar";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { MailStatus } from "@blocks-communication/mail/models/email";
+import { useMailStatusLabel } from "@blocks-communication/mail/email/email-usage/use-mail-status-label";
+import { useT } from "@seliseblocks/genesis-os";
 type EmailUsageFilter = {
   search: string;
   sendDate: { from?: Date | string; to?: Date | string };
@@ -28,6 +30,8 @@ export function EmailUsageFilterToolbar({
   /** The inbound configurations a received mail can be filtered by. */
   configurations?: Array<{ itemId: string; name: string }>;
 }) {
+  const { t } = useT("os.communication.mail");
+  const statusLabel = useMailStatusLabel();
   const { queryParams, setQueryParams } = useEmailUsageFilterQueryParams();
   const updateSendDate = (value: { from?: Date; to?: Date } | null) => {
     const { from, to } = value || {};
@@ -48,7 +52,7 @@ export function EmailUsageFilterToolbar({
   };
   const resetHandler = () => setQueryParams(null);
   const statusOptions = Object.values(MailStatus).map((status) => ({
-    label: status,
+    label: statusLabel(status),
     value: status,
   }));
   const filters: FilterItem<EmailUsageFilter>[] = [{ key: "search", type: "SearchInput", label: "" }];
@@ -57,7 +61,7 @@ export function EmailUsageFilterToolbar({
     filters.push({
       key: "configurationId",
       type: "Radio",
-      label: "Configuration",
+      label: t("EMAIL_USAGE_FILTER_TOOLBAR.CONFIGURATION"),
       props: {
         options: configurations.map((config) => ({ label: config.name, value: config.itemId })),
       },
@@ -66,7 +70,7 @@ export function EmailUsageFilterToolbar({
     filters.push({
       key: "status",
       type: "Radio",
-      label: "Status",
+      label: t("common:STATUS"),
       props: {
         options: statusOptions,
       },
@@ -75,7 +79,9 @@ export function EmailUsageFilterToolbar({
   filters.push({
     key: "sendDate",
     type: "DateRange",
-    label: isInbound ? "Received Date" : "Send Date",
+    label: isInbound
+      ? t("EMAIL_USAGE_FILTER_TOOLBAR.RECEIVED_DATE")
+      : t("EMAIL_USAGE_FILTER_TOOLBAR.SEND_DATE"),
     props: {},
   });
   return (

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { configurations, protocols } from "@blocks-communication/mail/constants/messaging";
 import { DataTableFacetedFilter } from "@/components/data-table-faceted-filter/data-table-faceted-filter";
 import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
+import { useT } from "@seliseblocks/genesis-os";
 import { useActiveFiltersCount } from "@/hooks/use-active-filters-count";
 import {
   Sheet,
@@ -22,19 +23,20 @@ interface MessagingTableToolbarProps<TData> {
   table: Table<TData>;
 }
 function MessagingFilterContent<TData>({ table }: { table: Table<TData> }) {
+  const { t } = useT("os.communication.mail");
   return (
     <>
       {table.getColumn("configuration") && (
         <DataTableFacetedFilter
           column={table.getColumn("configuration")}
-          title="Configuration"
+          title={t("MESSAGING_TABLE_TOOLBAR.CONFIGURATION")}
           options={configurations}
         />
       )}
       {table.getColumn("protocol") && (
         <DataTableFacetedFilter
           column={table.getColumn("protocol")}
-          title="Protocol"
+          title={t("MESSAGING_TABLE_TOOLBAR.PROTOCOL")}
           options={protocols}
         />
       )}
@@ -42,6 +44,7 @@ function MessagingFilterContent<TData>({ table }: { table: Table<TData> }) {
   );
 }
 export function MessagingTableToolbar<TData>({ table }: MessagingTableToolbarProps<TData>) {
+  const { t } = useT("os.communication.mail");
   const isMobile = useIsMobile();
   const isServiceBarOpen = useIsServiceBarOpenComm();
   const textSearchColumn = table.getColumn("name");
@@ -70,7 +73,7 @@ export function MessagingTableToolbar<TData>({ table }: MessagingTableToolbarPro
     <div className="flex flex-col space-y-4 md:space-y-0">
       <div className={`flex items-center justify-between ${isServiceBarOpen ? "flex" : "hidden"}`}>
         <SearchInput
-          placeholder="Filter campaigns"
+          placeholder={t("MESSAGING_TABLE_TOOLBAR.FILTER_CAMPAIGNS")}
           onSearch={onSearchInputChange}
           toggleable={true}
           className="h-8 w-[250px]"
@@ -91,18 +94,18 @@ export function MessagingTableToolbar<TData>({ table }: MessagingTableToolbarPro
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-full" aria-describedby="filter-description">
-              <SheetTitle className="mb-4">Filter</SheetTitle>
+              <SheetTitle className="mb-4">{t("common:FILTER")}</SheetTitle>
               <SheetDescription></SheetDescription>
               <div className="flex flex-col space-y-4">
                 <MessagingFilterContent table={table} />
                 <SheetClose asChild>
                   <Button className="mt-4" size="sm">
-                    Show Results
+                    {t("MESSAGING_TABLE_TOOLBAR.SHOW_RESULTS")}
                   </Button>
                 </SheetClose>
                 {isFiltered && (
                   <Button variant="outline" onClick={resetFilters} className="h-8 px-2 lg:px-3">
-                    Reset
+                    {t("common:RESET")}
                     <Cross2Icon className="ml-2 h-4 w-4" />
                   </Button>
                 )}
@@ -113,7 +116,7 @@ export function MessagingTableToolbar<TData>({ table }: MessagingTableToolbarPro
       </div>
       <div className={`${isServiceBarOpen ? "hidden" : "flex"} flex-1 items-center space-x-2`}>
         <SearchInput
-          placeholder="Filter campaigns"
+          placeholder={t("MESSAGING_TABLE_TOOLBAR.FILTER_CAMPAIGNS")}
           onSearch={onSearchInputChange}
           className="h-8 w-[268px]"
           value={searchValue}
@@ -123,7 +126,7 @@ export function MessagingTableToolbar<TData>({ table }: MessagingTableToolbarPro
         <MessagingFilterContent table={table} />
         {isFiltered && (
           <Button variant="outline" onClick={resetFilters} className="h-8 px-2 lg:px-3">
-            Reset
+            {t("common:RESET")}
             <Cross2Icon className="ml-2 h-4 w-4" />
           </Button>
         )}

@@ -7,6 +7,7 @@ import {
   RECEIVER_HELP,
   RECEIVER_OPTIONS,
 } from "../../constants/notification-ui.constant";
+import { useNotificationT } from "../../i18n";
 import { SegmentedControl } from "./segmented-control";
 import { CheckRow, HelpText } from "./form-row";
 import { PermissionPicker, RolePicker, UserPicker } from "./audience-pickers";
@@ -27,6 +28,7 @@ function SubRow({ label, children }: Readonly<{ label: string; children: React.R
 }
 
 function MatchChoice({ values, onPatch }: Readonly<ReceiversFieldProps>) {
+  useNotificationT();
   return (
     <fieldset className="flex flex-col gap-1.5">
       <legend className="mb-1 text-sm font-medium">{NOTIFICATION_TEXT.match}</legend>
@@ -53,6 +55,7 @@ function MatchChoice({ values, onPatch }: Readonly<ReceiversFieldProps>) {
 
 /** Targeted: the Owner and Done by ticks on their own, then one box with Match and the lists it combines. */
 function SelectedRules({ values, onPatch }: Readonly<ReceiversFieldProps>) {
+  useNotificationT();
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex flex-col gap-1">
@@ -95,6 +98,7 @@ function SelectedRules({ values, onPatch }: Readonly<ReceiversFieldProps>) {
 
 /** Recipients: all users, or Targeted — Owner, Done by and/or the users, roles and permissions picked. */
 export function ReceiversField({ values, onPatch }: Readonly<ReceiversFieldProps>) {
+  useNotificationT();
   return (
     <>
       <SegmentedControl

@@ -11,8 +11,10 @@ import {
   IOS_FAILURES,
   type IGuideSection,
 } from "../constants/push-guide.constant";
+import { useNotificationT } from "../i18n";
 
 function Section({ section }: Readonly<{ section: IGuideSection }>) {
+  useNotificationT();
   return (
     <section className="flex flex-col gap-2" aria-labelledby={`guide-${section.id}`}>
       {section.group && (
@@ -39,6 +41,7 @@ interface PushGuideDialogProps {
 
 /** "How to find these?": where each Firebase value comes from, and what an iOS test failure means. */
 export function PushGuideDialog({ open, onClose }: Readonly<PushGuideDialogProps>) {
+  useNotificationT();
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="max-h-[90vh] max-w-[720px] overflow-y-auto">

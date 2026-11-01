@@ -10,11 +10,14 @@ import {
 } from "@/components/ui-kits/dialog/dialog";
 import { Button } from "@/components/ui-kits/button/button";
 import { DialogTrigger } from "@radix-ui/react-dialog";
+import { useT } from "@seliseblocks/genesis-os";
 interface MessageConfigurationProps {
   dialogTitle: string;
   data?: string[];
 }
-const MessageConfiguration: React.FC<MessageConfigurationProps> = ({ dialogTitle }) => (
+const MessageConfiguration: React.FC<MessageConfigurationProps> = ({ dialogTitle }) => {
+  const { t } = useT("os.communication.mail");
+  return (
   <DialogContent className="rounded-md sm:max-w-[700px]">
     <DialogHeader>
       <DialogTitle className="mb-2 text-left">{dialogTitle}</DialogTitle>
@@ -24,21 +27,21 @@ const MessageConfiguration: React.FC<MessageConfigurationProps> = ({ dialogTitle
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="protocol" className="text-left font-medium text-high-emphasis">
-                Protocol
+                {t("MESSAGE_CONFIGURATION.PROTOCOL")}
               </Label>
               <Input
                 id="protocol"
-                placeholder="Enter host"
+                placeholder={t("MESSAGE_CONFIGURATION.PLACEHOLDER_HOST")}
                 className="border-default col-span-3 mt-1 border shadow-none"
               />
             </div>
             <div>
               <Label htmlFor="serviceVendor" className="text-left font-medium text-high-emphasis">
-                Service Vendor
+                {t("MESSAGE_CONFIGURATION.SERVICE_VENDOR")}
               </Label>
               <Input
                 id="serviceVendor"
-                placeholder="Enter port"
+                placeholder={t("MESSAGE_CONFIGURATION.PLACEHOLDER_PORT")}
                 className="border-default col-span-3 mt-1 border shadow-none"
               />
             </div>
@@ -46,21 +49,21 @@ const MessageConfiguration: React.FC<MessageConfigurationProps> = ({ dialogTitle
           <div className="mt-3 grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="configName" className="text-left font-medium text-high-emphasis">
-                Configuration name
+                {t("MESSAGE_CONFIGURATION.CONFIGURATION_NAME")}
               </Label>
               <Input
                 id="configName"
-                placeholder="Enter configuration name"
+                placeholder={t("MESSAGE_CONFIGURATION.PLACEHOLDER_CONFIGURATION_NAME")}
                 className="border-default col-span-3 mt-1 border shadow-none"
               />
             </div>
             <div>
               <Label htmlFor="id" className="text-left font-medium text-high-emphasis">
-                Configuration ID
+                {t("MESSAGE_CONFIGURATION.CONFIGURATION_ID")}
               </Label>
               <Input
                 id="id"
-                placeholder="Enter configuration ID"
+                placeholder={t("MESSAGE_CONFIGURATION.PLACEHOLDER_CONFIGURATION_ID")}
                 className="border-default col-span-3 mt-1 border shadow-none"
               />
             </div>
@@ -71,21 +74,21 @@ const MessageConfiguration: React.FC<MessageConfigurationProps> = ({ dialogTitle
                 htmlFor="authenticationToken"
                 className="text-left font-medium text-high-emphasis"
               >
-                Authentication Token
+                {t("MESSAGE_CONFIGURATION.AUTHENTICATION_TOKEN")}
               </Label>
               <Input
                 id="authenticationToken"
-                placeholder="Enter username"
+                placeholder={t("MESSAGE_CONFIGURATION.PLACEHOLDER_USERNAME")}
                 className="border-default col-span-3 mt-1 border shadow-none"
               />
             </div>
             <div>
               <Label htmlFor="AccountID" className="text-left font-medium text-high-emphasis">
-                AccountID
+                {t("MESSAGE_CONFIGURATION.ACCOUNT_ID")}
               </Label>
               <Input
                 id="AccountID"
-                placeholder="Enter password"
+                placeholder={t("MESSAGE_CONFIGURATION.PLACEHOLDER_PASSWORD")}
                 className="border-default col-span-3 mt-1 border shadow-none"
               />
             </div>
@@ -93,11 +96,11 @@ const MessageConfiguration: React.FC<MessageConfigurationProps> = ({ dialogTitle
           <div className="mt-4 grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="username" className="text-left font-medium text-high-emphasis">
-                Sender
+                {t("MESSAGE_CONFIGURATION.SENDER")}
               </Label>
               <Input
                 id="username"
-                placeholder="Enter username"
+                placeholder={t("MESSAGE_CONFIGURATION.PLACEHOLDER_USERNAME")}
                 className="border-default col-span-3 mt-1 border shadow-none"
               />
             </div>
@@ -106,11 +109,11 @@ const MessageConfiguration: React.FC<MessageConfigurationProps> = ({ dialogTitle
                 htmlFor="numberLookupEndURI"
                 className="text-left font-medium text-high-emphasis"
               >
-                Number Lookup End URI
+                {t("MESSAGE_CONFIGURATION.NUMBER_LOOKUP_END_URI")}
               </Label>
               <Input
                 id="numberLookupEndURI"
-                placeholder="Enter password"
+                placeholder={t("MESSAGE_CONFIGURATION.PLACEHOLDER_PASSWORD")}
                 className="border-default col-span-3 mt-1 border shadow-none"
               />
             </div>
@@ -121,11 +124,12 @@ const MessageConfiguration: React.FC<MessageConfigurationProps> = ({ dialogTitle
     <DialogFooter className="flex flex-row gap-2">
       <DialogTrigger asChild>
         <Button variant="outline" size="default">
-          Cancel
+          {t("common:CANCEL")}
         </Button>
       </DialogTrigger>
-      <Button size="default">Save</Button>
+      <Button size="default">{t("common:SAVE")}</Button>
     </DialogFooter>
   </DialogContent>
-);
+  );
+};
 export default MessageConfiguration;

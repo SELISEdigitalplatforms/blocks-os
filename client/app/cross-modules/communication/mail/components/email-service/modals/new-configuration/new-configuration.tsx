@@ -9,6 +9,7 @@ import {
 } from "@/components/ui-kits/dialog/dialog";
 import { Button } from "@/components/ui-kits/button/button";
 import { useForm, type Resolver } from "react-hook-form";
+import { useT } from "@seliseblocks/genesis-os";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -25,7 +26,7 @@ import {
   getMailProvider,
   getMailProvidersFor,
   IEmailConfig,
-  MAIL_AUTHENTICATION_LABELS,
+  getMailAuthenticationLabel,
   MailAuthenticationType,
   MailServiceProvider,
   MailSecurityMode,
@@ -63,10 +64,14 @@ const EMAIL_PATTERN = /^(?=.{1,320}$)[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{
  * has a client secret on file. Without that, an Office 365 edit would demand a
  * secret the user has no reason to retype.
  */
+type TranslateFn = ReturnType<typeof useT>["t"];
+
 const createSchema = ({
+  t,
   hasClientSecretOnFile,
   needsNewClientSecret = false,
 }: {
+  t: TranslateFn;
   hasClientSecretOnFile: boolean;
   /** The linked secret is archived or missing, so the required-secret error explains a repair. */
   needsNewClientSecret?: boolean;
@@ -75,15 +80,15 @@ const createSchema = ({
     .object({
       configurationName: z
         .string()
-        .min(3, { message: "Configuration name must be at least 3 characters" })
-        .max(100, { message: "Configuration name must be at most 100 characters" }),
+        .min(3, { message: t("NEW_CONFIGURATION.ERROR_NAME_MIN") })
+        .max(100, { message: t("NEW_CONFIGURATION.ERROR_NAME_MAX") }),
       host: z
         .string()
-        .regex(/^([\w-]+\.)*[\w-]+\.[a-z]{2,}$/, { message: "Host must be a valid domain" }),
+        .regex(/^([\w-]+\.)*[\w-]+\.[a-z]{2,}$/, { message: t("NEW_CONFIGURATION.ERROR_HOST_INVALID") }),
       port: z.coerce
         .number<number>()
-        .min(1, { message: "Port must be between 1 and 65535" })
-        .max(65535, { message: "Port must be between 1 and 65535" }),
+        .min(1, { message: t("NEW_CONFIGURATION.ERROR_PORT_RANGE") })
+        .max(65535, { message: t("NEW_CONFIGURATION.ERROR_PORT_RANGE") }),
       enableSSL: z.boolean(),
       senderName: z.string().optional(),
       senderAddress: z.string().optional(),
@@ -103,7 +108,9 @@ const createSchema = ({
       if (provider && (data.isInbound ? !provider.supportsInbound : !provider.supportsOutbound)) {
         ctx.addIssue({
           code: "custom",
-          message: `${provider.label} is not supported for ${data.isInbound ? "inbound" : "outbound"} configurations`,
+          message: data.isInbound
+            ? t("NEW_CONFIGURATION.ERROR_PROVIDER_NOT_INBOUND", { provider: provider.label })
+            : t("NEW_CONFIGURATION.ERROR_PROVIDER_NOT_OUTBOUND", { provider: provider.label }),
           path: ["provider"],
         });
       }
@@ -112,14 +119,14 @@ const createSchema = ({
         if (!data.senderName || data.senderName.length < 3 || data.senderName.length > 100) {
           ctx.addIssue({
             code: "custom",
-            message: "Sender name must be between 3 and 100 characters",
+            message: t("NEW_CONFIGURATION.ERROR_SENDER_NAME_LENGTH"),
             path: ["senderName"],
           });
         }
         if (!data.senderAddress || !EMAIL_PATTERN.test(data.senderAddress)) {
           ctx.addIssue({
             code: "custom",
-            message: "Sender Address must be a valid email",
+            message: t("NEW_CONFIGURATION.ERROR_SENDER_ADDRESS_INVALID"),
             path: ["senderAddress"],
           });
         }
@@ -131,20 +138,20 @@ const createSchema = ({
         if (!data.senderUserName) {
           ctx.addIssue({
             code: "custom",
-            message: "Sender username is required",
+            message: t("NEW_CONFIGURATION.ERROR_SENDER_USERNAME_REQUIRED"),
             path: ["senderUserName"],
           });
         }
         if (!data.accountPassword) {
           ctx.addIssue({
             code: "custom",
-            message: "Password is required",
+            message: t("NEW_CONFIGURATION.ERROR_PASSWORD_REQUIRED"),
             path: ["accountPassword"],
           });
         } else if (data.accountPassword.length < 6) {
           ctx.addIssue({
             code: "custom",
-            message: "Password must be at least 6 characters long",
+            message: t("NEW_CONFIGURATION.ERROR_PASSWORD_MIN"),
             path: ["accountPassword"],
           });
         }
@@ -154,21 +161,21 @@ const createSchema = ({
       if (!data.tenantId?.trim()) {
         ctx.addIssue({
           code: "custom",
-          message: "Tenant ID is required",
+          message: t("NEW_CONFIGURATION.ERROR_TENANT_ID_REQUIRED"),
           path: ["tenantId"],
         });
       }
       if (!data.clientId?.trim()) {
         ctx.addIssue({
           code: "custom",
-          message: "Client ID is required",
+          message: t("NEW_CONFIGURATION.ERROR_CLIENT_ID_REQUIRED"),
           path: ["clientId"],
         });
       }
       if (!data.mailboxAddress || !EMAIL_PATTERN.test(data.mailboxAddress)) {
         ctx.addIssue({
           code: "custom",
-          message: "Mailbox address must be a valid email",
+          message: t("NEW_CONFIGURATION.ERROR_MAILBOX_ADDRESS_INVALID"),
           path: ["mailboxAddress"],
         });
       }
@@ -181,14 +188,14 @@ const createSchema = ({
             code: "custom",
             message: needsNewClientSecret
               ? LINKED_SECRET_REPAIR_REQUIRED_MESSAGE
-              : "Client secret is required",
+              : t("NEW_CONFIGURATION.ERROR_CLIENT_SECRET_REQUIRED"),
             path: ["clientSecret"],
           });
         }
       } else if (!data.clientSecret.trim()) {
         ctx.addIssue({
           code: "custom",
-          message: "Client secret must not be blank",
+          message: t("NEW_CONFIGURATION.ERROR_CLIENT_SECRET_BLANK"),
           path: ["clientSecret"],
         });
       }
@@ -200,6 +207,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
   previousData,
   isEdit,
 }) => {
+  const { t } = useT("os.communication.mail");
   // const { saveEmailConfig, isPending } = useSaveEmailConfig();
   const { isPending, mutateAsync } = useSaveEmailConfig();
 
@@ -216,11 +224,12 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
   const schema = useMemo(
     () =>
       createSchema({
+        t,
         // A broken secret is never "on file", whatever the flag says.
         hasClientSecretOnFile: hasClientSecretOnFile && !needsNewClientSecret,
         needsNewClientSecret,
       }),
-    [hasClientSecretOnFile, needsNewClientSecret],
+    [t, hasClientSecretOnFile, needsNewClientSecret],
   );
   const keepsSecretOnFile = hasClientSecretOnFile && !needsNewClientSecret;
 
@@ -322,7 +331,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
   }, [fixedTransport, form]);
 
   if (isEdit && previousData?.itemId == "") {
-    return <div>loading</div>;
+    return <div>{t("NEW_CONFIGURATION.LOADING")}</div>;
   }
   const formSubmitHandler = async (data: IEmailConfig) => {
     try {
@@ -366,17 +375,17 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
       if (res?.isSuccess) {
         toast({
           variant: "success",
-          title: "Success",
+          title: t("common:SUCCESS"),
           description: isEdit
-            ? "Configuration updated successfully."
-            : "Configuration created successfully.",
+            ? t("NEW_CONFIGURATION.UPDATED_SUCCESS")
+            : t("NEW_CONFIGURATION.CREATED_SUCCESS"),
         });
         form.reset();
         onClose();
       } else {
         toast({
           variant: "destructive",
-          title: "Error",
+          title: t("common:ERROR"),
           description: JSON.stringify(res?.errors),
         });
       }
@@ -403,12 +412,12 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                       <FormItem>
                         <FormLabel className="text-left font-medium text-high-emphasis">
                           {" "}
-                          Name <span className="text-destructive">*</span>
+                          {t("common:NAME")} <span className="text-destructive">*</span>
                         </FormLabel>
                         <FormControl>
                           <Input
                             id="configName"
-                            placeholder="Enter name"
+                            placeholder={t("NEW_CONFIGURATION.PLACEHOLDER_NAME")}
                             className="border-default col-span-3 mt-1 border shadow-none"
                             {...field}
                           />
@@ -425,7 +434,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-left font-medium text-high-emphasis">
-                          Type <span className="text-destructive">*</span>
+                          {t("common:TYPE")} <span className="text-destructive">*</span>
                         </FormLabel>
                         <Select
                           onValueChange={(value) => field.onChange(value === "true")}
@@ -433,12 +442,12 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                         >
                           <FormControl>
                             <SelectTrigger className="border-default col-span-3 mt-1 border shadow-none">
-                              <SelectValue placeholder="Select type" />
+                              <SelectValue placeholder={t("NEW_CONFIGURATION.PLACEHOLDER_TYPE")} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="true">Inbound</SelectItem>
-                            <SelectItem value="false">Outbound</SelectItem>
+                            <SelectItem value="true">{t("NEW_CONFIGURATION.INBOUND")}</SelectItem>
+                            <SelectItem value="false">{t("NEW_CONFIGURATION.OUTBOUND")}</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -451,7 +460,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-left font-medium text-high-emphasis">
-                          Provider <span className="text-destructive">*</span>
+                          {t("NEW_CONFIGURATION.PROVIDER")} <span className="text-destructive">*</span>
                         </FormLabel>
                         <Select
                           onValueChange={(value) => field.onChange(parseInt(value))}
@@ -459,7 +468,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                         >
                           <FormControl>
                             <SelectTrigger className="border-default col-span-3 mt-1 border shadow-none">
-                              <SelectValue placeholder="Select provider" />
+                              <SelectValue placeholder={t("NEW_CONFIGURATION.PLACEHOLDER_PROVIDER")} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -483,12 +492,16 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                       <FormItem>
                         <FormLabel className="text-left font-medium text-high-emphasis">
                           {" "}
-                          {isInbound ? "Server Name" : "Host"}{" "}
+                          {isInbound ? t("NEW_CONFIGURATION.SERVER_NAME") : t("NEW_CONFIGURATION.HOST")}{" "}
                           <span className="text-destructive">*</span>
                         </FormLabel>
                         <FormControl>
                           <Input
-                            placeholder={isInbound ? "Enter Server Name" : "Enter Host"}
+                            placeholder={
+                              isInbound
+                                ? t("NEW_CONFIGURATION.PLACEHOLDER_SERVER_NAME")
+                                : t("NEW_CONFIGURATION.PLACEHOLDER_HOST")
+                            }
                             className="border-default col-span-3 mt-1 border shadow-none"
                             readOnly={Boolean(fixedTransport)}
                             disabled={Boolean(fixedTransport)}
@@ -506,12 +519,12 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                       <FormItem>
                         <FormLabel className="text-left font-medium text-high-emphasis">
                           {" "}
-                          Port <span className="text-destructive">*</span>
+                          {t("NEW_CONFIGURATION.PORT")} <span className="text-destructive">*</span>
                         </FormLabel>
                         <FormControl>
                           <Input
                             type="number"
-                            placeholder="Enter port"
+                            placeholder={t("NEW_CONFIGURATION.PLACEHOLDER_PORT")}
                             className="border-default col-span-3 mt-1 border shadow-none"
                             readOnly={Boolean(fixedTransport)}
                             disabled={Boolean(fixedTransport)}
@@ -531,7 +544,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-left font-medium text-high-emphasis">
-                            Authentication <span className="text-destructive">*</span>
+                            {t("NEW_CONFIGURATION.AUTHENTICATION")} <span className="text-destructive">*</span>
                           </FormLabel>
                           <Select
                             onValueChange={(value) => field.onChange(parseInt(value))}
@@ -542,13 +555,13 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                           >
                             <FormControl>
                               <SelectTrigger className="border-default col-span-3 mt-1 border shadow-none">
-                                <SelectValue placeholder="Select authentication" />
+                                <SelectValue placeholder={t("NEW_CONFIGURATION.PLACEHOLDER_AUTHENTICATION")} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
                               {authenticationOptions.map((option) => (
                                 <SelectItem key={option} value={option.toString()}>
-                                  {MAIL_AUTHENTICATION_LABELS[option]}
+                                  {getMailAuthenticationLabel(option)}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -569,11 +582,11 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                           <FormItem>
                             <FormLabel className="text-left font-medium text-high-emphasis">
                               {" "}
-                              Sender Name <span className="text-destructive">*</span>
+                              {t("NEW_CONFIGURATION.SENDER_NAME")} <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
                               <Input
-                                placeholder="Enter sender name"
+                                placeholder={t("NEW_CONFIGURATION.PLACEHOLDER_SENDER_NAME")}
                                 className="border-default col-span-3 mt-1 border shadow-none"
                                 {...field}
                               />
@@ -591,11 +604,11 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                           <FormItem>
                             <FormLabel className="text-left font-medium text-high-emphasis">
                               {" "}
-                              Sender Address <span className="text-destructive">*</span>
+                              {t("NEW_CONFIGURATION.SENDER_ADDRESS")} <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
                               <Input
-                                placeholder="Enter sender address"
+                                placeholder={t("NEW_CONFIGURATION.PLACEHOLDER_SENDER_ADDRESS")}
                                 className="border-default col-span-3 mt-1 border shadow-none"
                                 {...field}
                               />
@@ -617,12 +630,16 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                           <FormItem>
                             <FormLabel className="text-left font-medium text-high-emphasis">
                               {" "}
-                              {isInbound ? "Username" : "Sender Username"}{" "}
+                              {isInbound ? t("NEW_CONFIGURATION.USERNAME") : t("NEW_CONFIGURATION.SENDER_USERNAME")}{" "}
                               <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
                               <Input
-                                placeholder={isInbound ? "Enter username" : "Enter sender username"}
+                                placeholder={
+                                  isInbound
+                                    ? t("NEW_CONFIGURATION.PLACEHOLDER_USERNAME")
+                                    : t("NEW_CONFIGURATION.PLACEHOLDER_SENDER_USERNAME")
+                                }
                                 className="border-default col-span-3 mt-1 border shadow-none"
                                 {...field}
                               />
@@ -640,20 +657,24 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                           <FormItem>
                             <FormLabel className="text-left font-medium text-high-emphasis">
                               {" "}
-                              {isGmail ? "App password" : "Account password"}{" "}
+                              {isGmail ? t("NEW_CONFIGURATION.APP_PASSWORD") : t("NEW_CONFIGURATION.ACCOUNT_PASSWORD")}{" "}
                               <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
                               <Input
                                 type="password"
-                                placeholder={isGmail ? "Enter Google app password" : "Enter password"}
+                                placeholder={
+                                  isGmail
+                                    ? t("NEW_CONFIGURATION.PLACEHOLDER_APP_PASSWORD")
+                                    : t("NEW_CONFIGURATION.PLACEHOLDER_PASSWORD")
+                                }
                                 className="border-default col-span-3 mt-1 border shadow-none"
                                 {...field}
                               />
                             </FormControl>
                             {isGmail && (
                               <p className="mt-1 text-xs text-medium-emphasis">
-                                Google requires an App Password (2-Step Verification must be on).
+                                {t("NEW_CONFIGURATION.APP_PASSWORD_HINT")}
                               </p>
                             )}
                             <FormMessage />
@@ -671,11 +692,11 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-left font-medium text-high-emphasis">
-                              Tenant ID <span className="text-destructive">*</span>
+                              {t("NEW_CONFIGURATION.TENANT_ID")} <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
                               <Input
-                                placeholder="Enter Microsoft Entra tenant ID"
+                                placeholder={t("NEW_CONFIGURATION.PLACEHOLDER_TENANT_ID")}
                                 className="border-default col-span-3 mt-1 border shadow-none"
                                 {...field}
                               />
@@ -690,11 +711,11 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-left font-medium text-high-emphasis">
-                              Client ID <span className="text-destructive">*</span>
+                              {t("NEW_CONFIGURATION.CLIENT_ID")} <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
                               <Input
-                                placeholder="Enter client ID"
+                                placeholder={t("NEW_CONFIGURATION.PLACEHOLDER_CLIENT_ID")}
                                 className="border-default col-span-3 mt-1 border shadow-none"
                                 {...field}
                               />
@@ -716,7 +737,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-left font-medium text-high-emphasis">
-                              Client Secret{" "}
+                              {t("NEW_CONFIGURATION.CLIENT_SECRET")}{" "}
                               {keepsSecretOnFile ? null : (
                                 <span className="text-destructive">*</span>
                               )}
@@ -726,10 +747,10 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                                 type="password"
                                 placeholder={
                                   needsNewClientSecret
-                                    ? "Enter a new client secret"
+                                    ? t("NEW_CONFIGURATION.PLACEHOLDER_NEW_CLIENT_SECRET")
                                     : keepsSecretOnFile
-                                      ? "Leave blank to keep the current secret"
-                                      : "Enter client secret"
+                                      ? t("NEW_CONFIGURATION.PLACEHOLDER_KEEP_CLIENT_SECRET")
+                                      : t("NEW_CONFIGURATION.PLACEHOLDER_CLIENT_SECRET")
                                 }
                                 className="border-default col-span-3 mt-1 border shadow-none"
                                 {...field}
@@ -745,11 +766,11 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-left font-medium text-high-emphasis">
-                              Mailbox Address <span className="text-destructive">*</span>
+                              {t("NEW_CONFIGURATION.MAILBOX_ADDRESS")} <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
                               <Input
-                                placeholder="Enter mailbox address"
+                                placeholder={t("NEW_CONFIGURATION.PLACEHOLDER_MAILBOX_ADDRESS")}
                                 className="border-default col-span-3 mt-1 border shadow-none"
                                 {...field}
                               />
@@ -776,7 +797,10 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                             />
                           </FormControl>
                           <FormMessage />
-                          <FormLabel className="flex-start inline-flex"> Enable SSL </FormLabel>
+                          <FormLabel className="flex-start inline-flex">
+                            {" "}
+                            {t("NEW_CONFIGURATION.ENABLE_SSL")}{" "}
+                          </FormLabel>
                         </FormItem>
                       )}
                     />
@@ -789,7 +813,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
             <div className="flex flex-row justify-end gap-2">
               <DialogTrigger asChild>
                 <Button variant="outline" size="default" disabled={isPending}>
-                  Cancel
+                  {t("common:CANCEL")}
                 </Button>
               </DialogTrigger>
               {/* In repair mode the button stays enabled so an empty submit can explain, inline,
@@ -800,11 +824,11 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
               >
                 {isPending
                   ? isEdit
-                    ? "Updating..."
-                    : "Saving..."
+                    ? t("NEW_CONFIGURATION.UPDATING")
+                    : t("NEW_CONFIGURATION.SAVING")
                   : isEdit
-                    ? "Update Changes"
-                    : "Save"}
+                    ? t("NEW_CONFIGURATION.UPDATE_CHANGES")
+                    : t("common:SAVE")}
               </Button>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import { http } from "@/lib/http/http-client";
 import type { IAPIResponse } from "@/models/api-response";
 import { NOTIFICATION_ENDPOINTS } from "../constants/endpoint.constant";
+import { tn } from "../i18n";
 import {
   IGetNotificationConfigsPayload,
   IGetNotificationConfigsResponse,
@@ -152,8 +153,9 @@ export class NotificationConfigService {
       .then((response) => {
         // A refusal (for example a built-in config deleted by a non-root user) can arrive as a 200.
         if (response?.isSuccess === false) {
-          throw Object.assign(new Error("Delete failed"), {
-            errors: response.errors ?? { itemId: "Delete failed" },
+          const message = tn("NOTIFICATION_CONFIG_SERVICE.DELETE_FAILED");
+          throw Object.assign(new Error(message), {
+            errors: response.errors ?? { itemId: message },
           });
         }
       });

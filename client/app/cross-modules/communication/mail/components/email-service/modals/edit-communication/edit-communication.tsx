@@ -32,6 +32,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, type Resolver } from "react-hook-form";
 import { z } from "zod";
 import { isErrorWithErrors } from "@/lib/error";
+import { useT } from "@seliseblocks/genesis-os";
 import { useSaveMailTemplate } from "../../../../hooks/use-email-template";
 interface EditCommunicationProps {
   dialogTitle: string;
@@ -39,22 +40,23 @@ interface EditCommunicationProps {
   onClose: () => void;
 }
 const EditCommunication = (props: EditCommunicationProps) => {
+  const { t } = useT("os.communication.mail");
   const { isLoading, data } = useGetEmailConfigs(0, 100);
   // const { saveEmailTemplate, isPending } = useSaveEmailTemplate();
   const { isPending: isSaveTemplateLoading, mutateAsync: saveTemplate } = useSaveMailTemplate();
   const { isLoading: isLanguageListLoading, data: languageListData } = useGetLanguages();
   const schema = z.object({
-    mailConfigurationId: z.string().min(1, { message: "MailConfiguration is required" }),
-    language: z.string().min(1, { message: "Language is required" }),
+    mailConfigurationId: z.string().min(1, { message: t("EDIT_COMMUNICATION.ERROR_CONFIGURATION_REQUIRED") }),
+    language: z.string().min(1, { message: t("EDIT_COMMUNICATION.ERROR_LANGUAGE_REQUIRED") }),
     name: z
       .string()
-      .min(1, { message: "Name is required" })
-      .max(50, { message: "Name must be less than 50 characters" })
-      .regex(/^[^\s-]+$/, { message: "Name cannot contain spaces or hyphens" }),
+      .min(1, { message: t("EDIT_COMMUNICATION.ERROR_NAME_REQUIRED") })
+      .max(50, { message: t("EDIT_COMMUNICATION.ERROR_NAME_MAX") })
+      .regex(/^[^\s-]+$/, { message: t("EDIT_COMMUNICATION.ERROR_NAME_PATTERN") }),
     templateSubject: z
       .string()
-      .min(1, { message: "Subject is required" })
-      .max(150, { message: "Subject must be less than 150 characters" }),
+      .min(1, { message: t("EDIT_COMMUNICATION.ERROR_SUBJECT_REQUIRED") })
+      .max(150, { message: t("EDIT_COMMUNICATION.ERROR_SUBJECT_MAX") }),
   });
   const form = useForm<IEmailTemplate>({
     values: props.templateData
@@ -80,8 +82,8 @@ const EditCommunication = (props: EditCommunicationProps) => {
       if (res?.isSuccess) {
         toast({
           variant: "success",
-          title: "Success",
-          description: "Template updated",
+          title: t("common:SUCCESS"),
+          description: t("EDIT_COMMUNICATION.TEMPLATE_UPDATED"),
         });
       } else {
         showErrorToast({ errors: res.errors });
@@ -90,7 +92,7 @@ const EditCommunication = (props: EditCommunicationProps) => {
       if (isErrorWithErrors(error)) {
         showErrorToast({ errors: error.errors });
       } else {
-        showErrorToast({ errors: "Something went wrong" });
+        showErrorToast({ errors: t("EDIT_COMMUNICATION.SOMETHING_WENT_WRONG") });
       }
     }
   };
@@ -113,11 +115,11 @@ const EditCommunication = (props: EditCommunicationProps) => {
                       <FormItem>
                         <FormLabel className="text-left font-medium text-high-emphasis">
                           {" "}
-                          Subject
+                          {t("EDIT_COMMUNICATION.SUBJECT")}
                         </FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Enter subject"
+                            placeholder={t("EDIT_COMMUNICATION.PLACEHOLDER_SUBJECT")}
                             className="border-default col-span-3 mt-1 border shadow-none"
                             {...field}
                           />
@@ -136,11 +138,11 @@ const EditCommunication = (props: EditCommunicationProps) => {
                         <FormItem>
                           <FormLabel className="text-left font-medium text-high-emphasis">
                             {" "}
-                            Template name
+                            {t("EDIT_COMMUNICATION.TEMPLATE_NAME")}
                           </FormLabel>
                           <FormControl>
                             <Input
-                              placeholder="Enter Template name"
+                              placeholder={t("EDIT_COMMUNICATION.PLACEHOLDER_TEMPLATE_NAME")}
                               className="border-default col-span-3 mt-1 border shadow-none"
                               {...field}
                               disabled={props.templateData.generatedBy === "Tenant"}
@@ -165,12 +167,12 @@ const EditCommunication = (props: EditCommunicationProps) => {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-left font-medium text-high-emphasis">
-                            Language
+                            {t("EDIT_COMMUNICATION.LANGUAGE")}
                           </FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                                <SelectValue placeholder="Select language" />
+                                <SelectValue placeholder={t("EDIT_COMMUNICATION.PLACEHOLDER_LANGUAGE")} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -196,12 +198,12 @@ const EditCommunication = (props: EditCommunicationProps) => {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-left font-medium text-high-emphasis">
-                            Email Configuration
+                            {t("EDIT_COMMUNICATION.EMAIL_CONFIGURATION")}
                           </FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                                <SelectValue placeholder="Select Configuration" />
+                                <SelectValue placeholder={t("EDIT_COMMUNICATION.PLACEHOLDER_CONFIGURATION")} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -223,10 +225,10 @@ const EditCommunication = (props: EditCommunicationProps) => {
             <DialogFooter className="flex flex-row gap-2">
               <DialogTrigger asChild>
                 <Button disabled={isSaveTemplateLoading} variant="secondary">
-                  Cancel
+                  {t("common:CANCEL")}
                 </Button>
               </DialogTrigger>
-              <Button>Save</Button>
+              <Button>{t("common:SAVE")}</Button>
             </DialogFooter>
           </form>
         </Form>

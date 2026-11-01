@@ -12,11 +12,14 @@ import {
 import { Button } from "@/components/ui-kits/button/button";
 import { DialogTrigger } from "@radix-ui/react-dialog";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
+import { useT } from "@seliseblocks/genesis-os";
 interface CampaignCreationProps {
   dialogTitle: string;
   data?: string[];
 }
-const CampaignCreation: React.FC<CampaignCreationProps> = ({ dialogTitle }) => (
+const CampaignCreation: React.FC<CampaignCreationProps> = ({ dialogTitle }) => {
+  const { t } = useT("os.communication.mail");
+  return (
   <DialogContent className="rounded-md sm:max-w-[700px]">
     <DialogHeader>
       <DialogTitle className="text-left">{dialogTitle}</DialogTitle>
@@ -26,21 +29,21 @@ const CampaignCreation: React.FC<CampaignCreationProps> = ({ dialogTitle }) => (
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label htmlFor="campaignName" className="text-left font-medium text-high-emphasis">
-              Campaign Name
+              {t("CAMPAIGN_CREATION.CAMPAIGN_NAME")}
             </Label>
             <Input
               id="campaignName"
-              placeholder="Enter Campaign Name"
+              placeholder={t("CAMPAIGN_CREATION.PLACEHOLDER_CAMPAIGN_NAME")}
               className="border-default col-span-3 mt-1 border shadow-none"
             />
           </div>
           <div>
             <Label htmlFor="configuration" className="text-left font-medium text-high-emphasis">
-              Configuration
+              {t("CAMPAIGN_CREATION.CONFIGURATION")}
             </Label>
             <Input
               id="configuration"
-              placeholder="Enter Configuration"
+              placeholder={t("CAMPAIGN_CREATION.PLACEHOLDER_CONFIGURATION")}
               className="border-default col-span-3 mt-1 border shadow-none"
             />
           </div>
@@ -48,17 +51,17 @@ const CampaignCreation: React.FC<CampaignCreationProps> = ({ dialogTitle }) => (
         <div>
           <div className="mt-3 flex justify-between">
             <Label htmlFor="configName" className="mt-3 text-left font-medium text-high-emphasis">
-              Message
+              {t("CAMPAIGN_CREATION.MESSAGE")}
             </Label>
             <Button size="sm" variant="outline" className="gap-2">
               <AtSign className="h-3.5 w-3.5" />
-              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Merge tags</span>
+              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">{t("CAMPAIGN_CREATION.MERGE_TAGS")}</span>
             </Button>
           </div>
           <Textarea
             id="configName"
             className="border-default col-span-3 mt-1 min-h-[116px] border shadow-none"
-            placeholder="Type your message here."
+            placeholder={t("CAMPAIGN_CREATION.PLACEHOLDER_MESSAGE")}
           />
         </div>
       </div>
@@ -66,11 +69,12 @@ const CampaignCreation: React.FC<CampaignCreationProps> = ({ dialogTitle }) => (
     <DialogFooter className="mt-[-14px] flex flex-row gap-2">
       <DialogTrigger asChild>
         <Button variant="outline" size="default">
-          Cancel
+          {t("common:CANCEL")}
         </Button>
       </DialogTrigger>
-      <Button size="default">Save</Button>
+      <Button size="default">{t("common:SAVE")}</Button>
     </DialogFooter>
   </DialogContent>
-);
+  );
+};
 export default CampaignCreation;

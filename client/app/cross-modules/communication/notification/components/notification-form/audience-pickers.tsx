@@ -4,6 +4,7 @@ import { useGetAssignableRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
 import type { User } from "@blocks-idp/iam/models/user";
 import { LIMITS, NOTIFICATION_TEXT } from "../../constants/notification-ui.constant";
+import { useNotificationT } from "../../i18n";
 import { EntityPicker, type PickerSearchResult } from "./entity-picker";
 
 const PAGE_SIZE = 10;
@@ -47,6 +48,7 @@ const useUserNames = (ids: string[]) => {
 };
 
 export function UserPicker({ values, onChange }: Readonly<PickerProps>) {
+  useNotificationT();
   const labelOf = useUserNames(values);
   return (
     <EntityPicker
@@ -73,6 +75,7 @@ const useRoleSearch = (term: string, enabled: boolean): PickerSearchResult => {
 };
 
 export function RolePicker({ values, onChange }: Readonly<PickerProps>) {
+  useNotificationT();
   return (
     <EntityPicker
       label={NOTIFICATION_TEXT.roles}
@@ -102,6 +105,7 @@ const usePermissionSearch = (term: string, enabled: boolean): PickerSearchResult
 };
 
 export function PermissionPicker({ values, onChange }: Readonly<PickerProps>) {
+  useNotificationT();
   return (
     <EntityPicker
       label={NOTIFICATION_TEXT.permissions}

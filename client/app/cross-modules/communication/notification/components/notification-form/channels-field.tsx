@@ -1,6 +1,7 @@
 import { Input } from "@/components/ui-kits/input/input";
 import type { NotificationFormValues } from "../../utils/notification-form";
 import { NOTIFICATION_TEXT } from "../../constants/notification-ui.constant";
+import { useNotificationT } from "../../i18n";
 import { CheckRow, HelpText } from "./form-row";
 
 interface ChannelsFieldProps {
@@ -10,6 +11,7 @@ interface ChannelsFieldProps {
 
 /** In-app, push and inbox switches, with the rate limit per minute. */
 export function ChannelsField({ values, onPatch }: Readonly<ChannelsFieldProps>) {
+  useNotificationT();
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-x-[18px] gap-y-2">

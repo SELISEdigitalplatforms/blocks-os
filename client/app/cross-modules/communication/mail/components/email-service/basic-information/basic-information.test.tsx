@@ -21,7 +21,8 @@ vi.mock("@blocks-localization/hooks/use-language-manager", () => ({
 vi.mock("@blocks-communication/mail/hooks/use-email-template", () => ({
   useSaveMailTemplate: () => ({ isPending: h.isPending, mutateAsync: h.saveTemplate }),
 }));
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 vi.mock("@/hooks/use-toast", () => ({

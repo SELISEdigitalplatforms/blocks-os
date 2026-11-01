@@ -1,5 +1,6 @@
 import { FilterToolbar } from "@/components/filter-toolbar";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
+import { useNotificationT } from "../i18n";
 import { notificationImportances } from "../constants/notification.constant";
 import {
   NOTIFICATION_SCOPE,
@@ -15,7 +16,7 @@ type NotificationConfigFilter = {
 };
 
 /** "Send to" offers one side; a notification sent to both sides matches either. */
-const SEND_TO_FILTER_OPTIONS = [
+const sendToFilterOptions = () => [
   { label: NOTIFICATION_TEXT.projectUsers, value: String(NOTIFICATION_SCOPE.Project) },
   { label: NOTIFICATION_TEXT.consoleUsers, value: String(NOTIFICATION_SCOPE.Console) },
 ];
@@ -33,6 +34,7 @@ export const useNotificationConfigsFilterQueryParams = () => {
 };
 
 export function NotificationConfigsFilterToolBar() {
+  useNotificationT();
   const { queryParams, setQueryParams } = useNotificationConfigsFilterQueryParams();
 
   const changeHandler = (key: string, value: unknown) => {
@@ -96,7 +98,7 @@ export function NotificationConfigsFilterToolBar() {
           key: "sendTo",
           type: "Radio",
           label: NOTIFICATION_TEXT.filters.sendTo,
-          props: { options: SEND_TO_FILTER_OPTIONS },
+          props: { options: sendToFilterOptions() },
         },
         {
           key: "receivers",

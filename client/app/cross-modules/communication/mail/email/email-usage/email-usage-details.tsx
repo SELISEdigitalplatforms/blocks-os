@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { AlertCircle, Download, Loader2, Mail, Paperclip } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useT } from "@seliseblocks/genesis-os";
 import { emailService } from "@blocks-communication/mail/services/email.services";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { Button } from "@/components/ui-kits/button/button";
@@ -56,6 +57,7 @@ const downloadEml = (rawMime: string, subject: string) =>
   );
 
 export const EmailUsageDetails = ({ id }: { id: string }) => {
+  const { t } = useT("os.communication.mail");
   const { data: details, isLoading } = useGetEmailUsageById(id);
   const [view, setView] = useState<BodyView | null>(null);
   const [downloadingIndex, setDownloadingIndex] = useState<number | null>(null);
@@ -73,8 +75,8 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
     } catch {
       toast({
         variant: "destructive",
-        title: "Download failed",
-        description: `${fallbackName} could not be downloaded. Try again, or download the .eml.`,
+        title: t("EMAIL_USAGE_DETAILS.DOWNLOAD_FAILED_TITLE"),
+        description: t("EMAIL_USAGE_DETAILS.DOWNLOAD_FAILED_DESCRIPTION", { name: fallbackName }),
       });
     } finally {
       setDownloadingIndex(null);
@@ -97,9 +99,9 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
       <Card className="mt-6">
         <CardContent className="flex flex-col items-center justify-center gap-2 py-16 text-center">
           <Mail className="h-8 w-8 text-muted-foreground" />
-          <p className="font-medium">Email details not found.</p>
+          <p className="font-medium">{t("EMAIL_USAGE_DETAILS.NOT_FOUND_TITLE")}</p>
           <p className="text-sm text-muted-foreground">
-            The message may have been removed, or the link is incomplete.
+            {t("EMAIL_USAGE_DETAILS.NOT_FOUND_DESCRIPTION")}
           </p>
         </CardContent>
       </Card>
@@ -125,7 +127,7 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
         <CardContent className="space-y-5 p-5 md:p-6">
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <h1 className="wrap-break-word text-lg font-semibold text-high-emphasis md:text-2xl">
-              {details.subject || <span className="italic text-muted-foreground">(no subject)</span>}
+              {details.subject || <span className="italic text-muted-foreground">{t("EMAIL_USAGE_DETAILS.NO_SUBJECT")}</span>}
             </h1>
             <div className="flex shrink-0 items-center gap-2">
               {!details.isInbound && <StatusBadge status={details.status} />}
@@ -136,7 +138,7 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
                   onClick={() => downloadEml(details.rawMime as string, details.subject)}
                 >
                   <Download className="mr-2 h-4 w-4" />
-                  Download .eml
+                  {t("EMAIL_USAGE_DETAILS.DOWNLOAD_EML")}
                 </Button>
               )}
             </div>
@@ -158,14 +160,18 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
                 </p>
                 <p
                   className="shrink-0 text-xs text-muted-foreground"
-                  title={details.isInbound ? "Received" : "Sent"}
+                  title={
+                    details.isInbound
+                      ? t("EMAIL_USAGE_DETAILS.RECEIVED")
+                      : t("EMAIL_USAGE_DETAILS.SENT")
+                  }
                 >
                   {details.date ? formatMailDateLong(details.date) : "-"}
                 </p>
               </div>
-              <AddressLine label="To" raw={details.to} />
-              <AddressLine label="Cc" raw={details.content?.cc} />
-              <AddressLine label="Reply-To" raw={details.content?.replyTo} />
+              <AddressLine label={t("EMAIL_USAGE_DETAILS.LABEL_TO")} raw={details.to} />
+              <AddressLine label={t("EMAIL_USAGE_DETAILS.LABEL_CC")} raw={details.content?.cc} />
+              <AddressLine label={t("EMAIL_USAGE_DETAILS.LABEL_REPLY_TO")} raw={details.content?.replyTo} />
             </div>
           </div>
 
@@ -179,7 +185,7 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
           {attachments.length > 0 && (
             <div className="space-y-2">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {attachments.length} attachment{attachments.length > 1 ? "s" : ""}
+                {t("EMAIL_USAGE_DETAILS.ATTACHMENTS", { count: attachments.length })}
               </p>
               <div className="flex flex-wrap gap-2">
                 {attachments.map((attachment, index) => (
@@ -187,8 +193,10 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
                     type="button"
                     key={`${attachment.fileName}-${index}`}
                     className="group flex max-w-xs items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-left transition-colors hover:bg-muted/60 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
-                    title={`Download ${attachment.fileName}`}
-                    aria-label={`Download ${attachment.fileName}`}
+                    title={t("EMAIL_USAGE_DETAILS.DOWNLOAD_ATTACHMENT", { name: attachment.fileName })}
+                    aria-label={t("EMAIL_USAGE_DETAILS.DOWNLOAD_ATTACHMENT", {
+                      name: attachment.fileName,
+                    })}
                     disabled={downloadingIndex === index}
                     onClick={() => downloadAttachment(details.messageId || id, index, attachment.fileName)}
                   >
@@ -214,23 +222,23 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
 
       <Card className="overflow-hidden shadow-none">
         <div className="flex items-center justify-between border-b px-5 py-3">
-          <p className="text-sm font-medium text-high-emphasis">Message</p>
+          <p className="text-sm font-medium text-high-emphasis">{t("EMAIL_USAGE_DETAILS.MESSAGE")}</p>
           {availableViews.length > 1 && (
             <Tabs value={activeView} onValueChange={(value) => setView(value as BodyView)}>
               <TabsList className="h-8">
                 {availableViews.includes("html") && (
                   <TabsTrigger value="html" className="h-6 px-3 text-xs">
-                    Formatted
+                    {t("EMAIL_USAGE_DETAILS.VIEW_FORMATTED")}
                   </TabsTrigger>
                 )}
                 {availableViews.includes("text") && (
                   <TabsTrigger value="text" className="h-6 px-3 text-xs">
-                    Plain text
+                    {t("EMAIL_USAGE_DETAILS.VIEW_PLAIN_TEXT")}
                   </TabsTrigger>
                 )}
                 {availableViews.includes("source") && (
                   <TabsTrigger value="source" className="h-6 px-3 text-xs">
-                    Original
+                    {t("EMAIL_USAGE_DETAILS.VIEW_ORIGINAL")}
                   </TabsTrigger>
                 )}
               </TabsList>
@@ -242,7 +250,7 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
             // Untrusted markup: no scripts, no same-origin access, no forms. Links may
             // only open a new tab.
             <iframe
-              title="Email body"
+              title={t("EMAIL_USAGE_DETAILS.BODY_FRAME_TITLE")}
               sandbox="allow-popups allow-popups-to-escape-sandbox"
               referrerPolicy="no-referrer"
               srcDoc={buildMailFrameDocument(bodies.html)}
@@ -260,7 +268,7 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
             </pre>
           )}
           {!activeView && (
-            <p className="p-5 text-sm italic text-muted-foreground">This message has no body.</p>
+            <p className="p-5 text-sm italic text-muted-foreground">{t("EMAIL_USAGE_DETAILS.NO_BODY")}</p>
           )}
         </CardContent>
       </Card>
