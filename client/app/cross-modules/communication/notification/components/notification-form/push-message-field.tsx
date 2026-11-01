@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
 import {
@@ -17,7 +17,6 @@ import {
   placeholderFields,
   previewText,
   splitKeyNames,
-  withCurrent,
 } from "../../utils/push-preview";
 import {
   LIMITS,
@@ -52,32 +51,45 @@ export const localizationUrl = (): string => {
   }
 };
 
-function KeySelect({
-  label,
-  value,
-  names,
-  onChange,
-}: Readonly<{ label: string; value: string; names: string[]; onChange: (value: string) => void }>) {
+interface KeyInputProps {
+  label: string;
+  placeholder: string;
+  value: string;
+  /** Keys that did load, offered as suggestions; typing is never limited to them. */
+  names: string[];
+  onChange: (value: string) => void;
+}
+
+/**
+ * Typed, not picked: the key list cannot always be loaded here, and a push must still be possible
+ * without it. When sending, logic looks the value up as a key of the module and uses the value
+ * itself as the text when there is no such key.
+ */
+function KeyInput({ label, placeholder, value, names, onChange }: Readonly<KeyInputProps>) {
+  const listId = useId();
   return (
     <div className="grid grid-cols-1 items-center gap-1.5 sm:grid-cols-[110px_minmax(0,1fr)]">
       <span className="text-sm">{label}</span>
-      <Select value={value || undefined} onValueChange={onChange}>
-        <SelectTrigger aria-label={label}>
-          <SelectValue placeholder={NOTIFICATION_TEXT.selectKey} />
-        </SelectTrigger>
-        <SelectContent>
+      <Input
+        aria-label={label}
+        placeholder={placeholder}
+        maxLength={LIMITS.textLength}
+        list={names.length > 0 ? listId : undefined}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      {names.length > 0 && (
+        <datalist id={listId}>
           {names.map((name) => (
-            <SelectItem key={name} value={name}>
-              {name}
-            </SelectItem>
+            <option key={name} value={name} />
           ))}
-        </SelectContent>
-      </Select>
+        </datalist>
+      )}
     </div>
   );
 }
 
-/** The push title, message and link. Texts come from Localization; the config holds the keys. */
+/** The push title, message and link. A key's text comes from Localization; any other value is the text. */
 export function PushMessageField({
   values,
   onPatch,
@@ -92,7 +104,12 @@ export function PushMessageField({
   const { titles, bodies } = splitKeyNames(keys);
   const title = previewText(keys, values.titleKey, culture, fallback);
   const body = previewText(keys, values.bodyKey, culture, fallback);
-  const missing = missingLanguages(keys, languages, values.titleKey, values.bodyKey);
+  // Typed text has no translations, so missing languages only mean something when both are keys.
+  const isKey = (name: string) => keys.some((key) => key.keyName === name);
+  const missing =
+    isKey(values.titleKey) && isKey(values.bodyKey)
+      ? missingLanguages(keys, languages, values.titleKey, values.bodyKey)
+      : [];
   const fields = placeholderFields([title, body]);
   const manageUrl = localizationUrl();
 
@@ -127,16 +144,18 @@ export function PushMessageField({
       )}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="flex flex-col gap-2">
-          <KeySelect
+          <KeyInput
             label={NOTIFICATION_TEXT.titleKey}
+            placeholder={NOTIFICATION_TEXT.titleKeyPlaceholder}
             value={values.titleKey}
-            names={withCurrent(titles, values.titleKey)}
+            names={titles}
             onChange={(titleKey) => onPatch({ titleKey })}
           />
-          <KeySelect
+          <KeyInput
             label={NOTIFICATION_TEXT.messageKey}
+            placeholder={NOTIFICATION_TEXT.messageKeyPlaceholder}
             value={values.bodyKey}
-            names={withCurrent(bodies, values.bodyKey)}
+            names={bodies}
             onChange={(bodyKey) => onPatch({ bodyKey })}
           />
           <div className="grid grid-cols-1 items-center gap-1.5 sm:grid-cols-[110px_minmax(0,1fr)]">

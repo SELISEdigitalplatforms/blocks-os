@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EMPTY_FORM_VALUES } from "../../utils/notification-form";
@@ -7,6 +7,7 @@ import { NOTIFICATION_TEXT } from "../../constants/notification-ui.constant";
 const h = vi.hoisted(() => ({
   keys: [] as unknown[],
   languages: [] as unknown[],
+  isError: false,
   env: "https://loc.example/callback",
 }));
 
@@ -15,7 +16,7 @@ vi.mock("../../hooks/use-push-message-keys", () => ({
     keys: h.keys,
     languages: h.languages,
     isLoading: false,
-    isError: false,
+    isError: h.isError,
   }),
 }));
 vi.mock("@/lib/runtime-env", () => ({ getRuntimeEnv: () => h.env }));
@@ -35,6 +36,7 @@ const props = {
 describe("PushMessageField", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    h.isError = false;
     h.env = "https://loc.example/callback";
     h.languages = [
       { itemId: "1", languageName: "English", languageCode: "en-US", isDefault: true },
@@ -70,6 +72,43 @@ describe("PushMessageField", () => {
     expect(screen.getByText(NOTIFICATION_TEXT.fixedText)).toBeTruthy();
     expect(screen.queryByLabelText(NOTIFICATION_TEXT.titleKey)).toBeNull();
     expect(screen.getByText(TITLE_TEXT)).toBeTruthy();
+  });
+
+  it("takes a typed key or text, with the loaded keys as suggestions", () => {
+    render(<PushMessageField {...props} values={{ ...props.values, titleKey: "", bodyKey: "" }} />);
+    const title = screen.getByLabelText(NOTIFICATION_TEXT.titleKey);
+    expect(title.getAttribute("placeholder")).toBe(NOTIFICATION_TEXT.titleKeyPlaceholder);
+    expect(screen.getByLabelText(NOTIFICATION_TEXT.messageKey).getAttribute("placeholder")).toBe(
+      NOTIFICATION_TEXT.messageKeyPlaceholder,
+    );
+
+    const suggestions = document.getElementById(title.getAttribute("list") ?? "");
+    expect([...(suggestions?.querySelectorAll("option") ?? [])].map((o) => o.value)).toEqual([
+      "PAID_TITLE",
+    ]);
+
+    fireEvent.change(title, { target: { value: "Order shipped" } });
+    expect(props.onPatch).toHaveBeenCalledWith({ titleKey: "Order shipped" });
+  });
+
+  it("previews typed text as written and names no missing language for it", () => {
+    render(
+      <PushMessageField
+        {...props}
+        values={{ ...props.values, titleKey: "Order {{orderNo}} shipped", bodyKey: "PAID_BODY" }}
+      />,
+    );
+    expect(document.querySelector("b")?.textContent).toBe("Order {{orderNo}} shipped");
+    expect(screen.queryByText(/text yet — the default language is used/)).toBeNull();
+  });
+
+  it("still takes typing when the keys could not be loaded, and says so", () => {
+    h.keys = [];
+    h.isError = true;
+    render(<PushMessageField {...props} />);
+    expect(screen.getByText(NOTIFICATION_TEXT.keysLoadFailed)).toBeTruthy();
+    expect(screen.getByLabelText(NOTIFICATION_TEXT.titleKey).hasAttribute("list")).toBe(false);
+    expect(screen.queryByText(/text yet — the default language is used/)).toBeNull();
   });
 
   it("falls back to the key name when Localization has no text, and hides the link without an address", () => {
