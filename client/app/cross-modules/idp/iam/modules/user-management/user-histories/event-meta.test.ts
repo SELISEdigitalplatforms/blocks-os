@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { EVENT_META, EVENT_TONE_CLASS, getEventMeta } from "./event-meta";
+import { EVENT_TONE_CLASS, getEventMeta } from "./event-meta";
 
 describe("getEventMeta", () => {
   it("returns the mapped entry for a known snake_case event", () => {
     const meta = getEventMeta("login_via_password");
     expect(meta.label).toBe("Sign in");
     expect(meta.tone).toBe("success");
-    expect(meta).toBe(EVENT_META.login_via_password);
+    expect(meta.description).toBe("Interactive sign-in");
   });
 
   it("returns the mapped entry for a known upper-case event", () => {

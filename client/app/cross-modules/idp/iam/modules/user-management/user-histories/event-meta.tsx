@@ -7,6 +7,7 @@ import {
   XCircle,
   type LucideIcon,
 } from "lucide-react";
+import { tStatic } from "@seliseblocks/genesis-os";
 
 export type EventTone = "success" | "info" | "error" | "warning";
 
@@ -17,119 +18,137 @@ export type EventMeta = {
   tone: EventTone;
 };
 
-export const EVENT_META: Record<string, EventMeta> = {
+// Holds translation keys, not text: the text is looked up in getEventMeta, when it is shown.
+type EventMetaDefinition = {
+  labelKey: string;
+  descriptionKey: string;
+  icon: LucideIcon;
+  tone: EventTone;
+};
+
+export const EVENT_META: Record<string, EventMetaDefinition> = {
   login_via_password: {
-    label: "Sign in",
-    description: "Interactive sign-in",
+    labelKey: "EVENT_META.LABEL_SIGN_IN",
+    descriptionKey: "EVENT_META.DESCRIPTION_INTERACTIVE_SIGN_IN",
     icon: LogIn,
     tone: "success",
   },
   login_via_social: {
-    label: "Sign in",
-    description: "Signed in via social login",
+    labelKey: "EVENT_META.LABEL_SIGN_IN",
+    descriptionKey: "EVENT_META.DESCRIPTION_SIGNED_IN_SOCIAL",
     icon: LogIn,
     tone: "success",
   },
   login_via_sso_consent: {
-    label: "Sign in",
-    description: "Signed in via SSO",
+    labelKey: "EVENT_META.LABEL_SIGN_IN",
+    descriptionKey: "EVENT_META.DESCRIPTION_SIGNED_IN_SSO",
     icon: LogIn,
     tone: "success",
   },
   login_via_authorization_code: {
-    label: "Sign in",
-    description: "Signed in via authorization code",
+    labelKey: "EVENT_META.LABEL_SIGN_IN",
+    descriptionKey: "EVENT_META.DESCRIPTION_SIGNED_IN_AUTHORIZATION_CODE",
     icon: LogIn,
     tone: "success",
   },
   login_via_mfa_code: {
-    label: "MFA challenge",
-    description: "MFA verified",
+    labelKey: "EVENT_META.LABEL_MFA_CHALLENGE",
+    descriptionKey: "EVENT_META.DESCRIPTION_MFA_VERIFIED",
     icon: ShieldCheck,
     tone: "success",
   },
   token_renewed: {
-    label: "Token refreshed",
-    description: "Session token refreshed",
+    labelKey: "EVENT_META.LABEL_TOKEN_REFRESHED",
+    descriptionKey: "EVENT_META.DESCRIPTION_SESSION_TOKEN_REFRESHED",
     icon: RefreshCw,
     tone: "info",
   },
   renew_refresh_token: {
-    label: "Token refreshed",
-    description: "Refresh token renewed",
+    labelKey: "EVENT_META.LABEL_TOKEN_REFRESHED",
+    descriptionKey: "EVENT_META.DESCRIPTION_REFRESH_TOKEN_RENEWED",
     icon: RefreshCw,
     tone: "info",
   },
   issued_refresh_token: {
-    label: "Token issued",
-    description: "Refresh token issued",
+    labelKey: "EVENT_META.LABEL_TOKEN_ISSUED",
+    descriptionKey: "EVENT_META.DESCRIPTION_REFRESH_TOKEN_ISSUED",
     icon: KeyRound,
     tone: "info",
   },
   session_revoked: {
-    label: "Sign out",
-    description: "Signed out from session",
+    labelKey: "EVENT_META.LABEL_SIGN_OUT",
+    descriptionKey: "EVENT_META.DESCRIPTION_SIGNED_OUT_FROM_SESSION",
     icon: LogOut,
     tone: "error",
   },
   revoke_access_by_logout: {
-    label: "Sign out",
-    description: "Signed out",
+    labelKey: "EVENT_META.LABEL_SIGN_OUT",
+    descriptionKey: "EVENT_META.DESCRIPTION_SIGNED_OUT",
     icon: LogOut,
     tone: "error",
   },
   revoke_access_by_logout_all: {
-    label: "Sign out",
-    description: "Signed out of all devices",
+    labelKey: "EVENT_META.LABEL_SIGN_OUT",
+    descriptionKey: "EVENT_META.DESCRIPTION_SIGNED_OUT_ALL_DEVICES",
     icon: LogOut,
     tone: "error",
   },
   revoke_refresh_token: {
-    label: "Token revoked",
-    description: "Refresh token revoked",
+    labelKey: "EVENT_META.LABEL_TOKEN_REVOKED",
+    descriptionKey: "EVENT_META.DESCRIPTION_REFRESH_TOKEN_REVOKED",
     icon: XCircle,
     tone: "error",
   },
   LOGIN_SUCCESS: {
-    label: "Sign in",
-    description: "Interactive sign-in",
+    labelKey: "EVENT_META.LABEL_SIGN_IN",
+    descriptionKey: "EVENT_META.DESCRIPTION_INTERACTIVE_SIGN_IN",
     icon: LogIn,
     tone: "success",
   },
   LOGIN_FAILURE: {
-    label: "Sign in failed",
-    description: "Sign-in attempt failed",
+    labelKey: "EVENT_META.LABEL_SIGN_IN_FAILED",
+    descriptionKey: "EVENT_META.DESCRIPTION_SIGN_IN_ATTEMPT_FAILED",
     icon: XCircle,
     tone: "error",
   },
   TOKEN_REFRESHED: {
-    label: "Token refreshed",
-    description: "Session token refreshed",
+    labelKey: "EVENT_META.LABEL_TOKEN_REFRESHED",
+    descriptionKey: "EVENT_META.DESCRIPTION_SESSION_TOKEN_REFRESHED",
     icon: RefreshCw,
     tone: "info",
   },
   SESSION_REVOKED: {
-    label: "Sign out",
-    description: "Signed out from session",
+    labelKey: "EVENT_META.LABEL_SIGN_OUT",
+    descriptionKey: "EVENT_META.DESCRIPTION_SIGNED_OUT_FROM_SESSION",
     icon: LogOut,
     tone: "error",
   },
   MFA_CHALLENGE_SUCCESS: {
-    label: "MFA challenge",
-    description: "MFA verified",
+    labelKey: "EVENT_META.LABEL_MFA_CHALLENGE",
+    descriptionKey: "EVENT_META.DESCRIPTION_MFA_VERIFIED",
     icon: ShieldCheck,
     tone: "success",
   },
   PASSWORD_CHANGED: {
-    label: "Password changed",
-    description: "Account password updated",
+    labelKey: "EVENT_META.LABEL_PASSWORD_CHANGED",
+    descriptionKey: "EVENT_META.DESCRIPTION_PASSWORD_UPDATED",
     icon: KeyRound,
     tone: "info",
   },
 };
 
-export const getEventMeta = (event: string): EventMeta =>
-  EVENT_META[event] ?? {
+export const getEventMeta = (event: string): EventMeta => {
+  const known = EVENT_META[event];
+  if (known) {
+    return {
+      label: tStatic("os.idp.users", known.labelKey),
+      description: tStatic("os.idp.users", known.descriptionKey),
+      icon: known.icon,
+      tone: known.tone,
+    };
+  }
+  // Unknown backend event: show its own name, nothing to translate.
+  return {
     label: event
       .split("_")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -138,6 +157,7 @@ export const getEventMeta = (event: string): EventMeta =>
     icon: RefreshCw,
     tone: "info",
   };
+};
 
 export const EVENT_TONE_CLASS: Record<EventTone, string> = {
   success: "text-emerald-600 dark:text-emerald-400",

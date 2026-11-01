@@ -1,6 +1,7 @@
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 import { IMembership } from "@blocks-idp/iam/models/user";
 import { RemoveMembership } from "../user-memberships/remove-membership";
 
@@ -37,12 +38,13 @@ export const UserOrganizationsList = ({
   onRevokeDialogChange,
   onRevokeSuccess,
 }: UserOrganizationsListProps) => {
+  const { t } = useT("os.idp.users");
   return (
     <div className="flex flex-col gap-3 rounded-lg border bg-card p-3">
       <div>
-        <h3 className="text-base font-semibold text-high-emphasis">Organizations</h3>
+        <h3 className="text-base font-semibold text-high-emphasis">{t("USER_ORGANIZATIONS_LIST.TITLE")}</h3>
         <p className="mt-0.5 text-sm text-muted-foreground">
-          Select an organization to view and manage your roles and permissions.
+          {t("USER_ORGANIZATIONS_LIST.DESCRIPTION")}
         </p>
       </div>
 
@@ -54,7 +56,7 @@ export const UserOrganizationsList = ({
         ) : organizations.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-8 text-center text-sm text-muted-foreground">
             <Building2 className="h-5 w-5" />
-            No organizations found
+            {t("USER_ORGANIZATIONS_LIST.NO_ORGANIZATIONS_FOUND")}
           </div>
         ) : (
           organizations.map((org) => {
@@ -77,8 +79,12 @@ export const UserOrganizationsList = ({
                       {org.name}
                     </p>
                     <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                      {org.roleCount} role{org.roleCount === 1 ? "" : "s"} &bull;{" "}
-                      {org.permissionCount} permission{org.permissionCount === 1 ? "" : "s"}
+                      {t("USER_ORGANIZATIONS_LIST.SUMMARY", {
+                        roles: t("USER_ORGANIZATIONS_LIST.ROLE_COUNT", { count: org.roleCount }),
+                        permissions: t("USER_ORGANIZATIONS_LIST.PERMISSION_COUNT", {
+                          count: org.permissionCount,
+                        }),
+                      })}
                     </p>
                   </div>
                 </button>

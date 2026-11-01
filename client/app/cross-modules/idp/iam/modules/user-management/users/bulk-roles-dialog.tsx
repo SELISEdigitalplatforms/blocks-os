@@ -13,6 +13,7 @@ import {
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { useGetAssignableRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { Lock } from "lucide-react";
+import { useT } from "@seliseblocks/genesis-os";
 import { useMemo, useState } from "react";
 import { GrantHint } from "@blocks-idp/iam/components/grant-hint";
 
@@ -69,6 +70,7 @@ export const BulkRolesDialog = ({
   onOpenChange,
   onContinue,
 }: BulkRolesDialogProps) => {
+  const { t } = useT("os.idp.users");
   const [selectedSlugs, setSelectedSlugs] = useState<string[]>([]);
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState("");
@@ -116,10 +118,10 @@ export const BulkRolesDialog = ({
   const totalCount = data?.totalCount ?? 0;
 
   const isRemove = mode === "remove";
-  const title = isRemove ? "Remove roles" : "Add roles";
+  const title = isRemove ? t("BULK_ROLES_DIALOG.TITLE_REMOVE") : t("BULK_ROLES_DIALOG.TITLE_ADD");
   const subtitle = isRemove
-    ? `${selectedCount} users selected · only the roles they hold in this organization are listed`
-    : `${selectedCount} users selected · roles are added, existing roles are kept`;
+    ? t("BULK_ROLES_DIALOG.SUBTITLE_REMOVE", { count: selectedCount })
+    : t("BULK_ROLES_DIALOG.SUBTITLE_ADD", { count: selectedCount });
 
   const toggle = (slug: string, checked: boolean) =>
     setSelectedSlugs((current) =>
@@ -143,15 +145,15 @@ export const BulkRolesDialog = ({
           className="rounded-lg border bg-muted/40 px-3 py-2.5"
         >
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Organization
+            {t("BULK_ROLES_DIALOG.ORGANIZATION")}
           </p>
           <p className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5 text-sm font-semibold text-high-emphasis">
             <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
             <span className="min-w-0 wrap-break-word">{organizationLabel}</span>
-            <span className="font-normal text-muted-foreground">· from the page filter</span>
+            <span className="font-normal text-muted-foreground">{t("BULK_ROLES_DIALOG.FROM_PAGE_FILTER")}</span>
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Each user&rsquo;s roles in other organizations are untouched.
+            {t("BULK_ROLES_DIALOG.OTHER_ORGANIZATIONS_UNTOUCHED")}
           </p>
         </div>
 
@@ -163,7 +165,7 @@ export const BulkRolesDialog = ({
               setPage(0);
             }}
             className="h-fit w-full py-3"
-            placeholder="Search roles"
+            placeholder={t("BULK_ROLES_DIALOG.SEARCH_ROLES")}
           />
         )}
 
@@ -200,7 +202,7 @@ export const BulkRolesDialog = ({
                           title={role.slug}
                         >
                           {isRemove && heldCount !== undefined
-                            ? `Held by ${heldCount} of the ${selectedCount} selected users`
+                            ? t("BULK_ROLES_DIALOG.HELD_BY", { count: heldCount, total: selectedCount })
                             : role.slug}
                         </span>
                       </label>
@@ -209,7 +211,7 @@ export const BulkRolesDialog = ({
                 })
               ) : (
                 <div className="col-span-full flex h-24 items-center justify-center text-sm text-muted-foreground">
-                  No roles found
+                  {t("BULK_ROLES_DIALOG.NO_ROLES_FOUND")}
                 </div>
               )}
             </div>
@@ -221,8 +223,7 @@ export const BulkRolesDialog = ({
             count of the wrong population. The preview step reports the real one. */}
         {isRemove && heldRoleCounts === null && (
           <p data-testid="bulk-roles-counts-unavailable" className="text-xs text-muted-foreground">
-            Counts are unavailable when every matching user is selected. The next step reports
-            exactly how many users each role would affect.
+            {t("BULK_ROLES_DIALOG.COUNTS_UNAVAILABLE")}
           </p>
         )}
 
@@ -245,7 +246,7 @@ export const BulkRolesDialog = ({
             disabled={isBusy}
             onClick={() => onOpenChange(false)}
           >
-            Cancel
+            {t("common:CANCEL")}
           </Button>
           <Button
             type="button"
@@ -254,7 +255,7 @@ export const BulkRolesDialog = ({
             disabled={isBusy || selectedSlugs.length === 0}
             onClick={() => onContinue(selectedSlugs)}
           >
-            {isBusy ? "Checking…" : "Continue"}
+            {isBusy ? t("BULK_ROLES_DIALOG.CHECKING") : t("common:CONTINUE")}
           </Button>
         </DialogFooter>
       </DialogContent>

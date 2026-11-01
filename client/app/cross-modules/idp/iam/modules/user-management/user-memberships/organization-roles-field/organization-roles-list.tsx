@@ -8,6 +8,7 @@ import {
 } from "@/components/ui-kits/table/table";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { useCallback, useMemo } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { DeleteOrganizationRole } from "./delete-organization-role";
@@ -19,6 +20,7 @@ type OrganizationRolesListProps = {
 };
 
 export const OrganizationRolesList = ({ roles, onDelete, onSave }: OrganizationRolesListProps) => {
+  const { t } = useT("os.idp.users");
   const handleDelete = useCallback((role: IRole) => {
     return onDelete(role);
   }, [onDelete]);
@@ -30,7 +32,7 @@ export const OrganizationRolesList = ({ roles, onDelete, onSave }: OrganizationR
         accessorFn: (row) => `${row.name}`.trim(),
         header: () => (
           <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">Roles</span>
+            <span className="font-bold text-medium-emphasis">{t("ORGANIZATION_ROLES_LIST.COLUMN_ROLES")}</span>
           </div>
         ),
         cell: ({ row }) => (
@@ -42,7 +44,7 @@ export const OrganizationRolesList = ({ roles, onDelete, onSave }: OrganizationR
         accessorFn: (row) => `${row.slug}`.trim(),
         header: () => (
           <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">Slug</span>
+            <span className="font-bold text-medium-emphasis">{t("ORGANIZATION_ROLES_LIST.COLUMN_SLUG")}</span>
           </div>
         ),
         cell: ({ row }) => (
@@ -66,7 +68,7 @@ export const OrganizationRolesList = ({ roles, onDelete, onSave }: OrganizationR
         ),
       },
     ],
-    [handleDelete, onSave],
+    [handleDelete, onSave, t],
   );
 
   const table = useReactTable({
@@ -100,7 +102,7 @@ export const OrganizationRolesList = ({ roles, onDelete, onSave }: OrganizationR
                 colSpan={columns.length}
                 className="h-24 text-center text-muted-foreground"
               >
-                No roles found
+                {t("ORGANIZATION_ROLES_LIST.NO_ROLES_FOUND")}
               </TableCell>
             </TableRow>
           ) : (

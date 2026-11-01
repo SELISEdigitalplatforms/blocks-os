@@ -23,14 +23,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui-kits/table/table";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { useGetGrantablePermissions } from "@blocks-idp/iam/hooks/use-permission";
 import { IPermission, RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
 import { Plus, KeyRound } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   MAX_PERMISSIONS_PER_USER,
-  PERMISSION_LIMIT_MESSAGE,
+  getPermissionLimitMessage,
   getNewlySelectedPermissions,
   getTotalPermissionCount,
   isAtMaxPermissions,
@@ -58,6 +58,7 @@ export const AddOrganizationPermission = ({
   onSave,
   organizationId,
 }: AddOrganizationPermissionProps) => {
+  const { t } = useT("os.idp.users");
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const scopeKey = organizationId || tenantId;
   const [open, setOpen] = useState<boolean>(false);
@@ -117,7 +118,7 @@ export const AddOrganizationPermission = ({
       );
 
       if (result.blocked) {
-        showErrorToast({ errors: PERMISSION_LIMIT_MESSAGE });
+        showErrorToast({ errors: getPermissionLimitMessage() });
         return currentSelection;
       }
 
@@ -130,9 +131,17 @@ export const AddOrganizationPermission = ({
     const disabled = shouldDisablePermissionCheckbox(item, permissions, selectedPermissions);
 
     if (disabled && atMaxPermissions) {
-      return `${item.name} unavailable, maximum of ${MAX_PERMISSIONS_PER_USER} permissions reached`;
+      return t("ADD_ORGANIZATION_PERMISSION.UNAVAILABLE_ARIA_LABEL", {
+        name: item.name,
+        max: MAX_PERMISSIONS_PER_USER,
+      });
     }
-    return `${selected ? "Deselect" : "Select"} ${item.name}`;
+    return t(
+      selected
+        ? "ADD_ORGANIZATION_PERMISSION.DESELECT_PERMISSION"
+        : "ADD_ORGANIZATION_PERMISSION.SELECT_PERMISSION",
+      { name: item.name },
+    );
   };
 
   return (
@@ -152,30 +161,38 @@ export const AddOrganizationPermission = ({
           onClick={(e) => e.stopPropagation()}
         >
           <Plus className="h-4 w-4 md:mr-1.5" />
-          <span className="sr-only sm:not-sr-only">Manage Permissions</span>
+          <span className="sr-only sm:not-sr-only">{t("ADD_ORGANIZATION_PERMISSION.MANAGE_PERMISSIONS")}</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="flex max-h-[560px] flex-col gap-3 overflow-hidden sm:max-w-2xl">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <DialogTitle className="text-left">Manage permissions</DialogTitle>
+            <DialogTitle className="text-left">{t("ADD_ORGANIZATION_PERMISSION.TITLE")}</DialogTitle>
             <Badge
               variant="success"
               className="font-normal"
               aria-live="polite"
-              aria-label={`${totalPermissionCount} out of ${MAX_PERMISSIONS_PER_USER} permissions selected`}
+              aria-label={t("ADD_ORGANIZATION_PERMISSION.SELECTED_ARIA_LABEL", {
+                count: totalPermissionCount,
+                max: MAX_PERMISSIONS_PER_USER,
+              })}
             >
-              {totalPermissionCount}/{MAX_PERMISSIONS_PER_USER} selected
+              {t("ADD_ORGANIZATION_PERMISSION.SELECTED_BADGE", {
+                count: totalPermissionCount,
+                max: MAX_PERMISSIONS_PER_USER,
+              })}
             </Badge>
           </div>
           <DialogDescription className="text-left">
-            You can assign a maximum of {MAX_PERMISSIONS_PER_USER} permissions per user.
+            {t("ADD_ORGANIZATION_PERMISSION.MAX_PERMISSIONS_DESCRIPTION", {
+              max: MAX_PERMISSIONS_PER_USER,
+            })}
           </DialogDescription>
         </DialogHeader>
         <GrantHint kind="permissions" />
         <div>
           <FilterControls.SearchInput
-            placeholder="Search by permission name"
+            placeholder={t("ADD_ORGANIZATION_PERMISSION.SEARCH_PLACEHOLDER")}
             onChange={(search) => setFilter((prev) => ({ ...prev, search, page: 0 }))}
             value={filter.search}
             className="h-fit w-full py-3"
@@ -186,8 +203,8 @@ export const AddOrganizationPermission = ({
             <TableHeader>
               <TableRow>
                 <TableHead></TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
+                <TableHead>{t("ADD_ORGANIZATION_PERMISSION.COLUMN_NAME")}</TableHead>
+                <TableHead>{t("ADD_ORGANIZATION_PERMISSION.COLUMN_TYPE")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -211,8 +228,8 @@ export const AddOrganizationPermission = ({
             <TableHeader>
               <TableRow>
                 <TableHead></TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
+                <TableHead>{t("ADD_ORGANIZATION_PERMISSION.COLUMN_NAME")}</TableHead>
+                <TableHead>{t("ADD_ORGANIZATION_PERMISSION.COLUMN_TYPE")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -256,8 +273,12 @@ export const AddOrganizationPermission = ({
             <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
               <KeyRound className="h-5 w-5 text-primary" />
             </div>
-            <p className="mt-3 text-sm font-medium text-foreground">No permissions added</p>
-            <p className="mt-1 text-xs text-muted-foreground">Optional, add if needed</p>
+            <p className="mt-3 text-sm font-medium text-foreground">
+              {t("ADD_ORGANIZATION_PERMISSION.NO_PERMISSIONS_ADDED")}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t("ADD_ORGANIZATION_PERMISSION.OPTIONAL_HINT")}
+            </p>
           </div>
         )}
         <div className="flex items-center justify-end">
@@ -273,7 +294,7 @@ export const AddOrganizationPermission = ({
         <DialogFooter>
           <DialogClose asChild>
             <Button variant="outline" size="default">
-              Cancel
+              {t("common:CANCEL")}
             </Button>
           </DialogClose>
           <Button
@@ -288,7 +309,7 @@ export const AddOrganizationPermission = ({
               setTimeout(() => onSave?.(), 0);
             }}
           >
-            Save
+            {t("common:SAVE")}
           </Button>
         </DialogFooter>
       </DialogContent>

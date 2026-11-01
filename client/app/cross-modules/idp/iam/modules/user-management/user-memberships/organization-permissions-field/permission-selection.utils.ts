@@ -1,8 +1,12 @@
+import { tStatic } from "@seliseblocks/genesis-os";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 
 export const MAX_PERMISSIONS_PER_USER = 5;
 
-export const PERMISSION_LIMIT_MESSAGE = `You can select up to ${MAX_PERMISSIONS_PER_USER} permissions.`;
+export const getPermissionLimitMessage = () =>
+  tStatic("os.idp.users", "PERMISSION_SELECTION_UTILS.PERMISSION_LIMIT", {
+    max: MAX_PERMISSIONS_PER_USER,
+  });
 
 export const permissionMatches = (left: IPermission, right: IPermission) =>
   left.resource === right.resource || left.name === right.name;

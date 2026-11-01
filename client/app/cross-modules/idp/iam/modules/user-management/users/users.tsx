@@ -11,7 +11,7 @@ import {
   useGetEnabledOrganizationsInfinite,
   useGetOrganizationConfig,
 } from "@blocks-idp/iam/hooks/use-organization";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import {
   UsersDateFilters,
   UsersSearchFilter,
@@ -35,9 +35,9 @@ import { useUserManageability } from "@blocks-idp/iam/hooks/use-user-manageabili
 import { useMemo, useState } from "react";
 
 const DEFAULT_ORGANIZATION_ID = "default";
-const DEFAULT_ORGANIZATION_LABEL = "Default organization";
 
 export const Users = () => {
+  const { t } = useT("os.idp.users");
   const { queryParams, setQueryParams } = useUsersFilterQueryParams();
   const { sortQueryParams } = useUsersSortQueryParams();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
@@ -137,12 +137,12 @@ export const Users = () => {
 
   const organizationLabel = useMemo(() => {
     if (effectiveOrganizationId === null) return "";
-    if (effectiveOrganizationId === DEFAULT_ORGANIZATION_ID) return DEFAULT_ORGANIZATION_LABEL;
+    if (effectiveOrganizationId === DEFAULT_ORGANIZATION_ID) return t("USERS.DEFAULT_ORGANIZATION");
     return (
       organizations.find((organization) => organization.itemId === effectiveOrganizationId)?.name ??
       effectiveOrganizationId
     );
-  }, [effectiveOrganizationId, organizations]);
+  }, [effectiveOrganizationId, organizations, t]);
 
   const exitSelection = () => {
     setIsSelecting(false);
@@ -238,9 +238,12 @@ export const Users = () => {
       : { userIds: Array.from(selectedUserIds) },
   });
 
+  const matchedAllLabel = organizationLabel
+    ? t("USERS.MATCHED_BY_ALL_IN_ORGANIZATION", { organization: organizationLabel })
+    : t("USERS.MATCHED_BY_ALL");
   const matchedBy = isAllMatchingSelected
-    ? `Everything matching the current filter${organizationLabel ? ` in ${organizationLabel}` : ""}`
-    : `${selectedUserIds.size} explicitly selected users`;
+    ? matchedAllLabel
+    : t("USERS.MATCHED_BY_SELECTED", { count: selectedUserIds.size });
 
   const handleContinue = async (roleSlugs: string[]) => {
     if (!dialogMode) return;
@@ -256,7 +259,7 @@ export const Users = () => {
       // Selection mode and the selection both survive, so the operator can narrow
       // the filter and retry without rebuilding what they picked.
       if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
-      showErrorToast({ errors: "Something went wrong" });
+      showErrorToast({ errors: t("USERS.SOMETHING_WENT_WRONG") });
     }
   };
 
@@ -267,21 +270,23 @@ export const Users = () => {
       const response = await submitMutation.mutateAsync(buildPayload(draft.mode, draft.roleSlugs));
       if (!response.isSuccess) return showErrorToast({ errors: response.errors });
 
-      const verb = draft.mode === "add" ? "Adding" : "Removing";
       const affected = preview?.affectedCount ?? response.matchedCount;
-      const direction = draft.mode === "add" ? "to" : "from";
+      const roles = draft.roleSlugs.join(", ");
 
       // The only feedback there is. The worker reports nothing back, so the copy
       // says the work is queued rather than done.
       showSuccessToast({
-        title: "Submitted successfully",
-        description: `${verb} ${draft.roleSlugs.join(", ")} ${direction} ${affected} users. This runs in the background.`,
+        title: t("USERS.SUBMITTED_SUCCESSFULLY"),
+        description:
+          draft.mode === "add"
+            ? t("USERS.SUBMITTED_ADD", { roles, count: affected })
+            : t("USERS.SUBMITTED_REMOVE", { roles, count: affected }),
       });
       setSubmittedAt(Date.now());
       exitSelection();
     } catch (error) {
       if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
-      showErrorToast({ errors: "Something went wrong" });
+      showErrorToast({ errors: t("USERS.SOMETHING_WENT_WRONG") });
     }
   };
 

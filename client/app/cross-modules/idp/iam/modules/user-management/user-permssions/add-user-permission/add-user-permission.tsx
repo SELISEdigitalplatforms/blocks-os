@@ -35,6 +35,7 @@ import { RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
 import { CirclePlus, Info } from "lucide-react";
 import { useState } from "react";
 import { GrantHint } from "@blocks-idp/iam/components/grant-hint";
+import { useT } from "@seliseblocks/genesis-os";
 
 type AddUserPermissionProps = {
   userId: string;
@@ -42,6 +43,7 @@ type AddUserPermissionProps = {
 };
 
 export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps) => {
+  const { t } = useT("os.idp.users");
   const [open, setOpen] = useState<boolean>(false);
   const [selectedPermisson, setSelectedPermissions] = useState<string[]>([]);
   const [filter, setFilter] = useState({
@@ -65,13 +67,13 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
       const res = await addPermissions(selectedPermisson);
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
       showSuccessToast({
-        description: `${selectedPermisson.length > 1 ? "New permissions added" : "New permission added"}`,
+        description: t("ADD_USER_PERMISSION.ADDED", { count: selectedPermisson.length }),
       });
       setSelectedPermissions([]);
       setOpen(false);
     } catch (error) {
       if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
-      showErrorToast({ errors: "Something went wrong" });
+      showErrorToast({ errors: t("ADD_USER_PERMISSION.SOMETHING_WENT_WRONG") });
     }
   };
 
@@ -122,14 +124,14 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
                   }}
                 >
                   <CirclePlus className="h-5 w-5 md:mr-2.5" />
-                  <span className="sr-only sm:not-sr-only">Assign Permissions</span>
+                  <span className="sr-only sm:not-sr-only">{t("ADD_USER_PERMISSION.ASSIGN_PERMISSIONS")}</span>
                 </Button>
               </DialogTrigger>
             </span>
           </TooltipTrigger>
           {resources.length >= 5 && (
             <TooltipContent side="bottom">
-              Maximum 5 permissions can be assigned to a user
+              {t("ADD_USER_PERMISSION.MAX_PERMISSIONS_TOOLTIP")}
             </TooltipContent>
           )}
         </Tooltip>
@@ -137,20 +139,20 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
       <DialogContent className="max-w-xl">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <DialogTitle className="text-left">Include Permissions</DialogTitle>
+            <DialogTitle className="text-left">{t("ADD_USER_PERMISSION.TITLE")}</DialogTitle>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    aria-label="Maximum permissions info"
+                    aria-label={t("ADD_USER_PERMISSION.MAX_PERMISSIONS_INFO")}
                     className="inline-flex items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus:outline-hidden"
                   >
                     <Info className="h-4 w-4" aria-hidden />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="top">
-                  You can assign a maximum of 5 permissions per user.
+                  {t("ADD_USER_PERMISSION.MAX_PERMISSIONS_INFO_TOOLTIP")}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -159,7 +161,7 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
         <GrantHint kind="permissions" />
         <div>
           <FilterControls.SearchInput
-            placeholder="Search by permission name"
+            placeholder={t("ADD_USER_PERMISSION.SEARCH_PLACEHOLDER")}
             onChange={(search) => setFilter((prev) => ({ ...prev, search, page: 0 }))}
             value={filter.search}
             className="h-fit w-full py-3"
@@ -172,8 +174,8 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
               <TableHeader>
                 <TableRow>
                   <TableHead></TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
+                  <TableHead>{t("ADD_USER_PERMISSION.COLUMN_NAME")}</TableHead>
+                  <TableHead>{t("ADD_USER_PERMISSION.COLUMN_TYPE")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -206,7 +208,7 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
                             </TooltipTrigger>
                             {isAtCap && !isAlreadyAssigned && (
                               <TooltipContent side="right">
-                                Maximum 5 permissions can be assigned to a user
+                                {t("ADD_USER_PERMISSION.MAX_PERMISSIONS_TOOLTIP")}
                               </TooltipContent>
                             )}
                           </Tooltip>
@@ -244,7 +246,7 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
         <DialogFooter>
           <DialogClose asChild>
             <Button variant="outline" size="default" disabled={isPending}>
-              Cancel
+              {t("common:CANCEL")}
             </Button>
           </DialogClose>
           <Button
@@ -252,7 +254,7 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
             onClick={onClickHandler}
             disabled={isPending || !selectedPermisson.length}
           >
-            {isPending ? "Including" : "Include"}
+            {isPending ? t("ADD_USER_PERMISSION.INCLUDING") : t("ADD_USER_PERMISSION.INCLUDE")}
           </Button>
         </DialogFooter>
       </DialogContent>

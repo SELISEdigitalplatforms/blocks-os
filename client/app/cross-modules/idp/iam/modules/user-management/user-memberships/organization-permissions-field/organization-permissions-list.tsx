@@ -9,6 +9,7 @@ import {
 } from "@/components/ui-kits/table/table";
 import { useMemo } from "react";
 import { DeleteOrganizationPermission } from "./delete-organization-permission";
+import { useT } from "@seliseblocks/genesis-os";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 
 interface OrganizationPermissionsListProps {
@@ -22,6 +23,7 @@ export const OrganizationPermissionsList = ({
   onDelete,
   onSave,
 }: OrganizationPermissionsListProps) => {
+  const { t } = useT("os.idp.users");
   const columns = useMemo<ColumnDef<IPermission>[]>(
     () => [
       {
@@ -29,7 +31,7 @@ export const OrganizationPermissionsList = ({
         accessorFn: (row) => `${row.name}`.trim(),
         header: () => (
           <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">Name</span>
+            <span className="font-bold text-medium-emphasis">{t("ORGANIZATION_PERMISSIONS_LIST.COLUMN_NAME")}</span>
           </div>
         ),
         cell: ({ row }) => (
@@ -43,7 +45,7 @@ export const OrganizationPermissionsList = ({
         accessorFn: (row) => `${row.resource}`.trim(),
         header: () => (
           <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">Resource</span>
+            <span className="font-bold text-medium-emphasis">{t("ORGANIZATION_PERMISSIONS_LIST.COLUMN_RESOURCE")}</span>
           </div>
         ),
         cell: ({ row }) => (
@@ -71,7 +73,7 @@ export const OrganizationPermissionsList = ({
         ),
       },
     ],
-    [onDelete, onSave],
+    [onDelete, onSave, t],
   );
 
   const table = useReactTable({
@@ -113,7 +115,7 @@ export const OrganizationPermissionsList = ({
                 colSpan={columns.length}
                 className="h-24 text-center text-muted-foreground"
               >
-                No permissions found
+                {t("ORGANIZATION_PERMISSIONS_LIST.NO_PERMISSIONS_FOUND")}
               </TableCell>
             </TableRow>
           )}

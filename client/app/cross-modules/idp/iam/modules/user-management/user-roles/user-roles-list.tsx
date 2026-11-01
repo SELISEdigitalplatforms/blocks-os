@@ -1,5 +1,6 @@
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { X } from "lucide-react";
+import { useT } from "@seliseblocks/genesis-os";
 
 import { IRole } from "@blocks-idp/iam/models/role";
 
@@ -34,6 +35,8 @@ export const UserRolesList = ({
   isLoading,
   onRemoveRole,
 }: UserRolesListProps) => {
+  const { t } = useT("os.idp.users");
+
   if (isLoading) return <LoadingSkelton />;
 
   return (
@@ -63,7 +66,7 @@ export const UserRolesList = ({
                     type="button"
                     className="flex h-7 w-7 items-center justify-center rounded-md bg-secondary transition-colors hover:bg-secondary/80"
                     onClick={() => onRemoveRole(item.slug)}
-                    aria-label="Remove role"
+                    aria-label={t("USER_ROLES_LIST.REMOVE_ROLE")}
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -74,7 +77,7 @@ export const UserRolesList = ({
       </div>
       {roles && roles.length === 0 && (
         <div className="flex h-24 items-center justify-center text-muted-foreground">
-          No roles found
+          {t("USER_ROLES_LIST.NO_ROLES_FOUND")}
         </div>
       )}
     </>

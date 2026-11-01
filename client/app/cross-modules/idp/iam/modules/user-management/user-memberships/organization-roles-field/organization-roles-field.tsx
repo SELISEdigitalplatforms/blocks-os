@@ -12,7 +12,8 @@ import { IRole } from "@blocks-idp/iam/models/role";
 import { Info, ShieldCheck } from "lucide-react";
 import { AddOrganizationRole } from "./add-organization-role";
 import { OrganizationRolesList } from "./organization-roles-list";
-import { MINIMUM_ROLE_MESSAGE } from "./role-assignment.constants";
+import { useT } from "@seliseblocks/genesis-os";
+import { getMinimumRoleMessage } from "./role-assignment.constants";
 
 type OrganizationRolesFieldProps = {
   roles: IRole[];
@@ -26,9 +27,10 @@ export const OrganizationRolesField = ({
   roles,
   onChange,
   onSave,
-  description = "Assign default roles to this user automatically",
+  description,
   organizationId,
 }: OrganizationRolesFieldProps) => {
+  const { t } = useT("os.idp.users");
   const [filter, setFilter] = useState({ page: 0, pageSize: 5 });
 
   const onPageChangeHandler = (page: number) => {
@@ -44,7 +46,7 @@ export const OrganizationRolesField = ({
   const onRemoveHandler = useCallback(
     (role: IRole) => {
       if (roles.length <= 1) {
-        showErrorToast({ errors: MINIMUM_ROLE_MESSAGE });
+        showErrorToast({ errors: getMinimumRoleMessage() });
         return false;
       }
       (onChange as unknown as (fn: (prev: IRole[]) => IRole[]) => void)(
@@ -60,7 +62,7 @@ export const OrganizationRolesField = ({
       <div className="flex flex-row items-center justify-between gap-3">
         <div className="flex-1 space-y-1">
           <div className="flex items-center gap-2">
-            <Label className="text-base font-medium">Roles</Label>
+            <Label className="text-base font-medium">{t("ORGANIZATION_ROLES_FIELD.ROLES")}</Label>
             {roles.length > 0 && (
               <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                 {roles.length}
@@ -71,7 +73,7 @@ export const OrganizationRolesField = ({
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    aria-label="Role assignment requirement"
+                    aria-label={t("ORGANIZATION_ROLES_FIELD.ROLE_ASSIGNMENT_REQUIREMENT")}
                     className="inline-flex items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus:outline-hidden"
                   >
                     <Info className="h-4 w-4" aria-hidden />
@@ -81,12 +83,14 @@ export const OrganizationRolesField = ({
                   side="top"
                   className="max-w-[240px] whitespace-normal text-center"
                 >
-                  {MINIMUM_ROLE_MESSAGE}
+                  {getMinimumRoleMessage()}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="text-sm text-muted-foreground">
+            {description ?? t("ORGANIZATION_ROLES_FIELD.DEFAULT_DESCRIPTION")}
+          </p>
         </div>
         <div className="shrink-0">
           <AddOrganizationRole
@@ -103,10 +107,10 @@ export const OrganizationRolesField = ({
             <ShieldCheck className="h-5 w-5 text-primary" />
           </div>
           <p className="mt-3 text-sm font-medium text-foreground">
-            No roles added
+            {t("ORGANIZATION_ROLES_FIELD.NO_ROLES_ADDED")}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Add at least one role for this user
+            {t("ORGANIZATION_ROLES_FIELD.ADD_AT_LEAST_ONE_ROLE")}
           </p>
         </div>
       ) : (
@@ -121,9 +125,11 @@ export const OrganizationRolesField = ({
           {roles.length > filter.pageSize && (
             <div className="flex items-center justify-between border-t pt-3">
               <p className="text-xs text-muted-foreground">
-                Showing {filter.page * filter.pageSize + 1} to{" "}
-                {Math.min((filter.page + 1) * filter.pageSize, roles.length)} of{" "}
-                {roles.length} roles
+                {t("ORGANIZATION_ROLES_FIELD.SHOWING", {
+                  from: filter.page * filter.pageSize + 1,
+                  to: Math.min((filter.page + 1) * filter.pageSize, roles.length),
+                  count: roles.length,
+                })}
               </p>
               <Pagination
                 page={filter.page}

@@ -5,13 +5,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
+import { useT } from "@seliseblocks/genesis-os";
 import { RotateCcw, Send } from "lucide-react";
 import { useState } from "react";
 import { UserResetPassword } from "./user-reset-password";
 import { UserResendActivationMail } from "./user-resend-activation/user-resend-activation";
 import { DisabledReason } from "@blocks-idp/iam/components/disabled-reason";
 import { useUserManageability } from "@blocks-idp/iam/hooks/use-user-manageability";
-import { CANNOT_MANAGE_USER_TOOLTIP } from "@blocks-idp/iam/utils/grant-scope";
+import { getCannotManageUserTooltip } from "@blocks-idp/iam/utils/grant-scope";
 import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
 
 type UserActionMenuProps = {
@@ -20,19 +21,22 @@ type UserActionMenuProps = {
 };
 
 export const UserActionMenu = ({ id, projectKey }: UserActionMenuProps) => {
+  const { t } = useT("os.idp.users");
   const { data } = useGetUserById({ id, projectKey });
   const [isResendActivationModalOpen, setIsResendActivationModalOpen] = useState<boolean>(false);
   const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState<boolean>(false);
 
   const { canManage } = useUserManageability();
-  const blockedReason = canManage(data?.data) ? null : CANNOT_MANAGE_USER_TOOLTIP;
+  const blockedReason = canManage(data?.data) ? null : getCannotManageUserTooltip();
   const isActive = data?.data?.active === true;
 
   if (blockedReason) {
     return (
       <DisabledReason reason={blockedReason}>
         <Button variant="outline" size="sm" className="gap-1.5" disabled>
-          {isActive ? "Reset Password" : "Resend Activation"}
+          {isActive
+            ? t("USER_ACTION_MENU.RESET_PASSWORD")
+            : t("USER_ACTION_MENU.RESEND_ACTIVATION")}
         </Button>
       </DisabledReason>
     );
@@ -50,12 +54,12 @@ export const UserActionMenu = ({ id, projectKey }: UserActionMenuProps) => {
                   size="icon"
                   className="lg:hidden"
                   onClick={() => setIsResetPasswordModalOpen(true)}
-                  aria-label="Reset Password"
+                  aria-label={t("USER_ACTION_MENU.RESET_PASSWORD")}
                 >
                   <RotateCcw className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom">Reset Password</TooltipContent>
+              <TooltipContent side="bottom">{t("USER_ACTION_MENU.RESET_PASSWORD")}</TooltipContent>
             </Tooltip>
           </TooltipProvider>
         ) : (
@@ -67,12 +71,12 @@ export const UserActionMenu = ({ id, projectKey }: UserActionMenuProps) => {
                   size="icon"
                   className="lg:hidden"
                   onClick={() => setIsResendActivationModalOpen(true)}
-                  aria-label="Resend Activation"
+                  aria-label={t("USER_ACTION_MENU.RESEND_ACTIVATION")}
                 >
                   <Send className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom">Resend Activation</TooltipContent>
+              <TooltipContent side="bottom">{t("USER_ACTION_MENU.RESEND_ACTIVATION")}</TooltipContent>
             </Tooltip>
           </TooltipProvider>
         )}
@@ -84,7 +88,7 @@ export const UserActionMenu = ({ id, projectKey }: UserActionMenuProps) => {
             onClick={() => setIsResetPasswordModalOpen(true)}
           >
             <RotateCcw className="h-4 w-4" />
-            Reset Password
+            {t("USER_ACTION_MENU.RESET_PASSWORD")}
           </Button>
         ) : (
           <Button
@@ -94,7 +98,7 @@ export const UserActionMenu = ({ id, projectKey }: UserActionMenuProps) => {
             onClick={() => setIsResendActivationModalOpen(true)}
           >
             <Send className="h-4 w-4" />
-            Resend Activation
+            {t("USER_ACTION_MENU.RESEND_ACTIVATION")}
           </Button>
         )}
       </div>

@@ -21,11 +21,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { useGetAssignableRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { Info, Plus, ShieldCheck } from "lucide-react";
-import { MINIMUM_ROLE_MESSAGE } from "./role-assignment.constants";
+import { getMinimumRoleMessage } from "./role-assignment.constants";
 import { GrantHint } from "@blocks-idp/iam/components/grant-hint";
 
 type AddOrganizationRoleProps = {
@@ -49,6 +49,7 @@ export const AddOrganizationRole = ({
   onSave,
   organizationId,
 }: AddOrganizationRoleProps) => {
+  const { t } = useT("os.idp.users");
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   // An explicit `organizationId` always wins. Sending the tenant id to
   // `/api/iam/roles` would either be wrong (different scope) or duplicate
@@ -113,7 +114,7 @@ export const AddOrganizationRole = ({
       );
     }
     if (selectedRoles.length === 1 && selectedRolesSlug.includes(role.slug)) {
-      showErrorToast({ errors: MINIMUM_ROLE_MESSAGE });
+      showErrorToast({ errors: getMinimumRoleMessage() });
       return;
     }
     setSelectedRoles((currentRoles) =>
@@ -152,7 +153,7 @@ export const AddOrganizationRole = ({
           onClick={(e) => e.stopPropagation()}
         >
           <Plus className="h-4 w-4 md:mr-1.5" />
-          <span className="sr-only sm:not-sr-only">Manage Roles</span>
+          <span className="sr-only sm:not-sr-only">{t("ADD_ORGANIZATION_ROLE.MANAGE_ROLES")}</span>
         </Button>
       </DialogTrigger>
       <DialogContent
@@ -166,13 +167,13 @@ export const AddOrganizationRole = ({
       >
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <DialogTitle className="text-left">Manage roles</DialogTitle>
+            <DialogTitle className="text-left">{t("ADD_ORGANIZATION_ROLE.TITLE")}</DialogTitle>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    aria-label="Role assignment requirement"
+                    aria-label={t("ADD_ORGANIZATION_ROLE.ROLE_ASSIGNMENT_REQUIREMENT")}
                     className="inline-flex items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus:outline-hidden"
                   >
                     <Info className="h-4 w-4" aria-hidden />
@@ -182,7 +183,7 @@ export const AddOrganizationRole = ({
                   side="top"
                   className="max-w-[240px] whitespace-normal text-center"
                 >
-                  {MINIMUM_ROLE_MESSAGE}
+                  {getMinimumRoleMessage()}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -190,13 +191,19 @@ export const AddOrganizationRole = ({
               variant="success"
               className="font-normal"
               aria-live="polite"
-              aria-label={`${totalRoleCount} out of ${MAX_ROLES_PER_USER} roles selected`}
+              aria-label={t("ADD_ORGANIZATION_ROLE.SELECTED_ARIA_LABEL", {
+                count: totalRoleCount,
+                max: MAX_ROLES_PER_USER,
+              })}
             >
-              {totalRoleCount}/{MAX_ROLES_PER_USER} selected
+              {t("ADD_ORGANIZATION_ROLE.SELECTED_BADGE", {
+                count: totalRoleCount,
+                max: MAX_ROLES_PER_USER,
+              })}
             </Badge>
           </div>
           <DialogDescription className="text-left">
-            You can assign a maximum of {MAX_ROLES_PER_USER} roles per user.
+            {t("ADD_ORGANIZATION_ROLE.MAX_ROLES_DESCRIPTION", { max: MAX_ROLES_PER_USER })}
           </DialogDescription>
         </DialogHeader>
         <GrantHint kind="roles" />
@@ -207,7 +214,7 @@ export const AddOrganizationRole = ({
               setFilter((prev) => ({ ...prev, search: value, page: 0 }))
             }
             className="h-fit w-full py-3"
-            placeholder="Search by role name"
+            placeholder={t("ADD_ORGANIZATION_ROLE.SEARCH_PLACEHOLDER")}
           />
         </div>
         {isLoading ? (
@@ -233,7 +240,12 @@ export const AddOrganizationRole = ({
                 <Checkbox
                   checked={isRoleSelectedInModal(item.slug)}
                   disabled={!isRoleSelectedInModal(item.slug) && isAtMaxRoles}
-                  aria-label={`${isRoleSelectedInModal(item.slug) ? "Deselect" : "Select"} ${item.name}`}
+                  aria-label={t(
+                    isRoleSelectedInModal(item.slug)
+                      ? "ADD_ORGANIZATION_ROLE.DESELECT_ROLE"
+                      : "ADD_ORGANIZATION_ROLE.SELECT_ROLE",
+                    { name: item.name },
+                  )}
                   onCheckedChange={(value) =>
                     onCheckedChangeHandler(!!value, item)
                   }
@@ -258,10 +270,10 @@ export const AddOrganizationRole = ({
               <ShieldCheck className="h-5 w-5 text-primary" />
             </div>
             <p className="mt-3 text-sm font-medium text-foreground">
-              No roles added
+              {t("ADD_ORGANIZATION_ROLE.NO_ROLES_ADDED")}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Add at least one role for this user
+              {t("ADD_ORGANIZATION_ROLE.ADD_AT_LEAST_ONE_ROLE")}
             </p>
           </div>
         )}
@@ -280,7 +292,7 @@ export const AddOrganizationRole = ({
         <DialogFooter>
           <DialogClose asChild>
             <Button variant="outline" size="default">
-              Cancel
+              {t("common:CANCEL")}
             </Button>
           </DialogClose>
           <Button
@@ -297,7 +309,7 @@ export const AddOrganizationRole = ({
               setTimeout(() => onSave?.(), 0);
             }}
           >
-            Add
+            {t("common:ADD")}
           </Button>
         </DialogFooter>
       </DialogContent>

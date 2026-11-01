@@ -22,13 +22,14 @@ import { isErrorWithErrors } from "@/lib/error";
 import { useGetUserById, useUpdateUser } from "@blocks-idp/iam/hooks/use-user";
 import { DisabledReason } from "@blocks-idp/iam/components/disabled-reason";
 import { useUserManageability } from "@blocks-idp/iam/hooks/use-user-manageability";
-import { CANNOT_MANAGE_USER_TOOLTIP } from "@blocks-idp/iam/utils/grant-scope";
+import { getCannotManageUserTooltip } from "@blocks-idp/iam/utils/grant-scope";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Pen } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { inviteUserFormDefaultValue, inviteUserFormSchema } from "./utils";
+import { useT } from "@seliseblocks/genesis-os";
+import { buildUpdateUserFormSchema, inviteUserFormDefaultValue, type inviteUserFormSchema } from "./utils";
 
 type UpdateUserProps = {
   id: string;
@@ -37,6 +38,7 @@ type UpdateUserProps = {
 };
 
 export const UpdateUser = ({ id, projectKey, iconOnly = false }: UpdateUserProps) => {
+  const { t } = useT("os.idp.users");
   const [open, setOpen] = useState<boolean>(false);
   const { data: userData, isLoading, isFetching } = useGetUserById({ id, projectKey });
   const { isPending, mutateAsync } = useUpdateUser({ id, projectKey });
@@ -46,7 +48,7 @@ export const UpdateUser = ({ id, projectKey, iconOnly = false }: UpdateUserProps
 
   const form = useForm({
     defaultValues: inviteUserFormDefaultValue,
-    resolver: zodResolver(inviteUserFormSchema),
+    resolver: zodResolver(buildUpdateUserFormSchema()),
   });
 
   const {
@@ -64,22 +66,22 @@ export const UpdateUser = ({ id, projectKey, iconOnly = false }: UpdateUserProps
         lastName: values.lastName,
       });
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
-      showSuccessToast({ description: "User updated successfully" });
+      showSuccessToast({ description: t("UPDATE_USER.USER_UPDATED") });
       form.reset();
       setOpen(false);
     } catch (error) {
       if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
-      showErrorToast({ errors: "Something went wrong" });
+      showErrorToast({ errors: t("UPDATE_USER.SOMETHING_WENT_WRONG") });
     }
   };
 
   if (isBlocked) {
     return (
-      <DisabledReason reason={CANNOT_MANAGE_USER_TOOLTIP}>
+      <DisabledReason reason={getCannotManageUserTooltip()}>
         <Button
           variant="ghost"
           size="icon"
-          aria-label="Edit user"
+          aria-label={t("UPDATE_USER.EDIT_USER_LABEL")}
           disabled
           className="h-7 w-7 shrink-0 rounded-full"
         >
@@ -109,7 +111,7 @@ export const UpdateUser = ({ id, projectKey, iconOnly = false }: UpdateUserProps
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Edit user"
+            aria-label={t("UPDATE_USER.EDIT_USER_LABEL")}
             className="h-7 w-7 shrink-0 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             <Pen className="h-3.5 w-3.5" />
@@ -117,13 +119,13 @@ export const UpdateUser = ({ id, projectKey, iconOnly = false }: UpdateUserProps
         ) : (
           <Button variant="outline" size="sm" className="gap-2">
             <Pen className="h-4 w-4" />
-            <span className="sr-only sm:not-sr-only">Edit User</span>
+            <span className="sr-only sm:not-sr-only">{t("UPDATE_USER.EDIT_USER")}</span>
           </Button>
         )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit User</DialogTitle>
+          <DialogTitle>{t("UPDATE_USER.EDIT_USER")}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmitHandler)}>
@@ -133,9 +135,9 @@ export const UpdateUser = ({ id, projectKey, iconOnly = false }: UpdateUserProps
                 name="firstName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>First name</FormLabel>
+                    <FormLabel>{t("UPDATE_USER.FIRST_NAME")}</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter first name" {...field} />
+                      <Input placeholder={t("UPDATE_USER.FIRST_NAME_PLACEHOLDER")} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -146,9 +148,9 @@ export const UpdateUser = ({ id, projectKey, iconOnly = false }: UpdateUserProps
                 name="lastName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Last name</FormLabel>
+                    <FormLabel>{t("UPDATE_USER.LAST_NAME")}</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter last name" {...field} />
+                      <Input placeholder={t("UPDATE_USER.LAST_NAME_PLACEHOLDER")} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -158,10 +160,12 @@ export const UpdateUser = ({ id, projectKey, iconOnly = false }: UpdateUserProps
             <DialogFooter className="mt-6">
               <DialogClose asChild>
                 <Button variant="secondary" disabled={isPending}>
-                  Cancel
+                  {t("common:CANCEL")}
                 </Button>
               </DialogClose>
-              <Button disabled={isPending || isLoading || isFetching || !isDirty}>Save</Button>
+              <Button disabled={isPending || isLoading || isFetching || !isDirty}>
+                {t("common:SAVE")}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

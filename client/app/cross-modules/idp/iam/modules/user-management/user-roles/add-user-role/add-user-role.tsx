@@ -26,6 +26,7 @@ import { useUserRoles } from "@blocks-idp/iam/hooks/use-user";
 import { CirclePlus, Info } from "lucide-react";
 import { useState } from "react";
 import { GrantHint } from "@blocks-idp/iam/components/grant-hint";
+import { useT } from "@seliseblocks/genesis-os";
 
 type AddUserRoleProps = {
   userId: string;
@@ -33,6 +34,7 @@ type AddUserRoleProps = {
 };
 
 export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
+  const { t } = useT("os.idp.users");
   const [open, setOpen] = useState<boolean>(false);
   const [selectedRolos, setSelectedRoles] = useState<string[]>([]);
   const [filter, setFilter] = useState({ page: 0, pageSize: 10, search: "" });
@@ -52,12 +54,12 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
     try {
       const res = await addRoles(selectedRolos);
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
-      showSuccessToast({ description: "New role assigned successfully" });
+      showSuccessToast({ description: t("ADD_USER_ROLE.ASSIGNED") });
       setSelectedRoles([]);
       setOpen(false);
     } catch (error) {
       if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
-      showErrorToast({ errors: "Something went wrong" });
+      showErrorToast({ errors: t("ADD_USER_ROLE.SOMETHING_WENT_WRONG") });
     }
   };
 
@@ -101,33 +103,33 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
                   disabled={slugs.length >= 5}
                 >
                   <CirclePlus className="h-5 w-5 md:mr-2.5" />
-                  <span className="sr-only sm:not-sr-only">Assign Role</span>
+                  <span className="sr-only sm:not-sr-only">{t("ADD_USER_ROLE.ASSIGN_ROLE")}</span>
                 </Button>
               </DialogTrigger>
             </span>
           </TooltipTrigger>
           {slugs.length >= 5 && (
-            <TooltipContent side="bottom">Maximum 5 roles can be assigned to a user</TooltipContent>
+            <TooltipContent side="bottom">{t("ADD_USER_ROLE.MAX_ROLES_TOOLTIP")}</TooltipContent>
           )}
         </Tooltip>
       </TooltipProvider>
       <DialogContent>
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <DialogTitle className="text-left">Assign roles</DialogTitle>
+            <DialogTitle className="text-left">{t("ADD_USER_ROLE.TITLE")}</DialogTitle>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    aria-label="Maximum roles info"
+                    aria-label={t("ADD_USER_ROLE.MAX_ROLES_INFO")}
                     className="inline-flex items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus:outline-hidden"
                   >
                     <Info className="h-4 w-4" aria-hidden />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="top">
-                  You can assign a maximum of 5 roles per user.
+                  {t("ADD_USER_ROLE.MAX_ROLES_INFO_TOOLTIP")}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -140,7 +142,7 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
             value={filter.search}
             onChange={(value) => setFilter((prev) => ({ ...prev, search: value, page: 0 }))}
             className="h-fit w-full py-3"
-            placeholder="Search by roles name"
+            placeholder={t("ADD_USER_ROLE.SEARCH_PLACEHOLDER")}
           />
         </div>
         <Card>
@@ -183,7 +185,7 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
                           </TooltipTrigger>
                           {isAtCap && !isAlreadyAssigned && (
                             <TooltipContent side="right">
-                              Maximum 5 roles can be assigned to a user
+                              {t("ADD_USER_ROLE.MAX_ROLES_TOOLTIP")}
                             </TooltipContent>
                           )}
                         </Tooltip>
@@ -203,7 +205,9 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
                   );
                 })
               ) : (
-                <div className="flex h-24 items-center justify-center">No roles found</div>
+                <div className="flex h-24 items-center justify-center">
+                  {t("ADD_USER_ROLE.NO_ROLES_FOUND")}
+                </div>
               )}
             </div>
           </CardContent>
@@ -223,7 +227,7 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
         <DialogFooter>
           <DialogClose asChild>
             <Button variant="outline" size="default" disabled={isPending}>
-              Cancel
+              {t("common:CANCEL")}
             </Button>
           </DialogClose>
           <Button
@@ -231,7 +235,7 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
             onClick={onClickHandler}
             disabled={isPending || !selectedRolos.length}
           >
-            {isPending ? "Including" : "Include"}
+            {isPending ? t("ADD_USER_ROLE.INCLUDING") : t("ADD_USER_ROLE.INCLUDE")}
           </Button>
         </DialogFooter>
       </DialogContent>

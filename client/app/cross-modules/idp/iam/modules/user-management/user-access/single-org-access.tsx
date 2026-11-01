@@ -10,6 +10,7 @@ import {
 import { createRoleStub } from "@blocks-idp/iam/utils/role-stub";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
+import { useT } from "@seliseblocks/genesis-os";
 import { RolesPermissionsPillEditor } from "./roles-permissions-pill-editor";
 
 type SingleOrgAccessProps = {
@@ -20,6 +21,7 @@ type SingleOrgAccessProps = {
 const DEFAULT_ORG_ID = "default";
 
 export const SingleOrgAccess = ({ userId, projectKey }: SingleOrgAccessProps) => {
+  const { t } = useT("os.idp.users");
   const { data: userData, isLoading: isUserLoading } = useGetUserById({ id: userId, projectKey });
   const { data: rolesData, isLoading: isRolesLoading } = useGetRoles({
     page: 0,
@@ -149,13 +151,13 @@ export const SingleOrgAccess = ({ userId, projectKey }: SingleOrgAccessProps) =>
         showErrorToast({ errors: res.errors });
         return;
       }
-      showSuccessToast({ description: "Roles and permissions updated successfully" });
+      showSuccessToast({ description: t("SINGLE_ORG_ACCESS.UPDATED") });
     } catch (error) {
       showErrorToast({
         errors:
           typeof error === "object" && error !== null && "errors" in error
             ? (error as { errors: unknown }).errors
-            : "Something went wrong",
+            : t("SINGLE_ORG_ACCESS.SOMETHING_WENT_WRONG"),
       });
     }
   };
@@ -177,8 +179,8 @@ export const SingleOrgAccess = ({ userId, projectKey }: SingleOrgAccessProps) =>
       permissions={selectedPermissions}
       onRolesChange={setSelectedRoles}
       onPermissionsChange={setSelectedPermissions}
-      rolesDescription="Roles assigned to you."
-      permissionsDescription="Permissions assigned to you."
+      rolesDescription={t("SINGLE_ORG_ACCESS.ROLES_DESCRIPTION")}
+      permissionsDescription={t("SINGLE_ORG_ACCESS.PERMISSIONS_DESCRIPTION")}
       onSave={onSave}
       organizationId={DEFAULT_ORG_ID}
     />
