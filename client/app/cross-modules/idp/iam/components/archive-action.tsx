@@ -23,6 +23,7 @@ import { isErrorWithErrors } from "@/lib/error";
 import { ARCHIVE_ERROR_MESSAGES, normalizeArchiveErrors } from "../constants/archive-error-messages";
 import { useRoleArchiveImpact, usePermissionArchiveImpact } from "../hooks/use-archive-impact";
 import { IArchiveImpactBase, IRoleArchiveImpact, IPermissionArchiveImpact } from "../models/archive-impact.model";
+import { useT } from "@seliseblocks/genesis-os";
 
 type ArchiveActionProps = {
   /** What is being archived, for the dialog copy and the button's accessible name. */
@@ -40,8 +41,7 @@ type ArchiveActionProps = {
   disabledReason?: string;
 };
 
-const plural = (count: number, singular: string) =>
-  `${count} ${singular}${count === 1 ? "" : "s"}`;
+type TFn = ReturnType<typeof useT>["t"];
 
 /**
  * The consequence sentence, built from the counts the backend reported.
@@ -52,6 +52,7 @@ const plural = (count: number, singular: string) =>
  * counted separately and must be described separately.
  */
 const consequenceText = (
+  t: TFn,
   entity: "role" | "permission",
   impact: IRoleArchiveImpact | IPermissionArchiveImpact,
 ): string => {
@@ -60,20 +61,26 @@ const consequenceText = (
   // Organization wording is omitted entirely for single-org tenants -- there is no such concept
   // there, and mentioning it would raise a question the reader cannot act on.
   if (impact.isMultiOrgEnabled && impact.organizationCount > 0) {
-    clauses.push(`is used in ${plural(impact.organizationCount, "other organization")}`);
+    clauses.push(
+      t("ARCHIVE_ACTION.CLAUSE_USED_IN_ORGANIZATIONS", { count: impact.organizationCount }),
+    );
   }
 
   if (entity === "role") {
     if (impact.affectedUserCount > 0) {
-      clauses.push(`is currently held by ${plural(impact.affectedUserCount, "user")}`);
+      clauses.push(t("ARCHIVE_ACTION.CLAUSE_HELD_BY_USERS", { count: impact.affectedUserCount }));
     }
   } else {
     const permissionImpact = impact as IPermissionArchiveImpact;
     if (permissionImpact.affectedUserCount > 0) {
-      clauses.push(`is granted directly to ${plural(permissionImpact.affectedUserCount, "user")}`);
+      clauses.push(
+        t("ARCHIVE_ACTION.CLAUSE_GRANTED_TO_USERS", { count: permissionImpact.affectedUserCount }),
+      );
     }
     if (permissionImpact.roleBindingCount > 0) {
-      clauses.push(`is referenced by ${plural(permissionImpact.roleBindingCount, "role")}`);
+      clauses.push(
+        t("ARCHIVE_ACTION.CLAUSE_REFERENCED_BY_ROLES", { count: permissionImpact.roleBindingCount }),
+      );
     }
   }
 
@@ -81,13 +88,25 @@ const consequenceText = (
     return "";
   }
 
-  const subject = entity === "role" ? "This role" : "This permission";
-  const effect =
-    entity === "role"
-      ? "Archiving it removes the role from all of them."
-      : "Archiving it removes the permission from those users and roles.";
+  return entity === "role"
+    ? t("ARCHIVE_ACTION.CONSEQUENCE_ROLE", { clauses: clauses.join(", ") })
+    : t("ARCHIVE_ACTION.CONSEQUENCE_PERMISSION", { clauses: clauses.join(", ") });
+};
 
-  return `${subject} ${clauses.join(", ")}. ${effect}`;
+const getConsentLabel = (
+  t: TFn,
+  entity: "role" | "permission",
+  users: string,
+  acrossOrganizations: boolean,
+): string => {
+  if (entity === "role") {
+    return acrossOrganizations
+      ? t("ARCHIVE_ACTION.CONSENT_ROLE_ALL_ORGANIZATIONS", { users })
+      : t("ARCHIVE_ACTION.CONSENT_ROLE", { users });
+  }
+  return acrossOrganizations
+    ? t("ARCHIVE_ACTION.CONSENT_PERMISSION_ALL_ORGANIZATIONS", { users })
+    : t("ARCHIVE_ACTION.CONSENT_PERMISSION", { users });
 };
 
 /** How long a click keeps the reason visible; a pointer leaving closes it sooner. */
@@ -109,6 +128,7 @@ const ArchiveActionBlocked = ({
   name: string;
   reason: string;
 }) => {
+  const { t } = useT("os.idp.iam-ui");
   const [open, setOpen] = useState(false);
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -150,7 +170,11 @@ const ArchiveActionBlocked = ({
             size="icon"
             variant="ghost"
             aria-disabled
-            aria-label={`Archive ${entity} ${name}`}
+            aria-label={
+              entity === "role"
+                ? t("ARCHIVE_ACTION.ARIA_ARCHIVE_ROLE", { name })
+                : t("ARCHIVE_ACTION.ARIA_ARCHIVE_PERMISSION", { name })
+            }
             className="cursor-not-allowed rounded-full opacity-50 hover:bg-transparent"
             onClick={reveal}
             onPointerEnter={hold}
@@ -176,6 +200,7 @@ const ArchiveActionBlocked = ({
  * other row's confirm button.
  */
 const ArchiveActionConfirm = ({ entity, name, archive, isPending, itemId }: ArchiveActionProps) => {
+  const { t } = useT("os.idp.iam-ui");
   const [open, setOpen] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
 
@@ -192,7 +217,10 @@ const ArchiveActionConfirm = ({ entity, name, archive, isPending, itemId }: Arch
   // Consent tracks affectedUserCount, not the active subset: the backend scrub is unconditional
   // over the organization's users, so an inactive holder loses the assignment just as permanently.
   const needsConsent = !!impact && !isBlocked && affectedUserCount > 0;
-  const consequence = impact ? consequenceText(entity, impact) : "";
+  const consequence = impact ? consequenceText(t, entity, impact) : "";
+  const consentUsers = t("ARCHIVE_ACTION.USER_COUNT", { count: affectedUserCount });
+  const acrossOrganizations = !!impact?.isMultiOrgEnabled && impact.organizationCount > 0;
+  const consentLabel = getConsentLabel(t, entity, consentUsers, acrossOrganizations);
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
@@ -207,7 +235,10 @@ const ArchiveActionConfirm = ({ entity, name, archive, isPending, itemId }: Arch
     try {
       await archive({ id: itemId, confirmRevokeFromUsers: needsConsent && consentChecked });
       showSuccessToast({
-        description: `${entity === "role" ? "Role" : "Permission"} archived successfully`,
+        description:
+          entity === "role"
+            ? t("ARCHIVE_ACTION.ARCHIVED_ROLE")
+            : t("ARCHIVE_ACTION.ARCHIVED_PERMISSION"),
       });
       setOpen(false);
       setConsentChecked(false);
@@ -223,7 +254,7 @@ const ArchiveActionConfirm = ({ entity, name, archive, isPending, itemId }: Arch
       const errors =
         dictionary && Object.keys(dictionary).length > 0
           ? dictionary
-          : "Something went wrong while archiving.";
+          : t("ARCHIVE_ACTION.ARCHIVE_FAILED");
 
       // The dictionary and the map go in raw; showErrorToast runs the lookup itself. Mapping here
       // first yielded a string[], and handleErrorMessages collapses any array to "An unexpected
@@ -241,18 +272,23 @@ const ArchiveActionConfirm = ({ entity, name, archive, isPending, itemId }: Arch
           size="icon"
           variant="ghost"
           className="rounded-full"
-          aria-label={`Archive ${entity} ${name}`}
+          aria-label={
+            entity === "role"
+              ? t("ARCHIVE_ACTION.ARIA_ARCHIVE_ROLE", { name })
+              : t("ARCHIVE_ACTION.ARIA_ARCHIVE_PERMISSION", { name })
+          }
         >
           <Trash2 className="h-4 w-4 text-destructive" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[440px]">
         <DialogHeader>
-          <DialogTitle>Archive this {entity}?</DialogTitle>
-          <DialogDescription>
-            {name} will be archived and hidden from this list. Existing records are kept, so nothing
-            is permanently deleted.
-          </DialogDescription>
+          <DialogTitle>
+            {entity === "role"
+              ? t("ARCHIVE_ACTION.TITLE_ROLE")
+              : t("ARCHIVE_ACTION.TITLE_PERMISSION")}
+          </DialogTitle>
+          <DialogDescription>{t("ARCHIVE_ACTION.DESCRIPTION", { name })}</DialogDescription>
         </DialogHeader>
 
         {isLoading && (
@@ -265,18 +301,15 @@ const ArchiveActionConfirm = ({ entity, name, archive, isPending, itemId }: Arch
         {/* An unavailable preview must not make archiving impossible -- it degrades to the plain
             confirm this dialog had before impact counts existed. */}
         {isError && (
-          <p className="text-sm text-muted-foreground">
-            The impact of this change could not be loaded. You can still archive, but the number of
-            affected users and organizations is unknown.
-          </p>
+          <p className="text-sm text-muted-foreground">{t("ARCHIVE_ACTION.IMPACT_UNAVAILABLE")}</p>
         )}
 
         {isBlocked && (
           <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
             <p className="font-medium text-destructive">
               {impact?.blockingReason === "Role_Has_Child_Roles"
-                ? "This role has child roles. Retire or re-parent them before archiving."
-                : "This item cannot be archived right now."}
+                ? t("ARCHIVE_ACTION.BLOCKED_CHILD_ROLES")
+                : t("ARCHIVE_ACTION.BLOCKED_GENERIC")}
             </p>
             {consequence && <p className="mt-1 text-muted-foreground">{consequence}</p>}
           </div>
@@ -286,8 +319,9 @@ const ArchiveActionConfirm = ({ entity, name, archive, isPending, itemId }: Arch
           <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
             <p>{consequence}</p>
             <p className="mt-1 text-muted-foreground">
-              Affected users keep their current access until they next sign in. This cannot be
-              undone — restoring the {entity} later does not restore who held it.
+              {entity === "role"
+                ? t("ARCHIVE_ACTION.WARNING_ROLE")
+                : t("ARCHIVE_ACTION.WARNING_PERMISSION")}
             </p>
           </div>
         )}
@@ -301,21 +335,19 @@ const ArchiveActionConfirm = ({ entity, name, archive, isPending, itemId }: Arch
               className="mt-0.5 shrink-0"
               checked={consentChecked}
               onCheckedChange={(checked) => setConsentChecked(checked === true)}
-              aria-label={`Confirm removing this ${entity} from ${affectedUserCount} users`}
+              aria-label={
+                entity === "role"
+                  ? t("ARCHIVE_ACTION.ARIA_CONSENT_ROLE", { count: affectedUserCount })
+                  : t("ARCHIVE_ACTION.ARIA_CONSENT_PERMISSION", { count: affectedUserCount })
+              }
             />
-            <span>
-              I understand this removes the {entity} from {plural(affectedUserCount, "user")}
-              {impact?.isMultiOrgEnabled && impact.organizationCount > 0
-                ? " across all organizations"
-                : ""}
-              .
-            </span>
+            <span>{consentLabel}</span>
           </label>
         )}
 
         <DialogFooter>
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
-            Cancel
+            {t("common:CANCEL")}
           </Button>
           <Button
             variant="destructive"
@@ -324,7 +356,7 @@ const ArchiveActionConfirm = ({ entity, name, archive, isPending, itemId }: Arch
             // a consequence before it is known, or to force one the backend will refuse anyway.
             disabled={isPending || isLoading || isBlocked || (needsConsent && !consentChecked)}
           >
-            {isPending ? "Archiving..." : "Archive"}
+            {isPending ? t("ARCHIVE_ACTION.ARCHIVING") : t("ARCHIVE_ACTION.ARCHIVE")}
           </Button>
         </DialogFooter>
       </DialogContent>

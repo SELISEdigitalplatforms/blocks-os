@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 const emptyProfilePhoto = "/assets/images/empty-profile-photo.png";
 import { ModuleName } from "@/constants/modules.constants";
+import { useT } from "@seliseblocks/genesis-os";
 type ProfileImageUploaderProps = {
   projectKey: string;
   id: string;
@@ -26,6 +27,7 @@ export const ProfileImageUploader = ({
   className,
   containerClassName,
 }: ProfileImageUploaderProps) => {
+  const { t } = useT("os.idp.iam-ui");
   const [localPreview, setLocalPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
@@ -59,7 +61,7 @@ export const ProfileImageUploader = ({
       });
       if (!res.isSuccess) {
         return showErrorToast({
-          errors: res.errors ?? "Unable to upload profile picture. Check that a Default storage configuration exists.",
+          errors: res.errors ?? t("PROFILE_IMAGE_UPLOADER.UPLOAD_FAILED"),
         });
       }
       const profileImageId = res.fileId;
@@ -71,7 +73,7 @@ export const ProfileImageUploader = ({
         });
         if (completion.verificationStatus !== "Verified") {
           return showErrorToast({
-            errors: completion.rejectionReason ?? "Profile picture failed verification",
+            errors: completion.rejectionReason ?? t("PROFILE_IMAGE_UPLOADER.VERIFICATION_FAILED"),
           });
         }
       }
@@ -87,12 +89,12 @@ export const ProfileImageUploader = ({
       if (!updatedUser.isSuccess)
         return showErrorToast({ errors: updatedUser.errors });
       queryClient.invalidateQueries({ queryKey: ["user"] });
-      showSuccessToast({ description: "Profile pic updated successfully" });
+      showSuccessToast({ description: t("PROFILE_IMAGE_UPLOADER.UPDATED") });
     } catch (error) {
       if (isErrorWithErrors(error)) {
         return showErrorToast({ errors: error.errors });
       }
-      return showErrorToast({ errors: "Something went wrong" });
+      return showErrorToast({ errors: t("PROFILE_IMAGE_UPLOADER.GENERIC_ERROR") });
     } finally {
       setIsProfileImageUploading(false);
     }
@@ -112,13 +114,13 @@ export const ProfileImageUploader = ({
     if (!ALLOWED_TYPES.includes(selectedFile.type)) {
       event.target.value = "";
       return showErrorToast({
-        errors: "Only image files (PNG, JPG, GIF, WebP, and SVG) are allowed",
+        errors: t("PROFILE_IMAGE_UPLOADER.INVALID_TYPE"),
       });
     }
     if (selectedFile.size > MAX_SIZE_MB * 1024 * 1024) {
       event.target.value = "";
       return showErrorToast({
-        errors: `File size must be less than ${MAX_SIZE_MB}MB`,
+        errors: t("PROFILE_IMAGE_UPLOADER.FILE_TOO_LARGE", { size: MAX_SIZE_MB }),
       });
     }
     setLocalPreview(URL.createObjectURL(selectedFile));
@@ -140,7 +142,7 @@ export const ProfileImageUploader = ({
       />
       <button
         type="button"
-        aria-label="Change profile image"
+        aria-label={t("PROFILE_IMAGE_UPLOADER.CHANGE_IMAGE")}
         disabled={isProfileImageUploading}
         onClick={(e) => {
           e.stopPropagation();
@@ -152,7 +154,7 @@ export const ProfileImageUploader = ({
         )}>
         <img
           src={image ?? emptyProfilePhoto}
-          alt="Profile Image"
+          alt={t("PROFILE_IMAGE_UPLOADER.IMAGE_ALT")}
           className="h-full w-full rounded-[inherit] object-cover object-center"
         />
         <div className="absolute inset-0 flex items-center justify-center rounded-[inherit] bg-black/0 transition-colors group-hover:bg-black/40 group-disabled:bg-black/0">
