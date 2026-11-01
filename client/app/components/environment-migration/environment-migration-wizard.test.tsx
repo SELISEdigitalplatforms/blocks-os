@@ -5,7 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({ resetFormData: vi.fn(), selectedTenantGroup: "grp-1" }));
 
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: (selector?: (s: { selectedTenantGroup: string }) => unknown) => {
     const state = { selectedTenantGroup: h.selectedTenantGroup };
     return selector ? selector(state) : state;

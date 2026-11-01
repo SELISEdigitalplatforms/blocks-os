@@ -16,9 +16,10 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
-vi.mock("@seliseblocks/genesis-os", () => {
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => {
   const Passthrough = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
   return {
+    ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
     useProjectStore: () => ({ selectedTenantGroup: h.selectedTenantGroup }),
     Tooltip: Passthrough,
     TooltipTrigger: Passthrough,

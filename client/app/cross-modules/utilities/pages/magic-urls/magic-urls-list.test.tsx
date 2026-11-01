@@ -17,7 +17,8 @@ vi.mock("@blocks-utilities/hooks/use-magic-url-config", () => ({
   useDeleteMagicUrlConfig: () => ({ mutateAsync: h.deleteConfig, isPending: h.isDeleting }),
   useSaveMagicUrlConfig: () => ({ mutateAsync: h.saveConfig, isPending: h.isSaving }),
 }));
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: h.tenantId } }),
 }));
 vi.mock("@blocks-utilities/utils/url.util", () => ({

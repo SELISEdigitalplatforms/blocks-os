@@ -31,7 +31,8 @@ const impersonateState = {
   impersonatedTenantId: "tenant-impersonated",
   originalTenantId: "tenant-root",
 };
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: vi.fn(() => ({
     setProjects,
     selectedProject: { itemId: "p-selected" },
