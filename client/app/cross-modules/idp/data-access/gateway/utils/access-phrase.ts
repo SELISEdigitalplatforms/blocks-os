@@ -6,6 +6,7 @@ import {
 } from "../constants/schema-access-control";
 import type { AccessTier } from "../components/primitives";
 import type { IPolicyItem, IPolicyRule, IPolicyRuleGroup } from "../models/data-service";
+import { gt } from "./gateway-i18n";
 
 /**
  * How alarming an effect is. This is not the access tier: a custom policy with
@@ -22,32 +23,81 @@ export type AccessEffect = {
   risk: AccessRisk;
 };
 
-/** Verb as it reads mid-sentence: "Anyone on the internet can *read* Order." */
-const VERB_PHRASES: Record<string, string> = {
-  view: "read",
-  create: "create records in",
-  edit: "edit",
-  delete: "delete from",
+/**
+ * The operation tabs. Each sentence has one key per tab, because the verb
+ * cannot be spliced into a sentence in every language ("can read X" / "X lesen").
+ */
+export type OperationTab = "view" | "create" | "edit" | "delete";
+
+export const asOperationTab = (tab: string): OperationTab =>
+  tab === "create" || tab === "edit" || tab === "delete" ? tab : "view";
+
+const PUBLIC_TEXT: Record<OperationTab, string> = {
+  view: "ACCESS_PHRASE.PUBLIC_VIEW",
+  create: "ACCESS_PHRASE.PUBLIC_CREATE",
+  edit: "ACCESS_PHRASE.PUBLIC_EDIT",
+  delete: "ACCESS_PHRASE.PUBLIC_DELETE",
+};
+const REQUESTER_TEXT: Record<OperationTab, string> = {
+  view: "ACCESS_PHRASE.REQUESTER_VIEW",
+  create: "ACCESS_PHRASE.REQUESTER_CREATE",
+  edit: "ACCESS_PHRASE.REQUESTER_EDIT",
+  delete: "ACCESS_PHRASE.REQUESTER_DELETE",
+};
+const INHERITED_TEXT: Record<OperationTab, string> = {
+  view: "ACCESS_PHRASE.INHERITED_VIEW",
+  create: "ACCESS_PHRASE.INHERITED_CREATE",
+  edit: "ACCESS_PHRASE.INHERITED_EDIT",
+  delete: "ACCESS_PHRASE.INHERITED_DELETE",
+};
+const NOBODY_TEXT: Record<OperationTab, string> = {
+  view: "ACCESS_PHRASE.NOBODY_VIEW",
+  create: "ACCESS_PHRASE.NOBODY_CREATE",
+  edit: "ACCESS_PHRASE.NOBODY_EDIT",
+  delete: "ACCESS_PHRASE.NOBODY_DELETE",
+};
+const ONE_RULE_SET_TEXT: Record<OperationTab, string> = {
+  view: "ACCESS_PHRASE.ONE_SET_VIEW",
+  create: "ACCESS_PHRASE.ONE_SET_CREATE",
+  edit: "ACCESS_PHRASE.ONE_SET_EDIT",
+  delete: "ACCESS_PHRASE.ONE_SET_DELETE",
+};
+const MANY_RULE_SETS_TEXT: Record<OperationTab, string> = {
+  view: "ACCESS_PHRASE.MANY_SETS_VIEW",
+  create: "ACCESS_PHRASE.MANY_SETS_CREATE",
+  edit: "ACCESS_PHRASE.MANY_SETS_EDIT",
+  delete: "ACCESS_PHRASE.MANY_SETS_DELETE",
 };
 
-export const verbPhrase = (tab: string) => VERB_PHRASES[tab] ?? tab;
-
-/** Where an operand comes from. 0 Auth, 1 Schema Fields, 2 Static Value. */
+/**
+ * Where an operand comes from: 0 Auth, 1 Schema Fields, 2 Static Value. Each
+ * phrase takes the operand's name, since the possessive reads differently in
+ * other languages ("the record's X" / "X des Datensatzes").
+ */
 const LEFT_SOURCE_PHRASES: Record<number, string> = {
-  0: "the signed-in user's",
-  1: "the record's",
-  2: "the value",
+  0: "ACCESS_PHRASE.OPERAND_AUTH",
+  1: "ACCESS_PHRASE.OPERAND_RECORD",
+  2: "ACCESS_PHRASE.OPERAND_VALUE",
 };
 
 const RIGHT_SOURCE_PHRASES: Record<number, string> = {
-  0: "the signed-in user's",
-  1: "the record's",
-  2: "",
+  0: "ACCESS_PHRASE.OPERAND_AUTH",
+  1: "ACCESS_PHRASE.OPERAND_RECORD",
+};
+
+/** An operand with its origin ("the record's OwnerId"); an unknown source is the bare name. */
+const operandPhrase = (phrases: Record<number, string>, source: number, name: string): string => {
+  const key = phrases[source];
+  return (key ? gt(key, { name }) : name).trim();
 };
 
 const quoteList = (value: string | string[] | null | undefined): string => {
-  if (Array.isArray(value)) return value.map((v) => `“${v}”`).join(" or ");
-  return `“${value ?? ""}”`;
+  if (Array.isArray(value)) {
+    return value
+      .map((v) => gt("ACCESS_PHRASE.QUOTED", { value: v }))
+      .join(gt("ACCESS_PHRASE.OR_JOIN"));
+  }
+  return gt("ACCESS_PHRASE.QUOTED", { value: value ?? "" });
 };
 
 /**
@@ -59,8 +109,10 @@ const quoteList = (value: string | string[] | null | undefined): string => {
  * the way the inspector needs to say it out loud.
  */
 export function rulePhrase(rule: IPolicyRule): string {
-  const left = `${LEFT_SOURCE_PHRASES[rule.leftSource] ?? ""} ${rule.leftOperand}`.trim();
-  const operator = READABLE_OPERATORS[rule.operator] ?? `operator(${rule.operator})`;
+  const left = operandPhrase(LEFT_SOURCE_PHRASES, rule.leftSource, rule.leftOperand);
+  const operator =
+    READABLE_OPERATORS[rule.operator] ??
+    gt("ACCESS_PHRASE.UNKNOWN_OPERATOR", { operator: rule.operator });
 
   if (NULL_OPERATORS.includes(NUMBER_TO_OPERATOR[rule.operator] ?? "")) {
     return `${left} ${operator}`;
@@ -73,8 +125,7 @@ export function rulePhrase(rule: IPolicyRule): string {
   const rightOperand = rule.rightOperands?.length
     ? rule.rightOperands.join(", ")
     : rule.rightOperand;
-  const rightSource = RIGHT_SOURCE_PHRASES[rule.rightSource] ?? "";
-  const rightPhrase = `${rightSource} ${rightOperand}`.trim();
+  const rightPhrase = operandPhrase(RIGHT_SOURCE_PHRASES, rule.rightSource, rightOperand);
   return `${left} ${operator} ${rightPhrase}`;
 }
 
@@ -97,7 +148,10 @@ export type RuleSetLine = {
  */
 export function ruleSetLines(policy: IPolicyItem): RuleSetLine[] {
   const walk = (group: IPolicyRuleGroup, depth: number, prefix: string): RuleSetLine[] => {
-    const joiner = group.logicalOperator === LOGICAL_OPERATOR.AND ? "and" : "or";
+    const joiner =
+      group.logicalOperator === LOGICAL_OPERATOR.AND
+        ? gt("ACCESS_PHRASE.JOIN_AND")
+        : gt("ACCESS_PHRASE.JOIN_OR");
     const items = [
       ...(group.rules ?? []).map((rule) => ({ rule })),
       ...(group.nestedGroups ?? []).map((nested) => ({ nested })),
@@ -105,13 +159,14 @@ export function ruleSetLines(policy: IPolicyItem): RuleSetLine[] {
     return items.flatMap((item, index): RuleSetLine[] => {
       const id = `${prefix}${index}`;
       let lead = joiner;
-      if (index === 0) lead = depth === 0 ? "when" : "";
+      if (index === 0) lead = depth === 0 ? gt("ACCESS_PHRASE.LEAD_WHEN") : "";
       if ("rule" in item) {
         return [{ id, lead, text: rulePhrase(item.rule), depth, kind: "rule" }];
       }
       const matchesAll = item.nested.logicalOperator === LOGICAL_OPERATOR.AND;
       return [
-        { id, lead, text: matchesAll ? "all of:" : "any of:", depth, kind: "group" },
+        { id, lead, text: matchesAll ? gt("ACCESS_PHRASE.GROUP_ALL_OF") : gt("ACCESS_PHRASE.GROUP_ANY_OF"),
+          depth, kind: "group" },
         ...walk(item.nested, depth + 1, `${id}.`),
       ];
     });
@@ -122,7 +177,10 @@ export function ruleSetLines(policy: IPolicyItem): RuleSetLine[] {
 const listNames = (policies: IPolicyItem[]) => {
   const names = policies.map((p) => p.policyName).filter(Boolean);
   if (names.length <= 1) return names.join("");
-  return `${names.slice(0, -1).join(", ")}, or ${names.at(-1)}`;
+  return gt("ACCESS_PHRASE.NAMES_LIST_OR", {
+    head: names.slice(0, -1).join(", "),
+    last: names.at(-1) ?? "",
+  });
 };
 
 /**
@@ -147,38 +205,36 @@ export function accessEffect({
   subject: string;
   policies?: IPolicyItem[];
 }): AccessEffect {
-  const verb = verbPhrase(tab);
+  const operationTab = asOperationTab(tab);
 
   if (tier === "public") {
     return {
-      heading: "Anyone, no sign-in",
-      text: `Anyone on the internet can ${verb} ${subject}. This is the widest grant available.`,
+      heading: gt("ACCESS_PHRASE.HEADING_PUBLIC"),
+      text: gt(PUBLIC_TEXT[operationTab], { subject }),
       risk: "open",
     };
   }
 
   if (tier === "user") {
     return {
-      heading: "Every requester",
-      text: `Any requester in this project can ${verb} ${subject}, with no further checks.`,
+      heading: gt("ACCESS_PHRASE.HEADING_REQUESTER"),
+      text: gt(REQUESTER_TEXT[operationTab], { subject }),
       risk: "caution",
     };
   }
 
   if (tier === "inherited") {
     return {
-      heading: "Inherited",
-      text: `Follows whatever the schema allows for ${verb === "read" ? "reading" : verb}.`,
+      heading: gt("ACCESS_PHRASE.HEADING_INHERITED"),
+      text: gt(INHERITED_TEXT[operationTab]),
       risk: "inherited",
     };
   }
 
   if (policies.some((policy) => policy.isAllowPolicy === false)) {
     return {
-      heading: "Cannot be summarised",
-      text:
-        `This policy includes a deny rule set, which the editor cannot represent. ` +
-        `Read the rule sets below rather than trusting a summary.`,
+      heading: gt("ACCESS_PHRASE.HEADING_UNKNOWN"),
+      text: gt("ACCESS_PHRASE.DENY_RULE_SET"),
       risk: "unknown",
     };
   }
@@ -186,18 +242,19 @@ export function accessEffect({
   // The trap: custom with nothing in it looks configured and grants nothing.
   if (policies.length === 0) {
     return {
-      heading: "Nobody",
-      text: `A custom policy with no rule sets allows nobody to ${verb} ${subject}.`,
+      heading: gt("ACCESS_PHRASE.HEADING_NOBODY"),
+      text: gt(NOBODY_TEXT[operationTab], { subject }),
       risk: "none",
     };
   }
 
+  const names = listNames(policies);
   return {
-    heading: "Effect",
+    heading: gt("ACCESS_PHRASE.HEADING_EFFECT"),
     text:
       policies.length === 1
-        ? `A requester can ${verb} ${subject} when ${listNames(policies)} matches.`
-        : `A requester can ${verb} ${subject} when any of these ${policies.length} rule sets match: ${listNames(policies)}.`,
+        ? gt(ONE_RULE_SET_TEXT[operationTab], { subject, names })
+        : gt(MANY_RULE_SETS_TEXT[operationTab], { subject, names, count: policies.length }),
     risk: "scoped",
   };
 }

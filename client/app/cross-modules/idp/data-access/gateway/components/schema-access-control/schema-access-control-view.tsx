@@ -33,8 +33,13 @@ import {
   useSetRowColumnPermission,
   useUpdatePolicy,
 } from "@blocks-idp/data-access/gateway/hooks/use-configuration";
-import { useProjectStore } from "@seliseblocks/genesis-os";
-import { accessEffect, verbPhrase } from "@blocks-idp/data-access/gateway/utils/access-phrase";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
+import {
+  accessEffect,
+  asOperationTab,
+  type OperationTab,
+} from "@blocks-idp/data-access/gateway/utils/access-phrase";
+import { gt } from "@blocks-idp/data-access/gateway/utils/gateway-i18n";
 import {
   accessPresets,
   type AccessPreset,
@@ -74,10 +79,18 @@ export interface SchemaAccessControlViewHandle {
  * from at row level).
  */
 const ACCESS_TIER_TILES = [
-  { type: ACCESS_TYPES.INHERITED, label: "Inherited" },
-  { type: ACCESS_TYPES.LOGGED_IN, label: "Requester" },
-  { type: ACCESS_TYPES.CUSTOM, label: "Custom" },
+  { type: ACCESS_TYPES.INHERITED, labelKey: "ACCESS_VIEW.TIER_INHERITED" },
+  { type: ACCESS_TYPES.LOGGED_IN, labelKey: "ACCESS_VIEW.TIER_REQUESTER" },
+  { type: ACCESS_TYPES.CUSTOM, labelKey: "ACCESS_VIEW.TIER_CUSTOM" },
 ];
+
+/** Translation keys of the empty-Custom confirmation title, one sentence per operation. */
+const NOBODY_TITLE_KEYS: Record<OperationTab, string> = {
+  view: "ACCESS_VIEW.NOBODY_TITLE_VIEW",
+  create: "ACCESS_VIEW.NOBODY_TITLE_CREATE",
+  edit: "ACCESS_VIEW.NOBODY_TITLE_EDIT",
+  delete: "ACCESS_VIEW.NOBODY_TITLE_DELETE",
+};
 
 /** Below this width the three property tiles stack instead of sharing a row. */
 const NARROW_TILES_WIDTH = 420;
@@ -118,6 +131,7 @@ const AccessTierTiles = ({
   disabled,
   onPick,
 }: Readonly<AccessTierTilesProps>) => {
+  const { t } = useT("os.idp.gateway");
   const groupName = useId();
   const { ref: tilesRef, isNarrow: tilesNarrow } = useNarrowContainer<HTMLDivElement>(
     NARROW_TILES_WIDTH,
@@ -132,9 +146,10 @@ const AccessTierTiles = ({
       ref={tilesRef}
       className={cn("grid gap-2", tileColumns(isRowLevel, tilesNarrow))}
       role="radiogroup"
-      aria-label="Who is allowed"
+      aria-label={t("ACCESS_VIEW.WHO_IS_ALLOWED")}
     >
-      {visibleTiers.map(({ type, label }) => {
+      {visibleTiers.map(({ type, labelKey }) => {
+        const label = t(labelKey);
         const tier = tierFromType(type);
         const isSelected = type === selectedType;
         const Icon = TIER_ICON[tier];
@@ -183,30 +198,34 @@ const AccessTierTiles = ({
  * them, so e.g. a Custom View on Role or User with nothing in it breaks sign-in.
  */
 const EmptyCustomConfirmDialog = ({
-  verb,
+  tab,
   subject,
   onAnswer,
-}: Readonly<{ verb: string; subject: string; onAnswer: (confirmed: boolean) => void }>) => (
+}: Readonly<{ tab: OperationTab; subject: string; onAnswer: (confirmed: boolean) => void }>) => {
+  const { t } = useT("os.idp.gateway");
+  return (
   <Dialog open onOpenChange={(open) => !open && onAnswer(false)}>
     <DialogContent className="mr-4 w-full max-w-[440px] rounded-md">
       <DialogHeader>
-        <DialogTitle className="text-left text-lg font-semibold leading-7">Nobody will be able to {verb} {subject}</DialogTitle>
+        <DialogTitle className="text-left text-lg font-semibold leading-7">
+          {gt(NOBODY_TITLE_KEYS[tab], { subject })}
+        </DialogTitle>
         <DialogDescription className="mt-2 wrap-break-word text-left text-sm font-normal leading-5">
-          Custom with no rule sets allows nobody. Every requester in this project, and the platform services
-          acting for them, will be refused until you add a rule set. Features that depend on {subject} can stop working.
+          {t("ACCESS_VIEW.NOBODY_DESCRIPTION", { subject })}
         </DialogDescription>
       </DialogHeader>
       <DialogFooter className="mt-4 flex flex-row justify-end gap-2">
         <Button type="button" variant="outline" size="sm" onClick={() => onAnswer(false)}>
-          Cancel
+          {t("common:CANCEL")}
         </Button>
         <Button type="button" variant="destructive" size="sm" onClick={() => onAnswer(true)}>
-          Save anyway
+          {t("ACCESS_VIEW.SAVE_ANYWAY")}
         </Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>
-);
+  );
+};
 
 /** A yes/no question asked from async code: `ask()` resolves with whatever is passed to `answer`. */
 function useAsyncConfirm() {
@@ -241,6 +260,7 @@ const PolicyListPane = ({
   onDeleteSuccess,
   onDeleteError,
 }: Readonly<PolicyListPaneProps>) => {
+  const { t } = useT("os.idp.gateway");
   if (isLoading) {
     return (
       <output
@@ -249,7 +269,7 @@ const PolicyListPane = ({
         aria-busy="true"
       >
         <Loader className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden />
-        <span className="text-sm text-muted-foreground">Loading access rules…</span>
+        <span className="text-sm text-muted-foreground">{t("ACCESS_VIEW.LOADING_RULES")}</span>
       </output>
     );
   }
@@ -289,6 +309,7 @@ export const SchemaAccessControlView = forwardRef<
   },
   ref,
 ) {
+  const { t } = useT("os.idp.gateway");
   const [showRuleSetForm, setShowRuleSetForm] = useState(false);
 
   // The inspector widens for the rule editor; it needs to
@@ -429,7 +450,7 @@ export const SchemaAccessControlView = forwardRef<
         return; // leave the form open with its values so the user can retry
       }
 
-      setSuccess("Rule set saved successfully");
+      setSuccess(t("ACCESS_VIEW.RULE_SET_SAVED"));
       refetch();
       advanceAfterRuleSetSaved();
     } catch (error) {
@@ -474,7 +495,7 @@ export const SchemaAccessControlView = forwardRef<
       });
 
       if (res?.isSuccess) {
-        setSuccess("Access level updated successfully");
+        setSuccess(t("ACCESS_VIEW.ACCESS_LEVEL_UPDATED"));
         setLastSavedAccessType(selectedAccessType);
         return true;
       }
@@ -552,11 +573,15 @@ export const SchemaAccessControlView = forwardRef<
     >
       {systemOnlyReason && (
         <p className="text-xs text-muted-foreground" data-testid="data-access-read-only">
-          Read-only. {systemOnlyReason}
+          {t("ACCESS_VIEW.READ_ONLY", { reason: systemOnlyReason })}
         </p>
       )}
       {emptyCustomConfirm.isAsking && (
-        <EmptyCustomConfirmDialog verb={verbPhrase(tabForOperation)} subject={effectSubject} onAnswer={emptyCustomConfirm.answer} />
+        <EmptyCustomConfirmDialog
+          tab={asOperationTab(tabForOperation)}
+          subject={effectSubject}
+          onAnswer={emptyCustomConfirm.answer}
+        />
       )}
       {/* Hidden while a rule set is being added or edited: the form is a
           focused sub-flow with its own header and Back button, and the tier
@@ -565,9 +590,9 @@ export const SchemaAccessControlView = forwardRef<
       <div className="flex shrink-0 flex-col gap-3">
         <div>
           <div className="mb-2">
-            <p className="text-sm font-semibold text-foreground">Who can access this?</p>
+            <p className="text-sm font-semibold text-foreground">{t("ACCESS_VIEW.WHO_CAN_ACCESS")}</p>
             <p className="text-xs text-muted-foreground">
-              Choose the access level for this operation.
+              {t("ACCESS_VIEW.CHOOSE_LEVEL")}
             </p>
           </div>
           <AccessTierTiles
@@ -640,7 +665,7 @@ export const SchemaAccessControlView = forwardRef<
                 setShowRuleSetForm(true);
               }}
               onDeleteSuccess={() => {
-                setSuccess("Rule set deleted successfully");
+                setSuccess(t("ACCESS_VIEW.RULE_SET_DELETED"));
                 refetch();
               }}
               onDeleteError={setError}
@@ -654,7 +679,7 @@ export const SchemaAccessControlView = forwardRef<
           <StatusSnackbar status={status} />
           <div className="flex items-center gap-2">
             <span className="flex-1 min-w-0 text-xs text-muted-foreground">
-              {hasUnsavedChanges ? "Unsaved changes" : "No changes"}
+              {hasUnsavedChanges ? t("ACCESS_VIEW.UNSAVED_CHANGES") : t("ACCESS_VIEW.NO_CHANGES")}
             </span>
             <Button
               type="button"
@@ -663,7 +688,7 @@ export const SchemaAccessControlView = forwardRef<
               disabled={!hasUnsavedChanges || isUpdating || isSavingRuleSet}
               onClick={handleCancelAccessType}
             >
-              Cancel
+              {t("common:CANCEL")}
             </Button>
             <Button
               type="button"
@@ -671,7 +696,7 @@ export const SchemaAccessControlView = forwardRef<
               disabled={!hasUnsavedChanges || isUpdating || isSavingRuleSet}
               onClick={() => void handleFinalSave()}
             >
-              Save
+              {t("common:SAVE")}
             </Button>
           </div>
         </div>

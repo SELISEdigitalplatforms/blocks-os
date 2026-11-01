@@ -4,6 +4,7 @@ import { SettingsAssignmentChip } from "@blocks-idp/settings/components/settings
 import { SettingsUnsavedBadge } from "@blocks-idp/settings/components/settings-unsaved-badge";
 import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout";
 import type { IRole } from "@blocks-idp/iam/models/role";
+import { useT } from "@seliseblocks/genesis-os";
 import { useMemo } from "react";
 
 type SignupRolesSectionProps = {
@@ -22,6 +23,7 @@ export const SignupRolesSection = ({
   savedSlugs,
   onChange,
 }: SignupRolesSectionProps) => {
+  const { t } = useT("os.idp.settings");
   const savedSlugSet = useMemo(() => new Set(savedSlugs), [savedSlugs]);
 
   const hasUnsavedChanges =
@@ -31,7 +33,9 @@ export const SignupRolesSection = ({
     <Card>
       <CardHeader className="mb-4 flex flex-row items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
-          <CardTitle className={SETTINGS_FORM_LAYOUT.sectionTitle}>Roles</CardTitle>
+          <CardTitle className={SETTINGS_FORM_LAYOUT.sectionTitle}>
+            {t("SIGNUP_ROLES_SECTION.TITLE")}
+          </CardTitle>
           {hasUnsavedChanges ? <SettingsUnsavedBadge /> : null}
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -40,12 +44,12 @@ export const SignupRolesSection = ({
       </CardHeader>
       <CardContent>
         {roles.length === 0 && removedRoles.length === 0 ? (
-          <p className={SETTINGS_FORM_LAYOUT.emptyState}>No roles found</p>
+          <p className={SETTINGS_FORM_LAYOUT.emptyState}>{t("SIGNUP_ROLES_SECTION.EMPTY")}</p>
         ) : (
           <div
             className="flex flex-col gap-2 sm:flex-row sm:flex-wrap"
             role="list"
-            aria-label="Assigned roles"
+            aria-label={t("SIGNUP_ROLES_SECTION.ASSIGNED_ROLES")}
           >
             {roles.map((role) => (
               <SettingsAssignmentChip

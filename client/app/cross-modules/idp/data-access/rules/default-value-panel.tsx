@@ -4,6 +4,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { ScrollArea } from "@/components/ui-kits/scroll-area/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui-kits/select/select";
 import { cn } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 import { useRef, useState } from "react";
 import { StatusSnackbar } from "../gateway/components/primitives";
 import { useSetPlatformFieldDefault } from "../gateway/hooks/use-configuration";
@@ -40,10 +41,10 @@ export interface DefaultValuePanelProps {
   savedLabel?: string;
 }
 
-const KIND_HINTS: Record<DefaultValueKind, string> = {
-  Static: "Stored as typed when the service creates a record with this property empty (null). Date-times are UTC.",
-  Template: "Text built from other properties of the same record and the signed-in user. Missing values become empty text.",
-  Now: "The time the record is created (UTC), optionally shifted.",
+const KIND_HINT_KEYS: Record<DefaultValueKind, string> = {
+  Static: "DEFAULT_VALUE_PANEL.HINT_STATIC",
+  Template: "DEFAULT_VALUE_PANEL.HINT_TEMPLATE",
+  Now: "DEFAULT_VALUE_PANEL.HINT_NOW",
 };
 
 /**
@@ -105,8 +106,9 @@ export function DefaultValuePanel({
   enumValues = [],
   initialDefault = null,
   onSave,
-  savedLabel = "Current default",
+  savedLabel,
 }: Readonly<DefaultValuePanelProps>) {
+  const { t } = useT("os.idp.rules");
   const kinds = allowedDefaultKinds(fieldType, isArray);
   // What's stored now: the schema response's value, then whatever this panel last saved.
   const [saved, setSaved] = useState<IFieldDefaultValue | null>(initialDefault);
@@ -149,7 +151,7 @@ export function DefaultValuePanel({
         editor.reset(kinds[0]);
         setTouched(false);
       }
-      setSuccess(value === null ? "Default value cleared" : "Default value saved");
+      setSuccess(value === null ? t("DEFAULT_VALUE_PANEL.CLEARED") : t("DEFAULT_VALUE_PANEL.SAVED"));
     } catch (error) {
       if (isRefusal(error)) setServerError(serverMessage(error));
       else setError(serverMessage(error));
@@ -169,14 +171,14 @@ export function DefaultValuePanel({
       <ScrollArea className="relative flex-1 overflow-auto">
         <div className="flex flex-col gap-5 p-6">
           <div className="flex flex-col gap-1.5">
-            <p className={LABEL_CLASS}>{savedLabel}</p>
+            <p className={LABEL_CLASS}>{savedLabel ?? t("DEFAULT_VALUE_PANEL.CURRENT_DEFAULT")}</p>
             <p className={cn("break-all text-sm", saved ? "font-mono text-foreground" : "text-muted-foreground")}>
-              {saved ? formatDefaultSummary(saved) : "None"}
+              {saved ? formatDefaultSummary(saved) : t("DEFAULT_VALUE_PANEL.NONE")}
             </p>
           </div>
 
           <div className="flex flex-col gap-4 rounded-sm border border-border/40 bg-card p-4">
-            <KindPicker kinds={kinds} value={draft.kind} hint={KIND_HINTS[draft.kind]} onChange={editor.setKind} />
+            <KindPicker kinds={kinds} value={draft.kind} hint={t(KIND_HINT_KEYS[draft.kind])} onChange={editor.setKind} />
 
             {draft.kind === "Now" ? (
               <OffsetInputs
@@ -194,7 +196,7 @@ export function DefaultValuePanel({
                   isArray={isArray}
                   fieldType={fieldType}
                   enumValues={enumValues}
-                  placeholder={`e.g. {{${variables.schemaName || "Schema"}.FirstName}}`}
+                  placeholder={t("DEFAULT_VALUE_PANEL.TEMPLATE_PLACEHOLDER", { example: `{{${variables.schemaName || "Schema"}.FirstName}}` })}
                   invalid={Boolean(shownError)}
                   onChange={editor.setItem}
                   onFocusItem={setActiveItem}
@@ -210,8 +212,8 @@ export function DefaultValuePanel({
 
                 {draft.kind === "Template" && (
                   <Select value="" onValueChange={insertVariable}>
-                    <SelectTrigger className="h-9 w-full" aria-label="Insert variable">
-                      <SelectValue placeholder="Insert variable…" />
+                    <SelectTrigger className="h-9 w-full" aria-label={t("DEFAULT_VALUE_PANEL.INSERT_VARIABLE_LABEL")}>
+                      <SelectValue placeholder={t("DEFAULT_VALUE_PANEL.INSERT_VARIABLE")} />
                     </SelectTrigger>
                     <SelectContent>
                       {templateVariables(variables.schemaName, variables.fields, AUTH_NAMES, isArray).map((variable) => (
@@ -237,14 +239,14 @@ export function DefaultValuePanel({
       <div className="flex shrink-0 flex-col gap-2 border-t border-border/40 bg-card px-6 py-3">
         <StatusSnackbar status={status} />
         <div className="flex items-center gap-2">
-          <span className="flex-1 text-xs text-muted-foreground">Applies to records the service creates from now on</span>
+          <span className="flex-1 text-xs text-muted-foreground">{t("DEFAULT_VALUE_PANEL.APPLIES_FROM_NOW")}</span>
           {saved && (
             <Button type="button" size="sm" variant="outline" disabled={isPending} onClick={() => void save(null)}>
-              Clear
+              {t("common:CLEAR")}
             </Button>
           )}
           <Button type="button" size="sm" disabled={isPending || Boolean(draftError && touched) || !isDirty} onClick={handleSave}>
-            {isPending ? "Saving…" : "Save"}
+            {isPending ? t("DEFAULT_VALUE_PANEL.SAVING") : t("common:SAVE")}
           </Button>
         </div>
       </div>

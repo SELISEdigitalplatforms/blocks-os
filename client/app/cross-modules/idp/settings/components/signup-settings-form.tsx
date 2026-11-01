@@ -24,6 +24,7 @@ import {
   toSignupSettingsFormValues,
   type SignupSettingsFormValues,
 } from "@blocks-idp/settings/utils/signup-settings-form";
+import { useT } from "@seliseblocks/genesis-os";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useMemo } from "react";
 import { useForm, useFormState } from "react-hook-form";
@@ -40,6 +41,7 @@ type SignupSettingsFormProps = {
 const DISCARD_DIRTY_VALUES = { keepDirtyValues: false } as const;
 
 export const SignupSettingsForm = ({ config }: SignupSettingsFormProps) => {
+  const { t } = useT("os.idp.settings");
   const tenantId = useSettingsTenantId();
   const { mutateAsync, isPending } = useSaveSettingsSignUpSetting();
 
@@ -154,13 +156,13 @@ export const SignupSettingsForm = ({ config }: SignupSettingsFormProps) => {
         const res = await mutateAsync(buildSignupSettingsSavePayload(normalized, config));
         if (!res.isSuccess) return showErrorToast({ errors: res.errors });
         form.reset(applySignupDisabledOverrides(normalized, config), DISCARD_DIRTY_VALUES);
-        showSuccessToast({ description: "Signup settings updated successfully" });
+        showSuccessToast({ description: t("SIGNUP_SETTINGS_FORM.UPDATED") });
       } catch (error) {
         if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
-        showErrorToast({ errors: "Something went wrong" });
+        showErrorToast({ errors: t("SIGNUP_SETTINGS_FORM.SOMETHING_WENT_WRONG") });
       }
     },
-    [config, form, mutateAsync, permissionsData?.data],
+    [config, form, mutateAsync, permissionsData?.data, t],
   );
 
   const tabActions = useMemo(
@@ -185,8 +187,8 @@ export const SignupSettingsForm = ({ config }: SignupSettingsFormProps) => {
             control={form.control}
             render={({ field }) => (
               <SettingsToggleCard
-                label="Sign Up Enabled"
-                description="Allow users to register using an email address and password. SSO sign-up is enabled automatically when this is on."
+                label={t("SIGNUP_SETTINGS_FORM.SIGN_UP_ENABLED")}
+                description={t("SIGNUP_SETTINGS_FORM.SIGN_UP_ENABLED_DESCRIPTION")}
                 checked={field.value}
                 onCheckedChange={(checked) => handleSignupEnabledChange(checked, field.onChange)}
               />

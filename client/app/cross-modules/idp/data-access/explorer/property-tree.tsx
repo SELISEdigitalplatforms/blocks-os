@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 import { ChevronRight } from "lucide-react";
 import type { CSSProperties } from "react";
 import type { PlatformSchemaField } from "../data-access.service";
@@ -69,10 +70,11 @@ export function TreeToggle({ expanded, label, onToggle }: Readonly<{ expanded: b
 
 /** "3 fields" beside an object property's name. */
 export function FieldCount({ count }: Readonly<{ count: number | undefined }>) {
+  const { t } = useT("os.idp.explorer");
   if (!count) return null;
   return (
     <span className="shrink-0 rounded-full border border-border/60 px-1.5 text-[10.5px] leading-4 text-muted-foreground">
-      {count} {count === 1 ? "field" : "fields"}
+      {t("PROPERTY_TREE.FIELD_COUNT", { count })}
     </span>
   );
 }

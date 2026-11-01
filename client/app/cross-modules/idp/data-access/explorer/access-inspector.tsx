@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui-kits/button/button";
 import { DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui-kits/dialog/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
+import { useT } from "@seliseblocks/genesis-os";
 import { Shield } from "lucide-react";
 import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import type { PlatformSchemaField } from "../data-access.service";
@@ -57,7 +58,14 @@ export const tabsForLevel = (level: AccessInspectorTarget["level"]) =>
  */
 export const AccessInspector = forwardRef<AccessInspectorHandle, { target: AccessInspectorTarget; onClose: () => void }>(
   function AccessInspector({ target, onClose }, ref) {
+    const { t } = useT("os.idp.explorer");
     const tabs = tabsForLevel(target.level);
+    const tabLabels: Record<string, string> = {
+      view: t("common:VIEW"),
+      create: t("common:CREATE"),
+      edit: t("common:EDIT"),
+      delete: t("common:DELETE"),
+    };
     const requestedTab = tabs.some((t) => t.value === target.tab) ? (target.tab as string) : "view";
     const [activeTab, setActiveTab] = useState(requestedTab);
     const tabRefs = useRef<Record<string, SchemaAccessControlViewHandle | null>>({});
@@ -81,8 +89,8 @@ export const AccessInspector = forwardRef<AccessInspectorHandle, { target: Acces
     }));
 
     return (
-      <PanelShell label={`Access for ${target.subject}`}>
-        <PanelHeader icon={Shield} title={target.subject} subtitle={target.context} onClose={onClose} closeLabel="Close access inspector" />
+      <PanelShell label={t("ACCESS_INSPECTOR.ACCESS_FOR", { subject: target.subject })}>
+        <PanelHeader icon={Shield} title={target.subject} subtitle={target.context} onClose={onClose} closeLabel={t("ACCESS_INSPECTOR.CLOSE")} />
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex min-h-0 flex-1 flex-col">
           <div className="shrink-0 border-b border-border/40 px-3">
             <TabsList className="flex h-12 w-full gap-0.5 bg-transparent p-0">
@@ -92,7 +100,7 @@ export const AccessInspector = forwardRef<AccessInspectorHandle, { target: Acces
                   value={tab.value}
                   className="flex h-12 flex-1 flex-col items-center justify-center gap-1.5 rounded-none border-b-2 border-transparent px-2.5 py-2.5 text-xs text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
                 >
-                  <span>{tab.label}</span>
+                  <span>{tabLabels[tab.value]}</span>
                   <AccessTierDot level={target[TAB_TO_ACCESS_LEVEL_KEY[tab.value]]} />
                 </TabsTrigger>
               ))}
@@ -131,6 +139,7 @@ export function UnsavedAccessChangesDialog({
   onDiscard,
   isSaving,
 }: Readonly<{ onSave: () => void; onDiscard: () => void; isSaving?: boolean }>) {
+  const { t } = useT("os.idp.explorer");
   return (
     <DialogContent
       className="mr-4 w-full max-w-[425px] rounded-md"
@@ -141,17 +150,17 @@ export function UnsavedAccessChangesDialog({
       }}
     >
       <DialogHeader>
-        <DialogTitle className="text-left text-lg font-semibold leading-7">Save changes?</DialogTitle>
+        <DialogTitle className="text-left text-lg font-semibold leading-7">{t("UNSAVED_DIALOG.TITLE")}</DialogTitle>
         <DialogDescription className="mb-2 mt-2 wrap-break-word text-left text-sm font-normal leading-5">
-          This access rule has unsaved changes. Save them before leaving, or discard them.
+          {t("UNSAVED_DIALOG.DESCRIPTION")}
         </DialogDescription>
       </DialogHeader>
       <DialogFooter className="mt-4 flex flex-row justify-end gap-2">
         <Button type="button" variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={onDiscard} disabled={isSaving}>
-          Discard
+          {t("UNSAVED_DIALOG.DISCARD")}
         </Button>
         <Button type="button" size="sm" onClick={onSave} disabled={isSaving}>
-          Save changes
+          {t("common:SAVE_CHANGES")}
         </Button>
       </DialogFooter>
     </DialogContent>

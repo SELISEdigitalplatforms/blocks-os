@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui-kits/button/button";
+import { useT } from "@seliseblocks/genesis-os";
 import { ChevronRight } from "lucide-react";
 
 import type { AccessPreset } from "../../utils/access-presets";
@@ -19,10 +20,12 @@ export function AccessPresetList({
   onApply: (preset: AccessPreset) => void;
   onStartBlank: () => void;
 }>) {
+  const { t } = useT("os.idp.gateway");
+
   return (
     <div className="space-y-2">
       <p className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground/70">
-        Sample rule set
+        {t("ACCESS_PRESET_LIST.SAMPLE_RULE_SET")}
       </p>
       {presets.map((preset) => (
         <button
@@ -50,7 +53,7 @@ export function AccessPresetList({
         className="h-8 w-full text-xs text-muted-foreground"
         onClick={onStartBlank}
       >
-        Start from an empty rule set
+        {t("ACCESS_PRESET_LIST.START_EMPTY")}
       </Button>
     </div>
   );

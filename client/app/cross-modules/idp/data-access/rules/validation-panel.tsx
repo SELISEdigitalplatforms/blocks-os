@@ -6,6 +6,7 @@ import { Input } from "@/components/ui-kits/input/input";
 import { ScrollArea } from "@/components/ui-kits/scroll-area/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui-kits/select/select";
 import { cn } from "@/lib/utils";
+import { tStatic, useT } from "@seliseblocks/genesis-os";
 import { Pencil, Plus, Trash } from "lucide-react";
 import { useState } from "react";
 import { StatusSnackbar } from "../gateway/components/primitives";
@@ -16,7 +17,6 @@ import type { ISchemaFieldValidation } from "./rules.types";
 import { serverMessage } from "./server-message";
 import {
   VALIDATION_TYPE,
-  VALIDATION_TYPE_META,
   checkRuleDraft,
   draftFromRule,
   formatRuleSummary,
@@ -61,6 +61,7 @@ function RuleRow({
   onEdit,
   onDelete,
 }: Readonly<{ rule: ISchemaFieldValidation; disabled: boolean; onEdit: () => void; onDelete: () => void }>) {
+  const { t } = useT("os.idp.rules");
   return (
     <div className="flex items-start justify-between gap-3 rounded-sm border border-border/40 bg-card px-4 py-3">
       <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -69,7 +70,7 @@ function RuleRow({
         </span>
         <p className={cn("break-all text-sm text-foreground", rule.type === VALIDATION_TYPE.Regex && "font-mono")}>{formatRuleSummary(rule)}</p>
         {rule.errorMessage && <p className="text-xs text-muted-foreground">{rule.errorMessage}</p>}
-        {!rule.isActive && <span className="w-fit text-xs text-muted-foreground">Inactive</span>}
+        {!rule.isActive && <span className="w-fit text-xs text-muted-foreground">{t("VALIDATION_PANEL.INACTIVE")}</span>}
       </div>
       <div className="flex shrink-0 gap-1">
         <Button
@@ -77,7 +78,7 @@ function RuleRow({
           variant="ghost"
           size="icon"
           className="h-7 w-7 text-muted-foreground hover:text-foreground"
-          aria-label={`Edit ${ruleTypeLabel(rule.type)} rule`}
+          aria-label={t("VALIDATION_PANEL.EDIT_RULE", { type: ruleTypeLabel(rule.type) })}
           disabled={disabled}
           onClick={onEdit}
         >
@@ -88,7 +89,7 @@ function RuleRow({
           variant="ghost"
           size="icon"
           className="h-7 w-7 text-muted-foreground hover:text-rose-500"
-          aria-label={`Delete ${ruleTypeLabel(rule.type)} rule`}
+          aria-label={t("VALIDATION_PANEL.DELETE_RULE", { type: ruleTypeLabel(rule.type) })}
           disabled={disabled}
           onClick={onDelete}
         >
@@ -101,8 +102,8 @@ function RuleRow({
 
 /** The form's save button: what it does now. */
 function submitLabel(isPending: boolean, isEditing: boolean): string {
-  if (isPending) return "Saving…";
-  return isEditing ? "Update" : "Add";
+  if (isPending) return tStatic("os.idp.rules", "VALIDATION_PANEL.SAVING");
+  return tStatic("os.idp.rules", isEditing ? "common:UPDATE" : "common:ADD");
 }
 
 /**
@@ -117,8 +118,9 @@ export function ValidationPanel({
   initialRules,
   variables,
   onSave,
-  listLabel = "Existing validations",
+  listLabel,
 }: Readonly<ValidationPanelProps>) {
+  const { t } = useT("os.idp.rules");
   const [rules, setRules] = useState<ISchemaFieldValidation[]>(initialRules);
   const [form, setForm] = useState<(RuleDraft & { editingIndex?: number }) | null>(null);
   const [touched, setTouched] = useState(false);
@@ -127,7 +129,7 @@ export function ValidationPanel({
 
   const isEditing = form?.editingIndex !== undefined;
   const hasOtherReference = rules.some((r, i) => r.type === VALIDATION_TYPE.Reference && i !== form?.editingIndex);
-  const typeOptions = getAllowedValidationTypes(fieldType).filter((t) => t !== VALIDATION_TYPE.Reference || !hasOtherReference);
+  const typeOptions = getAllowedValidationTypes(fieldType).filter((type) => type !== VALIDATION_TYPE.Reference || !hasOtherReference);
   const draftError = form ? checkRuleDraft(form, fieldType, variables) : null;
 
   const save = async (next: ISchemaFieldValidation[], message: string) => {
@@ -147,7 +149,7 @@ export function ValidationPanel({
     if (!form || draftError) return;
     const rule = ruleFromDraft(form, fieldType);
     const next = isEditing ? rules.map((r, i) => (i === form.editingIndex ? rule : r)) : [...rules, rule];
-    void save(next, isEditing ? "Validation updated" : "Validation added");
+    void save(next, isEditing ? t("VALIDATION_PANEL.UPDATED") : t("VALIDATION_PANEL.ADDED"));
   };
 
   const update = (patch: Partial<RuleDraft>) => {
@@ -160,10 +162,10 @@ export function ValidationPanel({
       <ScrollArea className="relative flex-1 overflow-auto">
         <div className="flex flex-col gap-5 p-6">
           <div className="flex flex-col gap-3">
-            <p className={LABEL_CLASS}>{listLabel}</p>
+            <p className={LABEL_CLASS}>{listLabel ?? t("VALIDATION_PANEL.EXISTING")}</p>
             {rules.length === 0 ? (
               <div className="flex items-center justify-center rounded-sm border border-dashed border-border/60 bg-muted/10 py-8 text-xs text-muted-foreground">
-                No validations added yet
+                {t("VALIDATION_PANEL.NONE_YET")}
               </div>
             ) : (
               rules.map((rule, index) => (
@@ -175,7 +177,7 @@ export function ValidationPanel({
                     setForm({ ...draftFromRule(rule), editingIndex: index });
                     setTouched(false);
                   }}
-                  onDelete={() => void save(rules.filter((_, i) => i !== index), "Validation deleted")}
+                  onDelete={() => void save(rules.filter((_, i) => i !== index), t("VALIDATION_PANEL.DELETED"))}
                 />
               ))
             )}
@@ -183,17 +185,17 @@ export function ValidationPanel({
 
           {form ? (
             <div className="flex flex-col gap-4 rounded-sm border border-border/40 bg-card p-4">
-              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{isEditing ? "Edit validation" : "Add validation"}</p>
+              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{isEditing ? t("VALIDATION_PANEL.EDIT_VALIDATION") : t("VALIDATION_PANEL.ADD_VALIDATION")}</p>
               <div className="flex flex-col gap-1.5">
-                <span className={LABEL_CLASS}>Rule type</span>
+                <span className={LABEL_CLASS}>{t("VALIDATION_PANEL.RULE_TYPE")}</span>
                 <Select value={String(form.type)} onValueChange={(value) => update({ type: Number(value) as ValidationTypeValue, value: "", secondaryValue: "" })}>
-                  <SelectTrigger className="h-9 w-full" aria-label="Rule type">
+                  <SelectTrigger className="h-9 w-full" aria-label={t("VALIDATION_PANEL.RULE_TYPE")}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {(isEditing && !typeOptions.includes(form.type) ? [form.type, ...typeOptions] : typeOptions).map((type) => (
                       <SelectItem key={type} value={String(type)}>
-                        {VALIDATION_TYPE_META[type].label}
+                        {ruleTypeLabel(type)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -212,13 +214,13 @@ export function ValidationPanel({
               />
 
               <div className="flex flex-col gap-1.5">
-                <span className={LABEL_CLASS}>Error message</span>
-                <Input placeholder="e.g. Only letters are allowed" value={form.errorMessage} onChange={(e) => update({ errorMessage: e.target.value })} />
+                <span className={LABEL_CLASS}>{t("VALIDATION_PANEL.ERROR_MESSAGE")}</span>
+                <Input placeholder={t("VALIDATION_PANEL.ERROR_PLACEHOLDER")} value={form.errorMessage} onChange={(e) => update({ errorMessage: e.target.value })} />
               </div>
               <div className="flex items-center gap-2">
                 <Checkbox id="rule-active" checked={form.isActive} onCheckedChange={(checked) => update({ isActive: checked === true })} />
                 <label htmlFor="rule-active" className="cursor-pointer text-xs text-muted-foreground">
-                  Active
+                  {t("VALIDATION_PANEL.ACTIVE")}
                 </label>
               </div>
             </div>
@@ -235,7 +237,7 @@ export function ValidationPanel({
               }}
             >
               <Plus className="h-4 w-4" />
-              Add validation
+              {t("VALIDATION_PANEL.ADD_VALIDATION")}
             </Button>
           )}
         </div>
@@ -246,9 +248,9 @@ export function ValidationPanel({
           <StatusSnackbar status={status} />
           {form && (
             <div className="flex items-center gap-2">
-              <span className="flex-1 text-xs text-muted-foreground">{isEditing ? "Editing validation" : "New validation"}</span>
+              <span className="flex-1 text-xs text-muted-foreground">{isEditing ? t("VALIDATION_PANEL.EDITING_VALIDATION") : t("VALIDATION_PANEL.NEW_VALIDATION")}</span>
               <Button type="button" size="sm" variant="outline" disabled={isPending} onClick={() => setForm(null)}>
-                Cancel
+                {t("common:CANCEL")}
               </Button>
               <Button type="button" size="sm" disabled={isPending || Boolean(touched && draftError)} onClick={submit}>
                 {submitLabel(isPending, isEditing)}

@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { Card } from "@/components/ui-kits/card/card";
 import { ScrollArea } from "@/components/ui-kits/scroll-area/scroll-area";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
@@ -63,11 +64,12 @@ const ENUM_CHIP_CLASS =
   "inline-flex h-6 items-center gap-1 rounded-md border border-border/60 bg-muted/40 px-2 text-xs font-medium text-foreground";
 
 function EnumValues({ values }: Readonly<{ values: string[] }>) {
+  const { t } = useT("os.idp.explorer");
   return (
     <div className="mt-2 space-y-1.5">
-      <span className="text-[11px] font-medium text-muted-foreground">Allowed values</span>
+      <span className="text-[11px] font-medium text-muted-foreground">{t("ENUM_VALUES.ALLOWED_VALUES")}</span>
       {values.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No allowed values defined.</p>
+        <p className="text-xs text-muted-foreground">{t("ENUM_VALUES.NO_VALUES")}</p>
       ) : (
         <div className="flex flex-wrap gap-1.5">
           {values.map((value) => (
@@ -87,6 +89,7 @@ function FieldAccessButton({
   path,
   onOpenFieldAccess,
 }: Readonly<{ field: PlatformSchemaField; path: string; onOpenFieldAccess: OnOpenFieldAccess }>) {
+  const { t } = useT("os.idp.explorer");
   if (!isScalarField(field)) {
     return (
       <Tooltip>
@@ -95,19 +98,19 @@ function FieldAccessButton({
             type="button"
             disabled
             className="flex h-[26px] w-[26px] shrink-0 cursor-not-allowed items-center justify-center rounded-md border border-border/60 text-muted-foreground/50"
-            aria-label="Set access on the properties inside"
+            aria-label={t("FIELD_ACCESS_BUTTON.SET_ON_INNER")}
           >
             <Shield className="h-3.5 w-3.5" />
           </button>
         </TooltipTrigger>
-        <TooltipContent>Set access on the properties inside</TooltipContent>
+        <TooltipContent>{t("FIELD_ACCESS_BUTTON.SET_ON_INNER")}</TooltipContent>
       </Tooltip>
     );
   }
 
   const levels = [
-    { label: "View", level: field.readAccessLevel },
-    { label: "Edit", level: field.editAccessLevel },
+    { label: t("common:VIEW"), level: field.readAccessLevel },
+    { label: t("common:EDIT"), level: field.editAccessLevel },
   ];
   const isCustomised = levels.some(({ level }) => tierFromLevel(level) !== "inherited");
 
@@ -123,7 +126,7 @@ function FieldAccessButton({
               ? "border-access-custom-border bg-access-custom-bg text-access-custom-fg"
               : "border-border text-muted-foreground hover:border-primary/40 hover:text-primary",
           )}
-          aria-label={`View access for ${path}`}
+          aria-label={t("FIELD_ACCESS_BUTTON.VIEW_ACCESS_FOR", { path })}
         >
           <Shield className="h-3.5 w-3.5" />
         </button>
@@ -163,10 +166,13 @@ function FieldRow({
   onToggleExpand: () => void;
   onOpenFieldAccess: OnOpenFieldAccess;
 }>) {
+  const { t } = useT("os.idp.explorer");
   const nested = hasNestedFields(field);
   const isTreeRow = depth > 0;
-  let toggleLabel = isExpanded ? `Collapse ${field.type}` : `Expand ${field.type} attributes`;
-  if (isTreeRow) toggleLabel = `${isExpanded ? "Collapse" : "Expand"} ${path}`;
+  let toggleLabel = isExpanded
+    ? t("FIELD_ROW.COLLAPSE_TYPE", { type: field.type })
+    : t("FIELD_ROW.EXPAND_TYPE_ATTRIBUTES", { type: field.type });
+  if (isTreeRow) toggleLabel = isExpanded ? t("FIELD_ROW.COLLAPSE_PATH", { path }) : t("FIELD_ROW.EXPAND_PATH", { path });
   return (
     <TableRow
       className={cn(isDefault && !isTreeRow && "bg-primary/5 hover:bg-primary/10", isTreeRow && "bg-muted/20 hover:bg-muted/30")}
@@ -282,6 +288,7 @@ function FieldsTable({
   tree: TreeState;
   onOpenFieldAccess: OnOpenFieldAccess;
 }>) {
+  const { t } = useT("os.idp.explorer");
   const [isDefaultsExpanded, setIsDefaultsExpanded] = useDefaultPropertiesExpanded();
   const { defaults, own } = orderFields(fields);
 
@@ -290,12 +297,12 @@ function FieldsTable({
       <ColumnWidths />
       <TableHeader className="sticky top-0 z-10 bg-card">
         <TableRow>
-          <TableHead>Property</TableHead>
-          <TableHead>Type</TableHead>
-          <TableHead>Required</TableHead>
-          <TableHead>Flags</TableHead>
-          <TableHead className="px-3 text-left md:px-3">Description</TableHead>
-          <TableHead>Rules</TableHead>
+          <TableHead>{t("FIELDS_TABLE.PROPERTY")}</TableHead>
+          <TableHead>{t("common:TYPE")}</TableHead>
+          <TableHead>{t("FIELDS_TABLE.REQUIRED")}</TableHead>
+          <TableHead>{t("FIELDS_TABLE.FLAGS")}</TableHead>
+          <TableHead className="px-3 text-left md:px-3">{t("common:DESCRIPTION")}</TableHead>
+          <TableHead>{t("FIELDS_TABLE.RULES")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -310,7 +317,7 @@ function FieldsTable({
                   className="flex w-full items-center gap-2 text-sm font-medium text-foreground transition-colors hover:text-primary"
                 >
                   <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isDefaultsExpanded ? "rotate-0" : "-rotate-90")} />
-                  <span>Default Properties ({defaults.length})</span>
+                  <span>{t("FIELDS_TABLE.DEFAULT_PROPERTIES", { total: defaults.length })}</span>
                 </button>
               </TableCell>
             </TableRow>
@@ -320,7 +327,7 @@ function FieldsTable({
         <TableRow className="hover:bg-transparent">
           <TableCell colSpan={COLUMN_COUNT} className="bg-muted/30 px-4 py-2">
             <div className="text-sm font-medium text-foreground">
-              {schemaName} Properties ({own.length})
+              {t("FIELDS_TABLE.OWN_PROPERTIES", { schema: schemaName, total: own.length })}
             </div>
           </TableCell>
         </TableRow>
@@ -336,6 +343,7 @@ function FieldCard({
   path,
   onOpenFieldAccess,
 }: Readonly<{ field: PlatformSchemaField; path: string; onOpenFieldAccess: OnOpenFieldAccess }>) {
+  const { t } = useT("os.idp.explorer");
   const [isExpanded, setIsExpanded] = useState(false);
   const nested = hasNestedFields(field);
   return (
@@ -361,7 +369,7 @@ function FieldCard({
             className="flex items-center gap-1 rounded p-1 text-xs text-primary hover:bg-primary/10"
           >
             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            {field.fields?.length} attributes
+            {t("FIELD_CARD.ATTRIBUTES", { count: field.fields?.length ?? 0 })}
           </button>
         )}
       </div>
@@ -401,6 +409,7 @@ export function SchemaFieldsTable({
   onOpenFieldAccess: OnOpenFieldAccess;
   onOpenFieldRules?: OnOpenFieldRules;
 }>) {
+  const { t } = useT("os.idp.explorer");
   const [isDefaultsExpanded, setIsDefaultsExpanded] = useDefaultPropertiesExpanded();
   const { defaults, own } = orderFields(fields);
   // The tree closes when another schema is selected.
@@ -413,7 +422,7 @@ export function SchemaFieldsTable({
   return (
     <FieldRulesProvider
       rules={onOpenFieldRules ? rules : null}
-      schemaReason={rulesExcluded ? `${schemaName} doesn't take validation rules or default values: credentials, tokens, sessions, secrets and logs are kept out` : null}
+      schemaReason={rulesExcluded ? t("SCHEMA_FIELDS_TABLE.RULES_EXCLUDED", { schema: schemaName }) : null}
       onOpen={onOpenFieldRules ?? (() => {})}
     >
     <Card className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-none border-t-0 shadow-none">
@@ -421,7 +430,7 @@ export function SchemaFieldsTable({
         <Tabs value="attribute">
           <TabsList className="h-8 gap-1 rounded-none bg-transparent p-0">
             <TabsTrigger value="attribute" className={TAB_TRIGGER_CLASS}>
-              Attribute
+              {t("SCHEMA_FIELDS_TABLE.TAB_ATTRIBUTE")}
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -429,11 +438,11 @@ export function SchemaFieldsTable({
           <div className="hidden items-center xl:flex">
             <Button type="button" variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs font-medium text-muted-foreground" onClick={() => setExpansion(EVERYTHING_EXPANDED)}>
               <ChevronsUpDown className="h-3.5 w-3.5" aria-hidden />
-              Expand all
+              {t("SCHEMA_FIELDS_TABLE.EXPAND_ALL")}
             </Button>
             <Button type="button" variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs font-medium text-muted-foreground" onClick={() => setExpansion(NOTHING_EXPANDED)}>
               <ChevronsDownUp className="h-3.5 w-3.5" aria-hidden />
-              Collapse all
+              {t("SCHEMA_FIELDS_TABLE.COLLAPSE_ALL")}
             </Button>
           </div>
         )}
@@ -441,7 +450,7 @@ export function SchemaFieldsTable({
 
       {fields.length === 0 ? (
         <div className="flex min-h-0 flex-1 items-center justify-center py-12 text-sm text-muted-foreground">
-          {schemaName} has no properties.
+          {t("SCHEMA_FIELDS_TABLE.NO_PROPERTIES", { schema: schemaName })}
         </div>
       ) : (
         <>
@@ -460,7 +469,7 @@ export function SchemaFieldsTable({
                     className="flex w-full items-center gap-2 text-sm font-medium text-foreground transition-colors hover:text-primary"
                   >
                     <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isDefaultsExpanded ? "rotate-0" : "-rotate-90")} />
-                    <span>Default Properties ({defaults.length})</span>
+                    <span>{t("FIELDS_TABLE.DEFAULT_PROPERTIES", { total: defaults.length })}</span>
                   </button>
                 </div>
                 {isDefaultsExpanded &&
@@ -468,7 +477,7 @@ export function SchemaFieldsTable({
               </>
             )}
             <div className="rounded-lg bg-muted/30 px-4 py-3 text-sm font-medium text-foreground">
-              {schemaName} Properties ({own.length})
+              {t("FIELDS_TABLE.OWN_PROPERTIES", { schema: schemaName, total: own.length })}
             </div>
             {own.map((field) => (
               <FieldCard key={field.name} field={field} path={field.name} onOpenFieldAccess={onOpenFieldAccess} />

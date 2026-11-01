@@ -1,3 +1,4 @@
+import { tStatic } from "@seliseblocks/genesis-os";
 import type { DefaultValueKind, IFieldDefaultValue } from "./rules.types";
 import { checkVariables, type VariableField } from "./variable-syntax";
 
@@ -28,18 +29,18 @@ export function checkStaticItem(text: string, fieldType: string, enumValues: str
   const value = text.trim();
   switch (fieldType) {
     case "Int":
-      return /^[+-]?\d+$/.test(value) && Math.abs(Number(value)) <= 2147483647 ? null : `"${value}" is not a whole number`;
+      return /^[+-]?\d+$/.test(value) && Math.abs(Number(value)) <= 2147483647 ? null : tStatic("os.idp.rules", "DEFAULT_VALUE_UTIL.NOT_WHOLE_NUMBER", { value });
     case "Float":
-      return value !== "" && Number.isFinite(Number(value)) ? null : `"${value}" is not a number`;
+      return value !== "" && Number.isFinite(Number(value)) ? null : tStatic("os.idp.rules", "DEFAULT_VALUE_UTIL.NOT_NUMBER", { value });
     case "Boolean":
-      return value === "true" || value === "false" ? null : `"${value}" is not true or false`;
+      return value === "true" || value === "false" ? null : tStatic("os.idp.rules", "DEFAULT_VALUE_UTIL.NOT_BOOLEAN", { value });
     case "DateTime":
       return value !== "" && !Number.isNaN(Date.parse(value)) && /^\d{4}-\d{2}-\d{2}/.test(value) && isRealDate(value)
         ? null
-        : `"${value}" is not a valid date-time`;
+        : tStatic("os.idp.rules", "DEFAULT_VALUE_UTIL.NOT_DATE_TIME", { value });
     case "Enum":
       return enumValues.length > 0 && !enumValues.includes(value)
-        ? `"${value}" is not one of the listed values (${enumValues.join(", ")})`
+        ? tStatic("os.idp.rules", "DEFAULT_VALUE_UTIL.NOT_LISTED_VALUE", { value, values: enumValues.join(", ") })
         : null;
     default:
       return null;
@@ -91,7 +92,19 @@ export function draftFromDefault(value: IFieldDefaultValue | null | undefined): 
   };
 }
 
-const OFFSET_LABELS = { days: "Days", hours: "Hours", minutes: "Minutes", seconds: "Seconds" } as const;
+const OFFSET_UNITS = ["days", "hours", "minutes", "seconds"] as const;
+const OFFSET_WHOLE_NUMBER_KEYS = {
+  days: "DEFAULT_VALUE_UTIL.DAYS_WHOLE_NUMBER",
+  hours: "DEFAULT_VALUE_UTIL.HOURS_WHOLE_NUMBER",
+  minutes: "DEFAULT_VALUE_UTIL.MINUTES_WHOLE_NUMBER",
+  seconds: "DEFAULT_VALUE_UTIL.SECONDS_WHOLE_NUMBER",
+} as const;
+const OFFSET_SUMMARY_KEYS = {
+  days: "DEFAULT_VALUE_UTIL.SUMMARY_DAYS",
+  hours: "DEFAULT_VALUE_UTIL.SUMMARY_HOURS",
+  minutes: "DEFAULT_VALUE_UTIL.SUMMARY_MINUTES",
+  seconds: "DEFAULT_VALUE_UTIL.SUMMARY_SECONDS",
+} as const;
 
 export interface DefaultTarget {
   fieldType: string;
@@ -108,7 +121,7 @@ const draftItems = (draft: DefaultDraft, target: DefaultTarget) =>
 function checkStaticDraft(items: string[], target: DefaultTarget): string | null {
   if (items.length === 0 || (items[0] ?? "").trim() === "") {
     // Only a single text property may default to empty text.
-    return target.fieldType === "String" && !target.isArray ? null : "A value is required";
+    return target.fieldType === "String" && !target.isArray ? null : tStatic("os.idp.rules", "DEFAULT_VALUE_UTIL.VALUE_REQUIRED");
   }
   for (const item of items) {
     const problem = checkStaticItem(item, target.fieldType, target.enumValues);
@@ -118,8 +131,8 @@ function checkStaticDraft(items: string[], target: DefaultTarget): string | null
 }
 
 function checkTemplateDraft(items: string[], target: DefaultTarget): string | null {
-  if (target.fieldType !== "String" && target.fieldType !== "ID") return "Templates can only be used on text properties";
-  if (items.every((item) => item.trim() === "")) return "A template is required";
+  if (target.fieldType !== "String" && target.fieldType !== "ID") return tStatic("os.idp.rules", "DEFAULT_VALUE_UTIL.TEMPLATE_TEXT_ONLY");
+  if (items.every((item) => item.trim() === "")) return tStatic("os.idp.rules", "DEFAULT_VALUE_UTIL.TEMPLATE_REQUIRED");
   for (const item of items) {
     const problem = checkVariables(item, "template", target.schemaName, target.fields, target.isArray);
     if (problem) return problem.message;
@@ -128,9 +141,9 @@ function checkTemplateDraft(items: string[], target: DefaultTarget): string | nu
 }
 
 function checkNowDraft(offset: DefaultDraft["offset"], target: DefaultTarget): string | null {
-  if (target.fieldType !== "DateTime" || target.isArray) return "Now can only be used on single date-time properties";
-  const notWhole = (Object.keys(OFFSET_LABELS) as Array<keyof typeof OFFSET_LABELS>).find((key) => !/^[+-]?\d+$/.test(offset[key].trim()));
-  return notWhole ? `${OFFSET_LABELS[notWhole]} must be a whole number` : null;
+  if (target.fieldType !== "DateTime" || target.isArray) return tStatic("os.idp.rules", "DEFAULT_VALUE_UTIL.NOW_DATE_TIME_ONLY");
+  const notWhole = OFFSET_UNITS.find((key) => !/^[+-]?\d+$/.test(offset[key].trim()));
+  return notWhole ? tStatic("os.idp.rules", OFFSET_WHOLE_NUMBER_KEYS[notWhole]) : null;
 }
 
 /** Why the draft can't be saved yet, or null. Same messages as the server. */
@@ -143,7 +156,7 @@ export function checkDefaultDraft(draft: DefaultDraft, target: DefaultTarget): s
     case "Now":
       return checkNowDraft(draft.offset, target);
     default:
-      return "Choose Static, Template or Now";
+      return tStatic("os.idp.rules", "DEFAULT_VALUE_UTIL.CHOOSE_KIND");
   }
 }
 
@@ -170,11 +183,12 @@ export function formatDefaultSummary(value: IFieldDefaultValue | null | undefine
   if (!value) return "";
   if (value.kind === "Now") {
     const offset = value.offset;
-    if (!offset) return "Now";
-    const parts = (Object.keys(OFFSET_LABELS) as Array<keyof typeof OFFSET_LABELS>)
-      .filter((key) => offset[key] !== 0)
-      .map((key) => `${offset[key] > 0 ? "+" : "−"} ${Math.abs(offset[key])} ${key.slice(0, -1)}${Math.abs(offset[key]) === 1 ? "" : "s"}`);
-    return parts.length === 0 ? "Now" : `Now ${parts.join(" ")}`;
+    const now = tStatic("os.idp.rules", "DEFAULT_VALUE_UTIL.SUMMARY_NOW");
+    if (!offset) return now;
+    const parts = OFFSET_UNITS.filter((key) => offset[key] !== 0).map((key) =>
+      tStatic("os.idp.rules", OFFSET_SUMMARY_KEYS[key], { count: Math.abs(offset[key]), sign: offset[key] > 0 ? "+" : "−" }),
+    );
+    return parts.length === 0 ? now : `${now} ${parts.join(" ")}`;
   }
   const raw = value.value;
   if (!Array.isArray(raw)) return String(raw ?? "");

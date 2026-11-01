@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { useState } from "react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card } from "@/components/ui-kits/card/card";
@@ -18,14 +19,28 @@ import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-fo
 
 type PolicyKey = keyof ITenantLoginPolicy;
 
-const PLACE_ROWS: { key: PolicyKey; label: string; hint: string }[] = [
-  { key: "allowEmbedded", label: "Embedded login", hint: "The app's own login form" },
-  { key: "allowOidc", label: "OIDC login", hint: "The IAM login page" },
+type PolicyRow = { key: PolicyKey; labelKey: string; hintKey: string };
+
+const PLACE_ROWS: PolicyRow[] = [
+  {
+    key: "allowEmbedded",
+    labelKey: "SIGN_IN_METHODS_CARD.EMBEDDED_LOGIN",
+    hintKey: "SIGN_IN_METHODS_CARD.EMBEDDED_LOGIN_HINT",
+  },
+  {
+    key: "allowOidc",
+    labelKey: "SIGN_IN_METHODS_CARD.OIDC_LOGIN",
+    hintKey: "SIGN_IN_METHODS_CARD.OIDC_LOGIN_HINT",
+  },
 ];
 
-const METHOD_ROWS: { key: PolicyKey; label: string; hint: string }[] = [
-  { key: "allowPassword", label: "Password", hint: "" },
-  { key: "allowSocial", label: "Social", hint: "Providers: Identity providers" },
+const METHOD_ROWS: PolicyRow[] = [
+  { key: "allowPassword", labelKey: "SIGN_IN_METHODS_CARD.PASSWORD", hintKey: "" },
+  {
+    key: "allowSocial",
+    labelKey: "SIGN_IN_METHODS_CARD.SOCIAL",
+    hintKey: "SIGN_IN_METHODS_CARD.SOCIAL_HINT",
+  },
 ];
 
 type ToggleRowProps = {
@@ -47,27 +62,31 @@ const ToggleRow = ({ label, hint, checked, onChange }: Readonly<ToggleRowProps>)
 
 type ToggleGroupProps = {
   title: string;
-  rows: { key: PolicyKey; label: string; hint: string }[];
+  rows: PolicyRow[];
   policy: ITenantLoginPolicy;
   onChange: (key: PolicyKey, checked: boolean) => void;
 };
 
-const ToggleGroup = ({ title, rows, policy, onChange }: Readonly<ToggleGroupProps>) => (
-  <div className="space-y-3">
-    <p className={SETTINGS_FORM_LAYOUT.overviewMetaLabel}>{title}</p>
-    {rows.map((row) => (
-      <ToggleRow
-        key={row.key}
-        label={row.label}
-        hint={row.hint}
-        checked={policy[row.key]}
-        onChange={(checked) => onChange(row.key, checked)}
-      />
-    ))}
-  </div>
-);
+const ToggleGroup = ({ title, rows, policy, onChange }: Readonly<ToggleGroupProps>) => {
+  const { t } = useT("os.idp.settings");
+  return (
+    <div className="space-y-3">
+      <p className={SETTINGS_FORM_LAYOUT.overviewMetaLabel}>{title}</p>
+      {rows.map((row) => (
+        <ToggleRow
+          key={row.key}
+          label={t(row.labelKey)}
+          hint={row.hintKey ? t(row.hintKey) : ""}
+          checked={policy[row.key]}
+          onChange={(checked) => onChange(row.key, checked)}
+        />
+      ))}
+    </div>
+  );
+};
 
 const SignInMethodsForm = ({ saved }: Readonly<{ saved: ITenantLoginPolicy }>) => {
+  const { t } = useT("os.idp.settings");
   const [policy, setPolicy] = useState<ITenantLoginPolicy>(saved);
   const { mutateAsync, isPending } = useSaveTenantLoginPolicy();
   const locked = locksEveryone(policy);
@@ -80,32 +99,41 @@ const SignInMethodsForm = ({ saved }: Readonly<{ saved: ITenantLoginPolicy }>) =
     try {
       const res = await mutateAsync(policy);
       if (!res.isSuccess) {
-        showErrorToast({ errors: res.errors ?? "Something went wrong" });
+        showErrorToast({ errors: res.errors ?? t("SIGN_IN_METHODS_CARD.SOMETHING_WENT_WRONG") });
         return;
       }
-      showSuccessToast({ description: "Sign-in methods updated successfully" });
+      showSuccessToast({ description: t("SIGN_IN_METHODS_CARD.UPDATED") });
     } catch (error) {
       if (isErrorWithErrors(error)) {
         showErrorToast({ errors: error.errors });
         return;
       }
-      showErrorToast({ errors: "Something went wrong" });
+      showErrorToast({ errors: t("SIGN_IN_METHODS_CARD.SOMETHING_WENT_WRONG") });
     }
   };
 
   return (
     <Card className="space-y-5 p-4 sm:p-6">
       <div className="space-y-1">
-        <h3 className={SETTINGS_FORM_LAYOUT.sectionTitle}>Sign-in methods</h3>
+        <h3 className={SETTINGS_FORM_LAYOUT.sectionTitle}>{t("SIGN_IN_METHODS_CARD.TITLE")}</h3>
         <p className={SETTINGS_FORM_LAYOUT.fieldDescription}>
-          Choose how users of this project can sign in.
+          {t("SIGN_IN_METHODS_CARD.DESCRIPTION")}
         </p>
       </div>
-      <ToggleGroup title="Where" rows={PLACE_ROWS} policy={policy} onChange={handleChange} />
-      <ToggleGroup title="How" rows={METHOD_ROWS} policy={policy} onChange={handleChange} />
+      <ToggleGroup
+        title={t("SIGN_IN_METHODS_CARD.WHERE")}
+        rows={PLACE_ROWS}
+        policy={policy}
+        onChange={handleChange}
+      />
+      <ToggleGroup
+        title={t("SIGN_IN_METHODS_CARD.HOW")}
+        rows={METHOD_ROWS}
+        policy={policy}
+        onChange={handleChange}
+      />
       <p className={SETTINGS_FORM_LAYOUT.fieldDescription}>
-        Turning a method off stops new sign-ins only. Users already signed in stay signed in until
-        their session ends.
+        {t("SIGN_IN_METHODS_CARD.TURN_OFF_NOTE")}
       </p>
       {locked && (
         <p className="text-sm text-warning-700" role="alert">
@@ -114,7 +142,7 @@ const SignInMethodsForm = ({ saved }: Readonly<{ saved: ITenantLoginPolicy }>) =
       )}
       <div className="flex justify-end">
         <Button size="sm" type="button" disabled={locked || isPending} onClick={handleSave}>
-          Save
+          {t("common:SAVE")}
         </Button>
       </div>
     </Card>

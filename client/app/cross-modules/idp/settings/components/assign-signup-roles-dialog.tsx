@@ -13,7 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { useGetAssignableRoles } from "@blocks-idp/iam/hooks/use-roles";
 import type { IRole } from "@blocks-idp/iam/models/role";
 import { CirclePlus } from "lucide-react";
@@ -26,6 +26,7 @@ type AssignSignupRolesDialogProps = {
 };
 
 export const AssignSignupRolesDialog = ({ roles, onAssign }: AssignSignupRolesDialogProps) => {
+  const { t } = useT("os.idp.settings");
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const [open, setOpen] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState<IRole[]>([]);
@@ -94,15 +95,16 @@ export const AssignSignupRolesDialog = ({ roles, onAssign }: AssignSignupRolesDi
       <DialogTrigger asChild>
         <Button size="sm" variant="default" className="h-7 bg-primary px-2.5 text-xs" type="button">
           <CirclePlus className="h-3.5 w-3.5 md:mr-1.5" />
-          <span className="sr-only sm:not-sr-only">Manage Roles</span>
+          <span className="sr-only sm:not-sr-only">
+            {t("ASSIGN_SIGNUP_ROLES_DIALOG.MANAGE_ROLES")}
+          </span>
         </Button>
       </DialogTrigger>
       <DialogContent className="flex max-h-[min(92vh,720px)] w-[calc(100vw-1.5rem)] max-w-xl flex-col overflow-hidden sm:w-full">
         <DialogHeader>
-          <DialogTitle className="text-left">Assign roles</DialogTitle>
+          <DialogTitle className="text-left">{t("ASSIGN_SIGNUP_ROLES_DIALOG.TITLE")}</DialogTitle>
           <DialogDescription className="text-left">
-            Select roles for new sign-up users. Set adds them to the list, then use Save on the page
-            to persist them.
+            {t("ASSIGN_SIGNUP_ROLES_DIALOG.DESCRIPTION")}
           </DialogDescription>
         </DialogHeader>
         <GrantHint kind="roles" />
@@ -110,7 +112,7 @@ export const AssignSignupRolesDialog = ({ roles, onAssign }: AssignSignupRolesDi
           value={filter.search}
           onChange={(value) => setFilter((current) => ({ ...current, search: value, page: 0 }))}
           className="h-fit w-full py-3"
-          placeholder="Search by role name"
+          placeholder={t("ASSIGN_SIGNUP_ROLES_DIALOG.SEARCH_PLACEHOLDER")}
         />
         <Card className="min-h-0 flex-1 overflow-hidden">
           <CardContent className="max-h-[min(50vh,360px)] overflow-y-auto">
@@ -129,7 +131,7 @@ export const AssignSignupRolesDialog = ({ roles, onAssign }: AssignSignupRolesDi
                     <Checkbox
                       checked={selectedRoleSlugs.has(item.slug)}
                       onCheckedChange={(value) => handleCheckedChange(!!value, item)}
-                      aria-label={`Assign role ${item.name}`}
+                      aria-label={t("ASSIGN_SIGNUP_ROLES_DIALOG.ASSIGN_ROLE", { name: item.name })}
                     />
                     <div className="ml-2 min-w-0 flex-1">
                       <div className="truncate font-medium" title={item.name}>
@@ -143,7 +145,7 @@ export const AssignSignupRolesDialog = ({ roles, onAssign }: AssignSignupRolesDi
                 ))
               ) : (
                 <div className="col-span-full flex h-24 items-center justify-center text-sm text-muted-foreground">
-                  No roles found
+                  {t("ASSIGN_SIGNUP_ROLES_DIALOG.NO_ROLES")}
                 </div>
               )}
             </div>
@@ -162,11 +164,11 @@ export const AssignSignupRolesDialog = ({ roles, onAssign }: AssignSignupRolesDi
         <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
           <DialogClose asChild>
             <Button variant="outline" size="default" type="button">
-              Cancel
+              {t("common:CANCEL")}
             </Button>
           </DialogClose>
           <Button type="button" size="default" onClick={handleSet}>
-            Set
+            {t("ASSIGN_SIGNUP_ROLES_DIALOG.SET")}
           </Button>
         </DialogFooter>
       </DialogContent>

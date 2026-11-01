@@ -1,4 +1,5 @@
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
+import { useT } from "@seliseblocks/genesis-os";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 
 type EnableMultiOrgDialogProps = {
@@ -11,17 +12,19 @@ export const EnableMultiOrgDialog = ({
   open,
   onOpenChange,
   onConfirm,
-}: EnableMultiOrgDialogProps) => (
-  <Dialog open={open} onOpenChange={onOpenChange}>
-    <ConfirmationModal
-      data={{
-        dialogTitle: "Enable multi-organization mode?",
-        dialogSubtitle:
-          "This cannot be turned off once saved. Creation workflows and provisioning settings will become editable, and your changes apply when you save.",
-        confirmButton: "Enable",
-      }}
-      onConfirm={onConfirm}
-      onCancel={() => onOpenChange(false)}
-    />
-  </Dialog>
-);
+}: EnableMultiOrgDialogProps) => {
+  const { t } = useT("os.idp.settings");
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <ConfirmationModal
+        data={{
+          dialogTitle: t("ENABLE_MULTI_ORG_DIALOG.TITLE"),
+          dialogSubtitle: t("ENABLE_MULTI_ORG_DIALOG.SUBTITLE"),
+          confirmButton: t("ENABLE_MULTI_ORG_DIALOG.ENABLE"),
+        }}
+        onConfirm={onConfirm}
+        onCancel={() => onOpenChange(false)}
+      />
+    </Dialog>
+  );
+};

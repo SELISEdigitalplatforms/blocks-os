@@ -1,5 +1,6 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
 import { cn } from "@/lib/utils";
+import { tStatic } from "@seliseblocks/genesis-os";
 import { Check, RectangleEllipsis } from "lucide-react";
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { PlatformSchemaField } from "../data-access.service";
@@ -50,18 +51,18 @@ const TINT_IDLE = "border-border text-muted-foreground hover:border-primary/40 h
 
 /** Why the Validation button can't be used on this property, or null when it can. */
 function validationUnavailable(field: PlatformSchemaField, path: string, rules: IPlatformFieldRules | undefined, schemaReason: string | null): string | null {
-  if (!isScalarField(field)) return "Validations are only available for primitive types";
+  if (!isScalarField(field)) return tStatic("os.idp.explorer", "FIELD_RULES_BUTTONS.VALIDATION_PRIMITIVE_ONLY");
   if (schemaReason) return schemaReason;
-  if (!rules || rules.validation === "Blocked") return `Validation rules can't be set on ${path}`;
+  if (!rules || rules.validation === "Blocked") return tStatic("os.idp.explorer", "FIELD_RULES_BUTTONS.VALIDATION_BLOCKED", { path });
   return null;
 }
 
 /** Why the Default value button can't be used on this property, or null when it can. */
 function defaultUnavailable(field: PlatformSchemaField, path: string, rules: IPlatformFieldRules | undefined, schemaReason: string | null): string | null {
-  if (!isScalarField(field)) return "Default values are only available for text, number, true/false, date-time and enum properties";
+  if (!isScalarField(field)) return tStatic("os.idp.explorer", "FIELD_RULES_BUTTONS.DEFAULT_TYPE_ONLY");
   if (schemaReason) return schemaReason;
-  if (!rules || rules.default === "Blocked") return `A default value can't be set on ${path}`;
-  if (rules.defaultHasNoEffect) return `${path} is never empty, so a default would never be used`;
+  if (!rules || rules.default === "Blocked") return tStatic("os.idp.explorer", "FIELD_RULES_BUTTONS.DEFAULT_BLOCKED", { path });
+  if (rules.defaultHasNoEffect) return tStatic("os.idp.explorer", "FIELD_RULES_BUTTONS.DEFAULT_NO_EFFECT", { path });
   return null;
 }
 
@@ -100,7 +101,11 @@ function ValidationButton({ field, path, wide, context }: RuleButtonProps) {
       type="button"
       onClick={() => context.onOpen({ path, field, panel: "validation" })}
       className={cn(shape, FOCUS, ruleCount > 0 ? TINT_SET : TINT_IDLE)}
-      aria-label={ruleCount > 0 ? `Manage validations for ${path} (${ruleCount})` : `Manage validations for ${path}`}
+      aria-label={
+        ruleCount > 0
+          ? tStatic("os.idp.explorer", "FIELD_RULES_BUTTONS.MANAGE_VALIDATIONS_COUNT", { path, count: ruleCount })
+          : tStatic("os.idp.explorer", "FIELD_RULES_BUTTONS.MANAGE_VALIDATIONS", { path })
+      }
     >
       {icon}
       {ruleCount > 0 && (
@@ -133,12 +138,18 @@ function DefaultValueButton({ field, path, wide, context }: RuleButtonProps) {
           type="button"
           onClick={() => context.onOpen({ path, field, panel: "default" })}
           className={cn(shape, FOCUS, defaultValue ? TINT_SET : TINT_IDLE)}
-          aria-label={summary ? `Default value for ${path} (${summary})` : `Default value for ${path}`}
+          aria-label={
+            summary
+              ? tStatic("os.idp.explorer", "FIELD_RULES_BUTTONS.DEFAULT_VALUE_SUMMARY", { path, summary })
+              : tStatic("os.idp.explorer", "FIELD_RULES_BUTTONS.DEFAULT_VALUE_FOR", { path })
+          }
         >
           {icon}
         </button>
       </TooltipTrigger>
-      <TooltipContent>{summary ? `Default value: ${summary}` : "Set a default value"}</TooltipContent>
+      <TooltipContent>
+        {summary ? tStatic("os.idp.explorer", "FIELD_RULES_BUTTONS.DEFAULT_VALUE_TOOLTIP", { summary }) : tStatic("os.idp.explorer", "FIELD_RULES_BUTTONS.SET_DEFAULT_VALUE")}
+      </TooltipContent>
     </Tooltip>
   );
 }

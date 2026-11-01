@@ -1,3 +1,4 @@
+import { tStatic } from "@seliseblocks/genesis-os";
 import type { PlatformSchema, PlatformSchemaField } from "../data-access.service";
 import { DEFAULT_PROPERTY_NAMES } from "../explorer/explorer-utils";
 import type { RuleAccess } from "./rules.types";
@@ -42,8 +43,8 @@ export function bulkPaths(schemas: PlatformSchema[]): string[] {
 export function schemaBlocker(schema: PlatformSchema, paths: string[], panel: BulkPanel): string | null {
   const closed = paths.filter((path) => accessOf(schema, path, panel) === "Blocked");
   if (closed.length === 0) return null;
-  const what = panel === "validation" ? "validation rules" : "a default value";
-  return `${schema.schemaName} doesn't take ${what} on ${closed.join(", ")}`;
+  const key = panel === "validation" ? "BULK_RULES_UTIL.BLOCKER_VALIDATION" : "BULK_RULES_UTIL.BLOCKER_DEFAULT";
+  return tStatic("os.idp.rules", key, { schema: schema.schemaName, paths: closed.join(", ") });
 }
 
 export type BulkShape = { type: string; isArray: boolean; enumValues?: string[] };
@@ -57,15 +58,15 @@ export function bulkShape(schemas: PlatformSchema[], paths: string[], panel: Bul
     const field = schemas.map((s) => fieldAt(s.fields, path)).find(Boolean);
     return field ? [field] : [];
   });
-  if (fields.length === 0) return { problem: "Pick the properties to change" };
+  if (fields.length === 0) return { problem: tStatic("os.idp.rules", "BULK_RULES_UTIL.PICK_PROPERTIES") };
   const [first] = fields;
   const differs = fields.some((f) => f.type !== first.type || (panel === "default" && f.isArray !== first.isArray));
   if (differs) {
     return {
       problem:
         panel === "default"
-          ? "These properties take different kinds of value (one text or a list); pick properties of one kind"
-          : "These properties have different types; pick properties of one type",
+          ? tStatic("os.idp.rules", "BULK_RULES_UTIL.DIFFERENT_KINDS")
+          : tStatic("os.idp.rules", "BULK_RULES_UTIL.DIFFERENT_TYPES"),
     };
   }
   return { type: first.type, isArray: first.isArray, enumValues: first.enumValues };
@@ -76,12 +77,13 @@ export function bulkWarning(schemas: PlatformSchema[], paths: string[], panel: B
   const warnedSchemas = schemas.filter((s) => s.rules?.level === "Warned").map((s) => s.schemaName);
   const warnedPaths = paths.filter((path) => schemas.some((s) => accessOf(s, path, panel) === "Warned"));
   if (warnedSchemas.length === 0 && warnedPaths.length === 0) return null;
-  const what = panel === "validation" ? "rule" : "default";
+  const tailKey = panel === "validation" ? "BULK_RULES_UTIL.WARNING_TAIL_RULE" : "BULK_RULES_UTIL.WARNING_TAIL_DEFAULT";
   const parts = [
-    warnedSchemas.length > 0 && `${warnedSchemas.join(", ")} ${warnedSchemas.length === 1 ? "is" : "are"} used by sign-in and the console.`,
-    warnedPaths.length > 0 && `${warnedPaths.join(", ")} decide${warnedPaths.length === 1 ? "s" : ""} who can see or change records.`,
+    warnedSchemas.length > 0 && tStatic("os.idp.rules", "BULK_RULES_UTIL.WARNED_SCHEMAS", { count: warnedSchemas.length, names: warnedSchemas.join(", ") }),
+    warnedPaths.length > 0 && tStatic("os.idp.rules", "BULK_RULES_UTIL.WARNED_PATHS", { count: warnedPaths.length, names: warnedPaths.join(", ") }),
+    tStatic("os.idp.rules", tailKey, { count: schemas.length }),
   ].filter(Boolean);
-  return `${parts.join(" ")} A wrong ${what} applies to every record the services save on all ${schemas.length} schema${schemas.length === 1 ? "" : "s"}.`;
+  return parts.join(" ");
 }
 
 /**

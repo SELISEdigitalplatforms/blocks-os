@@ -12,6 +12,7 @@ import {
 } from "@/components/ui-kits/dialog/dialog";
 import { Input } from "@/components/ui-kits/input/input";
 import { cn } from "@/lib/utils";
+import { tStatic, useT } from "@seliseblocks/genesis-os";
 import { CheckCircle2, CircleAlert, FlaskConical, WandSparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -36,10 +37,22 @@ export const RECOMMENDED_PASSWORD_POLICY: PasswordPolicyBuilderState = {
 const PASSWORD_POLICY_MAX_LENGTH = 256;
 
 const characterRequirements = [
-  { key: "requireUppercase", label: "Uppercase letter", example: "A–Z" },
-  { key: "requireLowercase", label: "Lowercase letter", example: "a–z" },
-  { key: "requireNumbers", label: "Number", example: "0–9" },
-  { key: "requireSpecialChars", label: "Special character", example: "! @ # …" },
+  {
+    key: "requireUppercase",
+    labelKey: "PASSWORD_POLICY_REGEX_BUILDER.UPPERCASE_LETTER",
+    example: "A–Z",
+  },
+  {
+    key: "requireLowercase",
+    labelKey: "PASSWORD_POLICY_REGEX_BUILDER.LOWERCASE_LETTER",
+    example: "a–z",
+  },
+  { key: "requireNumbers", labelKey: "PASSWORD_POLICY_REGEX_BUILDER.NUMBER", example: "0–9" },
+  {
+    key: "requireSpecialChars",
+    labelKey: "PASSWORD_POLICY_REGEX_BUILDER.SPECIAL_CHARACTER",
+    example: "! @ # …",
+  },
 ] as const;
 
 export const getPasswordPolicyBuilderError = (policy: PasswordPolicyBuilderState) => {
@@ -52,10 +65,13 @@ export const getPasswordPolicyBuilderError = (policy: PasswordPolicyBuilderState
     minLength < 1 ||
     maxLength > PASSWORD_POLICY_MAX_LENGTH
   ) {
-    return `Use whole-number lengths from 1 to ${PASSWORD_POLICY_MAX_LENGTH}.`;
+    return tStatic("os.idp.settings", "PASSWORD_POLICY_REGEX_BUILDER.LENGTH_RANGE_ERROR", {
+      max: PASSWORD_POLICY_MAX_LENGTH,
+    });
   }
 
-  if (maxLength < minLength) return "Maximum length must be greater than or equal to minimum.";
+  if (maxLength < minLength)
+    return tStatic("os.idp.settings", "PASSWORD_POLICY_REGEX_BUILDER.MAX_BELOW_MIN_ERROR");
 
   return null;
 };
@@ -97,14 +113,15 @@ type PasswordPolicyRegexBuilderProps = {
   onChange: (value: string) => void;
 };
 
-const resultCopy: Record<PolicyTestResult, string> = {
-  idle: "Enter a sample password to test the builder choices.",
-  invalid: "Fix the builder lengths to test this policy. The regex editor remains available.",
-  match: "The sample password meets the builder choices.",
-  "no-match": "The sample password does not meet every builder choice.",
+const RESULT_COPY_KEYS: Record<PolicyTestResult, string> = {
+  idle: "PASSWORD_POLICY_REGEX_BUILDER.RESULT_IDLE",
+  invalid: "PASSWORD_POLICY_REGEX_BUILDER.RESULT_INVALID",
+  match: "PASSWORD_POLICY_REGEX_BUILDER.RESULT_MATCH",
+  "no-match": "PASSWORD_POLICY_REGEX_BUILDER.RESULT_NO_MATCH",
 };
 
 export const PasswordPolicyRegexBuilder = ({ onChange }: PasswordPolicyRegexBuilderProps) => {
+  const { t } = useT("os.idp.settings");
   const [policy, setPolicy] = useState<PasswordPolicyBuilderState>(RECOMMENDED_PASSWORD_POLICY);
   const [samplePassword, setSamplePassword] = useState("");
   const builderError = getPasswordPolicyBuilderError(policy);
@@ -124,22 +141,19 @@ export const PasswordPolicyRegexBuilder = ({ onChange }: PasswordPolicyRegexBuil
       <DialogTrigger asChild>
         <Button type="button" size="sm" variant="outline" className="shrink-0 gap-2">
           <WandSparkles className="h-4 w-4" aria-hidden="true" />
-          Build password policy
+          {t("PASSWORD_POLICY_REGEX_BUILDER.BUILD_POLICY")}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Build with common password rules</DialogTitle>
-          <DialogDescription>
-            Choose the requirements IAM can explain to users. Applying a choice replaces the regex
-            in the editor, which remains fully editable afterward.
-          </DialogDescription>
+          <DialogTitle>{t("PASSWORD_POLICY_REGEX_BUILDER.TITLE")}</DialogTitle>
+          <DialogDescription>{t("PASSWORD_POLICY_REGEX_BUILDER.DESCRIPTION")}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5 py-2">
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="space-y-1.5 text-sm font-medium" htmlFor="password-policy-min-length">
-              Minimum length
+              {t("PASSWORD_POLICY_REGEX_BUILDER.MINIMUM_LENGTH")}
               <Input
                 id="password-policy-min-length"
                 type="number"
@@ -151,7 +165,7 @@ export const PasswordPolicyRegexBuilder = ({ onChange }: PasswordPolicyRegexBuil
               />
             </label>
             <label className="space-y-1.5 text-sm font-medium" htmlFor="password-policy-max-length">
-              Maximum length
+              {t("PASSWORD_POLICY_REGEX_BUILDER.MAXIMUM_LENGTH")}
               <Input
                 id="password-policy-max-length"
                 type="number"
@@ -165,9 +179,11 @@ export const PasswordPolicyRegexBuilder = ({ onChange }: PasswordPolicyRegexBuil
           </div>
 
           <fieldset className="space-y-2">
-            <legend className="mb-2 text-sm font-medium">Require at least one</legend>
+            <legend className="mb-2 text-sm font-medium">
+              {t("PASSWORD_POLICY_REGEX_BUILDER.REQUIRE_AT_LEAST_ONE")}
+            </legend>
             <div className="grid gap-2 sm:grid-cols-2">
-              {characterRequirements.map(({ key, label, example }) => (
+              {characterRequirements.map(({ key, labelKey, example }) => (
                 <label
                   key={key}
                   htmlFor={`password-policy-${key}`}
@@ -181,7 +197,7 @@ export const PasswordPolicyRegexBuilder = ({ onChange }: PasswordPolicyRegexBuil
                     }
                   />
                   <span className="min-w-0 text-sm">
-                    <span className="font-medium">{label}</span>
+                    <span className="font-medium">{t(labelKey)}</span>
                     <span className="ml-1 text-muted-foreground">({example})</span>
                   </span>
                 </label>
@@ -191,7 +207,7 @@ export const PasswordPolicyRegexBuilder = ({ onChange }: PasswordPolicyRegexBuil
 
           <div className="space-y-2 rounded-md border bg-muted/20 p-3">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Generated regex preview
+              {t("PASSWORD_POLICY_REGEX_BUILDER.REGEX_PREVIEW")}
             </p>
             {builderError ? (
               <p className="flex items-center gap-2 text-sm text-warning-700" role="status">
@@ -211,13 +227,13 @@ export const PasswordPolicyRegexBuilder = ({ onChange }: PasswordPolicyRegexBuil
               htmlFor="password-regex-sample"
             >
               <FlaskConical className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-              Try the builder policy
+              {t("PASSWORD_POLICY_REGEX_BUILDER.TRY_POLICY")}
             </label>
             <Input
               id="password-regex-sample"
               value={samplePassword}
               onChange={(event) => setSamplePassword(event.target.value)}
-              placeholder="Sample only — this is not saved"
+              placeholder={t("PASSWORD_POLICY_REGEX_BUILDER.SAMPLE_PLACEHOLDER")}
               autoComplete="off"
             />
             <p
@@ -234,7 +250,7 @@ export const PasswordPolicyRegexBuilder = ({ onChange }: PasswordPolicyRegexBuil
               ) : testResult === "invalid" || testResult === "no-match" ? (
                 <CircleAlert className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               ) : null}
-              {resultCopy[testResult]}
+              {t(RESULT_COPY_KEYS[testResult])}
             </p>
           </div>
         </div>
@@ -242,7 +258,7 @@ export const PasswordPolicyRegexBuilder = ({ onChange }: PasswordPolicyRegexBuil
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" size="sm" variant="outline" onClick={useRecommendedPolicy}>
-              Use recommended policy
+              {t("PASSWORD_POLICY_REGEX_BUILDER.USE_RECOMMENDED")}
             </Button>
           </DialogClose>
           <DialogClose asChild>
@@ -252,7 +268,7 @@ export const PasswordPolicyRegexBuilder = ({ onChange }: PasswordPolicyRegexBuil
               onClick={() => onChange(generatedRegex)}
               disabled={!!builderError}
             >
-              Use generated regex
+              {t("PASSWORD_POLICY_REGEX_BUILDER.USE_GENERATED")}
             </Button>
           </DialogClose>
         </DialogFooter>

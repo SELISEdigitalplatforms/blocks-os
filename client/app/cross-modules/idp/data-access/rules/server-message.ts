@@ -1,3 +1,5 @@
+import { tStatic } from "@seliseblocks/genesis-os";
+
 /**
  * The reason the OS server gave for refusing a save. A 400 from PlatformDataAccess carries
  * `{ isSuccess: false, errors: { [property]: message } }`; the HTTP client hands over `errors`
@@ -13,7 +15,7 @@ export function serverMessage(error: unknown): string {
       if (messages.length > 0) return messages.join(" ");
     }
   }
-  return "Something went wrong.";
+  return tStatic("os.idp.rules", "SERVER_MESSAGE.FALLBACK");
 }
 
 /** True for a refusal the user can fix (400), as opposed to a failure. */

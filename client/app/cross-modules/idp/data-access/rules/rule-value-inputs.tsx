@@ -4,6 +4,7 @@ import { Input } from "@/components/ui-kits/input/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui-kits/select/select";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
 import { cn } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 import { useId, useState, type ReactNode } from "react";
 import {
   VALIDATION_TYPE,
@@ -39,12 +40,13 @@ function ValueInput({
   invalid,
   onChange,
 }: Readonly<{ kind: ValueKind; label: string; value: string; enumValues: string[]; invalid: boolean; onChange: (value: string) => void }>) {
+  const { t } = useT("os.idp.rules");
   if (kind === "boolean" || kind === "enum") {
     const options = kind === "boolean" ? ["true", "false"] : enumValues;
     return (
       <Select value={value || undefined} onValueChange={onChange}>
         <SelectTrigger className="h-9 w-full" aria-label={label}>
-          <SelectValue placeholder="Select a value" />
+          <SelectValue placeholder={t("RULE_VALUE_INPUTS.SELECT_VALUE")} />
         </SelectTrigger>
         <SelectContent>
           {options.map((option) => (
@@ -90,6 +92,7 @@ function ComparisonValue({
   variableOptions: string[] | null;
   onChange: (value: string) => void;
 }>) {
+  const { t } = useT("os.idp.rules");
   const [isVariable, setIsVariable] = useState(() => looksLikeVariable(value));
   const groupName = useId();
   const switchTo = (variable: boolean) => {
@@ -102,7 +105,7 @@ function ComparisonValue({
     <div className="flex flex-col gap-1.5">
       {variableOptions && (
         <fieldset className="flex gap-1">
-          <legend className="sr-only">{`${label} source`}</legend>
+          <legend className="sr-only">{t("RULE_VALUE_INPUTS.SOURCE", { label })}</legend>
           {([false, true] as const).map((variable) => (
             <label
               key={String(variable)}
@@ -114,7 +117,7 @@ function ComparisonValue({
               )}
             >
               <input type="radio" name={groupName} className="sr-only" checked={isVariable === variable} onChange={() => switchTo(variable)} />
-              {variable ? "Variable" : "Fixed value"}
+              {variable ? t("RULE_VALUE_INPUTS.VARIABLE") : t("RULE_VALUE_INPUTS.FIXED_VALUE")}
             </label>
           ))}
         </fieldset>
@@ -130,8 +133,8 @@ function ComparisonValue({
           />
           {variableOptions.length > 0 && (
             <Select value="" onValueChange={onChange}>
-              <SelectTrigger className="h-8 w-full text-xs" aria-label={`Pick a property for ${label}`}>
-                <SelectValue placeholder="Pick a property…" />
+              <SelectTrigger className="h-8 w-full text-xs" aria-label={t("RULE_VALUE_INPUTS.PICK_PROPERTY_FOR", { label })}>
+                <SelectValue placeholder={t("RULE_VALUE_INPUTS.PICK_PROPERTY")} />
               </SelectTrigger>
               <SelectContent>
                 {variableOptions.map((option) => (
@@ -174,6 +177,7 @@ export function RuleValueInputs({
   error: string | null;
   onChange: (patch: Partial<RuleDraft>) => void;
 }>) {
+  const { t } = useT("os.idp.rules");
   const input = VALIDATION_TYPE_META[draft.type]?.input;
   const kind = valueKindForField(fieldType);
   const invalid = Boolean(error);
@@ -182,12 +186,12 @@ export function RuleValueInputs({
   const body = (() => {
     switch (input) {
       case "none":
-        return <p className="text-xs text-muted-foreground">Fails when the value is missing or blank (an empty list, for a list).</p>;
+        return <p className="text-xs text-muted-foreground">{t("RULE_VALUE_INPUTS.NOT_EMPTY_HINT")}</p>;
       case "regex":
         return (
-          <Labelled label="Regex pattern">
+          <Labelled label={t("RULE_VALUE_INPUTS.REGEX_PATTERN")}>
             <Textarea
-              placeholder="e.g. ^[a-zA-Z]+$"
+              placeholder={t("RULE_VALUE_INPUTS.REGEX_PLACEHOLDER")}
               value={draft.value}
               onChange={(e) => onChange({ value: e.target.value })}
               className={cn("resize-none font-mono text-sm", invalid && "border-rose-500")}
@@ -197,11 +201,11 @@ export function RuleValueInputs({
         );
       case "length":
         return (
-          <Labelled label={draft.type === VALIDATION_TYPE.MinLength ? "Minimum length" : "Maximum length"}>
+          <Labelled label={draft.type === VALIDATION_TYPE.MinLength ? t("RULE_VALUE_INPUTS.MINIMUM_LENGTH") : t("RULE_VALUE_INPUTS.MAXIMUM_LENGTH")}>
             <Input
               type="number"
               min={0}
-              aria-label="Length"
+              aria-label={t("RULE_VALUE_INPUTS.LENGTH")}
               value={draft.value}
               onChange={(e) => onChange({ value: e.target.value })}
               className={cn("h-9", invalid && "border-rose-500")}
@@ -211,28 +215,28 @@ export function RuleValueInputs({
       case "lengthRange":
         return (
           <div className="flex gap-3">
-            <Labelled label="Min length">
-              <Input type="number" min={0} aria-label="Min length" value={draft.value} onChange={(e) => onChange({ value: e.target.value })} className="h-9" />
+            <Labelled label={t("RULE_VALUE_INPUTS.MIN_LENGTH")}>
+              <Input type="number" min={0} aria-label={t("RULE_VALUE_INPUTS.MIN_LENGTH")} value={draft.value} onChange={(e) => onChange({ value: e.target.value })} className="h-9" />
             </Labelled>
-            <Labelled label="Max length">
-              <Input type="number" min={0} aria-label="Max length" value={draft.secondaryValue} onChange={(e) => onChange({ secondaryValue: e.target.value })} className="h-9" />
+            <Labelled label={t("RULE_VALUE_INPUTS.MAX_LENGTH")}>
+              <Input type="number" min={0} aria-label={t("RULE_VALUE_INPUTS.MAX_LENGTH")} value={draft.secondaryValue} onChange={(e) => onChange({ secondaryValue: e.target.value })} className="h-9" />
             </Labelled>
           </div>
         );
       case "value":
         return (
-          <Labelled label="Value">
-            <ComparisonValue kind={kind} label="Value" value={draft.value} enumValues={enumValues} invalid={invalid} variableOptions={variableOptions} onChange={(value) => onChange({ value })} />
+          <Labelled label={t("RULE_VALUE_INPUTS.VALUE")}>
+            <ComparisonValue kind={kind} label={t("RULE_VALUE_INPUTS.VALUE")} value={draft.value} enumValues={enumValues} invalid={invalid} variableOptions={variableOptions} onChange={(value) => onChange({ value })} />
           </Labelled>
         );
       case "valueRange":
         return (
           <div className="flex gap-3">
-            <Labelled label="Min">
-              <ComparisonValue kind={kind} label="Min" value={draft.value} enumValues={enumValues} invalid={invalid} variableOptions={variableOptions} onChange={(value) => onChange({ value })} />
+            <Labelled label={t("RULE_VALUE_INPUTS.MIN")}>
+              <ComparisonValue kind={kind} label={t("RULE_VALUE_INPUTS.MIN")} value={draft.value} enumValues={enumValues} invalid={invalid} variableOptions={variableOptions} onChange={(value) => onChange({ value })} />
             </Labelled>
-            <Labelled label="Max">
-              <ComparisonValue kind={kind} label="Max" value={draft.secondaryValue} enumValues={enumValues} invalid={invalid} variableOptions={variableOptions} onChange={(secondaryValue) => onChange({ secondaryValue })} />
+            <Labelled label={t("RULE_VALUE_INPUTS.MAX")}>
+              <ComparisonValue kind={kind} label={t("RULE_VALUE_INPUTS.MAX")} value={draft.secondaryValue} enumValues={enumValues} invalid={invalid} variableOptions={variableOptions} onChange={(secondaryValue) => onChange({ secondaryValue })} />
             </Labelled>
           </div>
         );
@@ -246,7 +250,7 @@ export function RuleValueInputs({
               onChange={({ schemaName, fieldName }) => onChange({ value: schemaName, secondaryValue: fieldName })}
             />
             <p className="text-xs text-muted-foreground">
-              Inserts and updates are refused when the value (each item, for a list) is not found there. Empty values are not checked.
+              {t("RULE_VALUE_INPUTS.REFERENCE_HINT")}
             </p>
           </>
         );

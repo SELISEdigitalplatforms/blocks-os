@@ -40,6 +40,7 @@ import {
 } from "@blocks-idp/data-access/gateway/constants/schema-access-control";
 import type { RuleSetFormValues } from "@blocks-idp/data-access/gateway/utils/schema-access-control.utils";
 import { cn } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 import { CheckIcon } from "@radix-ui/react-icons";
 import { ChevronDown, X } from "lucide-react";
 import { useEffect, useRef, type RefObject } from "react";
@@ -230,8 +231,9 @@ export const useFocusNewRow = (
 };
 
 const DIRECT_VALUE_PLACEHOLDERS: Record<string, string> = {
-  REGEX: "Enter regex pattern",
-  START_WITH: "Enter prefix",
+  REGEX: "RULE_CONDITION_ROW.PLACEHOLDER_REGEX",
+  START_WITH: "RULE_CONDITION_ROW.PLACEHOLDER_PREFIX",
+  END_WITH: "RULE_CONDITION_ROW.PLACEHOLDER_SUFFIX",
 };
 
 /** Chip look shared by every cell: disabled, filled or still "Not set". */
@@ -254,6 +256,7 @@ const CompareFieldMultiSelect = ({
   selectedValues,
   onChange,
 }: Readonly<CompareFieldMultiSelectProps>) => {
+  const { t } = useT("os.idp.gateway");
   const toggleValue = (value: string, selected: boolean) => {
     const updated = selected
       ? selectedValues.filter((v) => v !== value)
@@ -269,7 +272,7 @@ const CompareFieldMultiSelect = ({
           className="flex h-9 w-full min-w-0 items-center justify-between rounded-md border border-input bg-background px-3 text-xs"
         >
           <span className="truncate text-left">
-            {selectedValues.length > 0 ? selectedValues.join(", ") : "Select fields"}
+            {selectedValues.length > 0 ? selectedValues.join(", ") : t("RULE_CONDITION_ROW.SELECT_FIELDS")}
           </span>
           <ChevronDown className="ml-1 h-3.5 w-3.5 shrink-0 opacity-50" />
         </button>
@@ -328,6 +331,7 @@ export const RuleConditionRow = ({
   ctx,
   onRemove,
 }: RuleConditionRowProps) => {
+  const { t } = useT("os.idp.gateway");
   const form = useFormContext<RuleSetFormValues>();
   const {
     getFieldOptions,
@@ -395,14 +399,14 @@ export const RuleConditionRow = ({
 
   const sourceLabel = ruleSourceOptions.find((option) => option.value === source)?.label;
   const leftFieldLabel = isAuthAttributeField(leftField)
-    ? `Attributes.${getAuthAttributeName(leftField)}`
+    ? t("RULE_CONDITION_ROW.ATTRIBUTE_PATH", { name: getAuthAttributeName(leftField) })
     : (fieldOptions.find((option) => option.value === leftField)?.label ?? leftField);
   const operatorLabel = RULE_OPERATORS.find((option) => option.value === operatorValue)?.label;
   const compareSourceLabel = filteredCompareSourceOptions.find(
     (option) => option.value === compareSource,
   )?.label;
   const compareValueLabel = isCompareAttribute
-    ? `Attributes.${getAuthAttributeName(compareValue)}`
+    ? t("RULE_CONDITION_ROW.ATTRIBUTE_PATH", { name: getAuthAttributeName(compareValue) })
     : (compareFieldOptions.find((option) => option.value === compareValue)?.label ?? compareValue);
 
   const isCellActive = (key: RuleCellKey) => openCell?.ruleId === ruleId && openCell.key === key;
@@ -426,35 +430,35 @@ export const RuleConditionRow = ({
   }[] = [
     {
       key: "source",
-      title: "Left operand",
+      title: t("RULE_CONDITION_ROW.CELL_LEFT_OPERAND"),
       label: sourceLabel,
       applicable: true,
       reachable: true,
     },
     {
       key: "field",
-      title: "Left value",
+      title: t("RULE_CONDITION_ROW.CELL_LEFT_VALUE"),
       label: leftFieldLabel,
       applicable: true,
       reachable: Boolean(source),
     },
     {
       key: "operator",
-      title: "Operator",
+      title: t("RULE_CONDITION_ROW.CELL_OPERATOR"),
       label: operatorLabel,
       applicable: true,
       reachable: Boolean(leftField),
     },
     {
       key: "compareSource",
-      title: "Right operand",
+      title: t("RULE_CONDITION_ROW.CELL_RIGHT_OPERAND"),
       label: compareSourceLabel,
       applicable: !isNullOperator && !isDirectValueOp,
       reachable: Boolean(operatorValue),
     },
     {
       key: "compareValue",
-      title: "Right value",
+      title: t("RULE_CONDITION_ROW.CELL_RIGHT_VALUE"),
       label: compareValueLabel,
       applicable: !isNullOperator,
       reachable: isDirectValueOp ? Boolean(operatorValue) : Boolean(compareSource),
@@ -562,7 +566,7 @@ export const RuleConditionRow = ({
     const isFilled = Boolean(cell.label);
     const disabled = !cell.reachable;
     let ariaLabel: string | undefined;
-    if (!disabled) ariaLabel = isFilled ? cell.label : `Set ${cell.title}`;
+    if (!disabled) ariaLabel = isFilled ? cell.label : t("RULE_CONDITION_ROW.SET_CELL", { title: cell.title });
 
     return (
       <Popover
@@ -585,13 +589,13 @@ export const RuleConditionRow = ({
             aria-label={ariaLabel}
             aria-hidden={disabled || undefined}
             onClick={() => openCellFor(cell.key)}
-            title={disabled ? undefined : `Edit ${cell.key}`}
+            title={disabled ? undefined : t("RULE_CONDITION_ROW.EDIT_CELL", { title: cell.title })}
             className={cn(
               "flex h-8 min-w-0 max-w-full items-center justify-center truncate rounded-md border px-3 text-center text-xs font-semibold transition-colors",
               optionsChipTone(disabled, isFilled),
             )}
           >
-            <span className="block truncate">{isFilled ? cell.label : "Not set"}</span>
+            <span className="block truncate">{isFilled ? cell.label : t("RULE_CONDITION_ROW.NOT_SET")}</span>
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-52 p-0" align="start">
@@ -621,7 +625,7 @@ export const RuleConditionRow = ({
             isStaticValue ? (
               <Input
                 className="h-9 w-full min-w-0 rounded-md px-3 text-xs"
-                placeholder="Enter value"
+                placeholder={t("RULE_CONDITION_ROW.PLACEHOLDER_VALUE")}
                 value={field.value}
                 onChange={field.onChange}
                 onBlur={() => openCellFor(field.value ? "operator" : null)}
@@ -631,8 +635,8 @@ export const RuleConditionRow = ({
               // Only an access attribute reaches here: the other left fields are picked from the chip.
               <Input
                 className="h-9 w-full min-w-0 rounded-md px-3 text-xs"
-                placeholder="Attribute name"
-                aria-label="Attribute name"
+                placeholder={t("RULE_CONDITION_ROW.ATTRIBUTE_NAME")}
+                aria-label={t("RULE_CONDITION_ROW.ATTRIBUTE_NAME")}
                 value={getAuthAttributeName(field.value)}
                 onChange={(event) =>
                   field.onChange(
@@ -657,8 +661,8 @@ export const RuleConditionRow = ({
             return (
               <Input
                 className="h-9 w-full min-w-0 rounded-md px-3 text-xs"
-                placeholder="Attribute name"
-                aria-label="Attribute name"
+                placeholder={t("RULE_CONDITION_ROW.ATTRIBUTE_NAME")}
+                aria-label={t("RULE_CONDITION_ROW.ATTRIBUTE_NAME")}
                 value={getAuthAttributeName(field.value)}
                 onChange={(event) =>
                   field.onChange(
@@ -671,7 +675,9 @@ export const RuleConditionRow = ({
             );
           }
           if (isDirectValueOp) {
-            const placeholder = DIRECT_VALUE_PLACEHOLDERS[operatorValue] ?? "Enter suffix";
+            const placeholder = t(
+              DIRECT_VALUE_PLACEHOLDERS[operatorValue] ?? "RULE_CONDITION_ROW.PLACEHOLDER_SUFFIX",
+            );
             return (
               <Input
                 className="h-9 w-full min-w-0 rounded-md px-3 text-xs"
@@ -688,7 +694,7 @@ export const RuleConditionRow = ({
             return (
               <Input
                 className="h-9 w-full min-w-0 rounded-md px-3 text-xs"
-                placeholder="Values"
+                placeholder={t("RULE_CONDITION_ROW.PLACEHOLDER_VALUES")}
                 value={field.value}
                 onChange={field.onChange}
                 onBlur={() => openCellFor(null)}
@@ -717,7 +723,7 @@ export const RuleConditionRow = ({
           return isCompareStatic ? (
             <Input
               className="h-9 w-full min-w-0 rounded-md px-3 text-xs"
-              placeholder="Enter value"
+              placeholder={t("RULE_CONDITION_ROW.PLACEHOLDER_VALUE")}
               value={field.value}
               onChange={field.onChange}
               onBlur={() => openCellFor(null)}
@@ -732,7 +738,7 @@ export const RuleConditionRow = ({
               }}
             >
               <SelectTrigger className="h-9 w-full min-w-0 rounded-md px-3 text-xs">
-                <SelectValue placeholder="Select field" />
+                <SelectValue placeholder={t("RULE_CONDITION_ROW.SELECT_FIELD")} />
               </SelectTrigger>
               <SelectContent>
                 {compareFieldOptions.map((option) => (
@@ -812,7 +818,7 @@ export const RuleConditionRow = ({
           aria-hidden="true"
           className="flex h-8 min-w-0 max-w-full items-center justify-center truncate rounded-md border border-dashed border-border/40 px-3 text-center text-xs text-muted-foreground/40"
         >
-          Not set
+          {t("RULE_CONDITION_ROW.NOT_SET")}
         </div>
       );
     }
@@ -834,9 +840,9 @@ export const RuleConditionRow = ({
       <button
         key={cell.key}
         type="button"
-        aria-label={isFilled ? cell.label : `Set ${cell.title}`}
+        aria-label={isFilled ? cell.label : t("RULE_CONDITION_ROW.SET_CELL", { title: cell.title })}
         onClick={() => openCellFor(cell.key)}
-        title={`Edit ${cell.key}`}
+        title={t("RULE_CONDITION_ROW.EDIT_CELL", { title: cell.title })}
         className={cn(
           "flex h-8 min-w-0 max-w-full items-center justify-center truncate rounded-md border px-3 text-center text-xs font-semibold transition-colors",
           isFilled
@@ -844,7 +850,7 @@ export const RuleConditionRow = ({
             : "border-dashed border-border/50 bg-background text-muted-foreground hover:bg-muted/30",
         )}
       >
-        <span className="block truncate">{isFilled ? cell.label : "Not set"}</span>
+        <span className="block truncate">{isFilled ? cell.label : t("RULE_CONDITION_ROW.NOT_SET")}</span>
       </button>
     );
   };
@@ -866,7 +872,7 @@ export const RuleConditionRow = ({
           variant="ghost"
           size="icon"
           className="h-6 w-6 shrink-0 rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-          aria-label="Remove rule"
+          aria-label={t("RULE_CONDITION_ROW.REMOVE_RULE_ARIA")}
           onClick={onRemove}
         >
           <X className="h-3.5 w-3.5" strokeWidth={2.25} />
@@ -874,7 +880,7 @@ export const RuleConditionRow = ({
       </div>
       <div
         className="flex flex-wrap items-center gap-1.5"
-        aria-label={`${conditionLabel} expression`}
+        aria-label={t("RULE_CONDITION_ROW.EXPRESSION_ARIA", { condition: conditionLabel })}
       >
         {cellDefs.map(renderCell)}
       </div>

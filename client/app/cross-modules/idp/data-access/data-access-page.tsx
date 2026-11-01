@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui-kits/sheet/sheet";
 import { cn } from "@/lib/utils";
+import { tStatic, useT } from "@seliseblocks/genesis-os";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui-kits/button/button";
 import { ArrowLeft, Layers } from "lucide-react";
@@ -50,7 +51,7 @@ function Inspector({
 /** Inspector subject for the schema itself (row access), opened on `tab`. */
 const schemaAccessTarget = (schema: PlatformSchema, tab?: AccessTab): AccessInspectorTarget => ({
   subject: schema.schemaName,
-  context: "Schema access",
+  context: tStatic("os.idp.data-access", "DATA_ACCESS_PAGE.CONTEXT_SCHEMA_ACCESS"),
   schemaId: schema.id,
   schemaName: schema.schemaName,
   fields: schema.fields,
@@ -66,7 +67,7 @@ const schemaAccessTarget = (schema: PlatformSchema, tab?: AccessTab): AccessInsp
 /** Inspector subject for one property (column access), addressed by its dotted path. */
 const fieldAccessTarget = (schema: PlatformSchema, path: string, field: PlatformSchemaField): AccessInspectorTarget => ({
   subject: path,
-  context: `Field on ${schema.schemaName}`,
+  context: tStatic("os.idp.data-access", "DATA_ACCESS_PAGE.CONTEXT_FIELD_ON", { schema: schema.schemaName }),
   schemaId: schema.id,
   schemaName: schema.schemaName,
   fields: schema.fields,
@@ -119,6 +120,7 @@ function SchemaPanel({
   onOpenFieldAccess: OnOpenFieldAccess;
   onOpenFieldRules: OnOpenFieldRules;
 }>) {
+  const { t } = useT("os.idp.data-access");
   if (isLoading) {
     return (
       <>
@@ -131,8 +133,8 @@ function SchemaPanel({
     return (
       <Card className="w-full">
         <CardContent className="p-4">
-          <h4 className="text-lg font-semibold">Schema</h4>
-          <p className="text-sm text-muted-foreground">Select a schema from the list to view its properties and access.</p>
+          <h4 className="text-lg font-semibold">{t("SCHEMA_PANEL.TITLE")}</h4>
+          <p className="text-sm text-muted-foreground">{t("SCHEMA_PANEL.SELECT_HINT")}</p>
         </CardContent>
       </Card>
     );
@@ -212,6 +214,7 @@ function InspectorColumn({
  * folds to a rail while the inspector is open.
  */
 export function DataAccessPage() {
+  const { t } = useT("os.idp.data-access");
   const schemasQuery = useQuery({ queryKey: ["platform-data-access-schemas"], queryFn: platformDataAccessService.getSchemas });
   const schemas = useMemo(() => schemasQuery.data?.data ?? [], [schemasQuery.data?.data]);
 
@@ -283,13 +286,13 @@ export function DataAccessPage() {
   return (
     <div className="flex flex-col lg:h-[calc(100vh-8rem)] lg:min-h-0">
       <PageHeader
-        title="Data Access"
-        description="Platform collections of IAM, OS, Logic, Release and Monitor, and who may view, create, edit and delete them."
+        title={t("DATA_ACCESS_PAGE.TITLE")}
+        description={t("DATA_ACCESS_PAGE.DESCRIPTION")}
         actions={
           rulesEnabled ? (
             <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => setIsBulkOpen(true)}>
               <Layers className="h-4 w-4" />
-              Bulk rules
+              {t("DATA_ACCESS_PAGE.BULK_RULES")}
             </Button>
           ) : undefined
         }
@@ -331,7 +334,7 @@ export function DataAccessPage() {
         {/* Main content */}
         <div className={cn("flex w-full min-w-0 flex-col lg:h-full lg:flex-1 lg:overflow-hidden", selectedSchemaId ? "flex" : "hidden lg:flex")}>
           <div className="flex min-w-0 items-center gap-2 pb-2 lg:hidden">
-            <button type="button" aria-label="Back to schema list" onClick={() => selectSchema(null)}>
+            <button type="button" aria-label={t("DATA_ACCESS_PAGE.BACK_TO_LIST")} onClick={() => selectSchema(null)}>
               <ArrowLeft className="h-5 w-5" />
             </button>
             <h2 className="min-w-0 truncate text-lg font-semibold">{selectedSchema?.schemaName}</h2>
@@ -367,11 +370,11 @@ export function DataAccessPage() {
       {!isLargeScreen && (
         <Sheet open={Boolean(inspector)} onOpenChange={(open) => !open && closeInspector()}>
           <SheetContent side="right" hideClose className="flex w-full flex-col p-0 sm:max-w-[540px]">
-            <SheetTitle className="sr-only">{inspector && isRulesTarget(inspector) ? "Rules" : "Access"}</SheetTitle>
+            <SheetTitle className="sr-only">{inspector && isRulesTarget(inspector) ? t("DATA_ACCESS_PAGE.SHEET_TITLE_RULES") : t("DATA_ACCESS_PAGE.SHEET_TITLE_ACCESS")}</SheetTitle>
             <SheetDescription className="sr-only">
               {inspector && isRulesTarget(inspector)
-                ? "Validation rules or the default value of this property."
-                : "Who may view, create, edit or delete this schema or property."}
+                ? t("DATA_ACCESS_PAGE.SHEET_DESCRIPTION_RULES")
+                : t("DATA_ACCESS_PAGE.SHEET_DESCRIPTION_ACCESS")}
             </SheetDescription>
             {inspector && <Inspector target={inspector} inspectorRef={inspectorRef} onClose={closeInspector} />}
           </SheetContent>

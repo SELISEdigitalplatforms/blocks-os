@@ -4,6 +4,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui-kits/select/select";
 import { cn } from "@/lib/utils";
+import { tStatic, useT } from "@seliseblocks/genesis-os";
 import { Plus, X } from "lucide-react";
 import type { ReactNode } from "react";
 import type { DefaultValueKind } from "./rules.types";
@@ -16,13 +17,17 @@ import type { DefaultDraft } from "./default-value.util";
 
 export const LABEL_CLASS = "text-[11px] font-medium uppercase tracking-widest text-muted-foreground";
 
-const KIND_LABELS: Record<DefaultValueKind, string> = { Static: "Fixed value", Template: "Template", Now: "Now" };
+const KIND_LABEL_KEYS: Record<DefaultValueKind, string> = {
+  Static: "DEFAULT_VALUE_FIELDS.FIXED_VALUE",
+  Template: "DEFAULT_VALUE_FIELDS.TEMPLATE",
+  Now: "DEFAULT_VALUE_FIELDS.NOW",
+};
 
 const OFFSET_PARTS = [
-  { key: "days", label: "Days" },
-  { key: "hours", label: "Hours" },
-  { key: "minutes", label: "Minutes" },
-  { key: "seconds", label: "Seconds" },
+  { key: "days", labelKey: "DEFAULT_VALUE_FIELDS.DAYS" },
+  { key: "hours", labelKey: "DEFAULT_VALUE_FIELDS.HOURS" },
+  { key: "minutes", labelKey: "DEFAULT_VALUE_FIELDS.MINUTES" },
+  { key: "seconds", labelKey: "DEFAULT_VALUE_FIELDS.SECONDS" },
 ] as const;
 
 function Labelled({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
@@ -41,9 +46,10 @@ export function KindPicker({
   hint,
   onChange,
 }: Readonly<{ kinds: DefaultValueKind[]; value: DefaultValueKind; hint: string; onChange: (kind: DefaultValueKind) => void }>) {
+  const { t } = useT("os.idp.rules");
   return (
     <fieldset className="flex flex-col gap-1.5">
-      <legend className={cn(LABEL_CLASS, "mb-1.5")}>Default kind</legend>
+      <legend className={cn(LABEL_CLASS, "mb-1.5")}>{t("DEFAULT_VALUE_FIELDS.DEFAULT_KIND")}</legend>
       <div className="flex gap-1">
         {kinds.map((kind) => (
           <label
@@ -56,7 +62,7 @@ export function KindPicker({
             )}
           >
             <input type="radio" name="default-kind" className="sr-only" checked={value === kind} onChange={() => onChange(kind)} />
-            {KIND_LABELS[kind]}
+            {t(KIND_LABEL_KEYS[kind])}
           </label>
         ))}
       </div>
@@ -77,15 +83,16 @@ export function OffsetInputs({
   summary: string | null;
   onChange: (offset: DefaultDraft["offset"]) => void;
 }>) {
+  const { t } = useT("os.idp.rules");
   return (
     <div className="flex flex-col gap-1.5">
       <div className="grid grid-cols-2 gap-3">
-        {OFFSET_PARTS.map(({ key, label }) => (
-          <Labelled key={key} label={label}>
+        {OFFSET_PARTS.map(({ key, labelKey }) => (
+          <Labelled key={key} label={t(labelKey)}>
             <Input
               type="number"
               step={1}
-              aria-label={label}
+              aria-label={t(labelKey)}
               value={offset[key]}
               onChange={(e) => onChange({ ...offset, [key]: e.target.value })}
               className={cn("h-9", invalid && "border-rose-500")}
@@ -113,12 +120,13 @@ export function StaticItemInput({
   invalid,
   onChange,
 }: Readonly<{ fieldType: string; enumValues: string[]; value: string; label: string; invalid: boolean; onChange: (value: string) => void }>) {
+  const { t } = useT("os.idp.rules");
   if (fieldType === "Boolean" || fieldType === "Enum") {
     const options = fieldType === "Boolean" ? ["true", "false"] : enumValues;
     return (
       <Select value={value || undefined} onValueChange={onChange}>
         <SelectTrigger className="h-9 w-full" aria-label={label}>
-          <SelectValue placeholder="Select a value" />
+          <SelectValue placeholder={t("DEFAULT_VALUE_FIELDS.SELECT_VALUE")} />
         </SelectTrigger>
         <SelectContent>
           {options.map((option) => (
@@ -175,9 +183,10 @@ export function ItemsEditor({
   onAdd: () => void;
   onRemove: (index: number) => void;
 }>) {
+  const { t } = useT("os.idp.rules");
   const itemLabel = (index: number) => {
-    const noun = isTemplate ? "Template" : "Value";
-    return isArray ? `${noun} ${index + 1}` : noun;
+    if (isArray) return t(isTemplate ? "DEFAULT_VALUE_FIELDS.TEMPLATE_N" : "DEFAULT_VALUE_FIELDS.VALUE_N", { n: index + 1 });
+    return t(isTemplate ? "DEFAULT_VALUE_FIELDS.TEMPLATE" : "DEFAULT_VALUE_FIELDS.VALUE");
   };
   return (
     <>
@@ -210,7 +219,7 @@ export function ItemsEditor({
               variant="ghost"
               size="icon"
               className="h-8 w-8 shrink-0 text-muted-foreground hover:text-rose-500"
-              aria-label={`Remove item ${index + 1}`}
+              aria-label={t("DEFAULT_VALUE_FIELDS.REMOVE_ITEM", { n: index + 1 })}
               onClick={() => onRemove(index)}
             >
               <X className="h-3.5 w-3.5" />
@@ -221,7 +230,7 @@ export function ItemsEditor({
       {isArray && (
         <Button type="button" variant="outline" size="sm" className="w-fit gap-1.5" onClick={onAdd}>
           <Plus className="h-3.5 w-3.5" />
-          Add item
+          {t("DEFAULT_VALUE_FIELDS.ADD_ITEM")}
         </Button>
       )}
     </>
@@ -240,6 +249,6 @@ export function templateVariables(schemaName: string, fields: Record<string, { i
 
 /** The heading over the inputs. */
 export function itemsHeading(isArray: boolean, kind: DefaultValueKind): string {
-  if (isArray) return "Values";
-  return kind === "Template" ? "Template" : "Value";
+  if (isArray) return tStatic("os.idp.rules", "DEFAULT_VALUE_FIELDS.VALUES");
+  return tStatic("os.idp.rules", kind === "Template" ? "DEFAULT_VALUE_FIELDS.TEMPLATE" : "DEFAULT_VALUE_FIELDS.VALUE");
 }

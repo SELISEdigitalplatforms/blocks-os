@@ -1,11 +1,12 @@
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { cn } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 import { Database, PanelLeftOpen, Search } from "lucide-react";
 import { PLATFORM_SERVICES, type PlatformSchema } from "../data-access.service";
 import { AccessTierDot } from "../gateway/components/primitives";
 import { schemaExposure } from "./explorer-utils";
 
-const SERVICE_FILTERS = [{ value: "all", label: "All" }, ...PLATFORM_SERVICES.map((service) => ({ value: service, label: service }))];
+const SERVICE_FILTERS = ["all", ...PLATFORM_SERVICES];
 
 /** Schemas the explorer lists: the service filter, then a name search. */
 export function filterSchemas(schemas: PlatformSchema[], service: string, search: string) {
@@ -66,6 +67,7 @@ function SchemaList({
   selectedSchemaId?: string | null;
   onSelectSchema: (id: string) => void;
 }>) {
+  const { t } = useT("os.idp.explorer");
   if (isLoading) return <SchemaListSkeleton />;
   if (schemas.length > 0) {
     return (
@@ -77,7 +79,7 @@ function SchemaList({
     );
   }
   if (isFilteredOrSearched) {
-    return <div className="flex h-full items-center justify-center py-8 text-sm text-muted-foreground/60">No schemas found</div>;
+    return <div className="flex h-full items-center justify-center py-8 text-sm text-muted-foreground/60">{t("SCHEMA_EXPLORER.NO_SCHEMAS_FOUND")}</div>;
   }
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 px-6 py-8 text-center">
@@ -85,9 +87,9 @@ function SchemaList({
         <Database className="h-[19px] w-[19px]" aria-hidden />
       </div>
       <p className="text-[12.5px] leading-relaxed text-muted-foreground/70">
-        No platform schemas yet.
+        {t("SCHEMA_EXPLORER.NO_PLATFORM_SCHEMAS")}
         <br />
-        They will be listed here once seeded.
+        {t("SCHEMA_EXPLORER.NO_PLATFORM_SCHEMAS_HINT")}
       </p>
     </div>
   );
@@ -117,15 +119,16 @@ export function SchemaExplorer({
   onSearchChange: (search: string) => void;
   onSelectSchema: (id: string) => void;
 }>) {
+  const { t } = useT("os.idp.explorer");
   const visible = filterSchemas(schemas, service, search);
   const isFilteredOrSearched = service !== "all" || search.trim().length > 0;
 
   return (
     <div className="relative flex h-full w-full min-w-0 flex-col overflow-hidden rounded-sm border border-border/40 bg-card">
       <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border/40 pl-4 pr-2">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-foreground">Schemas</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-foreground">{t("SCHEMA_EXPLORER.TITLE")}</h2>
         {!isLoading && (
-          <span className="text-[11px] text-muted-foreground" aria-label={`${visible.length} schemas`}>
+          <span className="text-[11px] text-muted-foreground" aria-label={t("SCHEMA_EXPLORER.SCHEMA_COUNT", { count: visible.length })}>
             {visible.length}
           </span>
         )}
@@ -138,15 +141,15 @@ export function SchemaExplorer({
             type="text"
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
-            placeholder="Search schemas…"
-            aria-label="Search schemas"
+            placeholder={t("SCHEMA_EXPLORER.SEARCH_PLACEHOLDER")}
+            aria-label={t("SCHEMA_EXPLORER.SEARCH_LABEL")}
             className="min-w-0 flex-1 bg-transparent text-xs text-foreground outline-hidden placeholder:text-muted-foreground/60"
           />
         </div>
       </div>
 
       <div className="flex shrink-0 flex-wrap gap-1.5 border-b border-border/40 px-2.5 py-2">
-        {SERVICE_FILTERS.map(({ value, label }) => {
+        {SERVICE_FILTERS.map((value) => {
           const active = service === value;
           return (
             <button
@@ -161,7 +164,7 @@ export function SchemaExplorer({
                   : "border-border/40 font-medium text-muted-foreground hover:text-foreground",
               )}
             >
-              {label}
+              {value === "all" ? t("common:ALL") : value}
             </button>
           );
         })}
@@ -192,13 +195,14 @@ export function SchemaRail({
   onSelectSchema: (id: string) => void;
   onExpand: () => void;
 }>) {
+  const { t } = useT("os.idp.explorer");
   return (
     <div className="flex h-full w-full shrink-0 flex-col items-center overflow-hidden rounded-sm border border-border/40 bg-card">
       <div className="flex h-11 w-full shrink-0 items-center justify-center border-b border-border/40">
         <button
           type="button"
           onClick={onExpand}
-          aria-label="Show the schema list"
+          aria-label={t("SCHEMA_RAIL.SHOW_LIST")}
           className="dg-interactive flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40"
         >
           <PanelLeftOpen className="h-4 w-4" aria-hidden />

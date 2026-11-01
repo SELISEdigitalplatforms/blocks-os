@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { handleErrorMessages } from "@/lib/error";
+import { gt } from "../utils/gateway-i18n";
 
 export interface TransientStatus {
   kind: "success" | "error";
@@ -45,7 +46,7 @@ export function useTransientStatus(duration = DEFAULT_DURATION_MS) {
   /** Mirrors `showErrorToast`'s own `errors` normalization, so switching a
    *  call site from the toast to this hook is a drop-in swap. */
   const setError = useCallback(
-    (errors: unknown, fallback = "Something went wrong.") => {
+    (errors: unknown, fallback = gt("TRANSIENT_STATUS.ERROR_FALLBACK")) => {
       const normalized = handleErrorMessages(errors);
       const message = Array.isArray(normalized) ? normalized.join(" ") : normalized || fallback;
       showStatus({ kind: "error", message });

@@ -1,3 +1,4 @@
+import { tStatic } from "@seliseblocks/genesis-os";
 import type { AccessTier } from "../gateway/components/primitives";
 import { tierFromLevel } from "../gateway/components/primitives";
 import type { PlatformSchema, PlatformSchemaField } from "../data-access.service";
@@ -53,11 +54,17 @@ export type SchemaExposure = { tier: Extract<AccessTier, "public" | "user">; rea
 
 type Verb = "read" | "write" | "edit" | "delete";
 const WRITE_VERBS: readonly Verb[] = ["write", "edit", "delete"];
-const VERB_PHRASES: Record<Verb, string> = {
-  read: "read",
-  write: "create records in",
-  edit: "edit",
-  delete: "delete from",
+const PUBLIC_REASON_KEYS: Record<Verb, string> = {
+  read: "EXPLORER_UTILS.PUBLIC_READ",
+  write: "EXPLORER_UTILS.PUBLIC_WRITE",
+  edit: "EXPLORER_UTILS.PUBLIC_EDIT",
+  delete: "EXPLORER_UTILS.PUBLIC_DELETE",
+};
+const USER_REASON_KEYS: Record<Verb, string> = {
+  read: "EXPLORER_UTILS.USER_READ",
+  write: "EXPLORER_UTILS.USER_WRITE",
+  edit: "EXPLORER_UTILS.USER_EDIT",
+  delete: "EXPLORER_UTILS.USER_DELETE",
 };
 
 /**
@@ -69,10 +76,10 @@ export function schemaExposure(
 ): SchemaExposure | null {
   const level = (verb: Verb) => schema[`${verb}AccessLevel` as const];
   const publicWrite = WRITE_VERBS.find((verb) => tierFromLevel(level(verb)) === "public");
-  if (publicWrite) return { tier: "public", reason: `Anyone can ${VERB_PHRASES[publicWrite]} this schema` };
-  if (tierFromLevel(level("read")) === "public") return { tier: "public", reason: "Anyone can read this schema" };
+  if (publicWrite) return { tier: "public", reason: tStatic("os.idp.explorer", PUBLIC_REASON_KEYS[publicWrite]) };
+  if (tierFromLevel(level("read")) === "public") return { tier: "public", reason: tStatic("os.idp.explorer", PUBLIC_REASON_KEYS.read) };
   const userWrite = WRITE_VERBS.find((verb) => tierFromLevel(level(verb)) === "user");
-  if (userWrite) return { tier: "user", reason: `Any requester can ${VERB_PHRASES[userWrite]} this schema` };
+  if (userWrite) return { tier: "user", reason: tStatic("os.idp.explorer", USER_REASON_KEYS[userWrite]) };
   return null;
 }
 

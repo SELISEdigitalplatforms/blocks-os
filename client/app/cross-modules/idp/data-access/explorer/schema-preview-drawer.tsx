@@ -1,6 +1,7 @@
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button/copy-to-clipboard-button";
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerTitle } from "@/components/ui-kits/drawer/drawer";
 import { ScrollArea } from "@/components/ui-kits/scroll-area/scroll-area";
+import { useT } from "@seliseblocks/genesis-os";
 import { Eye, X } from "lucide-react";
 import { useMemo } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -26,6 +27,7 @@ export function SchemaPreviewDrawer({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }>) {
+  const { t } = useT("os.idp.explorer");
   const formattedJson = useMemo(() => JSON.stringify(buildStructurePreview(fields), null, 2), [fields]);
 
   return (
@@ -39,14 +41,14 @@ export function SchemaPreviewDrawer({
           <div className="relative flex shrink-0 items-center justify-between gap-4 border-b border-border/40 px-6 py-4">
             <DrawerTitle className="flex items-center gap-2 text-sm font-semibold text-foreground">
               <Eye className="h-4 w-4 text-indigo-400" />
-              {schemaName} preview
+              {t("SCHEMA_PREVIEW_DRAWER.TITLE", { schema: schemaName })}
             </DrawerTitle>
-            <DrawerDescription className="sr-only">Preview of the schema structure.</DrawerDescription>
+            <DrawerDescription className="sr-only">{t("SCHEMA_PREVIEW_DRAWER.DESCRIPTION")}</DrawerDescription>
             <DrawerClose asChild>
               <button
                 type="button"
                 className="inline-flex h-7 w-7 items-center justify-center rounded-md text-foreground/80 transition-colors hover:bg-muted/60 hover:text-foreground"
-                aria-label="Close"
+                aria-label={t("common:CLOSE")}
               >
                 <X className="h-4 w-4" />
               </button>

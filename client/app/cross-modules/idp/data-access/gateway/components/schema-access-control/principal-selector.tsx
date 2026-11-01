@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { useEffect, useRef, useState, type ComponentProps } from "react";
 import {
   Command,
@@ -16,16 +17,16 @@ import {
   type PrincipalOption,
   type UserPrincipalValue,
 } from "@blocks-idp/data-access/gateway/hooks/use-principal-options";
+import { lazyLabels } from "@blocks-idp/data-access/gateway/utils/gateway-i18n";
 
-export const PRINCIPAL_MESSAGES = {
-  MISSING_TENANT: "Select a project before loading roles or users.",
-  FORBIDDEN: "You do not have permission to view tenant roles or users.",
-  ROLES_FAILED: "Roles could not be loaded.",
-  USERS_FAILED: "Users could not be loaded.",
-  NO_ROLES: "No roles found.",
-  NO_USERS: "No users found.",
-  UNAVAILABLE: "Unavailable",
-} as const;
+export const PRINCIPAL_MESSAGES = lazyLabels({
+  MISSING_TENANT: "PRINCIPAL_SELECTOR.MISSING_TENANT",
+  FORBIDDEN: "PRINCIPAL_SELECTOR.FORBIDDEN",
+  ROLES_FAILED: "PRINCIPAL_SELECTOR.ROLES_FAILED",
+  USERS_FAILED: "PRINCIPAL_SELECTOR.USERS_FAILED",
+  NO_ROLES: "PRINCIPAL_SELECTOR.NO_ROLES",
+  NO_USERS: "PRINCIPAL_SELECTOR.NO_USERS",
+});
 
 interface PrincipalSelectorProps {
   entity: PrincipalEntity;
@@ -54,9 +55,6 @@ const selectedValuesOf = (value: string, multiple: boolean): string[] => {
   return trimmed ? [trimmed] : [];
 };
 
-const emptyTriggerLabel = (entity: PrincipalEntity): string =>
-  entity === "role" ? "Select role" : "Select user";
-
 type BrowseState = ReturnType<typeof usePrincipalOptions>;
 
 /**
@@ -70,6 +68,7 @@ interface PrincipalTriggerProps extends ComponentProps<"button"> {
 }
 
 const PrincipalTrigger = ({ isChip, hasSelection, triggerLabel, className, ...buttonProps }: Readonly<PrincipalTriggerProps>) => {
+  const { t } = useT("os.idp.gateway");
   if (isChip) {
     return (
       <button
@@ -86,7 +85,7 @@ const PrincipalTrigger = ({ isChip, hasSelection, triggerLabel, className, ...bu
           className,
         )}
       >
-        <span className="block truncate">{hasSelection ? triggerLabel : "Not set"}</span>
+        <span className="block truncate">{hasSelection ? triggerLabel : t("PRINCIPAL_SELECTOR.NOT_SET")}</span>
       </button>
     );
   }
@@ -133,6 +132,7 @@ const BrowseResults = ({
   selectedValues,
   onToggle,
 }: Readonly<BrowseResultsProps>) => {
+  const { t } = useT("os.idp.gateway");
   if (browse.isForbidden) {
     return <div className="p-3 text-sm text-destructive">{PRINCIPAL_MESSAGES.FORBIDDEN}</div>;
   }
@@ -143,7 +143,7 @@ const BrowseResults = ({
           {entity === "role" ? PRINCIPAL_MESSAGES.ROLES_FAILED : PRINCIPAL_MESSAGES.USERS_FAILED}
         </span>
         <button type="button" className="underline" onClick={() => browse.refetch()}>
-          Retry
+          {t("common:RETRY")}
         </button>
       </div>
     );
@@ -151,7 +151,7 @@ const BrowseResults = ({
   if (browse.isLoading) {
     return (
       <div className="p-3 text-sm text-muted-foreground" aria-busy="true">
-        Loading…
+        {t("PRINCIPAL_SELECTOR.LOADING")}
       </div>
     );
   }
@@ -178,7 +178,11 @@ const BrowseResults = ({
               <Checkbox
                 checked={isSelected}
                 tabIndex={-1}
-                aria-label={`${isSelected ? "Deselect" : "Select"} ${option.primaryLabel}`}
+                aria-label={
+                  isSelected
+                    ? t("PRINCIPAL_SELECTOR.DESELECT_OPTION", { name: option.primaryLabel })
+                    : t("PRINCIPAL_SELECTOR.SELECT_OPTION", { name: option.primaryLabel })
+                }
                 className="pointer-events-none mr-2 shrink-0"
               />
             )}
@@ -195,7 +199,7 @@ const BrowseResults = ({
           value="__load_more__"
           onSelect={() => browse.fetchNextPage()}
         >
-          {browse.isFetchingNextPage ? "Loading…" : "Load more"}
+          {browse.isFetchingNextPage ? t("PRINCIPAL_SELECTOR.LOADING") : t("PRINCIPAL_SELECTOR.LOAD_MORE")}
         </CommandItem>
       )}
     </CommandGroup>
@@ -215,6 +219,7 @@ const PrincipalSelectorInner = ({
   userValueField,
   variant = "field",
 }: PrincipalSelectorProps) => {
+  const { t } = useT("os.idp.gateway");
   const isChip = variant === "chip";
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -243,7 +248,7 @@ const PrincipalSelectorInner = ({
     const state = stored.stateFor(storedValue);
     if (state.status === "resolved") return state.option.primaryLabel;
     if (state.status === "unavailable") {
-      return `${storedValue} — ${PRINCIPAL_MESSAGES.UNAVAILABLE}`;
+      return t("PRINCIPAL_SELECTOR.UNAVAILABLE_VALUE", { value: storedValue });
     }
     // resolving / unresolved / forbidden: show the raw stored value, never a guess.
     return storedValue;
@@ -274,7 +279,9 @@ const PrincipalSelectorInner = ({
 
   const triggerLabel = selectedValues.length
     ? selectedValues.map(labelFor).join(", ")
-    : emptyTriggerLabel(entity);
+    : entity === "role"
+      ? t("PRINCIPAL_SELECTOR.SELECT_ROLE")
+      : t("PRINCIPAL_SELECTOR.SELECT_USER");
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -289,7 +296,11 @@ const PrincipalSelectorInner = ({
         <div className="border-b p-2">
           <Input
             className={cn("h-8", isChip && "text-xs")}
-            placeholder={entity === "role" ? "Search roles" : "Search users"}
+            placeholder={
+              entity === "role"
+                ? t("PRINCIPAL_SELECTOR.SEARCH_ROLES")
+                : t("PRINCIPAL_SELECTOR.SEARCH_USERS")
+            }
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />

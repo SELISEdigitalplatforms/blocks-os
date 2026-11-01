@@ -1,8 +1,10 @@
+import { labelledOption, lazyLabels } from "../utils/gateway-i18n";
+
 export const PERMISSION_ACTIONS = [
-  { id: "view", label: "View", value: "view" },
-  { id: "create", label: "Create", value: "create" },
-  { id: "edit", label: "Edit", value: "edit" },
-  { id: "delete", label: "Delete", value: "delete" },
+  labelledOption("common:VIEW", { id: "view", value: "view" }),
+  labelledOption("common:CREATE", { id: "create", value: "create" }),
+  labelledOption("common:EDIT", { id: "edit", value: "edit" }),
+  labelledOption("common:DELETE", { id: "delete", value: "delete" }),
 ];
 
 export const ACCESS_TYPES = {
@@ -19,15 +21,21 @@ export const RULE_SOURCE_TYPES = {
 } as const;
 
 export const RULE_SOURCE_OPTIONS = [
-  { label: "Auth", value: RULE_SOURCE_TYPES.AUTH },
-  { label: "Schema Fields", value: RULE_SOURCE_TYPES.SCHEMA_FIELD },
-  // { label: "Static Value", value: RULE_SOURCE_TYPES.STATIC_VALUE },
+  labelledOption("SCHEMA_ACCESS_CONTROL.SOURCE_AUTH", { value: RULE_SOURCE_TYPES.AUTH }),
+  labelledOption("SCHEMA_ACCESS_CONTROL.SOURCE_SCHEMA_FIELDS", {
+    value: RULE_SOURCE_TYPES.SCHEMA_FIELD,
+  }),
+  // labelledOption("SCHEMA_ACCESS_CONTROL.SOURCE_STATIC_VALUE", { value: RULE_SOURCE_TYPES.STATIC_VALUE }),
 ];
 
 export const COMPARE_SOURCE_OPTIONS = [
-  { label: "Auth", value: RULE_SOURCE_TYPES.AUTH },
-  { label: "Schema Fields", value: RULE_SOURCE_TYPES.SCHEMA_FIELD },
-  { label: "Static Value", value: RULE_SOURCE_TYPES.STATIC_VALUE },
+  labelledOption("SCHEMA_ACCESS_CONTROL.SOURCE_AUTH", { value: RULE_SOURCE_TYPES.AUTH }),
+  labelledOption("SCHEMA_ACCESS_CONTROL.SOURCE_SCHEMA_FIELDS", {
+    value: RULE_SOURCE_TYPES.SCHEMA_FIELD,
+  }),
+  labelledOption("SCHEMA_ACCESS_CONTROL.SOURCE_STATIC_VALUE", {
+    value: RULE_SOURCE_TYPES.STATIC_VALUE,
+  }),
 ];
 
 /** Mirrors GraphQlConstant.MaxNestedLevelIterationLimit (server/DataGateway.DomainService) */
@@ -50,19 +58,23 @@ export const FIELD_TYPE_CATEGORY = {
 export type FieldTypeCategory = (typeof FIELD_TYPE_CATEGORY)[keyof typeof FIELD_TYPE_CATEGORY];
 
 export const AUTH_FIELD_OPTIONS = [
-  { label: "UserId", value: "userId", category: FIELD_TYPE_CATEGORY.STRING },
-  { label: "Email", value: "email", category: FIELD_TYPE_CATEGORY.STRING },
-  { label: "Roles", value: "roles", category: FIELD_TYPE_CATEGORY.ARRAY },
-  {
-    label: "Permissions",
+  labelledOption("SCHEMA_ACCESS_CONTROL.AUTH_USER_ID", {
+    value: "userId",
+    category: FIELD_TYPE_CATEGORY.STRING,
+  }),
+  labelledOption("common:EMAIL", { value: "email", category: FIELD_TYPE_CATEGORY.STRING }),
+  labelledOption("SCHEMA_ACCESS_CONTROL.AUTH_ROLES", {
+    value: "roles",
+    category: FIELD_TYPE_CATEGORY.ARRAY,
+  }),
+  labelledOption("SCHEMA_ACCESS_CONTROL.AUTH_PERMISSIONS", {
     value: "permissions",
     category: FIELD_TYPE_CATEGORY.ARRAY,
-  },
-  {
-    label: "OrganizationId",
+  }),
+  labelledOption("SCHEMA_ACCESS_CONTROL.AUTH_ORGANIZATION_ID", {
     value: "organizationId",
     category: FIELD_TYPE_CATEGORY.STRING,
-  },
+  }),
   // Left out of the selectable auth fields for now; add an entry back here to expose it.
   // { label: "TenantId", value: "tenantId", category: FIELD_TYPE_CATEGORY.STRING },
   // { label: "Custom Claims", value: "customClaims", category: FIELD_TYPE_CATEGORY.STRING },
@@ -74,11 +86,10 @@ export const AUTH_FIELD_OPTIONS = [
  * `isAuthAttributeField`). Offered on the left side of a rule only; a list of strings, like Roles.
  */
 export const AUTH_ATTRIBUTE_PREFIX = "attributes";
-export const AUTH_ATTRIBUTE_OPTION = {
-  label: "Attributes",
+export const AUTH_ATTRIBUTE_OPTION = labelledOption("SCHEMA_ACCESS_CONTROL.AUTH_ATTRIBUTES", {
   value: AUTH_ATTRIBUTE_PREFIX,
   category: FIELD_TYPE_CATEGORY.ARRAY,
-};
+});
 
 /** Auth fields offered on the left side of a rule: the fixed ones plus access attributes. */
 export const AUTH_LEFT_FIELD_OPTIONS = [...AUTH_FIELD_OPTIONS, AUTH_ATTRIBUTE_OPTION];
@@ -92,21 +103,21 @@ export const getAuthAttributeName = (field: string | undefined): string =>
   field?.startsWith(`${AUTH_ATTRIBUTE_PREFIX}.`) ? field.slice(AUTH_ATTRIBUTE_PREFIX.length + 1) : "";
 
 export const RULE_OPERATORS = [
-  { label: "Equal", value: "EQUAL" },
-  { label: "Not Equal", value: "NOT_EQUAL" },
-  { label: "Greater Than", value: "GREATER_THAN" },
-  { label: "Greater Than or Equal", value: "GREATER_THAN_OR_EQUAL" },
-  { label: "Less Than", value: "LESS_THAN" },
-  { label: "Less Than or Equal", value: "LESS_THAN_OR_EQUAL" },
-  { label: "Contain", value: "CONTAIN" },
-  { label: "Not Contain", value: "NOT_CONTAIN" },
-  { label: "In", value: "IN" },
-  { label: "Not In", value: "NOT_IN" },
-  { label: "Start With", value: "START_WITH" },
-  { label: "End With", value: "END_WITH" },
-  { label: "Is Null", value: "IS_NULL" },
-  { label: "Is Not Null", value: "IS_NOT_NULL" },
-  // { label: "Regex", value: "REGEX" },
+  labelledOption("SCHEMA_ACCESS_CONTROL.OPERATOR_EQUAL", { value: "EQUAL" }),
+  labelledOption("SCHEMA_ACCESS_CONTROL.OPERATOR_NOT_EQUAL", { value: "NOT_EQUAL" }),
+  labelledOption("SCHEMA_ACCESS_CONTROL.OPERATOR_GREATER_THAN", { value: "GREATER_THAN" }),
+  labelledOption("SCHEMA_ACCESS_CONTROL.OPERATOR_GREATER_THAN_OR_EQUAL", { value: "GREATER_THAN_OR_EQUAL" }),
+  labelledOption("SCHEMA_ACCESS_CONTROL.OPERATOR_LESS_THAN", { value: "LESS_THAN" }),
+  labelledOption("SCHEMA_ACCESS_CONTROL.OPERATOR_LESS_THAN_OR_EQUAL", { value: "LESS_THAN_OR_EQUAL" }),
+  labelledOption("SCHEMA_ACCESS_CONTROL.OPERATOR_CONTAIN", { value: "CONTAIN" }),
+  labelledOption("SCHEMA_ACCESS_CONTROL.OPERATOR_NOT_CONTAIN", { value: "NOT_CONTAIN" }),
+  labelledOption("SCHEMA_ACCESS_CONTROL.OPERATOR_IN", { value: "IN" }),
+  labelledOption("SCHEMA_ACCESS_CONTROL.OPERATOR_NOT_IN", { value: "NOT_IN" }),
+  labelledOption("SCHEMA_ACCESS_CONTROL.OPERATOR_START_WITH", { value: "START_WITH" }),
+  labelledOption("SCHEMA_ACCESS_CONTROL.OPERATOR_END_WITH", { value: "END_WITH" }),
+  labelledOption("SCHEMA_ACCESS_CONTROL.OPERATOR_IS_NULL", { value: "IS_NULL" }),
+  labelledOption("SCHEMA_ACCESS_CONTROL.OPERATOR_IS_NOT_NULL", { value: "IS_NOT_NULL" }),
+  // labelledOption("SCHEMA_ACCESS_CONTROL.OPERATOR_REGEX", { value: "REGEX" }),
 ];
 
 /** Numeric mappings matching the API contract */
@@ -179,12 +190,12 @@ export const POLICY_OPERATION = {
 } as const;
 
 /** Short display labels for access type badges */
-export const ACCESS_TYPE_SHORT_LABELS: Record<string, string> = {
-  [ACCESS_TYPES.LOGGED_IN]: "Logged in users",
-  [ACCESS_TYPES.PUBLIC]: "Public",
-  [ACCESS_TYPES.CUSTOM]: "Custom",
-  [ACCESS_TYPES.INHERITED]: "Inherited",
-};
+export const ACCESS_TYPE_SHORT_LABELS: Record<string, string> = lazyLabels({
+  [ACCESS_TYPES.LOGGED_IN]: "SCHEMA_ACCESS_CONTROL.TYPE_SHORT_LOGGED_IN",
+  [ACCESS_TYPES.PUBLIC]: "SCHEMA_ACCESS_CONTROL.TYPE_PUBLIC",
+  [ACCESS_TYPES.CUSTOM]: "SCHEMA_ACCESS_CONTROL.TYPE_CUSTOM",
+  [ACCESS_TYPES.INHERITED]: "SCHEMA_ACCESS_CONTROL.TYPE_INHERITED",
+});
 
 /** SchemaAccessLevel enum: number → ACCESS_TYPES string */
 export const ACCESS_LEVEL_TO_TYPE: Record<number, string> = {
@@ -203,11 +214,11 @@ export const ACCESS_TYPE_TO_LEVEL: Record<string, number> = {
 };
 
 /** Reverse mappings: number → display label */
-export const NUMBER_TO_SOURCE_LABEL: Record<number, string> = {
-  0: "Auth",
-  1: "Schema Fields",
-  2: "Static Value",
-};
+export const NUMBER_TO_SOURCE_LABEL: Record<number, string> = lazyLabels({
+  0: "SCHEMA_ACCESS_CONTROL.SOURCE_AUTH",
+  1: "SCHEMA_ACCESS_CONTROL.SOURCE_SCHEMA_FIELDS",
+  2: "SCHEMA_ACCESS_CONTROL.SOURCE_STATIC_VALUE",
+});
 
 /** Operators valid per field type category */
 export const STRING_OPERATORS = [
@@ -271,42 +282,42 @@ export function getFieldTypeCategory(
   return FIELD_TYPE_CATEGORY.STRING;
 }
 
-export const NUMBER_TO_OPERATOR_LABEL: Record<number, string> = {
-  0: "Equal",
-  1: "Not Equal",
-  2: "Greater Than",
-  3: "Greater Than or Equal",
-  4: "Less Than",
-  5: "Less Than or Equal",
-  6: "Contain",
-  7: "Not Contain",
-  8: "In",
-  9: "Not In",
-  10: "Start With",
-  11: "End With",
-  12: "Is Null",
-  13: "Is Not Null",
-  14: "Regex",
-};
+export const NUMBER_TO_OPERATOR_LABEL: Record<number, string> = lazyLabels({
+  0: "SCHEMA_ACCESS_CONTROL.OPERATOR_EQUAL",
+  1: "SCHEMA_ACCESS_CONTROL.OPERATOR_NOT_EQUAL",
+  2: "SCHEMA_ACCESS_CONTROL.OPERATOR_GREATER_THAN",
+  3: "SCHEMA_ACCESS_CONTROL.OPERATOR_GREATER_THAN_OR_EQUAL",
+  4: "SCHEMA_ACCESS_CONTROL.OPERATOR_LESS_THAN",
+  5: "SCHEMA_ACCESS_CONTROL.OPERATOR_LESS_THAN_OR_EQUAL",
+  6: "SCHEMA_ACCESS_CONTROL.OPERATOR_CONTAIN",
+  7: "SCHEMA_ACCESS_CONTROL.OPERATOR_NOT_CONTAIN",
+  8: "SCHEMA_ACCESS_CONTROL.OPERATOR_IN",
+  9: "SCHEMA_ACCESS_CONTROL.OPERATOR_NOT_IN",
+  10: "SCHEMA_ACCESS_CONTROL.OPERATOR_START_WITH",
+  11: "SCHEMA_ACCESS_CONTROL.OPERATOR_END_WITH",
+  12: "SCHEMA_ACCESS_CONTROL.OPERATOR_IS_NULL",
+  13: "SCHEMA_ACCESS_CONTROL.OPERATOR_IS_NOT_NULL",
+  14: "SCHEMA_ACCESS_CONTROL.OPERATOR_REGEX",
+});
 
 /** Natural-language operator labels for readable rule text */
-export const READABLE_OPERATORS: Record<number, string> = {
-  0: "equals",
-  1: "does not equal",
-  2: "is greater than",
-  3: "is greater than or equal to",
-  4: "is less than",
-  5: "is less than or equal to",
-  6: "contains",
-  7: "does not contain",
-  8: "is in",
-  9: "is not in",
-  10: "starts with",
-  11: "ends with",
-  12: "is null",
-  13: "is not null",
-  14: "matches regex",
-};
+export const READABLE_OPERATORS: Record<number, string> = lazyLabels({
+  0: "SCHEMA_ACCESS_CONTROL.READABLE_EQUAL",
+  1: "SCHEMA_ACCESS_CONTROL.READABLE_NOT_EQUAL",
+  2: "SCHEMA_ACCESS_CONTROL.READABLE_GREATER_THAN",
+  3: "SCHEMA_ACCESS_CONTROL.READABLE_GREATER_THAN_OR_EQUAL",
+  4: "SCHEMA_ACCESS_CONTROL.READABLE_LESS_THAN",
+  5: "SCHEMA_ACCESS_CONTROL.READABLE_LESS_THAN_OR_EQUAL",
+  6: "SCHEMA_ACCESS_CONTROL.READABLE_CONTAIN",
+  7: "SCHEMA_ACCESS_CONTROL.READABLE_NOT_CONTAIN",
+  8: "SCHEMA_ACCESS_CONTROL.READABLE_IN",
+  9: "SCHEMA_ACCESS_CONTROL.READABLE_NOT_IN",
+  10: "SCHEMA_ACCESS_CONTROL.READABLE_START_WITH",
+  11: "SCHEMA_ACCESS_CONTROL.READABLE_END_WITH",
+  12: "SCHEMA_ACCESS_CONTROL.READABLE_IS_NULL",
+  13: "SCHEMA_ACCESS_CONTROL.READABLE_IS_NOT_NULL",
+  14: "SCHEMA_ACCESS_CONTROL.READABLE_REGEX",
+});
 
 /** Operator keys that take no right-hand operand */
 export const NULL_OPERATORS: string[] = ["IS_NULL", "IS_NOT_NULL"];
@@ -315,12 +326,12 @@ export const NULL_OPERATORS: string[] = ["IS_NULL", "IS_NOT_NULL"];
 export const IN_OPERATORS: string[] = ["IN", "NOT_IN"];
 
 /** Display labels for the access type selector */
-export const ACCESS_TYPE_LABELS: Record<string, string> = {
-  [ACCESS_TYPES.LOGGED_IN]: "All Logged In Users",
-  [ACCESS_TYPES.PUBLIC]: "Public",
-  [ACCESS_TYPES.CUSTOM]: "Custom Permissions",
-  [ACCESS_TYPES.INHERITED]: "Inherited",
-};
+export const ACCESS_TYPE_LABELS: Record<string, string> = lazyLabels({
+  [ACCESS_TYPES.LOGGED_IN]: "SCHEMA_ACCESS_CONTROL.TYPE_LOGGED_IN",
+  [ACCESS_TYPES.PUBLIC]: "SCHEMA_ACCESS_CONTROL.TYPE_PUBLIC",
+  [ACCESS_TYPES.CUSTOM]: "SCHEMA_ACCESS_CONTROL.TYPE_CUSTOM_PERMISSIONS",
+  [ACCESS_TYPES.INHERITED]: "SCHEMA_ACCESS_CONTROL.TYPE_INHERITED",
+});
 
 /** Map tab id → POLICY_OPERATION number */
 export const TAB_TO_OPERATION: Record<string, number> = {
