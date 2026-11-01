@@ -34,7 +34,10 @@ export const useApproveConnectRequest = () => {
       queryClient.invalidateQueries({ queryKey: ["integration"] });
     },
     onError: (error) => {
-      showErrorToast({ title: tStatic("os.integration", "USE_CONNECT.COULD_NOT_APPROVE"), errors: error instanceof Error ? error.message : error });
+      showErrorToast({
+        title: tStatic("os.integration", "USE_CONNECT.COULD_NOT_APPROVE"),
+        errors: error instanceof Error ? error.message : error,
+      });
     },
   });
 };
@@ -57,7 +60,10 @@ export type ReadinessState =
  * 2 minutes (P3-15). A brand-new project's permissions are copied asynchronously, so the
  * first checks legitimately fail; only a timeout should stop the wait.
  */
-export const useReadinessWait = (templateKey: string | null, environmentTenantId: string | null) => {
+export const useReadinessWait = (
+  templateKey: string | null,
+  environmentTenantId: string | null,
+) => {
   const { mutateAsync: startImpersonation } = useStartImpersonation();
   const [state, setState] = useState<ReadinessState>({ phase: "idle" });
   const [attempt, setAttempt] = useState(0);
@@ -73,9 +79,12 @@ export const useReadinessWait = (templateKey: string | null, environmentTenantId
     setState({ phase: "idle" });
   }, []);
 
-  useEffect(() => () => {
-    if (timer.current) clearTimeout(timer.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
 
   const check = useCallback(async () => {
     if (!templateKey || !environmentTenantId) return;

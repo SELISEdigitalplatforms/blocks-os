@@ -51,7 +51,8 @@ export const ClientCredentialRolesSection = ({
         <div className="flex-1 space-y-1">
           <div className="flex items-center gap-2">
             <Label className="text-base font-medium">
-              {label ?? t("CLIENT_CREDENTIAL_ROLES_SECTION.LABEL")} {required && <span className="text-destructive">*</span>}
+              {label ?? t("CLIENT_CREDENTIAL_ROLES_SECTION.LABEL")}{" "}
+              {required && <span className="text-destructive">*</span>}
             </Label>
             {roles.length > 0 && (
               <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
@@ -85,8 +86,12 @@ export const ClientCredentialRolesSection = ({
               />
             </svg>
           </div>
-          <p className="mt-3 text-sm font-medium text-foreground">{emptyTitle ?? t("CLIENT_CREDENTIAL_ROLES_SECTION.EMPTY_TITLE")}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{emptyHint ?? t("CLIENT_CREDENTIAL_ROLES_SECTION.EMPTY_HINT")}</p>
+          <p className="mt-3 text-sm font-medium text-foreground">
+            {emptyTitle ?? t("CLIENT_CREDENTIAL_ROLES_SECTION.EMPTY_TITLE")}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {emptyHint ?? t("CLIENT_CREDENTIAL_ROLES_SECTION.EMPTY_HINT")}
+          </p>
         </div>
       ) : (
         <div className="space-y-3">

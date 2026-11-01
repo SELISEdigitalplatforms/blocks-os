@@ -8,15 +8,23 @@ import { StorageTierSwitcher } from "../storage-tier-cards/storage-tier-switcher
 import { LogsViewerContext } from "../logs-viewer/logs-viewer";
 import { useT, tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.lmt";
+
 /** What each tier holds, in the words of this page: logs rather than telemetry in general. */
 const LOG_TIER_DESCRIPTIONS: Partial<Record<StorageTier, string>> = {
-  get [TRACE_PROVIDERS.hot]() { return tStatic("os.lmt", "LOGS_HEADER.LIVE_AND_RECENT_LOGS"); },
-  get [TRACE_PROVIDERS.cold]() { return tStatic("os.lmt", "LOGS_HEADER.LONGER_TERM_STORED_LOGS"); },
-  get [TRACE_PROVIDERS.archive]() { return tStatic("os.lmt", "LOGS_HEADER.DEEP_HISTORY_RETAINED_FOR_AUDIT"); },
+  get [TRACE_PROVIDERS.hot]() {
+    return tStatic(I18N_MODULE, "LOGS_HEADER.LIVE_AND_RECENT_LOGS");
+  },
+  get [TRACE_PROVIDERS.cold]() {
+    return tStatic(I18N_MODULE, "LOGS_HEADER.LONGER_TERM_STORED_LOGS");
+  },
+  get [TRACE_PROVIDERS.archive]() {
+    return tStatic(I18N_MODULE, "LOGS_HEADER.DEEP_HISTORY_RETAINED_FOR_AUDIT");
+  },
 };
 
 export const LogsListHeader = () => {
-  const { t } = useT("os.lmt");
+  const { t } = useT(I18N_MODULE);
   const {
     predefinedQueries,
     agentName,

@@ -1,6 +1,8 @@
 import type { FlowStep } from "@blocks-lmt/utils/trace-flow.util";
 import { tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.lmt";
+
 type Narration = { title: string; description: string };
 type Attributes = FlowStep["span"]["attributes"];
 
@@ -28,8 +30,8 @@ const describeDatabase = (
   const location = collection ? ` in the ${collection} collection` : "";
   if (/find|read|select|query|get|count|aggregate/i.test(operation)) {
     return {
-      title: tStatic("os.lmt", "TRACE_STORY_NARRATION.LOOKING_UP_THE_DATA"),
-      description: tStatic("os.lmt", "TRACE_STORY_NARRATION.LOOKS_UP_DATA_USING", {
+      title: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.LOOKING_UP_THE_DATA"),
+      description: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.LOOKS_UP_DATA_USING", {
         from,
         location,
         to,
@@ -41,7 +43,7 @@ const describeDatabase = (
   if (action) {
     const preposition = action === "remove" ? "from" : "in";
     const destination = collection ? ` ${preposition} the ${collection} collection` : "";
-    description = tStatic("os.lmt", "TRACE_STORY_NARRATION.ASKS_TO_DATA", {
+    description = tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.ASKS_TO_DATA", {
       from,
       to,
       action,
@@ -49,14 +51,14 @@ const describeDatabase = (
     });
   } else {
     const target = collection ? ` on the ${collection} collection` : "";
-    description = tStatic("os.lmt", "TRACE_STORY_NARRATION.ASKS_TO_RUN", {
+    description = tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.ASKS_TO_RUN", {
       from,
       to,
       operation,
       target,
     });
   }
-  return { title: tStatic("os.lmt", "TRACE_STORY_NARRATION.UPDATING_THE_DATA"), description };
+  return { title: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.UPDATING_THE_DATA"), description };
 };
 
 const describeCache = (
@@ -73,8 +75,8 @@ const describeCache = (
   if (hit === "Miss") outcome = " The trace records a cache miss.";
   return {
     title: reading
-      ? tStatic("os.lmt", "TRACE_STORY_NARRATION.CHECKING_THE_CACHE")
-      : tStatic("os.lmt", "TRACE_STORY_NARRATION.UPDATING_THE_CACHE"),
+      ? tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.CHECKING_THE_CACHE")
+      : tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.UPDATING_THE_CACHE"),
     description: `${from} ${action} in ${to}.${outcome}`,
   };
 };
@@ -82,21 +84,24 @@ const describeCache = (
 const describeMessage = (step: FlowStep, from: string, to: string): Narration => {
   if (step.span.kind?.toLowerCase() === "consumer") {
     return {
-      title: tStatic("os.lmt", "TRACE_STORY_NARRATION.A_WORKER_PICKS_IT_UP"),
-      description: tStatic("os.lmt", "TRACE_STORY_NARRATION.RECEIVES_A_MESSAGE_FROM", { to, from }),
+      title: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.A_WORKER_PICKS_IT_UP"),
+      description: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.RECEIVES_A_MESSAGE_FROM", {
+        to,
+        from,
+      }),
     };
   }
   return {
-    title: tStatic("os.lmt", "TRACE_STORY_NARRATION.PASSING_THE_WORK_ALONG"),
-    description: tStatic("os.lmt", "TRACE_STORY_NARRATION.PUBLISHES_A_MESSAGE_TO", { from, to }),
+    title: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.PASSING_THE_WORK_ALONG"),
+    description: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.PUBLISHES_A_MESSAGE_TO", { from, to }),
   };
 };
 
 const describeAction = (step: FlowStep, from: string, to: string): Narration => {
   if (step.fromId === "caller")
     return {
-      title: tStatic("os.lmt", "TRACE_STORY_NARRATION.THE_REQUEST_ARRIVES"),
-      description: tStatic("os.lmt", "TRACE_STORY_NARRATION.RECEIVES", { to, tag: step.tag }),
+      title: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.THE_REQUEST_ARRIVES"),
+      description: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.RECEIVES", { to, tag: step.tag }),
     };
   const operation = step.operationName.replace(/^(MongoDb|Redis)::/i, "");
   const attrs = step.span.attributes ?? {};
@@ -110,15 +115,15 @@ const describeAction = (step: FlowStep, from: string, to: string): Narration => 
   }
   if (step.fromId === step.toId)
     return {
-      title: tStatic("os.lmt", "TRACE_STORY_NARRATION.WORKING_INSIDE_THE_SERVICE"),
-      description: tStatic("os.lmt", "TRACE_STORY_NARRATION.RUNS", {
+      title: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.WORKING_INSIDE_THE_SERVICE"),
+      description: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.RUNS", {
         to,
         operationName: step.operationName,
       }),
     };
   return {
-    title: tStatic("os.lmt", "TRACE_STORY_NARRATION.CALLING_THE_NEXT_SERVICE"),
-    description: tStatic("os.lmt", "TRACE_STORY_NARRATION.CALLS", { from, to, tag: step.tag }),
+    title: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.CALLING_THE_NEXT_SERVICE"),
+    description: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.CALLS", { from, to, tag: step.tag }),
   };
 };
 
@@ -127,9 +132,9 @@ const describeCacheEvent = (step: FlowStep, from: string, to: string): Narration
   const failure = step.state === "error" ? " This span records an error." : "";
   return {
     title: step.isErrorOrigin
-      ? tStatic("os.lmt", "TRACE_STORY_NARRATION.THIS_IS_WHERE_IT_FAILED")
-      : tStatic("os.lmt", "TRACE_STORY_NARRATION.RECEIVING_A_CACHE_EVENT"),
-    description: tStatic("os.lmt", "TRACE_STORY_NARRATION.RECEIVES_FROM", {
+      ? tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.THIS_IS_WHERE_IT_FAILED")
+      : tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.RECEIVING_A_CACHE_EVENT"),
+    description: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.RECEIVES_FROM", {
       to,
       operation,
       from,
@@ -149,7 +154,7 @@ export const describeTransfer = (step: FlowStep, from: string, to: string) => {
   }
   const narration = describeAction(step, from, to);
   if (step.isErrorOrigin) {
-    narration.title = tStatic("os.lmt", "TRACE_STORY_NARRATION.THIS_IS_WHERE_IT_FAILED");
+    narration.title = tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.THIS_IS_WHERE_IT_FAILED");
     narration.description += " This span records an error.";
   } else if (step.state === "error") {
     narration.description += " This span also reports a failure.";
@@ -170,33 +175,33 @@ const recordedFacts = (attrs: Attributes) => {
     attrs["db.collection.name"] || attrs["db.mongodb.collection"] || attrs["db.namespace"];
   if (collection)
     facts.push({
-      label: tStatic("os.lmt", "TRACE_STORY_NARRATION.COLLECTION"),
+      label: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.COLLECTION"),
       value: String(collection),
     });
   const count = attrs["result.count"];
   if (count !== undefined && count !== "")
     facts.push({
-      label: tStatic("os.lmt", "TRACE_STORY_NARRATION.RECORDED_COUNT"),
+      label: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.RECORDED_COUNT"),
       value: String(count),
     });
   const hit = cacheOutcome(attrs["cache.hit"]);
-  if (hit) facts.push({ label: tStatic("os.lmt", "TRACE_STORY_NARRATION.CACHE"), value: hit });
+  if (hit) facts.push({ label: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.CACHE"), value: hit });
   const message = attrs["messaging.message_type"];
   if (message)
     facts.push({
-      label: tStatic("os.lmt", "TRACE_STORY_NARRATION.MESSAGE"),
+      label: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.MESSAGE"),
       value: String(message),
     });
   const response = attrs["http.response.status_code"] ?? attrs["response.status.code"];
   if (response !== undefined)
     facts.push({
-      label: tStatic("os.lmt", "TRACE_STORY_NARRATION.RESPONSE"),
+      label: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.RESPONSE"),
       value: String(response),
     });
   return facts.slice(0, 3);
 };
 
 export const recordedResult = (step: FlowStep) => ({
-  outcome: tStatic("os.lmt", OUTCOME_KEYS[step.state]),
+  outcome: tStatic(I18N_MODULE, OUTCOME_KEYS[step.state]),
   facts: recordedFacts(step.span.attributes ?? {}),
 });

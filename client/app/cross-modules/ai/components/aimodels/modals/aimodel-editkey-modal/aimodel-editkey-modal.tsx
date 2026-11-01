@@ -110,7 +110,8 @@ export const ModelEditKeyModal = ({
       };
       if (trimmedApiKey && trimmedApiKey !== originalApiKey) payload.api_key = trimmedApiKey;
       const res = await mutateAsync({ modelId: model._id, payload });
-      if (res.is_success) showSuccessToast({ description: t("AIMODEL_EDITKEY_MODAL.MODEL_UPDATED_SUCCESSFULLY") });
+      if (res.is_success)
+        showSuccessToast({ description: t("AIMODEL_EDITKEY_MODAL.MODEL_UPDATED_SUCCESSFULLY") });
       else showErrorToast({ errors: res.detail });
       setEditKeyModalOpen(false);
     } catch (err) {
@@ -136,7 +137,11 @@ export const ModelEditKeyModal = ({
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle>{t("AIMODEL_EDITKEY_MODAL.UPDATE_KEY", { Provider: getProviderDisplayName(model.Provider) })}</DialogTitle>
+          <DialogTitle>
+            {t("AIMODEL_EDITKEY_MODAL.UPDATE_KEY", {
+              Provider: getProviderDisplayName(model.Provider),
+            })}
+          </DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmitHandler)}>
@@ -158,9 +163,7 @@ export const ModelEditKeyModal = ({
                   name="url"
                   render={({ field }) => (
                     <FormItem className="w-full">
-                      <FormLabel>
-                        {t("AIMODEL_EDITKEY_MODAL.URL", { span: "*" })}
-                      </FormLabel>
+                      <FormLabel>{t("AIMODEL_EDITKEY_MODAL.URL", { span: "*" })}</FormLabel>
                       <FormControl className="w-full">
                         <Input
                           className="flex w-full"
@@ -179,9 +182,7 @@ export const ModelEditKeyModal = ({
               )}
               {fields.includes("deploymentName") && (
                 <FormItem>
-                  <FormLabel>
-                    {t("AIMODEL_EDITKEY_MODAL.DEPLOYMENT_NAME", { span: "*" })}
-                  </FormLabel>
+                  <FormLabel>{t("AIMODEL_EDITKEY_MODAL.DEPLOYMENT_NAME", { span: "*" })}</FormLabel>
                   <Input value={selectedModel} disabled />
                 </FormItem>
               )}
@@ -205,7 +206,9 @@ export const ModelEditKeyModal = ({
                               if (apiKeyEditable) field.onChange(e.target.value);
                             }}
                             disabled={!apiKeyEditable}
-                            placeholder={apiKeyEditable ? t("AIMODEL_EDITKEY_MODAL.ENTER_NEW_API_KEY") : ""}
+                            placeholder={
+                              apiKeyEditable ? t("AIMODEL_EDITKEY_MODAL.ENTER_NEW_API_KEY") : ""
+                            }
                             className="inline-block w-full truncate border-none shadow-none focus-visible:ring-0"
                           />
                         </FormControl>
@@ -236,7 +239,10 @@ export const ModelEditKeyModal = ({
                     <FormItem>
                       <FormLabel>OpenAI Organization ID</FormLabel>
                       <FormControl>
-                        <Input placeholder={t("AIMODEL_EDITKEY_MODAL.ENTER_ORGANIZATION_ID")} {...field} />
+                        <Input
+                          placeholder={t("AIMODEL_EDITKEY_MODAL.ENTER_ORGANIZATION_ID")}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -251,7 +257,10 @@ export const ModelEditKeyModal = ({
                     <FormItem>
                       <FormLabel>OpenAI Project ID</FormLabel>
                       <FormControl>
-                        <Input placeholder={t("AIMODEL_EDITKEY_MODAL.ENTER_PROJECT_ID")} {...field} />
+                        <Input
+                          placeholder={t("AIMODEL_EDITKEY_MODAL.ENTER_PROJECT_ID")}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

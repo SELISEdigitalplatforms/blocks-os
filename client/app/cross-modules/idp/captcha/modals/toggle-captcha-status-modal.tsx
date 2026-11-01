@@ -29,7 +29,8 @@ export const ToggleCaptchaStatusModal = ({
   const providerType = CAPTCHA_PROVIDERS[configuration.provider];
   const onConfirm = async () => {
     try {
-      if (!configuration) return showErrorToast({ errors: t("TOGGLE_CAPTCHA_STATUS_MODAL.GENERIC_ERROR") });
+      if (!configuration)
+        return showErrorToast({ errors: t("TOGGLE_CAPTCHA_STATUS_MODAL.GENERIC_ERROR") });
       // No captchaSecret here: omitting it tells the backend to leave the stored secret
       // untouched, which is exactly what a pure enable/disable toggle should do.
       await mutateAsync({
@@ -59,7 +60,9 @@ export const ToggleCaptchaStatusModal = ({
           <Button size="sm" variant="outline">
             <IconComponent className="h-4 w-4" />
             <span className="ml-2.5">
-              {configuration?.isEnable ? t("TOGGLE_CAPTCHA_STATUS_MODAL.DISABLE") : t("TOGGLE_CAPTCHA_STATUS_MODAL.ENABLE")}
+              {configuration?.isEnable
+                ? t("TOGGLE_CAPTCHA_STATUS_MODAL.DISABLE")
+                : t("TOGGLE_CAPTCHA_STATUS_MODAL.ENABLE")}
             </span>
           </Button>
         )}
@@ -67,12 +70,18 @@ export const ToggleCaptchaStatusModal = ({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {configuration?.isEnable ? t("TOGGLE_CAPTCHA_STATUS_MODAL.TITLE_DISABLE") : t("TOGGLE_CAPTCHA_STATUS_MODAL.TITLE_ENABLE")}
+            {configuration?.isEnable
+              ? t("TOGGLE_CAPTCHA_STATUS_MODAL.TITLE_DISABLE")
+              : t("TOGGLE_CAPTCHA_STATUS_MODAL.TITLE_ENABLE")}
           </DialogTitle>
           <DialogDescription>
             {configuration?.isEnable
-              ? t("TOGGLE_CAPTCHA_STATUS_MODAL.DESCRIPTION_DISABLE", { provider: providerType.label })
-              : t("TOGGLE_CAPTCHA_STATUS_MODAL.DESCRIPTION_ENABLE", { provider: providerType.label })}
+              ? t("TOGGLE_CAPTCHA_STATUS_MODAL.DESCRIPTION_DISABLE", {
+                  provider: providerType.label,
+                })
+              : t("TOGGLE_CAPTCHA_STATUS_MODAL.DESCRIPTION_ENABLE", {
+                  provider: providerType.label,
+                })}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

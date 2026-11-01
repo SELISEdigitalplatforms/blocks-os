@@ -150,7 +150,9 @@ export const BulkRolesDialog = ({
           <p className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5 text-sm font-semibold text-high-emphasis">
             <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
             <span className="min-w-0 wrap-break-word">{organizationLabel}</span>
-            <span className="font-normal text-muted-foreground">{t("BULK_ROLES_DIALOG.FROM_PAGE_FILTER")}</span>
+            <span className="font-normal text-muted-foreground">
+              {t("BULK_ROLES_DIALOG.FROM_PAGE_FILTER")}
+            </span>
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             {t("BULK_ROLES_DIALOG.OTHER_ORGANIZATIONS_UNTOUCHED")}
@@ -202,7 +204,10 @@ export const BulkRolesDialog = ({
                           title={role.slug}
                         >
                           {isRemove && heldCount !== undefined
-                            ? t("BULK_ROLES_DIALOG.HELD_BY", { count: heldCount, total: selectedCount })
+                            ? t("BULK_ROLES_DIALOG.HELD_BY", {
+                                count: heldCount,
+                                total: selectedCount,
+                              })
                             : role.slug}
                         </span>
                       </label>

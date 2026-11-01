@@ -93,15 +93,15 @@ export const AddOrganizationPermission = ({
   );
 
   const deselectedPermissions = useMemo(
-    () =>
-      permissions.filter(
-        (assigned) => !isPermissionInList(assigned, selectedPermissions),
-      ),
+    () => permissions.filter((assigned) => !isPermissionInList(assigned, selectedPermissions)),
     [permissions, selectedPermissions],
   );
 
   const finalSelection = useMemo(
-    () => [...permissions.filter((p) => !isPermissionInList(p, deselectedPermissions)), ...newlySelectedPermissions],
+    () => [
+      ...permissions.filter((p) => !isPermissionInList(p, deselectedPermissions)),
+      ...newlySelectedPermissions,
+    ],
     [permissions, newlySelectedPermissions, deselectedPermissions],
   );
 
@@ -110,12 +110,7 @@ export const AddOrganizationPermission = ({
 
   const onCheckedChangeHandler = (checked: boolean, permission: IPermission) => {
     setSelectedPermissions((currentSelection) => {
-      const result = togglePermissionSelection(
-        checked,
-        permission,
-        permissions,
-        currentSelection,
-      );
+      const result = togglePermissionSelection(checked, permission, permissions, currentSelection);
 
       if (result.blocked) {
         showErrorToast({ errors: getPermissionLimitMessage() });
@@ -161,13 +156,17 @@ export const AddOrganizationPermission = ({
           onClick={(e) => e.stopPropagation()}
         >
           <Plus className="h-4 w-4 md:mr-1.5" />
-          <span className="sr-only sm:not-sr-only">{t("ADD_ORGANIZATION_PERMISSION.MANAGE_PERMISSIONS")}</span>
+          <span className="sr-only sm:not-sr-only">
+            {t("ADD_ORGANIZATION_PERMISSION.MANAGE_PERMISSIONS")}
+          </span>
         </Button>
       </DialogTrigger>
       <DialogContent className="flex max-h-[560px] flex-col gap-3 overflow-hidden sm:max-w-2xl">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <DialogTitle className="text-left">{t("ADD_ORGANIZATION_PERMISSION.TITLE")}</DialogTitle>
+            <DialogTitle className="text-left">
+              {t("ADD_ORGANIZATION_PERMISSION.TITLE")}
+            </DialogTitle>
             <Badge
               variant="success"
               className="font-normal"
@@ -258,9 +257,8 @@ export const AddOrganizationPermission = ({
                     </TableCell>
                     <TableCell>
                       {
-                        RESOURCE_TYPE.find(
-                          (resource) => resource.value === item.type.toString(),
-                        )?.label
+                        RESOURCE_TYPE.find((resource) => resource.value === item.type.toString())
+                          ?.label
                       }
                     </TableCell>
                   </TableRow>
@@ -299,9 +297,7 @@ export const AddOrganizationPermission = ({
           </DialogClose>
           <Button
             size="default"
-            disabled={
-              newlySelectedPermissions.length === 0 && deselectedPermissions.length === 0
-            }
+            disabled={newlySelectedPermissions.length === 0 && deselectedPermissions.length === 0}
             onClick={() => {
               onAdd(finalSelection);
               reset();

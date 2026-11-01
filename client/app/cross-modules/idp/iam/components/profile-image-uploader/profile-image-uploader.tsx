@@ -39,8 +39,7 @@ export const ProfileImageUploader = ({
     projectKey,
     id,
   });
-  const [isProfileImageUploading, setIsProfileImageUploading] =
-    useState<boolean>(false);
+  const [isProfileImageUploading, setIsProfileImageUploading] = useState<boolean>(false);
   const currentUser = data?.data;
   const storedImageSrc = useProfileImageSrc(currentUser?.profileImageUrl);
   const image = localPreview ?? storedImageSrc;
@@ -86,8 +85,7 @@ export const ProfileImageUploader = ({
         profileImageId: userProfileFile.itemId,
         profileImageUrl: userProfileFile.url,
       });
-      if (!updatedUser.isSuccess)
-        return showErrorToast({ errors: updatedUser.errors });
+      if (!updatedUser.isSuccess) return showErrorToast({ errors: updatedUser.errors });
       queryClient.invalidateQueries({ queryKey: ["user"] });
       showSuccessToast({ description: t("PROFILE_IMAGE_UPLOADER.UPDATED") });
     } catch (error) {
@@ -128,11 +126,7 @@ export const ProfileImageUploader = ({
     event.target.value = "";
   };
   return (
-    <div
-      className={cn(
-        "flex flex-col items-center justify-center",
-        containerClassName,
-      )}>
+    <div className={cn("flex flex-col items-center justify-center", containerClassName)}>
       <input
         type="file"
         accept="image/*"
@@ -151,7 +145,8 @@ export const ProfileImageUploader = ({
         className={cn(
           "group relative aspect-square w-full max-w-[200px] cursor-pointer overflow-hidden rounded-lg bg-gray-50 disabled:cursor-not-allowed dark:bg-gray-800",
           className,
-        )}>
+        )}
+      >
         <img
           src={image ?? emptyProfilePhoto}
           alt={t("PROFILE_IMAGE_UPLOADER.IMAGE_ALT")}

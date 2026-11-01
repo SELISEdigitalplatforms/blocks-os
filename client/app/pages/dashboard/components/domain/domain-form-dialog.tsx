@@ -27,9 +27,13 @@ export const DomainFormDialog = ({ open, onOpenChange, application }: DomainForm
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEditMode ? t("DOMAIN_FORM_DIALOG.EDIT_DOMAIN") : t("DOMAIN_FORM_DIALOG.ADD_DOMAIN")}</DialogTitle>
+          <DialogTitle>
+            {isEditMode ? t("DOMAIN_FORM_DIALOG.EDIT_DOMAIN") : t("DOMAIN_FORM_DIALOG.ADD_DOMAIN")}
+          </DialogTitle>
           <DialogDescription>
-            {isEditMode ? t("DOMAIN_FORM_DIALOG.UPDATE_THE_DOMAIN_CONFIGURATION") : t("DOMAIN_FORM_DIALOG.ADD_A_NEW_DOMAIN_TO")}
+            {isEditMode
+              ? t("DOMAIN_FORM_DIALOG.UPDATE_THE_DOMAIN_CONFIGURATION")
+              : t("DOMAIN_FORM_DIALOG.ADD_A_NEW_DOMAIN_TO")}
           </DialogDescription>
         </DialogHeader>
         <DomainForm application={application} onAfterSubmit={() => onOpenChange(false)} />

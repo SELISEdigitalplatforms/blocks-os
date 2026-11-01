@@ -173,9 +173,7 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
                               aria-disabled={isCheckboxDisabled}
                             >
                               <Checkbox
-                                checked={
-                                  isAlreadyAssigned || selectedRolos.includes(item.slug)
-                                }
+                                checked={isAlreadyAssigned || selectedRolos.includes(item.slug)}
                                 disabled={isCheckboxDisabled}
                                 onCheckedChange={(value) =>
                                   onCheckedChangeHandler(!!value, item.slug)

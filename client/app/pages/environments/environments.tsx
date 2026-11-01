@@ -20,12 +20,17 @@ import {
 import { useNotificationListener } from "@/cross-modules/communication/hooks/use-notification-listener";
 import { useGetMigrationStatus, useGetProjects } from "@/hooks/use-project";
 import { showErrorToast } from "@/hooks/use-toast";
-import { getMigrationNotificationOutcome, getMigrationStateForTarget } from "@/utils/migration-status";
+import {
+  getMigrationNotificationOutcome,
+  getMigrationStateForTarget,
+} from "@/utils/migration-status";
 import { useProjectPermissions } from "@/hooks/use-project-access";
 import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { ArrowRightLeft, CircleHelp, Plus } from "lucide-react";
 import { useCallback, useState } from "react";
 import { Navigate, useNavigate } from "react-router";
+
+const KEY_START_MIGRATION = "ENVIRONMENTS.START_MIGRATION";
 
 const ProjectGroupLoading = () => (
   <main className="flex flex-1 flex-col gap-4 p-4 sm:mx-10 md:gap-6">
@@ -75,7 +80,7 @@ export const EnvironmentsPage = () => {
         showErrorToast({ errors: outcome.description ?? t("ENVIRONMENTS.MIGRATION_FAILED") });
       }
     },
-    [refetchMigrationStatus],
+    [refetchMigrationStatus, t],
   );
   useNotificationListener("EnvironmentDataMigration", handleMigrationNotification);
   const handleAddEnvModalClose = () => {
@@ -110,12 +115,12 @@ export const EnvironmentsPage = () => {
               <Button
                 variant="outline"
                 size="sm"
-                aria-label={t("ENVIRONMENTS.START_MIGRATION")}
+                aria-label={t(KEY_START_MIGRATION)}
                 onClick={() => navigate("/app/data-migration")}
                 className="h-10 whitespace-nowrap text-sm"
               >
                 <ArrowRightLeft className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">{t("ENVIRONMENTS.START_MIGRATION")}</span>
+                <span className="hidden sm:inline">{t(KEY_START_MIGRATION)}</span>
               </Button>
             )}
             {canMigrate && !canStartMigration && (
@@ -132,12 +137,12 @@ export const EnvironmentsPage = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        aria-label={t("ENVIRONMENTS.START_MIGRATION")}
+                        aria-label={t(KEY_START_MIGRATION)}
                         disabled
                         className="h-10 whitespace-nowrap text-sm"
                       >
                         <ArrowRightLeft className="mr-2 h-4 w-4" />
-                        <span className="hidden sm:inline">{t("ENVIRONMENTS.START_MIGRATION")}</span>
+                        <span className="hidden sm:inline">{t(KEY_START_MIGRATION)}</span>
                       </Button>
                     </span>
                   </TooltipTrigger>
@@ -162,7 +167,9 @@ export const EnvironmentsPage = () => {
         </div>
         {environmentList[0]?.isShared && (
           <div className="mb-4 mt-6 border-b-2 border-border pb-2">
-            <h5 className="text-sm font-medium text-muted-foreground">{t("ENVIRONMENTS.SHARED_WITH_YOU")}</h5>
+            <h5 className="text-sm font-medium text-muted-foreground">
+              {t("ENVIRONMENTS.SHARED_WITH_YOU")}
+            </h5>
           </div>
         )}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -182,7 +189,9 @@ export const EnvironmentsPage = () => {
         {environmentList[0]?.isShared && environmentList[0]?.nonSharedProject?.length > 0 && (
           <>
             <div className="mb-4 mt-8 border-b-2 border-border pb-2">
-              <h5 className="text-sm font-medium text-muted-foreground">{t("ENVIRONMENTS.OTHERS")}</h5>
+              <h5 className="text-sm font-medium text-muted-foreground">
+                {t("ENVIRONMENTS.OTHERS")}
+              </h5>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {environmentList[0]?.nonSharedProject?.map((project) => (
@@ -208,7 +217,9 @@ export const EnvironmentsPage = () => {
       <Dialog open={addEnvModalOpen} onOpenChange={setAddEnvModalOpen}>
         <DialogContent className="max-h-[90vh] w-[calc(100%-2rem)] overflow-y-auto rounded-lg border p-6 shadow-lg md:max-h-[85vh] md:w-[500px]">
           <DialogHeader className="mb-4">
-            <DialogTitle className="text-lg md:text-xl">{t("ENVIRONMENTS.ADD_ENVIRONMENT")}</DialogTitle>
+            <DialogTitle className="text-lg md:text-xl">
+              {t("ENVIRONMENTS.ADD_ENVIRONMENT")}
+            </DialogTitle>
             <DialogDescription className="flex flex-col gap-2 text-sm md:flex-row md:items-start md:gap-2">
               <span className="flex flex-row items-start gap-2">
                 <span>{t("ENVIRONMENTS.ADD_ENVIRONMENTS_HINT")}</span>

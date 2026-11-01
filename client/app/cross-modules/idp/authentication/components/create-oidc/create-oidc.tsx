@@ -58,22 +58,24 @@ import { OidcSignInSection } from "./oidc-sign-in-section";
 import { OneTimeSecret, OneTimeSecretDialog } from "../one-time-secret-dialog";
 import { maskId } from "../../utils/mask-id.util";
 
+const I18N_MODULE = "os.idp.create-oidc";
+
 const getApplicationTypeOptions = (): { value: ApplicationType; id: string; label: string }[] => [
   {
     value: "web",
     id: "applicationType-web",
-    label: tStatic("os.idp.create-oidc", "CREATE_OIDC.APP_TYPE_WEB"),
+    label: tStatic(I18N_MODULE, "CREATE_OIDC.APP_TYPE_WEB"),
   },
   {
     value: "mobile",
     id: "applicationType-mobile",
-    label: tStatic("os.idp.create-oidc", "CREATE_OIDC.APP_TYPE_MOBILE"),
+    label: tStatic(I18N_MODULE, "CREATE_OIDC.APP_TYPE_MOBILE"),
   },
 ];
 
 const getApplicationTypeHelper = (): Record<ApplicationType, string> => ({
-  web: tStatic("os.idp.create-oidc", "CREATE_OIDC.APP_TYPE_WEB_HELPER"),
-  mobile: tStatic("os.idp.create-oidc", "CREATE_OIDC.APP_TYPE_MOBILE_HELPER"),
+  web: tStatic(I18N_MODULE, "CREATE_OIDC.APP_TYPE_WEB_HELPER"),
+  mobile: tStatic(I18N_MODULE, "CREATE_OIDC.APP_TYPE_MOBILE_HELPER"),
 });
 
 const REDIRECT_URI_PLACEHOLDER: Record<ApplicationType, string> = {
@@ -99,28 +101,28 @@ type TokenLifetimeField = {
 const getTokenLifetimeFields = (): TokenLifetimeField[] => [
   {
     name: "accessTokenLifetime",
-    label: tStatic("os.idp.create-oidc", "CREATE_OIDC.LIFETIME_ACCESS_LABEL"),
-    shortLabel: tStatic("os.idp.create-oidc", "CREATE_OIDC.LIFETIME_ACCESS_SHORT"),
-    note: tStatic("os.idp.create-oidc", "CREATE_OIDC.LIFETIME_ACCESS_NOTE"),
-    ariaLabel: tStatic("os.idp.create-oidc", "CREATE_OIDC.LIFETIME_ACCESS_ARIA"),
+    label: tStatic(I18N_MODULE, "CREATE_OIDC.LIFETIME_ACCESS_LABEL"),
+    shortLabel: tStatic(I18N_MODULE, "CREATE_OIDC.LIFETIME_ACCESS_SHORT"),
+    note: tStatic(I18N_MODULE, "CREATE_OIDC.LIFETIME_ACCESS_NOTE"),
+    ariaLabel: tStatic(I18N_MODULE, "CREATE_OIDC.LIFETIME_ACCESS_ARIA"),
     max: TOKEN_LIFETIME_LIMITS.access.max,
     projectKey: "accessTokenValidForNumberMinutes",
   },
   {
     name: "refreshTokenLifetime",
-    label: tStatic("os.idp.create-oidc", "CREATE_OIDC.LIFETIME_REFRESH_LABEL"),
-    shortLabel: tStatic("os.idp.create-oidc", "CREATE_OIDC.LIFETIME_REFRESH_SHORT"),
-    note: tStatic("os.idp.create-oidc", "CREATE_OIDC.LIFETIME_REFRESH_NOTE"),
-    ariaLabel: tStatic("os.idp.create-oidc", "CREATE_OIDC.LIFETIME_REFRESH_ARIA"),
+    label: tStatic(I18N_MODULE, "CREATE_OIDC.LIFETIME_REFRESH_LABEL"),
+    shortLabel: tStatic(I18N_MODULE, "CREATE_OIDC.LIFETIME_REFRESH_SHORT"),
+    note: tStatic(I18N_MODULE, "CREATE_OIDC.LIFETIME_REFRESH_NOTE"),
+    ariaLabel: tStatic(I18N_MODULE, "CREATE_OIDC.LIFETIME_REFRESH_ARIA"),
     max: TOKEN_LIFETIME_LIMITS.refresh.max,
     projectKey: "refreshTokenValidForNumberMinutes",
   },
   {
     name: "absoluteRefreshTokenLifetime",
-    label: tStatic("os.idp.create-oidc", "CREATE_OIDC.LIFETIME_ABSOLUTE_LABEL"),
-    shortLabel: tStatic("os.idp.create-oidc", "CREATE_OIDC.LIFETIME_ABSOLUTE_SHORT"),
-    note: tStatic("os.idp.create-oidc", "CREATE_OIDC.LIFETIME_ABSOLUTE_NOTE"),
-    ariaLabel: tStatic("os.idp.create-oidc", "CREATE_OIDC.LIFETIME_ABSOLUTE_ARIA"),
+    label: tStatic(I18N_MODULE, "CREATE_OIDC.LIFETIME_ABSOLUTE_LABEL"),
+    shortLabel: tStatic(I18N_MODULE, "CREATE_OIDC.LIFETIME_ABSOLUTE_SHORT"),
+    note: tStatic(I18N_MODULE, "CREATE_OIDC.LIFETIME_ABSOLUTE_NOTE"),
+    ariaLabel: tStatic(I18N_MODULE, "CREATE_OIDC.LIFETIME_ABSOLUTE_ARIA"),
     max: TOKEN_LIFETIME_LIMITS.refresh.max,
     projectKey: "absoluteRefreshTokenValidForNumberMinutes",
   },
@@ -132,12 +134,12 @@ const getTokenModeOptions = (): { value: TokenLifetimeMode; id: string; label: s
   {
     value: "project",
     id: "tokenLifetimes-project",
-    label: tStatic("os.idp.create-oidc", "CREATE_OIDC.MODE_PROJECT"),
+    label: tStatic(I18N_MODULE, "CREATE_OIDC.MODE_PROJECT"),
   },
   {
     value: "custom",
     id: "tokenLifetimes-custom",
-    label: tStatic("os.idp.create-oidc", "CREATE_OIDC.MODE_CUSTOM"),
+    label: tStatic(I18N_MODULE, "CREATE_OIDC.MODE_CUSTOM"),
   },
 ];
 
@@ -151,14 +153,14 @@ const toProjectConfig = (raw: Parameters<typeof normalizeAuthConfigResponse>[0] 
   raw ? normalizeAuthConfigResponse(raw) : undefined;
 
 const projectSummary = (config?: ISettingsAuthConfig) => {
-  const fallback = tStatic("os.idp.create-oidc", "CREATE_OIDC.PROJECT_SUMMARY_FALLBACK");
+  const fallback = tStatic(I18N_MODULE, "CREATE_OIDC.PROJECT_SUMMARY_FALLBACK");
   if (!config) return fallback;
   const parts = getTokenLifetimeFields()
     .map((lifetime) => {
       const minutes = knownMinutes(config[lifetime.projectKey]);
       return minutes === undefined
         ? undefined
-        : tStatic("os.idp.create-oidc", "CREATE_OIDC.PROJECT_SUMMARY_ITEM", {
+        : tStatic(I18N_MODULE, "CREATE_OIDC.PROJECT_SUMMARY_ITEM", {
             label: lifetime.shortLabel,
             value: formatMinutes(minutes),
           });
@@ -181,7 +183,7 @@ const TokenLifetimesSection = ({
   onModeChange,
   projectConfig,
 }: Readonly<TokenLifetimesSectionProps>) => {
-  const { t } = useT("os.idp.create-oidc");
+  const { t } = useT(I18N_MODULE);
   const lifetimeFields = getTokenLifetimeFields();
   const handleModeChange = (next: TokenLifetimeMode) => {
     onModeChange(next);
@@ -290,7 +292,7 @@ type CreateOIDCProps = {
 };
 
 export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCProps) => {
-  const { t } = useT("os.idp.create-oidc");
+  const { t } = useT(I18N_MODULE);
   const [open, setOpen] = useState<boolean>(false);
   const [createdSecret, setCreatedSecret] = useState<OneTimeSecret | null>(null);
   const [tokenMode, setTokenMode] = useState<TokenLifetimeMode>("project");

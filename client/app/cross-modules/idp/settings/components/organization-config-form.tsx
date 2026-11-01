@@ -25,6 +25,8 @@ import { tStatic, useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { useCallback, useId, useMemo, useState } from "react";
 import { useForm, useFormState } from "react-hook-form";
 
+const I18N_MODULE = "os.idp.settings";
+
 type OrganizationConfigFormProps = {
   config: ISettingsOrganizationConfig;
 };
@@ -32,11 +34,11 @@ type OrganizationConfigFormProps = {
 /** Server error codes mapped to texts; read when an error is shown, so the current language applies. */
 const getSignupAutoJoinErrorMessages = (): Record<string, string> => ({
   signup_auto_join_organization_required: tStatic(
-    "os.idp.settings",
+    I18N_MODULE,
     "ORGANIZATION_CONFIG_FORM.AUTO_JOIN_REQUIRED",
   ),
   signup_organization_unavailable: tStatic(
-    "os.idp.settings",
+    I18N_MODULE,
     "ORGANIZATION_CONFIG_FORM.ORGANIZATION_UNAVAILABLE",
   ),
 });
@@ -109,7 +111,7 @@ const CreationWorkflowTile = ({
 };
 
 export const OrganizationConfigForm = ({ config }: OrganizationConfigFormProps) => {
-  const { t } = useT("os.idp.settings");
+  const { t } = useT(I18N_MODULE);
   const { mutateAsync, isPending } = useSaveSettingsOrganizationConfig();
   const [enableDialogOpen, setEnableDialogOpen] = useState(false);
   const projectKey = useProjectStore().selectedProject?.tenantId || "";

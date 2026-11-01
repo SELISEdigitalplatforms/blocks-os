@@ -56,4 +56,3 @@ export function useTransientStatus(duration = DEFAULT_DURATION_MS) {
 
   return { status, setStatus: showStatus, setSuccess, setError } as const;
 }
-

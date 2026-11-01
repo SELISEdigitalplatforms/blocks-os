@@ -113,7 +113,9 @@ export const ModelAddKeyModal = ({
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle>{t("AIMODEL_ADDKEY_MODAL.ADD_KEY", { provider: getProviderDisplayName(provider) })}</DialogTitle>
+          <DialogTitle>
+            {t("AIMODEL_ADDKEY_MODAL.ADD_KEY", { provider: getProviderDisplayName(provider) })}
+          </DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmitHandler)}>
@@ -155,9 +157,7 @@ export const ModelAddKeyModal = ({
                     name="model"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>
-                          {t("AIMODEL_ADDKEY_MODAL.MODEL", { span: "*" })}
-                        </FormLabel>
+                        <FormLabel>{t("AIMODEL_ADDKEY_MODAL.MODEL", { span: "*" })}</FormLabel>
                         <FormControl>
                           <Input placeholder={t("AIMODEL_ADDKEY_MODAL.ENTER_MODEL")} {...field} />
                         </FormControl>
@@ -173,9 +173,7 @@ export const ModelAddKeyModal = ({
                   name="url"
                   render={({ field }) => (
                     <FormItem className="w-full">
-                      <FormLabel>
-                        {t("AIMODEL_ADDKEY_MODAL.URL", { span: "*" })}
-                      </FormLabel>
+                      <FormLabel>{t("AIMODEL_ADDKEY_MODAL.URL", { span: "*" })}</FormLabel>
                       <FormControl className="w-full">
                         <Input
                           className="flex w-full"
@@ -190,9 +188,7 @@ export const ModelAddKeyModal = ({
               )}
               {fields.includes("deploymentName") && (
                 <FormItem>
-                  <FormLabel>
-                    {t("AIMODEL_ADDKEY_MODAL.DEPLOYMENT_NAME", { span: "*" })}
-                  </FormLabel>
+                  <FormLabel>{t("AIMODEL_ADDKEY_MODAL.DEPLOYMENT_NAME", { span: "*" })}</FormLabel>
                   <Input value={selectedModel} disabled />
                 </FormItem>
               )}
@@ -202,9 +198,7 @@ export const ModelAddKeyModal = ({
                   name="apiKey"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>
-                        {t("AIMODEL_ADDKEY_MODAL.API_KEY", { span: "*" })}
-                      </FormLabel>
+                      <FormLabel>{t("AIMODEL_ADDKEY_MODAL.API_KEY", { span: "*" })}</FormLabel>
                       <FormControl>
                         <Input placeholder={t("AIMODEL_ADDKEY_MODAL.ENTER_API_KEY")} {...field} />
                       </FormControl>
@@ -221,7 +215,10 @@ export const ModelAddKeyModal = ({
                     <FormItem>
                       <FormLabel>OpenAI Organization ID</FormLabel>
                       <FormControl>
-                        <Input placeholder={t("AIMODEL_ADDKEY_MODAL.ENTER_ORGANIZATION_ID")} {...field} />
+                        <Input
+                          placeholder={t("AIMODEL_ADDKEY_MODAL.ENTER_ORGANIZATION_ID")}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -236,7 +233,10 @@ export const ModelAddKeyModal = ({
                     <FormItem>
                       <FormLabel>OpenAI Project ID</FormLabel>
                       <FormControl>
-                        <Input placeholder={t("AIMODEL_ADDKEY_MODAL.ENTER_PROJECT_ID")} {...field} />
+                        <Input
+                          placeholder={t("AIMODEL_ADDKEY_MODAL.ENTER_PROJECT_ID")}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

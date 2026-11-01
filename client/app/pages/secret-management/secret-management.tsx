@@ -21,6 +21,8 @@ import { useNotificationNavigation } from "@/cross-modules/communication/notific
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 
+const KEY_ADD_CONFIGURATION = "SECRET_MANAGEMENT.ADD_CONFIGURATION";
+
 function SecretManagementHeaderActions({
   isOidcBranding,
   currentPath,
@@ -110,7 +112,7 @@ function SecretManagementHeaderActions({
             <Button size="sm">
               <Plus className="h-5 w-5" />
               <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
-                {t("SECRET_MANAGEMENT.ADD_CONFIGURATION")}
+                {t(KEY_ADD_CONFIGURATION)}
               </span>
             </Button>
           </DialogTrigger>
@@ -122,7 +124,7 @@ function SecretManagementHeaderActions({
             <Button size="sm">
               <Plus className="h-5 w-5" />
               <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
-                {t("SECRET_MANAGEMENT.ADD_CONFIGURATION")}
+                {t(KEY_ADD_CONFIGURATION)}
               </span>
             </Button>
           </DialogTrigger>
@@ -143,7 +145,7 @@ function SecretManagementHeaderActions({
         <Button size="sm" onClick={() => setIsEmailConfigOpen(true)}>
           <Plus className="h-5 w-5" />
           <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
-            {t("SECRET_MANAGEMENT.ADD_CONFIGURATION")}
+            {t(KEY_ADD_CONFIGURATION)}
           </span>
         </Button>
       )}

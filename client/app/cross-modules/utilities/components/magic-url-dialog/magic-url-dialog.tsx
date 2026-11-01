@@ -192,7 +192,10 @@ export function MagicUrlDialog({ open, onOpenChange, trigger, initialData }: Mag
         toast({
           variant: "destructive",
           title: t("common:ERROR"),
-          description: error instanceof Error ? error.message : t("MAGIC_URL_DIALOG.FAILED_TO_CREATE_MAGIC_URL"),
+          description:
+            error instanceof Error
+              ? error.message
+              : t("MAGIC_URL_DIALOG.FAILED_TO_CREATE_MAGIC_URL"),
         });
       },
     });
@@ -353,7 +356,9 @@ export function MagicUrlDialog({ open, onOpenChange, trigger, initialData }: Mag
                         onClick={() => setIsCalendarOpen(true)}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {expiryDate ? formatDate(expiryDate, true) : t("MAGIC_URL_DIALOG.PICK_A_DATE")}
+                        {expiryDate
+                          ? formatDate(expiryDate, true)
+                          : t("MAGIC_URL_DIALOG.PICK_A_DATE")}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">

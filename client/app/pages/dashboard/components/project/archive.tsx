@@ -50,9 +50,7 @@ export const ArchiveProject = () => {
           dialogSubtitle: (
             <>
               <p>{t("ARCHIVE.ARE_YOU_SURE_YOU_WANT")}</p>
-              <p>
-                {t("ARCHIVE.THIS_WILL_PERMANENTLY_DELETE_THE")}
-              </p>
+              <p>{t("ARCHIVE.THIS_WILL_PERMANENTLY_DELETE_THE")}</p>
             </>
           ),
           confirmButton: t("common:DELETE"),

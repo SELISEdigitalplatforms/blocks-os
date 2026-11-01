@@ -82,10 +82,7 @@ export const AddOrganizationRole = ({
     { enabled: open && !!scopeKey },
   );
 
-  const rolesSlug = useMemo(
-    () => roles.map((item) => item.slug) || [],
-    [roles],
-  );
+  const rolesSlug = useMemo(() => roles.map((item) => item.slug) || [], [roles]);
 
   const selectedRolesSlug = useMemo(
     () => selectedRoles.map((item) => item.slug) || [],
@@ -95,8 +92,7 @@ export const AddOrganizationRole = ({
   const totalRoleCount = selectedRoles.length;
   const isAtMaxRoles = totalRoleCount >= MAX_ROLES_PER_USER;
 
-  const isRoleSelectedInModal = (slug: string) =>
-    selectedRolesSlug.includes(slug);
+  const isRoleSelectedInModal = (slug: string) => selectedRolesSlug.includes(slug);
 
   const hasSelectionChanged =
     selectedRolesSlug.length !== rolesSlug.length ||
@@ -117,13 +113,10 @@ export const AddOrganizationRole = ({
       showErrorToast({ errors: getMinimumRoleMessage() });
       return;
     }
-    setSelectedRoles((currentRoles) =>
-      currentRoles.filter((item) => item.slug !== role.slug),
-    );
+    setSelectedRoles((currentRoles) => currentRoles.filter((item) => item.slug !== role.slug));
   };
 
-  const pageChangeHandler = (page: number) =>
-    setFilter((prev) => ({ ...prev, page }));
+  const pageChangeHandler = (page: number) => setFilter((prev) => ({ ...prev, page }));
 
   const reset = () => {
     setSelectedRoles([]);
@@ -160,9 +153,7 @@ export const AddOrganizationRole = ({
         ref={dialogContentRef}
         onOpenAutoFocus={(event) => {
           event.preventDefault();
-          dialogContentRef.current
-            ?.querySelector<HTMLInputElement>("input")
-            ?.focus();
+          dialogContentRef.current?.querySelector<HTMLInputElement>("input")?.focus();
         }}
       >
         <DialogHeader>
@@ -179,10 +170,7 @@ export const AddOrganizationRole = ({
                     <Info className="h-4 w-4" aria-hidden />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent
-                  side="top"
-                  className="max-w-[240px] whitespace-normal text-center"
-                >
+                <TooltipContent side="top" className="max-w-[240px] whitespace-normal text-center">
                   {getMinimumRoleMessage()}
                 </TooltipContent>
               </Tooltip>
@@ -210,9 +198,7 @@ export const AddOrganizationRole = ({
         <div>
           <FilterControls.SearchInput
             value={filter.search}
-            onChange={(value) =>
-              setFilter((prev) => ({ ...prev, search: value, page: 0 }))
-            }
+            onChange={(value) => setFilter((prev) => ({ ...prev, search: value, page: 0 }))}
             className="h-fit w-full py-3"
             placeholder={t("ADD_ORGANIZATION_ROLE.SEARCH_PLACEHOLDER")}
           />
@@ -220,10 +206,7 @@ export const AddOrganizationRole = ({
         {isLoading ? (
           <div className="grid grid-cols-2">
             {Array.from({ length: filter.pageSize }).map((_, idx) => (
-              <div
-                key={idx}
-                className="flex animate-pulse items-center space-x-2 py-2"
-              >
+              <div key={idx} className="flex animate-pulse items-center space-x-2 py-2">
                 <div className="h-4 w-4 rounded bg-gray-200" />
                 <div className="h-4 w-24 rounded bg-gray-200" />
                 <div className="h-4 w-20 rounded bg-gray-200" />
@@ -233,10 +216,7 @@ export const AddOrganizationRole = ({
         ) : data && data.data && data.data.length > 0 ? (
           <div className="grid grid-cols-2">
             {data.data.map((item) => (
-              <div
-                key={item.itemId}
-                className="col-span-1 flex items-center py-2"
-              >
+              <div key={item.itemId} className="col-span-1 flex items-center py-2">
                 <Checkbox
                   checked={isRoleSelectedInModal(item.slug)}
                   disabled={!isRoleSelectedInModal(item.slug) && isAtMaxRoles}
@@ -246,9 +226,7 @@ export const AddOrganizationRole = ({
                       : "ADD_ORGANIZATION_ROLE.SELECT_ROLE",
                     { name: item.name },
                   )}
-                  onCheckedChange={(value) =>
-                    onCheckedChangeHandler(!!value, item)
-                  }
+                  onCheckedChange={(value) => onCheckedChangeHandler(!!value, item)}
                 />
                 <div className="ml-2 flex flex-col">
                   <div className="max-w-[150px] truncate" title={item.name}>

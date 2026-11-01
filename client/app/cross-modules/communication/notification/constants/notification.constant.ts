@@ -1,26 +1,28 @@
 import { lazyOption, textMap, tn } from "../i18n";
 
+const KEY_NONE = "NOTIFICATION_CONSTANT.NONE";
+
 export const channelsToNotify = [
   { label: "SignalR", value: 0 },
   { label: "Firebase", value: 1 },
 ];
 
 export const notificationTypes = [
-  lazyOption(0, "NOTIFICATION_CONSTANT.NONE"),
+  lazyOption(0, KEY_NONE),
   lazyOption(1, "NOTIFICATION_CONSTANT.TYPE_BROADCAST"),
   lazyOption(2, "NOTIFICATION_CONSTANT.TYPE_USERS"),
   lazyOption(3, "NOTIFICATION_CONSTANT.TYPE_FILTER"),
 ];
 
 export const notificationImportances = [
-  lazyOption(0, "NOTIFICATION_CONSTANT.NONE"),
+  lazyOption(0, KEY_NONE),
   lazyOption(1, "NOTIFICATION_CONSTANT.IMPORTANCE_LOW"),
   lazyOption(2, "NOTIFICATION_CONSTANT.IMPORTANCE_MEDIUM"),
   lazyOption(3, "NOTIFICATION_CONSTANT.IMPORTANCE_HIGH"),
 ];
 
 export const notificationKinds = [
-  lazyOption(0, "NOTIFICATION_CONSTANT.NONE"),
+  lazyOption(0, KEY_NONE),
   lazyOption(1, "NOTIFICATION_CONSTANT.KIND_JOB"),
   lazyOption(2, "NOTIFICATION_CONSTANT.KIND_PROGRESS"),
   lazyOption(3, "NOTIFICATION_CONSTANT.KIND_ALERT"),

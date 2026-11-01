@@ -9,17 +9,32 @@ import {
 } from "@blocks-storage/models/storage.model";
 import { useT, tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.storage";
+
 const STATUS_LABEL: Record<LinkedSecretStatus, string> = {
-  get none() { return tStatic("os.storage", "STORAGE_SECRET_STATUS.NOT_SET"); },
-  get active() { return tStatic("os.storage", "STORAGE_SECRET_STATUS.SET"); },
-  get locked() { return tStatic("os.storage", "STORAGE_SECRET_STATUS.SET"); },
-  get archived() { return tStatic("os.storage", "STORAGE_SECRET_STATUS.ARCHIVED"); },
-  get missing() { return tStatic("os.storage", "STORAGE_SECRET_STATUS.MISSING"); },
-  get unavailable() { return tStatic("os.storage", "STORAGE_SECRET_STATUS.STATUS_UNAVAILABLE"); },
+  get none() {
+    return tStatic(I18N_MODULE, "STORAGE_SECRET_STATUS.NOT_SET");
+  },
+  get active() {
+    return tStatic(I18N_MODULE, "STORAGE_SECRET_STATUS.SET");
+  },
+  get locked() {
+    return tStatic(I18N_MODULE, "STORAGE_SECRET_STATUS.SET");
+  },
+  get archived() {
+    return tStatic(I18N_MODULE, "STORAGE_SECRET_STATUS.ARCHIVED");
+  },
+  get missing() {
+    return tStatic(I18N_MODULE, "STORAGE_SECRET_STATUS.MISSING");
+  },
+  get unavailable() {
+    return tStatic(I18N_MODULE, "STORAGE_SECRET_STATUS.STATUS_UNAVAILABLE");
+  },
 };
 
 /** Secrets can't be replaced on an update, so a broken one needs the configuration added again. */
-const REPAIR_HINT = () => tStatic("os.storage", "STORAGE_SECRET_STATUS.DELETE_THIS_CONFIGURATION_AND_ADD");
+const REPAIR_HINT = () =>
+  tStatic(I18N_MODULE, "STORAGE_SECRET_STATUS.DELETE_THIS_CONFIGURATION_AND_ADD");
 
 function SecretStatusValue({ status }: Readonly<{ status?: LinkedSecretStatus }>) {
   if (isBrokenLinkedSecretStatus(status)) {
@@ -36,7 +51,7 @@ function SecretStatusValue({ status }: Readonly<{ status?: LinkedSecretStatus }>
 
 /** The provider's secrets with their status only: the server never returns a secret value. */
 export function StorageSecretStatusList({ storage }: Readonly<{ storage: IStorageConfiguration }>) {
-  const { t } = useT("os.storage");
+  const { t } = useT(I18N_MODULE);
   const fields = getStorageSecretFields()[storage.storageStrategy] ?? [];
   if (fields.length === 0) return null;
 

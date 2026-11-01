@@ -40,6 +40,9 @@ import { format } from "date-fns";
 import { KVDetailItem } from "../kv-detail-item";
 import { OneTimeSecret, OneTimeSecretDialog } from "../one-time-secret-dialog";
 
+const KEY_ERROR_GENERIC = "CLIENT_CREDENTIALS_LIST.ERROR_GENERIC";
+const KEY_COMMON_CANCEL = "common:CANCEL";
+
 const SKELETON_ROWS = 3;
 
 const getBackendErrorMap = (response: unknown) => {
@@ -132,12 +135,14 @@ const ClientCredentialRow = ({
         return showErrorToast({ errors: apiErrors ?? t("CLIENT_CREDENTIALS_LIST.UPDATE_FAILED") });
       }
       showSuccessToast({
-        description: item.isActive ? t("CLIENT_CREDENTIALS_LIST.DISABLED_SUCCESS") : t("CLIENT_CREDENTIALS_LIST.ENABLED_SUCCESS"),
+        description: item.isActive
+          ? t("CLIENT_CREDENTIALS_LIST.DISABLED_SUCCESS")
+          : t("CLIENT_CREDENTIALS_LIST.ENABLED_SUCCESS"),
       });
       setShowStatusDialog(false);
     } catch (err) {
       if (isErrorWithErrors(err)) return showErrorToast({ errors: err.errors });
-      showErrorToast({ errors: t("CLIENT_CREDENTIALS_LIST.ERROR_GENERIC") });
+      showErrorToast({ errors: t(KEY_ERROR_GENERIC) });
     }
   };
 
@@ -154,10 +159,14 @@ const ClientCredentialRow = ({
         });
         showSuccessToast({ description: t("CLIENT_CREDENTIALS_LIST.ROTATED_SUCCESS") });
       } else {
-        showErrorToast({ errors: getBackendErrorMap(res) ?? t("CLIENT_CREDENTIALS_LIST.ROTATE_FAILED") });
+        showErrorToast({
+          errors: getBackendErrorMap(res) ?? t("CLIENT_CREDENTIALS_LIST.ROTATE_FAILED"),
+        });
       }
     } catch (err) {
-      showErrorToast({ errors: isErrorWithErrors(err) ? err.errors : t("CLIENT_CREDENTIALS_LIST.ERROR_GENERIC") });
+      showErrorToast({
+        errors: isErrorWithErrors(err) ? err.errors : t(KEY_ERROR_GENERIC),
+      });
     }
   };
 
@@ -172,7 +181,7 @@ const ClientCredentialRow = ({
       setShowDeleteDialog(false);
     } catch (err) {
       if (isErrorWithErrors(err)) return showErrorToast({ errors: err.errors });
-      showErrorToast({ errors: t("CLIENT_CREDENTIALS_LIST.ERROR_GENERIC") });
+      showErrorToast({ errors: t(KEY_ERROR_GENERIC) });
     }
   };
 
@@ -184,7 +193,13 @@ const ClientCredentialRow = ({
     sensitive?: boolean;
     masked?: boolean;
   }[] = [
-    { key: "clientId", label: t("CLIENT_CREDENTIALS_LIST.CLIENT_ID"), value: item.itemId ?? "", copyable: true, masked: true },
+    {
+      key: "clientId",
+      label: t("CLIENT_CREDENTIALS_LIST.CLIENT_ID"),
+      value: item.itemId ?? "",
+      copyable: true,
+      masked: true,
+    },
     // Shown even when it is the tenant-wide "default", because that is the most privileged
     // scope a credential can have and is worth seeing rather than inferring from an absence.
     {
@@ -195,10 +210,26 @@ const ClientCredentialRow = ({
           ? t("CLIENT_CREDENTIALS_LIST.ORGANIZATION_DEFAULT")
           : (item.organizationId ?? ""),
     },
-    { key: "tokenLifetime", label: t("CLIENT_CREDENTIALS_LIST.TOKEN_LIFETIME"), value: formatLifetime(item.accessTokenValidForNumberMinutes) },
-    { key: "roles", label: t("CLIENT_CREDENTIALS_LIST.ROLES"), value: item.roles?.length ? item.roles.join(", ") : "" },
-    { key: "permissions", label: t("CLIENT_CREDENTIALS_LIST.PERMISSIONS"), value: item.permissions?.length ? item.permissions.join(", ") : "" },
-    { key: "updatedOn", label: t("CLIENT_CREDENTIALS_LIST.UPDATED_ON"), value: formatDateTime(item.lastUpdatedDate) },
+    {
+      key: "tokenLifetime",
+      label: t("CLIENT_CREDENTIALS_LIST.TOKEN_LIFETIME"),
+      value: formatLifetime(item.accessTokenValidForNumberMinutes),
+    },
+    {
+      key: "roles",
+      label: t("CLIENT_CREDENTIALS_LIST.ROLES"),
+      value: item.roles?.length ? item.roles.join(", ") : "",
+    },
+    {
+      key: "permissions",
+      label: t("CLIENT_CREDENTIALS_LIST.PERMISSIONS"),
+      value: item.permissions?.length ? item.permissions.join(", ") : "",
+    },
+    {
+      key: "updatedOn",
+      label: t("CLIENT_CREDENTIALS_LIST.UPDATED_ON"),
+      value: formatDateTime(item.lastUpdatedDate),
+    },
   ].filter((pair) => pair.value);
 
   return (
@@ -247,7 +278,9 @@ const ClientCredentialRow = ({
                 isActive ? "bg-emerald-500" : "bg-muted-foreground/40",
               )}
             />
-            {isActive ? t("CLIENT_CREDENTIALS_LIST.STATUS_ACTIVE") : t("CLIENT_CREDENTIALS_LIST.STATUS_INACTIVE")}
+            {isActive
+              ? t("CLIENT_CREDENTIALS_LIST.STATUS_ACTIVE")
+              : t("CLIENT_CREDENTIALS_LIST.STATUS_INACTIVE")}
           </Badge>
         </TableCell>
         <TableCell className="hidden py-3.5 text-sm text-muted-foreground md:table-cell">
@@ -297,7 +330,11 @@ const ClientCredentialRow = ({
                       ? "text-emerald-600 hover:text-destructive"
                       : "text-muted-foreground hover:text-emerald-600",
                   )}
-                  aria-label={isActive ? t("CLIENT_CREDENTIALS_LIST.DISABLE_LABEL") : t("CLIENT_CREDENTIALS_LIST.ENABLE_LABEL")}
+                  aria-label={
+                    isActive
+                      ? t("CLIENT_CREDENTIALS_LIST.DISABLE_LABEL")
+                      : t("CLIENT_CREDENTIALS_LIST.ENABLE_LABEL")
+                  }
                   onClick={() => setShowStatusDialog(true)}
                   disabled={isUpdating}
                 >
@@ -308,7 +345,11 @@ const ClientCredentialRow = ({
                   )}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>{isActive ? t("CLIENT_CREDENTIALS_LIST.DISABLE") : t("CLIENT_CREDENTIALS_LIST.ENABLE")}</TooltipContent>
+              <TooltipContent>
+                {isActive
+                  ? t("CLIENT_CREDENTIALS_LIST.DISABLE")
+                  : t("CLIENT_CREDENTIALS_LIST.ENABLE")}
+              </TooltipContent>
             </Tooltip>
             <span className="mx-0.5 h-4 w-px shrink-0 bg-border" aria-hidden />
             <Tooltip>
@@ -356,7 +397,9 @@ const ClientCredentialRow = ({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {willEnable ? t("CLIENT_CREDENTIALS_LIST.ENABLE_TITLE") : t("CLIENT_CREDENTIALS_LIST.DISABLE_TITLE")}
+              {willEnable
+                ? t("CLIENT_CREDENTIALS_LIST.ENABLE_TITLE")
+                : t("CLIENT_CREDENTIALS_LIST.DISABLE_TITLE")}
             </DialogTitle>
             <DialogDescription>
               {willEnable
@@ -371,7 +414,7 @@ const ClientCredentialRow = ({
               onClick={() => setShowStatusDialog(false)}
               disabled={isUpdating}
             >
-              {t("common:CANCEL")}
+              {t(KEY_COMMON_CANCEL)}
             </Button>
             <Button
               variant={willEnable ? "default" : "destructive"}
@@ -406,10 +449,12 @@ const ClientCredentialRow = ({
               onClick={() => setShowRotateDialog(false)}
               disabled={isRotating}
             >
-              {t("common:CANCEL")}
+              {t(KEY_COMMON_CANCEL)}
             </Button>
             <Button size="sm" onClick={handleConfirmRotate} disabled={isRotating}>
-              {isRotating ? t("CLIENT_CREDENTIALS_LIST.ROTATING") : t("CLIENT_CREDENTIALS_LIST.ROTATE_SECRET")}
+              {isRotating
+                ? t("CLIENT_CREDENTIALS_LIST.ROTATING")
+                : t("CLIENT_CREDENTIALS_LIST.ROTATE_SECRET")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -432,7 +477,7 @@ const ClientCredentialRow = ({
               onClick={() => setShowDeleteDialog(false)}
               disabled={isDeleting}
             >
-              {t("common:CANCEL")}
+              {t(KEY_COMMON_CANCEL)}
             </Button>
             <Button
               variant="destructive"

@@ -46,9 +46,7 @@ export const UserDisableMFA = ({ userId, projectKey, open, setOpen }: UserDisabl
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t("USER_DISABLE_MFA.TITLE")}</DialogTitle>
-          <DialogDescription>
-            {t("USER_DISABLE_MFA.DESCRIPTION")}
-          </DialogDescription>
+          <DialogDescription>{t("USER_DISABLE_MFA.DESCRIPTION")}</DialogDescription>
         </DialogHeader>
         <DialogFooter className="mt-4 flex flex-col-reverse items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end">
           <DialogTrigger asChild>
@@ -56,7 +54,12 @@ export const UserDisableMFA = ({ userId, projectKey, open, setOpen }: UserDisabl
               {t("common:CANCEL")}
             </Button>
           </DialogTrigger>
-          <Button size="sm" onClick={onClickHandler} disabled={isPending} className="w-full sm:w-auto">
+          <Button
+            size="sm"
+            onClick={onClickHandler}
+            disabled={isPending}
+            className="w-full sm:w-auto"
+          >
             {isPending ? t("USER_DISABLE_MFA.PROCESSING") : t("common:YES")}
           </Button>
         </DialogFooter>

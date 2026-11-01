@@ -43,6 +43,8 @@ import { Badge } from "@/components/ui-kits/badge/badge";
 import { PeopleStatusBadge } from "@/components/people/status-badge";
 import { getUserDisplayName } from "@blocks-idp/iam/utils/user-display-name";
 
+const KEY_COMMON_CANCEL = "common:CANCEL";
+
 type PeopleTableProps = {
   people: PeopleGroupedByEnvironments[];
   isLoading: boolean;
@@ -338,7 +340,12 @@ export const PeopleTable = ({
                 const showRemoveAccess =
                   canRemove && row.original.peopleDetails.userId !== viewerUserId;
 
-                if (!showResendInvite && !showResendActivation && !showRemoveAccess && !isViewerOwner)
+                if (
+                  !showResendInvite &&
+                  !showResendActivation &&
+                  !showRemoveAccess &&
+                  !isViewerOwner
+                )
                   return null;
 
                 return (
@@ -402,7 +409,7 @@ export const PeopleTable = ({
           ]
         : []),
     ],
-    [canInvite, canRemove, isViewerOwner, viewerUserId],
+    [canInvite, canRemove, isViewerOwner, viewerUserId, t],
   );
 
   const table = useReactTable({
@@ -476,9 +483,11 @@ export const PeopleTable = ({
             onConfirm={onRemoveConfirm}
             data={{
               dialogTitle: t("PEOPLE_TABLE.REVOKE_ACCESS"),
-              dialogSubtitle: t("PEOPLE_TABLE.ARE_YOU_SURE_YOU_WANT_4", { peopleDetails: getUserDisplayName(selectedPeopleData.peopleDetails) }),
+              dialogSubtitle: t("PEOPLE_TABLE.ARE_YOU_SURE_YOU_WANT_4", {
+                peopleDetails: getUserDisplayName(selectedPeopleData.peopleDetails),
+              }),
               confirmButton: t("PEOPLE_TABLE.REVOKE"),
-              cancelButton: t("common:CANCEL"),
+              cancelButton: t(KEY_COMMON_CANCEL),
             }}
           />
         )}
@@ -489,11 +498,14 @@ export const PeopleTable = ({
           <DialogHeader>
             <DialogTitle>{t("PEOPLE_TABLE.RESEND_INVITATION")}</DialogTitle>
             <DialogDescription>
-              {t("PEOPLE_TABLE.ARE_YOU_SURE_YOU_WANT", { email: selectedPeopleData?.peopleDetails.email ?? "" })}</DialogDescription>
+              {t("PEOPLE_TABLE.ARE_YOU_SURE_YOU_WANT", {
+                email: selectedPeopleData?.peopleDetails.email ?? "",
+              })}
+            </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsResendInvitationDialogOpen(false)}>
-              {t("common:CANCEL")}
+              {t(KEY_COMMON_CANCEL)}
             </Button>
             <Button onClick={onConfirmResendInvitation}>{t("PEOPLE_TABLE.RESEND")}</Button>
           </DialogFooter>
@@ -505,11 +517,14 @@ export const PeopleTable = ({
           <DialogHeader>
             <DialogTitle>{t("PEOPLE_TABLE.RESEND_ACTIVATION")}</DialogTitle>
             <DialogDescription>
-              {t("PEOPLE_TABLE.ARE_YOU_SURE_YOU_WANT_2", { email: selectedPeopleData?.peopleDetails.email ?? "" })}</DialogDescription>
+              {t("PEOPLE_TABLE.ARE_YOU_SURE_YOU_WANT_2", {
+                email: selectedPeopleData?.peopleDetails.email ?? "",
+              })}
+            </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsResendActivationDialogOpen(false)}>
-              {t("common:CANCEL")}
+              {t(KEY_COMMON_CANCEL)}
             </Button>
             <Button onClick={onConfirmResendActivation}>{t("PEOPLE_TABLE.RESEND")}</Button>
           </DialogFooter>
@@ -521,7 +536,10 @@ export const PeopleTable = ({
           <DialogHeader>
             <DialogTitle>{t("PEOPLE_TABLE.TRANSFER_OWNERSHIP")}</DialogTitle>
             <DialogDescription>
-              {t("PEOPLE_TABLE.ARE_YOU_SURE_YOU_WANT_3", { email: selectedPeopleData?.peopleDetails.email ?? "" })}</DialogDescription>
+              {t("PEOPLE_TABLE.ARE_YOU_SURE_YOU_WANT_3", {
+                email: selectedPeopleData?.peopleDetails.email ?? "",
+              })}
+            </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button
@@ -529,7 +547,7 @@ export const PeopleTable = ({
               onClick={() => setIsTransferOwnershipDialogOpen(false)}
               disabled={isTransferring}
             >
-              {t("common:CANCEL")}
+              {t(KEY_COMMON_CANCEL)}
             </Button>
             <Button onClick={onConfirmTransferOwnership} disabled={isTransferring}>
               {isTransferring ? t("PEOPLE_TABLE.TRANSFERRING") : t("PEOPLE_TABLE.TRANSFER")}

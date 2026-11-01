@@ -32,7 +32,12 @@ import { useInitiateMigration, useVerifyMigration } from "@/hooks/use-project";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { useProjectStore, useT, tStatic } from "@seliseblocks/genesis-os";
 import { useDataMigrationFormState } from "./migration-form-state";
-import { MIGRATION_SERVICE_NAME_TO_ID, createMigrationVerificationSchema } from "./migration-form-schema";
+import {
+  MIGRATION_SERVICE_NAME_TO_ID,
+  createMigrationVerificationSchema,
+} from "./migration-form-schema";
+
+const I18N_MODULE = "os.environments";
 
 const CustomInputOTPSlot = ({ index }: { index: number }) => (
   <InputOTPSlot
@@ -42,7 +47,7 @@ const CustomInputOTPSlot = ({ index }: { index: number }) => (
 );
 
 export const ReviewConfirmForm = () => {
-  const { t } = useT("os.environments");
+  const { t } = useT(I18N_MODULE);
   const navigate = useNavigate();
   const { formData } = useDataMigrationFormState();
   const groupId = useProjectStore().selectedTenantGroup;
@@ -76,7 +81,9 @@ export const ReviewConfirmForm = () => {
 
   const handleStartMigration = async () => {
     if (!groupId) {
-      showErrorToast({ errors: { general: tStatic("os.environments", "REVIEW_CONFIRM_FORM.NO_PROJECT_SELECTED") } });
+      showErrorToast({
+        errors: { general: tStatic(I18N_MODULE, "REVIEW_CONFIRM_FORM.NO_PROJECT_SELECTED") },
+      });
       return;
     }
 
@@ -88,17 +95,25 @@ export const ReviewConfirmForm = () => {
         reset();
         return;
       }
-      showErrorToast({ errors: { general: tStatic("os.environments", "REVIEW_CONFIRM_FORM.FAILED_TO_INITIATE_MIGRATION") } });
+      showErrorToast({
+        errors: {
+          general: tStatic(I18N_MODULE, "REVIEW_CONFIRM_FORM.FAILED_TO_INITIATE_MIGRATION"),
+        },
+      });
     } catch {
       showErrorToast({
-        errors: { general: tStatic("os.environments", "REVIEW_CONFIRM_FORM.AN_ERROR_OCCURRED_WHILE_INITIATING") },
+        errors: {
+          general: tStatic(I18N_MODULE, "REVIEW_CONFIRM_FORM.AN_ERROR_OCCURRED_WHILE_INITIATING"),
+        },
       });
     }
   };
 
   const handleResendVerification = async () => {
     if (!groupId) {
-      showErrorToast({ errors: { general: tStatic("os.environments", "REVIEW_CONFIRM_FORM.NO_PROJECT_SELECTED") } });
+      showErrorToast({
+        errors: { general: tStatic(I18N_MODULE, "REVIEW_CONFIRM_FORM.NO_PROJECT_SELECTED") },
+      });
       return;
     }
 
@@ -113,12 +128,14 @@ export const ReviewConfirmForm = () => {
         return;
       }
       showErrorToast({
-        errors: { general: tStatic("os.environments", "REVIEW_CONFIRM_FORM.FAILED_TO_RESEND_VERIFICATION_CODE") },
+        errors: {
+          general: tStatic(I18N_MODULE, "REVIEW_CONFIRM_FORM.FAILED_TO_RESEND_VERIFICATION_CODE"),
+        },
       });
     } catch {
       showErrorToast({
         errors: {
-          general: tStatic("os.environments", "REVIEW_CONFIRM_FORM.AN_ERROR_OCCURRED_WHILE_RESENDING"),
+          general: tStatic(I18N_MODULE, "REVIEW_CONFIRM_FORM.AN_ERROR_OCCURRED_WHILE_RESENDING"),
         },
       });
     }
@@ -138,10 +155,17 @@ export const ReviewConfirmForm = () => {
         navigate(groupId ? `/app/project/${groupId}/environments` : "/app/console");
         return;
       }
-      showErrorToast({ errors: { general: tStatic("os.environments", "REVIEW_CONFIRM_FORM.INVALID_VERIFICATION_CODE") } });
+      showErrorToast({
+        errors: { general: tStatic(I18N_MODULE, "REVIEW_CONFIRM_FORM.INVALID_VERIFICATION_CODE") },
+      });
     } catch {
       showErrorToast({
-        errors: { general: tStatic("os.environments", "REVIEW_CONFIRM_FORM.AN_ERROR_OCCURRED_DURING_VERIFICATION") },
+        errors: {
+          general: tStatic(
+            I18N_MODULE,
+            "REVIEW_CONFIRM_FORM.AN_ERROR_OCCURRED_DURING_VERIFICATION",
+          ),
+        },
       });
     }
   };
@@ -152,7 +176,9 @@ export const ReviewConfirmForm = () => {
     <>
       <div className="mt-4 flex flex-col gap-6 text-left">
         <div>
-          <p className="text-3xl font-bold tracking-tight">{t("REVIEW_CONFIRM_FORM.REVIEW_CONFIRM")}</p>
+          <p className="text-3xl font-bold tracking-tight">
+            {t("REVIEW_CONFIRM_FORM.REVIEW_CONFIRM")}
+          </p>
           <p className="mt-2 text-sm text-muted-foreground">
             {t("REVIEW_CONFIRM_FORM.CHECK_THE_DETAILS_BELOW_BEFORE")}
           </p>
@@ -160,7 +186,10 @@ export const ReviewConfirmForm = () => {
 
         <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
           <p className="text-sm text-yellow-800">
-            {t("REVIEW_CONFIRM_FORM.YOU_ARE_ABOUT_TO_MIGRATE", { strong: t("REVIEW_CONFIRM_FORM.PLEASE_NOTE") })}</p>
+            {t("REVIEW_CONFIRM_FORM.YOU_ARE_ABOUT_TO_MIGRATE", {
+              strong: t("REVIEW_CONFIRM_FORM.PLEASE_NOTE"),
+            })}
+          </p>
         </div>
 
         <Card>
@@ -170,13 +199,17 @@ export const ReviewConfirmForm = () => {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">{t("REVIEW_CONFIRM_FORM.SOURCE_ENVIRONMENT")}</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  {t("REVIEW_CONFIRM_FORM.SOURCE_ENVIRONMENT")}
+                </p>
                 <p className="text-base font-medium">
                   {formData[0].sourceEnvironmentName || formData[0].sourceEnvironment}
                 </p>
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">{t("REVIEW_CONFIRM_FORM.TARGET_ENVIRONMENT")}</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  {t("REVIEW_CONFIRM_FORM.TARGET_ENVIRONMENT")}
+                </p>
                 <p className="text-base font-medium">
                   {formData[0].targetEnvironmentName || formData[0].targetEnvironment}
                 </p>
@@ -184,7 +217,9 @@ export const ReviewConfirmForm = () => {
             </div>
 
             <div>
-              <p className="mb-2 text-sm font-medium text-muted-foreground">{t("REVIEW_CONFIRM_FORM.SERVICES_SELECTED")}</p>
+              <p className="mb-2 text-sm font-medium text-muted-foreground">
+                {t("REVIEW_CONFIRM_FORM.SERVICES_SELECTED")}
+              </p>
               <TooltipProvider>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                   {selectedServices.map((service) => (
@@ -223,7 +258,9 @@ export const ReviewConfirmForm = () => {
             onClick={handleStartMigration}
             disabled={isInitiating || selectedServices.length === 0}
           >
-            {isInitiating ? t("REVIEW_CONFIRM_FORM.STARTING_MIGRATION") : t("REVIEW_CONFIRM_FORM.START_MIGRATION")}
+            {isInitiating
+              ? t("REVIEW_CONFIRM_FORM.STARTING_MIGRATION")
+              : t("REVIEW_CONFIRM_FORM.START_MIGRATION")}
           </Button>
         </div>
       </div>
@@ -233,7 +270,11 @@ export const ReviewConfirmForm = () => {
           <DialogHeader>
             <DialogTitle>{t("REVIEW_CONFIRM_FORM.VERIFY_YOUR_MIGRATION")}</DialogTitle>
             <DialogDescription>
-              {t("REVIEW_CONFIRM_FORM.YOU_RE_ABOUT_TO_MIGRATE", { strong: `${formData[0].sourceEnvironmentName || formData[0].sourceEnvironment}`, strong2: `${formData[0].targetEnvironmentName || formData[0].targetEnvironment}` })}</DialogDescription>
+              {t("REVIEW_CONFIRM_FORM.YOU_RE_ABOUT_TO_MIGRATE", {
+                strong: `${formData[0].sourceEnvironmentName || formData[0].sourceEnvironment}`,
+                strong2: `${formData[0].targetEnvironmentName || formData[0].targetEnvironment}`,
+              })}
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -279,7 +320,10 @@ export const ReviewConfirmForm = () => {
                       onClick={handleResendVerification}
                     >
                       {remainingTime
-                        ? t("REVIEW_CONFIRM_FORM.RESEND_IN", { value1: Math.floor(remainingTime / 60), value2: String(remainingTime % 60).padStart(2, "0") })
+                        ? t("REVIEW_CONFIRM_FORM.RESEND_IN", {
+                            value1: Math.floor(remainingTime / 60),
+                            value2: String(remainingTime % 60).padStart(2, "0"),
+                          })
                         : t("REVIEW_CONFIRM_FORM.RESEND")}
                     </Button>
                   </p>
@@ -295,7 +339,9 @@ export const ReviewConfirmForm = () => {
                     {t("common:CANCEL")}
                   </Button>
                   <Button type="submit" disabled={isVerifying}>
-                    {isVerifying ? t("REVIEW_CONFIRM_FORM.VERIFYING") : t("REVIEW_CONFIRM_FORM.VERIFY_BEGIN")}
+                    {isVerifying
+                      ? t("REVIEW_CONFIRM_FORM.VERIFYING")
+                      : t("REVIEW_CONFIRM_FORM.VERIFY_BEGIN")}
                   </Button>
                 </div>
               </form>

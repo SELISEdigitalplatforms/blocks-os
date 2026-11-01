@@ -54,14 +54,18 @@ export function StorageDetailsDrawer({ open, onOpenChange, storage }: StorageDet
           <div className="flex-1 overflow-y-auto px-6 py-6">
             <div className="space-y-6">
               <div>
-                <h3 className="mb-4 text-sm font-medium text-muted-foreground">{t("STORAGE_DETAILS_DRAWER.PROPERTIES")}</h3>
+                <h3 className="mb-4 text-sm font-medium text-muted-foreground">
+                  {t("STORAGE_DETAILS_DRAWER.PROPERTIES")}
+                </h3>
                 <div className="space-y-4">
                   <div>
                     <div className="mb-1 text-xs text-muted-foreground">{t("common:NAME")}</div>
                     <div className="text-sm font-medium">{storage.name}</div>
                   </div>
                   <div>
-                    <div className="mb-2 text-xs text-muted-foreground">{t("STORAGE_DETAILS_DRAWER.STORAGE_PROVIDER")}</div>
+                    <div className="mb-2 text-xs text-muted-foreground">
+                      {t("STORAGE_DETAILS_DRAWER.STORAGE_PROVIDER")}
+                    </div>
                     <div className="flex items-center gap-2">
                       <div
                         className={cn(
@@ -93,8 +97,12 @@ export function StorageDetailsDrawer({ open, onOpenChange, storage }: StorageDet
                   </div>
                   <StorageSecretStatusList storage={storage} />
                   <div>
-                    <div className="mb-1 text-xs text-muted-foreground">{t("STORAGE_DETAILS_DRAWER.OWNER")}</div>
-                    <div className="text-sm font-medium">{storage.createdBy || t("STORAGE_DETAILS_DRAWER.ME")}</div>
+                    <div className="mb-1 text-xs text-muted-foreground">
+                      {t("STORAGE_DETAILS_DRAWER.OWNER")}
+                    </div>
+                    <div className="text-sm font-medium">
+                      {storage.createdBy || t("STORAGE_DETAILS_DRAWER.ME")}
+                    </div>
                   </div>
                   <div>
                     <div className="mb-2 text-xs text-muted-foreground">{t("common:TYPE")}</div>
@@ -103,13 +111,17 @@ export function StorageDetailsDrawer({ open, onOpenChange, storage }: StorageDet
                     </Badge>
                   </div>
                   <div>
-                    <div className="mb-1 text-xs text-muted-foreground">{t("STORAGE_DETAILS_DRAWER.LAST_MODIFIED")}</div>
+                    <div className="mb-1 text-xs text-muted-foreground">
+                      {t("STORAGE_DETAILS_DRAWER.LAST_MODIFIED")}
+                    </div>
                     <div className="text-sm font-medium">
                       {formatDate(new Date(storage.lastUpdatedDate))}
                     </div>
                   </div>
                   <div>
-                    <div className="mb-1 text-xs text-muted-foreground">{t("STORAGE_DETAILS_DRAWER.DATE_CREATED")}</div>
+                    <div className="mb-1 text-xs text-muted-foreground">
+                      {t("STORAGE_DETAILS_DRAWER.DATE_CREATED")}
+                    </div>
                     <div className="text-sm font-medium">
                       {formatDate(new Date(storage.createdDate))}
                     </div>

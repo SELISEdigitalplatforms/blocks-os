@@ -71,12 +71,16 @@ export const AddClientCredentialRole = ({ onAdd, selectedSlugs }: AddClientCrede
       <DialogTrigger asChild>
         <Button size="sm" variant="default" className="h-7 bg-primary px-2.5 text-xs" type="button">
           <Plus className="h-3.5 w-3.5 md:mr-1.5" />
-          <span className="sr-only sm:not-sr-only">{t("ADD_CLIENT_CREDENTIAL_ROLE.ASSIGN_ROLE")}</span>
+          <span className="sr-only sm:not-sr-only">
+            {t("ADD_CLIENT_CREDENTIAL_ROLE.ASSIGN_ROLE")}
+          </span>
         </Button>
       </DialogTrigger>
       <DialogContent className="flex max-h-[min(92vh,720px)] w-[calc(100vw-1.5rem)] max-w-xl flex-col overflow-hidden sm:w-full">
         <DialogHeader>
-          <DialogTitle className="text-left">{t("ADD_CLIENT_CREDENTIAL_ROLE.DIALOG_TITLE")}</DialogTitle>
+          <DialogTitle className="text-left">
+            {t("ADD_CLIENT_CREDENTIAL_ROLE.DIALOG_TITLE")}
+          </DialogTitle>
           <DialogDescription />
         </DialogHeader>
         <GrantHint kind="roles" />

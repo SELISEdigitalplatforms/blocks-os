@@ -59,19 +59,21 @@ export const SECRET_STATUS_LABEL: Record<SecretStatus, string> = {
 };
 
 /** Toolbar options. `""` is "All" — an empty filter value is omitted from the query. */
-export const getSecretTypeOptions = () => [
-  { value: "", label: tStatic("os.secrets", "common:ALL") },
-  { value: SECRET_TYPE.Api, label: SECRET_TYPE_LABEL.api },
-  { value: SECRET_TYPE.Service, label: SECRET_TYPE_LABEL.service },
-  { value: SECRET_TYPE.Both, label: SECRET_TYPE_LABEL.both },
-] as const;
+export const getSecretTypeOptions = () =>
+  [
+    { value: "", label: tStatic("os.secrets", "common:ALL") },
+    { value: SECRET_TYPE.Api, label: SECRET_TYPE_LABEL.api },
+    { value: SECRET_TYPE.Service, label: SECRET_TYPE_LABEL.service },
+    { value: SECRET_TYPE.Both, label: SECRET_TYPE_LABEL.both },
+  ] as const;
 
-export const getSecretStatusOptions = () => [
-  { value: "", label: tStatic("os.secrets", "common:ALL") },
-  { value: SECRET_STATUS.Active, label: SECRET_STATUS_LABEL.active },
-  { value: SECRET_STATUS.Locked, label: SECRET_STATUS_LABEL.locked },
-  { value: SECRET_STATUS.Deleted, label: SECRET_STATUS_LABEL.deleted },
-] as const;
+export const getSecretStatusOptions = () =>
+  [
+    { value: "", label: tStatic("os.secrets", "common:ALL") },
+    { value: SECRET_STATUS.Active, label: SECRET_STATUS_LABEL.active },
+    { value: SECRET_STATUS.Locked, label: SECRET_STATUS_LABEL.locked },
+    { value: SECRET_STATUS.Deleted, label: SECRET_STATUS_LABEL.deleted },
+  ] as const;
 
 // ─── Resources ────────────────────────────────────────────────────────────────
 

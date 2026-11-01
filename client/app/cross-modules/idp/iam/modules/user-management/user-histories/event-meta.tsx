@@ -9,6 +9,10 @@ import {
 } from "lucide-react";
 import { tStatic } from "@seliseblocks/genesis-os";
 
+const KEY_LABEL_SIGN_IN = "EVENT_META.LABEL_SIGN_IN";
+const KEY_LABEL_SIGN_OUT = "EVENT_META.LABEL_SIGN_OUT";
+const KEY_LABEL_TOKEN_REFRESHED = "EVENT_META.LABEL_TOKEN_REFRESHED";
+
 export type EventTone = "success" | "info" | "error" | "warning";
 
 export type EventMeta = {
@@ -28,25 +32,25 @@ type EventMetaDefinition = {
 
 export const EVENT_META: Record<string, EventMetaDefinition> = {
   login_via_password: {
-    labelKey: "EVENT_META.LABEL_SIGN_IN",
+    labelKey: KEY_LABEL_SIGN_IN,
     descriptionKey: "EVENT_META.DESCRIPTION_INTERACTIVE_SIGN_IN",
     icon: LogIn,
     tone: "success",
   },
   login_via_social: {
-    labelKey: "EVENT_META.LABEL_SIGN_IN",
+    labelKey: KEY_LABEL_SIGN_IN,
     descriptionKey: "EVENT_META.DESCRIPTION_SIGNED_IN_SOCIAL",
     icon: LogIn,
     tone: "success",
   },
   login_via_sso_consent: {
-    labelKey: "EVENT_META.LABEL_SIGN_IN",
+    labelKey: KEY_LABEL_SIGN_IN,
     descriptionKey: "EVENT_META.DESCRIPTION_SIGNED_IN_SSO",
     icon: LogIn,
     tone: "success",
   },
   login_via_authorization_code: {
-    labelKey: "EVENT_META.LABEL_SIGN_IN",
+    labelKey: KEY_LABEL_SIGN_IN,
     descriptionKey: "EVENT_META.DESCRIPTION_SIGNED_IN_AUTHORIZATION_CODE",
     icon: LogIn,
     tone: "success",
@@ -58,13 +62,13 @@ export const EVENT_META: Record<string, EventMetaDefinition> = {
     tone: "success",
   },
   token_renewed: {
-    labelKey: "EVENT_META.LABEL_TOKEN_REFRESHED",
+    labelKey: KEY_LABEL_TOKEN_REFRESHED,
     descriptionKey: "EVENT_META.DESCRIPTION_SESSION_TOKEN_REFRESHED",
     icon: RefreshCw,
     tone: "info",
   },
   renew_refresh_token: {
-    labelKey: "EVENT_META.LABEL_TOKEN_REFRESHED",
+    labelKey: KEY_LABEL_TOKEN_REFRESHED,
     descriptionKey: "EVENT_META.DESCRIPTION_REFRESH_TOKEN_RENEWED",
     icon: RefreshCw,
     tone: "info",
@@ -76,19 +80,19 @@ export const EVENT_META: Record<string, EventMetaDefinition> = {
     tone: "info",
   },
   session_revoked: {
-    labelKey: "EVENT_META.LABEL_SIGN_OUT",
+    labelKey: KEY_LABEL_SIGN_OUT,
     descriptionKey: "EVENT_META.DESCRIPTION_SIGNED_OUT_FROM_SESSION",
     icon: LogOut,
     tone: "error",
   },
   revoke_access_by_logout: {
-    labelKey: "EVENT_META.LABEL_SIGN_OUT",
+    labelKey: KEY_LABEL_SIGN_OUT,
     descriptionKey: "EVENT_META.DESCRIPTION_SIGNED_OUT",
     icon: LogOut,
     tone: "error",
   },
   revoke_access_by_logout_all: {
-    labelKey: "EVENT_META.LABEL_SIGN_OUT",
+    labelKey: KEY_LABEL_SIGN_OUT,
     descriptionKey: "EVENT_META.DESCRIPTION_SIGNED_OUT_ALL_DEVICES",
     icon: LogOut,
     tone: "error",
@@ -100,7 +104,7 @@ export const EVENT_META: Record<string, EventMetaDefinition> = {
     tone: "error",
   },
   LOGIN_SUCCESS: {
-    labelKey: "EVENT_META.LABEL_SIGN_IN",
+    labelKey: KEY_LABEL_SIGN_IN,
     descriptionKey: "EVENT_META.DESCRIPTION_INTERACTIVE_SIGN_IN",
     icon: LogIn,
     tone: "success",
@@ -112,13 +116,13 @@ export const EVENT_META: Record<string, EventMetaDefinition> = {
     tone: "error",
   },
   TOKEN_REFRESHED: {
-    labelKey: "EVENT_META.LABEL_TOKEN_REFRESHED",
+    labelKey: KEY_LABEL_TOKEN_REFRESHED,
     descriptionKey: "EVENT_META.DESCRIPTION_SESSION_TOKEN_REFRESHED",
     icon: RefreshCw,
     tone: "info",
   },
   SESSION_REVOKED: {
-    labelKey: "EVENT_META.LABEL_SIGN_OUT",
+    labelKey: KEY_LABEL_SIGN_OUT,
     descriptionKey: "EVENT_META.DESCRIPTION_SIGNED_OUT_FROM_SESSION",
     icon: LogOut,
     tone: "error",

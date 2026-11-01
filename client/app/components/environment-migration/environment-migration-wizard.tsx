@@ -9,9 +9,11 @@ import { EnvironmentServiceSelectionForm } from "./environment-service-selection
 import { ReviewConfirmForm } from "./review-confirm-form";
 import { useDataMigrationFormState } from "./migration-form-state";
 
+const I18N_MODULE = "os.environments";
+
 const getStepData = (): Steps => [
-  { id: 1, title: tStatic("os.environments", "ENVIRONMENT_MIGRATION_WIZARD.ENVIRONMENTS_SERVICES") },
-  { id: 2, title: tStatic("os.environments", "ENVIRONMENT_MIGRATION_WIZARD.REVIEW_CONFIRM") },
+  { id: 1, title: tStatic(I18N_MODULE, "ENVIRONMENT_MIGRATION_WIZARD.ENVIRONMENTS_SERVICES") },
+  { id: 2, title: tStatic(I18N_MODULE, "ENVIRONMENT_MIGRATION_WIZARD.REVIEW_CONFIRM") },
 ];
 
 export const EnvironmentMigrationWizard = () => (
@@ -21,7 +23,7 @@ export const EnvironmentMigrationWizard = () => (
 );
 
 const EnvironmentMigrationWizardContent = () => {
-  const { t } = useT("os.environments");
+  const { t } = useT(I18N_MODULE);
   const { resetFormData } = useDataMigrationFormState();
   const { currentStep } = useStepper();
   const { selectedTenantGroup } = useProjectStore();
@@ -35,10 +37,16 @@ const EnvironmentMigrationWizardContent = () => {
         <div className="mt-16 flex-1 p-5">
           <div className="flex flex-col items-center justify-center md:hidden">
             <div className="flex gap-2">
-              <Link to={environmentsPath} onClick={resetFormData} aria-label={t("ENVIRONMENT_MIGRATION_WIZARD.CLOSE_MIGRATION")}>
+              <Link
+                to={environmentsPath}
+                onClick={resetFormData}
+                aria-label={t("ENVIRONMENT_MIGRATION_WIZARD.CLOSE_MIGRATION")}
+              >
                 <X size={32} strokeWidth={1} />
               </Link>
-              <p className="mt-[2px] text-lg font-semibold">{t("ENVIRONMENT_MIGRATION_WIZARD.ENVIRONMENT_MIGRATION")}</p>
+              <p className="mt-[2px] text-lg font-semibold">
+                {t("ENVIRONMENT_MIGRATION_WIZARD.ENVIRONMENT_MIGRATION")}
+              </p>
             </div>
             <p className="mb-7 mt-2 text-sm font-normal text-medium-emphasis">
               {t("ENVIRONMENT_MIGRATION_WIZARD.CONFIGURE_YOUR_SOURCE_TARGET_AND")}
@@ -56,10 +64,16 @@ const EnvironmentMigrationWizardContent = () => {
         <div className="min-h-screen max-w-80 gap-5 bg-background p-5 pt-24 dark:bg-gray-900">
           <div className="mx-2 my-3">
             <div className="flex gap-2">
-              <Link to={environmentsPath} onClick={resetFormData} aria-label={t("ENVIRONMENT_MIGRATION_WIZARD.CLOSE_MIGRATION")}>
+              <Link
+                to={environmentsPath}
+                onClick={resetFormData}
+                aria-label={t("ENVIRONMENT_MIGRATION_WIZARD.CLOSE_MIGRATION")}
+              >
                 <X size={32} strokeWidth={1} />
               </Link>
-              <p className="mt-[2px] text-lg font-semibold">{t("ENVIRONMENT_MIGRATION_WIZARD.ENVIRONMENT_MIGRATION")}</p>
+              <p className="mt-[2px] text-lg font-semibold">
+                {t("ENVIRONMENT_MIGRATION_WIZARD.ENVIRONMENT_MIGRATION")}
+              </p>
             </div>
             <p className="mb-7 mt-2 text-sm font-normal text-medium-emphasis">
               {t("ENVIRONMENT_MIGRATION_WIZARD.CONFIGURE_YOUR_SOURCE_TARGET_AND")}

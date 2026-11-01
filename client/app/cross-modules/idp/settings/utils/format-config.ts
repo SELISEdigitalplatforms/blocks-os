@@ -1,17 +1,17 @@
 import { tStatic } from "@seliseblocks/genesis-os";
 import type { ReactNode } from "react";
 
+const I18N_MODULE = "os.idp.settings";
+
 export const formatBoolean = (value: boolean | null | undefined) =>
-  tStatic("os.idp.settings", value ? "common:YES" : "common:NO");
+  tStatic(I18N_MODULE, value ? "common:YES" : "common:NO");
 
 export const formatList = (values: string[] | undefined | null): string =>
-  values && values.length > 0
-    ? values.join(", ")
-    : tStatic("os.idp.settings", "FORMAT_CONFIG.NONE");
+  values && values.length > 0 ? values.join(", ") : tStatic(I18N_MODULE, "FORMAT_CONFIG.NONE");
 
 export const formatMinutes = (value: number | null | undefined): string => {
   const minutes = value === null || value === undefined ? 0 : value;
-  return tStatic("os.idp.settings", "FORMAT_CONFIG.MINUTES", { count: minutes });
+  return tStatic(I18N_MODULE, "FORMAT_CONFIG.MINUTES", { count: minutes });
 };
 
 export const formatNumber = (value: number | null | undefined): string => {

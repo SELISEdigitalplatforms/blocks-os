@@ -63,12 +63,9 @@ export const SchemaAccessControlAccordion = ({
   const { t } = useT("os.idp.gateway");
   const [openId, setOpenId] = useState<number | null>(null);
   const [searchText, setSearchText] = useState("");
-  const [deletingPolicy, setDeletingPolicy] = useState<IPolicyItem | null>(
-    null,
-  );
+  const [deletingPolicy, setDeletingPolicy] = useState<IPolicyItem | null>(null);
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
-  const { mutateAsync: deletePolicy, isPending: isDeleting } =
-    useDeletePolicy();
+  const { mutateAsync: deletePolicy, isPending: isDeleting } = useDeletePolicy();
 
   const handleDeletePolicy = async () => {
     if (!deletingPolicy?.itemId) return;
@@ -89,9 +86,7 @@ export const SchemaAccessControlAccordion = ({
   };
 
   const filteredPolicies = searchText
-    ? policies.filter((p) =>
-        p.policyName.toLowerCase().includes(searchText.toLowerCase()),
-      )
+    ? policies.filter((p) => p.policyName.toLowerCase().includes(searchText.toLowerCase()))
     : policies;
 
   /**
@@ -165,7 +160,9 @@ export const SchemaAccessControlAccordion = ({
             // Groups are only mentioned once a set has some, so a flat set reads as it always has.
             const summaryLabel = [
               t("ACCESS_ACCORDION.RULES_COUNT", { count: rulesCount }),
-              ...(groupsCount === 0 ? [] : [t("ACCESS_ACCORDION.GROUPS_COUNT", { count: groupsCount })]),
+              ...(groupsCount === 0
+                ? []
+                : [t("ACCESS_ACCORDION.GROUPS_COUNT", { count: groupsCount })]),
               matchesAll ? t("ACCESS_ACCORDION.MATCH_ALL") : t("ACCESS_ACCORDION.MATCH_ANY"),
             ].join(" · ");
 
@@ -229,9 +226,7 @@ export const SchemaAccessControlAccordion = ({
                   <div className="border-t border-border/40 bg-muted/20 px-2.5 py-2">
                     {/* Read as a sentence: "when X, and Y" — the joiner is the
                         set's own operator, so the relation is never guessed. */}
-                    <p className="text-[11px] text-muted-foreground">
-                      {grantsLabel}
-                    </p>
+                    <p className="text-[11px] text-muted-foreground">{grantsLabel}</p>
                     <ul className="mt-1.5 flex flex-col">
                       {ruleSetLines(policy).map((line) => (
                         <li
@@ -323,4 +318,3 @@ export const SchemaAccessControlAccordion = ({
     </div>
   );
 };
-

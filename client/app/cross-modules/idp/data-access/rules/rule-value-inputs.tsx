@@ -1,7 +1,13 @@
 "use client";
 
 import { Input } from "@/components/ui-kits/input/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui-kits/select/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui-kits/select/select";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
 import { cn } from "@/lib/utils";
 import { useT } from "@seliseblocks/genesis-os";
@@ -18,9 +24,15 @@ import {
 } from "./validation-rules.util";
 import { ReferenceTargetPicker } from "./reference-target-picker";
 
+const I18N_MODULE = "os.idp.rules";
+
 const LABEL_CLASS = "text-[11px] font-medium uppercase tracking-widest text-muted-foreground";
 
-function Labelled({ label, required = true, children }: Readonly<{ label: string; required?: boolean; children: ReactNode }>) {
+function Labelled({
+  label,
+  required = true,
+  children,
+}: Readonly<{ label: string; required?: boolean; children: ReactNode }>) {
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-1.5">
       <span className={LABEL_CLASS}>
@@ -39,8 +51,15 @@ function ValueInput({
   enumValues,
   invalid,
   onChange,
-}: Readonly<{ kind: ValueKind; label: string; value: string; enumValues: string[]; invalid: boolean; onChange: (value: string) => void }>) {
-  const { t } = useT("os.idp.rules");
+}: Readonly<{
+  kind: ValueKind;
+  label: string;
+  value: string;
+  enumValues: string[];
+  invalid: boolean;
+  onChange: (value: string) => void;
+}>) {
+  const { t } = useT(I18N_MODULE);
   if (kind === "boolean" || kind === "enum") {
     const options = kind === "boolean" ? ["true", "false"] : enumValues;
     return (
@@ -92,7 +111,7 @@ function ComparisonValue({
   variableOptions: string[] | null;
   onChange: (value: string) => void;
 }>) {
-  const { t } = useT("os.idp.rules");
+  const { t } = useT(I18N_MODULE);
   const [isVariable, setIsVariable] = useState(() => looksLikeVariable(value));
   const groupName = useId();
   const switchTo = (variable: boolean) => {
@@ -116,7 +135,13 @@ function ComparisonValue({
                   : "border-border text-muted-foreground hover:border-primary/40 hover:text-primary",
               )}
             >
-              <input type="radio" name={groupName} className="sr-only" checked={isVariable === variable} onChange={() => switchTo(variable)} />
+              <input
+                type="radio"
+                name={groupName}
+                className="sr-only"
+                checked={isVariable === variable}
+                onChange={() => switchTo(variable)}
+              />
               {variable ? t("RULE_VALUE_INPUTS.VARIABLE") : t("RULE_VALUE_INPUTS.FIXED_VALUE")}
             </label>
           ))}
@@ -133,7 +158,10 @@ function ComparisonValue({
           />
           {variableOptions.length > 0 && (
             <Select value="" onValueChange={onChange}>
-              <SelectTrigger className="h-8 w-full text-xs" aria-label={t("RULE_VALUE_INPUTS.PICK_PROPERTY_FOR", { label })}>
+              <SelectTrigger
+                className="h-8 w-full text-xs"
+                aria-label={t("RULE_VALUE_INPUTS.PICK_PROPERTY_FOR", { label })}
+              >
                 <SelectValue placeholder={t("RULE_VALUE_INPUTS.PICK_PROPERTY")} />
               </SelectTrigger>
               <SelectContent>
@@ -147,7 +175,14 @@ function ComparisonValue({
           )}
         </>
       ) : (
-        <ValueInput kind={kind} label={label} value={value} enumValues={enumValues} invalid={invalid} onChange={onChange} />
+        <ValueInput
+          kind={kind}
+          label={label}
+          value={value}
+          enumValues={enumValues}
+          invalid={invalid}
+          onChange={onChange}
+        />
       )}
     </div>
   );
@@ -177,16 +212,20 @@ export function RuleValueInputs({
   error: string | null;
   onChange: (patch: Partial<RuleDraft>) => void;
 }>) {
-  const { t } = useT("os.idp.rules");
+  const { t } = useT(I18N_MODULE);
   const input = VALIDATION_TYPE_META[draft.type]?.input;
   const kind = valueKindForField(fieldType);
   const invalid = Boolean(error);
-  const variableOptions = variables?.schemaName ? fittingVariables(fieldType, variables, fieldName) : null;
+  const variableOptions = variables?.schemaName
+    ? fittingVariables(fieldType, variables, fieldName)
+    : null;
 
   const body = (() => {
     switch (input) {
       case "none":
-        return <p className="text-xs text-muted-foreground">{t("RULE_VALUE_INPUTS.NOT_EMPTY_HINT")}</p>;
+        return (
+          <p className="text-xs text-muted-foreground">{t("RULE_VALUE_INPUTS.NOT_EMPTY_HINT")}</p>
+        );
       case "regex":
         return (
           <Labelled label={t("RULE_VALUE_INPUTS.REGEX_PATTERN")}>
@@ -201,7 +240,13 @@ export function RuleValueInputs({
         );
       case "length":
         return (
-          <Labelled label={draft.type === VALIDATION_TYPE.MinLength ? t("RULE_VALUE_INPUTS.MINIMUM_LENGTH") : t("RULE_VALUE_INPUTS.MAXIMUM_LENGTH")}>
+          <Labelled
+            label={
+              draft.type === VALIDATION_TYPE.MinLength
+                ? t("RULE_VALUE_INPUTS.MINIMUM_LENGTH")
+                : t("RULE_VALUE_INPUTS.MAXIMUM_LENGTH")
+            }
+          >
             <Input
               type="number"
               min={0}
@@ -216,27 +261,65 @@ export function RuleValueInputs({
         return (
           <div className="flex gap-3">
             <Labelled label={t("RULE_VALUE_INPUTS.MIN_LENGTH")}>
-              <Input type="number" min={0} aria-label={t("RULE_VALUE_INPUTS.MIN_LENGTH")} value={draft.value} onChange={(e) => onChange({ value: e.target.value })} className="h-9" />
+              <Input
+                type="number"
+                min={0}
+                aria-label={t("RULE_VALUE_INPUTS.MIN_LENGTH")}
+                value={draft.value}
+                onChange={(e) => onChange({ value: e.target.value })}
+                className="h-9"
+              />
             </Labelled>
             <Labelled label={t("RULE_VALUE_INPUTS.MAX_LENGTH")}>
-              <Input type="number" min={0} aria-label={t("RULE_VALUE_INPUTS.MAX_LENGTH")} value={draft.secondaryValue} onChange={(e) => onChange({ secondaryValue: e.target.value })} className="h-9" />
+              <Input
+                type="number"
+                min={0}
+                aria-label={t("RULE_VALUE_INPUTS.MAX_LENGTH")}
+                value={draft.secondaryValue}
+                onChange={(e) => onChange({ secondaryValue: e.target.value })}
+                className="h-9"
+              />
             </Labelled>
           </div>
         );
       case "value":
         return (
           <Labelled label={t("RULE_VALUE_INPUTS.VALUE")}>
-            <ComparisonValue kind={kind} label={t("RULE_VALUE_INPUTS.VALUE")} value={draft.value} enumValues={enumValues} invalid={invalid} variableOptions={variableOptions} onChange={(value) => onChange({ value })} />
+            <ComparisonValue
+              kind={kind}
+              label={t("RULE_VALUE_INPUTS.VALUE")}
+              value={draft.value}
+              enumValues={enumValues}
+              invalid={invalid}
+              variableOptions={variableOptions}
+              onChange={(value) => onChange({ value })}
+            />
           </Labelled>
         );
       case "valueRange":
         return (
           <div className="flex gap-3">
             <Labelled label={t("RULE_VALUE_INPUTS.MIN")}>
-              <ComparisonValue kind={kind} label={t("RULE_VALUE_INPUTS.MIN")} value={draft.value} enumValues={enumValues} invalid={invalid} variableOptions={variableOptions} onChange={(value) => onChange({ value })} />
+              <ComparisonValue
+                kind={kind}
+                label={t("RULE_VALUE_INPUTS.MIN")}
+                value={draft.value}
+                enumValues={enumValues}
+                invalid={invalid}
+                variableOptions={variableOptions}
+                onChange={(value) => onChange({ value })}
+              />
             </Labelled>
             <Labelled label={t("RULE_VALUE_INPUTS.MAX")}>
-              <ComparisonValue kind={kind} label={t("RULE_VALUE_INPUTS.MAX")} value={draft.secondaryValue} enumValues={enumValues} invalid={invalid} variableOptions={variableOptions} onChange={(secondaryValue) => onChange({ secondaryValue })} />
+              <ComparisonValue
+                kind={kind}
+                label={t("RULE_VALUE_INPUTS.MAX")}
+                value={draft.secondaryValue}
+                enumValues={enumValues}
+                invalid={invalid}
+                variableOptions={variableOptions}
+                onChange={(secondaryValue) => onChange({ secondaryValue })}
+              />
             </Labelled>
           </div>
         );
@@ -247,11 +330,11 @@ export function RuleValueInputs({
               sourceType={fieldType}
               schemaName={draft.value}
               fieldName={draft.secondaryValue}
-              onChange={({ schemaName, fieldName }) => onChange({ value: schemaName, secondaryValue: fieldName })}
+              onChange={({ schemaName, fieldName }) =>
+                onChange({ value: schemaName, secondaryValue: fieldName })
+              }
             />
-            <p className="text-xs text-muted-foreground">
-              {t("RULE_VALUE_INPUTS.REFERENCE_HINT")}
-            </p>
+            <p className="text-xs text-muted-foreground">{t("RULE_VALUE_INPUTS.REFERENCE_HINT")}</p>
           </>
         );
       default:

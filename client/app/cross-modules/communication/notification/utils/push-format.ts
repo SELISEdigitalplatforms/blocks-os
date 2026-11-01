@@ -34,8 +34,10 @@ export const timeAgo = (iso: string | null | undefined, now = Date.now()): strin
   if (!date) return "";
   const elapsed = Math.max(0, now - date.getTime());
   if (elapsed < MINUTE_MS) return tn("PUSH_FORMAT.JUST_NOW");
-  if (elapsed < HOUR_MS) return tn("PUSH_FORMAT.MINUTES_AGO", { count: Math.floor(elapsed / MINUTE_MS) });
-  if (elapsed < DAY_MS) return tn("PUSH_FORMAT.HOURS_AGO", { count: Math.floor(elapsed / HOUR_MS) });
+  if (elapsed < HOUR_MS)
+    return tn("PUSH_FORMAT.MINUTES_AGO", { count: Math.floor(elapsed / MINUTE_MS) });
+  if (elapsed < DAY_MS)
+    return tn("PUSH_FORMAT.HOURS_AGO", { count: Math.floor(elapsed / HOUR_MS) });
   return tn("PUSH_FORMAT.DAYS_AGO", { count: Math.floor(elapsed / DAY_MS) });
 };
 

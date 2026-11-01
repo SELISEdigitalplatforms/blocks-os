@@ -1,5 +1,7 @@
 import { tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.idp.auth";
+
 // const ALLOWED_SPECIAL_CHARS = "!@#$%^&*()_+-=[]{}|;':\",.<>/?`~";
 const PASSWORD_MIN_LENGTH = 8;
 const PASSWORD_MAX_LENGTH = 30;
@@ -39,10 +41,10 @@ export interface PasswordRequirement {
 // const formatSpecialCharsDisplay = (chars: string): string => chars.split("").join("");
 
 export const getPasswordRequirements = (): PasswordRequirement[] => [
-  { key: "length", label: tStatic("os.idp.auth", "PASSWORD_STRENGTH_UTIL.LENGTH") },
-  { key: "case", label: tStatic("os.idp.auth", "PASSWORD_STRENGTH_UTIL.CASE") },
-  { key: "number", label: tStatic("os.idp.auth", "PASSWORD_STRENGTH_UTIL.NUMBER") },
-  { key: "special", label: tStatic("os.idp.auth", "PASSWORD_STRENGTH_UTIL.SPECIAL") },
+  { key: "length", label: tStatic(I18N_MODULE, "PASSWORD_STRENGTH_UTIL.LENGTH") },
+  { key: "case", label: tStatic(I18N_MODULE, "PASSWORD_STRENGTH_UTIL.CASE") },
+  { key: "number", label: tStatic(I18N_MODULE, "PASSWORD_STRENGTH_UTIL.NUMBER") },
+  { key: "special", label: tStatic(I18N_MODULE, "PASSWORD_STRENGTH_UTIL.SPECIAL") },
 ];
 
 export const createInitialChecks = (): PasswordChecks => ({

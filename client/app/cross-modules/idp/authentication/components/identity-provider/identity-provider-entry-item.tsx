@@ -37,7 +37,8 @@ interface ProviderEntryItemProps {
  * edit/enable-disable/delete actions and expandable KV details the old table row had.
  */
 const isLoginRedirectUriMissing = (item: IdentityProvider, loginRedirectUri: string): boolean =>
-  loginRedirectUri !== "" && !hasRedirectUri(item.redirectUris ?? item.redirectUri, loginRedirectUri);
+  loginRedirectUri !== "" &&
+  !hasRedirectUri(item.redirectUris ?? item.redirectUri, loginRedirectUri);
 
 export function ProviderEntryItem({ item, defaultExpanded = false }: ProviderEntryItemProps) {
   const { t } = useT("os.idp.identity-provider");
@@ -68,7 +69,9 @@ export function ProviderEntryItem({ item, defaultExpanded = false }: ProviderEnt
       });
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
       showSuccessToast({
-        description: item.isActive ? t("IDENTITY_PROVIDER_ENTRY_ITEM.DISABLED_SUCCESS") : t("IDENTITY_PROVIDER_ENTRY_ITEM.ENABLED_SUCCESS"),
+        description: item.isActive
+          ? t("IDENTITY_PROVIDER_ENTRY_ITEM.DISABLED_SUCCESS")
+          : t("IDENTITY_PROVIDER_ENTRY_ITEM.ENABLED_SUCCESS"),
       });
       setShowStatusDialog(false);
     } catch (err) {
@@ -102,26 +105,61 @@ export function ProviderEntryItem({ item, defaultExpanded = false }: ProviderEnt
     sensitive?: boolean;
     masked?: boolean;
   }[] = [
-    { key: "clientId", label: t("IDENTITY_PROVIDER_ENTRY_ITEM.CLIENT_ID"), value: item.clientId ?? "", copyable: true, masked: true },
-    { key: "issuerUrl", label: t("IDENTITY_PROVIDER_ENTRY_ITEM.ISSUER_URL"), value: item.issuer ?? "", copyable: true },
+    {
+      key: "clientId",
+      label: t("IDENTITY_PROVIDER_ENTRY_ITEM.CLIENT_ID"),
+      value: item.clientId ?? "",
+      copyable: true,
+      masked: true,
+    },
+    {
+      key: "issuerUrl",
+      label: t("IDENTITY_PROVIDER_ENTRY_ITEM.ISSUER_URL"),
+      value: item.issuer ?? "",
+      copyable: true,
+    },
     {
       key: "authorizationUrl",
       label: t("IDENTITY_PROVIDER_ENTRY_ITEM.AUTHORIZATION_URL"),
       value: item.authorizationUrl ?? "",
       copyable: true,
     },
-    { key: "tokenUrl", label: t("IDENTITY_PROVIDER_ENTRY_ITEM.TOKEN_URL"), value: item.tokenUrl ?? "", copyable: true },
-    { key: "userInfoUrl", label: t("IDENTITY_PROVIDER_ENTRY_ITEM.USER_INFO_URL"), value: item.userInfoUrl ?? "", copyable: true },
-    { key: "wellKnownUri", label: t("IDENTITY_PROVIDER_ENTRY_ITEM.WELL_KNOWN_URI"), value: item.wellKnownUrl ?? "", copyable: true },
+    {
+      key: "tokenUrl",
+      label: t("IDENTITY_PROVIDER_ENTRY_ITEM.TOKEN_URL"),
+      value: item.tokenUrl ?? "",
+      copyable: true,
+    },
+    {
+      key: "userInfoUrl",
+      label: t("IDENTITY_PROVIDER_ENTRY_ITEM.USER_INFO_URL"),
+      value: item.userInfoUrl ?? "",
+      copyable: true,
+    },
+    {
+      key: "wellKnownUri",
+      label: t("IDENTITY_PROVIDER_ENTRY_ITEM.WELL_KNOWN_URI"),
+      value: item.wellKnownUrl ?? "",
+      copyable: true,
+    },
     { key: "scope", label: t("IDENTITY_PROVIDER_ENTRY_ITEM.SCOPE"), value: item.scope ?? "" },
-    { key: "audience", label: t("IDENTITY_PROVIDER_ENTRY_ITEM.AUDIENCE"), value: item.audience ?? "" },
+    {
+      key: "audience",
+      label: t("IDENTITY_PROVIDER_ENTRY_ITEM.AUDIENCE"),
+      value: item.audience ?? "",
+    },
     {
       key: "redirectUris",
       label: t("IDENTITY_PROVIDER_ENTRY_ITEM.REDIRECT_URIS"),
       value: (item.redirectUris ?? item.redirectUri)?.join(", ") ?? "",
       copyable: true,
     },
-    { key: "iamLoginRedirectUri", label: t("IDENTITY_PROVIDER_ENTRY_ITEM.IAM_LOGIN_REDIRECT_URI"), value: loginRedirectUri, copyable: true },
+    {
+      key: "iamLoginRedirectUri",
+      label: t("IDENTITY_PROVIDER_ENTRY_ITEM.IAM_LOGIN_REDIRECT_URI"),
+      value: loginRedirectUri,
+      copyable: true,
+    },
     {
       key: "roles",
       label: t("IDENTITY_PROVIDER_ENTRY_ITEM.ROLES"),
@@ -171,7 +209,9 @@ export function ProviderEntryItem({ item, defaultExpanded = false }: ProviderEnt
                 data-testid="login-redirect-uri-missing"
               >
                 <AlertTriangle className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">{t("IDENTITY_PROVIDER_ENTRY_ITEM.REDIRECT_URI_MISSING")}</span>
+                <span className="hidden sm:inline">
+                  {t("IDENTITY_PROVIDER_ENTRY_ITEM.REDIRECT_URI_MISSING")}
+                </span>
               </span>
             </TooltipTrigger>
             <TooltipContent className="max-w-xs">
@@ -208,7 +248,11 @@ export function ProviderEntryItem({ item, defaultExpanded = false }: ProviderEnt
                     ? "text-emerald-600 hover:text-destructive"
                     : "text-muted-foreground hover:text-emerald-600",
                 )}
-                aria-label={isActive ? t("IDENTITY_PROVIDER_ENTRY_ITEM.DISABLE_PROVIDER") : t("IDENTITY_PROVIDER_ENTRY_ITEM.ENABLE_PROVIDER")}
+                aria-label={
+                  isActive
+                    ? t("IDENTITY_PROVIDER_ENTRY_ITEM.DISABLE_PROVIDER")
+                    : t("IDENTITY_PROVIDER_ENTRY_ITEM.ENABLE_PROVIDER")
+                }
                 onClick={() => setShowStatusDialog(true)}
                 disabled={isUpdating}
               >
@@ -216,7 +260,9 @@ export function ProviderEntryItem({ item, defaultExpanded = false }: ProviderEnt
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {isActive ? t("IDENTITY_PROVIDER_ENTRY_ITEM.DISABLE") : t("IDENTITY_PROVIDER_ENTRY_ITEM.ENABLE")}
+              {isActive
+                ? t("IDENTITY_PROVIDER_ENTRY_ITEM.DISABLE")
+                : t("IDENTITY_PROVIDER_ENTRY_ITEM.ENABLE")}
             </TooltipContent>
           </Tooltip>
           <Tooltip>
@@ -266,7 +312,9 @@ export function ProviderEntryItem({ item, defaultExpanded = false }: ProviderEnt
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {willEnable ? t("IDENTITY_PROVIDER_ENTRY_ITEM.ENABLE_TITLE") : t("IDENTITY_PROVIDER_ENTRY_ITEM.DISABLE_TITLE")}
+              {willEnable
+                ? t("IDENTITY_PROVIDER_ENTRY_ITEM.ENABLE_TITLE")
+                : t("IDENTITY_PROVIDER_ENTRY_ITEM.DISABLE_TITLE")}
             </DialogTitle>
             <DialogDescription>
               {willEnable
@@ -307,8 +355,12 @@ export function ProviderEntryItem({ item, defaultExpanded = false }: ProviderEnt
             <DialogTitle>{t("IDENTITY_PROVIDER_ENTRY_ITEM.DELETE_TITLE")}</DialogTitle>
             <DialogDescription>
               {isActive
-                ? t("IDENTITY_PROVIDER_ENTRY_ITEM.DELETE_DESCRIPTION_ACTIVE", { name: providerLabel })
-                : t("IDENTITY_PROVIDER_ENTRY_ITEM.DELETE_DESCRIPTION_INACTIVE", { name: providerLabel })}
+                ? t("IDENTITY_PROVIDER_ENTRY_ITEM.DELETE_DESCRIPTION_ACTIVE", {
+                    name: providerLabel,
+                  })
+                : t("IDENTITY_PROVIDER_ENTRY_ITEM.DELETE_DESCRIPTION_INACTIVE", {
+                    name: providerLabel,
+                  })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2">

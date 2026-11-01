@@ -63,7 +63,9 @@ export const UserBasicInformation = ({
           </Item>
           <Item label={t("common:STATUS")} isLoading={isLoading}>
             <Badge variant={user?.active ? "success" : "error"} className="w-fit rounded-sm py-1.5">
-              {user?.active ? t("USER_BASIC_INFORMATION.ACTIVE") : t("USER_BASIC_INFORMATION.INACTIVE")}
+              {user?.active
+                ? t("USER_BASIC_INFORMATION.ACTIVE")
+                : t("USER_BASIC_INFORMATION.INACTIVE")}
             </Badge>
           </Item>
           <Item label={t("USER_BASIC_INFORMATION.LATEST_LOGIN")} isLoading={isLoading}>

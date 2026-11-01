@@ -42,7 +42,9 @@ export const UserOrganizationsList = ({
   return (
     <div className="flex flex-col gap-3 rounded-lg border bg-card p-3">
       <div>
-        <h3 className="text-base font-semibold text-high-emphasis">{t("USER_ORGANIZATIONS_LIST.TITLE")}</h3>
+        <h3 className="text-base font-semibold text-high-emphasis">
+          {t("USER_ORGANIZATIONS_LIST.TITLE")}
+        </h3>
         <p className="mt-0.5 text-sm text-muted-foreground">
           {t("USER_ORGANIZATIONS_LIST.DESCRIPTION")}
         </p>
@@ -75,9 +77,7 @@ export const UserOrganizationsList = ({
                   className="flex flex-1 items-center gap-3 px-2.5 py-2.5 text-left"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-high-emphasis">
-                      {org.name}
-                    </p>
+                    <p className="truncate text-sm font-semibold text-high-emphasis">{org.name}</p>
                     <p className="mt-0.5 truncate text-xs text-muted-foreground">
                       {t("USER_ORGANIZATIONS_LIST.SUMMARY", {
                         roles: t("USER_ORGANIZATIONS_LIST.ROLE_COUNT", { count: org.roleCount }),

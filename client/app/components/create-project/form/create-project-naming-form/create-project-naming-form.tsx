@@ -31,7 +31,9 @@ export const CreateProjectNamingForm = () => {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmitHandler)}>
         <div className="mt-4 flex flex-col gap-1 text-left">
-          <h3 className="text-3xl font-semibold tracking-tight">{t("CREATE_PROJECT_NAMING_FORM.NAME_YOUR_PROJECT")}</h3>
+          <h3 className="text-3xl font-semibold tracking-tight">
+            {t("CREATE_PROJECT_NAMING_FORM.NAME_YOUR_PROJECT")}
+          </h3>
           <div className="mt-5 max-w-[437px] sm:mt-5">
             <FormField
               name="name"

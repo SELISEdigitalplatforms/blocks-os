@@ -114,9 +114,7 @@ export const Activation = ({ code }: ActivationProps) => {
       }
     } catch (error) {
       setResendSuccess(false);
-      setResendMessage(
-        error instanceof Error ? error.message : t("ACTIVATION.RESEND_ERROR"),
-      );
+      setResendMessage(error instanceof Error ? error.message : t("ACTIVATION.RESEND_ERROR"));
     }
   };
   if (isActivationPending || isValidCode === null) {
@@ -153,9 +151,7 @@ export const Activation = ({ code }: ActivationProps) => {
           <CardContent className="p-8">
             <CheckCircle2 className="mx-auto flex h-10 w-10 items-center justify-center text-success" />
             <h1 className="text-xl font-semibold">{t("ACTIVATION.ALREADY_ACTIVE_TITLE")}</h1>
-            <p className="mt-2 text-sm">
-              {t("ACTIVATION.ALREADY_ACTIVE_MESSAGE")}
-            </p>
+            <p className="mt-2 text-sm">{t("ACTIVATION.ALREADY_ACTIVE_MESSAGE")}</p>
             <div className="mt-4 flex flex-col items-center gap-2">
               <Button asChild>
                 <Link to="/login">{t("ACTIVATION.GO_TO_SIGN_IN")}</Link>
@@ -168,9 +164,7 @@ export const Activation = ({ code }: ActivationProps) => {
           <CardContent className="p-8">
             <AlertTriangle className="mx-auto flex h-10 w-10 items-center justify-center text-amber-600" />
             <h1 className="text-xl font-semibold">{t("ACTIVATION.INVALID_TITLE")}</h1>
-            <p className="mt-2 text-sm">
-              {t("ACTIVATION.INVALID_MESSAGE")}
-            </p>
+            <p className="mt-2 text-sm">{t("ACTIVATION.INVALID_MESSAGE")}</p>
             <div className="mt-4 flex flex-col items-center gap-2">
               <Button asChild variant="outline">
                 <Link to="/login">{t("ACTIVATION.GO_TO_SIGN_IN")}</Link>
@@ -184,9 +178,7 @@ export const Activation = ({ code }: ActivationProps) => {
             <AlertTriangle className="mx-auto flex h-10 w-10 items-center justify-center text-amber-600" />
             {/* </div> */}
             <h1 className="text-xl font-semibold">{t("ACTIVATION.EXPIRED_TITLE")}</h1>
-            <p className="mt-2 text-sm">
-              {t("ACTIVATION.EXPIRED_MESSAGE")}
-            </p>
+            <p className="mt-2 text-sm">{t("ACTIVATION.EXPIRED_MESSAGE")}</p>
             <div className="mt-4 flex flex-col items-center gap-2">
               <Button
                 onClick={handleResendActivation}

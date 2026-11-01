@@ -33,6 +33,12 @@ import { showErrorToast } from "@/hooks/use-toast";
 import { ConnectProjectPicker } from "./connect-project-picker";
 import { useT, tStatic } from "@seliseblocks/genesis-os";
 
+const KEY_CONNECT_TO_BLOCKS_OS = "CONNECT.CONNECT_TO_BLOCKS_OS";
+const KEY_CONNECT_WITH_BLOCKS_OS = "CONNECT.CONNECT_WITH_BLOCKS_OS";
+const KEY_COMMON_RETRY = "common:RETRY";
+
+const I18N_MODULE = "os.connect";
+
 const PROJECTS_QUERY_KEY = ["identifier", "projects", "connect"] as const;
 const environmentLabel = (value: string) =>
   getEnvironmentOptions().find((option) => option.value === value)?.label ?? value;
@@ -43,7 +49,7 @@ const environmentLabel = (value: string) =>
  * round-trip via the localStorage pending-request hand-off.
  */
 export default function ConnectPage() {
-  const { t } = useT("os.connect");
+  const { t } = useT(I18N_MODULE);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -63,8 +69,10 @@ export default function ConnectPage() {
       }
       return null;
     }
-    return searchParams.get("request") ? null : tStatic("os.connect", "CONNECT.THIS_PAGE_IS_MISSING_ITS");
-  }, [searchParams]);
+    return searchParams.get("request")
+      ? null
+      : tStatic(I18N_MODULE, "CONNECT.THIS_PAGE_IS_MISSING_ITS");
+  }, [searchParams, t]);
 
   useEffect(() => {
     if (entryStarted.current) return;
@@ -105,7 +113,7 @@ export default function ConnectPage() {
       return;
     }
     if (searchParams.get("request")) return;
-  }, [isAuthenticated, queryEntryError, searchParams]);
+  }, [isAuthenticated, queryEntryError, searchParams, t]);
 
   // A resumed link can outlive the session. Save it again before redirecting so login can
   // return to this request instead of dropping the user at the console.
@@ -125,19 +133,28 @@ export default function ConnectPage() {
   }, [entryError, queryEntryError, requestId, isAuthenticated, navigate]);
 
   // ── Request view + approval state (P3-13) ──
-  const { data: request, error: requestError, isError: requestFailed, isLoading: requestLoading } = useConnectRequest(requestId);
+  const {
+    data: request,
+    error: requestError,
+    isError: requestFailed,
+    isLoading: requestLoading,
+  } = useConnectRequest(requestId);
 
   useEffect(() => {
     if (requestFailed) clearPendingConnectRequest();
   }, [requestFailed]);
 
-  const [createdProject, setCreatedProject] = useState<{ tenantGroupId: string; name: string } | null>(null);
+  const [createdProject, setCreatedProject] = useState<{
+    tenantGroupId: string;
+    name: string;
+  } | null>(null);
   const projectsQuery = useQuery({
     queryKey: PROJECTS_QUERY_KEY,
     queryFn: () => projectService.getProjects(0, 100, ""),
     enabled: !!requestId && isAuthenticated,
     refetchInterval: (query) =>
-      createdProject && !query.state.data?.some((group) => group.tenantGroupId === createdProject.tenantGroupId)
+      createdProject &&
+      !query.state.data?.some((group) => group.tenantGroupId === createdProject.tenantGroupId)
         ? 3_000
         : false,
   });
@@ -145,33 +162,40 @@ export default function ConnectPage() {
 
   const [selectedTenantGroupId, setSelectedTenantGroupId] = useState<string | null>(null);
   const selectedGroup = groups.find((group) => group.tenantGroupId === selectedTenantGroupId);
-  const [selectedEnvironment, setSelectedEnvironment] = useState<{ itemId: string; tenantId: string; environment: string } | null>(null);
+  const [selectedEnvironment, setSelectedEnvironment] = useState<{
+    itemId: string;
+    tenantId: string;
+    environment: string;
+  } | null>(null);
   const [templateKey, setTemplateKey] = useState<string | null>(null);
   const [showCreateProject, setShowCreateProject] = useState(false);
   const [successRedirectUrl, setSuccessRedirectUrl] = useState<string | null>(null);
 
-  const readiness = useReadinessWait(
-    templateKey,
-    selectedEnvironment?.tenantId ?? null,
-  );
+  const readiness = useReadinessWait(templateKey, selectedEnvironment?.tenantId ?? null);
 
   const approve = useApproveConnectRequest();
   const cancel = useCancelConnectRequest();
   const approvalStartedFor = useRef<string | null>(null);
 
-  const handleApprove = useCallback(async (selectedTemplateKey: string) => {
-    if (!request || !selectedEnvironment || approve.isPending) return;
-    const selection = `${selectedEnvironment.tenantId}:${selectedTemplateKey}`;
-    if (approvalStartedFor.current === selection) return;
-    approvalStartedFor.current = selection;
-    try {
-      const result = await approve.mutateAsync({ requestId: request.requestId, templateKey: selectedTemplateKey });
-      clearPendingConnectRequest();
-      setSuccessRedirectUrl(result.redirectUrl);
-    } catch {
-      // Toast already shown by the hook.
-    }
-  }, [approve, request, selectedEnvironment]);
+  const handleApprove = useCallback(
+    async (selectedTemplateKey: string) => {
+      if (!request || !selectedEnvironment || approve.isPending) return;
+      const selection = `${selectedEnvironment.tenantId}:${selectedTemplateKey}`;
+      if (approvalStartedFor.current === selection) return;
+      approvalStartedFor.current = selection;
+      try {
+        const result = await approve.mutateAsync({
+          requestId: request.requestId,
+          templateKey: selectedTemplateKey,
+        });
+        clearPendingConnectRequest();
+        setSuccessRedirectUrl(result.redirectUrl);
+      } catch {
+        // Toast already shown by the hook.
+      }
+    },
+    [approve, request, selectedEnvironment],
+  );
 
   // The redirect carries a one-time code, so the browser must load it exactly once. The
   // "Go to site now" click and the auto-redirect share this guard: otherwise a click followed
@@ -192,7 +216,11 @@ export default function ConnectPage() {
 
   useEffect(() => {
     if (readiness.state.phase !== "ready" || !selectedEnvironment || !templateKey) return;
-    if (readiness.state.templateKey !== templateKey || readiness.state.environmentTenantId !== selectedEnvironment.tenantId) return;
+    if (
+      readiness.state.templateKey !== templateKey ||
+      readiness.state.environmentTenantId !== selectedEnvironment.tenantId
+    )
+      return;
     // Approval updates the success screen only after its asynchronous request resolves.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void handleApprove(templateKey);
@@ -200,7 +228,11 @@ export default function ConnectPage() {
 
   const handleConnect = () => {
     if (!selectedEnvironment || !templateKey || approve.isPending) return;
-    if (readiness.state.phase === "ready" && readiness.state.templateKey === templateKey && readiness.state.environmentTenantId === selectedEnvironment.tenantId) {
+    if (
+      readiness.state.phase === "ready" &&
+      readiness.state.templateKey === templateKey &&
+      readiness.state.environmentTenantId === selectedEnvironment.tenantId
+    ) {
       // A failed approval stays on this screen; a deliberate second click retries it.
       approvalStartedFor.current = null;
       void handleApprove(templateKey);
@@ -224,12 +256,16 @@ export default function ConnectPage() {
 
   // ── Render ──
   if (entryError || queryEntryError) {
-    return <ConnectShell title={t("CONNECT.CONNECTION_PROBLEM")}>{entryError || queryEntryError}</ConnectShell>;
+    return (
+      <ConnectShell title={t("CONNECT.CONNECTION_PROBLEM")}>
+        {entryError || queryEntryError}
+      </ConnectShell>
+    );
   }
 
   if (!requestId) {
     return (
-      <ConnectShell title={t("CONNECT.CONNECT_WITH_BLOCKS_OS")}>
+      <ConnectShell title={t(KEY_CONNECT_WITH_BLOCKS_OS)}>
         <div className="flex justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-medium-emphasis" />
         </div>
@@ -239,7 +275,7 @@ export default function ConnectPage() {
 
   if (!isAuthenticated) {
     return (
-      <ConnectShell title={t("CONNECT.CONNECT_WITH_BLOCKS_OS")}>
+      <ConnectShell title={t(KEY_CONNECT_WITH_BLOCKS_OS)}>
         <div className="flex justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-medium-emphasis" />
         </div>
@@ -256,7 +292,10 @@ export default function ConnectPage() {
           </span>
           <p className="text-sm text-high-emphasis">{t("CONNECT.YOUR_SITE_IS_CONNECTED_TO")}</p>
           <p className="text-sm text-medium-emphasis">
-            {t("CONNECT.REDIRECTING_YOU_TO", { value1: request?.siteName || request?.redirectHost || "your site" })}</p>
+            {t("CONNECT.REDIRECTING_YOU_TO", {
+              value1: request?.siteName || request?.redirectHost || "your site",
+            })}
+          </p>
         </div>
         <div className="flex justify-center">
           <Button asChild size="sm" className="gap-2">
@@ -277,7 +316,7 @@ export default function ConnectPage() {
 
   if (requestLoading) {
     return (
-      <ConnectShell title={t("CONNECT.CONNECT_WITH_BLOCKS_OS")}>
+      <ConnectShell title={t(KEY_CONNECT_WITH_BLOCKS_OS)}>
         <div className="flex justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-medium-emphasis" />
         </div>
@@ -319,7 +358,7 @@ export default function ConnectPage() {
 
   if (projectsQuery.isLoading) {
     return (
-      <ConnectShell title={t("CONNECT.CONNECT_TO_BLOCKS_OS")}>
+      <ConnectShell title={t(KEY_CONNECT_TO_BLOCKS_OS)}>
         <div className="flex items-center gap-2 py-4 text-sm text-medium-emphasis" role="status">
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
           {t("CONNECT.LOADING_PROJECTS")}
@@ -330,11 +369,17 @@ export default function ConnectPage() {
 
   if (projectsQuery.isError && !createdProject) {
     return (
-      <ConnectShell title={t("CONNECT.CONNECT_TO_BLOCKS_OS")}>
-        <Banner variant="destructive" title={t("CONNECT.PROJECTS_COULD_NOT_BE_LOADED")} compact={false}>
+      <ConnectShell title={t(KEY_CONNECT_TO_BLOCKS_OS)}>
+        <Banner
+          variant="destructive"
+          title={t("CONNECT.PROJECTS_COULD_NOT_BE_LOADED")}
+          compact={false}
+        >
           {t("CONNECT.CHECK_YOUR_CONNECTION_THEN_TRY")}
         </Banner>
-        <Button size="sm" variant="outline" onClick={() => void projectsQuery.refetch()}>{t("common:RETRY")}</Button>
+        <Button size="sm" variant="outline" onClick={() => void projectsQuery.refetch()}>
+          {t(KEY_COMMON_RETRY)}
+        </Button>
       </ConnectShell>
     );
   }
@@ -343,18 +388,25 @@ export default function ConnectPage() {
   const busy = waiting || approve.isPending;
 
   return (
-    <ConnectShell title={t("CONNECT.CONNECT_TO_BLOCKS_OS")}>
+    <ConnectShell title={t(KEY_CONNECT_TO_BLOCKS_OS)}>
       <p className="text-sm leading-relaxed text-medium-emphasis">
         {t("CONNECT.CHOOSE_THE_PROJECT_ENVIRONMENT_AND")}
       </p>
-      <section aria-label={t("CONNECT.CONNECTION_REQUEST")} className="rounded-lg border border-border bg-muted/20 p-4">
+      <section
+        aria-label={t("CONNECT.CONNECTION_REQUEST")}
+        className="rounded-lg border border-border bg-muted/20 p-4"
+      >
         <div className="flex items-start gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
             <Plug className="h-4 w-4" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <p className="wrap-break-word text-sm font-semibold text-high-emphasis">{request.siteName || request.redirectHost}</p>
-            <p className="mt-0.5 text-xs text-medium-emphasis">{t("CONNECT.REQUESTS_ACCESS_TO_BLOCKS")}</p>
+            <p className="wrap-break-word text-sm font-semibold text-high-emphasis">
+              {request.siteName || request.redirectHost}
+            </p>
+            <p className="mt-0.5 text-xs text-medium-emphasis">
+              {t("CONNECT.REQUESTS_ACCESS_TO_BLOCKS")}
+            </p>
           </div>
         </div>
         <div className="mt-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-t border-border pt-3 text-xs">
@@ -371,8 +423,12 @@ export default function ConnectPage() {
               ? t("CONNECT.COULD_NOT_LOAD_ENVIRONMENTS_FOR", { name: createdProject.name })
               : t("CONNECT.LOADING_ENVIRONMENTS_FOR", { name: createdProject.name })}
           {!selectedGroup && projectsQuery.isError && (
-            <button type="button" className="ml-1 font-semibold underline" onClick={() => void projectsQuery.refetch()}>
-              {t("common:RETRY")}
+            <button
+              type="button"
+              className="ml-1 font-semibold underline"
+              onClick={() => void projectsQuery.refetch()}
+            >
+              {t(KEY_COMMON_RETRY)}
             </button>
           )}
         </Banner>
@@ -392,22 +448,28 @@ export default function ConnectPage() {
         <div className="space-y-6">
           <section>
             <p className="mb-2 text-sm font-medium text-high-emphasis">{t("CONNECT.PROJECT")}</p>
-            {groups.length > 0 ? <ConnectProjectPicker
-              projects={groups.map((group) => ({
-                tenantGroupId: group.tenantGroupId,
-                name: group.projects[0]?.name ?? group.tenantGroupId,
-              }))}
-              value={selectedTenantGroupId}
-              onValueChange={(tenantGroupId) => {
-                if (tenantGroupId === selectedTenantGroupId) return;
-                setSelectedTenantGroupId(tenantGroupId);
-                if (tenantGroupId !== createdProject?.tenantGroupId) setCreatedProject(null);
-                setSelectedEnvironment(null);
-                setTemplateKey(null);
-                approvalStartedFor.current = null;
-                readiness.reset();
-              }}
-            /> : <p className="text-sm text-medium-emphasis" role="status">{t("CONNECT.LOADING_PROJECTS")}</p>}
+            {groups.length > 0 ? (
+              <ConnectProjectPicker
+                projects={groups.map((group) => ({
+                  tenantGroupId: group.tenantGroupId,
+                  name: group.projects[0]?.name ?? group.tenantGroupId,
+                }))}
+                value={selectedTenantGroupId}
+                onValueChange={(tenantGroupId) => {
+                  if (tenantGroupId === selectedTenantGroupId) return;
+                  setSelectedTenantGroupId(tenantGroupId);
+                  if (tenantGroupId !== createdProject?.tenantGroupId) setCreatedProject(null);
+                  setSelectedEnvironment(null);
+                  setTemplateKey(null);
+                  approvalStartedFor.current = null;
+                  readiness.reset();
+                }}
+              />
+            ) : (
+              <p className="text-sm text-medium-emphasis" role="status">
+                {t("CONNECT.LOADING_PROJECTS")}
+              </p>
+            )}
             <button
               type="button"
               className="mt-2 text-xs font-medium text-primary hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
@@ -419,8 +481,15 @@ export default function ConnectPage() {
 
           {selectedGroup ? (
             <section>
-              <h2 id="connect-environment-heading" className="mb-2 text-sm font-medium text-high-emphasis">{t("CONNECT.ENVIRONMENT")}</h2>
-              <p className="mb-3 text-xs text-medium-emphasis">{t("CONNECT.SELECT_THE_ENVIRONMENT_THIS")}</p>
+              <h2
+                id="connect-environment-heading"
+                className="mb-2 text-sm font-medium text-high-emphasis"
+              >
+                {t("CONNECT.ENVIRONMENT")}
+              </h2>
+              <p className="mb-3 text-xs text-medium-emphasis">
+                {t("CONNECT.SELECT_THE_ENVIRONMENT_THIS")}
+              </p>
               <RadioGroup
                 aria-labelledby="connect-environment-heading"
                 value={selectedEnvironment?.tenantId ?? ""}
@@ -433,10 +502,13 @@ export default function ConnectPage() {
                       environment: project.environment,
                     });
                     setTemplateKey(
-                      request.templates.find((template) => template.key === request.suggestedTemplateKey)?.key
-                      ?? request.templates.find((template) => template.accessLevel === "read")?.key
-                      ?? request.templates[0]?.key
-                      ?? null,
+                      request.templates.find(
+                        (template) => template.key === request.suggestedTemplateKey,
+                      )?.key ??
+                        request.templates.find((template) => template.accessLevel === "read")
+                          ?.key ??
+                        request.templates[0]?.key ??
+                        null,
                     );
                     approvalStartedFor.current = null;
                     readiness.reset();
@@ -454,7 +526,9 @@ export default function ConnectPage() {
                       }`}
                     >
                       <RadioGroupItem value={p.tenantId} />
-                      <span className="min-w-0 flex-1 truncate font-medium text-high-emphasis">{environmentLabel(p.environment)}</span>
+                      <span className="min-w-0 flex-1 truncate font-medium text-high-emphasis">
+                        {environmentLabel(p.environment)}
+                      </span>
                       <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border bg-muted/50 px-2 py-0.5 font-mono text-xs text-medium-emphasis">
                         <GitBranch className="h-3 w-3" aria-hidden="true" />
                         {p.environment === "prod" ? "main" : p.environment}
@@ -466,21 +540,33 @@ export default function ConnectPage() {
             </section>
           ) : (
             <p className="text-xs text-medium-emphasis">
-              {createdProject ? t("CONNECT.THE_NEW_PROJECT_WILL_APPEAR") : t("CONNECT.SELECT_A_PROJECT_TO_SEE")}
+              {createdProject
+                ? t("CONNECT.THE_NEW_PROJECT_WILL_APPEAR")
+                : t("CONNECT.SELECT_A_PROJECT_TO_SEE")}
             </p>
           )}
 
           {selectedEnvironment && (
             <section aria-labelledby="connect-options-heading" className="space-y-3">
               <div>
-                <h2 id="connect-options-heading" className="text-sm font-medium text-high-emphasis">{t("CONNECT.CONNECT_OPTIONS")}</h2>
+                <h2 id="connect-options-heading" className="text-sm font-medium text-high-emphasis">
+                  {t("CONNECT.CONNECT_OPTIONS")}
+                </h2>
                 <p className="mt-1 text-xs text-medium-emphasis">
-                  {t("CONNECT.SELECT_THE_LEVEL_OF_LOCALIZATION", { environment: environmentLabel(selectedEnvironment.environment) })}</p>
+                  {t("CONNECT.SELECT_THE_LEVEL_OF_LOCALIZATION", {
+                    environment: environmentLabel(selectedEnvironment.environment),
+                  })}
+                </p>
               </div>
               <div role="group" aria-labelledby="connect-options-heading" className="grid gap-2">
                 {request.templates.map((template) => {
                   const isSelected = templateKey === template.key;
-                  const accessLabel = template.accessLevel === "read" ? "Read-only" : template.accessLevel === "full" ? tStatic("os.connect", "CONNECT.FULL_ACCESS") : template.accessLevel;
+                  const accessLabel =
+                    template.accessLevel === "read"
+                      ? "Read-only"
+                      : template.accessLevel === "full"
+                        ? tStatic(I18N_MODULE, "CONNECT.FULL_ACCESS")
+                        : template.accessLevel;
                   return (
                     <button
                       key={template.key}
@@ -498,15 +584,28 @@ export default function ConnectPage() {
                       <span className="block min-w-0">
                         <span className="flex flex-wrap items-center justify-between gap-2">
                           <span className="flex items-center gap-2.5">
-                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Plug className="h-4 w-4" aria-hidden="true" /></span>
-                            <span className="text-sm font-semibold text-high-emphasis">{template.displayName}</span>
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                              <Plug className="h-4 w-4" aria-hidden="true" />
+                            </span>
+                            <span className="text-sm font-semibold text-high-emphasis">
+                              {template.displayName}
+                            </span>
                           </span>
-                          <span className="rounded-full border border-border bg-muted/50 px-2 py-0.5 text-xs font-medium text-medium-emphasis">{accessLabel}</span>
+                          <span className="rounded-full border border-border bg-muted/50 px-2 py-0.5 text-xs font-medium text-medium-emphasis">
+                            {accessLabel}
+                          </span>
                         </span>
-                        {template.description && <span className="mt-2 block pr-8 text-xs leading-relaxed text-medium-emphasis">{template.description}</span>}
+                        {template.description && (
+                          <span className="mt-2 block pr-8 text-xs leading-relaxed text-medium-emphasis">
+                            {template.description}
+                          </span>
+                        )}
                       </span>
                       {isSelected && (
-                        <span className="absolute bottom-3 right-3 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground" aria-hidden="true">
+                        <span
+                          className="absolute bottom-3 right-3 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground"
+                          aria-hidden="true"
+                        >
                           <Check className="h-3.5 w-3.5" />
                         </span>
                       )}
@@ -514,15 +613,33 @@ export default function ConnectPage() {
                   );
                 })}
               </div>
-              {waiting && <p role="status" className="text-xs text-medium-emphasis">{t("CONNECT.CHECKING_THAT_THIS_ENVIRONMENT_IS")}</p>}
+              {waiting && (
+                <p role="status" className="text-xs text-medium-emphasis">
+                  {t("CONNECT.CHECKING_THAT_THIS_ENVIRONMENT_IS")}
+                </p>
+              )}
               {readiness.state.phase === "timeout" && (
-                <Banner variant="warning" title={t("CONNECT.THIS_ENVIRONMENT_IS_TAKING_LONGER")} compact={false}>
+                <Banner
+                  variant="warning"
+                  title={t("CONNECT.THIS_ENVIRONMENT_IS_TAKING_LONGER")}
+                  compact={false}
+                >
                   <span>{t("CONNECT.TRY_THE_READINESS_CHECK_AGAIN")} </span>
-                  <button type="button" className="font-semibold underline" onClick={() => void readiness.retry()}>{t("common:RETRY")}</button>
+                  <button
+                    type="button"
+                    className="font-semibold underline"
+                    onClick={() => void readiness.retry()}
+                  >
+                    {t(KEY_COMMON_RETRY)}
+                  </button>
                 </Banner>
               )}
               {readiness.state.phase === "permissionDenied" && (
-                <Banner variant="destructive" title={t("CONNECT.INTEGRATION_PERMISSION_REQUIRED")} compact={false}>
+                <Banner
+                  variant="destructive"
+                  title={t("CONNECT.INTEGRATION_PERMISSION_REQUIRED")}
+                  compact={false}
+                >
                   {t("CONNECT.YOU_DON_T_HAVE_PERMISSION")}
                 </Banner>
               )}
@@ -531,13 +648,27 @@ export default function ConnectPage() {
         </div>
       )}
       <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
-        <Button variant="outline" size="sm" onClick={handleCancel} disabled={approve.isPending || cancel.isPending}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleCancel}
+          disabled={approve.isPending || cancel.isPending}
+        >
           {t("common:CANCEL")}
         </Button>
         {selectedEnvironment && (
-          <Button type="button" className="min-w-32 gap-2 font-semibold" onClick={handleConnect} disabled={!templateKey || busy || cancel.isPending}>
+          <Button
+            type="button"
+            className="min-w-32 gap-2 font-semibold"
+            onClick={handleConnect}
+            disabled={!templateKey || busy || cancel.isPending}
+          >
             {busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-            {approve.isPending ? t("CONNECT.CONNECTING") : waiting ? t("CONNECT.CHECKING") : t("CONNECT.CONNECT")}
+            {approve.isPending
+              ? t("CONNECT.CONNECTING")
+              : waiting
+                ? t("CONNECT.CHECKING")
+                : t("CONNECT.CONNECT")}
             {!busy && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
           </Button>
         )}
@@ -547,26 +678,34 @@ export default function ConnectPage() {
 }
 
 const ConnectShell = ({ title, children }: { title: string; children: React.ReactNode }) => {
-  const { t } = useT("os.connect");
+  const { t } = useT(I18N_MODULE);
   return (
-  <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10 sm:px-6">
-    <div className="w-full max-w-xl">
-      <div className="mb-6 flex justify-center">
-        <img src="/blocks-logos/os_light_mode.svg" alt={t("CONNECT.BLOCKS_OS")} className="h-14 w-auto dark:hidden" />
-        <img src="/blocks-logos/os_dark_mode.svg" alt={t("CONNECT.BLOCKS_OS")} className="hidden h-14 w-auto dark:block" />
-      </div>
-      <div className="space-y-5 rounded-lg border border-border bg-card p-5 shadow-xs sm:p-8">
-        <h1 className="text-lg font-semibold text-high-emphasis">{title}</h1>
-        {children}
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10 sm:px-6">
+      <div className="w-full max-w-xl">
+        <div className="mb-6 flex justify-center">
+          <img
+            src="/blocks-logos/os_light_mode.svg"
+            alt={t("CONNECT.BLOCKS_OS")}
+            className="h-14 w-auto dark:hidden"
+          />
+          <img
+            src="/blocks-logos/os_dark_mode.svg"
+            alt={t("CONNECT.BLOCKS_OS")}
+            className="hidden h-14 w-auto dark:block"
+          />
+        </div>
+        <div className="space-y-5 rounded-lg border border-border bg-card p-5 shadow-xs sm:p-8">
+          <h1 className="text-lg font-semibold text-high-emphasis">{title}</h1>
+          {children}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
 };
 
 /** Clears the pending id on unmount so re-renders of this screen keep the back button. */
 const ExpiredScreen = ({ backUrl }: { backUrl: string | null }) => {
-  const { t } = useT("os.connect");
+  const { t } = useT(I18N_MODULE);
   useEffect(() => clearPendingConnectRequest, []);
   return (
     <ConnectShell title={t("CONNECT.THIS_CONNECTION_LINK_HAS_EXPIRED")}>
@@ -594,7 +733,7 @@ const CreateProjectBranch = ({
   onCreated: (tenantGroupId: string, name: string) => void;
   onChooseExisting?: () => void;
 }) => {
-  const { t } = useT("os.connect");
+  const { t } = useT(I18N_MODULE);
   const { isPending, mutateAsync } = useCreateProject();
   const [created, setCreated] = useState(false);
   const [name, setName] = useState("");
@@ -641,11 +780,20 @@ const CreateProjectBranch = ({
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-sm font-semibold text-high-emphasis">{onChooseExisting ? t("CONNECT.CREATE_A_PROJECT") : t("CONNECT.YOU_DON_T_HAVE_A")}</h2>
-        <p className="mt-1 text-xs text-medium-emphasis">{t("CONNECT.CREATE_A_PROJECT_TO_CONTINUE")}</p>
+        <h2 className="text-sm font-semibold text-high-emphasis">
+          {onChooseExisting ? t("CONNECT.CREATE_A_PROJECT") : t("CONNECT.YOU_DON_T_HAVE_A")}
+        </h2>
+        <p className="mt-1 text-xs text-medium-emphasis">
+          {t("CONNECT.CREATE_A_PROJECT_TO_CONTINUE")}
+        </p>
       </div>
       <div>
-        <label htmlFor="connect-project-name" className="mb-2 block text-sm font-medium text-high-emphasis">{t("CONNECT.PROJECT_NAME")}</label>
+        <label
+          htmlFor="connect-project-name"
+          className="mb-2 block text-sm font-medium text-high-emphasis"
+        >
+          {t("CONNECT.PROJECT_NAME")}
+        </label>
         <Input
           id="connect-project-name"
           value={name}
@@ -677,7 +825,13 @@ const CreateProjectBranch = ({
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         {onChooseExisting ? (
-          <Button variant="ghost" size="sm" className="gap-2" onClick={onChooseExisting} disabled={isPending || created}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-2"
+            onClick={onChooseExisting}
+            disabled={isPending || created}
+          >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             {t("CONNECT.GO_BACK")}
           </Button>

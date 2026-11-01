@@ -3,6 +3,8 @@ import type { IDnsRecordInstruction, IDomainSetupGuideItem } from "@/models/doma
 import { CopyValueButton } from "./copy-value-button";
 import { useT, tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.dashboard";
+
 const FieldLabel = ({ children }: { children: React.ReactNode }) => (
   <span className="text-[11px] font-semibold uppercase tracking-wide text-medium-emphasis">
     {children}
@@ -24,11 +26,11 @@ const RecordValue = ({ value, copyLabel }: { value: string; copyLabel?: string }
 const valueHint = (record: IDnsRecordInstruction, cnameTarget?: string) => {
   if (record.type === "A") {
     return cnameTarget
-      ? tStatic("os.dashboard", "DNS_RECORDS_STEP.IP_ADDRESS_OF_TARGET", { target: cnameTarget })
+      ? tStatic(I18N_MODULE, "DNS_RECORDS_STEP.IP_ADDRESS_OF_TARGET", { target: cnameTarget })
       : undefined;
   }
   if (record.type === "ALIAS") {
-    return tStatic("os.dashboard", "DNS_RECORDS_STEP.YOUR_PROVIDER_MUST_SUPPORT_ALIAS");
+    return tStatic(I18N_MODULE, "DNS_RECORDS_STEP.YOUR_PROVIDER_MUST_SUPPORT_ALIAS");
   }
   return undefined;
 };
@@ -41,13 +43,13 @@ interface DnsRecordCardProps {
 }
 
 const DnsRecordCard = ({ index, record, isApex, cnameTarget }: DnsRecordCardProps) => {
-  const { t } = useT("os.dashboard");
+  const { t } = useT(I18N_MODULE);
   const purpose =
     record.purpose === "api"
-      ? tStatic("os.dashboard", "DNS_RECORDS_STEP.BLOCKS_API_FOR_YOUR_APP")
+      ? tStatic(I18N_MODULE, "DNS_RECORDS_STEP.BLOCKS_API_FOR_YOUR_APP")
       : isApex
-        ? tStatic("os.dashboard", "DNS_RECORDS_STEP.YOUR_APP_ROOT_DOMAIN")
-        : tStatic("os.dashboard", "DNS_RECORDS_STEP.YOUR_APP");
+        ? tStatic(I18N_MODULE, "DNS_RECORDS_STEP.YOUR_APP_ROOT_DOMAIN")
+        : tStatic(I18N_MODULE, "DNS_RECORDS_STEP.YOUR_APP");
   const hint = valueHint(record, cnameTarget);
 
   return (
@@ -56,7 +58,9 @@ const DnsRecordCard = ({ index, record, isApex, cnameTarget }: DnsRecordCardProp
       className="flex flex-col gap-3 rounded-lg border border-border p-4"
     >
       <p className="text-sm">
-        <span className="font-semibold text-high-emphasis">{t("DNS_RECORDS_STEP.RECORD", { value1: index + 1 })}</span>
+        <span className="font-semibold text-high-emphasis">
+          {t("DNS_RECORDS_STEP.RECORD", { value1: index + 1 })}
+        </span>
         <span className="text-muted-foreground"> · {purpose}</span>
       </p>
       <div className="grid gap-3 sm:grid-cols-[88px_minmax(0,1fr)_minmax(0,1.3fr)]">
@@ -85,9 +89,11 @@ interface DnsRecordsStepProps {
 }
 
 export const DnsRecordsStep = ({ guide, isLoading }: DnsRecordsStepProps) => {
-  const { t } = useT("os.dashboard");
+  const { t } = useT(I18N_MODULE);
   if (isLoading) {
-    return <p className="text-sm text-muted-foreground">{t("DNS_RECORDS_STEP.LOADING_DNS_RECORDS")}</p>;
+    return (
+      <p className="text-sm text-muted-foreground">{t("DNS_RECORDS_STEP.LOADING_DNS_RECORDS")}</p>
+    );
   }
 
   if (!guide || guide.records.length === 0) {
@@ -137,13 +143,17 @@ export const DnsRecordsStep = ({ guide, isLoading }: DnsRecordsStepProps) => {
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
         <ul className="flex list-disc flex-col gap-1.5 pl-4 text-sm text-high-emphasis">
           <li>
-            {t("DNS_RECORDS_STEP.ENTER_THE_EXACTLY_AS_SHOWN", { strong: t("DNS_RECORDS_STEP.NAME_HOST"), code: `.${zone}` })}</li>
-          {guide.isApex && (
-            <li>
-              {t("DNS_RECORDS_STEP.REMOVE_ANY_EXISTING_A_OR", { code: "@" })}</li>
-          )}
+            {t("DNS_RECORDS_STEP.ENTER_THE_EXACTLY_AS_SHOWN", {
+              strong: t("DNS_RECORDS_STEP.NAME_HOST"),
+              code: `.${zone}`,
+            })}
+          </li>
+          {guide.isApex && <li>{t("DNS_RECORDS_STEP.REMOVE_ANY_EXISTING_A_OR", { code: "@" })}</li>}
           <li>
-            {t("DNS_RECORDS_STEP.USING_CLOUDFLARE_SET_THE_PROXY", { strong: t("DNS_RECORDS_STEP.DNS_ONLY") })}</li>
+            {t("DNS_RECORDS_STEP.USING_CLOUDFLARE_SET_THE_PROXY", {
+              strong: t("DNS_RECORDS_STEP.DNS_ONLY"),
+            })}
+          </li>
           <li>{t("DNS_RECORDS_STEP.DNS_CHANGES_USUALLY_SHOW_UP")}</li>
         </ul>
       </div>

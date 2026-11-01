@@ -1,6 +1,8 @@
 import type { LinkedSecretStatus } from "@/cross-modules/secrets/models/secret.model";
 import { tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.communication.mail";
+
 export interface IEmailServiceData {
   id: string;
   name: string;
@@ -186,8 +188,8 @@ export const MAIL_PROVIDERS: readonly IMailProviderCapability[] = [
 
 export const getMailAuthenticationLabel = (type: MailAuthenticationType): string =>
   type === MailAuthenticationType.OAuthClientCredentials
-    ? tStatic("os.communication.mail", "EMAIL_MODEL.AUTH_OAUTH_CLIENT_CREDENTIALS")
-    : tStatic("os.communication.mail", "EMAIL_MODEL.AUTH_USERNAME_PASSWORD");
+    ? tStatic(I18N_MODULE, "EMAIL_MODEL.AUTH_OAUTH_CLIENT_CREDENTIALS")
+    : tStatic(I18N_MODULE, "EMAIL_MODEL.AUTH_USERNAME_PASSWORD");
 
 export const getMailProvider = (
   provider: MailServiceProvider,
@@ -219,7 +221,7 @@ export const getFixedTransport = (
  */
 export const getMailProviderLabel = (provider: MailServiceProvider): string =>
   getMailProvider(provider)?.label ??
-  tStatic("os.communication.mail", "EMAIL_MODEL.UNKNOWN_PROVIDER", { provider });
+  tStatic(I18N_MODULE, "EMAIL_MODEL.UNKNOWN_PROVIDER", { provider });
 
 export const getMailProvidersFor = (isInbound: boolean): IMailProviderCapability[] =>
   MAIL_PROVIDERS.filter((p) => (isInbound ? p.supportsInbound : p.supportsOutbound));

@@ -1,5 +1,8 @@
 import { labelledOption, lazyLabels } from "../utils/gateway-i18n";
 
+const KEY_SOURCE_AUTH = "SCHEMA_ACCESS_CONTROL.SOURCE_AUTH";
+const KEY_SOURCE_SCHEMA_FIELDS = "SCHEMA_ACCESS_CONTROL.SOURCE_SCHEMA_FIELDS";
+
 export const PERMISSION_ACTIONS = [
   labelledOption("common:VIEW", { id: "view", value: "view" }),
   labelledOption("common:CREATE", { id: "create", value: "create" }),
@@ -21,16 +24,16 @@ export const RULE_SOURCE_TYPES = {
 } as const;
 
 export const RULE_SOURCE_OPTIONS = [
-  labelledOption("SCHEMA_ACCESS_CONTROL.SOURCE_AUTH", { value: RULE_SOURCE_TYPES.AUTH }),
-  labelledOption("SCHEMA_ACCESS_CONTROL.SOURCE_SCHEMA_FIELDS", {
+  labelledOption(KEY_SOURCE_AUTH, { value: RULE_SOURCE_TYPES.AUTH }),
+  labelledOption(KEY_SOURCE_SCHEMA_FIELDS, {
     value: RULE_SOURCE_TYPES.SCHEMA_FIELD,
   }),
   // labelledOption("SCHEMA_ACCESS_CONTROL.SOURCE_STATIC_VALUE", { value: RULE_SOURCE_TYPES.STATIC_VALUE }),
 ];
 
 export const COMPARE_SOURCE_OPTIONS = [
-  labelledOption("SCHEMA_ACCESS_CONTROL.SOURCE_AUTH", { value: RULE_SOURCE_TYPES.AUTH }),
-  labelledOption("SCHEMA_ACCESS_CONTROL.SOURCE_SCHEMA_FIELDS", {
+  labelledOption(KEY_SOURCE_AUTH, { value: RULE_SOURCE_TYPES.AUTH }),
+  labelledOption(KEY_SOURCE_SCHEMA_FIELDS, {
     value: RULE_SOURCE_TYPES.SCHEMA_FIELD,
   }),
   labelledOption("SCHEMA_ACCESS_CONTROL.SOURCE_STATIC_VALUE", {
@@ -100,15 +103,21 @@ export const isAuthAttributeField = (field: string | undefined): boolean =>
 
 /** The attribute name inside `attributes.<name>`, or "" while it is not typed yet. */
 export const getAuthAttributeName = (field: string | undefined): string =>
-  field?.startsWith(`${AUTH_ATTRIBUTE_PREFIX}.`) ? field.slice(AUTH_ATTRIBUTE_PREFIX.length + 1) : "";
+  field?.startsWith(`${AUTH_ATTRIBUTE_PREFIX}.`)
+    ? field.slice(AUTH_ATTRIBUTE_PREFIX.length + 1)
+    : "";
 
 export const RULE_OPERATORS = [
   labelledOption("SCHEMA_ACCESS_CONTROL.OPERATOR_EQUAL", { value: "EQUAL" }),
   labelledOption("SCHEMA_ACCESS_CONTROL.OPERATOR_NOT_EQUAL", { value: "NOT_EQUAL" }),
   labelledOption("SCHEMA_ACCESS_CONTROL.OPERATOR_GREATER_THAN", { value: "GREATER_THAN" }),
-  labelledOption("SCHEMA_ACCESS_CONTROL.OPERATOR_GREATER_THAN_OR_EQUAL", { value: "GREATER_THAN_OR_EQUAL" }),
+  labelledOption("SCHEMA_ACCESS_CONTROL.OPERATOR_GREATER_THAN_OR_EQUAL", {
+    value: "GREATER_THAN_OR_EQUAL",
+  }),
   labelledOption("SCHEMA_ACCESS_CONTROL.OPERATOR_LESS_THAN", { value: "LESS_THAN" }),
-  labelledOption("SCHEMA_ACCESS_CONTROL.OPERATOR_LESS_THAN_OR_EQUAL", { value: "LESS_THAN_OR_EQUAL" }),
+  labelledOption("SCHEMA_ACCESS_CONTROL.OPERATOR_LESS_THAN_OR_EQUAL", {
+    value: "LESS_THAN_OR_EQUAL",
+  }),
   labelledOption("SCHEMA_ACCESS_CONTROL.OPERATOR_CONTAIN", { value: "CONTAIN" }),
   labelledOption("SCHEMA_ACCESS_CONTROL.OPERATOR_NOT_CONTAIN", { value: "NOT_CONTAIN" }),
   labelledOption("SCHEMA_ACCESS_CONTROL.OPERATOR_IN", { value: "IN" }),
@@ -215,8 +224,8 @@ export const ACCESS_TYPE_TO_LEVEL: Record<string, number> = {
 
 /** Reverse mappings: number → display label */
 export const NUMBER_TO_SOURCE_LABEL: Record<number, string> = lazyLabels({
-  0: "SCHEMA_ACCESS_CONTROL.SOURCE_AUTH",
-  1: "SCHEMA_ACCESS_CONTROL.SOURCE_SCHEMA_FIELDS",
+  0: KEY_SOURCE_AUTH,
+  1: KEY_SOURCE_SCHEMA_FIELDS,
   2: "SCHEMA_ACCESS_CONTROL.SOURCE_STATIC_VALUE",
 });
 
@@ -351,4 +360,3 @@ export const TAB_TO_ACCESS_LEVEL_KEY: Record<
   edit: "editAccessLevel",
   delete: "deleteAccessLevel",
 };
-

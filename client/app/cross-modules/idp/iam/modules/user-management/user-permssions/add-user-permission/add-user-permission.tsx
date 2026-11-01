@@ -124,7 +124,9 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
                   }}
                 >
                   <CirclePlus className="h-5 w-5 md:mr-2.5" />
-                  <span className="sr-only sm:not-sr-only">{t("ADD_USER_PERMISSION.ASSIGN_PERMISSIONS")}</span>
+                  <span className="sr-only sm:not-sr-only">
+                    {t("ADD_USER_PERMISSION.ASSIGN_PERMISSIONS")}
+                  </span>
                 </Button>
               </DialogTrigger>
             </span>
@@ -196,8 +198,7 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
                               >
                                 <Checkbox
                                   checked={
-                                    isAlreadyAssigned ||
-                                    selectedPermisson.includes(item.resource)
+                                    isAlreadyAssigned || selectedPermisson.includes(item.resource)
                                   }
                                   disabled={isCheckboxDisabled}
                                   onCheckedChange={(checked) =>
@@ -221,9 +222,8 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
                       </TableCell>
                       <TableCell>
                         {
-                          RESOURCE_TYPE.find(
-                            (resoruce) => resoruce.value === item.type.toString(),
-                          )?.label
+                          RESOURCE_TYPE.find((resoruce) => resoruce.value === item.type.toString())
+                            ?.label
                         }
                       </TableCell>
                     </TableRow>

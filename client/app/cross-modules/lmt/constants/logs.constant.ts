@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.lmt";
+
 export const LOG_SERVICE_ICONS = {
   iam: Shield,
   os: Network,
@@ -33,7 +35,7 @@ export const getLogServices = (): LogServiceRow[] => [
     name: "Blocks IAM",
     routeSlug: "iam",
     icon: "iam",
-    description: tStatic("os.lmt", "LOGS_CONSTANT.SIGN_IN_TOKEN_ROLE_AND"),
+    description: tStatic(I18N_MODULE, "LOGS_CONSTANT.SIGN_IN_TOKEN_ROLE_AND"),
     status: "running",
   },
   {
@@ -41,7 +43,7 @@ export const getLogServices = (): LogServiceRow[] => [
     name: "Blocks OS",
     routeSlug: "os",
     icon: "os",
-    description: tStatic("os.lmt", "LOGS_CONSTANT.CORE_PLATFORM_AND_WORKSPACE"),
+    description: tStatic(I18N_MODULE, "LOGS_CONSTANT.CORE_PLATFORM_AND_WORKSPACE"),
     status: "running",
   },
   {
@@ -49,7 +51,7 @@ export const getLogServices = (): LogServiceRow[] => [
     name: "Blocks Monitor",
     routeSlug: "monitor",
     icon: "monitor",
-    description: tStatic("os.lmt", "LOGS_CONSTANT.METRICS_ALERTS_AND_TRACE"),
+    description: tStatic(I18N_MODULE, "LOGS_CONSTANT.METRICS_ALERTS_AND_TRACE"),
     status: "running",
   },
   {
@@ -57,7 +59,7 @@ export const getLogServices = (): LogServiceRow[] => [
     name: "Blocks Localization",
     routeSlug: "localization",
     icon: "localization",
-    description: tStatic("os.lmt", "LOGS_CONSTANT.TRANSLATION_AND_LOCALE_DELIVERY"),
+    description: tStatic(I18N_MODULE, "LOGS_CONSTANT.TRANSLATION_AND_LOCALE_DELIVERY"),
     status: "running",
   },
   {
@@ -65,7 +67,7 @@ export const getLogServices = (): LogServiceRow[] => [
     name: "Blocks Data",
     routeSlug: "data",
     icon: "data",
-    description: tStatic("os.lmt", "LOGS_CONSTANT.STORAGE_SYNC_AND_DATA_PIPELINE"),
+    description: tStatic(I18N_MODULE, "LOGS_CONSTANT.STORAGE_SYNC_AND_DATA_PIPELINE"),
     status: "running",
   },
   {
@@ -73,7 +75,7 @@ export const getLogServices = (): LogServiceRow[] => [
     name: "Blocks Release",
     routeSlug: "release",
     icon: "release",
-    description: tStatic("os.lmt", "LOGS_CONSTANT.BUILD_PROMOTE_AND_DEPLOY_EVENTS"),
+    description: tStatic(I18N_MODULE, "LOGS_CONSTANT.BUILD_PROMOTE_AND_DEPLOY_EVENTS"),
     status: "running",
   },
   {
@@ -81,7 +83,7 @@ export const getLogServices = (): LogServiceRow[] => [
     name: "Blocks Utilities",
     routeSlug: "utilities",
     icon: "utilities",
-    description: tStatic("os.lmt", "LOGS_CONSTANT.SHARED_HELPER_SERVICES_AND_CROSS"),
+    description: tStatic(I18N_MODULE, "LOGS_CONSTANT.SHARED_HELPER_SERVICES_AND_CROSS"),
     status: "running",
   },
   {
@@ -89,7 +91,7 @@ export const getLogServices = (): LogServiceRow[] => [
     name: "Blocks Studio",
     routeSlug: "studio",
     icon: "studio",
-    description: tStatic("os.lmt", "LOGS_CONSTANT.BUILDER_AND_WORKSPACE_EDITING_LOGS"),
+    description: tStatic(I18N_MODULE, "LOGS_CONSTANT.BUILDER_AND_WORKSPACE_EDITING_LOGS"),
     status: "running",
   },
   {
@@ -97,7 +99,7 @@ export const getLogServices = (): LogServiceRow[] => [
     name: "Blocks Agent",
     routeSlug: "agent",
     icon: "agent",
-    description: tStatic("os.lmt", "LOGS_CONSTANT.AI_AGENT_ORCHESTRATION_AND_TOOL"),
+    description: tStatic(I18N_MODULE, "LOGS_CONSTANT.AI_AGENT_ORCHESTRATION_AND_TOOL"),
     status: "running",
   },
 ];

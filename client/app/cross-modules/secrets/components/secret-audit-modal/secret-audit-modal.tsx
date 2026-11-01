@@ -33,6 +33,8 @@ import {
 } from "@/cross-modules/secrets/models/secret.model";
 import { useT, tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.secrets";
+
 const PAGE_SIZE = 10;
 
 const OUTCOME_VARIANT: Record<string, "success" | "error" | "warning" | "secondary"> = {
@@ -48,44 +50,48 @@ const formatWhen = (value: string): string => {
 };
 
 const AuditRow = ({ log }: { log: SecretAuditLogResult }) => {
-  const { t } = useT("os.secrets");
+  const { t } = useT(I18N_MODULE);
   return (
-  <TableRow>
-    <TableCell className="whitespace-nowrap py-2.5 text-sm text-muted-foreground">
-      {formatWhen(log.createdDate)}
-    </TableCell>
-    <TableCell className="py-2.5 text-sm font-medium">
-      {secretAuditActionLabel(log.action)}
-    </TableCell>
-    <TableCell className="py-2.5 text-sm">
-      <div className="flex items-center gap-1.5">
-        <span className="max-w-[160px] truncate font-mono text-xs" title={log.actorUserId}>
-          {log.actorUserId || "—"}
-        </span>
-        {log.isRootOverride && (
-          // Surfaces that the access list was bypassed by a platform administrator.
-          <Badge variant="info" className="gap-1 px-1.5 py-0 text-[10px]" title={t("SECRET_AUDIT_MODAL.ROOT_OVERRIDE")}>
-            <ShieldCheck className="h-3 w-3" />
-            {t("SECRET_AUDIT_MODAL.ADMIN")}
-          </Badge>
-        )}
-        {log.impersonated && (
-          <Badge variant="warning" className="px-1.5 py-0 text-[10px]">
-            {t("SECRET_AUDIT_MODAL.IMPERSONATED")}
-          </Badge>
-        )}
-      </div>
-    </TableCell>
-    <TableCell className="py-2.5">
-      <Badge variant={OUTCOME_VARIANT[log.outcome] ?? "secondary"} className="font-normal">
-        {log.outcome}
-      </Badge>
-    </TableCell>
-    <TableCell className="py-2.5 text-sm text-muted-foreground">
-      {log.reason ? (SECRET_AUDIT_REASON_LABEL[log.reason] ?? log.reason) : "—"}
-    </TableCell>
-  </TableRow>
-);
+    <TableRow>
+      <TableCell className="whitespace-nowrap py-2.5 text-sm text-muted-foreground">
+        {formatWhen(log.createdDate)}
+      </TableCell>
+      <TableCell className="py-2.5 text-sm font-medium">
+        {secretAuditActionLabel(log.action)}
+      </TableCell>
+      <TableCell className="py-2.5 text-sm">
+        <div className="flex items-center gap-1.5">
+          <span className="max-w-[160px] truncate font-mono text-xs" title={log.actorUserId}>
+            {log.actorUserId || "—"}
+          </span>
+          {log.isRootOverride && (
+            // Surfaces that the access list was bypassed by a platform administrator.
+            <Badge
+              variant="info"
+              className="gap-1 px-1.5 py-0 text-[10px]"
+              title={t("SECRET_AUDIT_MODAL.ROOT_OVERRIDE")}
+            >
+              <ShieldCheck className="h-3 w-3" />
+              {t("SECRET_AUDIT_MODAL.ADMIN")}
+            </Badge>
+          )}
+          {log.impersonated && (
+            <Badge variant="warning" className="px-1.5 py-0 text-[10px]">
+              {t("SECRET_AUDIT_MODAL.IMPERSONATED")}
+            </Badge>
+          )}
+        </div>
+      </TableCell>
+      <TableCell className="py-2.5">
+        <Badge variant={OUTCOME_VARIANT[log.outcome] ?? "secondary"} className="font-normal">
+          {log.outcome}
+        </Badge>
+      </TableCell>
+      <TableCell className="py-2.5 text-sm text-muted-foreground">
+        {log.reason ? (SECRET_AUDIT_REASON_LABEL[log.reason] ?? log.reason) : "—"}
+      </TableCell>
+    </TableRow>
+  );
 };
 
 interface SecretAuditModalProps {
@@ -103,7 +109,7 @@ interface SecretAuditModalProps {
  * Mount this only while it is open; a fresh mount is what returns it to page one.
  */
 export function SecretAuditModal({ open, onOpenChange, secret }: SecretAuditModalProps) {
-  const { t } = useT("os.secrets");
+  const { t } = useT(I18N_MODULE);
   const [page, setPage] = useState(0);
 
   const { data, isLoading, isFetching, error } = useSecretAuditLogs(
@@ -119,7 +125,9 @@ export function SecretAuditModal({ open, onOpenChange, secret }: SecretAuditModa
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[min(90vh,760px)] w-[calc(100vw-1.5rem)] max-w-3xl flex-col overflow-hidden sm:w-full">
         <DialogHeader>
-          <DialogTitle className="text-left">{t("SECRET_AUDIT_MODAL.AUDIT_LOG", { name: secret.name })}</DialogTitle>
+          <DialogTitle className="text-left">
+            {t("SECRET_AUDIT_MODAL.AUDIT_LOG", { name: secret.name })}
+          </DialogTitle>
           <DialogDescription className="text-left">
             {t("SECRET_AUDIT_MODAL.EVERY_OPERATION_ON_THIS_SECRET")}
           </DialogDescription>
@@ -127,7 +135,12 @@ export function SecretAuditModal({ open, onOpenChange, secret }: SecretAuditModa
 
         {error && (
           <Banner variant="destructive">
-            {describeSecretError(error, tStatic("os.secrets", "SECRET_AUDIT_MODAL.COULD_NOT_LOAD_THE_AUDIT")).message}
+            {
+              describeSecretError(
+                error,
+                tStatic(I18N_MODULE, "SECRET_AUDIT_MODAL.COULD_NOT_LOAD_THE_AUDIT"),
+              ).message
+            }
           </Banner>
         )}
 
@@ -135,7 +148,9 @@ export function SecretAuditModal({ open, onOpenChange, secret }: SecretAuditModa
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="text-xs font-semibold uppercase tracking-wide">{t("SECRET_AUDIT_MODAL.WHEN")}</TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide">
+                  {t("SECRET_AUDIT_MODAL.WHEN")}
+                </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wide">
                   {t("SECRET_AUDIT_MODAL.ACTION")}
                 </TableHead>
@@ -166,7 +181,9 @@ export function SecretAuditModal({ open, onOpenChange, secret }: SecretAuditModa
               ) : (
                 <TableRow>
                   <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                    {error ? t("SECRET_AUDIT_MODAL.THE_AUDIT_LOG_COULD_NOT") : t("SECRET_AUDIT_MODAL.NO_AUDIT_ENTRIES_YET")}
+                    {error
+                      ? t("SECRET_AUDIT_MODAL.THE_AUDIT_LOG_COULD_NOT")
+                      : t("SECRET_AUDIT_MODAL.NO_AUDIT_ENTRIES_YET")}
                   </TableCell>
                 </TableRow>
               )}

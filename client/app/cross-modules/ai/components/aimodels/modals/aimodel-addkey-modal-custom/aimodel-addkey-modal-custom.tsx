@@ -33,23 +33,43 @@ import { transformToUniversal } from "@blocks-ai/utils/aimodel-form.utils";
 import { useProjectStore, useT, tStatic } from "@seliseblocks/genesis-os";
 import { useCreateModel } from "@blocks-ai/hooks/use-aimodel";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-const createCustomAddKeyFormSchema = () => z.object({
-  model: z.string().trim().min(1, tStatic("os.ai", "AIMODEL_ADDKEY_MODAL_CUSTOM.MODEL_NAME_IS_REQUIRED")),
-  providerName: z.string().trim().min(1, tStatic("os.ai", "AIMODEL_ADDKEY_MODAL_CUSTOM.PROVIDER_NAME_IS_REQUIRED")),
-  url: z.string().trim().refine(isParsableUrl, tStatic("os.ai", "AIMODEL_ADDKEY_MODAL_CUSTOM.MUST_BE_A_VALID_URL")),
-  apiKey: z.string().min(1, tStatic("os.ai", "AIMODEL_ADDKEY_MODAL_CUSTOM.API_KEY_IS_REQUIRED")),
-  apiVersion: z.string().trim().min(1, tStatic("os.ai", "AIMODEL_ADDKEY_MODAL_CUSTOM.API_VERSION_IS_REQUIRED")),
-  DefaultTemp: z.number().min(0).max(2),
-  MaxTokens: z.number().min(1).max(32768),
-  customHeaders: z
-    .array(
-      z.object({
-        key: z.string().trim().optional().nullable(),
-        value: z.string().trim().optional().nullable(),
-      }),
-    )
-    .default([]),
-});
+
+const I18N_MODULE = "os.ai";
+const createCustomAddKeyFormSchema = () =>
+  z.object({
+    model: z
+      .string()
+      .trim()
+      .min(1, tStatic(I18N_MODULE, "AIMODEL_ADDKEY_MODAL_CUSTOM.MODEL_NAME_IS_REQUIRED")),
+    providerName: z
+      .string()
+      .trim()
+      .min(1, tStatic(I18N_MODULE, "AIMODEL_ADDKEY_MODAL_CUSTOM.PROVIDER_NAME_IS_REQUIRED")),
+    url: z
+      .string()
+      .trim()
+      .refine(
+        isParsableUrl,
+        tStatic(I18N_MODULE, "AIMODEL_ADDKEY_MODAL_CUSTOM.MUST_BE_A_VALID_URL"),
+      ),
+    apiKey: z
+      .string()
+      .min(1, tStatic(I18N_MODULE, "AIMODEL_ADDKEY_MODAL_CUSTOM.API_KEY_IS_REQUIRED")),
+    apiVersion: z
+      .string()
+      .trim()
+      .min(1, tStatic(I18N_MODULE, "AIMODEL_ADDKEY_MODAL_CUSTOM.API_VERSION_IS_REQUIRED")),
+    DefaultTemp: z.number().min(0).max(2),
+    MaxTokens: z.number().min(1).max(32768),
+    customHeaders: z
+      .array(
+        z.object({
+          key: z.string().trim().optional().nullable(),
+          value: z.string().trim().optional().nullable(),
+        }),
+      )
+      .default([]),
+  });
 type FormSchema = z.infer<ReturnType<typeof createCustomAddKeyFormSchema>>;
 const CustomAddKeyFormDefaultValue: FormSchema = {
   model: "",
@@ -72,7 +92,7 @@ export const CustomModelAddKeyModal = ({
   addKeyModalOpen,
   setAddKeyModalOpen,
 }: CustomModelAddKeyModalProps) => {
-  const { t } = useT("os.ai");
+  const { t } = useT(I18N_MODULE);
   const provider = "CUSTOM";
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useCreateModel();
@@ -99,7 +119,9 @@ export const CustomModelAddKeyModal = ({
       payload.display_name = payload.model_name;
       const res = await mutateAsync(payload);
       if (res.is_success) {
-        showSuccessToast({ description: t("AIMODEL_ADDKEY_MODAL_CUSTOM.MODEL_ADDED_SUCCESSFULLY") });
+        showSuccessToast({
+          description: t("AIMODEL_ADDKEY_MODAL_CUSTOM.MODEL_ADDED_SUCCESSFULLY"),
+        });
       } else {
         showErrorToast({ errors: res.detail });
       }
@@ -135,7 +157,10 @@ export const CustomModelAddKeyModal = ({
                     {t("AIMODEL_ADDKEY_MODAL_CUSTOM.MODEL_NAME", { span: "*" })}
                   </FormLabel>
                   <FormControl>
-                    <Input placeholder={t("AIMODEL_ADDKEY_MODAL_CUSTOM.ENTER_MODEL_NAME")} {...field} />
+                    <Input
+                      placeholder={t("AIMODEL_ADDKEY_MODAL_CUSTOM.ENTER_MODEL_NAME")}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -149,11 +174,12 @@ export const CustomModelAddKeyModal = ({
               name="url"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>
-                    {t("AIMODEL_ADDKEY_MODAL_CUSTOM.API_URL", { span: "*" })}
-                  </FormLabel>
+                  <FormLabel>{t("AIMODEL_ADDKEY_MODAL_CUSTOM.API_URL", { span: "*" })}</FormLabel>
                   <FormControl>
-                    <Input placeholder={t("AIMODEL_ADDKEY_MODAL_CUSTOM.ENTER_API_URL")} {...field} />
+                    <Input
+                      placeholder={t("AIMODEL_ADDKEY_MODAL_CUSTOM.ENTER_API_URL")}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -166,7 +192,10 @@ export const CustomModelAddKeyModal = ({
                 <FormItem>
                   <FormLabel>{t("AIMODEL_ADDKEY_MODAL_CUSTOM.API_KEY")}</FormLabel>
                   <FormControl>
-                    <Input placeholder={t("AIMODEL_ADDKEY_MODAL_CUSTOM.ENTER_API_KEY")} {...field} />
+                    <Input
+                      placeholder={t("AIMODEL_ADDKEY_MODAL_CUSTOM.ENTER_API_KEY")}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -181,7 +210,10 @@ export const CustomModelAddKeyModal = ({
                     {t("AIMODEL_ADDKEY_MODAL_CUSTOM.API_VERSION", { span: "*" })}
                   </FormLabel>
                   <FormControl>
-                    <Input placeholder={t("AIMODEL_ADDKEY_MODAL_CUSTOM.API_VERSION_2")} {...field} />
+                    <Input
+                      placeholder={t("AIMODEL_ADDKEY_MODAL_CUSTOM.API_VERSION_2")}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -266,7 +298,9 @@ export const CustomModelAddKeyModal = ({
               )}
             />
             <div>
-              <h4 className="text-sm font-medium">{t("AIMODEL_ADDKEY_MODAL_CUSTOM.CUSTOM_HEADERS_OPTIONAL")}</h4>
+              <h4 className="text-sm font-medium">
+                {t("AIMODEL_ADDKEY_MODAL_CUSTOM.CUSTOM_HEADERS_OPTIONAL")}
+              </h4>
               <div className="mt-3 space-y-2">
                 {fields.map((f, idx) => (
                   <div key={f.id} className="flex items-center gap-3">

@@ -168,7 +168,9 @@ export function EmailConfiguration({
                 >
                   <div>
                     <p className="text-sm text-muted-foreground">
-                      {config.isInbound ? t("EMAIL_CONFIGURE.SERVER_NAME") : t("EMAIL_CONFIGURE.HOST")}
+                      {config.isInbound
+                        ? t("EMAIL_CONFIGURE.SERVER_NAME")
+                        : t("EMAIL_CONFIGURE.HOST")}
                     </p>
                     <p className="text-base">{config.host}</p>
                   </div>
@@ -179,7 +181,11 @@ export function EmailConfiguration({
                   <div>
                     <div className="mb-4">
                       <p className="text-sm text-muted-foreground">{t("common:TYPE")}</p>
-                      <p className="text-base">{config.isInbound ? t("EMAIL_CONFIGURE.INBOUND") : t("EMAIL_CONFIGURE.OUTBOUND")}</p>
+                      <p className="text-base">
+                        {config.isInbound
+                          ? t("EMAIL_CONFIGURE.INBOUND")
+                          : t("EMAIL_CONFIGURE.OUTBOUND")}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -193,11 +199,15 @@ export function EmailConfiguration({
                   {!config.isInbound && (
                     <>
                       <div>
-                        <p className="text-sm text-muted-foreground">{t("EMAIL_CONFIGURE.SENDER_NAME")}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {t("EMAIL_CONFIGURE.SENDER_NAME")}
+                        </p>
                         <p className="text-base">{config.senderName}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">{t("EMAIL_CONFIGURE.SENDER_ADDRESS")}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {t("EMAIL_CONFIGURE.SENDER_ADDRESS")}
+                        </p>
                         <p className="text-base">{config.senderAddress}</p>
                       </div>
                     </>
@@ -223,12 +233,16 @@ export function EmailConfiguration({
                   >
                     <div>
                       <p className="text-sm text-muted-foreground">
-                        {config.isInbound ? t("EMAIL_CONFIGURE.USERNAME") : t("EMAIL_CONFIGURE.SENDER_USERNAME")}
+                        {config.isInbound
+                          ? t("EMAIL_CONFIGURE.USERNAME")
+                          : t("EMAIL_CONFIGURE.SENDER_USERNAME")}
                       </p>
                       <p className="text-base">{config.senderUserName}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">{t("EMAIL_CONFIGURE.ACCOUNT_PASSWORD")}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {t("EMAIL_CONFIGURE.ACCOUNT_PASSWORD")}
+                      </p>
                       <p className="trucate break-all text-base">*********************</p>
                     </div>
                   </div>
@@ -241,19 +255,27 @@ export function EmailConfiguration({
                     )}
                   >
                     <div>
-                      <p className="text-sm text-muted-foreground">{t("EMAIL_CONFIGURE.TENANT_ID")}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {t("EMAIL_CONFIGURE.TENANT_ID")}
+                      </p>
                       <p className="trucate break-all text-base">{config.tenantId}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">{t("EMAIL_CONFIGURE.CLIENT_ID")}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {t("EMAIL_CONFIGURE.CLIENT_ID")}
+                      </p>
                       <p className="trucate break-all text-base">{config.clientId}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">{t("EMAIL_CONFIGURE.MAILBOX_ADDRESS")}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {t("EMAIL_CONFIGURE.MAILBOX_ADDRESS")}
+                      </p>
                       <p className="trucate break-all text-base">{config.mailboxAddress}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">{t("EMAIL_CONFIGURE.CLIENT_SECRET")}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {t("EMAIL_CONFIGURE.CLIENT_SECRET")}
+                      </p>
                       <LinkedSecretStatusValue
                         status={config.clientSecretStatus}
                         fallback={

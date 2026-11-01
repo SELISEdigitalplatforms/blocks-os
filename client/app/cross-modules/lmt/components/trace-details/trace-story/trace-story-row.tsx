@@ -7,6 +7,8 @@ import { timelineGridStyle } from "../timeline-axis";
 import { plural, type ServiceLevel, type StepTiming } from "./trace-story.util";
 import { useT, tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.lmt";
+
 /** The waterfall's three columns -- what happened, when, how long -- shared by the axis
  *  header and every row so the bars line up under the axis stops. */
 export const ROW_GRID =
@@ -25,7 +27,7 @@ export const getTrafficLabel = (): Record<FlowStep["traffic"], string> => ({
   call: "Call",
   data: "Database",
   cache: "Cache",
-  message: tStatic("os.lmt", "TRACE_STORY_ROW.MESSAGE"),
+  message: tStatic(I18N_MODULE, "TRACE_STORY_ROW.MESSAGE"),
 });
 
 const MAX_INDENT = 6;
@@ -37,7 +39,7 @@ const barColor = (step: FlowStep) => {
 };
 
 const StateTag = ({ step }: { step: FlowStep }) => {
-  const { t } = useT("os.lmt");
+  const { t } = useT(I18N_MODULE);
   if (step.isErrorOrigin)
     return (
       <span className="shrink-0 rounded bg-error/10 px-1.5 text-[10px] font-semibold uppercase tracking-wide text-error">
@@ -57,7 +59,7 @@ const StateTag = ({ step }: { step: FlowStep }) => {
 export const formatDelay = (ms: number) => `+${formatDurationMs(Math.max(ms, 0))}`;
 
 const OpenLevel = ({ level, onOpen }: { level: ServiceLevel; onOpen: () => void }) => {
-  const { t } = useT("os.lmt");
+  const { t } = useT(I18N_MODULE);
   return (
     <button
       type="button"
@@ -96,7 +98,7 @@ export const TraceStoryRow = forwardRef<
     { step, number, indent, title, description, timing, selected, opens, onSelect, onOpen },
     ref,
   ) => {
-    const { t } = useT("os.lmt");
+    const { t } = useT(I18N_MODULE);
     const event = opens.find((level) => level.isEvent && level.delayMs !== null);
     return (
       <div

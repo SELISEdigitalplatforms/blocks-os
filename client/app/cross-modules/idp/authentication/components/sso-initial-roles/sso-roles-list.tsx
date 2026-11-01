@@ -29,7 +29,9 @@ export const SSORolesList = ({ roles, onDelete }: SSORolesListProps) => {
         accessorFn: (row) => `${row.name}`.trim(),
         header: () => (
           <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">{t("SSO_ROLES_LIST.COLUMN_ROLES")}</span>
+            <span className="font-bold text-medium-emphasis">
+              {t("SSO_ROLES_LIST.COLUMN_ROLES")}
+            </span>
           </div>
         ),
         cell: (roles) => <div className="w-[130px] truncate">{roles.row.original.name}</div>,
@@ -39,7 +41,9 @@ export const SSORolesList = ({ roles, onDelete }: SSORolesListProps) => {
         accessorFn: (row) => `${row.slug}`.trim(),
         header: () => (
           <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">{t("SSO_ROLES_LIST.COLUMN_SLUG")}</span>
+            <span className="font-bold text-medium-emphasis">
+              {t("SSO_ROLES_LIST.COLUMN_SLUG")}
+            </span>
           </div>
         ),
         cell: ({ row }) => (

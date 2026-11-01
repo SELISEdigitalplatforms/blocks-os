@@ -51,7 +51,10 @@ export function SchemaHeader({
   ] as const;
 
   return (
-    <div ref={headerRef} className="relative overflow-hidden rounded-t-sm border border-b-0 border-border/40 bg-card">
+    <div
+      ref={headerRef}
+      className="relative overflow-hidden rounded-t-sm border border-b-0 border-border/40 bg-card"
+    >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(99,102,241,0.04),transparent_60%)]" />
       <div className="relative flex items-start justify-between gap-3 px-3 py-3.5 sm:px-5">
         <div className="flex min-w-0 flex-1 items-center gap-2.5">
@@ -60,7 +63,9 @@ export function SchemaHeader({
           </div>
           <div className="flex min-w-0 flex-col gap-0.5">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="min-w-0 wrap-break-word text-sm font-semibold text-foreground">{schema.schemaName}</h2>
+              <h2 className="min-w-0 wrap-break-word text-sm font-semibold text-foreground">
+                {schema.schemaName}
+              </h2>
               <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
                 {t("SCHEMA_HEADER.ENTITY")}
               </span>
@@ -75,7 +80,12 @@ export function SchemaHeader({
               )}
             >
               <span className="break-all font-mono">{schema.collectionName}</span>
-              {!isNarrow && <span aria-hidden className="h-[3px] w-[3px] shrink-0 rounded-full bg-current opacity-50" />}
+              {!isNarrow && (
+                <span
+                  aria-hidden
+                  className="h-[3px] w-[3px] shrink-0 rounded-full bg-current opacity-50"
+                />
+              )}
               <span>{fieldsSummary}</span>
             </div>
           </div>
@@ -130,7 +140,9 @@ export function SchemaHeader({
       </div>
 
       <div className="relative flex flex-col items-start gap-2.5 border-t border-border/40 px-3 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-5">
-        <span className="shrink-0 text-[11px] font-medium uppercase tracking-widest text-muted-foreground/50">{t("SCHEMA_HEADER.ACCESS_CONTROL")}</span>
+        <span className="shrink-0 text-[11px] font-medium uppercase tracking-widest text-muted-foreground/50">
+          {t("SCHEMA_HEADER.ACCESS_CONTROL")}
+        </span>
         <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
           {accessLevels.map(({ label, tab, level }) => (
             <AccessVerbPill

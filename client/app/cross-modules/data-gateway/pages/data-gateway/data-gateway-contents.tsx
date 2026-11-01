@@ -52,10 +52,13 @@ import {
   toDataGatewayConfigurationFormValues,
 } from "./utils";
 
+const I18N_MODULE = "os.data-gateway";
+
 const formatAnalyticsDate = (value: string | null | undefined) => {
   if (!value) return null;
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return tStatic("os.data-gateway", "DATA_GATEWAY_CONTENTS.INVALID_DATE");
+  if (Number.isNaN(date.getTime()))
+    return tStatic(I18N_MODULE, "DATA_GATEWAY_CONTENTS.INVALID_DATE");
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
     timeStyle: "short",
@@ -63,7 +66,7 @@ const formatAnalyticsDate = (value: string | null | undefined) => {
 };
 
 export function DataGatewayContents() {
-  const { t } = useT("os.data-gateway");
+  const { t } = useT(I18N_MODULE);
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
   const { data: configuration, isLoading } = useGetDataGatewayConfiguration();
   const { isPending: isSavePending, mutateAsync: saveConfiguration } =
@@ -159,7 +162,9 @@ export function DataGatewayContents() {
                     <Database className="h-4 w-4 text-indigo-400" />
                   </div>
                   <div>
-                    <h2 className="text-sm font-semibold text-foreground">{t("DATA_GATEWAY_CONTENTS.DATA_SOURCE")}</h2>
+                    <h2 className="text-sm font-semibold text-foreground">
+                      {t("DATA_GATEWAY_CONTENTS.DATA_SOURCE")}
+                    </h2>
                     <p className="text-xs text-muted-foreground/60">
                       {t("DATA_GATEWAY_CONTENTS.SELECT_WHERE_YOUR_DATA_WILL")}
                     </p>
@@ -201,7 +206,9 @@ export function DataGatewayContents() {
                       />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-foreground">{t("DATA_GATEWAY_CONTENTS.BLOCKS_DATABASE")}</p>
+                      <p className="text-sm font-medium text-foreground">
+                        {t("DATA_GATEWAY_CONTENTS.BLOCKS_DATABASE")}
+                      </p>
                       <p className="text-xs text-muted-foreground/60">
                         {t("DATA_GATEWAY_CONTENTS.USE_THE_MANAGED_DATABASE_PROVIDED")}
                       </p>
@@ -236,7 +243,9 @@ export function DataGatewayContents() {
                       />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-foreground">{t("DATA_GATEWAY_CONTENTS.MY_DATA_SOURCES")}</p>
+                      <p className="text-sm font-medium text-foreground">
+                        {t("DATA_GATEWAY_CONTENTS.MY_DATA_SOURCES")}
+                      </p>
                       <p className="text-xs text-muted-foreground/60">
                         {t("DATA_GATEWAY_CONTENTS.CONNECT_YOUR_OWN_DATABASE_WITH")}
                       </p>
@@ -258,7 +267,9 @@ export function DataGatewayContents() {
                             <Input
                               type="password"
                               autoComplete="off"
-                              placeholder={t("DATA_GATEWAY_CONTENTS.MONGODB_USERNAME_PASSWORD_HOST")}
+                              placeholder={t(
+                                "DATA_GATEWAY_CONTENTS.MONGODB_USERNAME_PASSWORD_HOST",
+                              )}
                               className="border-border/40 bg-muted/10 focus-visible:border-primary/40 focus-visible:ring-primary/20"
                               {...field}
                               disabled={isSavePending}
@@ -276,7 +287,12 @@ export function DataGatewayContents() {
                     <FormField
                       control={form.control}
                       name="databaseName"
-                      rules={{ required: tStatic("os.data-gateway", "DATA_GATEWAY_CONTENTS.DATABASE_NAME_IS_REQUIRED") }}
+                      rules={{
+                        required: tStatic(
+                          I18N_MODULE,
+                          "DATA_GATEWAY_CONTENTS.DATABASE_NAME_IS_REQUIRED",
+                        ),
+                      }}
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-xs font-medium uppercase tracking-widest text-muted-foreground/50">
@@ -308,7 +324,9 @@ export function DataGatewayContents() {
                     <Settings2 className="h-4 w-4 text-indigo-400" />
                   </div>
                   <div>
-                    <h2 className="text-sm font-semibold text-foreground">{t("DATA_GATEWAY_CONTENTS.COLLECTION_SETTINGS")}</h2>
+                    <h2 className="text-sm font-semibold text-foreground">
+                      {t("DATA_GATEWAY_CONTENTS.COLLECTION_SETTINGS")}
+                    </h2>
                     <p className="text-xs text-muted-foreground/60">
                       {t("DATA_GATEWAY_CONTENTS.CONFIGURE_HOW_COLLECTION_NAMES_ARE")}
                     </p>
@@ -345,7 +363,10 @@ export function DataGatewayContents() {
                   control={form.control}
                   name="collectionNamePattern"
                   rules={{
-                    required: tStatic("os.data-gateway", "DATA_GATEWAY_CONTENTS.COLLECTION_NAME_PATTERN_IS_REQUIRED"),
+                    required: tStatic(
+                      I18N_MODULE,
+                      "DATA_GATEWAY_CONTENTS.COLLECTION_NAME_PATTERN_IS_REQUIRED",
+                    ),
                     validate: (value) =>
                       value.includes("{SchemaName}") || "Pattern must contain {SchemaName}",
                   }}
@@ -396,7 +417,10 @@ export function DataGatewayContents() {
                           </div>
                         </FormControl>
                         <FormDescription className="text-xs text-muted-foreground/50">
-                          {t("DATA_GATEWAY_CONTENTS.PATTERN_FOR_GENERATING_COLLECTION", { span: `${SCHEMA_NAME_PLACEHOLDER}` })}</FormDescription>
+                          {t("DATA_GATEWAY_CONTENTS.PATTERN_FOR_GENERATING_COLLECTION", {
+                            span: `${SCHEMA_NAME_PLACEHOLDER}`,
+                          })}
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     );
@@ -414,7 +438,9 @@ export function DataGatewayContents() {
                     <BarChart3 className="h-4 w-4 text-indigo-400" />
                   </div>
                   <div>
-                    <h2 className="text-sm font-semibold text-foreground">{t("DATA_GATEWAY_CONTENTS.ANALYTICS")}</h2>
+                    <h2 className="text-sm font-semibold text-foreground">
+                      {t("DATA_GATEWAY_CONTENTS.ANALYTICS")}
+                    </h2>
                     <p className="text-xs text-muted-foreground/60">
                       {t("DATA_GATEWAY_CONTENTS.VIEW_AND_MANAGE_ANALYTICS")}
                     </p>
@@ -519,7 +545,8 @@ export function DataGatewayContents() {
               <AlertTriangle className="h-4 w-4 text-indigo-400" />
               {configuration
                 ? t("DATA_GATEWAY_CONTENTS.CONFIRM_DATA_SOURCE_UPDATE")
-                : t("DATA_GATEWAY_CONTENTS.CONFIRM_DATA_SOURCE_CONFIGURATION")}</DialogTitle>
+                : t("DATA_GATEWAY_CONTENTS.CONFIRM_DATA_SOURCE_CONFIGURATION")}
+            </DialogTitle>
             <DialogDescription className="mt-2 text-left text-sm text-muted-foreground/70">
               {t("DATA_GATEWAY_CONTENTS.CHANGING_THE_DATA_SOURCE_WILL")}
             </DialogDescription>

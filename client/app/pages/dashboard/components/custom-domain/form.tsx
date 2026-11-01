@@ -18,9 +18,10 @@ import {
 import { Button } from "@/components/ui-kits/button/button";
 import { useT, tStatic } from "@seliseblocks/genesis-os";
 
-const createFormSchema = () => z.object({
-  domain: z.string().min(1, tStatic("os.dashboard", "FORM.PLEASE_SELECT_A_DOMAIN")),
-});
+const createFormSchema = () =>
+  z.object({
+    domain: z.string().min(1, tStatic("os.dashboard", "FORM.PLEASE_SELECT_A_DOMAIN")),
+  });
 
 type FormValues = z.infer<ReturnType<typeof createFormSchema>>;
 

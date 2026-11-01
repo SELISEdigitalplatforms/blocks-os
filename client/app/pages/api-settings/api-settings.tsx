@@ -130,18 +130,24 @@ export default function ApiSettingsPage() {
           captchaProvider: ep.captchaProvider,
         });
         if (!result.isSuccess) {
-          throw new Error(result.errors?.join(", ") || t("API_SETTINGS.FAILED_TO_UPDATE_MFA_SETTING"));
+          throw new Error(
+            result.errors?.join(", ") || t("API_SETTINGS.FAILED_TO_UPDATE_MFA_SETTING"),
+          );
         }
         showSuccessToast({
-          description: t(value ? "API_SETTINGS.MFA_FOR_ENABLED" : "API_SETTINGS.MFA_FOR_DISABLED", { controller: ep.controller, method: ep.method.charAt(0).toUpperCase() + ep.method.slice(1) }),
+          description: t(value ? "API_SETTINGS.MFA_FOR_ENABLED" : "API_SETTINGS.MFA_FOR_DISABLED", {
+            controller: ep.controller,
+            method: ep.method.charAt(0).toUpperCase() + ep.method.slice(1),
+          }),
         });
       } catch (error) {
         showErrorToast({
-          errors: error instanceof Error ? error.message : t("API_SETTINGS.FAILED_TO_UPDATE_MFA_SETTING"),
+          errors:
+            error instanceof Error ? error.message : t("API_SETTINGS.FAILED_TO_UPDATE_MFA_SETTING"),
         });
       }
     },
-    [updateEndpoint],
+    [updateEndpoint, t],
   );
   const handleToggleCaptcha = useCallback(
     async (ep: IApiEndpoint, value: boolean) => {
@@ -158,18 +164,29 @@ export default function ApiSettingsPage() {
           mfaType: ep.mfaType,
         });
         if (!result.isSuccess) {
-          throw new Error(result.errors?.join(", ") || t("API_SETTINGS.FAILED_TO_UPDATE_CAPTCHA_SETTING"));
+          throw new Error(
+            result.errors?.join(", ") || t("API_SETTINGS.FAILED_TO_UPDATE_CAPTCHA_SETTING"),
+          );
         }
         showSuccessToast({
-          description: t(value ? "API_SETTINGS.CAPTCHA_FOR_ENABLED" : "API_SETTINGS.CAPTCHA_FOR_DISABLED", { controller: ep.controller, method: ep.method.charAt(0).toUpperCase() + ep.method.slice(1) }),
+          description: t(
+            value ? "API_SETTINGS.CAPTCHA_FOR_ENABLED" : "API_SETTINGS.CAPTCHA_FOR_DISABLED",
+            {
+              controller: ep.controller,
+              method: ep.method.charAt(0).toUpperCase() + ep.method.slice(1),
+            },
+          ),
         });
       } catch (error) {
         showErrorToast({
-          errors: error instanceof Error ? error.message : t("API_SETTINGS.FAILED_TO_UPDATE_CAPTCHA_SETTING"),
+          errors:
+            error instanceof Error
+              ? error.message
+              : t("API_SETTINGS.FAILED_TO_UPDATE_CAPTCHA_SETTING"),
         });
       }
     },
-    [updateEndpoint],
+    [updateEndpoint, t],
   );
   // ── Bulk handlers (group presets) ─────────────────────────────────────────
   const handleBulkGroupMfa = useCallback(
@@ -195,15 +212,21 @@ export default function ApiSettingsPage() {
           throw new Error(result.errors?.join(", ") || t("API_SETTINGS.FAILED_TO_BULK_UPDATE_MFA"));
         }
         showSuccessToast({
-          description: t(value ? "API_SETTINGS.MFA_FOR_ENDPOINTS_ENABLED" : "API_SETTINGS.MFA_FOR_ENDPOINTS_DISABLED", { count: ids.length }),
+          description: t(
+            value
+              ? "API_SETTINGS.MFA_FOR_ENDPOINTS_ENABLED"
+              : "API_SETTINGS.MFA_FOR_ENDPOINTS_DISABLED",
+            { count: ids.length },
+          ),
         });
       } catch (error) {
         showErrorToast({
-          errors: error instanceof Error ? error.message : t("API_SETTINGS.FAILED_TO_BULK_UPDATE_MFA"),
+          errors:
+            error instanceof Error ? error.message : t("API_SETTINGS.FAILED_TO_BULK_UPDATE_MFA"),
         });
       }
     },
-    [endpoints, bulkUpdate],
+    [endpoints, bulkUpdate, t],
   );
   const handleBulkGroupCaptcha = useCallback(
     async (ids: string[], value: boolean) => {
@@ -225,18 +248,28 @@ export default function ApiSettingsPage() {
           disableAll: false,
         });
         if (!result.isSuccess) {
-          throw new Error(result.errors?.join(", ") || t("API_SETTINGS.FAILED_TO_BULK_UPDATE_CAPTCHA"));
+          throw new Error(
+            result.errors?.join(", ") || t("API_SETTINGS.FAILED_TO_BULK_UPDATE_CAPTCHA"),
+          );
         }
         showSuccessToast({
-          description: t(value ? "API_SETTINGS.CAPTCHA_FOR_ENDPOINTS_ENABLED" : "API_SETTINGS.CAPTCHA_FOR_ENDPOINTS_DISABLED", { count: ids.length }),
+          description: t(
+            value
+              ? "API_SETTINGS.CAPTCHA_FOR_ENDPOINTS_ENABLED"
+              : "API_SETTINGS.CAPTCHA_FOR_ENDPOINTS_DISABLED",
+            { count: ids.length },
+          ),
         });
       } catch (error) {
         showErrorToast({
-          errors: error instanceof Error ? error.message : t("API_SETTINGS.FAILED_TO_BULK_UPDATE_CAPTCHA"),
+          errors:
+            error instanceof Error
+              ? error.message
+              : t("API_SETTINGS.FAILED_TO_BULK_UPDATE_CAPTCHA"),
         });
       }
     },
-    [endpoints, bulkUpdate],
+    [endpoints, bulkUpdate, t],
   );
 
   // ── Bulk bar actions ───────────────────────────────────────────────────────
@@ -271,7 +304,7 @@ export default function ApiSettingsPage() {
         errors: error instanceof Error ? error.message : t("API_SETTINGS.FAILED_TO_ENABLE_MFA"),
       });
     }
-  }, [endpoints, selectedArray, bulkUpdate, clearSelection]);
+  }, [endpoints, selectedArray, bulkUpdate, clearSelection, t]);
   const handleBulkCaptcha = useCallback(async () => {
     try {
       // Preserve current MFA state when enabling Captcha
@@ -294,7 +327,9 @@ export default function ApiSettingsPage() {
         throw new Error(result.errors?.join(", ") || t("API_SETTINGS.FAILED_TO_ENABLE_CAPTCHA"));
       }
       showSuccessToast({
-        description: t("API_SETTINGS.CAPTCHA_ENABLED_FOR_ENDPOINTS", { count: selectedArray.length }),
+        description: t("API_SETTINGS.CAPTCHA_ENABLED_FOR_ENDPOINTS", {
+          count: selectedArray.length,
+        }),
       });
       clearSelection();
     } catch (error) {
@@ -302,11 +337,13 @@ export default function ApiSettingsPage() {
         errors: error instanceof Error ? error.message : t("API_SETTINGS.FAILED_TO_ENABLE_CAPTCHA"),
       });
     }
-  }, [endpoints, selectedArray, bulkUpdate, clearSelection]);
+  }, [endpoints, selectedArray, bulkUpdate, clearSelection, t]);
   return (
     <main className="flex flex-col gap-4 p-4 pb-24 sm:gap-6 sm:p-6">
       <div>
-        <h1 className="text-lg font-semibold sm:text-xl md:text-2xl">{t("API_SETTINGS.API_SETTINGS")}</h1>
+        <h1 className="text-lg font-semibold sm:text-xl md:text-2xl">
+          {t("API_SETTINGS.API_SETTINGS")}
+        </h1>
         <p className="text-sm text-muted-foreground">
           {t("API_SETTINGS.CONFIGURE_SECURITY_POLICIES_FOR")}
         </p>

@@ -1,10 +1,5 @@
 import { useState } from "react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui-kits/sheet/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui-kits/sheet/sheet";
 import { DisabledReason } from "@blocks-idp/iam/components/disabled-reason";
 import { Button } from "@/components/ui-kits/button/button";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
@@ -105,9 +100,13 @@ export const SessionDetailsDrawer = ({
           </div>
         ) : isError ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center">
-            <p className="text-sm font-medium text-high-emphasis">{t("SESSION_DETAILS_DRAWER.LOAD_FAILED_TITLE")}</p>
+            <p className="text-sm font-medium text-high-emphasis">
+              {t("SESSION_DETAILS_DRAWER.LOAD_FAILED_TITLE")}
+            </p>
             <p className="text-xs text-muted-foreground">
-              {error instanceof Error ? error.message : t("SESSION_DETAILS_DRAWER.UNEXPECTED_ERROR")}
+              {error instanceof Error
+                ? error.message
+                : t("SESSION_DETAILS_DRAWER.UNEXPECTED_ERROR")}
             </p>
             <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
               {t("common:CLOSE")}
@@ -115,7 +114,9 @@ export const SessionDetailsDrawer = ({
           </div>
         ) : !vm ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center">
-            <p className="text-sm font-medium text-high-emphasis">{t("SESSION_DETAILS_DRAWER.NOT_FOUND_TITLE")}</p>
+            <p className="text-sm font-medium text-high-emphasis">
+              {t("SESSION_DETAILS_DRAWER.NOT_FOUND_TITLE")}
+            </p>
             <p className="text-xs text-muted-foreground">
               {t("SESSION_DETAILS_DRAWER.NOT_FOUND_BODY")}
             </p>
@@ -166,19 +167,19 @@ export const SessionDetailsDrawer = ({
                         <DialogHeader>
                           <DialogTitle>{t("SESSION_DETAILS_DRAWER.CONFIRM_TITLE")}</DialogTitle>
                           <DialogDescription>
-                            {t("SESSION_DETAILS_DRAWER.CONFIRM_DESCRIPTION", { device: vm.overview.deviceName })}
+                            {t("SESSION_DETAILS_DRAWER.CONFIRM_DESCRIPTION", {
+                              device: vm.overview.deviceName,
+                            })}
                           </DialogDescription>
                         </DialogHeader>
                         <DialogFooter>
                           <Button variant="outline" onClick={() => setIsConfirmOpen(false)}>
                             {t("common:CANCEL")}
                           </Button>
-                          <Button
-                            variant="destructive"
-                            onClick={handleRevoke}
-                            disabled={isPending}
-                          >
-                            {isPending ? t("SESSION_DETAILS_DRAWER.SIGNING_OUT") : t("SESSION_DETAILS_DRAWER.SIGN_OUT")}
+                          <Button variant="destructive" onClick={handleRevoke} disabled={isPending}>
+                            {isPending
+                              ? t("SESSION_DETAILS_DRAWER.SIGNING_OUT")
+                              : t("SESSION_DETAILS_DRAWER.SIGN_OUT")}
                           </Button>
                         </DialogFooter>
                       </DialogContent>
@@ -187,7 +188,8 @@ export const SessionDetailsDrawer = ({
                 </div>
 
                 <p className="break-all text-xs text-muted-foreground">
-                  {t("SESSION_DETAILS_DRAWER.SESSION_ID")} <span className="font-mono">{vm.overview.sessionId}</span>
+                  {t("SESSION_DETAILS_DRAWER.SESSION_ID")}{" "}
+                  <span className="font-mono">{vm.overview.sessionId}</span>
                 </p>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -228,11 +230,11 @@ export const SessionDetailsDrawer = ({
                           className="flex items-center justify-between gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm"
                         >
                           <span className="truncate">
-                            <span className="font-medium text-high-emphasis">
-                              {app.clientName}
-                            </span>
+                            <span className="font-medium text-high-emphasis">{app.clientName}</span>
                             <span className="ml-2 text-xs text-muted-foreground">
-                              {t("SESSION_DETAILS_DRAWER.ROTATIONS", { count: Number(app.rotationCountLabel) })}
+                              {t("SESSION_DETAILS_DRAWER.ROTATIONS", {
+                                count: Number(app.rotationCountLabel),
+                              })}
                             </span>
                           </span>
                           <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
@@ -249,7 +251,9 @@ export const SessionDetailsDrawer = ({
                     {t("SESSION_DETAILS_DRAWER.ACTIVITY_TIMELINE")}
                   </h4>
                   {vm.timeline.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">{t("SESSION_DETAILS_DRAWER.NO_ACTIVITY")}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {t("SESSION_DETAILS_DRAWER.NO_ACTIVITY")}
+                    </p>
                   ) : (
                     <ul className="space-y-3 border-l pl-4">
                       {vm.timeline.map((event) => (

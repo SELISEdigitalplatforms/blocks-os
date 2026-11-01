@@ -36,7 +36,9 @@ function FilterContent<TData extends TableFilterData>({ table }: { table: Table<
           column={table.getColumn("resourceGroup")}
           title={t("USERS_ROLE_PERMISSION_TABLE_TOOLBAR.GROUP")}
           options={[
-            ...Array.from(new Set(table.getRowModel().rows.map((row) => row.original.resourceGroup))).map((group) => ({
+            ...Array.from(
+              new Set(table.getRowModel().rows.map((row) => row.original.resourceGroup)),
+            ).map((group) => ({
               label: group,
               value: group,
             })),
@@ -59,9 +61,10 @@ export function UsersRolePermissionTableToolbar<TData extends TableFilterData>({
   // toggled by the user. The override is scoped to the viewport it was made in,
   // so crossing the breakpoint falls back to the default without an effect that
   // writes state during synchronisation.
-  const [searchOverride, setSearchOverride] = useState<{ mobile: boolean; visible: boolean } | null>(
-    null,
-  );
+  const [searchOverride, setSearchOverride] = useState<{
+    mobile: boolean;
+    visible: boolean;
+  } | null>(null);
   const isSearchVisible =
     searchOverride && searchOverride.mobile === isMobile ? searchOverride.visible : !isMobile;
   const setIsSearchVisible = useCallback(
@@ -85,7 +88,7 @@ export function UsersRolePermissionTableToolbar<TData extends TableFilterData>({
       setSearchValue(text);
       textSearchColumn?.setFilterValue(text);
     },
-    [textSearchColumn]
+    [textSearchColumn],
   );
 
   function resetFilters() {

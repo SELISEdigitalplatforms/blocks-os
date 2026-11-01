@@ -34,7 +34,11 @@ export const OnboardDialog = ({ open, onOpenChange, project }: OnboardDialogProp
       });
       return;
     }
-    showErrorToast({ errors: { clipboard: tStatic("os.dashboard", "ONBOARD_DIALOG.COULD_NOT_COPY_THE_INSTRUCTIONS") } });
+    showErrorToast({
+      errors: {
+        clipboard: tStatic("os.dashboard", "ONBOARD_DIALOG.COULD_NOT_COPY_THE_INSTRUCTIONS"),
+      },
+    });
   };
 
   return (

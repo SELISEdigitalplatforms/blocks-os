@@ -1,6 +1,8 @@
 import type { LinkedSecretStatus } from "@/cross-modules/secrets/models/secret.model";
 import { tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.storage";
+
 // "Azure"
 export type StorageStrategyType = "AWS" | "Azure" | "SftpStorage" | "S3Compatible";
 
@@ -36,17 +38,22 @@ export const getStorageSecretFields = (): Record<
   { key: StorageSecretStatusKey; label: string }[]
 > => ({
   AWS: [
-    { key: "accessKeyStatus", label: tStatic("os.storage", "STORAGE_MODEL.ACCESS_KEY") },
-    { key: "secretKeyStatus", label: tStatic("os.storage", "STORAGE_MODEL.SECRET_KEY") },
+    { key: "accessKeyStatus", label: tStatic(I18N_MODULE, "STORAGE_MODEL.ACCESS_KEY") },
+    { key: "secretKeyStatus", label: tStatic(I18N_MODULE, "STORAGE_MODEL.SECRET_KEY") },
   ],
-  Azure: [{ key: "connectionStringStatus", label: tStatic("os.storage", "STORAGE_MODEL.CONNECTION_STRING") }],
+  Azure: [
+    {
+      key: "connectionStringStatus",
+      label: tStatic(I18N_MODULE, "STORAGE_MODEL.CONNECTION_STRING"),
+    },
+  ],
   SftpStorage: [
-    { key: "passwordStatus", label: tStatic("os.storage", "STORAGE_MODEL.PASSWORD") },
-    { key: "sftpSecretKeyStatus", label: tStatic("os.storage", "STORAGE_MODEL.SFTP_SECRET_KEY") },
+    { key: "passwordStatus", label: tStatic(I18N_MODULE, "STORAGE_MODEL.PASSWORD") },
+    { key: "sftpSecretKeyStatus", label: tStatic(I18N_MODULE, "STORAGE_MODEL.SFTP_SECRET_KEY") },
   ],
   S3Compatible: [
-    { key: "accessKeyStatus", label: tStatic("os.storage", "STORAGE_MODEL.ACCESS_KEY") },
-    { key: "secretKeyStatus", label: tStatic("os.storage", "STORAGE_MODEL.SECRET_KEY") },
+    { key: "accessKeyStatus", label: tStatic(I18N_MODULE, "STORAGE_MODEL.ACCESS_KEY") },
+    { key: "secretKeyStatus", label: tStatic(I18N_MODULE, "STORAGE_MODEL.SECRET_KEY") },
   ],
 });
 

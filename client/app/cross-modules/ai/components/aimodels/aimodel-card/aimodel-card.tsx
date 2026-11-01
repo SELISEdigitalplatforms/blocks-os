@@ -54,7 +54,9 @@ export const ProviderCard = (provider: IProvider) => {
               {getProviderDisplayName(provider.Provider)}
             </CardTitle>
             <p className="text-sm font-light text-low-emphasis">
-              {provider.Provider.toLowerCase() === ProviderType.CUSTOM ? t("AIMODEL_CARD.MY_MODEL") : t("AIMODEL_CARD.MY_KEY")}
+              {provider.Provider.toLowerCase() === ProviderType.CUSTOM
+                ? t("AIMODEL_CARD.MY_MODEL")
+                : t("AIMODEL_CARD.MY_KEY")}
             </p>
           </div>
         </div>

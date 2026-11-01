@@ -177,7 +177,7 @@ export const RepositorySelectionModal = ({
     setRepoError("");
     onSelectRepository(repo);
     setSelectedRepoId("");
-  }, [selectedRepoId, allRepositories, selectedRepositories, onSelectRepository]);
+  }, [selectedRepoId, allRepositories, selectedRepositories, onSelectRepository, t]);
   const handleRepoChange = useCallback((val: string) => {
     setSelectedRepoId(val);
     setRepoError("");
@@ -300,7 +300,9 @@ export const RepositorySelectionModal = ({
         <div className="mb-6">
           <label className="mb-1 block text-sm font-medium">
             {repositories?.data?.total_count
-              ? t("REPOSITORY_SELECTION_MODAL.GITHUB_REPOSITORY_RESULTS", { count: repositories.data.total_count })
+              ? t("REPOSITORY_SELECTION_MODAL.GITHUB_REPOSITORY_RESULTS", {
+                  count: repositories.data.total_count,
+                })
               : t("REPOSITORY_SELECTION_MODAL.GITHUB_REPOSITORY")}
           </label>
           <div className="relative" onKeyDown={handleKeyDown}>
@@ -341,7 +343,9 @@ export const RepositorySelectionModal = ({
                   className="max-h-60 overflow-y-auto overflow-x-hidden p-1"
                 >
                   {!isLoading && !isFetching && allRepositories.length === 0 && (
-                    <div className="py-6 text-center text-sm">{t("REPOSITORY_SELECTION_MODAL.NO_REPOSITORIES_FOUND")}</div>
+                    <div className="py-6 text-center text-sm">
+                      {t("REPOSITORY_SELECTION_MODAL.NO_REPOSITORIES_FOUND")}
+                    </div>
                   )}
                   {(isLoading || isFetching) && allRepositories.length === 0 && (
                     <div className="flex items-center justify-center p-4 text-sm text-gray-500">

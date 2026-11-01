@@ -5,6 +5,8 @@ import type {
 } from "@/models/people";
 import { tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.people";
+
 export const emailRegex = /^(?=.{1,320}$)[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
 const GRANTED_OUTCOMES: InvitationOutcome[] = [
@@ -34,10 +36,12 @@ export const summarizeInviteOutcomes = (
 };
 
 export const describeSkippedInvites = (skipped: [string, InvitationOutcome][]): string =>
-  tStatic("os.people", "INVITE_PEOPLE_UTILS.NO_INVITATION_WAS_SENT", {
+  tStatic(I18N_MODULE, "INVITE_PEOPLE_UTILS.NO_INVITATION_WAS_SENT", {
     details: skipped
       .map(([email, outcome]) =>
-        tStatic("os.people", SKIP_REASON_KEYS[outcome] ?? "INVITE_PEOPLE_UTILS.SKIP_DEFAULT", { email }),
+        tStatic(I18N_MODULE, SKIP_REASON_KEYS[outcome] ?? "INVITE_PEOPLE_UTILS.SKIP_DEFAULT", {
+          email,
+        }),
       )
       .join(", "),
   });
@@ -47,12 +51,15 @@ export const describeInviteSuccess = (
   skipped: [string, InvitationOutcome][],
 ): string => {
   // A server that does not report outcomes yet sends neither list; say nothing more than we know.
-  if (granted.length === 0 && skipped.length === 0) return tStatic("os.people", "INVITE_PEOPLE_UTILS.INVITATION_IS_SENT");
+  if (granted.length === 0 && skipped.length === 0)
+    return tStatic(I18N_MODULE, "INVITE_PEOPLE_UTILS.INVITATION_IS_SENT");
 
-  const sent = tStatic("os.people", "INVITE_PEOPLE_UTILS.INVITATION_SENT_TO", { count: granted.length });
+  const sent = tStatic(I18N_MODULE, "INVITE_PEOPLE_UTILS.INVITATION_SENT_TO", {
+    count: granted.length,
+  });
   return skipped.length === 0
     ? sent
-    : tStatic("os.people", "INVITE_PEOPLE_UTILS.SENT_AND_SKIPPED", {
+    : tStatic(I18N_MODULE, "INVITE_PEOPLE_UTILS.SENT_AND_SKIPPED", {
         sent,
         emails: skipped.map(([email]) => email).join(", "),
       });

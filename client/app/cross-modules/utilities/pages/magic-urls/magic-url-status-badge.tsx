@@ -2,6 +2,8 @@ import React from "react";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { MagicUrl } from "@blocks-utilities/models/magic-url.model";
 import { useT } from "@seliseblocks/genesis-os";
+
+const KEY_EXPIRED = "MAGIC_URL_STATUS_BADGE.EXPIRED";
 export function MagicUrlStatusBadge({ item }: { item: MagicUrl }) {
   const { t } = useT("os.utilities");
   const getStatus = (item: MagicUrl) => {
@@ -13,7 +15,7 @@ export function MagicUrlStatusBadge({ item }: { item: MagicUrl }) {
         case "Disabled":
           return { label: item.status, variant: "error" };
         case "Expired":
-          return { label: t("MAGIC_URL_STATUS_BADGE.EXPIRED"), variant: "error" };
+          return { label: t(KEY_EXPIRED), variant: "error" };
         default:
           return { label: item.status, variant: "secondary" };
       }
@@ -30,10 +32,10 @@ export function MagicUrlStatusBadge({ item }: { item: MagicUrl }) {
       return { label: t("MAGIC_URL_STATUS_BADGE.LIMIT_EXCEEDED"), variant: "error" };
     }
     if (item.expiredReason === "TimeExpired" || (expiryDate && expiryDate < now)) {
-      return { label: t("MAGIC_URL_STATUS_BADGE.EXPIRED"), variant: "error" };
+      return { label: t(KEY_EXPIRED), variant: "error" };
     }
     if (item.isExpired) {
-      return { label: t("MAGIC_URL_STATUS_BADGE.EXPIRED"), variant: "error" };
+      return { label: t(KEY_EXPIRED), variant: "error" };
     }
     return { label: t("MAGIC_URL_STATUS_BADGE.ACTIVE"), variant: "success" };
   };

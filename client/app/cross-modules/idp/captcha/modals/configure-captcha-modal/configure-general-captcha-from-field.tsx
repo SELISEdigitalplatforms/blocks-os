@@ -43,10 +43,14 @@ export const ConfigureGeneralCaptchaFormField = ({
         render={({ field }) => (
           <FormItem>
             <FormLabel>
-              {t("CONFIGURE_GENERAL_CAPTCHA_FORM_FIELD.SITE_KEY")} <span className="text-destructive">*</span>
+              {t("CONFIGURE_GENERAL_CAPTCHA_FORM_FIELD.SITE_KEY")}{" "}
+              <span className="text-destructive">*</span>
             </FormLabel>
             <FormControl>
-              <Input placeholder={t("CONFIGURE_GENERAL_CAPTCHA_FORM_FIELD.PLACEHOLDER_SITE_KEY")} {...field} />
+              <Input
+                placeholder={t("CONFIGURE_GENERAL_CAPTCHA_FORM_FIELD.PLACEHOLDER_SITE_KEY")}
+                {...field}
+              />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -63,7 +67,8 @@ export const ConfigureGeneralCaptchaFormField = ({
         render={({ field }) => (
           <FormItem>
             <FormLabel>
-              {t("CONFIGURE_GENERAL_CAPTCHA_FORM_FIELD.SECRET_KEY")} {isRequired && <span className="text-destructive">*</span>}
+              {t("CONFIGURE_GENERAL_CAPTCHA_FORM_FIELD.SECRET_KEY")}{" "}
+              {isRequired && <span className="text-destructive">*</span>}
             </FormLabel>
             <FormControl>
               <Input placeholder={placeholder} {...field} />

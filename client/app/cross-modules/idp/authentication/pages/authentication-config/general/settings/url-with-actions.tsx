@@ -33,7 +33,9 @@ export const UrlWithActions = ({ url, className }: UrlWithActionsProps) => {
   const certificatePath = url.trim();
 
   if (!certificatePath) {
-    return <span className="text-sm text-muted-foreground">{t("URL_WITH_ACTIONS.NO_CERTIFICATE")}</span>;
+    return (
+      <span className="text-sm text-muted-foreground">{t("URL_WITH_ACTIONS.NO_CERTIFICATE")}</span>
+    );
   }
 
   const handleCopy = async (event: React.MouseEvent<HTMLButtonElement>) => {

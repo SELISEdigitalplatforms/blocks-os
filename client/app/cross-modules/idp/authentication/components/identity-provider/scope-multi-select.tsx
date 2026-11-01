@@ -67,7 +67,9 @@ export function ScopeMultiSelect({ value, onChange, disabled }: Props) {
         >
           <span className="flex flex-1 flex-wrap items-center gap-1.5 text-left">
             {value.length === 0 ? (
-              <span className="text-sm text-muted-foreground">{t("SCOPE_MULTI_SELECT.SELECT_SCOPES")}</span>
+              <span className="text-sm text-muted-foreground">
+                {t("SCOPE_MULTI_SELECT.SELECT_SCOPES")}
+              </span>
             ) : (
               value.map((scope) => (
                 <Badge key={scope} variant="secondary" className="gap-1 pr-1 font-normal">
@@ -131,7 +133,9 @@ export function ScopeMultiSelect({ value, onChange, disabled }: Props) {
                     />
                     {option.label}
                     {option.locked && (
-                      <span className="ml-auto text-xs text-muted-foreground">{t("SCOPE_MULTI_SELECT.REQUIRED")}</span>
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        {t("SCOPE_MULTI_SELECT.REQUIRED")}
+                      </span>
                     )}
                   </CommandItem>
                 );

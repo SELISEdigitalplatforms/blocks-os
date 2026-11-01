@@ -246,7 +246,9 @@ export function MessagingServiceTable() {
               onClick={() => navigate("/utilities/messaging/configure")}
             >
               <Settings className="h-5 w-5" />
-              <span className="sr-only sm:not-sr-only">{t("MESSAGING_SERVICE_TABLE.CONFIGURE")}</span>
+              <span className="sr-only sm:not-sr-only">
+                {t("MESSAGING_SERVICE_TABLE.CONFIGURE")}
+              </span>
             </Button>
           </div>
         </div>

@@ -37,7 +37,9 @@ export const PermissionSeverity = ({ data, isLoading }: PermissionSeverityProps)
             >
               <div className={cn(item.barClassName, "absolute left-0 top-0 h-full w-1.5")} />
               <div className="min-w-0 pl-2">
-                <p className="truncate text-xs font-semibold uppercase">{t("PERMISSION_SEVERITY.RISK", { level: item.label })}</p>
+                <p className="truncate text-xs font-semibold uppercase">
+                  {t("PERMISSION_SEVERITY.RISK", { level: item.label })}
+                </p>
                 {isLoading ? (
                   <Skeleton className="mt-2 h-6 w-[100px]" />
                 ) : (

@@ -100,7 +100,9 @@ const EditDefaultSenderName: React.FC<EditDefaultSenderNameProps> = ({ config, o
       <Form {...form}>
         <form onSubmit={form.handleSubmit(formSubmitHandler)}>
           <DialogHeader>
-            <DialogTitle className="mb-2 text-left">{t("EDIT_DEFAULT_SENDER_NAME.TITLE")}</DialogTitle>
+            <DialogTitle className="mb-2 text-left">
+              {t("EDIT_DEFAULT_SENDER_NAME.TITLE")}
+            </DialogTitle>
             <DialogDescription className="text-left">
               {t("EDIT_DEFAULT_SENDER_NAME.DESCRIPTION")}
             </DialogDescription>
@@ -112,7 +114,8 @@ const EditDefaultSenderName: React.FC<EditDefaultSenderNameProps> = ({ config, o
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-left font-medium text-high-emphasis">
-                    {t("EDIT_DEFAULT_SENDER_NAME.SENDER_NAME")} <span className="text-destructive">*</span>
+                    {t("EDIT_DEFAULT_SENDER_NAME.SENDER_NAME")}{" "}
+                    <span className="text-destructive">*</span>
                   </FormLabel>
                   <FormControl>
                     <Input

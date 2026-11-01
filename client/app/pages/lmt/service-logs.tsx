@@ -43,7 +43,7 @@ export function LmtServiceLogsRoute() {
         serviceName: workerServiceName,
       },
     ];
-  }, [service]);
+  }, [service, t]);
 
   const breadcrumbTitles = {
     [`${LMT_BASE_PATH}/logs`]: "Logs",

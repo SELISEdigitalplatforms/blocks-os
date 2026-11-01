@@ -62,7 +62,9 @@ export const AddEnvironmentModal = ({
         }
       } catch (error) {
         showErrorToast({
-          errors: isErrorWithErrors(error) ? error.errors : t("ADD_ENVIRONMENT_MODAL.COULD_NOT_ADD_THE_ENVIRONMENT"),
+          errors: isErrorWithErrors(error)
+            ? error.errors
+            : t("ADD_ENVIRONMENT_MODAL.COULD_NOT_ADD_THE_ENVIRONMENT"),
         });
       }
     }

@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 import { useT } from "@seliseblocks/genesis-os";
 import type { ReactNode } from "react";
 
+const I18N_MODULE = "os.idp.settings";
+
 type SettingsTabLoadingShellProps = {
   tabId: SettingsTabValue;
   label: string;
@@ -134,7 +136,7 @@ type SettingsTabLoadingStateProps = {
 };
 
 export const AuthTabLoadingState = ({ className }: { className?: string }) => {
-  const { t } = useT("os.idp.settings");
+  const { t } = useT(I18N_MODULE);
   return (
     <SettingsTabLoadingShell
       tabId="auth-config"
@@ -149,7 +151,7 @@ export const AuthTabLoadingState = ({ className }: { className?: string }) => {
 };
 
 export const IamTabLoadingState = ({ className }: { className?: string }) => {
-  const { t } = useT("os.idp.settings");
+  const { t } = useT(I18N_MODULE);
   return (
     <SettingsTabLoadingShell
       tabId="iam-config"
@@ -170,7 +172,7 @@ export const SettingsTabLoadingState = ({
   sectionCount = 2,
   className,
 }: SettingsTabLoadingStateProps) => {
-  const { t } = useT("os.idp.settings");
+  const { t } = useT(I18N_MODULE);
   return (
     <SettingsTabLoadingShell
       tabId={tabId}
@@ -186,7 +188,7 @@ export const SettingsTabLoadingState = ({
 };
 
 export const OrganizationTabLoadingState = () => {
-  const { t } = useT("os.idp.settings");
+  const { t } = useT(I18N_MODULE);
   return (
     <SettingsTabLoadingShell
       tabId="organization-config"
@@ -199,7 +201,7 @@ export const OrganizationTabLoadingState = () => {
 };
 
 export const SignupTabLoadingState = () => {
-  const { t } = useT("os.idp.settings");
+  const { t } = useT(I18N_MODULE);
   return (
     <SettingsTabLoadingShell tabId="signup-settings" label={t("SETTINGS_TAB_LOADING_STATE.SIGNUP")}>
       <ToggleCardSkeleton />

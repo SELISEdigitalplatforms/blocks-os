@@ -26,7 +26,10 @@ export const lazyLabels = <K extends string | number>(
 };
 
 /** An option whose `label` is looked up each time it is read. */
-export const labelledOption = <T extends object>(labelKey: string, rest: T): T & { label: string } =>
+export const labelledOption = <T extends object>(
+  labelKey: string,
+  rest: T,
+): T & { label: string } =>
   Object.defineProperty({ ...rest } as T & { label: string }, "label", {
     enumerable: true,
     get: () => gt(labelKey),

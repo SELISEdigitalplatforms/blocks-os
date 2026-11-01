@@ -28,6 +28,8 @@ import { useProjectPermissions } from "@/hooks/use-project-access";
 import { useProjectStore, useT, tStatic } from "@seliseblocks/genesis-os";
 import { formatDate } from "@/lib/utils";
 import { EnvironmentsCard, getEnvironmentOrder } from "./environments-card";
+
+const I18N_MODULE = "os.settings";
 const SettingsLoading = () => (
   <main className="flex flex-col gap-6 p-6">
     <Skeleton className="h-8 w-40" />
@@ -56,17 +58,18 @@ const InfoField = ({ label, children }: { label: string; children: ReactNode }) 
     <div className="font-medium">{children}</div>
   </div>
 );
-const createProjectNameSchema = () => z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, tStatic("os.settings", "SETTINGS.NAME_IS_REQUIRED"))
-    .min(3, tStatic("os.settings", "SETTINGS.PROJECT_NAME_MUST_BE_AT"))
-    .max(100, tStatic("os.settings", "SETTINGS.PROJECT_NAME_SHOULD_BE_A")),
-});
+const createProjectNameSchema = () =>
+  z.object({
+    name: z
+      .string()
+      .trim()
+      .min(1, tStatic(I18N_MODULE, "SETTINGS.NAME_IS_REQUIRED"))
+      .min(3, tStatic(I18N_MODULE, "SETTINGS.PROJECT_NAME_MUST_BE_AT"))
+      .max(100, tStatic(I18N_MODULE, "SETTINGS.PROJECT_NAME_SHOULD_BE_A")),
+  });
 type ProjectNameForm = z.infer<ReturnType<typeof createProjectNameSchema>>;
 export const SettingsPage = () => {
-  const { t } = useT("os.settings");
+  const { t } = useT(I18N_MODULE);
   const { selectedProject, selectedTenantGroup, setSelectedProject } = useProjectStore();
   const { data: projectsData, isLoading } = useGetProjects({
     tenantGroupId: selectedTenantGroup ?? "",

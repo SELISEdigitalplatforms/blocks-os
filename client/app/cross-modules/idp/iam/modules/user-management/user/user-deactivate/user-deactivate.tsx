@@ -11,11 +11,7 @@ type UserDeactivateProps = {
   setOpen: (open: boolean) => void;
 };
 
-export const UserDeactivate = ({
-  userId,
-  open,
-  setOpen,
-}: UserDeactivateProps) => {
+export const UserDeactivate = ({ userId, open, setOpen }: UserDeactivateProps) => {
   const { t } = useT("os.idp.users");
   const { mutateAsync, isPending } = useAccountDeactivate();
   const onClickHandler = async () => {

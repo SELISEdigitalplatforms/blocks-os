@@ -82,10 +82,16 @@ export const AIModels = () => {
       ) : (
         <>
           {shouldShowOfficial && (
-            <AiModelsList servicePlatform={t("AI_MODELS.OFFICIAL_API")} providerList={filteredOfficial} />
+            <AiModelsList
+              servicePlatform={t("AI_MODELS.OFFICIAL_API")}
+              providerList={filteredOfficial}
+            />
           )}
           {shouldShowOpen && (
-            <AiModelsList servicePlatform={t("AI_MODELS.OPEN_DEPLOYMENT")} providerList={filteredOpen} />
+            <AiModelsList
+              servicePlatform={t("AI_MODELS.OPEN_DEPLOYMENT")}
+              providerList={filteredOpen}
+            />
           )}
         </>
       )}

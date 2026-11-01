@@ -1,10 +1,5 @@
 import { useForm } from "react-hook-form";
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormMessage,
-} from "@/components/ui-kits/form/form";
+import { Form, FormField, FormItem, FormMessage } from "@/components/ui-kits/form/form";
 import {
   createProjectEnvironmentFormDefaultValue,
   createCreateProjectEnvironmentFormSchema,
@@ -40,7 +35,9 @@ export const CreateProjectEnvironmentsForm = () => {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmitHandler)}>
         <div className="mt-4 flex flex-col gap-1 text-left">
-          <p className="text-3xl font-bold tracking-tight">{t("CREATE_PROJECT_ENVIRONMENTS_FORM.SELECT_ENVIRONMENTS")}</p>
+          <p className="text-3xl font-bold tracking-tight">
+            {t("CREATE_PROJECT_ENVIRONMENTS_FORM.SELECT_ENVIRONMENTS")}
+          </p>
           <p className="text-base font-normal tracking-tight">
             {t("CREATE_PROJECT_ENVIRONMENTS_FORM.SELECT_THE_ENVIRONMENTS_YOU_WANT")}
           </p>

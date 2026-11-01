@@ -13,18 +13,18 @@ type GuideCodeBlockProps = {
 const GuideCodeBlock = ({ language, code }: GuideCodeBlockProps) => {
   const { t } = useT("os.dashboard");
   return (
-  <div className="my-3 overflow-hidden rounded-md border border-border-default">
-    <div className="flex items-center justify-between gap-2 border-b border-border-default bg-muted px-3 py-1">
-      <span className="font-mono text-xs uppercase tracking-wide text-medium-emphasis">
-        {language}
-      </span>
-      <CopyButton text={code} label={t("ONBOARD_MARKDOWN.COPY_COMMAND", { language })} />
+    <div className="my-3 overflow-hidden rounded-md border border-border-default">
+      <div className="flex items-center justify-between gap-2 border-b border-border-default bg-muted px-3 py-1">
+        <span className="font-mono text-xs uppercase tracking-wide text-medium-emphasis">
+          {language}
+        </span>
+        <CopyButton text={code} label={t("ONBOARD_MARKDOWN.COPY_COMMAND", { language })} />
+      </div>
+      <pre className="overflow-x-auto bg-surface-app p-3">
+        <code className="font-mono text-[13px] leading-6 text-high-emphasis">{code}</code>
+      </pre>
     </div>
-    <pre className="overflow-x-auto bg-surface-app p-3">
-      <code className="font-mono text-[13px] leading-6 text-high-emphasis">{code}</code>
-    </pre>
-  </div>
-);
+  );
 };
 
 /**
@@ -81,9 +81,7 @@ const createGuideComponents = (): Components => ({
         </code>
       );
     }
-    return (
-      <GuideCodeBlock language={language} code={String(children).replace(/\n$/, "")} />
-    );
+    return <GuideCodeBlock language={language} code={String(children).replace(/\n$/, "")} />;
   },
 });
 

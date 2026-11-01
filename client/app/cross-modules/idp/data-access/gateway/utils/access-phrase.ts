@@ -165,8 +165,13 @@ export function ruleSetLines(policy: IPolicyItem): RuleSetLine[] {
       }
       const matchesAll = item.nested.logicalOperator === LOGICAL_OPERATOR.AND;
       return [
-        { id, lead, text: matchesAll ? gt("ACCESS_PHRASE.GROUP_ALL_OF") : gt("ACCESS_PHRASE.GROUP_ANY_OF"),
-          depth, kind: "group" },
+        {
+          id,
+          lead,
+          text: matchesAll ? gt("ACCESS_PHRASE.GROUP_ALL_OF") : gt("ACCESS_PHRASE.GROUP_ANY_OF"),
+          depth,
+          kind: "group",
+        },
         ...walk(item.nested, depth + 1, `${id}.`),
       ];
     });
@@ -258,4 +263,3 @@ export function accessEffect({
     risk: "scoped",
   };
 }
-

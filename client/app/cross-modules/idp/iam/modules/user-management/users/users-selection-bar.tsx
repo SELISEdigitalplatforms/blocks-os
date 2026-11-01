@@ -3,6 +3,8 @@ import { Button } from "@/components/ui-kits/button/button";
 import { useT } from "@seliseblocks/genesis-os";
 import { CircleAlert, Lock, MinusCircle, PlusCircle, SquareCheck } from "lucide-react";
 
+const I18N_MODULE = "os.idp.users";
+
 /**
  * Whether the Select button exists at all, and if so whether it can be used.
  *
@@ -34,7 +36,7 @@ export const UsersSelectTrigger = ({
   onEnterSelection,
   onCancelSelection,
 }: UsersSelectTriggerProps) => {
-  const { t } = useT("os.idp.users");
+  const { t } = useT(I18N_MODULE);
 
   if (state === "hidden") {
     return (
@@ -111,7 +113,7 @@ export const UsersSelectionBanner = ({
   onSelectPageOnly,
   onClearSelection,
 }: UsersSelectionBannerProps) => {
-  const { t } = useT("os.idp.users");
+  const { t } = useT(I18N_MODULE);
 
   if (isAllMatchingSelected) {
     const offPageCount = Math.max(matchedTotal - pageSelectedCount, 0);
@@ -194,7 +196,7 @@ export const UsersSelectionBar = ({
   onRemoveRoles,
   onCancel,
 }: UsersSelectionBarProps) => {
-  const { t } = useT("os.idp.users");
+  const { t } = useT(I18N_MODULE);
 
   return (
     <div

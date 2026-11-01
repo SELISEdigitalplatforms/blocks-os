@@ -19,6 +19,10 @@ import { LogItem } from "../logs-list/log-item";
 import { LogsViewerContext } from "../logs-viewer/logs-viewer";
 import { useT, tStatic } from "@seliseblocks/genesis-os";
 
+const KEY_GO_TO_TRACING = "RESTORED_LOGS_PANEL.GO_TO_TRACING";
+
+const I18N_MODULE = "os.lmt";
+
 interface RestoredLogsPanelProps {
   sourceType: TRACE_REQUEST_SOURCE_TYPE;
   restore: ReturnType<typeof useRestoreRequest>;
@@ -26,13 +30,27 @@ interface RestoredLogsPanelProps {
 
 /** How long each tier usually takes, so a waiting reader knows whether to come back later. */
 const EXPECTED_DURATION: Record<string, string> = {
-  get [TRACE_REQUEST_SOURCE_TYPE.cold]() { return tStatic("os.lmt", "RESTORED_LOGS_PANEL.3_5_HOURS"); },
-  get [TRACE_REQUEST_SOURCE_TYPE.archive]() { return tStatic("os.lmt", "RESTORED_LOGS_PANEL.10_15_HOURS"); },
+  get [TRACE_REQUEST_SOURCE_TYPE.cold]() {
+    return tStatic(I18N_MODULE, "RESTORED_LOGS_PANEL.3_5_HOURS");
+  },
+  get [TRACE_REQUEST_SOURCE_TYPE.archive]() {
+    return tStatic(I18N_MODULE, "RESTORED_LOGS_PANEL.10_15_HOURS");
+  },
 };
 
 const TIER_WORDS: Record<string, { noun: string; empty: string }> = {
-  [TRACE_REQUEST_SOURCE_TYPE.cold]: { noun: "cold", get empty() { return tStatic("os.lmt", "RESTORED_LOGS_PANEL.NO_COLD_LOGS_RESTORED"); } },
-  [TRACE_REQUEST_SOURCE_TYPE.archive]: { noun: "archived", get empty() { return tStatic("os.lmt", "RESTORED_LOGS_PANEL.NO_ARCHIVED_LOGS_RESTORED"); } },
+  [TRACE_REQUEST_SOURCE_TYPE.cold]: {
+    noun: "cold",
+    get empty() {
+      return tStatic(I18N_MODULE, "RESTORED_LOGS_PANEL.NO_COLD_LOGS_RESTORED");
+    },
+  },
+  [TRACE_REQUEST_SOURCE_TYPE.archive]: {
+    noun: "archived",
+    get empty() {
+      return tStatic(I18N_MODULE, "RESTORED_LOGS_PANEL.NO_ARCHIVED_LOGS_RESTORED");
+    },
+  },
 };
 
 const formatExpiry = (value?: string) => {
@@ -50,7 +68,7 @@ const formatExpiry = (value?: string) => {
  * points back there rather than offering a second way to spend.
  */
 export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProps) {
-  const { t } = useT("os.lmt");
+  const { t } = useT(I18N_MODULE);
   const { filter, pageSize, services, selectedServiceNames, selectedService, isServicesLoading } =
     useContext(LogsViewerContext);
   const basePath = useLmtBasePath();
@@ -188,7 +206,7 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
               {t("RESTORED_LOGS_PANEL.TRY_AGAIN")}
             </Button>
             <Button size="sm" variant="outline" asChild>
-              <Link to={tracingHref}>{t("RESTORED_LOGS_PANEL.GO_TO_TRACING")}</Link>
+              <Link to={tracingHref}>{t(KEY_GO_TO_TRACING)}</Link>
             </Button>
           </div>
         </div>
@@ -261,7 +279,7 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
             })}
           </p>
           <Button size="sm" asChild>
-            <Link to={tracingHref}>{t("RESTORED_LOGS_PANEL.GO_TO_TRACING")}</Link>
+            <Link to={tracingHref}>{t(KEY_GO_TO_TRACING)}</Link>
           </Button>
         </div>
       </Card>
@@ -280,7 +298,7 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
             {t("RESTORED_LOGS_PANEL.ITS_PARTIALLY_RESTORED_ROWS_WERE")}
           </p>
           <Button size="sm" asChild>
-            <Link to={tracingHref}>{t("RESTORED_LOGS_PANEL.GO_TO_TRACING")}</Link>
+            <Link to={tracingHref}>{t(KEY_GO_TO_TRACING)}</Link>
           </Button>
         </div>
       </Card>
@@ -297,7 +315,7 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
             {t("RESTORED_LOGS_PANEL.A_RESTORE_REQUEST_BRINGS_BACK")}
           </p>
           <Button size="sm" asChild>
-            <Link to={tracingHref}>{t("RESTORED_LOGS_PANEL.GO_TO_TRACING")}</Link>
+            <Link to={tracingHref}>{t(KEY_GO_TO_TRACING)}</Link>
           </Button>
         </div>
       </Card>
@@ -322,7 +340,7 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
             })}
           </p>
           <Button size="sm" variant="outline" asChild>
-            <Link to={tracingHref}>{t("RESTORED_LOGS_PANEL.GO_TO_TRACING")}</Link>
+            <Link to={tracingHref}>{t(KEY_GO_TO_TRACING)}</Link>
           </Button>
         </div>
       </Card>

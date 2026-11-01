@@ -76,7 +76,9 @@ export const BulkRoleReviewDialog = ({
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <span className="text-sm font-medium text-high-emphasis">
-              {isRemove ? t("BULK_ROLE_REVIEW_DIALOG.REMOVING") : t("BULK_ROLE_REVIEW_DIALOG.ADDING")}
+              {isRemove
+                ? t("BULK_ROLE_REVIEW_DIALOG.REMOVING")
+                : t("BULK_ROLE_REVIEW_DIALOG.ADDING")}
             </span>
             {roleSlugs.map((slug) => (
               <Badge
@@ -103,7 +105,9 @@ export const BulkRoleReviewDialog = ({
           </p>
           <dl className="mt-2 space-y-1 text-sm">
             <div className="flex items-start justify-between gap-4">
-              <dt className="shrink-0 text-muted-foreground">{t("BULK_ROLE_REVIEW_DIALOG.MATCHED")}</dt>
+              <dt className="shrink-0 text-muted-foreground">
+                {t("BULK_ROLE_REVIEW_DIALOG.MATCHED")}
+              </dt>
               <dd
                 data-testid="bulk-review-matched"
                 className="min-w-0 text-right font-medium text-high-emphasis"

@@ -1,5 +1,8 @@
 import { lazyOption, textMap, tn } from "../i18n";
 
+const KEY_PUSH = "NOTIFICATION_UI.PUSH";
+const KEY_RECIPIENTS = "NOTIFICATION_UI.RECIPIENTS";
+
 /** Numeric values the notification API uses for the receiver fields. */
 export const NOTIFICATION_SCOPE = { Project: 0, Console: 1, Both: 2 } as const;
 export const AUDIENCE_LEVEL = { AffectedOnly: 0, AllUsers: 1, Selected: 2 } as const;
@@ -64,15 +67,15 @@ export const MATCH_OPTIONS = [
 export const ownerOnlyLabel = (): string => tn("NOTIFICATION_UI.OWNER_ONLY");
 
 export const NOTIFICATION_TEXT = textMap({
-  mobilePush: "NOTIFICATION_UI.PUSH",
+  mobilePush: KEY_PUSH,
   searchPlaceholder: "NOTIFICATION_UI.SEARCH_PLACEHOLDER",
   columns: {
     name: "common:NAME",
-    recipients: "NOTIFICATION_UI.RECIPIENTS",
+    recipients: KEY_RECIPIENTS,
     service: "NOTIFICATION_UI.COLUMN_SERVICE",
     importance: "NOTIFICATION_UI.IMPORTANCE",
     inApp: "NOTIFICATION_UI.COLUMN_IN_APP",
-    push: "NOTIFICATION_UI.PUSH",
+    push: KEY_PUSH,
     inbox: "NOTIFICATION_UI.OFFLINE",
     delivery: "NOTIFICATION_UI.DELIVERY_CHANNELS",
     status: "common:STATUS",
@@ -92,7 +95,7 @@ export const NOTIFICATION_TEXT = textMap({
   inactive: "NOTIFICATION_UI.INACTIVE",
   filters: {
     sendTo: "NOTIFICATION_UI.AUDIENCE",
-    receivers: "NOTIFICATION_UI.RECIPIENTS",
+    receivers: KEY_RECIPIENTS,
   },
   custom: "NOTIFICATION_UI.CUSTOM",
   builtIn: "NOTIFICATION_UI.BUILT_IN",
@@ -107,7 +110,7 @@ export const NOTIFICATION_TEXT = textMap({
   consoleUsers: "NOTIFICATION_UI.OS_USERS",
   sendToHelp: "NOTIFICATION_UI.SEND_TO_HELP",
   personalHelp: "NOTIFICATION_UI.PERSONAL_HELP",
-  receiversLabel: "NOTIFICATION_UI.RECIPIENTS",
+  receiversLabel: KEY_RECIPIENTS,
   receiversNarrowHelp: "NOTIFICATION_UI.RECEIVERS_NARROW_HELP",
   match: "NOTIFICATION_UI.MATCH",
   matchHelp: "NOTIFICATION_UI.MATCH_HELP",
@@ -136,7 +139,7 @@ export const NOTIFICATION_TEXT = textMap({
   filterHelp: "NOTIFICATION_UI.FILTER_HELP",
   channels: "NOTIFICATION_UI.DELIVERY_CHANNELS",
   inApp: "NOTIFICATION_UI.COLUMN_IN_APP",
-  mobilePushChannel: "NOTIFICATION_UI.PUSH",
+  mobilePushChannel: KEY_PUSH,
   saveToInbox: "NOTIFICATION_UI.OFFLINE",
   saveToInboxHelp: "NOTIFICATION_UI.SAVE_TO_INBOX_HELP",
   rateLimit: "NOTIFICATION_UI.RATE_LIMIT",
@@ -171,8 +174,7 @@ export const NOTIFICATION_TEXT = textMap({
   breadcrumb: "NOTIFICATION_UI.BREADCRUMB",
   newBreadcrumb: "NOTIFICATION_UI.NEW_BREADCRUMB",
   errors: {
-    name: () =>
-      tn("NOTIFICATION_UI.ERROR_NAME", { min: LIMITS.nameMin, max: LIMITS.nameMax }),
+    name: () => tn("NOTIFICATION_UI.ERROR_NAME", { min: LIMITS.nameMin, max: LIMITS.nameMax }),
     sendTo: "NOTIFICATION_UI.ERROR_SEND_TO",
     channel: "NOTIFICATION_UI.ERROR_CHANNEL",
     pushKeys: "NOTIFICATION_UI.ERROR_PUSH_KEYS",

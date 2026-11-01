@@ -19,11 +19,7 @@ type DeleteOrganizationRoleProps = {
   onSave?: () => void;
 };
 
-export const DeleteOrganizationRole = ({
-  role,
-  onDelete,
-  onSave,
-}: DeleteOrganizationRoleProps) => {
+export const DeleteOrganizationRole = ({ role, onDelete, onSave }: DeleteOrganizationRoleProps) => {
   const { t } = useT("os.idp.users");
   const [open, setOpen] = useState<boolean>(false);
 

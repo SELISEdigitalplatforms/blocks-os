@@ -1,6 +1,10 @@
 import type { PushPlatform, PushResultCode } from "../models/push.model";
 import { lazyOption, textMap } from "../i18n";
 
+const KEY_FIELD_EXPIRES = "PUSH_UI.FIELD_EXPIRES";
+const KEY_PLATFORM = "PUSH_UI.PLATFORM";
+const KEY_COMMON_REMOVE = "common:REMOVE";
+
 /** Platform names are product names and stay as they are. */
 export const PLATFORM_LABEL: Record<PushPlatform, string> = {
   android: "Android",
@@ -36,7 +40,7 @@ export const APNS_HINT: Partial<Record<PushResultCode, string>> = textMap({
 export const PLATFORMS_TEXT = textMap({
   title: "PUSH_UI.PLATFORMS_TITLE",
   help: "PUSH_UI.PLATFORMS_HELP",
-  platform: "PUSH_UI.PLATFORM",
+  platform: KEY_PLATFORM,
   sending: "PUSH_UI.SENDING",
   devices: "PUSH_UI.DEVICES",
   lastTest: "PUSH_UI.LAST_TEST",
@@ -58,7 +62,7 @@ export const WEB_TEXT = textMap({
   pasteLabel: "PUSH_UI.WEB_PASTE_LABEL",
   pastePlaceholder: "PUSH_UI.WEB_PASTE_PLACEHOLDER",
   added: "PUSH_UI.WEB_ADDED",
-  remove: "common:REMOVE",
+  remove: KEY_COMMON_REMOVE,
   apiKey: "PUSH_UI.WEB_API_KEY",
   appId: "PUSH_UI.WEB_APP_ID",
   senderId: "PUSH_UI.WEB_SENDER_ID",
@@ -100,16 +104,16 @@ export const DEVICES_TEXT = textMap({
   all: "common:ALL",
   search: "PUSH_UI.DEVICES_SEARCH",
   user: "PUSH_UI.DEVICES_USER",
-  platform: "PUSH_UI.PLATFORM",
+  platform: KEY_PLATFORM,
   device: "PUSH_UI.DEVICES_DEVICE",
   lastSeen: "PUSH_UI.DEVICES_LAST_SEEN",
-  remove: "common:REMOVE",
+  remove: KEY_COMMON_REMOVE,
   note: "PUSH_UI.DEVICES_NOTE",
   empty: "PUSH_UI.DEVICES_EMPTY",
   loadFailed: "PUSH_UI.DEVICES_LOAD_FAILED",
   confirmTitle: "PUSH_UI.DEVICES_CONFIRM_TITLE",
   confirmBody: "PUSH_UI.DEVICES_CONFIRM_BODY",
-  confirmYes: "common:REMOVE",
+  confirmYes: KEY_COMMON_REMOVE,
   removed: "PUSH_UI.DEVICES_REMOVED",
   previous: "common:PREVIOUS",
   next: "common:NEXT",
@@ -124,7 +128,7 @@ export const PUSH_FORM_TEXT = textMap({
   webLinkError: "PUSH_UI.FORM_WEB_LINK_ERROR",
   options: "PUSH_UI.FORM_OPTIONS",
   optionsHelp: "PUSH_UI.FORM_OPTIONS_HELP",
-  optionsAria: "PUSH_UI.PLATFORM",
+  optionsAria: KEY_PLATFORM,
   previewTitle: "PUSH_UI.FORM_PREVIEW_TITLE",
   previewHelp: "PUSH_UI.FORM_PREVIEW_HELP",
   sendTest: "PUSH_UI.FORM_SEND_TEST",
@@ -140,7 +144,7 @@ export const ANDROID_FIELDS = textMap({
   priority: "PUSH_UI.FIELD_PRIORITY",
   channel: "PUSH_UI.FIELD_CHANNEL",
   sound: "PUSH_UI.FIELD_SOUND",
-  expires: "PUSH_UI.FIELD_EXPIRES",
+  expires: KEY_FIELD_EXPIRES,
   collapseKey: "PUSH_UI.FIELD_COLLAPSE_KEY",
   color: "PUSH_UI.FIELD_COLOR",
 });
@@ -151,14 +155,14 @@ export const IOS_FIELDS = textMap({
   priority: "PUSH_UI.FIELD_PRIORITY",
   interruption: "PUSH_UI.FIELD_INTERRUPTION",
   thread: "PUSH_UI.FIELD_THREAD",
-  expires: "PUSH_UI.FIELD_EXPIRES",
+  expires: KEY_FIELD_EXPIRES,
 });
 
 export const WEB_FIELDS = textMap({
   icon: "PUSH_UI.FIELD_ICON",
   requireInteraction: "PUSH_UI.FIELD_REQUIRE_INTERACTION",
   urgency: "PUSH_UI.FIELD_URGENCY",
-  expires: "PUSH_UI.FIELD_EXPIRES",
+  expires: KEY_FIELD_EXPIRES,
 });
 
 export interface IOption {

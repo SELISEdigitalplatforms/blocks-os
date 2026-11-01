@@ -4,13 +4,20 @@ import { isParsableUrl } from "@/lib/url-format";
 import { ProviderToPlatformMap, ServicePlatform } from "./aimodel-provider.utils";
 import { tStatic } from "@seliseblocks/genesis-os";
 
-export const createOpenAIModelSchema = () => z.object({
-  model: z.string().trim().min(1, tStatic("os.ai", "AIMODEL_FORM_UTILS.MODEL_IS_REQUIRED")),
-  url: z.string().trim().refine(isParsableUrl, tStatic("os.ai", "AIMODEL_FORM_UTILS.ENTER_A_VALID_URL")),
-  apiKey: z.string().min(1, tStatic("os.ai", "AIMODEL_FORM_UTILS.API_KEY_IS_REQUIRED")),
-  organizationId: z.string().trim().optional(),
-  projectId: z.string().trim().optional(),
-});
+const KEY_API_KEY_IS_REQUIRED = "AIMODEL_FORM_UTILS.API_KEY_IS_REQUIRED";
+const KEY_ENTER_A_VALID_URL = "AIMODEL_FORM_UTILS.ENTER_A_VALID_URL";
+const KEY_MODEL_IS_REQUIRED = "AIMODEL_FORM_UTILS.MODEL_IS_REQUIRED";
+
+const I18N_MODULE = "os.ai";
+
+export const createOpenAIModelSchema = () =>
+  z.object({
+    model: z.string().trim().min(1, tStatic(I18N_MODULE, KEY_MODEL_IS_REQUIRED)),
+    url: z.string().trim().refine(isParsableUrl, tStatic(I18N_MODULE, KEY_ENTER_A_VALID_URL)),
+    apiKey: z.string().min(1, tStatic(I18N_MODULE, KEY_API_KEY_IS_REQUIRED)),
+    organizationId: z.string().trim().optional(),
+    projectId: z.string().trim().optional(),
+  });
 type FormSchemaOpenai = z.infer<ReturnType<typeof createOpenAIModelSchema>>;
 export const OpenAIModelDefaults = (defaultModel: string): FormSchemaOpenai => ({
   model: defaultModel,
@@ -20,11 +27,12 @@ export const OpenAIModelDefaults = (defaultModel: string): FormSchemaOpenai => (
   projectId: "",
 });
 
-export const createOfficialApiModelSchema = () => z.object({
-  model: z.string().trim().min(1, tStatic("os.ai", "AIMODEL_FORM_UTILS.MODEL_IS_REQUIRED")),
-  url: z.string().trim().refine(isParsableUrl, tStatic("os.ai", "AIMODEL_FORM_UTILS.ENTER_A_VALID_URL")),
-  apiKey: z.string().min(1, tStatic("os.ai", "AIMODEL_FORM_UTILS.API_KEY_IS_REQUIRED")),
-});
+export const createOfficialApiModelSchema = () =>
+  z.object({
+    model: z.string().trim().min(1, tStatic(I18N_MODULE, KEY_MODEL_IS_REQUIRED)),
+    url: z.string().trim().refine(isParsableUrl, tStatic(I18N_MODULE, KEY_ENTER_A_VALID_URL)),
+    apiKey: z.string().min(1, tStatic(I18N_MODULE, KEY_API_KEY_IS_REQUIRED)),
+  });
 type FormSchemaOfficialApi = z.infer<ReturnType<typeof createOfficialApiModelSchema>>;
 export const OfficialApiModelDefaults = (defaultModel: string): FormSchemaOfficialApi => ({
   model: defaultModel,
@@ -32,12 +40,16 @@ export const OfficialApiModelDefaults = (defaultModel: string): FormSchemaOffici
   apiKey: "",
 });
 
-export const createOpenDeploymentModelSchema = () => z.object({
-  model: z.string().trim().min(1, tStatic("os.ai", "AIMODEL_FORM_UTILS.MODEL_IS_REQUIRED")),
-  url: z.string().trim().refine(isParsableUrl, tStatic("os.ai", "AIMODEL_FORM_UTILS.ENTER_A_VALID_URL")),
-  deploymentName: z.string().trim().min(1, tStatic("os.ai", "AIMODEL_FORM_UTILS.DEPLOYMENT_NAME_IS_REQUIRED")),
-  apiKey: z.string().min(1, tStatic("os.ai", "AIMODEL_FORM_UTILS.API_KEY_IS_REQUIRED")),
-});
+export const createOpenDeploymentModelSchema = () =>
+  z.object({
+    model: z.string().trim().min(1, tStatic(I18N_MODULE, KEY_MODEL_IS_REQUIRED)),
+    url: z.string().trim().refine(isParsableUrl, tStatic(I18N_MODULE, KEY_ENTER_A_VALID_URL)),
+    deploymentName: z
+      .string()
+      .trim()
+      .min(1, tStatic(I18N_MODULE, "AIMODEL_FORM_UTILS.DEPLOYMENT_NAME_IS_REQUIRED")),
+    apiKey: z.string().min(1, tStatic(I18N_MODULE, KEY_API_KEY_IS_REQUIRED)),
+  });
 type FormSchemaOpenDeployment = z.infer<ReturnType<typeof createOpenDeploymentModelSchema>>;
 export const OpenDeploymentDefaults = (defaultModel: string): FormSchemaOpenDeployment => ({
   model: defaultModel,

@@ -31,7 +31,9 @@ export const OrganizationPermissionsList = ({
         accessorFn: (row) => `${row.name}`.trim(),
         header: () => (
           <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">{t("ORGANIZATION_PERMISSIONS_LIST.COLUMN_NAME")}</span>
+            <span className="font-bold text-medium-emphasis">
+              {t("ORGANIZATION_PERMISSIONS_LIST.COLUMN_NAME")}
+            </span>
           </div>
         ),
         cell: ({ row }) => (
@@ -45,7 +47,9 @@ export const OrganizationPermissionsList = ({
         accessorFn: (row) => `${row.resource}`.trim(),
         header: () => (
           <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">{t("ORGANIZATION_PERMISSIONS_LIST.COLUMN_RESOURCE")}</span>
+            <span className="font-bold text-medium-emphasis">
+              {t("ORGANIZATION_PERMISSIONS_LIST.COLUMN_RESOURCE")}
+            </span>
           </div>
         ),
         cell: ({ row }) => (

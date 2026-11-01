@@ -30,11 +30,7 @@ const LoadingSkelton = () => (
   </div>
 );
 
-export const UserRolesList = ({
-  roles,
-  isLoading,
-  onRemoveRole,
-}: UserRolesListProps) => {
+export const UserRolesList = ({ roles, isLoading, onRemoveRole }: UserRolesListProps) => {
   const { t } = useT("os.idp.users");
 
   if (isLoading) return <LoadingSkelton />;
@@ -48,10 +44,7 @@ export const UserRolesList = ({
             <div key={item.itemId} className="col-span-1 flex items-center py-2">
               <div className="flex w-full items-center rounded-2xl border border-border px-4 py-2 shadow-xs">
                 <div className="flex min-w-0 flex-1 flex-col">
-                  <span
-                    className="truncate text-base font-medium leading-tight"
-                    title={item.name}
-                  >
+                  <span className="truncate text-base font-medium leading-tight" title={item.name}>
                     {item.name}
                   </span>
                   <span

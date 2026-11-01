@@ -40,7 +40,9 @@ export const SSoProviderStatusToggle = ({
     }
   };
   const isCurrentlyDisabled = configuration.isDisabled;
-  const dialogTitle = isCurrentlyDisabled ? t("SSO_PROVIDER_STATUS_TOGGLE.ENABLE") : t("SSO_PROVIDER_STATUS_TOGGLE.DISABLE");
+  const dialogTitle = isCurrentlyDisabled
+    ? t("SSO_PROVIDER_STATUS_TOGGLE.ENABLE")
+    : t("SSO_PROVIDER_STATUS_TOGGLE.DISABLE");
   const dialogSubtitle = isCurrentlyDisabled
     ? t("SSO_PROVIDER_STATUS_TOGGLE.ENABLE_CONFIRM")
     : t("SSO_PROVIDER_STATUS_TOGGLE.DISABLE_CONFIRM");

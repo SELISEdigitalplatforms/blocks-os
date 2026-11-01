@@ -54,7 +54,9 @@ export const AddService = () => {
       };
       const response = await registerService(payload);
       if (!response.isSuccess)
-        return showErrorToast({ errors: response.errors || t("ADD_SERVICE.FAILED_TO_REGISTER_THE_SERVICE") });
+        return showErrorToast({
+          errors: response.errors || t("ADD_SERVICE.FAILED_TO_REGISTER_THE_SERVICE"),
+        });
       showSuccessToast({ description: t("ADD_SERVICE.SERVICE_REGISTERED_SUCCESSFULLY") });
       form.reset();
       onOpenChange(false);
@@ -82,9 +84,7 @@ export const AddService = () => {
       <DialogContent className="md:max-w-md">
         <DialogHeader>
           <DialogTitle>{t("ADD_SERVICE.REGISTER_NEW_SERVICE")}</DialogTitle>
-          <DialogDescription>
-            {t("ADD_SERVICE.REGISTER_A_NEW_SERVICE_TO")}
-          </DialogDescription>
+          <DialogDescription>{t("ADD_SERVICE.REGISTER_A_NEW_SERVICE_TO")}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)}>
@@ -94,9 +94,7 @@ export const AddService = () => {
                 name="serviceName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>
-                      {t("ADD_SERVICE.SERVICE_NAME", { span: "*" })}
-                    </FormLabel>
+                    <FormLabel>{t("ADD_SERVICE.SERVICE_NAME", { span: "*" })}</FormLabel>
                     <FormControl>
                       <Input placeholder={t("ADD_SERVICE.ENTER_NAME")} {...field} />
                     </FormControl>

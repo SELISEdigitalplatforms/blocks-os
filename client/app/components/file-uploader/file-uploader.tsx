@@ -16,6 +16,8 @@ import { Trash2 as RemoveIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui-kits/button/button";
 import { showErrorToast } from "@/hooks/use-toast";
 import { useT } from "@seliseblocks/genesis-os";
+
+const I18N_MODULE = "os.shared";
 type DirectionOptions = "rtl" | "ltr" | undefined;
 type FileUploaderContextType = {
   dropzoneState: DropzoneState;
@@ -62,7 +64,7 @@ export const FileUploader = forwardRef<
     },
     ref,
   ) => {
-    const { t } = useT("os.shared");
+    const { t } = useT(I18N_MODULE);
     const [isFileTooBig, setIsFileTooBig] = useState(false);
     const [isLOF, setIsLOF] = useState(false);
     const [activeIndex, setActiveIndex] = useState(-1);
@@ -226,7 +228,7 @@ FileUploader.displayName = "FileUploader";
 
 export const FileUploaderContent = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ children, className, ...props }, ref) => {
-    const { t } = useT("os.shared");
+    const { t } = useT(I18N_MODULE);
     const { orientation } = useFileUpload();
     const containerRef = useRef<HTMLDivElement>(null);
     return (
@@ -255,7 +257,7 @@ export const FileUploaderItem = forwardRef<
   HTMLDivElement,
   { index: number } & React.HTMLAttributes<HTMLDivElement>
 >(({ className, index, children, ...props }, ref) => {
-  const { t } = useT("os.shared");
+  const { t } = useT(I18N_MODULE);
   const { removeFileFromSet, activeIndex, direction } = useFileUpload();
   const isSelected = index === activeIndex;
   return (

@@ -143,10 +143,16 @@ export const EnvironmentsCard = ({ environments, isLoading = false }: Environmen
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="text-xs md:text-sm">{t("ENVIRONMENTS_CARD.ENVIRONMENT")}</TableHead>
-              <TableHead className="text-xs md:text-sm">{t("ENVIRONMENTS_CARD.X_BLOCKS_KEY")}</TableHead>
+              <TableHead className="text-xs md:text-sm">
+                {t("ENVIRONMENTS_CARD.ENVIRONMENT")}
+              </TableHead>
+              <TableHead className="text-xs md:text-sm">
+                {t("ENVIRONMENTS_CARD.X_BLOCKS_KEY")}
+              </TableHead>
               <TableHead className="text-xs md:text-sm">{t("ENVIRONMENTS_CARD.DOMAIN")}</TableHead>
-              <TableHead className="text-xs md:text-sm">{t("ENVIRONMENTS_CARD.CREATED_ON")}</TableHead>
+              <TableHead className="text-xs md:text-sm">
+                {t("ENVIRONMENTS_CARD.CREATED_ON")}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

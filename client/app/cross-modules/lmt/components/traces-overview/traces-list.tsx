@@ -134,7 +134,7 @@ export function TracesList({
         ),
       },
     ],
-    [serviceLabels, setSortQueryParams, sortQueryParams],
+    [serviceLabels, setSortQueryParams, sortQueryParams, t],
   );
   const table = useReactTable({
     data,

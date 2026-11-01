@@ -37,7 +37,8 @@ const InfoRow = ({ icon, label, value }: InfoRowProps) => (
 const formatLastLogin = (t: TFn, value?: string) => {
   if (!value) return t("USER_PROFILE_SIDEBAR.NEVER");
   const date = new Date(value);
-  if (Number.isNaN(date.getTime()) || date.getFullYear() <= 1) return t("USER_PROFILE_SIDEBAR.NEVER");
+  if (Number.isNaN(date.getTime()) || date.getFullYear() <= 1)
+    return t("USER_PROFILE_SIDEBAR.NEVER");
   return date.toLocaleString(undefined, {
     month: "short",
     day: "numeric",
@@ -104,7 +105,9 @@ export const UserProfileSidebar = ({ id, projectKey }: UserProfileSidebarProps) 
 
       {/* Account details */}
       <CardContent className="mt-4 w-full rounded-sm border bg-card p-5 shadow-xs md:flex-1 md:overflow-y-auto">
-        <h3 className="mb-3 text-base font-semibold text-high-emphasis">{t("USER_PROFILE_SIDEBAR.ACCOUNT_DETAILS")}</h3>
+        <h3 className="mb-3 text-base font-semibold text-high-emphasis">
+          {t("USER_PROFILE_SIDEBAR.ACCOUNT_DETAILS")}
+        </h3>
         <InfoRow
           icon={<Shield className="h-4 w-4 text-muted-foreground" />}
           label={t("common:STATUS")}
@@ -123,9 +126,13 @@ export const UserProfileSidebar = ({ id, projectKey }: UserProfileSidebarProps) 
                       user?.active ? "bg-emerald-500" : "bg-red-500"
                     }`}
                   />
-                  {user?.active ? t("USER_PROFILE_SIDEBAR.ACTIVE") : t("USER_PROFILE_SIDEBAR.INACTIVE")}
+                  {user?.active
+                    ? t("USER_PROFILE_SIDEBAR.ACTIVE")
+                    : t("USER_PROFILE_SIDEBAR.INACTIVE")}
                 </span>
-                {user?.isLockedOut === true && <Badge variant="error">{t("USER_PROFILE_SIDEBAR.LOCKED_OUT")}</Badge>}
+                {user?.isLockedOut === true && (
+                  <Badge variant="error">{t("USER_PROFILE_SIDEBAR.LOCKED_OUT")}</Badge>
+                )}
               </div>
               {user?.isLockedOut === true && formattedLockoutTime && (
                 <span className="text-xs font-normal text-muted-foreground">

@@ -39,6 +39,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { OrganizationCombobox } from "@blocks-idp/iam/components/organization-combobox";
 import { NotifyUserCheckbox } from "@blocks-idp/iam/components/notify-user-checkbox";
 
+const I18N_MODULE = "os.idp.organizations";
+
 const DEFAULT_ORGANIZATION_ID = "default";
 
 const inviteOrganizationUserFormDefaultValue = {
@@ -50,11 +52,11 @@ const inviteOrganizationUserFormSchema = z.object({
     .string()
     .trim()
     .min(1, {
-      error: () => tStatic("os.idp.organizations", "INVITE_ORGANIZATION_USER.EMAIL_REQUIRED"),
+      error: () => tStatic(I18N_MODULE, "INVITE_ORGANIZATION_USER.EMAIL_REQUIRED"),
     })
     .check(
       z.email({
-        error: () => tStatic("os.idp.organizations", "INVITE_ORGANIZATION_USER.EMAIL_INVALID"),
+        error: () => tStatic(I18N_MODULE, "INVITE_ORGANIZATION_USER.EMAIL_INVALID"),
       }),
     ),
 });
@@ -81,7 +83,7 @@ export const InviteOrganizationUser = ({
   organizationId,
   organizationName,
 }: InviteOrganizationUserProps) => {
-  const { t } = useT("os.idp.organizations");
+  const { t } = useT(I18N_MODULE);
   const { isPending: isCreatingUser, mutateAsync: createUser } = useAddUser();
   const queryClient = useQueryClient();
 

@@ -23,9 +23,7 @@ export const CnameValidatorProject = ({
         showSuccessToast({ description: t("VALIDATOR_PROJECT.CNAME_IS_VALIDATED_SUCCESSFULLY") });
       } else {
         showErrorToast({
-          errors:
-            res?.errors ??
-            t("VALIDATOR_PROJECT.COULD_NOT_VERIFY_THE_DOMAIN"),
+          errors: res?.errors ?? t("VALIDATOR_PROJECT.COULD_NOT_VERIFY_THE_DOMAIN"),
         });
       }
     } catch (error) {

@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.idp.auth";
+
 export type ActivationErrorState = "invalid" | "expired" | "already_activated";
 
 // An already-activated account is not an invalid link: the validate call fails, but the failure means
@@ -29,7 +31,7 @@ export const activationFormDefaultValue = {
 };
 
 const hasWhitespace = /\s/;
-const noWhitespaceMessage = () => tStatic("os.idp.auth", "ACTIVATION_UTILS.PASSWORD_NO_SPACES");
+const noWhitespaceMessage = () => tStatic(I18N_MODULE, "ACTIVATION_UTILS.PASSWORD_NO_SPACES");
 
 const passwordSchema = z
   .string()
@@ -41,8 +43,12 @@ const passwordSchema = z
   .transform((value) => value.trim());
 
 export const activationFormSchema = z.object({
-  firstname: z.string().min(1, { error: () => tStatic("os.idp.auth", "ACTIVATION_UTILS.FIRST_NAME_REQUIRED") }),
-  lastname: z.string().min(1, { error: () => tStatic("os.idp.auth", "ACTIVATION_UTILS.LAST_NAME_REQUIRED") }),
+  firstname: z
+    .string()
+    .min(1, { error: () => tStatic(I18N_MODULE, "ACTIVATION_UTILS.FIRST_NAME_REQUIRED") }),
+  lastname: z
+    .string()
+    .min(1, { error: () => tStatic(I18N_MODULE, "ACTIVATION_UTILS.LAST_NAME_REQUIRED") }),
   password: passwordSchema,
   confirmPassword: passwordSchema,
 });

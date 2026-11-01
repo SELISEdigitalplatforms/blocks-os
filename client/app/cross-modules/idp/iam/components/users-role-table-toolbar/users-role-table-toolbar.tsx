@@ -47,7 +47,11 @@ function FilterContent<TData>({
         />
       )}
       {table.getColumn("lastLogin") && (
-        <DataTableFacetedFilter column={table.getColumn("lastLogin")} title={t("USERS_ROLE_TABLE_TOOLBAR.LAST_LOGIN")} options={translation} />
+        <DataTableFacetedFilter
+          column={table.getColumn("lastLogin")}
+          title={t("USERS_ROLE_TABLE_TOOLBAR.LAST_LOGIN")}
+          options={translation}
+        />
       )}
     </>
   );
@@ -64,9 +68,10 @@ export function UsersRoleTableToolbar<TData>({ table }: UsersRoleTableToolbarPro
   // toggled by the user. The override is scoped to the viewport it was made in,
   // so crossing the breakpoint falls back to the default without an effect that
   // writes state during synchronisation.
-  const [searchOverride, setSearchOverride] = useState<{ mobile: boolean; visible: boolean } | null>(
-    null,
-  );
+  const [searchOverride, setSearchOverride] = useState<{
+    mobile: boolean;
+    visible: boolean;
+  } | null>(null);
   const isSearchVisible =
     searchOverride && searchOverride.mobile === isMobile ? searchOverride.visible : !isMobile;
   const setIsSearchVisible = useCallback(
@@ -90,7 +95,7 @@ export function UsersRoleTableToolbar<TData>({ table }: UsersRoleTableToolbarPro
       setSearchValue(text);
       textSearchColumn?.setFilterValue(text);
     },
-    [textSearchColumn]
+    [textSearchColumn],
   );
 
   function resetFilters() {

@@ -25,7 +25,9 @@ const FileSvgDraw = () => {
         <CloudUpload />
       </div>
       <p className="mb-1 text-sm text-high-emphasis">
-        <span className="font-semibold text-primary">{t("IMPORT_COMMUNICATIONS.CLICK_TO_UPLOAD")}</span>
+        <span className="font-semibold text-primary">
+          {t("IMPORT_COMMUNICATIONS.CLICK_TO_UPLOAD")}
+        </span>
         &nbsp; {t("IMPORT_COMMUNICATIONS.OR_DRAG_AND_DROP")}
       </p>
       <p className="text-xs text-low-emphasis">{t("IMPORT_COMMUNICATIONS.FILE_TYPES")}</p>

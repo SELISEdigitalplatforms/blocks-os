@@ -4,8 +4,9 @@ import {
   reviewConfirmFormDefaultValue,
 } from "@/components/environment-migration/migration-form-schema";
 
-export type EnvironmentServiceSelectionFormValues =
-  ReturnType<typeof getEnvironmentServiceSelectionFormDefaultValue>;
+export type EnvironmentServiceSelectionFormValues = ReturnType<
+  typeof getEnvironmentServiceSelectionFormDefaultValue
+>;
 export type ReviewConfirmFormValues = typeof reviewConfirmFormDefaultValue;
 
 export type MigrationFormData = [EnvironmentServiceSelectionFormValues, ReviewConfirmFormValues];

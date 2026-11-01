@@ -2,7 +2,13 @@
 
 import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui-kits/select/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui-kits/select/select";
 import { cn } from "@/lib/utils";
 import { tStatic, useT } from "@seliseblocks/genesis-os";
 import { Plus, X } from "lucide-react";
@@ -10,16 +16,21 @@ import type { ReactNode } from "react";
 import type { DefaultValueKind } from "./rules.types";
 import type { DefaultDraft } from "./default-value.util";
 
+const KEY_TEMPLATE = "DEFAULT_VALUE_FIELDS.TEMPLATE";
+
+const I18N_MODULE = "os.idp.rules";
+
 /**
  * The inputs of the default-value panel: the kind picker, the Now offset, and the list of fixed values or
  * templates. Stateless; the panel owns the draft.
  */
 
-export const LABEL_CLASS = "text-[11px] font-medium uppercase tracking-widest text-muted-foreground";
+export const LABEL_CLASS =
+  "text-[11px] font-medium uppercase tracking-widest text-muted-foreground";
 
 const KIND_LABEL_KEYS: Record<DefaultValueKind, string> = {
   Static: "DEFAULT_VALUE_FIELDS.FIXED_VALUE",
-  Template: "DEFAULT_VALUE_FIELDS.TEMPLATE",
+  Template: KEY_TEMPLATE,
   Now: "DEFAULT_VALUE_FIELDS.NOW",
 };
 
@@ -45,11 +56,18 @@ export function KindPicker({
   value,
   hint,
   onChange,
-}: Readonly<{ kinds: DefaultValueKind[]; value: DefaultValueKind; hint: string; onChange: (kind: DefaultValueKind) => void }>) {
-  const { t } = useT("os.idp.rules");
+}: Readonly<{
+  kinds: DefaultValueKind[];
+  value: DefaultValueKind;
+  hint: string;
+  onChange: (kind: DefaultValueKind) => void;
+}>) {
+  const { t } = useT(I18N_MODULE);
   return (
     <fieldset className="flex flex-col gap-1.5">
-      <legend className={cn(LABEL_CLASS, "mb-1.5")}>{t("DEFAULT_VALUE_FIELDS.DEFAULT_KIND")}</legend>
+      <legend className={cn(LABEL_CLASS, "mb-1.5")}>
+        {t("DEFAULT_VALUE_FIELDS.DEFAULT_KIND")}
+      </legend>
       <div className="flex gap-1">
         {kinds.map((kind) => (
           <label
@@ -61,7 +79,13 @@ export function KindPicker({
                 : "border-border text-muted-foreground hover:border-primary/40 hover:text-primary",
             )}
           >
-            <input type="radio" name="default-kind" className="sr-only" checked={value === kind} onChange={() => onChange(kind)} />
+            <input
+              type="radio"
+              name="default-kind"
+              className="sr-only"
+              checked={value === kind}
+              onChange={() => onChange(kind)}
+            />
             {t(KIND_LABEL_KEYS[kind])}
           </label>
         ))}
@@ -83,7 +107,7 @@ export function OffsetInputs({
   summary: string | null;
   onChange: (offset: DefaultDraft["offset"]) => void;
 }>) {
-  const { t } = useT("os.idp.rules");
+  const { t } = useT(I18N_MODULE);
   return (
     <div className="flex flex-col gap-1.5">
       <div className="grid grid-cols-2 gap-3">
@@ -119,8 +143,15 @@ export function StaticItemInput({
   label,
   invalid,
   onChange,
-}: Readonly<{ fieldType: string; enumValues: string[]; value: string; label: string; invalid: boolean; onChange: (value: string) => void }>) {
-  const { t } = useT("os.idp.rules");
+}: Readonly<{
+  fieldType: string;
+  enumValues: string[];
+  value: string;
+  label: string;
+  invalid: boolean;
+  onChange: (value: string) => void;
+}>) {
+  const { t } = useT(I18N_MODULE);
   if (fieldType === "Boolean" || fieldType === "Enum") {
     const options = fieldType === "Boolean" ? ["true", "false"] : enumValues;
     return (
@@ -139,7 +170,8 @@ export function StaticItemInput({
     );
   }
   // A saved date-time comes back as ISO text ("…T09:00:00Z"); the picker shows minutes, read as UTC.
-  const shown = fieldType === "DateTime" ? (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.exec(value)?.[0] ?? value) : value;
+  const shown =
+    fieldType === "DateTime" ? (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.exec(value)?.[0] ?? value) : value;
   return (
     <Input
       type={inputTypeFor(fieldType)}
@@ -183,10 +215,13 @@ export function ItemsEditor({
   onAdd: () => void;
   onRemove: (index: number) => void;
 }>) {
-  const { t } = useT("os.idp.rules");
+  const { t } = useT(I18N_MODULE);
   const itemLabel = (index: number) => {
-    if (isArray) return t(isTemplate ? "DEFAULT_VALUE_FIELDS.TEMPLATE_N" : "DEFAULT_VALUE_FIELDS.VALUE_N", { n: index + 1 });
-    return t(isTemplate ? "DEFAULT_VALUE_FIELDS.TEMPLATE" : "DEFAULT_VALUE_FIELDS.VALUE");
+    if (isArray)
+      return t(isTemplate ? "DEFAULT_VALUE_FIELDS.TEMPLATE_N" : "DEFAULT_VALUE_FIELDS.VALUE_N", {
+        n: index + 1,
+      });
+    return t(isTemplate ? KEY_TEMPLATE : "DEFAULT_VALUE_FIELDS.VALUE");
   };
   return (
     <>
@@ -238,17 +273,24 @@ export function ItemsEditor({
 }
 
 /** The variables a template may insert: single-value properties of the schema, and the caller's values. */
-export function templateVariables(schemaName: string, fields: Record<string, { isObject: boolean; isArray: boolean }>, authNames: readonly string[], isArray: boolean): string[] {
+export function templateVariables(
+  schemaName: string,
+  fields: Record<string, { isObject: boolean; isArray: boolean }>,
+  authNames: readonly string[],
+  isArray: boolean,
+): string[] {
   const own = Object.entries(fields)
     .filter(([, field]) => !field.isObject && !field.isArray)
     .map(([path]) => `{{${schemaName}.${path}}}`);
   // Roles and Permissions are lists: only a list property can take them.
-  const auth = authNames.filter((name) => isArray || (name !== "Roles" && name !== "Permissions")).map((name) => `{{Auth.${name}}}`);
+  const auth = authNames
+    .filter((name) => isArray || (name !== "Roles" && name !== "Permissions"))
+    .map((name) => `{{Auth.${name}}}`);
   return [...own, ...auth];
 }
 
 /** The heading over the inputs. */
 export function itemsHeading(isArray: boolean, kind: DefaultValueKind): string {
-  if (isArray) return tStatic("os.idp.rules", "DEFAULT_VALUE_FIELDS.VALUES");
-  return tStatic("os.idp.rules", kind === "Template" ? "DEFAULT_VALUE_FIELDS.TEMPLATE" : "DEFAULT_VALUE_FIELDS.VALUE");
+  if (isArray) return tStatic(I18N_MODULE, "DEFAULT_VALUE_FIELDS.VALUES");
+  return tStatic(I18N_MODULE, kind === "Template" ? KEY_TEMPLATE : "DEFAULT_VALUE_FIELDS.VALUE");
 }

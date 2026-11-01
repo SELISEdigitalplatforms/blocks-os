@@ -108,14 +108,20 @@ const CaptchaConfigCard = ({ configuration }: { configuration: ICaptchaConfig })
                       "h-7 w-7 p-0 hover:bg-transparent",
                       enabled ? "text-emerald-600" : "text-destructive",
                     )}
-                    aria-label={enabled ? t("CONFIGURE_CAPTCHA_LIST.DISABLE") : t("CONFIGURE_CAPTCHA_LIST.ENABLE")}
+                    aria-label={
+                      enabled
+                        ? t("CONFIGURE_CAPTCHA_LIST.DISABLE")
+                        : t("CONFIGURE_CAPTCHA_LIST.ENABLE")
+                    }
                   >
                     <CaptchaSwitcher enabled={enabled} />
                   </Button>
                 </DialogTrigger>
               </ToggleCaptchaStatusModal>
             </TooltipTrigger>
-            <TooltipContent>{enabled ? t("CONFIGURE_CAPTCHA_LIST.DISABLE") : t("CONFIGURE_CAPTCHA_LIST.ENABLE")}</TooltipContent>
+            <TooltipContent>
+              {enabled ? t("CONFIGURE_CAPTCHA_LIST.DISABLE") : t("CONFIGURE_CAPTCHA_LIST.ENABLE")}
+            </TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -150,7 +156,9 @@ const CaptchaConfigCard = ({ configuration }: { configuration: ICaptchaConfig })
               status={configuration.secretStatus}
               fallback={
                 <span className="text-muted-foreground">
-                  {configuration.secretId ? t("CONFIGURE_CAPTCHA_LIST.CONFIGURED") : t("CONFIGURE_CAPTCHA_LIST.NOT_SET")}
+                  {configuration.secretId
+                    ? t("CONFIGURE_CAPTCHA_LIST.CONFIGURED")
+                    : t("CONFIGURE_CAPTCHA_LIST.NOT_SET")}
                 </span>
               }
             />

@@ -89,7 +89,9 @@ export const DomainSetupDialog = ({
           type="button"
           variant="ghost"
           size="icon"
-          aria-label={isRunning ? t("DOMAIN_SETUP_DIALOG.CLOSE_DISABLED_WHILE_SETUP_IS") : t("common:CLOSE")}
+          aria-label={
+            isRunning ? t("DOMAIN_SETUP_DIALOG.CLOSE_DISABLED_WHILE_SETUP_IS") : t("common:CLOSE")
+          }
           disabled={isRunning}
           onClick={() => handleOpenChange(false)}
           className="absolute right-3 top-3 h-9 w-9 text-muted-foreground"
@@ -99,12 +101,16 @@ export const DomainSetupDialog = ({
 
         <DialogHeader className="pr-8 text-left">
           <DialogTitle>
-            {view === "connect" ? t("DOMAIN_SETUP_DIALOG.CONNECT_YOUR_APP") : t("DOMAIN_SETUP_DIALOG.SET_UP_CUSTOM_DOMAIN")}
+            {view === "connect"
+              ? t("DOMAIN_SETUP_DIALOG.CONNECT_YOUR_APP")
+              : t("DOMAIN_SETUP_DIALOG.SET_UP_CUSTOM_DOMAIN")}
           </DialogTitle>
           <DialogDescription>
             <span className="font-medium text-high-emphasis">{host}</span>
             {" · "}
-            {isPlatform ? t("DOMAIN_SETUP_DIALOG.DEFAULT_DOMAIN") : t("DOMAIN_SETUP_DIALOG.COOKIE_DOMAIN", { cookieDomain: domain.cookieDomain })}
+            {isPlatform
+              ? t("DOMAIN_SETUP_DIALOG.DEFAULT_DOMAIN")
+              : t("DOMAIN_SETUP_DIALOG.COOKIE_DOMAIN", { cookieDomain: domain.cookieDomain })}
           </DialogDescription>
         </DialogHeader>
 

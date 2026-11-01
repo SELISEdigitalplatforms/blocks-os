@@ -55,7 +55,9 @@ export function EmailUsageFilterToolbar({
     label: statusLabel(status),
     value: status,
   }));
-  const filters: FilterItem<EmailUsageFilter>[] = [{ key: "search", type: "SearchInput", label: "" }];
+  const filters: FilterItem<EmailUsageFilter>[] = [
+    { key: "search", type: "SearchInput", label: "" },
+  ];
   if (isInbound) {
     // Inbound only: outbound rows are not stamped with the configuration that sent them.
     filters.push({
@@ -96,7 +98,12 @@ export function EmailUsageFilterToolbar({
         status: queryParams.status,
         configurationId: queryParams.configurationId,
       }}
-      defaultValues={{ search: "", sendDate: { from: "", to: "" }, status: "", configurationId: "" }}
+      defaultValues={{
+        search: "",
+        sendDate: { from: "", to: "" },
+        status: "",
+        configurationId: "",
+      }}
       onChange={changeHandler}
       onReset={resetHandler}
     />

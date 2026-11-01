@@ -24,9 +24,7 @@ export const CnameValidatorDialog = ({ open, onOpenChange, domain }: CnameValida
       <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-md overflow-y-auto overflow-x-hidden rounded-lg">
         <DialogHeader>
           <DialogTitle>{t("DIALOG.VALIDATE_DOMAIN")}</DialogTitle>
-          <DialogDescription>
-            {t("DIALOG.RUN_A_CNAME_LOOKUP_TO")}
-          </DialogDescription>
+          <DialogDescription>{t("DIALOG.RUN_A_CNAME_LOOKUP_TO")}</DialogDescription>
         </DialogHeader>
 
         <div className="flex min-w-0 flex-col gap-4">
@@ -50,7 +48,8 @@ export const CnameValidatorDialog = ({ open, onOpenChange, domain }: CnameValida
           {domain && !domain.isDomainVerified && (
             <div className="flex min-w-0 flex-col gap-1 rounded-sm border border-base-error bg-blocks-error-100 px-4 py-3 text-sm font-normal text-blocks-error-800">
               <p className="wrap-break-word">
-                {t("DIALOG.NO_SERVERS_FOUND_FOR_RUN", { cookieDomain: domain.cookieDomain })}</p>
+                {t("DIALOG.NO_SERVERS_FOUND_FOR_RUN", { cookieDomain: domain.cookieDomain })}
+              </p>
             </div>
           )}
 

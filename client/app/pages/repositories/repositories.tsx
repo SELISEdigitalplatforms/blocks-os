@@ -34,6 +34,8 @@ import { useDebounce } from "@seliseblocks/genesis-os/hooks";
 import { useValidateAuthorization } from "@/cross-modules/devops/hooks/github-info";
 import { RepositorySelectionModal } from "@/components/repository-selection-modal/repository-selection-modal";
 import ProviderButtons from "@/cross-modules/devops/components/deployment-steps/render-repos/render-provider";
+
+const I18N_MODULE = "os.repositories";
 // Repositories linked before the field existed carry .NET's DateTime.MinValue, which is not a
 // real creation date, so those read as unknown rather than 01/01/0001.
 const formatCreatedDate = (value?: string) => {
@@ -43,10 +45,18 @@ const formatCreatedDate = (value?: string) => {
   return formatDate(parsed, true);
 };
 const ADD_REPOSITORY_MESSAGES: Record<AssetMutationStatus, string> = {
-  get Added() { return tStatic("os.repositories", "REPOSITORIES.REPOSITORY_ADDED_SUCCESSFULLY"); },
-  get Updated() { return tStatic("os.repositories", "REPOSITORIES.REPOSITORY_DETAILS_UPDATED_SUCCESSFULLY"); },
-  get Unchanged() { return tStatic("os.repositories", "REPOSITORIES.REPOSITORY_IS_ALREADY_UP"); },
-  get Restored() { return tStatic("os.repositories", "REPOSITORIES.REPOSITORY_RESTORED_SUCCESSFULLY"); },
+  get Added() {
+    return tStatic(I18N_MODULE, "REPOSITORIES.REPOSITORY_ADDED_SUCCESSFULLY");
+  },
+  get Updated() {
+    return tStatic(I18N_MODULE, "REPOSITORIES.REPOSITORY_DETAILS_UPDATED_SUCCESSFULLY");
+  },
+  get Unchanged() {
+    return tStatic(I18N_MODULE, "REPOSITORIES.REPOSITORY_IS_ALREADY_UP");
+  },
+  get Restored() {
+    return tStatic(I18N_MODULE, "REPOSITORIES.REPOSITORY_RESTORED_SUCCESSFULLY");
+  },
 };
 const RepositoriesLoading = () => (
   <main className="p-6">
@@ -71,7 +81,7 @@ const RepositoriesLoading = () => (
   </main>
 );
 export const RepositoriesPage = () => {
-  const { t } = useT("os.repositories");
+  const { t } = useT(I18N_MODULE);
   const groupId = useProjectStore().selectedTenantGroup;
   const [pageNumber, setPageNumber] = useState(0);
   const [pageSize] = useState(12);
@@ -250,7 +260,7 @@ export const RepositoriesPage = () => {
         ),
       },
     ],
-    [canDelete],
+    [canDelete, t],
   );
   // The server returns one page of resources plus the count of everything the current search
   // matches, so neither list is filtered or sliced again here.
@@ -279,9 +289,7 @@ export const RepositoriesPage = () => {
         <DialogContent className="w-[calc(100%-2rem)] rounded-lg border p-6 shadow-lg md:w-[425px]">
           <DialogHeader>
             <DialogTitle>{t("REPOSITORIES.CONNECT_REPOSITORY")}</DialogTitle>
-            <DialogDescription>
-              {t("REPOSITORIES.SELECT_A_GIT_PROVIDER_TO")}
-            </DialogDescription>
+            <DialogDescription>{t("REPOSITORIES.SELECT_A_GIT_PROVIDER_TO")}</DialogDescription>
           </DialogHeader>
           <ProviderButtons destination="/intermediate-page" onClose={handleProviderClose} />
         </DialogContent>
@@ -305,7 +313,10 @@ export const RepositoriesPage = () => {
             dialogSubtitle: (
               <>
                 <p>
-                  {t("REPOSITORIES.WILL_NO_LONGER_BE_LISTED", { span: `${repositoryToRemove?.name}` })}</p>
+                  {t("REPOSITORIES.WILL_NO_LONGER_BE_LISTED", {
+                    span: `${repositoryToRemove?.name}`,
+                  })}
+                </p>
                 <p>{t("REPOSITORIES.YOU_CAN_ADD_IT_AGAIN")}</p>
               </>
             ),
@@ -389,7 +400,9 @@ export const RepositoriesPage = () => {
                         colSpan={columns.length}
                         className="h-24 text-center text-sm text-muted-foreground md:text-base"
                       >
-                        {isFetchingAssets ? t("REPOSITORIES.LOADING_REPOSITORIES") : t("REPOSITORIES.NO_REPOSITORIES_FOUND")}
+                        {isFetchingAssets
+                          ? t("REPOSITORIES.LOADING_REPOSITORIES")
+                          : t("REPOSITORIES.NO_REPOSITORIES_FOUND")}
                       </TableCell>
                     </TableRow>
                   ) : (

@@ -20,9 +20,16 @@ import {
 } from "@/components/ui-kits/tooltip/tooltip";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
-import { ARCHIVE_ERROR_MESSAGES, normalizeArchiveErrors } from "../constants/archive-error-messages";
+import {
+  ARCHIVE_ERROR_MESSAGES,
+  normalizeArchiveErrors,
+} from "../constants/archive-error-messages";
 import { useRoleArchiveImpact, usePermissionArchiveImpact } from "../hooks/use-archive-impact";
-import { IArchiveImpactBase, IRoleArchiveImpact, IPermissionArchiveImpact } from "../models/archive-impact.model";
+import {
+  IArchiveImpactBase,
+  IRoleArchiveImpact,
+  IPermissionArchiveImpact,
+} from "../models/archive-impact.model";
 import { useT } from "@seliseblocks/genesis-os";
 
 type ArchiveActionProps = {
@@ -79,7 +86,9 @@ const consequenceText = (
     }
     if (permissionImpact.roleBindingCount > 0) {
       clauses.push(
-        t("ARCHIVE_ACTION.CLAUSE_REFERENCED_BY_ROLES", { count: permissionImpact.roleBindingCount }),
+        t("ARCHIVE_ACTION.CLAUSE_REFERENCED_BY_ROLES", {
+          count: permissionImpact.roleBindingCount,
+        }),
       );
     }
   }

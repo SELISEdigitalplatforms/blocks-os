@@ -128,7 +128,10 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
                   value={activeTab}
                   onValueChange={(value) => handleTabChange(value as EmailTabKey)}
                 >
-                  <SelectTrigger className="w-56" aria-label={t("EMAIL_SERVICE_TABLE.SECTION_ARIA_LABEL")}>
+                  <SelectTrigger
+                    className="w-56"
+                    aria-label={t("EMAIL_SERVICE_TABLE.SECTION_ARIA_LABEL")}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -161,7 +164,9 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
                   onClick={() => navigate(scoped("email-management/new-communication"))}
                 >
                   <CirclePlus className="h-5 w-5 lg:mr-2" />
-                  <span className="sr-only lg:not-sr-only">{t("EMAIL_SERVICE_TABLE.ADD_TEMPLATE")}</span>
+                  <span className="sr-only lg:not-sr-only">
+                    {t("EMAIL_SERVICE_TABLE.ADD_TEMPLATE")}
+                  </span>
                 </Button>
               </div>
             ) : null}

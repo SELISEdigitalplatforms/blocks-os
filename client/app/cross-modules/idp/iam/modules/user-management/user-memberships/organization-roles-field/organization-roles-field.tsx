@@ -38,10 +38,8 @@ export const OrganizationRolesField = ({
   };
 
   const slicedRoles =
-    roles.slice(
-      filter.page * filter.pageSize,
-      filter.page * filter.pageSize + filter.pageSize,
-    ) || [];
+    roles.slice(filter.page * filter.pageSize, filter.page * filter.pageSize + filter.pageSize) ||
+    [];
 
   const onRemoveHandler = useCallback(
     (role: IRole) => {
@@ -49,8 +47,8 @@ export const OrganizationRolesField = ({
         showErrorToast({ errors: getMinimumRoleMessage() });
         return false;
       }
-      (onChange as unknown as (fn: (prev: IRole[]) => IRole[]) => void)(
-        (prevRoles) => prevRoles.filter((item) => item.slug !== role.slug),
+      (onChange as unknown as (fn: (prev: IRole[]) => IRole[]) => void)((prevRoles) =>
+        prevRoles.filter((item) => item.slug !== role.slug),
       );
       return true;
     },
@@ -79,10 +77,7 @@ export const OrganizationRolesField = ({
                     <Info className="h-4 w-4" aria-hidden />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent
-                  side="top"
-                  className="max-w-[240px] whitespace-normal text-center"
-                >
+                <TooltipContent side="top" className="max-w-[240px] whitespace-normal text-center">
                   {getMinimumRoleMessage()}
                 </TooltipContent>
               </Tooltip>
@@ -116,11 +111,7 @@ export const OrganizationRolesField = ({
       ) : (
         <div className="space-y-3">
           <div className="overflow-hidden rounded-lg border">
-            <OrganizationRolesList
-              roles={slicedRoles}
-              onDelete={onRemoveHandler}
-              onSave={onSave}
-            />
+            <OrganizationRolesList roles={slicedRoles} onDelete={onRemoveHandler} onSave={onSave} />
           </div>
           {roles.length > filter.pageSize && (
             <div className="flex items-center justify-between border-t pt-3">

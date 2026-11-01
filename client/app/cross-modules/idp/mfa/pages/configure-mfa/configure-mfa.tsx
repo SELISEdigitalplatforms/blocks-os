@@ -67,7 +67,9 @@ export const ConfigureMFA = () => {
         cell: ({ row }) => (
           <div className="flex max-w-[200px]">
             <Badge variant={data?.allowedMethods.includes(row.original.type) ? "success" : "error"}>
-              {data?.allowedMethods.includes(row.original.type) ? t("common:ENABLED") : t("common:DISABLED")}
+              {data?.allowedMethods.includes(row.original.type)
+                ? t("common:ENABLED")
+                : t("common:DISABLED")}
             </Badge>
           </div>
         ),

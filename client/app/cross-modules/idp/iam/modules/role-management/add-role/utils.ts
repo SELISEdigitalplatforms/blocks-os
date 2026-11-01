@@ -1,6 +1,8 @@
 import { tStatic } from "@seliseblocks/genesis-os";
 import { z } from "zod";
 
+const I18N_MODULE = "os.idp.roles";
+
 export const addRoleFormDefaultValue = {
   name: "",
   slug: "",
@@ -15,15 +17,15 @@ export const createAddRoleFormSchema = () =>
     name: z
       .string()
       .trim()
-      .min(1, tStatic("os.idp.roles", "ADD_ROLE.NAME_REQUIRED"))
-      .max(150, tStatic("os.idp.roles", "ADD_ROLE.MAX_150")),
+      .min(1, tStatic(I18N_MODULE, "ADD_ROLE.NAME_REQUIRED"))
+      .max(150, tStatic(I18N_MODULE, "ADD_ROLE.MAX_150")),
     slug: z
       .string()
       .trim()
-      .min(1, tStatic("os.idp.roles", "ADD_ROLE.SLUG_REQUIRED"))
-      .max(200, tStatic("os.idp.roles", "ADD_ROLE.MAX_200"))
-      .refine((s) => !s.includes(" "), tStatic("os.idp.roles", "ADD_ROLE.SLUG_NO_SPACES")),
-    description: z.string().trim().max(150, tStatic("os.idp.roles", "ADD_ROLE.MAX_150")).optional(),
+      .min(1, tStatic(I18N_MODULE, "ADD_ROLE.SLUG_REQUIRED"))
+      .max(200, tStatic(I18N_MODULE, "ADD_ROLE.MAX_200"))
+      .refine((s) => !s.includes(" "), tStatic(I18N_MODULE, "ADD_ROLE.SLUG_NO_SPACES")),
+    description: z.string().trim().max(150, tStatic(I18N_MODULE, "ADD_ROLE.MAX_150")).optional(),
     parentRoleSlug: z.string().optional(),
   });
 

@@ -27,7 +27,8 @@ const ServiceCardCopiedItem = ({ label, value }: { label: string; value: string 
           className="h-5 w-5 p-0 text-gray-400 hover:text-gray-600"
           onClick={() =>
             copy(value, {
-              onSuccess: () => showSuccessToast({ description: t("SERVICE_CARD.COPIED", { label }) }),
+              onSuccess: () =>
+                showSuccessToast({ description: t("SERVICE_CARD.COPIED", { label }) }),
             })
           }
         >

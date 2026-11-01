@@ -37,28 +37,28 @@ const AccessChips = ({
 }) => {
   const { t } = useT("os.secrets");
   return (
-  <div className="flex flex-wrap gap-1.5">
-    {ids.map((id) => (
-      <Badge key={id} variant="secondary" className="gap-1 py-0.5 pl-2 pr-1 font-normal">
-        <Icon className="h-3 w-3 shrink-0 text-muted-foreground" />
-        <span className="max-w-[180px] truncate" title={labels[id] ?? id}>
-          {labels[id] ?? id}
-        </span>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-4 w-4 p-0 hover:bg-transparent"
-          onClick={() => onRemove(id)}
-          disabled={disabled}
-          aria-label={t("USER_ROLE_PICKER.REMOVE", { value1: labels[id] ?? id })}
-        >
-          <X className="h-3 w-3" />
-        </Button>
-      </Badge>
-    ))}
-  </div>
-);
+    <div className="flex flex-wrap gap-1.5">
+      {ids.map((id) => (
+        <Badge key={id} variant="secondary" className="gap-1 py-0.5 pl-2 pr-1 font-normal">
+          <Icon className="h-3 w-3 shrink-0 text-muted-foreground" />
+          <span className="max-w-[180px] truncate" title={labels[id] ?? id}>
+            {labels[id] ?? id}
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-4 w-4 p-0 hover:bg-transparent"
+            onClick={() => onRemove(id)}
+            disabled={disabled}
+            aria-label={t("USER_ROLE_PICKER.REMOVE", { value1: labels[id] ?? id })}
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        </Badge>
+      ))}
+    </div>
+  );
 };
 
 /** One bordered box per access kind, so users and roles never read as a single blurred list. */

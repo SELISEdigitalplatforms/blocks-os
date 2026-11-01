@@ -21,9 +21,12 @@ type OrganizationRolesListProps = {
 
 export const OrganizationRolesList = ({ roles, onDelete, onSave }: OrganizationRolesListProps) => {
   const { t } = useT("os.idp.users");
-  const handleDelete = useCallback((role: IRole) => {
-    return onDelete(role);
-  }, [onDelete]);
+  const handleDelete = useCallback(
+    (role: IRole) => {
+      return onDelete(role);
+    },
+    [onDelete],
+  );
 
   const columns = useMemo<ColumnDef<IRole>[]>(
     () => [
@@ -32,19 +35,21 @@ export const OrganizationRolesList = ({ roles, onDelete, onSave }: OrganizationR
         accessorFn: (row) => `${row.name}`.trim(),
         header: () => (
           <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">{t("ORGANIZATION_ROLES_LIST.COLUMN_ROLES")}</span>
+            <span className="font-bold text-medium-emphasis">
+              {t("ORGANIZATION_ROLES_LIST.COLUMN_ROLES")}
+            </span>
           </div>
         ),
-        cell: ({ row }) => (
-          <div className="w-[130px] truncate">{row.original.name}</div>
-        ),
+        cell: ({ row }) => <div className="w-[130px] truncate">{row.original.name}</div>,
       },
       {
         id: "slug",
         accessorFn: (row) => `${row.slug}`.trim(),
         header: () => (
           <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">{t("ORGANIZATION_ROLES_LIST.COLUMN_SLUG")}</span>
+            <span className="font-bold text-medium-emphasis">
+              {t("ORGANIZATION_ROLES_LIST.COLUMN_SLUG")}
+            </span>
           </div>
         ),
         cell: ({ row }) => (
@@ -82,17 +87,15 @@ export const OrganizationRolesList = ({ roles, onDelete, onSave }: OrganizationR
       <Table>
         <TableHeader>
           <TableRow className="px-4 py-3 hover:bg-transparent">
-            {table
-              .getHeaderGroups()
-              .map((headerGroup) =>
-                headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} className="px-4 py-3">
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                )),
-              )}
+            {table.getHeaderGroups().map((headerGroup) =>
+              headerGroup.headers.map((header) => (
+                <TableHead key={header.id} className="px-4 py-3">
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(header.column.columnDef.header, header.getContext())}
+                </TableHead>
+              )),
+            )}
           </TableRow>
         </TableHeader>
         <TableBody>

@@ -46,21 +46,23 @@ const CopyIconButton = ({
 }) => {
   const { t } = useT("os.idp.auth");
   return (
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <Button
-        type="button"
-        variant="ghost"
-        className="h-auto shrink-0 p-1 text-gray-600 hover:bg-gray-100 hover:text-gray-800"
-        aria-label={t("KV_DETAIL_ITEM.COPY_VALUE")}
-        disabled={isCopying || !value}
-        onClick={onCopy}
-      >
-        {isCopying ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-      </Button>
-    </TooltipTrigger>
-    <TooltipContent>{isCopying ? t("common:COPIED") : t("KV_DETAIL_ITEM.COPY_VALUE")}</TooltipContent>
-  </Tooltip>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-auto shrink-0 p-1 text-gray-600 hover:bg-gray-100 hover:text-gray-800"
+          aria-label={t("KV_DETAIL_ITEM.COPY_VALUE")}
+          disabled={isCopying || !value}
+          onClick={onCopy}
+        >
+          {isCopying ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        {isCopying ? t("common:COPIED") : t("KV_DETAIL_ITEM.COPY_VALUE")}
+      </TooltipContent>
+    </Tooltip>
   );
 };
 
@@ -113,13 +115,17 @@ export const KVDetailItem = ({
                 type="button"
                 variant="ghost"
                 className="h-auto shrink-0 p-1 text-muted-foreground hover:text-high-emphasis"
-                aria-label={revealed ? t("KV_DETAIL_ITEM.HIDE_VALUE") : t("KV_DETAIL_ITEM.SHOW_VALUE")}
+                aria-label={
+                  revealed ? t("KV_DETAIL_ITEM.HIDE_VALUE") : t("KV_DETAIL_ITEM.SHOW_VALUE")
+                }
                 onClick={() => setRevealed((current) => !current)}
               >
                 {revealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{revealed ? t("KV_DETAIL_ITEM.HIDE_VALUE") : t("KV_DETAIL_ITEM.SHOW_VALUE")}</TooltipContent>
+            <TooltipContent>
+              {revealed ? t("KV_DETAIL_ITEM.HIDE_VALUE") : t("KV_DETAIL_ITEM.SHOW_VALUE")}
+            </TooltipContent>
           </Tooltip>
           <CopyIconButton value={value} isCopying={isCopying} onCopy={handleCopy} />
         </span>

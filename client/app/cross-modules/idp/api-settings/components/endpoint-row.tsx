@@ -59,7 +59,9 @@ export const EndpointRow = ({
             checked={endpoint.isMFARequired}
             onCheckedChange={(val) => onToggleMfa(endpoint, val)}
           />
-          <span className="text-[11px] font-medium text-muted-foreground">{t("ENDPOINT_ROW.MFA")}</span>
+          <span className="text-[11px] font-medium text-muted-foreground">
+            {t("ENDPOINT_ROW.MFA")}
+          </span>
           <Lock
             className={`h-3 w-3 transition-colors ${endpoint.isMFARequired ? "text-amber-500" : "text-border"}`}
           />
@@ -71,7 +73,9 @@ export const EndpointRow = ({
             checked={endpoint.isCaptchaRequired}
             onCheckedChange={(val) => onToggleCaptcha(endpoint, val)}
           />
-          <span className="text-[11px] font-medium text-muted-foreground">{t("ENDPOINT_ROW.CAPTCHA")}</span>
+          <span className="text-[11px] font-medium text-muted-foreground">
+            {t("ENDPOINT_ROW.CAPTCHA")}
+          </span>
         </div>
       </div>
     </div>

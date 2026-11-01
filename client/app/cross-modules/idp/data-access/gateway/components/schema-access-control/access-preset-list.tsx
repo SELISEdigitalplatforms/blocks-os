@@ -35,12 +35,8 @@ export function AccessPresetList({
           className="flex w-full items-center gap-3 rounded-md border border-border/50 px-3 py-2.5 text-left transition-colors hover:border-primary/40 hover:bg-accent/40"
         >
           <span className="min-w-0 flex-1">
-            <span className="block text-xs font-semibold text-foreground">
-              {preset.title}
-            </span>
-            <span className="mt-0.5 block text-[11px] text-muted-foreground">
-              {preset.hint}
-            </span>
+            <span className="block text-xs font-semibold text-foreground">{preset.title}</span>
+            <span className="mt-0.5 block text-[11px] text-muted-foreground">{preset.hint}</span>
           </span>
           <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
         </button>
@@ -58,4 +54,3 @@ export function AccessPresetList({
     </div>
   );
 }
-

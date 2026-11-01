@@ -83,7 +83,9 @@ export const EnvironmentServiceSelectionForm = () => {
     resolver: zodResolver(createEnvironmentServiceSelectionFormSchema()),
   });
 
-  const handleSubmit = (values: ReturnType<typeof getEnvironmentServiceSelectionFormDefaultValue>) => {
+  const handleSubmit = (
+    values: ReturnType<typeof getEnvironmentServiceSelectionFormDefaultValue>,
+  ) => {
     setFormData(0, values);
     nextStep();
   };
@@ -137,7 +139,9 @@ export const EnvironmentServiceSelectionForm = () => {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)}>
           <div className="mt-4 flex flex-col gap-1 text-left">
-            <p className="text-3xl font-bold tracking-tight">{t("ENVIRONMENT_SERVICE_SELECTION_FORM.SELECT_ENVIRONMENTS_SERVICES")}</p>
+            <p className="text-3xl font-bold tracking-tight">
+              {t("ENVIRONMENT_SERVICE_SELECTION_FORM.SELECT_ENVIRONMENTS_SERVICES")}
+            </p>
             <p className="mb-8 text-sm text-medium-emphasis">
               {t("ENVIRONMENT_SERVICE_SELECTION_FORM.CHOOSE_THE_SOURCE_AND_TARGET")}
             </p>
@@ -145,14 +149,18 @@ export const EnvironmentServiceSelectionForm = () => {
 
           <div className="space-y-6">
             <div>
-              <h3 className="mb-4 text-lg font-semibold">{t("ENVIRONMENT_SERVICE_SELECTION_FORM.ENVIRONMENTS")}</h3>
+              <h3 className="mb-4 text-lg font-semibold">
+                {t("ENVIRONMENT_SERVICE_SELECTION_FORM.ENVIRONMENTS")}
+              </h3>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="sourceEnvironment"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("ENVIRONMENT_SERVICE_SELECTION_FORM.SOURCE_ENVIRONMENT")}</FormLabel>
+                      <FormLabel>
+                        {t("ENVIRONMENT_SERVICE_SELECTION_FORM.SOURCE_ENVIRONMENT")}
+                      </FormLabel>
                       <Select
                         value={field.value}
                         onValueChange={(value) => {
@@ -171,21 +179,27 @@ export const EnvironmentServiceSelectionForm = () => {
                           <FormControl>
                             <SelectTrigger
                               ref={sourceTriggerRef}
-                              aria-label={t("ENVIRONMENT_SERVICE_SELECTION_FORM.SOURCE_ENVIRONMENT")}
+                              aria-label={t(
+                                "ENVIRONMENT_SERVICE_SELECTION_FORM.SOURCE_ENVIRONMENT",
+                              )}
                               className={cn(field.value && !isLoading && "pr-14")}
                             >
                               <SelectValue
                                 placeholder={
                                   isLoading
                                     ? t("ENVIRONMENT_SERVICE_SELECTION_FORM.LOADING_ENVIRONMENTS")
-                                    : t("ENVIRONMENT_SERVICE_SELECTION_FORM.SELECT_SOURCE_ENVIRONMENT")
+                                    : t(
+                                        "ENVIRONMENT_SERVICE_SELECTION_FORM.SELECT_SOURCE_ENVIRONMENT",
+                                      )
                                 }
                               />
                             </SelectTrigger>
                           </FormControl>
                           {field.value && !isLoading ? (
                             <EnvironmentClearButton
-                              label={t("ENVIRONMENT_SERVICE_SELECTION_FORM.CLEAR_SOURCE_ENVIRONMENT")}
+                              label={t(
+                                "ENVIRONMENT_SERVICE_SELECTION_FORM.CLEAR_SOURCE_ENVIRONMENT",
+                              )}
                               onClear={() => clearEnvironment("sourceEnvironment")}
                             />
                           ) : null}
@@ -212,7 +226,9 @@ export const EnvironmentServiceSelectionForm = () => {
                   name="targetEnvironment"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("ENVIRONMENT_SERVICE_SELECTION_FORM.TARGET_ENVIRONMENT")}</FormLabel>
+                      <FormLabel>
+                        {t("ENVIRONMENT_SERVICE_SELECTION_FORM.TARGET_ENVIRONMENT")}
+                      </FormLabel>
                       <Select
                         value={field.value}
                         onValueChange={(value) => {
@@ -231,21 +247,27 @@ export const EnvironmentServiceSelectionForm = () => {
                           <FormControl>
                             <SelectTrigger
                               ref={targetTriggerRef}
-                              aria-label={t("ENVIRONMENT_SERVICE_SELECTION_FORM.TARGET_ENVIRONMENT")}
+                              aria-label={t(
+                                "ENVIRONMENT_SERVICE_SELECTION_FORM.TARGET_ENVIRONMENT",
+                              )}
                               className={cn(field.value && !isLoading && "pr-14")}
                             >
                               <SelectValue
                                 placeholder={
                                   isLoading
                                     ? t("ENVIRONMENT_SERVICE_SELECTION_FORM.LOADING_ENVIRONMENTS")
-                                    : t("ENVIRONMENT_SERVICE_SELECTION_FORM.SELECT_TARGET_ENVIRONMENT")
+                                    : t(
+                                        "ENVIRONMENT_SERVICE_SELECTION_FORM.SELECT_TARGET_ENVIRONMENT",
+                                      )
                                 }
                               />
                             </SelectTrigger>
                           </FormControl>
                           {field.value && !isLoading ? (
                             <EnvironmentClearButton
-                              label={t("ENVIRONMENT_SERVICE_SELECTION_FORM.CLEAR_TARGET_ENVIRONMENT")}
+                              label={t(
+                                "ENVIRONMENT_SERVICE_SELECTION_FORM.CLEAR_TARGET_ENVIRONMENT",
+                              )}
                               onClear={() => clearEnvironment("targetEnvironment")}
                             />
                           ) : null}
@@ -270,7 +292,9 @@ export const EnvironmentServiceSelectionForm = () => {
             </div>
 
             <div>
-              <h3 className="mb-4 text-lg font-semibold">{t("ENVIRONMENT_SERVICE_SELECTION_FORM.SERVICES")}</h3>
+              <h3 className="mb-4 text-lg font-semibold">
+                {t("ENVIRONMENT_SERVICE_SELECTION_FORM.SERVICES")}
+              </h3>
               <FormField
                 control={form.control}
                 name="services"
@@ -343,7 +367,10 @@ export const EnvironmentServiceSelectionForm = () => {
                                                 );
                                               }
                                             }}
-                                            aria-label={t("ENVIRONMENT_SERVICE_SELECTION_FORM.SELECT", { name: service.name })}
+                                            aria-label={t(
+                                              "ENVIRONMENT_SERVICE_SELECTION_FORM.SELECT",
+                                              { name: service.name },
+                                            )}
                                           />
                                         </FormControl>
                                       </FormItem>
@@ -365,14 +392,18 @@ export const EnvironmentServiceSelectionForm = () => {
                                             <TooltipTrigger type="button" asChild>
                                               <div className="flex cursor-help items-center space-x-1">
                                                 <FormLabel className="text-xs font-normal text-muted-foreground">
-                                                  {t("ENVIRONMENT_SERVICE_SELECTION_FORM.OVERWRITE_DATA")}
+                                                  {t(
+                                                    "ENVIRONMENT_SERVICE_SELECTION_FORM.OVERWRITE_DATA",
+                                                  )}
                                                 </FormLabel>
                                                 <AlertTriangle className="h-3 w-3 text-amber-500" />
                                               </div>
                                             </TooltipTrigger>
                                             <TooltipContent>
                                               <p>
-                                                {t("ENVIRONMENT_SERVICE_SELECTION_FORM.THIS_WILL_OVERWRITE_EXISTING_DATA")}
+                                                {t(
+                                                  "ENVIRONMENT_SERVICE_SELECTION_FORM.THIS_WILL_OVERWRITE_EXISTING_DATA",
+                                                )}
                                               </p>
                                             </TooltipContent>
                                           </Tooltip>
@@ -400,7 +431,10 @@ export const EnvironmentServiceSelectionForm = () => {
                                                 ),
                                               );
                                             }}
-                                            aria-label={t("ENVIRONMENT_SERVICE_SELECTION_FORM.OVERWRITE_DATA_FOR", { name: service.name })}
+                                            aria-label={t(
+                                              "ENVIRONMENT_SERVICE_SELECTION_FORM.OVERWRITE_DATA_FOR",
+                                              { name: service.name },
+                                            )}
                                           />
                                         </FormControl>
                                       </FormItem>
@@ -420,7 +454,9 @@ export const EnvironmentServiceSelectionForm = () => {
                                 </div>
                               ) : (
                                 <p className="text-xs text-muted-foreground">
-                                  {t("ENVIRONMENT_SERVICE_SELECTION_FORM.NOT_AVAILABLE_FOR_THIS_SERVICE")}
+                                  {t(
+                                    "ENVIRONMENT_SERVICE_SELECTION_FORM.NOT_AVAILABLE_FOR_THIS_SERVICE",
+                                  )}
                                 </p>
                               )}
                             </CardContent>

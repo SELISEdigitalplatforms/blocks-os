@@ -19,44 +19,46 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/to
 import { SetCustomDomainDialog } from "../custom-domain/dialog";
 import { useT, tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.dashboard";
+
 // ─── Column helper ────────────────────────────────────────────────────────────
 
 const columnHelper = createColumnHelper<IEnvRepository>();
 
 const buildColumns = (onSet: (repo: IEnvRepository) => void) => [
   columnHelper.accessor("repoName", {
-    header: tStatic("os.dashboard", "common:NAME"),
+    header: tStatic(I18N_MODULE, "common:NAME"),
     cell: (info) => (
       <span className="text-sm font-medium text-high-emphasis">{info.getValue()}</span>
     ),
   }),
   columnHelper.accessor("defaultDeploymentUrl", {
-    header: tStatic("os.dashboard", "REPO_TABLE.DEPLOYMENT_DOMAIN"),
+    header: tStatic(I18N_MODULE, "REPO_TABLE.DEPLOYMENT_DOMAIN"),
     cell: (info) => <span className="text-sm text-medium-emphasis">{info.getValue()}</span>,
   }),
   columnHelper.accessor("customDeploymentUrl", {
-    header: tStatic("os.dashboard", "REPO_TABLE.CUSTOM_DOMAIN"),
+    header: tStatic(I18N_MODULE, "REPO_TABLE.CUSTOM_DOMAIN"),
     cell: ({ row }) => {
       const repo = row.original;
       return repo.customDeploymentUrl ? (
         <span className="text-sm text-medium-emphasis">{repo.customDeploymentUrl}</span>
       ) : (
         <Button variant="outline" size="xxs" onClick={() => onSet(repo)}>
-          <span className="px-2">{tStatic("os.dashboard", "REPO_TABLE.SET")}</span>
+          <span className="px-2">{tStatic(I18N_MODULE, "REPO_TABLE.SET")}</span>
         </Button>
       );
     },
   }),
   columnHelper.display({
     id: "lastDeploymentDate",
-    header: tStatic("os.dashboard", "REPO_TABLE.LAST_DEPLOYMENT_DATE"),
+    header: tStatic(I18N_MODULE, "REPO_TABLE.LAST_DEPLOYMENT_DATE"),
     cell: ({ row }) => {
       const repo = row.original;
       const isDefaultDate = repo.lastDeploymentDate === "0001-01-01T00:00:00";
       return (
         <div className="text-sm text-medium-emphasis">
           {!repo.lastDeploymentDate || isDefaultDate
-            ? tStatic("os.dashboard", "REPO_TABLE.NOT_DEPLOYED")
+            ? tStatic(I18N_MODULE, "REPO_TABLE.NOT_DEPLOYED")
             : formatFullDate(new Date(repo.lastDeploymentDate))}
         </div>
       );
@@ -64,13 +66,13 @@ const buildColumns = (onSet: (repo: IEnvRepository) => void) => [
   }),
   columnHelper.display({
     id: "actions",
-    header: tStatic("os.dashboard", "common:ACTIONS"),
+    header: tStatic(I18N_MODULE, "common:ACTIONS"),
     cell: ({ row }) => {
       const repo = row.original;
       const hasCustomDomain = !!repo.customDeploymentUrl;
       const tooltipText = hasCustomDomain
-        ? tStatic("os.dashboard", "REPO_TABLE.EDIT_CUSTOM_DOMAIN")
-        : tStatic("os.dashboard", "REPO_TABLE.SET_A_CUSTOM_DOMAIN_FIRST");
+        ? tStatic(I18N_MODULE, "REPO_TABLE.EDIT_CUSTOM_DOMAIN")
+        : tStatic(I18N_MODULE, "REPO_TABLE.SET_A_CUSTOM_DOMAIN_FIRST");
       return (
         <div className="flex items-center gap-1">
           <Tooltip>
@@ -78,7 +80,7 @@ const buildColumns = (onSet: (repo: IEnvRepository) => void) => [
               <Button
                 variant="ghost"
                 size="icon"
-                aria-label={tStatic("os.dashboard", "REPO_TABLE.EDIT_CUSTOM_DOMAIN")}
+                aria-label={tStatic(I18N_MODULE, "REPO_TABLE.EDIT_CUSTOM_DOMAIN")}
                 disabled={!hasCustomDomain}
                 onClick={() => onSet(repo)}
                 className="disabled:opacity-50 disabled:cursor-not-allowed"
@@ -119,7 +121,7 @@ export const ProjectRepoTable = ({
   search,
   onSearchChange,
 }: ProjectRepoTableProps) => {
-  const { t } = useT("os.dashboard");
+  const { t } = useT(I18N_MODULE);
   // ── Set custom domain dialog ────────────────────────────────────────────────
   const [setTarget, setSetTarget] = useState<IEnvRepository | null>(null);
   const [setDialogOpen, setSetDialogOpen] = useState(false);
@@ -237,7 +239,10 @@ export const ProjectRepoTable = ({
 
       {/* Pagination — same component and same rules as the Domains section. */}
       {filteredData.length > 0 && (
-        <nav aria-label={t("REPO_TABLE.REPOSITORIES_PAGINATION")} className="mt-4 flex items-center md:justify-end">
+        <nav
+          aria-label={t("REPO_TABLE.REPOSITORIES_PAGINATION")}
+          className="mt-4 flex items-center md:justify-end"
+        >
           <Pagination
             page={page}
             pageSize={DASHBOARD_TABLE_PAGE_SIZE}

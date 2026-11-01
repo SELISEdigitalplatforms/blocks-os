@@ -1,5 +1,7 @@
 import { tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.idp.api-settings";
+
 const API_ENDPOINT_CONFIG_SUBPATH = "/ApiEndpointConfig";
 
 export const API_SETTINGS_ENDPOINTS = {
@@ -16,37 +18,37 @@ export const API_SETTINGS_ENDPOINTS = {
 export const SERVICE_META: Record<string, { description: string; icon: string }> = {
   Authentication: {
     get description() {
-      return tStatic("os.idp.api-settings", "ENDPOINT_CONSTANT.AUTHENTICATION");
+      return tStatic(I18N_MODULE, "ENDPOINT_CONSTANT.AUTHENTICATION");
     },
     icon: "Lock",
   },
   Captcha: {
     get description() {
-      return tStatic("os.idp.api-settings", "ENDPOINT_CONSTANT.CAPTCHA");
+      return tStatic(I18N_MODULE, "ENDPOINT_CONSTANT.CAPTCHA");
     },
     icon: "Shield",
   },
   Iam: {
     get description() {
-      return tStatic("os.idp.api-settings", "ENDPOINT_CONSTANT.IAM");
+      return tStatic(I18N_MODULE, "ENDPOINT_CONSTANT.IAM");
     },
     icon: "Users",
   },
   Mfa: {
     get description() {
-      return tStatic("os.idp.api-settings", "ENDPOINT_CONSTANT.MFA");
+      return tStatic(I18N_MODULE, "ENDPOINT_CONSTANT.MFA");
     },
     icon: "Smartphone",
   },
   Storage: {
     get description() {
-      return tStatic("os.idp.api-settings", "ENDPOINT_CONSTANT.STORAGE");
+      return tStatic(I18N_MODULE, "ENDPOINT_CONSTANT.STORAGE");
     },
     icon: "HardDrive",
   },
   Communication: {
     get description() {
-      return tStatic("os.idp.api-settings", "ENDPOINT_CONSTANT.COMMUNICATION");
+      return tStatic(I18N_MODULE, "ENDPOINT_CONSTANT.COMMUNICATION");
     },
     icon: "Mail",
   },
@@ -54,7 +56,7 @@ export const SERVICE_META: Record<string, { description: string; icon: string }>
 
 export const DEFAULT_SERVICE_META = {
   get description() {
-    return tStatic("os.idp.api-settings", "ENDPOINT_CONSTANT.DEFAULT");
+    return tStatic(I18N_MODULE, "ENDPOINT_CONSTANT.DEFAULT");
   },
   icon: "Settings",
 };

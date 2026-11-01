@@ -20,7 +20,7 @@ interface LMTQueryAgentChatInputProps {
 }
 export const LMTQueryAgentChatInput = forwardRef<HTMLTextAreaElement, LMTQueryAgentChatInputProps>(
   ({ form, isThinking, onSubmit, onKeyDown }, _ref) => {
-  const { t } = useT("os.ai");
+    const { t } = useT("os.ai");
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const currentQuery = form.watch("query");
     const isSubmitDisabled = isThinking || !currentQuery?.trim();

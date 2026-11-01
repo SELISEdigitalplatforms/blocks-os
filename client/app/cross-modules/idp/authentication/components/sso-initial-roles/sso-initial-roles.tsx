@@ -38,9 +38,7 @@ export const SSOInitialRoles = ({ roles, onChange }: SSOInitialRolesProps) => {
               </span>
             )}
           </div>
-          <p className="text-sm text-muted-foreground">
-            {t("SSO_INITIAL_ROLES.DESCRIPTION")}
-          </p>
+          <p className="text-sm text-muted-foreground">{t("SSO_INITIAL_ROLES.DESCRIPTION")}</p>
         </div>
         <div className="shrink-0">
           <AddSSORole onAdd={onAddHandler} roles={roles} />
@@ -64,7 +62,9 @@ export const SSOInitialRoles = ({ roles, onChange }: SSOInitialRolesProps) => {
               />
             </svg>
           </div>
-          <p className="mt-3 text-sm font-medium text-foreground">{t("SSO_INITIAL_ROLES.EMPTY_TITLE")}</p>
+          <p className="mt-3 text-sm font-medium text-foreground">
+            {t("SSO_INITIAL_ROLES.EMPTY_TITLE")}
+          </p>
           <p className="mt-1 text-xs text-muted-foreground">{t("SSO_INITIAL_ROLES.EMPTY_HINT")}</p>
         </div>
       ) : (

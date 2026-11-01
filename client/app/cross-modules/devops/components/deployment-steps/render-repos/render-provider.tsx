@@ -93,7 +93,9 @@ const ProviderButtons = ({
                   height={18}
                   className="object-contain"
                 />
-                <span className="text-foreground">{t("RENDER_PROVIDER.CONTINUE_WITH", { name: provider.name })}</span>
+                <span className="text-foreground">
+                  {t("RENDER_PROVIDER.CONTINUE_WITH", { name: provider.name })}
+                </span>
               </Button>
             );
           })}

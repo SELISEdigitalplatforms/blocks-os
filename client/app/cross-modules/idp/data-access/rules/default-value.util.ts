@@ -2,13 +2,21 @@ import { tStatic } from "@seliseblocks/genesis-os";
 import type { DefaultValueKind, IFieldDefaultValue } from "./rules.types";
 import { checkVariables, type VariableField } from "./variable-syntax";
 
+const I18N_MODULE = "os.idp.rules";
+
 /**
  * Default values: which kinds fit a property, the checks before saving, and the one-line summary.
  * Mirrors Genesis `FieldDefaultValueCheck` / `DefaultValueConverter`, with the same messages.
  */
 
 /** Set by the platform on every save; never defaulted. */
-export const LOCKED_DEFAULT_PROPERTIES = ["ItemId", "CreatedBy", "LastUpdatedBy", "CreatedDate", "LastUpdatedDate"];
+export const LOCKED_DEFAULT_PROPERTIES = [
+  "ItemId",
+  "CreatedBy",
+  "LastUpdatedBy",
+  "CreatedDate",
+  "LastUpdatedDate",
+];
 
 const SUPPORTED_TYPES = new Set(["String", "ID", "Int", "Float", "Boolean", "DateTime", "Enum"]);
 
@@ -25,22 +33,38 @@ export function allowedDefaultKinds(fieldType: string, isArray: boolean): Defaul
 }
 
 /** One static item, as typed, checked against the property's type; null when it fits. */
-export function checkStaticItem(text: string, fieldType: string, enumValues: string[] = []): string | null {
+export function checkStaticItem(
+  text: string,
+  fieldType: string,
+  enumValues: string[] = [],
+): string | null {
   const value = text.trim();
   switch (fieldType) {
     case "Int":
-      return /^[+-]?\d+$/.test(value) && Math.abs(Number(value)) <= 2147483647 ? null : tStatic("os.idp.rules", "DEFAULT_VALUE_UTIL.NOT_WHOLE_NUMBER", { value });
-    case "Float":
-      return value !== "" && Number.isFinite(Number(value)) ? null : tStatic("os.idp.rules", "DEFAULT_VALUE_UTIL.NOT_NUMBER", { value });
-    case "Boolean":
-      return value === "true" || value === "false" ? null : tStatic("os.idp.rules", "DEFAULT_VALUE_UTIL.NOT_BOOLEAN", { value });
-    case "DateTime":
-      return value !== "" && !Number.isNaN(Date.parse(value)) && /^\d{4}-\d{2}-\d{2}/.test(value) && isRealDate(value)
+      return /^[+-]?\d+$/.test(value) && Math.abs(Number(value)) <= 2147483647
         ? null
-        : tStatic("os.idp.rules", "DEFAULT_VALUE_UTIL.NOT_DATE_TIME", { value });
+        : tStatic(I18N_MODULE, "DEFAULT_VALUE_UTIL.NOT_WHOLE_NUMBER", { value });
+    case "Float":
+      return value !== "" && Number.isFinite(Number(value))
+        ? null
+        : tStatic(I18N_MODULE, "DEFAULT_VALUE_UTIL.NOT_NUMBER", { value });
+    case "Boolean":
+      return value === "true" || value === "false"
+        ? null
+        : tStatic(I18N_MODULE, "DEFAULT_VALUE_UTIL.NOT_BOOLEAN", { value });
+    case "DateTime":
+      return value !== "" &&
+        !Number.isNaN(Date.parse(value)) &&
+        /^\d{4}-\d{2}-\d{2}/.test(value) &&
+        isRealDate(value)
+        ? null
+        : tStatic(I18N_MODULE, "DEFAULT_VALUE_UTIL.NOT_DATE_TIME", { value });
     case "Enum":
       return enumValues.length > 0 && !enumValues.includes(value)
-        ? tStatic("os.idp.rules", "DEFAULT_VALUE_UTIL.NOT_LISTED_VALUE", { value, values: enumValues.join(", ") })
+        ? tStatic(I18N_MODULE, "DEFAULT_VALUE_UTIL.NOT_LISTED_VALUE", {
+            value,
+            values: enumValues.join(", "),
+          })
         : null;
     default:
       return null;
@@ -88,7 +112,12 @@ export function draftFromDefault(value: IFieldDefaultValue | null | undefined): 
   return {
     kind: value.kind,
     items: items.length > 0 ? items : [""],
-    offset: { days: String(offset.days), hours: String(offset.hours), minutes: String(offset.minutes), seconds: String(offset.seconds) },
+    offset: {
+      days: String(offset.days),
+      hours: String(offset.hours),
+      minutes: String(offset.minutes),
+      seconds: String(offset.seconds),
+    },
   };
 }
 
@@ -121,7 +150,9 @@ const draftItems = (draft: DefaultDraft, target: DefaultTarget) =>
 function checkStaticDraft(items: string[], target: DefaultTarget): string | null {
   if (items.length === 0 || (items[0] ?? "").trim() === "") {
     // Only a single text property may default to empty text.
-    return target.fieldType === "String" && !target.isArray ? null : tStatic("os.idp.rules", "DEFAULT_VALUE_UTIL.VALUE_REQUIRED");
+    return target.fieldType === "String" && !target.isArray
+      ? null
+      : tStatic(I18N_MODULE, "DEFAULT_VALUE_UTIL.VALUE_REQUIRED");
   }
   for (const item of items) {
     const problem = checkStaticItem(item, target.fieldType, target.enumValues);
@@ -131,19 +162,28 @@ function checkStaticDraft(items: string[], target: DefaultTarget): string | null
 }
 
 function checkTemplateDraft(items: string[], target: DefaultTarget): string | null {
-  if (target.fieldType !== "String" && target.fieldType !== "ID") return tStatic("os.idp.rules", "DEFAULT_VALUE_UTIL.TEMPLATE_TEXT_ONLY");
-  if (items.every((item) => item.trim() === "")) return tStatic("os.idp.rules", "DEFAULT_VALUE_UTIL.TEMPLATE_REQUIRED");
+  if (target.fieldType !== "String" && target.fieldType !== "ID")
+    return tStatic(I18N_MODULE, "DEFAULT_VALUE_UTIL.TEMPLATE_TEXT_ONLY");
+  if (items.every((item) => item.trim() === ""))
+    return tStatic(I18N_MODULE, "DEFAULT_VALUE_UTIL.TEMPLATE_REQUIRED");
   for (const item of items) {
-    const problem = checkVariables(item, "template", target.schemaName, target.fields, target.isArray);
+    const problem = checkVariables(
+      item,
+      "template",
+      target.schemaName,
+      target.fields,
+      target.isArray,
+    );
     if (problem) return problem.message;
   }
   return null;
 }
 
 function checkNowDraft(offset: DefaultDraft["offset"], target: DefaultTarget): string | null {
-  if (target.fieldType !== "DateTime" || target.isArray) return tStatic("os.idp.rules", "DEFAULT_VALUE_UTIL.NOW_DATE_TIME_ONLY");
+  if (target.fieldType !== "DateTime" || target.isArray)
+    return tStatic(I18N_MODULE, "DEFAULT_VALUE_UTIL.NOW_DATE_TIME_ONLY");
   const notWhole = OFFSET_UNITS.find((key) => !/^[+-]?\d+$/.test(offset[key].trim()));
-  return notWhole ? tStatic("os.idp.rules", OFFSET_WHOLE_NUMBER_KEYS[notWhole]) : null;
+  return notWhole ? tStatic(I18N_MODULE, OFFSET_WHOLE_NUMBER_KEYS[notWhole]) : null;
 }
 
 /** Why the draft can't be saved yet, or null. Same messages as the server. */
@@ -156,7 +196,7 @@ export function checkDefaultDraft(draft: DefaultDraft, target: DefaultTarget): s
     case "Now":
       return checkNowDraft(draft.offset, target);
     default:
-      return tStatic("os.idp.rules", "DEFAULT_VALUE_UTIL.CHOOSE_KIND");
+      return tStatic(I18N_MODULE, "DEFAULT_VALUE_UTIL.CHOOSE_KIND");
   }
 }
 
@@ -168,7 +208,12 @@ export function defaultFromDraft(draft: DefaultDraft, target: DefaultTarget): IF
     return {
       kind: "Now",
       value: null,
-      offset: { days: n(draft.offset.days), hours: n(draft.offset.hours), minutes: n(draft.offset.minutes), seconds: n(draft.offset.seconds) },
+      offset: {
+        days: n(draft.offset.days),
+        hours: n(draft.offset.hours),
+        minutes: n(draft.offset.minutes),
+        seconds: n(draft.offset.seconds),
+      },
     };
   }
   if (draft.kind === "Template") {
@@ -183,16 +228,20 @@ export function formatDefaultSummary(value: IFieldDefaultValue | null | undefine
   if (!value) return "";
   if (value.kind === "Now") {
     const offset = value.offset;
-    const now = tStatic("os.idp.rules", "DEFAULT_VALUE_UTIL.SUMMARY_NOW");
+    const now = tStatic(I18N_MODULE, "DEFAULT_VALUE_UTIL.SUMMARY_NOW");
     if (!offset) return now;
     const parts = OFFSET_UNITS.filter((key) => offset[key] !== 0).map((key) =>
-      tStatic("os.idp.rules", OFFSET_SUMMARY_KEYS[key], { count: Math.abs(offset[key]), sign: offset[key] > 0 ? "+" : "−" }),
+      tStatic(I18N_MODULE, OFFSET_SUMMARY_KEYS[key], {
+        count: Math.abs(offset[key]),
+        sign: offset[key] > 0 ? "+" : "−",
+      }),
     );
     return parts.length === 0 ? now : `${now} ${parts.join(" ")}`;
   }
   const raw = value.value;
   if (!Array.isArray(raw)) return String(raw ?? "");
   // Fixed text items are quoted, so ["admin", "app-user"] reads as a list of values.
-  const quote = (item: string | number | boolean) => (typeof item === "string" && value.kind === "Static" ? JSON.stringify(item) : String(item));
+  const quote = (item: string | number | boolean) =>
+    typeof item === "string" && value.kind === "Static" ? JSON.stringify(item) : String(item);
   return "[" + raw.map(quote).join(", ") + "]";
 }

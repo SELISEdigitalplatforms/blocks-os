@@ -82,7 +82,9 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
         ...(values.captchaSecret ? { captchaSecret: values.captchaSecret } : {}),
       });
       showSuccessToast({
-        description: configuration ? t("CONFIGURE_CAPTCHA_MODAL.UPDATED") : t("CONFIGURE_CAPTCHA_MODAL.ADDED"),
+        description: configuration
+          ? t("CONFIGURE_CAPTCHA_MODAL.UPDATED")
+          : t("CONFIGURE_CAPTCHA_MODAL.ADDED"),
       });
       form.reset();
       setOpen(false);
@@ -106,7 +108,9 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
         <DialogHeader>
           <DialogTitle>
             {configuration
-              ? t("CONFIGURE_CAPTCHA_MODAL.TITLE_EDIT", { provider: CAPTCHA_PROVIDERS[configuration.provider].label })
+              ? t("CONFIGURE_CAPTCHA_MODAL.TITLE_EDIT", {
+                  provider: CAPTCHA_PROVIDERS[configuration.provider].label,
+                })
               : t("CONFIGURE_CAPTCHA_MODAL.TITLE_ADD")}
           </DialogTitle>
         </DialogHeader>
@@ -119,12 +123,15 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {t("CONFIGURE_CAPTCHA_MODAL.PROVIDER")} <span className="text-destructive">*</span>
+                      {t("CONFIGURE_CAPTCHA_MODAL.PROVIDER")}{" "}
+                      <span className="text-destructive">*</span>
                     </FormLabel>
                     <FormControl>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                          <SelectValue placeholder={t("CONFIGURE_CAPTCHA_MODAL.PROVIDER_PLACEHOLDER")} />
+                          <SelectValue
+                            placeholder={t("CONFIGURE_CAPTCHA_MODAL.PROVIDER_PLACEHOLDER")}
+                          />
                         </SelectTrigger>
                         <SelectContent>
                           {Object.values(CAPTCHA_PROVIDERS).map((item) => (
@@ -154,7 +161,11 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
                   disabled={isPending || (!needsNewSecret && (!isDirty || !isValid))}
                   type="submit"
                 >
-                  {isPending ? t("CONFIGURE_CAPTCHA_MODAL.SAVING") : configuration ? t("CONFIGURE_CAPTCHA_MODAL.UPDATE_CHANGES") : t("common:SAVE")}
+                  {isPending
+                    ? t("CONFIGURE_CAPTCHA_MODAL.SAVING")
+                    : configuration
+                      ? t("CONFIGURE_CAPTCHA_MODAL.UPDATE_CHANGES")
+                      : t("common:SAVE")}
                 </Button>
               </DialogFooter>
             </form>

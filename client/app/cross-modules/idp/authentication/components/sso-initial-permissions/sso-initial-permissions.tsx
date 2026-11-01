@@ -55,8 +55,12 @@ export function SSOInitialPermissions({ permissions, onChange }: SSOInitialPermi
               />
             </svg>
           </div>
-          <p className="mt-3 text-sm font-medium text-foreground">{t("SSO_INITIAL_PERMISSIONS.EMPTY_TITLE")}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{t("SSO_INITIAL_PERMISSIONS.EMPTY_HINT")}</p>
+          <p className="mt-3 text-sm font-medium text-foreground">
+            {t("SSO_INITIAL_PERMISSIONS.EMPTY_TITLE")}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {t("SSO_INITIAL_PERMISSIONS.EMPTY_HINT")}
+          </p>
         </div>
       ) : (
         <div className="overflow-hidden rounded-lg border">

@@ -34,7 +34,9 @@ export const CreateProjectResourcesForm = () => {
   const [selectRepositoryModalOpen, setSelectRepositoryModalOpen] = useState(false);
   const form = useForm<{ assets: Asset[] }>({
     values: formData[1],
-    resolver: zodResolver(createCreateProjectResourcesFormSchema()) as Resolver<{ assets: Asset[] }>,
+    resolver: zodResolver(createCreateProjectResourcesFormSchema()) as Resolver<{
+      assets: Asset[];
+    }>,
   });
   const [selectedRepositories, setSelectedRepositories] = useState<IRepository[]>(
     (formData[1]?.assets ?? []).map((asset) => ({
@@ -88,30 +90,43 @@ export const CreateProjectResourcesForm = () => {
       <form onSubmit={form.handleSubmit(onSubmitHandler)} className="w-full">
         <div className="mt-4 flex flex-col gap-6 text-left">
           <div className="space-y-1">
-            <h3 className="text-2xl font-semibold tracking-tight">{t("CREATE_PROJECT_RESOURCES_FORM.ADD_RESOURCE")}</h3>
+            <h3 className="text-2xl font-semibold tracking-tight">
+              {t("CREATE_PROJECT_RESOURCES_FORM.ADD_RESOURCE")}
+            </h3>
             <p className="text-base font-normal text-gray-500">
               {t("CREATE_PROJECT_RESOURCES_FORM.ADD_REPOSITORIES_TO_LINK_WITH")}
             </p>
           </div>
           <div className="rounded-md border border-gray-200 bg-card p-6 shadow-xs">
-            <h4 className="mb-2 text-lg font-medium">{t("CREATE_PROJECT_RESOURCES_FORM.CONNECT_AND_SELECT_REPOSITORIES")}</h4>
+            <h4 className="mb-2 text-lg font-medium">
+              {t("CREATE_PROJECT_RESOURCES_FORM.CONNECT_AND_SELECT_REPOSITORIES")}
+            </h4>
             <p className="mb-6 text-sm text-gray-500">
               {t("CREATE_PROJECT_RESOURCES_FORM.WE_LL_AUTOMATICALLY_DETECT_AND")}
             </p>
             <div className="flex flex-col gap-6 md:flex-row">
               {authAccountData && (
                 <div className="min-w-[220px] flex-1">
-                  <div className="mb-2 text-sm font-medium text-gray-600">{t("CREATE_PROJECT_RESOURCES_FORM.GITHUB_AUTH_ACCOUNT")}</div>
+                  <div className="mb-2 text-sm font-medium text-gray-600">
+                    {t("CREATE_PROJECT_RESOURCES_FORM.GITHUB_AUTH_ACCOUNT")}
+                  </div>
                   <div className="flex items-center gap-2 rounded-md py-2">
                     <div className="relative flex h-6 w-6 items-center justify-center overflow-hidden rounded-full bg-gray-200">
                       {authAccountData.avatar_url && authAccountData.avatar_url !== "" ? (
                         <img
                           src={authAccountData.avatar_url}
-                          alt={authAccountData.name || t("CREATE_PROJECT_RESOURCES_FORM.USER_AVATAR")}
+                          alt={
+                            authAccountData.name || t("CREATE_PROJECT_RESOURCES_FORM.USER_AVATAR")
+                          }
                           className="h-full w-full object-cover"
                         />
                       ) : (
-                        <img src={githubIconSrc} alt={t("CREATE_PROJECT_RESOURCES_FORM.GITHUB")} width={20} height={20} />
+                        <img
+                          src={githubIconSrc}
+                          alt={t("CREATE_PROJECT_RESOURCES_FORM.GITHUB")}
+                          width={20}
+                          height={20}
+                        />
                       )}
                     </div>
                     <div className="text-sm font-medium">{authAccountData.login}</div>
@@ -124,7 +139,10 @@ export const CreateProjectResourcesForm = () => {
               {(selectedRepositories ?? []).length > 0 && (
                 <div className="min-w-[220px] flex-1">
                   <div className="mb-2 text-sm font-medium text-gray-600">
-                    {t("CREATE_PROJECT_RESOURCES_FORM.GIT_REPOS", { count: (selectedRepositories ?? []).length })}</div>
+                    {t("CREATE_PROJECT_RESOURCES_FORM.GIT_REPOS", {
+                      count: (selectedRepositories ?? []).length,
+                    })}
+                  </div>
                   <ul className="flex flex-col gap-2">
                     {(selectedRepositories ?? []).map((repo: IRepository) => (
                       <li
@@ -132,7 +150,12 @@ export const CreateProjectResourcesForm = () => {
                         className="flex items-center justify-between rounded-md bg-card py-2"
                       >
                         <div className="flex items-center gap-2">
-                          <img src={githubIconSrc} alt={t("CREATE_PROJECT_RESOURCES_FORM.GITHUB")} width={20} height={20} />
+                          <img
+                            src={githubIconSrc}
+                            alt={t("CREATE_PROJECT_RESOURCES_FORM.GITHUB")}
+                            width={20}
+                            height={20}
+                          />
                           <div className="text-sm font-medium"> {repo.full_name}</div>
                         </div>
                       </li>

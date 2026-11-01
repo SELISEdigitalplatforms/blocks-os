@@ -51,6 +51,10 @@ import {
 } from "./oidc-template-validation";
 import type { OidcPreviewTheme, OidcPreviewThemeMode } from "./oidc-preview-shared";
 
+const KEY_FIELD_ERROR = "OIDC_BRANDING_FORM.FIELD_ERROR";
+
+const I18N_MODULE = "os.idp.oidc";
+
 const DEFAULT_COLOR = "#0066b2";
 const MAX_LOGO_SIZE_MB = 2;
 const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/svg+xml", "image/webp"];
@@ -64,11 +68,11 @@ const getEditorTabs = (): Array<{
 }> => [
   {
     value: "branding",
-    label: tStatic("os.idp.oidc", "OIDC_BRANDING_FORM.TAB_BRANDING"),
+    label: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.TAB_BRANDING"),
     Icon: Brush,
   },
-  { value: "theme", label: tStatic("os.idp.oidc", "OIDC_BRANDING_FORM.TAB_THEME"), Icon: Palette },
-  { value: "pages", label: tStatic("os.idp.oidc", "OIDC_BRANDING_FORM.TAB_PAGES"), Icon: FileText },
+  { value: "theme", label: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.TAB_THEME"), Icon: Palette },
+  { value: "pages", label: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.TAB_PAGES"), Icon: FileText },
 ];
 
 const EDITOR_TAB_VALUES = ["branding", "theme", "pages"] as const;
@@ -82,43 +86,43 @@ const getThemeGroups = (): Array<{
 }> => [
   {
     id: "brand",
-    label: tStatic("os.idp.oidc", "OIDC_BRANDING_FORM.GROUP_BRAND_COLORS"),
-    description: tStatic("os.idp.oidc", "OIDC_BRANDING_FORM.GROUP_BRAND_COLORS_DESC"),
+    label: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.GROUP_BRAND_COLORS"),
+    description: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.GROUP_BRAND_COLORS_DESC"),
     fields: ["primary", "secondary", "accentSoft"],
   },
   {
     id: "surfaces",
-    label: tStatic("os.idp.oidc", "OIDC_BRANDING_FORM.GROUP_SURFACES"),
-    description: tStatic("os.idp.oidc", "OIDC_BRANDING_FORM.GROUP_SURFACES_DESC"),
+    label: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.GROUP_SURFACES"),
+    description: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.GROUP_SURFACES_DESC"),
     fields: ["background", "surface", "border", "borderStrong"],
   },
   {
     id: "content",
-    label: tStatic("os.idp.oidc", "OIDC_BRANDING_FORM.GROUP_CONTENT_STATUS"),
-    description: tStatic("os.idp.oidc", "OIDC_BRANDING_FORM.GROUP_CONTENT_STATUS_DESC"),
+    label: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.GROUP_CONTENT_STATUS"),
+    description: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.GROUP_CONTENT_STATUS_DESC"),
     fields: ["text", "mutedText", "success", "danger"],
   },
   {
     id: "buttons",
-    label: tStatic("os.idp.oidc", "OIDC_BRANDING_FORM.GROUP_BUTTONS"),
-    description: tStatic("os.idp.oidc", "OIDC_BRANDING_FORM.GROUP_BUTTONS_DESC"),
+    label: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.GROUP_BUTTONS"),
+    description: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.GROUP_BUTTONS_DESC"),
     fields: ["buttonText"],
   },
 ];
 
 const getThemeFieldDescriptions = (): Record<keyof IOidcUiThemePalette, string> => ({
-  primary: tStatic("os.idp.oidc", "OIDC_BRANDING_FORM.THEME_DESC_PRIMARY"),
-  secondary: tStatic("os.idp.oidc", "OIDC_BRANDING_FORM.THEME_DESC_SECONDARY"),
-  background: tStatic("os.idp.oidc", "OIDC_BRANDING_FORM.THEME_DESC_BACKGROUND"),
-  surface: tStatic("os.idp.oidc", "OIDC_BRANDING_FORM.THEME_DESC_SURFACE"),
-  text: tStatic("os.idp.oidc", "OIDC_BRANDING_FORM.THEME_DESC_TEXT"),
-  mutedText: tStatic("os.idp.oidc", "OIDC_BRANDING_FORM.THEME_DESC_MUTED_TEXT"),
-  success: tStatic("os.idp.oidc", "OIDC_BRANDING_FORM.THEME_DESC_SUCCESS"),
-  danger: tStatic("os.idp.oidc", "OIDC_BRANDING_FORM.THEME_DESC_DANGER"),
-  border: tStatic("os.idp.oidc", "OIDC_BRANDING_FORM.THEME_DESC_BORDER"),
-  borderStrong: tStatic("os.idp.oidc", "OIDC_BRANDING_FORM.THEME_DESC_BORDER_STRONG"),
-  accentSoft: tStatic("os.idp.oidc", "OIDC_BRANDING_FORM.THEME_DESC_ACCENT_SOFT"),
-  buttonText: tStatic("os.idp.oidc", "OIDC_BRANDING_FORM.THEME_DESC_BUTTON_TEXT"),
+  primary: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.THEME_DESC_PRIMARY"),
+  secondary: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.THEME_DESC_SECONDARY"),
+  background: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.THEME_DESC_BACKGROUND"),
+  surface: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.THEME_DESC_SURFACE"),
+  text: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.THEME_DESC_TEXT"),
+  mutedText: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.THEME_DESC_MUTED_TEXT"),
+  success: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.THEME_DESC_SUCCESS"),
+  danger: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.THEME_DESC_DANGER"),
+  border: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.THEME_DESC_BORDER"),
+  borderStrong: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.THEME_DESC_BORDER_STRONG"),
+  accentSoft: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.THEME_DESC_ACCENT_SOFT"),
+  buttonText: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.THEME_DESC_BUTTON_TEXT"),
 });
 
 const normalizeField = (value: string) => value.toLowerCase().replace(/[^a-z]/g, "");
@@ -188,7 +192,7 @@ const ColorInput = ({
   error: string | null;
   onChange: (value: string) => void;
 }) => {
-  const { t } = useT("os.idp.oidc");
+  const { t } = useT(I18N_MODULE);
   const id = `theme-${palette}-${field}`;
   const paletteLabel =
     palette === "light" ? t("OIDC_BRANDING_FORM.LIGHT") : t("OIDC_BRANDING_FORM.DARK");
@@ -270,7 +274,7 @@ const LogoUploadField = ({
   onFile: (file: File) => void;
   onRemove: () => void;
 }) => {
-  const { t } = useT("os.idp.oidc");
+  const { t } = useT(I18N_MODULE);
   return (
     <div className="space-y-2">
       <Label htmlFor={inputId}>{label}</Label>
@@ -358,7 +362,7 @@ const LogoUploadField = ({
       </div>
       {error && (
         <p className="text-xs text-destructive" role="alert">
-          {t("OIDC_BRANDING_FORM.FIELD_ERROR", { label, error })}
+          {t(KEY_FIELD_ERROR, { label, error })}
         </p>
       )}
     </div>
@@ -366,7 +370,7 @@ const LogoUploadField = ({
 };
 
 export const OidcBrandingForm = () => {
-  const { t, language } = useT("os.idp.oidc");
+  const { t, language } = useT(I18N_MODULE);
   const fileInputRefLight = useRef<HTMLInputElement>(null);
   const fileInputRefDark = useRef<HTMLInputElement>(null);
   const { setActions } = useOidcBrandingHeader();
@@ -549,7 +553,10 @@ export const OidcBrandingForm = () => {
           fileVersionId: response.fileVersionId ?? "",
         });
         if (completion.verificationStatus !== "Verified") {
-          throw new Error(completion.rejectionReason ?? tStatic("os.idp.oidc", "OIDC_BRANDING_FORM.LOGO_FAILED_VERIFICATION"));
+          throw new Error(
+            completion.rejectionReason ??
+              tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.LOGO_FAILED_VERIFICATION"),
+          );
         }
       }
       const fileRecord = await storageService.file.getFileByFileId({
@@ -562,9 +569,9 @@ export const OidcBrandingForm = () => {
   );
 
   // `language` is a dependency so the messages are rebuilt when the language changes.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const validationErrors = useMemo(
     () => (draft ? validateOidcUiTemplate(draft) : {}),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [draft, language],
   );
   const fieldError = (field: string) =>
@@ -1115,7 +1122,7 @@ export const OidcBrandingForm = () => {
                           )}
                           {error && (
                             <p className="text-xs text-destructive" role="alert">
-                              {t("OIDC_BRANDING_FORM.FIELD_ERROR", { label, error })}
+                              {t(KEY_FIELD_ERROR, { label, error })}
                             </p>
                           )}
                         </div>
@@ -1193,7 +1200,7 @@ export const OidcBrandingForm = () => {
                         />
                         {fieldError(`pages.shared.${key}`) && (
                           <p className="text-xs text-destructive" role="alert">
-                            {t("OIDC_BRANDING_FORM.FIELD_ERROR", {
+                            {t(KEY_FIELD_ERROR, {
                               label,
                               error: fieldError(`pages.shared.${key}`),
                             })}

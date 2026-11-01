@@ -36,24 +36,32 @@ import { MultiSelect } from "@/components/filter-toolbar/multi-select/multi-sele
 import { environmentOptions } from "@/constants/environment-options";
 import { z } from "zod";
 
-const createFormSchema = () => z.object({
-  invitations: z.array(
-    z.object({
-      recipients: z
-        .string()
-        .min(1, tStatic("os.people", "INVITE_PEOPLE.RECIPIENT_IS_REQUIRED"))
-        .refine((val) => {
-          const emails = val
-            .split(/[\s,]+/)
-            .map((e) => e.trim())
-            .filter((e) => e.length > 0);
-          if (emails.length === 0) return false;
-          return emails.every((email) => emailRegex.test(email));
-        }, tStatic("os.people", "INVITE_PEOPLE.INVALID_EMAIL_FORMAT")),
-      projectKeys: z.array(z.string()).min(1, tStatic("os.people", "INVITE_PEOPLE.AT_LEAST_ONE_ENVIRONMENT_IS")),
-    }),
-  ),
-});
+const I18N_MODULE = "os.people";
+
+const createFormSchema = () =>
+  z.object({
+    invitations: z.array(
+      z.object({
+        recipients: z
+          .string()
+          .min(1, tStatic(I18N_MODULE, "INVITE_PEOPLE.RECIPIENT_IS_REQUIRED"))
+          .refine(
+            (val) => {
+              const emails = val
+                .split(/[\s,]+/)
+                .map((e) => e.trim())
+                .filter((e) => e.length > 0);
+              if (emails.length === 0) return false;
+              return emails.every((email) => emailRegex.test(email));
+            },
+            tStatic(I18N_MODULE, "INVITE_PEOPLE.INVALID_EMAIL_FORMAT"),
+          ),
+        projectKeys: z
+          .array(z.string())
+          .min(1, tStatic(I18N_MODULE, "INVITE_PEOPLE.AT_LEAST_ONE_ENVIRONMENT_IS")),
+      }),
+    ),
+  });
 
 type InvitePeopleFormValues = z.infer<ReturnType<typeof createFormSchema>>;
 
@@ -68,7 +76,7 @@ interface InvitePeopleProps {
 }
 
 export const InvitePeople = ({ existingEmails = [], canInvite = false }: InvitePeopleProps) => {
-  const { t } = useT("os.people");
+  const { t } = useT(I18N_MODULE);
   const { isPending, mutateAsync } = useInvitePeople();
   const groupId = useProjectStore().selectedTenantGroup;
   const { data: projectsData } = useGetProjects({
@@ -87,7 +95,7 @@ export const InvitePeople = ({ existingEmails = [], canInvite = false }: InviteP
         };
       }),
     );
-  }, [projectsData]);
+  }, [projectsData, t]);
 
   const existingEmailSet = useMemo(
     () => new Set(existingEmails.map((e) => e.toLowerCase())),
@@ -132,7 +140,7 @@ export const InvitePeople = ({ existingEmails = [], canInvite = false }: InviteP
           }
         });
       }),
-    [existingEmailSet],
+    [existingEmailSet, t],
   );
 
   const [open, setOpen] = useState(false);

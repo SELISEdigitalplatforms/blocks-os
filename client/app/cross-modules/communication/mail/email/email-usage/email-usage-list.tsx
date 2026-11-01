@@ -80,9 +80,7 @@ const AddressCell = ({ raw, withAvatar }: { raw: string; withAvatar?: boolean })
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-high-emphasis">
           {primary.name}
-          {extra > 0 && (
-            <span className="ml-1 font-normal text-muted-foreground">+{extra}</span>
-          )}
+          {extra > 0 && <span className="ml-1 font-normal text-muted-foreground">+{extra}</span>}
         </p>
         {primary.name !== primary.email && (
           <p className="truncate text-xs text-muted-foreground">{primary.email}</p>
@@ -111,7 +109,8 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
 
   const { data: emailConfigsData } = useGetEmailConfigs(0, 100);
   const inboundConfigs = useMemo(
-    () => (Array.isArray(emailConfigsData) ? emailConfigsData.filter((config) => config.isInbound) : []),
+    () =>
+      Array.isArray(emailConfigsData) ? emailConfigsData.filter((config) => config.isInbound) : [],
     [emailConfigsData],
   );
   const configsById = useMemo(
@@ -142,7 +141,11 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
           return (
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-high-emphasis">
-                {row.original.subject || <span className="italic text-muted-foreground">{t("EMAIL_USAGE_LIST.NO_SUBJECT")}</span>}
+                {row.original.subject || (
+                  <span className="italic text-muted-foreground">
+                    {t("EMAIL_USAGE_LIST.NO_SUBJECT")}
+                  </span>
+                )}
               </p>
               {preview && <p className="truncate text-xs text-muted-foreground">{preview}</p>}
             </div>
@@ -152,7 +155,9 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
       {
         id: "mailbox",
         accessorKey: isInbound ? "to" : "from",
-        header: isInbound ? t("EMAIL_USAGE_LIST.COLUMN_MAILBOX") : t("EMAIL_USAGE_LIST.COLUMN_FROM"),
+        header: isInbound
+          ? t("EMAIL_USAGE_LIST.COLUMN_MAILBOX")
+          : t("EMAIL_USAGE_LIST.COLUMN_FROM"),
         cell: ({ row }) => {
           // Inbound, the configuration that read the mail: a mail's To can name a list or
           // another recipient entirely, and two configurations can share an address.
@@ -162,7 +167,10 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
           if (config) {
             const address = config.mailboxAddress || config.senderUserName || config.senderAddress;
             return (
-              <div className="min-w-0" title={address ? `${config.name} (${address})` : config.name}>
+              <div
+                className="min-w-0"
+                title={address ? `${config.name} (${address})` : config.name}
+              >
                 <p className="truncate text-sm text-high-emphasis">{config.name}</p>
                 {address && <p className="truncate text-xs text-muted-foreground">{address}</p>}
               </div>
@@ -186,7 +194,9 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
       },
       {
         accessorKey: "date",
-        header: isInbound ? t("EMAIL_USAGE_LIST.COLUMN_RECEIVED_DATE") : t("EMAIL_USAGE_LIST.COLUMN_SEND_DATE"),
+        header: isInbound
+          ? t("EMAIL_USAGE_LIST.COLUMN_RECEIVED_DATE")
+          : t("EMAIL_USAGE_LIST.COLUMN_SEND_DATE"),
         cell: ({ row }) => {
           const dateValue = row.original.date;
           if (!dateValue) return <span className="text-muted-foreground">-</span>;
@@ -263,7 +273,10 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
                       return (
                         <TableHead
                           key={header.id}
-                          className={cn("h-10 text-xs font-medium uppercase tracking-wide", columnClass)}
+                          className={cn(
+                            "h-10 text-xs font-medium uppercase tracking-wide",
+                            columnClass,
+                          )}
                         >
                           {header.isPlaceholder
                             ? null
@@ -308,9 +321,15 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
                         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
                           <EmptyIcon className="h-6 w-6 text-muted-foreground" />
                         </div>
-                        <p className="text-sm font-medium text-high-emphasis">{t("EMAIL_USAGE_LIST.NO_RESULTS")}</p>
+                        <p className="text-sm font-medium text-high-emphasis">
+                          {t("EMAIL_USAGE_LIST.NO_RESULTS")}
+                        </p>
                         <p className="text-xs text-muted-foreground">
-                          {search || status || startDate || endDate || (isInbound && configurationId)
+                          {search ||
+                          status ||
+                          startDate ||
+                          endDate ||
+                          (isInbound && configurationId)
                             ? t("EMAIL_USAGE_LIST.EMPTY_FILTERED")
                             : isInbound
                               ? t("EMAIL_USAGE_LIST.EMPTY_INBOUND")

@@ -35,6 +35,8 @@ import {
 } from "./trace-story.util";
 import { useT } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.lmt";
+
 const shortId = (value?: string) => (value && value.length > 10 ? `${value.slice(0, 8)}…` : value);
 
 const Dot = () => (
@@ -52,7 +54,7 @@ const TraceHeader = ({
   flow: TraceFlow;
   services: number;
 }) => {
-  const { t } = useT("os.lmt");
+  const { t } = useT(I18N_MODULE);
   const status = getTraceStatus(root);
   const method = root.entryPoint?.method;
   const action = root.entryPoint?.actionName || flow.steps[0]?.tag;
@@ -109,7 +111,7 @@ const ServiceChips = ({
   current: string;
   onPick: (service: ServiceSummary) => void;
 }) => {
-  const { t } = useT("os.lmt");
+  const { t } = useT(I18N_MODULE);
   return (
     <nav aria-label={t("TRACE_STORY.SERVICES")} className="flex flex-wrap items-center gap-2">
       <span className="mr-1 text-[11px] font-medium uppercase tracking-wider text-low-emphasis">
@@ -155,7 +157,7 @@ const ServiceChips = ({
 };
 
 const Legend = () => {
-  const { t } = useT("os.lmt");
+  const { t } = useT(I18N_MODULE);
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-1 px-5 py-3 text-[11px] text-medium-emphasis">
       {(Object.keys(TRAFFIC_BAR) as (keyof typeof TRAFFIC_BAR)[]).map((traffic) => (
@@ -194,7 +196,7 @@ const PlotLineNote = ({ plot }: { plot: PlotLine }) => (
 );
 
 const StoryNotes = ({ flow, skewCount }: { flow: TraceFlow; skewCount: number }) => {
-  const { t } = useT("os.lmt");
+  const { t } = useT(I18N_MODULE);
   if (!flow.truncated && skewCount === 0) return null;
   return (
     <div className="flex flex-col gap-1 px-5 pb-3 text-xs text-medium-emphasis">
@@ -248,7 +250,7 @@ const LevelBar = ({
   onGoTo: (depth: number) => void;
   onToggleErrorPath: () => void;
 }) => {
-  const { t } = useT("os.lmt");
+  const { t } = useT(I18N_MODULE);
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-5 py-2.5">
       <Button
@@ -311,7 +313,7 @@ const LevelBar = ({
 };
 
 const EventNote = ({ level, caller }: { level: ServiceLevel; caller?: string }) => {
-  const { t } = useT("os.lmt");
+  const { t } = useT(I18N_MODULE);
   return (
     <p className="flex flex-wrap items-center gap-2 border-b border-border px-5 py-2.5 text-xs text-medium-emphasis">
       {level.delayMs === null ? null : (
@@ -336,7 +338,7 @@ const EventNote = ({ level, caller }: { level: ServiceLevel; caller?: string }) 
 };
 
 const TraceStory = ({ root, flow }: { root: TraceTree; flow: TraceFlow }) => {
-  const { t } = useT("os.lmt");
+  const { t } = useT(I18N_MODULE);
   const { setSelectedTrace, requestId } = useContext(timelineContext);
   const model = useStoryModel(flow);
   const { labelOf, parents, levels, errorPath, narrations } = model;
@@ -486,7 +488,7 @@ const TraceStory = ({ root, flow }: { root: TraceTree; flow: TraceFlow }) => {
 
 /** Mirrors the loaded layout so the page does not jump when the trace arrives. */
 const TraceStorySkeleton = () => {
-  const { t } = useT("os.lmt");
+  const { t } = useT(I18N_MODULE);
   return (
     <section
       aria-busy="true"
@@ -554,7 +556,7 @@ const TraceStorySkeleton = () => {
 };
 
 export const TraceStoryView = () => {
-  const { t } = useT("os.lmt");
+  const { t } = useT(I18N_MODULE);
   const { traceHistory, isLoading } = useContext(timelineContext);
   const current = traceHistory.at(-1)?.current ?? null;
   const flow = useMemo(() => buildTraceFlow(current), [current]);

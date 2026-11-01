@@ -19,6 +19,8 @@ import {
 } from "@blocks-idp/data-access/gateway/hooks/use-principal-options";
 import { lazyLabels } from "@blocks-idp/data-access/gateway/utils/gateway-i18n";
 
+const I18N_MODULE = "os.idp.gateway";
+
 export const PRINCIPAL_MESSAGES = lazyLabels({
   MISSING_TENANT: "PRINCIPAL_SELECTOR.MISSING_TENANT",
   FORBIDDEN: "PRINCIPAL_SELECTOR.FORBIDDEN",
@@ -67,8 +69,14 @@ interface PrincipalTriggerProps extends ComponentProps<"button"> {
   triggerLabel: string;
 }
 
-const PrincipalTrigger = ({ isChip, hasSelection, triggerLabel, className, ...buttonProps }: Readonly<PrincipalTriggerProps>) => {
-  const { t } = useT("os.idp.gateway");
+const PrincipalTrigger = ({
+  isChip,
+  hasSelection,
+  triggerLabel,
+  className,
+  ...buttonProps
+}: Readonly<PrincipalTriggerProps>) => {
+  const { t } = useT(I18N_MODULE);
   if (isChip) {
     return (
       <button
@@ -85,7 +93,9 @@ const PrincipalTrigger = ({ isChip, hasSelection, triggerLabel, className, ...bu
           className,
         )}
       >
-        <span className="block truncate">{hasSelection ? triggerLabel : t("PRINCIPAL_SELECTOR.NOT_SET")}</span>
+        <span className="block truncate">
+          {hasSelection ? triggerLabel : t("PRINCIPAL_SELECTOR.NOT_SET")}
+        </span>
       </button>
     );
   }
@@ -132,7 +142,7 @@ const BrowseResults = ({
   selectedValues,
   onToggle,
 }: Readonly<BrowseResultsProps>) => {
-  const { t } = useT("os.idp.gateway");
+  const { t } = useT(I18N_MODULE);
   if (browse.isForbidden) {
     return <div className="p-3 text-sm text-destructive">{PRINCIPAL_MESSAGES.FORBIDDEN}</div>;
   }
@@ -199,7 +209,9 @@ const BrowseResults = ({
           value="__load_more__"
           onSelect={() => browse.fetchNextPage()}
         >
-          {browse.isFetchingNextPage ? t("PRINCIPAL_SELECTOR.LOADING") : t("PRINCIPAL_SELECTOR.LOAD_MORE")}
+          {browse.isFetchingNextPage
+            ? t("PRINCIPAL_SELECTOR.LOADING")
+            : t("PRINCIPAL_SELECTOR.LOAD_MORE")}
         </CommandItem>
       )}
     </CommandGroup>
@@ -219,7 +231,7 @@ const PrincipalSelectorInner = ({
   userValueField,
   variant = "field",
 }: PrincipalSelectorProps) => {
-  const { t } = useT("os.idp.gateway");
+  const { t } = useT(I18N_MODULE);
   const isChip = variant === "chip";
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -371,4 +383,3 @@ export const PrincipalSelector = (props: PrincipalSelectorProps) => {
 
   return <PrincipalSelectorInner key={scope ?? ""} {...props} />;
 };
-

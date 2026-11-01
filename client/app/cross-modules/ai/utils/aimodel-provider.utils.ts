@@ -1,6 +1,8 @@
 import { IProvider } from "@blocks-ai/types/aimodel.service.type";
 import { tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.ai";
+
 /**
  * The kind of platform that hosts an AI model integration. Drives how
  * credentials and request URLs are configured in the AI settings UI.
@@ -18,8 +20,7 @@ export const createCustomProvider = (): IProvider => ({
   Provider: "CUSTOM",
   Url: "",
   DocLink: "",
-  Description:
-    tStatic("os.ai", "AIMODEL_PROVIDER_UTILS.BRING_YOUR_OWN_AI_MODEL"),
+  Description: tStatic(I18N_MODULE, "AIMODEL_PROVIDER_UTILS.BRING_YOUR_OWN_AI_MODEL"),
   Order: 999999,
 });
 
@@ -51,12 +52,18 @@ export const ProviderToPlatformMap: Record<string, ServicePlatform> = {
 export const ProviderNameMap: Record<string, string> = {
   openai: "OpenAI",
   anthropic: "Anthropic",
-  get google() { return tStatic("os.ai", "AIMODEL_PROVIDER_UTILS.GEMINI"); },
-  get mistral() { return tStatic("os.ai", "AIMODEL_PROVIDER_UTILS.MISTRAL"); },
+  get google() {
+    return tStatic(I18N_MODULE, "AIMODEL_PROVIDER_UTILS.GEMINI");
+  },
+  get mistral() {
+    return tStatic(I18N_MODULE, "AIMODEL_PROVIDER_UTILS.MISTRAL");
+  },
   deepseek: "DeepSeek",
   azure: "Azure",
   openrouter: "OpenRouter",
-  get custom() { return tStatic("os.ai", "AIMODEL_PROVIDER_UTILS.CUSTOM_MODEL"); },
+  get custom() {
+    return tStatic(I18N_MODULE, "AIMODEL_PROVIDER_UTILS.CUSTOM_MODEL");
+  },
 };
 
 export const getProviderDisplayName = (provider: string | undefined): string => {

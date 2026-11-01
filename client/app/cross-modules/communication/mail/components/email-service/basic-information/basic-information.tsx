@@ -94,34 +94,40 @@ const getUniqueLanguages = (languages: LanguageOption[] = []): LanguageOption[] 
 const BasicInformationSkeleton = () => {
   const { t } = useT("os.communication.mail");
   return (
-  <Card
-    className="w-full rounded-sm shadow-none"
-    aria-busy="true"
-    aria-label={t("BASIC_INFORMATION.LOADING_FORM")}
-  >
-    <CardHeader className="space-y-2 px-6 py-5">
-      <div className="flex items-start justify-between gap-4">
-        <Skeleton className="h-6 w-48" />
-        <Skeleton className="h-10 w-36 shrink-0" />
-      </div>
-      <Skeleton className="h-4 w-80 max-w-full" />
-    </CardHeader>
-    <CardContent className="px-6 pb-6 pt-0">
-      <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="grid gap-2">
-            <Skeleton className="h-4 w-28" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-        ))}
-      </div>
-    </CardContent>
-  </Card>
+    <Card
+      className="w-full rounded-sm shadow-none"
+      aria-busy="true"
+      aria-label={t("BASIC_INFORMATION.LOADING_FORM")}
+    >
+      <CardHeader className="space-y-2 px-6 py-5">
+        <div className="flex items-start justify-between gap-4">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-10 w-36 shrink-0" />
+        </div>
+        <Skeleton className="h-4 w-80 max-w-full" />
+      </CardHeader>
+      <CardContent className="px-6 pb-6 pt-0">
+        <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="grid gap-2">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
 const BasicInformation = forwardRef(function Inner(
-  { onSaveSuccess, templateData, onValidityChange, onPendingChange, actions }: IBasicInformationProps,
+  {
+    onSaveSuccess,
+    templateData,
+    onValidityChange,
+    onPendingChange,
+    actions,
+  }: IBasicInformationProps,
   ref,
 ) {
   const { t } = useT("os.communication.mail");
@@ -259,7 +265,9 @@ const BasicInformation = forwardRef(function Inner(
                           className="border-default h-10 shadow-none"
                           aria-required="true"
                         >
-                          <SelectValue placeholder={t("BASIC_INFORMATION.PLACEHOLDER_CONFIGURATION")} />
+                          <SelectValue
+                            placeholder={t("BASIC_INFORMATION.PLACEHOLDER_CONFIGURATION")}
+                          />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>

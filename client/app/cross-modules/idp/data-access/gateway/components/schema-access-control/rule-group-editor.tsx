@@ -14,6 +14,8 @@ import { Fragment } from "react";
 import { useFieldArray, useFormContext } from "react-hook-form";
 import { RuleConditionRow, useFocusNewRow, type RuleBuilderContext } from "./rule-condition-row";
 
+const I18N_MODULE = "os.idp.gateway";
+
 /** `nestedGroups.1` + `rules` → `nestedGroups.1.rules`; the root's path is empty. */
 const joinPath = (path: string, key: string) => (path ? `${path}.${key}` : key);
 
@@ -28,8 +30,9 @@ const ruleLead = (position: number, operator: string, t: TFunction): string => {
  * a centred rule at the top level, a small label inside a nested group.
  */
 const GroupJoiner = ({ operator, centered }: { operator: string; centered: boolean }) => {
-  const { t } = useT("os.idp.gateway");
-  const word = operator === "OR" ? t("RULE_GROUP_EDITOR.JOINER_OR") : t("RULE_GROUP_EDITOR.JOINER_AND");
+  const { t } = useT(I18N_MODULE);
+  const word =
+    operator === "OR" ? t("RULE_GROUP_EDITOR.JOINER_OR") : t("RULE_GROUP_EDITOR.JOINER_AND");
   if (centered) {
     return (
       <div className="flex items-center gap-2" aria-hidden="true">
@@ -83,7 +86,7 @@ export const RuleGroupChildren = ({
   onRemoveGroup,
   labelPrefix = "",
 }: RuleGroupChildrenProps) => {
-  const { t } = useT("os.idp.gateway");
+  const { t } = useT(I18N_MODULE);
   const form = useFormContext<RuleSetFormValues>();
   const operator = form.watch(joinPath(path, "logicalOperator") as "logicalOperator");
 
@@ -151,7 +154,7 @@ export const RuleGroupEditor = ({
   labelPrefix,
   onRemove,
 }: RuleGroupEditorProps) => {
-  const { t } = useT("os.idp.gateway");
+  const { t } = useT(I18N_MODULE);
   const form = useFormContext<RuleSetFormValues>();
   const matchOptions = [
     {
@@ -287,4 +290,3 @@ export const RuleGroupEditor = ({
     </section>
   );
 };
-

@@ -64,7 +64,10 @@ const AttributeAdder = ({ choices, onAdd }: Readonly<AttributeAdderProps>) => {
             setValue("");
           }}
         >
-          <SelectTrigger className="h-9 w-44" aria-label={t("USER_ACCESS_ATTRIBUTES.ATTRIBUTE_NAME")}>
+          <SelectTrigger
+            className="h-9 w-44"
+            aria-label={t("USER_ACCESS_ATTRIBUTES.ATTRIBUTE_NAME")}
+          >
             <SelectValue placeholder={t("USER_ACCESS_ATTRIBUTES.ATTRIBUTE_PLACEHOLDER")} />
           </SelectTrigger>
           <SelectContent>
@@ -76,7 +79,10 @@ const AttributeAdder = ({ choices, onAdd }: Readonly<AttributeAdderProps>) => {
           </SelectContent>
         </Select>
         <Select value={value || undefined} onValueChange={setValue} disabled={!name}>
-          <SelectTrigger className="h-9 w-44" aria-label={t("USER_ACCESS_ATTRIBUTES.ATTRIBUTE_VALUE")}>
+          <SelectTrigger
+            className="h-9 w-44"
+            aria-label={t("USER_ACCESS_ATTRIBUTES.ATTRIBUTE_VALUE")}
+          >
             <SelectValue placeholder={t("USER_ACCESS_ATTRIBUTES.VALUE_PLACEHOLDER")} />
           </SelectTrigger>
           <SelectContent>
@@ -128,7 +134,10 @@ const AttributeAdder = ({ choices, onAdd }: Readonly<AttributeAdderProps>) => {
  * organization on the user. The system user may set anything; anyone else may only hand out values
  * they hold themselves, so their choices come from their own record.
  */
-export const UserAccessAttributes = ({ userId, projectKey }: Readonly<UserAccessAttributesProps>) => {
+export const UserAccessAttributes = ({
+  userId,
+  projectKey,
+}: Readonly<UserAccessAttributesProps>) => {
   const { t } = useT("os.idp.users");
   const authUser = useAuthStore().user;
   const organizationId = authUser?.org_id || DEFAULT_ORGANIZATION_ID;
@@ -154,7 +163,11 @@ export const UserAccessAttributes = ({ userId, projectKey }: Readonly<UserAccess
     try {
       const res = await mutateAsync({
         itemId: userId,
-        attributes: withOrgAccessAttributes(user?.attributes, organizationId, draft as AccessAttributes),
+        attributes: withOrgAccessAttributes(
+          user?.attributes,
+          organizationId,
+          draft as AccessAttributes,
+        ),
       });
       if (!res.isSuccess) {
         showErrorToast({ errors: res.errors });
@@ -163,7 +176,11 @@ export const UserAccessAttributes = ({ userId, projectKey }: Readonly<UserAccess
       showSuccessToast({ description: t("USER_ACCESS_ATTRIBUTES.UPDATED") });
       setDraft(null);
     } catch (error) {
-      showErrorToast({ errors: isErrorWithErrors(error) ? error.errors : t("USER_ACCESS_ATTRIBUTES.SOMETHING_WENT_WRONG") });
+      showErrorToast({
+        errors: isErrorWithErrors(error)
+          ? error.errors
+          : t("USER_ACCESS_ATTRIBUTES.SOMETHING_WENT_WRONG"),
+      });
     }
   };
 
@@ -174,10 +191,10 @@ export const UserAccessAttributes = ({ userId, projectKey }: Readonly<UserAccess
       data-testid="user-access-attributes"
     >
       <div>
-        <h3 className="text-base font-semibold text-high-emphasis">{t("USER_ACCESS_ATTRIBUTES.TITLE")}</h3>
-        <p className="text-sm text-muted-foreground">
-          {t("USER_ACCESS_ATTRIBUTES.DESCRIPTION")}
-        </p>
+        <h3 className="text-base font-semibold text-high-emphasis">
+          {t("USER_ACCESS_ATTRIBUTES.TITLE")}
+        </h3>
+        <p className="text-sm text-muted-foreground">{t("USER_ACCESS_ATTRIBUTES.DESCRIPTION")}</p>
       </div>
       {names.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t("USER_ACCESS_ATTRIBUTES.NO_ATTRIBUTES")}</p>

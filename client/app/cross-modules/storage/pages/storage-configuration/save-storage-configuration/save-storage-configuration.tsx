@@ -115,9 +115,11 @@ export const SaveStorageConfiguration = ({
   return (
     <DialogContent className="max-h-[90vh] overflow-y-auto rounded-md sm:max-w-[700px]">
       <DialogHeader>
-        <DialogTitle>{configuration
+        <DialogTitle>
+          {configuration
             ? t("SAVE_STORAGE_CONFIGURATION.EDIT_STORAGE_CONFIGURATION")
-            : t("SAVE_STORAGE_CONFIGURATION.ADD_STORAGE_CONFIGURATION")}</DialogTitle>
+            : t("SAVE_STORAGE_CONFIGURATION.ADD_STORAGE_CONFIGURATION")}
+        </DialogTitle>
         <DialogDescription>
           {isEditMode
             ? t("SAVE_STORAGE_CONFIGURATION.ONLY_THE_UPLOAD_AND_VERIFICATION")
@@ -133,7 +135,9 @@ export const SaveStorageConfiguration = ({
               // attached to may not even be rendered (e.g. a stale error on a provider-credential
               // field left over from before edit mode hid that section).
               console.error("[SaveStorageConfiguration] validation failed", errors);
-              showErrorToast({ errors: t("SAVE_STORAGE_CONFIGURATION.PLEASE_CHECK_THE_HIGHLIGHTED") });
+              showErrorToast({
+                errors: t("SAVE_STORAGE_CONFIGURATION.PLEASE_CHECK_THE_HIGHLIGHTED"),
+              });
             })}
           >
             {!isEditMode && (
@@ -152,7 +156,11 @@ export const SaveStorageConfiguration = ({
                         value={field.value}
                       >
                         <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                          <SelectValue placeholder={t("SAVE_STORAGE_CONFIGURATION.SELECT_CONFIGURATION_PROVIDER")} />
+                          <SelectValue
+                            placeholder={t(
+                              "SAVE_STORAGE_CONFIGURATION.SELECT_CONFIGURATION_PROVIDER",
+                            )}
+                          />
                         </SelectTrigger>
                         <SelectContent>
                           {STORAGE_STRATEGIES.map((item) => (
@@ -168,106 +176,89 @@ export const SaveStorageConfiguration = ({
               />
             )}
             {!isEditMode && (
-            <div className="mt-2 grid grid-cols-1 gap-4 text-left text-sm md:grid-cols-2">
-              <FormField
-                name="name"
-                key="name"
-                control={form.control}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("common:NAME")}</FormLabel>
-                    <FormControl>
-                      <Input placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_NAME")} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              {storageStrategy === "AWS" && (
-                <>
-                  <FormField
-                    name="accessKey"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.ACCESS_KEY")}</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_ACCESS_KEY")}
-                            {...field}
-                            value={field.value ?? ""}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    name="secretKey"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.SECRET_KEY")}</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_SECRET_KEY")}
-                            {...field}
-                            value={field.value ?? ""}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    name="cloudStorageRegionEndPoint"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.REGION_ENDPOINT")}</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_REGION_ENDPOINT")}
-                            {...field}
-                            value={field.value ?? ""}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </>
-              )}
-              {storageStrategy === "Azure" && (
+              <div className="mt-2 grid grid-cols-1 gap-4 text-left text-sm md:grid-cols-2">
                 <FormField
-                  name="connectionString"
+                  name="name"
+                  key="name"
                   control={form.control}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.CONNECTION_STRING")}</FormLabel>
+                      <FormLabel>{t("common:NAME")}</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_CONNECTION_STRING")}
+                          placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_NAME")}
                           {...field}
-                          value={field.value ?? ""}
                         />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              )}
-              {storageStrategy === "S3Compatible" && (
-                <>
+                {storageStrategy === "AWS" && (
+                  <>
+                    <FormField
+                      name="accessKey"
+                      control={form.control}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.ACCESS_KEY")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_ACCESS_KEY")}
+                              {...field}
+                              value={field.value ?? ""}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      name="secretKey"
+                      control={form.control}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.SECRET_KEY")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_SECRET_KEY")}
+                              {...field}
+                              value={field.value ?? ""}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      name="cloudStorageRegionEndPoint"
+                      control={form.control}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.REGION_ENDPOINT")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_REGION_ENDPOINT")}
+                              {...field}
+                              value={field.value ?? ""}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
+                {storageStrategy === "Azure" && (
                   <FormField
-                    name="accessKey"
+                    name="connectionString"
                     control={form.control}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.ACCESS_KEY")}</FormLabel>
+                        <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.CONNECTION_STRING")}</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_ACCESS_KEY")}
+                            placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_CONNECTION_STRING")}
                             {...field}
                             value={field.value ?? ""}
                           />
@@ -276,129 +267,153 @@ export const SaveStorageConfiguration = ({
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    name="secretKey"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.SECRET_KEY")}</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_SECRET_KEY")}
-                            {...field}
-                            value={field.value ?? ""}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    name="host"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.HOST_URL")}</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_HOST_URL")}
-                            {...field}
-                            value={field.value ?? ""}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </>
-              )}
-              {storageStrategy === "SftpStorage" && (
-                <>
-                  <FormField
-                    name="remoteBasePath"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.REMOTE_BASE_PATH")}</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_REMOTE_BASE_PATH")}
-                            {...field}
-                            value={field.value ?? ""}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    name="host"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.HOST_IP_ADDRESS")}</FormLabel>
-                        <FormControl>
-                          <Input placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_HOST")} {...field} value={field.value ?? ""} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    name="port"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.PORT")}</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_PORT")}
-                            {...field}
-                            value={field.value ?? ""}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    name="userName"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.USERNAME")}</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_USERNAME")}
-                            {...field}
-                            value={field.value ?? ""}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    name="password"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.PASSWORD")}</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_PASSWORD")}
-                            {...field}
-                            value={field.value ?? ""}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </>
-              )}
-            </div>
+                )}
+                {storageStrategy === "S3Compatible" && (
+                  <>
+                    <FormField
+                      name="accessKey"
+                      control={form.control}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.ACCESS_KEY")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_ACCESS_KEY")}
+                              {...field}
+                              value={field.value ?? ""}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      name="secretKey"
+                      control={form.control}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.SECRET_KEY")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_SECRET_KEY")}
+                              {...field}
+                              value={field.value ?? ""}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      name="host"
+                      control={form.control}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.HOST_URL")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_HOST_URL")}
+                              {...field}
+                              value={field.value ?? ""}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
+                {storageStrategy === "SftpStorage" && (
+                  <>
+                    <FormField
+                      name="remoteBasePath"
+                      control={form.control}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.REMOTE_BASE_PATH")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_REMOTE_BASE_PATH")}
+                              {...field}
+                              value={field.value ?? ""}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      name="host"
+                      control={form.control}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.HOST_IP_ADDRESS")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_HOST")}
+                              {...field}
+                              value={field.value ?? ""}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      name="port"
+                      control={form.control}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.PORT")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_PORT")}
+                              {...field}
+                              value={field.value ?? ""}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      name="userName"
+                      control={form.control}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.USERNAME")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_USERNAME")}
+                              {...field}
+                              value={field.value ?? ""}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      name="password"
+                      control={form.control}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.PASSWORD")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_PASSWORD")}
+                              {...field}
+                              value={field.value ?? ""}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
+              </div>
             )}
 
             <Separator className="mt-2" />
@@ -417,7 +432,9 @@ export const SaveStorageConfiguration = ({
                   control={form.control}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.UPLOAD_URL_EXPIRY_SECONDS")}</FormLabel>
+                      <FormLabel>
+                        {t("SAVE_STORAGE_CONFIGURATION.UPLOAD_URL_EXPIRY_SECONDS")}
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -435,7 +452,9 @@ export const SaveStorageConfiguration = ({
                   control={form.control}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.DOWNLOAD_URL_EXPIRY_SECONDS")}</FormLabel>
+                      <FormLabel>
+                        {t("SAVE_STORAGE_CONFIGURATION.DOWNLOAD_URL_EXPIRY_SECONDS")}
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -455,12 +474,7 @@ export const SaveStorageConfiguration = ({
                     <FormItem>
                       <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.MAXIMUM_FILE_SIZE_MB")}</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="5"
-                          {...field}
-                          value={field.value ?? ""}
-                        />
+                        <Input type="number" placeholder="5" {...field} value={field.value ?? ""} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -482,23 +496,23 @@ export const SaveStorageConfiguration = ({
                   };
                   return (
                     <FormItem className="mt-4">
-                      <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.REQUIRE_UPLOAD_VERIFICATION_FOR")}</FormLabel>
+                      <FormLabel>
+                        {t("SAVE_STORAGE_CONFIGURATION.REQUIRE_UPLOAD_VERIFICATION_FOR")}
+                      </FormLabel>
                       <FormControl>
                         <div className="rounded-md border">
-                          {(
-                            [
-                              {
-                                option: "Public" as const,
-                                description:
-                                  t("SAVE_STORAGE_CONFIGURATION.FILES_SERVED_ON_A_LINK"),
-                              },
-                              {
-                                option: "Private" as const,
-                                description:
-                                  t("SAVE_STORAGE_CONFIGURATION.FILES_RESTRICTED_TO_AUTHORIZED"),
-                              },
-                            ]
-                          ).map(({ option, description }, index) => (
+                          {[
+                            {
+                              option: "Public" as const,
+                              description: t("SAVE_STORAGE_CONFIGURATION.FILES_SERVED_ON_A_LINK"),
+                            },
+                            {
+                              option: "Private" as const,
+                              description: t(
+                                "SAVE_STORAGE_CONFIGURATION.FILES_RESTRICTED_TO_AUTHORIZED",
+                              ),
+                            },
+                          ].map(({ option, description }, index) => (
                             <div
                               key={option}
                               className={cn(
@@ -508,9 +522,7 @@ export const SaveStorageConfiguration = ({
                             >
                               <div>
                                 <div className="text-sm font-medium">{option}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  {description}
-                                </div>
+                                <div className="text-xs text-muted-foreground">{description}</div>
                               </div>
                               <Switch
                                 aria-label={option}

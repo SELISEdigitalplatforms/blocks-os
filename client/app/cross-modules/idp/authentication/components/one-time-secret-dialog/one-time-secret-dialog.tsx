@@ -57,7 +57,10 @@ export function OneTimeSecretDialog({ secret, onClose }: Readonly<OneTimeSecretD
                 {maskId(secret?.clientId)}
               </code>
               {secret?.clientId && (
-                <CopyToClipboardButton textToCopy={secret.clientId} label={t("ONE_TIME_SECRET_DIALOG.COPY_CLIENT_ID")}>
+                <CopyToClipboardButton
+                  textToCopy={secret.clientId}
+                  label={t("ONE_TIME_SECRET_DIALOG.COPY_CLIENT_ID")}
+                >
                   {null}
                 </CopyToClipboardButton>
               )}
@@ -70,7 +73,10 @@ export function OneTimeSecretDialog({ secret, onClose }: Readonly<OneTimeSecretD
                 {secret?.clientSecret}
               </code>
               {secret?.clientSecret && (
-                <CopyToClipboardButton textToCopy={secret.clientSecret} label={t("ONE_TIME_SECRET_DIALOG.COPY_CLIENT_SECRET")}>
+                <CopyToClipboardButton
+                  textToCopy={secret.clientSecret}
+                  label={t("ONE_TIME_SECRET_DIALOG.COPY_CLIENT_SECRET")}
+                >
                   {null}
                 </CopyToClipboardButton>
               )}

@@ -12,7 +12,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
-import { useIntegrationTemplates, useRunIntegrationSetup } from "@/cross-modules/integration/hooks/use-integration";
+import {
+  useIntegrationTemplates,
+  useRunIntegrationSetup,
+} from "@/cross-modules/integration/hooks/use-integration";
 import { useT } from "@seliseblocks/genesis-os";
 
 type IntegrationSetupModalProps = {
@@ -21,7 +24,11 @@ type IntegrationSetupModalProps = {
   onCreated?: (response: IRunIntegrationSetupResponse) => void;
 };
 
-export function IntegrationSetupModal({ open, onOpenChange, onCreated }: Readonly<IntegrationSetupModalProps>) {
+export function IntegrationSetupModal({
+  open,
+  onOpenChange,
+  onCreated,
+}: Readonly<IntegrationSetupModalProps>) {
   const { t } = useT("os.integration");
   const [templateKey, setTemplateKey] = useState("");
   const [connectionName, setConnectionName] = useState("");
@@ -45,17 +52,23 @@ export function IntegrationSetupModal({ open, onOpenChange, onCreated }: Readonl
 
   const handleConfirm = () => {
     if (!selected || !connectionName.trim() || isPending) return;
-    runSetup({ templateKey: selected.key, connectionName: connectionName.trim() }, {
-      onSuccess: (response) => {
-        if (response.clientSecret) onCreated?.(response);
-        close();
+    runSetup(
+      { templateKey: selected.key, connectionName: connectionName.trim() },
+      {
+        onSuccess: (response) => {
+          if (response.clientSecret) onCreated?.(response);
+          close();
+        },
       },
-    });
+    );
   };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg" hideCloseButton={isPending}>
+      <DialogContent
+        className="max-h-[90vh] overflow-y-auto sm:max-w-lg"
+        hideCloseButton={isPending}
+      >
         <DialogHeader>
           <DialogTitle>{t("INTEGRATION_SETUP_MODAL.ADD_CONNECTION")}</DialogTitle>
           <DialogDescription>
@@ -65,21 +78,43 @@ export function IntegrationSetupModal({ open, onOpenChange, onCreated }: Readonl
         <div className="space-y-5">
           <section aria-labelledby="integration-access-heading" className="space-y-3">
             <div>
-              <h3 id="integration-access-heading" className="text-sm font-medium text-high-emphasis">{t("INTEGRATION_SETUP_MODAL.ACCESS_LEVEL")}</h3>
-              <p className="mt-1 text-xs text-medium-emphasis">{t("INTEGRATION_SETUP_MODAL.SELECT_THE_PERMISSIONS_THIS")}</p>
+              <h3
+                id="integration-access-heading"
+                className="text-sm font-medium text-high-emphasis"
+              >
+                {t("INTEGRATION_SETUP_MODAL.ACCESS_LEVEL")}
+              </h3>
+              <p className="mt-1 text-xs text-medium-emphasis">
+                {t("INTEGRATION_SETUP_MODAL.SELECT_THE_PERMISSIONS_THIS")}
+              </p>
             </div>
             {isLoading ? (
-              <div className="flex items-center gap-2 py-5 text-sm text-medium-emphasis" role="status">
+              <div
+                className="flex items-center gap-2 py-5 text-sm text-medium-emphasis"
+                role="status"
+              >
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                 {t("INTEGRATION_SETUP_MODAL.LOADING_ACCESS_OPTIONS")}
               </div>
             ) : isError ? (
               <div className="rounded-md border border-border p-4 text-sm text-medium-emphasis">
                 <p>{t("INTEGRATION_SETUP_MODAL.ACCESS_OPTIONS_COULD_NOT_BE")}</p>
-                <Button type="button" size="sm" variant="outline" className="mt-3" onClick={() => void refetch()}>{t("common:RETRY")}</Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="mt-3"
+                  onClick={() => void refetch()}
+                >
+                  {t("common:RETRY")}
+                </Button>
               </div>
             ) : templates.length > 0 ? (
-              <RadioGroup value={templateKey} onValueChange={setTemplateKey} aria-labelledby="integration-access-heading">
+              <RadioGroup
+                value={templateKey}
+                onValueChange={setTemplateKey}
+                aria-labelledby="integration-access-heading"
+              >
                 {templates.map((template) => (
                   <label
                     key={template.key}
@@ -98,12 +133,20 @@ export function IntegrationSetupModal({ open, onOpenChange, onCreated }: Readonl
                     />
                     <span className="min-w-0 flex-1 space-y-2">
                       <span className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-sm font-semibold text-high-emphasis">{template.displayName}</span>
+                        <span className="text-sm font-semibold text-high-emphasis">
+                          {template.displayName}
+                        </span>
                         <span className="rounded-full border border-border bg-muted/50 px-2 py-0.5 text-xs text-medium-emphasis">
-                          {t("INTEGRATION_SETUP_MODAL.PERMISSION", { count: template.permissions.length })}
+                          {t("INTEGRATION_SETUP_MODAL.PERMISSION", {
+                            count: template.permissions.length,
+                          })}
                         </span>
                       </span>
-                      {template.description && <span className="block text-xs leading-relaxed text-medium-emphasis">{template.description}</span>}
+                      {template.description && (
+                        <span className="block text-xs leading-relaxed text-medium-emphasis">
+                          {template.description}
+                        </span>
+                      )}
                       <span className="flex items-center gap-1.5 text-xs text-medium-emphasis">
                         <Plug className="h-3.5 w-3.5" aria-hidden="true" />
                         {t("INTEGRATION_SETUP_MODAL.ROLE", { roleName: template.roleName })}
@@ -113,11 +156,18 @@ export function IntegrationSetupModal({ open, onOpenChange, onCreated }: Readonl
                 ))}
               </RadioGroup>
             ) : (
-              <p className="rounded-md border border-border p-4 text-sm text-medium-emphasis">{t("INTEGRATION_SETUP_MODAL.NO_ACCESS_OPTIONS_ARE_AVAILABLE")}</p>
+              <p className="rounded-md border border-border p-4 text-sm text-medium-emphasis">
+                {t("INTEGRATION_SETUP_MODAL.NO_ACCESS_OPTIONS_ARE_AVAILABLE")}
+              </p>
             )}
           </section>
           <div className="space-y-2">
-            <label htmlFor="integration-connection-name" className="block text-sm font-medium text-high-emphasis">{t("INTEGRATION_SETUP_MODAL.CONNECTION_NAME")}</label>
+            <label
+              htmlFor="integration-connection-name"
+              className="block text-sm font-medium text-high-emphasis"
+            >
+              {t("INTEGRATION_SETUP_MODAL.CONNECTION_NAME")}
+            </label>
             <Input
               id="integration-connection-name"
               value={connectionName}
@@ -128,7 +178,9 @@ export function IntegrationSetupModal({ open, onOpenChange, onCreated }: Readonl
               disabled={isPending}
               aria-describedby="integration-connection-name-help"
             />
-            <p id="integration-connection-name-help" className="text-xs text-medium-emphasis">{t("INTEGRATION_SETUP_MODAL.USE_A_NAME_THAT_IDENTIFIES")}</p>
+            <p id="integration-connection-name-help" className="text-xs text-medium-emphasis">
+              {t("INTEGRATION_SETUP_MODAL.USE_A_NAME_THAT_IDENTIFIES")}
+            </p>
           </div>
         </div>
         <DialogFooter className="border-t border-border pt-4">
@@ -140,9 +192,15 @@ export function IntegrationSetupModal({ open, onOpenChange, onCreated }: Readonl
           >
             {t("common:CANCEL")}
           </Button>
-          <Button type="button" onClick={handleConfirm} disabled={!selected || !connectionName.trim() || isPending}>
+          <Button
+            type="button"
+            onClick={handleConfirm}
+            disabled={!selected || !connectionName.trim() || isPending}
+          >
             {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isPending ? t("INTEGRATION_SETUP_MODAL.CREATING") : t("INTEGRATION_SETUP_MODAL.CREATE_CONNECTION")}
+            {isPending
+              ? t("INTEGRATION_SETUP_MODAL.CREATING")
+              : t("INTEGRATION_SETUP_MODAL.CREATE_CONNECTION")}
           </Button>
         </DialogFooter>
       </DialogContent>

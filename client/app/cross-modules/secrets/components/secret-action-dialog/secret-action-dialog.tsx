@@ -25,6 +25,8 @@ import {
 } from "@/cross-modules/secrets/components/secret-dependents-notice/secret-dependents-notice";
 import { useT, tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.secrets";
+
 export type SecretLifecycleAction = "lock" | "unlock" | "delete" | "restore" | "purge";
 
 interface Copy {
@@ -38,34 +40,54 @@ interface Copy {
 const COPY: Record<SecretLifecycleAction, Copy> = {
   lock: {
     title: (name) => `Lock ${name}?`,
-    get body() { return tStatic("os.secrets", "SECRET_ACTION_DIALOG.WHILE_LOCKED_THE_VALUE_CANNOT"); },
-    get confirm() { return tStatic("os.secrets", "SECRET_ACTION_DIALOG.LOCK"); },
+    get body() {
+      return tStatic(I18N_MODULE, "SECRET_ACTION_DIALOG.WHILE_LOCKED_THE_VALUE_CANNOT");
+    },
+    get confirm() {
+      return tStatic(I18N_MODULE, "SECRET_ACTION_DIALOG.LOCK");
+    },
     pending: "Locking…",
   },
   unlock: {
     title: (name) => `Unlock ${name}?`,
-    get body() { return tStatic("os.secrets", "SECRET_ACTION_DIALOG.THE_VALUE_BECOMES_READABLE_AGAIN"); },
-    get confirm() { return tStatic("os.secrets", "SECRET_ACTION_DIALOG.UNLOCK"); },
+    get body() {
+      return tStatic(I18N_MODULE, "SECRET_ACTION_DIALOG.THE_VALUE_BECOMES_READABLE_AGAIN");
+    },
+    get confirm() {
+      return tStatic(I18N_MODULE, "SECRET_ACTION_DIALOG.UNLOCK");
+    },
     pending: "Unlocking…",
   },
   // The backend's soft delete, presented as archive: the vault value is deliberately retained
   // so restore can bring the secret back. Saying "cannot be undone" here would simply be false.
   delete: {
     title: (name) => `Archive ${name}?`,
-    get body() { return tStatic("os.secrets", "SECRET_ACTION_DIALOG.THE_SECRET_STOPS_WORKING_IMMEDIATELY"); },
-    get confirm() { return tStatic("os.secrets", "SECRET_ACTION_DIALOG.ARCHIVE"); },
+    get body() {
+      return tStatic(I18N_MODULE, "SECRET_ACTION_DIALOG.THE_SECRET_STOPS_WORKING_IMMEDIATELY");
+    },
+    get confirm() {
+      return tStatic(I18N_MODULE, "SECRET_ACTION_DIALOG.ARCHIVE");
+    },
     pending: "Archiving…",
   },
   restore: {
     title: (name) => `Restore ${name}?`,
-    get body() { return tStatic("os.secrets", "SECRET_ACTION_DIALOG.THE_SECRET_BECOMES_ACTIVE_AGAIN"); },
-    get confirm() { return tStatic("os.secrets", "SECRET_ACTION_DIALOG.RESTORE"); },
+    get body() {
+      return tStatic(I18N_MODULE, "SECRET_ACTION_DIALOG.THE_SECRET_BECOMES_ACTIVE_AGAIN");
+    },
+    get confirm() {
+      return tStatic(I18N_MODULE, "SECRET_ACTION_DIALOG.RESTORE");
+    },
     pending: "Restoring…",
   },
   purge: {
     title: (name) => `Purge ${name}?`,
-    get body() { return tStatic("os.secrets", "SECRET_ACTION_DIALOG.THE_SECRET_AND_ITS_VALUE"); },
-    get confirm() { return tStatic("os.secrets", "SECRET_ACTION_DIALOG.PURGE"); },
+    get body() {
+      return tStatic(I18N_MODULE, "SECRET_ACTION_DIALOG.THE_SECRET_AND_ITS_VALUE");
+    },
+    get confirm() {
+      return tStatic(I18N_MODULE, "SECRET_ACTION_DIALOG.PURGE");
+    },
     pending: "Purging…",
     destructive: true,
   },
@@ -101,7 +123,7 @@ export function SecretActionDialog({
   secret,
   action,
 }: SecretActionDialogProps) {
-  const { t } = useT("os.secrets");
+  const { t } = useT(I18N_MODULE);
   const [error, setError] = useState<string | null>(null);
 
   const lock = useLockSecret();
@@ -126,7 +148,7 @@ export function SecretActionDialog({
       onOpenChange(false);
     } catch (cause) {
       setError(
-        describeSecretError(cause, tStatic("os.secrets", ACTION_FAILED_KEYS[action])).message,
+        describeSecretError(cause, tStatic(I18N_MODULE, ACTION_FAILED_KEYS[action])).message,
       );
     }
   };

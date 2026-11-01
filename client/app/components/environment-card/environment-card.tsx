@@ -15,7 +15,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
-import { isErrorWithErrors, showErrorToast, showSuccessToast } from "@seliseblocks/genesis-os/utils";
+import {
+  isErrorWithErrors,
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/genesis-os/utils";
 import { environmentOptions } from "@/constants/environment-options";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { MaskedText } from "@/components/masked-text";
@@ -161,7 +165,11 @@ export const EnvironmentCard = ({
           </CardTitle>
           <div className="flex items-center gap-1">
             {setupPending && (
-              <Badge variant="warning" className="gap-1" aria-label={t("ENVIRONMENT_CARD.SETUP_PENDING")}>
+              <Badge
+                variant="warning"
+                className="gap-1"
+                aria-label={t("ENVIRONMENT_CARD.SETUP_PENDING")}
+              >
                 <AlertTriangle className="h-3 w-3" />
                 {t("ENVIRONMENT_CARD.SETUP_NOT_FINISHED")}
               </Badge>
@@ -214,7 +222,9 @@ export const EnvironmentCard = ({
                     ) : (
                       <Wrench className="h-3 w-3" />
                     )}
-                    <span>{isRestoring ? t("ENVIRONMENT_CARD.REPAIRING") : t("ENVIRONMENT_CARD.REPAIR")}</span>
+                    <span>
+                      {isRestoring ? t("ENVIRONMENT_CARD.REPAIRING") : t("ENVIRONMENT_CARD.REPAIR")}
+                    </span>
                     {isRestoring && (
                       <span
                         className="ml-0.5 h-1 w-8 overflow-hidden rounded-full bg-secondary-foreground/20"
@@ -253,7 +263,9 @@ export const EnvironmentCard = ({
         <dl className="mt-3 flex flex-col gap-1.5 text-xs">
           {primaryDomain && (
             <div className="flex items-center gap-2">
-              <dt className="w-[86px] shrink-0 text-muted-foreground">{t("ENVIRONMENT_CARD.DOMAIN")}</dt>
+              <dt className="w-[86px] shrink-0 text-muted-foreground">
+                {t("ENVIRONMENT_CARD.DOMAIN")}
+              </dt>
               <dd className="flex min-w-0 items-center gap-1.5">
                 <span className="truncate">{primaryDomain}</span>
                 {extraDomains > 0 && (
@@ -265,7 +277,9 @@ export const EnvironmentCard = ({
             </div>
           )}
           <div className="flex items-center gap-2">
-            <dt className="w-[86px] shrink-0 text-muted-foreground">{t("ENVIRONMENT_CARD.X_BLOCKS_KEY")}</dt>
+            <dt className="w-[86px] shrink-0 text-muted-foreground">
+              {t("ENVIRONMENT_CARD.X_BLOCKS_KEY")}
+            </dt>
             <dd
               className="flex min-w-0 items-center gap-1 font-mono text-muted-foreground"
               onClick={(event) => event.stopPropagation()}
@@ -277,8 +291,12 @@ export const EnvironmentCard = ({
           </div>
           {project.createdDate && (
             <div className="flex items-center gap-2">
-              <dt className="w-[86px] shrink-0 text-muted-foreground">{t("ENVIRONMENT_CARD.CREATED")}</dt>
-              <dd className="truncate text-muted-foreground">{formatDate(new Date(project.createdDate))}</dd>
+              <dt className="w-[86px] shrink-0 text-muted-foreground">
+                {t("ENVIRONMENT_CARD.CREATED")}
+              </dt>
+              <dd className="truncate text-muted-foreground">
+                {formatDate(new Date(project.createdDate))}
+              </dd>
             </div>
           )}
         </dl>
@@ -289,8 +307,7 @@ export const EnvironmentCard = ({
           onConfirm={handleConfirm}
           data={{
             dialogTitle: t("ENVIRONMENT_CARD.ENVIRONMENT_MIGRATION_IN_PROGRESS"),
-            dialogSubtitle:
-              t("ENVIRONMENT_CARD.THIS_ENVIRONMENT_IS_CURRENTLY"),
+            dialogSubtitle: t("ENVIRONMENT_CARD.THIS_ENVIRONMENT_IS_CURRENTLY"),
             confirmButton: t("ENVIRONMENT_CARD.CONTINUE_ANYWAY"),
             cancelButton: t("common:CANCEL"),
           }}

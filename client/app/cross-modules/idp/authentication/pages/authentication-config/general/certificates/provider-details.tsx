@@ -13,6 +13,8 @@ import {
 import { ApiIntegrationCard } from "./api-integration-card";
 import { useT } from "@seliseblocks/genesis-os";
 
+const KEY_NOT_MAPPED = "PROVIDER_DETAILS.NOT_MAPPED";
+
 const algorithmLabel = (value: number) =>
   getSigningAlgorithms().find((a) => a.value === value)?.label ?? "—";
 
@@ -73,14 +75,10 @@ function CertificatePanel({ provider }: Readonly<{ provider: ThirdPartyJwtProvid
       {/* A certificate pins one key, so a lapse refuses every token the provider issues and
           nothing in the token says why. Worth stating outright rather than leaving to the date. */}
       {expiry?.expired && (
-        <p className="text-xs text-destructive">
-          {t("PROVIDER_DETAILS.EXPIRED_WARNING")}
-        </p>
+        <p className="text-xs text-destructive">{t("PROVIDER_DETAILS.EXPIRED_WARNING")}</p>
       )}
       {expiry?.expiringSoon && (
-        <p className="text-xs text-destructive">
-          {t("PROVIDER_DETAILS.EXPIRING_WARNING")}
-        </p>
+        <p className="text-xs text-destructive">{t("PROVIDER_DETAILS.EXPIRING_WARNING")}</p>
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -133,9 +131,7 @@ function CertificatePanel({ provider }: Readonly<{ provider: ThirdPartyJwtProvid
       </div>
 
       {!provider.certificateSubject && (
-        <p className="text-xs text-muted-foreground">
-          {t("PROVIDER_DETAILS.UNREADABLE")}
-        </p>
+        <p className="text-xs text-muted-foreground">{t("PROVIDER_DETAILS.UNREADABLE")}</p>
       )}
     </div>
   );
@@ -226,7 +222,9 @@ export function ProviderDetails({
               value={provider.algorithms?.map(algorithmLabel).join(", ") || "—"}
             />
             <Detail label={t("PROVIDER_DETAILS.KEY_SOURCE")} value={keySourceLabel(provider)} />
-            {provider.cookieKey && <Detail label={t("PROVIDER_DETAILS.COOKIE_KEY")} value={provider.cookieKey} />}
+            {provider.cookieKey && (
+              <Detail label={t("PROVIDER_DETAILS.COOKIE_KEY")} value={provider.cookieKey} />
+            )}
           </div>
 
           {provider.publicCertificatePath && <CertificatePanel provider={provider} />}
@@ -242,23 +240,29 @@ export function ProviderDetails({
             </p>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Detail label={t("PROVIDER_DETAILS.USER_ID")} value={mapping?.userId || "—"} muted={!mapping?.userId} />
+            <Detail
+              label={t("PROVIDER_DETAILS.USER_ID")}
+              value={mapping?.userId || "—"}
+              muted={!mapping?.userId}
+            />
             <Detail
               label={t("common:EMAIL")}
-              value={mapping?.email || t("PROVIDER_DETAILS.NOT_MAPPED")} muted={!mapping?.email} />
+              value={mapping?.email || t(KEY_NOT_MAPPED)}
+              muted={!mapping?.email}
+            />
             <Detail
               label={t("PROVIDER_DETAILS.USERNAME")}
-              value={mapping?.userName || t("PROVIDER_DETAILS.NOT_MAPPED")}
+              value={mapping?.userName || t(KEY_NOT_MAPPED)}
               muted={!mapping?.userName}
             />
             <Detail
               label={t("PROVIDER_DETAILS.DISPLAY_NAME")}
-              value={mapping?.name || t("PROVIDER_DETAILS.NOT_MAPPED")}
+              value={mapping?.name || t(KEY_NOT_MAPPED)}
               muted={!mapping?.name}
             />
             <Detail
               label={t("PROVIDER_DETAILS.ROLES")}
-              value={mapping?.roles || t("PROVIDER_DETAILS.NOT_MAPPED")}
+              value={mapping?.roles || t(KEY_NOT_MAPPED)}
               muted={!mapping?.roles}
             />
           </div>

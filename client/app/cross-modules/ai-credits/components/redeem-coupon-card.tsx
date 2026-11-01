@@ -49,7 +49,11 @@ export const RedeemCouponCard = () => {
     event.preventDefault();
     if (isPending) return;
     if (code.length < COUPON_CODE_LENGTH) {
-      setError(code ? t("REDEEM_COUPON_CARD.ENTER_ALL_8_CHARACTERS_OF") : t("REDEEM_COUPON_CARD.ENTER_A_VOUCHER_CODE"));
+      setError(
+        code
+          ? t("REDEEM_COUPON_CARD.ENTER_ALL_8_CHARACTERS_OF")
+          : t("REDEEM_COUPON_CARD.ENTER_A_VOUCHER_CODE"),
+      );
       return;
     }
     setRedeemed(null);

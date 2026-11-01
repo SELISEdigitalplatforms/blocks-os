@@ -49,7 +49,9 @@ export const OrganizationPermissionsField = ({
       <div className="flex flex-row items-center justify-between gap-3">
         <div className="flex-1 space-y-1">
           <div className="flex items-center gap-2">
-            <Label className="text-base font-medium">{t("ORGANIZATION_PERMISSIONS_FIELD.PERMISSIONS")}</Label>
+            <Label className="text-base font-medium">
+              {t("ORGANIZATION_PERMISSIONS_FIELD.PERMISSIONS")}
+            </Label>
             {permissions.length > 0 && (
               <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                 {permissions.length}

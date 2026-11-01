@@ -4,11 +4,17 @@ import { CAPTCHA_PROVIDERS } from "@blocks-idp/captcha/models/captcha";
 import type { SecretDependent } from "@/cross-modules/secrets/models/secret.model";
 import { useT, tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.secrets";
+
 export type SecretDependentsAction = "delete" | "purge";
 
 const CLOSING: Record<SecretDependentsAction, string> = {
-  get delete() { return tStatic("os.secrets", "SECRET_DEPENDENTS_NOTICE.THEY_WILL_STOP_WORKING_UNTIL"); },
-  get purge() { return tStatic("os.secrets", "SECRET_DEPENDENTS_NOTICE.THEY_WILL_STOP_WORKING_PURGING"); },
+  get delete() {
+    return tStatic(I18N_MODULE, "SECRET_DEPENDENTS_NOTICE.THEY_WILL_STOP_WORKING_UNTIL");
+  },
+  get purge() {
+    return tStatic(I18N_MODULE, "SECRET_DEPENDENTS_NOTICE.THEY_WILL_STOP_WORKING_PURGING");
+  },
 };
 
 const dependentLabel = (dependent: SecretDependent): string => {
@@ -40,11 +46,13 @@ export function SecretDependentsNotice({
   isError,
   dependents,
 }: SecretDependentsNoticeProps) {
-  const { t } = useT("os.secrets");
+  const { t } = useT(I18N_MODULE);
   if (isLoading) {
     return (
       <div role="status" className="py-1">
-        <span className="sr-only">{t("SECRET_DEPENDENTS_NOTICE.CHECKING_WHICH_CONFIGURATIONS_USE")}</span>
+        <span className="sr-only">
+          {t("SECRET_DEPENDENTS_NOTICE.CHECKING_WHICH_CONFIGURATIONS_USE")}
+        </span>
         <Skeleton className="h-4 w-full" />
       </div>
     );

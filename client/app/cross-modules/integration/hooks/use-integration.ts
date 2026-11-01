@@ -47,16 +47,33 @@ export const useRunIntegrationSetup = () => {
     mutationKey: integrationRunSetupMutationKey(tenantId),
     mutationFn: (payload: IRunIntegrationSetupPayload) => integrationService.runSetup(payload),
     onSuccess: () => {
-      showSuccessToast({ description: tStatic("os.integration", "USE_INTEGRATION.INTEGRATION_IS_SET_UP") });
+      showSuccessToast({
+        description: tStatic("os.integration", "USE_INTEGRATION.INTEGRATION_IS_SET_UP"),
+      });
       queryClient.invalidateQueries({ queryKey: ["integration"] });
     },
     onError: (error) => {
-      showErrorToast({ title: tStatic("os.integration", "USE_INTEGRATION.SETUP_FAILED"), errors: error instanceof Error ? error.message : error });
+      showErrorToast({
+        title: tStatic("os.integration", "USE_INTEGRATION.SETUP_FAILED"),
+        errors: error instanceof Error ? error.message : error,
+      });
       // Steps before the failure may have succeeded; refresh so the page reflects them.
       queryClient.invalidateQueries({ queryKey: ["integration"] });
     },
   });
 };
 
-export const useDisconnect = () => { const queryClient = useQueryClient(); return useMutation({ mutationFn: integrationService.disconnect, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["integration"] }) }); };
-export const useRegenerateSecret = () => { const queryClient = useQueryClient(); return useMutation({ mutationFn: integrationService.regenerateSecret, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["integration"] }) }); };
+export const useDisconnect = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: integrationService.disconnect,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["integration"] }),
+  });
+};
+export const useRegenerateSecret = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: integrationService.regenerateSecret,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["integration"] }),
+  });
+};

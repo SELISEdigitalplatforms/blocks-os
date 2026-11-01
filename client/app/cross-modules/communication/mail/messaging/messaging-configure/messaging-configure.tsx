@@ -73,7 +73,10 @@ export function MessagingConfiguration() {
                 </span>
               </Button>
             </DialogTrigger>
-            <MessageConfiguration dialogTitle={t("MESSAGING_CONFIGURE.NEW_CONFIGURATION")} data={[]} />
+            <MessageConfiguration
+              dialogTitle={t("MESSAGING_CONFIGURE.NEW_CONFIGURATION")}
+              data={[]}
+            />
           </Dialog>
         </div>
       </div>
@@ -112,7 +115,10 @@ export function MessagingConfiguration() {
                         </span>
                       </Button>
                     </DialogTrigger>
-                    <MessageConfiguration dialogTitle={t("MESSAGING_CONFIGURE.EDIT_CONFIGURATION")} data={[]} />
+                    <MessageConfiguration
+                      dialogTitle={t("MESSAGING_CONFIGURE.EDIT_CONFIGURATION")}
+                      data={[]}
+                    />
                   </Dialog>
                   <Button size="sm" variant="outline" className="h-9 gap-2 px-4 py-1">
                     <Copy className="h-3.5 w-3.5" />
@@ -124,19 +130,27 @@ export function MessagingConfiguration() {
               )}
               <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                 <div>
-                  <p className="text-sm text-muted-foreground">{t("MESSAGING_CONFIGURE.PROTOCOL")}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {t("MESSAGING_CONFIGURE.PROTOCOL")}
+                  </p>
                   <p className="text-base">{config.protocol}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">{t("MESSAGING_CONFIGURE.SERVICE_VENDOR")}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {t("MESSAGING_CONFIGURE.SERVICE_VENDOR")}
+                  </p>
                   <p className="text-base">{config.serviceVendor}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">{t("MESSAGING_CONFIGURE.AUTHENTICATION_TOKEN")}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {t("MESSAGING_CONFIGURE.AUTHENTICATION_TOKEN")}
+                  </p>
                   <p className="text-base">{config.authenticationToken}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">{t("MESSAGING_CONFIGURE.ACCOUNT_ID")}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {t("MESSAGING_CONFIGURE.ACCOUNT_ID")}
+                  </p>
                   <p className="text-base">{config.accountID}</p>
                 </div>
                 <div>
@@ -144,7 +158,9 @@ export function MessagingConfiguration() {
                   <p className="text-base">{config.sender}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">{t("MESSAGING_CONFIGURE.NUMBER_LOOKUP_END_URI")}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {t("MESSAGING_CONFIGURE.NUMBER_LOOKUP_END_URI")}
+                  </p>
                   <p className="text-base">{config.numberLookupEndURI}</p>
                 </div>
               </div>

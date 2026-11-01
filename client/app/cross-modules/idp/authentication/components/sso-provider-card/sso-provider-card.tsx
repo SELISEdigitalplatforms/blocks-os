@@ -71,7 +71,9 @@ export const SSOProviderCard = ({ configuration }: SSOProviderCardProps) => {
                     </Badge>
                   )}
                 </div>
-                <p className="text-sm font-normal text-low-emphasis">{t("SSO_PROVIDER_CARD.SOCIAL_CONNECTIONS")}</p>
+                <p className="text-sm font-normal text-low-emphasis">
+                  {t("SSO_PROVIDER_CARD.SOCIAL_CONNECTIONS")}
+                </p>
               </div>
             </div>
             {configuration.isAvailable && (
@@ -95,7 +97,9 @@ export const SSOProviderCard = ({ configuration }: SSOProviderCardProps) => {
                         setOpen(true);
                       }}
                     >
-                      {configuration.isDisabled ? t("SSO_PROVIDER_CARD.ENABLE") : t("SSO_PROVIDER_CARD.DISABLE")}
+                      {configuration.isDisabled
+                        ? t("SSO_PROVIDER_CARD.ENABLE")
+                        : t("SSO_PROVIDER_CARD.DISABLE")}
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>

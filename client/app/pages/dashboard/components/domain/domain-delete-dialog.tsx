@@ -103,9 +103,7 @@ export const DomainDeleteDialog = ({
             {/* What always happens, stated rather than asked */}
             <div className="flex items-start gap-2 rounded-md bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground">
               <Info className="mt-0.5 h-4 w-4 shrink-0" />
-              <p>
-                {t("DOMAIN_DELETE_DIALOG.ITS_WEB_SERVER_CONFIGURATION_AND")}
-              </p>
+              <p>{t("DOMAIN_DELETE_DIALOG.ITS_WEB_SERVER_CONFIGURATION_AND")}</p>
             </div>
 
             <div className="flex items-start gap-3 rounded-md border border-base-error bg-blocks-error-100/40 px-3 py-3">
@@ -121,13 +119,20 @@ export const DomainDeleteDialog = ({
                   {t("DOMAIN_DELETE_DIALOG.ALSO_REMOVE_THE_SHARED_API")}
                 </Label>
                 <p className="mt-1 break-all text-xs text-muted-foreground">
-                  {t("DOMAIN_DELETE_DIALOG.SERVES_THE_API_FOR_DOMAIN", { span: `${apiHost}`, span2: t("DOMAIN_DELETE_DIALOG.EVERY"), value3: domain?.cookieDomain?.replace(/^\./, "") ?? "" })}</p>
+                  {t("DOMAIN_DELETE_DIALOG.SERVES_THE_API_FOR_DOMAIN", {
+                    span: `${apiHost}`,
+                    span2: t("DOMAIN_DELETE_DIALOG.EVERY"),
+                    value3: domain?.cookieDomain?.replace(/^\./, "") ?? "",
+                  })}
+                </p>
               </div>
             </div>
           </>
         )}
 
-        <p className="text-sm text-medium-emphasis">{t("DOMAIN_DELETE_DIALOG.THIS_ACTION_CANNOT_BE_UNDONE")}</p>
+        <p className="text-sm text-medium-emphasis">
+          {t("DOMAIN_DELETE_DIALOG.THIS_ACTION_CANNOT_BE_UNDONE")}
+        </p>
 
         <DialogFooter className="mt-4 flex flex-row gap-2">
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>

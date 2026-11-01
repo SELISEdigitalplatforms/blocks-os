@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.dashboard";
+
 /**
  * The server's hostname grammar (DomainManagementService.HostnameRegex): two or
  * more labels of letters, digits and inner hyphens, 1–63 characters each. The
@@ -18,7 +20,7 @@ export const isValidHostname = (value: string): boolean =>
   value.length <= MAX_HOSTNAME_LENGTH && hostnameRegex.test(value);
 
 const invalidDomainMessage = () =>
-  tStatic("os.dashboard", "DOMAIN_FORM_SCHEMA.PLEASE_ENTER_A_VALID_DOMAIN");
+  tStatic(I18N_MODULE, "DOMAIN_FORM_SCHEMA.PLEASE_ENTER_A_VALID_DOMAIN");
 
 /**
  * Enough of the public suffix list to recognise the common multi-label TLDs.
@@ -47,7 +49,9 @@ const isPublicSuffix = (value: string): boolean => {
   const labels = value.split(".");
   if (labels.length === 1) return true;
   // Only ccTLDs hand out second-level suffixes, and every one is two letters.
-  return labels.length === 2 && labels[1].length === 2 && SECOND_LEVEL_SUFFIX_LABELS.includes(labels[0]);
+  return (
+    labels.length === 2 && labels[1].length === 2 && SECOND_LEVEL_SUFFIX_LABELS.includes(labels[0])
+  );
 };
 
 /**
@@ -75,18 +79,22 @@ export const isCookieDomainValidFor = (domain: string, cookieDomain: string): bo
   return host === cookie || host.endsWith(`.${cookie}`);
 };
 
-export const createDomainFormSchema = () => z
-  .object({
-    domain: z.string().min(1, tStatic("os.dashboard", "DOMAIN_FORM_SCHEMA.DOMAIN_IS_REQUIRED")).refine(isValidHostname, invalidDomainMessage()),
-    cookieDomain: z
-      .string()
-      .min(1, tStatic("os.dashboard", "DOMAIN_FORM_SCHEMA.COOKIE_DOMAIN_IS_REQUIRED"))
-      .refine(isValidHostname, invalidDomainMessage()),
-  })
-  .refine(({ domain, cookieDomain }) => isCookieDomainValidFor(domain, cookieDomain), {
-    path: ["cookieDomain"],
-    message: tStatic("os.dashboard", "DOMAIN_FORM_SCHEMA.COOKIE_DOMAIN_MUST_BE_THE"),
-  });
+export const createDomainFormSchema = () =>
+  z
+    .object({
+      domain: z
+        .string()
+        .min(1, tStatic(I18N_MODULE, "DOMAIN_FORM_SCHEMA.DOMAIN_IS_REQUIRED"))
+        .refine(isValidHostname, invalidDomainMessage()),
+      cookieDomain: z
+        .string()
+        .min(1, tStatic(I18N_MODULE, "DOMAIN_FORM_SCHEMA.COOKIE_DOMAIN_IS_REQUIRED"))
+        .refine(isValidHostname, invalidDomainMessage()),
+    })
+    .refine(({ domain, cookieDomain }) => isCookieDomainValidFor(domain, cookieDomain), {
+      path: ["cookieDomain"],
+      message: tStatic(I18N_MODULE, "DOMAIN_FORM_SCHEMA.COOKIE_DOMAIN_MUST_BE_THE"),
+    });
 
 export type DomainFormSchema = z.infer<ReturnType<typeof createDomainFormSchema>>;
 

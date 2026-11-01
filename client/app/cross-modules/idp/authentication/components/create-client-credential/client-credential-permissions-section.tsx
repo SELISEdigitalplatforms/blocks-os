@@ -39,7 +39,9 @@ export const ClientCredentialPermissionsSection = ({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex-1 space-y-1">
           <div className="flex items-center gap-2">
-            <Label className="text-base font-medium">{label ?? t("CLIENT_CREDENTIAL_PERMISSIONS_SECTION.LABEL")}</Label>
+            <Label className="text-base font-medium">
+              {label ?? t("CLIENT_CREDENTIAL_PERMISSIONS_SECTION.LABEL")}
+            </Label>
             {permissions.length > 0 && (
               <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                 {permissions.length}
@@ -76,7 +78,9 @@ export const ClientCredentialPermissionsSection = ({
               />
             </svg>
           </div>
-          <p className="mt-3 text-sm font-medium text-foreground">{t("CLIENT_CREDENTIAL_PERMISSIONS_SECTION.EMPTY_TITLE")}</p>
+          <p className="mt-3 text-sm font-medium text-foreground">
+            {t("CLIENT_CREDENTIAL_PERMISSIONS_SECTION.EMPTY_TITLE")}
+          </p>
           <p className="mt-1 text-xs text-muted-foreground">
             {t("CLIENT_CREDENTIAL_PERMISSIONS_SECTION.EMPTY_HINT")}
           </p>

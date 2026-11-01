@@ -7,7 +7,8 @@ import { IntegrationSetupModal } from "@/cross-modules/integration/components/in
 import { OneTimeSecretDialog } from "@/cross-modules/integration/components/one-time-secret-dialog";
 import {
   useIntegrationConnections,
-  useDisconnect, useRegenerateSecret,
+  useDisconnect,
+  useRegenerateSecret,
 } from "@/cross-modules/integration/hooks/use-integration";
 import { IRunIntegrationSetupResponse } from "@/cross-modules/integration/models/integration.model";
 import { useT } from "@seliseblocks/genesis-os";
@@ -19,7 +20,11 @@ export default function IntegrationPage() {
   const { mutate: disconnect, isPending: disconnecting } = useDisconnect();
   const { mutate: regenerate, isPending: regenerating } = useRegenerateSecret();
   const {
-    data: connections = [], isLoading, isError, refetch, isFetching,
+    data: connections = [],
+    isLoading,
+    isError,
+    refetch,
+    isFetching,
   } = useIntegrationConnections();
 
   if (isLoading) {
@@ -56,10 +61,16 @@ export default function IntegrationPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold text-high-emphasis">{t("INTEGRATION.CONNECTIONS")}</h2>
-          <p className="text-sm text-medium-emphasis">{t("INTEGRATION.CONNECTION_COUNT", { count: connections.length })}</p>
+          <h2 className="text-base font-semibold text-high-emphasis">
+            {t("INTEGRATION.CONNECTIONS")}
+          </h2>
+          <p className="text-sm text-medium-emphasis">
+            {t("INTEGRATION.CONNECTION_COUNT", { count: connections.length })}
+          </p>
         </div>
-        <Button size="sm" onClick={() => setIsSetupOpen(true)}>{t("INTEGRATION.ADD_CONNECTION")}</Button>
+        <Button size="sm" onClick={() => setIsSetupOpen(true)}>
+          {t("INTEGRATION.ADD_CONNECTION")}
+        </Button>
       </div>
 
       {connections.length === 0 ? (
@@ -77,7 +88,11 @@ export default function IntegrationPage() {
             regenerate(connection.itemId, {
               onSuccess: (r) =>
                 r.clientSecret &&
-                setSecret({ isSuccess: true, clientSecret: r.clientSecret, clientId: connection.clientCredentialId }),
+                setSecret({
+                  isSuccess: true,
+                  clientSecret: r.clientSecret,
+                  clientId: connection.clientCredentialId,
+                }),
             })
           }
           disconnecting={disconnecting}
@@ -85,9 +100,22 @@ export default function IntegrationPage() {
         />
       )}
 
-      <IntegrationSetupModal open={isSetupOpen} onOpenChange={setIsSetupOpen} onCreated={setSecret} />
+      <IntegrationSetupModal
+        open={isSetupOpen}
+        onOpenChange={setIsSetupOpen}
+        onCreated={setSecret}
+      />
       <OneTimeSecretDialog
-        secret={secret ? { clientId: secret.clientId ?? "", clientSecret: secret.clientSecret ?? "", xBlocksKey: secret.xBlocksKey, baseUrl: secret.baseUrl } : null}
+        secret={
+          secret
+            ? {
+                clientId: secret.clientId ?? "",
+                clientSecret: secret.clientSecret ?? "",
+                xBlocksKey: secret.xBlocksKey,
+                baseUrl: secret.baseUrl,
+              }
+            : null
+        }
         onClose={() => setSecret(null)}
       />
     </div>

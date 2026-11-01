@@ -31,6 +31,8 @@ import {
 import { useNavigate } from "react-router";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { useT } from "@seliseblocks/genesis-os";
+
+const KEY_COMMON_ERROR = "common:ERROR";
 type EmailTemplateListProps = {
   templates: IEmailTemplate[];
   isLoading: boolean;
@@ -83,14 +85,14 @@ export const EmailTemplateList = ({
       } else {
         toast({
           variant: "destructive",
-          title: t("common:ERROR"),
+          title: t(KEY_COMMON_ERROR),
           description: JSON.stringify(res?.errors),
         });
       }
     } catch (error) {
       toast({
         variant: "destructive",
-        title: t("common:ERROR"),
+        title: t(KEY_COMMON_ERROR),
         description: JSON.stringify(error),
       });
     }
@@ -112,14 +114,14 @@ export const EmailTemplateList = ({
       } else {
         toast({
           variant: "destructive",
-          title: t("common:ERROR"),
+          title: t(KEY_COMMON_ERROR),
           description: JSON.stringify(res?.errors),
         });
       }
     } catch (error) {
       toast({
         variant: "destructive",
-        title: t("common:ERROR"),
+        title: t(KEY_COMMON_ERROR),
         description: JSON.stringify(error),
       });
     }

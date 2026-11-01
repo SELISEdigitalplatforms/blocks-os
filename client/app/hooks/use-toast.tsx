@@ -2,6 +2,8 @@ import * as React from "react";
 import type { ToastActionElement, ToastProps } from "@/components/ui-kits/toaster/toast";
 import { handleErrorMessages } from "@/lib/error";
 import { tStatic } from "@seliseblocks/genesis-os";
+
+const I18N_MODULE = "os.shared";
 const TOAST_LIMIT = 1;
 const TOAST_REMOVE_DELAY = 1000000;
 type ToasterToast = ToastProps & {
@@ -154,14 +156,14 @@ type ErrorToastOptions = {
 export const showSuccessToast = ({ title, description }: SuccessToastOptions) => {
   toast({
     variant: "success",
-    title: title ?? tStatic("os.shared", "common:SUCCESS"),
+    title: title ?? tStatic(I18N_MODULE, "common:SUCCESS"),
     description,
   });
 };
 export const showInfoToast = ({ title, description }: InfoToastOptions) => {
   toast({
     variant: "info",
-    title: title ?? tStatic("os.shared", "USE_TOAST.INFO"),
+    title: title ?? tStatic(I18N_MODULE, "USE_TOAST.INFO"),
     description,
   });
 };
@@ -169,7 +171,7 @@ export const showErrorToast = ({ title, errors, customMessages }: ErrorToastOpti
   const message = handleErrorMessages(errors, customMessages);
   toast({
     variant: "destructive",
-    title: title ?? tStatic("os.shared", "USE_TOAST.FAILED"),
+    title: title ?? tStatic(I18N_MODULE, "USE_TOAST.FAILED"),
     description: Array.isArray(message)
       ? message.map((item, index) => <div key={index}>{item}</div>)
       : message,

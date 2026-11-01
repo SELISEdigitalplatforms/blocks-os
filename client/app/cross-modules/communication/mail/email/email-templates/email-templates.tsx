@@ -104,7 +104,12 @@ const EmailTemplates = () => {
               {templateData.map((item) => (
                 <div key={item.id} className="flex h-full flex-col justify-center gap-2">
                   <div className="relative flex h-[360px] flex-col items-center justify-center rounded-sm border">
-                    <img src={item.thumbnailUrl} alt={t("EMAIL_TEMPLATES.IMAGE_ALT")} width={240} height={360} />
+                    <img
+                      src={item.thumbnailUrl}
+                      alt={t("EMAIL_TEMPLATES.IMAGE_ALT")}
+                      width={240}
+                      height={360}
+                    />
                   </div>
                   <p className="mt-3 text-base">{item.name}</p>
                 </div>
@@ -119,7 +124,12 @@ const EmailTemplates = () => {
               {templateData.map((item) => (
                 <div key={item.id} className="flex h-full flex-col justify-center gap-2">
                   <div className="relative flex h-[360px] flex-col items-center justify-center rounded-sm border">
-                    <img src={item.thumbnailUrl} alt={t("EMAIL_TEMPLATES.IMAGE_ALT")} width={240} height={360} />
+                    <img
+                      src={item.thumbnailUrl}
+                      alt={t("EMAIL_TEMPLATES.IMAGE_ALT")}
+                      width={240}
+                      height={360}
+                    />
                   </div>
                   <p className="mt-3 text-base">{item.name}</p>
                 </div>

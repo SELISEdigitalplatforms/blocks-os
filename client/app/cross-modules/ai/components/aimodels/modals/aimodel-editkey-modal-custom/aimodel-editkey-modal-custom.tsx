@@ -33,23 +33,41 @@ import { IModelInfo, IUpdateModelPayload } from "@blocks-ai/types/aimodel.servic
 import { useProjectStore, useT, tStatic } from "@seliseblocks/genesis-os";
 import { useUpdateModel } from "@blocks-ai/hooks/use-aimodel";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-const createCustomEditKeyFormSchema = () => z.object({
-  model: z.string().trim().min(1, tStatic("os.ai", "AIMODEL_EDITKEY_MODAL_CUSTOM.MODEL_NAME_IS_REQUIRED")),
-  providerName: z.string().trim().min(1, tStatic("os.ai", "AIMODEL_EDITKEY_MODAL_CUSTOM.PROVIDER_NAME_IS_REQUIRED")),
-  url: z.string().trim().refine(isParsableUrl, tStatic("os.ai", "AIMODEL_EDITKEY_MODAL_CUSTOM.MUST_BE_A_VALID_URL")),
-  apiKey: z.string().optional(),
-  apiVersion: z.string().trim().min(1, tStatic("os.ai", "AIMODEL_EDITKEY_MODAL_CUSTOM.API_VERSION_IS_REQUIRED")),
-  DefaultTemp: z.number().min(0).max(2),
-  MaxTokens: z.number().min(1).max(32768),
-  customHeaders: z
-    .array(
-      z.object({
-        key: z.string().trim().optional().nullable(),
-        value: z.string().trim().optional().nullable(),
-      }),
-    )
-    .default([]),
-});
+
+const I18N_MODULE = "os.ai";
+const createCustomEditKeyFormSchema = () =>
+  z.object({
+    model: z
+      .string()
+      .trim()
+      .min(1, tStatic(I18N_MODULE, "AIMODEL_EDITKEY_MODAL_CUSTOM.MODEL_NAME_IS_REQUIRED")),
+    providerName: z
+      .string()
+      .trim()
+      .min(1, tStatic(I18N_MODULE, "AIMODEL_EDITKEY_MODAL_CUSTOM.PROVIDER_NAME_IS_REQUIRED")),
+    url: z
+      .string()
+      .trim()
+      .refine(
+        isParsableUrl,
+        tStatic(I18N_MODULE, "AIMODEL_EDITKEY_MODAL_CUSTOM.MUST_BE_A_VALID_URL"),
+      ),
+    apiKey: z.string().optional(),
+    apiVersion: z
+      .string()
+      .trim()
+      .min(1, tStatic(I18N_MODULE, "AIMODEL_EDITKEY_MODAL_CUSTOM.API_VERSION_IS_REQUIRED")),
+    DefaultTemp: z.number().min(0).max(2),
+    MaxTokens: z.number().min(1).max(32768),
+    customHeaders: z
+      .array(
+        z.object({
+          key: z.string().trim().optional().nullable(),
+          value: z.string().trim().optional().nullable(),
+        }),
+      )
+      .default([]),
+  });
 type FormSchema = z.infer<ReturnType<typeof createCustomEditKeyFormSchema>>;
 interface CustomModelEditKeyModalProps {
   editKeyModalOpen: boolean;
@@ -61,7 +79,7 @@ export const CustomModelEditKeyModal = ({
   setEditKeyModalOpen,
   model,
 }: CustomModelEditKeyModalProps) => {
-  const { t } = useT("os.ai");
+  const { t } = useT(I18N_MODULE);
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useUpdateModel();
   const initialValues: FormSchema = useMemo(() => {
@@ -126,7 +144,9 @@ export const CustomModelEditKeyModal = ({
       if (trimmedApiKey) payload.api_key = trimmedApiKey;
       const res = await mutateAsync({ modelId: model._id, payload });
       if (res.is_success) {
-        showSuccessToast({ description: t("AIMODEL_EDITKEY_MODAL_CUSTOM.MODEL_UPDATED_SUCCESSFULLY") });
+        showSuccessToast({
+          description: t("AIMODEL_EDITKEY_MODAL_CUSTOM.MODEL_UPDATED_SUCCESSFULLY"),
+        });
       } else {
         showErrorToast({ errors: res.detail });
       }
@@ -161,7 +181,11 @@ export const CustomModelEditKeyModal = ({
                     {t("AIMODEL_EDITKEY_MODAL_CUSTOM.MODEL_NAME", { span: "*" })}
                   </FormLabel>
                   <FormControl>
-                    <Input placeholder={t("AIMODEL_EDITKEY_MODAL_CUSTOM.ENTER_MODEL_NAME")} {...field} disabled />
+                    <Input
+                      placeholder={t("AIMODEL_EDITKEY_MODAL_CUSTOM.ENTER_MODEL_NAME")}
+                      {...field}
+                      disabled
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -175,11 +199,12 @@ export const CustomModelEditKeyModal = ({
               name="url"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>
-                    {t("AIMODEL_EDITKEY_MODAL_CUSTOM.API_URL", { span: "*" })}
-                  </FormLabel>
+                  <FormLabel>{t("AIMODEL_EDITKEY_MODAL_CUSTOM.API_URL", { span: "*" })}</FormLabel>
                   <FormControl>
-                    <Input placeholder={t("AIMODEL_EDITKEY_MODAL_CUSTOM.ENTER_API_URL")} {...field} />
+                    <Input
+                      placeholder={t("AIMODEL_EDITKEY_MODAL_CUSTOM.ENTER_API_URL")}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -204,7 +229,11 @@ export const CustomModelEditKeyModal = ({
                           if (apiKeyEditable) field.onChange(e.target.value);
                         }}
                         disabled={!apiKeyEditable}
-                        placeholder={apiKeyEditable ? t("AIMODEL_EDITKEY_MODAL_CUSTOM.ENTER_NEW_API_KEY") : t("AIMODEL_EDITKEY_MODAL_CUSTOM.API_KEY")}
+                        placeholder={
+                          apiKeyEditable
+                            ? t("AIMODEL_EDITKEY_MODAL_CUSTOM.ENTER_NEW_API_KEY")
+                            : t("AIMODEL_EDITKEY_MODAL_CUSTOM.API_KEY")
+                        }
                         className="inline-block w-full truncate border-none shadow-none focus-visible:ring-0"
                       />
                     </FormControl>
@@ -235,7 +264,10 @@ export const CustomModelEditKeyModal = ({
                     {t("AIMODEL_EDITKEY_MODAL_CUSTOM.API_VERSION", { span: "*" })}
                   </FormLabel>
                   <FormControl>
-                    <Input placeholder={t("AIMODEL_EDITKEY_MODAL_CUSTOM.API_VERSION_2")} {...field} />
+                    <Input
+                      placeholder={t("AIMODEL_EDITKEY_MODAL_CUSTOM.API_VERSION_2")}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -317,8 +349,12 @@ export const CustomModelEditKeyModal = ({
             />
             <div>
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-medium">{t("AIMODEL_EDITKEY_MODAL_CUSTOM.CUSTOM_HEADERS_OPTIONAL")}</h4>
-                <span className="text-sm text-medium-emphasis">{t("AIMODEL_EDITKEY_MODAL_CUSTOM.KEY_VALUE_PAIRS")}</span>
+                <h4 className="text-sm font-medium">
+                  {t("AIMODEL_EDITKEY_MODAL_CUSTOM.CUSTOM_HEADERS_OPTIONAL")}
+                </h4>
+                <span className="text-sm text-medium-emphasis">
+                  {t("AIMODEL_EDITKEY_MODAL_CUSTOM.KEY_VALUE_PAIRS")}
+                </span>
               </div>
               <div className="mt-3 space-y-2">
                 {fields.map((f, idx) => (
@@ -378,7 +414,8 @@ export const CustomModelEditKeyModal = ({
                   onClick={() => append({ key: "", value: "" })}
                   className="mt-2"
                 >
-                  {t("AIMODEL_EDITKEY_MODAL_CUSTOM.ADD", { count: fields.length })}</Button>
+                  {t("AIMODEL_EDITKEY_MODAL_CUSTOM.ADD", { count: fields.length })}
+                </Button>
               </div>
             </div>
             <DialogFooter className="mt-6 flex items-center justify-end gap-3">

@@ -114,4 +114,3 @@ export function accessPresets(fields: Pick<IField, "name">[] = []): AccessPreset
       : []),
   ];
 }
-

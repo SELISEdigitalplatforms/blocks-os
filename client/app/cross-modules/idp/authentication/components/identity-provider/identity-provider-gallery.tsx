@@ -17,9 +17,11 @@ import {
   SOCIAL_CARD_TAGS,
 } from "./identity-provider-visual.constant";
 
+const I18N_MODULE = "os.idp.identity-provider";
+
 /** The federated sign-in explainer, shown only while nothing is configured yet. */
 function FederatedFlow() {
-  const { t } = useT("os.idp.identity-provider");
+  const { t } = useT(I18N_MODULE);
   const googleLogo = SOCIAL_AUTH_PROVIDERS_CONFIG[SSO_PROVIDERS.google];
   const microsoftLogo = SOCIAL_AUTH_PROVIDERS_CONFIG[SSO_PROVIDERS.microsoft];
 
@@ -43,7 +45,9 @@ function FederatedFlow() {
                 <User className="h-4 w-4 text-medium-emphasis" />
               </div>
               <div className="min-w-0">
-                <p className="text-[13px] font-semibold text-high-emphasis">{t("IDENTITY_PROVIDER_GALLERY.FLOW_USER_TITLE")}</p>
+                <p className="text-[13px] font-semibold text-high-emphasis">
+                  {t("IDENTITY_PROVIDER_GALLERY.FLOW_USER_TITLE")}
+                </p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   {t("IDENTITY_PROVIDER_GALLERY.FLOW_USER_DESCRIPTION")}
                 </p>
@@ -85,8 +89,12 @@ function FederatedFlow() {
                 )}
               </div>
               <div className="min-w-0">
-                <p className="text-[13px] font-semibold text-high-emphasis">{t("IDENTITY_PROVIDER_GALLERY.FLOW_IDP_TITLE")}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">{t("IDENTITY_PROVIDER_GALLERY.FLOW_IDP_DESCRIPTION")}</p>
+                <p className="text-[13px] font-semibold text-high-emphasis">
+                  {t("IDENTITY_PROVIDER_GALLERY.FLOW_IDP_TITLE")}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {t("IDENTITY_PROVIDER_GALLERY.FLOW_IDP_DESCRIPTION")}
+                </p>
               </div>
             </div>
           </div>
@@ -108,7 +116,7 @@ function SectionHeading({ title, hint }: { title: string; hint: string }) {
 }
 
 function NotConfiguredPill() {
-  const { t } = useT("os.idp.identity-provider");
+  const { t } = useT(I18N_MODULE);
   return (
     <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-medium-emphasis">
       <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-low-emphasis" />
@@ -123,7 +131,7 @@ function NotConfiguredPill() {
  * available no matter how many are already configured.
  */
 function AddProviderButton({ label, onAdd }: { label: string; onAdd: () => void }) {
-  const { t } = useT("os.idp.identity-provider");
+  const { t } = useT(I18N_MODULE);
   return (
     <Button
       type="button"
@@ -157,7 +165,7 @@ function ConfigurationStatus({
   onToggle: () => void;
   listId: string;
 }) {
-  const { t } = useT("os.idp.identity-provider");
+  const { t } = useT(I18N_MODULE);
   if (count === 0) return <NotConfiguredPill />;
 
   return (
@@ -192,11 +200,15 @@ function ProviderEntriesList({
   expanded: boolean;
   listId: string;
 }) {
-  const { t } = useT("os.idp.identity-provider");
+  const { t } = useT(I18N_MODULE);
   if (entries.length === 0 || !expanded) return null;
 
   return (
-    <ul id={listId} aria-label={t("IDENTITY_PROVIDER_GALLERY.CONFIGURED_LIST", { label })} className="space-y-2">
+    <ul
+      id={listId}
+      aria-label={t("IDENTITY_PROVIDER_GALLERY.CONFIGURED_LIST", { label })}
+      className="space-y-2"
+    >
       {entries.map((entry) => (
         <ProviderEntryItem key={entry.itemId} item={entry} />
       ))}
@@ -211,7 +223,7 @@ interface SocialProviderCardProps {
 }
 
 function SocialProviderCard({ provider, entries, onAdd }: SocialProviderCardProps) {
-  const { t } = useT("os.idp.identity-provider");
+  const { t } = useT(I18N_MODULE);
   const config = SOCIAL_AUTH_PROVIDERS_CONFIG[provider as SSO_PROVIDERS];
   const [expanded, setExpanded] = useState(true);
   const listId = useId();
@@ -359,7 +371,7 @@ export function IdentityProviderGallery({
   onSelectBlocksOidc,
   onSelectByos,
 }: IdentityProviderGalleryProps) {
-  const { t } = useT("os.idp.identity-provider");
+  const { t } = useT(I18N_MODULE);
   return (
     <div className="space-y-6">
       <FederatedFlow />

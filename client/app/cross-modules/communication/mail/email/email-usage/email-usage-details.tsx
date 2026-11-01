@@ -71,7 +71,10 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
         throw new Error("Attachment not found");
       }
       const bytes = Uint8Array.from(atob(file.contentBase64), (ch) => ch.charCodeAt(0));
-      saveBlob(new Blob([bytes], { type: file.contentType || "application/octet-stream" }), file.fileName || fallbackName);
+      saveBlob(
+        new Blob([bytes], { type: file.contentType || "application/octet-stream" }),
+        file.fileName || fallbackName,
+      );
     } catch {
       toast({
         variant: "destructive",
@@ -127,7 +130,11 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
         <CardContent className="space-y-5 p-5 md:p-6">
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <h1 className="wrap-break-word text-lg font-semibold text-high-emphasis md:text-2xl">
-              {details.subject || <span className="italic text-muted-foreground">{t("EMAIL_USAGE_DETAILS.NO_SUBJECT")}</span>}
+              {details.subject || (
+                <span className="italic text-muted-foreground">
+                  {t("EMAIL_USAGE_DETAILS.NO_SUBJECT")}
+                </span>
+              )}
             </h1>
             <div className="flex shrink-0 items-center gap-2">
               {!details.isInbound && <StatusBadge status={details.status} />}
@@ -171,7 +178,10 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
               </div>
               <AddressLine label={t("EMAIL_USAGE_DETAILS.LABEL_TO")} raw={details.to} />
               <AddressLine label={t("EMAIL_USAGE_DETAILS.LABEL_CC")} raw={details.content?.cc} />
-              <AddressLine label={t("EMAIL_USAGE_DETAILS.LABEL_REPLY_TO")} raw={details.content?.replyTo} />
+              <AddressLine
+                label={t("EMAIL_USAGE_DETAILS.LABEL_REPLY_TO")}
+                raw={details.content?.replyTo}
+              />
             </div>
           </div>
 
@@ -193,12 +203,16 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
                     type="button"
                     key={`${attachment.fileName}-${index}`}
                     className="group flex max-w-xs items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-left transition-colors hover:bg-muted/60 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
-                    title={t("EMAIL_USAGE_DETAILS.DOWNLOAD_ATTACHMENT", { name: attachment.fileName })}
+                    title={t("EMAIL_USAGE_DETAILS.DOWNLOAD_ATTACHMENT", {
+                      name: attachment.fileName,
+                    })}
                     aria-label={t("EMAIL_USAGE_DETAILS.DOWNLOAD_ATTACHMENT", {
                       name: attachment.fileName,
                     })}
                     disabled={downloadingIndex === index}
-                    onClick={() => downloadAttachment(details.messageId || id, index, attachment.fileName)}
+                    onClick={() =>
+                      downloadAttachment(details.messageId || id, index, attachment.fileName)
+                    }
                   >
                     {downloadingIndex === index ? (
                       <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
@@ -222,7 +236,9 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
 
       <Card className="overflow-hidden shadow-none">
         <div className="flex items-center justify-between border-b px-5 py-3">
-          <p className="text-sm font-medium text-high-emphasis">{t("EMAIL_USAGE_DETAILS.MESSAGE")}</p>
+          <p className="text-sm font-medium text-high-emphasis">
+            {t("EMAIL_USAGE_DETAILS.MESSAGE")}
+          </p>
           {availableViews.length > 1 && (
             <Tabs value={activeView} onValueChange={(value) => setView(value as BodyView)}>
               <TabsList className="h-8">
@@ -268,7 +284,9 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
             </pre>
           )}
           {!activeView && (
-            <p className="p-5 text-sm italic text-muted-foreground">{t("EMAIL_USAGE_DETAILS.NO_BODY")}</p>
+            <p className="p-5 text-sm italic text-muted-foreground">
+              {t("EMAIL_USAGE_DETAILS.NO_BODY")}
+            </p>
           )}
         </CardContent>
       </Card>

@@ -146,11 +146,13 @@ export function PermissionGroupCombobox({
             ) : null}
 
             {filtered.length > 0 ? (
-              <CommandGroup heading={
+              <CommandGroup
+                heading={
                   canCreate
                     ? t("PERMISSION_GROUP_COMBOBOX.EXISTING_GROUPS")
                     : t("PERMISSION_GROUP_COMBOBOX.GROUPS")
-                }>
+                }
+              >
                 {filtered.map((opt) => (
                   <CommandItem key={opt} value={opt} onSelect={() => handleSelect(opt)}>
                     {opt}

@@ -29,7 +29,11 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useT } from "@seliseblocks/genesis-os";
-import { buildUpdateUserFormSchema, inviteUserFormDefaultValue, type inviteUserFormSchema } from "./utils";
+import {
+  buildUpdateUserFormSchema,
+  inviteUserFormDefaultValue,
+  type inviteUserFormSchema,
+} from "./utils";
 
 type UpdateUserProps = {
   id: string;

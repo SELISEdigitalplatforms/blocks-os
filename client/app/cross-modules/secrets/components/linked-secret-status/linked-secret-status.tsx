@@ -7,29 +7,31 @@ import {
 } from "@/cross-modules/secrets/models/secret.model";
 import { tStatic, useT } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.secrets";
+
 const getBrokenCopy = () => ({
   [LINKED_SECRET_STATUS.Archived]: {
-    label: tStatic("os.secrets", "LINKED_SECRET_STATUS.LABEL_ARCHIVED"),
-    help: tStatic("os.secrets", "LINKED_SECRET_STATUS.HELP_ARCHIVED"),
+    label: tStatic(I18N_MODULE, "LINKED_SECRET_STATUS.LABEL_ARCHIVED"),
+    help: tStatic(I18N_MODULE, "LINKED_SECRET_STATUS.HELP_ARCHIVED"),
   },
   [LINKED_SECRET_STATUS.Missing]: {
-    label: tStatic("os.secrets", "LINKED_SECRET_STATUS.LABEL_MISSING"),
-    help: tStatic("os.secrets", "LINKED_SECRET_STATUS.HELP_MISSING"),
+    label: tStatic(I18N_MODULE, "LINKED_SECRET_STATUS.LABEL_MISSING"),
+    help: tStatic(I18N_MODULE, "LINKED_SECRET_STATUS.HELP_MISSING"),
   },
 });
 
 /** Copy for the repair notice in an edit form, by broken status (read when shown). */
 export const LINKED_SECRET_REPAIR_NOTICE = {
   get [LINKED_SECRET_STATUS.Archived]() {
-    return tStatic("os.secrets", "LINKED_SECRET_STATUS.REPAIR_ARCHIVED");
+    return tStatic(I18N_MODULE, "LINKED_SECRET_STATUS.REPAIR_ARCHIVED");
   },
   get [LINKED_SECRET_STATUS.Missing]() {
-    return tStatic("os.secrets", "LINKED_SECRET_STATUS.REPAIR_MISSING");
+    return tStatic(I18N_MODULE, "LINKED_SECRET_STATUS.REPAIR_MISSING");
   },
 };
 
 export const linkedSecretRepairRequiredMessage = () =>
-  tStatic("os.secrets", "LINKED_SECRET_STATUS.REPAIR_REQUIRED");
+  tStatic(I18N_MODULE, "LINKED_SECRET_STATUS.REPAIR_REQUIRED");
 
 interface LinkedSecretStatusValueProps {
   status?: LinkedSecretStatus | null;
@@ -47,7 +49,7 @@ interface LinkedSecretStatusValueProps {
  * checked, and the screen's own text otherwise.
  */
 export function LinkedSecretStatusValue({ status, fallback }: LinkedSecretStatusValueProps) {
-  const { t } = useT("os.secrets");
+  const { t } = useT(I18N_MODULE);
   if (status === LINKED_SECRET_STATUS.Archived || status === LINKED_SECRET_STATUS.Missing) {
     const copy = getBrokenCopy()[status];
     return (

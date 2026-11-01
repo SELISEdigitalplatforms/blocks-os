@@ -13,9 +13,7 @@ import { Label } from "@/components/ui-kits/label/label";
 import { PasswordInput } from "@/components/password-input/password-input";
 import { useRotateSecret } from "@/cross-modules/secrets/hooks/use-secret-management";
 import { describeSecretError } from "@/cross-modules/secrets/utils/secret-error";
-import {
-  type SecretResult,
-} from "@/cross-modules/secrets/models/secret.model";
+import { type SecretResult } from "@/cross-modules/secrets/models/secret.model";
 import { useT, tStatic } from "@seliseblocks/genesis-os";
 
 interface RotateSecretModalProps {
@@ -51,7 +49,12 @@ export function RotateSecretModal({ open, onOpenChange, secret }: RotateSecretMo
       await rotate({ secretId: secret.secretId, value });
       onOpenChange(false);
     } catch (cause) {
-      setError(describeSecretError(cause, tStatic("os.secrets", "ROTATE_SECRET_MODAL.COULD_NOT_ROTATE_THE_SECRET")).message);
+      setError(
+        describeSecretError(
+          cause,
+          tStatic("os.secrets", "ROTATE_SECRET_MODAL.COULD_NOT_ROTATE_THE_SECRET"),
+        ).message,
+      );
     }
   };
 
@@ -59,15 +62,15 @@ export function RotateSecretModal({ open, onOpenChange, secret }: RotateSecretMo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[calc(100vw-1.5rem)] max-w-lg sm:w-full">
         <DialogHeader>
-          <DialogTitle className="text-left">{t("ROTATE_SECRET_MODAL.ROTATE", { name: secret.name })}</DialogTitle>
+          <DialogTitle className="text-left">
+            {t("ROTATE_SECRET_MODAL.ROTATE", { name: secret.name })}
+          </DialogTitle>
           <DialogDescription className="text-left">
             {t("ROTATE_SECRET_MODAL.THE_OLD_VALUE_IS_REPLACED")}
           </DialogDescription>
         </DialogHeader>
 
-        <Banner variant="warning">
-          {t("ROTATE_SECRET_MODAL.ANYTHING_STILL_USING_THE_OLD")}
-        </Banner>
+        <Banner variant="warning">{t("ROTATE_SECRET_MODAL.ANYTHING_STILL_USING_THE_OLD")}</Banner>
 
         {error && <Banner variant="destructive">{error}</Banner>}
 

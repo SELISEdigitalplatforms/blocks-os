@@ -25,9 +25,7 @@ const AiCreditsContent = () => {
   if (isError || !usage) {
     return (
       <div className="flex flex-col items-start gap-3 rounded-lg border border-border bg-card px-6 py-5">
-        <p className="text-sm text-high-emphasis">
-          {t("AI_CREDITS_PAGE.WE_COULD_NOT_LOAD_THE")}
-        </p>
+        <p className="text-sm text-high-emphasis">{t("AI_CREDITS_PAGE.WE_COULD_NOT_LOAD_THE")}</p>
         <Button variant="outline" onClick={() => refetch()}>
           {t("AI_CREDITS_PAGE.TRY_AGAIN")}
         </Button>
@@ -37,7 +35,9 @@ const AiCreditsContent = () => {
 
   if (!usage.enabled) {
     return (
-      <p className="text-sm text-medium-emphasis">{t("AI_CREDITS_PAGE.AI_CREDITS_ARE_NOT_AVAILABLE")}</p>
+      <p className="text-sm text-medium-emphasis">
+        {t("AI_CREDITS_PAGE.AI_CREDITS_ARE_NOT_AVAILABLE")}
+      </p>
     );
   }
 
@@ -60,14 +60,14 @@ const AiCreditsContent = () => {
 export const AiCreditsPage = () => {
   const { t } = useT("os.ai-credits");
   return (
-  <div className="flex h-full min-h-0 flex-col overflow-hidden">
-    <div className="flex-1 overflow-y-auto px-6 pb-6 pt-4">
-      <PageHeader
-        title={t("AI_CREDITS_PAGE.AI_CREDITS")}
-        description={t("AI_CREDITS_PAGE.AGENT_CREDIT_BALANCE_FOR_THIS")}
-      />
-      <AiCreditsContent />
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="flex-1 overflow-y-auto px-6 pb-6 pt-4">
+        <PageHeader
+          title={t("AI_CREDITS_PAGE.AI_CREDITS")}
+          description={t("AI_CREDITS_PAGE.AGENT_CREDIT_BALANCE_FOR_THIS")}
+        />
+        <AiCreditsContent />
+      </div>
     </div>
-  </div>
-);
+  );
 };

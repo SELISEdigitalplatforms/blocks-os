@@ -16,6 +16,8 @@ import { tStatic, useT } from "@seliseblocks/genesis-os";
 import { CheckCircle2, CircleAlert, FlaskConical, WandSparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 
+const I18N_MODULE = "os.idp.settings";
+
 type PasswordPolicyBuilderState = {
   minLength: string;
   maxLength: string;
@@ -65,13 +67,13 @@ export const getPasswordPolicyBuilderError = (policy: PasswordPolicyBuilderState
     minLength < 1 ||
     maxLength > PASSWORD_POLICY_MAX_LENGTH
   ) {
-    return tStatic("os.idp.settings", "PASSWORD_POLICY_REGEX_BUILDER.LENGTH_RANGE_ERROR", {
+    return tStatic(I18N_MODULE, "PASSWORD_POLICY_REGEX_BUILDER.LENGTH_RANGE_ERROR", {
       max: PASSWORD_POLICY_MAX_LENGTH,
     });
   }
 
   if (maxLength < minLength)
-    return tStatic("os.idp.settings", "PASSWORD_POLICY_REGEX_BUILDER.MAX_BELOW_MIN_ERROR");
+    return tStatic(I18N_MODULE, "PASSWORD_POLICY_REGEX_BUILDER.MAX_BELOW_MIN_ERROR");
 
   return null;
 };
@@ -121,7 +123,7 @@ const RESULT_COPY_KEYS: Record<PolicyTestResult, string> = {
 };
 
 export const PasswordPolicyRegexBuilder = ({ onChange }: PasswordPolicyRegexBuilderProps) => {
-  const { t } = useT("os.idp.settings");
+  const { t } = useT(I18N_MODULE);
   const [policy, setPolicy] = useState<PasswordPolicyBuilderState>(RECOMMENDED_PASSWORD_POLICY);
   const [samplePassword, setSamplePassword] = useState("");
   const builderError = getPasswordPolicyBuilderError(policy);

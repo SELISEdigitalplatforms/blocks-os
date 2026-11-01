@@ -128,7 +128,9 @@ export function StorageContents() {
           </div>
         ) : (
           <div className="flex h-64 items-center justify-center">
-            <p className="text-muted-foreground">{t("STORAGE_CONTENTS.NO_STORAGE_CONFIGURATIONS_FOUND")}</p>
+            <p className="text-muted-foreground">
+              {t("STORAGE_CONTENTS.NO_STORAGE_CONFIGURATIONS_FOUND")}
+            </p>
           </div>
         )}
       </div>
@@ -139,10 +141,7 @@ export function StorageContents() {
           if (!nextOpen) setEditingStorage(null);
         }}
       >
-        <SaveStorageConfiguration
-          configuration={editingStorage ?? undefined}
-          onClose={setOpen}
-        />
+        <SaveStorageConfiguration configuration={editingStorage ?? undefined} onClose={setOpen} />
       </Dialog>
       <StorageDetailsDrawer
         open={detailsOpen}

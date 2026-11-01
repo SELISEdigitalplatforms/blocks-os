@@ -225,7 +225,9 @@ export function IdentityProviderFormDialog({
 
     if (!providerResponse?.isSuccess || !editedProvider) {
       showErrorToast({
-        errors: providerResponse?.errors ?? { not_found: t("IDENTITY_PROVIDER_FORM_DIALOG.PROVIDER_NOT_FOUND") },
+        errors: providerResponse?.errors ?? {
+          not_found: t("IDENTITY_PROVIDER_FORM_DIALOG.PROVIDER_NOT_FOUND"),
+        },
       });
       onOpenChange(false);
       return;
@@ -249,6 +251,7 @@ export function IdentityProviderFormDialog({
     onOpenChange,
     presetProviderType,
     presetProvider,
+    t,
   ]);
 
   useEffect(() => {
@@ -256,10 +259,12 @@ export function IdentityProviderFormDialog({
     if (isErrorWithErrors(providerFetchError)) {
       showErrorToast({ errors: providerFetchError.errors });
     } else {
-      showErrorToast({ errors: { not_found: t("IDENTITY_PROVIDER_FORM_DIALOG.PROVIDER_NOT_FOUND") } });
+      showErrorToast({
+        errors: { not_found: t("IDENTITY_PROVIDER_FORM_DIALOG.PROVIDER_NOT_FOUND") },
+      });
     }
     onOpenChange(false);
-  }, [open, isEditing, isProviderFetchError, providerFetchError, onOpenChange]);
+  }, [open, isEditing, isProviderFetchError, providerFetchError, onOpenChange, t]);
 
   // The pre-fill banner reflects what was picked from the gallery (the original preset
   // props), not the live form value - it stays put even if the admin starts tweaking the
@@ -334,7 +339,9 @@ export function IdentityProviderFormDialog({
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
 
       showSuccessToast({
-        description: isEditing ? t("IDENTITY_PROVIDER_FORM_DIALOG.UPDATED_SUCCESS") : t("IDENTITY_PROVIDER_FORM_DIALOG.CREATED_SUCCESS"),
+        description: isEditing
+          ? t("IDENTITY_PROVIDER_FORM_DIALOG.UPDATED_SUCCESS")
+          : t("IDENTITY_PROVIDER_FORM_DIALOG.CREATED_SUCCESS"),
       });
       onOpenChange(false);
     } catch (err) {
@@ -357,12 +364,18 @@ export function IdentityProviderFormDialog({
         <div className="flex-1 space-y-4 overflow-y-auto px-6 py-6">
           <DialogHeader>
             <DialogTitle>
-              {isEditing ? t("IDENTITY_PROVIDER_FORM_DIALOG.EDIT_TITLE") : t("IDENTITY_PROVIDER_FORM_DIALOG.ADD_TITLE")}
+              {isEditing
+                ? t("IDENTITY_PROVIDER_FORM_DIALOG.EDIT_TITLE")
+                : t("IDENTITY_PROVIDER_FORM_DIALOG.ADD_TITLE")}
             </DialogTitle>
           </DialogHeader>
 
           {isFormLoading ? (
-            <div className="space-y-4" aria-busy="true" aria-label={t("IDENTITY_PROVIDER_FORM_DIALOG.LOADING_PROVIDER")}>
+            <div
+              className="space-y-4"
+              aria-busy="true"
+              aria-label={t("IDENTITY_PROVIDER_FORM_DIALOG.LOADING_PROVIDER")}
+            >
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="space-y-1.5">
                   <Skeleton className="h-4 w-24" />
@@ -412,7 +425,8 @@ export function IdentityProviderFormDialog({
               {/* Select Provider */}
               <div className="space-y-1.5">
                 <Label htmlFor="providerType">
-                  {t("IDENTITY_PROVIDER_FORM_DIALOG.SELECT_PROVIDER")} <span className="text-destructive">*</span>
+                  {t("IDENTITY_PROVIDER_FORM_DIALOG.SELECT_PROVIDER")}{" "}
+                  <span className="text-destructive">*</span>
                 </Label>
                 <Select
                   value={providerType}
@@ -435,7 +449,8 @@ export function IdentityProviderFormDialog({
               {/* Provider Name */}
               <div className="space-y-1.5">
                 <Label htmlFor="provider">
-                  {t("IDENTITY_PROVIDER_FORM_DIALOG.PROVIDER_NAME")} <span className="text-destructive">*</span>
+                  {t("IDENTITY_PROVIDER_FORM_DIALOG.PROVIDER_NAME")}{" "}
+                  <span className="text-destructive">*</span>
                 </Label>
                 {providerType === "social" ? (
                   <Select
@@ -448,7 +463,9 @@ export function IdentityProviderFormDialog({
                           (e.g. via `reset()` when editing) before the user opens it - so the
                           trigger renders blank the first time. Passing the label in ourselves
                           sidesteps that. */}
-                      <SelectValue placeholder={t("IDENTITY_PROVIDER_FORM_DIALOG.SELECT_A_PROVIDER")}>
+                      <SelectValue
+                        placeholder={t("IDENTITY_PROVIDER_FORM_DIALOG.SELECT_A_PROVIDER")}
+                      >
                         {selectedSocialProvider && (
                           <div className="flex items-center gap-3">
                             <img
@@ -481,7 +498,9 @@ export function IdentityProviderFormDialog({
                     id="provider"
                     placeholder={t("IDENTITY_PROVIDER_FORM_DIALOG.PROVIDER_PLACEHOLDER")}
                     disabled={isEditing}
-                    {...register("provider", { required: t("IDENTITY_PROVIDER_FORM_DIALOG.PROVIDER_REQUIRED") })}
+                    {...register("provider", {
+                      required: t("IDENTITY_PROVIDER_FORM_DIALOG.PROVIDER_REQUIRED"),
+                    })}
                   />
                 )}
                 {errors.provider && (
@@ -493,7 +512,8 @@ export function IdentityProviderFormDialog({
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="clientId">
-                    {t("IDENTITY_PROVIDER_FORM_DIALOG.CLIENT_ID")} <span className="text-destructive">*</span>
+                    {t("IDENTITY_PROVIDER_FORM_DIALOG.CLIENT_ID")}{" "}
+                    <span className="text-destructive">*</span>
                     {isEditing && (
                       <span className="ml-1 text-xs font-normal text-muted-foreground">
                         {t("IDENTITY_PROVIDER_FORM_DIALOG.CLIENT_ID_LOCKED")}
@@ -507,7 +527,9 @@ export function IdentityProviderFormDialog({
                       placeholder={t("IDENTITY_PROVIDER_FORM_DIALOG.CLIENT_ID_PLACEHOLDER")}
                       className="pr-10"
                       disabled={isEditing}
-                      {...register("clientId", { required: t("IDENTITY_PROVIDER_FORM_DIALOG.CLIENT_ID_REQUIRED") })}
+                      {...register("clientId", {
+                        required: t("IDENTITY_PROVIDER_FORM_DIALOG.CLIENT_ID_REQUIRED"),
+                      })}
                     />
                     <button
                       type="button"
@@ -523,7 +545,8 @@ export function IdentityProviderFormDialog({
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="clientSecret">
-                    {t("IDENTITY_PROVIDER_FORM_DIALOG.CLIENT_SECRET")} <span className="text-destructive">*</span>
+                    {t("IDENTITY_PROVIDER_FORM_DIALOG.CLIENT_SECRET")}{" "}
+                    <span className="text-destructive">*</span>
                     {isEditing && (
                       <span className="ml-1 text-xs font-normal text-muted-foreground">
                         {t("IDENTITY_PROVIDER_FORM_DIALOG.CLIENT_SECRET_HIDDEN")}
@@ -534,10 +557,16 @@ export function IdentityProviderFormDialog({
                     <Input
                       id="clientSecret"
                       type={showClientSecret ? "text" : "password"}
-                      placeholder={isEditing ? "••••••••••••" : t("IDENTITY_PROVIDER_FORM_DIALOG.CLIENT_SECRET_PLACEHOLDER")}
+                      placeholder={
+                        isEditing
+                          ? "••••••••••••"
+                          : t("IDENTITY_PROVIDER_FORM_DIALOG.CLIENT_SECRET_PLACEHOLDER")
+                      }
                       className="pr-10"
                       {...register("clientSecret", {
-                        required: isEditing ? false : t("IDENTITY_PROVIDER_FORM_DIALOG.CLIENT_SECRET_REQUIRED"),
+                        required: isEditing
+                          ? false
+                          : t("IDENTITY_PROVIDER_FORM_DIALOG.CLIENT_SECRET_REQUIRED"),
                       })}
                     />
                     <button
@@ -584,7 +613,9 @@ export function IdentityProviderFormDialog({
               {/* Well Known URL (auto-generated) - shown only for Blocks OIDC */}
               {providerType === "blocks-oidc" && (
                 <div className="space-y-1.5">
-                  <Label htmlFor="generatedWellKnownUrl">{t("IDENTITY_PROVIDER_FORM_DIALOG.WELL_KNOWN_URL")}</Label>
+                  <Label htmlFor="generatedWellKnownUrl">
+                    {t("IDENTITY_PROVIDER_FORM_DIALOG.WELL_KNOWN_URL")}
+                  </Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="generatedWellKnownUrl"
@@ -628,7 +659,8 @@ export function IdentityProviderFormDialog({
               {/* Redirect URIs */}
               <div className="space-y-2">
                 <Label>
-                  {t("IDENTITY_PROVIDER_FORM_DIALOG.REDIRECT_URIS")} <span className="text-destructive">*</span>
+                  {t("IDENTITY_PROVIDER_FORM_DIALOG.REDIRECT_URIS")}{" "}
+                  <span className="text-destructive">*</span>
                 </Label>
                 {loginRedirectUri && (
                   <div

@@ -42,7 +42,9 @@ export const SSOPermissionsList = ({ permissions, onDelete }: SSOPermissionsList
         accessorFn: (row) => `${row.resource}`.trim(),
         header: () => (
           <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">{t("SSO_PERMISSIONS_LIST.COLUMN_RESOURCE")}</span>
+            <span className="font-bold text-medium-emphasis">
+              {t("SSO_PERMISSIONS_LIST.COLUMN_RESOURCE")}
+            </span>
           </div>
         ),
         cell: (permission) => (

@@ -60,7 +60,10 @@ function DeliveryChannels({
     <div className="flex items-center gap-1.5">
       {channelIcons().map(({ key, label, icon: Icon }) => {
         const on = channels[key];
-        const text = tn(on ? "NOTIFICATION_CONFIG_ROW.CHANNEL_ON" : "NOTIFICATION_CONFIG_ROW.CHANNEL_OFF", { label });
+        const text = tn(
+          on ? "NOTIFICATION_CONFIG_ROW.CHANNEL_ON" : "NOTIFICATION_CONFIG_ROW.CHANNEL_OFF",
+          { label },
+        );
         return (
           <span
             key={key}
@@ -106,7 +109,10 @@ export function NotificationConfigRow({
         <div className="flex items-center gap-2">
           <span className="break-all font-mono text-sm font-medium">{config.name}</span>
           {config.audienceLocked && (
-            <Lock className="h-3.5 w-3.5 shrink-0" aria-label={t("NOTIFICATION_CONFIG_ROW.PERSONAL_NOTICE")} />
+            <Lock
+              className="h-3.5 w-3.5 shrink-0"
+              aria-label={t("NOTIFICATION_CONFIG_ROW.PERSONAL_NOTICE")}
+            />
           )}
           <Badge
             variant={config.isBuiltIn ? "secondary" : "info"}

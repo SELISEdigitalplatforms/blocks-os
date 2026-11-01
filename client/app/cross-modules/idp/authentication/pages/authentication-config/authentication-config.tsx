@@ -101,11 +101,7 @@ export const AuthenticationConfigLayout = () => {
       <div
         ref={rootRef}
         className="flex min-h-0 flex-col overflow-hidden"
-        style={
-          topOffset
-            ? { height: `calc(100vh - ${topOffset}px)` }
-            : undefined
-        }
+        style={topOffset ? { height: `calc(100vh - ${topOffset}px)` } : undefined}
       >
         <div className="flex-1 overflow-y-auto px-6 pb-6 pt-4">
           {!isSettingsPath && currentItem && (

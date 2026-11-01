@@ -113,12 +113,16 @@ export const AddClientCredentialPermission = ({
           disabled={selectedResources.length >= maxPermissions}
         >
           <Plus className="h-3.5 w-3.5 md:mr-1.5" />
-          <span className="sr-only sm:not-sr-only">{t("ADD_CLIENT_CREDENTIAL_PERMISSION.ASSIGN")}</span>
+          <span className="sr-only sm:not-sr-only">
+            {t("ADD_CLIENT_CREDENTIAL_PERMISSION.ASSIGN")}
+          </span>
         </Button>
       </DialogTrigger>
       <DialogContent className="flex max-h-[min(92vh,720px)] w-[calc(100vw-1.5rem)] max-w-3xl flex-col overflow-hidden sm:w-full">
         <DialogHeader>
-          <DialogTitle className="text-left">{t("ADD_CLIENT_CREDENTIAL_PERMISSION.ASSIGN")}</DialogTitle>
+          <DialogTitle className="text-left">
+            {t("ADD_CLIENT_CREDENTIAL_PERMISSION.ASSIGN")}
+          </DialogTitle>
           <DialogDescription />
         </DialogHeader>
         <GrantHint kind="permissions" />

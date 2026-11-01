@@ -82,9 +82,9 @@ const createSchema = ({
         .string()
         .min(3, { message: t("NEW_CONFIGURATION.ERROR_NAME_MIN") })
         .max(100, { message: t("NEW_CONFIGURATION.ERROR_NAME_MAX") }),
-      host: z
-        .string()
-        .regex(/^([\w-]+\.)*[\w-]+\.[a-z]{2,}$/, { message: t("NEW_CONFIGURATION.ERROR_HOST_INVALID") }),
+      host: z.string().regex(/^([\w-]+\.)*[\w-]+\.[a-z]{2,}$/, {
+        message: t("NEW_CONFIGURATION.ERROR_HOST_INVALID"),
+      }),
       port: z.coerce
         .number<number>()
         .min(1, { message: t("NEW_CONFIGURATION.ERROR_PORT_RANGE") })
@@ -460,7 +460,8 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-left font-medium text-high-emphasis">
-                          {t("NEW_CONFIGURATION.PROVIDER")} <span className="text-destructive">*</span>
+                          {t("NEW_CONFIGURATION.PROVIDER")}{" "}
+                          <span className="text-destructive">*</span>
                         </FormLabel>
                         <Select
                           onValueChange={(value) => field.onChange(parseInt(value))}
@@ -468,7 +469,9 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                         >
                           <FormControl>
                             <SelectTrigger className="border-default col-span-3 mt-1 border shadow-none">
-                              <SelectValue placeholder={t("NEW_CONFIGURATION.PLACEHOLDER_PROVIDER")} />
+                              <SelectValue
+                                placeholder={t("NEW_CONFIGURATION.PLACEHOLDER_PROVIDER")}
+                              />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -492,7 +495,9 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                       <FormItem>
                         <FormLabel className="text-left font-medium text-high-emphasis">
                           {" "}
-                          {isInbound ? t("NEW_CONFIGURATION.SERVER_NAME") : t("NEW_CONFIGURATION.HOST")}{" "}
+                          {isInbound
+                            ? t("NEW_CONFIGURATION.SERVER_NAME")
+                            : t("NEW_CONFIGURATION.HOST")}{" "}
                           <span className="text-destructive">*</span>
                         </FormLabel>
                         <FormControl>
@@ -544,7 +549,8 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-left font-medium text-high-emphasis">
-                            {t("NEW_CONFIGURATION.AUTHENTICATION")} <span className="text-destructive">*</span>
+                            {t("NEW_CONFIGURATION.AUTHENTICATION")}{" "}
+                            <span className="text-destructive">*</span>
                           </FormLabel>
                           <Select
                             onValueChange={(value) => field.onChange(parseInt(value))}
@@ -555,7 +561,9 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                           >
                             <FormControl>
                               <SelectTrigger className="border-default col-span-3 mt-1 border shadow-none">
-                                <SelectValue placeholder={t("NEW_CONFIGURATION.PLACEHOLDER_AUTHENTICATION")} />
+                                <SelectValue
+                                  placeholder={t("NEW_CONFIGURATION.PLACEHOLDER_AUTHENTICATION")}
+                                />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -582,7 +590,8 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                           <FormItem>
                             <FormLabel className="text-left font-medium text-high-emphasis">
                               {" "}
-                              {t("NEW_CONFIGURATION.SENDER_NAME")} <span className="text-destructive">*</span>
+                              {t("NEW_CONFIGURATION.SENDER_NAME")}{" "}
+                              <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
                               <Input
@@ -604,7 +613,8 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                           <FormItem>
                             <FormLabel className="text-left font-medium text-high-emphasis">
                               {" "}
-                              {t("NEW_CONFIGURATION.SENDER_ADDRESS")} <span className="text-destructive">*</span>
+                              {t("NEW_CONFIGURATION.SENDER_ADDRESS")}{" "}
+                              <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
                               <Input
@@ -630,7 +640,9 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                           <FormItem>
                             <FormLabel className="text-left font-medium text-high-emphasis">
                               {" "}
-                              {isInbound ? t("NEW_CONFIGURATION.USERNAME") : t("NEW_CONFIGURATION.SENDER_USERNAME")}{" "}
+                              {isInbound
+                                ? t("NEW_CONFIGURATION.USERNAME")
+                                : t("NEW_CONFIGURATION.SENDER_USERNAME")}{" "}
                               <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
@@ -657,7 +669,9 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                           <FormItem>
                             <FormLabel className="text-left font-medium text-high-emphasis">
                               {" "}
-                              {isGmail ? t("NEW_CONFIGURATION.APP_PASSWORD") : t("NEW_CONFIGURATION.ACCOUNT_PASSWORD")}{" "}
+                              {isGmail
+                                ? t("NEW_CONFIGURATION.APP_PASSWORD")
+                                : t("NEW_CONFIGURATION.ACCOUNT_PASSWORD")}{" "}
                               <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
@@ -692,7 +706,8 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-left font-medium text-high-emphasis">
-                              {t("NEW_CONFIGURATION.TENANT_ID")} <span className="text-destructive">*</span>
+                              {t("NEW_CONFIGURATION.TENANT_ID")}{" "}
+                              <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
                               <Input
@@ -711,7 +726,8 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-left font-medium text-high-emphasis">
-                              {t("NEW_CONFIGURATION.CLIENT_ID")} <span className="text-destructive">*</span>
+                              {t("NEW_CONFIGURATION.CLIENT_ID")}{" "}
+                              <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
                               <Input
@@ -766,7 +782,8 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-left font-medium text-high-emphasis">
-                              {t("NEW_CONFIGURATION.MAILBOX_ADDRESS")} <span className="text-destructive">*</span>
+                              {t("NEW_CONFIGURATION.MAILBOX_ADDRESS")}{" "}
+                              <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
                               <Input

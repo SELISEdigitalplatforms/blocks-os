@@ -153,7 +153,9 @@ export function EmailCommunicationDetails({
             onClick={sendTestEmailModalOpen}
           >
             <Send className="h-5 w-5" />
-            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">{t("EMAIL_COMMUNICATION_DETAILS.SEND_TEST_EMAIL")}</span>
+            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+              {t("EMAIL_COMMUNICATION_DETAILS.SEND_TEST_EMAIL")}
+            </span>
           </Button>
           <Dialog open={isSendTestEmailModalOpen} onOpenChange={setIsSendTestEmailModalOpen}>
             <ConfirmationModal
@@ -182,7 +184,9 @@ export function EmailCommunicationDetails({
               }
             >
               <Pencil className="h-5 w-5" />
-              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">{t("common:EDIT")}</span>
+              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                {t("common:EDIT")}
+              </span>
             </Button>
           </header>
           <div className="min-h-0 flex-1 bg-muted/30">
@@ -209,7 +213,9 @@ export function EmailCommunicationDetails({
                   onClick={() => setIsEditDialogOpen(true)}
                 >
                   <Pencil className="h-5 w-5" />
-                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">{t("common:EDIT")}</span>
+                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                    {t("common:EDIT")}
+                  </span>
                 </Button>
               </DialogTrigger>
               <EditCommunication
@@ -223,13 +229,17 @@ export function EmailCommunicationDetails({
           </header>
           <div className="grid gap-x-6 gap-y-7 p-5 sm:grid-cols-2 sm:p-6 xl:grid-cols-1 2xl:grid-cols-2">
             <div className="grid min-w-0 gap-1 sm:col-span-2 xl:col-span-1 2xl:col-span-2">
-              <h3 className="text-sm font-medium text-low-emphasis">{t("EMAIL_COMMUNICATION_DETAILS.SUBJECT")}</h3>
+              <h3 className="text-sm font-medium text-low-emphasis">
+                {t("EMAIL_COMMUNICATION_DETAILS.SUBJECT")}
+              </h3>
               <p className="wrap-break-word text-base font-medium text-high-emphasis">
                 {emailDetails.templateSubject || "-"}
               </p>
             </div>
             <div className="grid min-w-0 gap-1">
-              <h3 className="text-sm font-medium text-low-emphasis">{t("EMAIL_COMMUNICATION_DETAILS.LANGUAGE")}</h3>
+              <h3 className="text-sm font-medium text-low-emphasis">
+                {t("EMAIL_COMMUNICATION_DETAILS.LANGUAGE")}
+              </h3>
               <p className="wrap-break-word text-base font-medium text-high-emphasis">
                 {langConfigureData.find(
                   (lang) =>
@@ -238,7 +248,9 @@ export function EmailCommunicationDetails({
               </p>
             </div>
             <div className="grid min-w-0 gap-1">
-              <h3 className="text-sm font-medium text-low-emphasis">{t("EMAIL_COMMUNICATION_DETAILS.CONFIGURATION")}</h3>
+              <h3 className="text-sm font-medium text-low-emphasis">
+                {t("EMAIL_COMMUNICATION_DETAILS.CONFIGURATION")}
+              </h3>
               <p className="wrap-break-word text-base font-medium text-high-emphasis">
                 {emailConfigsData?.find(
                   (config) => config.itemId === emailDetails.mailConfigurationId,
@@ -246,7 +258,9 @@ export function EmailCommunicationDetails({
               </p>
             </div>
             <div className="grid min-w-0 gap-1">
-              <h3 className="text-sm font-medium text-low-emphasis">{t("EMAIL_COMMUNICATION_DETAILS.CREATED_ON")}</h3>
+              <h3 className="text-sm font-medium text-low-emphasis">
+                {t("EMAIL_COMMUNICATION_DETAILS.CREATED_ON")}
+              </h3>
               <p className="wrap-break-word text-base font-medium text-high-emphasis">
                 {!emailDetails.createdDate || !checkValidDate(emailDetails.createdDate)
                   ? "-"
@@ -254,7 +268,9 @@ export function EmailCommunicationDetails({
               </p>
             </div>
             <div className="grid min-w-0 gap-1">
-              <h3 className="text-sm font-medium text-low-emphasis">{t("EMAIL_COMMUNICATION_DETAILS.LAST_MODIFIED")}</h3>
+              <h3 className="text-sm font-medium text-low-emphasis">
+                {t("EMAIL_COMMUNICATION_DETAILS.LAST_MODIFIED")}
+              </h3>
               <p className="wrap-break-word text-base font-medium text-high-emphasis">
                 {!emailDetails.lastUpdatedDate || !checkValidDate(emailDetails.lastUpdatedDate)
                   ? "-"

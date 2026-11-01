@@ -4,13 +4,14 @@ import { tStatic } from "@seliseblocks/genesis-os";
 
 export { parseSSEEvent, parseSSEBuffer };
 
-export const createLmtQueryAgentSchema = () => z.object({
-  query: z
-    .string()
-    .trim()
-    .nonempty({ message: tStatic("os.ai", "UTILS.QUERY_IS_REQUIRED") })
-    .max(500, { message: tStatic("os.ai", "UTILS.QUERY_MUST_NOT_EXCEED_500") }),
-});
+export const createLmtQueryAgentSchema = () =>
+  z.object({
+    query: z
+      .string()
+      .trim()
+      .nonempty({ message: tStatic("os.ai", "UTILS.QUERY_IS_REQUIRED") })
+      .max(500, { message: tStatic("os.ai", "UTILS.QUERY_MUST_NOT_EXCEED_500") }),
+  });
 export type LmtQueryAgentForm = z.infer<ReturnType<typeof createLmtQueryAgentSchema>>;
 
 export const lmtQueryAgentFormDefaultValue: LmtQueryAgentForm = {

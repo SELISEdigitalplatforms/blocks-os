@@ -12,13 +12,17 @@ export type DataSourceChoice = "blocks" | "others";
 export const isCustomConnection = (configuration?: IDataGatewayConfiguration | null) =>
   configuration?.connectionType === "Custom";
 
-export const createDataGatewayConfigurationFormSchema = () => z.object({
-  connectionString: z.string().trim(),
-  databaseName: z.string().trim(),
-  isCollectionNameEditable: z.boolean(),
-  collectionNamePattern: z.string().trim().nonempty(tStatic("os.data-gateway", "UTILS.COLLECTION_NAME_PATTERN_IS")),
-  enableAnalytics: z.boolean(),
-});
+export const createDataGatewayConfigurationFormSchema = () =>
+  z.object({
+    connectionString: z.string().trim(),
+    databaseName: z.string().trim(),
+    isCollectionNameEditable: z.boolean(),
+    collectionNamePattern: z
+      .string()
+      .trim()
+      .nonempty(tStatic("os.data-gateway", "UTILS.COLLECTION_NAME_PATTERN_IS")),
+    enableAnalytics: z.boolean(),
+  });
 
 export type DataGatewayConfigurationFormValues = z.infer<
   ReturnType<typeof createDataGatewayConfigurationFormSchema>

@@ -376,7 +376,11 @@ export const RuleSetForm = ({
                     {t("RULE_SET_FORM.NAME_LABEL")}
                   </FormLabel>
                   <FormControl>
-                    <Input className="h-9" placeholder={t("RULE_SET_FORM.NAME_PLACEHOLDER")} {...field} />
+                    <Input
+                      className="h-9"
+                      placeholder={t("RULE_SET_FORM.NAME_PLACEHOLDER")}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -516,4 +520,3 @@ export const RuleSetForm = ({
     </div>
   );
 };
-

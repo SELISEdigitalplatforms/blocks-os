@@ -1,6 +1,8 @@
 import { getTraceStatus, type IAttributes, type TraceTree } from "../models/trace.model";
 import { tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.lmt";
+
 /**
  * Turns a trace tree into a "flow": the components a request touched and one step per span,
  * in the order the spans ran. The 3D flow view plays these steps; nothing here knows about
@@ -112,7 +114,7 @@ interface Component {
 }
 
 const serviceComponent = (span: TraceTree) => {
-  const name = span.serviceName?.trim() || tStatic("os.lmt", "TRACE_FLOW_UTIL.UNKNOWN_SERVICE");
+  const name = span.serviceName?.trim() || tStatic(I18N_MODULE, "TRACE_FLOW_UTIL.UNKNOWN_SERVICE");
   return { id: `svc:${name}`, label: name, kind: "service" as const };
 };
 
@@ -122,7 +124,7 @@ const clientComponent = (span: TraceTree, op: string): Component => {
   const host = text(attrs, "server.address") || hostOf(url);
   const method = text(attrs, "http.request.method", "http.method", "method");
   if (host || url || method || /http/i.test(op)) {
-    const label = host || tStatic("os.lmt", "TRACE_FLOW_UTIL.EXTERNAL_HTTP");
+    const label = host || tStatic(I18N_MODULE, "TRACE_FLOW_UTIL.EXTERNAL_HTTP");
     const path = pathOf(url);
     const tag = [method || "HTTP", path].filter(Boolean).join(" ");
     return { id: `ext:${label}`, label, kind: "external", traffic: "http", tag };
@@ -130,7 +132,7 @@ const clientComponent = (span: TraceTree, op: string): Component => {
   if (/grpc/i.test(op)) {
     return {
       id: "ext:grpc",
-      label: tStatic("os.lmt", "TRACE_FLOW_UTIL.GRPC_SERVICE"),
+      label: tStatic(I18N_MODULE, "TRACE_FLOW_UTIL.GRPC_SERVICE"),
       kind: "external",
       traffic: "http",
       tag: "gRPC call",
@@ -151,7 +153,7 @@ export const classifySpan = (span: TraceTree): Component => {
   if (mongo) {
     return {
       id: "db:mongodb",
-      label: tStatic("os.lmt", "TRACE_FLOW_UTIL.MONGODB"),
+      label: tStatic(I18N_MODULE, "TRACE_FLOW_UTIL.MONGODB"),
       kind: "database",
       traffic: "data",
       tag: `MongoDB ${mongo[1]}`,
@@ -167,14 +169,14 @@ export const classifySpan = (span: TraceTree): Component => {
         tag: `Redis ${redis[1]}`,
         fromOverride: {
           id: "cache:redis",
-          label: tStatic("os.lmt", "TRACE_FLOW_UTIL.REDIS"),
+          label: tStatic(I18N_MODULE, "TRACE_FLOW_UTIL.REDIS"),
           kind: "cache",
         },
       };
     }
     return {
       id: "cache:redis",
-      label: tStatic("os.lmt", "TRACE_FLOW_UTIL.REDIS"),
+      label: tStatic(I18N_MODULE, "TRACE_FLOW_UTIL.REDIS"),
       kind: "cache",
       traffic: "cache",
       tag: `Redis ${redis[1]}`,
@@ -187,7 +189,8 @@ export const classifySpan = (span: TraceTree): Component => {
     const destination = text(attrs, "messaging.destination.name", "messaging.destination");
     const queue = {
       id: `queue:${destination || messagingSystem || "broker"}`,
-      label: destination || messagingSystem || tStatic("os.lmt", "TRACE_FLOW_UTIL.MESSAGE_BROKER"),
+      label:
+        destination || messagingSystem || tStatic(I18N_MODULE, "TRACE_FLOW_UTIL.MESSAGE_BROKER"),
       kind: "queue" as const,
     };
     if (kind === "producer") {
@@ -248,8 +251,8 @@ export const getSpanOutcome = (span: TraceTree) => {
       text(attrs, "errorMessage", "exception.message", "error.message") ||
       (hasErrorText ? errorText : "") ||
       (/^\d{3}$/.test(status.label)
-        ? tStatic("os.lmt", "TRACE_FLOW_UTIL.HTTP", { label: status.label })
-        : tStatic("os.lmt", "TRACE_FLOW_UTIL.THE_SPAN_REPORTED_AN_ERROR"));
+        ? tStatic(I18N_MODULE, "TRACE_FLOW_UTIL.HTTP", { label: status.label })
+        : tStatic(I18N_MODULE, "TRACE_FLOW_UTIL.THE_SPAN_REPORTED_AN_ERROR"));
   }
 
   return {
@@ -367,7 +370,11 @@ export const buildTraceFlow = (
       const parent = components[parentIndex];
       from = { id: parent.id, label: parent.label, kind: parent.kind };
     } else if (span.kind?.trim().toLowerCase() === "server")
-      from = { id: CALLER_ID, label: tStatic("os.lmt", "TRACE_FLOW_UTIL.CALLER"), kind: "caller" };
+      from = {
+        id: CALLER_ID,
+        label: tStatic(I18N_MODULE, "TRACE_FLOW_UTIL.CALLER"),
+        kind: "caller",
+      };
     else from = component;
 
     addNode(from.id, from.label, from.kind);

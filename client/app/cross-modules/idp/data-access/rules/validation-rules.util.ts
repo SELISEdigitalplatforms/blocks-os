@@ -2,6 +2,11 @@ import { tStatic } from "@seliseblocks/genesis-os";
 import type { ISchemaFieldValidation, ValidationRuleValue } from "./rules.types";
 import { checkVariables, parseVariables, type VariableField } from "./variable-syntax";
 
+const KEY_MIN_MAX = "VALIDATION_RULES_UTIL.MIN_MAX";
+const KEY_NOT_VALID_NUMBER = "VALIDATION_RULES_UTIL.NOT_VALID_NUMBER";
+
+const I18N_MODULE = "os.idp.rules";
+
 /** Mirrors the server's ValidationType (Genesis); the API sends the number. */
 export const VALIDATION_TYPE = {
   NotEmpty: 0,
@@ -22,7 +27,8 @@ export const VALIDATION_TYPE = {
 export type ValidationTypeValue = (typeof VALIDATION_TYPE)[keyof typeof VALIDATION_TYPE];
 
 /** Which inputs a rule type needs in the form. */
-export type RuleInputKind = "none" | "regex" | "length" | "lengthRange" | "value" | "valueRange" | "reference";
+export type RuleInputKind =
+  "none" | "regex" | "length" | "lengthRange" | "value" | "valueRange" | "reference";
 
 export const VALIDATION_TYPE_META: Record<ValidationTypeValue, { input: RuleInputKind }> = {
   [VALIDATION_TYPE.NotEmpty]: { input: "none" },
@@ -54,7 +60,16 @@ export function getAllowedValidationTypes(fieldType: string): ValidationTypeValu
   switch (fieldType) {
     case "String":
     case "ID":
-      return [T.NotEmpty, T.Regex, T.MinLength, T.MaxLength, T.LengthRange, T.Equal, T.NotEqual, T.Reference];
+      return [
+        T.NotEmpty,
+        T.Regex,
+        T.MinLength,
+        T.MaxLength,
+        T.LengthRange,
+        T.Equal,
+        T.NotEqual,
+        T.Reference,
+      ];
     case "Int":
     case "Float":
       return [T.NotEmpty, T.Equal, T.NotEqual, ...COMPARISONS, T.Reference];
@@ -97,7 +112,8 @@ export interface RuleDraft {
   isActive: boolean;
 }
 
-const asText = (value: ValidationRuleValue | undefined): string => (value === null || value === undefined ? "" : String(value));
+const asText = (value: ValidationRuleValue | undefined): string =>
+  value === null || value === undefined ? "" : String(value);
 
 export function draftFromRule(rule: ISchemaFieldValidation): RuleDraft {
   return {
@@ -144,25 +160,49 @@ const KIND_DESCRIPTION_KEYS = {
 } as const;
 
 const describeKind = (type: string, isArray: boolean) =>
-  tStatic("os.idp.rules", isArray ? "VALIDATION_RULES_UTIL.KIND_LIST" : KIND_DESCRIPTION_KEYS[variableKind(type)]);
+  tStatic(
+    I18N_MODULE,
+    isArray ? "VALIDATION_RULES_UTIL.KIND_LIST" : KIND_DESCRIPTION_KEYS[variableKind(type)],
+  );
 
 /** A variable value's problem, with the server's messages (Genesis `ValidationVariableCheck`), or null. */
-export function checkRuleVariable(text: string, fieldType: string, context: RuleVariableContext): string | null {
+export function checkRuleVariable(
+  text: string,
+  fieldType: string,
+  context: RuleVariableContext,
+): string | null {
   const problem = checkVariables(text, "single", context.schemaName, context.fields);
   if (problem) return problem.message;
-  const variable = parseVariables(text, "single", context.schemaName).parts.find((part) => part.prefix !== undefined);
+  const variable = parseVariables(text, "single", context.schemaName).parts.find(
+    (part) => part.prefix !== undefined,
+  );
   if (!variable) return null;
   const target = context.fields[variable.path!];
   if (variableKind(target.type) !== variableKind(fieldType) || target.isArray) {
-    return tStatic("os.idp.rules", "VALIDATION_RULES_UTIL.VARIABLE_KIND_MISMATCH", { name: `${variable.prefix}.${variable.path}`, actual: describeKind(target.type, target.isArray), position: variable.position, expected: describeKind(fieldType, false) });
+    return tStatic(I18N_MODULE, "VALIDATION_RULES_UTIL.VARIABLE_KIND_MISMATCH", {
+      name: `${variable.prefix}.${variable.path}`,
+      actual: describeKind(target.type, target.isArray),
+      position: variable.position,
+      expected: describeKind(fieldType, false),
+    });
   }
   return null;
 }
 
 /** The properties a comparison may name: single values of the same kind, as {{Schema.Path}}. */
-export function fittingVariables(fieldType: string, context: RuleVariableContext, exclude?: string): string[] {
+export function fittingVariables(
+  fieldType: string,
+  context: RuleVariableContext,
+  exclude?: string,
+): string[] {
   return Object.entries(context.fields)
-    .filter(([path, field]) => !field.isObject && !field.isArray && path !== exclude && variableKind(field.type) === variableKind(fieldType))
+    .filter(
+      ([path, field]) =>
+        !field.isObject &&
+        !field.isArray &&
+        path !== exclude &&
+        variableKind(field.type) === variableKind(fieldType),
+    )
     .map(([path]) => `{{${context.schemaName}.${path}}}`);
 }
 
@@ -174,64 +214,95 @@ const isNumber = (text: string) => text.trim() !== "" && Number.isFinite(Number(
  * the syntax is left to the server), and a fixed bound beside one is still checked for its type, since the
  * order is known only at insert. Undefined when no slot is a variable, so the fixed-value checks apply.
  */
-function checkVariableSlots(slots: string[], fieldType: string, variables?: RuleVariableContext): string | null | undefined {
+function checkVariableSlots(
+  slots: string[],
+  fieldType: string,
+  variables?: RuleVariableContext,
+): string | null | undefined {
   if (!slots.some(looksLikeVariable)) return undefined;
-  if (slots.includes("")) return tStatic("os.idp.rules", slots.length === 1 ? "VALIDATION_RULES_UTIL.VALUE_REQUIRED" : "VALIDATION_RULES_UTIL.BOTH_VALUES_REQUIRED");
+  if (slots.includes(""))
+    return tStatic(
+      I18N_MODULE,
+      slots.length === 1
+        ? "VALIDATION_RULES_UTIL.VALUE_REQUIRED"
+        : "VALIDATION_RULES_UTIL.BOTH_VALUES_REQUIRED",
+    );
   for (const slot of slots.filter(looksLikeVariable)) {
     const problem = variables?.schemaName ? checkRuleVariable(slot, fieldType, variables) : null;
     if (problem) return problem;
   }
   const fixed = slots.filter((slot) => !looksLikeVariable(slot));
-  return valueKindForField(fieldType) === "number" && fixed.some((slot) => !isNumber(slot)) ? tStatic("os.idp.rules", "VALIDATION_RULES_UTIL.NOT_VALID_NUMBER") : null;
+  return valueKindForField(fieldType) === "number" && fixed.some((slot) => !isNumber(slot))
+    ? tStatic(I18N_MODULE, KEY_NOT_VALID_NUMBER)
+    : null;
 }
 
 /** The pattern's syntax is checked by the server, which refuses an invalid one. */
 function checkRegex(value: string): string | null {
-  return value ? null : tStatic("os.idp.rules", "VALIDATION_RULES_UTIL.PATTERN_REQUIRED");
+  return value ? null : tStatic(I18N_MODULE, "VALIDATION_RULES_UTIL.PATTERN_REQUIRED");
 }
 
 function checkLengthRange(value: string, secondary: string): string | null {
-  if (!isWholeNumber(value) || !isWholeNumber(secondary)) return tStatic("os.idp.rules", "VALIDATION_RULES_UTIL.WHOLE_NUMBERS");
-  return Number(value) <= Number(secondary) ? null : tStatic("os.idp.rules", "VALIDATION_RULES_UTIL.MIN_MAX");
+  if (!isWholeNumber(value) || !isWholeNumber(secondary))
+    return tStatic(I18N_MODULE, "VALIDATION_RULES_UTIL.WHOLE_NUMBERS");
+  return Number(value) <= Number(secondary) ? null : tStatic(I18N_MODULE, KEY_MIN_MAX);
 }
 
 function checkValue(value: string, fieldType: string): string | null {
-  if (!value) return tStatic("os.idp.rules", "VALIDATION_RULES_UTIL.VALUE_REQUIRED");
-  return valueKindForField(fieldType) === "number" && !isNumber(value) ? tStatic("os.idp.rules", "VALIDATION_RULES_UTIL.NOT_VALID_NUMBER") : null;
+  if (!value) return tStatic(I18N_MODULE, "VALIDATION_RULES_UTIL.VALUE_REQUIRED");
+  return valueKindForField(fieldType) === "number" && !isNumber(value)
+    ? tStatic(I18N_MODULE, KEY_NOT_VALID_NUMBER)
+    : null;
 }
 
 function checkValueRange(value: string, secondary: string, fieldType: string): string | null {
-  if (!value || !secondary) return tStatic("os.idp.rules", "VALIDATION_RULES_UTIL.BOTH_VALUES_REQUIRED");
+  if (!value || !secondary)
+    return tStatic(I18N_MODULE, "VALIDATION_RULES_UTIL.BOTH_VALUES_REQUIRED");
   const kind = valueKindForField(fieldType);
   if (kind === "number") {
-    if (!isNumber(value) || !isNumber(secondary)) return tStatic("os.idp.rules", "VALIDATION_RULES_UTIL.NOT_VALID_NUMBER");
-    return Number(value) <= Number(secondary) ? null : tStatic("os.idp.rules", "VALIDATION_RULES_UTIL.MIN_MAX");
+    if (!isNumber(value) || !isNumber(secondary)) return tStatic(I18N_MODULE, KEY_NOT_VALID_NUMBER);
+    return Number(value) <= Number(secondary) ? null : tStatic(I18N_MODULE, KEY_MIN_MAX);
   }
-  return kind === "date" && new Date(value) > new Date(secondary) ? tStatic("os.idp.rules", "VALIDATION_RULES_UTIL.MIN_MAX") : null;
+  return kind === "date" && new Date(value) > new Date(secondary)
+    ? tStatic(I18N_MODULE, KEY_MIN_MAX)
+    : null;
 }
 
 /** The fixed-value check for each kind of rule input. */
-const INPUT_CHECKS: Record<RuleInputKind, (value: string, secondary: string, fieldType: string) => string | null> = {
+const INPUT_CHECKS: Record<
+  RuleInputKind,
+  (value: string, secondary: string, fieldType: string) => string | null
+> = {
   none: () => null,
   regex: (value) => checkRegex(value),
-  length: (value) => (isWholeNumber(value) ? null : tStatic("os.idp.rules", "VALIDATION_RULES_UTIL.WHOLE_NUMBER")),
+  length: (value) =>
+    isWholeNumber(value) ? null : tStatic(I18N_MODULE, "VALIDATION_RULES_UTIL.WHOLE_NUMBER"),
   lengthRange: (value, secondary) => checkLengthRange(value, secondary),
   value: (value, _secondary, fieldType) => checkValue(value, fieldType),
   valueRange: checkValueRange,
-  reference: (value) => (value ? null : tStatic("os.idp.rules", "VALIDATION_RULES_UTIL.CHOOSE_SCHEMA")),
+  reference: (value) =>
+    value ? null : tStatic(I18N_MODULE, "VALIDATION_RULES_UTIL.CHOOSE_SCHEMA"),
 };
 
 /**
  * Why the draft cannot be saved yet, or null when it can. With `variables`, a comparison value written as
  * a variable is checked against the schema; without them its syntax is left to the server.
  */
-export function checkRuleDraft(draft: RuleDraft, fieldType: string, variables?: RuleVariableContext): string | null {
+export function checkRuleDraft(
+  draft: RuleDraft,
+  fieldType: string,
+  variables?: RuleVariableContext,
+): string | null {
   const input = VALIDATION_TYPE_META[draft.type]?.input;
-  if (!input) return tStatic("os.idp.rules", "VALIDATION_RULES_UTIL.CHOOSE_RULE_TYPE");
+  if (!input) return tStatic(I18N_MODULE, "VALIDATION_RULES_UTIL.CHOOSE_RULE_TYPE");
   const value = draft.value.trim();
   const secondary = draft.secondaryValue.trim();
   if (input === "value" || input === "valueRange") {
-    const variableProblem = checkVariableSlots(input === "value" ? [value] : [value, secondary], fieldType, variables);
+    const variableProblem = checkVariableSlots(
+      input === "value" ? [value] : [value, secondary],
+      fieldType,
+      variables,
+    );
     if (variableProblem !== undefined) return variableProblem;
   }
   return INPUT_CHECKS[input](value, secondary, fieldType);
@@ -248,7 +319,11 @@ export function ruleFromDraft(draft: RuleDraft, fieldType: string): ISchemaField
     const trimmed = text.trim();
     if (trimmed === "") return null;
     if ((input === "value" || input === "valueRange") && looksLikeVariable(trimmed)) return trimmed;
-    if (input === "length" || input === "lengthRange" || ((input === "value" || input === "valueRange") && kind === "number")) {
+    if (
+      input === "length" ||
+      input === "lengthRange" ||
+      ((input === "value" || input === "valueRange") && kind === "number")
+    ) {
       return Number(trimmed);
     }
     if (input === "value" && kind === "boolean") return trimmed === "true";
@@ -256,10 +331,12 @@ export function ruleFromDraft(draft: RuleDraft, fieldType: string): ISchemaField
   };
 
   let value: ValidationRuleValue = convert(draft.value);
-  let secondaryValue: ValidationRuleValue = input === "lengthRange" || input === "valueRange" ? convert(draft.secondaryValue) : null;
+  let secondaryValue: ValidationRuleValue =
+    input === "lengthRange" || input === "valueRange" ? convert(draft.secondaryValue) : null;
   if (input === "none") value = null;
   if (input === "regex") value = draft.value.trim();
-  if (input === "reference") secondaryValue = draft.secondaryValue.trim() || DEFAULT_REFERENCE_FIELD;
+  if (input === "reference")
+    secondaryValue = draft.secondaryValue.trim() || DEFAULT_REFERENCE_FIELD;
 
   return {
     type: draft.type,
@@ -277,15 +354,18 @@ export function formatRuleSummary(rule: ISchemaFieldValidation): string {
   const secondary = asText(rule.secondaryValue);
   switch (rule.type) {
     case T.NotEmpty:
-      return tStatic("os.idp.rules", "VALIDATION_RULES_UTIL.SUMMARY_NOT_EMPTY");
+      return tStatic(I18N_MODULE, "VALIDATION_RULES_UTIL.SUMMARY_NOT_EMPTY");
     case T.Regex:
       return value;
     case T.MinLength:
-      return tStatic("os.idp.rules", "VALIDATION_RULES_UTIL.SUMMARY_MIN_LENGTH", { value });
+      return tStatic(I18N_MODULE, "VALIDATION_RULES_UTIL.SUMMARY_MIN_LENGTH", { value });
     case T.MaxLength:
-      return tStatic("os.idp.rules", "VALIDATION_RULES_UTIL.SUMMARY_MAX_LENGTH", { value });
+      return tStatic(I18N_MODULE, "VALIDATION_RULES_UTIL.SUMMARY_MAX_LENGTH", { value });
     case T.LengthRange:
-      return tStatic("os.idp.rules", "VALIDATION_RULES_UTIL.SUMMARY_LENGTH_RANGE", { value, secondary });
+      return tStatic(I18N_MODULE, "VALIDATION_RULES_UTIL.SUMMARY_LENGTH_RANGE", {
+        value,
+        secondary,
+      });
     case T.Equal:
       return `= ${value}`;
     case T.NotEqual:
@@ -299,9 +379,11 @@ export function formatRuleSummary(rule: ISchemaFieldValidation): string {
     case T.LessThanOrEqual:
       return `≤ ${value}`;
     case T.Range:
-      return tStatic("os.idp.rules", "VALIDATION_RULES_UTIL.SUMMARY_RANGE", { value, secondary });
+      return tStatic(I18N_MODULE, "VALIDATION_RULES_UTIL.SUMMARY_RANGE", { value, secondary });
     case T.Reference:
-      return tStatic("os.idp.rules", "VALIDATION_RULES_UTIL.SUMMARY_REFERENCE", { target: `${value}.${secondary || DEFAULT_REFERENCE_FIELD}` });
+      return tStatic(I18N_MODULE, "VALIDATION_RULES_UTIL.SUMMARY_REFERENCE", {
+        target: `${value}.${secondary || DEFAULT_REFERENCE_FIELD}`,
+      });
     default:
       return value;
   }
@@ -326,5 +408,7 @@ const TYPE_LABEL_KEYS: Record<ValidationTypeValue, string> = {
 /** The label for a rule type, including types this client does not know yet. */
 export const ruleTypeLabel = (type: number) => {
   const key = TYPE_LABEL_KEYS[type as ValidationTypeValue];
-  return key ? tStatic("os.idp.rules", key) : tStatic("os.idp.rules", "VALIDATION_RULES_UTIL.TYPE_UNKNOWN", { type });
+  return key
+    ? tStatic(I18N_MODULE, key)
+    : tStatic(I18N_MODULE, "VALIDATION_RULES_UTIL.TYPE_UNKNOWN", { type });
 };

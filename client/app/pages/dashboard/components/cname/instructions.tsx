@@ -32,30 +32,23 @@ export const CNameInstruction = ({
           <h4>
             {cookieDomainName
               ? t("INSTRUCTIONS.PLEASE_ADD_TWO_CNAME_RECORDS")
-              : t("INSTRUCTIONS.PLEASE_ADD_A_CNAME_RECORD")}</h4>
+              : t("INSTRUCTIONS.PLEASE_ADD_A_CNAME_RECORD")}
+          </h4>
           {cookieDomainName && (
             <>
               <p className="mt-3 font-semibold">{t("INSTRUCTIONS.CNAME_CONFIGURATION_1")}</p>
               <ul className="mt-2 list-disc break-all pl-5">
-                <li>
-                  {t("INSTRUCTIONS.HOST", { span: `${customDomainHost}` })}
-                </li>
+                <li>{t("INSTRUCTIONS.HOST", { span: `${customDomainHost}` })}</li>
                 <li className="my-2">{t("INSTRUCTIONS.TYPE_CNAME")}</li>
-                <li>
-                  {t("INSTRUCTIONS.VALUE", { span: `${cnameTarget}` })}
-                </li>
+                <li>{t("INSTRUCTIONS.VALUE", { span: `${cnameTarget}` })}</li>
               </ul>
               <p className="mt-3 font-semibold">{t("INSTRUCTIONS.CNAME_CONFIGURATION_2")}</p>
             </>
           )}
           <ul className="mt-2 list-disc break-all pl-5">
-            <li>
-              {t("INSTRUCTIONS.HOST", { span: `${apiBaseUrl}` })}
-            </li>
+            <li>{t("INSTRUCTIONS.HOST", { span: `${apiBaseUrl}` })}</li>
             <li className="my-2">{t("INSTRUCTIONS.TYPE_CNAME")}</li>
-            <li>
-              {t("INSTRUCTIONS.VALUE", { span: `${cnameTarget}` })}
-            </li>
+            <li>{t("INSTRUCTIONS.VALUE", { span: `${cnameTarget}` })}</li>
           </ul>
         </div>
       </CardContent>

@@ -40,7 +40,9 @@ export function CampaignDetails({ params }: { params: { id: string } }) {
           <DialogTrigger asChild>
             <Button size="sm" className="h-10 gap-2 px-4 py-1 shadow-none">
               <Pencil className="h-5 w-5" />
-              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">{t("CAMPAIGN_DETAILS.EDIT_MESSAGES")}</span>
+              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                {t("CAMPAIGN_DETAILS.EDIT_MESSAGES")}
+              </span>
             </Button>
           </DialogTrigger>
           <CampaignCreation dialogTitle={t("CAMPAIGN_DETAILS.EDIT_MESSAGES")} />
@@ -54,9 +56,7 @@ export function CampaignDetails({ params }: { params: { id: string } }) {
           <CardHeader>
             <CardTitle className="text-xl">{t("CAMPAIGN_DETAILS.MESSAGE")}</CardTitle>
           </CardHeader>
-          <CardContent className="text-base">
-            {t("CAMPAIGN_DETAILS.MESSAGE_BODY")}
-          </CardContent>
+          <CardContent className="text-base">{t("CAMPAIGN_DETAILS.MESSAGE_BODY")}</CardContent>
         </Card>
         <Card className="rounded-sm shadow-none">
           <CardHeader>
@@ -65,19 +65,25 @@ export function CampaignDetails({ params }: { params: { id: string } }) {
           <CardContent className="grid grid-cols-2 gap-4">
             <div className="grid gap-10">
               <div className="grid gap-1">
-                <h3 className="text-sm font-medium text-low-emphasis">{t("CAMPAIGN_DETAILS.CONFIGURATION")}</h3>
+                <h3 className="text-sm font-medium text-low-emphasis">
+                  {t("CAMPAIGN_DETAILS.CONFIGURATION")}
+                </h3>
                 <p className="text-base font-normal text-high-emphasis">
                   {messageDetails.configuration}
                 </p>
               </div>
               <div className="grid gap-1">
-                <h3 className="text-sm font-medium text-low-emphasis">{t("CAMPAIGN_DETAILS.CREATED_ON")}</h3>
+                <h3 className="text-sm font-medium text-low-emphasis">
+                  {t("CAMPAIGN_DETAILS.CREATED_ON")}
+                </h3>
                 <p className="text-base font-normal text-high-emphasis">
                   {formatDate(messageDetails.createdOn, true)}
                 </p>
               </div>
               <div className="grid gap-1">
-                <h3 className="text-sm font-medium text-low-emphasis">{t("CAMPAIGN_DETAILS.LAST_MODIFIED")}</h3>
+                <h3 className="text-sm font-medium text-low-emphasis">
+                  {t("CAMPAIGN_DETAILS.LAST_MODIFIED")}
+                </h3>
                 <p className="text-base font-normal text-high-emphasis">
                   {formatDate(messageDetails.lastModified)}
                 </p>
@@ -86,13 +92,17 @@ export function CampaignDetails({ params }: { params: { id: string } }) {
             <div>
               <div className="grid gap-10">
                 <div className="grid gap-1">
-                  <h3 className="text-sm font-medium text-low-emphasis">{t("CAMPAIGN_DETAILS.PROTOCOL")}</h3>
+                  <h3 className="text-sm font-medium text-low-emphasis">
+                    {t("CAMPAIGN_DETAILS.PROTOCOL")}
+                  </h3>
                   <p className="text-base font-normal text-high-emphasis">
                     {messageDetails.protocol}
                   </p>
                 </div>
                 <div className="grid gap-1">
-                  <h3 className="text-sm font-medium text-low-emphasis">{t("CAMPAIGN_DETAILS.CREATED_BY")}</h3>
+                  <h3 className="text-sm font-medium text-low-emphasis">
+                    {t("CAMPAIGN_DETAILS.CREATED_BY")}
+                  </h3>
                   <p className="text-base font-normal text-high-emphasis">
                     {messageDetails.createdBy}
                   </p>

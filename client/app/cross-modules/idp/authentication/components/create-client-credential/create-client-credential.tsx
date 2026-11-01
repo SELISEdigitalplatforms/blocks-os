@@ -170,7 +170,9 @@ export const CreateClientCredential = ({
         });
       }
       showSuccessToast({
-        description: isEdit ? t("CREATE_CLIENT_CREDENTIAL.UPDATED_SUCCESS") : t("CREATE_CLIENT_CREDENTIAL.CREATED_SUCCESS"),
+        description: isEdit
+          ? t("CREATE_CLIENT_CREDENTIAL.UPDATED_SUCCESS")
+          : t("CREATE_CLIENT_CREDENTIAL.CREATED_SUCCESS"),
       });
       // Create is the only time the API returns the secret; the list never does.
       if (!isEdit && res.clientSecret) {
@@ -205,7 +207,11 @@ export const CreateClientCredential = ({
       )}
       <DialogContent className="max-w-2xl flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0">
         <DialogHeader className="shrink-0 px-6 pb-4 pt-6 pr-12">
-          <DialogTitle>{isEdit ? t("CREATE_CLIENT_CREDENTIAL.EDIT_TITLE") : t("CREATE_CLIENT_CREDENTIAL.ADD_TITLE")}</DialogTitle>
+          <DialogTitle>
+            {isEdit
+              ? t("CREATE_CLIENT_CREDENTIAL.EDIT_TITLE")
+              : t("CREATE_CLIENT_CREDENTIAL.ADD_TITLE")}
+          </DialogTitle>
           <DialogDescription>
             {isEdit
               ? t("CREATE_CLIENT_CREDENTIAL.EDIT_DESCRIPTION")
@@ -219,17 +225,20 @@ export const CreateClientCredential = ({
           >
             <div className="min-h-0 w-full min-w-0 flex-1 space-y-8 overflow-y-auto px-6 py-4">
               <section className="space-y-4">
-              
                 <FormField
                   control={form.control}
                   name="clientNameService"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        {t("CREATE_CLIENT_CREDENTIAL.CLIENT_NAME")} <span className="text-destructive">*</span>
+                        {t("CREATE_CLIENT_CREDENTIAL.CLIENT_NAME")}{" "}
+                        <span className="text-destructive">*</span>
                       </FormLabel>
                       <FormControl>
-                        <Input placeholder={t("CREATE_CLIENT_CREDENTIAL.CLIENT_NAME_PLACEHOLDER")} {...field} />
+                        <Input
+                          placeholder={t("CREATE_CLIENT_CREDENTIAL.CLIENT_NAME_PLACEHOLDER")}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -282,7 +291,8 @@ export const CreateClientCredential = ({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          {t("CREATE_CLIENT_CREDENTIAL.ORGANIZATION")} <span className="text-destructive">*</span>
+                          {t("CREATE_CLIENT_CREDENTIAL.ORGANIZATION")}{" "}
+                          <span className="text-destructive">*</span>
                         </FormLabel>
                         <OrganizationCombobox
                           projectKey={tenantId}

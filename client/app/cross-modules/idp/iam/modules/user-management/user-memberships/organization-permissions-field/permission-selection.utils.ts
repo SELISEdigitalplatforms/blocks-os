@@ -14,22 +14,20 @@ export const permissionMatches = (left: IPermission, right: IPermission) =>
 export const isPermissionInList = (permission: IPermission, list: IPermission[]) =>
   list.some((item) => permissionMatches(item, permission));
 
-export const isPermissionAssigned = (
-  permission: IPermission,
-  assignedPermissions: IPermission[],
-) =>
+export const isPermissionAssigned = (permission: IPermission, assignedPermissions: IPermission[]) =>
   assignedPermissions.some((item) => permissionMatches(item, permission));
 
 export const getNewlySelectedPermissions = (
   selectedPermissions: IPermission[],
   assignedPermissions: IPermission[],
-) =>
-  selectedPermissions.filter((item) => !isPermissionAssigned(item, assignedPermissions));
+) => selectedPermissions.filter((item) => !isPermissionAssigned(item, assignedPermissions));
 
 export const getTotalPermissionCount = (
   assignedPermissions: IPermission[],
   selectedPermissions: IPermission[],
-) => assignedPermissions.length + getNewlySelectedPermissions(selectedPermissions, assignedPermissions).length;
+) =>
+  assignedPermissions.length +
+  getNewlySelectedPermissions(selectedPermissions, assignedPermissions).length;
 
 export const isAtMaxPermissions = (
   assignedPermissions: IPermission[],
@@ -81,9 +79,7 @@ export const togglePermissionSelection = (
   }
 
   return {
-    selectedPermissions: selectedPermissions.filter(
-      (item) => !permissionMatches(item, permission),
-    ),
+    selectedPermissions: selectedPermissions.filter((item) => !permissionMatches(item, permission)),
     blocked: false,
   };
 };

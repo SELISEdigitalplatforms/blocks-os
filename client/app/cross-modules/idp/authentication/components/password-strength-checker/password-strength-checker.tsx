@@ -52,16 +52,16 @@ export const PasswordStrengthChecker: React.FC<PasswordStrengthCheckerProps> = (
   };
   return (
     <div className="border-primary-50 mx-auto w-full rounded-lg border px-6 py-4 shadow-xs">
-      <h2 className="mb-2 text-sm font-semibold text-high-emphasis">{t("PASSWORD_STRENGTH_CHECKER.TITLE")}</h2>
+      <h2 className="mb-2 text-sm font-semibold text-high-emphasis">
+        {t("PASSWORD_STRENGTH_CHECKER.TITLE")}
+      </h2>
       <div className="bg-primary-50 mb-2 h-1 w-full rounded">
         <div
           className={`h-1 rounded-full transition-all duration-300 ${getAdjustedStrengthColor()}`}
           style={{ width: `${getAdjustedStrength()}%` }}
         />
       </div>
-      <p className="mb-2 text-xs text-medium-emphasis">
-        {t("PASSWORD_STRENGTH_CHECKER.INTRO")}
-      </p>
+      <p className="mb-2 text-xs text-medium-emphasis">{t("PASSWORD_STRENGTH_CHECKER.INTRO")}</p>
       <ul className="space-y-1 text-xs text-medium-emphasis">
         {requirements.map((requirement) => (
           <li key={requirement.key} className="flex items-center gap-2">

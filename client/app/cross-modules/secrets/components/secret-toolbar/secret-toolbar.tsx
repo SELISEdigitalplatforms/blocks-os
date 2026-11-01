@@ -175,7 +175,12 @@ export function SecretToolbar() {
                 className: "w-full sm:w-72",
               },
             },
-            { key: "type", type: "Radio", label: t("common:TYPE"), props: { options: TYPE_OPTIONS } },
+            {
+              key: "type",
+              type: "Radio",
+              label: t("common:TYPE"),
+              props: { options: TYPE_OPTIONS },
+            },
             ...(isArchived
               ? []
               : [
@@ -212,7 +217,9 @@ export function SecretToolbar() {
           onClick={toggleArchived}
           className={cn(
             "h-8 gap-2",
-            isArchived ? "border-primary bg-primary/5 text-primary hover:bg-primary/10" : "border-dashed",
+            isArchived
+              ? "border-primary bg-primary/5 text-primary hover:bg-primary/10"
+              : "border-dashed",
           )}
         >
           {isArchived ? (
@@ -232,9 +239,7 @@ export function SecretToolbar() {
       {isArchived && (
         <p className="flex items-start gap-2 text-sm text-muted-foreground">
           <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-          <span>
-            {t("SECRET_TOOLBAR.SHOWING_ARCHIVED_SECRETS_THEY_NO")}
-          </span>
+          <span>{t("SECRET_TOOLBAR.SHOWING_ARCHIVED_SECRETS_THEY_NO")}</span>
         </p>
       )}
     </div>

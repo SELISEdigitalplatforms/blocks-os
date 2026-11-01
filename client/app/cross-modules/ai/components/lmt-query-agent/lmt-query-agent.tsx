@@ -135,7 +135,7 @@ export const LMTQueryAgent: React.FC<LMTQueryAgentProps> = ({
         }, 0);
       }
     },
-    [addMessage, form, handleStreamEvent, session, streamQuery],
+    [addMessage, form, handleStreamEvent, session, streamQuery, t],
   );
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

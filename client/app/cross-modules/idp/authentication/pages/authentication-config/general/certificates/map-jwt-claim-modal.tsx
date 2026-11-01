@@ -168,12 +168,15 @@ export function MapJwtClaimModal({
 
     if (!result.isSuccess) {
       showErrorToast({
-        errors: Object.values(result.errors ?? {}).join(" ") || t("MAP_JWT_CLAIM_MODAL.SAVE_FAILED"),
+        errors:
+          Object.values(result.errors ?? {}).join(" ") || t("MAP_JWT_CLAIM_MODAL.SAVE_FAILED"),
       });
       return;
     }
 
-    showSuccessToast({ description: t("MAP_JWT_CLAIM_MODAL.SAVED", { name: provider.providerName }) });
+    showSuccessToast({
+      description: t("MAP_JWT_CLAIM_MODAL.SAVED", { name: provider.providerName }),
+    });
     onOpenChange(false);
   };
 
@@ -242,7 +245,9 @@ export function MapJwtClaimModal({
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col space-y-3">
-              <p className="border-t pt-3 text-sm font-medium text-foreground">{t("MAP_JWT_CLAIM_MODAL.MAPPING_TABLE")}</p>
+              <p className="border-t pt-3 text-sm font-medium text-foreground">
+                {t("MAP_JWT_CLAIM_MODAL.MAPPING_TABLE")}
+              </p>
 
               {hasClaimsToOffer ? (
                 <div className="flex-1 overflow-y-auto rounded-md">
@@ -276,7 +281,11 @@ export function MapJwtClaimModal({
                                 <SelectValue placeholder={t("MAP_JWT_CLAIM_MODAL.NOT_MAPPED")} />
                               </SelectTrigger>
                               <SelectContent>
-                                {!required && <SelectItem value={UNMAPPED}>{t("MAP_JWT_CLAIM_MODAL.NOT_MAPPED")}</SelectItem>}
+                                {!required && (
+                                  <SelectItem value={UNMAPPED}>
+                                    {t("MAP_JWT_CLAIM_MODAL.NOT_MAPPED")}
+                                  </SelectItem>
+                                )}
                                 {options.map((claim) => (
                                   <SelectItem key={claim} value={claim}>
                                     {claim}
@@ -295,9 +304,7 @@ export function MapJwtClaimModal({
                 </div>
               ) : (
                 <div className="flex flex-1 items-center justify-center py-10">
-                  <p className="text-sm text-muted-foreground">
-                    {t("MAP_JWT_CLAIM_MODAL.EMPTY")}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{t("MAP_JWT_CLAIM_MODAL.EMPTY")}</p>
                 </div>
               )}
             </div>

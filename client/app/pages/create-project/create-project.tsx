@@ -53,7 +53,9 @@ const CreateProject = () => {
               <Link to="/console">
                 <X onClick={resetFormData} size={32} strokeWidth={1} />
               </Link>
-              <p className="mt-[2px] text-lg font-semibold">{t("CREATE_PROJECT.CREATE_A_PROJECT")}</p>
+              <p className="mt-[2px] text-lg font-semibold">
+                {t("CREATE_PROJECT.CREATE_A_PROJECT")}
+              </p>
             </div>
             <p className="mb-7 mt-2 text-sm font-normal text-medium-emphasis">
               {t("CREATE_PROJECT.GET_STARTED")}
@@ -75,7 +77,9 @@ const CreateProject = () => {
               <Link to="/console">
                 <X onClick={resetFormData} size={32} strokeWidth={1} />
               </Link>
-              <p className="mt-[2px] text-lg font-semibold">{t("CREATE_PROJECT.CREATE_A_PROJECT")}</p>
+              <p className="mt-[2px] text-lg font-semibold">
+                {t("CREATE_PROJECT.CREATE_A_PROJECT")}
+              </p>
             </div>
             <p className="mb-7 mt-2 text-sm font-normal text-medium-emphasis">
               {t("CREATE_PROJECT.GET_STARTED")}

@@ -10,6 +10,8 @@ import { IMenuGrant, toPolicy, VIEW_ACTION } from "@blocks-identifier/models/pro
 import { cn } from "@/lib/utils";
 import { useT, tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.people";
+
 /**
  * Labels and destructive markers for the grant catalog.
  *
@@ -18,10 +20,18 @@ import { useT, tStatic } from "@seliseblocks/genesis-os";
  * before this map does still renders, falling back to its id, rather than disappearing.
  */
 const MENU_LABELS: Record<string, string> = {
-  get environments() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.ENVIRONMENTS"); },
-  get people() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.PEOPLE"); },
-  get repositories() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.REPOSITORIES"); },
-  get settings() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.PROJECT_SETTINGS"); },
+  get environments() {
+    return tStatic(I18N_MODULE, "PEOPLE_ACCESS_TAB.ENVIRONMENTS");
+  },
+  get people() {
+    return tStatic(I18N_MODULE, "PEOPLE_ACCESS_TAB.PEOPLE");
+  },
+  get repositories() {
+    return tStatic(I18N_MODULE, "PEOPLE_ACCESS_TAB.REPOSITORIES");
+  },
+  get settings() {
+    return tStatic(I18N_MODULE, "PEOPLE_ACCESS_TAB.PROJECT_SETTINGS");
+  },
 };
 
 const MENU_ICONS: Record<string, typeof Package> = {
@@ -32,23 +42,49 @@ const MENU_ICONS: Record<string, typeof Package> = {
 };
 
 const ACTION_LABELS: Record<string, string> = {
-  get "environments::view"() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.VIEW_ENVIRONMENTS"); },
-  get "environments::migrate"() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.START_MIGRATION"); },
-  get "people::view"() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.VIEW_MEMBERS"); },
-  get "people::invite"() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.INVITE_PEOPLE"); },
-  get "people::remove"() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.REMOVE_ACCESS"); },
-  get "repositories::view"() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.VIEW_REPOSITORIES"); },
-  get "repositories::add"() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.ADD_REPOSITORY"); },
-  get "repositories::delete"() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.DELETE_REPOSITORY"); },
-  get "settings::view"() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.VIEW_SETTINGS"); },
-  get "settings::rename"() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.RENAME_PROJECT"); },
+  get "environments::view"() {
+    return tStatic(I18N_MODULE, "PEOPLE_ACCESS_TAB.VIEW_ENVIRONMENTS");
+  },
+  get "environments::migrate"() {
+    return tStatic(I18N_MODULE, "PEOPLE_ACCESS_TAB.START_MIGRATION");
+  },
+  get "people::view"() {
+    return tStatic(I18N_MODULE, "PEOPLE_ACCESS_TAB.VIEW_MEMBERS");
+  },
+  get "people::invite"() {
+    return tStatic(I18N_MODULE, "PEOPLE_ACCESS_TAB.INVITE_PEOPLE");
+  },
+  get "people::remove"() {
+    return tStatic(I18N_MODULE, "PEOPLE_ACCESS_TAB.REMOVE_ACCESS");
+  },
+  get "repositories::view"() {
+    return tStatic(I18N_MODULE, "PEOPLE_ACCESS_TAB.VIEW_REPOSITORIES");
+  },
+  get "repositories::add"() {
+    return tStatic(I18N_MODULE, "PEOPLE_ACCESS_TAB.ADD_REPOSITORY");
+  },
+  get "repositories::delete"() {
+    return tStatic(I18N_MODULE, "PEOPLE_ACCESS_TAB.DELETE_REPOSITORY");
+  },
+  get "settings::view"() {
+    return tStatic(I18N_MODULE, "PEOPLE_ACCESS_TAB.VIEW_SETTINGS");
+  },
+  get "settings::rename"() {
+    return tStatic(I18N_MODULE, "PEOPLE_ACCESS_TAB.RENAME_PROJECT");
+  },
 };
 
 /** What a grant actually does, where that is not obvious from the label. */
 const ACTION_WARNINGS: Record<string, string> = {
-  get "environments::migrate"() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.OVERWRITES_DATA_IN_THE_TARGET"); },
-  get "people::remove"() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.REVOKES_A_PERSON"); },
-  get "repositories::delete"() { return tStatic("os.people", "PEOPLE_ACCESS_TAB.TEARS_DOWN_RUNNING_DEPLOYMENTS"); },
+  get "environments::migrate"() {
+    return tStatic(I18N_MODULE, "PEOPLE_ACCESS_TAB.OVERWRITES_DATA_IN_THE_TARGET");
+  },
+  get "people::remove"() {
+    return tStatic(I18N_MODULE, "PEOPLE_ACCESS_TAB.REVOKES_A_PERSON");
+  },
+  get "repositories::delete"() {
+    return tStatic(I18N_MODULE, "PEOPLE_ACCESS_TAB.TEARS_DOWN_RUNNING_DEPLOYMENTS");
+  },
 };
 
 const sameSet = (a: string[], b: string[]) =>
@@ -81,7 +117,7 @@ export const PeopleAccessTab = ({
   isTargetOwner,
   isLoading = false,
 }: PeopleAccessTabProps) => {
-  const { t } = useT("os.people");
+  const { t } = useT(I18N_MODULE);
   const { mutateAsync: save, isPending } = useSaveAccessPolicy();
 
   const saved = useMemo(() => accessPolicies ?? [], [accessPolicies]);
@@ -112,9 +148,7 @@ export const PeopleAccessTab = ({
     const policy = toPolicy(menuId, action);
 
     setSelected((current) => {
-      const next = checked
-        ? [...current, policy]
-        : current.filter((entry) => entry !== policy);
+      const next = checked ? [...current, policy] : current.filter((entry) => entry !== policy);
 
       // "view" is implied by any other action on the same menu, so a grant can never exist
       // without the read it depends on. Applied here as well as server-side, so the checkbox
@@ -184,9 +218,7 @@ export const PeopleAccessTab = ({
         {grantedMenus.length === 0 && (
           <div className="rounded-lg border border-l-[3px] border-l-warning-500 bg-surface p-3 text-sm">
             <p className="font-semibold">{t("PEOPLE_ACCESS_TAB.NO_ACCESS_YET")}</p>
-            <p className="text-medium-emphasis">
-              {t("PEOPLE_ACCESS_TAB.UNTIL_AT_LEAST_ONE_MENU")}
-            </p>
+            <p className="text-medium-emphasis">{t("PEOPLE_ACCESS_TAB.UNTIL_AT_LEAST_ONE_MENU")}</p>
           </div>
         )}
 
@@ -276,7 +308,10 @@ export const PeopleAccessTab = ({
         <span className="text-sm text-medium-emphasis">
           {grantedMenus.length === 0
             ? t("PEOPLE_ACCESS_TAB.NO_MENUS_GRANTED")
-            : t("PEOPLE_ACCESS_TAB.OF_MENUS_GRANTED", { count: grantedMenus.length, count2: menuIds.length })}
+            : t("PEOPLE_ACCESS_TAB.OF_MENUS_GRANTED", {
+                count: grantedMenus.length,
+                count2: menuIds.length,
+              })}
         </span>
         <div className="flex gap-2">
           <Button variant="outline" disabled={!isDirty || isPending} onClick={() => setDraft(null)}>

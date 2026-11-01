@@ -38,7 +38,9 @@ function CopyButton({ label, value, className }: Readonly<CopyButtonProps>) {
       variant="ghost"
       className={cn("h-7 w-7 shrink-0", className)}
       aria-label={
-        copied ? t("API_INTEGRATION_CARD.LABEL_COPIED", { label }) : t("API_INTEGRATION_CARD.COPY_LABEL", { label })
+        copied
+          ? t("API_INTEGRATION_CARD.LABEL_COPIED", { label })
+          : t("API_INTEGRATION_CARD.COPY_LABEL", { label })
       }
       onClick={copy}
     >
@@ -118,12 +120,12 @@ export function ApiIntegrationCard({
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <h3 className="text-sm font-semibold">{t("API_INTEGRATION_CARD.TITLE")}</h3>
-            <p className="text-xs text-muted-foreground">
-              {t("API_INTEGRATION_CARD.INTRO")}
-            </p>
+            <p className="text-xs text-muted-foreground">{t("API_INTEGRATION_CARD.INTRO")}</p>
           </div>
           <Badge variant={headerRequired ? "default" : "secondary"}>
-            {headerRequired ? t("API_INTEGRATION_CARD.HEADER_REQUIRED") : t("API_INTEGRATION_CARD.HEADER_OPTIONAL")}
+            {headerRequired
+              ? t("API_INTEGRATION_CARD.HEADER_REQUIRED")
+              : t("API_INTEGRATION_CARD.HEADER_OPTIONAL")}
           </Badge>
         </div>
 
@@ -165,7 +167,11 @@ export function ApiIntegrationCard({
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               {t("API_INTEGRATION_CARD.EXAMPLE_TITLE")}
             </p>
-            <CopyButton label={t("API_INTEGRATION_CARD.EXAMPLE_REQUEST")} value={curl} className="-mr-1" />
+            <CopyButton
+              label={t("API_INTEGRATION_CARD.EXAMPLE_REQUEST")}
+              value={curl}
+              className="-mr-1"
+            />
           </div>
           <pre className="overflow-x-auto rounded bg-muted p-3 font-mono text-xs leading-relaxed">
             {curl}

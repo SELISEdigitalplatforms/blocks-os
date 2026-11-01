@@ -11,6 +11,8 @@ import type { IPlatformFieldRules } from "./rules.types";
 import type { RuleVariableContext } from "./validation-rules.util";
 import { ValidationPanel } from "./validation-panel";
 
+const I18N_MODULE = "os.idp.rules";
+
 /** Validations or the default value of one property of a platform schema. */
 export interface RulesInspectorTarget {
   panel: "validation" | "default";
@@ -26,7 +28,8 @@ export interface RulesInspectorTarget {
   variables: RuleVariableContext;
 }
 
-export const rulesInspectorKey = (target: RulesInspectorTarget) => `${target.panel}:${target.schemaId}:${target.path}`;
+export const rulesInspectorKey = (target: RulesInspectorTarget) =>
+  `${target.panel}:${target.schemaId}:${target.path}`;
 
 /** Why this change needs a second look, or null when it doesn't. */
 export function rulesWarning(target: RulesInspectorTarget): string | null {
@@ -35,17 +38,32 @@ export function rulesWarning(target: RulesInspectorTarget): string | null {
   const isRule = target.panel === "validation";
   const params = { schema: target.schemaName, service: target.service, path: target.path };
   if (target.isWarnedSchema) {
-    return tStatic("os.idp.rules", isRule ? "RULES_INSPECTOR.WARNING_SCHEMA_RULE" : "RULES_INSPECTOR.WARNING_SCHEMA_DEFAULT", params);
+    return tStatic(
+      I18N_MODULE,
+      isRule ? "RULES_INSPECTOR.WARNING_SCHEMA_RULE" : "RULES_INSPECTOR.WARNING_SCHEMA_DEFAULT",
+      params,
+    );
   }
-  return tStatic("os.idp.rules", isRule ? "RULES_INSPECTOR.WARNING_PATH_RULE" : "RULES_INSPECTOR.WARNING_PATH_DEFAULT", params);
+  return tStatic(
+    I18N_MODULE,
+    isRule ? "RULES_INSPECTOR.WARNING_PATH_RULE" : "RULES_INSPECTOR.WARNING_PATH_DEFAULT",
+    params,
+  );
 }
 
 /** Asks before the editor opens on a warned schema or property. */
-export function WarningGate({ warning, onClose, onContinue }: Readonly<{ warning: string; onClose: () => void; onContinue: () => void }>) {
-  const { t } = useT("os.idp.rules");
+export function WarningGate({
+  warning,
+  onClose,
+  onContinue,
+}: Readonly<{ warning: string; onClose: () => void; onContinue: () => void }>) {
+  const { t } = useT(I18N_MODULE);
   return (
     <div className="flex flex-col gap-4 p-6">
-      <div role="alert" className="flex gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-foreground">
+      <div
+        role="alert"
+        className="flex gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-foreground"
+      >
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
         <p>{warning}</p>
       </div>
@@ -92,12 +110,17 @@ function RulesPanel({ target }: Readonly<{ target: RulesInspectorTarget }>) {
  * The docked panel for a property's validations or default value, beside the access inspector's slot.
  * Warned schemas and properties ask before the editor opens.
  */
-export function RulesInspector({ target, onClose }: Readonly<{ target: RulesInspectorTarget; onClose: () => void }>) {
-  const { t } = useT("os.idp.rules");
+export function RulesInspector({
+  target,
+  onClose,
+}: Readonly<{ target: RulesInspectorTarget; onClose: () => void }>) {
+  const { t } = useT(I18N_MODULE);
   const warning = rulesWarning(target);
   const [confirmed, setConfirmed] = useState(warning === null);
   const isValidation = target.panel === "validation";
-  const title = isValidation ? t("RULES_INSPECTOR.VALIDATIONS") : t("RULES_INSPECTOR.DEFAULT_VALUE");
+  const title = isValidation
+    ? t("RULES_INSPECTOR.VALIDATIONS")
+    : t("RULES_INSPECTOR.DEFAULT_VALUE");
 
   return (
     <PanelShell label={t("RULES_INSPECTOR.TITLE_FOR", { title, path: target.path })}>
@@ -106,9 +129,15 @@ export function RulesInspector({ target, onClose }: Readonly<{ target: RulesInsp
         title={target.path}
         subtitle={t("RULES_INSPECTOR.SUBTITLE", { title, schema: target.schemaName })}
         onClose={onClose}
-        closeLabel={t(isValidation ? "RULES_INSPECTOR.CLOSE_VALIDATIONS" : "RULES_INSPECTOR.CLOSE_DEFAULT")}
+        closeLabel={t(
+          isValidation ? "RULES_INSPECTOR.CLOSE_VALIDATIONS" : "RULES_INSPECTOR.CLOSE_DEFAULT",
+        )}
       />
-      {!confirmed && warning ? <WarningGate warning={warning} onClose={onClose} onContinue={() => setConfirmed(true)} /> : <RulesPanel target={target} />}
+      {!confirmed && warning ? (
+        <WarningGate warning={warning} onClose={onClose} onContinue={() => setConfirmed(true)} />
+      ) : (
+        <RulesPanel target={target} />
+      )}
     </PanelShell>
   );
 }

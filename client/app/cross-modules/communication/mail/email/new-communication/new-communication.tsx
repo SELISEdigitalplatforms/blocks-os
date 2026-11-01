@@ -15,10 +15,12 @@ import { FileText, LayoutTemplate } from "lucide-react";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
 
+const I18N_MODULE = "os.communication.mail";
+
 const EMAIL_TEMPLATE_STEPS: StepItem[] = [{ id: "basic-information" }, { id: "template" }];
 
 const BasicInformationLabel = () => {
-  const { t } = useT("os.communication.mail");
+  const { t } = useT(I18N_MODULE);
   return (
     <span className="flex flex-wrap items-center gap-2">
       {t("NEW_COMMUNICATION.BASIC_INFORMATION")}
@@ -33,7 +35,7 @@ const BasicInformationLabel = () => {
 };
 
 const TemplateLabel = () => {
-  const { t } = useT("os.communication.mail");
+  const { t } = useT(I18N_MODULE);
   return (
     <span className="flex flex-wrap items-center gap-2">
       {t("NEW_COMMUNICATION.TEMPLATE")}
@@ -58,7 +60,7 @@ const BasicInformationStep = ({
   setTemplateData,
   onStepComplete,
 }: BasicInformationStepProps) => {
-  const { t } = useT("os.communication.mail");
+  const { t } = useT(I18N_MODULE);
   const { nextStep } = useStepper();
   const ref = useRef<{ submit: () => void; isValid: boolean } | undefined>(undefined);
   const [isFormValid, setIsFormValid] = useState(false);
@@ -100,7 +102,7 @@ type TemplateDesignStepProps = {
 };
 
 const TemplateDesignStep = ({ templateData, setTemplateData }: TemplateDesignStepProps) => {
-  const { t } = useT("os.communication.mail");
+  const { t } = useT(I18N_MODULE);
   const { isPending, mutateAsync: saveTemplate } = useSaveMailTemplate();
   const editorRef = useRef<IMailcraftEditorRef | null>(null);
   const navigate = useNavigate();
@@ -173,7 +175,7 @@ const TemplateDesignStep = ({ templateData, setTemplateData }: TemplateDesignSte
 };
 
 function EmailTemplateStepper() {
-  const { t } = useT("os.communication.mail");
+  const { t } = useT(I18N_MODULE);
   const completedStepRef = useRef(0);
   const [templateData, setTemplateData] = useState<IEmailTemplate>({
     itemId: "",
@@ -232,7 +234,7 @@ function EmailTemplateStepper() {
 }
 
 export default function NewCommunication() {
-  const { t } = useT("os.communication.mail");
+  const { t } = useT(I18N_MODULE);
   const scoped = useScopedPath();
   const emailBasePath = scoped("email-management");
   const breadcrumbTitles = {
@@ -243,11 +245,7 @@ export default function NewCommunication() {
   return (
     <main className="flex min-h-0 w-full flex-1 flex-col gap-4 p-4 sm:gap-6 sm:p-6">
       <header className="w-full space-y-4">
-        <PageBreadcrumb
-          breadcrumbIndex={3}
-          className="flex"
-          customTitles={breadcrumbTitles}
-        />
+        <PageBreadcrumb breadcrumbIndex={3} className="flex" customTitles={breadcrumbTitles} />
       </header>
 
       <div className="w-full flex-1">

@@ -10,6 +10,8 @@ import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
 import { Archive, Flame, Snowflake } from "lucide-react";
 import { tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.lmt";
+
 export type StorageTier = `${TRACE_PROVIDERS}`;
 
 /**
@@ -21,20 +23,20 @@ export const getStorageTiers = () =>
   [
     {
       value: TRACE_PROVIDERS.hot,
-      title: tStatic("os.lmt", "STORAGE_TIER_CARDS.HOT"),
-      description: tStatic("os.lmt", "STORAGE_TIER_CARDS.LIVE_AND_RECENT_DATA_FOR"),
+      title: tStatic(I18N_MODULE, "STORAGE_TIER_CARDS.HOT"),
+      description: tStatic(I18N_MODULE, "STORAGE_TIER_CARDS.LIVE_AND_RECENT_DATA_FOR"),
       Icon: Flame,
     },
     {
       value: TRACE_PROVIDERS.cold,
-      title: tStatic("os.lmt", "STORAGE_TIER_CARDS.COLD"),
-      description: tStatic("os.lmt", "STORAGE_TIER_CARDS.LONGER_TERM_STORED_DATA_FOR"),
+      title: tStatic(I18N_MODULE, "STORAGE_TIER_CARDS.COLD"),
+      description: tStatic(I18N_MODULE, "STORAGE_TIER_CARDS.LONGER_TERM_STORED_DATA_FOR"),
       Icon: Snowflake,
     },
     {
       value: TRACE_PROVIDERS.archive,
-      title: tStatic("os.lmt", "STORAGE_TIER_CARDS.ARCHIVE"),
-      description: tStatic("os.lmt", "STORAGE_TIER_CARDS.DEEP_HISTORY_RETAINED_FOR_AUDIT"),
+      title: tStatic(I18N_MODULE, "STORAGE_TIER_CARDS.ARCHIVE"),
+      description: tStatic(I18N_MODULE, "STORAGE_TIER_CARDS.DEEP_HISTORY_RETAINED_FOR_AUDIT"),
       Icon: Archive,
     },
   ] as const;

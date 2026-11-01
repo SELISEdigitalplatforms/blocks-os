@@ -1,5 +1,7 @@
 import { tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.lmt";
+
 export const getServices = () =>
   [
     // {
@@ -51,7 +53,7 @@ export const getServices = () =>
     //   showInLogs: true,
     // },
     {
-      label: tStatic("os.lmt", "SERVICES_CONSTANT.DATA"),
+      label: tStatic(I18N_MODULE, "SERVICES_CONSTANT.DATA"),
       name: "data",
       serviceName: "data",
       showInUsage: true,
@@ -67,7 +69,7 @@ export const getServices = () =>
     //   showInLogs: true,
     // },
     {
-      label: tStatic("os.lmt", "SERVICES_CONSTANT.LOCALIZATION"),
+      label: tStatic(I18N_MODULE, "SERVICES_CONSTANT.LOCALIZATION"),
       name: "localization",
       serviceName: "localization",
       showInUsage: true,
@@ -75,7 +77,7 @@ export const getServices = () =>
       showInLogs: true,
     },
     {
-      label: tStatic("os.lmt", "SERVICES_CONSTANT.AI_GATEWAY"),
+      label: tStatic(I18N_MODULE, "SERVICES_CONSTANT.AI_GATEWAY"),
       name: "ai",
       serviceName: "ai",
       showInUsage: true,
@@ -91,7 +93,7 @@ export const getServices = () =>
       showInLogs: true,
     },
     {
-      label: tStatic("os.lmt", "SERVICES_CONSTANT.UTILITIES"),
+      label: tStatic(I18N_MODULE, "SERVICES_CONSTANT.UTILITIES"),
       name: "utilities",
       serviceName: "utilities",
       showInUsage: true,
@@ -99,7 +101,7 @@ export const getServices = () =>
       showInLogs: true,
     },
     {
-      label: tStatic("os.lmt", "SERVICES_CONSTANT.LOGIC"),
+      label: tStatic(I18N_MODULE, "SERVICES_CONSTANT.LOGIC"),
       name: "logic",
       serviceName: "logic",
       showInUsage: true,
@@ -107,7 +109,7 @@ export const getServices = () =>
       showInLogs: true,
     },
     {
-      label: tStatic("os.lmt", "SERVICES_CONSTANT.MONITOR"),
+      label: tStatic(I18N_MODULE, "SERVICES_CONSTANT.MONITOR"),
       name: "monitor",
       serviceName: "monitor",
       showInUsage: true,
@@ -115,7 +117,7 @@ export const getServices = () =>
       showInLogs: true,
     },
     {
-      label: tStatic("os.lmt", "SERVICES_CONSTANT.RELEASE"),
+      label: tStatic(I18N_MODULE, "SERVICES_CONSTANT.RELEASE"),
       name: "release",
       serviceName: "release",
       showInUsage: true,
@@ -123,7 +125,7 @@ export const getServices = () =>
       showInLogs: true,
     },
     {
-      label: tStatic("os.lmt", "SERVICES_CONSTANT.STUDIO"),
+      label: tStatic(I18N_MODULE, "SERVICES_CONSTANT.STUDIO"),
       name: "studio",
       serviceName: "studio",
       showInUsage: true,
@@ -131,7 +133,7 @@ export const getServices = () =>
       showInLogs: true,
     },
     {
-      label: tStatic("os.lmt", "SERVICES_CONSTANT.AGENT"),
+      label: tStatic(I18N_MODULE, "SERVICES_CONSTANT.AGENT"),
       name: "agent",
       serviceName: "agent",
       showInUsage: true,

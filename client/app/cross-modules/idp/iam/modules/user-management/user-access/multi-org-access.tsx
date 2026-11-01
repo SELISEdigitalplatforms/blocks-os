@@ -94,17 +94,15 @@ export const MultiOrgAccess = ({ userId, projectKey }: MultiOrgAccessProps) => {
     if (!user || !orgId) return { roleSlugs: [], permissionResources: [] };
     const membership = user.organizations?.find((item) => item.organizationId === orgId);
     if (membership) {
-      return { roleSlugs: membership.roles ?? [], permissionResources: membership.permissions ?? [] };
+      return {
+        roleSlugs: membership.roles ?? [],
+        permissionResources: membership.permissions ?? [],
+      };
     }
     return {
-      roleSlugs:
-        user.OrganizationsRoles?.[orgId] ??
-        user.roles?.[orgId] ??
-        [],
+      roleSlugs: user.OrganizationsRoles?.[orgId] ?? user.roles?.[orgId] ?? [],
       permissionResources:
-        user.OrganizationsPermissions?.[orgId] ??
-        user.permissions?.[orgId] ??
-        [],
+        user.OrganizationsPermissions?.[orgId] ?? user.permissions?.[orgId] ?? [],
     };
   };
 
@@ -114,7 +112,7 @@ export const MultiOrgAccess = ({ userId, projectKey }: MultiOrgAccessProps) => {
     const orgIds =
       user.organizationIds?.length > 0
         ? user.organizationIds
-        : (user as { OrganizationIds?: string[] }).OrganizationIds ?? [];
+        : ((user as { OrganizationIds?: string[] }).OrganizationIds ?? []);
     return orgIds.map((orgId) => {
       const { roleSlugs, permissionResources } = getExistingSelection(orgId);
       const org = orgById.get(orgId);
@@ -132,8 +130,7 @@ export const MultiOrgAccess = ({ userId, projectKey }: MultiOrgAccessProps) => {
   // Always send the selected organization's `itemId` as the `organizationId`
   // on roles/permissions queries and updates, never the tenant id. Fall back
   // to the first available org, and disable the queries if no org exists yet.
-  const organizationIdForQueries =
-    selectedOrgId || organizationRows[0]?.organizationId || "";
+  const organizationIdForQueries = selectedOrgId || organizationRows[0]?.organizationId || "";
 
   const { data: rolesData } = useGetRoles({
     page: 0,
@@ -162,15 +159,14 @@ export const MultiOrgAccess = ({ userId, projectKey }: MultiOrgAccessProps) => {
     [rolesData?.data],
   );
   const permissionByResource = useMemo(
-    () => new Map((permissionsData?.data || []).map((permission) => [permission.resource, permission])),
+    () =>
+      new Map((permissionsData?.data || []).map((permission) => [permission.resource, permission])),
     [permissionsData?.data],
   );
 
   const applyOrgSelection = (orgId: string) => {
     const { roleSlugs, permissionResources } = getExistingSelection(orgId);
-    setSelectedRoles(
-      roleSlugs.map((slug) => roleBySlug.get(slug) ?? createRoleStub({ slug })),
-    );
+    setSelectedRoles(roleSlugs.map((slug) => roleBySlug.get(slug) ?? createRoleStub({ slug })));
     setSelectedPermissions(
       permissionResources.map(
         (resource) =>
@@ -231,8 +227,8 @@ export const MultiOrgAccess = ({ userId, projectKey }: MultiOrgAccessProps) => {
       if (!res.isSuccess) {
         const errorMsg =
           res.errors && typeof res.errors === "object"
-            ? Object.values(res.errors as Record<string, string>)[0] ??
-              t("MULTI_ORG_ACCESS.FAILED_TO_SAVE")
+            ? (Object.values(res.errors as Record<string, string>)[0] ??
+              t("MULTI_ORG_ACCESS.FAILED_TO_SAVE"))
             : (res.errors as string) || t("MULTI_ORG_ACCESS.FAILED_TO_SAVE");
         showErrorToast({ errors: errorMsg });
         return;
@@ -278,7 +274,9 @@ export const MultiOrgAccess = ({ userId, projectKey }: MultiOrgAccessProps) => {
                   id="access-org-select"
                   className="h-auto w-full max-w-[320px] gap-2 border-input bg-background text-md font-semibold text-high-emphasis text-left"
                 >
-                  <SelectValue placeholder={t("MULTI_ORG_ACCESS.SELECT_ORGANIZATION_PLACEHOLDER")} />
+                  <SelectValue
+                    placeholder={t("MULTI_ORG_ACCESS.SELECT_ORGANIZATION_PLACEHOLDER")}
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {organizationRows.map((org) => (
@@ -309,35 +307,39 @@ export const MultiOrgAccess = ({ userId, projectKey }: MultiOrgAccessProps) => {
                         size="icon"
                         className="h-8 w-8 bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground disabled:pointer-events-none disabled:opacity-50"
                         onClick={() => setRevokeTarget(selectedOrgRow)}
-                        aria-label={t("MULTI_ORG_ACCESS.REVOKE_ARIA_LABEL", { name: selectedOrgRow.name })}
+                        aria-label={t("MULTI_ORG_ACCESS.REVOKE_ARIA_LABEL", {
+                          name: selectedOrgRow.name,
+                        })}
                       >
                         <UserMinus className="h-4 w-4" />
                       </Button>
                     </span>
                   </TooltipTrigger>
-                  <TooltipContent side="left">{t("MULTI_ORG_ACCESS.REVOKE_USER_ACCESS")}</TooltipContent>
+                  <TooltipContent side="left">
+                    {t("MULTI_ORG_ACCESS.REVOKE_USER_ACCESS")}
+                  </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             )}
           </div>
           <div className="scrollbar-slim flex min-h-0 flex-1 flex-col overflow-y-auto pt-4 pr-1">
-          {selectedOrgRow ? (
-            <RolesPermissionsPillEditor
-              roles={selectedRoles}
-              permissions={selectedPermissions}
-              onRolesChange={setSelectedRoles}
-              onPermissionsChange={setSelectedPermissions}
-              rolesDescription={t("MULTI_ORG_ACCESS.ROLES_DESCRIPTION")}
-              permissionsDescription={t("MULTI_ORG_ACCESS.PERMISSIONS_DESCRIPTION")}
-              onSave={onSave}
-              organizationId={organizationIdForQueries}
-            />
-          ) : (
-            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 py-16 text-center text-sm text-muted-foreground">
-              <Building2 className="h-6 w-6" />
-              {t("MULTI_ORG_ACCESS.SELECT_ORGANIZATION_HINT")}
-            </div>
-          )}
+            {selectedOrgRow ? (
+              <RolesPermissionsPillEditor
+                roles={selectedRoles}
+                permissions={selectedPermissions}
+                onRolesChange={setSelectedRoles}
+                onPermissionsChange={setSelectedPermissions}
+                rolesDescription={t("MULTI_ORG_ACCESS.ROLES_DESCRIPTION")}
+                permissionsDescription={t("MULTI_ORG_ACCESS.PERMISSIONS_DESCRIPTION")}
+                onSave={onSave}
+                organizationId={organizationIdForQueries}
+              />
+            ) : (
+              <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 py-16 text-center text-sm text-muted-foreground">
+                <Building2 className="h-6 w-6" />
+                {t("MULTI_ORG_ACCESS.SELECT_ORGANIZATION_HINT")}
+              </div>
+            )}
           </div>
         </>
       )}
@@ -380,4 +382,3 @@ export const MultiOrgAccess = ({ userId, projectKey }: MultiOrgAccessProps) => {
     </div>
   );
 };
- 

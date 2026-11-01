@@ -20,7 +20,11 @@ function readFileIds(projectKey: string): string[] {
     const value: unknown = JSON.parse(localStorage.getItem(fileIdsStorageKey(projectKey)) ?? "[]");
     if (!Array.isArray(value)) return [];
 
-    return [...new Set(value.filter((fileId): fileId is string => typeof fileId === "string" && !!fileId))];
+    return [
+      ...new Set(
+        value.filter((fileId): fileId is string => typeof fileId === "string" && !!fileId),
+      ),
+    ];
   } catch {
     return [];
   }

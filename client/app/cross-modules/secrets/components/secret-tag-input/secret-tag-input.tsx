@@ -120,7 +120,9 @@ export function SecretTagInput({ value, onChange, catalogue, disabled }: SecretT
             <CommandList>
               {suggestions.length === 0 && !canCreateTyped && (
                 <CommandEmpty>
-                  {query ? t("SECRET_TAG_INPUT.THAT_TAG_IS_ALREADY_ADDED") : t("SECRET_TAG_INPUT.NO_TAGS_YET_TYPE_ONE")}
+                  {query
+                    ? t("SECRET_TAG_INPUT.THAT_TAG_IS_ALREADY_ADDED")
+                    : t("SECRET_TAG_INPUT.NO_TAGS_YET_TYPE_ONE")}
                 </CommandEmpty>
               )}
 
@@ -143,7 +145,11 @@ export function SecretTagInput({ value, onChange, catalogue, disabled }: SecretT
                         entry.key.includes(toSecretTagKey(query)),
                     )
                     .map((entry) => (
-                      <CommandItem key={entry.key} value={entry.key} onSelect={() => add(entry.key)}>
+                      <CommandItem
+                        key={entry.key}
+                        value={entry.key}
+                        onSelect={() => add(entry.key)}
+                      >
                         <Check className="mr-2 h-4 w-4 opacity-0" />
                         <span className="truncate">{entry.label}</span>
                       </CommandItem>
@@ -157,7 +163,8 @@ export function SecretTagInput({ value, onChange, catalogue, disabled }: SecretT
 
       {atLimit && (
         <p className="text-xs text-muted-foreground">
-          {t("SECRET_TAG_INPUT.A_SECRET_MAY_CARRY_AT", { SECRET_TAG_MAX_PER_SECRET })}</p>
+          {t("SECRET_TAG_INPUT.A_SECRET_MAY_CARRY_AT", { SECRET_TAG_MAX_PER_SECRET })}
+        </p>
       )}
     </div>
   );

@@ -24,12 +24,12 @@ const ServiceListSkeleton = () => (
 const EmptyServiceList = () => {
   const { t } = useT("os.identifier");
   return (
-  <EmptyState
-    icon={Layers}
-    title={t("SERVICE_LIST.NO_SERVICES_YET")}
-    description={t("SERVICE_LIST.REGISTER_YOUR_FIRST_SERVICE_TO")}
-  />
-);
+    <EmptyState
+      icon={Layers}
+      title={t("SERVICE_LIST.NO_SERVICES_YET")}
+      description={t("SERVICE_LIST.REGISTER_YOUR_FIRST_SERVICE_TO")}
+    />
+  );
 };
 export const ServiceList = () => {
   const [queryParams, setQueryParams] = useQueryStates({

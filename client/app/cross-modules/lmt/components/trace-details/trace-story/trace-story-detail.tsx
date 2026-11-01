@@ -7,21 +7,26 @@ import type { describeTransfer } from "./trace-story-narration";
 import { getTrafficLabel } from "./trace-story-row";
 import { useT, tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.lmt";
+
 type Narration = ReturnType<typeof describeTransfer>;
 
 const stateBadge = (step: FlowStep) => {
   if (step.state === "error")
-    return { variant: "error" as const, label: tStatic("os.lmt", "TRACE_STORY_DETAIL.FAILED") };
+    return { variant: "error" as const, label: tStatic(I18N_MODULE, "TRACE_STORY_DETAIL.FAILED") };
   if (step.state === "warning")
-    return { variant: "warning" as const, label: tStatic("os.lmt", "TRACE_STORY_DETAIL.WARNING") };
+    return {
+      variant: "warning" as const,
+      label: tStatic(I18N_MODULE, "TRACE_STORY_DETAIL.WARNING"),
+    };
   if (step.state === "ok")
     return {
       variant: "success" as const,
-      label: tStatic("os.lmt", "TRACE_STORY_DETAIL.SUCCEEDED"),
+      label: tStatic(I18N_MODULE, "TRACE_STORY_DETAIL.SUCCEEDED"),
     };
   return {
     variant: "secondary" as const,
-    label: tStatic("os.lmt", "TRACE_STORY_DETAIL.OUTCOME_NOT_RECORDED"),
+    label: tStatic(I18N_MODULE, "TRACE_STORY_DETAIL.OUTCOME_NOT_RECORDED"),
   };
 };
 
@@ -32,7 +37,7 @@ const ErrorNote = ({
   step: FlowStep;
   onSelectStep: (index: number) => void;
 }) => {
-  const { t } = useT("os.lmt");
+  const { t } = useT(I18N_MODULE);
   const cause = step.causedByIndex;
   if (!step.errorMessage && cause === null) return null;
   return (
@@ -78,7 +83,7 @@ export const TraceStoryDetail = ({
   startOffsetMs: number | null;
   onSelectStep: (index: number) => void;
 }) => {
-  const { t } = useT("os.lmt");
+  const { t } = useT(I18N_MODULE);
   const badge = stateBadge(step);
   const facts = [
     ...(startOffsetMs === null

@@ -34,6 +34,11 @@ import { KVDetailItem } from "../kv-detail-item";
 import { maskId } from "../../utils/mask-id.util";
 import { OneTimeSecret, OneTimeSecretDialog } from "../one-time-secret-dialog";
 
+const KEY_COMMON_CANCEL = "common:CANCEL";
+const KEY_COMMON_DELETE = "common:DELETE";
+
+const I18N_MODULE = "os.idp.oidc";
+
 interface OIDCRowProps {
   item: IOidcConfig;
   /** From the list response; missing means the client follows the project setting. */
@@ -64,41 +69,41 @@ const buildKvPairs = (item: IOidcConfig): KvPair[] => {
     : [
         {
           key: "pkce",
-          label: tStatic("os.idp.oidc", "OIDC_CARD.KV_PKCE"),
+          label: tStatic(I18N_MODULE, "OIDC_CARD.KV_PKCE"),
           value: item.requirePkce
-            ? tStatic("os.idp.oidc", "OIDC_CARD.KV_REQUIRED")
-            : tStatic("os.idp.oidc", "OIDC_CARD.KV_NOT_REQUIRED"),
+            ? tStatic(I18N_MODULE, "OIDC_CARD.KV_REQUIRED")
+            : tStatic(I18N_MODULE, "OIDC_CARD.KV_NOT_REQUIRED"),
         },
         {
           key: "autoRedirect",
-          label: tStatic("os.idp.oidc", "OIDC_CARD.KV_AUTO_REDIRECT"),
+          label: tStatic(I18N_MODULE, "OIDC_CARD.KV_AUTO_REDIRECT"),
           value: item.isAutoRedirect
-            ? tStatic("os.idp.oidc", "OIDC_CARD.KV_TRUE")
-            : tStatic("os.idp.oidc", "OIDC_CARD.KV_FALSE"),
+            ? tStatic(I18N_MODULE, "OIDC_CARD.KV_TRUE")
+            : tStatic(I18N_MODULE, "OIDC_CARD.KV_FALSE"),
         },
       ];
   const pairs: KvPair[] = [
     {
       key: "clientId",
-      label: tStatic("os.idp.oidc", "OIDC_CARD.KV_CLIENT_ID"),
+      label: tStatic(I18N_MODULE, "OIDC_CARD.KV_CLIENT_ID"),
       value: item.itemId,
       copyable: true,
       masked: true,
     },
     {
       key: "redirectUris",
-      label: tStatic("os.idp.oidc", "OIDC_CARD.KV_REDIRECT_URIS"),
+      label: tStatic(I18N_MODULE, "OIDC_CARD.KV_REDIRECT_URIS"),
       value: getRedirectUris(item).join(", "),
       copyable: true,
     },
     {
       key: "responseTypes",
-      label: tStatic("os.idp.oidc", "OIDC_CARD.KV_RESPONSE_TYPES"),
+      label: tStatic(I18N_MODULE, "OIDC_CARD.KV_RESPONSE_TYPES"),
       value: getResponseTypes(item).join(", "),
     },
     {
       key: "scopes",
-      label: tStatic("os.idp.oidc", "OIDC_CARD.KV_SCOPES"),
+      label: tStatic(I18N_MODULE, "OIDC_CARD.KV_SCOPES"),
       value: item.scope ?? "",
     },
     ...browserOnly,
@@ -134,19 +139,19 @@ const buildStatusTogglePayload = (item: IOidcConfig): ISaveOidcCredentialPayload
 const statusButtonLabel = (isUpdating: boolean, willEnable: boolean): string => {
   if (isUpdating) {
     return willEnable
-      ? tStatic("os.idp.oidc", "OIDC_CARD.STATUS_ENABLING")
-      : tStatic("os.idp.oidc", "OIDC_CARD.STATUS_DISABLING");
+      ? tStatic(I18N_MODULE, "OIDC_CARD.STATUS_ENABLING")
+      : tStatic(I18N_MODULE, "OIDC_CARD.STATUS_DISABLING");
   }
   return willEnable
-    ? tStatic("os.idp.oidc", "OIDC_CARD.ENABLE")
-    : tStatic("os.idp.oidc", "OIDC_CARD.DISABLE");
+    ? tStatic(I18N_MODULE, "OIDC_CARD.ENABLE")
+    : tStatic(I18N_MODULE, "OIDC_CARD.DISABLE");
 };
 
 const showActionError = (error: unknown) => {
   showErrorToast({
     errors: isErrorWithErrors(error)
       ? error.errors
-      : tStatic("os.idp.oidc", "OIDC_CARD.ERROR_GENERIC"),
+      : tStatic(I18N_MODULE, "OIDC_CARD.ERROR_GENERIC"),
   });
 };
 
@@ -161,7 +166,7 @@ const OidcClientNameCell = ({
   item,
   loginPolicy,
 }: Readonly<{ item: IOidcConfig; loginPolicy?: IOidcClientLoginPolicy }>) => {
-  const { t } = useT("os.idp.oidc");
+  const { t } = useT(I18N_MODULE);
   return (
     <TableCell className="py-3.5">
       <div className="flex items-center gap-3">
@@ -195,7 +200,7 @@ const OidcClientNameCell = ({
 };
 
 const OidcTypeCell = ({ isDeviceFlowClient }: Readonly<{ isDeviceFlowClient?: boolean }>) => {
-  const { t } = useT("os.idp.oidc");
+  const { t } = useT(I18N_MODULE);
   return (
     <TableCell className="hidden py-3.5 sm:table-cell">
       <div className="flex flex-wrap gap-1.5">
@@ -220,7 +225,7 @@ const OidcTypeCell = ({ isDeviceFlowClient }: Readonly<{ isDeviceFlowClient?: bo
 };
 
 const OidcStatusCell = ({ isActive }: Readonly<{ isActive: boolean }>) => {
-  const { t } = useT("os.idp.oidc");
+  const { t } = useT(I18N_MODULE);
   return (
     <TableCell className="hidden py-3.5 sm:table-cell">
       <Badge
@@ -256,7 +261,7 @@ const OidcRowActions = ({
   onToggleStatus,
   onDelete,
 }: OidcRowActionsProps) => {
-  const { t } = useT("os.idp.oidc");
+  const { t } = useT(I18N_MODULE);
   const isActive = item.isActive;
   return (
     <TableCell className="py-3.5 pl-4 text-left" onClick={(e) => e.stopPropagation()}>
@@ -308,13 +313,13 @@ const OidcRowActions = ({
               variant="ghost"
               size="sm"
               className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-              aria-label={t("common:DELETE")}
+              aria-label={t(KEY_COMMON_DELETE)}
               onClick={onDelete}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{t("common:DELETE")}</TooltipContent>
+          <TooltipContent>{t(KEY_COMMON_DELETE)}</TooltipContent>
         </Tooltip>
       </div>
     </TableCell>
@@ -356,7 +361,7 @@ const OidcStatusDialog = ({
   onConfirm,
   willEnable,
 }: ConfirmDialogProps & Readonly<{ willEnable: boolean }>) => {
-  const { t } = useT("os.idp.oidc");
+  const { t } = useT(I18N_MODULE);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -380,7 +385,7 @@ const OidcStatusDialog = ({
             onClick={() => onOpenChange(false)}
             disabled={isPending}
           >
-            {t("common:CANCEL")}
+            {t(KEY_COMMON_CANCEL)}
           </Button>
           <Button
             variant={willEnable ? "default" : "destructive"}
@@ -403,7 +408,7 @@ const OidcRotateDialog = ({
   isPending,
   onConfirm,
 }: ConfirmDialogProps) => {
-  const { t } = useT("os.idp.oidc");
+  const { t } = useT(I18N_MODULE);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -420,7 +425,7 @@ const OidcRotateDialog = ({
             onClick={() => onOpenChange(false)}
             disabled={isPending}
           >
-            {t("common:CANCEL")}
+            {t(KEY_COMMON_CANCEL)}
           </Button>
           <Button size="sm" onClick={onConfirm} disabled={isPending}>
             {isPending ? t("OIDC_CARD.ROTATING") : t("OIDC_CARD.ROTATE_SECRET")}
@@ -438,7 +443,7 @@ const OidcDeleteDialog = ({
   isPending,
   onConfirm,
 }: ConfirmDialogProps) => {
-  const { t } = useT("os.idp.oidc");
+  const { t } = useT(I18N_MODULE);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -450,10 +455,10 @@ const OidcDeleteDialog = ({
         </DialogHeader>
         <DialogFooter className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
-            {t("common:CANCEL")}
+            {t(KEY_COMMON_CANCEL)}
           </Button>
           <Button variant="destructive" size="sm" onClick={onConfirm} disabled={isPending}>
-            {isPending ? t("OIDC_CARD.DELETING") : t("common:DELETE")}
+            {isPending ? t("OIDC_CARD.DELETING") : t(KEY_COMMON_DELETE)}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -462,7 +467,7 @@ const OidcDeleteDialog = ({
 };
 
 const OIDCRow = ({ item, loginPolicy, defaultExpanded = false }: Readonly<OIDCRowProps>) => {
-  const { t } = useT("os.idp.oidc");
+  const { t } = useT(I18N_MODULE);
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showStatusDialog, setShowStatusDialog] = useState(false);

@@ -43,7 +43,10 @@ import {
   type SecretResult,
   type SecretStatus,
 } from "@/cross-modules/secrets/models/secret.model";
-import { useRevealSecret, useSecretTags } from "@/cross-modules/secrets/hooks/use-secret-management";
+import {
+  useRevealSecret,
+  useSecretTags,
+} from "@/cross-modules/secrets/hooks/use-secret-management";
 import { describeSecretError } from "@/cross-modules/secrets/utils/secret-error";
 import { SecretDetail } from "../secret-detail/secret-detail";
 import { RevealSecretModal } from "../reveal-secret-modal/reveal-secret-modal";
@@ -56,13 +59,15 @@ import {
 } from "../secret-action-dialog/secret-action-dialog";
 import { useT, tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.secrets";
+
 const STATUS_VARIANT: Record<SecretStatus, "success" | "warning" | "secondary"> = {
   active: "success",
   locked: "warning",
   deleted: "secondary",
 };
 
-const noReadPermission = () => tStatic("os.secrets", "SECRET_ROW.YOU_DO_NOT_HAVE_PERMISSION");
+const noReadPermission = () => tStatic(I18N_MODULE, "SECRET_ROW.YOU_DO_NOT_HAVE_PERMISSION");
 
 const formatCreated = (value?: string | null): string => {
   if (!value) return "—";
@@ -138,7 +143,7 @@ interface SecretRowProps {
  * root override are all already folded into it, so nothing here re-derives the rule.
  */
 export function SecretRow({ secret }: SecretRowProps) {
-  const { t } = useT("os.secrets");
+  const { t } = useT(I18N_MODULE);
   const [expanded, setExpanded] = useState(false);
   const [revealOpen, setRevealOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -169,7 +174,12 @@ export function SecretRow({ secret }: SecretRowProps) {
       await navigator.clipboard.writeText(value);
       showSuccessToast({ description: t("SECRET_ROW.SECRET_VALUE_COPIED_TO_THE") });
     } catch (error) {
-      showErrorToast({ errors: describeSecretError(error, tStatic("os.secrets", "SECRET_ROW.COULD_NOT_COPY_THE_VALUE")).message });
+      showErrorToast({
+        errors: describeSecretError(
+          error,
+          tStatic(I18N_MODULE, "SECRET_ROW.COULD_NOT_COPY_THE_VALUE"),
+        ).message,
+      });
     }
   };
 
@@ -235,7 +245,10 @@ export function SecretRow({ secret }: SecretRowProps) {
         ) : (
           <>
             <TableCell className="py-3.5">
-              <Badge variant={STATUS_VARIANT[secret.status]} className="w-fit whitespace-nowrap font-normal">
+              <Badge
+                variant={STATUS_VARIANT[secret.status]}
+                className="w-fit whitespace-nowrap font-normal"
+              >
                 {SECRET_STATUS_LABEL[secret.status]}
               </Badge>
             </TableCell>
@@ -360,9 +373,7 @@ export function SecretRow({ secret }: SecretRowProps) {
       {revealOpen && (
         <RevealSecretModal open={revealOpen} onOpenChange={setRevealOpen} secret={secret} />
       )}
-      {editOpen && (
-        <SecretFormModal open={editOpen} onOpenChange={setEditOpen} secret={secret} />
-      )}
+      {editOpen && <SecretFormModal open={editOpen} onOpenChange={setEditOpen} secret={secret} />}
       {rotateOpen && (
         <RotateSecretModal open={rotateOpen} onOpenChange={setRotateOpen} secret={secret} />
       )}

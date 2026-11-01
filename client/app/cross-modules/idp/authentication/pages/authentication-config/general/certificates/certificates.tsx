@@ -40,6 +40,8 @@ import { MapJwtClaimModal } from "./map-jwt-claim-modal";
 import { ProviderDetails } from "./provider-details";
 import { ProviderFormModal } from "./provider-form-modal";
 
+const I18N_MODULE = "os.idp.auth";
+
 const LoadingSkeleton = () => (
   <Card>
     <CardContent className="space-y-3 pt-4">
@@ -78,7 +80,7 @@ function ProviderCard({
   onMapClaims,
   onDelete,
 }: Readonly<ProviderCardProps>) {
-  const { t } = useT("os.idp.auth");
+  const { t } = useT(I18N_MODULE);
   const icon = providerIcon(provider.providerName);
 
   return (
@@ -185,7 +187,10 @@ function ProviderCard({
             value={provider.algorithms?.map(algorithmLabel).join(", ") || "—"}
           />
           <Detail label={t("CERTIFICATES.KEY_SOURCE")} value={keySourceLabel(provider)} />
-          <Detail label={t("CERTIFICATES.USER_ID_CLAIM")} value={provider.claimsMapping?.userId || "—"} />
+          <Detail
+            label={t("CERTIFICATES.USER_ID_CLAIM")}
+            value={provider.claimsMapping?.userId || "—"}
+          />
         </div>
       </CardContent>
     </Card>
@@ -230,7 +235,7 @@ function TrustToggle({
   isPending,
   onToggle,
 }: Readonly<TrustToggleProps>) {
-  const { t } = useT("os.idp.auth");
+  const { t } = useT(I18N_MODULE);
   const disabled = isLoading || isError || (!checked && !canEnable);
   const helper =
     !isLoading && !isError && !checked && !canEnable
@@ -279,17 +284,15 @@ function TrustToggle({
 }
 
 export const Certificates = () => {
-  const { t } = useT("os.idp.auth");
+  const { t } = useT(I18N_MODULE);
   const projectKey = useProjectStore().selectedProject?.tenantId ?? "";
   const {
     data: projectResponse,
     isLoading: isProjectLoading,
     isError: isProjectError,
   } = useGetProject();
-  const {
-    data: providers,
-    isLoading: isProvidersLoading,
-  } = useGetThirdPartyJwtProviders(projectKey);
+  const { data: providers, isLoading: isProvidersLoading } =
+    useGetThirdPartyJwtProviders(projectKey);
   const { mutateAsync: deleteProvider } = useDeleteThirdPartyJwtProvider();
   const { mutateAsync: saveProvider, isPending: isTogglingActive } = useSaveThirdPartyJwtProvider();
   const { mutateAsync: updateTrust, isPending: isTrustPending } = useUpdateThirdPartyJwtEnabled();
@@ -384,7 +387,9 @@ export const Certificates = () => {
     }
 
     if (provider.itemId === openItemId) void setOpenItemId(null);
-    showSuccessToast({ description: t("CERTIFICATES.PROVIDER_REMOVED", { name: provider.providerName }) });
+    showSuccessToast({
+      description: t("CERTIFICATES.PROVIDER_REMOVED", { name: provider.providerName }),
+    });
   };
 
   const trustToggle = (
@@ -459,7 +464,9 @@ export const Certificates = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {statusTarget?.isActive ? t("CERTIFICATES.DISABLE_PROVIDER") : t("CERTIFICATES.ENABLE_PROVIDER")}
+              {statusTarget?.isActive
+                ? t("CERTIFICATES.DISABLE_PROVIDER")
+                : t("CERTIFICATES.ENABLE_PROVIDER")}
             </DialogTitle>
             <DialogDescription>
               {statusTarget?.isActive

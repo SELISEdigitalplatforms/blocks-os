@@ -3,6 +3,8 @@ import { isHttpErrorStatus } from "@/lib/http/http-error.util";
 import { SECRET_ERROR_REASON } from "@/cross-modules/secrets/models/secret.model";
 import { tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.secrets";
+
 /**
  * Normalised view of a failed secret call.
  *
@@ -22,12 +24,20 @@ export interface SecretErrorInfo {
 }
 
 const STATUS_MESSAGES: Record<number, string> = {
-  get 403() { return tStatic("os.secrets", "SECRET_ERROR.YOU_DO_NOT_HAVE_PERMISSION"); },
-  get 404() { return tStatic("os.secrets", "SECRET_ERROR.THAT_SECRET_NO_LONGER_EXISTS"); },
-  get 409() { return tStatic("os.secrets", "SECRET_ERROR.THE_SECRETS_STATUS_HAS_CHANGED"); },
+  get 403() {
+    return tStatic(I18N_MODULE, "SECRET_ERROR.YOU_DO_NOT_HAVE_PERMISSION");
+  },
+  get 404() {
+    return tStatic(I18N_MODULE, "SECRET_ERROR.THAT_SECRET_NO_LONGER_EXISTS");
+  },
+  get 409() {
+    return tStatic(I18N_MODULE, "SECRET_ERROR.THE_SECRETS_STATUS_HAS_CHANGED");
+  },
   // Deliberately generic, and it matches what the backend already sends: the underlying vault
   // error can name hosts and credential types that must not reach a user.
-  get 502() { return tStatic("os.secrets", "SECRET_ERROR.THE_SECRET_STORE_IS_CURRENTLY"); },
+  get 502() {
+    return tStatic(I18N_MODULE, "SECRET_ERROR.THE_SECRET_STORE_IS_CURRENTLY");
+  },
 };
 
 const REASON_FIELDS: Record<string, SecretErrorInfo["field"]> = {
@@ -41,15 +51,33 @@ const REASON_FIELDS: Record<string, SecretErrorInfo["field"]> = {
 };
 
 const REASON_MESSAGES: Record<string, string> = {
-  get [SECRET_ERROR_REASON.NameInvalid]() { return tStatic("os.secrets", "SECRET_ERROR.USE_LETTERS_DIGITS_DOT_UNDERSCORE"); },
-  get [SECRET_ERROR_REASON.NameTooLong]() { return tStatic("os.secrets", "SECRET_ERROR.THE_NAME_IS_TOO_LONG"); },
-  get [SECRET_ERROR_REASON.NameRequired]() { return tStatic("os.secrets", "SECRET_ERROR.A_NAME_IS_REQUIRED"); },
-  get [SECRET_ERROR_REASON.DescriptionTooLong]() { return tStatic("os.secrets", "SECRET_ERROR.THE_DESCRIPTION_IS_TOO_LONG"); },
-  get [SECRET_ERROR_REASON.ValueRequired]() { return tStatic("os.secrets", "SECRET_ERROR.A_VALUE_IS_REQUIRED"); },
-  get [SECRET_ERROR_REASON.ValueTooLarge]() { return tStatic("os.secrets", "SECRET_ERROR.THE_VALUE_IS_LARGER_THAN"); },
-  get [SECRET_ERROR_REASON.InvalidType]() { return tStatic("os.secrets", "SECRET_ERROR.THAT_SECRET_TYPE_IS_NOT"); },
-  get [SECRET_ERROR_REASON.BatchTooLarge]() { return tStatic("os.secrets", "SECRET_ERROR.TOO_MANY_SECRETS_IN_ONE"); },
-  get [SECRET_ERROR_REASON.DuplicateNameInBatch]() { return tStatic("os.secrets", "SECRET_ERROR.THE_BATCH_CONTAINS_THE_SAME"); },
+  get [SECRET_ERROR_REASON.NameInvalid]() {
+    return tStatic(I18N_MODULE, "SECRET_ERROR.USE_LETTERS_DIGITS_DOT_UNDERSCORE");
+  },
+  get [SECRET_ERROR_REASON.NameTooLong]() {
+    return tStatic(I18N_MODULE, "SECRET_ERROR.THE_NAME_IS_TOO_LONG");
+  },
+  get [SECRET_ERROR_REASON.NameRequired]() {
+    return tStatic(I18N_MODULE, "SECRET_ERROR.A_NAME_IS_REQUIRED");
+  },
+  get [SECRET_ERROR_REASON.DescriptionTooLong]() {
+    return tStatic(I18N_MODULE, "SECRET_ERROR.THE_DESCRIPTION_IS_TOO_LONG");
+  },
+  get [SECRET_ERROR_REASON.ValueRequired]() {
+    return tStatic(I18N_MODULE, "SECRET_ERROR.A_VALUE_IS_REQUIRED");
+  },
+  get [SECRET_ERROR_REASON.ValueTooLarge]() {
+    return tStatic(I18N_MODULE, "SECRET_ERROR.THE_VALUE_IS_LARGER_THAN");
+  },
+  get [SECRET_ERROR_REASON.InvalidType]() {
+    return tStatic(I18N_MODULE, "SECRET_ERROR.THAT_SECRET_TYPE_IS_NOT");
+  },
+  get [SECRET_ERROR_REASON.BatchTooLarge]() {
+    return tStatic(I18N_MODULE, "SECRET_ERROR.TOO_MANY_SECRETS_IN_ONE");
+  },
+  get [SECRET_ERROR_REASON.DuplicateNameInBatch]() {
+    return tStatic(I18N_MODULE, "SECRET_ERROR.THE_BATCH_CONTAINS_THE_SAME");
+  },
 };
 
 /**
@@ -59,7 +87,9 @@ const REASON_MESSAGES: Record<string, string> = {
  */
 const REASON_STATUS_MESSAGES: Record<string, Partial<Record<number, string>>> = {
   [SECRET_ERROR_REASON.StatusDeleted]: {
-    get 400() { return tStatic("os.secrets", "SECRET_ERROR.THIS_SECRET_IS_ARCHIVED_RESTORE"); },
+    get 400() {
+      return tStatic(I18N_MODULE, "SECRET_ERROR.THIS_SECRET_IS_ARCHIVED_RESTORE");
+    },
   },
 };
 
@@ -82,7 +112,7 @@ const firstString = (value: string | string[] | undefined): string | undefined =
 
 export const describeSecretError = (
   error: unknown,
-  fallback = tStatic("os.secrets", "SECRET_ERROR.SOMETHING_WENT_WRONG_PLEASE_TRY"),
+  fallback = tStatic(I18N_MODULE, "SECRET_ERROR.SOMETHING_WENT_WRONG_PLEASE_TRY"),
 ): SecretErrorInfo => {
   const status = statusOf(error);
   const errors = isErrorWithErrors(error) ? error.errors : undefined;
@@ -94,9 +124,7 @@ export const describeSecretError = (
   const serverMessage = errors
     ? firstString(
         Object.entries(errors).find(([key]) => key !== "reason")?.[1] as
-          | string
-          | string[]
-          | undefined,
+          string | string[] | undefined,
       )
     : undefined;
 

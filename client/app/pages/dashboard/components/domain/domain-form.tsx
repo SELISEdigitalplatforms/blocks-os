@@ -104,7 +104,9 @@ export const DomainForm = ({ application, onAfterSubmit }: DomainFormProps) => {
           name="domain"
           render={({ field }) => (
             <FormItem className="space-y-1.5">
-              <FormLabel className="text-sm font-medium text-medium-emphasis">{t("DOMAIN_FORM.DOMAIN")}</FormLabel>
+              <FormLabel className="text-sm font-medium text-medium-emphasis">
+                {t("DOMAIN_FORM.DOMAIN")}
+              </FormLabel>
               <FormControl>
                 <div className="flex items-center rounded-md border border-input bg-background px-3 py-2">
                   <span className="text-muted-foreground">{t("DOMAIN_FORM.HTTPS")}</span>

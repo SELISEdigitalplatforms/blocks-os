@@ -46,6 +46,9 @@ import { ChevronDown, X } from "lucide-react";
 import { useEffect, useRef, type RefObject } from "react";
 import { useFormContext } from "react-hook-form";
 
+const KEY_ATTRIBUTE_NAME = "RULE_CONDITION_ROW.ATTRIBUTE_NAME";
+const KEY_NOT_SET = "RULE_CONDITION_ROW.NOT_SET";
+
 export type RuleCellKey = "source" | "field" | "operator" | "compareSource" | "compareValue";
 
 export interface SchemaField {
@@ -272,7 +275,9 @@ const CompareFieldMultiSelect = ({
           className="flex h-9 w-full min-w-0 items-center justify-between rounded-md border border-input bg-background px-3 text-xs"
         >
           <span className="truncate text-left">
-            {selectedValues.length > 0 ? selectedValues.join(", ") : t("RULE_CONDITION_ROW.SELECT_FIELDS")}
+            {selectedValues.length > 0
+              ? selectedValues.join(", ")
+              : t("RULE_CONDITION_ROW.SELECT_FIELDS")}
           </span>
           <ChevronDown className="ml-1 h-3.5 w-3.5 shrink-0 opacity-50" />
         </button>
@@ -566,7 +571,8 @@ export const RuleConditionRow = ({
     const isFilled = Boolean(cell.label);
     const disabled = !cell.reachable;
     let ariaLabel: string | undefined;
-    if (!disabled) ariaLabel = isFilled ? cell.label : t("RULE_CONDITION_ROW.SET_CELL", { title: cell.title });
+    if (!disabled)
+      ariaLabel = isFilled ? cell.label : t("RULE_CONDITION_ROW.SET_CELL", { title: cell.title });
 
     return (
       <Popover
@@ -595,7 +601,7 @@ export const RuleConditionRow = ({
               optionsChipTone(disabled, isFilled),
             )}
           >
-            <span className="block truncate">{isFilled ? cell.label : t("RULE_CONDITION_ROW.NOT_SET")}</span>
+            <span className="block truncate">{isFilled ? cell.label : t(KEY_NOT_SET)}</span>
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-52 p-0" align="start">
@@ -635,8 +641,8 @@ export const RuleConditionRow = ({
               // Only an access attribute reaches here: the other left fields are picked from the chip.
               <Input
                 className="h-9 w-full min-w-0 rounded-md px-3 text-xs"
-                placeholder={t("RULE_CONDITION_ROW.ATTRIBUTE_NAME")}
-                aria-label={t("RULE_CONDITION_ROW.ATTRIBUTE_NAME")}
+                placeholder={t(KEY_ATTRIBUTE_NAME)}
+                aria-label={t(KEY_ATTRIBUTE_NAME)}
                 value={getAuthAttributeName(field.value)}
                 onChange={(event) =>
                   field.onChange(
@@ -661,8 +667,8 @@ export const RuleConditionRow = ({
             return (
               <Input
                 className="h-9 w-full min-w-0 rounded-md px-3 text-xs"
-                placeholder={t("RULE_CONDITION_ROW.ATTRIBUTE_NAME")}
-                aria-label={t("RULE_CONDITION_ROW.ATTRIBUTE_NAME")}
+                placeholder={t(KEY_ATTRIBUTE_NAME)}
+                aria-label={t(KEY_ATTRIBUTE_NAME)}
                 value={getAuthAttributeName(field.value)}
                 onChange={(event) =>
                   field.onChange(
@@ -779,7 +785,7 @@ export const RuleConditionRow = ({
   };
 
   const renderCell = (cell: (typeof cellDefs)[number]) => {
-      if (!cell.applicable) return null;
+    if (!cell.applicable) return null;
 
     // Operand/operator columns are a fixed option list opened
     // with a single click on a popover — renderOptionsChip
@@ -818,7 +824,7 @@ export const RuleConditionRow = ({
           aria-hidden="true"
           className="flex h-8 min-w-0 max-w-full items-center justify-center truncate rounded-md border border-dashed border-border/40 px-3 text-center text-xs text-muted-foreground/40"
         >
-          {t("RULE_CONDITION_ROW.NOT_SET")}
+          {t(KEY_NOT_SET)}
         </div>
       );
     }
@@ -850,7 +856,7 @@ export const RuleConditionRow = ({
             : "border-dashed border-border/50 bg-background text-muted-foreground hover:bg-muted/30",
         )}
       >
-        <span className="block truncate">{isFilled ? cell.label : t("RULE_CONDITION_ROW.NOT_SET")}</span>
+        <span className="block truncate">{isFilled ? cell.label : t(KEY_NOT_SET)}</span>
       </button>
     );
   };
@@ -887,4 +893,3 @@ export const RuleConditionRow = ({
     </Card>
   );
 };
-

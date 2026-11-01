@@ -1,5 +1,7 @@
 import { tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.lmt";
+
 export const LOG_LEVEL = {
   Information: "Information",
   Warning: "Warning",
@@ -20,20 +22,20 @@ export const getLogFormatTimestamp = (timestamp: string) => {
 /** Relative windows shared by the logs and traces filters, coarsest unit last. */
 export const getLmtTimeRanges = () =>
   [
-    { label: tStatic("os.lmt", "UTILS.LAST_5_MINUTES"), value: "5m", minutes: 5 },
-    { label: tStatic("os.lmt", "UTILS.LAST_15_MINUTES"), value: "15m", minutes: 15 },
-    { label: tStatic("os.lmt", "UTILS.LAST_30_MINUTES"), value: "30m", minutes: 30 },
-    { label: tStatic("os.lmt", "UTILS.LAST_HOUR"), value: "1h", minutes: 60 },
-    { label: tStatic("os.lmt", "UTILS.LAST_6_HOURS"), value: "6h", minutes: 6 * 60 },
-    { label: tStatic("os.lmt", "UTILS.LAST_24_HOURS"), value: "24h", minutes: 24 * 60 },
+    { label: tStatic(I18N_MODULE, "UTILS.LAST_5_MINUTES"), value: "5m", minutes: 5 },
+    { label: tStatic(I18N_MODULE, "UTILS.LAST_15_MINUTES"), value: "15m", minutes: 15 },
+    { label: tStatic(I18N_MODULE, "UTILS.LAST_30_MINUTES"), value: "30m", minutes: 30 },
+    { label: tStatic(I18N_MODULE, "UTILS.LAST_HOUR"), value: "1h", minutes: 60 },
+    { label: tStatic(I18N_MODULE, "UTILS.LAST_6_HOURS"), value: "6h", minutes: 6 * 60 },
+    { label: tStatic(I18N_MODULE, "UTILS.LAST_24_HOURS"), value: "24h", minutes: 24 * 60 },
   ] as const;
 
 export const getTraceStatusClasses = () =>
   [
-    { label: tStatic("os.lmt", "UTILS.N_2XX_SUCCESS"), value: "2" },
-    { label: tStatic("os.lmt", "UTILS.N_3XX_REDIRECT"), value: "3" },
-    { label: tStatic("os.lmt", "UTILS.N_4XX_CLIENT_ERROR"), value: "4" },
-    { label: tStatic("os.lmt", "UTILS.N_5XX_SERVER_ERROR"), value: "5" },
+    { label: tStatic(I18N_MODULE, "UTILS.N_2XX_SUCCESS"), value: "2" },
+    { label: tStatic(I18N_MODULE, "UTILS.N_3XX_REDIRECT"), value: "3" },
+    { label: tStatic(I18N_MODULE, "UTILS.N_4XX_CLIENT_ERROR"), value: "4" },
+    { label: tStatic(I18N_MODULE, "UTILS.N_5XX_SERVER_ERROR"), value: "5" },
   ] as const;
 
 /**

@@ -16,6 +16,8 @@ import { LogStackTrace } from "../../log-stack-trace";
 import { logServiceOf } from "./trace-story.util";
 import { useT, tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.lmt";
+
 export const LOG_PAGE_SIZE = 25;
 
 export type LogScope = "step" | "service";
@@ -37,10 +39,12 @@ const useTraceLogs = ({ payload, enabled, requestId }: LogsQuery) => {
 };
 
 const emptyReason = (step: FlowStep) => {
-  if (step.traffic === "data") return tStatic("os.lmt", "TRACE_STORY_LOGS.THIS_IS_A_DATABASE_CALL");
-  if (step.traffic === "cache") return tStatic("os.lmt", "TRACE_STORY_LOGS.THIS_IS_A_CACHE_CALL");
-  return tStatic("os.lmt", "TRACE_STORY_LOGS.SERVICE_WROTE_NOTHING_DURING_STEP", {
-    service: logServiceOf(step) || tStatic("os.lmt", "TRACE_STORY_LOGS.THE_SERVICE"),
+  if (step.traffic === "data")
+    return tStatic(I18N_MODULE, "TRACE_STORY_LOGS.THIS_IS_A_DATABASE_CALL");
+  if (step.traffic === "cache")
+    return tStatic(I18N_MODULE, "TRACE_STORY_LOGS.THIS_IS_A_CACHE_CALL");
+  return tStatic(I18N_MODULE, "TRACE_STORY_LOGS.SERVICE_WROTE_NOTHING_DURING_STEP", {
+    service: logServiceOf(step) || tStatic(I18N_MODULE, "TRACE_STORY_LOGS.THE_SERVICE"),
   });
 };
 
@@ -64,7 +68,7 @@ const LogRow = ({
   stepOf?: (spanId?: string) => FlowStep | undefined;
   onSelectStep: (index: number) => void;
 }) => {
-  const { t } = useT("os.lmt");
+  const { t } = useT(I18N_MODULE);
   const step = stepOf?.(log.spanId);
   const failed = getLogLevelBadgeVariant(log.level) === "error";
   return (
@@ -132,8 +136,8 @@ const buildLogsPayload = (
 
 const emptyTitle = (scope: LogScope, service: string) =>
   scope === "step"
-    ? tStatic("os.lmt", "TRACE_STORY_LOGS.NO_LOGS_WRITTEN_DURING_STEP")
-    : tStatic("os.lmt", "TRACE_STORY_LOGS.SERVICE_WROTE_NO_LOGS", { service });
+    ? tStatic(I18N_MODULE, "TRACE_STORY_LOGS.NO_LOGS_WRITTEN_DURING_STEP")
+    : tStatic(I18N_MODULE, "TRACE_STORY_LOGS.SERVICE_WROTE_NO_LOGS", { service });
 
 const EmptyLogs = ({
   scope,
@@ -152,7 +156,7 @@ const EmptyLogs = ({
   onSelectStep: (index: number) => void;
   onScopeChange: (scope: LogScope) => void;
 }) => {
-  const { t } = useT("os.lmt");
+  const { t } = useT(I18N_MODULE);
   const forStep = scope === "step";
   return (
     <div className="flex flex-col items-start gap-3 px-5 py-6 text-sm">
@@ -183,7 +187,7 @@ const LogsPager = ({
   total: number;
   setPage: (page: number) => void;
 }) => {
-  const { t } = useT("os.lmt");
+  const { t } = useT(I18N_MODULE);
   return (
     <div className="flex items-center justify-between gap-3 px-5 py-3 text-xs">
       <Button
@@ -234,7 +238,7 @@ const LogsBody = ({
   onSelectStep: (index: number) => void;
   onScopeChange: (scope: LogScope) => void;
 }) => {
-  const { t } = useT("os.lmt");
+  const { t } = useT(I18N_MODULE);
   const [page, setPage] = useState(0);
   const payload = buildLogsPayload(scope, step, service, errorsOnly, page);
   const hasSpan = scope === "service" || Boolean(step.span.spanId);
@@ -349,7 +353,7 @@ export const TraceStoryLogs = ({
   stepOf: (spanId?: string) => FlowStep | undefined;
   onSelectStep: (index: number) => void;
 }) => {
-  const { t } = useT("os.lmt");
+  const { t } = useT(I18N_MODULE);
   const [scope, setScope] = useState<LogScope>("step");
   const [errorsOnly, setErrorsOnly] = useState(false);
   const span = step.span;

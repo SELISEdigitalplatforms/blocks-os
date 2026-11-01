@@ -121,7 +121,9 @@ export const AddSSORole = ({ onAdd, roles }: AddSSORoleProps) => {
                   </div>
                 ))
               ) : (
-                <div className="flex h-24 items-center justify-center">{t("ADD_SSO_ROLE.EMPTY")}</div>
+                <div className="flex h-24 items-center justify-center">
+                  {t("ADD_SSO_ROLE.EMPTY")}
+                </div>
               )}
             </div>
             {/* <Table>

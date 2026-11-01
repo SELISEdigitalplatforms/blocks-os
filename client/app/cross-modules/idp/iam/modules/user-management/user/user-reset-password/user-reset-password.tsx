@@ -13,11 +13,7 @@ type UserResetPasswordProps = {
 };
 
 // Uses the protected admin reset (no captcha), not the public forgot-password flow.
-export const UserResetPassword = ({
-  userId,
-  open,
-  setOpen,
-}: Readonly<UserResetPasswordProps>) => {
+export const UserResetPassword = ({ userId, open, setOpen }: Readonly<UserResetPasswordProps>) => {
   const { t } = useT("os.idp.users");
   const { mutateAsync, isPending } = useAdminResetPassword();
 

@@ -3,10 +3,7 @@ import { IRole } from "@blocks-idp/iam/models/role";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
-import {
-  useGetUserById,
-  useUpdateUserAccessControl,
-} from "@blocks-idp/iam/hooks/use-user";
+import { useGetUserById, useUpdateUserAccessControl } from "@blocks-idp/iam/hooks/use-user";
 import { createRoleStub } from "@blocks-idp/iam/utils/role-stub";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
@@ -61,8 +58,7 @@ export const SingleOrgAccess = ({ userId, projectKey }: SingleOrgAccessProps) =>
 
   const user = userData?.data;
   const orgId = DEFAULT_ORG_ID;
-  const roleSlugs =
-    user?.OrganizationsRoles?.[orgId] ?? user?.roles?.[orgId] ?? [];
+  const roleSlugs = user?.OrganizationsRoles?.[orgId] ?? user?.roles?.[orgId] ?? [];
   const permissionResources =
     user?.OrganizationsPermissions?.[orgId] ?? user?.permissions?.[orgId] ?? [];
 
@@ -127,9 +123,7 @@ export const SingleOrgAccess = ({ userId, projectKey }: SingleOrgAccessProps) =>
     if (!user) return;
 
     const hydrationKey = `${user.itemId}:${rolesData?.data?.length ?? 0}:${permissionsData?.data?.length ?? 0}`;
-    const shouldHydrate =
-      !isInitialized ||
-      hydrationKey !== hydratedKeyRef.current;
+    const shouldHydrate = !isInitialized || hydrationKey !== hydratedKeyRef.current;
 
     if (!shouldHydrate) return;
 
@@ -186,4 +180,3 @@ export const SingleOrgAccess = ({ userId, projectKey }: SingleOrgAccessProps) =>
     />
   );
 };
- 

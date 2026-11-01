@@ -40,6 +40,10 @@ import {
 } from "@blocks-idp/authentication/models/jwt.claim.model";
 import { tStatic } from "@seliseblocks/genesis-os";
 
+const KEY_INVALID_PROVIDE_A_VALID_JWKS = "PROJECT_SERVICE.INVALID_PROVIDE_A_VALID_JWKS";
+
+const I18N_MODULE = "os.identifier";
+
 export class ProjectService {
   getProjects(page: number, pageSize: number, tenantGroupId: string): Promise<IProjectGroup[]> {
     const url = `${PROJECT_ENDPOINTS.GETS}?page=${page}&pageSize=${pageSize}&tenantGroupId=${tenantGroupId}`;
@@ -166,15 +170,11 @@ export class ProjectService {
   }
 
   // Data Migration Methods
-  initiateMigration(
-    payload: IMigrationRequest,
-  ): Promise<IMigrationInitiateResponse> {
+  initiateMigration(payload: IMigrationRequest): Promise<IMigrationInitiateResponse> {
     return http.post(MIGRATION_ENDPOINTS.MIGRATE, payload, undefined, { absoluteUrl: true });
   }
 
-  verifyMigration(
-    payload: IVerifyMigrationRequest,
-  ): Promise<IMigrationVerificationResponse> {
+  verifyMigration(payload: IVerifyMigrationRequest): Promise<IMigrationVerificationResponse> {
     return http.post(MIGRATION_ENDPOINTS.VERIFY, payload, undefined, { absoluteUrl: true });
   }
 
@@ -187,9 +187,7 @@ export class ProjectService {
     return http.post(PROJECT_ENDPOINTS.UPDATE_TOKEN_VALIDATION, payload);
   }
 
-  getPublicCertificateInformation(
-
-  ): Promise<IGetPublicCertificateResponse | null> {
+  getPublicCertificateInformation(): Promise<IGetPublicCertificateResponse | null> {
     const url = `${PROJECT_ENDPOINTS.GET_TOKEN_VALIDATION}`;
     return http.get<IGetPublicCertificateResponse | null>(url);
   }
@@ -212,7 +210,7 @@ export class ProjectService {
         // HTTP error
         return {
           isValid: false,
-          error: tStatic("os.identifier", "PROJECT_SERVICE.INVALID_PROVIDE_A_VALID_JWKS"),
+          error: tStatic(I18N_MODULE, KEY_INVALID_PROVIDE_A_VALID_JWKS),
         };
       }
 
@@ -222,7 +220,7 @@ export class ProjectService {
         // Response is not JSON
         return {
           isValid: false,
-          error: tStatic("os.identifier", "PROJECT_SERVICE.INVALID_PROVIDE_A_VALID_JWKS"),
+          error: tStatic(I18N_MODULE, KEY_INVALID_PROVIDE_A_VALID_JWKS),
         };
       }
 
@@ -234,7 +232,7 @@ export class ProjectService {
         // Missing or invalid 'keys' array in JWKS
         return {
           isValid: false,
-          error: tStatic("os.identifier", "PROJECT_SERVICE.INVALID_PROVIDE_A_VALID_JWKS"),
+          error: tStatic(I18N_MODULE, KEY_INVALID_PROVIDE_A_VALID_JWKS),
         };
       }
 
@@ -243,7 +241,7 @@ export class ProjectService {
       console.error("JWKS URL Validation Error:", error);
       return {
         isValid: false,
-        error: tStatic("os.identifier", "PROJECT_SERVICE.INVALID_PROVIDE_A_VALID_JWKS"),
+        error: tStatic(I18N_MODULE, KEY_INVALID_PROVIDE_A_VALID_JWKS),
       };
     }
   }

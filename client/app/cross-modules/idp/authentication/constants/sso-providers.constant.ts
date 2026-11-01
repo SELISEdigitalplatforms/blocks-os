@@ -15,6 +15,10 @@ import {
   ISsoProviderFrontendMeta,
 } from "@blocks-idp/authentication/models/sso.model";
 
+const KEY_HELP_TITLE = "SSO_PROVIDERS_CONSTANT.HELP_TITLE";
+
+const I18N_MODULE = "os.idp.auth";
+
 /**
  * Identifiers for the single sign-on providers supported by the platform.
  * The string values are persisted in configuration documents and exchanged
@@ -97,31 +101,31 @@ export const SOCIAL_AUTH_PROVIDERS_CONFIG: Partial<
   google: createProviderConfig(SSO_PROVIDERS.google, {
     label: "Google",
     get description() {
-      return tStatic("os.idp.auth", "SSO_PROVIDERS_CONSTANT.GOOGLE_DESCRIPTION");
+      return tStatic(I18N_MODULE, "SSO_PROVIDERS_CONSTANT.GOOGLE_DESCRIPTION");
     },
     imageSrc: Google,
     isAvailable: true,
     isConfigured: false,
     get helpTitle() {
-      return tStatic("os.idp.auth", "SSO_PROVIDERS_CONSTANT.HELP_TITLE");
+      return tStatic(I18N_MODULE, KEY_HELP_TITLE);
     },
     get helpBody() {
-      return tStatic("os.idp.auth", "SSO_PROVIDERS_CONSTANT.GOOGLE_HELP_BODY");
+      return tStatic(I18N_MODULE, "SSO_PROVIDERS_CONSTANT.GOOGLE_HELP_BODY");
     },
   }),
   microsoft: createProviderConfig(SSO_PROVIDERS.microsoft, {
     label: "Microsoft",
     get description() {
-      return tStatic("os.idp.auth", "SSO_PROVIDERS_CONSTANT.MICROSOFT_DESCRIPTION");
+      return tStatic(I18N_MODULE, "SSO_PROVIDERS_CONSTANT.MICROSOFT_DESCRIPTION");
     },
     imageSrc: Microsoft,
     isAvailable: true,
     isConfigured: false,
     get helpTitle() {
-      return tStatic("os.idp.auth", "SSO_PROVIDERS_CONSTANT.HELP_TITLE");
+      return tStatic(I18N_MODULE, KEY_HELP_TITLE);
     },
     get helpBody() {
-      return tStatic("os.idp.auth", "SSO_PROVIDERS_CONSTANT.MICROSOFT_HELP_BODY");
+      return tStatic(I18N_MODULE, "SSO_PROVIDERS_CONSTANT.MICROSOFT_HELP_BODY");
     },
   }),
   // linkedin: createProviderConfig(SSO_PROVIDERS.linkedin, {
@@ -157,10 +161,10 @@ export const SOCIAL_AUTH_PROVIDERS_CONFIG: Partial<
   // }),
   ownsso: createProviderConfig(SSO_PROVIDERS.ownsso, {
     get label() {
-      return tStatic("os.idp.auth", "SSO_PROVIDERS_CONSTANT.OWNSSO_LABEL");
+      return tStatic(I18N_MODULE, "SSO_PROVIDERS_CONSTANT.OWNSSO_LABEL");
     },
     get description() {
-      return tStatic("os.idp.auth", "SSO_PROVIDERS_CONSTANT.OWNSSO_DESCRIPTION");
+      return tStatic(I18N_MODULE, "SSO_PROVIDERS_CONSTANT.OWNSSO_DESCRIPTION");
     },
     imageSrc: "",
     isAvailable: false,
@@ -175,18 +179,18 @@ export const SOCIAL_AUTH_PROVIDERS_CONFIG: Partial<
  */
 export const BLOCKS_OIDC_HELP: { title: string; body: string } = {
   get title() {
-    return tStatic("os.idp.auth", "SSO_PROVIDERS_CONSTANT.HELP_TITLE");
+    return tStatic(I18N_MODULE, KEY_HELP_TITLE);
   },
   get body() {
-    return tStatic("os.idp.auth", "SSO_PROVIDERS_CONSTANT.BLOCKS_OIDC_HELP_BODY");
+    return tStatic(I18N_MODULE, "SSO_PROVIDERS_CONSTANT.BLOCKS_OIDC_HELP_BODY");
   },
 };
 
 export const BYOS_HELP: { title: string; body: string } = {
   get title() {
-    return tStatic("os.idp.auth", "SSO_PROVIDERS_CONSTANT.HELP_TITLE");
+    return tStatic(I18N_MODULE, KEY_HELP_TITLE);
   },
   get body() {
-    return tStatic("os.idp.auth", "SSO_PROVIDERS_CONSTANT.BYOS_HELP_BODY");
+    return tStatic(I18N_MODULE, "SSO_PROVIDERS_CONSTANT.BYOS_HELP_BODY");
   },
 };

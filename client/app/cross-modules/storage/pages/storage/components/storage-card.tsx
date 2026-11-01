@@ -65,7 +65,11 @@ export const StorageCard = ({ data, onClick, onViewDetails, onEdit }: StorageCar
               <img src="/assets/images/amazon.png" alt="AWS" className="h-5 w-5 object-contain" />
             )}
             {data.provider === "Azure" && (
-              <img src="/assets/images/azure.png" alt={t("STORAGE_CARD.AZURE")} className="h-5 w-5 object-contain" />
+              <img
+                src="/assets/images/azure.png"
+                alt={t("STORAGE_CARD.AZURE")}
+                className="h-5 w-5 object-contain"
+              />
             )}
             {data.provider === "SftpStorage" && <PackageOpen className="h-5 w-5" />}
           </div>

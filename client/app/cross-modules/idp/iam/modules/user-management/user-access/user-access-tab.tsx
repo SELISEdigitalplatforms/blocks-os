@@ -1,10 +1,7 @@
 import { useGetOrganizationConfig } from "@blocks-idp/iam/hooks/use-organization";
 import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
 import { useUserManageability } from "@blocks-idp/iam/hooks/use-user-manageability";
-import {
-  getCannotManageUserTooltip,
-  getOwnRolesTooltip,
-} from "@blocks-idp/iam/utils/grant-scope";
+import { getCannotManageUserTooltip, getOwnRolesTooltip } from "@blocks-idp/iam/utils/grant-scope";
 import {
   Tooltip,
   TooltipContent,

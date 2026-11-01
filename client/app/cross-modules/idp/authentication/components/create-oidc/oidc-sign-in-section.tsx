@@ -15,26 +15,28 @@ import type {
 import type { IdentityProvider } from "@blocks-idp/authentication/models/identity-provider.model";
 import { usesSocialProviders, type CreateOIDCFormValues } from "./utils";
 
+const I18N_MODULE = "os.idp.create-oidc";
+
 type Option<T extends string> = { value: T; id: string; label: string; hint: string };
 
 const getMethodOptions = (): Option<OidcLoginMethod>[] => [
   {
     value: "default",
     id: "loginMethod-default",
-    label: tStatic("os.idp.create-oidc", "OIDC_SIGN_IN_SECTION.OPTION_DEFAULT"),
-    hint: tStatic("os.idp.create-oidc", "OIDC_SIGN_IN_SECTION.METHOD_DEFAULT_HINT"),
+    label: tStatic(I18N_MODULE, "OIDC_SIGN_IN_SECTION.OPTION_DEFAULT"),
+    hint: tStatic(I18N_MODULE, "OIDC_SIGN_IN_SECTION.METHOD_DEFAULT_HINT"),
   },
   {
     value: "password",
     id: "loginMethod-password",
-    label: tStatic("os.idp.create-oidc", "OIDC_SIGN_IN_SECTION.METHOD_PASSWORD"),
-    hint: tStatic("os.idp.create-oidc", "OIDC_SIGN_IN_SECTION.METHOD_PASSWORD_HINT"),
+    label: tStatic(I18N_MODULE, "OIDC_SIGN_IN_SECTION.METHOD_PASSWORD"),
+    hint: tStatic(I18N_MODULE, "OIDC_SIGN_IN_SECTION.METHOD_PASSWORD_HINT"),
   },
   {
     value: "social",
     id: "loginMethod-social",
-    label: tStatic("os.idp.create-oidc", "OIDC_SIGN_IN_SECTION.METHOD_SOCIAL"),
-    hint: tStatic("os.idp.create-oidc", "OIDC_SIGN_IN_SECTION.METHOD_SOCIAL_HINT"),
+    label: tStatic(I18N_MODULE, "OIDC_SIGN_IN_SECTION.METHOD_SOCIAL"),
+    hint: tStatic(I18N_MODULE, "OIDC_SIGN_IN_SECTION.METHOD_SOCIAL_HINT"),
   },
 ];
 
@@ -42,14 +44,14 @@ const getProviderOptions = (): Option<OidcLoginProviders>[] => [
   {
     value: "default",
     id: "loginProviders-default",
-    label: tStatic("os.idp.create-oidc", "OIDC_SIGN_IN_SECTION.OPTION_DEFAULT"),
-    hint: tStatic("os.idp.create-oidc", "OIDC_SIGN_IN_SECTION.PROVIDERS_DEFAULT_HINT"),
+    label: tStatic(I18N_MODULE, "OIDC_SIGN_IN_SECTION.OPTION_DEFAULT"),
+    hint: tStatic(I18N_MODULE, "OIDC_SIGN_IN_SECTION.PROVIDERS_DEFAULT_HINT"),
   },
   {
     value: "selected",
     id: "loginProviders-selected",
-    label: tStatic("os.idp.create-oidc", "OIDC_SIGN_IN_SECTION.PROVIDERS_SELECTED"),
-    hint: tStatic("os.idp.create-oidc", "OIDC_SIGN_IN_SECTION.PROVIDERS_SELECTED_HINT"),
+    label: tStatic(I18N_MODULE, "OIDC_SIGN_IN_SECTION.PROVIDERS_SELECTED"),
+    hint: tStatic(I18N_MODULE, "OIDC_SIGN_IN_SECTION.PROVIDERS_SELECTED_HINT"),
   },
 ];
 
@@ -71,7 +73,7 @@ const OptionCards = <T extends string>({
   isDisabled,
   onChange,
 }: Readonly<OptionCardsProps<T>>) => {
-  const { t } = useT("os.idp.create-oidc");
+  const { t } = useT(I18N_MODULE);
   return (
     <RadioGroup aria-label={label} value={value} onValueChange={(next) => onChange(next as T)}>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -119,7 +121,7 @@ const ProviderChecklist = ({
   selectedIds,
   onChange,
 }: Readonly<ProviderChecklistProps>) => {
-  const { t } = useT("os.idp.create-oidc");
+  const { t } = useT(I18N_MODULE);
   if (providers.length === 0) {
     return (
       <p className="text-xs text-muted-foreground">{t("OIDC_SIGN_IN_SECTION.NO_PROVIDERS")}</p>
@@ -158,7 +160,7 @@ type OidcSignInSectionProps = {
 
 /** Per-client sign-in rule: the method, and which social providers it may use. */
 export const OidcSignInSection = ({ form, tenantId }: Readonly<OidcSignInSectionProps>) => {
-  const { t } = useT("os.idp.create-oidc");
+  const { t } = useT(I18N_MODULE);
   const method = form.watch("loginMethod");
   const providersMode = form.watch("loginProviders");
   const selectedIds = form.watch("loginProviderIds");

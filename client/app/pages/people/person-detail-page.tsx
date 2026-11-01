@@ -55,9 +55,11 @@ export const PersonDetailPage = () => {
   // rendered for them alone.
   // An owner's own grants are the whole catalog, so this doubles as the list of everything
   // grantable — no separate per-person endpoint to fetch it from.
-  const { isOwner, can, menus: catalogMenus } = useProjectPermissions(
-    selectedTenantGroup ?? undefined,
-  );
+  const {
+    isOwner,
+    can,
+    menus: catalogMenus,
+  } = useProjectPermissions(selectedTenantGroup ?? undefined);
 
   const { data: userResponse, isLoading: isUserLoading } = useGetUserById({
     id,
@@ -114,7 +116,12 @@ export const PersonDetailPage = () => {
     <main className="flex min-w-0 flex-1 flex-col gap-6 p-6">
       <div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label={t("PERSON_DETAIL_PAGE.BACK_TO_PEOPLE")}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate(-1)}
+            aria-label={t("PERSON_DETAIL_PAGE.BACK_TO_PEOPLE")}
+          >
             <ArrowLeft className="h-5 w-5" />
           </Button>
           {isLoading ? (

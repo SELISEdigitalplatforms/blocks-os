@@ -20,6 +20,8 @@ import { describeSecretError } from "@/cross-modules/secrets/utils/secret-error"
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isHttpErrorStatus } from "@/lib/http/http-error.util";
 
+const I18N_MODULE = "os.secrets";
+
 /**
  * The secret endpoints resolve the tenant from the request token, so the same URL returns
  * different data per project. The active tenant has to be part of every query key, otherwise
@@ -207,7 +209,8 @@ export const useRevealSecret = () => {
   return useMutation({
     mutationFn: (secretId: string) => secretManagementService.getValue(secretId),
     // No cache write and no toast on success — the caller renders the value and drops it.
-    onError: (error) => toastError(error, tStatic("os.secrets", "USE_SECRET_MANAGEMENT.COULD_NOT_READ_THE_SECRET")),
+    onError: (error) =>
+      toastError(error, tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.COULD_NOT_READ_THE_SECRET")),
     gcTime: 0,
   });
 };
@@ -219,7 +222,9 @@ export const useSetSecret = () => {
     onSuccess: () => {
       invalidateList();
       invalidateTags();
-      showSuccessToast({ description: tStatic("os.secrets", "USE_SECRET_MANAGEMENT.SECRET_CREATED") });
+      showSuccessToast({
+        description: tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.SECRET_CREATED"),
+      });
     },
     // Errors surface as inline field messages in the form (NAME_INVALID maps onto the name
     // input), so no toast here — it would duplicate the field error.
@@ -259,9 +264,12 @@ export const useRotateSecret = () => {
     onSuccess: (_, variables) => {
       invalidateList();
       invalidateItem(variables.secretId);
-      showSuccessToast({ description: tStatic("os.secrets", "USE_SECRET_MANAGEMENT.SECRET_ROTATED") });
+      showSuccessToast({
+        description: tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.SECRET_ROTATED"),
+      });
     },
-    onError: (error) => toastError(error, tStatic("os.secrets", "USE_SECRET_MANAGEMENT.COULD_NOT_ROTATE_THE_SECRET")),
+    onError: (error) =>
+      toastError(error, tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.COULD_NOT_ROTATE_THE_SECRET")),
   });
 };
 
@@ -272,9 +280,12 @@ export const useLockSecret = () => {
     onSuccess: (_, secretId) => {
       invalidateList();
       invalidateItem(secretId);
-      showSuccessToast({ description: tStatic("os.secrets", "USE_SECRET_MANAGEMENT.SECRET_LOCKED") });
+      showSuccessToast({
+        description: tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.SECRET_LOCKED"),
+      });
     },
-    onError: (error) => toastError(error, tStatic("os.secrets", "USE_SECRET_MANAGEMENT.COULD_NOT_LOCK_THE_SECRET")),
+    onError: (error) =>
+      toastError(error, tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.COULD_NOT_LOCK_THE_SECRET")),
   });
 };
 
@@ -285,9 +296,12 @@ export const useUnlockSecret = () => {
     onSuccess: (_, secretId) => {
       invalidateList();
       invalidateItem(secretId);
-      showSuccessToast({ description: tStatic("os.secrets", "USE_SECRET_MANAGEMENT.SECRET_UNLOCKED") });
+      showSuccessToast({
+        description: tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.SECRET_UNLOCKED"),
+      });
     },
-    onError: (error) => toastError(error, tStatic("os.secrets", "USE_SECRET_MANAGEMENT.COULD_NOT_UNLOCK_THE_SECRET")),
+    onError: (error) =>
+      toastError(error, tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.COULD_NOT_UNLOCK_THE_SECRET")),
   });
 };
 
@@ -301,10 +315,11 @@ export const useDeleteSecret = () => {
       invalidateItem(secretId);
       invalidateLinkedConfigurations();
       showSuccessToast({
-        description: tStatic("os.secrets", "USE_SECRET_MANAGEMENT.SECRET_ARCHIVED_FIND_IT_UNDER"),
+        description: tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.SECRET_ARCHIVED_FIND_IT_UNDER"),
       });
     },
-    onError: (error) => toastError(error, tStatic("os.secrets", "USE_SECRET_MANAGEMENT.COULD_NOT_ARCHIVE_THE_SECRET")),
+    onError: (error) =>
+      toastError(error, tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.COULD_NOT_ARCHIVE_THE_SECRET")),
   });
 };
 
@@ -317,9 +332,12 @@ export const useRestoreSecret = () => {
       invalidateList();
       invalidateItem(secretId);
       invalidateLinkedConfigurations();
-      showSuccessToast({ description: tStatic("os.secrets", "USE_SECRET_MANAGEMENT.SECRET_RESTORED") });
+      showSuccessToast({
+        description: tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.SECRET_RESTORED"),
+      });
     },
-    onError: (error) => toastError(error, tStatic("os.secrets", "USE_SECRET_MANAGEMENT.COULD_NOT_RESTORE_THE_SECRET")),
+    onError: (error) =>
+      toastError(error, tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.COULD_NOT_RESTORE_THE_SECRET")),
   });
 };
 
@@ -332,8 +350,11 @@ export const usePurgeSecret = () => {
       invalidateList();
       invalidateItem(secretId);
       invalidateLinkedConfigurations();
-      showSuccessToast({ description: tStatic("os.secrets", "USE_SECRET_MANAGEMENT.SECRET_PURGED") });
+      showSuccessToast({
+        description: tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.SECRET_PURGED"),
+      });
     },
-    onError: (error) => toastError(error, tStatic("os.secrets", "USE_SECRET_MANAGEMENT.COULD_NOT_PURGE_THE_SECRET")),
+    onError: (error) =>
+      toastError(error, tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.COULD_NOT_PURGE_THE_SECRET")),
   });
 };

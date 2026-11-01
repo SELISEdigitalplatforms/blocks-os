@@ -136,7 +136,7 @@ export function MagicUrlsList({ configurations, isLoading }: MagicUrlsListProps)
         ),
       },
     ],
-    [isDeleting],
+    [isDeleting, t],
   );
 
   const table = useReactTable({
@@ -199,7 +199,9 @@ export function MagicUrlsList({ configurations, isLoading }: MagicUrlsListProps)
           onConfirm={handleDelete}
           data={{
             dialogTitle: t("MAGIC_URLS_LIST.DELETE_MAGIC_URL_CONFIGURATION"),
-            dialogSubtitle: t("MAGIC_URLS_LIST.ARE_YOU_SURE_YOU_WANT", { contextName: itemToDelete?.contextName ?? "this configuration" }),
+            dialogSubtitle: t("MAGIC_URLS_LIST.ARE_YOU_SURE_YOU_WANT", {
+              contextName: itemToDelete?.contextName ?? "this configuration",
+            }),
             confirmButton: t("common:DELETE"),
             cancelButton: t("common:CANCEL"),
           }}

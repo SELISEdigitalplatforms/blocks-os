@@ -13,11 +13,13 @@ import { createParser, useQueryState } from "nuqs";
 import { useProjectStore, useT, tStatic } from "@seliseblocks/genesis-os";
 import { useMemo } from "react";
 
+const I18N_MODULE = "os.lmt";
+
 type LogSource = "blocks" | "managed";
 
 const getSourceOptions = (): { label: string; value: LogSource }[] => [
-  { label: tStatic("os.lmt", "LOGS.MANAGED_SERVICE"), value: "blocks" },
-  { label: tStatic("os.lmt", "LOGS.MY_SERVICE"), value: "managed" },
+  { label: tStatic(I18N_MODULE, "LOGS.MANAGED_SERVICE"), value: "blocks" },
+  { label: tStatic(I18N_MODULE, "LOGS.MY_SERVICE"), value: "managed" },
 ];
 
 export const parseAsLogSource = createParser({
@@ -32,7 +34,7 @@ export const parseAsLogSource = createParser({
   },
 });
 export function LogsRoute() {
-  const { t } = useT("os.lmt");
+  const { t } = useT(I18N_MODULE);
   const [source] = useQueryState<LogSource>("source", parseAsLogSource.withDefault("blocks"));
   // Cold and archive rows belong to a restore of this project, so the viewer needs to know
   // which project's restore to look up.

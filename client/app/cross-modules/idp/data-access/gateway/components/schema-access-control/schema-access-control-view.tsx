@@ -57,6 +57,8 @@ import { useTransientStatus } from "@blocks-idp/data-access/gateway/hooks/use-tr
 import { AccessEffectLine } from "./access-effect-line";
 import { AccessPresetList } from "./access-preset-list";
 
+const I18N_MODULE = "os.idp.gateway";
+
 /** What the rule editor's own Save/Update hands back to be sent to the API. */
 interface RuleSetSubmission {
   payload: ICreatePolicyPayload | IUpdatePolicyPayload;
@@ -131,11 +133,10 @@ const AccessTierTiles = ({
   disabled,
   onPick,
 }: Readonly<AccessTierTilesProps>) => {
-  const { t } = useT("os.idp.gateway");
+  const { t } = useT(I18N_MODULE);
   const groupName = useId();
-  const { ref: tilesRef, isNarrow: tilesNarrow } = useNarrowContainer<HTMLDivElement>(
-    NARROW_TILES_WIDTH,
-  );
+  const { ref: tilesRef, isNarrow: tilesNarrow } =
+    useNarrowContainer<HTMLDivElement>(NARROW_TILES_WIDTH);
   const visibleTiers =
     level === "column"
       ? ACCESS_TIER_TILES
@@ -202,28 +203,28 @@ const EmptyCustomConfirmDialog = ({
   subject,
   onAnswer,
 }: Readonly<{ tab: OperationTab; subject: string; onAnswer: (confirmed: boolean) => void }>) => {
-  const { t } = useT("os.idp.gateway");
+  const { t } = useT(I18N_MODULE);
   return (
-  <Dialog open onOpenChange={(open) => !open && onAnswer(false)}>
-    <DialogContent className="mr-4 w-full max-w-[440px] rounded-md">
-      <DialogHeader>
-        <DialogTitle className="text-left text-lg font-semibold leading-7">
-          {gt(NOBODY_TITLE_KEYS[tab], { subject })}
-        </DialogTitle>
-        <DialogDescription className="mt-2 wrap-break-word text-left text-sm font-normal leading-5">
-          {t("ACCESS_VIEW.NOBODY_DESCRIPTION", { subject })}
-        </DialogDescription>
-      </DialogHeader>
-      <DialogFooter className="mt-4 flex flex-row justify-end gap-2">
-        <Button type="button" variant="outline" size="sm" onClick={() => onAnswer(false)}>
-          {t("common:CANCEL")}
-        </Button>
-        <Button type="button" variant="destructive" size="sm" onClick={() => onAnswer(true)}>
-          {t("ACCESS_VIEW.SAVE_ANYWAY")}
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
+    <Dialog open onOpenChange={(open) => !open && onAnswer(false)}>
+      <DialogContent className="mr-4 w-full max-w-[440px] rounded-md">
+        <DialogHeader>
+          <DialogTitle className="text-left text-lg font-semibold leading-7">
+            {gt(NOBODY_TITLE_KEYS[tab], { subject })}
+          </DialogTitle>
+          <DialogDescription className="mt-2 wrap-break-word text-left text-sm font-normal leading-5">
+            {t("ACCESS_VIEW.NOBODY_DESCRIPTION", { subject })}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="mt-4 flex flex-row justify-end gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={() => onAnswer(false)}>
+            {t("common:CANCEL")}
+          </Button>
+          <Button type="button" variant="destructive" size="sm" onClick={() => onAnswer(true)}>
+            {t("ACCESS_VIEW.SAVE_ANYWAY")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -260,7 +261,7 @@ const PolicyListPane = ({
   onDeleteSuccess,
   onDeleteError,
 }: Readonly<PolicyListPaneProps>) => {
-  const { t } = useT("os.idp.gateway");
+  const { t } = useT(I18N_MODULE);
   if (isLoading) {
     return (
       <output
@@ -309,7 +310,7 @@ export const SchemaAccessControlView = forwardRef<
   },
   ref,
 ) {
-  const { t } = useT("os.idp.gateway");
+  const { t } = useT(I18N_MODULE);
   const [showRuleSetForm, setShowRuleSetForm] = useState(false);
 
   // The inspector widens for the rule editor; it needs to
@@ -519,7 +520,11 @@ export const SchemaAccessControlView = forwardRef<
    *  here. */
   const handleFinalSave = async (): Promise<boolean> => {
     if (!isAccessTypeDirty) return true;
-    if (selectedAccessType === ACCESS_TYPES.CUSTOM && policies.length === 0 && !(await emptyCustomConfirm.ask())) {
+    if (
+      selectedAccessType === ACCESS_TYPES.CUSTOM &&
+      policies.length === 0 &&
+      !(await emptyCustomConfirm.ask())
+    ) {
       return false;
     }
     return handleSaveAccessType();
@@ -587,24 +592,24 @@ export const SchemaAccessControlView = forwardRef<
           focused sub-flow with its own header and Back button, and the tier
           picker above it is disabled then anyway. */}
       {!showRuleSetForm && (
-      <div className="flex shrink-0 flex-col gap-3">
-        <div>
-          <div className="mb-2">
-            <p className="text-sm font-semibold text-foreground">{t("ACCESS_VIEW.WHO_CAN_ACCESS")}</p>
-            <p className="text-xs text-muted-foreground">
-              {t("ACCESS_VIEW.CHOOSE_LEVEL")}
-            </p>
+        <div className="flex shrink-0 flex-col gap-3">
+          <div>
+            <div className="mb-2">
+              <p className="text-sm font-semibold text-foreground">
+                {t("ACCESS_VIEW.WHO_CAN_ACCESS")}
+              </p>
+              <p className="text-xs text-muted-foreground">{t("ACCESS_VIEW.CHOOSE_LEVEL")}</p>
+            </div>
+            <AccessTierTiles
+              level={level}
+              isRowLevel={isRowLevel}
+              selectedType={selectedAccessType}
+              disabled={showRuleSetForm}
+              onPick={handleTierPick}
+            />
           </div>
-          <AccessTierTiles
-            level={level}
-            isRowLevel={isRowLevel}
-            selectedType={selectedAccessType}
-            disabled={showRuleSetForm}
-            onPick={handleTierPick}
-          />
+          <AccessEffectLine effect={effect} />
         </div>
-        <AccessEffectLine effect={effect} />
-      </div>
       )}
 
       {/* Always the flex-1 element, even when it renders nothing (any tier
@@ -621,57 +626,57 @@ export const SchemaAccessControlView = forwardRef<
       <div className="flex min-h-0 flex-1 flex-col">
         {currentAccessType === ACCESS_TYPES.CUSTOM &&
           (showRuleSetForm ? (
-          // The form used to snap in the instant a preset/Add was clicked; a
-          // short fade + rise reads as it opening rather than a jump cut.
-          // `dg-rise-in` is the shared one-shot from globals.css.
-          //
-          // Unlike the other branches, this isn't `overflow-y-auto`: the form
-          // scrolls its own content internally and keeps its Cancel/Save
-          // footer outside that scroll region, so the footer needs a bounded
-          // flex height here to pin to, not a scrolling ancestor to hide in.
-          <div key="rule-set-form" className="dg-rise-in flex min-h-0 flex-1 flex-col">
-            <RuleSetForm
-              onCancel={() => {
-                setSeedRuleSet(undefined);
-                setQueuedRuleSet(undefined);
-                setEditingPolicy(undefined);
-                setShowRuleSetForm(false);
-              }}
-              schemaFields={schemaFields}
-              schemaName={schemaName}
-              schemaId={schemaId}
-              operation={operation}
-              fieldNames={fieldNames}
-              editingPolicy={editingPolicy}
-              level={level}
-              seed={seedRuleSet}
-              onStage={handleRuleSetSubmit}
-              isSubmitting={isSavingRuleSet}
-              status={status}
-            />
-          </div>
-        ) : (
-          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
-            <PolicyListPane
-              isLoading={isPolicyListLoading}
-              policies={policies}
-              schemaFields={schemaFields}
-              onApplyPreset={applyPreset}
-              onAddRuleSet={openBlankRuleSetForm}
-              onEditPolicy={(policy) => {
-                setSeedRuleSet(undefined);
-                setQueuedRuleSet(undefined);
-                setEditingPolicy(policy);
-                setShowRuleSetForm(true);
-              }}
-              onDeleteSuccess={() => {
-                setSuccess(t("ACCESS_VIEW.RULE_SET_DELETED"));
-                refetch();
-              }}
-              onDeleteError={setError}
-            />
-          </div>
-        ))}
+            // The form used to snap in the instant a preset/Add was clicked; a
+            // short fade + rise reads as it opening rather than a jump cut.
+            // `dg-rise-in` is the shared one-shot from globals.css.
+            //
+            // Unlike the other branches, this isn't `overflow-y-auto`: the form
+            // scrolls its own content internally and keeps its Cancel/Save
+            // footer outside that scroll region, so the footer needs a bounded
+            // flex height here to pin to, not a scrolling ancestor to hide in.
+            <div key="rule-set-form" className="dg-rise-in flex min-h-0 flex-1 flex-col">
+              <RuleSetForm
+                onCancel={() => {
+                  setSeedRuleSet(undefined);
+                  setQueuedRuleSet(undefined);
+                  setEditingPolicy(undefined);
+                  setShowRuleSetForm(false);
+                }}
+                schemaFields={schemaFields}
+                schemaName={schemaName}
+                schemaId={schemaId}
+                operation={operation}
+                fieldNames={fieldNames}
+                editingPolicy={editingPolicy}
+                level={level}
+                seed={seedRuleSet}
+                onStage={handleRuleSetSubmit}
+                isSubmitting={isSavingRuleSet}
+                status={status}
+              />
+            </div>
+          ) : (
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
+              <PolicyListPane
+                isLoading={isPolicyListLoading}
+                policies={policies}
+                schemaFields={schemaFields}
+                onApplyPreset={applyPreset}
+                onAddRuleSet={openBlankRuleSetForm}
+                onEditPolicy={(policy) => {
+                  setSeedRuleSet(undefined);
+                  setQueuedRuleSet(undefined);
+                  setEditingPolicy(policy);
+                  setShowRuleSetForm(true);
+                }}
+                onDeleteSuccess={() => {
+                  setSuccess(t("ACCESS_VIEW.RULE_SET_DELETED"));
+                  refetch();
+                }}
+                onDeleteError={setError}
+              />
+            </div>
+          ))}
       </div>
 
       {!showRuleSetForm && (
@@ -704,4 +709,3 @@ export const SchemaAccessControlView = forwardRef<
     </fieldset>
   );
 });
-

@@ -3,6 +3,8 @@ import type { AccessTier } from "../gateway/components/primitives";
 import { tierFromLevel } from "../gateway/components/primitives";
 import type { PlatformSchema, PlatformSchemaField } from "../data-access.service";
 
+const I18N_MODULE = "os.idp.explorer";
+
 /**
  * Layout and motion constants of the schema shell, mirroring the Data Gateway's
  * `utils/motion.ts` (the CSS side lives in `styles/globals.css` as `--dg-*`).
@@ -35,7 +37,16 @@ export const DEFAULT_PROPERTY_NAMES = [
 ];
 
 /** Types a column access rule can be set on. Object properties are reached through their children. */
-const SCALAR_TYPES = new Set(["String", "Int", "Float", "Boolean", "DateTime", "GeoJson", "Enum", "Json"]);
+const SCALAR_TYPES = new Set([
+  "String",
+  "Int",
+  "Float",
+  "Boolean",
+  "DateTime",
+  "GeoJson",
+  "Enum",
+  "Json",
+]);
 
 export const isScalarField = (field: Pick<PlatformSchemaField, "type" | "fields">) =>
   SCALAR_TYPES.has(field.type) && !(field.fields && field.fields.length > 0);
@@ -72,14 +83,19 @@ const USER_REASON_KEYS: Record<Verb, string> = {
  * `schemaExposure`): anyone can reach the data, or any signed-in user can change it.
  */
 export function schemaExposure(
-  schema: Pick<PlatformSchema, "readAccessLevel" | "writeAccessLevel" | "editAccessLevel" | "deleteAccessLevel">,
+  schema: Pick<
+    PlatformSchema,
+    "readAccessLevel" | "writeAccessLevel" | "editAccessLevel" | "deleteAccessLevel"
+  >,
 ): SchemaExposure | null {
   const level = (verb: Verb) => schema[`${verb}AccessLevel` as const];
   const publicWrite = WRITE_VERBS.find((verb) => tierFromLevel(level(verb)) === "public");
-  if (publicWrite) return { tier: "public", reason: tStatic("os.idp.explorer", PUBLIC_REASON_KEYS[publicWrite]) };
-  if (tierFromLevel(level("read")) === "public") return { tier: "public", reason: tStatic("os.idp.explorer", PUBLIC_REASON_KEYS.read) };
+  if (publicWrite)
+    return { tier: "public", reason: tStatic(I18N_MODULE, PUBLIC_REASON_KEYS[publicWrite]) };
+  if (tierFromLevel(level("read")) === "public")
+    return { tier: "public", reason: tStatic(I18N_MODULE, PUBLIC_REASON_KEYS.read) };
   const userWrite = WRITE_VERBS.find((verb) => tierFromLevel(level(verb)) === "user");
-  if (userWrite) return { tier: "user", reason: tStatic("os.idp.explorer", USER_REASON_KEYS[userWrite]) };
+  if (userWrite) return { tier: "user", reason: tStatic(I18N_MODULE, USER_REASON_KEYS[userWrite]) };
   return null;
 }
 

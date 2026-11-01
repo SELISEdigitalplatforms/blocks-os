@@ -169,7 +169,9 @@ export function AccessPickerDialog({
                         )}
                       </div>
                       {alreadySelected && (
-                        <span className="shrink-0 text-xs text-muted-foreground">{t("ACCESS_PICKER_DIALOG.ADDED")}</span>
+                        <span className="shrink-0 text-xs text-muted-foreground">
+                          {t("ACCESS_PICKER_DIALOG.ADDED")}
+                        </span>
                       )}
                     </label>
                   );

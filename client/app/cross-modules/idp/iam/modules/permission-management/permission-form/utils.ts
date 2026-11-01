@@ -6,8 +6,10 @@ import {
 } from "@blocks-idp/iam/models/permission";
 import { z } from "zod";
 
+const I18N_MODULE = "os.idp.permissions";
+
 export const getBuiltinPermissionReadonlyMessage = (): string =>
-  tStatic("os.idp.permissions", "PERMISSION_FORM_SCHEMA.BUILTIN_READONLY");
+  tStatic(I18N_MODULE, "PERMISSION_FORM_SCHEMA.BUILTIN_READONLY");
 
 export const isPermissionFormReadOnly = (isBuiltIn?: boolean): boolean => Boolean(isBuiltIn);
 
@@ -47,45 +49,41 @@ export const permissionFormSchema = z
     name: z
       .string()
       .min(1, {
-        error: () => tStatic("os.idp.permissions", "PERMISSION_FORM_SCHEMA.NAME_REQUIRED"),
+        error: () => tStatic(I18N_MODULE, "PERMISSION_FORM_SCHEMA.NAME_REQUIRED"),
       })
       .max(100, {
-        error: () => tStatic("os.idp.permissions", "PERMISSION_FORM_SCHEMA.NAME_MAX_100"),
+        error: () => tStatic(I18N_MODULE, "PERMISSION_FORM_SCHEMA.NAME_MAX_100"),
       })
       .trim(),
-    type: z.coerce
-      .number<number>()
-      .min(1, {
-        error: () => tStatic("os.idp.permissions", "PERMISSION_FORM_SCHEMA.TYPE_REQUIRED"),
-      }),
+    type: z.coerce.number<number>().min(1, {
+      error: () => tStatic(I18N_MODULE, "PERMISSION_FORM_SCHEMA.TYPE_REQUIRED"),
+    }),
     resource: z
       .string()
       .min(1, {
-        error: () => tStatic("os.idp.permissions", "PERMISSION_FORM_SCHEMA.RESOURCE_REQUIRED"),
+        error: () => tStatic(I18N_MODULE, "PERMISSION_FORM_SCHEMA.RESOURCE_REQUIRED"),
       })
       .max(100, {
-        error: () => tStatic("os.idp.permissions", "PERMISSION_FORM_SCHEMA.RESOURCE_MAX_100"),
+        error: () => tStatic(I18N_MODULE, "PERMISSION_FORM_SCHEMA.RESOURCE_MAX_100"),
       })
       .trim()
       .refine((s) => !s.includes(" "), {
-        error: () => tStatic("os.idp.permissions", "PERMISSION_FORM_SCHEMA.RESOURCE_NO_SPACES"),
+        error: () => tStatic(I18N_MODULE, "PERMISSION_FORM_SCHEMA.RESOURCE_NO_SPACES"),
       }),
     resourceGroup: z
       .string()
       .nonempty({
-        error: () => tStatic("os.idp.permissions", "PERMISSION_FORM_SCHEMA.GROUP_REQUIRED"),
+        error: () => tStatic(I18N_MODULE, "PERMISSION_FORM_SCHEMA.GROUP_REQUIRED"),
       })
       .trim(),
     tags: z.string().array(),
-    description: z
-      .string()
-      .max(150, {
-        error: () => tStatic("os.idp.permissions", "PERMISSION_FORM_SCHEMA.DESCRIPTION_MAX_150"),
-      }),
+    description: z.string().max(150, {
+      error: () => tStatic(I18N_MODULE, "PERMISSION_FORM_SCHEMA.DESCRIPTION_MAX_150"),
+    }),
     dependentPermissions: z.array(z.string()),
     permissionSeverity: z
       .enum(PermissionSeverityLevel, {
-        error: () => tStatic("os.idp.permissions", "PERMISSION_FORM_SCHEMA.SEVERITY_REQUIRED"),
+        error: () => tStatic(I18N_MODULE, "PERMISSION_FORM_SCHEMA.SEVERITY_REQUIRED"),
       })
       .optional(),
   })
@@ -98,7 +96,7 @@ export const permissionFormSchema = z
       return true;
     },
     {
-      error: () => tStatic("os.idp.permissions", "PERMISSION_FORM_SCHEMA.RESOURCE_FORMAT"),
+      error: () => tStatic(I18N_MODULE, "PERMISSION_FORM_SCHEMA.RESOURCE_FORMAT"),
       path: ["resource"],
     },
   );

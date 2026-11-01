@@ -4,6 +4,8 @@ import { BookOpenText } from "lucide-react";
 // import { BookOpenText, Component } from "lucide-react";
 import { Link } from "react-router";
 import { useT } from "@seliseblocks/genesis-os";
+
+const KEY_LOGO_ALT = "BLOCKS_INFO.LOGO_ALT";
 export const BlockInfo = () => {
   const { t } = useT("os.idp.auth");
   return (
@@ -21,7 +23,12 @@ export const BlockInfo = () => {
         <div className="flex items-center gap-4">
           <div className="flex w-[50%] flex-col gap-2">
             <Button variant="outline" className="w-full">
-              <img src="/assets/images/react-icon.png" width={20} height={20} alt={t("BLOCKS_INFO.LOGO_ALT", { name: "React" })} />
+              <img
+                src="/assets/images/react-icon.png"
+                width={20}
+                height={20}
+                alt={t(KEY_LOGO_ALT, { name: "React" })}
+              />
             </Button>
             <div className="flex items-center gap-2 text-blue-700 md:justify-between">
               <Link
@@ -55,7 +62,7 @@ export const BlockInfo = () => {
                 src="/assets/images/angular-icon.png"
                 width={20}
                 height={20}
-                alt={t("BLOCKS_INFO.LOGO_ALT", { name: "Angular" })}
+                alt={t(KEY_LOGO_ALT, { name: "Angular" })}
               />
             </Button>
             <p className="text-medium-emphasis">{t("BLOCKS_INFO.COMING_SOON")}</p>
@@ -67,7 +74,12 @@ export const BlockInfo = () => {
         <div className="flex items-center gap-4">
           <div className="flex w-[50%] flex-col gap-2">
             <Button variant="outline" className="w-full">
-              <img src="/assets/images/dotnet-icon.png" width={20} height={20} alt={t("BLOCKS_INFO.LOGO_ALT", { name: ".NET" })} />
+              <img
+                src="/assets/images/dotnet-icon.png"
+                width={20}
+                height={20}
+                alt={t(KEY_LOGO_ALT, { name: ".NET" })}
+              />
             </Button>
             <div className="flex items-center gap-1 text-blue-700 md:justify-between">
               <Link
@@ -106,7 +118,12 @@ export const BlockInfo = () => {
           </div>
           <div className="flex w-[50%] flex-col gap-2">
             <Button variant="outline" className="w-full" disabled>
-              <img src="/assets/images/ruby-icon.png" width={20} height={20} alt={t("BLOCKS_INFO.LOGO_ALT", { name: "Ruby" })} />
+              <img
+                src="/assets/images/ruby-icon.png"
+                width={20}
+                height={20}
+                alt={t(KEY_LOGO_ALT, { name: "Ruby" })}
+              />
             </Button>
             <p className="text-medium-emphasis">{t("BLOCKS_INFO.COMING_SOON")}</p>
           </div>
@@ -121,7 +138,7 @@ export const BlockInfo = () => {
               width={20}
               height={20}
               className="mr-3"
-              alt={t("BLOCKS_INFO.LOGO_ALT", { name: "GitHub" })}
+              alt={t(KEY_LOGO_ALT, { name: "GitHub" })}
             />
             {t("BLOCKS_INFO.OPEN_IN_GITHUB")}
           </Button>

@@ -24,6 +24,8 @@ import {
 import { useSecretTags } from "@/cross-modules/secrets/hooks/use-secret-management";
 import { useT } from "@seliseblocks/genesis-os";
 
+const KEY_NONE = "SECRET_DETAIL.NONE";
+
 /**
  * Actor ids are deliberately not rendered.
  *
@@ -112,7 +114,9 @@ export function SecretDetail({ secret }: { secret: SecretResult }) {
         </Stat>
 
         <Stat icon={PenLine} label={t("common:DESCRIPTION")}>
-          {secret.description || <span className="italic text-muted-foreground">{t("SECRET_DETAIL.NONE")}</span>}
+          {secret.description || (
+            <span className="italic text-muted-foreground">{t(KEY_NONE)}</span>
+          )}
         </Stat>
 
         <Stat icon={Clock} label={t("SECRET_DETAIL.CREATED")}>
@@ -153,7 +157,7 @@ export function SecretDetail({ secret }: { secret: SecretResult }) {
               ))}
             </div>
           ) : (
-            <span className="italic text-muted-foreground">{t("SECRET_DETAIL.NONE")}</span>
+            <span className="italic text-muted-foreground">{t(KEY_NONE)}</span>
           )}
         </Stat>
       </div>
@@ -164,14 +168,14 @@ export function SecretDetail({ secret }: { secret: SecretResult }) {
             {access.userIds.length ? (
               <ChipList ids={access.userIds} labels={userNames} icon={User} />
             ) : (
-              <span className="italic text-muted-foreground">{t("SECRET_DETAIL.NONE")}</span>
+              <span className="italic text-muted-foreground">{t(KEY_NONE)}</span>
             )}
           </Stat>
           <Stat icon={ShieldCheck} label={t("SECRET_DETAIL.ALLOWED_ROLES")}>
             {access.roles.length ? (
               <ChipList ids={access.roles} labels={roleNames} icon={ShieldCheck} />
             ) : (
-              <span className="italic text-muted-foreground">{t("SECRET_DETAIL.NONE")}</span>
+              <span className="italic text-muted-foreground">{t(KEY_NONE)}</span>
             )}
           </Stat>
           {!hasAccessEntries && (

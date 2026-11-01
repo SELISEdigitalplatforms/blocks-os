@@ -74,7 +74,10 @@ const buildSchema = (isEditing: boolean, t: TFunction) =>
       ? z
           .string()
           .trim()
-          .refine((value) => value === "" || KEY_CHARACTERS.test(value), t("PROVIDER_FORM_MODAL.KEY_CHARACTERS"))
+          .refine(
+            (value) => value === "" || KEY_CHARACTERS.test(value),
+            t("PROVIDER_FORM_MODAL.KEY_CHARACTERS"),
+          )
       : z
           .string()
           .trim()
@@ -327,7 +330,9 @@ export function ProviderFormModal({
     // extensions rather than answering with a code.
     if (!isCertificateFile(pendingCertificate.name)) {
       showErrorToast({
-        errors: t("PROVIDER_FORM_MODAL.ONLY_CERTIFICATE_FILES", { extensions: CERTIFICATE_EXTENSIONS.join(", ") }),
+        errors: t("PROVIDER_FORM_MODAL.ONLY_CERTIFICATE_FILES", {
+          extensions: CERTIFICATE_EXTENSIONS.join(", "),
+        }),
       });
       return null;
     }
@@ -375,11 +380,16 @@ export function ProviderFormModal({
     });
 
     if (!result.isSuccess) {
-      showErrorToast({ errors: Object.values(result.errors ?? {}).join(" ") || t("PROVIDER_FORM_MODAL.SAVE_FAILED") });
+      showErrorToast({
+        errors:
+          Object.values(result.errors ?? {}).join(" ") || t("PROVIDER_FORM_MODAL.SAVE_FAILED"),
+      });
       return;
     }
 
-    showSuccessToast({ description: existing ? t("PROVIDER_FORM_MODAL.UPDATED") : t("PROVIDER_FORM_MODAL.ADDED") });
+    showSuccessToast({
+      description: existing ? t("PROVIDER_FORM_MODAL.UPDATED") : t("PROVIDER_FORM_MODAL.ADDED"),
+    });
     closeAndReset(false);
   };
 
@@ -389,10 +399,10 @@ export function ProviderFormModal({
     <Dialog open={open} onOpenChange={closeAndReset}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{existing ? t("PROVIDER_FORM_MODAL.EDIT_TITLE") : t("PROVIDER_FORM_MODAL.ADD_TITLE")}</DialogTitle>
-          <DialogDescription>
-            {t("PROVIDER_FORM_MODAL.DESCRIPTION")}
-          </DialogDescription>
+          <DialogTitle>
+            {existing ? t("PROVIDER_FORM_MODAL.EDIT_TITLE") : t("PROVIDER_FORM_MODAL.ADD_TITLE")}
+          </DialogTitle>
+          <DialogDescription>{t("PROVIDER_FORM_MODAL.DESCRIPTION")}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
@@ -430,7 +440,11 @@ export function ProviderFormModal({
               id="provider-key"
               aria-required={!existing}
               autoComplete="off"
-              placeholder={existing ? t("PROVIDER_FORM_MODAL.KEY_PLACEHOLDER_EDIT", { key: existing.key }) : "auth0-web"}
+              placeholder={
+                existing
+                  ? t("PROVIDER_FORM_MODAL.KEY_PLACEHOLDER_EDIT", { key: existing.key })
+                  : "auth0-web"
+              }
               {...register("key")}
             />
             <p className="text-xs text-muted-foreground">
@@ -450,9 +464,7 @@ export function ProviderFormModal({
               placeholder="https://your-tenant.us.auth0.com/"
               {...register("issuer")}
             />
-            <p className="text-xs text-muted-foreground">
-              {t("PROVIDER_FORM_MODAL.ISSUER_HINT")}
-            </p>
+            <p className="text-xs text-muted-foreground">{t("PROVIDER_FORM_MODAL.ISSUER_HINT")}</p>
             {!issuer && (
               <p className="text-xs text-muted-foreground">
                 {issuerlessSiblings > 0
@@ -534,7 +546,9 @@ export function ProviderFormModal({
                 id="provider-secret"
                 type="password"
                 autoComplete="new-password"
-                placeholder={existing?.hasSigningSecret ? t("PROVIDER_FORM_MODAL.KEEP_PLACEHOLDER") : ""}
+                placeholder={
+                  existing?.hasSigningSecret ? t("PROVIDER_FORM_MODAL.KEEP_PLACEHOLDER") : ""
+                }
                 {...register("signingSecret")}
               />
               <p className="text-xs text-muted-foreground">
@@ -568,7 +582,9 @@ export function ProviderFormModal({
                       >
                         <RadioGroupItem value={option.value} id={option.id} />
                         <Label htmlFor={option.id} className="cursor-pointer text-sm">
-                          {option.value === "jwks" ? t("PROVIDER_FORM_MODAL.OPTION_JWKS") : t("PROVIDER_FORM_MODAL.OPTION_CERTIFICATE")}
+                          {option.value === "jwks"
+                            ? t("PROVIDER_FORM_MODAL.OPTION_JWKS")
+                            : t("PROVIDER_FORM_MODAL.OPTION_CERTIFICATE")}
                         </Label>
                       </div>
                     ))}
@@ -623,7 +639,9 @@ export function ProviderFormModal({
                             {t("PROVIDER_FORM_MODAL.UPLOAD_PROMPT")}
                           </p>
                           <p className="text-center text-[10px] leading-tight text-muted-foreground">
-                            {t("PROVIDER_FORM_MODAL.UPLOAD_LIMITS", { extensions: CERTIFICATE_EXTENSIONS.join(", ") })}
+                            {t("PROVIDER_FORM_MODAL.UPLOAD_LIMITS", {
+                              extensions: CERTIFICATE_EXTENSIONS.join(", "),
+                            })}
                           </p>
                         </div>
                       </FileInput>
@@ -642,7 +660,9 @@ export function ProviderFormModal({
                     </FileUploader>
                     <p className="text-xs text-muted-foreground">
                       {keepsStoredCertificate
-                        ? t("PROVIDER_FORM_MODAL.STORED_REPLACE", { label: storedCertificateLabel(storedCertificatePath, t) })
+                        ? t("PROVIDER_FORM_MODAL.STORED_REPLACE", {
+                            label: storedCertificateLabel(storedCertificatePath, t),
+                          })
                         : t("PROVIDER_FORM_MODAL.CERTIFICATE_HINT")}
                     </p>
                   </div>
@@ -667,7 +687,11 @@ export function ProviderFormModal({
                         type="button"
                         variant="ghost"
                         size="sm"
-                        aria-label={showPassphrase ? t("PROVIDER_FORM_MODAL.HIDE_PASSPHRASE") : t("PROVIDER_FORM_MODAL.SHOW_PASSPHRASE")}
+                        aria-label={
+                          showPassphrase
+                            ? t("PROVIDER_FORM_MODAL.HIDE_PASSPHRASE")
+                            : t("PROVIDER_FORM_MODAL.SHOW_PASSPHRASE")
+                        }
                         className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
                         onClick={() => setShowPassphrase(!showPassphrase)}
                       >

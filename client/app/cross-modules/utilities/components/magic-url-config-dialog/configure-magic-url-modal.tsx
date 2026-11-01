@@ -17,6 +17,8 @@ import { useProjectStore, useT, tStatic } from "@seliseblocks/genesis-os";
 import { IMagicUrlConfig } from "@blocks-utilities/models/magic-url-config.model";
 import { v4 as uuidv4 } from "uuid";
 
+const I18N_MODULE = "os.utilities";
+
 type ConfigureMagicUrlModalProps = {
   configuration?: IMagicUrlConfig | null;
   children?: ReactNode;
@@ -30,7 +32,7 @@ export const ConfigureMagicUrlModal = ({
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
 }: ConfigureMagicUrlModalProps) => {
-  const { t } = useT("os.utilities");
+  const { t } = useT(I18N_MODULE);
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const isControlled = controlledOpen !== undefined;
@@ -69,14 +71,23 @@ export const ConfigureMagicUrlModal = ({
   const validateFields = (): boolean => {
     const newErrors = { contextName: "", shortUrlBase: "" };
     if (!contextName.trim()) {
-      newErrors.contextName = tStatic("os.utilities", "CONFIGURE_MAGIC_URL_MODAL.CONTEXT_NAME_IS_REQUIRED");
+      newErrors.contextName = tStatic(
+        I18N_MODULE,
+        "CONFIGURE_MAGIC_URL_MODAL.CONTEXT_NAME_IS_REQUIRED",
+      );
     }
     if (!shortUrlBase.trim()) {
-      newErrors.shortUrlBase = tStatic("os.utilities", "CONFIGURE_MAGIC_URL_MODAL.SHORT_URL_BASE_IS_REQUIRED");
+      newErrors.shortUrlBase = tStatic(
+        I18N_MODULE,
+        "CONFIGURE_MAGIC_URL_MODAL.SHORT_URL_BASE_IS_REQUIRED",
+      );
     } else if (!isValidUrl(shortUrlBase)) {
-      newErrors.shortUrlBase = tStatic("os.utilities", "CONFIGURE_MAGIC_URL_MODAL.URL_MUST_BE_A_VALID");
+      newErrors.shortUrlBase = tStatic(
+        I18N_MODULE,
+        "CONFIGURE_MAGIC_URL_MODAL.URL_MUST_BE_A_VALID",
+      );
     } else if (!shortUrlBase.endsWith("/")) {
-      newErrors.shortUrlBase = tStatic("os.utilities", "CONFIGURE_MAGIC_URL_MODAL.URL_MUST_END");
+      newErrors.shortUrlBase = tStatic(I18N_MODULE, "CONFIGURE_MAGIC_URL_MODAL.URL_MUST_END");
     }
     setErrors(newErrors);
     return !newErrors.contextName && !newErrors.shortUrlBase;
@@ -115,7 +126,9 @@ export const ConfigureMagicUrlModal = ({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {configuration ? t("CONFIGURE_MAGIC_URL_MODAL.EDIT_MAGIC_URL_CONFIGURATION") : t("CONFIGURE_MAGIC_URL_MODAL.ADD_MAGIC_URL_CONFIGURATION")}
+            {configuration
+              ? t("CONFIGURE_MAGIC_URL_MODAL.EDIT_MAGIC_URL_CONFIGURATION")
+              : t("CONFIGURE_MAGIC_URL_MODAL.ADD_MAGIC_URL_CONFIGURATION")}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">

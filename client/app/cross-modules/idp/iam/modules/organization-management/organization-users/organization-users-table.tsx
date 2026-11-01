@@ -24,6 +24,8 @@ import { useNavigate } from "react-router";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { NotifyUserCheckbox } from "@blocks-idp/iam/components/notify-user-checkbox";
 
+const KEY_REVOKE_ARIA = "ORGANIZATION_USERS_TABLE.REVOKE_ARIA";
+
 type OrganizationUsersTableProps = {
   users: User[];
   isLoading: boolean;
@@ -243,8 +245,8 @@ export const OrganizationUsersTable = ({
                       <Button
                         size="icon"
                         variant="ghost"
-                        aria-label={t("ORGANIZATION_USERS_TABLE.REVOKE_ARIA")}
-                        title={t("ORGANIZATION_USERS_TABLE.REVOKE_ARIA")}
+                        aria-label={t(KEY_REVOKE_ARIA)}
+                        title={t(KEY_REVOKE_ARIA)}
                         className="h-7 w-7 text-destructive hover:bg-destructive/10"
                         onClick={() => setConfirmRevoke(user)}
                       >
@@ -300,8 +302,8 @@ export const OrganizationUsersTable = ({
                     <Button
                       size="icon"
                       variant="ghost"
-                      aria-label={t("ORGANIZATION_USERS_TABLE.REVOKE_ARIA")}
-                      title={t("ORGANIZATION_USERS_TABLE.REVOKE_ARIA")}
+                      aria-label={t(KEY_REVOKE_ARIA)}
+                      title={t(KEY_REVOKE_ARIA)}
                       className="h-6 w-6 text-destructive hover:bg-destructive/10"
                       onClick={() => setConfirmRevoke(user)}
                     >

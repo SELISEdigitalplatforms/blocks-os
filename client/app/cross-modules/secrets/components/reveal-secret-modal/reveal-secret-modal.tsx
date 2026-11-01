@@ -70,7 +70,13 @@ export function RevealSecretModal({ open, onOpenChange, secret }: RevealSecretMo
         if (active) setValue(response.value);
       })
       .catch((cause) => {
-        if (active) setError(describeSecretError(cause, tStatic("os.secrets", "REVEAL_SECRET_MODAL.COULD_NOT_READ_THE_SECRET")).message);
+        if (active)
+          setError(
+            describeSecretError(
+              cause,
+              tStatic("os.secrets", "REVEAL_SECRET_MODAL.COULD_NOT_READ_THE_SECRET"),
+            ).message,
+          );
       });
     resetTimer();
 
@@ -132,7 +138,11 @@ export function RevealSecretModal({ open, onOpenChange, secret }: RevealSecretMo
                   resetTimer();
                   setVisible((previous) => !previous);
                 }}
-                aria-label={visible ? t("REVEAL_SECRET_MODAL.HIDE_VALUE") : t("REVEAL_SECRET_MODAL.SHOW_VALUE")}
+                aria-label={
+                  visible
+                    ? t("REVEAL_SECRET_MODAL.HIDE_VALUE")
+                    : t("REVEAL_SECRET_MODAL.SHOW_VALUE")
+                }
               >
                 {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>

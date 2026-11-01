@@ -19,6 +19,8 @@ import type { ISessionCardViewModel } from "../view-models/session.view-model";
 import { SessionDetailsDrawer } from "./session-details-drawer";
 import { useT } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.idp.security";
+
 const LoadingSkeleton = () => (
   <div className="grid gap-2">
     {Array.from({ length: 5 }).map((_, index) => (
@@ -28,14 +30,16 @@ const LoadingSkeleton = () => (
 );
 
 const EmptyState = () => {
-  const { t } = useT("os.idp.security");
+  const { t } = useT(I18N_MODULE);
   return (
     <div className="flex h-full min-h-0 flex-col items-center justify-center gap-3 py-10 text-center">
       <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
         <Laptop className="h-7 w-7 text-muted-foreground" />
       </div>
       <div>
-        <p className="text-base font-semibold text-foreground">{t("SESSION_LIST_CARD.EMPTY_TITLE")}</p>
+        <p className="text-base font-semibold text-foreground">
+          {t("SESSION_LIST_CARD.EMPTY_TITLE")}
+        </p>
         <p className="mt-1 text-sm text-muted-foreground">{t("SESSION_LIST_CARD.EMPTY_BODY")}</p>
       </div>
     </div>
@@ -53,7 +57,7 @@ const SignOutButton = ({
   mutateAsync: (vars: { sessionId: string; reason?: string }) => Promise<unknown>;
   isPending: boolean;
 }) => {
-  const { t } = useT("os.idp.security");
+  const { t } = useT(I18N_MODULE);
   const [open, setOpen] = useState(false);
 
   const handleConfirm = async () => {
@@ -118,8 +122,12 @@ type SessionListCardProps = {
   readOnlyReason?: string;
 };
 
-export const SessionListCard = ({ showSignOut = true, userId, readOnlyReason }: SessionListCardProps) => {
-  const { t } = useT("os.idp.security");
+export const SessionListCard = ({
+  showSignOut = true,
+  userId,
+  readOnlyReason,
+}: SessionListCardProps) => {
+  const { t } = useT(I18N_MODULE);
   const { isLoading, isFetching, data, refetch } = useUserSessions(userId);
   const { mutateAsync, isPending } = useRevokeSession(userId);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
@@ -154,9 +162,7 @@ export const SessionListCard = ({ showSignOut = true, userId, readOnlyReason }: 
                       <Icon className="h-4 w-4" />
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate font-medium text-high-emphasis">
-                        {card.deviceName}
-                      </p>
+                      <p className="truncate font-medium text-high-emphasis">{card.deviceName}</p>
                       <p className="truncate text-xs text-muted-foreground">
                         {t("SESSION_LIST_CARD.DEVICE_DETAILS", {
                           browser: card.browser,
@@ -172,7 +178,10 @@ export const SessionListCard = ({ showSignOut = true, userId, readOnlyReason }: 
                       </p>
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                  <div
+                    className="flex shrink-0 items-center gap-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     {card.isCurrent ? (
                       <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700">
                         {t("SESSION_LIST_CARD.THIS_DEVICE")}

@@ -46,7 +46,9 @@ const EditCommunication = (props: EditCommunicationProps) => {
   const { isPending: isSaveTemplateLoading, mutateAsync: saveTemplate } = useSaveMailTemplate();
   const { isLoading: isLanguageListLoading, data: languageListData } = useGetLanguages();
   const schema = z.object({
-    mailConfigurationId: z.string().min(1, { message: t("EDIT_COMMUNICATION.ERROR_CONFIGURATION_REQUIRED") }),
+    mailConfigurationId: z
+      .string()
+      .min(1, { message: t("EDIT_COMMUNICATION.ERROR_CONFIGURATION_REQUIRED") }),
     language: z.string().min(1, { message: t("EDIT_COMMUNICATION.ERROR_LANGUAGE_REQUIRED") }),
     name: z
       .string()
@@ -172,7 +174,9 @@ const EditCommunication = (props: EditCommunicationProps) => {
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                                <SelectValue placeholder={t("EDIT_COMMUNICATION.PLACEHOLDER_LANGUAGE")} />
+                                <SelectValue
+                                  placeholder={t("EDIT_COMMUNICATION.PLACEHOLDER_LANGUAGE")}
+                                />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -203,7 +207,9 @@ const EditCommunication = (props: EditCommunicationProps) => {
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                                <SelectValue placeholder={t("EDIT_COMMUNICATION.PLACEHOLDER_CONFIGURATION")} />
+                                <SelectValue
+                                  placeholder={t("EDIT_COMMUNICATION.PLACEHOLDER_CONFIGURATION")}
+                                />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>

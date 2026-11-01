@@ -6,10 +6,12 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui-kits/card/card"
-import { Link } from "react-router"
-import { getRuntimeEnv } from "@/lib/runtime-env"
-import { useT } from "@seliseblocks/genesis-os"
+} from "@/components/ui-kits/card/card";
+import { Link } from "react-router";
+import { getRuntimeEnv } from "@/lib/runtime-env";
+import { useT } from "@seliseblocks/genesis-os";
+
+const KEY_INVITATION_ACCEPTED = "PEOPLE_INVITATION_RESULT.INVITATION_ACCEPTED";
 
 type PeopleInvitationResultProps = {
   success: string;
@@ -18,7 +20,7 @@ type PeopleInvitationResultProps = {
   code: string;
 };
 
-const trimTrailingSlash = (value: string) => value.replace(/\/$/, "")
+const trimTrailingSlash = (value: string) => value.replace(/\/$/, "");
 
 /**
  * IAM's OIDC activation page, e.g.
@@ -42,20 +44,20 @@ const trimTrailingSlash = (value: string) => value.replace(/\/$/, "")
  * Returns null when the IAM base URL or the tenant key is unavailable.
  */
 const buildIamActivationUrl = (code: string): string | null => {
-  const iamBaseUrl = getRuntimeEnv("BLOCKS_IAM_BASE_URL")
-  const tenant = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY")
-  if (!iamBaseUrl || !tenant) return null
+  const iamBaseUrl = getRuntimeEnv("BLOCKS_IAM_BASE_URL");
+  const tenant = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
+  if (!iamBaseUrl || !tenant) return null;
 
-  const params = new URLSearchParams({ code, lang: "en-US" })
+  const params = new URLSearchParams({ code, lang: "en-US" });
 
-  const clientId = getRuntimeEnv("BLOCKS_OIDC_CLIENT_ID")
+  const clientId = getRuntimeEnv("BLOCKS_OIDC_CLIENT_ID");
   if (clientId && typeof window !== "undefined") {
-    params.set("clientId", clientId)
-    params.set("redirect_uri", `${window.location.origin}/login/callback`)
+    params.set("clientId", clientId);
+    params.set("redirect_uri", `${window.location.origin}/login/callback`);
   }
 
-  return `${trimTrailingSlash(iamBaseUrl)}/oidc/activate/${tenant}?${params.toString()}`
-}
+  return `${trimTrailingSlash(iamBaseUrl)}/oidc/activate/${tenant}?${params.toString()}`;
+};
 
 const InvitationResultShell = ({
   title,
@@ -64,12 +66,12 @@ const InvitationResultShell = ({
   buttonTo,
   external = false,
 }: {
-  title: string
-  message: string
-  buttonText: string
-  buttonTo: string
+  title: string;
+  message: string;
+  buttonText: string;
+  buttonTo: string;
   /** When true, `buttonTo` is an absolute URL (e.g. IAM) reached via a full navigation, not client routing. */
-  external?: boolean
+  external?: boolean;
 }) => (
   <div className="flex min-h-screen flex-col items-center bg-background">
     <div className="mb-4 mt-[136px] p-4">
@@ -124,17 +126,17 @@ export const PeopleInvitationResult = ({
   if (old === "0") {
     // Prefer IAM's OIDC activation page. Fall back to the OS-hosted activation page only
     // when the IAM base URL / tenant key is unavailable.
-    const iamActivationUrl = buildIamActivationUrl(code)
+    const iamActivationUrl = buildIamActivationUrl(code);
     if (iamActivationUrl) {
       return (
         <InvitationResultShell
-          title={t("PEOPLE_INVITATION_RESULT.INVITATION_ACCEPTED")}
+          title={t(KEY_INVITATION_ACCEPTED)}
           message={t("PEOPLE_INVITATION_RESULT.ACCEPTED_ACTIVATE")}
           buttonText={t("PEOPLE_INVITATION_RESULT.ACTIVATE")}
           buttonTo={iamActivationUrl}
           external
         />
-      )
+      );
     }
 
     const activateParams = new URLSearchParams({
@@ -143,7 +145,7 @@ export const PeopleInvitationResult = ({
     });
     return (
       <InvitationResultShell
-        title={t("PEOPLE_INVITATION_RESULT.INVITATION_ACCEPTED")}
+        title={t(KEY_INVITATION_ACCEPTED)}
         message={t("PEOPLE_INVITATION_RESULT.ACCEPTED_ACTIVATE")}
         buttonText={t("PEOPLE_INVITATION_RESULT.ACTIVATE")}
         buttonTo={`/activate?${activateParams.toString()}`}
@@ -153,7 +155,7 @@ export const PeopleInvitationResult = ({
 
   return (
     <InvitationResultShell
-      title={t("PEOPLE_INVITATION_RESULT.INVITATION_ACCEPTED")}
+      title={t(KEY_INVITATION_ACCEPTED)}
       message={t("PEOPLE_INVITATION_RESULT.ACCEPTED_SHARED")}
       buttonText={t("PEOPLE_INVITATION_RESULT.GO_TO_CONSOLE")}
       buttonTo="/login"

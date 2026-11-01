@@ -4,6 +4,8 @@ import type { IOidcClientTokenLifetimes } from "@blocks-idp/authentication/model
 import type { IOidcClientLoginPolicy } from "@blocks-idp/authentication/models/login-policy.model";
 import { DEFAULT_CLIENT_LOGIN_POLICY } from "@blocks-idp/authentication/utils/login-policy.util";
 
+const I18N_MODULE = "os.idp.create-oidc";
+
 const PUBLIC_TLD_PATTERN = /^([a-z0-9-]+\.)+[a-z]{2,}$/i;
 
 const hasPublicHostname = (hostname: string) => {
@@ -28,11 +30,11 @@ const httpsUrlRule = (val: string) => {
 export type ApplicationType = "web" | "mobile";
 
 export const getHttpsRedirectUriMessage = () =>
-  tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.MESSAGE_HTTPS_REDIRECT_URI");
+  tStatic(I18N_MODULE, "CREATE_OIDC_UTILS.MESSAGE_HTTPS_REDIRECT_URI");
 export const getWebAppSchemeRedirectUriMessage = () =>
-  tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.MESSAGE_WEB_APP_SCHEME_REDIRECT_URI");
+  tStatic(I18N_MODULE, "CREATE_OIDC_UTILS.MESSAGE_WEB_APP_SCHEME_REDIRECT_URI");
 export const getMobileInvalidRedirectUriMessage = () =>
-  tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.MESSAGE_MOBILE_INVALID_REDIRECT_URI");
+  tStatic(I18N_MODULE, "CREATE_OIDC_UTILS.MESSAGE_MOBILE_INVALID_REDIRECT_URI");
 
 const APP_SCHEME_PATTERN = /^[A-Za-z][A-Za-z0-9+.-]*$/;
 const BLOCKED_APP_SCHEMES = new Set([
@@ -87,7 +89,7 @@ const buildRedirectUriSchema = (entryError: (value: string) => string | null) =>
   z
     .array(redirectUriEntry)
     .min(1, {
-      error: () => tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.MESSAGE_REDIRECT_URI_MIN"),
+      error: () => tStatic(I18N_MODULE, "CREATE_OIDC_UTILS.MESSAGE_REDIRECT_URI_MIN"),
     })
     .superRefine((entries, ctx) => {
       entries.forEach((entry, idx) => {
@@ -95,10 +97,7 @@ const buildRedirectUriSchema = (entryError: (value: string) => string | null) =>
           ctx.addIssue({
             code: "custom",
             path: [idx, "value"],
-            message: tStatic(
-              "os.idp.create-oidc",
-              "CREATE_OIDC_UTILS.MESSAGE_REDIRECT_URI_REQUIRED",
-            ),
+            message: tStatic(I18N_MODULE, "CREATE_OIDC_UTILS.MESSAGE_REDIRECT_URI_REQUIRED"),
           });
           return;
         }
@@ -153,14 +152,11 @@ export const TOKEN_LIFETIME_LIMITS = {
 
 export const getTokenLifetimeMessages = () =>
   ({
-    wholeNumber: tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.MESSAGE_WHOLE_NUMBER"),
-    access: tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.MESSAGE_ACCESS_LIFETIME"),
-    refresh: tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.MESSAGE_REFRESH_LIFETIME"),
-    absolute: tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.MESSAGE_ABSOLUTE_LIFETIME"),
-    absoluteBelowRefresh: tStatic(
-      "os.idp.create-oidc",
-      "CREATE_OIDC_UTILS.MESSAGE_ABSOLUTE_BELOW_REFRESH",
-    ),
+    wholeNumber: tStatic(I18N_MODULE, "CREATE_OIDC_UTILS.MESSAGE_WHOLE_NUMBER"),
+    access: tStatic(I18N_MODULE, "CREATE_OIDC_UTILS.MESSAGE_ACCESS_LIFETIME"),
+    refresh: tStatic(I18N_MODULE, "CREATE_OIDC_UTILS.MESSAGE_REFRESH_LIFETIME"),
+    absolute: tStatic(I18N_MODULE, "CREATE_OIDC_UTILS.MESSAGE_ABSOLUTE_LIFETIME"),
+    absoluteBelowRefresh: tStatic(I18N_MODULE, "CREATE_OIDC_UTILS.MESSAGE_ABSOLUTE_BELOW_REFRESH"),
   }) as const;
 
 /** The three lifetime inputs as typed. An empty string means "use the project setting". */
@@ -203,22 +199,22 @@ const MINUTES_PER_DAY = 1440;
 /** 1440 -> "1 day", 90 -> "1 h 30 min", 45 -> "45 min". */
 export const formatMinutes = (minutes: number): string => {
   if (minutes % MINUTES_PER_DAY === 0) {
-    return tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.DURATION_DAYS", {
+    return tStatic(I18N_MODULE, "CREATE_OIDC_UTILS.DURATION_DAYS", {
       count: minutes / MINUTES_PER_DAY,
     });
   }
   if (minutes % MINUTES_PER_HOUR === 0) {
-    return tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.DURATION_HOURS", {
+    return tStatic(I18N_MODULE, "CREATE_OIDC_UTILS.DURATION_HOURS", {
       count: minutes / MINUTES_PER_HOUR,
     });
   }
   if (minutes > MINUTES_PER_HOUR) {
-    return tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.DURATION_HOURS_MINUTES", {
+    return tStatic(I18N_MODULE, "CREATE_OIDC_UTILS.DURATION_HOURS_MINUTES", {
       hours: Math.floor(minutes / MINUTES_PER_HOUR),
       minutes: minutes % MINUTES_PER_HOUR,
     });
   }
-  return tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.DURATION_MINUTES", { minutes });
+  return tStatic(I18N_MODULE, "CREATE_OIDC_UTILS.DURATION_MINUTES", { minutes });
 };
 
 /** A project value the UI can show: a positive number, else undefined (not loaded or unset). */
@@ -234,18 +230,18 @@ export const describeTokenLifetime = (raw: string, projectMinutes?: number): str
   const value = raw.trim();
   if (value === "") {
     return project
-      ? tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.PROJECT_SETTING_VALUE", { value: project })
-      : tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.PROJECT_SETTING");
+      ? tStatic(I18N_MODULE, "CREATE_OIDC_UTILS.PROJECT_SETTING_VALUE", { value: project })
+      : tStatic(I18N_MODULE, "CREATE_OIDC_UTILS.PROJECT_SETTING");
   }
   const minutes = Number(value);
   if (!WHOLE_NUMBER.test(value) || minutes < 1) return "";
   const own = formatMinutes(minutes);
   return project
-    ? tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.LIFETIME_WITH_PROJECT", {
+    ? tStatic(I18N_MODULE, "CREATE_OIDC_UTILS.LIFETIME_WITH_PROJECT", {
         value: own,
         project,
       })
-    : tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.LIFETIME_VALUE", { value: own });
+    : tStatic(I18N_MODULE, "CREATE_OIDC_UTILS.LIFETIME_VALUE", { value: own });
 };
 
 /**
@@ -311,7 +307,7 @@ const addTokenLifetimeIssues = (value: TokenLifetimeFormValues, ctx: z.Refinemen
 };
 
 export const getSelectProviderMessage = () =>
-  tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.MESSAGE_SELECT_PROVIDER");
+  tStatic(I18N_MODULE, "CREATE_OIDC_UTILS.MESSAGE_SELECT_PROVIDER");
 
 /** The sign-in inputs as the form holds them. */
 export type LoginPolicyFormValues = {
@@ -372,8 +368,7 @@ export const createOidcSchema = z
       .string()
       .trim()
       .min(1, {
-        error: () =>
-          tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.MESSAGE_CLIENT_NAME_REQUIRED"),
+        error: () => tStatic(I18N_MODULE, "CREATE_OIDC_UTILS.MESSAGE_CLIENT_NAME_REQUIRED"),
       }),
     isAutoRedirect: z.boolean(),
     isActive: z.boolean(),
@@ -430,7 +425,7 @@ export const createOidcSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["allowedResponseTypes"],
-        message: tStatic("os.idp.create-oidc", "CREATE_OIDC_UTILS.MESSAGE_RESPONSE_TYPE_REQUIRED"),
+        message: tStatic(I18N_MODULE, "CREATE_OIDC_UTILS.MESSAGE_RESPONSE_TYPE_REQUIRED"),
       });
     }
   });
