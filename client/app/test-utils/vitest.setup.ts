@@ -181,6 +181,14 @@ vi.mock("rollbar", () => ({
   },
 }));
 
+const realProcess = globalThis.process;
+
 // Dynamic, after the polyfills above: a static import is hoisted above them and the genesis store
 // needs `matchMedia` while it loads.
 await import("@/i18n");
+
+// Genesis replaced `process` by `{ env }` while loading. Let it fall back to Node's real one, so
+// libraries that read `process.stderr` or `process.listeners` (debug, micromark) keep working.
+if (typeof window !== "undefined" && globalThis.process !== realProcess) {
+  Object.setPrototypeOf(globalThis.process, realProcess);
+}
