@@ -16,7 +16,8 @@ const h = vi.hoisted(() => ({
   queryParams: { page: 0, pageSize: 10, search: "", includeInactive: false },
 }));
 
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 

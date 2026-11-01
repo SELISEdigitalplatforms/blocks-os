@@ -1,3 +1,6 @@
+import { tStatic } from "@seliseblocks/genesis-os";
+
+const I18N_MODULE = "os.idp.signup-links";
 /**
  * Mapping between the Max redemptions form field (a string, so that "" and "0" stay
  * distinct) and IAM's `defaultMaxRedemptions` (null = IAM default of one use, 0 = unlimited
@@ -29,11 +32,14 @@ export const fromConfigurationMaxRedemptions = (value: number | null | undefined
 
 /** List label for the "Max uses" cell. */
 export const maxRedemptionsLabel = (value: number | null | undefined): string => {
-  if (value === null || value === undefined || value === 1) return "Single use";
-  if (value === 0) return "Unlimited";
-  return `${value} uses`;
+  if (value === null || value === undefined || value === 1)
+    return tStatic(I18N_MODULE, "MAX_REDEMPTIONS.SINGLE_USE");
+  if (value === 0) return tStatic(I18N_MODULE, "MAX_REDEMPTIONS.UNLIMITED");
+  return tStatic(I18N_MODULE, "MAX_REDEMPTIONS.USES", { value });
 };
 
 /** List label for the "Existing-user password" cell. Missing or null reads as required. */
 export const existingUserPasswordLabel = (value: boolean | null | undefined): string =>
-  value === false ? "Not required" : "Required";
+  value === false
+    ? tStatic(I18N_MODULE, "MAX_REDEMPTIONS.PASSWORD_NOT_REQUIRED")
+    : tStatic(I18N_MODULE, "MAX_REDEMPTIONS.PASSWORD_REQUIRED");

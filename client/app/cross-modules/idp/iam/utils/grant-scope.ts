@@ -1,14 +1,21 @@
 import { IGrantScope } from "@blocks-idp/iam/models/grant-scope";
+import { tStatic } from "@seliseblocks/genesis-os";
 
-export const ASSIGNABLE_ROLES_HELPER = "You can give only roles below your role.";
-export const GRANT_PERMISSION_TOOLTIP = "Your role doesn't have this permission.";
-export const DIRECT_PERMISSIONS_HELPER = "Only a top admin can give permissions directly. Give a role instead.";
-export const CANNOT_MANAGE_USER_TOOLTIP = "You can't manage this user.";
-export const OWN_ROLES_TOOLTIP = "You can't change your own roles.";
-export const SYSTEM_ONLY_TOOLTIP = "Only the system user can change this.";
-export const DEFAULT_COPY_TOOLTIP = "Comes from default. Only the system user can change it.";
-export const OWN_ROLE_TOOLTIP = "This is your role. Ask an admin above you to change it.";
-export const ROLE_ABOVE_TOOLTIP = "This role is not below your role.";
+const I18N_MODULE = "os.idp.iam";
+
+export const getAssignableRolesHelper = () =>
+  tStatic(I18N_MODULE, "GRANT_SCOPE.ASSIGNABLE_ROLES_HELPER");
+export const getGrantPermissionTooltip = () =>
+  tStatic(I18N_MODULE, "GRANT_SCOPE.GRANT_PERMISSION_TOOLTIP");
+export const getDirectPermissionsHelper = () =>
+  tStatic(I18N_MODULE, "GRANT_SCOPE.DIRECT_PERMISSIONS_HELPER");
+export const getCannotManageUserTooltip = () =>
+  tStatic(I18N_MODULE, "GRANT_SCOPE.CANNOT_MANAGE_USER_TOOLTIP");
+export const getOwnRolesTooltip = () => tStatic(I18N_MODULE, "GRANT_SCOPE.OWN_ROLES_TOOLTIP");
+export const getSystemOnlyTooltip = () => tStatic(I18N_MODULE, "GRANT_SCOPE.SYSTEM_ONLY_TOOLTIP");
+export const getDefaultCopyTooltip = () => tStatic(I18N_MODULE, "GRANT_SCOPE.DEFAULT_COPY_TOOLTIP");
+export const getOwnRoleTooltip = () => tStatic(I18N_MODULE, "GRANT_SCOPE.OWN_ROLE_TOOLTIP");
+export const getRoleAboveTooltip = () => tStatic(I18N_MODULE, "GRANT_SCOPE.ROLE_ABOVE_TOOLTIP");
 
 /**
  * True for a known, non-system caller: system-only screens are read-only for it. The server always
@@ -33,12 +40,15 @@ export const getRolePermissionCap = (scope: IGrantScope): string[] =>
 type RoleLike = { slug: string; createdFromDefault?: boolean };
 
 /** Why the caller may not edit this role, or `undefined` when it may (rule R5 as far as the client can see). */
-export const getRoleEditBlock = (scope: IGrantScope | undefined, role: RoleLike): string | undefined => {
+export const getRoleEditBlock = (
+  scope: IGrantScope | undefined,
+  role: RoleLike,
+): string | undefined => {
   if (!isScopeRestricted(scope)) return undefined;
-  if (role.createdFromDefault) return DEFAULT_COPY_TOOLTIP;
-  if (scope.heldRoles.includes(role.slug)) return OWN_ROLE_TOOLTIP;
+  if (role.createdFromDefault) return getDefaultCopyTooltip();
+  if (scope.heldRoles.includes(role.slug)) return getOwnRoleTooltip();
   if (scope.isTopUser || scope.managedRoles.includes(role.slug)) return undefined;
-  return ROLE_ABOVE_TOOLTIP;
+  return getRoleAboveTooltip();
 };
 
 /**

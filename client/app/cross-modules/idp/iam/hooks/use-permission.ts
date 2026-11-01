@@ -8,6 +8,7 @@ import {
 } from "@blocks-idp/iam/models/permission";
 import { iamService } from "@blocks-idp/iam/services/iam.service";
 import { useGrantScope } from "@blocks-idp/iam/hooks/use-grant-scope";
+import { tStatic } from "@seliseblocks/genesis-os";
 
 export const useGetPermissions = (
   options: IPermissionFilter,
@@ -100,8 +101,10 @@ export const useDeletePermission = () => {
     }) => {
       const response = await iamService.permission.deletePermission(id, confirmRevokeFromUsers);
       if (response?.isSuccess === false) {
-        throw Object.assign(new Error("Archive failed"), {
-          errors: normalizeArchiveErrors(response) ?? { general: "Archive failed" },
+        throw Object.assign(new Error(tStatic("os.idp.iam", "USE_PERMISSION.ARCHIVE_FAILED")), {
+          errors: normalizeArchiveErrors(response) ?? {
+            general: tStatic("os.idp.iam", "USE_PERMISSION.ARCHIVE_FAILED"),
+          },
         });
       }
       return response;

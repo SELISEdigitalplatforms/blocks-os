@@ -1,6 +1,7 @@
 import { FilterToolbar } from "@/components/filter-toolbar";
 import { Label } from "@/components/ui-kits/label/label";
 import { Switch } from "@/components/ui-kits/switch/switch";
+import { useT } from "@seliseblocks/genesis-os";
 import { parseAsBoolean, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 
 type ConfigurationsFilter = {
@@ -18,6 +19,7 @@ export const useSignupLinkConfigurationsQueryParams = () => {
 };
 
 export const ConfigurationsFilterToolbar = () => {
+  const { t } = useT("os.idp.signup-links");
   const { queryParams, setQueryParams } = useSignupLinkConfigurationsQueryParams();
 
   const changeHandler = (key: string, value: string) => {
@@ -31,7 +33,7 @@ export const ConfigurationsFilterToolbar = () => {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <FilterToolbar<ConfigurationsFilter>
-        filters={[{ key: "search", type: "SearchInput", label: "Search" }]}
+        filters={[{ key: "search", type: "SearchInput", label: t("common:SEARCH") }]}
         values={{ search: queryParams.search }}
         defaultValues={{ search: "" }}
         onChange={changeHandler}
@@ -50,7 +52,7 @@ export const ConfigurationsFilterToolbar = () => {
           }
         />
         <Label htmlFor="show-archived-configurations" className="text-sm font-normal">
-          Show archived
+          {t("CONFIGURATIONS_FILTER_TOOLBAR.SHOW_ARCHIVED")}
         </Label>
       </div>
     </div>
