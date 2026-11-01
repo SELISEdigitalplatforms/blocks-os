@@ -1,4 +1,5 @@
 import React from "react";
+import { useT } from "@seliseblocks/genesis-os";
 
 interface ChatEventMessageProps {
   message: string;
@@ -207,6 +208,7 @@ interface ChatEventMessageProps {
 // };
 
 export const AnimatedDots = () => {
+  const { t } = useT("os.ai");
   return (
     <div className="flex items-center gap-1">
       <span

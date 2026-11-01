@@ -7,6 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui-kits/dropdown-menu/dropdown-menu";
+import { useT } from "@seliseblocks/genesis-os";
 type FilterValues = {
   search: string;
   providers: string[];
@@ -24,16 +25,17 @@ export function StorageFiltersToolbar({
   onReset,
   onAddConfiguration,
 }: StorageFiltersToolbarProps) {
+  const { t } = useT("os.storage");
   return (
     <div className="mb-6 flex items-center justify-between gap-3">
       <div className="flex-1">
         <FilterToolbar
           filters={[
-            { key: "search", type: "SearchInput", label: "Search" },
+            { key: "search", type: "SearchInput", label: t("common:SEARCH") },
             {
               key: "providers",
               type: "MultiSelect",
-              label: "Provider",
+              label: t("STORAGE_FILTERS_TOOLBAR.PROVIDER"),
               props: {
                 options: [
                   { label: "AWS", value: "AWS" },
@@ -53,14 +55,14 @@ export function StorageFiltersToolbar({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className="gap-2">
-            Add
+            {t("common:ADD")}
             <ChevronDown className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={onAddConfiguration}>
             <Plus className="mr-2 h-4 w-4" />
-            Add Configuration
+            {t("STORAGE_FILTERS_TOOLBAR.ADD_CONFIGURATION")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

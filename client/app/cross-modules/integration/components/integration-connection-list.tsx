@@ -7,6 +7,7 @@ import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-
 import { checkValidDate, formatFullDate } from "@/lib/utils";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { IIntegrationConnection } from "@/cross-modules/integration/models/integration.model";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
 
 type PendingAction = { type: "disconnect" | "regenerate"; connection: IIntegrationConnection };
 
@@ -26,7 +27,7 @@ const accessLevelLabel = (connection: IIntegrationConnection): string => {
 };
 
 const sourceLabel = (connection: IIntegrationConnection): string =>
-  connection.source === "connect" ? "Connect flow" : "Manual";
+  connection.source === "connect" ? tStatic("os.integration", "INTEGRATION_CONNECTION_LIST.CONNECT_FLOW") : "Manual";
 
 /** Saved connections contain metadata, not the one-time client secret. */
 export const toConnectionJson = (connection: IIntegrationConnection): string => JSON.stringify({
@@ -49,9 +50,9 @@ export const toConnectionJson = (connection: IIntegrationConnection): string => 
 const copyConnectionJson = async (connection: IIntegrationConnection) => {
   try {
     await navigator.clipboard.writeText(toConnectionJson(connection));
-    showSuccessToast({ description: "Connection details copied as JSON. The client secret is not included." });
+    showSuccessToast({ description: tStatic("os.integration", "INTEGRATION_CONNECTION_LIST.CONNECTION_DETAILS_COPIED_AS_JSON") });
   } catch {
-    showErrorToast({ errors: "Could not copy to the clipboard." });
+    showErrorToast({ errors: tStatic("os.integration", "INTEGRATION_CONNECTION_LIST.COULD_NOT_COPY_TO_THE") });
   }
 };
 
@@ -72,6 +73,7 @@ export function IntegrationConnectionList({
   disconnecting,
   regenerating,
 }: Readonly<IntegrationConnectionListProps>) {
+  const { t } = useT("os.integration");
   const [pending, setPending] = useState<PendingAction | null>(null);
 
   const closeConfirm = () => setPending(null);
@@ -96,24 +98,24 @@ export function IntegrationConnectionList({
                 <h3 className="wrap-break-word text-base font-semibold text-high-emphasis">{connection.connectionName}</h3>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant={connection.status === "active" ? "success" : "secondary"}>{connection.status}</Badge>
-                  <Badge variant="outline">{accessLevelLabel(connection)} access</Badge>
+                  <Badge variant="outline">{t("INTEGRATION_CONNECTION_LIST.ACCESS", { connection: accessLevelLabel(connection) })}</Badge>
                   <Badge variant="outline">{sourceLabel(connection)}</Badge>
-                  {connection.neverDelivered && <Badge variant="secondary">Never delivered</Badge>}
+                  {connection.neverDelivered && <Badge variant="secondary">{t("INTEGRATION_CONNECTION_LIST.NEVER_DELIVERED")}</Badge>}
                 </div>
               </div>
               <Button type="button" size="sm" variant="outline" className="gap-2" onClick={() => void copyConnectionJson(connection)}>
                 <Braces className="h-4 w-4" aria-hidden="true" />
-                Copy as JSON
+                {t("INTEGRATION_CONNECTION_LIST.COPY_AS_JSON")}
               </Button>
             </div>
             <dl className="grid gap-x-8 gap-y-4 border-t border-border px-5 py-4 sm:grid-cols-2 xl:grid-cols-3">
-              <Detail label="Integration">{connection.templateDisplayName}</Detail>
-              <Detail label="Client ID"><code className="break-all font-mono text-xs">{connection.clientCredentialId}</code></Detail>
-              <Detail label="Site URL">{connection.siteUrl ? <span className="break-all">{connection.siteUrl}</span> : "—"}</Detail>
-              <Detail label="Created">{connection.createdDate && checkValidDate(connection.createdDate)
+              <Detail label={t("INTEGRATION_CONNECTION_LIST.INTEGRATION")}>{connection.templateDisplayName}</Detail>
+              <Detail label={t("INTEGRATION_CONNECTION_LIST.CLIENT_ID")}><code className="break-all font-mono text-xs">{connection.clientCredentialId}</code></Detail>
+              <Detail label={t("INTEGRATION_CONNECTION_LIST.SITE_URL")}>{connection.siteUrl ? <span className="break-all">{connection.siteUrl}</span> : "—"}</Detail>
+              <Detail label={t("INTEGRATION_CONNECTION_LIST.CREATED")}>{connection.createdDate && checkValidDate(connection.createdDate)
                 ? <time dateTime={connection.createdDate}>{formatFullDate(new Date(connection.createdDate))}</time>
                 : "—"}</Detail>
-              <Detail label="Created by">{connection.createdBy || "—"}</Detail>
+              <Detail label={t("INTEGRATION_CONNECTION_LIST.CREATED_BY")}>{connection.createdBy || "—"}</Detail>
             </dl>
             {connection.status === "active" && (
               <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border bg-background/40 px-5 py-3">
@@ -123,7 +125,7 @@ export function IntegrationConnectionList({
                   disabled={regenerating}
                   onClick={() => setPending({ type: "regenerate", connection })}
                 >
-                  Regenerate
+                  {t("INTEGRATION_CONNECTION_LIST.REGENERATE")}
                 </Button>
                 <Button
                   size="sm"
@@ -131,7 +133,7 @@ export function IntegrationConnectionList({
                   disabled={disconnecting}
                   onClick={() => setPending({ type: "disconnect", connection })}
                 >
-                  Disconnect
+                  {t("INTEGRATION_CONNECTION_LIST.DISCONNECT")}
                 </Button>
               </div>
             )}
@@ -146,30 +148,25 @@ export function IntegrationConnectionList({
             buttonState={{ confirm: { disable: pending.type === "disconnect" ? disconnecting : regenerating } }}
             data={{
               dialogTitle:
-                pending.type === "disconnect" ? "Disconnect this connection?" : "Regenerate the secret?",
+                pending.type === "disconnect" ? t("INTEGRATION_CONNECTION_LIST.DISCONNECT_THIS_CONNECTION") : t("INTEGRATION_CONNECTION_LIST.REGENERATE_THE_SECRET"),
               dialogSubtitle:
                 pending.type === "disconnect" ? (
                   <>
                     <p>
-                      <span className="font-medium">{pending.connection.connectionName}</span> will stop working
-                      immediately and its client credential will be deleted.
-                    </p>
-                    <p>This cannot be undone; you can always create a new connection.</p>
-                    <p>Access tokens already issued stay valid until they expire (up to 60 minutes).</p>
+                      {t("INTEGRATION_CONNECTION_LIST.WILL_STOP_WORKING_IMMEDIATELY_AND", { span: `${pending.connection.connectionName}` })}</p>
+                    <p>{t("INTEGRATION_CONNECTION_LIST.THIS_CANNOT_BE_UNDONE_YOU")}</p>
+                    <p>{t("INTEGRATION_CONNECTION_LIST.ACCESS_TOKENS_ALREADY_ISSUED_STAY")}</p>
                   </>
                 ) : (
                   <>
                     <p>
-                      A new secret will be created for{" "}
-                      <span className="font-medium">{pending.connection.connectionName}</span>. The client id stays
-                      the same.
-                    </p>
-                    <p>The old secret stops working immediately; update your site with the new one.</p>
-                    <p>Access tokens already issued stay valid until they expire (up to 60 minutes).</p>
+                      {t("INTEGRATION_CONNECTION_LIST.A_NEW_SECRET_WILL_BE", { span: `${pending.connection.connectionName}` })}</p>
+                    <p>{t("INTEGRATION_CONNECTION_LIST.THE_OLD_SECRET_STOPS_WORKING")}</p>
+                    <p>{t("INTEGRATION_CONNECTION_LIST.ACCESS_TOKENS_ALREADY_ISSUED_STAY")}</p>
                   </>
                 ),
-              confirmButton: pending.type === "disconnect" ? "Disconnect" : "Regenerate",
-              cancelButton: "Cancel",
+              confirmButton: pending.type === "disconnect" ? t("INTEGRATION_CONNECTION_LIST.DISCONNECT") : t("INTEGRATION_CONNECTION_LIST.REGENERATE"),
+              cancelButton: t("common:CANCEL"),
             }}
           />
         )}

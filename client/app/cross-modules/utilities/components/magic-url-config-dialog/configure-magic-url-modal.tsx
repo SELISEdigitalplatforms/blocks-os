@@ -13,7 +13,7 @@ import { Label } from "@/components/ui-kits/label/label";
 import { useSaveMagicUrlConfig } from "@blocks-utilities/hooks/use-magic-url-config";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { getDefaultShortUrlBase, isValidUrl } from "@blocks-utilities/utils/url.util";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT, tStatic } from "@seliseblocks/genesis-os";
 import { IMagicUrlConfig } from "@blocks-utilities/models/magic-url-config.model";
 import { v4 as uuidv4 } from "uuid";
 
@@ -30,6 +30,7 @@ export const ConfigureMagicUrlModal = ({
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
 }: ConfigureMagicUrlModalProps) => {
+  const { t } = useT("os.utilities");
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const isControlled = controlledOpen !== undefined;
@@ -68,14 +69,14 @@ export const ConfigureMagicUrlModal = ({
   const validateFields = (): boolean => {
     const newErrors = { contextName: "", shortUrlBase: "" };
     if (!contextName.trim()) {
-      newErrors.contextName = "Context name is required";
+      newErrors.contextName = tStatic("os.utilities", "CONFIGURE_MAGIC_URL_MODAL.CONTEXT_NAME_IS_REQUIRED");
     }
     if (!shortUrlBase.trim()) {
-      newErrors.shortUrlBase = "Short URL base is required";
+      newErrors.shortUrlBase = tStatic("os.utilities", "CONFIGURE_MAGIC_URL_MODAL.SHORT_URL_BASE_IS_REQUIRED");
     } else if (!isValidUrl(shortUrlBase)) {
-      newErrors.shortUrlBase = "URL must be a valid HTTPS/HTTP URL";
+      newErrors.shortUrlBase = tStatic("os.utilities", "CONFIGURE_MAGIC_URL_MODAL.URL_MUST_BE_A_VALID");
     } else if (!shortUrlBase.endsWith("/")) {
-      newErrors.shortUrlBase = "URL must end with a forward slash (/)";
+      newErrors.shortUrlBase = tStatic("os.utilities", "CONFIGURE_MAGIC_URL_MODAL.URL_MUST_END");
     }
     setErrors(newErrors);
     return !newErrors.contextName && !newErrors.shortUrlBase;
@@ -94,12 +95,12 @@ export const ConfigureMagicUrlModal = ({
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
       showSuccessToast({
         description: configuration
-          ? "Configuration updated successfully"
-          : "Configuration added successfully",
+          ? t("CONFIGURE_MAGIC_URL_MODAL.CONFIGURATION_UPDATED_SUCCESSFULLY")
+          : t("CONFIGURE_MAGIC_URL_MODAL.CONFIGURATION_ADDED_SUCCESSFULLY"),
       });
       setOpen(false);
     } catch {
-      showErrorToast({ errors: "Failed to save configuration" });
+      showErrorToast({ errors: t("CONFIGURE_MAGIC_URL_MODAL.FAILED_TO_SAVE_CONFIGURATION") });
     }
   };
 
@@ -114,17 +115,17 @@ export const ConfigureMagicUrlModal = ({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {configuration ? "Edit Magic URL Configuration" : "Add Magic URL Configuration"}
+            {configuration ? t("CONFIGURE_MAGIC_URL_MODAL.EDIT_MAGIC_URL_CONFIGURATION") : t("CONFIGURE_MAGIC_URL_MODAL.ADD_MAGIC_URL_CONFIGURATION")}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="contextName">
-              Context Name <span className="text-error">*</span>
+              {t("CONFIGURE_MAGIC_URL_MODAL.CONTEXT_NAME", { span: "*" })}
             </Label>
             <Input
               id="contextName"
-              placeholder="Enter context name"
+              placeholder={t("CONFIGURE_MAGIC_URL_MODAL.ENTER_CONTEXT_NAME")}
               value={contextName}
               onChange={(e) => {
                 setContextName(e.target.value);
@@ -137,11 +138,11 @@ export const ConfigureMagicUrlModal = ({
           </div>
           <div className="space-y-2">
             <Label htmlFor="shortUrlBase">
-              Short URL Base <span className="text-error">*</span>
+              {t("CONFIGURE_MAGIC_URL_MODAL.SHORT_URL_BASE", { span: "*" })}
             </Label>
             <Input
               id="shortUrlBase"
-              placeholder="e.g., https://short.seliseblocks.com/"
+              placeholder={t("CONFIGURE_MAGIC_URL_MODAL.E_G_HTTPS_SHORT_SELISEBLOCKS")}
               value={shortUrlBase}
               onChange={(e) => {
                 setShortUrlBase(e.target.value);
@@ -156,11 +157,11 @@ export const ConfigureMagicUrlModal = ({
         <DialogFooter>
           <DialogTrigger asChild>
             <Button variant="outline" disabled={isSaving}>
-              Cancel
+              {t("common:CANCEL")}
             </Button>
           </DialogTrigger>
           <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving ? "Saving..." : "Save"}
+            {isSaving ? t("CONFIGURE_MAGIC_URL_MODAL.SAVING") : t("common:SAVE")}
           </Button>
         </DialogFooter>
       </DialogContent>

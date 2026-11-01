@@ -38,6 +38,7 @@ import {
   JwtClaimPayload,
   JwtClaimResponse,
 } from "@blocks-idp/authentication/models/jwt.claim.model";
+import { tStatic } from "@seliseblocks/genesis-os";
 
 export class ProjectService {
   getProjects(page: number, pageSize: number, tenantGroupId: string): Promise<IProjectGroup[]> {
@@ -211,7 +212,7 @@ export class ProjectService {
         // HTTP error
         return {
           isValid: false,
-          error: `Invalid, provide a valid jwks URL`,
+          error: tStatic("os.identifier", "PROJECT_SERVICE.INVALID_PROVIDE_A_VALID_JWKS"),
         };
       }
 
@@ -221,7 +222,7 @@ export class ProjectService {
         // Response is not JSON
         return {
           isValid: false,
-          error: "Invalid, provide a valid jwks URL",
+          error: tStatic("os.identifier", "PROJECT_SERVICE.INVALID_PROVIDE_A_VALID_JWKS"),
         };
       }
 
@@ -233,7 +234,7 @@ export class ProjectService {
         // Missing or invalid 'keys' array in JWKS
         return {
           isValid: false,
-          error: "Invalid, provide a valid jwks URL",
+          error: tStatic("os.identifier", "PROJECT_SERVICE.INVALID_PROVIDE_A_VALID_JWKS"),
         };
       }
 
@@ -242,7 +243,7 @@ export class ProjectService {
       console.error("JWKS URL Validation Error:", error);
       return {
         isValid: false,
-        error: "Invalid, provide a valid jwks URL",
+        error: tStatic("os.identifier", "PROJECT_SERVICE.INVALID_PROVIDE_A_VALID_JWKS"),
       };
     }
   }

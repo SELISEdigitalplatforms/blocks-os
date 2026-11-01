@@ -12,7 +12,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { useNavigate } from "react-router";
 import { useValidateAuthorization } from "@/cross-modules/devops/hooks/github-info";
 import { IProviderDestination } from "@/cross-modules/devops/models/utils";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 interface ProviderButtonsProps extends IProviderDestination {
   onClose?: (verifyAuth?: boolean) => void | Promise<void>;
   extraState?: string;
@@ -24,6 +24,7 @@ const ProviderButtons = ({
   extraState,
   closeOnProviderSelect,
 }: ProviderButtonsProps) => {
+  const { t } = useT("os.devops");
   const navigate = useNavigate();
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
   const { data: verifyAuth } = useValidateAuthorization();
@@ -87,12 +88,12 @@ const ProviderButtons = ({
               >
                 <img
                   src={iconSrc}
-                  alt={`${provider.name} icon`}
+                  alt={t("RENDER_PROVIDER.ICON", { name: provider.name })}
                   width={18}
                   height={18}
                   className="object-contain"
                 />
-                <span className="text-foreground">Continue with {provider.name}</span>
+                <span className="text-foreground">{t("RENDER_PROVIDER.CONTINUE_WITH", { name: provider.name })}</span>
               </Button>
             );
           })}

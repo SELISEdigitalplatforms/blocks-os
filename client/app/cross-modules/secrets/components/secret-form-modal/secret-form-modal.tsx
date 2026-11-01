@@ -48,42 +48,49 @@ import {
 import { describeSecretError } from "@/cross-modules/secrets/utils/secret-error";
 import { UserRolePicker } from "../user-role-picker/user-role-picker";
 import { SecretTagInput } from "../secret-tag-input/secret-tag-input";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
 
 // Mirrors SecretService.Helpers.cs so the user sees the problem before a round trip. The
 // server re-validates regardless; this only saves a failed request.
-const nameField = z
+const createNameField = () => z
   .string()
   .trim()
-  .min(1, "A name is required.")
-  .max(SECRET_NAME_MAX_LENGTH, `A name may be at most ${SECRET_NAME_MAX_LENGTH} characters.`)
+  .min(1, tStatic("os.secrets", "SECRET_FORM_MODAL.A_NAME_IS_REQUIRED"))
+  .max(
+    SECRET_NAME_MAX_LENGTH,
+    tStatic("os.secrets", "SECRET_FORM_MODAL.NAME_MAX_LENGTH", { max: SECRET_NAME_MAX_LENGTH }),
+  )
   .regex(
     SECRET_NAME_PATTERN,
-    "Start with a letter or digit; letters, digits, dot, underscore and hyphen only.",
+    tStatic("os.secrets", "SECRET_FORM_MODAL.START_WITH_A_LETTER_OR"),
   );
 
-const descriptionField = z
-  .string()
-  .max(
-    SECRET_DESCRIPTION_MAX_LENGTH,
-    `A description may be at most ${SECRET_DESCRIPTION_MAX_LENGTH} characters.`,
-  )
-  .optional();
+const createDescriptionField = () =>
+  z
+    .string()
+    .max(
+      SECRET_DESCRIPTION_MAX_LENGTH,
+      tStatic("os.secrets", "SECRET_FORM_MODAL.DESCRIPTION_MAX_LENGTH", {
+        max: SECRET_DESCRIPTION_MAX_LENGTH,
+      }),
+    )
+    .optional();
 
 // Length is deliberately not validated here. Key Vault's 25 KB cap is enforced server-side and
 // comes back as a 400 with reason VALUE_TOO_LARGE, which `applyError` puts on this field — so an
 // oversized value still fails clearly, without a byte counter distracting from a limit almost
 // nobody reaches.
-const valueField = z.string().min(1, "A value is required.");
+const createValueField = () => z.string().min(1, tStatic("os.secrets", "SECRET_FORM_MODAL.A_VALUE_IS_REQUIRED"));
 
-const createSchema = z.object({
-  name: nameField,
-  description: descriptionField,
-  value: valueField,
+const createCreateSchema = () => z.object({
+  name: createNameField(),
+  description: createDescriptionField(),
+  value: createValueField(),
 });
 
-const editSchema = z.object({
-  name: nameField,
-  description: descriptionField,
+const createEditSchema = () => z.object({
+  name: createNameField(),
+  description: createDescriptionField(),
   // Never edited here: changing a value is a rotation, which is audited separately.
   value: z.string().optional(),
 });
@@ -138,6 +145,7 @@ interface SecretFormModalProps {
  * discards a previous attempt.
  */
 export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalProps) {
+  const { t } = useT("os.secrets");
   const isEdit = !!secret;
   const [type, setType] = useState<SecretType>(secret?.type ?? SECRET_TYPE.Api);
   const [access, setAccess] = useState<SecretAccess>(() =>
@@ -157,7 +165,7 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
   const isPending = isCreating || isUpdating || isUpdatingAccess;
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(isEdit ? editSchema : createSchema),
+    resolver: zodResolver(isEdit ? createEditSchema() : createCreateSchema()),
     defaultValues: {
       name: secret?.name ?? "",
       description: secret?.description ?? "",
@@ -198,7 +206,7 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
       });
       onOpenChange(false);
     } catch (error) {
-      applyError(error, "Could not create the secret.");
+      applyError(error, t("SECRET_FORM_MODAL.COULD_NOT_CREATE_THE_SECRET"));
     }
   };
 
@@ -217,7 +225,7 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
           tags,
         });
       } catch (error) {
-        applyError(error, "Could not save the secret.");
+        applyError(error, t("SECRET_FORM_MODAL.COULD_NOT_SAVE_THE_SECRET"));
         return;
       }
     }
@@ -240,9 +248,9 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
       // failure imply nothing landed, and keep the modal open so a retry redoes only the
       // access call.
       setMetadataSaved(true);
-      const info = describeSecretError(error, "Could not update the access list.");
+      const info = describeSecretError(error, tStatic("os.secrets", "SECRET_FORM_MODAL.COULD_NOT_UPDATE_THE_ACCESS"));
       setFormError(
-        `The name and description were saved, but the access list was not: ${info.message}`,
+        t("SECRET_FORM_MODAL.THE_NAME_AND_DESCRIPTION_WERE", { message: info.message }),
       );
     }
   };
@@ -258,11 +266,11 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[min(90vh,760px)] w-[calc(100vw-1.5rem)] max-w-lg flex-col overflow-hidden sm:w-full">
         <DialogHeader>
-          <DialogTitle className="text-left">{isEdit ? "Edit secret" : "Create secret"}</DialogTitle>
+          <DialogTitle className="text-left">{isEdit ? t("SECRET_FORM_MODAL.EDIT_SECRET") : t("SECRET_FORM_MODAL.CREATE_SECRET")}</DialogTitle>
           <DialogDescription className="text-left">
             {isEdit
-              ? "Update the name, description, tags and access list. Use Rotate to change the value."
-              : "Store a new secret. The value goes straight to the secret store and is never shown in a list."}
+              ? t("SECRET_FORM_MODAL.UPDATE_THE_NAME_DESCRIPTION_TAGS")
+              : t("SECRET_FORM_MODAL.STORE_A_NEW_SECRET_THE")}
           </DialogDescription>
         </DialogHeader>
 
@@ -276,7 +284,7 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
               {formError && <Banner variant="destructive">{formError}</Banner>}
 
               <div className="space-y-2">
-                <Label>Type {!isEdit && <span className="text-destructive">*</span>}</Label>
+                <Label>{t("common:TYPE")} {!isEdit && <span className="text-destructive">*</span>}</Label>
                 {isEdit ? (
                   // The backend has no type transition; changing it would mean a new secret.
                   <div className="rounded-md border bg-muted/30 px-3 py-2">
@@ -292,7 +300,7 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
                   <RadioGroup
                     value={type}
                     onValueChange={(value) => setType(value as SecretType)}
-                    aria-label="Type"
+                    aria-label={t("common:TYPE")}
                     className="gap-2"
                   >
                     {CREATE_TYPE_OPTIONS.map((option) => (
@@ -331,10 +339,10 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Name <span className="text-destructive">*</span>
+                      {t("SECRET_FORM_MODAL.NAME", { span: "*" })}
                     </FormLabel>
                     <FormControl>
-                      <Input placeholder="payment-gateway-key" autoComplete="off" {...field} />
+                      <Input placeholder={t("SECRET_FORM_MODAL.PAYMENT_GATEWAY_KEY")} autoComplete="off" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -346,10 +354,10 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>{t("common:DESCRIPTION")}</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="What this secret is for"
+                        placeholder={t("SECRET_FORM_MODAL.WHAT_THIS_SECRET_IS_FOR")}
                         className="min-h-[70px]"
                         {...field}
                         value={field.value ?? ""}
@@ -367,19 +375,18 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        Secret value <span className="text-destructive">*</span>
+                        {t("SECRET_FORM_MODAL.SECRET_VALUE", { span: "*" })}
                       </FormLabel>
                       <FormControl>
                         <PasswordInput
-                          placeholder="Paste the secret value"
+                          placeholder={t("SECRET_FORM_MODAL.PASTE_THE_SECRET_VALUE")}
                           autoComplete="off"
                           {...field}
                           value={field.value ?? ""}
                         />
                       </FormControl>
                       <FormDescription>
-                        Stored in the secret store. It is never shown in a list and can only be
-                        read through an audited reveal.
+                        {t("SECRET_FORM_MODAL.STORED_IN_THE_SECRET_STORE")}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -388,9 +395,9 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
               )}
 
               <div className="space-y-2">
-                <Label>Tags</Label>
+                <Label>{t("SECRET_FORM_MODAL.TAGS")}</Label>
                 <p className="text-xs text-muted-foreground">
-                  For grouping and filtering only — tags never affect who can read a secret.
+                  {t("SECRET_FORM_MODAL.FOR_GROUPING_AND_FILTERING_ONLY")}
                 </p>
                 <SecretTagInput
                   value={tags}
@@ -402,9 +409,9 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
 
               {isApi && (
                 <div className="space-y-2">
-                  <Label>Access</Label>
+                  <Label>{t("SECRET_FORM_MODAL.ACCESS")}</Label>
                   <p className="text-xs text-muted-foreground">
-                    Who may read this secret&apos;s value.
+                    {t("SECRET_FORM_MODAL.WHO_MAY_READ_THIS_SECRET")}
                   </p>
                   <UserRolePicker value={access} onChange={setAccess} disabled={isPending} />
                 </div>
@@ -418,10 +425,10 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
                 onClick={() => onOpenChange(false)}
                 disabled={isPending}
               >
-                Cancel
+                {t("common:CANCEL")}
               </Button>
               <Button type="submit" disabled={isPending}>
-                {isPending ? "Saving…" : metadataSaved ? "Retry access update" : "Save"}
+                {isPending ? t("SECRET_FORM_MODAL.SAVING") : metadataSaved ? t("SECRET_FORM_MODAL.RETRY_ACCESS_UPDATE") : t("common:SAVE")}
               </Button>
             </DialogFooter>
           </form>

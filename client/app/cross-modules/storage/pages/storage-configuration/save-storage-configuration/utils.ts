@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { IStorageConfiguration } from "@blocks-storage/models/storage.model";
+import { tStatic } from "@seliseblocks/genesis-os";
 
 /** Upper bound for a configured upload/download URL expiry (7 days), matching the backend's own limit. */
 const MAX_EXPIRY_SECONDS = 604_800;
@@ -18,7 +19,7 @@ const MAX_FILE_SIZE_MB = 50;
 export const buildStorageConfigurationFormSchema = (isEditMode: boolean) =>
   z
   .object({
-    name: z.string().nonempty("Name is required").trim(),
+    name: z.string().nonempty(tStatic("os.storage", "UTILS.NAME_IS_REQUIRED")).trim(),
     storageStrategy: z.enum(["AWS", "Azure", "SftpStorage", "S3Compatible"]),
     secretKey: z.string().trim().nullable(),
     accessKey: z.string().trim().nullable(),
@@ -34,8 +35,8 @@ export const buildStorageConfigurationFormSchema = (isEditMode: boolean) =>
       .pipe(
         // zod 3's default messages, kept so the form reads the same after the zod 4 upgrade.
         z.coerce
-          .number<string>({ error: "Expected number, received nan" })
-          .min(0, { error: "Number must be greater than or equal to 0", abort: true })
+          .number<string>({ error: tStatic("os.storage", "UTILS.EXPECTED_NUMBER_RECEIVED_NAN") })
+          .min(0, { error: tStatic("os.storage", "UTILS.NUMBER_MUST_BE_GREATER_THAN"), abort: true })
           .transform((arg) => arg.toString()),
       )
       .nullable(),
@@ -47,11 +48,11 @@ export const buildStorageConfigurationFormSchema = (isEditMode: boolean) =>
       .trim()
       .pipe(
         z.coerce
-          .number<string>({ error: "Must be a number" })
-          .refine(Number.isInteger, { error: "Must be a whole number of seconds", abort: true })
-          .min(1, { error: "Must be at least 1 second", abort: true })
+          .number<string>({ error: tStatic("os.storage", "UTILS.MUST_BE_A_NUMBER") })
+          .refine(Number.isInteger, { error: tStatic("os.storage", "UTILS.MUST_BE_A_WHOLE_NUMBER"), abort: true })
+          .min(1, { error: tStatic("os.storage", "UTILS.MUST_BE_AT_LEAST_1"), abort: true })
           .max(MAX_EXPIRY_SECONDS, {
-            error: "Must be at most 604,800 seconds (7 days)",
+            error: tStatic("os.storage", "UTILS.MUST_BE_AT_MOST_604"),
             abort: true,
           })
           .transform((arg) => arg.toString()),
@@ -61,11 +62,11 @@ export const buildStorageConfigurationFormSchema = (isEditMode: boolean) =>
       .trim()
       .pipe(
         z.coerce
-          .number<string>({ error: "Must be a number" })
-          .refine(Number.isInteger, { error: "Must be a whole number of seconds", abort: true })
-          .min(1, { error: "Must be at least 1 second", abort: true })
+          .number<string>({ error: tStatic("os.storage", "UTILS.MUST_BE_A_NUMBER") })
+          .refine(Number.isInteger, { error: tStatic("os.storage", "UTILS.MUST_BE_A_WHOLE_NUMBER"), abort: true })
+          .min(1, { error: tStatic("os.storage", "UTILS.MUST_BE_AT_LEAST_1"), abort: true })
           .max(MAX_EXPIRY_SECONDS, {
-            error: "Must be at most 604,800 seconds (7 days)",
+            error: tStatic("os.storage", "UTILS.MUST_BE_AT_MOST_604"),
             abort: true,
           })
           .transform((arg) => arg.toString()),
@@ -75,9 +76,9 @@ export const buildStorageConfigurationFormSchema = (isEditMode: boolean) =>
       .trim()
       .pipe(
         z.coerce
-          .number<string>({ error: "Must be a number" })
-          .positive({ error: "Must be greater than 0", abort: true })
-          .max(MAX_FILE_SIZE_MB, { error: `Must be at most ${MAX_FILE_SIZE_MB} MB`, abort: true })
+          .number<string>({ error: tStatic("os.storage", "UTILS.MUST_BE_A_NUMBER") })
+          .positive({ error: tStatic("os.storage", "UTILS.MUST_BE_GREATER_THAN_0"), abort: true })
+          .max(MAX_FILE_SIZE_MB, { error: tStatic("os.storage", "UTILS.MUST_BE_AT_MOST_MB", { MAX_FILE_SIZE_MB }), abort: true })
           .transform((arg) => arg.toString()),
       ),
     uploadCompletionRequiredFor: z.array(z.enum(["Public", "Private"])),
@@ -93,7 +94,7 @@ export const buildStorageConfigurationFormSchema = (isEditMode: boolean) =>
           ctx.addIssue({
             path: [field],
             code: "custom",
-            message: messages[field] || `${field} is required`,
+            message: messages[field] || tStatic("os.storage", "UTILS.IS_REQUIRED", { field }),
           });
         }
       });
@@ -101,33 +102,33 @@ export const buildStorageConfigurationFormSchema = (isEditMode: boolean) =>
 
     if (storageStrategy === "AWS") {
       requireFields(["secretKey", "accessKey", "cloudStorageRegionEndPoint"], {
-        secretKey: "Secret key is required",
-        accessKey: "Access key is required",
-        cloudStorageRegionEndPoint: "Region endpoint is required",
+        secretKey: tStatic("os.storage", "UTILS.SECRET_KEY_IS_REQUIRED"),
+        accessKey: tStatic("os.storage", "UTILS.ACCESS_KEY_IS_REQUIRED"),
+        cloudStorageRegionEndPoint: tStatic("os.storage", "UTILS.REGION_ENDPOINT_IS_REQUIRED"),
       });
     }
 
     if (storageStrategy === "Azure") {
       requireFields(["connectionString"], {
-        connectionString: "Connection string is required",
+        connectionString: tStatic("os.storage", "UTILS.CONNECTION_STRING_IS_REQUIRED"),
       });
     }
 
     if (storageStrategy === "SftpStorage") {
       requireFields(["host", "port", "userName", "password", "remoteBasePath"], {
-        host: "Host is required",
-        port: "Port is required",
-        userName: "Username is required",
-        password: "Password is required",
-        remoteBasePath: "Remote base path is required",
+        host: tStatic("os.storage", "UTILS.HOST_IS_REQUIRED"),
+        port: tStatic("os.storage", "UTILS.PORT_IS_REQUIRED"),
+        userName: tStatic("os.storage", "UTILS.USERNAME_IS_REQUIRED"),
+        password: tStatic("os.storage", "UTILS.PASSWORD_IS_REQUIRED"),
+        remoteBasePath: tStatic("os.storage", "UTILS.REMOTE_BASE_PATH_IS_REQUIRED"),
       });
     }
 
     if (storageStrategy === "S3Compatible") {
       requireFields(["accessKey", "secretKey", "host"], {
-        accessKey: "Access key is required",
-        secretKey: "Secret key is required",
-        host: "Host URL is required",
+        accessKey: tStatic("os.storage", "UTILS.ACCESS_KEY_IS_REQUIRED"),
+        secretKey: tStatic("os.storage", "UTILS.SECRET_KEY_IS_REQUIRED"),
+        host: tStatic("os.storage", "UTILS.HOST_URL_IS_REQUIRED"),
       });
     }
   });

@@ -1,25 +1,22 @@
-export const myServicesGuidelineSteps = [
+import type { TFunction } from "@seliseblocks/genesis-os";
+
+export const getMyServicesGuidelineSteps = (t: TFunction) => [
   {
     id: "0",
     description: (
       <div className="text-sm text-medium-emphasis">
-        <h4 className="mb-2 text-lg font-semibold text-high-emphasis">My Services Overview</h4>
+        <h4 className="mb-2 text-lg font-semibold text-high-emphasis">{t("GUIDELINE_DOCS.MY_SERVICES_OVERVIEW")}</h4>
         <p>
-          My Services lets you register your applications and automatically collect logs and traces
-          using our official NuGet package. Once integrated, all telemetry is securely ingested,
-          stored, and visualized in real time through the platform dashboard. This guide will
-          explain in detail the following step:
+          {t("GUIDELINE_DOCS.MY_SERVICES_LETS_YOU_REGISTER")}
         </p>
         <ul className="ml-4 mt-2 list-inside list-disc text-sm">
           <li>
-            Register your service in the cloud to obtain credentials and configuration details.
+            {t("GUIDELINE_DOCS.REGISTER_YOUR_SERVICE_IN_THE")}
           </li>
-          <li>Install the NuGet package- SeliseBlocks.LMT.Client.</li>
+          <li>{t("GUIDELINE_DOCS.INSTALL_THE_NUGET_PACKAGE")}</li>
         </ul>
         <p className="mt-2 text-high-emphasis">
-          Send structured logs, metrics, and traces automatically — no extra setup needed. Once
-          configured, your telemetry will appear under the corresponding service in the monitoring
-          interface within seconds.
+          {t("GUIDELINE_DOCS.SEND_STRUCTURED_LOGS_METRICS_AND")}
         </p>
       </div>
     ),
@@ -28,28 +25,26 @@ export const myServicesGuidelineSteps = [
     id: "1",
     description: (
       <div className="text-sm text-medium-emphasis">
-        <h4 className="mb-2 text-lg font-semibold text-high-emphasis">NuGet Integration</h4>
+        <h4 className="mb-2 text-lg font-semibold text-high-emphasis">{t("GUIDELINE_DOCS.NUGET_INTEGRATION")}</h4>
         <p className="text-sm">
-          Install the official client library from NuGet to send logs and traces directly from your
-          .NET applications. The package automatically batches and transmits telemetry to the
-          managed ingestion endpoint.
+          {t("GUIDELINE_DOCS.INSTALL_THE_OFFICIAL_CLIENT")}
         </p>
         <p className="mt-2 font-semibold">
-          Package:
+          {t("GUIDELINE_DOCS.PACKAGE")}
           <a
             href="https://www.nuget.org/packages/SeliseBlocks.LMT.Client#readme-body-tab"
             target="_blank"
             rel="noopener noreferrer"
             className="ml-1 font-normal text-primary underline"
           >
-            SeliseBlocks.LMT.Client
+            {t("GUIDELINE_DOCS.SELISEBLOCKS_LMT_CLIENT")}
           </a>
         </p>
-        <p className="mt-2 font-semibold">Features:</p>
+        <p className="mt-2 font-semibold">{t("GUIDELINE_DOCS.FEATURES")}</p>
         <ul className="ml-4 mt-2 list-inside list-disc text-sm">
-          <li>Automatic retry and buffering on transient network errors.</li>
-          <li>Supports logs, traces, and custom context properties.</li>
-          <li>Minimal configuration via appsettings.json or environment variables.</li>
+          <li>{t("GUIDELINE_DOCS.AUTOMATIC_RETRY_AND_BUFFERING_ON")}</li>
+          <li>{t("GUIDELINE_DOCS.SUPPORTS_LOGS_TRACES_AND_CUSTOM")}</li>
+          <li>{t("GUIDELINE_DOCS.MINIMAL_CONFIGURATION_VIA")}</li>
         </ul>
       </div>
     ),
@@ -58,15 +53,14 @@ export const myServicesGuidelineSteps = [
     id: "2",
     description: (
       <div className="text-sm text-medium-emphasis">
-        <h4 className="mb-2 text-lg font-semibold text-high-emphasis">Viewing Your Data</h4>
+        <h4 className="mb-2 text-lg font-semibold text-high-emphasis">{t("GUIDELINE_DOCS.VIEWING_YOUR_DATA")}</h4>
         <p className="text-sm">
-          Once the client is active, all incoming telemetry becomes searchable and visualizable in
-          the My Services dashboard.
+          {t("GUIDELINE_DOCS.ONCE_THE_CLIENT_IS_ACTIVE")}
         </p>
         <ul className="mt-2 list-inside list-disc text-sm">
-          <li>Use the list view to browse logs and traces per service.</li>
-          <li>Filter by severity, trace ID, service name, or custom tags.</li>
-          <li>Leverage time-range filters for performance insights.</li>
+          <li>{t("GUIDELINE_DOCS.USE_THE_LIST_VIEW_TO")}</li>
+          <li>{t("GUIDELINE_DOCS.FILTER_BY_SEVERITY_TRACE_ID")}</li>
+          <li>{t("GUIDELINE_DOCS.LEVERAGE_TIME_RANGE_FILTERS_FOR")}</li>
         </ul>
       </div>
     ),

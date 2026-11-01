@@ -1,4 +1,5 @@
 import { IProvider } from "@blocks-ai/types/aimodel.service.type";
+import { tStatic } from "@seliseblocks/genesis-os";
 
 /**
  * The kind of platform that hosts an AI model integration. Drives how
@@ -18,7 +19,7 @@ export const createCustomProvider = (): IProvider => ({
   Url: "",
   DocLink: "",
   Description:
-    "Bring your own AI model to the platform by connecting external APIs for full customization and control.",
+    tStatic("os.ai", "AIMODEL_PROVIDER_UTILS.BRING_YOUR_OWN_AI_MODEL"),
   Order: 999999,
 });
 
@@ -50,12 +51,12 @@ export const ProviderToPlatformMap: Record<string, ServicePlatform> = {
 export const ProviderNameMap: Record<string, string> = {
   openai: "OpenAI",
   anthropic: "Anthropic",
-  google: "Gemini",
-  mistral: "Mistral",
+  get google() { return tStatic("os.ai", "AIMODEL_PROVIDER_UTILS.GEMINI"); },
+  get mistral() { return tStatic("os.ai", "AIMODEL_PROVIDER_UTILS.MISTRAL"); },
   deepseek: "DeepSeek",
   azure: "Azure",
   openrouter: "OpenRouter",
-  custom: "Custom Model",
+  get custom() { return tStatic("os.ai", "AIMODEL_PROVIDER_UTILS.CUSTOM_MODEL"); },
 };
 
 export const getProviderDisplayName = (provider: string | undefined): string => {

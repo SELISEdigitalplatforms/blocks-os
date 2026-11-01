@@ -34,7 +34,7 @@ import {
 import { z } from "zod";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { useSaveStorageConfiguration } from "@blocks-storage/hooks/use-storage-configuration";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import {
   IStorageConfiguration,
   IStorageConfigurationSavePayload,
@@ -51,6 +51,7 @@ export const SaveStorageConfiguration = ({
   onClose,
   configuration,
 }: SaveStorageConfigurationProps) => {
+  const { t } = useT("os.storage");
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   // Editing only ever changes the Phase 1 upload/verification settings below; the provider
   // identity and its credentials are fixed once a configuration exists.
@@ -100,25 +101,27 @@ export const SaveStorageConfiguration = ({
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
       showSuccessToast({
         description: configuration
-          ? "Configuration updated successfully"
-          : "New configuration added successfully",
+          ? t("SAVE_STORAGE_CONFIGURATION.CONFIGURATION_UPDATED_SUCCESSFULLY")
+          : t("SAVE_STORAGE_CONFIGURATION.NEW_CONFIGURATION_ADDED"),
       });
       onClose(false);
       form.reset();
     } catch (error) {
       if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
-      showErrorToast({ errors: "Something went wrong" });
+      showErrorToast({ errors: t("SAVE_STORAGE_CONFIGURATION.SOMETHING_WENT_WRONG") });
     }
   };
   const storageStrategy = form.watch("storageStrategy") as StorageStrategyType;
   return (
     <DialogContent className="max-h-[90vh] overflow-y-auto rounded-md sm:max-w-[700px]">
       <DialogHeader>
-        <DialogTitle>{configuration ? "Edit" : "Add"} Storage Configuration</DialogTitle>
+        <DialogTitle>{configuration
+            ? t("SAVE_STORAGE_CONFIGURATION.EDIT_STORAGE_CONFIGURATION")
+            : t("SAVE_STORAGE_CONFIGURATION.ADD_STORAGE_CONFIGURATION")}</DialogTitle>
         <DialogDescription>
           {isEditMode
-            ? "Only the upload and verification settings below can be changed."
-            : "Ensure you have selected a storage configuration provider to move forward."}
+            ? t("SAVE_STORAGE_CONFIGURATION.ONLY_THE_UPLOAD_AND_VERIFICATION")
+            : t("SAVE_STORAGE_CONFIGURATION.ENSURE_YOU_HAVE_SELECTED_A")}
         </DialogDescription>
       </DialogHeader>
       <div>
@@ -130,7 +133,7 @@ export const SaveStorageConfiguration = ({
               // attached to may not even be rendered (e.g. a stale error on a provider-credential
               // field left over from before edit mode hid that section).
               console.error("[SaveStorageConfiguration] validation failed", errors);
-              showErrorToast({ errors: "Please check the highlighted fields and try again." });
+              showErrorToast({ errors: t("SAVE_STORAGE_CONFIGURATION.PLEASE_CHECK_THE_HIGHLIGHTED") });
             })}
           >
             {!isEditMode && (
@@ -139,7 +142,7 @@ export const SaveStorageConfiguration = ({
                 name="storageStrategy"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Storage Provider</FormLabel>
+                    <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.STORAGE_PROVIDER")}</FormLabel>
                     <FormControl>
                       <Select
                         onValueChange={(value) => {
@@ -149,7 +152,7 @@ export const SaveStorageConfiguration = ({
                         value={field.value}
                       >
                         <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                          <SelectValue placeholder="Select configuration provider" />
+                          <SelectValue placeholder={t("SAVE_STORAGE_CONFIGURATION.SELECT_CONFIGURATION_PROVIDER")} />
                         </SelectTrigger>
                         <SelectContent>
                           {STORAGE_STRATEGIES.map((item) => (
@@ -172,9 +175,9 @@ export const SaveStorageConfiguration = ({
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Name</FormLabel>
+                    <FormLabel>{t("common:NAME")}</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter name" {...field} />
+                      <Input placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_NAME")} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -187,10 +190,10 @@ export const SaveStorageConfiguration = ({
                     control={form.control}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Access Key</FormLabel>
+                        <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.ACCESS_KEY")}</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Enter access key"
+                            placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_ACCESS_KEY")}
                             {...field}
                             value={field.value ?? ""}
                           />
@@ -204,10 +207,10 @@ export const SaveStorageConfiguration = ({
                     control={form.control}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Secret Key</FormLabel>
+                        <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.SECRET_KEY")}</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Enter secret key"
+                            placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_SECRET_KEY")}
                             {...field}
                             value={field.value ?? ""}
                           />
@@ -221,10 +224,10 @@ export const SaveStorageConfiguration = ({
                     control={form.control}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Region Endpoint</FormLabel>
+                        <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.REGION_ENDPOINT")}</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Enter region endpoint"
+                            placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_REGION_ENDPOINT")}
                             {...field}
                             value={field.value ?? ""}
                           />
@@ -241,10 +244,10 @@ export const SaveStorageConfiguration = ({
                   control={form.control}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Connection String</FormLabel>
+                      <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.CONNECTION_STRING")}</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="Enter connection string"
+                          placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_CONNECTION_STRING")}
                           {...field}
                           value={field.value ?? ""}
                         />
@@ -261,10 +264,10 @@ export const SaveStorageConfiguration = ({
                     control={form.control}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Access Key</FormLabel>
+                        <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.ACCESS_KEY")}</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Enter access key"
+                            placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_ACCESS_KEY")}
                             {...field}
                             value={field.value ?? ""}
                           />
@@ -278,10 +281,10 @@ export const SaveStorageConfiguration = ({
                     control={form.control}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Secret Key</FormLabel>
+                        <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.SECRET_KEY")}</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Enter secret key"
+                            placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_SECRET_KEY")}
                             {...field}
                             value={field.value ?? ""}
                           />
@@ -295,10 +298,10 @@ export const SaveStorageConfiguration = ({
                     control={form.control}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Host URL</FormLabel>
+                        <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.HOST_URL")}</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Enter host URL"
+                            placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_HOST_URL")}
                             {...field}
                             value={field.value ?? ""}
                           />
@@ -316,10 +319,10 @@ export const SaveStorageConfiguration = ({
                     control={form.control}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Remote Base Path</FormLabel>
+                        <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.REMOTE_BASE_PATH")}</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Enter remote base path"
+                            placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_REMOTE_BASE_PATH")}
                             {...field}
                             value={field.value ?? ""}
                           />
@@ -333,9 +336,9 @@ export const SaveStorageConfiguration = ({
                     control={form.control}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Host IP Address</FormLabel>
+                        <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.HOST_IP_ADDRESS")}</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter host" {...field} value={field.value ?? ""} />
+                          <Input placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_HOST")} {...field} value={field.value ?? ""} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -346,11 +349,11 @@ export const SaveStorageConfiguration = ({
                     control={form.control}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>PORT</FormLabel>
+                        <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.PORT")}</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
-                            placeholder="Enter port"
+                            placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_PORT")}
                             {...field}
                             value={field.value ?? ""}
                           />
@@ -364,10 +367,10 @@ export const SaveStorageConfiguration = ({
                     control={form.control}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Username</FormLabel>
+                        <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.USERNAME")}</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Enter username"
+                            placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_USERNAME")}
                             {...field}
                             value={field.value ?? ""}
                           />
@@ -381,10 +384,10 @@ export const SaveStorageConfiguration = ({
                     control={form.control}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Password</FormLabel>
+                        <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.PASSWORD")}</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Enter password"
+                            placeholder={t("SAVE_STORAGE_CONFIGURATION.ENTER_PASSWORD")}
                             {...field}
                             value={field.value ?? ""}
                           />
@@ -402,11 +405,10 @@ export const SaveStorageConfiguration = ({
 
             <div className="text-left text-sm">
               <h3 className="text-sm font-medium">
-                Upload &amp; verification settings
+                {t("SAVE_STORAGE_CONFIGURATION.UPLOAD_VERIFICATION_SETTINGS")}
               </h3>
               <p className="mt-1 text-xs text-muted-foreground">
-                Controls how long signed URLs stay valid and which uploads are
-                held for verification before they become readable.
+                {t("SAVE_STORAGE_CONFIGURATION.CONTROLS_HOW_LONG_SIGNED_URLS")}
               </p>
 
               <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -415,7 +417,7 @@ export const SaveStorageConfiguration = ({
                   control={form.control}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Upload URL Expiry (seconds)</FormLabel>
+                      <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.UPLOAD_URL_EXPIRY_SECONDS")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -433,7 +435,7 @@ export const SaveStorageConfiguration = ({
                   control={form.control}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Download URL Expiry (seconds)</FormLabel>
+                      <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.DOWNLOAD_URL_EXPIRY_SECONDS")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -451,7 +453,7 @@ export const SaveStorageConfiguration = ({
                   control={form.control}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Maximum File Size (MB)</FormLabel>
+                      <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.MAXIMUM_FILE_SIZE_MB")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -480,7 +482,7 @@ export const SaveStorageConfiguration = ({
                   };
                   return (
                     <FormItem className="mt-4">
-                      <FormLabel>Require upload verification for</FormLabel>
+                      <FormLabel>{t("SAVE_STORAGE_CONFIGURATION.REQUIRE_UPLOAD_VERIFICATION_FOR")}</FormLabel>
                       <FormControl>
                         <div className="rounded-md border">
                           {(
@@ -488,12 +490,12 @@ export const SaveStorageConfiguration = ({
                               {
                                 option: "Public" as const,
                                 description:
-                                  "Files served on a link anyone can open.",
+                                  t("SAVE_STORAGE_CONFIGURATION.FILES_SERVED_ON_A_LINK"),
                               },
                               {
                                 option: "Private" as const,
                                 description:
-                                  "Files restricted to authorized users.",
+                                  t("SAVE_STORAGE_CONFIGURATION.FILES_RESTRICTED_TO_AUTHORIZED"),
                               },
                             ]
                           ).map(({ option, description }, index) => (
@@ -530,11 +532,11 @@ export const SaveStorageConfiguration = ({
               <div className="flex flex-row gap-2">
                 <DialogTrigger asChild>
                   <Button variant="outline" disabled={isPending}>
-                    Cancel
+                    {t("common:CANCEL")}
                   </Button>
                 </DialogTrigger>
                 <Button variant="default" disabled={isPending}>
-                  Save
+                  {t("common:SAVE")}
                 </Button>
               </div>
             </div>

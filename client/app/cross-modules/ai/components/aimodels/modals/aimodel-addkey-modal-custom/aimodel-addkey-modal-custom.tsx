@@ -30,15 +30,15 @@ import {
 } from "@/components/ui-kits/tooltip/tooltip";
 import { Info, Trash2 } from "lucide-react";
 import { transformToUniversal } from "@blocks-ai/utils/aimodel-form.utils";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT, tStatic } from "@seliseblocks/genesis-os";
 import { useCreateModel } from "@blocks-ai/hooks/use-aimodel";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-const CustomAddKeyFormSchema = z.object({
-  model: z.string().trim().min(1, "Model name is required"),
-  providerName: z.string().trim().min(1, "Provider name is required"),
-  url: z.string().trim().refine(isParsableUrl, "Must be a valid URL"),
-  apiKey: z.string().min(1, "API key is required"),
-  apiVersion: z.string().trim().min(1, "API version is required"),
+const createCustomAddKeyFormSchema = () => z.object({
+  model: z.string().trim().min(1, tStatic("os.ai", "AIMODEL_ADDKEY_MODAL_CUSTOM.MODEL_NAME_IS_REQUIRED")),
+  providerName: z.string().trim().min(1, tStatic("os.ai", "AIMODEL_ADDKEY_MODAL_CUSTOM.PROVIDER_NAME_IS_REQUIRED")),
+  url: z.string().trim().refine(isParsableUrl, tStatic("os.ai", "AIMODEL_ADDKEY_MODAL_CUSTOM.MUST_BE_A_VALID_URL")),
+  apiKey: z.string().min(1, tStatic("os.ai", "AIMODEL_ADDKEY_MODAL_CUSTOM.API_KEY_IS_REQUIRED")),
+  apiVersion: z.string().trim().min(1, tStatic("os.ai", "AIMODEL_ADDKEY_MODAL_CUSTOM.API_VERSION_IS_REQUIRED")),
   DefaultTemp: z.number().min(0).max(2),
   MaxTokens: z.number().min(1).max(32768),
   customHeaders: z
@@ -50,7 +50,7 @@ const CustomAddKeyFormSchema = z.object({
     )
     .default([]),
 });
-type FormSchema = z.infer<typeof CustomAddKeyFormSchema>;
+type FormSchema = z.infer<ReturnType<typeof createCustomAddKeyFormSchema>>;
 const CustomAddKeyFormDefaultValue: FormSchema = {
   model: "",
   providerName: "Custom",
@@ -72,12 +72,13 @@ export const CustomModelAddKeyModal = ({
   addKeyModalOpen,
   setAddKeyModalOpen,
 }: CustomModelAddKeyModalProps) => {
+  const { t } = useT("os.ai");
   const provider = "CUSTOM";
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useCreateModel();
   const form = useForm<FormSchema>({
     defaultValues: CustomAddKeyFormDefaultValue,
-    resolver: zodResolver(CustomAddKeyFormSchema) as Resolver<FormSchema>,
+    resolver: zodResolver(createCustomAddKeyFormSchema()) as Resolver<FormSchema>,
     mode: "onChange",
   });
   const { control, handleSubmit } = form;
@@ -98,7 +99,7 @@ export const CustomModelAddKeyModal = ({
       payload.display_name = payload.model_name;
       const res = await mutateAsync(payload);
       if (res.is_success) {
-        showSuccessToast({ description: "Model added successfully." });
+        showSuccessToast({ description: t("AIMODEL_ADDKEY_MODAL_CUSTOM.MODEL_ADDED_SUCCESSFULLY") });
       } else {
         showErrorToast({ errors: res.detail });
       }
@@ -118,7 +119,7 @@ export const CustomModelAddKeyModal = ({
     >
       <DialogContent className="w-[calc(100%-2rem)] p-6 sm:mx-0 sm:w-[720px]">
         <DialogHeader>
-          <DialogTitle>Add custom model</DialogTitle>
+          <DialogTitle>{t("AIMODEL_ADDKEY_MODAL_CUSTOM.ADD_CUSTOM_MODEL")}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form
@@ -131,17 +132,17 @@ export const CustomModelAddKeyModal = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    Model Name <span className="text-red-500">*</span>
+                    {t("AIMODEL_ADDKEY_MODAL_CUSTOM.MODEL_NAME", { span: "*" })}
                   </FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter model name" {...field} />
+                    <Input placeholder={t("AIMODEL_ADDKEY_MODAL_CUSTOM.ENTER_MODEL_NAME")} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <div className="rounded border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900 dark:border-blue-600 dark:bg-blue-950/60 dark:text-blue-200">
-              Connect any model via an OpenAI-compatible API
+              {t("AIMODEL_ADDKEY_MODAL_CUSTOM.CONNECT_ANY_MODEL_VIA_AN")}
             </div>
             <FormField
               control={control}
@@ -149,10 +150,10 @@ export const CustomModelAddKeyModal = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    API URL <span className="text-red-500">*</span>
+                    {t("AIMODEL_ADDKEY_MODAL_CUSTOM.API_URL", { span: "*" })}
                   </FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter API URL" {...field} />
+                    <Input placeholder={t("AIMODEL_ADDKEY_MODAL_CUSTOM.ENTER_API_URL")} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -163,9 +164,9 @@ export const CustomModelAddKeyModal = ({
               name="apiKey"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>API Key</FormLabel>
+                  <FormLabel>{t("AIMODEL_ADDKEY_MODAL_CUSTOM.API_KEY")}</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter API Key" {...field} />
+                    <Input placeholder={t("AIMODEL_ADDKEY_MODAL_CUSTOM.ENTER_API_KEY")} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -177,10 +178,10 @@ export const CustomModelAddKeyModal = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    API Version <span className="text-red-500">*</span>
+                    {t("AIMODEL_ADDKEY_MODAL_CUSTOM.API_VERSION", { span: "*" })}
                   </FormLabel>
                   <FormControl>
-                    <Input placeholder="API Version" {...field} />
+                    <Input placeholder={t("AIMODEL_ADDKEY_MODAL_CUSTOM.API_VERSION_2")} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -193,15 +194,14 @@ export const CustomModelAddKeyModal = ({
                 <FormItem>
                   <div className="flex items-center justify-between">
                     <FormLabel className="flex items-center gap-2 text-base font-medium">
-                      Temperature
+                      {t("AIMODEL_ADDKEY_MODAL_CUSTOM.TEMPERATURE")}
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Info className="h-4 w-4 text-muted-foreground" />
                           </TooltipTrigger>
                           <TooltipContent>
-                            Lower values make LLM responses more accurate and stable, while higher
-                            values make them more random and creative.
+                            {t("AIMODEL_ADDKEY_MODAL_CUSTOM.LOWER_VALUES_MAKE_LLM_RESPONSES")}
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -234,15 +234,14 @@ export const CustomModelAddKeyModal = ({
                 <FormItem>
                   <div className="flex items-center justify-between">
                     <FormLabel className="flex items-center gap-2 text-base font-medium">
-                      Maximum tokens
+                      {t("AIMODEL_ADDKEY_MODAL_CUSTOM.MAXIMUM_TOKENS")}
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Info className="h-4 w-4 text-muted-foreground" />
                           </TooltipTrigger>
                           <TooltipContent>
-                            Used to roughly control the maximum number of tokens in LLM responses (1
-                            token ≈ 1 English short word).
+                            {t("AIMODEL_ADDKEY_MODAL_CUSTOM.USED_TO_ROUGHLY_CONTROL_THE")}
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -267,7 +266,7 @@ export const CustomModelAddKeyModal = ({
               )}
             />
             <div>
-              <h4 className="text-sm font-medium">Custom Headers (Optional)</h4>
+              <h4 className="text-sm font-medium">{t("AIMODEL_ADDKEY_MODAL_CUSTOM.CUSTOM_HEADERS_OPTIONAL")}</h4>
               <div className="mt-3 space-y-2">
                 {fields.map((f, idx) => (
                   <div key={f.id} className="flex items-center gap-3">
@@ -278,7 +277,7 @@ export const CustomModelAddKeyModal = ({
                         <FormItem className="flex-1">
                           <FormControl>
                             <Input
-                              placeholder="Header Key"
+                              placeholder={t("AIMODEL_ADDKEY_MODAL_CUSTOM.HEADER_KEY")}
                               value={field.value ?? ""}
                               onChange={field.onChange}
                               onBlur={field.onBlur}
@@ -297,7 +296,7 @@ export const CustomModelAddKeyModal = ({
                         <FormItem className="flex-1">
                           <FormControl>
                             <Input
-                              placeholder="Enter value"
+                              placeholder={t("AIMODEL_ADDKEY_MODAL_CUSTOM.ENTER_VALUE")}
                               value={field.value ?? ""}
                               onChange={field.onChange}
                               onBlur={field.onBlur}
@@ -326,18 +325,18 @@ export const CustomModelAddKeyModal = ({
                   onClick={() => append({ key: "", value: "" })}
                   className="mt-2"
                 >
-                  + Add
+                  {t("AIMODEL_ADDKEY_MODAL_CUSTOM.ADD")}
                 </Button>
               </div>
             </div>
             <DialogFooter className="sticky bottom-0 left-0 right-0 mt-4 flex items-center justify-end gap-3 border-t bg-background py-4">
               <DialogClose asChild>
                 <Button variant="secondary" type="button" onClick={() => setAddKeyModalOpen(false)}>
-                  Cancel
+                  {t("common:CANCEL")}
                 </Button>
               </DialogClose>
               <Button disabled={!form.formState.isValid || isPending} type="submit">
-                {isPending ? "Saving..." : "Save"}
+                {isPending ? t("AIMODEL_ADDKEY_MODAL_CUSTOM.SAVING") : t("common:SAVE")}
               </Button>
             </DialogFooter>
           </form>

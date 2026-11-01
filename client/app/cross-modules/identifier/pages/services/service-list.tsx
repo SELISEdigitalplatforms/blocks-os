@@ -7,6 +7,7 @@ import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { parseAsInteger, useQueryStates } from "nuqs";
 import { Accordion, AccordionItem } from "@/components/ui-kits/accordion/accordion";
 import { Layers } from "lucide-react";
+import { useT } from "@seliseblocks/genesis-os";
 const ServiceListSkeleton = () => (
   <div className="grid gap-4">
     {Array.from({ length: 3 }).map((_, index) => (
@@ -20,13 +21,16 @@ const ServiceListSkeleton = () => (
     ))}
   </div>
 );
-const EmptyServiceList = () => (
+const EmptyServiceList = () => {
+  const { t } = useT("os.identifier");
+  return (
   <EmptyState
     icon={Layers}
-    title="No services yet"
-    description="Register your first service to get started."
+    title={t("SERVICE_LIST.NO_SERVICES_YET")}
+    description={t("SERVICE_LIST.REGISTER_YOUR_FIRST_SERVICE_TO")}
   />
 );
+};
 export const ServiceList = () => {
   const [queryParams, setQueryParams] = useQueryStates({
     page: parseAsInteger.withDefault(0),

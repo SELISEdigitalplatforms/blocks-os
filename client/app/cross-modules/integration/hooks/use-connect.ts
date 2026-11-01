@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useStartImpersonation } from "@seliseblocks/genesis-os/hooks";
 import { showErrorToast } from "@/hooks/use-toast";
 import { integrationConnectService } from "@/cross-modules/integration/services/integration-connect.service";
+import { tStatic } from "@seliseblocks/genesis-os";
 
 export const integrationConnectQueryKeys = {
   request: (requestId: string) => ["integration-connect", "request", requestId] as const,
@@ -33,7 +34,7 @@ export const useApproveConnectRequest = () => {
       queryClient.invalidateQueries({ queryKey: ["integration"] });
     },
     onError: (error) => {
-      showErrorToast({ title: "Could not approve", errors: error instanceof Error ? error.message : error });
+      showErrorToast({ title: tStatic("os.integration", "USE_CONNECT.COULD_NOT_APPROVE"), errors: error instanceof Error ? error.message : error });
     },
   });
 };

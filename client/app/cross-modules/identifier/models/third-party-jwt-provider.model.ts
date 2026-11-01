@@ -1,3 +1,5 @@
+import { tStatic } from "@seliseblocks/genesis-os";
+
 /**
  * Which claim of an incoming token supplies each field.
  *
@@ -68,7 +70,7 @@ export function certificateExtension(path: string): string {
  * The full URL belongs on the details page, where there is room for it.
  */
 export function keySourceLabel(provider: ThirdPartyJwtProvider): string {
-  if (provider.hasSigningSecret) return "Shared secret (stored encrypted)";
+  if (provider.hasSigningSecret) return tStatic("os.identifier", "THIRD_PARTY_JWT_PROVIDER_MODEL.SHARED_SECRET_STORED_ENCRYPTED");
 
   if (provider.publicCertificatePath) {
     const extension = certificateExtension(provider.publicCertificatePath);
@@ -200,19 +202,19 @@ export enum JwtSigningAlgorithm {
   HS512 = 12,
 }
 
-export const SIGNING_ALGORITHMS = [
-  { value: JwtSigningAlgorithm.RS256, label: "RS256", symmetric: false },
-  { value: JwtSigningAlgorithm.RS384, label: "RS384", symmetric: false },
-  { value: JwtSigningAlgorithm.RS512, label: "RS512", symmetric: false },
-  { value: JwtSigningAlgorithm.ES256, label: "ES256", symmetric: false },
-  { value: JwtSigningAlgorithm.ES384, label: "ES384", symmetric: false },
-  { value: JwtSigningAlgorithm.ES512, label: "ES512", symmetric: false },
-  { value: JwtSigningAlgorithm.PS256, label: "PS256", symmetric: false },
-  { value: JwtSigningAlgorithm.PS384, label: "PS384", symmetric: false },
-  { value: JwtSigningAlgorithm.PS512, label: "PS512", symmetric: false },
-  { value: JwtSigningAlgorithm.HS256, label: "HS256", symmetric: true },
-  { value: JwtSigningAlgorithm.HS384, label: "HS384", symmetric: true },
-  { value: JwtSigningAlgorithm.HS512, label: "HS512", symmetric: true },
+export const getSigningAlgorithms = () => [
+  { value: JwtSigningAlgorithm.RS256, label: tStatic("os.identifier", "THIRD_PARTY_JWT_PROVIDER_MODEL.RS256"), symmetric: false },
+  { value: JwtSigningAlgorithm.RS384, label: tStatic("os.identifier", "THIRD_PARTY_JWT_PROVIDER_MODEL.RS384"), symmetric: false },
+  { value: JwtSigningAlgorithm.RS512, label: tStatic("os.identifier", "THIRD_PARTY_JWT_PROVIDER_MODEL.RS512"), symmetric: false },
+  { value: JwtSigningAlgorithm.ES256, label: tStatic("os.identifier", "THIRD_PARTY_JWT_PROVIDER_MODEL.ES256"), symmetric: false },
+  { value: JwtSigningAlgorithm.ES384, label: tStatic("os.identifier", "THIRD_PARTY_JWT_PROVIDER_MODEL.ES384"), symmetric: false },
+  { value: JwtSigningAlgorithm.ES512, label: tStatic("os.identifier", "THIRD_PARTY_JWT_PROVIDER_MODEL.ES512"), symmetric: false },
+  { value: JwtSigningAlgorithm.PS256, label: tStatic("os.identifier", "THIRD_PARTY_JWT_PROVIDER_MODEL.PS256"), symmetric: false },
+  { value: JwtSigningAlgorithm.PS384, label: tStatic("os.identifier", "THIRD_PARTY_JWT_PROVIDER_MODEL.PS384"), symmetric: false },
+  { value: JwtSigningAlgorithm.PS512, label: tStatic("os.identifier", "THIRD_PARTY_JWT_PROVIDER_MODEL.PS512"), symmetric: false },
+  { value: JwtSigningAlgorithm.HS256, label: tStatic("os.identifier", "THIRD_PARTY_JWT_PROVIDER_MODEL.HS256"), symmetric: true },
+  { value: JwtSigningAlgorithm.HS384, label: tStatic("os.identifier", "THIRD_PARTY_JWT_PROVIDER_MODEL.HS384"), symmetric: true },
+  { value: JwtSigningAlgorithm.HS512, label: tStatic("os.identifier", "THIRD_PARTY_JWT_PROVIDER_MODEL.HS512"), symmetric: true },
 ] as const;
 
 /** HMAC keys are a shared secret; everything else publishes a public key through a JWKS. */

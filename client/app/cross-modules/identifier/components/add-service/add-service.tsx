@@ -34,13 +34,15 @@ import { useState } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import { useRegisterService } from "@blocks-identifier/hooks/use-services";
 import { IRegisterServicePayload } from "@blocks-identifier/types/services.type";
-import { addServiceDefaultValues, AddServiceForm, addServiceSchema } from "./utils";
+import { addServiceDefaultValues, AddServiceForm, createAddServiceSchema } from "./utils";
+import { useT } from "@seliseblocks/genesis-os";
 export const AddService = () => {
+  const { t } = useT("os.identifier");
   const [open, onOpenChange] = useState(false);
   const { mutateAsync: registerService, isPending } = useRegisterService();
   const form = useForm<AddServiceForm>({
     defaultValues: addServiceDefaultValues,
-    resolver: zodResolver(addServiceSchema) as Resolver<AddServiceForm>,
+    resolver: zodResolver(createAddServiceSchema()) as Resolver<AddServiceForm>,
   });
   const {
     formState: { isDirty },
@@ -52,13 +54,13 @@ export const AddService = () => {
       };
       const response = await registerService(payload);
       if (!response.isSuccess)
-        return showErrorToast({ errors: response.errors || "Failed to register the service." });
-      showSuccessToast({ description: "Service Registered successfully" });
+        return showErrorToast({ errors: response.errors || t("ADD_SERVICE.FAILED_TO_REGISTER_THE_SERVICE") });
+      showSuccessToast({ description: t("ADD_SERVICE.SERVICE_REGISTERED_SUCCESSFULLY") });
       form.reset();
       onOpenChange(false);
     } catch (error) {
       if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
-      showErrorToast({ errors: "Something went wrong." });
+      showErrorToast({ errors: t("ADD_SERVICE.SOMETHING_WENT_WRONG") });
     }
   };
   return (
@@ -73,15 +75,15 @@ export const AddService = () => {
         <Button size="sm">
           <Plus className="h-4 w-4" />
           <span className="sr-only sm:not-sr-only sm:ml-2 sm:text-sm sm:whitespace-nowrap">
-            Register Service
+            {t("ADD_SERVICE.REGISTER_SERVICE")}
           </span>
         </Button>
       </DialogTrigger>
       <DialogContent className="md:max-w-md">
         <DialogHeader>
-          <DialogTitle>Register New Service</DialogTitle>
+          <DialogTitle>{t("ADD_SERVICE.REGISTER_NEW_SERVICE")}</DialogTitle>
           <DialogDescription>
-            Register a new service to start collecting logs and traces.
+            {t("ADD_SERVICE.REGISTER_A_NEW_SERVICE_TO")}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -93,10 +95,10 @@ export const AddService = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Service Name <span className="text-destructive">*</span>
+                      {t("ADD_SERVICE.SERVICE_NAME", { span: "*" })}
                     </FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter name" {...field} />
+                      <Input placeholder={t("ADD_SERVICE.ENTER_NAME")} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -107,15 +109,15 @@ export const AddService = () => {
                 name="serviceType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Type</FormLabel>
+                    <FormLabel>{t("common:TYPE")}</FormLabel>
                     <FormControl>
                       <Select value={field.value} onValueChange={field.onChange}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="frontend">Frontend</SelectItem>
-                          <SelectItem value="backend">Backend</SelectItem>
+                          <SelectItem value="frontend">{t("ADD_SERVICE.FRONTEND")}</SelectItem>
+                          <SelectItem value="backend">{t("ADD_SERVICE.BACKEND")}</SelectItem>
                         </SelectContent>
                       </Select>
                     </FormControl>
@@ -128,12 +130,12 @@ export const AddService = () => {
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tags</FormLabel>
+                    <FormLabel>{t("ADD_SERVICE.TAGS")}</FormLabel>
                     <FormControl>
                       <ChipsInput
                         {...field}
                         customValidator={(val) => !field.value?.includes(val)}
-                        validatorRegexErrorMessage="Duplicate tags are not allowed"
+                        validatorRegexErrorMessage={t("ADD_SERVICE.DUPLICATE_TAGS_ARE_NOT_ALLOWED")}
                       >
                         <ChipsInputList />
                         <ChipsInputField />
@@ -148,10 +150,10 @@ export const AddService = () => {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>{t("common:DESCRIPTION")}</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Brief description of the service..."
+                        placeholder={t("ADD_SERVICE.BRIEF_DESCRIPTION_OF_THE_SERVICE")}
                         rows={3}
                         {...field}
                       />
@@ -164,11 +166,11 @@ export const AddService = () => {
             <div className="flex flex-col justify-end gap-2 pt-4 md:flex-row">
               <DialogClose asChild>
                 <Button type="button" variant="outline">
-                  Cancel
+                  {t("common:CANCEL")}
                 </Button>
               </DialogClose>
               <Button type="submit" disabled={isPending || !isDirty}>
-                Save
+                {t("common:SAVE")}
               </Button>
             </div>
           </form>

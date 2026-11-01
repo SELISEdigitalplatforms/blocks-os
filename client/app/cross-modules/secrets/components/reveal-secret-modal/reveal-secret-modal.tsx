@@ -14,6 +14,7 @@ import { MaskedText } from "@/components/masked-text";
 import { useRevealSecret } from "@/cross-modules/secrets/hooks/use-secret-management";
 import { describeSecretError } from "@/cross-modules/secrets/utils/secret-error";
 import type { SecretResult } from "@/cross-modules/secrets/models/secret.model";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
 
 /** Closes the dialog after this long with no interaction, so a value cannot sit on screen. */
 const AUTO_CLOSE_MS = 60_000;
@@ -33,6 +34,7 @@ interface RevealSecretModalProps {
  * dialog closes itself after a minute of inactivity.
  */
 export function RevealSecretModal({ open, onOpenChange, secret }: RevealSecretModalProps) {
+  const { t } = useT("os.secrets");
   const [value, setValue] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +70,7 @@ export function RevealSecretModal({ open, onOpenChange, secret }: RevealSecretMo
         if (active) setValue(response.value);
       })
       .catch((cause) => {
-        if (active) setError(describeSecretError(cause, "Could not read the secret value.").message);
+        if (active) setError(describeSecretError(cause, tStatic("os.secrets", "REVEAL_SECRET_MODAL.COULD_NOT_READ_THE_SECRET")).message);
       });
     resetTimer();
 
@@ -88,7 +90,7 @@ export function RevealSecretModal({ open, onOpenChange, secret }: RevealSecretMo
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      setError("Could not copy to the clipboard.");
+      setError(t("REVEAL_SECRET_MODAL.COULD_NOT_COPY_TO_THE"));
     }
   };
 
@@ -102,8 +104,7 @@ export function RevealSecretModal({ open, onOpenChange, secret }: RevealSecretMo
         <DialogHeader>
           <DialogTitle className="text-left">{secret.name}</DialogTitle>
           <DialogDescription className="text-left">
-            This read has been recorded in the audit log. The dialog closes automatically after a
-            minute.
+            {t("REVEAL_SECRET_MODAL.THIS_READ_HAS_BEEN_RECORDED")}
           </DialogDescription>
         </DialogHeader>
 
@@ -113,7 +114,7 @@ export function RevealSecretModal({ open, onOpenChange, secret }: RevealSecretMo
           <div className="flex items-start gap-2 rounded-md border bg-muted/30 p-3">
             <div className="min-w-0 flex-1 break-all font-mono text-sm">
               {isPending || value === null ? (
-                <span className="text-muted-foreground">Loading…</span>
+                <span className="text-muted-foreground">{t("REVEAL_SECRET_MODAL.LOADING")}</span>
               ) : visible ? (
                 <span data-testid="secret-value">{value}</span>
               ) : (
@@ -131,7 +132,7 @@ export function RevealSecretModal({ open, onOpenChange, secret }: RevealSecretMo
                   resetTimer();
                   setVisible((previous) => !previous);
                 }}
-                aria-label={visible ? "Hide value" : "Show value"}
+                aria-label={visible ? t("REVEAL_SECRET_MODAL.HIDE_VALUE") : t("REVEAL_SECRET_MODAL.SHOW_VALUE")}
               >
                 {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
@@ -142,7 +143,7 @@ export function RevealSecretModal({ open, onOpenChange, secret }: RevealSecretMo
                 className="h-7 w-7 p-0"
                 disabled={value === null}
                 onClick={copy}
-                aria-label="Copy value"
+                aria-label={t("REVEAL_SECRET_MODAL.COPY_VALUE")}
               >
                 {copied ? (
                   <Check className="h-4 w-4 text-green-600" />
@@ -156,7 +157,7 @@ export function RevealSecretModal({ open, onOpenChange, secret }: RevealSecretMo
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={close}>
-            Close
+            {t("common:CLOSE")}
           </Button>
         </DialogFooter>
       </DialogContent>

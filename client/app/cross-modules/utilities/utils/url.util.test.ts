@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { stubOrigin } from "@/test-utils/stub-origin";
-import { getDefaultShortUrlBase, isValidUrl, magicUrlSchema } from "./url.util";
+import { getDefaultShortUrlBase, isValidUrl, createMagicUrlSchema } from "./url.util";
 
 type BlocksWindow = Window & {
   __BLOCKS_ENV__?: Record<string, string | undefined>;
@@ -74,7 +74,7 @@ describe("url.util", () => {
 
   describe("magicUrlSchema", () => {
     it("accepts a valid uri and name", () => {
-      const result = magicUrlSchema.safeParse({
+      const result = createMagicUrlSchema().safeParse({
         uri: "https://example.com",
         name: "My link",
       });
@@ -82,12 +82,12 @@ describe("url.util", () => {
     });
 
     it("rejects an empty name", () => {
-      const result = magicUrlSchema.safeParse({ uri: "example.com", name: "" });
+      const result = createMagicUrlSchema().safeParse({ uri: "example.com", name: "" });
       expect(result.success).toBe(false);
     });
 
     it("rejects an invalid uri", () => {
-      const result = magicUrlSchema.safeParse({ uri: "!!!", name: "ok" });
+      const result = createMagicUrlSchema().safeParse({ uri: "!!!", name: "ok" });
       expect(result.success).toBe(false);
     });
   });

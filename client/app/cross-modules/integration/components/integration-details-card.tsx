@@ -7,6 +7,7 @@ import { MaskedText } from "@/components/masked-text/masked-text";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { IIntegrationDetails } from "@/cross-modules/integration/models/integration.model";
 import { toIntegrationJson } from "@/cross-modules/integration/utils/integration-details";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
 
 type DetailRowProps = {
   label: string;
@@ -15,6 +16,7 @@ type DetailRowProps = {
 };
 
 function DetailRow({ label, value, secret = false }: Readonly<DetailRowProps>) {
+  const { t } = useT("os.integration");
   const [revealed, setRevealed] = useState(false);
   const hidden = secret && !revealed;
 
@@ -24,7 +26,7 @@ function DetailRow({ label, value, secret = false }: Readonly<DetailRowProps>) {
       <div className="flex min-w-0 items-center gap-2">
         <code className="min-w-0 flex-1 truncate font-mono text-sm">
           {!value ? (
-            <span className="text-medium-emphasis">Not available</span>
+            <span className="text-medium-emphasis">{t("INTEGRATION_DETAILS_CARD.NOT_AVAILABLE")}</span>
           ) : hidden ? (
             <MaskedText text={value} showFirstN={5} length={24} />
           ) : (
@@ -36,14 +38,14 @@ function DetailRow({ label, value, secret = false }: Readonly<DetailRowProps>) {
             type="button"
             variant="ghost"
             size="icon"
-            aria-label={revealed ? `Hide ${label}` : `Show ${label}`}
+            aria-label={revealed ? t("INTEGRATION_DETAILS_CARD.HIDE", { label }) : t("INTEGRATION_DETAILS_CARD.SHOW", { label })}
             onClick={() => setRevealed((r) => !r)}
           >
             {revealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </Button>
         )}
         {value && (
-          <CopyToClipboardButton textToCopy={value} label={`Copy ${label}`}>
+          <CopyToClipboardButton textToCopy={value} label={t("INTEGRATION_DETAILS_CARD.COPY", { label })}>
             {null}
           </CopyToClipboardButton>
         )}
@@ -55,9 +57,9 @@ function DetailRow({ label, value, secret = false }: Readonly<DetailRowProps>) {
 const copyJson = async (details: IIntegrationDetails) => {
   try {
     await navigator.clipboard.writeText(toIntegrationJson(details));
-    showSuccessToast({ description: "Integration details copied as JSON." });
+    showSuccessToast({ description: tStatic("os.integration", "INTEGRATION_DETAILS_CARD.INTEGRATION_DETAILS_COPIED_AS_JSON") });
   } catch {
-    showErrorToast({ errors: "Could not copy to the clipboard." });
+    showErrorToast({ errors: tStatic("os.integration", "INTEGRATION_DETAILS_CARD.COULD_NOT_COPY_TO_THE") });
   }
 };
 
@@ -69,13 +71,14 @@ type IntegrationDetailsCardProps = {
 };
 
 export function IntegrationDetailsCard({ title, details, warning }: Readonly<IntegrationDetailsCardProps>) {
+  const { t } = useT("os.integration");
   return (
     <div className="rounded-lg border border-border bg-card p-6">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
         <div>
           <h2 className="text-lg font-semibold">{title}</h2>
           <p className="text-sm text-medium-emphasis">
-            Use these values to connect your app. Keep the client secret private.
+            {t("INTEGRATION_DETAILS_CARD.USE_THESE_VALUES_TO_CONNECT")}
           </p>
         </div>
         {/* JSON without the secret is not usable config, so it is not offered as if it were. */}
@@ -87,7 +90,7 @@ export function IntegrationDetailsCard({ title, details, warning }: Readonly<Int
           disabled={!details.clientSecret}
         >
           <Braces className="h-4 w-4" />
-          <span className="ml-2">Copy as JSON</span>
+          <span className="ml-2">{t("INTEGRATION_DETAILS_CARD.COPY_AS_JSON")}</span>
         </Button>
       </div>
       {warning && (
@@ -96,11 +99,11 @@ export function IntegrationDetailsCard({ title, details, warning }: Readonly<Int
         </Banner>
       )}
       <div className="rounded-md border border-border px-4">
-        <DetailRow label="Client ID" value={details.clientId} />
-        <DetailRow label="Client Secret" value={details.clientSecret} secret />
-        <DetailRow label="x-blocks-key" value={details.xBlocksKey} />
-        <DetailRow label="Base URL" value={details.baseUrl} />
-        <DetailRow label="Domain" value={details.domain} />
+        <DetailRow label={t("INTEGRATION_DETAILS_CARD.CLIENT_ID")} value={details.clientId} />
+        <DetailRow label={t("INTEGRATION_DETAILS_CARD.CLIENT_SECRET")} value={details.clientSecret} secret />
+        <DetailRow label={t("INTEGRATION_DETAILS_CARD.X_BLOCKS_KEY")} value={details.xBlocksKey} />
+        <DetailRow label={t("INTEGRATION_DETAILS_CARD.BASE_URL")} value={details.baseUrl} />
+        <DetailRow label={t("INTEGRATION_DETAILS_CARD.DOMAIN")} value={details.domain} />
       </div>
     </div>
   );

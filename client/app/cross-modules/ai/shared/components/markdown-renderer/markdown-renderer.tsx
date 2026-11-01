@@ -3,6 +3,7 @@ import remarkGfm from "remark-gfm";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { MarkdownComponentsMap } from "./markdown-components-map";
+import { useT } from "@seliseblocks/genesis-os";
 
 type MarkdownRendererProps = {
   content: string;
@@ -26,6 +27,7 @@ const JsonCodeBlock = ({ content }: { content: string }) => {
 };
 
 const JsonSkeletonBlock = ({ content }: { content: string }) => {
+  const { t } = useT("os.ai");
   const lineCount = content.split("\n").length;
   const height = Math.min(Math.max(lineCount * 20 + 16, 80), 400);
 

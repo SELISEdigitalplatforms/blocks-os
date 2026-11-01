@@ -1,9 +1,10 @@
 import { ChatItemSuggestions } from "../chat-item-suggestions/chat-item-suggestions";
+import { tStatic } from "@seliseblocks/genesis-os";
 export const EmptyConversations = ({
   queries = [],
   onSelect,
   title = "Hello! How can I assist you today?",
-  description = "Here to answer questions & uncover insights.",
+  description = tStatic("os.ai", "EMPTY_CONVERSATION.HERE_TO_ANSWER_QUESTIONS_UNCOVER"),
 }: {
   queries?: string[];
   onSelect?: (question: string) => void;

@@ -8,6 +8,7 @@ import { StorageFiltersToolbar } from "./components/storage-filters-toolbar";
 import { IStorageConfiguration } from "@blocks-storage/models/storage.model";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { StorageDetailsDrawer } from "./components/storage-details-drawer";
+import { useT } from "@seliseblocks/genesis-os";
 type FilterValues = {
   search: string;
   providers: string[];
@@ -29,6 +30,7 @@ const mapConfigurationToCardData = (config: IStorageConfiguration): StorageCardD
           : "SFTP",
 });
 export function StorageContents() {
+  const { t } = useT("os.storage");
   const [open, setOpen] = useState<boolean>(false);
   const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
   const [selectedStorage, setSelectedStorage] = useState<IStorageConfiguration | null>(null);
@@ -126,7 +128,7 @@ export function StorageContents() {
           </div>
         ) : (
           <div className="flex h-64 items-center justify-center">
-            <p className="text-muted-foreground">No storage configurations found.</p>
+            <p className="text-muted-foreground">{t("STORAGE_CONTENTS.NO_STORAGE_CONFIGURATIONS_FOUND")}</p>
           </div>
         )}
       </div>

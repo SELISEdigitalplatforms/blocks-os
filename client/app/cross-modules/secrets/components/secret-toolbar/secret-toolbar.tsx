@@ -18,6 +18,7 @@ import {
   type SecretStatus,
   type SecretType,
 } from "@/cross-modules/secrets/models/secret.model";
+import { useT } from "@seliseblocks/genesis-os";
 
 type SecretFilterValues = {
   search: string;
@@ -104,6 +105,7 @@ export const useSecretFilterQueryParams = () => {
 };
 
 export function SecretToolbar() {
+  const { t } = useT("os.secrets");
   const { setQueryParams, values, view } = useSecretFilterQueryParams();
   const archivedCount = useArchivedSecretCount();
   const { data: tagCatalogue = [], isLoading: isTagsLoading } = useSecretTags();
@@ -169,25 +171,25 @@ export function SecretToolbar() {
               // The control defaults to w-52, which clips a placeholder this long. The backend also
               // matches description, but naming every matched field is what made it overflow.
               props: {
-                placeholder: "Search by name or ID",
+                placeholder: t("SECRET_TOOLBAR.SEARCH_BY_NAME_OR_ID"),
                 className: "w-full sm:w-72",
               },
             },
-            { key: "type", type: "Radio", label: "Type", props: { options: TYPE_OPTIONS } },
+            { key: "type", type: "Radio", label: t("common:TYPE"), props: { options: TYPE_OPTIONS } },
             ...(isArchived
               ? []
               : [
                   {
                     key: "status" as const,
                     type: "Radio" as const,
-                    label: "Status",
+                    label: t("common:STATUS"),
                     props: { options: STATUS_OPTIONS },
                   },
                 ]),
             {
               key: "tags",
               type: "MultiSelect",
-              label: "Tags",
+              label: t("SECRET_TOOLBAR.TAGS"),
               props: { options: tagOptions, disabled: isTagsLoading },
             },
           ]}
@@ -218,7 +220,7 @@ export function SecretToolbar() {
           ) : (
             <Archive className="h-4 w-4" aria-hidden />
           )}
-          Archived
+          {t("SECRET_TOOLBAR.ARCHIVED")}
           {archivedCount !== undefined && (
             <Badge variant="secondary" className="rounded-sm px-1 font-normal tabular-nums">
               {archivedCount}
@@ -231,8 +233,7 @@ export function SecretToolbar() {
         <p className="flex items-start gap-2 text-sm text-muted-foreground">
           <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
           <span>
-            Showing archived secrets. They no longer work. Restore one to use it again, or purge
-            it to delete it and its value permanently.
+            {t("SECRET_TOOLBAR.SHOWING_ARCHIVED_SECRETS_THEY_NO")}
           </span>
         </p>
       )}

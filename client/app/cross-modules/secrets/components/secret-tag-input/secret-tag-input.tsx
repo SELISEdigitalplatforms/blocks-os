@@ -18,6 +18,7 @@ import {
   toSecretTagKey,
   type SecretTagEntry,
 } from "@/cross-modules/secrets/models/secret.model";
+import { useT } from "@seliseblocks/genesis-os";
 
 interface SecretTagInputProps {
   /** Canonical tag keys. */
@@ -37,6 +38,7 @@ interface SecretTagInputProps {
  * rather than a validation error about spaces.
  */
 export function SecretTagInput({ value, onChange, catalogue, disabled }: SecretTagInputProps) {
+  const { t } = useT("os.secrets");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -67,7 +69,7 @@ export function SecretTagInput({ value, onChange, catalogue, disabled }: SecretT
   return (
     <div className="space-y-2">
       {value.length > 0 && (
-        <ul className="flex flex-wrap gap-1.5" aria-label="Selected tags">
+        <ul className="flex flex-wrap gap-1.5" aria-label={t("SECRET_TAG_INPUT.SELECTED_TAGS")}>
           {value.map((key) => (
             <li key={key}>
               <Badge variant="secondary" className="gap-1 pr-1 font-normal">
@@ -76,7 +78,7 @@ export function SecretTagInput({ value, onChange, catalogue, disabled }: SecretT
                   type="button"
                   onClick={() => remove(key)}
                   disabled={disabled}
-                  aria-label={`Remove ${secretTagLabel(key, catalogue)}`}
+                  aria-label={t("SECRET_TAG_INPUT.REMOVE", { key: secretTagLabel(key, catalogue) })}
                   className="rounded-sm opacity-60 transition-opacity hover:opacity-100 disabled:pointer-events-none"
                 >
                   <X className="h-3 w-3" />
@@ -101,7 +103,7 @@ export function SecretTagInput({ value, onChange, catalogue, disabled }: SecretT
             className="h-8 border-dashed"
           >
             <Plus className="mr-1 h-3.5 w-3.5" />
-            Add tag
+            {t("SECRET_TAG_INPUT.ADD_TAG")}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[260px] p-0" align="start">
@@ -111,19 +113,19 @@ export function SecretTagInput({ value, onChange, catalogue, disabled }: SecretT
             shouldFilter={false}
           >
             <CommandInput
-              placeholder="Search or type a new tag"
+              placeholder={t("SECRET_TAG_INPUT.SEARCH_OR_TYPE_A_NEW")}
               value={query}
               onValueChange={setQuery}
             />
             <CommandList>
               {suggestions.length === 0 && !canCreateTyped && (
                 <CommandEmpty>
-                  {query ? "That tag is already added." : "No tags yet — type one to create it."}
+                  {query ? t("SECRET_TAG_INPUT.THAT_TAG_IS_ALREADY_ADDED") : t("SECRET_TAG_INPUT.NO_TAGS_YET_TYPE_ONE")}
                 </CommandEmpty>
               )}
 
               {canCreateTyped && (
-                <CommandGroup heading="Create">
+                <CommandGroup heading={t("common:CREATE")}>
                   <CommandItem value={`create-${typedKey}`} onSelect={() => add(typedKey)}>
                     <Plus className="mr-2 h-4 w-4" />
                     <span className="truncate">{typedKey}</span>
@@ -132,7 +134,7 @@ export function SecretTagInput({ value, onChange, catalogue, disabled }: SecretT
               )}
 
               {suggestions.length > 0 && (
-                <CommandGroup heading="Suggested">
+                <CommandGroup heading={t("SECRET_TAG_INPUT.SUGGESTED")}>
                   {suggestions
                     .filter(
                       (entry) =>
@@ -155,8 +157,7 @@ export function SecretTagInput({ value, onChange, catalogue, disabled }: SecretT
 
       {atLimit && (
         <p className="text-xs text-muted-foreground">
-          A secret may carry at most {SECRET_TAG_MAX_PER_SECRET} tags.
-        </p>
+          {t("SECRET_TAG_INPUT.A_SECRET_MAY_CARRY_AT", { SECRET_TAG_MAX_PER_SECRET })}</p>
       )}
     </div>
   );

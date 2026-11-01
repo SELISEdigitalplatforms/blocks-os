@@ -10,7 +10,9 @@ import { showSuccessToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { AccordionTrigger } from "@/components/ui-kits/accordion/accordion";
 import { AccordionContent } from "@radix-ui/react-accordion";
+import { useT } from "@seliseblocks/genesis-os";
 const ServiceCardCopiedItem = ({ label, value }: { label: string; value: string }) => {
+  const { t } = useT("os.identifier");
   const { copy } = useCopyToClipboard();
   return (
     <div className="text-sm">
@@ -25,7 +27,7 @@ const ServiceCardCopiedItem = ({ label, value }: { label: string; value: string 
           className="h-5 w-5 p-0 text-gray-400 hover:text-gray-600"
           onClick={() =>
             copy(value, {
-              onSuccess: () => showSuccessToast({ description: `${label} copied` }),
+              onSuccess: () => showSuccessToast({ description: t("SERVICE_CARD.COPIED", { label }) }),
             })
           }
         >
@@ -45,6 +47,7 @@ const LinkButton = ({ onClick, children }: { onClick: () => void; children: Reac
   </button>
 );
 export const ServiceCard = ({ service }: { service: RegisteredService }) => {
+  const { t } = useT("os.identifier");
   const LMT_BASE_PATH = useLmtBasePath();
   const [showAllTags, setShowAllTags] = useState(false);
   const navigate = useNavigate();
@@ -69,7 +72,7 @@ export const ServiceCard = ({ service }: { service: RegisteredService }) => {
               }
             >
               <FileText className="h-4 w-4" />
-              <span className="sr-only sm:not-sr-only sm:ml-2">Logs</span>
+              <span className="sr-only sm:not-sr-only sm:ml-2">{t("SERVICE_CARD.LOGS")}</span>
             </LinkButton>
             <LinkButton
               onClick={() =>
@@ -79,25 +82,25 @@ export const ServiceCard = ({ service }: { service: RegisteredService }) => {
               }
             >
               <Activity className="h-4 w-4" />
-              <span className="sr-only sm:not-sr-only sm:ml-2">Traces</span>
+              <span className="sr-only sm:not-sr-only sm:ml-2">{t("SERVICE_CARD.TRACES")}</span>
             </LinkButton>
           </div>
         </div>
       </AccordionTrigger>
       <AccordionContent className="p-4">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <ServiceCardCopiedItem label="Service ID" value={service.serviceId} />
+          <ServiceCardCopiedItem label={t("SERVICE_CARD.SERVICE_ID")} value={service.serviceId} />
           {service.serviceBusConnectionString && service.serviceType !== "frontend" && (
             <ServiceCardCopiedItem
-              label="Connection String"
+              label={t("SERVICE_CARD.CONNECTION_STRING")}
               value={service.serviceBusConnectionString}
             />
           )}
-          <ServiceCardCopiedItem label="X-Blocks-Key" value={service.tenantId} />
+          <ServiceCardCopiedItem label={t("SERVICE_CARD.X_BLOCKS_KEY")} value={service.tenantId} />
         </div>
         {service.description && (
           <div className="mt-3 text-sm">
-            <h3 className="text-low-emphasis">Description</h3>
+            <h3 className="text-low-emphasis">{t("common:DESCRIPTION")}</h3>
             <p className="wrap-break-word text-high-emphasis">{service.description}</p>
           </div>
         )}

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui-kits/dialog/dialog";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { cn } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 
 export interface AccessPickerItem {
   /** The value that is stored and sent to the API — a user GUID or a role slug. */
@@ -74,6 +75,7 @@ export function AccessPickerDialog({
   onSearchChange,
   onAdd,
 }: AccessPickerDialogProps) {
+  const { t } = useT("os.secrets");
   const [pending, setPending] = useState<string[]>([]);
 
   const handleOpenChange = (next: boolean) => {
@@ -167,7 +169,7 @@ export function AccessPickerDialog({
                         )}
                       </div>
                       {alreadySelected && (
-                        <span className="shrink-0 text-xs text-muted-foreground">Added</span>
+                        <span className="shrink-0 text-xs text-muted-foreground">{t("ACCESS_PICKER_DIALOG.ADDED")}</span>
                       )}
                     </label>
                   );
@@ -195,7 +197,7 @@ export function AccessPickerDialog({
 
         <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
           <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
-            Cancel
+            {t("common:CANCEL")}
           </Button>
           <Button
             type="button"
@@ -205,7 +207,7 @@ export function AccessPickerDialog({
               handleOpenChange(false);
             }}
           >
-            Add
+            {t("common:ADD")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -2,14 +2,13 @@ import { Banner } from "@/components/ui-kits/banner/banner";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { CAPTCHA_PROVIDERS } from "@blocks-idp/captcha/models/captcha";
 import type { SecretDependent } from "@/cross-modules/secrets/models/secret.model";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
 
 export type SecretDependentsAction = "delete" | "purge";
 
 const CLOSING: Record<SecretDependentsAction, string> = {
-  delete:
-    "They will stop working until you restore this secret or enter a new value in each configuration.",
-  purge:
-    "They will stop working. Purging can't be undone; each configuration will need a new value.",
+  get delete() { return tStatic("os.secrets", "SECRET_DEPENDENTS_NOTICE.THEY_WILL_STOP_WORKING_UNTIL"); },
+  get purge() { return tStatic("os.secrets", "SECRET_DEPENDENTS_NOTICE.THEY_WILL_STOP_WORKING_PURGING"); },
 };
 
 const dependentLabel = (dependent: SecretDependent): string => {
@@ -41,10 +40,11 @@ export function SecretDependentsNotice({
   isError,
   dependents,
 }: SecretDependentsNoticeProps) {
+  const { t } = useT("os.secrets");
   if (isLoading) {
     return (
       <div role="status" className="py-1">
-        <span className="sr-only">Checking which configurations use this secret…</span>
+        <span className="sr-only">{t("SECRET_DEPENDENTS_NOTICE.CHECKING_WHICH_CONFIGURATIONS_USE")}</span>
         <Skeleton className="h-4 w-full" />
       </div>
     );
@@ -53,7 +53,7 @@ export function SecretDependentsNotice({
   if (isError) {
     return (
       <Banner variant="info" className="mb-0">
-        Couldn&apos;t check whether any configuration uses this secret.
+        {t("SECRET_DEPENDENTS_NOTICE.COULDN_T_CHECK_WHETHER_ANY")}
       </Banner>
     );
   }
@@ -66,7 +66,7 @@ export function SecretDependentsNotice({
     <Banner
       variant="warning"
       className="mb-0"
-      title={`In use by ${count} ${count === 1 ? "configuration" : "configurations"}`}
+      title={t("SECRET_DEPENDENTS_NOTICE.IN_USE_BY", { count })}
     >
       {/*
         Banner renders its body inside a <p>, which may not contain a <ul>; the list roles give

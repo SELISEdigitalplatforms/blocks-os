@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { IDataGatewayConfiguration } from "@/cross-modules/data-gateway/models/data-gateway.model";
 import { DEFAULT_COLLECTION_NAME_PATTERN } from "@/cross-modules/data-gateway/models/data-gateway.model";
+import { tStatic } from "@seliseblocks/genesis-os";
 
 /** Value the backend treats as "use the platform's own managed database". */
 export const DEFAULT_DATA_SOURCE_VALUE = "default";
@@ -11,16 +12,16 @@ export type DataSourceChoice = "blocks" | "others";
 export const isCustomConnection = (configuration?: IDataGatewayConfiguration | null) =>
   configuration?.connectionType === "Custom";
 
-export const dataGatewayConfigurationFormSchema = z.object({
+export const createDataGatewayConfigurationFormSchema = () => z.object({
   connectionString: z.string().trim(),
   databaseName: z.string().trim(),
   isCollectionNameEditable: z.boolean(),
-  collectionNamePattern: z.string().trim().nonempty("Collection name pattern is required"),
+  collectionNamePattern: z.string().trim().nonempty(tStatic("os.data-gateway", "UTILS.COLLECTION_NAME_PATTERN_IS")),
   enableAnalytics: z.boolean(),
 });
 
 export type DataGatewayConfigurationFormValues = z.infer<
-  typeof dataGatewayConfigurationFormSchema
+  ReturnType<typeof createDataGatewayConfigurationFormSchema>
 >;
 
 export const dataGatewayConfigurationFormDefaultValue: DataGatewayConfigurationFormValues = {

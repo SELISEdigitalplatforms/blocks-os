@@ -23,6 +23,7 @@ import {
   SecretDependentsNotice,
   type SecretDependentsAction,
 } from "@/cross-modules/secrets/components/secret-dependents-notice/secret-dependents-notice";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
 
 export type SecretLifecycleAction = "lock" | "unlock" | "delete" | "restore" | "purge";
 
@@ -37,40 +38,48 @@ interface Copy {
 const COPY: Record<SecretLifecycleAction, Copy> = {
   lock: {
     title: (name) => `Lock ${name}?`,
-    body: "While locked, the value cannot be read by anyone, including administrators. Metadata stays visible and the value stays in the store. You can unlock it again at any time.",
-    confirm: "Lock",
+    get body() { return tStatic("os.secrets", "SECRET_ACTION_DIALOG.WHILE_LOCKED_THE_VALUE_CANNOT"); },
+    get confirm() { return tStatic("os.secrets", "SECRET_ACTION_DIALOG.LOCK"); },
     pending: "Locking…",
   },
   unlock: {
     title: (name) => `Unlock ${name}?`,
-    body: "The value becomes readable again to whoever the access list allows.",
-    confirm: "Unlock",
+    get body() { return tStatic("os.secrets", "SECRET_ACTION_DIALOG.THE_VALUE_BECOMES_READABLE_AGAIN"); },
+    get confirm() { return tStatic("os.secrets", "SECRET_ACTION_DIALOG.UNLOCK"); },
     pending: "Unlocking…",
   },
   // The backend's soft delete, presented as archive: the vault value is deliberately retained
   // so restore can bring the secret back. Saying "cannot be undone" here would simply be false.
   delete: {
     title: (name) => `Archive ${name}?`,
-    body: "The secret stops working immediately and is archived. You can restore it later, or purge it to remove it for good — use the Archived filter to find it.",
-    confirm: "Archive",
+    get body() { return tStatic("os.secrets", "SECRET_ACTION_DIALOG.THE_SECRET_STOPS_WORKING_IMMEDIATELY"); },
+    get confirm() { return tStatic("os.secrets", "SECRET_ACTION_DIALOG.ARCHIVE"); },
     pending: "Archiving…",
   },
   restore: {
     title: (name) => `Restore ${name}?`,
-    body: "The secret becomes active again with its previous value.",
-    confirm: "Restore",
+    get body() { return tStatic("os.secrets", "SECRET_ACTION_DIALOG.THE_SECRET_BECOMES_ACTIVE_AGAIN"); },
+    get confirm() { return tStatic("os.secrets", "SECRET_ACTION_DIALOG.RESTORE"); },
     pending: "Restoring…",
   },
   purge: {
     title: (name) => `Purge ${name}?`,
-    body: "The secret and its value are permanently removed from the store and cannot be restored. Anything still referencing it will keep failing. The audit trail is kept.",
-    confirm: "Purge",
+    get body() { return tStatic("os.secrets", "SECRET_ACTION_DIALOG.THE_SECRET_AND_ITS_VALUE"); },
+    get confirm() { return tStatic("os.secrets", "SECRET_ACTION_DIALOG.PURGE"); },
     pending: "Purging…",
     destructive: true,
   },
 };
 
 /** The actions that break a configuration still pointing at the secret. */
+const ACTION_FAILED_KEYS: Record<SecretLifecycleAction, string> = {
+  lock: "SECRET_ACTION_DIALOG.COULD_NOT_LOCK",
+  unlock: "SECRET_ACTION_DIALOG.COULD_NOT_UNLOCK",
+  delete: "SECRET_ACTION_DIALOG.COULD_NOT_ARCHIVE",
+  restore: "SECRET_ACTION_DIALOG.COULD_NOT_RESTORE",
+  purge: "SECRET_ACTION_DIALOG.COULD_NOT_PURGE",
+};
+
 const warnsAboutDependents = (action: SecretLifecycleAction): action is SecretDependentsAction =>
   action === "delete" || action === "purge";
 
@@ -92,6 +101,7 @@ export function SecretActionDialog({
   secret,
   action,
 }: SecretActionDialogProps) {
+  const { t } = useT("os.secrets");
   const [error, setError] = useState<string | null>(null);
 
   const lock = useLockSecret();
@@ -115,8 +125,9 @@ export function SecretActionDialog({
       await mutation.mutateAsync(secret.secretId);
       onOpenChange(false);
     } catch (cause) {
-      const verb = action === "delete" ? "archive" : action;
-      setError(describeSecretError(cause, `Could not ${verb} the secret.`).message);
+      setError(
+        describeSecretError(cause, tStatic("os.secrets", ACTION_FAILED_KEYS[action])).message,
+      );
     }
   };
 
@@ -145,7 +156,7 @@ export function SecretActionDialog({
             onClick={() => onOpenChange(false)}
             disabled={mutation.isPending}
           >
-            Cancel
+            {t("common:CANCEL")}
           </Button>
           <Button
             type="button"

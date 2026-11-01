@@ -22,6 +22,7 @@ import { ModelEditKeyModal } from "@blocks-ai/components/aimodels/modals/aimodel
 import { CustomModelEditKeyModal } from "@blocks-ai/components/aimodels/modals/aimodel-editkey-modal-custom/aimodel-editkey-modal-custom";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { useValidateModel } from "@blocks-ai/hooks/use-aimodel";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
 type AIModelsTableProps = {
   custom: boolean;
   models: IModelInfo[];
@@ -35,6 +36,7 @@ const LoadingSkeleton = () => (
   </div>
 );
 export const AIModelsTable = ({ custom, models, isLoading }: AIModelsTableProps) => {
+  const { t } = useT("os.ai");
   const [deleteTarget, setDeleteTarget] = useState<IModelInfo | null>(null);
   const [editTarget, setEditTarget] = useState<IModelInfo | null>(null);
   const [editKeyModalOpen, setEditKeyModalOpen] = useState(false);
@@ -56,7 +58,7 @@ export const AIModelsTable = ({ custom, models, isLoading }: AIModelsTableProps)
         {
           onSuccess: (res) => {
             const isValid = !!res.valid?.valid;
-            const messageFromBackend = res.valid?.message || res.message || "Validation completed.";
+            const messageFromBackend = res.valid?.message || res.message || tStatic("os.ai", "AIMODEL_TABLE.VALIDATION_COMPLETED");
             if (isValid) showSuccessToast({ description: messageFromBackend });
             else showErrorToast({ errors: messageFromBackend });
             setValidatingRowId(null);
@@ -65,7 +67,7 @@ export const AIModelsTable = ({ custom, models, isLoading }: AIModelsTableProps)
             const fallbackMessage =
               error instanceof Error
                 ? error.message
-                : "Failed to validate model. Please try again.";
+                : tStatic("os.ai", "AIMODEL_TABLE.FAILED_TO_VALIDATE_MODEL_PLEASE");
             showErrorToast({ errors: fallbackMessage });
             setValidatingRowId(null);
           },
@@ -128,7 +130,7 @@ export const AIModelsTable = ({ custom, models, isLoading }: AIModelsTableProps)
                 colSpan={columns.length}
                 className="h-24 text-center text-muted-foreground"
               >
-                No models found.
+                {t("AIMODEL_TABLE.NO_MODELS_FOUND")}
               </TableCell>
             </TableRow>
           ) : (

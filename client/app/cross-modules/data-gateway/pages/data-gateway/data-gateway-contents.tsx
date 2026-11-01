@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT, tStatic } from "@seliseblocks/genesis-os";
 import { Button } from "@/components/ui-kits/button/button";
 import {
   Dialog,
@@ -46,7 +46,7 @@ import {
   DEFAULT_DATA_SOURCE_VALUE,
   canOmitConnectionString,
   dataGatewayConfigurationFormDefaultValue,
-  dataGatewayConfigurationFormSchema,
+  createDataGatewayConfigurationFormSchema,
   isCustomConnection,
   toConnectionStringPayload,
   toDataGatewayConfigurationFormValues,
@@ -55,7 +55,7 @@ import {
 const formatAnalyticsDate = (value: string | null | undefined) => {
   if (!value) return null;
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Invalid date";
+  if (Number.isNaN(date.getTime())) return tStatic("os.data-gateway", "DATA_GATEWAY_CONTENTS.INVALID_DATE");
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
     timeStyle: "short",
@@ -63,6 +63,7 @@ const formatAnalyticsDate = (value: string | null | undefined) => {
 };
 
 export function DataGatewayContents() {
+  const { t } = useT("os.data-gateway");
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
   const { data: configuration, isLoading } = useGetDataGatewayConfiguration();
   const { isPending: isSavePending, mutateAsync: saveConfiguration } =
@@ -73,7 +74,7 @@ export function DataGatewayContents() {
 
   const form = useForm({
     defaultValues: dataGatewayConfigurationFormDefaultValue,
-    resolver: zodResolver(dataGatewayConfigurationFormSchema),
+    resolver: zodResolver(createDataGatewayConfigurationFormSchema()),
   });
 
   useEffect(() => {
@@ -112,8 +113,8 @@ export function DataGatewayContents() {
       if (res.isSuccess) {
         showSuccessToast({
           description: configuration
-            ? "Configuration updated successfully"
-            : "Configuration created successfully",
+            ? t("DATA_GATEWAY_CONTENTS.CONFIGURATION_UPDATED_SUCCESSFULLY")
+            : t("DATA_GATEWAY_CONTENTS.CONFIGURATION_CREATED_SUCCESSFULLY"),
         });
       } else {
         showErrorToast({ errors: res.errors });
@@ -123,7 +124,7 @@ export function DataGatewayContents() {
       if (isErrorWithErrors(error)) {
         showErrorToast({ errors: error.errors });
       } else {
-        showErrorToast({ errors: "An unexpected error occurred. Please try again." });
+        showErrorToast({ errors: t("DATA_GATEWAY_CONTENTS.AN_UNEXPECTED_ERROR_OCCURRED") });
       }
       setIsConfirmDialogOpen(false);
     }
@@ -158,9 +159,9 @@ export function DataGatewayContents() {
                     <Database className="h-4 w-4 text-indigo-400" />
                   </div>
                   <div>
-                    <h2 className="text-sm font-semibold text-foreground">Data Source</h2>
+                    <h2 className="text-sm font-semibold text-foreground">{t("DATA_GATEWAY_CONTENTS.DATA_SOURCE")}</h2>
                     <p className="text-xs text-muted-foreground/60">
-                      Select where your data will be stored and retrieved from.
+                      {t("DATA_GATEWAY_CONTENTS.SELECT_WHERE_YOUR_DATA_WILL")}
                     </p>
                   </div>
                 </div>
@@ -200,9 +201,9 @@ export function DataGatewayContents() {
                       />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-foreground">Blocks database</p>
+                      <p className="text-sm font-medium text-foreground">{t("DATA_GATEWAY_CONTENTS.BLOCKS_DATABASE")}</p>
                       <p className="text-xs text-muted-foreground/60">
-                        Use the managed database provided by Blocks
+                        {t("DATA_GATEWAY_CONTENTS.USE_THE_MANAGED_DATABASE_PROVIDED")}
                       </p>
                     </div>
                   </label>
@@ -235,9 +236,9 @@ export function DataGatewayContents() {
                       />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-foreground">My data sources</p>
+                      <p className="text-sm font-medium text-foreground">{t("DATA_GATEWAY_CONTENTS.MY_DATA_SOURCES")}</p>
                       <p className="text-xs text-muted-foreground/60">
-                        Connect your own database with a custom connection string
+                        {t("DATA_GATEWAY_CONTENTS.CONNECT_YOUR_OWN_DATABASE_WITH")}
                       </p>
                     </div>
                   </label>
@@ -251,13 +252,13 @@ export function DataGatewayContents() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-xs font-medium uppercase tracking-widest text-muted-foreground/50">
-                            Connection String
+                            {t("DATA_GATEWAY_CONTENTS.CONNECTION_STRING")}
                           </FormLabel>
                           <FormControl>
                             <Input
                               type="password"
                               autoComplete="off"
-                              placeholder="mongodb://<username>:<password>@host:27017/db"
+                              placeholder={t("DATA_GATEWAY_CONTENTS.MONGODB_USERNAME_PASSWORD_HOST")}
                               className="border-border/40 bg-muted/10 focus-visible:border-primary/40 focus-visible:ring-primary/20"
                               {...field}
                               disabled={isSavePending}
@@ -265,7 +266,7 @@ export function DataGatewayContents() {
                           </FormControl>
                           {isCustomConnection(configuration) && (
                             <FormDescription className="text-xs text-muted-foreground/50">
-                              Saved — enter a new value to replace it
+                              {t("DATA_GATEWAY_CONTENTS.SAVED_ENTER_A_NEW_VALUE")}
                             </FormDescription>
                           )}
                           <FormMessage />
@@ -275,15 +276,15 @@ export function DataGatewayContents() {
                     <FormField
                       control={form.control}
                       name="databaseName"
-                      rules={{ required: "Database name is required" }}
+                      rules={{ required: tStatic("os.data-gateway", "DATA_GATEWAY_CONTENTS.DATABASE_NAME_IS_REQUIRED") }}
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-xs font-medium uppercase tracking-widest text-muted-foreground/50">
-                            Database Name
+                            {t("DATA_GATEWAY_CONTENTS.DATABASE_NAME")}
                           </FormLabel>
                           <FormControl>
                             <Input
-                              placeholder="my-database"
+                              placeholder={t("DATA_GATEWAY_CONTENTS.MY_DATABASE")}
                               className="border-border/40 bg-muted/10 focus-visible:border-primary/40 focus-visible:ring-primary/20"
                               {...field}
                               disabled={isSavePending}
@@ -307,9 +308,9 @@ export function DataGatewayContents() {
                     <Settings2 className="h-4 w-4 text-indigo-400" />
                   </div>
                   <div>
-                    <h2 className="text-sm font-semibold text-foreground">Collection Settings</h2>
+                    <h2 className="text-sm font-semibold text-foreground">{t("DATA_GATEWAY_CONTENTS.COLLECTION_SETTINGS")}</h2>
                     <p className="text-xs text-muted-foreground/60">
-                      Configure how collection names are generated for schemas.
+                      {t("DATA_GATEWAY_CONTENTS.CONFIGURE_HOW_COLLECTION_NAMES_ARE")}
                     </p>
                   </div>
                 </div>
@@ -323,10 +324,10 @@ export function DataGatewayContents() {
                     <FormItem className="flex flex-row items-center justify-between rounded-sm border border-border/30 bg-muted/10 px-4 py-3.5">
                       <div>
                         <FormLabel className="text-sm font-medium text-foreground">
-                          Collection Name Editable
+                          {t("DATA_GATEWAY_CONTENTS.COLLECTION_NAME_EDITABLE")}
                         </FormLabel>
                         <FormDescription className="mt-0.5 text-xs text-muted-foreground/60">
-                          Allow users to edit collection names when creating or updating schemas
+                          {t("DATA_GATEWAY_CONTENTS.ALLOW_USERS_TO_EDIT_COLLECTION")}
                         </FormDescription>
                       </div>
                       <FormControl>
@@ -344,7 +345,7 @@ export function DataGatewayContents() {
                   control={form.control}
                   name="collectionNamePattern"
                   rules={{
-                    required: "Collection name pattern is required",
+                    required: tStatic("os.data-gateway", "DATA_GATEWAY_CONTENTS.COLLECTION_NAME_PATTERN_IS_REQUIRED"),
                     validate: (value) =>
                       value.includes("{SchemaName}") || "Pattern must contain {SchemaName}",
                   }}
@@ -358,7 +359,7 @@ export function DataGatewayContents() {
                     return (
                       <FormItem>
                         <FormLabel className="text-xs font-medium uppercase tracking-widest text-muted-foreground/50">
-                          Collection Name Pattern
+                          {t("DATA_GATEWAY_CONTENTS.COLLECTION_NAME_PATTERN")}
                         </FormLabel>
                         <FormControl>
                           <div className="flex items-center rounded-sm border border-border/40 bg-muted/10 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-colors">
@@ -374,7 +375,7 @@ export function DataGatewayContents() {
                                 width: `calc(${prefix.length > 0 ? prefix.length : 6}ch + 0.75rem)`,
                               }}
                               className="min-w-0 bg-transparent py-2 pl-3 pr-0 text-sm text-foreground/80 outline-hidden disabled:opacity-50"
-                              placeholder="prefix"
+                              placeholder={t("DATA_GATEWAY_CONTENTS.PREFIX")}
                               disabled={isSavePending}
                             />
                             <span className="shrink-0 text-sm font-medium text-indigo-400/80">
@@ -389,18 +390,13 @@ export function DataGatewayContents() {
                                 )
                               }
                               className="flex-1 bg-transparent py-2 pl-0 pr-3 text-sm text-foreground/80 outline-hidden disabled:opacity-50"
-                              placeholder="postfix"
+                              placeholder={t("DATA_GATEWAY_CONTENTS.POSTFIX")}
                               disabled={isSavePending}
                             />
                           </div>
                         </FormControl>
                         <FormDescription className="text-xs text-muted-foreground/50">
-                          Pattern for generating collection names. The{" "}
-                          <span className="font-medium text-indigo-400/70">
-                            {SCHEMA_NAME_PLACEHOLDER}
-                          </span>{" "}
-                          placeholder cannot be modified or removed.
-                        </FormDescription>
+                          {t("DATA_GATEWAY_CONTENTS.PATTERN_FOR_GENERATING_COLLECTION", { span: `${SCHEMA_NAME_PLACEHOLDER}` })}</FormDescription>
                         <FormMessage />
                       </FormItem>
                     );
@@ -418,9 +414,9 @@ export function DataGatewayContents() {
                     <BarChart3 className="h-4 w-4 text-indigo-400" />
                   </div>
                   <div>
-                    <h2 className="text-sm font-semibold text-foreground">Analytics</h2>
+                    <h2 className="text-sm font-semibold text-foreground">{t("DATA_GATEWAY_CONTENTS.ANALYTICS")}</h2>
                     <p className="text-xs text-muted-foreground/60">
-                      View and manage analytics availability for this project.
+                      {t("DATA_GATEWAY_CONTENTS.VIEW_AND_MANAGE_ANALYTICS")}
                     </p>
                   </div>
                 </div>
@@ -434,10 +430,10 @@ export function DataGatewayContents() {
                     <FormItem className="flex flex-row items-center justify-between rounded-sm border border-border/30 bg-muted/10 px-4 py-3.5">
                       <div>
                         <FormLabel className="text-sm font-medium text-foreground">
-                          Enable Analytics
+                          {t("DATA_GATEWAY_CONTENTS.ENABLE_ANALYTICS")}
                         </FormLabel>
                         <FormDescription className="mt-0.5 text-xs text-muted-foreground/60">
-                          Show analytics in the menu and allow access during the configured period.
+                          {t("DATA_GATEWAY_CONTENTS.SHOW_ANALYTICS_IN_THE_MENU")}
                         </FormDescription>
                       </div>
                       <FormControl>
@@ -455,26 +451,26 @@ export function DataGatewayContents() {
                   <div className="rounded-sm border border-border/30 bg-muted/10 px-4 py-3.5">
                     <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-muted-foreground/50">
                       <CalendarDays className="h-3.5 w-3.5" />
-                      Enable date
+                      {t("DATA_GATEWAY_CONTENTS.ENABLE_DATE")}
                     </div>
                     <p className="mt-2 text-sm text-foreground/80">
                       {formatAnalyticsDate(configuration?.analyticsConfiguration?.enableDate) ??
-                        "Not set"}
+                        t("DATA_GATEWAY_CONTENTS.NOT_SET")}
                     </p>
                   </div>
                   <div className="rounded-sm border border-border/30 bg-muted/10 px-4 py-3.5">
                     <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-muted-foreground/50">
                       <CalendarDays className="h-3.5 w-3.5" />
-                      Valid till
+                      {t("DATA_GATEWAY_CONTENTS.VALID_TILL")}
                     </div>
                     <p className="mt-2 text-sm text-foreground/80">
                       {formatAnalyticsDate(configuration?.analyticsConfiguration?.validTill) ??
-                        "Not set (analytics unavailable)"}
+                        t("DATA_GATEWAY_CONTENTS.NOT_SET_ANALYTICS_UNAVAILABLE")}
                     </p>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground/50">
-                  Availability dates are managed by Blocks and cannot be edited here.
+                  {t("DATA_GATEWAY_CONTENTS.AVAILABILITY_DATES_ARE_MANAGED_BY")}
                 </p>
               </div>
             </div>
@@ -488,7 +484,7 @@ export function DataGatewayContents() {
                 onClick={() => form.reset(toDataGatewayConfigurationFormValues(configuration))}
                 disabled={isSavePending}
               >
-                Cancel
+                {t("common:CANCEL")}
               </Button>
               <Button
                 type="button"
@@ -499,10 +495,10 @@ export function DataGatewayContents() {
                 {isSavePending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving…
+                    {t("DATA_GATEWAY_CONTENTS.SAVING")}
                   </>
                 ) : (
-                  "Save Changes"
+                  t("DATA_GATEWAY_CONTENTS.SAVE_CHANGES")
                 )}
               </Button>
             </div>
@@ -521,11 +517,11 @@ export function DataGatewayContents() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-left text-base font-semibold">
               <AlertTriangle className="h-4 w-4 text-indigo-400" />
-              Confirm data source {configuration ? "update" : "configuration"}?
-            </DialogTitle>
+              {configuration
+                ? t("DATA_GATEWAY_CONTENTS.CONFIRM_DATA_SOURCE_UPDATE")
+                : t("DATA_GATEWAY_CONTENTS.CONFIRM_DATA_SOURCE_CONFIGURATION")}</DialogTitle>
             <DialogDescription className="mt-2 text-left text-sm text-muted-foreground/70">
-              Changing the data source will affect all existing data. You will need to manually
-              migrate any required data to the new source. Are you sure you want to proceed?
+              {t("DATA_GATEWAY_CONTENTS.CHANGING_THE_DATA_SOURCE_WILL")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-4 flex flex-row gap-2">
@@ -535,10 +531,10 @@ export function DataGatewayContents() {
               className="border-border/40"
               onClick={() => setIsConfirmDialogOpen(false)}
             >
-              Cancel
+              {t("common:CANCEL")}
             </Button>
             <Button size="sm" onClick={handleConfirmSave} disabled={isSavePending}>
-              {isSavePending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm"}
+              {isSavePending ? <Loader2 className="h-4 w-4 animate-spin" /> : t("common:CONFIRM")}
             </Button>
           </DialogFooter>
         </DialogContent>

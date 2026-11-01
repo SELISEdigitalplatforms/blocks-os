@@ -1,6 +1,7 @@
 import { SHORT_URL_BASES } from "@blocks-utilities/constants/endpoint.constant";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import { z } from "zod";
+import { tStatic } from "@seliseblocks/genesis-os";
 
 /** Local dev serves from localhost but talks to the dev backend, so it shares the dev short base. */
 const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]"]);
@@ -40,11 +41,11 @@ export const isValidUrl = (url: string): boolean => {
   }
 };
 
-export const magicUrlSchema = z.object({
+export const createMagicUrlSchema = () => z.object({
   uri: z
     .string()
-    .min(1, "URI is required")
-    .regex(/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/, "Please enter a valid URI")
+    .min(1, tStatic("os.utilities", "URL_UTIL.URI_IS_REQUIRED"))
+    .regex(/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/, tStatic("os.utilities", "URL_UTIL.PLEASE_ENTER_A_VALID_URI"))
     .refine(
       (val) => {
         try {
@@ -54,7 +55,7 @@ export const magicUrlSchema = z.object({
           return false;
         }
       },
-      { message: "Please enter a valid URI" },
+      { message: tStatic("os.utilities", "URL_UTIL.PLEASE_ENTER_A_VALID_URI") },
     ),
-  name: z.string().min(1, "Name is required").max(100, "Name must be at most 100 characters"),
+  name: z.string().min(1, tStatic("os.utilities", "URL_UTIL.NAME_IS_REQUIRED")).max(100, tStatic("os.utilities", "URL_UTIL.NAME_MUST_BE_AT_MOST")),
 });
