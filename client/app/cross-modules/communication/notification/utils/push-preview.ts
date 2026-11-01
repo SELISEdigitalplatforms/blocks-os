@@ -10,7 +10,7 @@ const textOf = (key: IBlocksLanguageKey | undefined, culture: string): string =>
 const TITLE_SUFFIX = /_TITLE$/i;
 const BODY_SUFFIX = /_BODY$/i;
 
-/** Title and message dropdowns prefer keys named `*_TITLE` / `*_BODY`; all keys when none match. */
+/** Title and message suggestions prefer keys named `*_TITLE` / `*_BODY`; all keys when none match. */
 export const splitKeyNames = (keys: IBlocksLanguageKey[]) => {
   const names = keys.map((k) => k.keyName);
   const titles = names.filter((n) => TITLE_SUFFIX.test(n));
@@ -20,10 +20,6 @@ export const splitKeyNames = (keys: IBlocksLanguageKey[]) => {
     bodies: bodies.length > 0 ? bodies : names,
   };
 };
-
-/** The saved key stays selectable even when Localization no longer lists it. */
-export const withCurrent = (names: string[], current: string): string[] =>
-  current && !names.includes(current) ? [current, ...names] : names;
 
 /** The language the user's text falls back to when the chosen one has none. */
 export const defaultCulture = (languages: ILanguageConfig[]): string =>

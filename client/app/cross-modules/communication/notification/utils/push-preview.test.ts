@@ -6,7 +6,6 @@ import {
   placeholderFields,
   previewText,
   splitKeyNames,
-  withCurrent,
 } from "./push-preview";
 
 const key = (keyName: string, texts: Record<string, string>): IBlocksLanguageKey =>
@@ -48,11 +47,6 @@ describe("push preview", () => {
     });
     const plain = [key("A", {}), key("B", {})];
     expect(splitKeyNames(plain)).toEqual({ titles: ["A", "B"], bodies: ["A", "B"] });
-  });
-
-  it("keeps a saved key that Localization no longer lists", () => {
-    expect(withCurrent(["A"], "OLD")).toEqual(["OLD", "A"]);
-    expect(withCurrent(["A"], "A")).toEqual(["A"]);
   });
 
   it("finds the default language and the {{fields}} of the texts", () => {
