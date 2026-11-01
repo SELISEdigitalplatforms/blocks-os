@@ -12,6 +12,20 @@ interface SetupStepperProps {
   failed?: boolean;
 }
 
+const stepMarker = ({
+  isDone,
+  isFailed,
+  index,
+}: {
+  isDone: boolean;
+  isFailed: boolean;
+  index: number;
+}) => {
+  if (isDone) return <Check className="h-3.5 w-3.5" />;
+  if (isFailed) return "!";
+  return index + 1;
+};
+
 export const SetupStepper = ({ current, failed = false }: SetupStepperProps) => {
   const { t } = useT("os.dashboard");
   return (
@@ -37,7 +51,7 @@ export const SetupStepper = ({ current, failed = false }: SetupStepperProps) => 
                   !isDone && !isCurrent && "border border-border text-muted-foreground",
                 )}
               >
-                {isDone ? <Check className="h-3.5 w-3.5" /> : isCurrent && failed ? "!" : index + 1}
+                {stepMarker({ isDone, isFailed: isCurrent && failed, index })}
               </span>
               <span
                 className={cn(

@@ -16,12 +16,12 @@ describe("Pagination in German", () => {
 
     render(<Pagination page={0} onChange={() => {}} totalCount={30} pageSize={10} />);
 
-    expect(screen.queryByText("Seite 1 von 3")).toBeTruthy();
+    expect(screen.getByText("Seite 1 von 3")).toBeTruthy();
   });
 
   it("falls back to English when the language is English", () => {
     render(<Pagination page={0} onChange={() => {}} totalCount={30} pageSize={10} />);
 
-    expect(screen.queryByText("Page 1 of 3")).toBeTruthy();
+    expect(screen.getByText("Page 1 of 3")).toBeTruthy();
   });
 });

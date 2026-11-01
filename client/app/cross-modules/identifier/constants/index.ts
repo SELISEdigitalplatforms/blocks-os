@@ -1,6 +1,8 @@
 import { tStatic } from "@seliseblocks/genesis-os";
 
 const KEY_COMMON_ERROR = "common:ERROR";
+const VALUE_ERROR = "error";
+const COLOR_ERROR = "bg-red-500";
 
 const I18N_MODULE = "os.identifier";
 
@@ -34,7 +36,7 @@ export const getLogLevels = () =>
     { value: "debug", label: tStatic(I18N_MODULE, "CONSTANTS.DEBUG"), color: "bg-gray-500" },
     { value: "info", label: tStatic(I18N_MODULE, "CONSTANTS.INFO"), color: "bg-blue-500" },
     { value: "warn", label: tStatic(I18N_MODULE, "CONSTANTS.WARNING"), color: "bg-yellow-500" },
-    { value: "error", label: tStatic(I18N_MODULE, KEY_COMMON_ERROR), color: "bg-red-500" },
+    { value: VALUE_ERROR, label: tStatic(I18N_MODULE, KEY_COMMON_ERROR), color: COLOR_ERROR },
     { value: "fatal", label: tStatic(I18N_MODULE, "CONSTANTS.FATAL"), color: "bg-red-700" },
   ] as const;
 
@@ -42,12 +44,12 @@ export const getServiceStatus = () =>
   [
     { value: "active", label: tStatic(I18N_MODULE, "CONSTANTS.ACTIVE"), color: "bg-green-500" },
     { value: "inactive", label: tStatic(I18N_MODULE, "CONSTANTS.INACTIVE"), color: "bg-gray-500" },
-    { value: "error", label: tStatic(I18N_MODULE, KEY_COMMON_ERROR), color: "bg-red-500" },
+    { value: VALUE_ERROR, label: tStatic(I18N_MODULE, KEY_COMMON_ERROR), color: COLOR_ERROR },
   ] as const;
 
 export const getTraceStatus = () =>
   [
     { value: "ok", label: tStatic(I18N_MODULE, "common:SUCCESS"), color: "bg-green-500" },
-    { value: "error", label: tStatic(I18N_MODULE, KEY_COMMON_ERROR), color: "bg-red-500" },
+    { value: VALUE_ERROR, label: tStatic(I18N_MODULE, KEY_COMMON_ERROR), color: COLOR_ERROR },
     { value: "timeout", label: tStatic(I18N_MODULE, "CONSTANTS.TIMEOUT"), color: "bg-yellow-500" },
   ] as const;

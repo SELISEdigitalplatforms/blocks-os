@@ -53,7 +53,7 @@ describe("EmailUsageDetailsBreadcrumb", () => {
 
   it("renders separators at size-4 (16px)", () => {
     renderCrumb({ id: "msg-1" });
-    const separators = document.querySelectorAll('[role="presentation"]');
+    const separators = document.querySelectorAll('li[aria-hidden="true"]');
     expect(separators.length).toBeGreaterThan(0);
     separators.forEach((sep) => {
       expect(sep.className).toContain("[&>svg]:size-4");

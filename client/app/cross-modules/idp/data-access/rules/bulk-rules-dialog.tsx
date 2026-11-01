@@ -103,6 +103,10 @@ function TargetPicker({
   const { t } = useT(I18N_MODULE);
   const chosenPaths = paths.filter((p) => pickedPaths.has(p));
   const open = schemas.filter((s) => !schemaBlocker(s, chosenPaths, panel));
+  const noSchemaKey =
+    panel === "validation"
+      ? "BULK_RULES_DIALOG.NO_SCHEMA_TAKES_VALIDATION"
+      : "BULK_RULES_DIALOG.NO_SCHEMA_TAKES_DEFAULT";
   return (
     <ScrollArea className="min-h-0 flex-1">
       <div className="flex flex-col gap-5 p-4">
@@ -115,12 +119,7 @@ function TargetPicker({
               checked={pickedPaths.has(path)}
               disabledReason={
                 schemas.every((s) => schemaBlocker(s, [path], panel))
-                  ? t(
-                      panel === "validation"
-                        ? "BULK_RULES_DIALOG.NO_SCHEMA_TAKES_VALIDATION"
-                        : "BULK_RULES_DIALOG.NO_SCHEMA_TAKES_DEFAULT",
-                      { path },
-                    )
+                  ? t(noSchemaKey, { path })
                   : null
               }
               onToggle={() => onTogglePath(path)}

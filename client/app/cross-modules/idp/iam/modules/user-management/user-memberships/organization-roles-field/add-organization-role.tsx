@@ -205,8 +205,8 @@ export const AddOrganizationRole = ({
         </div>
         {isLoading ? (
           <div className="grid grid-cols-2">
-            {Array.from({ length: filter.pageSize }).map((_, idx) => (
-              <div key={idx} className="flex animate-pulse items-center space-x-2 py-2">
+            {Array.from({ length: filter.pageSize }, (_, idx) => `skeleton-${idx}`).map((id) => (
+              <div key={id} className="flex animate-pulse items-center space-x-2 py-2">
                 <div className="h-4 w-4 rounded bg-gray-200" />
                 <div className="h-4 w-24 rounded bg-gray-200" />
                 <div className="h-4 w-20 rounded bg-gray-200" />

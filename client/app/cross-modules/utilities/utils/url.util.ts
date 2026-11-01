@@ -49,7 +49,7 @@ export const createMagicUrlSchema = () =>
       .string()
       .min(1, tStatic(I18N_MODULE, "URL_UTIL.URI_IS_REQUIRED"))
       .regex(
-        /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/,
+        /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})[/\w .-]*\/?$/,
         tStatic(I18N_MODULE, "URL_UTIL.PLEASE_ENTER_A_VALID_URI"),
       )
       .refine(

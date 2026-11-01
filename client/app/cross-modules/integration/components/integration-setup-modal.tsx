@@ -88,15 +88,13 @@ export function IntegrationSetupModal({
                 {t("INTEGRATION_SETUP_MODAL.SELECT_THE_PERMISSIONS_THIS")}
               </p>
             </div>
-            {isLoading ? (
-              <div
-                className="flex items-center gap-2 py-5 text-sm text-medium-emphasis"
-                role="status"
-              >
+            {isLoading && (
+              <output className="flex items-center gap-2 py-5 text-sm text-medium-emphasis">
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                 {t("INTEGRATION_SETUP_MODAL.LOADING_ACCESS_OPTIONS")}
-              </div>
-            ) : isError ? (
+              </output>
+            )}
+            {!isLoading && isError && (
               <div className="rounded-md border border-border p-4 text-sm text-medium-emphasis">
                 <p>{t("INTEGRATION_SETUP_MODAL.ACCESS_OPTIONS_COULD_NOT_BE")}</p>
                 <Button
@@ -109,7 +107,8 @@ export function IntegrationSetupModal({
                   {t("common:RETRY")}
                 </Button>
               </div>
-            ) : templates.length > 0 ? (
+            )}
+            {!isLoading && !isError && templates.length > 0 && (
               <RadioGroup
                 value={templateKey}
                 onValueChange={setTemplateKey}
@@ -155,7 +154,8 @@ export function IntegrationSetupModal({
                   </label>
                 ))}
               </RadioGroup>
-            ) : (
+            )}
+            {!isLoading && !isError && templates.length === 0 && (
               <p className="rounded-md border border-border p-4 text-sm text-medium-emphasis">
                 {t("INTEGRATION_SETUP_MODAL.NO_ACCESS_OPTIONS_ARE_AVAILABLE")}
               </p>

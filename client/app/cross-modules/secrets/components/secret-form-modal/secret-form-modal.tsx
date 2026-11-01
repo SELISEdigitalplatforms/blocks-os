@@ -261,6 +261,10 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
     else await submitCreate(values);
   };
 
+  let submitLabel = t("common:SAVE");
+  if (isPending) submitLabel = t("SECRET_FORM_MODAL.SAVING");
+  else if (metadataSaved) submitLabel = t("SECRET_FORM_MODAL.RETRY_ACCESS_UPDATE");
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[min(90vh,760px)] w-[calc(100vw-1.5rem)] max-w-lg flex-col overflow-hidden sm:w-full">
@@ -429,11 +433,7 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
                 {t("common:CANCEL")}
               </Button>
               <Button type="submit" disabled={isPending}>
-                {isPending
-                  ? t("SECRET_FORM_MODAL.SAVING")
-                  : metadataSaved
-                    ? t("SECRET_FORM_MODAL.RETRY_ACCESS_UPDATE")
-                    : t("common:SAVE")}
+                {submitLabel}
               </Button>
             </DialogFooter>
           </form>

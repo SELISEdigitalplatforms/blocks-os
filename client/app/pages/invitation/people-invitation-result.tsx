@@ -51,9 +51,9 @@ const buildIamActivationUrl = (code: string): string | null => {
   const params = new URLSearchParams({ code, lang: "en-US" });
 
   const clientId = getRuntimeEnv("BLOCKS_OIDC_CLIENT_ID");
-  if (clientId && typeof window !== "undefined") {
+  if (clientId && globalThis.location !== undefined) {
     params.set("clientId", clientId);
-    params.set("redirect_uri", `${window.location.origin}/login/callback`);
+    params.set("redirect_uri", `${globalThis.location.origin}/login/callback`);
   }
 
   return `${trimTrailingSlash(iamBaseUrl)}/oidc/activate/${tenant}?${params.toString()}`;

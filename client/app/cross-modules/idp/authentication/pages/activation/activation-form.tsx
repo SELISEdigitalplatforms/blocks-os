@@ -68,11 +68,12 @@ export const ActivationForm = ({ code }: ActivationFormProps) => {
         lastname: values.lastname,
         captchaCode,
       });
-      if (!res.isSuccess) {
+      if (res.isSuccess) {
+        navigate("/activate-success");
+      } else {
         resetCaptcha();
-        return showErrorToast({ errors: res.errors });
+        showErrorToast({ errors: res.errors });
       }
-      return navigate("/activate-success");
     } catch (error: unknown) {
       resetCaptcha();
       if (isErrorWithErrors(error)) {

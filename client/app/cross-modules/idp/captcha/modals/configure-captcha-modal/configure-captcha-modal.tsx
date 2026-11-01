@@ -95,6 +95,9 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
     }
   };
   const ConfigureFormField = ConfigureGeneralCaptchaFormField;
+  let submitLabel = t("common:SAVE");
+  if (isPending) submitLabel = t("CONFIGURE_CAPTCHA_MODAL.SAVING");
+  else if (configuration) submitLabel = t("CONFIGURE_CAPTCHA_MODAL.UPDATE_CHANGES");
   return (
     <Dialog
       open={open}
@@ -161,11 +164,7 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
                   disabled={isPending || (!needsNewSecret && (!isDirty || !isValid))}
                   type="submit"
                 >
-                  {isPending
-                    ? t("CONFIGURE_CAPTCHA_MODAL.SAVING")
-                    : configuration
-                      ? t("CONFIGURE_CAPTCHA_MODAL.UPDATE_CHANGES")
-                      : t("common:SAVE")}
+                  {submitLabel}
                 </Button>
               </DialogFooter>
             </form>

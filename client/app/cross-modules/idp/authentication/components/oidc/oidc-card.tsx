@@ -157,9 +157,17 @@ const showActionError = (error: unknown) => {
 
 const withBoldName = (text: string, name: string): ReactNode => {
   if (!name) return text;
-  return text
-    .split(name)
-    .flatMap((part, index) => (index === 0 ? [part] : [<strong key={index}>{name}</strong>, part]));
+  const nodes: ReactNode[] = [];
+  let offset = 0;
+  for (const [index, part] of text.split(name).entries()) {
+    if (index > 0) {
+      nodes.push(<strong key={`name-${offset}`}>{name}</strong>);
+      offset += name.length;
+    }
+    nodes.push(part);
+    offset += part.length;
+  }
+  return nodes;
 };
 
 const OidcClientNameCell = ({

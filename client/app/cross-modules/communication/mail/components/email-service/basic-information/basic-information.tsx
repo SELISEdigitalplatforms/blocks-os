@@ -108,8 +108,8 @@ const BasicInformationSkeleton = () => {
       </CardHeader>
       <CardContent className="px-6 pb-6 pt-0">
         <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="grid gap-2">
+          {["field-1", "field-2", "field-3", "field-4"].map((field) => (
+            <div key={field} className="grid gap-2">
               <Skeleton className="h-4 w-28" />
               <Skeleton className="h-10 w-full" />
             </div>

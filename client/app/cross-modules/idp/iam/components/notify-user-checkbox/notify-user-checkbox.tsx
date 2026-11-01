@@ -1,4 +1,5 @@
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
+import { useId } from "react";
 import { useT } from "@seliseblocks/genesis-os";
 
 type NotifyUserCheckboxProps = {
@@ -20,9 +21,11 @@ export const NotifyUserCheckbox = ({
   disabled,
 }: NotifyUserCheckboxProps) => {
   const { t } = useT("os.idp.iam-ui");
+  const checkboxId = useId();
   return (
-    <label className="flex items-start gap-2 text-sm">
+    <label htmlFor={checkboxId} className="flex items-start gap-2 text-sm">
       <Checkbox
+        id={checkboxId}
         // `shrink-0` so the box keeps its size as a flex item next to wrapping text.
         className="mt-0.5 shrink-0"
         checked={checked}

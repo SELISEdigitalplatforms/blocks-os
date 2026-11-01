@@ -58,7 +58,7 @@ describe("os.idp console components German", () => {
       primaryDeviceName: null,
       primaryBrowser: "Chrome",
       primaryOperatingSystem: "macOS",
-      primaryIpAddress: "1.2.3.4",
+      primaryIpAddress: "192.0.2.1",
       lastActivityAt: "2025-01-01T00:00:00Z",
       absoluteExpiry: "2025-02-01T00:00:00Z",
       status: "Active",

@@ -180,8 +180,8 @@ export const SettingsTabLoadingState = ({
       className={className}
     >
       {includeToggle ? <ToggleCardSkeleton /> : null}
-      {Array.from({ length: sectionCount }).map((_, index) => (
-        <SectionCardSkeleton key={index} />
+      {Array.from({ length: sectionCount }, (_, index) => `section-${index}`).map((id) => (
+        <SectionCardSkeleton key={id} />
       ))}
     </SettingsTabLoadingShell>
   );

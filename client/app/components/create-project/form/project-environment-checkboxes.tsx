@@ -76,16 +76,15 @@ export const ProjectEnvironmentCheckboxes = ({
                 aria-label={option.label}
                 id={`project-environment-${option.value}`}
               />
-              <label className="text-lg font-bold" htmlFor={`project-environment-${option.value}`}>
-                <div className="flex flex-row items-center gap-2">
-                  <span>{option.label}</span>
-                  <div className="flex flex-row items-center">
-                    <GitBranch className="h-3 w-3 text-gray-400" />
-                    <span className="text-sm text-gray-400">
-                      {option.value === "prod" ? "main" : option.value}
-                    </span>
-                  </div>
-                </div>
+              <label
+                className="flex flex-row items-center gap-2 text-lg font-bold"
+                htmlFor={`project-environment-${option.value}`}
+              >
+                <span>{option.label}</span>
+                <GitBranch className="h-3 w-3 text-gray-400" />
+                <span className="-ml-2 text-sm text-gray-400">
+                  {option.value === "prod" ? "main" : option.value}
+                </span>
               </label>
             </div>
             <div className="ml-7 text-base font-normal">{option.subtext}</div>

@@ -199,9 +199,8 @@ export const UsersSelectionBar = ({
   const { t } = useT(I18N_MODULE);
 
   return (
-    <div
+    <section
       data-testid="users-selection-bar"
-      role="region"
       aria-label={t("USERS_SELECTION_BAR.BULK_ACTIONS")}
       className="fixed inset-x-0 bottom-0 z-40 flex flex-wrap items-center justify-center gap-3 border-t bg-card px-4 py-3 shadow-[0_-4px_16px_rgba(15,23,42,0.08)]"
     >
@@ -254,6 +253,6 @@ export const UsersSelectionBar = ({
           {t("common:CANCEL")}
         </Button>
       </div>
-    </div>
+    </section>
   );
 };

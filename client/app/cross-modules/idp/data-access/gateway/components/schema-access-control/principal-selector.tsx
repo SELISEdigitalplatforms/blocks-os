@@ -289,11 +289,9 @@ const PrincipalSelectorInner = ({
     );
   }
 
-  const triggerLabel = selectedValues.length
-    ? selectedValues.map(labelFor).join(", ")
-    : entity === "role"
-      ? t("PRINCIPAL_SELECTOR.SELECT_ROLE")
-      : t("PRINCIPAL_SELECTOR.SELECT_USER");
+  const emptyLabel =
+    entity === "role" ? t("PRINCIPAL_SELECTOR.SELECT_ROLE") : t("PRINCIPAL_SELECTOR.SELECT_USER");
+  const triggerLabel = selectedValues.length ? selectedValues.map(labelFor).join(", ") : emptyLabel;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

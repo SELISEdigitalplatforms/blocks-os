@@ -33,7 +33,7 @@ const CreateProject = () => {
   useEffect(() => {
     if (tab) {
       const step = parseInt(tab, 10);
-      if (!isNaN(step) && step > 0 && step <= STEP_COUNT && step === 2) {
+      if (!Number.isNaN(step) && step > 0 && step <= STEP_COUNT && step === 2) {
         if (!completedSteps.includes(1)) {
           setCompletedSteps([1]);
           return;

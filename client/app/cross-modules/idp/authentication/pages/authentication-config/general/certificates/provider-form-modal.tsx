@@ -50,6 +50,7 @@ import {
 } from "@/cross-modules/identifier/models/third-party-jwt-provider.model";
 
 const KEY_CHARACTERS = /^[A-Za-z0-9._-]+$/;
+const IDP_HEADER = "x-blocks-idp";
 
 /**
  * The two asymmetric key sources, as the radio group presents them.
@@ -81,7 +82,7 @@ const buildSchema = (isEditing: boolean, t: TFunction) =>
       : z
           .string()
           .trim()
-          .min(1, t("PROVIDER_FORM_MODAL.KEY_REQUIRED", { header: "x-blocks-idp" }))
+          .min(1, t("PROVIDER_FORM_MODAL.KEY_REQUIRED", { header: IDP_HEADER }))
           .regex(KEY_CHARACTERS, t("PROVIDER_FORM_MODAL.KEY_CHARACTERS")),
     providerName: z.string().trim().min(1, t("PROVIDER_FORM_MODAL.PROVIDER_REQUIRED")),
     isActive: z.boolean(),
@@ -450,7 +451,7 @@ export function ProviderFormModal({
             <p className="text-xs text-muted-foreground">
               {existing
                 ? t("PROVIDER_FORM_MODAL.KEY_HINT_EDIT")
-                : t("PROVIDER_FORM_MODAL.KEY_HINT_NEW", { header: "x-blocks-idp" })}
+                : t("PROVIDER_FORM_MODAL.KEY_HINT_NEW", { header: IDP_HEADER })}
             </p>
             {formState.errors.key && (
               <p className="text-xs text-destructive">{formState.errors.key.message}</p>
@@ -469,7 +470,7 @@ export function ProviderFormModal({
               <p className="text-xs text-muted-foreground">
                 {issuerlessSiblings > 0
                   ? t("PROVIDER_FORM_MODAL.ISSUERLESS_SHARED", {
-                      header: "x-blocks-idp",
+                      header: IDP_HEADER,
                       key: existing?.key ?? t("PROVIDER_FORM_MODAL.THIS_PROVIDER_KEY"),
                     })
                   : t("PROVIDER_FORM_MODAL.ISSUERLESS_ALONE")}

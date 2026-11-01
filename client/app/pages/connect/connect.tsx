@@ -386,6 +386,9 @@ export default function ConnectPage() {
 
   const waiting = readiness.state.phase === "checking" || readiness.state.phase === "waiting";
   const busy = waiting || approve.isPending;
+  let connectLabel = t("CONNECT.CONNECT");
+  if (approve.isPending) connectLabel = t("CONNECT.CONNECTING");
+  else if (waiting) connectLabel = t("CONNECT.CHECKING");
 
   return (
     <ConnectShell title={t(KEY_CONNECT_TO_BLOCKS_OS)}>
@@ -466,9 +469,9 @@ export default function ConnectPage() {
                 }}
               />
             ) : (
-              <p className="text-sm text-medium-emphasis" role="status">
+              <output className="block text-sm text-medium-emphasis">
                 {t("CONNECT.LOADING_PROJECTS")}
-              </p>
+              </output>
             )}
             <button
               type="button"
@@ -558,15 +561,17 @@ export default function ConnectPage() {
                   })}
                 </p>
               </div>
-              <div role="group" aria-labelledby="connect-options-heading" className="grid gap-2">
+              <fieldset
+                aria-labelledby="connect-options-heading"
+                className="m-0 grid min-w-0 gap-2 border-0 p-0"
+              >
                 {request.templates.map((template) => {
                   const isSelected = templateKey === template.key;
-                  const accessLabel =
-                    template.accessLevel === "read"
-                      ? "Read-only"
-                      : template.accessLevel === "full"
-                        ? tStatic(I18N_MODULE, "CONNECT.FULL_ACCESS")
-                        : template.accessLevel;
+                  let accessLabel: string = template.accessLevel;
+                  if (template.accessLevel === "read") accessLabel = "Read-only";
+                  else if (template.accessLevel === "full") {
+                    accessLabel = tStatic(I18N_MODULE, "CONNECT.FULL_ACCESS");
+                  }
                   return (
                     <button
                       key={template.key}
@@ -612,11 +617,11 @@ export default function ConnectPage() {
                     </button>
                   );
                 })}
-              </div>
+              </fieldset>
               {waiting && (
-                <p role="status" className="text-xs text-medium-emphasis">
+                <output className="block text-xs text-medium-emphasis">
                   {t("CONNECT.CHECKING_THAT_THIS_ENVIRONMENT_IS")}
-                </p>
+                </output>
               )}
               {readiness.state.phase === "timeout" && (
                 <Banner
@@ -664,11 +669,7 @@ export default function ConnectPage() {
             disabled={!templateKey || busy || cancel.isPending}
           >
             {busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-            {approve.isPending
-              ? t("CONNECT.CONNECTING")
-              : waiting
-                ? t("CONNECT.CHECKING")
-                : t("CONNECT.CONNECT")}
+            {connectLabel}
             {!busy && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
           </Button>
         )}
@@ -712,7 +713,7 @@ const ExpiredScreen = ({ backUrl }: { backUrl: string | null }) => {
       <p>{t("CONNECT.GO_BACK_TO_YOUR_SITE")}</p>
       {backUrl && (
         <div className="mt-4">
-          <Button size="sm" variant="outline" onClick={() => window.location.assign(backUrl)}>
+          <Button size="sm" variant="outline" onClick={() => globalThis.location.assign(backUrl)}>
             {t("CONNECT.BACK_TO_YOUR_SITE")}
           </Button>
         </div>

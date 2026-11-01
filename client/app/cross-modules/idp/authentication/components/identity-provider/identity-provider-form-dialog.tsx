@@ -52,7 +52,10 @@ import { getBlocksOidcWellKnownUrl } from "@/lib/get-api-path";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 
-const PROVIDER_TYPE_VALUES = ["social", "blocks-oidc", "byos"];
+const PROVIDER_SOCIAL = "social";
+const PROVIDER_BLOCKS_OIDC = "blocks-oidc";
+const PROVIDER_BYOS = "byos";
+const PROVIDER_TYPE_VALUES = [PROVIDER_SOCIAL, PROVIDER_BLOCKS_OIDC, PROVIDER_BYOS];
 
 type FormValues = {
   displayName: string;
@@ -76,7 +79,7 @@ type Props = {
 
 const BLANK_FORM: FormValues = {
   displayName: "",
-  providerType: "social",
+  providerType: PROVIDER_SOCIAL,
   provider: "",
   clientId: "",
   clientSecret: "",
@@ -106,7 +109,7 @@ const toFormValues = (provider: IdentityProvider): FormValues => {
   const matched = PROVIDER_TYPE_VALUES.includes(provider.providerType);
   return {
     displayName: provider.displayName,
-    providerType: matched ? provider.providerType : "social",
+    providerType: matched ? provider.providerType : PROVIDER_SOCIAL,
     provider: provider.provider,
     clientId: provider.clientId,
     clientSecret: "",
@@ -125,9 +128,9 @@ export function IdentityProviderFormDialog({
   const { t } = useT("os.idp.identity-provider");
   const isEditing = !!editId;
   const providerOptions: { value: string; label: string }[] = [
-    { value: "social", label: t("IDENTITY_PROVIDER_FORM_DIALOG.TYPE_SOCIAL") },
-    { value: "blocks-oidc", label: "Blocks OIDC" },
-    { value: "byos", label: t("IDENTITY_PROVIDER_FORM_DIALOG.TYPE_BYOS") },
+    { value: PROVIDER_SOCIAL, label: t("IDENTITY_PROVIDER_FORM_DIALOG.TYPE_SOCIAL") },
+    { value: PROVIDER_BLOCKS_OIDC, label: "Blocks OIDC" },
+    { value: PROVIDER_BYOS, label: t("IDENTITY_PROVIDER_FORM_DIALOG.TYPE_BYOS") },
   ];
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
 
@@ -190,7 +193,7 @@ export function IdentityProviderFormDialog({
   );
 
   useEffect(() => {
-    if (providerType === "blocks-oidc" && blocksOidcWellKnownUrl) {
+    if (providerType === PROVIDER_BLOCKS_OIDC && blocksOidcWellKnownUrl) {
       setValue("wellKnownUrl", blocksOidcWellKnownUrl, { shouldValidate: true });
     }
   }, [providerType, blocksOidcWellKnownUrl, setValue]);
@@ -275,7 +278,7 @@ export function IdentityProviderFormDialog({
     ? SOCIAL_AUTH_PROVIDERS_CONFIG[presetProvider as SSO_PROVIDERS]
     : undefined;
   const pickedEnterpriseMeta =
-    presetProviderType === "blocks-oidc" || presetProviderType === "byos"
+    presetProviderType === PROVIDER_BLOCKS_OIDC || presetProviderType === PROVIDER_BYOS
       ? ENTERPRISE_CARD_INFO[presetProviderType]
       : undefined;
 
@@ -284,16 +287,16 @@ export function IdentityProviderFormDialog({
   // never render a box with a missing/empty title or body.
   const helpContent = ((): { title: string; body: string } | undefined => {
     if (isEditing) return undefined;
-    if (providerType === "social") {
+    if (providerType === PROVIDER_SOCIAL) {
       const meta = SOCIAL_AUTH_PROVIDERS_CONFIG[watch("provider") as SSO_PROVIDERS];
       return meta?.helpTitle && meta?.helpBody
         ? { title: meta.helpTitle, body: meta.helpBody }
         : undefined;
     }
     const staticHelp =
-      providerType === "blocks-oidc"
+      providerType === PROVIDER_BLOCKS_OIDC
         ? BLOCKS_OIDC_HELP
-        : providerType === "byos"
+        : providerType === PROVIDER_BYOS
           ? BYOS_HELP
           : undefined;
     return staticHelp?.title && staticHelp?.body ? staticHelp : undefined;
@@ -310,6 +313,9 @@ export function IdentityProviderFormDialog({
   const { mutateAsync: create, isPending: isCreating } = useCreateIdentityProvider();
   const { mutateAsync: update, isPending: isUpdating } = useUpdateIdentityProvider();
   const isPending = isCreating || isUpdating;
+  let submitLabel = t("IDENTITY_PROVIDER_FORM_DIALOG.ADD_PROVIDER");
+  if (isPending) submitLabel = t("IDENTITY_PROVIDER_FORM_DIALOG.SAVING");
+  else if (isEditing) submitLabel = t("IDENTITY_PROVIDER_FORM_DIALOG.SAVE_CHANGES");
 
   const onSubmit = async (values: FormValues) => {
     const cleanedUris = redirectUris.map((u) => u.trim()).filter(Boolean);
@@ -452,7 +458,7 @@ export function IdentityProviderFormDialog({
                   {t("IDENTITY_PROVIDER_FORM_DIALOG.PROVIDER_NAME")}{" "}
                   <span className="text-destructive">*</span>
                 </Label>
-                {providerType === "social" ? (
+                {providerType === PROVIDER_SOCIAL ? (
                   <Select
                     value={watch("provider")}
                     onValueChange={(v) => setValue("provider", v, { shouldValidate: true })}
@@ -611,7 +617,7 @@ export function IdentityProviderFormDialog({
               )}
 
               {/* Well Known URL (auto-generated) - shown only for Blocks OIDC */}
-              {providerType === "blocks-oidc" && (
+              {providerType === PROVIDER_BLOCKS_OIDC && (
                 <div className="space-y-1.5">
                   <Label htmlFor="generatedWellKnownUrl">
                     {t("IDENTITY_PROVIDER_FORM_DIALOG.WELL_KNOWN_URL")}
@@ -770,11 +776,7 @@ export function IdentityProviderFormDialog({
                   {t("common:CANCEL")}
                 </Button>
                 <Button type="submit" disabled={isPending || !isValid || isFormLoading}>
-                  {isPending
-                    ? t("IDENTITY_PROVIDER_FORM_DIALOG.SAVING")
-                    : isEditing
-                      ? t("IDENTITY_PROVIDER_FORM_DIALOG.SAVE_CHANGES")
-                      : t("IDENTITY_PROVIDER_FORM_DIALOG.ADD_PROVIDER")}
+                  {submitLabel}
                 </Button>
               </DialogFooter>
             </form>

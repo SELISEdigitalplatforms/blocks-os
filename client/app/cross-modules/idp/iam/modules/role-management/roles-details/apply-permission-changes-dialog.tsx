@@ -116,6 +116,10 @@ export const ApplyPermissionChangesDialog = ({
     }
   };
 
+  let confirmLabel = t("common:SAVE_CHANGES");
+  if (isPending) confirmLabel = t("APPLY_PERMISSION_CHANGES_DIALOG.SAVING");
+  else if (willPropagate) confirmLabel = t("APPLY_PERMISSION_CHANGES_DIALOG.APPLY_TO_ALL");
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
@@ -225,11 +229,7 @@ export const ApplyPermissionChangesDialog = ({
             // consequence before it is known.
             disabled={isPending || isLoading}
           >
-            {isPending
-              ? t("APPLY_PERMISSION_CHANGES_DIALOG.SAVING")
-              : willPropagate
-                ? t("APPLY_PERMISSION_CHANGES_DIALOG.APPLY_TO_ALL")
-                : t("common:SAVE_CHANGES")}
+            {confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>
