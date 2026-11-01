@@ -7,26 +7,28 @@ import {
 } from "@/components/ui-kits/form/form";
 import {
   createProjectEnvironmentFormDefaultValue,
-  createProjectEnvironmentFormSchema,
-  environmentOptions,
+  createCreateProjectEnvironmentFormSchema,
+  getEnvironmentOptions,
 } from "./utils";
 import { ProjectEnvironmentCheckboxes } from "../project-environment-checkboxes";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui-kits/button/button";
 import { useCreateProjectFormState } from "../../utils";
 import { useProjectForm } from "@/hooks/use-project";
+import { useT } from "@seliseblocks/genesis-os";
 export const CreateProjectEnvironmentsForm = () => {
+  const { t } = useT("os.create-project");
   const { isPending, saveProject } = useProjectForm();
   const { formData, setFormData } = useCreateProjectFormState();
   const form = useForm({
     defaultValues: formData[2],
-    resolver: zodResolver(createProjectEnvironmentFormSchema),
+    resolver: zodResolver(createCreateProjectEnvironmentFormSchema()),
   });
   const onSubmitHandler = (values: typeof createProjectEnvironmentFormDefaultValue) => {
     const sortedEnvironments = [...values.environments].sort(
       (a: { value: string }, b: { value: string }) => {
-        const aIndex = environmentOptions.find((opt) => opt.value === a.value)?.index ?? 0;
-        const bIndex = environmentOptions.find((opt) => opt.value === b.value)?.index ?? 0;
+        const aIndex = getEnvironmentOptions().find((opt) => opt.value === a.value)?.index ?? 0;
+        const bIndex = getEnvironmentOptions().find((opt) => opt.value === b.value)?.index ?? 0;
         return aIndex - bIndex;
       },
     );
@@ -38,10 +40,9 @@ export const CreateProjectEnvironmentsForm = () => {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmitHandler)}>
         <div className="mt-4 flex flex-col gap-1 text-left">
-          <p className="text-3xl font-bold tracking-tight">Select environments</p>
+          <p className="text-3xl font-bold tracking-tight">{t("CREATE_PROJECT_ENVIRONMENTS_FORM.SELECT_ENVIRONMENTS")}</p>
           <p className="text-base font-normal tracking-tight">
-            Select the environments you want to enable for this project. You can configure each one
-            individually later.
+            {t("CREATE_PROJECT_ENVIRONMENTS_FORM.SELECT_THE_ENVIRONMENTS_YOU_WANT")}
           </p>
           <div className="">
             <div className="mt-8 text-sm">
@@ -74,7 +75,7 @@ export const CreateProjectEnvironmentsForm = () => {
         </div>
         <div className="mb-4 mt-10">
           <Button size="lg" disabled={!isValid || isPending}>
-            Submit
+            {t("common:SUBMIT")}
           </Button>
         </div>
       </form>

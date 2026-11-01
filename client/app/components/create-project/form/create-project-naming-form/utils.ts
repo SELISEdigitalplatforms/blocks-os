@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { tStatic } from "@seliseblocks/genesis-os";
 
 export const createProjectNamingFormDefaultValue = {
   name: "",
@@ -6,13 +7,13 @@ export const createProjectNamingFormDefaultValue = {
   isUseBlocksExclusively: false,
 };
 
-export const createProjectNamingFormSchema = z.object({
+export const createCreateProjectNamingFormSchema = () => z.object({
   name: z
     .string()
     .trim()
-    .min(1, "Name is required")
-    .min(3, "Project name must be at least 3 characters")
-    .max(100, "Project name should be a maximum of 100 characters"),
+    .min(1, tStatic("os.create-project", "UTILS.NAME_IS_REQUIRED"))
+    .min(3, tStatic("os.create-project", "UTILS.PROJECT_NAME_MUST_BE_AT"))
+    .max(100, tStatic("os.create-project", "UTILS.PROJECT_NAME_SHOULD_BE_A")),
   isAcceptBlocksTerms: z.boolean().refine((val) => val),
   isUseBlocksExclusively: z.boolean().refine((val) => val),
 });

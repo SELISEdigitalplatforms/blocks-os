@@ -1,66 +1,67 @@
 import { z } from "zod";
+import { tStatic } from "@seliseblocks/genesis-os";
 
 export const createProjectEnvironmentFormDefaultValue = {
   environments: [] as { value: string }[],
 };
 
-export const createProjectEnvironmentFormSchema = z.object({
+export const createCreateProjectEnvironmentFormSchema = () => z.object({
   environments: z
     .array(
       z.object({
         value: z.string(),
       }),
     )
-    .min(1, "At least one environment is required"),
+    .min(1, tStatic("os.create-project", "UTILS.AT_LEAST_ONE_ENVIRONMENT_IS")),
 });
 
-export const environmentOptions = [
+export const getEnvironmentOptions = () => [
   {
     index: 0,
-    label: "Development",
+    label: tStatic("os.create-project", "UTILS.DEVELOPMENT"),
     value: "dev",
-    subtext: "For day-to-day development and testing unstable changes.",
+    subtext: tStatic("os.create-project", "UTILS.FOR_DAY_TO_DAY_DEVELOPMENT"),
   },
   {
     index: 1,
-    label: "Testing",
+    label: tStatic("os.create-project", "UTILS.TESTING"),
     value: "test",
-    subtext: "For QA testing and validation of new features.",
+    subtext: tStatic("os.create-project", "UTILS.FOR_QA_TESTING_AND_VALIDATION"),
   },
   {
     index: 2,
-    label: "Staging",
+    label: tStatic("os.create-project", "UTILS.STAGING"),
     value: "stg",
-    subtext: "For final pre-prod validation in a near-production replica.",
+    subtext: tStatic("os.create-project", "UTILS.FOR_FINAL_PRE_PROD_VALIDATION"),
   },
   {
     index: 3,
     label: "IAT",
     value: "iat",
-    subtext: "For testing service integrations across modules/systems.",
+    subtext: tStatic("os.create-project", "UTILS.FOR_TESTING_SERVICE_INTEGRATIONS"),
   },
   {
     index: 4,
     label: "UAT",
     value: "uat",
-    subtext: "For end-user or stakeholder validation of new features.",
+    subtext: tStatic("os.create-project", "UTILS.FOR_END_USER_OR_STAKEHOLDER"),
   },
   {
     index: 5,
-    label: "Prod Shadow",
+    label: tStatic("os.create-project", "UTILS.PROD_SHADOW"),
     value: "prod-shadow",
-    subtext: "For mirroring production data/traffic to validate changes invisibly.",
+    subtext: tStatic("os.create-project", "UTILS.FOR_MIRRORING_PRODUCTION_DATA"),
   },
   {
     index: 6,
-    label: "Pre-Prod",
+    label: tStatic("os.create-project", "UTILS.PRE_PROD"),
     value: "pre-prod",
-    subtext: "For load testing, security checks, or final sanity tests before production.",
+    subtext: tStatic("os.create-project", "UTILS.FOR_LOAD_TESTING_SECURITY_CHECKS"),
   },
   {
     index: 7,
-    label: "Production",
+    label: tStatic("os.create-project", "UTILS.PRODUCTION"),
     value: "prod",
-    subtext: "The live environment serving actual users.",
+    subtext: tStatic("os.create-project", "UTILS.THE_LIVE_ENVIRONMENT_SERVING"),
   },
 ];

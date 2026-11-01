@@ -10,12 +10,15 @@ import { useCreateProjectFormState } from "@/components/create-project/utils";
 import { CreateProjectNamingForm } from "@/components/create-project/form/create-project-naming-form/create-project-naming-form";
 import { CreateProjectResourcesForm } from "@/components/create-project/form/create-project-resources-form/create-project-resources-form";
 import { CreateProjectEnvironmentsForm } from "@/components/create-project/form/create-project-environments-form/create-project-environments-form";
-const stepData: Steps = [
-  { id: 1, title: "Name your project" },
-  { id: 2, title: "Add resources" },
-  { id: 3, title: "Configure environments" },
-];
+import { useT } from "@seliseblocks/genesis-os";
+const STEP_COUNT = 3;
 export const CreateProjectWrapper = () => {
+  const { t } = useT("os.create-project");
+  const stepData: Steps = [
+    { id: 1, title: t("CREATE_PROJECT.NAME_YOUR_PROJECT") },
+    { id: 2, title: t("CREATE_PROJECT.ADD_RESOURCES") },
+    { id: 3, title: t("CREATE_PROJECT.CONFIGURE_ENVIRONMENTS") },
+  ];
   return (
     <StepperProvider steps={stepData}>
       <CreateProject />
@@ -23,13 +26,14 @@ export const CreateProjectWrapper = () => {
   );
 };
 const CreateProject = () => {
+  const { t } = useT("os.create-project");
   const { resetFormData } = useCreateProjectFormState();
   const [tab, setTab] = useQueryState("tab", { defaultValue: "1" });
   const { currentStep, goToStep, setCompletedSteps, completedSteps } = useStepper();
   useEffect(() => {
     if (tab) {
       const step = parseInt(tab, 10);
-      if (!isNaN(step) && step > 0 && step <= stepData.length && step === 2) {
+      if (!isNaN(step) && step > 0 && step <= STEP_COUNT && step === 2) {
         if (!completedSteps.includes(1)) {
           setCompletedSteps([1]);
           return;
@@ -49,10 +53,10 @@ const CreateProject = () => {
               <Link to="/console">
                 <X onClick={resetFormData} size={32} strokeWidth={1} />
               </Link>
-              <p className="mt-[2px] text-lg font-semibold">Create a project</p>
+              <p className="mt-[2px] text-lg font-semibold">{t("CREATE_PROJECT.CREATE_A_PROJECT")}</p>
             </div>
             <p className="mb-7 mt-2 text-sm font-normal text-medium-emphasis">
-              Let&apos;s get started by setting up the basics for your new project.
+              {t("CREATE_PROJECT.GET_STARTED")}
             </p>
             <StepHorizontalTrackBar />
           </div>
@@ -71,10 +75,10 @@ const CreateProject = () => {
               <Link to="/console">
                 <X onClick={resetFormData} size={32} strokeWidth={1} />
               </Link>
-              <p className="mt-[2px] text-lg font-semibold">Create a project</p>
+              <p className="mt-[2px] text-lg font-semibold">{t("CREATE_PROJECT.CREATE_A_PROJECT")}</p>
             </div>
             <p className="mb-7 mt-2 text-sm font-normal text-medium-emphasis">
-              Let&apos;s get started by setting up the basics for your new project.
+              {t("CREATE_PROJECT.GET_STARTED")}
             </p>
           </div>
           <StepVerticalTrackBar />

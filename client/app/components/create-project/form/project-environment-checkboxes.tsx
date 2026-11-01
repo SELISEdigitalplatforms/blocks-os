@@ -1,6 +1,7 @@
 import { Check, GitBranch } from "lucide-react";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
-import { environmentOptions } from "./create-project-environments-form/utils";
+import { getEnvironmentOptions } from "./create-project-environments-form/utils";
+import { useT } from "@seliseblocks/genesis-os";
 
 /**
  * The wizard's environment checkbox group: same options, same order, same branch-name hint.
@@ -16,16 +17,18 @@ export const ProjectEnvironmentCheckboxes = ({
   onToggle: (environment: string, checked: boolean) => void;
   disabled?: boolean;
   variant?: "default" | "compact";
-}) => variant === "compact" ? (
-  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" aria-label="Environments">
-    {environmentOptions.map((option) => {
+}) => {
+  const { t } = useT("os.create-project");
+  return variant === "compact" ? (
+  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" aria-label={t("PROJECT_ENVIRONMENT_CHECKBOXES.ENVIRONMENTS")}>
+    {getEnvironmentOptions().map((option) => {
       const checked = selected.includes(option.value);
       return (
         <button
           key={option.value}
           type="button"
           aria-pressed={checked}
-          aria-label={`${option.label}, branch ${option.value === "prod" ? "main" : option.value}`}
+          aria-label={t("PROJECT_ENVIRONMENT_CHECKBOXES.BRANCH", { label: option.label, value2: option.value === "prod" ? "main" : option.value })}
           disabled={disabled}
           onClick={() => onToggle(option.value, !checked)}
           className={`flex min-h-12 items-center gap-2.5 rounded-md border px-3 py-2 text-left text-sm transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 ${
@@ -48,12 +51,11 @@ export const ProjectEnvironmentCheckboxes = ({
   <div>
     <div className="mt-2 flex min-h-10 w-fit flex-row items-center gap-1 rounded border border-base-warning bg-warning-100 p-3 text-sm text-warning-800">
       <span>
-        Please ensure that the branch name in your Git repository matches the environment&apos;s
-        label exactly — for example, use &apos;dev&apos; for the Development environment.
+        {t("PROJECT_ENVIRONMENT_CHECKBOXES.PLEASE_ENSURE_THAT_THE_BRANCH")}
       </span>
     </div>
     <div className="mt-8 text-sm">
-      {environmentOptions.map((option) => (
+      {getEnvironmentOptions().map((option) => (
         <div key={option.value} className="mb-4 flex flex-col">
           <div className="flex items-center gap-2">
             <Checkbox
@@ -82,11 +84,12 @@ export const ProjectEnvironmentCheckboxes = ({
     </div>
   </div>
 );
+};
 
 /** Sorts selected environment values into the wizard's canonical order. */
 export const sortEnvironments = (values: string[]): string[] =>
   [...values].sort(
     (a, b) =>
-      (environmentOptions.find((opt) => opt.value === a)?.index ?? 0) -
-      (environmentOptions.find((opt) => opt.value === b)?.index ?? 0),
+      (getEnvironmentOptions().find((opt) => opt.value === a)?.index ?? 0) -
+      (getEnvironmentOptions().find((opt) => opt.value === b)?.index ?? 0),
   );
