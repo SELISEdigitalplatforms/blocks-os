@@ -99,7 +99,9 @@ export function ApiIntegrationCard({
 }: Readonly<ApiIntegrationCardProps>) {
   const { t } = useT("os.idp.auth");
   const headerRequired = requiresIdpHeader(provider, allProviders);
-  const bearer = `Bearer <token from ${provider.providerName || "your provider"}>`;
+  const bearer = t("API_INTEGRATION_CARD.BEARER_TOKEN_FROM", {
+    provider: provider.providerName || t("API_INTEGRATION_CARD.YOUR_PROVIDER"),
+  });
 
   // Every header is in the sample, x-blocks-idp included: it is accepted whether or not it is
   // required, so a request copied once keeps working if another provider is added later.

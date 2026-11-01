@@ -43,7 +43,7 @@ import {
   isSymmetric,
   JwtSigningAlgorithm,
   keySourceOf,
-  SIGNING_ALGORITHMS,
+  getSigningAlgorithms,
   type AsymmetricKeySource,
   type ClaimsMapping,
   type ThirdPartyJwtProvider,
@@ -498,7 +498,7 @@ export function ProviderFormModal({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {SIGNING_ALGORITHMS.map((a) => (
+                {getSigningAlgorithms().map((a) => (
                   <SelectItem key={a.value} value={String(a.value)}>
                     {a.label}
                   </SelectItem>

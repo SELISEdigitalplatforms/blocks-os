@@ -133,9 +133,9 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
               <LMTQueryAgentSheet
                 description={t("TRACES_OVERVIEW.HELLO_I_CAN_HELP_YOU")}
                 questions={[
-                  "Show me traces for the last 1 hour",
-                  "Which services are generating the most traces",
-                  "Which traces had high latency today",
+                  t("TRACES_OVERVIEW.QUESTION_LAST_HOUR"),
+                  t("TRACES_OVERVIEW.QUESTION_TOP_SERVICES"),
+                  t("TRACES_OVERVIEW.QUESTION_HIGH_LATENCY"),
                 ]}
               />
             </>
@@ -146,9 +146,9 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
             value={tabId}
             onChange={(tier) => tabChangedHandler(tier as keyof typeof TRACE_PROVIDERS)}
             descriptions={{
-              [TRACE_PROVIDERS.hot]: "Live and recent traces for active debugging.",
-              [TRACE_PROVIDERS.cold]: "Longer-term stored traces for later investigation.",
-              [TRACE_PROVIDERS.archive]: "Deep history retained for audit and export use cases.",
+              [TRACE_PROVIDERS.hot]: t("TRACES_OVERVIEW.TIER_HOT"),
+              [TRACE_PROVIDERS.cold]: t("TRACES_OVERVIEW.TIER_COLD"),
+              [TRACE_PROVIDERS.archive]: t("TRACES_OVERVIEW.TIER_ARCHIVE"),
             }}
           />
         </div>

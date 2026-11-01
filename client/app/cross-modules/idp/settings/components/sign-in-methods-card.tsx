@@ -11,7 +11,7 @@ import {
 } from "@blocks-idp/authentication/hooks/use-login-policy";
 import type { ITenantLoginPolicy } from "@blocks-idp/authentication/models/login-policy.model";
 import {
-  LOGIN_POLICY_LOCKED_MESSAGE,
+  getLoginPolicyLockedMessage,
   locksEveryone,
 } from "@blocks-idp/authentication/utils/login-policy.util";
 import { ConfigErrorState } from "@blocks-idp/settings/components/config-error-state";
@@ -137,7 +137,7 @@ const SignInMethodsForm = ({ saved }: Readonly<{ saved: ITenantLoginPolicy }>) =
       </p>
       {locked && (
         <p className="text-sm text-warning-700" role="alert">
-          {LOGIN_POLICY_LOCKED_MESSAGE}
+          {getLoginPolicyLockedMessage()}
         </p>
       )}
       <div className="flex justify-end">

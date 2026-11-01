@@ -17,7 +17,7 @@ import { formatRestoreWindow } from "../../utils/restore-window";
 import { LogsFilterToolbar } from "../logs-header/logs-filter-toolbar";
 import { LogItem } from "../logs-list/log-item";
 import { LogsViewerContext } from "../logs-viewer/logs-viewer";
-import { useT } from "@seliseblocks/genesis-os";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
 
 interface RestoredLogsPanelProps {
   sourceType: TRACE_REQUEST_SOURCE_TYPE;
@@ -26,13 +26,13 @@ interface RestoredLogsPanelProps {
 
 /** How long each tier usually takes, so a waiting reader knows whether to come back later. */
 const EXPECTED_DURATION: Record<string, string> = {
-  [TRACE_REQUEST_SOURCE_TYPE.cold]: "3–5 hours",
-  [TRACE_REQUEST_SOURCE_TYPE.archive]: "10–15 hours",
+  get [TRACE_REQUEST_SOURCE_TYPE.cold]() { return tStatic("os.lmt", "RESTORED_LOGS_PANEL.3_5_HOURS"); },
+  get [TRACE_REQUEST_SOURCE_TYPE.archive]() { return tStatic("os.lmt", "RESTORED_LOGS_PANEL.10_15_HOURS"); },
 };
 
 const TIER_WORDS: Record<string, { noun: string; empty: string }> = {
-  [TRACE_REQUEST_SOURCE_TYPE.cold]: { noun: "cold", empty: "No cold logs restored" },
-  [TRACE_REQUEST_SOURCE_TYPE.archive]: { noun: "archived", empty: "No archived logs restored" },
+  [TRACE_REQUEST_SOURCE_TYPE.cold]: { noun: "cold", get empty() { return tStatic("os.lmt", "RESTORED_LOGS_PANEL.NO_COLD_LOGS_RESTORED"); } },
+  [TRACE_REQUEST_SOURCE_TYPE.archive]: { noun: "archived", get empty() { return tStatic("os.lmt", "RESTORED_LOGS_PANEL.NO_ARCHIVED_LOGS_RESTORED"); } },
 };
 
 const formatExpiry = (value?: string) => {
@@ -317,8 +317,8 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
           <p className="mb-5 mt-2 max-w-md text-sm text-muted-foreground">
             {t("RESTORED_LOGS_PANEL.HAD_LOGS_STORED_FOR_THIS", {
               value1: windowLabel
-                ? `${windowLabel} was restored, but none of those days `
-                : "None of the restored days ",
+                ? t("RESTORED_LOGS_PANEL.WINDOW_RESTORED_NONE_OF_DAYS", { windowLabel })
+                : t("RESTORED_LOGS_PANEL.NONE_OF_THE_RESTORED_DAYS"),
             })}
           </p>
           <Button size="sm" variant="outline" asChild>
@@ -344,7 +344,9 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-6 py-3 text-sm text-medium-emphasis">
         <span className="text-xs font-semibold uppercase tracking-wider text-primary">
-          {t("RESTORED_LOGS_PANEL.RESTORE", { value1: words.noun === "cold" ? "Cold" : "Archive" })}
+          {words.noun === "cold"
+            ? t("RESTORED_LOGS_PANEL.COLD_RESTORE")
+            : t("RESTORED_LOGS_PANEL.ARCHIVE_RESTORE")}
         </span>
         {windowLabel && (
           <span className="tabular-nums text-high-emphasis">

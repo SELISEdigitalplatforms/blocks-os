@@ -30,7 +30,7 @@ import {
 } from "@blocks-idp/authentication/hooks/use-third-party-jwt-provider";
 import {
   requiresIdpHeader,
-  SIGNING_ALGORITHMS,
+  getSigningAlgorithms,
   toSavePayload,
   type ThirdPartyJwtProvider,
   keySourceLabel,
@@ -54,7 +54,7 @@ const LoadingSkeleton = () => (
 );
 
 const algorithmLabel = (value: number) =>
-  SIGNING_ALGORITHMS.find((a) => a.value === value)?.label ?? "—";
+  getSigningAlgorithms().find((a) => a.value === value)?.label ?? "—";
 
 const providerIcon = (name: string) =>
   providerCatalogue.find((p) => p.name.toLowerCase() === name?.toLowerCase())?.icon;

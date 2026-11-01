@@ -6,13 +6,13 @@ import { useContext } from "react";
 import type { StorageTier } from "../storage-tier-cards/storage-tier-cards";
 import { StorageTierSwitcher } from "../storage-tier-cards/storage-tier-switcher";
 import { LogsViewerContext } from "../logs-viewer/logs-viewer";
-import { useT } from "@seliseblocks/genesis-os";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
 
 /** What each tier holds, in the words of this page: logs rather than telemetry in general. */
 const LOG_TIER_DESCRIPTIONS: Partial<Record<StorageTier, string>> = {
-  [TRACE_PROVIDERS.hot]: "Live and recent logs for active debugging.",
-  [TRACE_PROVIDERS.cold]: "Longer-term stored logs for later investigation.",
-  [TRACE_PROVIDERS.archive]: "Deep history retained for audit and export use cases.",
+  get [TRACE_PROVIDERS.hot]() { return tStatic("os.lmt", "LOGS_HEADER.LIVE_AND_RECENT_LOGS"); },
+  get [TRACE_PROVIDERS.cold]() { return tStatic("os.lmt", "LOGS_HEADER.LONGER_TERM_STORED_LOGS"); },
+  get [TRACE_PROVIDERS.archive]() { return tStatic("os.lmt", "LOGS_HEADER.DEEP_HISTORY_RETAINED_FOR_AUDIT"); },
 };
 
 export const LogsListHeader = () => {

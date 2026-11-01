@@ -112,7 +112,7 @@ interface Component {
 }
 
 const serviceComponent = (span: TraceTree) => {
-  const name = span.serviceName?.trim() || "Unknown service";
+  const name = span.serviceName?.trim() || tStatic("os.lmt", "TRACE_FLOW_UTIL.UNKNOWN_SERVICE");
   return { id: `svc:${name}`, label: name, kind: "service" as const };
 };
 
@@ -122,7 +122,7 @@ const clientComponent = (span: TraceTree, op: string): Component => {
   const host = text(attrs, "server.address") || hostOf(url);
   const method = text(attrs, "http.request.method", "http.method", "method");
   if (host || url || method || /http/i.test(op)) {
-    const label = host || "External HTTP";
+    const label = host || tStatic("os.lmt", "TRACE_FLOW_UTIL.EXTERNAL_HTTP");
     const path = pathOf(url);
     const tag = [method || "HTTP", path].filter(Boolean).join(" ");
     return { id: `ext:${label}`, label, kind: "external", traffic: "http", tag };

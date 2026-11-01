@@ -39,7 +39,9 @@ const useTraceLogs = ({ payload, enabled, requestId }: LogsQuery) => {
 const emptyReason = (step: FlowStep) => {
   if (step.traffic === "data") return tStatic("os.lmt", "TRACE_STORY_LOGS.THIS_IS_A_DATABASE_CALL");
   if (step.traffic === "cache") return tStatic("os.lmt", "TRACE_STORY_LOGS.THIS_IS_A_CACHE_CALL");
-  return `${logServiceOf(step) || "The service"} wrote nothing while this step ran.`;
+  return tStatic("os.lmt", "TRACE_STORY_LOGS.SERVICE_WROTE_NOTHING_DURING_STEP", {
+    service: logServiceOf(step) || tStatic("os.lmt", "TRACE_STORY_LOGS.THE_SERVICE"),
+  });
 };
 
 /** "+176 ms" from the start of the trace; a record from a host whose clock runs early can
@@ -130,8 +132,8 @@ const buildLogsPayload = (
 
 const emptyTitle = (scope: LogScope, service: string) =>
   scope === "step"
-    ? "No logs were written during this step."
-    : `${service} wrote no logs in this trace.`;
+    ? tStatic("os.lmt", "TRACE_STORY_LOGS.NO_LOGS_WRITTEN_DURING_STEP")
+    : tStatic("os.lmt", "TRACE_STORY_LOGS.SERVICE_WROTE_NO_LOGS", { service });
 
 const EmptyLogs = ({
   scope,

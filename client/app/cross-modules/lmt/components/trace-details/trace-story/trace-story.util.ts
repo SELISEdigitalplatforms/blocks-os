@@ -158,7 +158,7 @@ export const buildServiceLevels = (flow: TraceFlow, parents: number[]): ServiceL
     const callerStart = parent >= 0 ? parseTime(flow.steps[parent].startTime) : null;
     const level: ServiceLevel = {
       id: levels.length,
-      service: services[i] || "Unknown service",
+      service: services[i] || tStatic("os.lmt", "TRACE_FLOW_UTIL.UNKNOWN_SERVICE"),
       rootIndex: i,
       parentLevel: parent >= 0 ? levelOf[parent] : -1,
       enteredFrom: parent,
@@ -244,14 +244,21 @@ export const buildPlotLine = (flow: TraceFlow, labelOf: (id: string) => string):
   if (origin) {
     const where =
       origin.fromId === origin.toId
-        ? `${labelOf(origin.toId)} failed while running ${origin.tag}`
-        : `${labelOf(origin.fromId)} could not complete ${origin.tag} on ${labelOf(origin.toId)}`;
+        ? tStatic("os.lmt", "TRACE_STORY_UTIL.FAILED_WHILE_RUNNING", { service: labelOf(origin.toId), tag: origin.tag })
+        : tStatic("os.lmt", "TRACE_STORY_UTIL.COULD_NOT_COMPLETE", {
+            from: labelOf(origin.fromId),
+            tag: origin.tag,
+            to: labelOf(origin.toId),
+          });
     const reason = origin.errorMessage ? `: ${origin.errorMessage}` : "";
     const others = flow.errorCount - 1;
-    const spread = others > 0 ? ` ${plural(others, "other step")} failed because of it.` : "";
+    const spread =
+      others > 0 ? ` ${tStatic("os.lmt", "TRACE_STORY_UTIL.OTHERS_FAILED_BECAUSE", { steps: plural(others, "other step") })}` : "";
     return {
       tone: "error",
-      headline: `Error started in ${origin.serviceName || labelOf(origin.fromId)}:`,
+      headline: tStatic("os.lmt", "TRACE_STORY_UTIL.ERROR_STARTED_IN", {
+        service: origin.serviceName || labelOf(origin.fromId),
+      }),
       detail: `${where}${reason}.${spread}`,
     };
   }
@@ -264,11 +271,17 @@ export const buildPlotLine = (flow: TraceFlow, labelOf: (id: string) => string):
       detail: tStatic("os.lmt", "TRACE_STORY_UTIL.ONLY_ONE_STEP_WAS_RECORDED"),
     };
   const share =
-    totalMs > 0 ? ` · ${Math.round((slowest.durationMs / totalMs) * 100)}% of the request` : "";
+    totalMs > 0
+      ? ` · ${tStatic("os.lmt", "TRACE_STORY_UTIL.PERCENT_OF_REQUEST", { percent: Math.round((slowest.durationMs / totalMs) * 100) })}`
+      : "";
   return {
     tone: "ok",
-    headline: "Slowest step:",
-    detail: `${slowest.tag} in ${slowest.serviceName || labelOf(slowest.fromId)} (${formatDurationMs(slowest.durationMs)}${share}).`,
+    headline: tStatic("os.lmt", "TRACE_STORY_UTIL.SLOWEST_STEP"),
+    detail: tStatic("os.lmt", "TRACE_STORY_UTIL.SLOWEST_STEP_DETAIL", {
+      tag: slowest.tag,
+      service: slowest.serviceName || labelOf(slowest.fromId),
+      duration: `${formatDurationMs(slowest.durationMs)}${share}`,
+    }),
   };
 };
 

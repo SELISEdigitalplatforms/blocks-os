@@ -7,14 +7,14 @@ import { providers as providerCatalogue } from "@blocks-idp/authentication/const
 import {
   certificateExpiry,
   keySourceLabel,
-  SIGNING_ALGORITHMS,
+  getSigningAlgorithms,
   type ThirdPartyJwtProvider,
 } from "@/cross-modules/identifier/models/third-party-jwt-provider.model";
 import { ApiIntegrationCard } from "./api-integration-card";
 import { useT } from "@seliseblocks/genesis-os";
 
 const algorithmLabel = (value: number) =>
-  SIGNING_ALGORITHMS.find((a) => a.value === value)?.label ?? "—";
+  getSigningAlgorithms().find((a) => a.value === value)?.label ?? "—";
 
 const providerIcon = (name: string) =>
   providerCatalogue.find((p) => p.name.toLowerCase() === name?.toLowerCase())?.icon;

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { tStatic } from "@seliseblocks/genesis-os";
-import { LINKED_SECRET_REPAIR_REQUIRED_MESSAGE } from "@/cross-modules/secrets/components/linked-secret-status/linked-secret-status";
+import { linkedSecretRepairRequiredMessage } from "@/cross-modules/secrets/components/linked-secret-status/linked-secret-status";
 
 // The secret is required to create a configuration but optional to edit one — the backend
 // never returns the existing secret, so an edit form can only ever offer to replace it, not
@@ -16,7 +16,7 @@ export const buildConfigureCaptchaFormSchema = (isEditing: boolean, needsNewSecr
     captchaSecret: !isEditing
       ? z.string().min(1, tStatic("os.idp.captcha", "CONFIGURE_CAPTCHA_FORM.SECRET_REQUIRED"))
       : needsNewSecret
-        ? z.string().min(1, LINKED_SECRET_REPAIR_REQUIRED_MESSAGE)
+        ? z.string().min(1, linkedSecretRepairRequiredMessage())
         : z.string().optional(),
   });
 

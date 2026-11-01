@@ -101,10 +101,10 @@ export function CheckboxTree({
             const child = option.children?.find((item) => item.value === selected[0]);
             return `${option.label} · ${child?.label ?? selected[0]}`;
           }
-          return `${option.label} · ${selected.length} selected`;
+          return `${option.label} · ${t("CHECKBOX_TREE.SELECTED_COUNT", { count: selected.length })}`;
         })
         .filter((item): item is string => item !== null),
-    [options, value],
+    [options, value, t],
   );
 
   const searchedOptions = useMemo(() => {
@@ -137,7 +137,7 @@ export function CheckboxTree({
                 <div className="flex space-x-1">
                   {selectedBadges.length > 2 ? (
                     <Badge variant="secondary" className="rounded-sm px-1 font-normal">
-                      {selectedBadges.length} selected
+                      {t("CHECKBOX_TREE.SELECTED_COUNT", { count: selectedBadges.length })}
                     </Badge>
                   ) : (
                     selectedBadges.map((badge) => (

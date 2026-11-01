@@ -14,7 +14,7 @@ vi.mock("@blocks-lmt/constants/logs-service-names.constant", () => ({
 }));
 vi.mock("@blocks-lmt/constants/logs-service-meta.constant", () => ({
   LOG_SERVICE_AI_QUERIES: { iam: ["q1"] },
-  LOG_SERVICE_AI_DESCRIPTION: "desc",
+  getLogServiceAiDescription: () => "desc",
 }));
 vi.mock("@blocks-lmt/components", () => ({
   LogsViewer: (props: Record<string, unknown>) => {

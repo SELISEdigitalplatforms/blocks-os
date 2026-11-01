@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -757,7 +758,13 @@ describe("CreateOIDC", () => {
     });
 
     it("uses the ui-kits radio group and label and no hard-coded colours", () => {
-      const source = readFileSync(new URL("./create-oidc.tsx", import.meta.url), "utf8");
+      const source = readFileSync(
+        resolve(
+          process.cwd(),
+          "app/cross-modules/idp/authentication/components/create-oidc/create-oidc.tsx",
+        ),
+        "utf8",
+      );
       expect(source).toContain(
         'import { RadioGroup, RadioGroupItem } from "@/components/ui-kits/radio-group/radio-group";',
       );
@@ -1111,7 +1118,13 @@ describe("CreateOIDC", () => {
     });
 
     it("builds the block from the form kit inputs only (H10)", () => {
-      const source = readFileSync(new URL("./create-oidc.tsx", import.meta.url), "utf8");
+      const source = readFileSync(
+        resolve(
+          process.cwd(),
+          "app/cross-modules/idp/authentication/components/create-oidc/create-oidc.tsx",
+        ),
+        "utf8",
+      );
       expect(source).toContain('import { Input } from "@/components/ui-kits/input/input";');
       expect(source).toContain("CREATE_OIDC.PLACEHOLDER_PROJECT_SETTING");
       expect(source).toContain("CREATE_OIDC.MODE_CUSTOM");

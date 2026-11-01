@@ -323,8 +323,11 @@ const EventNote = ({ level, caller }: { level: ServiceLevel; caller?: string }) 
         {t("TRACE_STORY.N_0_MS_HERE_IS_WHEN", {
           value1:
             level.delayMs === null
-              ? `This event runs on its own clock.`
-              : `This event ran ${formatDelay(level.delayMs).slice(1)} after ${caller ?? "the caller"} published it.`,
+              ? t("TRACE_STORY.EVENT_RUNS_ON_OWN_CLOCK")
+              : t("TRACE_STORY.EVENT_RAN_AFTER_PUBLISHED", {
+                  delay: formatDelay(level.delayMs).slice(1),
+                  caller: caller ?? t("TRACE_STORY.THE_CALLER"),
+                }),
           service: level.service,
         })}
       </span>

@@ -16,6 +16,7 @@ import { githubInfoService } from "@/cross-modules/devops/services/github-info.s
 import { cn, debounce } from "@/lib/utils";
 import { Check, ChevronsUpDown, ExternalLink, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 interface RepositorySelectionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -32,6 +33,7 @@ export const RepositorySelectionModal = ({
   title = "Select repository",
   description = "Select the repositories you want to link to this project",
 }: RepositorySelectionModalProps) => {
+  const { t } = useT("os.create-project");
   const [selectedRepoId, setSelectedRepoId] = useState<string>("");
   const [repoError, setRepoError] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -169,7 +171,7 @@ export const RepositorySelectionModal = ({
     const repo = allRepositories.find((r) => String(r.id) === selectedRepoId);
     if (!repo) return;
     if (selectedRepositories.some((r) => r.id === repo.id)) {
-      setRepoError("Repository already selected.");
+      setRepoError(t("REPOSITORY_SELECTION_MODAL.REPOSITORY_ALREADY_SELECTED"));
       return;
     }
     setRepoError("");
@@ -232,10 +234,10 @@ export const RepositorySelectionModal = ({
     }
   };
   const modalData = {
-    dialogTitle: "Revoke Access",
-    dialogSubtitle: <>You will no longer be able to access the repositories.</>,
-    confirmButton: "Confirm",
-    cancelButton: "Cancel",
+    dialogTitle: t("REPOSITORY_SELECTION_MODAL.REVOKE_ACCESS"),
+    dialogSubtitle: <>{t("REPOSITORY_SELECTION_MODAL.YOU_WILL_NO_LONGER_BE")}</>,
+    confirmButton: t("common:CONFIRM"),
+    cancelButton: t("common:CANCEL"),
   };
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -269,13 +271,13 @@ export const RepositorySelectionModal = ({
           })}
         </div>
         <div className="mb-2 gap-1 text-xs text-gray-500 sm:flex">
-          {"Not seeing the repositories you expected here? "}
+          {t("REPOSITORY_SELECTION_MODAL.NOT_SEEING_THE_REPOSITORIES_YOU")}
           <span
             className="cursor-pointer text-blue-600 underline transition-colors hover:text-blue-800"
             onClick={() => setShowAccessModal(true)}
           >
             <span className="flex items-center gap-1">
-              Revoke repository access
+              {t("REPOSITORY_SELECTION_MODAL.REVOKE_REPOSITORY_ACCESS")}
               <ExternalLink className="h-3 w-3" />
             </span>
           </span>
@@ -297,8 +299,9 @@ export const RepositorySelectionModal = ({
         </div>
         <div className="mb-6">
           <label className="mb-1 block text-sm font-medium">
-            Github repository{" "}
-            {repositories?.data?.total_count ? `(${repositories.data.total_count} results)` : ""}
+            {repositories?.data?.total_count
+              ? t("REPOSITORY_SELECTION_MODAL.GITHUB_REPOSITORY_RESULTS", { count: repositories.data.total_count })
+              : t("REPOSITORY_SELECTION_MODAL.GITHUB_REPOSITORY")}
           </label>
           <div className="relative" onKeyDown={handleKeyDown}>
             <Button
@@ -317,8 +320,8 @@ export const RepositorySelectionModal = ({
               {selectedRepoId
                 ? allRepositories.find((r) => String(r.id) === selectedRepoId)?.full_name
                 : isLoading || isFetching
-                  ? "Loading repositories..."
-                  : "Select a repository"}
+                  ? t("REPOSITORY_SELECTION_MODAL.LOADING_REPOSITORIES")
+                  : t("REPOSITORY_SELECTION_MODAL.SELECT_A_REPOSITORY")}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
             {isPopoverOpen && (
@@ -326,7 +329,7 @@ export const RepositorySelectionModal = ({
                 <div className="flex items-center border-b px-3">
                   <Input
                     autoFocus
-                    placeholder="Search repositories..."
+                    placeholder={t("REPOSITORY_SELECTION_MODAL.SEARCH_REPOSITORIES")}
                     value={searchTerm}
                     onChange={(e) => handleSearchChange(e.target.value)}
                     className="h-11 w-full border-0 bg-transparent text-sm outline-hidden placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -338,12 +341,12 @@ export const RepositorySelectionModal = ({
                   className="max-h-60 overflow-y-auto overflow-x-hidden p-1"
                 >
                   {!isLoading && !isFetching && allRepositories.length === 0 && (
-                    <div className="py-6 text-center text-sm">No repositories found.</div>
+                    <div className="py-6 text-center text-sm">{t("REPOSITORY_SELECTION_MODAL.NO_REPOSITORIES_FOUND")}</div>
                   )}
                   {(isLoading || isFetching) && allRepositories.length === 0 && (
                     <div className="flex items-center justify-center p-4 text-sm text-gray-500">
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Loading repositories...
+                      {t("REPOSITORY_SELECTION_MODAL.LOADING_REPOSITORIES")}
                     </div>
                   )}
                   {allRepositories.map((repo: IRepository, idx: number) => (
@@ -379,7 +382,7 @@ export const RepositorySelectionModal = ({
                   {(isLoading || isFetching) && allRepositories.length > 0 && (
                     <div className="flex items-center justify-center p-2 text-sm text-gray-500">
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Loading more...
+                      {t("REPOSITORY_SELECTION_MODAL.LOADING_MORE")}
                     </div>
                   )}
                 </div>
@@ -390,14 +393,14 @@ export const RepositorySelectionModal = ({
         </div>
         <div className="mt-6 flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={handleCancel}>
-            Cancel
+            {t("common:CANCEL")}
           </Button>
           <Button
             type="button"
             disabled={!selectedRepoId || isLoading || isFetching}
             onClick={handleSelectRepository}
           >
-            Add
+            {t("common:ADD")}
           </Button>
         </div>
       </DialogContent>

@@ -48,7 +48,7 @@ import { Banner } from "@/components/ui-kits/banner/banner";
 import { isBrokenLinkedSecretStatus } from "@/cross-modules/secrets/models/secret.model";
 import {
   LINKED_SECRET_REPAIR_NOTICE,
-  LINKED_SECRET_REPAIR_REQUIRED_MESSAGE,
+  linkedSecretRepairRequiredMessage,
 } from "@/cross-modules/secrets/components/linked-secret-status/linked-secret-status";
 interface NewConfigurationProps {
   dialogTitle: string;
@@ -187,7 +187,7 @@ const createSchema = ({
           ctx.addIssue({
             code: "custom",
             message: needsNewClientSecret
-              ? LINKED_SECRET_REPAIR_REQUIRED_MESSAGE
+              ? linkedSecretRepairRequiredMessage()
               : t("NEW_CONFIGURATION.ERROR_CLIENT_SECRET_REQUIRED"),
             path: ["clientSecret"],
           });

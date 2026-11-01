@@ -255,6 +255,7 @@ export const FileUploaderItem = forwardRef<
   HTMLDivElement,
   { index: number } & React.HTMLAttributes<HTMLDivElement>
 >(({ className, index, children, ...props }, ref) => {
+  const { t } = useT("os.shared");
   const { removeFileFromSet, activeIndex, direction } = useFileUpload();
   const isSelected = index === activeIndex;
   return (
@@ -276,7 +277,7 @@ export const FileUploaderItem = forwardRef<
         className={cn("absolute", direction === "rtl" ? "left-1 top-1" : "right-1 top-1")}
         onClick={() => removeFileFromSet(index)}
       >
-        <span className="sr-only">remove item {index}</span>
+        <span className="sr-only">{t("FILE_UPLOADER.REMOVE_ITEM", { index })}</span>
         <RemoveIcon className="h-4 w-4 duration-200 ease-in-out hover:stroke-destructive" />
       </button>
     </div>

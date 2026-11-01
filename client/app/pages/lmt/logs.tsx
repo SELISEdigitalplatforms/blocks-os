@@ -4,7 +4,7 @@ import { useGetAllServices } from "@blocks-identifier/hooks/use-services";
 import { useGetBlocksServices } from "@blocks-lmt/hooks/use-log";
 import { LogsViewer, type Service } from "@blocks-lmt/components";
 import {
-  LOG_SERVICE_AI_DESCRIPTION,
+  getLogServiceAiDescription,
   LOG_SERVICE_AI_QUERIES,
 } from "@blocks-lmt/constants/logs-service-meta.constant";
 import { useLogsTier } from "@blocks-lmt/hooks/use-logs-tier";
@@ -109,7 +109,7 @@ export function LogsRoute() {
         actions={
           tier === TRACE_PROVIDERS.hot ? (
             <LMTQueryAgentSheet
-              description={LOG_SERVICE_AI_DESCRIPTION}
+              description={getLogServiceAiDescription()}
               questions={predefinedQueries}
             />
           ) : undefined
@@ -121,7 +121,7 @@ export function LogsRoute() {
           services={services}
           projectKey={projectKey}
           predefinedQueries={predefinedQueries}
-          askAiDescription={LOG_SERVICE_AI_DESCRIPTION}
+          askAiDescription={getLogServiceAiDescription()}
           showAgent={false}
           useGenericTraceLinks
           isSourceBlocks={source === "blocks"}

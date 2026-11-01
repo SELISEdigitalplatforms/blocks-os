@@ -87,7 +87,7 @@ export function MultiSelect({
                 <div className="flex space-x-1">
                   {selectedValues.length > 2 ? (
                     <Badge variant="secondary" className="rounded-sm px-1 font-normal">
-                      {selectedValues.length} selected
+                      {t("MULTI_SELECT.SELECTED_COUNT", { count: selectedValues.length })}
                     </Badge>
                   ) : (
                     flatOptions
@@ -201,7 +201,7 @@ export function MultiSelect({
             </CommandGroup>
             {isLoadingMore && (
               <div className="py-2 text-center text-xs text-muted-foreground" role="status">
-                Loading more…
+                {t("MULTI_SELECT.LOADING_MORE")}
               </div>
             )}
             {selectedValues.length > 0 && (

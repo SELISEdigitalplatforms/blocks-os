@@ -13,13 +13,6 @@ export const DEFAULT_CLIENT_LOGIN_POLICY: IOidcClientLoginPolicy = {
 /** Translated when called; use this in new code. */
 export const getLoginPolicyLockedMessage = () => tStatic("os.idp.auth", "LOGIN_POLICY_UTIL.LOCKED_MESSAGE");
 
-/**
- * @deprecated Read-time translation needs a function; call `getLoginPolicyLockedMessage()`.
- * Kept only so the settings sign-in card keeps compiling until it switches over.
- */
-export const LOGIN_POLICY_LOCKED_MESSAGE =
-  "At least one place (Embedded or OIDC) and one method (Password or Social) must stay on.";
-
 /** True when the project policy would leave nobody able to sign in. */
 export const locksEveryone = (policy: ITenantLoginPolicy): boolean =>
   (!policy.allowEmbedded && !policy.allowOidc) || (!policy.allowPassword && !policy.allowSocial);

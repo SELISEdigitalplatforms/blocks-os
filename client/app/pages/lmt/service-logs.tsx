@@ -2,7 +2,7 @@ import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
 import {
-  LOG_SERVICE_AI_DESCRIPTION,
+  getLogServiceAiDescription,
   LOG_SERVICE_AI_QUERIES,
 } from "@blocks-lmt/constants/logs-service-meta.constant";
 import { getLmtLogCollections } from "@blocks-lmt/constants/logs-service-names.constant";
@@ -73,7 +73,7 @@ export function LmtServiceLogsRoute() {
         logsRouteServiceName={serviceName}
         services={logServices}
         predefinedQueries={LOG_SERVICE_AI_QUERIES[service.name] ?? []}
-        askAiDescription={LOG_SERVICE_AI_DESCRIPTION}
+        askAiDescription={getLogServiceAiDescription()}
       />
     </div>
   );

@@ -549,7 +549,7 @@ export const OidcBrandingForm = () => {
           fileVersionId: response.fileVersionId ?? "",
         });
         if (completion.verificationStatus !== "Verified") {
-          throw new Error(completion.rejectionReason ?? "Logo failed verification");
+          throw new Error(completion.rejectionReason ?? tStatic("os.idp.oidc", "OIDC_BRANDING_FORM.LOGO_FAILED_VERIFICATION"));
         }
       }
       const fileRecord = await storageService.file.getFileByFileId({

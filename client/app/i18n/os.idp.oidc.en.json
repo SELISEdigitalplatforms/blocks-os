@@ -39,6 +39,7 @@
   "OIDC_BRANDING_FORM.LOGO_BROWSE": "Browse files",
   "OIDC_BRANDING_FORM.LOGO_DARK": "Dark mode logo",
   "OIDC_BRANDING_FORM.LOGO_DROP_HINT": "Drop your logo here",
+  "OIDC_BRANDING_FORM.LOGO_FAILED_VERIFICATION": "Logo failed verification",
   "OIDC_BRANDING_FORM.LOGO_FORMATS": "PNG, JPG, SVG, or WebP · max {{size}}MB",
   "OIDC_BRANDING_FORM.LOGO_LIGHT": "Light mode logo",
   "OIDC_BRANDING_FORM.LOGO_PREVIEW_ALT": "Logo preview",
