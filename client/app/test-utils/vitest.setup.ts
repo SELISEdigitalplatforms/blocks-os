@@ -170,4 +170,6 @@ if (typeof window !== "undefined") {
   browserWindow.__BLOCKS_ENV__ = { ...process.env, ...browserWindow.__BLOCKS_ENV__ };
 }
 
-import "@/i18n";
+// Dynamic, after the polyfills above: a static import is hoisted above them and the genesis store
+// needs `matchMedia` while it loads.
+await import("@/i18n");
