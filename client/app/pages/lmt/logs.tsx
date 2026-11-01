@@ -10,19 +10,19 @@ import {
 import { useLogsTier } from "@blocks-lmt/hooks/use-logs-tier";
 import { TRACE_PROVIDERS } from "@blocks-lmt/constants/trace.constant";
 import { createParser, useQueryState } from "nuqs";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT, tStatic } from "@seliseblocks/genesis-os";
 import { useMemo } from "react";
 
 type LogSource = "blocks" | "managed";
 
-const SOURCE_OPTIONS: { label: string; value: LogSource }[] = [
-  { label: "Managed Service", value: "blocks" },
-  { label: "My Service", value: "managed" },
+const getSourceOptions = (): { label: string; value: LogSource }[] => [
+  { label: tStatic("os.lmt", "LOGS.MANAGED_SERVICE"), value: "blocks" },
+  { label: tStatic("os.lmt", "LOGS.MY_SERVICE"), value: "managed" },
 ];
 
 export const parseAsLogSource = createParser({
   parse(value: string) {
-    if (SOURCE_OPTIONS.some((option) => option.value === value)) {
+    if (getSourceOptions().some((option) => option.value === value)) {
       return value as LogSource;
     }
     return null;
@@ -32,6 +32,7 @@ export const parseAsLogSource = createParser({
   },
 });
 export function LogsRoute() {
+  const { t } = useT("os.lmt");
   const [source] = useQueryState<LogSource>("source", parseAsLogSource.withDefault("blocks"));
   // Cold and archive rows belong to a restore of this project, so the viewer needs to know
   // which project's restore to look up.
@@ -39,7 +40,11 @@ export function LogsRoute() {
   // The agent sits in the page header, where Tracing's does. It queries hot storage, so over a
   // restore it would answer about days other than the ones on screen and is withheld there.
   const { tier } = useLogsTier(Boolean(projectKey));
-  const { data: managedServicesData, isLoading, isFetching } = useGetAllServices({
+  const {
+    data: managedServicesData,
+    isLoading,
+    isFetching,
+  } = useGetAllServices({
     page: 0,
     pageSize: 1000,
   });
@@ -93,15 +98,14 @@ export function LogsRoute() {
   );
 
   const services = source === "blocks" ? blocksServices : managedServices;
-  const isServicesLoading =
-    source === "blocks" ? isBlocksServicesLoading : isLoading || isFetching;
+  const isServicesLoading = source === "blocks" ? isBlocksServicesLoading : isLoading || isFetching;
   const predefinedQueries = source === "blocks" ? Object.values(LOG_SERVICE_AI_QUERIES).flat() : [];
 
   return (
     <>
       <PageHeader
-        title="Logs"
-        description="Search and view application logs across your services"
+        title={t("LOGS.LOGS")}
+        description={t("LOGS.SEARCH_AND_VIEW_APPLICATION_LOGS")}
         actions={
           tier === TRACE_PROVIDERS.hot ? (
             <LMTQueryAgentSheet

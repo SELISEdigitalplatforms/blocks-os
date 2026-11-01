@@ -9,7 +9,7 @@ const h = vi.hoisted(() => ({
 vi.mock("@/hooks/use-lmt-base-path", () => ({ useLmtBasePath: () => "/app/lmt" }));
 vi.mock("react-router", () => ({ useParams: () => h.params }));
 vi.mock("@blocks-lmt/constants/services.constant", () => ({
-  SERVICES: [{ name: "iam", label: "IAM", showInLogs: true }],
+  getServices: () => [{ name: "iam", label: "IAM", showInLogs: true }],
 }));
 vi.mock("@blocks-lmt/components/trace-details", () => ({
   TraceDetails: (props: Record<string, unknown>) => {

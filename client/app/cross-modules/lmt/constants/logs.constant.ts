@@ -12,6 +12,7 @@ import {
   Wrench,
   Workflow,
 } from "lucide-react";
+import { tStatic } from "@seliseblocks/genesis-os";
 
 export const LOG_SERVICE_ICONS = {
   iam: Shield,
@@ -26,14 +27,13 @@ export const LOG_SERVICE_ICONS = {
   agent: Bot,
 } satisfies Record<LogServiceRow["icon"], LucideIcon>;
 
-export const LOG_SERVICES: LogServiceRow[] = [
+export const getLogServices = (): LogServiceRow[] => [
   {
     id: "blocks-iam",
     name: "Blocks IAM",
     routeSlug: "iam",
     icon: "iam",
-    description:
-      "Sign-in, token, role, and permission activity. Use these logs to audit access changes and troubleshoot auth issues.",
+    description: tStatic("os.lmt", "LOGS_CONSTANT.SIGN_IN_TOKEN_ROLE_AND"),
     status: "running",
   },
   {
@@ -41,8 +41,7 @@ export const LOG_SERVICES: LogServiceRow[] = [
     name: "Blocks OS",
     routeSlug: "os",
     icon: "os",
-    description:
-      "Core platform and workspace operations. Follow tenancy, orchestration, and shared infrastructure events.",
+    description: tStatic("os.lmt", "LOGS_CONSTANT.CORE_PLATFORM_AND_WORKSPACE"),
     status: "running",
   },
   {
@@ -50,8 +49,7 @@ export const LOG_SERVICES: LogServiceRow[] = [
     name: "Blocks Monitor",
     routeSlug: "monitor",
     icon: "monitor",
-    description:
-      "Metrics, alerts, and trace collection pipelines. Spot ingestion failures and observability gaps quickly.",
+    description: tStatic("os.lmt", "LOGS_CONSTANT.METRICS_ALERTS_AND_TRACE"),
     status: "running",
   },
   {
@@ -59,8 +57,7 @@ export const LOG_SERVICES: LogServiceRow[] = [
     name: "Blocks Localization",
     routeSlug: "localization",
     icon: "localization",
-    description:
-      "Translation and locale delivery logs. Track string updates, regional rollouts, and i18n job failures.",
+    description: tStatic("os.lmt", "LOGS_CONSTANT.TRANSLATION_AND_LOCALE_DELIVERY"),
     status: "running",
   },
   {
@@ -68,8 +65,7 @@ export const LOG_SERVICES: LogServiceRow[] = [
     name: "Blocks Data",
     routeSlug: "data",
     icon: "data",
-    description:
-      "Storage, sync, and data pipeline logs. Debug queries, migrations, and background data jobs.",
+    description: tStatic("os.lmt", "LOGS_CONSTANT.STORAGE_SYNC_AND_DATA_PIPELINE"),
     status: "running",
   },
   {
@@ -77,8 +73,7 @@ export const LOG_SERVICES: LogServiceRow[] = [
     name: "Blocks Release",
     routeSlug: "release",
     icon: "release",
-    description:
-      "Build, promote, and deploy events across environments. Trace release progress and rollout errors.",
+    description: tStatic("os.lmt", "LOGS_CONSTANT.BUILD_PROMOTE_AND_DEPLOY_EVENTS"),
     status: "running",
   },
   {
@@ -86,8 +81,7 @@ export const LOG_SERVICES: LogServiceRow[] = [
     name: "Blocks Utilities",
     routeSlug: "utilities",
     icon: "utilities",
-    description:
-      "Shared helper services and cross-cutting jobs. Inspect platform tooling runs and utility API calls.",
+    description: tStatic("os.lmt", "LOGS_CONSTANT.SHARED_HELPER_SERVICES_AND_CROSS"),
     status: "running",
   },
   {
@@ -95,8 +89,7 @@ export const LOG_SERVICES: LogServiceRow[] = [
     name: "Blocks Studio",
     routeSlug: "studio",
     icon: "studio",
-    description:
-      "Builder and workspace editing logs. Monitor asset processing, publishing flows, and studio-side errors.",
+    description: tStatic("os.lmt", "LOGS_CONSTANT.BUILDER_AND_WORKSPACE_EDITING_LOGS"),
     status: "running",
   },
   {
@@ -104,8 +97,7 @@ export const LOG_SERVICES: LogServiceRow[] = [
     name: "Blocks Agent",
     routeSlug: "agent",
     icon: "agent",
-    description:
-      "AI agent orchestration and tool-call logs. Trace prompt flows, model invocations, and agent-side failures.",
+    description: tStatic("os.lmt", "LOGS_CONSTANT.AI_AGENT_ORCHESTRATION_AND_TOOL"),
     status: "running",
   },
 ];

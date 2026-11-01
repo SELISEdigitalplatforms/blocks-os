@@ -5,6 +5,7 @@ import { formatDurationMs } from "@blocks-lmt/utils";
 import type { FlowStep } from "@blocks-lmt/utils/trace-flow.util";
 import { timelineGridStyle } from "../timeline-axis";
 import { plural, type ServiceLevel, type StepTiming } from "./trace-story.util";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
 
 /** The waterfall's three columns -- what happened, when, how long -- shared by the axis
  *  header and every row so the bars line up under the axis stops. */
@@ -19,13 +20,13 @@ export const TRAFFIC_BAR: Record<FlowStep["traffic"], string> = {
   message: "bg-chart-orange",
 };
 
-export const TRAFFIC_LABEL: Record<FlowStep["traffic"], string> = {
+export const getTrafficLabel = (): Record<FlowStep["traffic"], string> => ({
   http: "Request",
   call: "Call",
   data: "Database",
   cache: "Cache",
-  message: "Message",
-};
+  message: tStatic("os.lmt", "TRACE_STORY_ROW.MESSAGE"),
+});
 
 const MAX_INDENT = 6;
 
@@ -36,16 +37,17 @@ const barColor = (step: FlowStep) => {
 };
 
 const StateTag = ({ step }: { step: FlowStep }) => {
+  const { t } = useT("os.lmt");
   if (step.isErrorOrigin)
     return (
       <span className="shrink-0 rounded bg-error/10 px-1.5 text-[10px] font-semibold uppercase tracking-wide text-error">
-        Error started here
+        {t("TRACE_STORY_ROW.ERROR_STARTED_HERE")}
       </span>
     );
   if (step.state === "error")
     return (
       <span className="shrink-0 rounded px-1.5 text-[10px] font-semibold uppercase tracking-wide text-error">
-        Failed
+        {t("TRACE_STORY_ROW.FAILED")}
       </span>
     );
   return null;
@@ -54,20 +56,26 @@ const StateTag = ({ step }: { step: FlowStep }) => {
 /** "+2.4 s": how long after the publishing step an event's consumer started. */
 export const formatDelay = (ms: number) => `+${formatDurationMs(Math.max(ms, 0))}`;
 
-const OpenLevel = ({ level, onOpen }: { level: ServiceLevel; onOpen: () => void }) => (
-  <button
-    type="button"
-    onClick={onOpen}
-    className={cn(
-      "relative z-10 inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-semibold hover:bg-muted/50",
-      level.isEvent ? "border-dashed" : "border-solid",
-      level.hasError ? "border-error/40 text-error" : "border-border text-primary",
-    )}
-  >
-    Open {level.service} · {plural(level.totalSteps, "step")}
-    <ChevronRight size={12} aria-hidden />
-  </button>
-);
+const OpenLevel = ({ level, onOpen }: { level: ServiceLevel; onOpen: () => void }) => {
+  const { t } = useT("os.lmt");
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={cn(
+        "relative z-10 inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-semibold hover:bg-muted/50",
+        level.isEvent ? "border-dashed" : "border-solid",
+        level.hasError ? "border-error/40 text-error" : "border-border text-primary",
+      )}
+    >
+      {t("TRACE_STORY_ROW.OPEN", {
+        service: level.service,
+        totalSteps: plural(level.totalSteps, "step"),
+      })}
+      <ChevronRight size={12} aria-hidden />
+    </button>
+  );
+};
 
 export const TraceStoryRow = forwardRef<
   HTMLButtonElement,
@@ -88,6 +96,7 @@ export const TraceStoryRow = forwardRef<
     { step, number, indent, title, description, timing, selected, opens, onSelect, onOpen },
     ref,
   ) => {
+    const { t } = useT("os.lmt");
     const event = opens.find((level) => level.isEvent && level.delayMs !== null);
     return (
       <div
@@ -109,7 +118,12 @@ export const TraceStoryRow = forwardRef<
             type="button"
             onClick={onSelect}
             aria-pressed={selected}
-            aria-label={`Step ${number}: ${title}. ${step.tag}. ${formatDurationMs(step.durationMs)}`}
+            aria-label={t("TRACE_STORY_ROW.STEP", {
+              number,
+              title,
+              tag: step.tag,
+              durationMs: formatDurationMs(step.durationMs),
+            })}
             className="flex min-w-0 flex-col text-left after:absolute after:inset-0 focus-visible:outline-hidden focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-ring"
           >
             <span className="flex min-w-0 items-center gap-x-2">
@@ -136,7 +150,7 @@ export const TraceStoryRow = forwardRef<
         >
           {timing.untimed ? (
             <span className="absolute inset-0 flex items-center px-1 text-[10px] text-low-emphasis">
-              Time not recorded
+              {t("TRACE_STORY_ROW.TIME_NOT_RECORDED")}
             </span>
           ) : (
             <span
@@ -160,9 +174,9 @@ export const TraceStoryRow = forwardRef<
           {timing.skewed ? (
             <span
               className="block text-[10px] text-warning"
-              title="This span starts before the step that called it. The services' clocks disagree."
+              title={t("TRACE_STORY_ROW.THIS_SPAN_STARTS_BEFORE_THE")}
             >
-              clock skew
+              {t("TRACE_STORY_ROW.CLOCK_SKEW")}
             </span>
           ) : null}
         </span>

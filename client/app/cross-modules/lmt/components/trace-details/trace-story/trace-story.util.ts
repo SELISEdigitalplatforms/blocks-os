@@ -1,5 +1,6 @@
 import type { FlowStep, TraceFlow } from "@blocks-lmt/utils/trace-flow.util";
 import { formatDurationMs } from "@blocks-lmt/utils";
+import { tStatic } from "@seliseblocks/genesis-os";
 
 /**
  * Pure helpers behind the story waterfall: where each bar sits on the time axis, which step
@@ -23,7 +24,14 @@ export interface TraceTimeline {
   timings: StepTiming[];
 }
 
-export const plural = (count: number, noun: string) => `${count} ${noun}${count === 1 ? "" : "s"}`;
+const PLURAL_KEYS = {
+  step: "TRACE_STORY_UTIL.COUNT_STEP",
+  service: "TRACE_STORY_UTIL.COUNT_SERVICE",
+  "other step": "TRACE_STORY_UTIL.COUNT_OTHER_STEP",
+} as const;
+
+export const plural = (count: number, noun: keyof typeof PLURAL_KEYS) =>
+  tStatic("os.lmt", PLURAL_KEYS[noun], { count });
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
@@ -249,7 +257,12 @@ export const buildPlotLine = (flow: TraceFlow, labelOf: (id: string) => string):
   }
   const slowest = getSlowestStep(flow);
   const totalMs = flow.steps[0]?.durationMs ?? 0;
-  if (!slowest) return { tone: "ok", headline: "", detail: "Only one step was recorded." };
+  if (!slowest)
+    return {
+      tone: "ok",
+      headline: "",
+      detail: tStatic("os.lmt", "TRACE_STORY_UTIL.ONLY_ONE_STEP_WAS_RECORDED"),
+    };
   const share =
     totalMs > 0 ? ` · ${Math.round((slowest.durationMs / totalMs) * 100)}% of the request` : "";
   return {

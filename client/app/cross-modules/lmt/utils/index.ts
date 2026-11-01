@@ -1,3 +1,5 @@
+import { tStatic } from "@seliseblocks/genesis-os";
+
 export const LOG_LEVEL = {
   Information: "Information",
   Warning: "Warning",
@@ -16,21 +18,23 @@ export const getLogFormatTimestamp = (timestamp: string) => {
 };
 
 /** Relative windows shared by the logs and traces filters, coarsest unit last. */
-export const LMT_TIME_RANGES = [
-  { label: "Last 5 minutes", value: "5m", minutes: 5 },
-  { label: "Last 15 minutes", value: "15m", minutes: 15 },
-  { label: "Last 30 minutes", value: "30m", minutes: 30 },
-  { label: "Last hour", value: "1h", minutes: 60 },
-  { label: "Last 6 hours", value: "6h", minutes: 6 * 60 },
-  { label: "Last 24 hours", value: "24h", minutes: 24 * 60 },
-] as const;
+export const getLmtTimeRanges = () =>
+  [
+    { label: tStatic("os.lmt", "UTILS.LAST_5_MINUTES"), value: "5m", minutes: 5 },
+    { label: tStatic("os.lmt", "UTILS.LAST_15_MINUTES"), value: "15m", minutes: 15 },
+    { label: tStatic("os.lmt", "UTILS.LAST_30_MINUTES"), value: "30m", minutes: 30 },
+    { label: tStatic("os.lmt", "UTILS.LAST_HOUR"), value: "1h", minutes: 60 },
+    { label: tStatic("os.lmt", "UTILS.LAST_6_HOURS"), value: "6h", minutes: 6 * 60 },
+    { label: tStatic("os.lmt", "UTILS.LAST_24_HOURS"), value: "24h", minutes: 24 * 60 },
+  ] as const;
 
-export const TRACE_STATUS_CLASSES = [
-  { label: "2xx Success", value: "2" },
-  { label: "3xx Redirect", value: "3" },
-  { label: "4xx Client error", value: "4" },
-  { label: "5xx Server error", value: "5" },
-] as const;
+export const getTraceStatusClasses = () =>
+  [
+    { label: tStatic("os.lmt", "UTILS.N_2XX_SUCCESS"), value: "2" },
+    { label: tStatic("os.lmt", "UTILS.N_3XX_REDIRECT"), value: "3" },
+    { label: tStatic("os.lmt", "UTILS.N_4XX_CLIENT_ERROR"), value: "4" },
+    { label: tStatic("os.lmt", "UTILS.N_5XX_SERVER_ERROR"), value: "5" },
+  ] as const;
 
 /**
  * Start of a relative window, as an ISO string, or undefined when no range is selected.
@@ -41,7 +45,7 @@ export const TRACE_STATUS_CLASSES = [
  * which also keeps a "last 15 minutes" view moving without any polling.
  */
 export const getRangeStartDate = (range: string, now: Date = new Date()) => {
-  const preset = LMT_TIME_RANGES.find((option) => option.value === range);
+  const preset = getLmtTimeRanges().find((option) => option.value === range);
   if (!preset) return undefined;
 
   const flooredNow = new Date(now);

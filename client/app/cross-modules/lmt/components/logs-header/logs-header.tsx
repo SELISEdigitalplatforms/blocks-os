@@ -6,6 +6,7 @@ import { useContext } from "react";
 import type { StorageTier } from "../storage-tier-cards/storage-tier-cards";
 import { StorageTierSwitcher } from "../storage-tier-cards/storage-tier-switcher";
 import { LogsViewerContext } from "../logs-viewer/logs-viewer";
+import { useT } from "@seliseblocks/genesis-os";
 
 /** What each tier holds, in the words of this page: logs rather than telemetry in general. */
 const LOG_TIER_DESCRIPTIONS: Partial<Record<StorageTier, string>> = {
@@ -15,6 +16,7 @@ const LOG_TIER_DESCRIPTIONS: Partial<Record<StorageTier, string>> = {
 };
 
 export const LogsListHeader = () => {
+  const { t } = useT("os.lmt");
   const {
     predefinedQueries,
     agentName,
@@ -38,10 +40,10 @@ export const LogsListHeader = () => {
       <Tabs value={source} onValueChange={setSource}>
         <TabsList className="h-[42px] bg-blocks-primary-shades-300">
           <TabsTrigger value="blocks" className="h-8 w-fit">
-            Managed Service
+            {t("LOGS_HEADER.MANAGED_SERVICE")}
           </TabsTrigger>
           <TabsTrigger value="managed" className="h-8 w-fit">
-            My Service
+            {t("LOGS_HEADER.MY_SERVICE")}
           </TabsTrigger>
         </TabsList>
       </Tabs>

@@ -6,17 +6,19 @@ import {
   LOG_SERVICE_AI_QUERIES,
 } from "@blocks-lmt/constants/logs-service-meta.constant";
 import { getLmtLogCollections } from "@blocks-lmt/constants/logs-service-names.constant";
-import { SERVICES } from "@blocks-lmt/constants/services.constant";
+import { getServices } from "@blocks-lmt/constants/services.constant";
 import { LogsViewer } from "@blocks-lmt/components";
 import { useMemo } from "react";
 import { useParams } from "react-router";
+import { useT } from "@seliseblocks/genesis-os";
 
 export function LmtServiceLogsRoute() {
+  const { t } = useT("os.lmt");
   const { serviceName } = useParams<{ serviceName: string }>();
   const LMT_BASE_PATH = useLmtBasePath();
 
   const service = useMemo(
-    () => SERVICES.find((item) => item.name === serviceName && item.showInLogs),
+    () => getServices().find((item) => item.name === serviceName && item.showInLogs),
     [serviceName],
   );
 
@@ -32,12 +34,12 @@ export function LmtServiceLogsRoute() {
     return [
       {
         id: apiServiceName,
-        label: "Api",
+        label: t("SERVICE_LOGS.API"),
         serviceName: apiServiceName,
       },
       {
         id: workerServiceName,
-        label: "Worker",
+        label: t("SERVICE_LOGS.WORKER"),
         serviceName: workerServiceName,
       },
     ];
@@ -53,13 +55,10 @@ export function LmtServiceLogsRoute() {
   if (!service) {
     return (
       <div className="flex flex-col gap-5 sm:gap-4">
-        <PageBreadcrumb
-          breadcrumbIndex={4}
-          customTitles={breadcrumbTitles}
-        />
+        <PageBreadcrumb breadcrumbIndex={4} customTitles={breadcrumbTitles} />
         <Card>
           <CardContent className="flex h-32 items-center justify-center text-sm text-muted-foreground">
-            Logs are not configured for this service.
+            {t("SERVICE_LOGS.LOGS_ARE_NOT_CONFIGURED_FOR")}
           </CardContent>
         </Card>
       </div>
@@ -68,10 +67,7 @@ export function LmtServiceLogsRoute() {
 
   return (
     <div className="flex flex-col gap-5 sm:gap-4">
-      <PageBreadcrumb
-        breadcrumbIndex={4}
-        customTitles={breadcrumbTitles}
-      />
+      <PageBreadcrumb breadcrumbIndex={4} customTitles={breadcrumbTitles} />
       <LogsViewer
         key={serviceName}
         logsRouteServiceName={serviceName}

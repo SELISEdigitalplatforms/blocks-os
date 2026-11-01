@@ -17,6 +17,7 @@ import { Loader2 } from "lucide-react";
 import { parseCalendarDay, toUtcCalendarDay } from "@blocks-lmt/utils/restore-date-range";
 import { DateRange } from "react-day-picker";
 import { DateRangePicker } from "../date-range-picker";
+import { useT } from "@seliseblocks/genesis-os";
 
 interface RequestTracesModalProps {
   open: boolean;
@@ -33,6 +34,7 @@ export function RequestTracesModal({
   isPending,
   onSubmit,
 }: RequestTracesModalProps) {
+  const { t } = useT("os.lmt");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const { data: retentionData } = useGetRestoredDataRetentionDays({ enabled: open });
 
@@ -70,8 +72,8 @@ export function RequestTracesModal({
     ? "Loading the available range…"
     : minDate
       ? `Allowed range: ${format(minDate, "MMM d, yyyy")} to ${format(maxDate, "MMM d, yyyy")}.`
-      // "before" would exclude this date, but it is selectable — cold picks up the day after it.
-      : `Allowed range: on or before ${format(maxDate, "MMM d, yyyy")}.`;
+      : // "before" would exclude this date, but it is selectable — cold picks up the day after it.
+        `Allowed range: on or before ${format(maxDate, "MMM d, yyyy")}.`;
 
   // Nothing to disable while the bounds are unknown; the picker itself is disabled until then.
   const disabledDays = !maxDate
@@ -84,20 +86,27 @@ export function RequestTracesModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Request {sourceType} Traces</DialogTitle>
+          <DialogTitle>{t("REQUEST_TRACES_MODAL.REQUEST_TRACES", { sourceType })}</DialogTitle>
           <DialogDescription>
-            Start a new retrieval for {sourceType.toLowerCase()} logs. This process typically takes{" "}
-            {sourceType === TRACE_REQUEST_SOURCE_TYPE.cold ? "3-5" : "10-15"} hours.
+            {t("REQUEST_TRACES_MODAL.START_A_NEW_RETRIEVAL_FOR", {
+              value1: sourceType.toLowerCase(),
+              value2: sourceType === TRACE_REQUEST_SOURCE_TYPE.cold ? "3-5" : "10-15",
+            })}
           </DialogDescription>
         </DialogHeader>
 
-        <Banner variant="warning" title="Warning">
-          Requesting {sourceType.toLowerCase()} traces may affect your project&apos;s pricing. Please
-          continue with caution.
+        <Banner variant="warning" title={t("REQUEST_TRACES_MODAL.WARNING")}>
+          {t("REQUEST_TRACES_MODAL.REQUESTING_TRACES_MAY_AFFECT_YOUR", {
+            value1: sourceType.toLowerCase(),
+          })}
         </Banner>
 
         <div className="space-y-2 py-4">
-          <Label>{maxDays ? `Date Range (Max ${maxDays} Days)` : "Date Range"}</Label>
+          <Label>
+            {maxDays
+              ? t("REQUEST_TRACES_MODAL.DATE_RANGE_MAX_DAYS", { maxDays })
+              : t("REQUEST_TRACES_MODAL.DATE_RANGE")}
+          </Label>
           <DateRangePicker
             value={dateRange}
             onChange={setDateRange}
@@ -111,7 +120,7 @@ export function RequestTracesModal({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
-            Cancel
+            {t("common:CANCEL")}
           </Button>
           <Button
             onClick={handleSend}
@@ -120,10 +129,10 @@ export function RequestTracesModal({
             {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Sending
+                {t("REQUEST_TRACES_MODAL.SENDING")}
               </>
             ) : (
-              "Send Request"
+              t("REQUEST_TRACES_MODAL.SEND_REQUEST")
             )}
           </Button>
         </DialogFooter>

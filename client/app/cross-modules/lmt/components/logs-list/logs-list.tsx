@@ -9,18 +9,22 @@ import { useLogs } from "../../hooks/use-logs";
 import { getRangeStartDate } from "../../utils";
 import { LogsFilterToolbar } from "../logs-header/logs-filter-toolbar";
 import { ILog } from "../../models/log.model";
+import { useT } from "@seliseblocks/genesis-os";
 // UI: New Data Available Indicator
-const NewDataAvailableIndicator = ({ onBottomClick }: { onBottomClick: () => void }) => (
-  <div
-    className="absolute bottom-4 left-1/2 inline-flex h-9 -translate-x-1/2 cursor-pointer items-center justify-center whitespace-nowrap rounded-sm bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-    onClick={(e) => {
-      e.stopPropagation();
-      onBottomClick();
-    }}
-  >
-    New logs available
-  </div>
-);
+const NewDataAvailableIndicator = ({ onBottomClick }: { onBottomClick: () => void }) => {
+  const { t } = useT("os.lmt");
+  return (
+    <div
+      className="absolute bottom-4 left-1/2 inline-flex h-9 -translate-x-1/2 cursor-pointer items-center justify-center whitespace-nowrap rounded-sm bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+      onClick={(e) => {
+        e.stopPropagation();
+        onBottomClick();
+      }}
+    >
+      {t("LOGS_LIST.NEW_LOGS_AVAILABLE")}
+    </div>
+  );
+};
 // UI: Loading Indicator for Older Data
 const OldDataFetchingIndicator = () => (
   <div className="flex w-full items-center justify-center py-4">
@@ -28,6 +32,7 @@ const OldDataFetchingIndicator = () => (
   </div>
 );
 export const LogsList = () => {
+  const { t } = useT("os.lmt");
   const { selectedService, selectedServiceNames, filter, pageSize, isServicesLoading, services } =
     useContext(LogsViewerContext);
   const { level, startDate, endDate, search, range } = filter || {
@@ -74,11 +79,11 @@ export const LogsList = () => {
       <CardContent className="h-[calc(100vh-340px)]">
         {isServicesLoading ? (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            Loading services...
+            {t("LOGS_LIST.LOADING_SERVICES")}
           </div>
         ) : noServices ? (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            No services found.
+            {t("LOGS_LIST.NO_SERVICES_FOUND")}
           </div>
         ) : isLoading ? (
           <div className="grid h-full w-full gap-2 overflow-hidden">

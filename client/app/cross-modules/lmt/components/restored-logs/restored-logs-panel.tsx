@@ -17,6 +17,7 @@ import { formatRestoreWindow } from "../../utils/restore-window";
 import { LogsFilterToolbar } from "../logs-header/logs-filter-toolbar";
 import { LogItem } from "../logs-list/log-item";
 import { LogsViewerContext } from "../logs-viewer/logs-viewer";
+import { useT } from "@seliseblocks/genesis-os";
 
 interface RestoredLogsPanelProps {
   sourceType: TRACE_REQUEST_SOURCE_TYPE;
@@ -49,6 +50,7 @@ const formatExpiry = (value?: string) => {
  * points back there rather than offering a second way to spend.
  */
 export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProps) {
+  const { t } = useT("os.lmt");
   const { filter, pageSize, services, selectedServiceNames, selectedService, isServicesLoading } =
     useContext(LogsViewerContext);
   const basePath = useLmtBasePath();
@@ -147,7 +149,7 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
       <Card className="flex min-h-[280px] items-center justify-center">
         <div className="flex flex-col items-center text-center text-muted-foreground">
           <Loader2 className="mb-3 h-6 w-6 animate-spin" />
-          <p className="text-sm">Loading services...</p>
+          <p className="text-sm">{t("RESTORED_LOGS_PANEL.LOADING_SERVICES")}</p>
         </div>
       </Card>
     );
@@ -156,7 +158,9 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
   if (noServices) {
     return (
       <Card className="flex min-h-[280px] items-center justify-center">
-        <p className="text-sm text-muted-foreground">No services found.</p>
+        <p className="text-sm text-muted-foreground">
+          {t("RESTORED_LOGS_PANEL.NO_SERVICES_FOUND")}
+        </p>
       </Card>
     );
   }
@@ -169,19 +173,22 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
         <div className="flex min-h-[280px] flex-col items-center justify-center px-6 py-10 text-center">
           <AlertTriangle className="mb-3 h-7 w-7 text-muted-foreground" />
           <h3 className="text-base font-semibold tracking-tight">
-            Couldn&apos;t read the {words.noun} restore status
+            {t("RESTORED_LOGS_PANEL.COULDN_T_READ_THE_RESTORE", { noun: words.noun })}
           </h3>
           <p className="mb-5 mt-2 max-w-md text-sm text-muted-foreground">
-            The status of this project&apos;s {words.noun} restore could not be reached, so there
-            is nothing to show yet. Any restored rows are still there.
+            {t("RESTORED_LOGS_PANEL.THE_STATUS_OF_THIS_PROJECT", { noun: words.noun })}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2">
-            <Button size="sm" onClick={() => void restore.refresh()} disabled={restore.isRefreshing}>
+            <Button
+              size="sm"
+              onClick={() => void restore.refresh()}
+              disabled={restore.isRefreshing}
+            >
               <RefreshCw className="mr-2 h-4 w-4" />
-              Try again
+              {t("RESTORED_LOGS_PANEL.TRY_AGAIN")}
             </Button>
             <Button size="sm" variant="outline" asChild>
-              <Link to={tracingHref}>Go to Tracing</Link>
+              <Link to={tracingHref}>{t("RESTORED_LOGS_PANEL.GO_TO_TRACING")}</Link>
             </Button>
           </div>
         </div>
@@ -194,7 +201,9 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
       <Card className="flex min-h-[280px] items-center justify-center">
         <div className="flex flex-col items-center text-center text-muted-foreground">
           <Loader2 className="mb-3 h-6 w-6 animate-spin" />
-          <p className="text-sm">Loading {words.noun} log status...</p>
+          <p className="text-sm">
+            {t("RESTORED_LOGS_PANEL.LOADING_LOG_STATUS", { noun: words.noun })}
+          </p>
         </div>
       </Card>
     );
@@ -206,14 +215,19 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
         <div className="flex min-h-[280px] flex-col items-center justify-center px-6 py-10 text-center">
           <Loader2 className="mb-3 h-7 w-7 animate-spin text-primary" />
           <h3 className="text-base font-semibold tracking-tight">
-            A {words.noun} restore is running
+            {t("RESTORED_LOGS_PANEL.A_RESTORE_IS_RUNNING", { noun: words.noun })}
           </h3>
           <p className="mb-1 mt-2 max-w-md text-sm text-muted-foreground">
-            {windowLabel ? `${windowLabel}. ` : ""}Logs appear here as soon as it finishes, which usually
-            takes {EXPECTED_DURATION[sourceType]}.
+            {t("RESTORED_LOGS_PANEL.LOGS_APPEAR_HERE_AS_SOON", {
+              value1: windowLabel ? `${windowLabel}. ` : "",
+              value2: EXPECTED_DURATION[sourceType],
+            })}
           </p>
           <p className="text-xs tabular-nums text-muted-foreground">
-            {restore.processedFiles} of {restore.totalFiles} files processed
+            {t("RESTORED_LOGS_PANEL.OF_FILES_PROCESSED", {
+              processedFiles: restore.processedFiles,
+              totalFiles: restore.totalFiles,
+            })}
           </p>
           <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
             <Button
@@ -221,13 +235,11 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
               onClick={() => void restore.refresh()}
               disabled={restore.isRefreshing}
             >
-              <RefreshCw
-                className={`mr-2 h-4 w-4 ${restore.isRefreshing ? "animate-spin" : ""}`}
-              />
-              {restore.isRefreshing ? "Refreshing" : "Refresh"}
+              <RefreshCw className={`mr-2 h-4 w-4 ${restore.isRefreshing ? "animate-spin" : ""}`} />
+              {restore.isRefreshing ? t("RESTORED_LOGS_PANEL.REFRESHING") : t("common:REFRESH")}
             </Button>
             <Button size="sm" variant="outline" asChild>
-              <Link to={tracingHref}>View this request in Tracing</Link>
+              <Link to={tracingHref}>{t("RESTORED_LOGS_PANEL.VIEW_THIS_REQUEST_IN_TRACING")}</Link>
             </Button>
           </div>
         </div>
@@ -241,14 +253,15 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
         <div className="flex min-h-[280px] flex-col items-center justify-center px-6 py-10 text-center">
           <AlertTriangle className="mb-3 h-7 w-7 text-destructive" />
           <h3 className="text-base font-semibold tracking-tight text-destructive">
-            The last {words.noun} restore failed
+            {t("RESTORED_LOGS_PANEL.THE_LAST_RESTORE_FAILED", { noun: words.noun })}
           </h3>
           <p className="mb-5 mt-2 max-w-md text-sm text-muted-foreground">
-            No log rows were recovered{windowLabel ? ` for ${windowLabel}` : ""}. Start a new request from
-            Tracing to try the range again.
+            {t("RESTORED_LOGS_PANEL.NO_LOG_ROWS_WERE_RECOVERED", {
+              value1: windowLabel ? ` for ${windowLabel}` : "",
+            })}
           </p>
           <Button size="sm" asChild>
-            <Link to={tracingHref}>Go to Tracing</Link>
+            <Link to={tracingHref}>{t("RESTORED_LOGS_PANEL.GO_TO_TRACING")}</Link>
           </Button>
         </div>
       </Card>
@@ -261,14 +274,13 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
         <div className="flex min-h-[280px] flex-col items-center justify-center px-6 py-10 text-center">
           <Ban className="mb-3 h-7 w-7 text-muted-foreground" />
           <h3 className="text-base font-semibold tracking-tight">
-            The last {words.noun} restore was cancelled
+            {t("RESTORED_LOGS_PANEL.THE_LAST_RESTORE_WAS_CANCELLED", { noun: words.noun })}
           </h3>
           <p className="mb-5 mt-2 max-w-md text-sm text-muted-foreground">
-            Its partially restored rows were discarded, so there is nothing to read here. Request
-            the range again from Tracing.
+            {t("RESTORED_LOGS_PANEL.ITS_PARTIALLY_RESTORED_ROWS_WERE")}
           </p>
           <Button size="sm" asChild>
-            <Link to={tracingHref}>Go to Tracing</Link>
+            <Link to={tracingHref}>{t("RESTORED_LOGS_PANEL.GO_TO_TRACING")}</Link>
           </Button>
         </div>
       </Card>
@@ -282,11 +294,10 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
           <History className="mb-3 h-7 w-7 text-muted-foreground" />
           <h3 className="text-base font-semibold tracking-tight">{words.empty}</h3>
           <p className="mb-5 mt-2 max-w-md text-sm text-muted-foreground">
-            A restore request brings back the traces and logs of a date range you pick. Requests
-            are made on the Tracing page, and what comes back is readable here.
+            {t("RESTORED_LOGS_PANEL.A_RESTORE_REQUEST_BRINGS_BACK")}
           </p>
           <Button size="sm" asChild>
-            <Link to={tracingHref}>Go to Tracing</Link>
+            <Link to={tracingHref}>{t("RESTORED_LOGS_PANEL.GO_TO_TRACING")}</Link>
           </Button>
         </div>
       </Card>
@@ -301,16 +312,17 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
         <div className="flex min-h-[280px] flex-col items-center justify-center px-6 py-10 text-center">
           <History className="mb-3 h-7 w-7 text-muted-foreground" />
           <h3 className="text-base font-semibold tracking-tight">
-            This restore holds no log rows
+            {t("RESTORED_LOGS_PANEL.THIS_RESTORE_HOLDS_NO_LOG")}
           </h3>
           <p className="mb-5 mt-2 max-w-md text-sm text-muted-foreground">
-            {windowLabel
-              ? `${windowLabel} was restored, but none of those days `
-              : "None of the restored days "}
-            had logs stored for this project. Its traces may still be readable in Tracing.
+            {t("RESTORED_LOGS_PANEL.HAD_LOGS_STORED_FOR_THIS", {
+              value1: windowLabel
+                ? `${windowLabel} was restored, but none of those days `
+                : "None of the restored days ",
+            })}
           </p>
           <Button size="sm" variant="outline" asChild>
-            <Link to={tracingHref}>Go to Tracing</Link>
+            <Link to={tracingHref}>{t("RESTORED_LOGS_PANEL.GO_TO_TRACING")}</Link>
           </Button>
         </div>
       </Card>
@@ -321,35 +333,43 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
     <Card>
       {restore.status === TRACE_REQUEST_STATUS.partialSuccess && (
         <div className="px-6 pt-6">
-          <Banner variant="warning" title="Partially restored">
-            {restore.failedFiles} of {restore.totalFiles} files could not be read, so these results
-            are incomplete. The gaps are listed on the request in Tracing.
+          <Banner variant="warning" title={t("RESTORED_LOGS_PANEL.PARTIALLY_RESTORED")}>
+            {t("RESTORED_LOGS_PANEL.OF_FILES_COULD_NOT_BE", {
+              failedFiles: restore.failedFiles,
+              totalFiles: restore.totalFiles,
+            })}
           </Banner>
         </div>
       )}
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-6 py-3 text-sm text-medium-emphasis">
         <span className="text-xs font-semibold uppercase tracking-wider text-primary">
-          {words.noun === "cold" ? "Cold" : "Archive"} restore
+          {t("RESTORED_LOGS_PANEL.RESTORE", { value1: words.noun === "cold" ? "Cold" : "Archive" })}
         </span>
         {windowLabel && (
-          <span className="tabular-nums text-high-emphasis">{windowLabel} (UTC)</span>
+          <span className="tabular-nums text-high-emphasis">
+            {t("RESTORED_LOGS_PANEL.UTC", { windowLabel })}
+          </span>
         )}
         <span aria-hidden="true">•</span>
         <span className="tabular-nums">
-          {(restore.logRowsRestored ?? 0).toLocaleString("en-US")} log rows
+          {t("RESTORED_LOGS_PANEL.LOG_ROWS", {
+            value1: (restore.logRowsRestored ?? 0).toLocaleString("en-US"),
+          })}
         </span>
         {formatExpiry(restore.expireAt) && (
           <>
             <span aria-hidden="true">•</span>
-            <span>expires {formatExpiry(restore.expireAt)}</span>
+            <span>
+              {t("RESTORED_LOGS_PANEL.EXPIRES", { expireAt: formatExpiry(restore.expireAt) })}
+            </span>
           </>
         )}
         <Link
           to={tracingHref}
           className="ml-auto text-xs text-primary hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
         >
-          View this request in Tracing
+          {t("RESTORED_LOGS_PANEL.VIEW_THIS_REQUEST_IN_TRACING")}
         </Link>
       </div>
 
@@ -361,16 +381,18 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
         {loading ? (
           <div className="flex min-h-[200px] items-center justify-center text-sm text-muted-foreground">
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Loading restored logs...
+            {t("RESTORED_LOGS_PANEL.LOADING_RESTORED_LOGS")}
           </div>
         ) : rows.length === 0 ? (
           <div className="flex min-h-[200px] flex-col items-center justify-center gap-1 text-center">
             <p className="text-sm font-medium text-high-emphasis">
-              {hasFilter ? "No logs match these filters" : "No logs in this restore"}
+              {hasFilter
+                ? t("RESTORED_LOGS_PANEL.NO_LOGS_MATCH_THESE_FILTERS")
+                : t("RESTORED_LOGS_PANEL.NO_LOGS_IN_THIS_RESTORE")}
             </p>
             {hasFilter && (
               <p className="text-sm text-muted-foreground">
-                Widen the window or clear a filter to see more of the restored rows.
+                {t("RESTORED_LOGS_PANEL.WIDEN_THE_WINDOW_OR_CLEAR")}
               </p>
             )}
           </div>

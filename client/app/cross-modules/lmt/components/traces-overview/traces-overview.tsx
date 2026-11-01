@@ -21,6 +21,7 @@ import {
   useTracesFilterQueryParams,
 } from "./traces-filter-toolbar";
 import { TracesList } from "./traces-list";
+import { useT } from "@seliseblocks/genesis-os";
 type TracesOverviewProps = {
   projectKey: string;
 };
@@ -31,6 +32,7 @@ type TracesOverviewProps = {
  * collection has nothing to trace and is left out.
  */
 export function TracesOverview({ projectKey }: TracesOverviewProps) {
+  const { t } = useT("os.lmt");
   const isMobile = useIsMobile();
   const { queryParams, setQueryParams } = useTracesFilterQueryParams();
   const { sortQueryParams } = useTraceSortQueryParams();
@@ -120,16 +122,16 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
         onValueChange={(value: string) => tabChangedHandler(value as keyof typeof TRACE_PROVIDERS)}
       >
         <PageHeader
-          title="Tracing"
-          description="Trace requests across services"
+          title={t("TRACES_OVERVIEW.TRACING")}
+          description={t("TRACES_OVERVIEW.TRACE_REQUESTS_ACROSS_SERVICES")}
           actions={
             <>
               <Button onClick={() => setOpen((current) => !current)} variant="outline" size="sm">
                 <BookOpenText className="aspect-square w-4" />
-                <span className="sr-only sm:not-sr-only sm:ml-2">Guide</span>
+                <span className="sr-only sm:not-sr-only sm:ml-2">{t("TRACES_OVERVIEW.GUIDE")}</span>
               </Button>
               <LMTQueryAgentSheet
-                description="Hello! I can help you search and analyze your logs, metrics, and tracing data."
+                description={t("TRACES_OVERVIEW.HELLO_I_CAN_HELP_YOU")}
                 questions={[
                   "Show me traces for the last 1 hour",
                   "Which services are generating the most traces",

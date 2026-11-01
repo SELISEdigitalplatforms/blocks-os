@@ -8,6 +8,7 @@ import {
 import { TRACE_PROVIDERS } from "@blocks-lmt/constants/trace.constant";
 import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
 import { Archive, Flame, Snowflake } from "lucide-react";
+import { tStatic } from "@seliseblocks/genesis-os";
 
 export type StorageTier = `${TRACE_PROVIDERS}`;
 
@@ -16,26 +17,27 @@ export type StorageTier = `${TRACE_PROVIDERS}`;
  * the same way -- both read the same restore request, and a reader who learns "cold" on one page
  * should not meet a different word for it on the other.
  */
-export const STORAGE_TIERS = [
-  {
-    value: TRACE_PROVIDERS.hot,
-    title: "Hot",
-    description: "Live and recent data for active debugging.",
-    Icon: Flame,
-  },
-  {
-    value: TRACE_PROVIDERS.cold,
-    title: "Cold",
-    description: "Longer-term stored data for later investigation.",
-    Icon: Snowflake,
-  },
-  {
-    value: TRACE_PROVIDERS.archive,
-    title: "Archive",
-    description: "Deep history retained for audit and export use cases.",
-    Icon: Archive,
-  },
-] as const;
+export const getStorageTiers = () =>
+  [
+    {
+      value: TRACE_PROVIDERS.hot,
+      title: tStatic("os.lmt", "STORAGE_TIER_CARDS.HOT"),
+      description: tStatic("os.lmt", "STORAGE_TIER_CARDS.LIVE_AND_RECENT_DATA_FOR"),
+      Icon: Flame,
+    },
+    {
+      value: TRACE_PROVIDERS.cold,
+      title: tStatic("os.lmt", "STORAGE_TIER_CARDS.COLD"),
+      description: tStatic("os.lmt", "STORAGE_TIER_CARDS.LONGER_TERM_STORED_DATA_FOR"),
+      Icon: Snowflake,
+    },
+    {
+      value: TRACE_PROVIDERS.archive,
+      title: tStatic("os.lmt", "STORAGE_TIER_CARDS.ARCHIVE"),
+      description: tStatic("os.lmt", "STORAGE_TIER_CARDS.DEEP_HISTORY_RETAINED_FOR_AUDIT"),
+      Icon: Archive,
+    },
+  ] as const;
 
 interface StorageTierCardsProps {
   value: StorageTier;
@@ -60,7 +62,7 @@ export function StorageTierCards({ value, onChange, descriptions }: StorageTierC
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {STORAGE_TIERS.map((tier) => (
+          {getStorageTiers().map((tier) => (
             <SelectItem key={tier.value} value={tier.value}>
               {tier.title}
             </SelectItem>
@@ -72,7 +74,7 @@ export function StorageTierCards({ value, onChange, descriptions }: StorageTierC
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-      {STORAGE_TIERS.map(({ value: tier, title, description, Icon }) => {
+      {getStorageTiers().map(({ value: tier, title, description, Icon }) => {
         const isActive = tier === value;
         return (
           <button
