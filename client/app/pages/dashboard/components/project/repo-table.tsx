@@ -17,6 +17,7 @@ import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { DASHBOARD_TABLE_PAGE_SIZE } from "../dashboard.constant";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
 import { SetCustomDomainDialog } from "../custom-domain/dialog";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
 
 // ─── Column helper ────────────────────────────────────────────────────────────
 
@@ -24,38 +25,38 @@ const columnHelper = createColumnHelper<IEnvRepository>();
 
 const buildColumns = (onSet: (repo: IEnvRepository) => void) => [
   columnHelper.accessor("repoName", {
-    header: "Name",
+    header: tStatic("os.dashboard", "common:NAME"),
     cell: (info) => (
       <span className="text-sm font-medium text-high-emphasis">{info.getValue()}</span>
     ),
   }),
   columnHelper.accessor("defaultDeploymentUrl", {
-    header: "Deployment Domain",
+    header: tStatic("os.dashboard", "REPO_TABLE.DEPLOYMENT_DOMAIN"),
     cell: (info) => <span className="text-sm text-medium-emphasis">{info.getValue()}</span>,
   }),
   columnHelper.accessor("customDeploymentUrl", {
-    header: "Custom Domain",
+    header: tStatic("os.dashboard", "REPO_TABLE.CUSTOM_DOMAIN"),
     cell: ({ row }) => {
       const repo = row.original;
       return repo.customDeploymentUrl ? (
         <span className="text-sm text-medium-emphasis">{repo.customDeploymentUrl}</span>
       ) : (
         <Button variant="outline" size="xxs" onClick={() => onSet(repo)}>
-          <span className="px-2">Set</span>
+          <span className="px-2">{tStatic("os.dashboard", "REPO_TABLE.SET")}</span>
         </Button>
       );
     },
   }),
   columnHelper.display({
     id: "lastDeploymentDate",
-    header: "Last Deployment Date",
+    header: tStatic("os.dashboard", "REPO_TABLE.LAST_DEPLOYMENT_DATE"),
     cell: ({ row }) => {
       const repo = row.original;
       const isDefaultDate = repo.lastDeploymentDate === "0001-01-01T00:00:00";
       return (
         <div className="text-sm text-medium-emphasis">
           {!repo.lastDeploymentDate || isDefaultDate
-            ? "Not deployed"
+            ? tStatic("os.dashboard", "REPO_TABLE.NOT_DEPLOYED")
             : formatFullDate(new Date(repo.lastDeploymentDate))}
         </div>
       );
@@ -63,13 +64,13 @@ const buildColumns = (onSet: (repo: IEnvRepository) => void) => [
   }),
   columnHelper.display({
     id: "actions",
-    header: "Actions",
+    header: tStatic("os.dashboard", "common:ACTIONS"),
     cell: ({ row }) => {
       const repo = row.original;
       const hasCustomDomain = !!repo.customDeploymentUrl;
       const tooltipText = hasCustomDomain
-        ? "Edit custom domain"
-        : "Set a custom domain first to enable editing";
+        ? tStatic("os.dashboard", "REPO_TABLE.EDIT_CUSTOM_DOMAIN")
+        : tStatic("os.dashboard", "REPO_TABLE.SET_A_CUSTOM_DOMAIN_FIRST");
       return (
         <div className="flex items-center gap-1">
           <Tooltip>
@@ -77,7 +78,7 @@ const buildColumns = (onSet: (repo: IEnvRepository) => void) => [
               <Button
                 variant="ghost"
                 size="icon"
-                aria-label="Edit custom domain"
+                aria-label={tStatic("os.dashboard", "REPO_TABLE.EDIT_CUSTOM_DOMAIN")}
                 disabled={!hasCustomDomain}
                 onClick={() => onSet(repo)}
                 className="disabled:opacity-50 disabled:cursor-not-allowed"
@@ -118,6 +119,7 @@ export const ProjectRepoTable = ({
   search,
   onSearchChange,
 }: ProjectRepoTableProps) => {
+  const { t } = useT("os.dashboard");
   // ── Set custom domain dialog ────────────────────────────────────────────────
   const [setTarget, setSetTarget] = useState<IEnvRepository | null>(null);
   const [setDialogOpen, setSetDialogOpen] = useState(false);
@@ -180,7 +182,7 @@ export const ProjectRepoTable = ({
           <FilterControls.SearchInput
             value={search}
             onChange={onSearchChange}
-            placeholder="Search repositories..."
+            placeholder={t("REPO_TABLE.SEARCH_REPOSITORIES")}
             className="w-64"
           />
         </div>
@@ -214,8 +216,8 @@ export const ProjectRepoTable = ({
                   className="py-10 text-center text-sm text-muted-foreground"
                 >
                   {data.length === 0
-                    ? "No repositories found for this project."
-                    : "No repositories match your search."}
+                    ? t("REPO_TABLE.NO_REPOSITORIES_FOUND_FOR_THIS")
+                    : t("REPO_TABLE.NO_REPOSITORIES_MATCH_YOUR_SEARCH")}
                 </td>
               </tr>
             ) : (
@@ -235,7 +237,7 @@ export const ProjectRepoTable = ({
 
       {/* Pagination — same component and same rules as the Domains section. */}
       {filteredData.length > 0 && (
-        <nav aria-label="Repositories pagination" className="mt-4 flex items-center md:justify-end">
+        <nav aria-label={t("REPO_TABLE.REPOSITORIES_PAGINATION")} className="mt-4 flex items-center md:justify-end">
           <Pagination
             page={page}
             pageSize={DASHBOARD_TABLE_PAGE_SIZE}

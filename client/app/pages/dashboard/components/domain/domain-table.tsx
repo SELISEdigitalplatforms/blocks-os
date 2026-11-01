@@ -25,19 +25,23 @@ import {
   RenderConditionally,
 } from "@seliseblocks/genesis-os/components";
 import { DomainDeleteDialog } from "./domain-delete-dialog";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
 const StatusBadge = ({ verified }: { verified: boolean }) =>
-  verified ? (
+  {
+  const { t } = useT("os.dashboard");
+  return verified ? (
     <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-800">
-      Verified
+      {t("DOMAIN_TABLE.VERIFIED")}
     </span>
   ) : (
     <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
-      Unverified
+      {t("DOMAIN_TABLE.UNVERIFIED")}
     </span>
   );
+};
 
 // ─── Column helper ────────────────────────────────────────────────────────────
 
@@ -62,8 +66,9 @@ const ApiBaseUrlCell = ({
   guide?: IDomainSetupGuideItem;
   isGuideLoading: boolean;
 }) => {
+  const { t } = useT("os.dashboard");
   if (!domain.isDomainVerified) {
-    return <span className="text-sm text-muted-foreground">Available after verification</span>;
+    return <span className="text-sm text-muted-foreground">{t("DOMAIN_TABLE.AVAILABLE_AFTER_VERIFICATION")}</span>;
   }
   if (!guide?.apiBaseUrl) {
     return <span className="text-sm text-muted-foreground">{isGuideLoading ? "…" : "—"}</span>;
@@ -83,20 +88,20 @@ const buildColumns = (
   isGuideLoading: boolean,
 ) => [
   columnHelper.accessor("domain", {
-    header: "Domain",
+    header: tStatic("os.dashboard", "DOMAIN_TABLE.DOMAIN"),
     cell: (info) => <CopyableDomainValue value={info.getValue()} />,
   }),
   columnHelper.accessor("isDomainVerified", {
-    header: "DNS Status",
+    header: tStatic("os.dashboard", "DOMAIN_TABLE.DNS_STATUS"),
     cell: (info) => <StatusBadge verified={info.getValue()} />,
   }),
   columnHelper.accessor("cookieDomain", {
-    header: "Cookie Domain",
+    header: tStatic("os.dashboard", "DOMAIN_TABLE.COOKIE_DOMAIN"),
     cell: (info) => <CopyableDomainValue value={info.getValue()} muted />,
   }),
   columnHelper.display({
     id: "apiBaseUrl",
-    header: "API Base URL",
+    header: tStatic("os.dashboard", "DOMAIN_TABLE.API_BASE_URL"),
     cell: ({ row }) => (
       <ApiBaseUrlCell
         domain={row.original}
@@ -107,7 +112,7 @@ const buildColumns = (
   }),
   columnHelper.display({
     id: "actions",
-    header: "Actions",
+    header: tStatic("os.dashboard", "common:ACTIONS"),
     cell: ({ row }) => {
       const domain = row.original;
       return (
@@ -115,7 +120,7 @@ const buildColumns = (
           <Button
             variant="ghost"
             size="icon"
-            title="Delete domain"
+            title={tStatic("os.dashboard", "DOMAIN_TABLE.DELETE_DOMAIN")}
             className="text-destructive hover:bg-destructive/10 hover:text-destructive"
             onClick={() => onDeleteRequest(domain)}
           >
@@ -127,8 +132,8 @@ const buildColumns = (
             <Button
               variant="ghost"
               size="icon"
-              title="Configure domain"
-              aria-label="Configure domain"
+              title={tStatic("os.dashboard", "DOMAIN_TABLE.CONFIGURE_DOMAIN")}
+              aria-label={tStatic("os.dashboard", "DOMAIN_TABLE.CONFIGURE_DOMAIN")}
               onClick={() => onEdit(domain)}
             >
               <Settings className="h-4 w-4 text-muted-foreground" />
@@ -136,8 +141,8 @@ const buildColumns = (
             <Button
               variant="ghost"
               size="icon"
-              title="Set up domain"
-              aria-label="Set up domain"
+              title={tStatic("os.dashboard", "DOMAIN_TABLE.SET_UP_DOMAIN")}
+              aria-label={tStatic("os.dashboard", "DOMAIN_TABLE.SET_UP_DOMAIN")}
               onClick={() => onSetup(domain)}
             >
               <ShieldCheck className="h-4 w-4 text-muted-foreground" />
@@ -149,8 +154,8 @@ const buildColumns = (
             <Button
               variant="ghost"
               size="icon"
-              title="Connect app"
-              aria-label="Connect app"
+              title={tStatic("os.dashboard", "DOMAIN_TABLE.CONNECT_APP")}
+              aria-label={tStatic("os.dashboard", "DOMAIN_TABLE.CONNECT_APP")}
               onClick={() => onSetup(domain)}
             >
               <Plug className="h-4 w-4 text-muted-foreground" />
@@ -169,6 +174,7 @@ interface DomainTableProps {
 }
 
 export const DomainTable = ({ data }: DomainTableProps) => {
+  const { t } = useT("os.dashboard");
   const { mutateAsync, isPending } = useUpdateProject();
   const { data: setupGuide, isLoading: isGuideLoading } = useDomainSetupGuide();
   const guideByDomain = useMemo(
@@ -205,12 +211,12 @@ export const DomainTable = ({ data }: DomainTableProps) => {
         deleteSharedApiHost,
       });
       if (res.isSuccess) {
-        showSuccessToast({ description: "Domain deleted successfully" });
+        showSuccessToast({ description: t("DOMAIN_TABLE.DOMAIN_DELETED_SUCCESSFULLY") });
       } else {
         showErrorToast({ errors: res.errors });
       }
     } catch {
-      showErrorToast({ errors: "Failed to delete domain" });
+      showErrorToast({ errors: t("DOMAIN_TABLE.FAILED_TO_DELETE_DOMAIN") });
     } finally {
       setDeleteDialogOpen(false);
       setDeleteTarget(null);
@@ -305,7 +311,7 @@ export const DomainTable = ({ data }: DomainTableProps) => {
           <FilterControls.SearchInput
             value={search}
             onChange={handleSearchChange}
-            placeholder="Search domains..."
+            placeholder={t("DOMAIN_TABLE.SEARCH_DOMAINS")}
             className="w-64"
           />
         </div>
@@ -340,8 +346,8 @@ export const DomainTable = ({ data }: DomainTableProps) => {
                   className="py-10 text-center text-sm text-muted-foreground"
                 >
                   {data.length === 0
-                    ? "No domains configured yet."
-                    : "No domains match your search."}
+                    ? t("DOMAIN_TABLE.NO_DOMAINS_CONFIGURED_YET")
+                    : t("DOMAIN_TABLE.NO_DOMAINS_MATCH_YOUR_SEARCH")}
                 </td>
               </tr>
             ) : (
@@ -363,7 +369,7 @@ export const DomainTable = ({ data }: DomainTableProps) => {
           empty state is not captioned "Page 1 of 1". No page-size selector: the size is
           fixed at five. */}
       {filteredData.length > 0 && (
-        <nav aria-label="Domains pagination" className="mt-4 flex items-center md:justify-end">
+        <nav aria-label={t("DOMAIN_TABLE.DOMAINS_PAGINATION")} className="mt-4 flex items-center md:justify-end">
           <Pagination
             page={pageIndex}
             pageSize={DASHBOARD_TABLE_PAGE_SIZE}

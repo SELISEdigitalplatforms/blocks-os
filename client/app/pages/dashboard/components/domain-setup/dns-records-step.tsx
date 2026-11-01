@@ -1,6 +1,7 @@
 import { AlertTriangle, Info } from "lucide-react";
 import type { IDnsRecordInstruction, IDomainSetupGuideItem } from "@/models/domain-setup.model";
 import { CopyValueButton } from "./copy-value-button";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
 
 const FieldLabel = ({ children }: { children: React.ReactNode }) => (
   <span className="text-[11px] font-semibold uppercase tracking-wide text-medium-emphasis">
@@ -23,11 +24,11 @@ const RecordValue = ({ value, copyLabel }: { value: string; copyLabel?: string }
 const valueHint = (record: IDnsRecordInstruction, cnameTarget?: string) => {
   if (record.type === "A") {
     return cnameTarget
-      ? `IP address of ${cnameTarget}. If your provider supports ALIAS / ANAME, you can use that host instead.`
+      ? tStatic("os.dashboard", "DNS_RECORDS_STEP.IP_ADDRESS_OF_TARGET", { target: cnameTarget })
       : undefined;
   }
   if (record.type === "ALIAS") {
-    return "Your provider must support ALIAS / ANAME records (sometimes called CNAME flattening).";
+    return tStatic("os.dashboard", "DNS_RECORDS_STEP.YOUR_PROVIDER_MUST_SUPPORT_ALIAS");
   }
   return undefined;
 };
@@ -40,36 +41,37 @@ interface DnsRecordCardProps {
 }
 
 const DnsRecordCard = ({ index, record, isApex, cnameTarget }: DnsRecordCardProps) => {
+  const { t } = useT("os.dashboard");
   const purpose =
     record.purpose === "api"
-      ? "Blocks API for your app"
+      ? tStatic("os.dashboard", "DNS_RECORDS_STEP.BLOCKS_API_FOR_YOUR_APP")
       : isApex
-        ? "Your app (root domain)"
-        : "Your app";
+        ? tStatic("os.dashboard", "DNS_RECORDS_STEP.YOUR_APP_ROOT_DOMAIN")
+        : tStatic("os.dashboard", "DNS_RECORDS_STEP.YOUR_APP");
   const hint = valueHint(record, cnameTarget);
 
   return (
     <section
-      aria-label={`Record ${index + 1}`}
+      aria-label={t("DNS_RECORDS_STEP.RECORD", { value1: index + 1 })}
       className="flex flex-col gap-3 rounded-lg border border-border p-4"
     >
       <p className="text-sm">
-        <span className="font-semibold text-high-emphasis">Record {index + 1}</span>
+        <span className="font-semibold text-high-emphasis">{t("DNS_RECORDS_STEP.RECORD", { value1: index + 1 })}</span>
         <span className="text-muted-foreground"> · {purpose}</span>
       </p>
       <div className="grid gap-3 sm:grid-cols-[88px_minmax(0,1fr)_minmax(0,1.3fr)]">
         <div className="flex flex-col gap-1">
-          <FieldLabel>Type</FieldLabel>
+          <FieldLabel>{t("common:TYPE")}</FieldLabel>
           <RecordValue value={record.type} />
         </div>
         <div className="flex min-w-0 flex-col gap-1">
-          <FieldLabel>Name / Host</FieldLabel>
-          <RecordValue value={record.name} copyLabel="Copy host" />
+          <FieldLabel>{t("DNS_RECORDS_STEP.NAME_HOST")}</FieldLabel>
+          <RecordValue value={record.name} copyLabel={t("DNS_RECORDS_STEP.COPY_HOST")} />
           <span className="break-all text-xs text-muted-foreground">= {record.host}</span>
         </div>
         <div className="flex min-w-0 flex-col gap-1">
-          <FieldLabel>Value / Target</FieldLabel>
-          <RecordValue value={record.value} copyLabel="Copy value" />
+          <FieldLabel>{t("DNS_RECORDS_STEP.VALUE_TARGET")}</FieldLabel>
+          <RecordValue value={record.value} copyLabel={t("DNS_RECORDS_STEP.COPY_VALUE")} />
           {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
         </div>
       </div>
@@ -83,14 +85,15 @@ interface DnsRecordsStepProps {
 }
 
 export const DnsRecordsStep = ({ guide, isLoading }: DnsRecordsStepProps) => {
+  const { t } = useT("os.dashboard");
   if (isLoading) {
-    return <p className="text-sm text-muted-foreground">Loading DNS records…</p>;
+    return <p className="text-sm text-muted-foreground">{t("DNS_RECORDS_STEP.LOADING_DNS_RECORDS")}</p>;
   }
 
   if (!guide || guide.records.length === 0) {
     return (
       <p className="rounded-md border border-base-error bg-blocks-error-100 px-4 py-3 text-sm text-blocks-error-800">
-        We couldn’t load the DNS records for this domain. Close this window and try again.
+        {t("DNS_RECORDS_STEP.WE_COULDN_T_LOAD_THE")}
       </p>
     );
   }
@@ -106,17 +109,18 @@ export const DnsRecordsStep = ({ guide, isLoading }: DnsRecordsStepProps) => {
         <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <p>
-            <span className="font-semibold">{zone} is a root (apex) domain.</span> Most DNS
-            providers don’t allow a CNAME on the root, so{" "}
-            <strong>Record 1 is an A record on @</strong> instead.
+            {t("DNS_RECORDS_STEP.MOST_DNS_PROVIDERS_DON_T", {
+              span: t("DNS_RECORDS_STEP.ZONE_IS_APEX", { zone }),
+              strong: t("DNS_RECORDS_STEP.RECORD_1_IS_AN_A"),
+            })}
           </p>
         </div>
       )}
 
       <p className="text-sm text-high-emphasis">
-        Sign in to your DNS provider (Cloudflare, GoDaddy, Namecheap, Route 53…) and add these{" "}
-        <strong>{guide.records.length} records</strong>. One points your app to Blocks, the other
-        creates the API address your app will call.
+        {t("DNS_RECORDS_STEP.SIGN_IN_TO_YOUR_DNS", {
+          strong: t("DNS_RECORDS_STEP.RECORDS_COUNT", { count: guide.records.length }),
+        })}
       </p>
 
       {guide.records.map((record, index) => (
@@ -133,19 +137,14 @@ export const DnsRecordsStep = ({ guide, isLoading }: DnsRecordsStepProps) => {
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
         <ul className="flex list-disc flex-col gap-1.5 pl-4 text-sm text-high-emphasis">
           <li>
-            Enter the <strong>Name / Host</strong> exactly as shown. Most providers add{" "}
-            <code className="font-mono">.{zone}</code> for you, so don’t type the full name.
-          </li>
+            {t("DNS_RECORDS_STEP.ENTER_THE_EXACTLY_AS_SHOWN", { strong: t("DNS_RECORDS_STEP.NAME_HOST"), code: `.${zone}` })}</li>
           {guide.isApex && (
             <li>
-              Remove any existing A or AAAA record on <code className="font-mono">@</code> first, or
-              it will conflict.
-            </li>
+              {t("DNS_RECORDS_STEP.REMOVE_ANY_EXISTING_A_OR", { code: "@" })}</li>
           )}
           <li>
-            Using Cloudflare? Set the proxy status to <strong>DNS only</strong> (grey cloud).
-          </li>
-          <li>DNS changes usually show up within minutes, but can take up to 48 hours.</li>
+            {t("DNS_RECORDS_STEP.USING_CLOUDFLARE_SET_THE_PROXY", { strong: t("DNS_RECORDS_STEP.DNS_ONLY") })}</li>
+          <li>{t("DNS_RECORDS_STEP.DNS_CHANGES_USUALLY_SHOW_UP")}</li>
         </ul>
       </div>
     </div>

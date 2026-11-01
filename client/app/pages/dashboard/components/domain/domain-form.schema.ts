@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { tStatic } from "@seliseblocks/genesis-os";
 
 /**
  * The server's hostname grammar (DomainManagementService.HostnameRegex): two or
@@ -16,7 +17,8 @@ const MAX_HOSTNAME_LENGTH = 253;
 export const isValidHostname = (value: string): boolean =>
   value.length <= MAX_HOSTNAME_LENGTH && hostnameRegex.test(value);
 
-const INVALID_DOMAIN_MESSAGE = "Please enter a valid domain (e.g. example.com)";
+const invalidDomainMessage = () =>
+  tStatic("os.dashboard", "DOMAIN_FORM_SCHEMA.PLEASE_ENTER_A_VALID_DOMAIN");
 
 /**
  * Enough of the public suffix list to recognise the common multi-label TLDs.
@@ -73,20 +75,20 @@ export const isCookieDomainValidFor = (domain: string, cookieDomain: string): bo
   return host === cookie || host.endsWith(`.${cookie}`);
 };
 
-export const domainFormSchema = z
+export const createDomainFormSchema = () => z
   .object({
-    domain: z.string().min(1, "Domain is required").refine(isValidHostname, INVALID_DOMAIN_MESSAGE),
+    domain: z.string().min(1, tStatic("os.dashboard", "DOMAIN_FORM_SCHEMA.DOMAIN_IS_REQUIRED")).refine(isValidHostname, invalidDomainMessage()),
     cookieDomain: z
       .string()
-      .min(1, "Cookie domain is required")
-      .refine(isValidHostname, INVALID_DOMAIN_MESSAGE),
+      .min(1, tStatic("os.dashboard", "DOMAIN_FORM_SCHEMA.COOKIE_DOMAIN_IS_REQUIRED"))
+      .refine(isValidHostname, invalidDomainMessage()),
   })
   .refine(({ domain, cookieDomain }) => isCookieDomainValidFor(domain, cookieDomain), {
     path: ["cookieDomain"],
-    message: "Cookie domain must be the domain itself or one of its parent domains",
+    message: tStatic("os.dashboard", "DOMAIN_FORM_SCHEMA.COOKIE_DOMAIN_MUST_BE_THE"),
   });
 
-export type DomainFormSchema = z.infer<typeof domainFormSchema>;
+export type DomainFormSchema = z.infer<ReturnType<typeof createDomainFormSchema>>;
 
 export const domainFormDefaultValues: DomainFormSchema = {
   domain: "",

@@ -1,6 +1,7 @@
 import { LoadingButton } from "@seliseblocks/genesis-os/components";
 import { useValidateCNameProject } from "@/hooks/use-project";
 import { showErrorToast, showSuccessToast } from "@seliseblocks/genesis-os/utils";
+import { useT } from "@seliseblocks/genesis-os";
 
 interface CnameValidatorProjectProps {
   isDomainVerified: boolean;
@@ -11,6 +12,7 @@ export const CnameValidatorProject = ({
   isDomainVerified,
   cookieDomain,
 }: CnameValidatorProjectProps) => {
+  const { t } = useT("os.dashboard");
   const { mutateAsync, isPending } = useValidateCNameProject({ cookieDomain });
 
   const handleValidate = async () => {
@@ -18,12 +20,12 @@ export const CnameValidatorProject = ({
       if (isDomainVerified) return;
       const res = await mutateAsync();
       if (res?.isSuccess) {
-        showSuccessToast({ description: "CName is validated successfully" });
+        showSuccessToast({ description: t("VALIDATOR_PROJECT.CNAME_IS_VALIDATED_SUCCESSFULLY") });
       } else {
         showErrorToast({
           errors:
             res?.errors ??
-            "Could not verify the domain. Please make sure it is valid and try again.",
+            t("VALIDATOR_PROJECT.COULD_NOT_VERIFY_THE_DOMAIN"),
         });
       }
     } catch (error) {
@@ -39,7 +41,7 @@ export const CnameValidatorProject = ({
       disabled={isPending || isDomainVerified}
       isLoading={isPending}
     >
-      CNAME Lookup
+      {t("VALIDATOR_PROJECT.CNAME_LOOKUP")}
     </LoadingButton>
   );
 };

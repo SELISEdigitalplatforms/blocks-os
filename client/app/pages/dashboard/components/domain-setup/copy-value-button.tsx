@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { cn } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 
 interface CopyValueButtonProps {
   value: string;
@@ -11,6 +12,7 @@ interface CopyValueButtonProps {
 }
 
 export const CopyValueButton = ({ value, label, className }: CopyValueButtonProps) => {
+  const { t } = useT("os.dashboard");
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -34,7 +36,7 @@ export const CopyValueButton = ({ value, label, className }: CopyValueButtonProp
       variant="ghost"
       size="icon"
       title={label}
-      aria-label={copied ? "Copied" : label}
+      aria-label={copied ? t("common:COPIED") : label}
       onClick={handleCopy}
       className={cn("h-8 w-8 shrink-0 text-muted-foreground", className)}
     >

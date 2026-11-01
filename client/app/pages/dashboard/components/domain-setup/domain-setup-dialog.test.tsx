@@ -189,7 +189,7 @@ describe("DomainSetupDialog", () => {
     expect(
       screen.getByText("VITE_BLOCKS_API_URL=https://dev-blocksapi.asifrafeen.shop"),
     ).toBeTruthy();
-    expect(screen.getByText("Your domain is live.")).toBeTruthy();
+    expect(screen.getByText(/Your domain is live\./)).toBeTruthy();
   });
 
   it("shows the default API URL for the platform domain", () => {
@@ -212,7 +212,7 @@ describe("DomainSetupDialog", () => {
 
     expect(screen.getByText(/Default domain/)).toBeTruthy();
     expect(screen.getByText("VITE_BLOCKS_API_URL=https://blocksapi.dev.slsblx.com")).toBeTruthy();
-    expect(screen.getByText("Ready to use.")).toBeTruthy();
+    expect(screen.getByText(/Ready to use\./)).toBeTruthy();
     expect(screen.getByRole("link", { name: /Test now/ }).getAttribute("href")).toBe(
       "https://blocksapi.dev.slsblx.com/iam/v4/swagger/index.html",
     );

@@ -226,7 +226,7 @@ describe("DomainTable", () => {
     const user = userEvent.setup();
     render(<DomainTable data={domains} />);
     await user.click(screen.getAllByTitle("Delete domain")[0]);
-    expect(await screen.findByText("blocksapi.verified.com")).toBeTruthy();
+    expect(await screen.findByText(/blocksapi.verified.com/)).toBeTruthy();
     expect(screen.getByText(/other projects you may not be able to see/)).toBeTruthy();
   });
 

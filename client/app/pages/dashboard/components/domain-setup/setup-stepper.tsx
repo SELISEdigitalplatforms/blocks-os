@@ -1,5 +1,6 @@
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 
 const STEP_TITLES = ["Add DNS records", "Verify & secure", "Connect your app"] as const;
 
@@ -11,8 +12,10 @@ interface SetupStepperProps {
   failed?: boolean;
 }
 
-export const SetupStepper = ({ current, failed = false }: SetupStepperProps) => (
-  <ol className="flex items-center gap-3" aria-label="Setup steps">
+export const SetupStepper = ({ current, failed = false }: SetupStepperProps) => {
+  const { t } = useT("os.dashboard");
+  return (
+  <ol className="flex items-center gap-3" aria-label={t("SETUP_STEPPER.SETUP_STEPS")}>
     {STEP_TITLES.map((title, index) => {
       const isDone = index < current;
       const isCurrent = index === current;
@@ -56,3 +59,4 @@ export const SetupStepper = ({ current, failed = false }: SetupStepperProps) => 
     })}
   </ol>
 );
+};

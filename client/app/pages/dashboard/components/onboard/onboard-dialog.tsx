@@ -12,6 +12,7 @@ import { useMemo } from "react";
 import { CopyButton } from "./copy-button";
 import { resolveOnboardingGuide } from "./onboard-guide";
 import { OnboardMarkdown } from "./onboard-markdown";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
 
 type OnboardDialogProps = {
   open: boolean;
@@ -20,6 +21,7 @@ type OnboardDialogProps = {
 };
 
 export const OnboardDialog = ({ open, onOpenChange, project }: OnboardDialogProps) => {
+  const { t } = useT("os.dashboard");
   const tenantId = project?.tenantId ?? "";
 
   const resolved = useMemo(() => resolveOnboardingGuide({ tenantId }), [tenantId]);
@@ -27,12 +29,12 @@ export const OnboardDialog = ({ open, onOpenChange, project }: OnboardDialogProp
   const handleCopied = (succeeded: boolean) => {
     if (succeeded) {
       showSuccessToast({
-        title: "Instructions copied",
-        description: "Paste them into your coding agent to start building.",
+        title: t("ONBOARD_DIALOG.INSTRUCTIONS_COPIED"),
+        description: t("ONBOARD_DIALOG.PASTE_THEM_INTO_YOUR_CODING"),
       });
       return;
     }
-    showErrorToast({ errors: { clipboard: "Could not copy the instructions." } });
+    showErrorToast({ errors: { clipboard: tStatic("os.dashboard", "ONBOARD_DIALOG.COULD_NOT_COPY_THE_INSTRUCTIONS") } });
   };
 
   return (
@@ -41,7 +43,7 @@ export const OnboardDialog = ({ open, onOpenChange, project }: OnboardDialogProp
         <DialogHeader className="space-y-1.5 border-b border-border-default px-6 py-5 text-left">
           <DialogTitle className="flex items-center gap-2">
             <Rocket className="h-5 w-5 text-primary" aria-hidden="true" />
-            Bootstrap with an AI agent
+            {t("ONBOARD_DIALOG.BOOTSTRAP_WITH_AN_AI_AGENT")}
           </DialogTitle>
         </DialogHeader>
 
@@ -52,7 +54,7 @@ export const OnboardDialog = ({ open, onOpenChange, project }: OnboardDialogProp
         <DialogFooter className="items-center border-t border-border-default px-6 py-4 sm:justify-end">
           <CopyButton
             text={resolved.markdown}
-            label="Copy instructions"
+            label={t("ONBOARD_DIALOG.COPY_INSTRUCTIONS")}
             showLabel
             variant="default"
             onCopied={handleCopied}

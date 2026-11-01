@@ -6,6 +6,7 @@ import type {
   IDomainSetupStepState,
 } from "@/hooks/use-domain-setup";
 import type { DomainSetupStepId, IDomainSetupGuideItem } from "@/models/domain-setup.model";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
 
 const StatusIcon = ({ state, skipped }: { state: IDomainSetupStepState; skipped: boolean }) => {
   switch (state.status) {
@@ -36,10 +37,18 @@ const StatusIcon = ({ state, skipped }: { state: IDomainSetupStepState; skipped:
 };
 
 const STATUS_TEXT: Record<IDomainSetupStepState["status"], string> = {
-  pending: "Waiting",
-  running: "In progress",
-  done: "Done",
-  failed: "Failed",
+  get pending() {
+    return tStatic("os.dashboard", "SETUP_PROGRESS_STEP.WAITING");
+  },
+  get running() {
+    return tStatic("os.dashboard", "SETUP_PROGRESS_STEP.IN_PROGRESS");
+  },
+  get done() {
+    return tStatic("os.dashboard", "common:DONE");
+  },
+  get failed() {
+    return tStatic("os.dashboard", "SETUP_PROGRESS_STEP.FAILED");
+  },
 };
 
 interface ProgressRowProps {
@@ -50,7 +59,9 @@ interface ProgressRowProps {
   skipped: boolean;
 }
 
-const ProgressRow = ({ title, detail, state, skipped }: ProgressRowProps) => (
+const ProgressRow = ({ title, detail, state, skipped }: ProgressRowProps) => {
+  const { t } = useT("os.dashboard");
+  return (
   <li
     className={cn(
       "flex items-start gap-3 border-b border-border px-4 py-3.5 last:border-0",
@@ -83,10 +94,11 @@ const ProgressRow = ({ title, detail, state, skipped }: ProgressRowProps) => (
         state.status === "pending" && "text-muted-foreground",
       )}
     >
-      {skipped ? "Skipped" : STATUS_TEXT[state.status]}
+      {skipped ? t("SETUP_PROGRESS_STEP.SKIPPED") : STATUS_TEXT[state.status]}
     </span>
   </li>
 );
+};
 
 interface SetupProgressStepProps {
   phase: DomainSetupPhase;
@@ -98,6 +110,7 @@ interface SetupProgressStepProps {
 }
 
 export const SetupProgressStep = ({ phase, steps, error, guide, host }: SetupProgressStepProps) => {
+  const { t } = useT("os.dashboard");
   const appRecord = guide?.records.find((record) => record.purpose === "app");
   const apiRecord = guide?.records.find((record) => record.purpose === "api");
   const isFailed = phase === "failed";
@@ -115,39 +128,39 @@ export const SetupProgressStep = ({ phase, steps, error, guide, host }: SetupPro
         >
           <p className="font-semibold">
             {failedDnsStep
-              ? `We couldn’t find Record ${failedDnsStep === "api_dns" ? 2 : 1} yet`
+              ? t("SETUP_PROGRESS_STEP.WE_COULDN_T_FIND_RECORD", { value1: failedDnsStep === "api_dns" ? 2 : 1 })
               : steps.ssl.status === "failed"
-                ? "We couldn’t secure your domain"
-                : "Setup didn’t finish"}
+                ? t("SETUP_PROGRESS_STEP.WE_COULDN_T_SECURE_YOUR")
+                : t("SETUP_PROGRESS_STEP.SETUP_DIDN_T_FINISH")}
           </p>
           <p>{error}</p>
         </div>
       ) : (
         <div className="flex flex-col gap-1">
-          <h3 className="text-base font-semibold text-high-emphasis">Setting up your domain…</h3>
+          <h3 className="text-base font-semibold text-high-emphasis">{t("SETUP_PROGRESS_STEP.SETTING_UP_YOUR_DOMAIN")}</h3>
           <p className="text-sm text-high-emphasis">
-            Each step updates as soon as it finishes. This usually takes under a minute.
+            {t("SETUP_PROGRESS_STEP.EACH_STEP_UPDATES_AS_SOON")}
           </p>
         </div>
       )}
 
-      <ol aria-label="Setup progress" className="rounded-lg border border-border">
+      <ol aria-label={t("SETUP_PROGRESS_STEP.SETUP_PROGRESS")} className="rounded-lg border border-border">
         <ProgressRow
-          title="DNS record for your app"
+          title={t("SETUP_PROGRESS_STEP.DNS_RECORD_FOR_YOUR_APP")}
           detail={appRecord?.host ?? host}
           state={steps.app_dns}
           skipped={isFailed && steps.app_dns.status === "pending"}
         />
         <ProgressRow
-          title="DNS record for the API"
+          title={t("SETUP_PROGRESS_STEP.DNS_RECORD_FOR_THE_API")}
           detail={apiRecord?.host}
           state={steps.api_dns}
           skipped={isFailed && steps.api_dns.status === "pending"}
         />
         <ProgressRow
-          title="SSL certificate"
+          title={t("SETUP_PROGRESS_STEP.SSL_CERTIFICATE")}
           detail={
-            steps.ssl.status === "running" ? "Securing your app and its API with HTTPS" : undefined
+            steps.ssl.status === "running" ? tStatic("os.dashboard", "SETUP_PROGRESS_STEP.SECURING_YOUR_APP_AND_ITS") : undefined
           }
           state={steps.ssl}
           skipped={isFailed && steps.ssl.status === "pending"}
@@ -156,35 +169,27 @@ export const SetupProgressStep = ({ phase, steps, error, guide, host }: SetupPro
 
       {isFailed && failedDnsStep && (
         <div className="flex flex-col gap-2">
-          <p className="text-sm font-semibold text-high-emphasis">Common causes</p>
+          <p className="text-sm font-semibold text-high-emphasis">{t("SETUP_PROGRESS_STEP.COMMON_CAUSES")}</p>
           <ul className="flex list-disc flex-col gap-1.5 pl-5 text-sm text-high-emphasis">
             <li>
-              <strong>DNS hasn’t updated yet.</strong> Wait a few minutes and try again. It can take
-              up to 48 hours.
-            </li>
+              {t("SETUP_PROGRESS_STEP.WAIT_A_FEW_MINUTES_AND", { strong: t("SETUP_PROGRESS_STEP.DNS_HASN_T_UPDATED_YET") })}</li>
             {failedRecord && failedRecord.name !== "@" && (
               <li>
-                <strong>Full name typed as Host.</strong> Many providers add the domain for you.
-                Enter only <code className="font-mono">{failedRecord.name}</code>.
-              </li>
+                {t("SETUP_PROGRESS_STEP.MANY_PROVIDERS_ADD_THE_DOMAIN", { strong: t("SETUP_PROGRESS_STEP.FULL_NAME_TYPED_AS_HOST"), code: `${failedRecord.name}` })}</li>
             )}
             {failedRecord && (
               <li>
-                <strong>Typo in the value.</strong> It must be exactly{" "}
-                <code className="font-mono">{failedRecord.value}</code>.
-              </li>
+                {t("SETUP_PROGRESS_STEP.IT_MUST_BE_EXACTLY", { strong: t("SETUP_PROGRESS_STEP.TYPO_IN_THE_VALUE"), code: `${failedRecord.value}` })}</li>
             )}
             <li>
-              <strong>Cloudflare proxy is on.</strong> Switch the record to DNS only (grey cloud).
-            </li>
+              {t("SETUP_PROGRESS_STEP.SWITCH_THE_RECORD_TO_DNS", { strong: t("SETUP_PROGRESS_STEP.CLOUDFLARE_PROXY_IS_ON") })}</li>
           </ul>
         </div>
       )}
 
       {isFailed && steps.ssl.status === "failed" && (
         <p className="text-sm text-high-emphasis">
-          Both DNS records were found, but the certificate could not be issued. Check that both
-          records point to Blocks and that no proxy sits in front of them, then try again.
+          {t("SETUP_PROGRESS_STEP.BOTH_DNS_RECORDS_WERE_FOUND")}
         </p>
       )}
     </div>
