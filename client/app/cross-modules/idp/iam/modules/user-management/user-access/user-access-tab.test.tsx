@@ -130,10 +130,10 @@ describe("UserAccessTab", () => {
     expect(screen.queryByTestId("multi-org")).toBeNull();
   });
 
-  it("shows the Access attributes section under the access editor", () => {
+  it("keeps the Access attributes section hidden", () => {
     render(<UserAccessTab userId="u1" projectKey="p1" />);
     expect(screen.getByTestId("single-org")).toBeTruthy();
-    expect(screen.getByTestId("access-attributes")).toBeTruthy();
+    expect(screen.queryByTestId("access-attributes")).toBeNull();
     expect(screen.queryByTestId(LOCKED_ID)).toBeNull();
   });
 
