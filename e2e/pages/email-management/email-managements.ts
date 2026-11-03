@@ -1,4 +1,5 @@
-import { expect, type Page } from "@playwright/test";
+import fs from "node:fs/promises";
+import { expect, type Page, type Response, type Route, type TestInfo } from "@playwright/test";
 import { openEmailManagement } from "../../support/os-helpers";
 
 export async function addTemplateFlow(page: Page) {
@@ -495,4 +496,301 @@ export async function outgoingMailsFlow(page: Page) {
   await sendDate.click();
   await expect(sendDate).toHaveAttribute("aria-expanded", "true", { timeout: 10_000 });
   await page.keyboard.press("Escape");
+}
+
+// ---------- Mailbox details (blocks-os#729) ----------
+// The E2E project has no mail and the runner has no inbound mailbox, so the details data is
+// stubbed with page.route; the file endpoints are hit for real where the spec asks for real 404s.
+// Regexes keep GetMailBoxMail? from matching GetMailBoxMails, ...Source or ...AttachmentFile.
+const MAIL_DETAILS_ROUTE = /\/api\/Mail\/GetMailBoxMail\?/;
+const MAIL_SOURCE_ROUTE = /\/api\/Mail\/GetMailBoxMailSource\?/;
+const MAIL_ATTACHMENT_FILE_ROUTE = /\/api\/Mail\/GetMailBoxMailAttachmentFile\?/;
+
+const MAIL_SOURCE_BODY = "Subject: e2e\r\n\r\nE2E body";
+const SOURCE_FAILED = "The original message could not be loaded. Try again later.";
+const TOO_LARGE = "This message is too large to preview — download .eml";
+
+export interface MailDetailsRun {
+  runId: string;
+  itemId: string;
+  /** The page URL up to and including "/email-management". */
+  emailManagementUrl: string;
+  sourceRequests: string[];
+}
+
+export async function startMailDetailsRun(page: Page): Promise<MailDetailsRun> {
+  await openEmailManagement(page);
+  const url = page.url();
+  const runId = Date.now().toString(36);
+  return {
+    runId,
+    itemId: `e2e-item-${runId}`,
+    emailManagementUrl: url.slice(0, url.indexOf("/email-management") + "/email-management".length),
+    sourceRequests: [],
+  };
+}
+
+function inboundDetails(run: MailDetailsRun, content: Record<string, unknown>) {
+  return {
+    isSuccess: true,
+    errors: null,
+    mail: {
+      itemId: run.itemId,
+      messageId: `${run.itemId}@e2e.invalid`,
+      mailServerConfigurationId: "",
+      subject: "E2E mailbox details",
+      from: "E2E Sender <sender@e2e.invalid>",
+      to: "inbox@e2e.invalid",
+      body: "E2E body",
+      status: "Received",
+      error: null,
+      date: new Date().toISOString(),
+      rawMime: null,
+      isInbound: true,
+    },
+    content,
+  };
+}
+
+const NORMAL_CONTENT = {
+  htmlBody: "<p>E2E body</p>",
+  textBody: "E2E body",
+  cc: null,
+  replyTo: null,
+  attachments: [{ fileName: "e2e.txt", contentType: "text/plain", size: 5 }],
+  rawMimeLength: 40,
+  previewTooLarge: false,
+};
+
+const TOO_LARGE_CONTENT = {
+  htmlBody: null,
+  textBody: null,
+  cc: null,
+  replyTo: null,
+  attachments: [],
+  rawMimeLength: 9_000_000,
+  previewTooLarge: true,
+};
+
+async function stubDetails(page: Page, run: MailDetailsRun, content: Record<string, unknown>) {
+  await page.unroute(MAIL_DETAILS_ROUTE);
+  await page.route(MAIL_DETAILS_ROUTE, (route) =>
+    route.fulfill({ status: 200, json: inboundDetails(run, content) }),
+  );
+}
+
+/** Serves the stub source and records each request; `hold` keeps the answer back until released. */
+async function stubSource(page: Page, run: MailDetailsRun, hold?: Promise<void>) {
+  await page.unroute(MAIL_SOURCE_ROUTE);
+  await page.route(MAIL_SOURCE_ROUTE, async (route: Route) => {
+    run.sourceRequests.push(route.request().url());
+    if (hold) await hold;
+    await route.fulfill({
+      status: 200,
+      headers: { "Content-Type": "application/octet-stream" },
+      body: MAIL_SOURCE_BODY,
+    });
+  });
+}
+
+async function openMailDetails(page: Page, run: MailDetailsRun, id: string) {
+  await page.goto(`${run.emailManagementUrl}/usage/${encodeURIComponent(id)}`);
+}
+
+async function expectMailNotFoundResponse(response: Response) {
+  expect(response.status()).toBe(404);
+  const body = (await response.json()) as { errors?: Record<string, string> };
+  expect(body.errors?.MessageId).toBe("Mail not found");
+}
+
+async function savedDownload(page: Page, click: () => Promise<void>) {
+  const [download] = await Promise.all([page.waitForEvent("download"), click()]);
+  const path = await download.path();
+  return { name: download.suggestedFilename(), content: await fs.readFile(path, "utf8") };
+}
+
+async function screenshotStates(page: Page, testInfo: TestInfo, state: string) {
+  const original = page.viewportSize();
+  for (const [size, viewport] of [
+    ["1440x900", { width: 1440, height: 900 }],
+    ["390x844", { width: 390, height: 844 }],
+  ] as const) {
+    await page.setViewportSize(viewport);
+    for (const theme of ["light", "dark"] as const) {
+      // The app's ThemeProvider toggles the "dark" class on <html>; set it directly so the
+      // account's saved theme setting is left alone.
+      await page.evaluate((dark) => document.documentElement.classList.toggle("dark", dark), theme === "dark");
+      await page.screenshot({
+        path: testInfo.outputPath(`mail-details-${state}-${size}-${theme}.png`),
+        fullPage: true,
+      });
+    }
+  }
+  await page.evaluate(() => document.documentElement.classList.remove("dark"));
+  if (original) await page.setViewportSize(original);
+}
+
+/** §10 step 1 (C1): an unknown id gets the real 404 and the not-found page. */
+export async function mailDetailsNotFoundFlow(page: Page, run: MailDetailsRun) {
+  const response = page.waitForResponse(MAIL_DETAILS_ROUTE, { timeout: 30_000 });
+  await openMailDetails(page, run, `e2e-missing-${run.runId}`);
+  await expectMailNotFoundResponse(await response);
+  // The details query retries a failed read before it gives up, so the page waits for that.
+  await expect(page.getByText("Email details not found.", { exact: true })).toBeVisible({
+    timeout: 30_000,
+  });
+}
+
+/** §10 step 2 (H1 client side, H9) plus the step 9 screenshots of the normal state. */
+export async function mailDetailsNormalFlow(page: Page, run: MailDetailsRun, testInfo: TestInfo) {
+  await stubDetails(page, run, NORMAL_CONTENT);
+  await stubSource(page, run);
+  await openMailDetails(page, run, run.itemId);
+
+  await expect(page.getByTitle("Email body")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("button", { name: "Download .eml" })).toBeVisible();
+  const original = page.getByRole("tab", { name: "Original", exact: true });
+  await expect(original).toBeVisible();
+  // H9: nothing is fetched until Original is opened.
+  expect(run.sourceRequests).toHaveLength(0);
+  await screenshotStates(page, testInfo, "normal");
+
+  await original.click();
+  await expect(page.getByText("Subject: e2e", { exact: false })).toBeVisible({ timeout: 15_000 });
+  expect(run.sourceRequests).toHaveLength(1);
+  expect(run.sourceRequests[0]).toContain(`ItemId=${run.itemId}`);
+}
+
+/** §10 step 3 (H10): the .eml is the fetched source, and the loaded source is reused. */
+export async function mailDetailsEmlFlow(page: Page, run: MailDetailsRun) {
+  const saved = await savedDownload(page, () =>
+    page.getByRole("button", { name: "Download .eml" }).click(),
+  );
+  expect(saved.name).toMatch(/\.eml$/);
+  expect(saved.content).toBe(MAIL_SOURCE_BODY);
+  expect(run.sourceRequests).toHaveLength(1);
+}
+
+/** §10 step 4 (H11): a chip downloads through GetMailBoxMailAttachmentFile with the route id. */
+export async function mailDetailsAttachmentFlow(page: Page, run: MailDetailsRun) {
+  const attachmentRequests: string[] = [];
+  await page.route(MAIL_ATTACHMENT_FILE_ROUTE, async (route) => {
+    attachmentRequests.push(route.request().url());
+    await route.fulfill({
+      status: 200,
+      headers: { "Content-Type": "application/octet-stream" },
+      body: "hello",
+    });
+  });
+
+  const saved = await savedDownload(page, () =>
+    page.getByRole("button", { name: "Download e2e.txt" }).click(),
+  );
+  expect(saved.name).toBe("e2e.txt");
+  expect(saved.content).toBe("hello");
+  expect(attachmentRequests).toHaveLength(1);
+  expect(attachmentRequests[0]).toContain(`ItemId=${run.itemId}&Index=0`);
+}
+
+/** §10 step 5 (C1, C10): without the file stubs the real API answers 404 and the page toasts. */
+export async function mailDetailsFileNotFoundFlow(page: Page) {
+  await page.unroute(MAIL_SOURCE_ROUTE);
+  await page.unroute(MAIL_ATTACHMENT_FILE_ROUTE);
+  await page.reload();
+  const emlButton = page.getByRole("button", { name: "Download .eml" });
+  await expect(emlButton).toBeVisible({ timeout: 30_000 });
+
+  const sourceResponse = page.waitForResponse(MAIL_SOURCE_ROUTE, { timeout: 30_000 });
+  await emlButton.click();
+  await expectMailNotFoundResponse(await sourceResponse);
+  await expect(page.getByText("Download failed", { exact: true })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(SOURCE_FAILED, { exact: true })).toBeVisible();
+  await expect(emlButton).toBeEnabled();
+
+  // The toaster shows one toast at a time; the attachment's own description replaces it.
+  const fileResponse = page.waitForResponse(MAIL_ATTACHMENT_FILE_ROUTE, { timeout: 30_000 });
+  await page.getByRole("button", { name: "Download e2e.txt" }).click();
+  await expectMailNotFoundResponse(await fileResponse);
+  await expect(page.getByText("Download failed", { exact: true })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("e2e.txt could not be downloaded", { exact: false })).toBeVisible();
+}
+
+/** E11 (C3): a non-integer Index is rejected by model binding with a 400 on the real API. */
+export async function mailAttachmentFileBadIndexFlow(page: Page, run: MailDetailsRun) {
+  // Reuse the app's own API origin and headers, read from its details request.
+  const detailsRequest = page.waitForRequest(MAIL_DETAILS_ROUTE, { timeout: 30_000 });
+  await page.reload();
+  const request = await detailsRequest;
+  const apiUrl = new URL(request.url());
+  apiUrl.pathname = apiUrl.pathname.replace(/GetMailBoxMail$/, "GetMailBoxMailAttachmentFile");
+  apiUrl.search = `?ItemId=${encodeURIComponent(run.itemId)}&Index=abc`;
+  const headers = Object.fromEntries(
+    Object.entries(await request.allHeaders()).filter(
+      ([name]) => name.startsWith("x-") || name === "accept" || name === "authorization",
+    ),
+  );
+
+  const response = await page.request.get(apiUrl.toString(), { headers });
+  expect(response.status()).toBe(400);
+  const body = (await response.json()) as { errors?: Record<string, unknown> };
+  expect(body.errors).toHaveProperty("Index");
+}
+
+/** §10 step 6 (C10): an older API answering with the SPA shell. */
+export async function mailDetailsOlderApiFlow(page: Page) {
+  await page.unroute(MAIL_SOURCE_ROUTE);
+  await page.route(MAIL_SOURCE_ROUTE, (route) =>
+    route.fulfill({
+      status: 200,
+      headers: { "Content-Type": "text/html" },
+      body: "<!doctype html><html></html>",
+    }),
+  );
+  await page.reload();
+  const original = page.getByRole("tab", { name: "Original", exact: true });
+  await expect(original).toBeVisible({ timeout: 30_000 });
+  await original.click();
+  await expect(page.getByText("Download failed", { exact: true })).toBeVisible({ timeout: 15_000 });
+  // Once in the toast and once in the Original panel.
+  await expect(page.getByText(SOURCE_FAILED, { exact: true })).toHaveCount(2);
+}
+
+/** §10 step 9: the Original view while its source is still loading. */
+export async function mailDetailsOriginalLoadingScreenshots(
+  page: Page,
+  run: MailDetailsRun,
+  testInfo: TestInfo,
+) {
+  let release = () => {};
+  const hold = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await stubDetails(page, run, NORMAL_CONTENT);
+  await stubSource(page, run, hold);
+  await page.reload();
+  const original = page.getByRole("tab", { name: "Original", exact: true });
+  await expect(original).toBeVisible({ timeout: 30_000 });
+  const requestsBefore = run.sourceRequests.length;
+  await original.click();
+  await expect.poll(() => run.sourceRequests.length).toBe(requestsBefore + 1);
+  await expect(page.getByText("Subject: e2e", { exact: false })).toHaveCount(0);
+  await screenshotStates(page, testInfo, "original-loading");
+  release();
+  await expect(page.getByText("Subject: e2e", { exact: false })).toBeVisible({ timeout: 15_000 });
+  await page.unroute(MAIL_SOURCE_ROUTE);
+}
+
+/** §10 step 7 (H12) plus its step 9 screenshots. */
+export async function mailDetailsTooLargeFlow(page: Page, run: MailDetailsRun, testInfo: TestInfo) {
+  await stubDetails(page, run, TOO_LARGE_CONTENT);
+  await page.reload();
+  await expect(page.getByText(TOO_LARGE, { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("button", { name: "Download .eml" })).toBeVisible();
+  for (const tab of ["Formatted", "Plain text", "Original"]) {
+    await expect(page.getByRole("tab", { name: tab, exact: true })).toHaveCount(0);
+  }
+  await expect(page.getByTitle("Email body")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Download e2e/ })).toHaveCount(0);
+  await screenshotStates(page, testInfo, "too-large");
+  await page.unroute(MAIL_DETAILS_ROUTE);
 }
