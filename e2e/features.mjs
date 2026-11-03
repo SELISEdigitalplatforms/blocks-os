@@ -103,6 +103,12 @@ export const OS_FEATURES = [
     enabled: true,
     spec: "tests/03-email-management/email-management-flow.spec.ts",
   },
+  {
+    id: "mail-template-subject",
+    name: "Email Management — template subject required (#726)",
+    enabled: true,
+    spec: "tests/03-email-management/mail-template-subject-726.spec.ts",
+  },
 
   // Identity & Access (sidebar submenu order)
   {
