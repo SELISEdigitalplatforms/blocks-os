@@ -6,12 +6,12 @@ using Microsoft.Extensions.DependencyInjection;
 namespace XUnitTest.Secrets
 {
     /// <summary>
-    /// Which value store <c>AddBlocksSecrets()</c> picks, and that swapping it is a configuration
-    /// change rather than a code change.
+    /// <c>AddBlocksSecrets()</c> keeps values in Key Vault only. There is no database value store
+    /// and no setting that switches to one.
     /// </summary>
     public class SecretValueStoreSelectionTests
     {
-        private const string StoreKey = "Secrets__ValueStore";
+        private const string LegacyStoreKey = "Secrets__ValueStore";
         private const string VaultKey = "KeyVault__KeyVaultUrl";
 
         /// <summary>
@@ -20,112 +20,78 @@ namespace XUnitTest.Secrets
         /// </summary>
         private sealed class EnvScope : IDisposable
         {
-            private readonly string? _store = Environment.GetEnvironmentVariable(StoreKey);
+            private readonly string? _store = Environment.GetEnvironmentVariable(LegacyStoreKey);
             private readonly string? _vault = Environment.GetEnvironmentVariable(VaultKey);
 
             public EnvScope(string? store, string? vault)
             {
-                Environment.SetEnvironmentVariable(StoreKey, store);
+                Environment.SetEnvironmentVariable(LegacyStoreKey, store);
                 Environment.SetEnvironmentVariable(VaultKey, vault);
             }
 
             public void Dispose()
             {
-                Environment.SetEnvironmentVariable(StoreKey, _store);
+                Environment.SetEnvironmentVariable(LegacyStoreKey, _store);
                 Environment.SetEnvironmentVariable(VaultKey, _vault);
             }
         }
 
-        [Fact]
-        public void NoVaultConfigured_FallsBackToTheDatabaseStore()
-        {
-            // The point of the fallback: an environment with no vault gets a working store instead
-            // of a startup failure, and had nothing in a vault to lose.
-            using var _ = new EnvScope(store: null, vault: null);
-
-            SecretsServiceCollectionExtensions.ResolveValueStoreType()
-                .Should().Be(SecretValueStoreType.Database);
-        }
-
-        [Fact]
-        public void VaultConfigured_KeepsUsingKeyVault()
-        {
-            // No existing environment changes behaviour, and values already in a vault stay
-            // readable, because the two stores keep their bytes in different places.
-            using var _ = new EnvScope(store: null, vault: "https://example-vault.vault.azure.net/");
-
-            SecretsServiceCollectionExtensions.ResolveValueStoreType()
-                .Should().Be(SecretValueStoreType.KeyVault);
-        }
-
-        [Theory]
-        [InlineData("Database", SecretValueStoreType.Database)]
-        [InlineData("database", SecretValueStoreType.Database)]
-        [InlineData("KeyVault", SecretValueStoreType.KeyVault)]
-        [InlineData("keyvault", SecretValueStoreType.KeyVault)]
-        public void ExplicitSetting_OverridesTheVaultInference(string configured, SecretValueStoreType expected)
-        {
-            using var _ = new EnvScope(store: configured, vault: "https://example-vault.vault.azure.net/");
-
-            SecretsServiceCollectionExtensions.ResolveValueStoreType().Should().Be(expected);
-        }
-
-        [Fact]
-        public void UnrecognisedSetting_FallsBackToTheVaultInference()
-        {
-            using var _ = new EnvScope(store: "nonsense", vault: "https://example-vault.vault.azure.net/");
-
-            SecretsServiceCollectionExtensions.ResolveValueStoreType()
-                .Should().Be(SecretValueStoreType.KeyVault);
-        }
-
-        [Fact]
-        public void DatabaseStore_IsRegisteredScoped()
+        private static ServiceDescriptor ValueStoreDescriptor()
         {
             var services = new ServiceCollection();
-            services.AddBlocksSecrets(SecretValueStoreType.Database);
-
-            var descriptor = services.Single(d => d.ServiceType == typeof(ISecretValueStore));
-
-            descriptor.ImplementationType.Should().Be(typeof(MongoSecretValueStore));
-
-            // Scoped, not singleton: it reaches Mongo through the scoped SecretStoreContext, so a
-            // singleton would capture the first caller's store context.
-            descriptor.Lifetime.Should().Be(ServiceLifetime.Scoped);
+            services.AddBlocksSecrets();
+            return services.Single(d => d.ServiceType == typeof(ISecretValueStore));
         }
 
         [Fact]
-        public void KeyVaultStore_StaysSingleton()
+        public void KeyVaultStore_IsRegisteredAsSingleton()
         {
-            var services = new ServiceCollection();
-            services.AddBlocksSecrets(SecretValueStoreType.KeyVault);
-
-            var descriptor = services.Single(d => d.ServiceType == typeof(ISecretValueStore));
+            var descriptor = ValueStoreDescriptor();
 
             descriptor.ImplementationType.Should().Be(typeof(KeyVaultSecretValueStore));
             descriptor.Lifetime.Should().Be(ServiceLifetime.Singleton);
         }
 
-        [Fact]
-        public void EitherStore_LeavesTheRestOfTheContractUnchanged()
+        [Theory]
+        [InlineData(null, null)]
+        [InlineData("Database", null)]
+        [InlineData("database", "https://example-vault.vault.azure.net/")]
+        public void NoSettingOrMissingVault_NeverSelectsAnotherStore(string? store, string? vault)
         {
-            // The swap is the value store and nothing else — ISecretService and its dependencies
-            // are identical either way, which is what makes this a configuration change.
-            var database = new ServiceCollection();
-            database.AddBlocksSecrets(SecretValueStoreType.Database);
+            // Values must never land in the database: no vault URL and the old switch both still
+            // resolve to Key Vault.
+            using var _ = new EnvScope(store, vault);
 
-            var vault = new ServiceCollection();
-            vault.AddBlocksSecrets(SecretValueStoreType.KeyVault);
+            ValueStoreDescriptor().ImplementationType.Should().Be(typeof(KeyVaultSecretValueStore));
+        }
 
-            static IEnumerable<(Type Service, ServiceLifetime Lifetime)> Shape(ServiceCollection services) =>
-                services
-                    .Where(d => d.ServiceType != typeof(ISecretValueStore))
-                    .Select(d => (d.ServiceType, d.Lifetime))
-                    .OrderBy(d => d.ServiceType.FullName);
+        [Fact]
+        public void Registration_DoesNotBuildTheVaultClient()
+        {
+            // A host without a vault must still start: the vault store is only built on first use.
+            using var _ = new EnvScope(store: null, vault: null);
 
-            Shape(database).Should().BeEquivalentTo(Shape(vault));
+            var act = () => new ServiceCollection().AddBlocksSecrets().BuildServiceProvider();
 
-            database.Should().Contain(d => d.ServiceType == typeof(ISecretService) && d.Lifetime == ServiceLifetime.Scoped);
+            act.Should().NotThrow();
+        }
+
+        [Fact]
+        public void AssemblyHasNoDatabaseValueStore()
+        {
+            var stores = typeof(ISecretValueStore).Assembly.GetTypes()
+                .Where(t => typeof(ISecretValueStore).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
+
+            stores.Should().ContainSingle().Which.Should().Be(typeof(KeyVaultSecretValueStore));
+        }
+
+        [Fact]
+        public void SecretService_StaysScoped()
+        {
+            var services = new ServiceCollection();
+            services.AddBlocksSecrets();
+
+            services.Should().Contain(d => d.ServiceType == typeof(ISecretService) && d.Lifetime == ServiceLifetime.Scoped);
         }
     }
 }
