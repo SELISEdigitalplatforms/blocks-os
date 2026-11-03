@@ -248,6 +248,8 @@ namespace XUnitTest.Controllers
         [InlineData(typeof(MailController), nameof(MailController.GetMailBoxMails), "blocks-os::mailbox::gets")]
         [InlineData(typeof(MailController), nameof(MailController.GetMailBoxMail), "blocks-os::mailbox::gets")]
         [InlineData(typeof(MailController), nameof(MailController.GetMailBoxMailAttachment), "blocks-os::mailbox::gets")]
+        [InlineData(typeof(MailController), nameof(MailController.GetMailBoxMailSource), "blocks-os::mailbox::gets")]
+        [InlineData(typeof(MailController), nameof(MailController.GetMailBoxMailAttachmentFile), "blocks-os::mailbox::gets")]
         [InlineData(typeof(MigrationController), nameof(MigrationController.Migrate), "blocks-os::migration::migrate")]
         [InlineData(typeof(MigrationController), nameof(MigrationController.Verify), "blocks-os::migration::migrate")]
         [InlineData(typeof(MigrationController), nameof(MigrationController.GetMigrationStatus), "blocks-os::migration::gets")]
