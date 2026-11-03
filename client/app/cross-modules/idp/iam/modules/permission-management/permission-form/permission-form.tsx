@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { ChipsInput, ChipsInputField, ChipsInputList } from "@/components/chip-input/chips-input";
 import { Button } from "@/components/ui-kits/button/button";
 import {
@@ -23,7 +24,7 @@ import {
   permissionFormDefaultValue,
   permissionFormSchema,
   PermissionFormSchemaType,
-  BUILTIN_PERMISSION_READONLY_MESSAGE,
+  getBuiltinPermissionReadonlyMessage,
   isPermissionFormReadOnly,
 } from "./utils";
 import { Card, CardContent, CardFooter } from "@/components/ui-kits/card/card";
@@ -48,6 +49,7 @@ export const PermissionForm = ({
   showTags = true,
   readOnlyReason,
 }: PermissionFormProps) => {
+  const { t } = useT("os.idp.permissions");
   const isReadOnly = isPermissionFormReadOnly(isBuiltIn) || Boolean(readOnlyReason);
   const form = useForm({
     values: values || permissionFormDefaultValue,
@@ -61,8 +63,13 @@ export const PermissionForm = ({
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 gap-4">
         {isReadOnly ? (
-          <Banner variant="warning" title="Read-only permission" className="mb-0" compact={false}>
-            {readOnlyReason ?? BUILTIN_PERMISSION_READONLY_MESSAGE}
+          <Banner
+            variant="warning"
+            title={t("PERMISSION_FORM.READ_ONLY_TITLE")}
+            className="mb-0"
+            compact={false}
+          >
+            {readOnlyReason ?? getBuiltinPermissionReadonlyMessage()}
           </Banner>
         ) : null}
         <Card>
@@ -73,10 +80,14 @@ export const PermissionForm = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    Name <span className="text-red-500">*</span>
+                    {t("common:NAME")} <span className="text-red-500">*</span>
                   </FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Enter name" disabled={isReadOnly} />
+                    <Input
+                      {...field}
+                      placeholder={t("PERMISSION_FORM.NAME_PLACEHOLDER")}
+                      disabled={isReadOnly}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -88,7 +99,7 @@ export const PermissionForm = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    Type <span className="text-red-500">*</span>
+                    {t("common:TYPE")} <span className="text-red-500">*</span>
                   </FormLabel>
                   <FormControl>
                     <Select
@@ -97,7 +108,7 @@ export const PermissionForm = ({
                       disabled={isReadOnly}
                     >
                       <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                        <SelectValue placeholder="Select Type" />
+                        <SelectValue placeholder={t("PERMISSION_FORM.SELECT_TYPE")} />
                       </SelectTrigger>
                       <SelectContent>
                         {RESOURCE_TYPE.map((item) => (
@@ -118,13 +129,15 @@ export const PermissionForm = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    Resource <span className="text-red-500">*</span>
+                    {t("PERMISSION_FORM.RESOURCE_LABEL")} <span className="text-red-500">*</span>
                   </FormLabel>
                   <FormControl>
                     <Input
                       {...field}
                       placeholder={
-                        resourceType === 1 ? "Enter service::controller::name" : "Enter resource"
+                        resourceType === 1
+                          ? t("PERMISSION_FORM.RESOURCE_PLACEHOLDER_SERVICE")
+                          : t("PERMISSION_FORM.RESOURCE_PLACEHOLDER")
                       }
                       disabled={isReadOnly}
                     />
@@ -139,7 +152,7 @@ export const PermissionForm = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    Group <span className="text-red-500">*</span>
+                    {t("PERMISSION_FORM.GROUP_LABEL")} <span className="text-red-500">*</span>
                   </FormLabel>
                   <FormControl>
                     <PermissionGroupCombobox
@@ -160,7 +173,7 @@ export const PermissionForm = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    Severity <span className="text-red-500">*</span>
+                    {t("PERMISSION_FORM.SEVERITY_LABEL")} <span className="text-red-500">*</span>
                   </FormLabel>
                   <FormControl>
                     <Select
@@ -173,7 +186,7 @@ export const PermissionForm = ({
                       disabled={isReadOnly}
                     >
                       <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                        <SelectValue placeholder="Select Severity" />
+                        <SelectValue placeholder={t("PERMISSION_FORM.SELECT_SEVERITY")} />
                       </SelectTrigger>
                       <SelectContent>
                         {PERMISSION_SEVERITY_OPTIONS.map((item) => (
@@ -194,7 +207,7 @@ export const PermissionForm = ({
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tags</FormLabel>
+                    <FormLabel>{t("PERMISSION_FORM.TAGS_LABEL")}</FormLabel>
                     <FormControl>
                       <div className={isReadOnly ? "pointer-events-none opacity-60" : undefined}>
                         <ChipsInput {...field}>
@@ -213,9 +226,13 @@ export const PermissionForm = ({
               control={form.control}
               render={({ field }) => (
                 <FormItem className=" md:col-span-2">
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>{t("common:DESCRIPTION")}</FormLabel>
                   <FormControl>
-                    <Textarea {...field} placeholder="Enter description" disabled={isReadOnly} />
+                    <Textarea
+                      {...field}
+                      placeholder={t("PERMISSION_FORM.DESCRIPTION_PLACEHOLDER")}
+                      disabled={isReadOnly}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -244,7 +261,7 @@ export const PermissionForm = ({
           </CardContent>
           <CardFooter className="mt-4 justify-end">
             <Button className="min-w-[80px]" type="submit" disabled={isPending || isReadOnly}>
-              Save
+              {t("common:SAVE")}
             </Button>
           </CardFooter>
         </Card>

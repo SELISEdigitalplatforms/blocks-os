@@ -13,6 +13,7 @@ import { COUPON_CODE_LENGTH } from "../constants/endpoint.constant";
 import { useRedeemCoupon } from "../hooks/use-ai-credits";
 import { getCouponErrorMessage } from "../utils/coupon-error";
 import { formatCouponCode, formatCredits, formatLongDate } from "../utils/format";
+import { useT } from "@seliseblocks/genesis-os";
 
 type Redeemed = { code: string; credits: number; validUntil: string | null };
 
@@ -27,6 +28,7 @@ const CodeSlot = ({ index, invalid }: { index: number; invalid: boolean }) => (
 );
 
 export const RedeemCouponCard = () => {
+  const { t } = useT("os.ai-credits");
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [redeemed, setRedeemed] = useState<Redeemed | null>(null);
@@ -47,7 +49,11 @@ export const RedeemCouponCard = () => {
     event.preventDefault();
     if (isPending) return;
     if (code.length < COUPON_CODE_LENGTH) {
-      setError(code ? "Enter all 8 characters of the code." : "Enter a voucher code.");
+      setError(
+        code
+          ? t("REDEEM_COUPON_CARD.ENTER_ALL_8_CHARACTERS_OF")
+          : t("REDEEM_COUPON_CARD.ENTER_A_VOUCHER_CODE"),
+      );
       return;
     }
     setRedeemed(null);
@@ -67,16 +73,16 @@ export const RedeemCouponCard = () => {
     >
       <div className="flex flex-col gap-0.5">
         <h2 id="ai-credits-redeem-title" className="text-base font-semibold text-high-emphasis">
-          Redeem a voucher
+          {t("REDEEM_COUPON_CARD.REDEEM_A_VOUCHER")}
         </h2>
         <p className="text-sm text-medium-emphasis">
-          Enter the 8-character code from your voucher.
+          {t("REDEEM_COUPON_CARD.ENTER_THE_8_CHARACTER_CODE")}
         </p>
       </div>
 
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-2">
         <span id="ai-credits-code-label" className="text-sm font-semibold text-high-emphasis">
-          Voucher code
+          {t("REDEEM_COUPON_CARD.VOUCHER_CODE")}
         </span>
         <div className="flex flex-wrap items-center gap-4">
           <InputOTP
@@ -113,11 +119,11 @@ export const RedeemCouponCard = () => {
             disabled={isPending || (!code && !error && !redeemed)}
             className="h-12 px-6"
           >
-            Clear
+            {t("common:CLEAR")}
           </Button>
           <Button type="submit" disabled={isPending} className="h-12 px-6">
             {isPending && <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />}
-            {isPending ? "Redeeming…" : "Redeem"}
+            {isPending ? t("REDEEM_COUPON_CARD.REDEEMING") : t("REDEEM_COUPON_CARD.REDEEM")}
           </Button>
         </div>
         {error && (
@@ -137,11 +143,11 @@ export const RedeemCouponCard = () => {
           <CheckCircle2 aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-success" />
           <span>
             <strong className="font-semibold">
-              {formatCredits(redeemed.credits)} credits added.
+              {t("REDEEM_COUPON_CARD.CREDITS_ADDED", { credits: formatCredits(redeemed.credits) })}
             </strong>{" "}
-            Voucher {formatCouponCode(redeemed.code)} is redeemed.
+            {t("REDEEM_COUPON_CARD.VOUCHER_REDEEMED", { code: formatCouponCode(redeemed.code) })}
             {redeemed.validUntil
-              ? ` The credits are valid until ${formatLongDate(redeemed.validUntil)}.`
+              ? ` ${t("REDEEM_COUPON_CARD.VALID_UNTIL", { date: formatLongDate(redeemed.validUntil) })}`
               : ""}
           </span>
         </output>

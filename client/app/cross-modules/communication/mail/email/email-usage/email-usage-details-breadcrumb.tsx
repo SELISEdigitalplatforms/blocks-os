@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
+import { useT } from "@seliseblocks/genesis-os";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -17,6 +18,7 @@ export const EmailUsageDetailsBreadcrumb = ({
   id,
   isInbound,
 }: EmailUsageDetailsBreadcrumbProps) => {
+  const { t } = useT("os.communication.mail");
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const backLink = scoped(
@@ -27,7 +29,7 @@ export const EmailUsageDetailsBreadcrumb = ({
       <BreadcrumbList>
         <BreadcrumbItem>
           <BreadcrumbLink asChild>
-            <button onClick={() => navigate(backLink)}>Email</button>
+            <button onClick={() => navigate(backLink)}>{t("common:EMAIL")}</button>
           </BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbSeparator />

@@ -9,6 +9,7 @@ import {
 } from "@/components/ui-kits/dialog/dialog";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 import { useRevokeAccess } from "@blocks-idp/iam/hooks/use-user";
 import { IMembership } from "@blocks-idp/iam/models/user";
 import { NotifyUserCheckbox } from "@blocks-idp/iam/components/notify-user-checkbox";
@@ -31,6 +32,7 @@ export const RemoveMembership = ({
   userId,
   onSuccess,
 }: RemoveMembershipProps) => {
+  const { t } = useT("os.idp.users");
   const { mutateAsync, isPending } = useRevokeAccess({ id: userId });
   const [notifyUser, setNotifyUser] = useState(true);
 
@@ -49,7 +51,7 @@ export const RemoveMembership = ({
         showErrorToast({ errors: res.errors });
         return;
       }
-      showSuccessToast({ description: "Organization membership removed successfully" });
+      showSuccessToast({ description: t("REMOVE_MEMBERSHIP.REMOVED") });
       handleOpenChange(false);
       onSuccess?.();
     } catch (error) {
@@ -57,7 +59,7 @@ export const RemoveMembership = ({
         errors:
           typeof error === "object" && error !== null && "errors" in error
             ? (error as { errors: unknown }).errors
-            : "Something went wrong",
+            : t("REMOVE_MEMBERSHIP.SOMETHING_WENT_WRONG"),
       });
     }
   };
@@ -66,10 +68,9 @@ export const RemoveMembership = ({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Remove organization membership</DialogTitle>
+          <DialogTitle>{t("REMOVE_MEMBERSHIP.TITLE")}</DialogTitle>
           <DialogDescription>
-            Are you sure you want to remove the user from &quot;{organizationName}&quot;? This will
-            revoke all roles associated with this organization.
+            {t("REMOVE_MEMBERSHIP.DESCRIPTION", { organization: organizationName })}
           </DialogDescription>
         </DialogHeader>
 
@@ -77,15 +78,15 @@ export const RemoveMembership = ({
           checked={notifyUser}
           onCheckedChange={setNotifyUser}
           disabled={isPending}
-          description="Send them an email saying they were removed from this organization."
+          description={t("REMOVE_MEMBERSHIP.NOTIFY_DESCRIPTION")}
         />
 
         <DialogFooter>
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
-            Cancel
+            {t("common:CANCEL")}
           </Button>
           <Button variant="destructive" onClick={onConfirm} disabled={isPending}>
-            {isPending ? "Removing..." : "Remove"}
+            {isPending ? t("REMOVE_MEMBERSHIP.REMOVING") : t("common:REMOVE")}
           </Button>
         </DialogFooter>
       </DialogContent>

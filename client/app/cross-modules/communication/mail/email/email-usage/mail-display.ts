@@ -1,4 +1,5 @@
 import { withStyleNonce } from "@/lib/csp-nonce";
+import { tStatic } from "@seliseblocks/genesis-os";
 /**
  * Presentation helpers shared by the mail list and the mail details page. Pure
  * functions, so the formatting rules can be tested without rendering.
@@ -81,8 +82,32 @@ export const getAvatarTone = (key: string): string => {
 };
 
 const pad = (value: number) => value.toString().padStart(2, "0");
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MAIL_MODULE = "os.communication.mail";
+const monthName = (index: number) =>
+  [
+    tStatic(MAIL_MODULE, "MAIL_DISPLAY.MONTH_JAN"),
+    tStatic(MAIL_MODULE, "MAIL_DISPLAY.MONTH_FEB"),
+    tStatic(MAIL_MODULE, "MAIL_DISPLAY.MONTH_MAR"),
+    tStatic(MAIL_MODULE, "MAIL_DISPLAY.MONTH_APR"),
+    tStatic(MAIL_MODULE, "MAIL_DISPLAY.MONTH_MAY"),
+    tStatic(MAIL_MODULE, "MAIL_DISPLAY.MONTH_JUN"),
+    tStatic(MAIL_MODULE, "MAIL_DISPLAY.MONTH_JUL"),
+    tStatic(MAIL_MODULE, "MAIL_DISPLAY.MONTH_AUG"),
+    tStatic(MAIL_MODULE, "MAIL_DISPLAY.MONTH_SEP"),
+    tStatic(MAIL_MODULE, "MAIL_DISPLAY.MONTH_OCT"),
+    tStatic(MAIL_MODULE, "MAIL_DISPLAY.MONTH_NOV"),
+    tStatic(MAIL_MODULE, "MAIL_DISPLAY.MONTH_DEC"),
+  ][index];
+const weekdayName = (index: number) =>
+  [
+    tStatic(MAIL_MODULE, "MAIL_DISPLAY.WEEKDAY_SUN"),
+    tStatic(MAIL_MODULE, "MAIL_DISPLAY.WEEKDAY_MON"),
+    tStatic(MAIL_MODULE, "MAIL_DISPLAY.WEEKDAY_TUE"),
+    tStatic(MAIL_MODULE, "MAIL_DISPLAY.WEEKDAY_WED"),
+    tStatic(MAIL_MODULE, "MAIL_DISPLAY.WEEKDAY_THU"),
+    tStatic(MAIL_MODULE, "MAIL_DISPLAY.WEEKDAY_FRI"),
+    tStatic(MAIL_MODULE, "MAIL_DISPLAY.WEEKDAY_SAT"),
+  ][index];
 
 /**
  * Inbox-style date: the time for today, "23 Sep" for this year, and the full
@@ -97,7 +122,7 @@ export const formatMailDate = (value: string | Date, now: Date = new Date()): st
     date.getDate() === now.getDate();
   if (sameDay) return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
   if (date.getFullYear() === now.getFullYear()) {
-    return `${date.getDate()} ${MONTHS[date.getMonth()]}`;
+    return `${date.getDate()} ${monthName(date.getMonth())}`;
   }
   return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
 };
@@ -105,7 +130,7 @@ export const formatMailDate = (value: string | Date, now: Date = new Date()): st
 export const formatMailDateLong = (value: string | Date): string => {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
-  return `${WEEKDAYS[date.getDay()]}, ${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}, ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return `${weekdayName(date.getDay())}, ${date.getDate()} ${monthName(date.getMonth())} ${date.getFullYear()}, ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 
 /**

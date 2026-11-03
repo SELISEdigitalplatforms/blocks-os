@@ -24,9 +24,12 @@ import {
   type IOption,
 } from "../../constants/push-ui.constant";
 import type { PushOptionValues } from "../../utils/push-options";
+import { useNotificationT } from "../../i18n";
 import { HelpText } from "./form-row";
+import { useT } from "@seliseblocks/genesis-os";
 
 function Field({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
+  useNotificationT();
   return (
     <div className="flex flex-col gap-1.5">
       <span className="text-xs font-medium text-medium-emphasis">{label}</span>
@@ -44,6 +47,7 @@ interface OptionSelectProps {
 
 /** A select whose first choice is "Default" (empty). A stored value that is not in the list stays visible. */
 function OptionSelect({ label, value, options, onChange }: Readonly<OptionSelectProps>) {
+  useNotificationT();
   const known = !value || options.some((option) => option.value === value);
   const all = known ? options : [...options, { value, label: value }];
   return (
@@ -103,6 +107,7 @@ interface PanelProps {
 }
 
 function AndroidPanel({ values, onChange }: Readonly<PanelProps>) {
+  const { t } = useT("os.communication.notification");
   const a = values.android;
   const set = (patch: Partial<typeof a>) => onChange({ ...values, android: { ...a, ...patch } });
   return (
@@ -138,7 +143,7 @@ function AndroidPanel({ values, onChange }: Readonly<PanelProps>) {
         label={ANDROID_FIELDS.color}
         value={a.color}
         maxLength={7}
-        placeholder="#0B5CAD"
+        placeholder={t("PUSH_OPTIONS_FIELD.N_0B5CAD")}
         onChange={(color) => set({ color })}
       />
     </div>
@@ -230,6 +235,7 @@ const PANELS: Record<PushPlatform, (props: Readonly<PanelProps>) => ReactNode> =
 
 /** Optional per-platform options in tabs. Empty fields use the defaults. */
 export function PushOptionsField({ values, onChange }: Readonly<PanelProps>) {
+  useNotificationT();
   return (
     <div className="flex flex-col gap-2">
       <HelpText>{PUSH_FORM_TEXT.optionsHelp}</HelpText>

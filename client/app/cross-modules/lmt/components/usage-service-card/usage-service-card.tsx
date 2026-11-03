@@ -18,6 +18,7 @@ import {
 } from "@/components/ui-kits/select/select";
 import { Info, Logs } from "lucide-react";
 import { Link } from "react-router";
+import { useT } from "@seliseblocks/genesis-os";
 interface ServiceCardProps {
   isLoading: boolean;
   name: string;
@@ -55,6 +56,7 @@ export const UsageServiceCard: React.FC<ServiceCardProps> = ({
   metrics,
   isLoading,
 }) => {
+  const { t } = useT("os.lmt");
   const [selected, setSelected] = useState<"api" | "worker">("api");
   if (isLoading) return <UsageServiceCardSkelton name={name} />;
   const currentMatrix = metrics[selected];
@@ -64,7 +66,9 @@ export const UsageServiceCard: React.FC<ServiceCardProps> = ({
         <div className="mb-4 flex items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="truncate text-sm font-semibold text-high-emphasis">{name}</div>
-            <div className="mt-0.5 text-xs text-medium-emphasis">Requests &amp; performance</div>
+            <div className="mt-0.5 text-xs text-medium-emphasis">
+              {t("USAGE_SERVICE_CARD.REQUESTS_PERFORMANCE")}
+            </div>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
             <Select value={selected} onValueChange={(v) => setSelected(v as "api" | "worker")}>
@@ -73,10 +77,10 @@ export const UsageServiceCard: React.FC<ServiceCardProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="api" className="text-xs">
-                  API
+                  {t("USAGE_SERVICE_CARD.API")}
                 </SelectItem>
                 <SelectItem value="worker" className="text-xs">
-                  Worker
+                  {t("USAGE_SERVICE_CARD.WORKER")}
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -84,14 +88,14 @@ export const UsageServiceCard: React.FC<ServiceCardProps> = ({
               <Link
                 to={logLink}
                 className="flex h-7 w-7 items-center justify-center rounded-lg border border-border/70 bg-muted/40 text-medium-emphasis transition-colors hover:bg-background hover:text-high-emphasis hover:shadow-xs"
-                title="View logs"
+                title={t("USAGE_SERVICE_CARD.VIEW_LOGS")}
               >
                 <Logs className="h-3.5 w-3.5" />
               </Link>
             ) : (
               <div
                 className="flex h-7 w-7 cursor-not-allowed items-center justify-center rounded-lg border border-dashed border-border/70 text-muted-foreground opacity-50"
-                title="Logs unavailable"
+                title={t("USAGE_SERVICE_CARD.LOGS_UNAVAILABLE")}
               >
                 <Logs className="h-3.5 w-3.5" />
               </div>
@@ -100,7 +104,9 @@ export const UsageServiceCard: React.FC<ServiceCardProps> = ({
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div className="flex flex-col justify-between rounded-lg bg-muted p-3">
-            <span className="text-xs text-medium-emphasis">API Calls</span>
+            <span className="text-xs text-medium-emphasis">
+              {t("USAGE_SERVICE_CARD.API_CALLS")}
+            </span>
             <div>
               <div className="text-xl font-bold text-high-emphasis">
                 {abbreviateNumber(currentMatrix.TotalRequests)}
@@ -108,10 +114,12 @@ export const UsageServiceCard: React.FC<ServiceCardProps> = ({
               {selected === "api" && (
                 <div className="mt-1 flex items-center gap-1.5 text-[11px]">
                   <span className="font-medium text-green-600">
-                    {currentMatrix.successRate}% ok
+                    {t("USAGE_SERVICE_CARD.OK", { successRate: currentMatrix.successRate })}
                   </span>
                   <span className="text-border">·</span>
-                  <span className="font-medium text-red-500">{currentMatrix.errorRate}% err</span>
+                  <span className="font-medium text-red-500">
+                    {t("USAGE_SERVICE_CARD.ERR", { errorRate: currentMatrix.errorRate })}
+                  </span>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -120,7 +128,7 @@ export const UsageServiceCard: React.FC<ServiceCardProps> = ({
                       <TooltipContent>
                         <div className="grid grid-cols-2 gap-6">
                           <div className="space-y-1">
-                            <div className="text-xs font-semibold">Success</div>
+                            <div className="text-xs font-semibold">{t("common:SUCCESS")}</div>
                             {[
                               ["1xx", currentMatrix.Status1xx],
                               ["2xx", currentMatrix.Status2xx],
@@ -133,7 +141,9 @@ export const UsageServiceCard: React.FC<ServiceCardProps> = ({
                             ))}
                           </div>
                           <div className="space-y-1">
-                            <div className="text-xs font-semibold">Errors</div>
+                            <div className="text-xs font-semibold">
+                              {t("USAGE_SERVICE_CARD.ERRORS")}
+                            </div>
                             {[
                               ["4xx", currentMatrix.Status4xx],
                               ["5xx", currentMatrix.Status5xx],
@@ -153,7 +163,9 @@ export const UsageServiceCard: React.FC<ServiceCardProps> = ({
             </div>
           </div>
           <div className="flex flex-col justify-between rounded-lg bg-muted p-3">
-            <span className="text-xs text-medium-emphasis">Avg Duration</span>
+            <span className="text-xs text-medium-emphasis">
+              {t("USAGE_SERVICE_CARD.AVG_DURATION")}
+            </span>
             <div className="text-xl font-bold text-high-emphasis">
               {abbreviateDurationMs(currentMatrix.AverageDuration)}
             </div>
@@ -161,9 +173,18 @@ export const UsageServiceCard: React.FC<ServiceCardProps> = ({
         </div>
         <div className="mt-3 divide-y divide-border/50">
           {[
-            { label: "Calls / min", value: String(currentMatrix.callsPerMinute) },
-            { label: "Peak Response", value: abbreviateDurationMs(currentMatrix.PeakDuration) },
-            { label: "Throughput", value: abbreviateBytes(currentMatrix.TotalThroughput || 0) },
+            {
+              label: t("USAGE_SERVICE_CARD.CALLS_MIN"),
+              value: String(currentMatrix.callsPerMinute),
+            },
+            {
+              label: t("USAGE_SERVICE_CARD.PEAK_RESPONSE"),
+              value: abbreviateDurationMs(currentMatrix.PeakDuration),
+            },
+            {
+              label: t("USAGE_SERVICE_CARD.THROUGHPUT"),
+              value: abbreviateBytes(currentMatrix.TotalThroughput || 0),
+            },
           ].map(({ label, value }) => (
             <div key={label} className="flex items-center justify-between py-1.5">
               <span className="text-xs text-medium-emphasis">{label}</span>

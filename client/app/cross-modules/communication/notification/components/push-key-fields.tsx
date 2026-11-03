@@ -2,22 +2,25 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
 import type { IPushSettings } from "../models/push.model";
-import { PUSH_TEXT } from "../constants/notification-ui.constant";
+import { PRIVATE_KEY_PLACEHOLDER, PUSH_TEXT } from "../constants/notification-ui.constant";
+import { lazyOption, tn, useNotificationT } from "../i18n";
 import { KEY_SOURCE, type PushKeyDraft } from "../hooks/use-push-key-draft";
 import { formatDate } from "../utils/push-format";
 import { FormRow, HelpText } from "./notification-form/form-row";
 import { SegmentedControl } from "./notification-form/segmented-control";
 
 const SOURCE_OPTIONS = [
-  { value: KEY_SOURCE.Upload, label: PUSH_TEXT.upload },
-  { value: KEY_SOURCE.Manual, label: PUSH_TEXT.manualMode },
+  lazyOption(KEY_SOURCE.Upload, "PUSH_SETTINGS.UPLOAD"),
+  lazyOption(KEY_SOURCE.Manual, "PUSH_SETTINGS.MANUAL_MODE"),
 ] as const;
 
 const keyUploadedText = (settings: IPushSettings): string => {
-  const parts: string[] = [PUSH_TEXT.keyUploaded];
-  if (settings.keyUploadedAt) parts.push("on", formatDate(settings.keyUploadedAt));
-  if (settings.keyUploadedBy) parts.push("by", settings.keyUploadedBy);
-  return parts.join(" ");
+  const date = settings.keyUploadedAt ? formatDate(settings.keyUploadedAt) : "";
+  const user = settings.keyUploadedBy ?? "";
+  if (date && user) return tn("PUSH_SETTINGS.KEY_UPLOADED_ON_BY", { date, user });
+  if (date) return tn("PUSH_SETTINGS.KEY_UPLOADED_ON", { date });
+  if (user) return tn("PUSH_SETTINGS.KEY_UPLOADED_BY", { user });
+  return PUSH_TEXT.keyUploaded;
 };
 
 interface PushKeyFieldsProps {
@@ -28,6 +31,7 @@ interface PushKeyFieldsProps {
 
 /** Read-only project id: it always comes from the key or its email, so it can never disagree with the key. */
 function ProjectFromKey({ draft, settings }: Readonly<Omit<PushKeyFieldsProps, "onOpenGuide">>) {
+  useNotificationT();
   const manual = draft.source === KEY_SOURCE.Manual;
   const projectId = draft.newProjectId ?? settings.projectId;
   if (!projectId) {
@@ -49,6 +53,7 @@ function ProjectFromKey({ draft, settings }: Readonly<Omit<PushKeyFieldsProps, "
 }
 
 function UploadKey({ draft, settings }: Readonly<Omit<PushKeyFieldsProps, "onOpenGuide">>) {
+  const { t } = useNotificationT();
   const { bindFileInput, fileName, openFilePicker, pickFile, setError } = draft;
   return (
     <div className="flex flex-col gap-1.5">
@@ -67,9 +72,7 @@ function UploadKey({ draft, settings }: Readonly<Omit<PushKeyFieldsProps, "onOpe
           {settings.hasKey ? PUSH_TEXT.replace : PUSH_TEXT.upload}
         </Button>
         {fileName && (
-          <span className="text-sm">
-            {PUSH_TEXT.chosenFile} {fileName}
-          </span>
+          <span className="text-sm">{t("PUSH_SETTINGS.CHOSEN_FILE", { name: fileName })}</span>
         )}
       </div>
       {fileName && (
@@ -83,6 +86,7 @@ function UploadKey({ draft, settings }: Readonly<Omit<PushKeyFieldsProps, "onOpe
 }
 
 function ManualKey({ draft }: Readonly<{ draft: PushKeyDraft }>) {
+  useNotificationT();
   const { bindPrivateKey, clientEmail, newProjectId, setClientEmail } = draft;
   return (
     <div className="flex flex-col gap-2">
@@ -97,7 +101,7 @@ function ManualKey({ draft }: Readonly<{ draft: PushKeyDraft }>) {
       <Textarea
         ref={bindPrivateKey}
         aria-label={PUSH_TEXT.privateKey}
-        placeholder={PUSH_TEXT.privateKeyPlaceholder}
+        placeholder={PRIVATE_KEY_PLACEHOLDER}
         autoComplete="off"
         spellCheck={false}
         maxLength={10_000}
@@ -112,6 +116,7 @@ function ManualKey({ draft }: Readonly<{ draft: PushKeyDraft }>) {
 
 /** Firebase project and service account key rows: upload the key file or type the email and private key. */
 export function PushKeyFields({ draft, settings, onOpenGuide }: Readonly<PushKeyFieldsProps>) {
+  useNotificationT();
   const manual = draft.source === KEY_SOURCE.Manual;
   const otherProject =
     settings.hasKey &&

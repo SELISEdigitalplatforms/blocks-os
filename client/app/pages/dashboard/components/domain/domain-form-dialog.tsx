@@ -7,6 +7,7 @@ import {
 } from "@/components/ui-kits/dialog/dialog";
 import type { IDomain } from "@/models/project.model";
 import { DomainForm } from "./domain-form";
+import { useT } from "@seliseblocks/genesis-os";
 
 interface DomainFormDialogProps {
   open: boolean;
@@ -19,15 +20,20 @@ interface DomainFormDialogProps {
 }
 
 export const DomainFormDialog = ({ open, onOpenChange, application }: DomainFormDialogProps) => {
+  const { t } = useT("os.dashboard");
   const isEditMode = !!application;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEditMode ? "Edit Domain" : "Add Domain"}</DialogTitle>
+          <DialogTitle>
+            {isEditMode ? t("DOMAIN_FORM_DIALOG.EDIT_DOMAIN") : t("DOMAIN_FORM_DIALOG.ADD_DOMAIN")}
+          </DialogTitle>
           <DialogDescription>
-            {isEditMode ? "Update the domain configuration." : "Add a new domain to this project."}
+            {isEditMode
+              ? t("DOMAIN_FORM_DIALOG.UPDATE_THE_DOMAIN_CONFIGURATION")
+              : t("DOMAIN_FORM_DIALOG.ADD_A_NEW_DOMAIN_TO")}
           </DialogDescription>
         </DialogHeader>
         <DomainForm application={application} onAfterSubmit={() => onOpenChange(false)} />

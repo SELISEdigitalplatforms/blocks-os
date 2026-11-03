@@ -9,37 +9,45 @@ import MailcraftEditor, {
 } from "@blocks-communication/mail/components/mailcraft-editor/mailcraft-editor";
 import { useSaveMailTemplate } from "@blocks-communication/mail/hooks/use-email-template";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { FileText, LayoutTemplate } from "lucide-react";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
 
+const I18N_MODULE = "os.communication.mail";
+
 const EMAIL_TEMPLATE_STEPS: StepItem[] = [{ id: "basic-information" }, { id: "template" }];
 
-const basicInformationLabel = (
-  <span className="flex flex-wrap items-center gap-2">
-    Basic information
-    <Badge
-      variant="secondary"
-      className="px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide"
-    >
-      Required
-    </Badge>
-  </span>
-);
+const BasicInformationLabel = () => {
+  const { t } = useT(I18N_MODULE);
+  return (
+    <span className="flex flex-wrap items-center gap-2">
+      {t("NEW_COMMUNICATION.BASIC_INFORMATION")}
+      <Badge
+        variant="secondary"
+        className="px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide"
+      >
+        {t("NEW_COMMUNICATION.REQUIRED")}
+      </Badge>
+    </span>
+  );
+};
 
-const templateLabel = (
-  <span className="flex flex-wrap items-center gap-2">
-    Template
-    <Badge
-      variant="outline"
-      className="px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide"
-    >
-      Design
-    </Badge>
-  </span>
-);
+const TemplateLabel = () => {
+  const { t } = useT(I18N_MODULE);
+  return (
+    <span className="flex flex-wrap items-center gap-2">
+      {t("NEW_COMMUNICATION.TEMPLATE")}
+      <Badge
+        variant="outline"
+        className="px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide"
+      >
+        {t("NEW_COMMUNICATION.DESIGN")}
+      </Badge>
+    </span>
+  );
+};
 
 type BasicInformationStepProps = {
   templateData: IEmailTemplate;
@@ -52,6 +60,7 @@ const BasicInformationStep = ({
   setTemplateData,
   onStepComplete,
 }: BasicInformationStepProps) => {
+  const { t } = useT(I18N_MODULE);
   const { nextStep } = useStepper();
   const ref = useRef<{ submit: () => void; isValid: boolean } | undefined>(undefined);
   const [isFormValid, setIsFormValid] = useState(false);
@@ -79,7 +88,7 @@ const BasicInformationStep = ({
             onClick={() => ref?.current?.submit()}
             disabled={isSaving || !isFormValid}
           >
-            Save &amp; continue
+            {t("NEW_COMMUNICATION.SAVE_AND_CONTINUE")}
           </Button>
         }
       />
@@ -93,6 +102,7 @@ type TemplateDesignStepProps = {
 };
 
 const TemplateDesignStep = ({ templateData, setTemplateData }: TemplateDesignStepProps) => {
+  const { t } = useT(I18N_MODULE);
   const { isPending, mutateAsync: saveTemplate } = useSaveMailTemplate();
   const editorRef = useRef<IMailcraftEditorRef | null>(null);
   const navigate = useNavigate();
@@ -120,15 +130,15 @@ const TemplateDesignStep = ({ templateData, setTemplateData }: TemplateDesignSte
 
       toast({
         variant: "destructive",
-        title: "Error",
+        title: t("common:ERROR"),
         description: JSON.stringify(res.errors),
       });
       navigate(emailBasePath);
     } catch {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Something went wrong",
+        title: t("common:ERROR"),
+        description: t("NEW_COMMUNICATION.SOMETHING_WENT_WRONG"),
       });
       navigate(emailBasePath);
     }
@@ -138,9 +148,11 @@ const TemplateDesignStep = ({ templateData, setTemplateData }: TemplateDesignSte
     <div className="mt-6 flex w-full flex-col gap-4">
       <div className="flex flex-col gap-3 rounded-sm border border-border bg-card px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <h2 className="text-lg font-semibold text-high-emphasis">Template design</h2>
+          <h2 className="text-lg font-semibold text-high-emphasis">
+            {t("NEW_COMMUNICATION.TEMPLATE_DESIGN")}
+          </h2>
           <p className="text-sm text-low-emphasis">
-            Build and preview the email body for this template.
+            {t("NEW_COMMUNICATION.TEMPLATE_DESIGN_DESCRIPTION")}
           </p>
         </div>
         <div className="flex shrink-0 flex-col-reverse gap-2 sm:flex-row sm:items-center">
@@ -151,7 +163,7 @@ const TemplateDesignStep = ({ templateData, setTemplateData }: TemplateDesignSte
             disabled={isPending}
             onClick={() => editorRef?.current?.submit()}
           >
-            Save template
+            {t("NEW_COMMUNICATION.SAVE_TEMPLATE")}
           </Button>
         </div>
       </div>
@@ -163,6 +175,7 @@ const TemplateDesignStep = ({ templateData, setTemplateData }: TemplateDesignSte
 };
 
 function EmailTemplateStepper() {
+  const { t } = useT(I18N_MODULE);
   const completedStepRef = useRef(0);
   const [templateData, setTemplateData] = useState<IEmailTemplate>({
     itemId: "",
@@ -199,8 +212,8 @@ function EmailTemplateStepper() {
     >
       <Step
         icon={FileText}
-        label={basicInformationLabel}
-        description="Name, mail configuration, and subject line"
+        label={<BasicInformationLabel />}
+        description={t("NEW_COMMUNICATION.BASIC_INFORMATION_DESCRIPTION")}
       >
         <BasicInformationStep
           templateData={templateData}
@@ -211,8 +224,8 @@ function EmailTemplateStepper() {
 
       <Step
         icon={LayoutTemplate}
-        label={templateLabel}
-        description="Build and preview your email body"
+        label={<TemplateLabel />}
+        description={t("NEW_COMMUNICATION.TEMPLATE_STEP_DESCRIPTION")}
       >
         <TemplateDesignStep templateData={templateData} setTemplateData={setTemplateData} />
       </Step>
@@ -221,21 +234,18 @@ function EmailTemplateStepper() {
 }
 
 export default function NewCommunication() {
+  const { t } = useT(I18N_MODULE);
   const scoped = useScopedPath();
   const emailBasePath = scoped("email-management");
   const breadcrumbTitles = {
-    [emailBasePath]: "Email Management",
-    [`${emailBasePath}/new-communication`]: "New Template",
+    [emailBasePath]: t("NEW_COMMUNICATION.BREADCRUMB_EMAIL_MANAGEMENT"),
+    [`${emailBasePath}/new-communication`]: t("NEW_COMMUNICATION.BREADCRUMB_NEW_TEMPLATE"),
   };
 
   return (
     <main className="flex min-h-0 w-full flex-1 flex-col gap-4 p-4 sm:gap-6 sm:p-6">
       <header className="w-full space-y-4">
-        <PageBreadcrumb
-          breadcrumbIndex={3}
-          className="flex"
-          customTitles={breadcrumbTitles}
-        />
+        <PageBreadcrumb breadcrumbIndex={3} className="flex" customTitles={breadcrumbTitles} />
       </header>
 
       <div className="w-full flex-1">

@@ -23,15 +23,73 @@ import { useGetEmailSecretConfigs } from "@blocks-communication/mail/hooks/use-e
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { EmptyState } from "@/components/ui-kits/empty-state";
 import { parseAsBoolean, useQueryState } from "nuqs";
+import { useT } from "@seliseblocks/genesis-os";
 import { LinkedSecretStatusValue } from "@/cross-modules/secrets/components/linked-secret-status/linked-secret-status";
 interface EmailConfigurationProps {
   addConfigOpen?: boolean;
   onAddConfigOpenChange?: (open: boolean) => void;
 }
+// Credentials follow the authentication type in both directions: an Office 365
+// inbound record signs in with OAuth and has no username or password to show.
+function ConfigCredentials({
+  config,
+  gridClassName,
+}: Readonly<{ config: IEmailConfig; gridClassName: string }>) {
+  const { t } = useT("os.communication.mail");
+  if (usesPasswordAuthentication(config.provider, config.isInbound, config.authenticationType)) {
+    return (
+      <div className={gridClassName}>
+        <div>
+          <p className="text-sm text-muted-foreground">
+            {config.isInbound
+              ? t("EMAIL_CONFIGURE.USERNAME")
+              : t("EMAIL_CONFIGURE.SENDER_USERNAME")}
+          </p>
+          <p className="text-base">{config.senderUserName}</p>
+        </div>
+        <div>
+          <p className="text-sm text-muted-foreground">{t("EMAIL_CONFIGURE.ACCOUNT_PASSWORD")}</p>
+          <p className="trucate break-all text-base">*********************</p>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className={gridClassName}>
+      <div>
+        <p className="text-sm text-muted-foreground">{t("EMAIL_CONFIGURE.TENANT_ID")}</p>
+        <p className="trucate break-all text-base">{config.tenantId}</p>
+      </div>
+      <div>
+        <p className="text-sm text-muted-foreground">{t("EMAIL_CONFIGURE.CLIENT_ID")}</p>
+        <p className="trucate break-all text-base">{config.clientId}</p>
+      </div>
+      <div>
+        <p className="text-sm text-muted-foreground">{t("EMAIL_CONFIGURE.MAILBOX_ADDRESS")}</p>
+        <p className="trucate break-all text-base">{config.mailboxAddress}</p>
+      </div>
+      <div>
+        <p className="text-sm text-muted-foreground">{t("EMAIL_CONFIGURE.CLIENT_SECRET")}</p>
+        <LinkedSecretStatusValue
+          status={config.clientSecretStatus}
+          fallback={
+            <p className="text-base">
+              {config.isClientSecretConfigured
+                ? t("EMAIL_CONFIGURE.CONFIGURED")
+                : t("EMAIL_CONFIGURE.NOT_CONFIGURED")}
+            </p>
+          }
+        />
+      </div>
+    </div>
+  );
+}
+
 export function EmailConfiguration({
   addConfigOpen,
   onAddConfigOpenChange,
 }: EmailConfigurationProps = {}) {
+  const { t } = useT("os.communication.mail");
   const [internalOpen, setInternalOpen] = useState<boolean>(false);
   const open = addConfigOpen !== undefined ? addConfigOpen : internalOpen;
   const setOpen = onAddConfigOpenChange || setInternalOpen;
@@ -69,7 +127,7 @@ export function EmailConfiguration({
       <Dialog open={open} onOpenChange={setOpen}>
         {open && (
           <NewConfiguration
-            dialogTitle="Add Configuration"
+            dialogTitle={t("EMAIL_CONFIGURE.ADD_CONFIGURATION")}
             onClose={() => setOpen(false)}
             isEdit={false}
           />
@@ -100,7 +158,7 @@ export function EmailConfiguration({
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                aria-label="Edit"
+                                aria-label={t("common:EDIT")}
                                 className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
                                 onClick={(e) => e.stopPropagation()}
                               >
@@ -108,7 +166,7 @@ export function EmailConfiguration({
                               </Button>
                             </DialogTrigger>
                           </TooltipTrigger>
-                          <TooltipContent>Edit</TooltipContent>
+                          <TooltipContent>{t("common:EDIT")}</TooltipContent>
                         </Tooltip>
                         {editingId === config.itemId && config.isDefault && (
                           <EditDefaultSenderName
@@ -118,7 +176,7 @@ export function EmailConfiguration({
                         )}
                         {editingId === config.itemId && !config.isDefault && (
                           <NewConfiguration
-                            dialogTitle="Edit Configuration"
+                            dialogTitle={t("EMAIL_CONFIGURE.EDIT_CONFIGURATION")}
                             previousData={config}
                             isEdit={true}
                             onClose={() => setEditingId(null)}
@@ -137,7 +195,7 @@ export function EmailConfiguration({
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                aria-label="Delete"
+                                aria-label={t("common:DELETE")}
                                 className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                                 onClick={(e) => e.stopPropagation()}
                               >
@@ -145,7 +203,7 @@ export function EmailConfiguration({
                               </Button>
                             </DialogTrigger>
                           </TooltipTrigger>
-                          <TooltipContent>Delete</TooltipContent>
+                          <TooltipContent>{t("common:DELETE")}</TooltipContent>
                         </Tooltip>
                         <DeleteEmailConfig
                           configId={config.itemId}
@@ -166,18 +224,24 @@ export function EmailConfiguration({
                 >
                   <div>
                     <p className="text-sm text-muted-foreground">
-                      {config.isInbound ? "Server Name" : "Host"}
+                      {config.isInbound
+                        ? t("EMAIL_CONFIGURE.SERVER_NAME")
+                        : t("EMAIL_CONFIGURE.HOST")}
                     </p>
                     <p className="text-base">{config.host}</p>
                   </div>
                   <div className="ml-1">
-                    <p className="text-sm text-muted-foreground">Port</p>
+                    <p className="text-sm text-muted-foreground">{t("EMAIL_CONFIGURE.PORT")}</p>
                     <p className="text-base">{config.port}</p>
                   </div>
                   <div>
                     <div className="mb-4">
-                      <p className="text-sm text-muted-foreground">Type</p>
-                      <p className="text-base">{config.isInbound ? "Inbound" : "Outbound"}</p>
+                      <p className="text-sm text-muted-foreground">{t("common:TYPE")}</p>
+                      <p className="text-base">
+                        {config.isInbound
+                          ? t("EMAIL_CONFIGURE.INBOUND")
+                          : t("EMAIL_CONFIGURE.OUTBOUND")}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -191,78 +255,32 @@ export function EmailConfiguration({
                   {!config.isInbound && (
                     <>
                       <div>
-                        <p className="text-sm text-muted-foreground">Sender name</p>
+                        <p className="text-sm text-muted-foreground">
+                          {t("EMAIL_CONFIGURE.SENDER_NAME")}
+                        </p>
                         <p className="text-base">{config.senderName}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Sender address</p>
+                        <p className="text-sm text-muted-foreground">
+                          {t("EMAIL_CONFIGURE.SENDER_ADDRESS")}
+                        </p>
                         <p className="text-base">{config.senderAddress}</p>
                       </div>
                     </>
                   )}
                   <div>
-                    <p className="text-sm text-muted-foreground">Provider</p>
+                    <p className="text-sm text-muted-foreground">{t("EMAIL_CONFIGURE.PROVIDER")}</p>
                     <p className="text-base">{getMailProviderLabel(config.provider)}</p>
                   </div>
                 </div>
-                {/* Credentials follow the authentication type in both directions: an Office 365
-                    inbound record signs in with OAuth and has no username or password to show. */}
-                {usesPasswordAuthentication(
-                  config.provider,
-                  config.isInbound,
-                  config.authenticationType,
-                ) ? (
-                  <div
-                    className={cn(
-                      "mt-5 grid grid-cols-3 space-y-2",
-                      isMediumScreen && "gap-12",
-                      isMobileScreen && "grid-cols-1 gap-6",
-                    )}
-                  >
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        {config.isInbound ? "Username" : "Sender username"}
-                      </p>
-                      <p className="text-base">{config.senderUserName}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Account Password</p>
-                      <p className="trucate break-all text-base">*********************</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div
-                    className={cn(
-                      "mt-5 grid grid-cols-3 space-y-2",
-                      isMediumScreen && "gap-12",
-                      isMobileScreen && "grid-cols-1 gap-6",
-                    )}
-                  >
-                    <div>
-                      <p className="text-sm text-muted-foreground">Tenant ID</p>
-                      <p className="trucate break-all text-base">{config.tenantId}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Client ID</p>
-                      <p className="trucate break-all text-base">{config.clientId}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Mailbox Address</p>
-                      <p className="trucate break-all text-base">{config.mailboxAddress}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Client secret</p>
-                      <LinkedSecretStatusValue
-                        status={config.clientSecretStatus}
-                        fallback={
-                          <p className="text-base">
-                            {config.isClientSecretConfigured ? "Configured" : "Not configured"}
-                          </p>
-                        }
-                      />
-                    </div>
-                  </div>
-                )}
+                <ConfigCredentials
+                  config={config}
+                  gridClassName={cn(
+                    "mt-5 grid grid-cols-3 space-y-2",
+                    isMediumScreen && "gap-12",
+                    isMobileScreen && "grid-cols-1 gap-6",
+                  )}
+                />
               </AccordionContent>
             </AccordionItem>
           ))}
@@ -270,8 +288,8 @@ export function EmailConfiguration({
       ) : (
         <EmptyState
           icon={Mail}
-          title="No email configurations found"
-          description="Use the Add Configuration button above to create one."
+          title={t("EMAIL_CONFIGURE.EMPTY_TITLE")}
+          description={t("EMAIL_CONFIGURE.EMPTY_DESCRIPTION")}
         />
       )}
     </div>

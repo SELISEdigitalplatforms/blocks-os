@@ -29,7 +29,8 @@ vi.mock("@/components/create-project/utils", () => ({
   shortGuidGenerator: () => "abcde",
 }));
 
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({
     setTenantGroup: h.setTenantGroup,
     setSelectedProject: h.setSelectedProject,

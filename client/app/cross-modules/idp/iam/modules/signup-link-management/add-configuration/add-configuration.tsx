@@ -17,6 +17,7 @@ import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isAccessGrantRefused } from "@/lib/error";
 import { isHttpErrorStatus } from "@/lib/http/http-error.util";
 import { useCreateSignupLinkConfiguration } from "@blocks-idp/iam/hooks/use-signup-link-configurations";
+import { useT } from "@seliseblocks/genesis-os";
 import { useQueryClient } from "@tanstack/react-query";
 import { ConfigurationFormFields } from "../configuration-form-fields";
 import {
@@ -33,7 +34,8 @@ type AddConfigurationProps = {
   triggerLabel?: string;
 };
 
-export const AddConfiguration = ({ triggerLabel = "Add Configuration" }: AddConfigurationProps) => {
+export const AddConfiguration = ({ triggerLabel }: AddConfigurationProps) => {
+  const { t } = useT("os.idp.signup-links");
   const [open, setOpen] = useState(false);
   const [formLevelError, setFormLevelError] = useState<string | null>(null);
   const { mutateAsync, isPending, reset: resetMutation } = useCreateSignupLinkConfiguration();
@@ -91,7 +93,7 @@ export const AddConfiguration = ({ triggerLabel = "Add Configuration" }: AddConf
         setFormLevelError(level);
         return;
       }
-      showSuccessToast({ description: "Configuration created" });
+      showSuccessToast({ description: t("ADD_CONFIGURATION.CREATED_TOAST") });
       close();
     } catch (error: unknown) {
       if (isAccessGrantRefused(error)) {
@@ -103,7 +105,7 @@ export const AddConfiguration = ({ triggerLabel = "Add Configuration" }: AddConf
         return;
       }
       if (isHttpErrorStatus(error, 404)) {
-        showErrorToast({ errors: "This configuration no longer exists." });
+        showErrorToast({ errors: t("ADD_CONFIGURATION.NOT_FOUND") });
         void queryClient.invalidateQueries({ queryKey: ["signup-link-configurations"] });
         close();
         return;
@@ -120,7 +122,7 @@ export const AddConfiguration = ({ triggerLabel = "Add Configuration" }: AddConf
         setFormLevelError(level);
         return;
       }
-      showErrorToast({ errors: "Something went wrong" });
+      showErrorToast({ errors: t("ADD_CONFIGURATION.GENERIC_ERROR") });
     }
   };
 
@@ -136,14 +138,12 @@ export const AddConfiguration = ({ triggerLabel = "Add Configuration" }: AddConf
       }}
     >
       <DialogTrigger asChild>
-        <PrimaryButton label={triggerLabel} />
+        <PrimaryButton label={triggerLabel ?? t("ADD_CONFIGURATION.TITLE")} />
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader className="mb-4">
-          <DialogTitle>Add Configuration</DialogTitle>
-          <DialogDescription>
-            Define the roles, permissions and sign-in experience for one-click signup links.
-          </DialogDescription>
+          <DialogTitle>{t("ADD_CONFIGURATION.TITLE")}</DialogTitle>
+          <DialogDescription>{t("ADD_CONFIGURATION.DESCRIPTION")}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
@@ -160,10 +160,10 @@ export const AddConfiguration = ({ triggerLabel = "Add Configuration" }: AddConf
                 disabled={isPending}
                 onClick={close}
               >
-                Cancel
+                {t("common:CANCEL")}
               </Button>
               <Button className="min-w-[80px]" type="submit" disabled={isPending}>
-                {isPending ? "Creating…" : "Create"}
+                {isPending ? t("ADD_CONFIGURATION.CREATING") : t("common:CREATE")}
               </Button>
             </DialogFooter>
           </form>

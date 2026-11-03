@@ -1,7 +1,8 @@
 import { FilterItem, FilterToolbar, useSortQueryParams } from "@/components/filter-toolbar";
 import type { TimeRangeValue } from "@/components/filter-toolbar/time-range/time-range";
-import { TRACE_STATUS_CLASSES } from "@blocks-lmt/utils";
+import { getTraceStatusClasses } from "@blocks-lmt/utils";
 import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
+import { useT } from "@seliseblocks/genesis-os";
 
 /** The filter as it is held in the URL. */
 export type TraceFilter = {
@@ -63,6 +64,7 @@ export function TracesFilterToolbar({
    */
   showTimeRange?: boolean;
 }) {
+  const { t } = useT("os.lmt");
   // Both ends live in the URL as their own params, so the one control writes them together.
   const changeTimeRange = (value: TimeRangeValue) => {
     setQueryParams((params) => ({
@@ -89,7 +91,7 @@ export function TracesFilterToolbar({
           {
             key: "timeRange",
             type: "TimeRange",
-            label: "Time range",
+            label: t("TRACES_FILTER_TOOLBAR.TIME_RANGE"),
             // Trace timestamps are listed in local time, not UTC, so the window is written
             // in local time too -- otherwise it would not line up with the column beside it.
             props: { timeZone: "local" },
@@ -99,13 +101,13 @@ export function TracesFilterToolbar({
     {
       key: "status",
       type: "MultiSelect",
-      label: "Status",
-      props: { options: TRACE_STATUS_CLASSES.map(({ label, value }) => ({ label, value })) },
+      label: t("common:STATUS"),
+      props: { options: getTraceStatusClasses().map(({ label, value }) => ({ label, value })) },
     },
     {
       key: "services",
       type: "CheckboxTree",
-      label: "Service",
+      label: t("TRACES_FILTER_TOOLBAR.SERVICE"),
       props: { options: serviceOptions },
     },
   ];

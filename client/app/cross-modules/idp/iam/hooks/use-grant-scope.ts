@@ -9,7 +9,7 @@ import {
   getRolePermissionCap,
   isScopeDescendant,
   isScopeRestricted,
-  SYSTEM_ONLY_TOOLTIP,
+  getSystemOnlyTooltip,
 } from "@blocks-idp/iam/utils/grant-scope";
 
 const FIVE_MINUTES = 5 * 60 * 1000;
@@ -62,7 +62,8 @@ export const useGrantScope = () => {
       /** A direct permission (to a user or a client): never for a descendant. */
       canGrantDirectPermission: !isDescendant,
       /** Why this role is locked for the caller, or `undefined`. */
-      roleEditBlock: (role: { slug: string; createdFromDefault?: boolean }) => getRoleEditBlock(scope, role),
+      roleEditBlock: (role: { slug: string; createdFromDefault?: boolean }) =>
+        getRoleEditBlock(scope, role),
     };
   }, [scope, isRestricted, isDescendant, query.isPending, tenantId]);
 };
@@ -73,5 +74,5 @@ export const useGrantScope = () => {
  */
 export const useSystemOnlyReason = (): string | undefined => {
   const { isRestricted } = useGrantScope();
-  return isRestricted ? SYSTEM_ONLY_TOOLTIP : undefined;
+  return isRestricted ? getSystemOnlyTooltip() : undefined;
 };

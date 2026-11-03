@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { domainFormSchema, isCookieDomainValidFor, isValidHostname } from "./domain-form.schema";
+import { createDomainFormSchema, isCookieDomainValidFor, isValidHostname } from "./domain-form.schema";
 
 describe("isCookieDomainValidFor", () => {
   it.each([
@@ -29,7 +29,7 @@ describe("isCookieDomainValidFor", () => {
 
 describe("domainFormSchema", () => {
   it("accepts a domain under its cookie domain", () => {
-    const result = domainFormSchema.safeParse({
+    const result = createDomainFormSchema().safeParse({
       domain: "app.example.com",
       cookieDomain: "example.com",
     });
@@ -37,7 +37,7 @@ describe("domainFormSchema", () => {
   });
 
   it("reports a mismatched cookie domain on the cookieDomain field", () => {
-    const result = domainFormSchema.safeParse({
+    const result = createDomainFormSchema().safeParse({
       domain: "app.example.com",
       cookieDomain: "someone-else.com",
     });
@@ -123,7 +123,7 @@ describe("isValidHostname", () => {
 
 describe("domainFormSchema field messages", () => {
   const issuesFor = (domain: string, cookieDomain: string) => {
-    const result = domainFormSchema.safeParse({ domain, cookieDomain });
+    const result = createDomainFormSchema().safeParse({ domain, cookieDomain });
     return result.success ? [] : result.error.issues;
   };
 

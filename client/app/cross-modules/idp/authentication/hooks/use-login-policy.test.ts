@@ -6,7 +6,8 @@ import { useGetTenantLoginPolicy, useSaveTenantLoginPolicy } from "./use-login-p
 
 const h = vi.hoisted(() => ({ tenantId: "tenant-1" as string | undefined }));
 
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: h.tenantId ? { tenantId: h.tenantId } : undefined }),
 }));
 vi.mock("@blocks-idp/authentication/services/login-policy.service", () => ({

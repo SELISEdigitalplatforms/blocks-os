@@ -29,6 +29,7 @@ import {
   toIamConfigFormValues,
   type IamConfigFormValues,
 } from "@blocks-idp/settings/utils/auth-config-form";
+import { useT } from "@seliseblocks/genesis-os";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Pen } from "lucide-react";
 import { useState } from "react";
@@ -39,6 +40,7 @@ type EditIamConfigDialogProps = {
 };
 
 export const EditIamConfigDialog = ({ config }: EditIamConfigDialogProps) => {
+  const { t } = useT("os.idp.settings");
   const [open, setOpen] = useState(false);
   const { mutateAsync, isPending } = useSaveSettingsAuthConfig();
   const form = useForm<IamConfigFormValues>({
@@ -62,22 +64,22 @@ export const EditIamConfigDialog = ({ config }: EditIamConfigDialogProps) => {
       const payload = buildSavePayload(config, values);
       const res = await mutateAsync(payload);
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
-      showSuccessToast({ description: "IAM configuration updated successfully" });
+      showSuccessToast({ description: t("EDIT_IAM_CONFIG_DIALOG.UPDATED") });
       setOpen(false);
     } catch (error) {
       if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
-      showErrorToast({ errors: "Something went wrong" });
+      showErrorToast({ errors: t("EDIT_IAM_CONFIG_DIALOG.SOMETHING_WENT_WRONG") });
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogTrigger asChild>
-        <PrimaryButton label="Edit" Icon={Pen} />
+        <PrimaryButton label={t("common:EDIT")} Icon={Pen} />
       </DialogTrigger>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>IAM Config</DialogTitle>
+          <DialogTitle>{t("EDIT_IAM_CONFIG_DIALOG.TITLE")}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
@@ -89,7 +91,7 @@ export const EditIamConfigDialog = ({ config }: EditIamConfigDialogProps) => {
                   <FormItem className="md:col-span-2">
                     <FormLabel>
                       <RequiredFieldLabel required={isAccountActionBaseUrlRequired}>
-                        Account Action Base URL
+                        {t("EDIT_IAM_CONFIG_DIALOG.ACCOUNT_ACTION_BASE_URL")}
                       </RequiredFieldLabel>
                     </FormLabel>
                     <FormControl>
@@ -104,7 +106,7 @@ export const EditIamConfigDialog = ({ config }: EditIamConfigDialogProps) => {
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Account Activation Path</FormLabel>
+                    <FormLabel>{t("EDIT_IAM_CONFIG_DIALOG.ACCOUNT_ACTIVATION_PATH")}</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -117,7 +119,7 @@ export const EditIamConfigDialog = ({ config }: EditIamConfigDialogProps) => {
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Account Verification Path</FormLabel>
+                    <FormLabel>{t("EDIT_IAM_CONFIG_DIALOG.ACCOUNT_VERIFICATION_PATH")}</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -130,7 +132,7 @@ export const EditIamConfigDialog = ({ config }: EditIamConfigDialogProps) => {
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Recover Account Path</FormLabel>
+                    <FormLabel>{t("EDIT_IAM_CONFIG_DIALOG.RECOVER_ACCOUNT_PATH")}</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -144,7 +146,9 @@ export const EditIamConfigDialog = ({ config }: EditIamConfigDialogProps) => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      <RequiredFieldLabel>Activation URL Lifetime (minutes)</RequiredFieldLabel>
+                      <RequiredFieldLabel>
+                        {t("EDIT_IAM_CONFIG_DIALOG.ACTIVATION_URL_LIFETIME")}
+                      </RequiredFieldLabel>
                     </FormLabel>
                     <FormControl>
                       <Input type="number" min={0} {...field} />
@@ -160,7 +164,7 @@ export const EditIamConfigDialog = ({ config }: EditIamConfigDialogProps) => {
                   <FormItem>
                     <FormLabel>
                       <RequiredFieldLabel>
-                        Recover Account URL Lifetime (minutes)
+                        {t("EDIT_IAM_CONFIG_DIALOG.RECOVER_URL_LIFETIME")}
                       </RequiredFieldLabel>
                     </FormLabel>
                     <FormControl>
@@ -175,7 +179,7 @@ export const EditIamConfigDialog = ({ config }: EditIamConfigDialogProps) => {
                 control={form.control}
                 render={({ field }) => (
                   <FormItem className="flex items-center justify-between rounded-md border p-3 md:col-span-2">
-                    <FormLabel>Use Account Action Base URL as Default</FormLabel>
+                    <FormLabel>{t("EDIT_IAM_CONFIG_DIALOG.USE_BASE_URL_AS_DEFAULT")}</FormLabel>
                     <FormControl>
                       <Switch
                         checked={field.value}
@@ -190,7 +194,7 @@ export const EditIamConfigDialog = ({ config }: EditIamConfigDialogProps) => {
                 control={form.control}
                 render={({ field }) => (
                   <FormItem className="flex items-center justify-between rounded-md border p-3">
-                    <FormLabel>Logout on Password Change</FormLabel>
+                    <FormLabel>{t("EDIT_IAM_CONFIG_DIALOG.LOGOUT_ON_PASSWORD_CHANGE")}</FormLabel>
                     <FormControl>
                       <Switch
                         checked={field.value}
@@ -205,7 +209,7 @@ export const EditIamConfigDialog = ({ config }: EditIamConfigDialogProps) => {
                 control={form.control}
                 render={({ field }) => (
                   <FormItem className="flex items-center justify-between rounded-md border p-3">
-                    <FormLabel>OIDC Enabled</FormLabel>
+                    <FormLabel>{t("EDIT_IAM_CONFIG_DIALOG.OIDC_ENABLED")}</FormLabel>
                     <FormControl>
                       <Switch
                         checked={field.value}
@@ -220,7 +224,7 @@ export const EditIamConfigDialog = ({ config }: EditIamConfigDialogProps) => {
                 control={form.control}
                 render={({ field }) => (
                   <FormItem className="md:col-span-2">
-                    <FormLabel>Password Strength Regex</FormLabel>
+                    <FormLabel>{t("EDIT_IAM_CONFIG_DIALOG.PASSWORD_STRENGTH_REGEX")}</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -232,11 +236,11 @@ export const EditIamConfigDialog = ({ config }: EditIamConfigDialogProps) => {
             <div className="flex items-center justify-end gap-4">
               <DialogClose asChild>
                 <Button type="button" variant="outline">
-                  Cancel
+                  {t("common:CANCEL")}
                 </Button>
               </DialogClose>
               <Button type="submit" disabled={isPending || !form.formState.isDirty}>
-                Save
+                {t("common:SAVE")}
               </Button>
             </div>
           </form>

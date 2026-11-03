@@ -1,5 +1,6 @@
 import { RULE_SOURCE_TYPES } from "../constants/schema-access-control";
 import type { IField } from "../models/data-service";
+import { gt } from "./gateway-i18n";
 
 /** One row of the rule-set form, in the shape `ruleSetSchema` expects. */
 export type PresetRuleRow = {
@@ -39,7 +40,7 @@ export const pickOwnerField = (fields: Pick<IField, "name">[] = []): string | nu
 };
 
 const ownerSet = (ownerField: string): PresetRuleSet => ({
-  name: "Owner access",
+  name: gt("ACCESS_PRESETS.OWNER_ACCESS"),
   logicalOperator: "AND",
   rules: [
     {
@@ -52,8 +53,8 @@ const ownerSet = (ownerField: string): PresetRuleSet => ({
   ],
 });
 
-const roleSet: PresetRuleSet = {
-  name: "Role access",
+const roleSet = (): PresetRuleSet => ({
+  name: gt("ACCESS_PRESETS.ROLE_ACCESS"),
   logicalOperator: "AND",
   rules: [
     {
@@ -66,7 +67,7 @@ const roleSet: PresetRuleSet = {
       compareValue: "",
     },
   ],
-};
+});
 
 /**
  * Starting points for a custom policy.
@@ -86,28 +87,30 @@ export function accessPresets(fields: Pick<IField, "name">[] = []): AccessPreset
       ? [
           {
             id: "owner",
-            title: "Only the owner",
-            hint: `The signed-in user must match ${ownerField}`,
+            title: gt("ACCESS_PRESETS.ONLY_OWNER_TITLE"),
+            hint: gt("ACCESS_PRESETS.ONLY_OWNER_HINT", { field: ownerField }),
             ruleSets: [ownerSet(ownerField)],
           },
         ]
       : []),
     {
       id: "roles",
-      title: "Specific roles",
-      hint: "Anyone holding one of the roles you choose",
-      ruleSets: [roleSet],
+      title: gt("ACCESS_PRESETS.ROLES_TITLE"),
+      hint: gt("ACCESS_PRESETS.ROLES_HINT"),
+      ruleSets: [roleSet()],
     },
     ...(ownerField
       ? [
           {
             id: "owner-plus-support",
-            title: "Owner, plus a support override",
-            hint: "Two rule sets — either one on its own grants access",
-            ruleSets: [ownerSet(ownerField), { ...roleSet, name: "Support override" }],
+            title: gt("ACCESS_PRESETS.OWNER_PLUS_SUPPORT_TITLE"),
+            hint: gt("ACCESS_PRESETS.OWNER_PLUS_SUPPORT_HINT"),
+            ruleSets: [
+              ownerSet(ownerField),
+              { ...roleSet(), name: gt("ACCESS_PRESETS.SUPPORT_OVERRIDE") },
+            ],
           },
         ]
       : []),
   ];
 }
-

@@ -14,6 +14,9 @@ import {
 } from "@blocks-lmt/utils";
 import { LogStackTrace } from "../../log-stack-trace";
 import { logServiceOf } from "./trace-story.util";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
+
+const I18N_MODULE = "os.lmt";
 
 export const LOG_PAGE_SIZE = 25;
 
@@ -37,10 +40,12 @@ const useTraceLogs = ({ payload, enabled, requestId }: LogsQuery) => {
 
 const emptyReason = (step: FlowStep) => {
   if (step.traffic === "data")
-    return "This is a database call. The database does not write to your logs; the service that made the call does.";
+    return tStatic(I18N_MODULE, "TRACE_STORY_LOGS.THIS_IS_A_DATABASE_CALL");
   if (step.traffic === "cache")
-    return "This is a cache call. The cache does not write to your logs; the service that made the call does.";
-  return `${logServiceOf(step) || "The service"} wrote nothing while this step ran.`;
+    return tStatic(I18N_MODULE, "TRACE_STORY_LOGS.THIS_IS_A_CACHE_CALL");
+  return tStatic(I18N_MODULE, "TRACE_STORY_LOGS.SERVICE_WROTE_NOTHING_DURING_STEP", {
+    service: logServiceOf(step) || tStatic(I18N_MODULE, "TRACE_STORY_LOGS.THE_SERVICE"),
+  });
 };
 
 /** "+176 ms" from the start of the trace; a record from a host whose clock runs early can
@@ -63,6 +68,7 @@ const LogRow = ({
   stepOf?: (spanId?: string) => FlowStep | undefined;
   onSelectStep: (index: number) => void;
 }) => {
+  const { t } = useT(I18N_MODULE);
   const step = stepOf?.(log.spanId);
   const failed = getLogLevelBadgeVariant(log.level) === "error";
   return (
@@ -96,7 +102,7 @@ const LogRow = ({
             className="self-start font-mono text-[11px] text-primary hover:underline"
             onClick={() => onSelectStep(step.index)}
           >
-            Go to step: {step.tag}
+            {t("TRACE_STORY_LOGS.GO_TO_STEP", { tag: step.tag })}
           </button>
         ) : null}
       </div>
@@ -130,8 +136,8 @@ const buildLogsPayload = (
 
 const emptyTitle = (scope: LogScope, service: string) =>
   scope === "step"
-    ? "No logs were written during this step."
-    : `${service} wrote no logs in this trace.`;
+    ? tStatic(I18N_MODULE, "TRACE_STORY_LOGS.NO_LOGS_WRITTEN_DURING_STEP")
+    : tStatic(I18N_MODULE, "TRACE_STORY_LOGS.SERVICE_WROTE_NO_LOGS", { service });
 
 const EmptyLogs = ({
   scope,
@@ -150,21 +156,22 @@ const EmptyLogs = ({
   onSelectStep: (index: number) => void;
   onScopeChange: (scope: LogScope) => void;
 }) => {
+  const { t } = useT(I18N_MODULE);
   const forStep = scope === "step";
   return (
     <div className="flex flex-col items-start gap-3 px-5 py-6 text-sm">
       <p className="font-semibold text-high-emphasis">
-        {errorsOnly ? "No errors were logged here." : emptyTitle(scope, service)}
+        {errorsOnly ? t("TRACE_STORY_LOGS.NO_ERRORS_WERE_LOGGED_HERE") : emptyTitle(scope, service)}
       </p>
       {forStep && !errorsOnly ? <p className="text-medium-emphasis">{emptyReason(step)}</p> : null}
       {forStep && parent ? (
         <Button size="sm" type="button" onClick={() => onSelectStep(parent.index)}>
-          Show logs of the step that called it
+          {t("TRACE_STORY_LOGS.SHOW_LOGS_OF_THE_STEP")}
         </Button>
       ) : null}
       {forStep ? (
         <Button size="sm" variant="outline" type="button" onClick={() => onScopeChange("service")}>
-          Show all logs of {service}
+          {t("TRACE_STORY_LOGS.SHOW_ALL_LOGS_OF", { service })}
         </Button>
       ) : null}
     </div>
@@ -179,29 +186,34 @@ const LogsPager = ({
   page: number;
   total: number;
   setPage: (page: number) => void;
-}) => (
-  <div className="flex items-center justify-between gap-3 px-5 py-3 text-xs">
-    <Button
-      size="sm"
-      variant="outline"
-      type="button"
-      disabled={page === 0}
-      onClick={() => setPage(page - 1)}
-    >
-      Newer records
-    </Button>
-    <span className="text-medium-emphasis">Page {page + 1}</span>
-    <Button
-      size="sm"
-      variant="outline"
-      type="button"
-      disabled={(page + 1) * LOG_PAGE_SIZE >= total}
-      onClick={() => setPage(page + 1)}
-    >
-      Older records
-    </Button>
-  </div>
-);
+}) => {
+  const { t } = useT(I18N_MODULE);
+  return (
+    <div className="flex items-center justify-between gap-3 px-5 py-3 text-xs">
+      <Button
+        size="sm"
+        variant="outline"
+        type="button"
+        disabled={page === 0}
+        onClick={() => setPage(page - 1)}
+      >
+        {t("TRACE_STORY_LOGS.NEWER_RECORDS")}
+      </Button>
+      <span className="text-medium-emphasis">
+        {t("TRACE_STORY_LOGS.PAGE", { value1: page + 1 })}
+      </span>
+      <Button
+        size="sm"
+        variant="outline"
+        type="button"
+        disabled={(page + 1) * LOG_PAGE_SIZE >= total}
+        onClick={() => setPage(page + 1)}
+      >
+        {t("TRACE_STORY_LOGS.OLDER_RECORDS")}
+      </Button>
+    </div>
+  );
+};
 
 const LogsBody = ({
   scope,
@@ -226,6 +238,7 @@ const LogsBody = ({
   onSelectStep: (index: number) => void;
   onScopeChange: (scope: LogScope) => void;
 }) => {
+  const { t } = useT(I18N_MODULE);
   const [page, setPage] = useState(0);
   const payload = buildLogsPayload(scope, step, service, errorsOnly, page);
   const hasSpan = scope === "service" || Boolean(step.span.spanId);
@@ -238,13 +251,13 @@ const LogsBody = ({
   if (!valid)
     return (
       <p className="px-5 py-6 text-sm text-medium-emphasis">
-        This step has no complete trace, span or service id, so its logs cannot be matched.
+        {t("TRACE_STORY_LOGS.THIS_STEP_HAS_NO_COMPLETE")}
       </p>
     );
   if (query.isLoading || query.isFetching)
     return (
       <output className="flex flex-col gap-4 px-5 py-5">
-        <span className="sr-only">Loading the logs…</span>
+        <span className="sr-only">{t("TRACE_STORY_LOGS.LOADING_THE_LOGS")}</span>
         {[0, 1, 2].map((i) => (
           <div key={i} className="flex flex-col gap-1.5" aria-hidden>
             <div className="flex items-center gap-2">
@@ -260,9 +273,9 @@ const LogsBody = ({
   if (query.isError)
     return (
       <div className="flex flex-col items-start gap-3 px-5 py-6 text-sm" role="alert">
-        <p className="text-error">The logs could not be loaded.</p>
+        <p className="text-error">{t("TRACE_STORY_LOGS.THE_LOGS_COULD_NOT_BE")}</p>
         <Button size="sm" variant="outline" type="button" onClick={() => query.refetch()}>
-          Try again
+          {t("TRACE_STORY_LOGS.TRY_AGAIN")}
         </Button>
       </div>
     );
@@ -280,7 +293,7 @@ const LogsBody = ({
     );
   return (
     <>
-      <ol aria-label="Log records">
+      <ol aria-label={t("TRACE_STORY_LOGS.LOG_RECORDS")}>
         {records.map((log, index) => (
           <LogRow
             key={`${log.timestamp}:${log.spanId ?? ""}:${page}:${index}`}
@@ -340,6 +353,7 @@ export const TraceStoryLogs = ({
   stepOf: (spanId?: string) => FlowStep | undefined;
   onSelectStep: (index: number) => void;
 }) => {
+  const { t } = useT(I18N_MODULE);
   const [scope, setScope] = useState<LogScope>("step");
   const [errorsOnly, setErrorsOnly] = useState(false);
   const span = step.span;
@@ -348,15 +362,18 @@ export const TraceStoryLogs = ({
       ? `trace ${span.traceId} · span ${span.spanId} · ${logServiceOf(step)}`
       : `trace ${span.traceId} · ${service}`;
   return (
-    <section aria-label={`Logs of ${service}`} className="flex min-h-0 flex-col">
+    <section
+      aria-label={t("TRACE_STORY_LOGS.LOGS_OF", { service })}
+      className="flex min-h-0 flex-col"
+    >
       <div className="flex flex-wrap items-center gap-2 border-b border-border px-5 py-2.5">
         <fieldset className="inline-flex rounded-lg bg-muted p-0.5">
-          <legend className="sr-only">Which logs</legend>
+          <legend className="sr-only">{t("TRACE_STORY_LOGS.WHICH_LOGS")}</legend>
           <ToggleButton pressed={scope === "step"} onClick={() => setScope("step")}>
-            This step
+            {t("TRACE_STORY_LOGS.THIS_STEP")}
           </ToggleButton>
           <ToggleButton pressed={scope === "service"} onClick={() => setScope("service")}>
-            All of {service}
+            {t("TRACE_STORY_LOGS.ALL_OF", { service })}
           </ToggleButton>
         </fieldset>
         <label className="ml-auto inline-flex items-center gap-1.5 text-xs text-medium-emphasis">
@@ -366,7 +383,7 @@ export const TraceStoryLogs = ({
             checked={errorsOnly}
             onChange={(event) => setErrorsOnly(event.target.checked)}
           />
-          <span>Errors only</span>
+          <span>{t("TRACE_STORY_LOGS.ERRORS_ONLY")}</span>
         </label>
       </div>
       <div className="max-h-[560px] min-h-0 overflow-y-auto">
@@ -388,7 +405,7 @@ export const TraceStoryLogs = ({
         />
       </div>
       <p className="break-all border-t border-border px-5 py-2 font-mono text-[10px] text-low-emphasis">
-        Times are from the start of the trace · matched by {scopeLine}
+        {t("TRACE_STORY_LOGS.TIMES_ARE_FROM_THE_START", { scopeLine })}
       </p>
     </section>
   );

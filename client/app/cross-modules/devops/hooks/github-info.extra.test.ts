@@ -5,7 +5,10 @@ import { mockProjectStoreFactory } from "@/test-utils/__mocks__";
 import { githubInfoService } from "../services/github-info.service";
 import { useRevokeAccess } from "./github-info";
 
-vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
+  ...mockProjectStoreFactory(),
+}));
 vi.mock("../services/github-info.service", () => ({
   githubInfoService: {
     revokeAccess: vi.fn(),

@@ -12,6 +12,7 @@ import { EndpointRow } from "./endpoint-row";
 import { SecurityPresetsPopover } from "./security-presets-popover";
 import { IApiEndpoint } from "../models/api-endpoint.model";
 import { SERVICE_META, DEFAULT_SERVICE_META } from "../constants/endpoint.constant";
+import { useT } from "@seliseblocks/genesis-os";
 type ServiceGroupCardProps = {
   controller: string;
   endpoints: IApiEndpoint[];
@@ -34,6 +35,7 @@ export const ServiceGroupCard = ({
   onBulkGroupMfa,
   onBulkGroupCaptcha,
 }: ServiceGroupCardProps) => {
+  const { t } = useT("os.idp.api-settings");
   const [open, setOpen] = useState(false);
   const meta = SERVICE_META[controller] || DEFAULT_SERVICE_META;
   const groupIds = endpoints.map((e) => e.itemId);
@@ -68,7 +70,7 @@ export const ServiceGroupCard = ({
           </CollapsibleTrigger>
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             <Badge className="hidden sm:flex rounded-full font-mono text-xs bg-primary/10 text-primary pointer-events-none">
-              {endpoints.length} Endpoint{endpoints.length !== 1 ? "s" : ""}
+              {t("SERVICE_GROUP_CARD.ENDPOINTS", { count: endpoints.length })}
             </Badge>
             <span className="flex sm:hidden rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-mono font-medium text-primary pointer-events-none">
               {endpoints.length}

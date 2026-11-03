@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { ReactNode } from "react";
 import { Link } from "react-router";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
@@ -15,13 +16,14 @@ interface OrganizationConfigProps {
  * settings page is local, so this is a plain in-app link instead.
  */
 export const OrganizationConfig = ({ trigger }: OrganizationConfigProps) => {
+  const { t } = useT("os.idp.organizations");
   const scoped = useScopedPath();
   const to = `${scoped("iam/settings")}?settingsTab=organization-config`;
 
   const defaultTrigger = (
     <Button size="sm" variant="outline" className="gap-2">
       <Settings2 className="h-4 w-4" />
-      <span className="sr-only sm:not-sr-only">Configure Organization</span>
+      <span className="sr-only sm:not-sr-only">{t("ORGANIZATION_CONFIG.CONFIGURE")}</span>
     </Button>
   );
 

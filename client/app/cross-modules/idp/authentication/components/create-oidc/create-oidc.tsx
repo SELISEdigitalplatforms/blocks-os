@@ -18,7 +18,7 @@ import {
 } from "@/components/ui-kits/form/form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useRef, useState } from "react";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { tStatic, useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { useFieldArray, useForm, type UseFormReturn } from "react-hook-form";
 import { Info, Plus, Pencil, X } from "lucide-react";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
@@ -58,16 +58,25 @@ import { OidcSignInSection } from "./oidc-sign-in-section";
 import { OneTimeSecret, OneTimeSecretDialog } from "../one-time-secret-dialog";
 import { maskId } from "../../utils/mask-id.util";
 
-const APPLICATION_TYPE_OPTIONS: { value: ApplicationType; id: string; label: string }[] = [
-  { value: "web", id: "applicationType-web", label: "Web application" },
-  { value: "mobile", id: "applicationType-mobile", label: "Mobile app" },
+const I18N_MODULE = "os.idp.create-oidc";
+
+const getApplicationTypeOptions = (): { value: ApplicationType; id: string; label: string }[] => [
+  {
+    value: "web",
+    id: "applicationType-web",
+    label: tStatic(I18N_MODULE, "CREATE_OIDC.APP_TYPE_WEB"),
+  },
+  {
+    value: "mobile",
+    id: "applicationType-mobile",
+    label: tStatic(I18N_MODULE, "CREATE_OIDC.APP_TYPE_MOBILE"),
+  },
 ];
 
-const APPLICATION_TYPE_HELPER: Record<ApplicationType, string> = {
-  web: "For browser-based apps.",
-  mobile:
-    "For iOS and Android apps. Uses a public client with PKCE, and the app receives tokens in the token response.",
-};
+const getApplicationTypeHelper = (): Record<ApplicationType, string> => ({
+  web: tStatic(I18N_MODULE, "CREATE_OIDC.APP_TYPE_WEB_HELPER"),
+  mobile: tStatic(I18N_MODULE, "CREATE_OIDC.APP_TYPE_MOBILE_HELPER"),
+});
 
 const REDIRECT_URI_PLACEHOLDER: Record<ApplicationType, string> = {
   web: "https://example.com/oidc",
@@ -79,7 +88,7 @@ type ProjectLifetimeKey =
   | "refreshTokenValidForNumberMinutes"
   | "absoluteRefreshTokenValidForNumberMinutes";
 
-const TOKEN_LIFETIME_FIELDS: {
+type TokenLifetimeField = {
   name: keyof TokenLifetimeFormValues;
   label: string;
   shortLabel: string;
@@ -87,31 +96,33 @@ const TOKEN_LIFETIME_FIELDS: {
   ariaLabel: string;
   max: number;
   projectKey: ProjectLifetimeKey;
-}[] = [
+};
+
+const getTokenLifetimeFields = (): TokenLifetimeField[] => [
   {
     name: "accessTokenLifetime",
-    label: "Access token",
-    shortLabel: "Access",
-    note: "How long a sign-in stays valid before the app must refresh it. Shorter is safer.",
-    ariaLabel: "Access token lifetime in minutes",
+    label: tStatic(I18N_MODULE, "CREATE_OIDC.LIFETIME_ACCESS_LABEL"),
+    shortLabel: tStatic(I18N_MODULE, "CREATE_OIDC.LIFETIME_ACCESS_SHORT"),
+    note: tStatic(I18N_MODULE, "CREATE_OIDC.LIFETIME_ACCESS_NOTE"),
+    ariaLabel: tStatic(I18N_MODULE, "CREATE_OIDC.LIFETIME_ACCESS_ARIA"),
     max: TOKEN_LIFETIME_LIMITS.access.max,
     projectKey: "accessTokenValidForNumberMinutes",
   },
   {
     name: "refreshTokenLifetime",
-    label: "Refresh token – idle",
-    shortLabel: "Idle",
-    note: "Signs the user out after this long without using the app.",
-    ariaLabel: "Refresh token idle lifetime in minutes",
+    label: tStatic(I18N_MODULE, "CREATE_OIDC.LIFETIME_REFRESH_LABEL"),
+    shortLabel: tStatic(I18N_MODULE, "CREATE_OIDC.LIFETIME_REFRESH_SHORT"),
+    note: tStatic(I18N_MODULE, "CREATE_OIDC.LIFETIME_REFRESH_NOTE"),
+    ariaLabel: tStatic(I18N_MODULE, "CREATE_OIDC.LIFETIME_REFRESH_ARIA"),
     max: TOKEN_LIFETIME_LIMITS.refresh.max,
     projectKey: "refreshTokenValidForNumberMinutes",
   },
   {
     name: "absoluteRefreshTokenLifetime",
-    label: "Refresh token – maximum",
-    shortLabel: "Maximum",
-    note: "Signs the user out after this time, even when active. At least the idle time.",
-    ariaLabel: "Refresh token maximum lifetime in minutes",
+    label: tStatic(I18N_MODULE, "CREATE_OIDC.LIFETIME_ABSOLUTE_LABEL"),
+    shortLabel: tStatic(I18N_MODULE, "CREATE_OIDC.LIFETIME_ABSOLUTE_SHORT"),
+    note: tStatic(I18N_MODULE, "CREATE_OIDC.LIFETIME_ABSOLUTE_NOTE"),
+    ariaLabel: tStatic(I18N_MODULE, "CREATE_OIDC.LIFETIME_ABSOLUTE_ARIA"),
     max: TOKEN_LIFETIME_LIMITS.refresh.max,
     projectKey: "absoluteRefreshTokenValidForNumberMinutes",
   },
@@ -119,9 +130,17 @@ const TOKEN_LIFETIME_FIELDS: {
 
 type TokenLifetimeMode = "project" | "custom";
 
-const TOKEN_MODE_OPTIONS: { value: TokenLifetimeMode; id: string; label: string }[] = [
-  { value: "project", id: "tokenLifetimes-project", label: "Use project settings" },
-  { value: "custom", id: "tokenLifetimes-custom", label: "Custom for this client" },
+const getTokenModeOptions = (): { value: TokenLifetimeMode; id: string; label: string }[] => [
+  {
+    value: "project",
+    id: "tokenLifetimes-project",
+    label: tStatic(I18N_MODULE, "CREATE_OIDC.MODE_PROJECT"),
+  },
+  {
+    value: "custom",
+    id: "tokenLifetimes-custom",
+    label: tStatic(I18N_MODULE, "CREATE_OIDC.MODE_CUSTOM"),
+  },
 ];
 
 const hasAnyLifetime = (values: TokenLifetimeFormValues) =>
@@ -134,12 +153,20 @@ const toProjectConfig = (raw: Parameters<typeof normalizeAuthConfigResponse>[0] 
   raw ? normalizeAuthConfigResponse(raw) : undefined;
 
 const projectSummary = (config?: ISettingsAuthConfig) => {
-  if (!config) return "The values set for the whole project.";
-  const parts = TOKEN_LIFETIME_FIELDS.map((lifetime) => {
-    const minutes = knownMinutes(config[lifetime.projectKey]);
-    return minutes === undefined ? undefined : `${lifetime.shortLabel} ${formatMinutes(minutes)}`;
-  }).filter(Boolean);
-  return parts.length ? parts.join(" · ") : "The values set for the whole project.";
+  const fallback = tStatic(I18N_MODULE, "CREATE_OIDC.PROJECT_SUMMARY_FALLBACK");
+  if (!config) return fallback;
+  const parts = getTokenLifetimeFields()
+    .map((lifetime) => {
+      const minutes = knownMinutes(config[lifetime.projectKey]);
+      return minutes === undefined
+        ? undefined
+        : tStatic(I18N_MODULE, "CREATE_OIDC.PROJECT_SUMMARY_ITEM", {
+            label: lifetime.shortLabel,
+            value: formatMinutes(minutes),
+          });
+    })
+    .filter(Boolean);
+  return parts.length ? parts.join(" · ") : fallback;
 };
 
 type TokenLifetimesSectionProps = {
@@ -156,9 +183,11 @@ const TokenLifetimesSection = ({
   onModeChange,
   projectConfig,
 }: Readonly<TokenLifetimesSectionProps>) => {
+  const { t } = useT(I18N_MODULE);
+  const lifetimeFields = getTokenLifetimeFields();
   const handleModeChange = (next: TokenLifetimeMode) => {
     onModeChange(next);
-    TOKEN_LIFETIME_FIELDS.forEach((lifetime) => {
+    lifetimeFields.forEach((lifetime) => {
       // Custom starts from the project values; project clears this client's values.
       const projectMinutes = knownMinutes(projectConfig?.[lifetime.projectKey]);
       const startValue =
@@ -172,14 +201,14 @@ const TokenLifetimesSection = ({
 
   return (
     <div className="space-y-2">
-      <FormLabel>Token lifetimes</FormLabel>
+      <FormLabel>{t("CREATE_OIDC.TOKEN_LIFETIMES")}</FormLabel>
       <RadioGroup
-        aria-label="Token lifetimes"
+        aria-label={t("CREATE_OIDC.TOKEN_LIFETIMES")}
         value={mode}
         onValueChange={(value) => handleModeChange(value as TokenLifetimeMode)}
       >
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {TOKEN_MODE_OPTIONS.map((option) => (
+          {getTokenModeOptions().map((option) => (
             <div
               key={option.value}
               className={`flex items-start gap-2 rounded-md border p-3 ${
@@ -194,7 +223,7 @@ const TokenLifetimesSection = ({
                 <p className="text-xs text-muted-foreground">
                   {option.value === "project"
                     ? projectSummary(projectConfig)
-                    : "Set different values for this client only."}
+                    : t("CREATE_OIDC.MODE_CUSTOM_HINT")}
                 </p>
               </div>
             </div>
@@ -203,7 +232,7 @@ const TokenLifetimesSection = ({
       </RadioGroup>
       {mode === "custom" && (
         <div className="rounded-md border px-3">
-          {TOKEN_LIFETIME_FIELDS.map((lifetime) => {
+          {lifetimeFields.map((lifetime) => {
             const projectMinutes = knownMinutes(projectConfig?.[lifetime.projectKey]);
             return (
               <FormField
@@ -226,7 +255,7 @@ const TokenLifetimesSection = ({
                             min={1}
                             max={lifetime.max}
                             step={1}
-                            placeholder="Project setting"
+                            placeholder={t("CREATE_OIDC.PLACEHOLDER_PROJECT_SETTING")}
                             aria-label={lifetime.ariaLabel}
                             className="pr-11"
                             {...field}
@@ -263,6 +292,7 @@ type CreateOIDCProps = {
 };
 
 export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCProps) => {
+  const { t } = useT(I18N_MODULE);
   const [open, setOpen] = useState<boolean>(false);
   const [createdSecret, setCreatedSecret] = useState<OneTimeSecret | null>(null);
   const [tokenMode, setTokenMode] = useState<TokenLifetimeMode>("project");
@@ -295,10 +325,12 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
   });
 
   const isEditMode = !!itemId;
-  const dialogTitle = isEditMode ? "Edit OIDC Client" : "New OIDC Client";
+  const dialogTitle = isEditMode ? t("CREATE_OIDC.TITLE_EDIT") : t("CREATE_OIDC.TITLE_NEW");
   const dialogDescription = isEditMode
-    ? "Update OIDC client details"
-    : "Enter details to generate a new key";
+    ? t("CREATE_OIDC.DESCRIPTION_EDIT")
+    : t("CREATE_OIDC.DESCRIPTION_NEW");
+  const applicationTypeOptions = getApplicationTypeOptions();
+  const applicationTypeHelper = getApplicationTypeHelper();
   const isDeviceFlowClient = form.watch("isDeviceFlowClient");
   const applicationType = form.watch("applicationType");
   const isMobile = applicationType === "mobile";
@@ -443,9 +475,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
         showErrorToast({ errors: res.error });
         return;
       }
-      const message = isEditMode
-        ? "OIDC Client updated successfully"
-        : "OIDC Client created successfully";
+      const message = isEditMode ? t("CREATE_OIDC.TOAST_UPDATED") : t("CREATE_OIDC.TOAST_CREATED");
       showSuccessToast({ description: message });
       // Create is the only time the API returns the secret; list and get never do.
       if (!isEditMode && res.clientSecret) {
@@ -463,7 +493,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
         showErrorToast({ errors: error.errors });
         return;
       }
-      showErrorToast({ errors: "Something went wrong" });
+      showErrorToast({ errors: t("CREATE_OIDC.ERROR_GENERIC") });
     } finally {
       submittingRef.current = false;
     }
@@ -481,19 +511,19 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                 variant={triggerVariant}
                 size="sm"
                 className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
-                aria-label="Edit"
+                aria-label={t("common:EDIT")}
               >
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
             </DialogTrigger>
           </TooltipTrigger>
-          <TooltipContent>Edit</TooltipContent>
+          <TooltipContent>{t("common:EDIT")}</TooltipContent>
         </Tooltip>
       ) : (
         <DialogTrigger asChild>
           <Button>
             <Plus className="aspect-square w-4" />
-            <span className="sr-only sm:not-sr-only sm:ml-2">Create</span>
+            <span className="sr-only sm:not-sr-only sm:ml-2">{t("common:CREATE")}</span>
           </Button>
         </DialogTrigger>
       )}
@@ -511,10 +541,10 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Client Name <span className="text-destructive">*</span>
+                      {t("CREATE_OIDC.CLIENT_NAME")} <span className="text-destructive">*</span>
                     </FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter client name" {...field} />
+                      <Input placeholder={t("CREATE_OIDC.CLIENT_NAME_PLACEHOLDER")} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -526,7 +556,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                 name="isDeviceFlowClient"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Device Flow</FormLabel>
+                    <FormLabel>{t("CREATE_OIDC.DEVICE_FLOW")}</FormLabel>
                     <div className="flex items-center gap-2">
                       <Checkbox
                         id="isDeviceFlowClient"
@@ -546,7 +576,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                         htmlFor="isDeviceFlowClient"
                         className="cursor-pointer text-sm text-high-emphasis"
                       >
-                        Generate this OIDC client only for device flow
+                        {t("CREATE_OIDC.DEVICE_FLOW_LABEL")}
                       </label>
                     </div>
                     <FormMessage />
@@ -562,17 +592,17 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                   name="applicationType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Application type</FormLabel>
+                      <FormLabel>{t("CREATE_OIDC.APPLICATION_TYPE")}</FormLabel>
                       <FormControl>
                         <RadioGroup
-                          aria-label="Application type"
+                          aria-label={t("CREATE_OIDC.APPLICATION_TYPE")}
                           value={field.value}
                           onValueChange={(value) =>
                             handleApplicationTypeChange(value as ApplicationType)
                           }
                         >
                           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                            {APPLICATION_TYPE_OPTIONS.map((option) => (
+                            {applicationTypeOptions.map((option) => (
                               <div
                                 key={option.value}
                                 className={`flex items-center gap-2 rounded-md border p-3 ${
@@ -591,7 +621,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                         </RadioGroup>
                       </FormControl>
                       <FormDescription className="text-xs">
-                        {APPLICATION_TYPE_HELPER[field.value]}
+                        {applicationTypeHelper[field.value]}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -603,7 +633,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
               {!isDeviceFlowClient && (
                 <div className="space-y-2">
                   <FormLabel>
-                    Redirect URI(s) <span className="text-destructive">*</span>
+                    {t("CREATE_OIDC.REDIRECT_URIS")} <span className="text-destructive">*</span>
                   </FormLabel>
                   {fields.map((fieldItem, idx) => (
                     <div key={fieldItem.id} className="flex items-start gap-2">
@@ -637,7 +667,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                     onClick={() => append({ value: "" })}
                   >
                     <Plus className="h-3 w-3" />
-                    Add Redirect URI
+                    {t("CREATE_OIDC.ADD_REDIRECT_URI")}
                   </Button>
                   {form.formState.errors.redirectUris &&
                     !Array.isArray(form.formState.errors.redirectUris) && (
@@ -655,7 +685,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                   name="isActive"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Status</FormLabel>
+                      <FormLabel>{t("common:STATUS")}</FormLabel>
                       <div className="flex items-center gap-2">
                         <Checkbox
                           id="isActive"
@@ -666,7 +696,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                           htmlFor="isActive"
                           className="cursor-pointer text-sm text-high-emphasis"
                         >
-                          Active
+                          {t("CREATE_OIDC.ACTIVE")}
                         </label>
                       </div>
                       <FormMessage />
@@ -679,7 +709,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                   name="scope"
                   render={() => (
                     <FormItem>
-                      <FormLabel>Scope(s)</FormLabel>
+                      <FormLabel>{t("CREATE_OIDC.SCOPES")}</FormLabel>
                       <FormControl>
                         <div className="flex items-center gap-2">
                           <Checkbox id="scope-openid" checked disabled />
@@ -710,7 +740,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                               htmlFor="requirePkce"
                               className="cursor-not-allowed text-sm text-muted-foreground"
                             >
-                              Required for mobile apps
+                              {t("CREATE_OIDC.PKCE_REQUIRED_MOBILE")}
                             </label>
                           </div>
                         ) : (
@@ -724,7 +754,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                               htmlFor="requirePkce"
                               className="cursor-pointer text-sm text-high-emphasis"
                             >
-                              Enabled
+                              {t("common:ENABLED")}
                             </label>
                           </div>
                         )}
@@ -744,7 +774,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                   name="isAutoRedirect"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Auto Redirect</FormLabel>
+                      <FormLabel>{t("CREATE_OIDC.AUTO_REDIRECT")}</FormLabel>
                       <div className="flex items-center gap-2">
                         <Checkbox
                           id="isAutoRedirect"
@@ -755,7 +785,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                           htmlFor="isAutoRedirect"
                           className="cursor-pointer text-sm text-high-emphasis"
                         >
-                          Redirect automatically after authentication
+                          {t("CREATE_OIDC.AUTO_REDIRECT_LABEL")}
                         </label>
                       </div>
                       <FormMessage />
@@ -776,7 +806,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                   name="registerAsIdentityProvider"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Identity Provider</FormLabel>
+                      <FormLabel>{t("CREATE_OIDC.IDENTITY_PROVIDER")}</FormLabel>
                       <div className="flex items-center gap-2">
                         <Checkbox
                           id="registerAsIdentityProvider"
@@ -788,13 +818,13 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                           htmlFor="registerAsIdentityProvider"
                           className="cursor-pointer text-sm text-high-emphasis"
                         >
-                          Register as a Blocks OIDC identity provider
+                          {t("CREATE_OIDC.IDENTITY_PROVIDER_LABEL")}
                         </label>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button
                               type="button"
-                              aria-label="More about Blocks OIDC identity providers"
+                              aria-label={t("CREATE_OIDC.IDENTITY_PROVIDER_INFO_LABEL")}
                               className="shrink-0 rounded-full text-muted-foreground transition-colors hover:text-high-emphasis focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                             >
                               <Info className="h-4 w-4" />
@@ -802,11 +832,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                           </TooltipTrigger>
                           <TooltipContent side="top" className="max-w-xs">
                             <p className="text-xs leading-relaxed">
-                              Adds a matching <span className="font-medium">Blocks OIDC</span> entry
-                              under Identity Provider, so other Blocks projects can offer this
-                              project as a sign-in option and federate their users to it. Uncheck if
-                              this client is only used by your own app to sign users in — you can
-                              always add the provider later.
+                              {t("CREATE_OIDC.IDENTITY_PROVIDER_INFO")}
                             </p>
                           </TooltipContent>
                         </Tooltip>
@@ -838,7 +864,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
             variant="outline"
             className="w-full sm:w-auto"
           >
-            Cancel
+            {t("common:CANCEL")}
           </Button>
           <Button
             form="oidc-form"
@@ -846,7 +872,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
             disabled={!isValid || isPending || isSubmitting}
             className="w-full sm:w-auto"
           >
-            {isEditMode ? "Update" : "Add"}
+            {isEditMode ? t("common:UPDATE") : t("common:ADD")}
           </Button>
         </DialogFooter>
       </DialogContent>

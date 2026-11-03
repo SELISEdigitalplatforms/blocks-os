@@ -1,6 +1,6 @@
-import { SERVICES } from "./services.constant";
+import { getServices } from "./services.constant";
 
-const usageServices = SERVICES.filter((s) => s.showInUsage);
+const usageServices = getServices().filter((s) => s.showInUsage);
 
 type UsageServiceMapKey = (typeof usageServices)[number]["name"];
 type UsageServiceMapValue = {

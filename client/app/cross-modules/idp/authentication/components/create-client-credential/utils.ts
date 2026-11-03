@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { TFunction } from "@seliseblocks/genesis-os";
 
 /**
  * @param isMultiOrgEnabled Whether the workspace has multi-organization turned on. When it is
@@ -7,38 +8,41 @@ import { z } from "zod";
  * @param isEdit Editing never re-scopes an existing credential, so the field is not required
  * even under multi-org.
  */
-export const buildCreateClientSchema = (isMultiOrgEnabled: boolean, isEdit: boolean) =>
+export const buildCreateClientSchema = (
+  isMultiOrgEnabled: boolean,
+  isEdit: boolean,
+  t: TFunction,
+) =>
   z.object({
     itemId: z.string().trim().optional().nullable(),
     // zod 3's default messages, kept so the form reads the same after the zod 4 upgrade.
     clientNameService: z
       .string()
       .trim()
-      .min(1, "Client name is required")
-      .max(80, "String must contain at most 80 character(s)"),
+      .min(1, t("CREATE_CLIENT_CREDENTIAL.CLIENT_NAME_REQUIRED"))
+      .max(80, t("CREATE_CLIENT_CREDENTIAL.CLIENT_NAME_TOO_LONG")),
     accessTokenValidForNumberMinutes: z
       .number({
-        error: (issue) => (issue.input === undefined ? "Required" : "Enter a number of minutes"),
+        error: (issue) =>
+          issue.input === undefined
+            ? t("CREATE_CLIENT_CREDENTIAL.REQUIRED")
+            : t("CREATE_CLIENT_CREDENTIAL.LIFETIME_NUMBER"),
       })
       // Number.isInteger, not .int(): zod 4's .int() also rejects unsafe integers and stops the
       // checks after it. zod 3 showed the invalid_type_error above for a fraction.
-      .refine(Number.isInteger, "Enter a number of minutes")
-      .min(5, "Must be at least 5 minutes")
-      .max(120, "Must be at most 120 minutes"),
+      .refine(Number.isInteger, t("CREATE_CLIENT_CREDENTIAL.LIFETIME_NUMBER"))
+      .min(5, t("CREATE_CLIENT_CREDENTIAL.LIFETIME_MIN"))
+      .max(120, t("CREATE_CLIENT_CREDENTIAL.LIFETIME_MAX")),
     isActive: z.boolean(),
     organizationId:
       isMultiOrgEnabled && !isEdit
-        ? z.string().trim().min(1, "Please select an organization")
+        ? z.string().trim().min(1, t("CREATE_CLIENT_CREDENTIAL.ORGANIZATION_REQUIRED"))
         : z.string().trim().optional(),
-    roles: z
-      .array(z.string().trim())
-      .min(1, "At least one role is required"),
-    permissions: z.array(z.string().trim()).max(10, "Maximum 10 permissions allowed"),
+    roles: z.array(z.string().trim()).min(1, t("CREATE_CLIENT_CREDENTIAL.ROLE_REQUIRED")),
+    permissions: z.array(z.string().trim()).max(10, t("CREATE_CLIENT_CREDENTIAL.PERMISSIONS_MAX")),
   });
 
-export const createClientSchema = buildCreateClientSchema(false, false);
-
-export type CreateClientModalFormValues = z.infer<typeof createClientSchema>;
+export type CreateClientModalFormValues = z.infer<ReturnType<typeof buildCreateClientSchema>>;
 
 export const CreateClientModalFormDefaultValues: CreateClientModalFormValues = {
   itemId: null,

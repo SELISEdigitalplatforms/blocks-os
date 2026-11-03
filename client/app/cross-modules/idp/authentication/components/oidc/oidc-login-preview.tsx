@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import {
   OidcPreviewShell,
   PreviewButton,
@@ -8,9 +9,10 @@ import {
 } from "./oidc-preview-shared";
 
 export const OidcLoginPreview = (props: OidcPagePreviewProps) => {
+  const { t } = useT("os.idp.oidc");
   const copy = props.template.pages.login;
   return (
-    <OidcPreviewShell {...props} pageLabel="Login">
+    <OidcPreviewShell {...props} pageLabel={t("OIDC_LOGIN_PREVIEW.PAGE_LABEL")}>
       <PreviewHeading>{copy.heading}</PreviewHeading>
       <div className="flex flex-col gap-3 sm:gap-4">
         <PreviewField label={copy.emailLabel} />

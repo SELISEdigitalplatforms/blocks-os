@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Bell } from "lucide-react";
 import { NOTIFICATION_CONFIG_ERROR_MESSAGES } from "../constants/notification.constant";
 import { NOTIFICATION_TEXT } from "../constants/notification-ui.constant";
+import { useNotificationT } from "../i18n";
 import { matchesReceivers, matchesSendTo } from "../utils/notification-labels";
 import { NotificationConfigRow } from "./notification-config-row";
 import { NotificationConfigPage } from "./notification-config-page";
@@ -39,7 +40,7 @@ import {
   useNotificationView,
 } from "../hooks/use-notification-navigation";
 
-const columns: { key: string; label: React.ReactNode }[] = [
+const getColumns = (): { key: string; label: React.ReactNode }[] => [
   { key: "name", label: NOTIFICATION_TEXT.columns.name },
   { key: "recipients", label: <RecipientsHeader /> },
   { key: "service", label: NOTIFICATION_TEXT.columns.service },
@@ -83,6 +84,8 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
   isLoading: isLoadingProp,
   onEdit,
 }) => {
+  const { t } = useNotificationT();
+  const columns = getColumns();
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const { queryParams, setQueryParams } = useNotificationConfigsFilterQueryParams();
   const { data, isLoading, isFetching } = useGetNotificationConfigs({
@@ -120,14 +123,14 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
       await deleteNotificationConfig(selectedConfigData.itemId);
       toast({
         variant: "success",
-        title: "Success",
-        description: "Notification deleted.",
+        title: t("common:SUCCESS"),
+        description: t("NOTIFICATION_CONFIGURATION_LIST.DELETED"),
       });
       setIsDeleteDialogOpen(false);
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Error",
+        title: t("common:ERROR"),
         description: describeDeleteError(error),
       });
     }
@@ -202,8 +205,10 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
             onCancel={() => setIsDeleteDialogOpen(false)}
             onConfirm={() => onConfirmDeleteConfig()}
             data={{
-              dialogTitle: "Delete notification?",
-              dialogSubtitle: `"${selectedConfigData?.name}" will be deleted.`,
+              dialogTitle: t("NOTIFICATION_CONFIGURATION_LIST.DELETE_TITLE"),
+              dialogSubtitle: t("NOTIFICATION_CONFIGURATION_LIST.DELETE_SUBTITLE", {
+                name: selectedConfigData?.name ?? "",
+              }),
             }}
             buttonState={{ confirm: { disable: isDeletePending } }}
           />
@@ -216,6 +221,7 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
 export default NotificationConfigurationList;
 
 export function NotificationConfigurationListPage() {
+  const { t } = useNotificationT();
   const view = useNotificationView();
   const nav = useNotificationNavigation();
   const { redirectLegacyLink } = nav;
@@ -254,8 +260,8 @@ export function NotificationConfigurationListPage() {
   return isEmpty ? (
     <EmptyState
       icon={Bell}
-      title="No notifications yet"
-      description="Use Add notification to create one."
+      title={t("NOTIFICATION_CONFIGURATION_LIST.EMPTY_TITLE")}
+      description={t("NOTIFICATION_CONFIGURATION_LIST.EMPTY_DESCRIPTION")}
     />
   ) : (
     <NotificationConfigurationList isLoading={loading} onEdit={nav.openEdit} />

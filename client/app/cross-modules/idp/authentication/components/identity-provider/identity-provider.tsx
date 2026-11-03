@@ -3,7 +3,7 @@ import { AlertCircle } from "lucide-react";
 import { parseAsBoolean, useQueryState } from "nuqs";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { IdentityProvider } from "@blocks-idp/authentication/models/identity-provider.model";
 import { useGetIdentityProviders } from "@blocks-idp/authentication/hooks/use-identity-provider";
 import { IdentityProviderFormDialog } from "./identity-provider-form-dialog";
@@ -18,6 +18,7 @@ type Props = {
 type GalleryPick = { providerType: string; provider?: string };
 
 function LoadError({ onRetry }: { onRetry: () => void }) {
+  const { t } = useT("os.idp.identity-provider");
   return (
     <Card>
       <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">
@@ -26,14 +27,14 @@ function LoadError({ onRetry }: { onRetry: () => void }) {
         </div>
         <div>
           <p className="text-base font-medium text-high-emphasis">
-            Couldn&apos;t load identity providers
+            {t("IDENTITY_PROVIDER.LOAD_ERROR_TITLE")}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Something went wrong while fetching your identity providers.
+            {t("IDENTITY_PROVIDER.LOAD_ERROR_MESSAGE")}
           </p>
         </div>
         <Button type="button" variant="outline" size="sm" onClick={onRetry}>
-          Retry
+          {t("common:RETRY")}
         </Button>
       </CardContent>
     </Card>

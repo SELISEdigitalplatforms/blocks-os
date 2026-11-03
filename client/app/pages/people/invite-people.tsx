@@ -29,33 +29,41 @@ import {
   FormMessage,
 } from "@/components/ui-kits/form/form";
 import { Input } from "@/components/ui-kits/input/input";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT, tStatic } from "@seliseblocks/genesis-os";
 import { useInvitePeople } from "@/hooks/use-people";
 import { useGetProjects } from "@/hooks/use-project";
 import { MultiSelect } from "@/components/filter-toolbar/multi-select/multi-select";
 import { environmentOptions } from "@/constants/environment-options";
 import { z } from "zod";
 
-const formSchema = z.object({
-  invitations: z.array(
-    z.object({
-      recipients: z
-        .string()
-        .min(1, "Recipient is required")
-        .refine((val) => {
-          const emails = val
-            .split(/[\s,]+/)
-            .map((e) => e.trim())
-            .filter((e) => e.length > 0);
-          if (emails.length === 0) return false;
-          return emails.every((email) => emailRegex.test(email));
-        }, "Invalid email format"),
-      projectKeys: z.array(z.string()).min(1, "At least one environment is required"),
-    }),
-  ),
-});
+const I18N_MODULE = "os.people";
 
-type InvitePeopleFormValues = z.infer<typeof formSchema>;
+const createFormSchema = () =>
+  z.object({
+    invitations: z.array(
+      z.object({
+        recipients: z
+          .string()
+          .min(1, tStatic(I18N_MODULE, "INVITE_PEOPLE.RECIPIENT_IS_REQUIRED"))
+          .refine(
+            (val) => {
+              const emails = val
+                .split(/[\s,]+/)
+                .map((e) => e.trim())
+                .filter((e) => e.length > 0);
+              if (emails.length === 0) return false;
+              return emails.every((email) => emailRegex.test(email));
+            },
+            tStatic(I18N_MODULE, "INVITE_PEOPLE.INVALID_EMAIL_FORMAT"),
+          ),
+        projectKeys: z
+          .array(z.string())
+          .min(1, tStatic(I18N_MODULE, "INVITE_PEOPLE.AT_LEAST_ONE_ENVIRONMENT_IS")),
+      }),
+    ),
+  });
+
+type InvitePeopleFormValues = z.infer<ReturnType<typeof createFormSchema>>;
 
 interface InvitePeopleProps {
   existingEmails?: string[];
@@ -67,7 +75,15 @@ interface InvitePeopleProps {
   canInvite?: boolean;
 }
 
+// The valid addresses in a recipients field, lower-cased.
+const validEmailsOf = (recipients: string) =>
+  recipients
+    .split(/[\s,]+/)
+    .map((e) => e.trim().toLowerCase())
+    .filter((e) => e.length > 0 && emailRegex.test(e));
+
 export const InvitePeople = ({ existingEmails = [], canInvite = false }: InvitePeopleProps) => {
+  const { t } = useT(I18N_MODULE);
   const { isPending, mutateAsync } = useInvitePeople();
   const groupId = useProjectStore().selectedTenantGroup;
   const { data: projectsData } = useGetProjects({
@@ -82,11 +98,11 @@ export const InvitePeople = ({ existingEmails = [], canInvite = false }: InviteP
         const mapping = environmentOptions.find((o) => o.value === p.environment);
         return {
           value: p.tenantId,
-          label: mapping?.label || p.environment || "Default",
+          label: mapping?.label || p.environment || t("INVITE_PEOPLE.DEFAULT"),
         };
       }),
     );
-  }, [projectsData]);
+  }, [projectsData, t]);
 
   const existingEmailSet = useMemo(
     () => new Set(existingEmails.map((e) => e.toLowerCase())),
@@ -95,27 +111,20 @@ export const InvitePeople = ({ existingEmails = [], canInvite = false }: InviteP
 
   const dynamicFormSchema = useMemo(
     () =>
-      formSchema.superRefine((data, ctx) => {
+      createFormSchema().superRefine((data, ctx) => {
         const emailCounts = new Map<string, number>();
-        data.invitations.forEach((inv) => {
-          const emails = inv.recipients
-            .split(/[\s,]+/)
-            .map((e) => e.trim().toLowerCase())
-            .filter((e) => e.length > 0 && emailRegex.test(e));
-          emails.forEach((email) => {
+        for (const inv of data.invitations) {
+          for (const email of validEmailsOf(inv.recipients)) {
             emailCounts.set(email, (emailCounts.get(email) || 0) + 1);
-          });
-        });
-        data.invitations.forEach((inv, index) => {
-          const emails = inv.recipients
-            .split(/[\s,]+/)
-            .map((e) => e.trim().toLowerCase())
-            .filter((e) => e.length > 0 && emailRegex.test(e));
+          }
+        }
+        for (const [index, inv] of data.invitations.entries()) {
+          const emails = validEmailsOf(inv.recipients);
           const duplicates = emails.filter((email) => existingEmailSet.has(email));
           if (duplicates.length > 0) {
             ctx.addIssue({
               code: "custom",
-              message: `Already invited: ${duplicates.join(", ")}`,
+              message: t("INVITE_PEOPLE.ALREADY_INVITED", { value1: duplicates.join(", ") }),
               path: ["invitations", index, "recipients"],
             });
           }
@@ -125,13 +134,13 @@ export const InvitePeople = ({ existingEmails = [], canInvite = false }: InviteP
           if (finalDuplicates.length > 0) {
             ctx.addIssue({
               code: "custom",
-              message: `Duplicate email: ${finalDuplicates.join(", ")}`,
+              message: t("INVITE_PEOPLE.DUPLICATE_EMAIL", { value1: finalDuplicates.join(", ") }),
               path: ["invitations", index, "recipients"],
             });
           }
-        });
+        }
       }),
-    [existingEmailSet],
+    [existingEmailSet, t],
   );
 
   const [open, setOpen] = useState(false);
@@ -179,7 +188,7 @@ export const InvitePeople = ({ existingEmails = [], canInvite = false }: InviteP
 
       if (Object.keys(invitationsMap).length === 0) {
         showErrorToast({
-          errors: "Please add at least one valid recipient and environment",
+          errors: t("INVITE_PEOPLE.PLEASE_ADD_AT_LEAST_ONE"),
         });
         return;
       }
@@ -217,15 +226,14 @@ export const InvitePeople = ({ existingEmails = [], canInvite = false }: InviteP
       <DialogTrigger asChild>
         <Button size="sm" variant="default" className="h-10 text-sm text-primary-foreground">
           <Plus className="mr-2 h-4 w-4" />
-          <span>Invite</span>
+          <span>{t("INVITE_PEOPLE.INVITE")}</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="flex max-h-[85vh] flex-col overflow-hidden sm:max-w-md md:min-w-[900px]">
         <DialogHeader>
-          <DialogTitle>Invite people</DialogTitle>
+          <DialogTitle>{t("INVITE_PEOPLE.INVITE_PEOPLE")}</DialogTitle>
           <DialogDescription className="mt-2! text-sm text-medium-emphasis">
-            They get an email invitation, and nothing is shared until they accept it. Each person
-            gets the environments picked on their own row.
+            {t("INVITE_PEOPLE.THEY_GET_AN_EMAIL_INVITATION")}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -235,8 +243,8 @@ export const InvitePeople = ({ existingEmails = [], canInvite = false }: InviteP
                 {/* Two lists side by side with no stated relationship left it unclear whether
                     you were pairing them up or applying one to all. The pairing is per row. */}
                 <div className="hidden w-full gap-4 text-sm font-medium text-muted-foreground sm:flex">
-                  <div className="w-[45%]">Email address</div>
-                  <div className="w-[45%]">Environments they can work in</div>
+                  <div className="w-[45%]">{t("INVITE_PEOPLE.EMAIL_ADDRESS")}</div>
+                  <div className="w-[45%]">{t("INVITE_PEOPLE.ENVIRONMENTS_THEY_CAN_WORK_IN")}</div>
                   <div className="w-[10%]" />
                 </div>
                 {fields.map(
@@ -277,7 +285,7 @@ export const InvitePeople = ({ existingEmails = [], canInvite = false }: InviteP
                           <FormItem className="w-full sm:w-[45%]">
                             <FormControl>
                               <MultiSelect
-                                label="Select environments"
+                                label={t("INVITE_PEOPLE.SELECT_ENVIRONMENTS")}
                                 options={multiSelectOptions}
                                 value={projectField.value}
                                 onChange={(val) => projectField.onChange(val)}
@@ -311,18 +319,18 @@ export const InvitePeople = ({ existingEmails = [], canInvite = false }: InviteP
                   onClick={() => append({ recipients: "", projectKeys: [] })}
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  Add another person
+                  {t("INVITE_PEOPLE.ADD_ANOTHER_PERSON")}
                 </Button>
               </div>
             </div>
             <DialogFooter className="mt-auto pt-4 sm:justify-end">
               <DialogClose asChild>
                 <Button variant="secondary" disabled={isPending}>
-                  Cancel
+                  {t("common:CANCEL")}
                 </Button>
               </DialogClose>
               <Button disabled={isPending || !form.formState.isValid} type="submit">
-                {isPending ? "Sending..." : "Send invitation"}
+                {isPending ? t("INVITE_PEOPLE.SENDING") : t("INVITE_PEOPLE.SEND_INVITATION")}
               </Button>
             </DialogFooter>
           </form>

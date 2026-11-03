@@ -2,7 +2,7 @@ import { InvitePeople } from "./invite-people";
 import { PeopleList } from "./people-list";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { useGetPeople } from "@/hooks/use-people";
 import { useProjectPermissions } from "@/hooks/use-project-access";
 import { usePeopleFilterQueryParams } from "./people-filter-toolbar";
@@ -32,6 +32,7 @@ export const PeopleManagementLoading = () => (
 );
 
 export const PeopleManagement = () => {
+  const { t } = useT("os.people");
   const { queryParams, setQueryParams } = usePeopleFilterQueryParams();
   const projectGroupId = useProjectStore().selectedTenantGroup ?? undefined;
   const { can, isOwner } = useProjectPermissions(projectGroupId);
@@ -83,11 +84,10 @@ export const PeopleManagement = () => {
     <main className="flex flex-col p-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h4 className="text-lg font-semibold md:text-xl">People</h4>
+          <h4 className="text-lg font-semibold md:text-xl">{t("PEOPLE_MANAGEMENT.PEOPLE")}</h4>
           <p className="mt-0.5 text-sm text-medium-emphasis">
-            {data?.totalCount ?? 0} {(data?.totalCount ?? 0) === 1 ? "member" : "members"}
-            {pendingCount > 0 &&
-              ` · ${pendingCount} ${pendingCount === 1 ? "invitation" : "invitations"} pending`}
+            {t("PEOPLE_MANAGEMENT.MEMBER_COUNT", { count: data?.totalCount ?? 0 })}
+            {pendingCount > 0 && t("PEOPLE_MANAGEMENT.PENDING", { count: pendingCount })}
           </p>
         </div>
         <div className="ml-auto flex items-center gap-2">

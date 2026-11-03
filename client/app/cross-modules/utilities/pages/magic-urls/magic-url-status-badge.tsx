@@ -1,17 +1,21 @@
 import React from "react";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { MagicUrl } from "@blocks-utilities/models/magic-url.model";
+import { useT } from "@seliseblocks/genesis-os";
+
+const KEY_EXPIRED = "MAGIC_URL_STATUS_BADGE.EXPIRED";
 export function MagicUrlStatusBadge({ item }: { item: MagicUrl }) {
+  const { t } = useT("os.utilities");
   const getStatus = (item: MagicUrl) => {
     if (item.status) {
       switch (item.status) {
         case "Active":
-          return { label: "Active", variant: "success" };
+          return { label: t("MAGIC_URL_STATUS_BADGE.ACTIVE"), variant: "success" };
         case "Inactive":
         case "Disabled":
           return { label: item.status, variant: "error" };
         case "Expired":
-          return { label: "Expired", variant: "error" };
+          return { label: t(KEY_EXPIRED), variant: "error" };
         default:
           return { label: item.status, variant: "secondary" };
       }
@@ -19,21 +23,21 @@ export function MagicUrlStatusBadge({ item }: { item: MagicUrl }) {
     const now = new Date();
     const expiryDate = item.expiryDate ? new Date(item.expiryDate) : null;
     if (item.expiredReason === "ManuallyDisabled") {
-      return { label: "Disabled", variant: "error" };
+      return { label: t("common:DISABLED"), variant: "error" };
     }
     if (
       item.expiredReason === "UsageLimitExceeded" ||
       (item.usageLimit > 0 && item.usageCount >= item.usageLimit)
     ) {
-      return { label: "Limit Exceeded", variant: "error" };
+      return { label: t("MAGIC_URL_STATUS_BADGE.LIMIT_EXCEEDED"), variant: "error" };
     }
     if (item.expiredReason === "TimeExpired" || (expiryDate && expiryDate < now)) {
-      return { label: "Expired", variant: "error" };
+      return { label: t(KEY_EXPIRED), variant: "error" };
     }
     if (item.isExpired) {
-      return { label: "Expired", variant: "error" };
+      return { label: t(KEY_EXPIRED), variant: "error" };
     }
-    return { label: "Active", variant: "success" };
+    return { label: t("MAGIC_URL_STATUS_BADGE.ACTIVE"), variant: "success" };
   };
   const { label, variant } = getStatus(item);
   return (

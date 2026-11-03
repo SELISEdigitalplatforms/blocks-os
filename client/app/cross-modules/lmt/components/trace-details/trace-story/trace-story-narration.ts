@@ -1,4 +1,7 @@
 import type { FlowStep } from "@blocks-lmt/utils/trace-flow.util";
+import { tStatic } from "@seliseblocks/genesis-os";
+
+const I18N_MODULE = "os.lmt";
 
 type Narration = { title: string; description: string };
 type Attributes = FlowStep["span"]["attributes"];
@@ -27,8 +30,12 @@ const describeDatabase = (
   const location = collection ? ` in the ${collection} collection` : "";
   if (/find|read|select|query|get|count|aggregate/i.test(operation)) {
     return {
-      title: "Looking up the data",
-      description: `${from} looks up data${location} using ${to}.`,
+      title: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.LOOKING_UP_THE_DATA"),
+      description: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.LOOKS_UP_DATA_USING", {
+        from,
+        location,
+        to,
+      }),
     };
   }
   const action = writeAction(operation);
@@ -36,12 +43,22 @@ const describeDatabase = (
   if (action) {
     const preposition = action === "remove" ? "from" : "in";
     const destination = collection ? ` ${preposition} the ${collection} collection` : "";
-    description = `${from} asks ${to} to ${action} data${destination}.`;
+    description = tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.ASKS_TO_DATA", {
+      from,
+      to,
+      action,
+      destination,
+    });
   } else {
     const target = collection ? ` on the ${collection} collection` : "";
-    description = `${from} asks ${to} to run ${operation}${target}.`;
+    description = tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.ASKS_TO_RUN", {
+      from,
+      to,
+      operation,
+      target,
+    });
   }
-  return { title: "Updating the data", description };
+  return { title: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.UPDATING_THE_DATA"), description };
 };
 
 const describeCache = (
@@ -57,21 +74,35 @@ const describeCache = (
   if (hit === "Hit") outcome = " The trace records a cache hit.";
   if (hit === "Miss") outcome = " The trace records a cache miss.";
   return {
-    title: reading ? "Checking the cache" : "Updating the cache",
+    title: reading
+      ? tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.CHECKING_THE_CACHE")
+      : tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.UPDATING_THE_CACHE"),
     description: `${from} ${action} in ${to}.${outcome}`,
   };
 };
 
 const describeMessage = (step: FlowStep, from: string, to: string): Narration => {
   if (step.span.kind?.toLowerCase() === "consumer") {
-    return { title: "A worker picks it up", description: `${to} receives a message from ${from}.` };
+    return {
+      title: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.A_WORKER_PICKS_IT_UP"),
+      description: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.RECEIVES_A_MESSAGE_FROM", {
+        to,
+        from,
+      }),
+    };
   }
-  return { title: "Passing the work along", description: `${from} publishes a message to ${to}.` };
+  return {
+    title: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.PASSING_THE_WORK_ALONG"),
+    description: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.PUBLISHES_A_MESSAGE_TO", { from, to }),
+  };
 };
 
 const describeAction = (step: FlowStep, from: string, to: string): Narration => {
   if (step.fromId === "caller")
-    return { title: "The request arrives", description: `${to} receives ${step.tag}.` };
+    return {
+      title: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.THE_REQUEST_ARRIVES"),
+      description: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.RECEIVES", { to, tag: step.tag }),
+    };
   const operation = step.operationName.replace(/^(MongoDb|Redis)::/i, "");
   const attrs = step.span.attributes ?? {};
   switch (step.traffic) {
@@ -84,18 +115,31 @@ const describeAction = (step: FlowStep, from: string, to: string): Narration => 
   }
   if (step.fromId === step.toId)
     return {
-      title: "Working inside the service",
-      description: `${to} runs ${step.operationName}.`,
+      title: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.WORKING_INSIDE_THE_SERVICE"),
+      description: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.RUNS", {
+        to,
+        operationName: step.operationName,
+      }),
     };
-  return { title: "Calling the next service", description: `${from} calls ${to} · ${step.tag}.` };
+  return {
+    title: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.CALLING_THE_NEXT_SERVICE"),
+    description: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.CALLS", { from, to, tag: step.tag }),
+  };
 };
 
 const describeCacheEvent = (step: FlowStep, from: string, to: string): Narration => {
   const operation = step.operationName.replace(/^(MongoDb|Redis)::/i, "");
   const failure = step.state === "error" ? " This span records an error." : "";
   return {
-    title: step.isErrorOrigin ? "This is where it failed" : "Receiving a cache event",
-    description: `${to} receives ${operation} from ${from}.${failure}`,
+    title: step.isErrorOrigin
+      ? tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.THIS_IS_WHERE_IT_FAILED")
+      : tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.RECEIVING_A_CACHE_EVENT"),
+    description: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.RECEIVES_FROM", {
+      to,
+      operation,
+      from,
+      failure,
+    }),
   };
 };
 
@@ -110,7 +154,7 @@ export const describeTransfer = (step: FlowStep, from: string, to: string) => {
   }
   const narration = describeAction(step, from, to);
   if (step.isErrorOrigin) {
-    narration.title = "This is where it failed";
+    narration.title = tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.THIS_IS_WHERE_IT_FAILED");
     narration.description += " This span records an error.";
   } else if (step.state === "error") {
     narration.description += " This span also reports a failure.";
@@ -118,31 +162,46 @@ export const describeTransfer = (step: FlowStep, from: string, to: string) => {
   return { ...narration, ...recordedResult(step) };
 };
 
-const outcomes: Record<FlowStep["state"], string> = {
-  error: "The operation reported a failure.",
-  warning: "The operation reported a warning.",
-  ok: "The operation reported success.",
-  unknown: "A completion outcome was not recorded.",
+const OUTCOME_KEYS: Record<FlowStep["state"], string> = {
+  error: "TRACE_STORY_NARRATION.OUTCOME_ERROR",
+  warning: "TRACE_STORY_NARRATION.OUTCOME_WARNING",
+  ok: "TRACE_STORY_NARRATION.OUTCOME_OK",
+  unknown: "TRACE_STORY_NARRATION.OUTCOME_UNKNOWN",
 };
 
 const recordedFacts = (attrs: Attributes) => {
   const facts: { label: string; value: string }[] = [];
   const collection =
     attrs["db.collection.name"] || attrs["db.mongodb.collection"] || attrs["db.namespace"];
-  if (collection) facts.push({ label: "Collection", value: String(collection) });
+  if (collection)
+    facts.push({
+      label: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.COLLECTION"),
+      value: String(collection),
+    });
   const count = attrs["result.count"];
   if (count !== undefined && count !== "")
-    facts.push({ label: "Recorded count", value: String(count) });
+    facts.push({
+      label: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.RECORDED_COUNT"),
+      value: String(count),
+    });
   const hit = cacheOutcome(attrs["cache.hit"]);
-  if (hit) facts.push({ label: "Cache", value: hit });
+  if (hit) facts.push({ label: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.CACHE"), value: hit });
   const message = attrs["messaging.message_type"];
-  if (message) facts.push({ label: "Message", value: String(message) });
+  if (message)
+    facts.push({
+      label: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.MESSAGE"),
+      value: String(message),
+    });
   const response = attrs["http.response.status_code"] ?? attrs["response.status.code"];
-  if (response !== undefined) facts.push({ label: "Response", value: String(response) });
+  if (response !== undefined)
+    facts.push({
+      label: tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.RESPONSE"),
+      value: String(response),
+    });
   return facts.slice(0, 3);
 };
 
 export const recordedResult = (step: FlowStep) => ({
-  outcome: outcomes[step.state],
+  outcome: tStatic(I18N_MODULE, OUTCOME_KEYS[step.state]),
   facts: recordedFacts(step.span.attributes ?? {}),
 });

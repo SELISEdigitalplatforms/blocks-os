@@ -5,6 +5,7 @@ import { DateRange } from "react-day-picker";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import { Button } from "@/components/ui-kits/button/button";
 import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
+import { useT } from "@seliseblocks/genesis-os";
 import { useActiveFiltersCount } from "@/hooks/use-active-filters-count";
 import {
   Sheet,
@@ -21,6 +22,7 @@ interface EmailTableToolbarProps<TData> {
   table: Table<TData>;
 }
 export function EmailTableToolbar<TData>({ table }: EmailTableToolbarProps<TData>) {
+  const { t } = useT("os.communication.mail");
   const isMobile = useIsMobile();
   const isServiceBarOpen = useIsServiceBarOpenComm();
   const textSearchColumn = table.getColumn("name");
@@ -49,7 +51,7 @@ export function EmailTableToolbar<TData>({ table }: EmailTableToolbarProps<TData
     <div className="flex flex-col space-y-4 md:space-y-0">
       <div className={`flex items-center justify-between ${isServiceBarOpen ? "flex" : "hidden"}`}>
         <SearchInput
-          placeholder="Filter communication"
+          placeholder={t("EMAIL_TABLE_TOOLBAR.FILTER_COMMUNICATION")}
           onSearch={onSearchInputChange}
           toggleable={true}
           className="h-8 w-[250px]"
@@ -70,17 +72,17 @@ export function EmailTableToolbar<TData>({ table }: EmailTableToolbarProps<TData
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-full" aria-describedby="filter-description">
-              <SheetTitle className="mb-4">Filter</SheetTitle>
+              <SheetTitle className="mb-4">{t("common:FILTER")}</SheetTitle>
               <SheetDescription></SheetDescription>
               <div className="flex flex-col space-y-4">
                 <SheetClose asChild>
                   <Button className="mt-4" size="sm">
-                    Show Results
+                    {t("EMAIL_TABLE_TOOLBAR.SHOW_RESULTS")}
                   </Button>
                 </SheetClose>
                 {isFiltered && (
                   <Button variant="outline" onClick={resetFilters} className="h-8 px-2 lg:px-3">
-                    Reset
+                    {t("common:RESET")}
                     <Cross2Icon className="ml-2 h-4 w-4" />
                   </Button>
                 )}
@@ -91,7 +93,7 @@ export function EmailTableToolbar<TData>({ table }: EmailTableToolbarProps<TData
       </div>
       <div className={`${isServiceBarOpen ? "hidden" : "flex"} flex-1 items-center space-x-2`}>
         <SearchInput
-          placeholder="Filter communication"
+          placeholder={t("EMAIL_TABLE_TOOLBAR.FILTER_COMMUNICATION")}
           onSearch={onSearchInputChange}
           className="h-8 w-[268px]"
           value={searchValue}
@@ -100,7 +102,7 @@ export function EmailTableToolbar<TData>({ table }: EmailTableToolbarProps<TData
         />
         {isFiltered && (
           <Button variant="outline" onClick={resetFilters} className="h-8 px-2 lg:px-3">
-            Reset
+            {t("common:RESET")}
             <Cross2Icon className="ml-2 h-4 w-4" />
           </Button>
         )}

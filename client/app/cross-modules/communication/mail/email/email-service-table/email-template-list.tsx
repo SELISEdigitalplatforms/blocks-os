@@ -30,6 +30,9 @@ import {
 } from "@blocks-communication/mail/hooks/use-email-template";
 import { useNavigate } from "react-router";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
+import { useT } from "@seliseblocks/genesis-os";
+
+const KEY_COMMON_ERROR = "common:ERROR";
 type EmailTemplateListProps = {
   templates: IEmailTemplate[];
   isLoading: boolean;
@@ -49,6 +52,7 @@ export const EmailTemplateList = ({
   emailConfigsData,
   onRowClick,
 }: EmailTemplateListProps) => {
+  const { t } = useT("os.communication.mail");
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const { sortQueryParams, setSortQueryParams } = useTemplatesSortQueryParams();
@@ -74,21 +78,21 @@ export const EmailTemplateList = ({
       if (res?.isSuccess) {
         toast({
           variant: "success",
-          title: "Success",
-          description: "Deleted template successfully",
+          title: t("common:SUCCESS"),
+          description: t("EMAIL_TEMPLATE_LIST.DELETED_SUCCESS"),
         });
         setIsDeleteDialogOpen(false);
       } else {
         toast({
           variant: "destructive",
-          title: "Error",
+          title: t(KEY_COMMON_ERROR),
           description: JSON.stringify(res?.errors),
         });
       }
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Error",
+        title: t(KEY_COMMON_ERROR),
         description: JSON.stringify(error),
       });
     }
@@ -102,22 +106,22 @@ export const EmailTemplateList = ({
       if (res?.isSuccess) {
         toast({
           variant: "success",
-          title: "Success",
-          description: "Cloned template successfully",
+          title: t("common:SUCCESS"),
+          description: t("EMAIL_TEMPLATE_LIST.CLONED_SUCCESS"),
         });
         setIsCloneDialogOpen(false);
         navigate(scoped(`email-management/communications/${res?.itemId}`));
       } else {
         toast({
           variant: "destructive",
-          title: "Error",
+          title: t(KEY_COMMON_ERROR),
           description: JSON.stringify(res?.errors),
         });
       }
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Error",
+        title: t(KEY_COMMON_ERROR),
         description: JSON.stringify(error),
       });
     }
@@ -128,7 +132,7 @@ export const EmailTemplateList = ({
         accessorKey: "name",
         header: () => (
           <FilterControls.SortHeader
-            label="Name"
+            label={t("common:NAME")}
             id="Name"
             value={sortQueryParams}
             onChange={setSortQueryParams}
@@ -138,7 +142,7 @@ export const EmailTemplateList = ({
       },
       {
         accessorKey: "MailConfigurationId",
-        header: "Configuration",
+        header: t("EMAIL_TEMPLATE_LIST.COLUMN_CONFIGURATION"),
         cell: ({ row }) => (
           <div className="truncate">
             {
@@ -152,7 +156,7 @@ export const EmailTemplateList = ({
         accessorKey: "templateSubject",
         header: () => (
           <FilterControls.SortHeader
-            label="Subject"
+            label={t("EMAIL_TEMPLATE_LIST.COLUMN_SUBJECT")}
             id="TemplateSubject"
             value={sortQueryParams}
             onChange={setSortQueryParams}
@@ -164,7 +168,7 @@ export const EmailTemplateList = ({
         accessorKey: "lastUpdatedDate",
         header: () => (
           <FilterControls.SortHeader
-            label="Last Modified"
+            label={t("EMAIL_TEMPLATE_LIST.COLUMN_LAST_MODIFIED")}
             id="LastUpdatedDate"
             value={sortQueryParams}
             onChange={setSortQueryParams}
@@ -184,7 +188,7 @@ export const EmailTemplateList = ({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-8 w-8 p-0">
-                  <span className="sr-only">Open menu</span>
+                  <span className="sr-only">{t("EMAIL_TEMPLATE_LIST.OPEN_MENU")}</span>
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -194,7 +198,7 @@ export const EmailTemplateList = ({
                   onClick={() => onRowClick(row.original.itemId)}
                 >
                   <AlignLeft className="mr-2 h-4 w-4" />
-                  <span>View details</span>
+                  <span>{t("EMAIL_TEMPLATE_LIST.VIEW_DETAILS")}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="cursor-pointer hover:no-underline"
@@ -204,7 +208,7 @@ export const EmailTemplateList = ({
                   }}
                 >
                   <Copy className="mr-2 h-4 w-4" />
-                  <span>Clone Template</span>
+                  <span>{t("EMAIL_TEMPLATE_LIST.CLONE_TEMPLATE")}</span>
                 </DropdownMenuItem>
                 {row.original.generatedBy !== "Tenant" && (
                   <DropdownMenuItem
@@ -215,7 +219,7 @@ export const EmailTemplateList = ({
                     }}
                   >
                     <Trash className="mr-2 h-4 w-4" />
-                    <span>Delete</span>
+                    <span>{t("common:DELETE")}</span>
                   </DropdownMenuItem>
                 )}
                 {/* <DropdownMenuItem className="cursor-pointer text-error" onClick={(e) => {
@@ -231,7 +235,7 @@ export const EmailTemplateList = ({
         },
       },
     ],
-    [sortQueryParams, setSortQueryParams, emailConfigsData, onRowClick],
+    [sortQueryParams, setSortQueryParams, emailConfigsData, onRowClick, t],
   );
   const table = useReactTable({
     data: templates,
@@ -276,7 +280,7 @@ export const EmailTemplateList = ({
         ) : (
           <TableRow>
             <TableCell colSpan={columns.length} className="text-center">
-              No templates found.
+              {t("EMAIL_TEMPLATE_LIST.NO_TEMPLATES")}
             </TableCell>
           </TableRow>
         )}
@@ -287,8 +291,10 @@ export const EmailTemplateList = ({
             onCancel={() => {}}
             onConfirm={() => onConfirmCloneTemplate()}
             data={{
-              dialogTitle: "Confirmation",
-              dialogSubtitle: `Are you sure you want to clone the ${selectedTemplateData?.name} template?`,
+              dialogTitle: t("EMAIL_TEMPLATE_LIST.CONFIRMATION_TITLE"),
+              dialogSubtitle: t("EMAIL_TEMPLATE_LIST.CLONE_CONFIRM", {
+                name: selectedTemplateData?.name ?? "",
+              }),
             }}
             buttonState={{ confirm: { disable: isClonePending } }}
           />
@@ -300,8 +306,10 @@ export const EmailTemplateList = ({
             onCancel={() => {}}
             onConfirm={() => onConfirmDeleteTemplate()}
             data={{
-              dialogTitle: "Confirmation",
-              dialogSubtitle: `Are you sure you want to delete the ${selectedTemplateData?.name} template?`,
+              dialogTitle: t("EMAIL_TEMPLATE_LIST.CONFIRMATION_TITLE"),
+              dialogSubtitle: t("EMAIL_TEMPLATE_LIST.DELETE_CONFIRM", {
+                name: selectedTemplateData?.name ?? "",
+              }),
             }}
             buttonState={{ confirm: { disable: isDeletePending } }}
           />

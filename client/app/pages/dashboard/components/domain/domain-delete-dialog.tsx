@@ -13,6 +13,7 @@ import type { IDomain } from "@/models/project.model";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import { Info } from "lucide-react";
 import { useState } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 
 /**
  * Hosts on the platform's own domains are served by shared infrastructure that
@@ -60,6 +61,7 @@ export const DomainDeleteDialog = ({
   isPending,
   onConfirm,
 }: DomainDeleteDialogProps) => {
+  const { t } = useT("os.dashboard");
   const [deleteSharedApiHost, setDeleteSharedApiHost] = useState(false);
   const offerSharedApiHostOption = isCustomerProvisioned(domain);
   const apiHost = apiHostFor(domain);
@@ -82,10 +84,10 @@ export const DomainDeleteDialog = ({
       <DialogContent className="mr-4 w-full max-w-[425px] rounded-md">
         <DialogHeader>
           <DialogTitle className="text-left text-lg font-semibold leading-7">
-            Delete Domain
+            {t("DOMAIN_DELETE_DIALOG.DELETE_DOMAIN")}
           </DialogTitle>
           <DialogDescription className="mt-2 wrap-break-word text-left text-sm font-normal leading-5 text-medium-emphasis">
-            Are you sure you want to delete the following domain?
+            {t("DOMAIN_DELETE_DIALOG.ARE_YOU_SURE_YOU_WANT")}
           </DialogDescription>
         </DialogHeader>
 
@@ -101,10 +103,7 @@ export const DomainDeleteDialog = ({
             {/* What always happens, stated rather than asked */}
             <div className="flex items-start gap-2 rounded-md bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground">
               <Info className="mt-0.5 h-4 w-4 shrink-0" />
-              <p>
-                Its web server configuration and SSL certificate are removed from the proxy. Adding
-                this domain back later issues a new certificate.
-              </p>
+              <p>{t("DOMAIN_DELETE_DIALOG.ITS_WEB_SERVER_CONFIGURATION_AND")}</p>
             </div>
 
             <div className="flex items-start gap-3 rounded-md border border-base-error bg-blocks-error-100/40 px-3 py-3">
@@ -117,29 +116,30 @@ export const DomainDeleteDialog = ({
               />
               <div className="min-w-0">
                 <Label htmlFor="delete-shared-api-host" className="cursor-pointer text-destructive">
-                  Also remove the shared API host
+                  {t("DOMAIN_DELETE_DIALOG.ALSO_REMOVE_THE_SHARED_API")}
                 </Label>
                 <p className="mt-1 break-all text-xs text-muted-foreground">
-                  <span className="font-mono font-semibold">{apiHost}</span> serves the API for{" "}
-                  <span className="font-semibold">every</span> domain under{" "}
-                  {domain?.cookieDomain?.replace(/^\./, "")} — including domains in other projects
-                  you may not be able to see. Removing it stops their API traffic until someone
-                  re-runs domain configuration. Leave it unchecked unless you are certain nothing
-                  else uses it.
+                  {t("DOMAIN_DELETE_DIALOG.SERVES_THE_API_FOR_DOMAIN", {
+                    span: `${apiHost}`,
+                    span2: t("DOMAIN_DELETE_DIALOG.EVERY"),
+                    value3: domain?.cookieDomain?.replace(/^\./, "") ?? "",
+                  })}
                 </p>
               </div>
             </div>
           </>
         )}
 
-        <p className="text-sm text-medium-emphasis">This action cannot be undone.</p>
+        <p className="text-sm text-medium-emphasis">
+          {t("DOMAIN_DELETE_DIALOG.THIS_ACTION_CANNOT_BE_UNDONE")}
+        </p>
 
         <DialogFooter className="mt-4 flex flex-row gap-2">
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("common:CANCEL")}
           </Button>
           <Button size="sm" disabled={isPending} onClick={() => onConfirm(deleteSharedApiHost)}>
-            Delete
+            {t("common:DELETE")}
           </Button>
         </DialogFooter>
       </DialogContent>

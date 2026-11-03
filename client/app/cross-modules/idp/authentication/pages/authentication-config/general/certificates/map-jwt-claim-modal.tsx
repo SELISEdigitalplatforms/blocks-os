@@ -26,6 +26,7 @@ import {
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 import { useSaveThirdPartyJwtProvider } from "@blocks-idp/authentication/hooks/use-third-party-jwt-provider";
 import {
   toSavePayload,
@@ -35,12 +36,12 @@ import {
 
 type ClaimField = keyof ClaimsMapping;
 
-const CLAIM_FIELDS: { field: ClaimField; label: string; required?: boolean }[] = [
-  { field: "userId", label: "User ID", required: true },
-  { field: "email", label: "Email" },
-  { field: "userName", label: "Username" },
-  { field: "name", label: "Display name" },
-  { field: "roles", label: "Roles" },
+const CLAIM_FIELDS: { field: ClaimField; required?: boolean }[] = [
+  { field: "userId", required: true },
+  { field: "email" },
+  { field: "userName" },
+  { field: "name" },
+  { field: "roles" },
 ];
 
 /** Radix rejects an empty-string item value, so clearing a mapping needs a sentinel. */
@@ -81,6 +82,14 @@ export function MapJwtClaimModal({
   onOpenChange,
   provider,
 }: Readonly<MapJwtClaimModalProps>) {
+  const { t } = useT("os.idp.auth");
+  const claimFieldLabels: Record<ClaimField, string> = {
+    userId: t("MAP_JWT_CLAIM_MODAL.FIELD_USER_ID"),
+    email: t("common:EMAIL"),
+    userName: t("MAP_JWT_CLAIM_MODAL.FIELD_USERNAME"),
+    name: t("MAP_JWT_CLAIM_MODAL.FIELD_DISPLAY_NAME"),
+    roles: t("MAP_JWT_CLAIM_MODAL.FIELD_ROLES"),
+  };
   const { mutateAsync, isPending } = useSaveThirdPartyJwtProvider();
 
   const [token, setToken] = useState("");
@@ -125,7 +134,7 @@ export function MapJwtClaimModal({
 
   const decode = useCallback(() => {
     if (!token.trim()) {
-      fail("Paste a token issued by this provider first.");
+      fail(t("MAP_JWT_CLAIM_MODAL.PASTE_FIRST"));
       return;
     }
 
@@ -133,21 +142,21 @@ export function MapJwtClaimModal({
       const claims = extractClaimPaths(jwtDecode<Record<string, unknown>>(token));
 
       if (!claims.length) {
-        fail("Decoded, but this token carries no claims to map.");
+        fail(t("MAP_JWT_CLAIM_MODAL.NO_CLAIMS"));
         return;
       }
 
       setDecodedClaims(claims);
       setDecodeStatus({
         ok: true,
-        message: `Decoded successfully — ${claims.length} claim${claims.length > 1 ? "s" : ""} found. Map them below.`,
+        message: t("MAP_JWT_CLAIM_MODAL.DECODED", { count: claims.length }),
       });
-      showSuccessToast({ description: "Token decoded" });
+      showSuccessToast({ description: t("MAP_JWT_CLAIM_MODAL.TOKEN_DECODED") });
     } catch {
       // The token is read for its claim names and nothing else — never verified, never trusted.
-      fail("That is not a readable JWT. Check you copied the whole token.");
+      fail(t("MAP_JWT_CLAIM_MODAL.UNREADABLE"));
     }
-  }, [token]);
+  }, [token, t]);
 
   const setField = (field: ClaimField, value: string) =>
     setDraft((prev) => (prev ? { ...prev, [field]: value === UNMAPPED ? "" : value } : prev));
@@ -159,12 +168,15 @@ export function MapJwtClaimModal({
 
     if (!result.isSuccess) {
       showErrorToast({
-        errors: Object.values(result.errors ?? {}).join(" ") || "Could not save the mapping",
+        errors:
+          Object.values(result.errors ?? {}).join(" ") || t("MAP_JWT_CLAIM_MODAL.SAVE_FAILED"),
       });
       return;
     }
 
-    showSuccessToast({ description: `Claim mapping saved for ${provider.providerName}` });
+    showSuccessToast({
+      description: t("MAP_JWT_CLAIM_MODAL.SAVED", { name: provider.providerName }),
+    });
     onOpenChange(false);
   };
 
@@ -183,14 +195,11 @@ export function MapJwtClaimModal({
           <div className="flex items-start justify-between gap-4">
             <div>
               <DrawerTitle className="text-lg font-semibold leading-none tracking-tight">
-                Map JWT claim
+                {t("MAP_JWT_CLAIM_MODAL.TITLE")}
               </DrawerTitle>
               {provider && (
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Which claim supplies each field for{" "}
-                  <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
-                    {provider.key}
-                  </code>
+                  {t("MAP_JWT_CLAIM_MODAL.SUBTITLE", { key: provider.key })}
                 </p>
               )}
             </div>
@@ -198,7 +207,7 @@ export function MapJwtClaimModal({
               <button
                 type="button"
                 className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted"
-                aria-label="Close drawer"
+                aria-label={t("MAP_JWT_CLAIM_MODAL.CLOSE_DRAWER")}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -208,17 +217,17 @@ export function MapJwtClaimModal({
           <div className="mt-6 flex min-h-0 flex-1 flex-col space-y-6">
             <div className="space-y-3">
               <label htmlFor="jwt-sample" className="text-sm font-medium text-foreground">
-                JSON Web Token (JWT)
+                {t("MAP_JWT_CLAIM_MODAL.JWT_LABEL")}
               </label>
               <Textarea
                 id="jwt-sample"
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
-                placeholder="Paste a token issued by this provider..."
+                placeholder={t("MAP_JWT_CLAIM_MODAL.JWT_PLACEHOLDER")}
                 className="h-[142px] w-full resize-none rounded-md border px-3 py-2 text-sm"
               />
               <p className="text-xs text-muted-foreground">
-                Read in your browser only, to list the claim names. It is never sent or stored.
+                {t("MAP_JWT_CLAIM_MODAL.PRIVACY_NOTE")}
               </p>
               {decodeStatus && (
                 <p
@@ -231,12 +240,14 @@ export function MapJwtClaimModal({
                 </p>
               )}
               <Button type="button" onClick={decode} variant="outline" className="w-full sm:w-auto">
-                Decode
+                {t("MAP_JWT_CLAIM_MODAL.DECODE")}
               </Button>
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col space-y-3">
-              <p className="border-t pt-3 text-sm font-medium text-foreground">Mapping table</p>
+              <p className="border-t pt-3 text-sm font-medium text-foreground">
+                {t("MAP_JWT_CLAIM_MODAL.MAPPING_TABLE")}
+              </p>
 
               {hasClaimsToOffer ? (
                 <div className="flex-1 overflow-y-auto rounded-md">
@@ -244,18 +255,18 @@ export function MapJwtClaimModal({
                     <TableHeader className="sticky top-0 z-10 bg-background">
                       <TableRow>
                         <TableHead className="w-1/2 text-left font-semibold text-foreground">
-                          Field
+                          {t("MAP_JWT_CLAIM_MODAL.COLUMN_FIELD")}
                         </TableHead>
                         <TableHead className="w-1/2 text-left font-semibold text-foreground">
-                          JWT claim
+                          {t("MAP_JWT_CLAIM_MODAL.COLUMN_JWT_CLAIM")}
                         </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {CLAIM_FIELDS.map(({ field, label, required }) => (
+                      {CLAIM_FIELDS.map(({ field, required }) => (
                         <TableRow key={field}>
                           <TableCell className="border-b py-2 text-foreground">
-                            {label}
+                            {claimFieldLabels[field]}
                             {required && <span className="ml-1 text-destructive">*</span>}
                           </TableCell>
                           <TableCell className="border-b py-2">
@@ -264,13 +275,17 @@ export function MapJwtClaimModal({
                               onValueChange={(value) => setField(field, value)}
                             >
                               <SelectTrigger
-                                aria-label={label}
+                                aria-label={claimFieldLabels[field]}
                                 className="border-0 text-foreground shadow-none focus:ring-0 focus:ring-offset-0"
                               >
-                                <SelectValue placeholder="Not mapped" />
+                                <SelectValue placeholder={t("MAP_JWT_CLAIM_MODAL.NOT_MAPPED")} />
                               </SelectTrigger>
                               <SelectContent>
-                                {!required && <SelectItem value={UNMAPPED}>Not mapped</SelectItem>}
+                                {!required && (
+                                  <SelectItem value={UNMAPPED}>
+                                    {t("MAP_JWT_CLAIM_MODAL.NOT_MAPPED")}
+                                  </SelectItem>
+                                )}
                                 {options.map((claim) => (
                                   <SelectItem key={claim} value={claim}>
                                     {claim}
@@ -284,15 +299,12 @@ export function MapJwtClaimModal({
                     </TableBody>
                   </Table>
                   <p className="pt-3 text-xs text-muted-foreground">
-                    User ID has no safe fallback: without it every token from this provider
-                    collapses onto the same principal.
+                    {t("MAP_JWT_CLAIM_MODAL.USER_ID_NOTE")}
                   </p>
                 </div>
               ) : (
                 <div className="flex flex-1 items-center justify-center py-10">
-                  <p className="text-sm text-muted-foreground">
-                    Decode a token above to list the claims it carries.
-                  </p>
+                  <p className="text-sm text-muted-foreground">{t("MAP_JWT_CLAIM_MODAL.EMPTY")}</p>
                 </div>
               )}
             </div>
@@ -305,7 +317,7 @@ export function MapJwtClaimModal({
               onClick={() => onOpenChange(false)}
               className="w-full sm:w-auto"
             >
-              Cancel
+              {t("common:CANCEL")}
             </Button>
             <Button
               type="button"
@@ -313,7 +325,7 @@ export function MapJwtClaimModal({
               disabled={isPending || !draft?.userId}
               className="w-full sm:w-auto"
             >
-              {isPending ? "Saving..." : "Save"}
+              {isPending ? t("MAP_JWT_CLAIM_MODAL.SAVING") : t("common:SAVE")}
             </Button>
           </div>
         </div>

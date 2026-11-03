@@ -22,6 +22,7 @@ import {
   withOrgAccessAttributes,
 } from "@blocks-idp/iam/utils/access-attributes";
 import { useAuthStore } from "@seliseblocks/genesis-os/store";
+import { useT } from "@seliseblocks/genesis-os";
 import { X } from "lucide-react";
 import { useState } from "react";
 
@@ -40,6 +41,7 @@ type AttributeAdderProps = {
 
 /** Free text for the system user; a pick from the caller's own values for everyone else. */
 const AttributeAdder = ({ choices, onAdd }: Readonly<AttributeAdderProps>) => {
+  const { t } = useT("os.idp.users");
   const [name, setName] = useState("");
   const [value, setValue] = useState("");
   const isNameValid = ATTRIBUTE_NAME_PATTERN.test(name);
@@ -62,8 +64,11 @@ const AttributeAdder = ({ choices, onAdd }: Readonly<AttributeAdderProps>) => {
             setValue("");
           }}
         >
-          <SelectTrigger className="h-9 w-44" aria-label="Attribute name">
-            <SelectValue placeholder="Attribute" />
+          <SelectTrigger
+            className="h-9 w-44"
+            aria-label={t("USER_ACCESS_ATTRIBUTES.ATTRIBUTE_NAME")}
+          >
+            <SelectValue placeholder={t("USER_ACCESS_ATTRIBUTES.ATTRIBUTE_PLACEHOLDER")} />
           </SelectTrigger>
           <SelectContent>
             {Object.keys(choices).map((option) => (
@@ -74,8 +79,11 @@ const AttributeAdder = ({ choices, onAdd }: Readonly<AttributeAdderProps>) => {
           </SelectContent>
         </Select>
         <Select value={value || undefined} onValueChange={setValue} disabled={!name}>
-          <SelectTrigger className="h-9 w-44" aria-label="Attribute value">
-            <SelectValue placeholder="Value" />
+          <SelectTrigger
+            className="h-9 w-44"
+            aria-label={t("USER_ACCESS_ATTRIBUTES.ATTRIBUTE_VALUE")}
+          >
+            <SelectValue placeholder={t("USER_ACCESS_ATTRIBUTES.VALUE_PLACEHOLDER")} />
           </SelectTrigger>
           <SelectContent>
             {values.map((option) => (
@@ -86,7 +94,7 @@ const AttributeAdder = ({ choices, onAdd }: Readonly<AttributeAdderProps>) => {
           </SelectContent>
         </Select>
         <Button type="button" size="sm" variant="outline" disabled={!canAdd} onClick={submit}>
-          Add
+          {t("common:ADD")}
         </Button>
       </div>
     );
@@ -96,15 +104,15 @@ const AttributeAdder = ({ choices, onAdd }: Readonly<AttributeAdderProps>) => {
     <div className="flex flex-wrap items-center gap-2">
       <Input
         className="h-9 w-44"
-        placeholder="Attribute"
-        aria-label="Attribute name"
+        placeholder={t("USER_ACCESS_ATTRIBUTES.ATTRIBUTE_PLACEHOLDER")}
+        aria-label={t("USER_ACCESS_ATTRIBUTES.ATTRIBUTE_NAME")}
         value={name}
         onChange={(event) => setName(event.target.value.trim())}
       />
       <Input
         className="h-9 w-44"
-        placeholder="Value"
-        aria-label="Attribute value"
+        placeholder={t("USER_ACCESS_ATTRIBUTES.VALUE_PLACEHOLDER")}
+        aria-label={t("USER_ACCESS_ATTRIBUTES.ATTRIBUTE_VALUE")}
         value={value}
         onChange={(event) => setValue(event.target.value)}
         onKeyDown={(event) => {
@@ -115,7 +123,7 @@ const AttributeAdder = ({ choices, onAdd }: Readonly<AttributeAdderProps>) => {
         }}
       />
       <Button type="button" size="sm" variant="outline" disabled={!canAdd} onClick={submit}>
-        Add
+        {t("common:ADD")}
       </Button>
     </div>
   );
@@ -126,7 +134,11 @@ const AttributeAdder = ({ choices, onAdd }: Readonly<AttributeAdderProps>) => {
  * organization on the user. The system user may set anything; anyone else may only hand out values
  * they hold themselves, so their choices come from their own record.
  */
-export const UserAccessAttributes = ({ userId, projectKey }: Readonly<UserAccessAttributesProps>) => {
+export const UserAccessAttributes = ({
+  userId,
+  projectKey,
+}: Readonly<UserAccessAttributesProps>) => {
+  const { t } = useT("os.idp.users");
   const authUser = useAuthStore().user;
   const organizationId = authUser?.org_id || DEFAULT_ORGANIZATION_ID;
   const { isRestricted } = useGrantScope();
@@ -151,33 +163,41 @@ export const UserAccessAttributes = ({ userId, projectKey }: Readonly<UserAccess
     try {
       const res = await mutateAsync({
         itemId: userId,
-        attributes: withOrgAccessAttributes(user?.attributes, organizationId, draft as AccessAttributes),
+        attributes: withOrgAccessAttributes(
+          user?.attributes,
+          organizationId,
+          draft as AccessAttributes,
+        ),
       });
       if (!res.isSuccess) {
         showErrorToast({ errors: res.errors });
         return;
       }
-      showSuccessToast({ description: "Access attributes updated successfully" });
+      showSuccessToast({ description: t("USER_ACCESS_ATTRIBUTES.UPDATED") });
       setDraft(null);
     } catch (error) {
-      showErrorToast({ errors: isErrorWithErrors(error) ? error.errors : "Something went wrong" });
+      showErrorToast({
+        errors: isErrorWithErrors(error)
+          ? error.errors
+          : t("USER_ACCESS_ATTRIBUTES.SOMETHING_WENT_WRONG"),
+      });
     }
   };
 
   return (
     <section
       className="flex shrink-0 flex-col gap-3 rounded-lg border bg-card p-4"
-      aria-label="Access attributes"
+      aria-label={t("USER_ACCESS_ATTRIBUTES.TITLE")}
       data-testid="user-access-attributes"
     >
       <div>
-        <h3 className="text-base font-semibold text-high-emphasis">Access attributes</h3>
-        <p className="text-sm text-muted-foreground">
-          Values that data policies can match on in this organization.
-        </p>
+        <h3 className="text-base font-semibold text-high-emphasis">
+          {t("USER_ACCESS_ATTRIBUTES.TITLE")}
+        </h3>
+        <p className="text-sm text-muted-foreground">{t("USER_ACCESS_ATTRIBUTES.DESCRIPTION")}</p>
       </div>
       {names.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No access attributes.</p>
+        <p className="text-sm text-muted-foreground">{t("USER_ACCESS_ATTRIBUTES.NO_ATTRIBUTES")}</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {names.map((name) => (
@@ -188,7 +208,7 @@ export const UserAccessAttributes = ({ userId, projectKey }: Readonly<UserAccess
                   <span>{value}</span>
                   <button
                     type="button"
-                    aria-label={`Remove ${value} from ${name}`}
+                    aria-label={t("USER_ACCESS_ATTRIBUTES.REMOVE_VALUE", { value, name })}
                     className="inline-flex items-center"
                     onClick={() => setDraft(removeAttributeValue(current, name, value))}
                   >
@@ -212,10 +232,10 @@ export const UserAccessAttributes = ({ userId, projectKey }: Readonly<UserAccess
           disabled={!isDirty || isPending}
           onClick={() => setDraft(null)}
         >
-          Cancel
+          {t("common:CANCEL")}
         </Button>
         <Button type="button" size="sm" disabled={!isDirty || isPending} onClick={onSave}>
-          {isPending ? "Saving..." : "Save"}
+          {isPending ? t("USER_ACCESS_ATTRIBUTES.SAVING") : t("common:SAVE")}
         </Button>
       </div>
     </section>

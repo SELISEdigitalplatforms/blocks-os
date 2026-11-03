@@ -1,4 +1,5 @@
 import { PageHeader } from "@/components/page-header/page-header";
+import { useT } from "@seliseblocks/genesis-os";
 import { useQueryState } from "nuqs";
 import {
   Select,
@@ -21,11 +22,11 @@ import { IamConfigTab } from "@blocks-idp/settings/pages/tabs/iam-config-tab";
 import { OrganizationConfigTab } from "@blocks-idp/settings/pages/tabs/organization-config-tab";
 import { SignupSettingsTab } from "@blocks-idp/settings/pages/tabs/signup-settings-tab";
 
-const SETTINGS_TABS: { value: SettingsTabValue; label: string }[] = [
-  { value: "auth-config", label: "Auth" },
-  { value: "iam-config", label: "IAM" },
-  { value: "signup-settings", label: "Signup" },
-  { value: "organization-config", label: "Organization" },
+const SETTINGS_TABS: { value: SettingsTabValue; labelKey: string }[] = [
+  { value: "auth-config", labelKey: "SETTINGS_PAGE.TAB_AUTH" },
+  { value: "iam-config", labelKey: "SETTINGS_PAGE.TAB_IAM" },
+  { value: "signup-settings", labelKey: "SETTINGS_PAGE.TAB_SIGNUP" },
+  { value: "organization-config", labelKey: "SETTINGS_PAGE.TAB_ORGANIZATION" },
 ];
 
 const DEFAULT_SETTINGS_TAB: SettingsTabValue = "auth-config";
@@ -34,6 +35,7 @@ const isSettingsTabValue = (value: string | null): value is SettingsTabValue =>
   SETTINGS_TABS.some((tab) => tab.value === value);
 
 export const IdpSettingsPage = () => {
+  const { t } = useT("os.idp.settings");
   const [settingsTab, setSettingsTab] = useQueryState("settingsTab", {
     defaultValue: DEFAULT_SETTINGS_TAB,
   });
@@ -51,19 +53,22 @@ export const IdpSettingsPage = () => {
   return (
     <SettingsTabActionsProvider>
       <Tabs value={activeTab} onValueChange={handleTabChange} className="flex w-full flex-col">
-        <PageHeader title={activeTabMeta.title} description={activeTabMeta.description} />
+        <PageHeader
+          title={t(activeTabMeta.titleKey)}
+          description={t(activeTabMeta.descriptionKey)}
+        />
 
         <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-4 sm:gap-y-3">
           <div className="flex min-w-0 items-center gap-4">
             <div className="md:hidden">
               <Select value={activeTab} onValueChange={handleTabChange}>
-                <SelectTrigger className="w-56" aria-label="Settings section">
+                <SelectTrigger className="w-56" aria-label={t("SETTINGS_PAGE.SECTION_LABEL")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {SETTINGS_TABS.map((tab) => (
                     <SelectItem key={tab.value} value={tab.value}>
-                      {tab.label}
+                      {t(tab.labelKey)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -77,7 +82,7 @@ export const IdpSettingsPage = () => {
                     value={tab.value}
                     className={cn("h-8 px-4", SETTINGS_FORM_LAYOUT.tabLabel)}
                   >
-                    {tab.label}
+                    {t(tab.labelKey)}
                   </TabsTrigger>
                 ))}
               </TabsList>

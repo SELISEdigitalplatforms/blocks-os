@@ -54,12 +54,13 @@ vi.mock("@/hooks/use-people", () => ({
   useTransferOwnership: () => ({ mutateAsync: h.transferOwnership, isPending: h.isTransferring }),
 }));
 
-vi.mock("@seliseblocks/genesis-os", () => {
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => {
   const store = () => ({ selectedTenantGroup: "grp-1" });
   (store as unknown as { getState: () => unknown }).getState = () => ({
     selectedTenantGroup: "grp-1",
   });
-  return { useProjectStore: store };
+  return {
+    ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()), useProjectStore: store };
 });
 
 vi.mock("@seliseblocks/genesis-os/store", () => ({

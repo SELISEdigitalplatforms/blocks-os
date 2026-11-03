@@ -7,6 +7,7 @@ import {
 } from "@/components/ui-kits/dropdown-menu/dropdown-menu";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { cn } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 import { Database, Eye, MoreVertical, Shield } from "lucide-react";
 import { useState } from "react";
 import type { PlatformSchema } from "../data-access.service";
@@ -33,23 +34,27 @@ export function SchemaHeader({
   onOpenPreview: () => void;
   onOpenSchemaAccess: (tab?: AccessTab) => void;
 }>) {
+  const { t } = useT("os.idp.explorer");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { ref: headerRef, isNarrow } = useNarrowContainer<HTMLDivElement>(NARROW_HEADER_WIDTH);
   const foldPreviewIntoMenu = isNarrow || isAccessPanelOpen;
 
   const ownCount = schema.fields.filter((f) => !DEFAULT_PROPERTY_NAMES.includes(f.name)).length;
   const systemCount = schema.fields.length - ownCount;
-  const fieldsSummary = `${ownCount} ${ownCount === 1 ? "field" : "fields"} · ${systemCount} system`;
+  const fieldsSummary = t("SCHEMA_HEADER.FIELDS_SUMMARY", { count: ownCount, system: systemCount });
 
   const accessLevels = [
-    { label: "View", tab: "view", level: schema.readAccessLevel },
-    { label: "Create", tab: "create", level: schema.writeAccessLevel },
-    { label: "Edit", tab: "edit", level: schema.editAccessLevel },
-    { label: "Delete", tab: "delete", level: schema.deleteAccessLevel },
+    { label: t("common:VIEW"), tab: "view", level: schema.readAccessLevel },
+    { label: t("common:CREATE"), tab: "create", level: schema.writeAccessLevel },
+    { label: t("common:EDIT"), tab: "edit", level: schema.editAccessLevel },
+    { label: t("common:DELETE"), tab: "delete", level: schema.deleteAccessLevel },
   ] as const;
 
   return (
-    <div ref={headerRef} className="relative overflow-hidden rounded-t-sm border border-b-0 border-border/40 bg-card">
+    <div
+      ref={headerRef}
+      className="relative overflow-hidden rounded-t-sm border border-b-0 border-border/40 bg-card"
+    >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(99,102,241,0.04),transparent_60%)]" />
       <div className="relative flex items-start justify-between gap-3 px-3 py-3.5 sm:px-5">
         <div className="flex min-w-0 flex-1 items-center gap-2.5">
@@ -58,9 +63,11 @@ export function SchemaHeader({
           </div>
           <div className="flex min-w-0 flex-col gap-0.5">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="min-w-0 wrap-break-word text-sm font-semibold text-foreground">{schema.schemaName}</h2>
+              <h2 className="min-w-0 wrap-break-word text-sm font-semibold text-foreground">
+                {schema.schemaName}
+              </h2>
               <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
-                Entity
+                {t("SCHEMA_HEADER.ENTITY")}
               </span>
               <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 {schema.service}
@@ -73,7 +80,12 @@ export function SchemaHeader({
               )}
             >
               <span className="break-all font-mono">{schema.collectionName}</span>
-              {!isNarrow && <span aria-hidden className="h-[3px] w-[3px] shrink-0 rounded-full bg-current opacity-50" />}
+              {!isNarrow && (
+                <span
+                  aria-hidden
+                  className="h-[3px] w-[3px] shrink-0 rounded-full bg-current opacity-50"
+                />
+              )}
               <span>{fieldsSummary}</span>
             </div>
           </div>
@@ -82,13 +94,13 @@ export function SchemaHeader({
           {!foldPreviewIntoMenu && (
             <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={onOpenPreview}>
               <Eye className="h-3.5 w-3.5" />
-              Preview
+              {t("SCHEMA_HEADER.PREVIEW")}
             </Button>
           )}
           <Button
             variant="outline"
             size="sm"
-            aria-label="Schema Access"
+            aria-label={t("SCHEMA_HEADER.SCHEMA_ACCESS")}
             className={cn(
               "h-8 gap-1.5 border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary",
               isNarrow && "w-8 px-0",
@@ -96,7 +108,7 @@ export function SchemaHeader({
             onClick={() => onOpenSchemaAccess()}
           >
             <Shield className="h-3.5 w-3.5" />
-            {!isNarrow && "Schema Access"}
+            {!isNarrow && t("SCHEMA_HEADER.SCHEMA_ACCESS")}
           </Button>
           {foldPreviewIntoMenu && (
             <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
@@ -105,7 +117,7 @@ export function SchemaHeader({
                   size="icon"
                   variant="ghost"
                   className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                  aria-label="More options"
+                  aria-label={t("SCHEMA_HEADER.MORE_OPTIONS")}
                 >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
@@ -119,7 +131,7 @@ export function SchemaHeader({
                   }}
                 >
                   <Eye className="mr-2 h-3.5 w-3.5" />
-                  Preview
+                  {t("SCHEMA_HEADER.PREVIEW")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -128,11 +140,13 @@ export function SchemaHeader({
       </div>
 
       <div className="relative flex flex-col items-start gap-2.5 border-t border-border/40 px-3 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-5">
-        <span className="shrink-0 text-[11px] font-medium uppercase tracking-widest text-muted-foreground/50">Access Control</span>
+        <span className="shrink-0 text-[11px] font-medium uppercase tracking-widest text-muted-foreground/50">
+          {t("SCHEMA_HEADER.ACCESS_CONTROL")}
+        </span>
         <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
           {accessLevels.map(({ label, tab, level }) => (
             <AccessVerbPill
-              key={label}
+              key={tab}
               verb={label}
               level={level}
               compact={isNarrow || isAccessPanelOpen}

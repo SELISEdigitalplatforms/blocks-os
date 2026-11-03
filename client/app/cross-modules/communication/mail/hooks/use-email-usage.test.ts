@@ -14,7 +14,10 @@ import { useGetEmailUsage, useGetEmailUsageById } from "./use-email-usage";
 import { act } from "react";
 
 vi.mock("@blocks-communication/mail/services/email.services", () => mockEmailServiceFactory());
-vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
+  ...mockProjectStoreFactory(),
+}));
 
 describe("Email Usage Hooks", () => {
   beforeEach(() => {

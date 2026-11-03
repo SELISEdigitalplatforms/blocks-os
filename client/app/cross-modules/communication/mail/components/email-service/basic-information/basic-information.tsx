@@ -2,6 +2,7 @@ import React, {
   forwardRef,
   useCallback,
   useImperativeHandle,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -23,7 +24,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useGetEmailConfigs } from "@blocks-communication/mail/hooks/use-email-config";
 import { useSaveMailTemplate } from "@blocks-communication/mail/hooks/use-email-template";
 import { useGetLanguages } from "@blocks-localization/hooks/use-language-manager";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import {
   Form,
   FormControl,
@@ -42,22 +43,27 @@ interface IBasicInformationProps {
   actions?: ReactNode;
 }
 
-const schema = z.object({
-  mailConfigurationId: z.string().min(1, { message: "MailConfiguration is required" }),
-  language: z.string().min(1, { message: "Language is required" }),
-  name: z
-    .string()
-    .min(1, { message: "Name is required" })
-    .max(50, { message: "Name must be less than 50 characters" })
-    .regex(/^[^\s-]+$/, { message: "Name cannot contain spaces or hyphens" }),
-  templateSubject: z
-    .string()
-    .min(1, { message: "Subject is required" })
-    .max(150, { message: "Subject must be less than 150 characters" })
-    .refine((val) => val.trim().length > 0, {
-      message: "Subject cannot contain only whitespace",
-    }),
-});
+type TranslateFn = ReturnType<typeof useT>["t"];
+
+const createSchema = (t: TranslateFn) =>
+  z.object({
+    mailConfigurationId: z
+      .string()
+      .min(1, { message: t("BASIC_INFORMATION.ERROR_CONFIGURATION_REQUIRED") }),
+    language: z.string().min(1, { message: t("BASIC_INFORMATION.ERROR_LANGUAGE_REQUIRED") }),
+    name: z
+      .string()
+      .min(1, { message: t("BASIC_INFORMATION.ERROR_NAME_REQUIRED") })
+      .max(50, { message: t("BASIC_INFORMATION.ERROR_NAME_MAX") })
+      .regex(/^[^\s-]+$/, { message: t("BASIC_INFORMATION.ERROR_NAME_PATTERN") }),
+    templateSubject: z
+      .string()
+      .min(1, { message: t("BASIC_INFORMATION.ERROR_SUBJECT_REQUIRED") })
+      .max(150, { message: t("BASIC_INFORMATION.ERROR_SUBJECT_MAX") })
+      .refine((val) => val.trim().length > 0, {
+        message: t("BASIC_INFORMATION.ERROR_SUBJECT_WHITESPACE"),
+      }),
+  });
 
 const RequiredMark = () => (
   <span className="text-destructive" aria-hidden="true">
@@ -85,32 +91,47 @@ const getUniqueLanguages = (languages: LanguageOption[] = []): LanguageOption[] 
   return Array.from(uniqueByCode.values());
 };
 
-const BasicInformationSkeleton = () => (
-  <Card className="w-full rounded-sm shadow-none" aria-busy="true" aria-label="Loading form">
-    <CardHeader className="space-y-2 px-6 py-5">
-      <div className="flex items-start justify-between gap-4">
-        <Skeleton className="h-6 w-48" />
-        <Skeleton className="h-10 w-36 shrink-0" />
-      </div>
-      <Skeleton className="h-4 w-80 max-w-full" />
-    </CardHeader>
-    <CardContent className="px-6 pb-6 pt-0">
-      <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="grid gap-2">
-            <Skeleton className="h-4 w-28" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-        ))}
-      </div>
-    </CardContent>
-  </Card>
-);
+const BasicInformationSkeleton = () => {
+  const { t } = useT("os.communication.mail");
+  return (
+    <Card
+      className="w-full rounded-sm shadow-none"
+      aria-busy="true"
+      aria-label={t("BASIC_INFORMATION.LOADING_FORM")}
+    >
+      <CardHeader className="space-y-2 px-6 py-5">
+        <div className="flex items-start justify-between gap-4">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-10 w-36 shrink-0" />
+        </div>
+        <Skeleton className="h-4 w-80 max-w-full" />
+      </CardHeader>
+      <CardContent className="px-6 pb-6 pt-0">
+        <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
+          {["field-1", "field-2", "field-3", "field-4"].map((field) => (
+            <div key={field} className="grid gap-2">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 const BasicInformation = forwardRef(function Inner(
-  { onSaveSuccess, templateData, onValidityChange, onPendingChange, actions }: IBasicInformationProps,
+  {
+    onSaveSuccess,
+    templateData,
+    onValidityChange,
+    onPendingChange,
+    actions,
+  }: IBasicInformationProps,
   ref,
 ) {
+  const { t } = useT("os.communication.mail");
+  const schema = useMemo(() => createSchema(t), [t]);
   const { isLoading: isLanguageListLoading, data: languageListData } = useGetLanguages();
   const [filterData] = useState({ pageNumber: 0, pageSize: 10 });
   const { isLoading, data } = useGetEmailConfigs(filterData.pageNumber, filterData.pageSize);
@@ -165,11 +186,11 @@ const BasicInformation = forwardRef(function Inner(
         if (isErrorWithErrors(error)) {
           showErrorToast({ errors: error.errors });
         } else {
-          showErrorToast({ errors: "Something went wrong" });
+          showErrorToast({ errors: t("BASIC_INFORMATION.SOMETHING_WENT_WRONG") });
         }
       }
     },
-    [onSaveSuccess, saveTemplate, templateItemId, tenantId],
+    [onSaveSuccess, saveTemplate, templateItemId, tenantId, t],
   );
 
   const { isValid } = form.formState;
@@ -195,12 +216,11 @@ const BasicInformation = forwardRef(function Inner(
         <form className="flex h-full flex-col">
           <CardHeader className="space-y-1 px-6 pb-4 pt-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle className="text-lg">About the Template</CardTitle>
+              <CardTitle className="text-lg">{t("BASIC_INFORMATION.TITLE")}</CardTitle>
               {actions ? <div className="flex shrink-0">{actions}</div> : null}
             </div>
             <p className="text-sm font-normal text-low-emphasis">
-              Set the template identity, delivery configuration, and subject line before designing
-              the email body.
+              {t("BASIC_INFORMATION.DESCRIPTION")}
             </p>
           </CardHeader>
           <CardContent className="flex-1 px-6 pb-6 pt-0">
@@ -211,11 +231,11 @@ const BasicInformation = forwardRef(function Inner(
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="font-medium text-high-emphasis">
-                      Name <RequiredMark />
+                      {t("common:NAME")} <RequiredMark />
                     </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Enter name"
+                        placeholder={t("BASIC_INFORMATION.PLACEHOLDER_NAME")}
                         className="border-default shadow-none"
                         aria-required="true"
                         {...field}
@@ -237,7 +257,7 @@ const BasicInformation = forwardRef(function Inner(
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="font-medium text-high-emphasis">
-                      Email Configuration <RequiredMark />
+                      {t("BASIC_INFORMATION.EMAIL_CONFIGURATION")} <RequiredMark />
                     </FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
@@ -245,7 +265,9 @@ const BasicInformation = forwardRef(function Inner(
                           className="border-default h-10 shadow-none"
                           aria-required="true"
                         >
-                          <SelectValue placeholder="Select Configuration" />
+                          <SelectValue
+                            placeholder={t("BASIC_INFORMATION.PLACEHOLDER_CONFIGURATION")}
+                          />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -269,7 +291,7 @@ const BasicInformation = forwardRef(function Inner(
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="font-medium text-high-emphasis">
-                      Language <RequiredMark />
+                      {t("BASIC_INFORMATION.LANGUAGE")} <RequiredMark />
                     </FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
@@ -277,7 +299,7 @@ const BasicInformation = forwardRef(function Inner(
                           className="border-default h-10 shadow-none"
                           aria-required="true"
                         >
-                          <SelectValue placeholder="Select language" />
+                          <SelectValue placeholder={t("BASIC_INFORMATION.PLACEHOLDER_LANGUAGE")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -299,11 +321,11 @@ const BasicInformation = forwardRef(function Inner(
                 render={({ field }) => (
                   <FormItem className="md:col-span-2 xl:col-span-3">
                     <FormLabel className="font-medium text-high-emphasis">
-                      Subject <RequiredMark />
+                      {t("BASIC_INFORMATION.SUBJECT")} <RequiredMark />
                     </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Enter subject"
+                        placeholder={t("BASIC_INFORMATION.PLACEHOLDER_SUBJECT")}
                         className="border-default shadow-none"
                         aria-required="true"
                         {...field}

@@ -1,6 +1,9 @@
-const LogoLoadingSpinner = ({ size = 64 }: { size?: number }) => (
-  <>
-    <style>{`
+import { useT } from "@seliseblocks/genesis-os";
+const LogoLoadingSpinner = ({ size = 64 }: { size?: number }) => {
+  const { t } = useT("os.shared");
+  return (
+    <>
+      <style>{`
       @keyframes breathe {
         0%, 100% { transform: scaleY(1); }
         50% { transform: scaleY(0.85); }
@@ -10,15 +13,16 @@ const LogoLoadingSpinner = ({ size = 64 }: { size?: number }) => (
         transform-origin: center;
       }
     `}</style>
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
-      <img
-        src="/Icon.svg"
-        alt="Loading"
-        className="animate-breathe"
-        style={{ width: size, height: size }}
-      />
-    </div>
-  </>
-);
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
+        <img
+          src="/Icon.svg"
+          alt={t("LOADER_SPINNER.LOADING")}
+          className="animate-breathe"
+          style={{ width: size, height: size }}
+        />
+      </div>
+    </>
+  );
+};
 
 export default LogoLoadingSpinner;

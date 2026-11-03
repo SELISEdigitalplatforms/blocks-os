@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ACCESS_GRANT_NOT_ALLOWED,
-  ACCESS_GRANT_NOT_ALLOWED_MESSAGE,
+  getAccessGrantNotAllowedMessage,
   isErrorWithErrors,
   isAccessGrantRefused,
   hasErrorCode,
@@ -140,13 +140,13 @@ describe("getErrorMessage value-first lookup", () => {
   describe("Access_Grant_Not_Allowed", () => {
     it("shows the grant refusal as a plain sentence, whether it is the key or the value", () => {
       expect(handleErrorMessages({ [ACCESS_GRANT_NOT_ALLOWED]: "x" })).toEqual([
-        ACCESS_GRANT_NOT_ALLOWED_MESSAGE,
+        getAccessGrantNotAllowedMessage(),
       ]);
       expect(handleErrorMessages({ forbidden: ACCESS_GRANT_NOT_ALLOWED })).toEqual([
-        ACCESS_GRANT_NOT_ALLOWED_MESSAGE,
+        getAccessGrantNotAllowedMessage(),
       ]);
       expect(handleErrorMessages({ forbidden: [ACCESS_GRANT_NOT_ALLOWED] })).toEqual([
-        ACCESS_GRANT_NOT_ALLOWED_MESSAGE,
+        getAccessGrantNotAllowedMessage(),
       ]);
     });
     it("lets a caller's own message win", () => {

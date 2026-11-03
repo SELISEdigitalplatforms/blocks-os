@@ -1,6 +1,7 @@
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Button } from "@/components/ui-kits/button/button";
 import { useGetNotificationConfig } from "../hooks/use-notification-config";
+import { useNotificationT } from "../i18n";
 import { NOTIFICATION_TEXT } from "../constants/notification-ui.constant";
 import { NotificationConfigForm } from "./notification-config-form";
 
@@ -17,6 +18,7 @@ export function NotificationConfigPage({
   onClose,
   onSetUpPush,
 }: Readonly<NotificationConfigPageProps>) {
+  useNotificationT();
   const { data, isLoading, isError } = useGetNotificationConfig(itemId);
 
   if (itemId && isLoading) {

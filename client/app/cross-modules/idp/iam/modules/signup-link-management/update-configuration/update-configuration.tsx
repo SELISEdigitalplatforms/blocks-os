@@ -15,6 +15,7 @@ import { isAccessGrantRefused } from "@/lib/error";
 import { isHttpErrorStatus } from "@/lib/http/http-error.util";
 import { useUpdateSignupLinkConfiguration } from "@blocks-idp/iam/hooks/use-signup-link-configurations";
 import { ISignupLinkConfiguration } from "@blocks-idp/iam/models/signup-link-configuration";
+import { useT } from "@seliseblocks/genesis-os";
 import { useQueryClient } from "@tanstack/react-query";
 import { ConfigurationFormFields } from "../configuration-form-fields";
 import {
@@ -55,6 +56,7 @@ export const UpdateConfiguration = ({
   isOpen,
   onClose,
 }: UpdateConfigurationProps) => {
+  const { t } = useT("os.idp.signup-links");
   const [formLevelError, setFormLevelError] = useState<string | null>(null);
   const { mutateAsync, isPending } = useUpdateSignupLinkConfiguration();
   const queryClient = useQueryClient();
@@ -131,7 +133,7 @@ export const UpdateConfiguration = ({
         setFormLevelError(level);
         return;
       }
-      showSuccessToast({ description: "Configuration updated" });
+      showSuccessToast({ description: t("UPDATE_CONFIGURATION.UPDATED_TOAST") });
       onClose();
     } catch (error: unknown) {
       if (isAccessGrantRefused(error)) {
@@ -139,7 +141,7 @@ export const UpdateConfiguration = ({
         return;
       }
       if (isHttpErrorStatus(error, 404)) {
-        showErrorToast({ errors: "This configuration no longer exists." });
+        showErrorToast({ errors: t("UPDATE_CONFIGURATION.NOT_FOUND") });
         void queryClient.invalidateQueries({ queryKey: ["signup-link-configurations"] });
         onClose();
         return;
@@ -156,15 +158,15 @@ export const UpdateConfiguration = ({
         setFormLevelError(level);
         return;
       }
-      showErrorToast({ errors: "Something went wrong" });
+      showErrorToast({ errors: t("UPDATE_CONFIGURATION.GENERIC_ERROR") });
     }
   };
 
   return (
     <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
       <DialogHeader className="mb-4">
-        <DialogTitle>Update Configuration</DialogTitle>
-        <DialogDescription>Edit the signup link configuration.</DialogDescription>
+        <DialogTitle>{t("UPDATE_CONFIGURATION.TITLE")}</DialogTitle>
+        <DialogDescription>{t("UPDATE_CONFIGURATION.DESCRIPTION")}</DialogDescription>
       </DialogHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
@@ -181,10 +183,10 @@ export const UpdateConfiguration = ({
               disabled={isPending}
               onClick={onClose}
             >
-              Cancel
+              {t("common:CANCEL")}
             </Button>
             <Button className="min-w-[80px]" type="submit" disabled={isPending || !isDirty}>
-              {isPending ? "Updating…" : "Update"}
+              {isPending ? t("UPDATE_CONFIGURATION.UPDATING") : t("common:UPDATE")}
             </Button>
           </DialogFooter>
         </form>

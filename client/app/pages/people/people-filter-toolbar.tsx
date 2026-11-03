@@ -3,6 +3,7 @@
 import { FilterChangeHandler, FilterToolbar } from "@/components/filter-toolbar";
 import { Mail, User } from "lucide-react";
 import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
+import { useT } from "@seliseblocks/genesis-os";
 
 export type PeopleSearchField = "name" | "email";
 
@@ -19,6 +20,7 @@ export const usePeopleFilterQueryParams = () => {
 };
 
 export const PeopleFilterToolbar = () => {
+  const { t } = useT("os.people");
   const { queryParams, setQueryParams } = usePeopleFilterQueryParams();
 
   type PeopleFilter = {
@@ -51,7 +53,7 @@ export const PeopleFilterToolbar = () => {
           type: "DropdownSearchInput",
           label: "",
           props: {
-            placeholder: "Minimum 3 characters…",
+            placeholder: t("PEOPLE_FILTER_TOOLBAR.MINIMUM_3_CHARACTERS"),
             debounceMs: 2000,
             minSearchLength: 3,
             keepValueOnTypeChange: true,
@@ -59,7 +61,7 @@ export const PeopleFilterToolbar = () => {
               {
                 label: (
                   <span className="flex items-center gap-2">
-                    <User className="aspect-square w-4" /> Name
+                    <User className="aspect-square w-4" /> {t("common:NAME")}
                   </span>
                 ),
                 value: "name",
@@ -67,7 +69,7 @@ export const PeopleFilterToolbar = () => {
               {
                 label: (
                   <span className="flex items-center gap-2">
-                    <Mail className="aspect-square w-4" /> Email
+                    <Mail className="aspect-square w-4" /> {t("common:EMAIL")}
                   </span>
                 ),
                 value: "email",

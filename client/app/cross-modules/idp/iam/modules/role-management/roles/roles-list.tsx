@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { FilterControls, SortValue } from "@/components/filter-toolbar";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
@@ -34,6 +35,7 @@ const LoadingSkelton = () => (
 );
 
 const RoleRowActions = ({ row, onEdit }: { row: IRole; onEdit: (role: IRole) => void }) => {
+  const { t } = useT("os.idp.roles");
   const { mutateAsync, isPending } = useDeleteRole();
   const { roleEditBlock } = useGrantScope();
   const blockedReason = roleEditBlock(row);
@@ -46,7 +48,13 @@ const RoleRowActions = ({ row, onEdit }: { row: IRole; onEdit: (role: IRole) => 
     >
       {blockedReason ? (
         <DisabledReason reason={blockedReason}>
-          <Button size="icon" className="rounded-full" variant="ghost" aria-label={`Edit role ${row.name}`} disabled>
+          <Button
+            size="icon"
+            className="rounded-full"
+            variant="ghost"
+            aria-label={t("ROLES_LIST.EDIT_ROLE", { name: row.name })}
+            disabled
+          >
             <Pencil className="h-4 w-4" />
           </Button>
         </DisabledReason>
@@ -55,7 +63,7 @@ const RoleRowActions = ({ row, onEdit }: { row: IRole; onEdit: (role: IRole) => 
           size="icon"
           className="rounded-full"
           variant="ghost"
-          aria-label={`Edit role ${row.name}`}
+          aria-label={t("ROLES_LIST.EDIT_ROLE", { name: row.name })}
           onClick={() => onEdit(row)}
         >
           <Pencil className="h-4 w-4" />
@@ -79,6 +87,7 @@ export const RolesList = ({
   isLoading,
   showDefaultOriginBadge = false,
 }: RolesTableProps) => {
+  const { t } = useT("os.idp.roles");
   const { sortQueryParams, setSortQueryParams } = useRolesSortQueryParams();
   const [selectedRole, setSelectedRole] = useState<IRole | null>(null);
   const navigate = useNavigate();
@@ -99,7 +108,7 @@ export const RolesList = ({
     return (
       <div className="flex min-h-[420px] flex-col items-center justify-center gap-3 rounded-xl py-16 text-center text-sm text-muted-foreground">
         <ShieldCheck className="h-6 w-6" />
-        No roles found. Please create new roles.
+        {t("ROLES_LIST.EMPTY")}
       </div>
     );
   }
@@ -108,37 +117,39 @@ export const RolesList = ({
     <>
       <div className="scrollbar-hidden-x overflow-x-hidden md:overflow-x-auto">
         <div className="flex flex-col gap-3 md:min-w-[840px]">
-          <div
-            className={`hidden items-center gap-4 px-4 md:grid ${gridColumns}`}
-          >
+          <div className={`hidden items-center gap-4 px-4 md:grid ${gridColumns}`}>
             <FilterControls.SortHeader
               id="Name"
-              label="Name"
+              label={t("common:NAME")}
               value={sortQueryParams}
               onChange={sortHandler}
             />
             <FilterControls.SortHeader
               id="Slug"
-              label="Slug"
+              label={t("ROLES_LIST.COLUMN_SLUG")}
               value={sortQueryParams}
               onChange={sortHandler}
             />
             <FilterControls.SortHeader
               id="Count"
-              label="Permissions"
+              label={t("ROLES_LIST.COLUMN_PERMISSIONS")}
               value={sortQueryParams}
               onChange={sortHandler}
             />
-            {showManagedBy && <span className="font-bold text-medium-emphasis">Managed by</span>}
-            <span className="font-bold text-medium-emphasis">Description</span>
+            {showManagedBy && (
+              <span className="font-bold text-medium-emphasis">
+                {t("ROLES_LIST.COLUMN_MANAGED_BY")}
+              </span>
+            )}
+            <span className="font-bold text-medium-emphasis">{t("common:DESCRIPTION")}</span>
             <span />
           </div>
 
           {roles.map((role) => (
-            <div
+            <div // NOSONAR: row opens the role by click/Enter/Space; it holds action buttons, so it can't be a <button>
               key={role.itemId}
               role="button"
-              aria-label={`Open role ${role.name}`}
+              aria-label={t("ROLES_LIST.OPEN_ROLE", { name: role.name })}
               tabIndex={0}
               onClick={() => openRole(role.itemId)}
               onKeyDown={(event) => {
@@ -162,13 +173,15 @@ export const RolesList = ({
                   </p>
                   {showDefaultOriginBadge && role.createdFromDefault && (
                     <Badge variant="secondary" className="shrink-0 font-normal">
-                      Default
+                      {t("ROLES_LIST.BADGE_DEFAULT")}
                     </Badge>
                   )}
                 </div>
               </div>
               <div className="min-w-0">
-                <span className="text-xs text-muted-foreground md:hidden">Slug</span>
+                <span className="text-xs text-muted-foreground md:hidden">
+                  {t("ROLES_LIST.COLUMN_SLUG")}
+                </span>
                 <Badge variant="secondary" className="w-fit max-w-full font-normal">
                   <span className="truncate" title={role.slug}>
                     {role.slug}
@@ -176,21 +189,32 @@ export const RolesList = ({
                 </Badge>
               </div>
               <div className="flex items-center justify-between gap-3 md:block">
-                <span className="text-xs text-muted-foreground md:hidden">Permissions</span>
+                <span className="text-xs text-muted-foreground md:hidden">
+                  {t("ROLES_LIST.COLUMN_PERMISSIONS")}
+                </span>
                 <Badge variant="secondary" className="w-fit">
-                  <span>{role.count}</span>&nbsp;{role.count === 1 ? "permission" : "permissions"}
+                  {t("ROLES_LIST.PERMISSION_COUNT", { count: role.count })}
                 </Badge>
               </div>
               {showManagedBy && (
                 <div className="min-w-0">
-                  <span className="text-xs text-muted-foreground md:hidden">Managed by</span>
-                  <p className="truncate text-sm text-muted-foreground" data-testid="managed-by-cell">
-                    {role.parentRoleSlug ? (nameBySlug.get(role.parentRoleSlug) ?? role.parentRoleSlug) : "-"}
+                  <span className="text-xs text-muted-foreground md:hidden">
+                    {t("ROLES_LIST.COLUMN_MANAGED_BY")}
+                  </span>
+                  <p
+                    className="truncate text-sm text-muted-foreground"
+                    data-testid="managed-by-cell"
+                  >
+                    {role.parentRoleSlug
+                      ? (nameBySlug.get(role.parentRoleSlug) ?? role.parentRoleSlug)
+                      : "-"}
                   </p>
                 </div>
               )}
               <div className="min-w-0">
-                <span className="text-xs text-muted-foreground md:hidden">Description</span>
+                <span className="text-xs text-muted-foreground md:hidden">
+                  {t("common:DESCRIPTION")}
+                </span>
                 <p className="truncate text-sm text-muted-foreground" title={role.description}>
                   {role.description || "-"}
                 </p>

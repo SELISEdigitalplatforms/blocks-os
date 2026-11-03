@@ -1,0 +1,10 @@
+{
+  "INTEGRATION.ADD_CONNECTION": "Add connection",
+  "INTEGRATION.ADD_CONNECTION_HINT": "Add a connection to create its role and client credential.",
+  "INTEGRATION.CHECK_CONNECTION": "Check your connection and try again.",
+  "INTEGRATION.CONNECTIONS": "Connections",
+  "INTEGRATION.CONNECTION_COUNT_one": "{{count}} connection",
+  "INTEGRATION.CONNECTION_COUNT_other": "{{count}} connections",
+  "INTEGRATION.COULD_NOT_LOAD_SETUP": "Could not load Integration setup",
+  "INTEGRATION.NO_INTEGRATIONS_YET": "No integrations yet"
+}

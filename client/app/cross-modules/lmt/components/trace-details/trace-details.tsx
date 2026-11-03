@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { TraceStoryView } from "./trace-story";
 import { TraceTree } from "@blocks-lmt/models/trace.model";
 import { useSearchParams } from "react-router";
+import { useT } from "@seliseblocks/genesis-os";
 export const timelineContext = createContext<{
   traceHistory: {
     rootId: string;
@@ -35,24 +36,27 @@ export const timelineContext = createContext<{
   setSelectedTrace: () => {},
   isLoading: false,
 });
-const TraceDetailsEmptyState = ({ traceId, isError }: { traceId: string; isError: boolean }) => (
-  <Card className="rounded-sm shadow-none">
-    <CardContent className="flex flex-col items-center justify-center px-6 py-16 text-center">
-      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-        <GitBranch className="h-6 w-6 text-muted-foreground" aria-hidden />
-      </div>
-      <h2 className="text-lg font-semibold text-high-emphasis">
-        {isError ? "Unable to load trace" : "Trace not found"}
-      </h2>
-      <p className="mt-2 max-w-md text-sm text-medium-emphasis">
-        {isError
-          ? "Something went wrong while fetching trace details. Please try again in a moment."
-          : `No trace data exists for this ID in the current project. The trace may have expired, or it may not have been recorded yet.`}
-      </p>
-      {traceId ? <p className="mt-4 break-all text-xs text-low-emphasis">{traceId}</p> : null}
-    </CardContent>
-  </Card>
-);
+const TraceDetailsEmptyState = ({ traceId, isError }: { traceId: string; isError: boolean }) => {
+  const { t } = useT("os.lmt");
+  return (
+    <Card className="rounded-sm shadow-none">
+      <CardContent className="flex flex-col items-center justify-center px-6 py-16 text-center">
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+          <GitBranch className="h-6 w-6 text-muted-foreground" aria-hidden />
+        </div>
+        <h2 className="text-lg font-semibold text-high-emphasis">
+          {isError ? t("TRACE_DETAILS.UNABLE_TO_LOAD_TRACE") : t("TRACE_DETAILS.TRACE_NOT_FOUND")}
+        </h2>
+        <p className="mt-2 max-w-md text-sm text-medium-emphasis">
+          {isError
+            ? t("TRACE_DETAILS.SOMETHING_WENT_WRONG_WHILE")
+            : t("TRACE_DETAILS.NO_TRACE_DATA_EXISTS_FOR")}
+        </p>
+        {traceId ? <p className="mt-4 break-all text-xs text-low-emphasis">{traceId}</p> : null}
+      </CardContent>
+    </Card>
+  );
+};
 
 const getTraceBreadcrumbLabel = (
   id: string,
@@ -79,6 +83,7 @@ export const TraceDetails = ({
   /** Titles for ancestor segments owned by the routing page (e.g. the logs crumbs). */
   breadcrumbTitles?: BreadcrumbTitles;
 }) => {
+  const { t } = useT("os.lmt");
   const lmtBase = useLmtBasePath();
   const [searchParams] = useSearchParams();
   const requestId = searchParams.get("requestId");
@@ -173,7 +178,7 @@ export const TraceDetails = ({
                 onClick={downloadJSONFile}
               >
                 <Download className="h-4 w-4 lg:mr-2" />
-                <span className="sr-only lg:not-sr-only">Download JSON</span>
+                <span className="sr-only lg:not-sr-only">{t("TRACE_DETAILS.DOWNLOAD_JSON")}</span>
               </Button>
             ) : null}
           </>

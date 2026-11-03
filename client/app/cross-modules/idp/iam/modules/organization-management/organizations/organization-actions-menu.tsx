@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { useState } from "react";
 import { IOrganization } from "@blocks-idp/iam/models/organization";
 import { Button } from "@/components/ui-kits/button/button";
@@ -17,6 +18,7 @@ type OrganizationActionsProps = {
 };
 
 export const OrganizationActions = ({ organization }: OrganizationActionsProps) => {
+  const { t } = useT("os.idp.organizations");
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [isToggleStatusModalOpen, setIsToggleStatusModalOpen] = useState(false);
 
@@ -35,18 +37,18 @@ export const OrganizationActions = ({ organization }: OrganizationActionsProps) 
         <DropdownMenuContent align="end">
           <DropdownMenuItem className="gap-2" onSelect={() => setIsRenameModalOpen(true)}>
             <Pencil className="aspect-square w-4" />
-            <span>Rename</span>
+            <span>{t("ORGANIZATION_ACTIONS_MENU.RENAME")}</span>
           </DropdownMenuItem>
           <DropdownMenuItem className="gap-2" onSelect={() => setIsToggleStatusModalOpen(true)}>
             {organization.isDisabled ? (
               <>
                 <Power className="aspect-square w-4" />
-                <span>Enable</span>
+                <span>{t("ORGANIZATION_ACTIONS_MENU.ENABLE")}</span>
               </>
             ) : (
               <>
                 <PowerOff className="aspect-square w-4" />
-                <span>Disable</span>
+                <span>{t("ORGANIZATION_ACTIONS_MENU.DISABLE")}</span>
               </>
             )}
           </DropdownMenuItem>

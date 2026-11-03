@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui-kits/badge/badge";
 import { Lock } from "lucide-react";
 import { MethodBadge } from "./method-badge";
 import { IApiEndpoint } from "../models/api-endpoint.model";
+import { useT } from "@seliseblocks/genesis-os";
 type EndpointRowProps = {
   endpoint: IApiEndpoint;
   isSelected: boolean;
@@ -18,6 +19,7 @@ export const EndpointRow = ({
   onToggleMfa,
   onToggleCaptcha,
 }: EndpointRowProps) => {
+  const { t } = useT("os.idp.api-settings");
   const isCritical = (endpoint.httpMethod ?? "").toUpperCase() === "DELETE";
   return (
     <div className="group flex flex-col gap-2 rounded-lg border border-border bg-background px-3 py-2.5 transition-colors hover:bg-accent/20 sm:flex-row sm:items-center sm:justify-between sm:gap-2.5 sm:px-4 sm:py-3">
@@ -39,7 +41,7 @@ export const EndpointRow = ({
                 variant="error"
                 className="shrink-0 rounded-full px-2 text-[10px] uppercase tracking-wide"
               >
-                Critical
+                {t("ENDPOINT_ROW.CRITICAL")}
               </Badge>
             )}
           </div>
@@ -57,7 +59,9 @@ export const EndpointRow = ({
             checked={endpoint.isMFARequired}
             onCheckedChange={(val) => onToggleMfa(endpoint, val)}
           />
-          <span className="text-[11px] font-medium text-muted-foreground">MFA</span>
+          <span className="text-[11px] font-medium text-muted-foreground">
+            {t("ENDPOINT_ROW.MFA")}
+          </span>
           <Lock
             className={`h-3 w-3 transition-colors ${endpoint.isMFARequired ? "text-amber-500" : "text-border"}`}
           />
@@ -69,7 +73,9 @@ export const EndpointRow = ({
             checked={endpoint.isCaptchaRequired}
             onCheckedChange={(val) => onToggleCaptcha(endpoint, val)}
           />
-          <span className="text-[11px] font-medium text-muted-foreground">Captcha</span>
+          <span className="text-[11px] font-medium text-muted-foreground">
+            {t("ENDPOINT_ROW.CAPTCHA")}
+          </span>
         </div>
       </div>
     </div>

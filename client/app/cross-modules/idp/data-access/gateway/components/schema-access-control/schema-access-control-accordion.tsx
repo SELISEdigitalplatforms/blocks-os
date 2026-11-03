@@ -9,7 +9,7 @@ import {
 } from "@/components/ui-kits/dropdown-menu/dropdown-menu";
 import { Input } from "@/components/ui-kits/input/input";
 import { cn } from "@/lib/utils";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { LOGICAL_OPERATOR } from "@blocks-idp/data-access/gateway/constants/schema-access-control";
 import { useDeletePolicy } from "@blocks-idp/data-access/gateway/hooks/use-configuration";
 import type { IPolicyItem } from "@blocks-idp/data-access/gateway/models/data-service";
@@ -60,14 +60,12 @@ export const SchemaAccessControlAccordion = ({
   onDeleteError,
   isEditing,
 }: SchemaAccessControlAccordionProps) => {
+  const { t } = useT("os.idp.gateway");
   const [openId, setOpenId] = useState<number | null>(null);
   const [searchText, setSearchText] = useState("");
-  const [deletingPolicy, setDeletingPolicy] = useState<IPolicyItem | null>(
-    null,
-  );
+  const [deletingPolicy, setDeletingPolicy] = useState<IPolicyItem | null>(null);
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
-  const { mutateAsync: deletePolicy, isPending: isDeleting } =
-    useDeletePolicy();
+  const { mutateAsync: deletePolicy, isPending: isDeleting } = useDeletePolicy();
 
   const handleDeletePolicy = async () => {
     if (!deletingPolicy?.itemId) return;
@@ -88,9 +86,7 @@ export const SchemaAccessControlAccordion = ({
   };
 
   const filteredPolicies = searchText
-    ? policies.filter((p) =>
-        p.policyName.toLowerCase().includes(searchText.toLowerCase()),
-      )
+    ? policies.filter((p) => p.policyName.toLowerCase().includes(searchText.toLowerCase()))
     : policies;
 
   /**
@@ -113,7 +109,7 @@ export const SchemaAccessControlAccordion = ({
       {!isEditing && (
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground/70">
-            Rule sets
+            {t("ACCESS_ACCORDION.RULE_SETS")}
           </span>
           <span className="rounded-full bg-access-custom-bg px-1.5 py-0.5 text-[10px] font-bold text-access-custom-fg">
             {policies.length}
@@ -127,15 +123,15 @@ export const SchemaAccessControlAccordion = ({
             onClick={onAddRuleSet}
           >
             <Plus className="h-3.5 w-3.5" />
-            <span>Add rule set</span>
+            <span>{t("ACCESS_ACCORDION.ADD_RULE_SET")}</span>
           </Button>
         </div>
       )}
 
       {!isEditing && policies.length > 0 && (
         <Input
-          placeholder="Search rule sets"
-          aria-label="Search rule sets"
+          placeholder={t("ACCESS_ACCORDION.SEARCH_RULE_SETS")}
+          aria-label={t("ACCESS_ACCORDION.SEARCH_RULE_SETS")}
           className="h-9 text-xs"
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
@@ -146,8 +142,7 @@ export const SchemaAccessControlAccordion = ({
         <div className="flex items-center gap-1.5 rounded-md bg-muted/40 px-2.5 py-1.5">
           <Info className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden />
           <span className="text-[11px] leading-relaxed text-muted-foreground">
-            Access is granted when <strong className="font-semibold text-foreground">any</strong> rule
-            set matches.
+            {t("ACCESS_ACCORDION.ANY_MATCHES_HINT")}
           </span>
         </div>
       )}
@@ -159,14 +154,17 @@ export const SchemaAccessControlAccordion = ({
             const rulesCount = countPolicyRules(policy.ruleGroup);
             const groupsCount = countPolicyGroups(policy.ruleGroup);
             const matchesAll = policy.ruleGroup.logicalOperator === LOGICAL_OPERATOR.AND;
-            const logicalLabel = matchesAll
-              ? "every rule must match"
-              : "any rule may match";
-            const rulesLabel = rulesCount === 1 ? "1 rule" : `${rulesCount} rules`;
-            // Only mentioned once a set has groups, so a flat set reads as it always has.
-            const groupsNoun = groupsCount === 1 ? "group" : "groups";
-            const groupsLabel = groupsCount === 0 ? "" : ` · ${groupsCount} ${groupsNoun}`;
-            const matchModeLabel = matchesAll ? "match all" : "match any";
+            const grantsLabel = matchesAll
+              ? t("ACCESS_ACCORDION.GRANTS_WHEN_ALL")
+              : t("ACCESS_ACCORDION.GRANTS_WHEN_ANY");
+            // Groups are only mentioned once a set has some, so a flat set reads as it always has.
+            const summaryLabel = [
+              t("ACCESS_ACCORDION.RULES_COUNT", { count: rulesCount }),
+              ...(groupsCount === 0
+                ? []
+                : [t("ACCESS_ACCORDION.GROUPS_COUNT", { count: groupsCount })]),
+              matchesAll ? t("ACCESS_ACCORDION.MATCH_ALL") : t("ACCESS_ACCORDION.MATCH_ANY"),
+            ].join(" · ");
 
             return (
               <li
@@ -191,8 +189,7 @@ export const SchemaAccessControlAccordion = ({
                       {policy.policyName}
                     </span>
                     <span className="shrink-0 text-[11px] text-muted-foreground">
-                      {rulesLabel}
-                      {groupsLabel} · {matchModeLabel}
+                      {summaryLabel}
                     </span>
                   </button>
 
@@ -200,7 +197,7 @@ export const SchemaAccessControlAccordion = ({
                     <DropdownMenuTrigger asChild>
                       <button
                         type="button"
-                        aria-label={`Actions for ${policy.policyName}`}
+                        aria-label={t("ACCESS_ACCORDION.ACTIONS_FOR", { name: policy.policyName })}
                         className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
                       >
                         <MoreHorizontal className="h-4 w-4" />
@@ -212,14 +209,14 @@ export const SchemaAccessControlAccordion = ({
                         onClick={() => onEditPolicy?.(policy)}
                       >
                         <Pencil className="mr-2 h-4 w-4" />
-                        <span>Edit</span>
+                        <span>{t("common:EDIT")}</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="cursor-pointer text-destructive focus:text-destructive"
                         onClick={() => setDeletingPolicy(policy)}
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
-                        <span>Delete</span>
+                        <span>{t("common:DELETE")}</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -229,9 +226,7 @@ export const SchemaAccessControlAccordion = ({
                   <div className="border-t border-border/40 bg-muted/20 px-2.5 py-2">
                     {/* Read as a sentence: "when X, and Y" — the joiner is the
                         set's own operator, so the relation is never guessed. */}
-                    <p className="text-[11px] text-muted-foreground">
-                      Grants access when {logicalLabel}:
-                    </p>
+                    <p className="text-[11px] text-muted-foreground">{grantsLabel}</p>
                     <ul className="mt-1.5 flex flex-col">
                       {ruleSetLines(policy).map((line) => (
                         <li
@@ -274,8 +269,8 @@ export const SchemaAccessControlAccordion = ({
       {filteredPolicies.length === 0 && !isEditing && (
         <p className="mt-6 text-center text-sm text-muted-foreground">
           {searchText
-            ? `No rule sets match "${searchText}"`
-            : "No rule sets added yet. Click Add rule set to create one."}
+            ? t("ACCESS_ACCORDION.NO_MATCH", { search: searchText })
+            : t("ACCESS_ACCORDION.EMPTY")}
         </p>
       )}
 
@@ -289,32 +284,33 @@ export const SchemaAccessControlAccordion = ({
           onCancel={() => setDeletingPolicy(null)}
           onConfirm={handleDeletePolicy}
           data={{
-            dialogTitle: isLastRuleSet ? "Delete the only rule set?" : "Delete rule set?",
+            dialogTitle: isLastRuleSet
+              ? t("ACCESS_ACCORDION.DELETE_ONLY_TITLE")
+              : t("ACCESS_ACCORDION.DELETE_TITLE"),
             dialogSubtitle: (
               <>
                 <span className="block">
-                  Are you sure you want to delete {deletingPolicy?.policyName}? This
-                  action cannot be undone.
+                  {t("ACCESS_ACCORDION.DELETE_CONFIRM", {
+                    name: deletingPolicy?.policyName ?? "",
+                  })}
                 </span>
                 {isLastRuleSet && (
                   <span className="mt-3 flex items-start gap-2.5 rounded-md border border-warning-500/50 bg-warning-100 px-3 py-2.5 text-warning-800">
                     <AlertTriangle className="mt-px h-4 w-4 shrink-0" aria-hidden />
                     <span className="min-w-0">
                       <span className="block text-xs font-semibold">
-                        This leaves access with nobody
+                        {t("ACCESS_ACCORDION.NOBODY_TITLE")}
                       </span>
                       <span className="mt-0.5 block text-xs leading-relaxed opacity-90">
-                        Custom access grants only what its rule sets allow, and this is
-                        the last one. Choose a different access level if you meant to
-                        open it up instead.
+                        {t("ACCESS_ACCORDION.NOBODY_TEXT")}
                       </span>
                     </span>
                   </span>
                 )}
               </>
             ),
-            confirmButton: "Delete",
-            cancelButton: "Cancel",
+            confirmButton: t("common:DELETE"),
+            cancelButton: t("common:CANCEL"),
           }}
           buttonState={{ confirm: { disable: isDeleting } }}
         />
@@ -322,4 +318,3 @@ export const SchemaAccessControlAccordion = ({
     </div>
   );
 };
-

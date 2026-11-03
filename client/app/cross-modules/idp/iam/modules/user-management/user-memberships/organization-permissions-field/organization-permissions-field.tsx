@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Label } from "@/components/ui-kits/label/label";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
+import { useT } from "@seliseblocks/genesis-os";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import { KeyRound } from "lucide-react";
 import { AddOrganizationPermission } from "./add-organization-permission";
@@ -19,9 +20,10 @@ export const OrganizationPermissionsField = ({
   permissions,
   onChange,
   onSave,
-  description = "Additional permissions for this user",
+  description,
   organizationId,
 }: OrganizationPermissionsFieldProps) => {
+  const { t } = useT("os.idp.users");
   const [filter, setFilter] = useState({ page: 0, pageSize: 5 });
 
   const onPageChangeHandler = (page: number) => {
@@ -47,14 +49,18 @@ export const OrganizationPermissionsField = ({
       <div className="flex flex-row items-center justify-between gap-3">
         <div className="flex-1 space-y-1">
           <div className="flex items-center gap-2">
-            <Label className="text-base font-medium">Permissions</Label>
+            <Label className="text-base font-medium">
+              {t("ORGANIZATION_PERMISSIONS_FIELD.PERMISSIONS")}
+            </Label>
             {permissions.length > 0 && (
               <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                 {permissions.length}
               </span>
             )}
           </div>
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="text-sm text-muted-foreground">
+            {description ?? t("ORGANIZATION_PERMISSIONS_FIELD.DEFAULT_DESCRIPTION")}
+          </p>
         </div>
         <div className="shrink-0">
           <AddOrganizationPermission
@@ -70,8 +76,12 @@ export const OrganizationPermissionsField = ({
           <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
             <KeyRound className="h-5 w-5 text-primary" />
           </div>
-          <p className="mt-3 text-sm font-medium text-foreground">No permissions added</p>
-          <p className="mt-1 text-xs text-muted-foreground">Optional, add if needed</p>
+          <p className="mt-3 text-sm font-medium text-foreground">
+            {t("ORGANIZATION_PERMISSIONS_FIELD.NO_PERMISSIONS_ADDED")}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {t("ORGANIZATION_PERMISSIONS_FIELD.OPTIONAL_HINT")}
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -87,12 +97,11 @@ export const OrganizationPermissionsField = ({
           {permissions.length > filter.pageSize && (
             <div className="flex items-center justify-between border-t pt-3">
               <p className="text-xs text-muted-foreground">
-                Showing {filter.page * filter.pageSize + 1} to{" "}
-                {Math.min(
-                  (filter.page + 1) * filter.pageSize,
-                  permissions.length,
-                )}{" "}
-                of {permissions.length} permissions
+                {t("ORGANIZATION_PERMISSIONS_FIELD.SHOWING", {
+                  from: filter.page * filter.pageSize + 1,
+                  to: Math.min((filter.page + 1) * filter.pageSize, permissions.length),
+                  count: permissions.length,
+                })}
               </p>
               <Pagination
                 page={filter.page}

@@ -14,7 +14,10 @@ import {
   useTransferOwnership,
 } from "./use-people";
 
-vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
+  ...mockProjectStoreFactory(),
+}));
 vi.mock("@blocks-identifier/services/people.service", () => ({
   peopleService: {
     getPeople: vi.fn(),

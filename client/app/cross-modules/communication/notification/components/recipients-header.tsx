@@ -5,10 +5,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
+import { useNotificationT } from "../i18n";
 import { NOTIFICATION_TEXT } from "../constants/notification-ui.constant";
 
 /** "Recipients" merges the old Send to and Receivers columns; the tooltip says what each value means. */
 export function RecipientsHeader() {
+  useNotificationT();
   return (
     <span className="inline-flex items-center gap-1">
       <span>{NOTIFICATION_TEXT.columns.recipients}</span>

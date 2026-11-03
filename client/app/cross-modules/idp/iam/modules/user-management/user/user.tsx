@@ -1,5 +1,5 @@
 import { UserProfileShell } from "@blocks-idp/iam/components/user-profile-shell";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { UserActionMenu } from "./user-action-menu";
 import { UserDevices } from "../user-devices/user-devices";
 import { UserHistories } from "../user-histories";
@@ -12,6 +12,7 @@ type UserProps = {
 };
 
 export const User = ({ id }: UserProps) => {
+  const { t } = useT("os.idp.users");
   // The IAM source hard-codes an empty projectKey because that app is already
   // scoped to a single tenant. OS is multi-project, so every IAM read has to
   // carry the selected project's tenant id.
@@ -20,19 +21,19 @@ export const User = ({ id }: UserProps) => {
   const tabs: { value: string; label: string; icon: ReactNode; render: () => ReactNode }[] = [
     {
       value: "access",
-      label: "Access",
+      label: t("USER.TAB_ACCESS"),
       icon: <KeyRound className="h-3.5 w-3.5" />,
       render: () => <UserAccessTab userId={id} projectKey={tenantId} />,
     },
     {
       value: "devices",
-      label: "Sessions",
+      label: t("USER.TAB_SESSIONS"),
       icon: <Smartphone className="h-3.5 w-3.5" />,
       render: () => <UserDevices id={id} projectKey={tenantId} />,
     },
     {
       value: "history",
-      label: "History",
+      label: t("USER.TAB_HISTORY"),
       icon: <Clock className="h-3.5 w-3.5" />,
       render: () => <UserHistories id={id} projectKey={tenantId} />,
     },

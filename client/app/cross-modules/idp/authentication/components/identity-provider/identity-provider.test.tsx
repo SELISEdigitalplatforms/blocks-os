@@ -7,7 +7,8 @@ const h = vi.hoisted(() => ({
   refetch: vi.fn(),
 }));
 
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { itemId: "project-1", tenantId: "tenant-1" } }),
 }));
 vi.mock("@blocks-idp/authentication/hooks/use-identity-provider", () => ({

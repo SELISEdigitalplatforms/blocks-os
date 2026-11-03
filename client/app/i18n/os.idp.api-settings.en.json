@@ -1,0 +1,23 @@
+{
+  "BULK_ACTION_BAR.CLEAR_SELECTION": "Clear selection",
+  "BULK_ACTION_BAR.ENABLE_CAPTCHA": "Enable Captcha",
+  "BULK_ACTION_BAR.ENABLE_MFA": "Enable MFA",
+  "BULK_ACTION_BAR.SELECTED": "Selected",
+  "ENDPOINT_CONSTANT.AUTHENTICATION": "Authentication and user identity provisioning endpoints.",
+  "ENDPOINT_CONSTANT.CAPTCHA": "Captcha verification and challenge endpoints.",
+  "ENDPOINT_CONSTANT.COMMUNICATION": "Email, SMS, and notification delivery endpoints.",
+  "ENDPOINT_CONSTANT.DEFAULT": "Service endpoints.",
+  "ENDPOINT_CONSTANT.IAM": "Identity and access management endpoints.",
+  "ENDPOINT_CONSTANT.MFA": "Multi-factor authentication endpoints.",
+  "ENDPOINT_CONSTANT.STORAGE": "S3-compatible object storage and bucket management.",
+  "ENDPOINT_ROW.CAPTCHA": "Captcha",
+  "ENDPOINT_ROW.CRITICAL": "Critical",
+  "ENDPOINT_ROW.MFA": "MFA",
+  "SECURITY_PRESETS_POPOVER.DISABLE_ALL_CAPTCHA": "Disable all Captcha",
+  "SECURITY_PRESETS_POPOVER.DISABLE_ALL_MFA": "Disable all MFA",
+  "SECURITY_PRESETS_POPOVER.ENABLE_ALL_CAPTCHA": "Enable all Captcha",
+  "SECURITY_PRESETS_POPOVER.ENABLE_ALL_MFA": "Enable all MFA",
+  "SECURITY_PRESETS_POPOVER.TITLE": "Security Presets",
+  "SERVICE_GROUP_CARD.ENDPOINTS_one": "{{count}} Endpoint",
+  "SERVICE_GROUP_CARD.ENDPOINTS_other": "{{count}} Endpoints"
+}

@@ -8,6 +8,7 @@ import { isHttpErrorStatus } from "@/lib/http/http-error.util";
 import { isErrorWithErrors } from "@/lib/error";
 import { useArchiveSignupLinkConfiguration } from "@blocks-idp/iam/hooks/use-signup-link-configurations";
 import { ISignupLinkConfiguration } from "@blocks-idp/iam/models/signup-link-configuration";
+import { useT } from "@seliseblocks/genesis-os";
 import { Pencil, Ticket, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { UpdateConfiguration } from "../update-configuration/update-configuration";
@@ -24,10 +25,12 @@ type ConfigurationsListProps = {
   onRetry: () => void;
 };
 
+const SKELETON_ROW_KEYS = ["row-1", "row-2", "row-3", "row-4", "row-5"];
+
 const LoadingSkeleton = () => (
   <div className="flex flex-col gap-3" data-testid="configurations-loading">
-    {Array.from({ length: 5 }).map((_, index) => (
-      <Skeleton key={index} className="h-[72px] w-full rounded-xl" />
+    {SKELETON_ROW_KEYS.map((key) => (
+      <Skeleton key={key} className="h-[72px] w-full rounded-xl" />
     ))}
   </div>
 );
@@ -41,6 +44,7 @@ export const ConfigurationsList = ({
   isError,
   onRetry,
 }: ConfigurationsListProps) => {
+  const { t } = useT("os.idp.signup-links");
   const [selected, setSelected] = useState<ISignupLinkConfiguration | null>(null);
   const [pendingArchive, setPendingArchive] = useState<ISignupLinkConfiguration | null>(null);
   const { mutateAsync: archive, isPending: isArchiving } = useArchiveSignupLinkConfiguration();
@@ -51,7 +55,7 @@ export const ConfigurationsList = ({
         className="flex min-h-[320px] items-center justify-center rounded-xl py-16 text-center text-sm text-muted-foreground"
         data-testid="configurations-forbidden"
       >
-        You do not have permission to manage signup link configurations.
+        {t("CONFIGURATIONS_LIST.FORBIDDEN")}
       </div>
     );
   }
@@ -62,9 +66,9 @@ export const ConfigurationsList = ({
         className="flex min-h-[320px] flex-col items-center justify-center gap-3 rounded-xl py-16 text-center text-sm text-muted-foreground"
         data-testid="configurations-error"
       >
-        <p>Something went wrong loading configurations.</p>
+        <p>{t("CONFIGURATIONS_LIST.LOAD_ERROR")}</p>
         <Button variant="outline" onClick={onRetry}>
-          Retry
+          {t("common:RETRY")}
         </Button>
       </div>
     );
@@ -79,9 +83,9 @@ export const ConfigurationsList = ({
           className="flex min-h-[320px] flex-col items-center justify-center gap-3 rounded-xl py-16 text-center text-sm text-muted-foreground"
           data-testid="configurations-no-match"
         >
-          <p>No configurations match your search.</p>
+          <p>{t("CONFIGURATIONS_LIST.NO_MATCH")}</p>
           <Button variant="outline" onClick={onClearFilters}>
-            Clear filters
+            {t("CONFIGURATIONS_LIST.CLEAR_FILTERS")}
           </Button>
         </div>
       );
@@ -93,11 +97,10 @@ export const ConfigurationsList = ({
       >
         <Ticket className="h-6 w-6 text-muted-foreground" />
         <h2 className="text-base font-semibold text-high-emphasis">
-          No signup link configurations yet
+          {t("CONFIGURATIONS_LIST.EMPTY_TITLE")}
         </h2>
         <p className="max-w-md text-sm text-muted-foreground">
-          A configuration decides which roles, permissions and sign-in experience a one-click signup
-          link grants.
+          {t("CONFIGURATIONS_LIST.EMPTY_BODY")}
         </p>
         <AddConfiguration />
       </div>
@@ -108,11 +111,11 @@ export const ConfigurationsList = ({
     if (!pendingArchive) return;
     try {
       await archive(pendingArchive.itemId);
-      showSuccessToast({ description: "Configuration archived" });
+      showSuccessToast({ description: t("CONFIGURATIONS_LIST.ARCHIVED_TOAST") });
       setPendingArchive(null);
     } catch (error) {
       if (isHttpErrorStatus(error, 404)) {
-        showErrorToast({ errors: "This configuration no longer exists." });
+        showErrorToast({ errors: t("CONFIGURATIONS_LIST.NOT_FOUND") });
         setPendingArchive(null);
         return;
       }
@@ -120,7 +123,7 @@ export const ConfigurationsList = ({
         showErrorToast({ errors: error.errors });
         return;
       }
-      showErrorToast({ errors: "Something went wrong" });
+      showErrorToast({ errors: t("CONFIGURATIONS_LIST.GENERIC_ERROR") });
     }
   };
 
@@ -129,13 +132,23 @@ export const ConfigurationsList = ({
       <div className="scrollbar-hidden-x overflow-x-hidden md:overflow-x-auto">
         <div className="flex flex-col gap-3 md:min-w-[1060px]">
           <div className="hidden grid-cols-[minmax(180px,1.2fr)_140px_minmax(140px,1fr)_100px_100px_120px_100px_88px] items-center gap-4 px-4 md:grid">
-            <span className="font-bold text-medium-emphasis">Name</span>
-            <span className="font-bold text-medium-emphasis">Credential mode</span>
-            <span className="font-bold text-medium-emphasis">Default roles</span>
-            <span className="font-bold text-medium-emphasis">Lifetime</span>
-            <span className="font-bold text-medium-emphasis">Max uses</span>
-            <span className="font-bold text-medium-emphasis">Existing-user password</span>
-            <span className="font-bold text-medium-emphasis">Status</span>
+            <span className="font-bold text-medium-emphasis">{t("common:NAME")}</span>
+            <span className="font-bold text-medium-emphasis">
+              {t("CONFIGURATIONS_LIST.COLUMN_CREDENTIAL_MODE")}
+            </span>
+            <span className="font-bold text-medium-emphasis">
+              {t("CONFIGURATIONS_LIST.COLUMN_DEFAULT_ROLES")}
+            </span>
+            <span className="font-bold text-medium-emphasis">
+              {t("CONFIGURATIONS_LIST.COLUMN_LIFETIME")}
+            </span>
+            <span className="font-bold text-medium-emphasis">
+              {t("CONFIGURATIONS_LIST.COLUMN_MAX_USES")}
+            </span>
+            <span className="font-bold text-medium-emphasis">
+              {t("CONFIGURATIONS_LIST.COLUMN_EXISTING_PASSWORD")}
+            </span>
+            <span className="font-bold text-medium-emphasis">{t("common:STATUS")}</span>
             <span />
           </div>
 
@@ -154,30 +167,40 @@ export const ConfigurationsList = ({
                 </p>
               </div>
               <div>
-                <span className="text-xs text-muted-foreground md:hidden">Credential mode</span>
+                <span className="text-xs text-muted-foreground md:hidden">
+                  {t("CONFIGURATIONS_LIST.COLUMN_CREDENTIAL_MODE")}
+                </span>
                 <Badge variant="secondary" className="font-normal">
                   {row.credentialMode}
                 </Badge>
               </div>
               <div className="min-w-0">
-                <span className="text-xs text-muted-foreground md:hidden">Default roles</span>
+                <span className="text-xs text-muted-foreground md:hidden">
+                  {t("CONFIGURATIONS_LIST.COLUMN_DEFAULT_ROLES")}
+                </span>
                 <p className="truncate text-sm text-muted-foreground">
                   {row.defaultRoles?.length ? row.defaultRoles.join(", ") : "—"}
                 </p>
               </div>
               <div>
-                <span className="text-xs text-muted-foreground md:hidden">Lifetime</span>
-                <p className="text-sm text-muted-foreground">{row.defaultLifetimeMinutes}m</p>
+                <span className="text-xs text-muted-foreground md:hidden">
+                  {t("CONFIGURATIONS_LIST.COLUMN_LIFETIME")}
+                </span>
+                <p className="text-sm text-muted-foreground">
+                  {t("CONFIGURATIONS_LIST.LIFETIME_VALUE", { minutes: row.defaultLifetimeMinutes })}
+                </p>
               </div>
               <div>
-                <span className="text-xs text-muted-foreground md:hidden">Max uses</span>
+                <span className="text-xs text-muted-foreground md:hidden">
+                  {t("CONFIGURATIONS_LIST.COLUMN_MAX_USES")}
+                </span>
                 <p className="text-sm text-muted-foreground" data-testid="max-uses">
                   {maxRedemptionsLabel(row.defaultMaxRedemptions)}
                 </p>
               </div>
               <div>
                 <span className="text-xs text-muted-foreground md:hidden">
-                  Existing-user password
+                  {t("CONFIGURATIONS_LIST.COLUMN_EXISTING_PASSWORD")}
                 </span>
                 <Badge
                   variant="secondary"
@@ -188,14 +211,16 @@ export const ConfigurationsList = ({
                 </Badge>
               </div>
               <div>
-                <span className="text-xs text-muted-foreground md:hidden">Status</span>
+                <span className="text-xs text-muted-foreground md:hidden">
+                  {t("common:STATUS")}
+                </span>
                 {row.isActive ? (
                   <Badge variant="secondary" className="font-normal">
-                    Active
+                    {t("CONFIGURATIONS_LIST.STATUS_ACTIVE")}
                   </Badge>
                 ) : (
                   <Badge variant="secondary" className="font-normal">
-                    Archived
+                    {t("CONFIGURATIONS_LIST.STATUS_ARCHIVED")}
                   </Badge>
                 )}
               </div>
@@ -204,7 +229,7 @@ export const ConfigurationsList = ({
                   size="icon"
                   className="rounded-full"
                   variant="ghost"
-                  aria-label={`Edit configuration ${row.name}`}
+                  aria-label={t("CONFIGURATIONS_LIST.EDIT_ARIA", { name: row.name })}
                   onClick={() => setSelected(row)}
                 >
                   <Pencil className="h-4 w-4" />
@@ -214,7 +239,7 @@ export const ConfigurationsList = ({
                     size="icon"
                     className="rounded-full"
                     variant="ghost"
-                    aria-label={`Archive configuration ${row.name}`}
+                    aria-label={t("CONFIGURATIONS_LIST.ARCHIVE_ARIA", { name: row.name })}
                     onClick={() => setPendingArchive(row)}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -246,10 +271,14 @@ export const ConfigurationsList = ({
         {pendingArchive && (
           <ConfirmationModal
             data={{
-              dialogTitle: "Archive this configuration?",
-              dialogSubtitle: `New links can no longer be generated from "${pendingArchive.name}". Links already generated from it keep working until they expire or are revoked.`,
-              confirmButton: isArchiving ? "Archiving…" : "Archive",
-              cancelButton: "Cancel",
+              dialogTitle: t("CONFIGURATIONS_LIST.ARCHIVE_TITLE"),
+              dialogSubtitle: t("CONFIGURATIONS_LIST.ARCHIVE_SUBTITLE", {
+                name: pendingArchive.name,
+              }),
+              confirmButton: isArchiving
+                ? t("CONFIGURATIONS_LIST.ARCHIVING")
+                : t("CONFIGURATIONS_LIST.ARCHIVE_CONFIRM"),
+              cancelButton: t("common:CANCEL"),
             }}
             onCancel={() => setPendingArchive(null)}
             onConfirm={confirmArchive}

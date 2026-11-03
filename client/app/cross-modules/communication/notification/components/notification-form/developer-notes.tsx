@@ -17,6 +17,7 @@ import {
 import type { NotificationFormValues } from "../../utils/notification-form";
 import { notificationImportances, notificationKinds } from "../../constants/notification.constant";
 import { NOTIFICATION_TEXT } from "../../constants/notification-ui.constant";
+import { useNotificationT } from "../../i18n";
 import { CheckRow, HelpText } from "./form-row";
 
 interface DeveloperNotesProps {
@@ -41,6 +42,7 @@ function OptionSelect({
   disabled: boolean;
   onChange: (value: number) => void;
 }>) {
+  useNotificationT();
   return (
     <div className="flex flex-col gap-1.5">
       <span className="text-sm">{label}</span>
@@ -67,6 +69,7 @@ export function DeveloperNotes({
   canMarkBuiltIn,
   readOnly = false,
 }: Readonly<DeveloperNotesProps>) {
+  useNotificationT();
   return (
     <Collapsible>
       <CollapsibleTrigger asChild>

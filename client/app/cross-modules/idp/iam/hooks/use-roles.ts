@@ -3,6 +3,7 @@ import { normalizeArchiveErrors } from "../constants/archive-error-messages";
 import { roleService } from "@blocks-idp/iam/services/role.service";
 import { GetRolesPayload, GetRolesResponse, IRole } from "@blocks-idp/iam/models/role";
 import { useGrantScope } from "@blocks-idp/iam/hooks/use-grant-scope";
+import { tStatic } from "@seliseblocks/genesis-os";
 
 const DEFAULT_ORGANIZATION_ID = "default";
 const ROLE_OPTIONS_PAGE_SIZE = 100;
@@ -33,7 +34,9 @@ export const useGetAssignableRoles = (
   // A caller that already narrows by slugs (the bulk "remove" list) keeps only the assignable ones.
   const requested = option.filter?.slugs ?? [];
   const slugs =
-    requested.length > 0 ? requested.filter((slug) => assignableRoles.includes(slug)) : assignableRoles;
+    requested.length > 0
+      ? requested.filter((slug) => assignableRoles.includes(slug))
+      : assignableRoles;
   // An empty slug list means "no filter" to the server, so "nothing assignable" must not be sent.
   const nothingToAssign = isRestricted && slugs.length === 0;
   const scoped: GetRolesPayload = isRestricted
@@ -140,8 +143,10 @@ export const useDeleteRole = () => {
     }) => {
       const response = await roleService.deleteRole(id, confirmRevokeFromUsers);
       if (response?.isSuccess === false) {
-        throw Object.assign(new Error("Archive failed"), {
-          errors: normalizeArchiveErrors(response) ?? { general: "Archive failed" },
+        throw Object.assign(new Error(tStatic("os.idp.iam", "USE_ROLES.ARCHIVE_FAILED")), {
+          errors: normalizeArchiveErrors(response) ?? {
+            general: tStatic("os.idp.iam", "USE_ROLES.ARCHIVE_FAILED"),
+          },
         });
       }
       return response;

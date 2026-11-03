@@ -22,6 +22,7 @@ import { environmentOptions } from "@/constants/environment-options";
 import { formatDate } from "@/lib/utils";
 import { IProject } from "@/models/project.model";
 import { useGetEnvRepositories } from "@/hooks/use-project";
+import { useT } from "@seliseblocks/genesis-os";
 
 const DEFAULT_LAST_DEPLOYMENT = "0001-01-01T00:00:00";
 
@@ -58,6 +59,7 @@ const EnvironmentDomain = ({
   project: IProject;
   hasDeployment: boolean;
 }) => {
+  const { t } = useT("os.settings");
   const [primary, ...rest] = project.applications ?? [];
   if (!primary) return <span className="text-muted-foreground">-</span>;
   return (
@@ -75,11 +77,11 @@ const EnvironmentDomain = ({
       ) : (
         <span
           className="flex max-w-[220px] items-center gap-2 truncate text-muted-foreground"
-          title="No repository has been deployed for this environment yet."
+          title={t("ENVIRONMENTS_CARD.NO_REPOSITORY_HAS_BEEN_DEPLOYED")}
         >
           <span className="truncate">{primary.domain.replace(/^https?:\/\//, "")}</span>
           <Badge variant="outline" className="w-fit shrink-0 text-[10px]">
-            Not deployed
+            {t("ENVIRONMENTS_CARD.NOT_DEPLOYED")}
           </Badge>
         </span>
       )}
@@ -114,6 +116,7 @@ type EnvironmentsCardProps = {
 };
 
 export const EnvironmentsCard = ({ environments, isLoading = false }: EnvironmentsCardProps) => {
+  const { t } = useT("os.settings");
   const firstTenantId = environments[0]?.tenantId || "";
   const {
     data: envRepositories,
@@ -131,60 +134,68 @@ export const EnvironmentsCard = ({ environments, isLoading = false }: Environmen
   return (
     <Card>
       <CardHeader className="mb-4 flex flex-col gap-1">
-        <CardTitle>Environments</CardTitle>
+        <CardTitle>{t("ENVIRONMENTS_CARD.ENVIRONMENTS")}</CardTitle>
         <CardDescription>
-          Environments provisioned for this project and their public domains
+          {t("ENVIRONMENTS_CARD.ENVIRONMENTS_PROVISIONED_FOR_THIS")}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="text-xs md:text-sm">Environment</TableHead>
-              <TableHead className="text-xs md:text-sm">X-Blocks-Key</TableHead>
-              <TableHead className="text-xs md:text-sm">Domain</TableHead>
-              <TableHead className="text-xs md:text-sm">Created On</TableHead>
+              <TableHead className="text-xs md:text-sm">
+                {t("ENVIRONMENTS_CARD.ENVIRONMENT")}
+              </TableHead>
+              <TableHead className="text-xs md:text-sm">
+                {t("ENVIRONMENTS_CARD.X_BLOCKS_KEY")}
+              </TableHead>
+              <TableHead className="text-xs md:text-sm">{t("ENVIRONMENTS_CARD.DOMAIN")}</TableHead>
+              <TableHead className="text-xs md:text-sm">
+                {t("ENVIRONMENTS_CARD.CREATED_ON")}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {showRowLoading ? (
-              <EnvironmentsTableLoading />
-            ) : environments.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={COLUMN_COUNT}
-                  className="h-24 text-center text-sm text-muted-foreground"
-                >
-                  No environments found for this project.
-                </TableCell>
-              </TableRow>
-            ) : (
-              environments.map((environment) => (
-                <TableRow key={environment.itemId} className="text-xs md:text-sm">
-                  <TableCell>
-                    <EnvironmentBadge environment={environment.environment} />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex h-6 items-center gap-2 font-mono text-medium-emphasis">
-                      <CopyToClipboardButton textToCopy={environment.tenantId}>
-                        <MaskedText
-                          text={environment.tenantId}
-                          showFirstN={3}
-                          showLastN={3}
-                          length={20}
-                        />
-                      </CopyToClipboardButton>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <EnvironmentDomain project={environment} hasDeployment={hasAnyDeployment} />
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap text-medium-emphasis">
-                    {environment.createdDate ? formatDate(new Date(environment.createdDate)) : "-"}
+            {showRowLoading && <EnvironmentsTableLoading />}
+            {!showRowLoading &&
+              (environments.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={COLUMN_COUNT}
+                    className="h-24 text-center text-sm text-muted-foreground"
+                  >
+                    {t("ENVIRONMENTS_CARD.NO_ENVIRONMENTS_FOUND_FOR_THIS")}
                   </TableCell>
                 </TableRow>
-              ))
-            )}
+              ) : (
+                environments.map((environment) => (
+                  <TableRow key={environment.itemId} className="text-xs md:text-sm">
+                    <TableCell>
+                      <EnvironmentBadge environment={environment.environment} />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex h-6 items-center gap-2 font-mono text-medium-emphasis">
+                        <CopyToClipboardButton textToCopy={environment.tenantId}>
+                          <MaskedText
+                            text={environment.tenantId}
+                            showFirstN={3}
+                            showLastN={3}
+                            length={20}
+                          />
+                        </CopyToClipboardButton>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <EnvironmentDomain project={environment} hasDeployment={hasAnyDeployment} />
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-medium-emphasis">
+                      {environment.createdDate
+                        ? formatDate(new Date(environment.createdDate))
+                        : "-"}
+                    </TableCell>
+                  </TableRow>
+                ))
+              ))}
           </TableBody>
         </Table>
       </CardContent>

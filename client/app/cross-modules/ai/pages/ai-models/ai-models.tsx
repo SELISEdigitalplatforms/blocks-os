@@ -9,6 +9,7 @@ import {
   ProviderToPlatformMap,
   ServicePlatform,
 } from "@blocks-ai/utils/aimodel-provider.utils";
+import { useT } from "@seliseblocks/genesis-os";
 const ProviderGridSkeleton = () => {
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -37,6 +38,7 @@ const ProviderGridSkeleton = () => {
   );
 };
 export const AIModels = () => {
+  const { t } = useT("os.ai");
   const { data: providers, isLoading } = useSeedProviders();
   const allProviders = [...(Array.isArray(providers) ? providers : []), createCustomProvider()];
   const officialApiModels = allProviders.filter((p) => {
@@ -63,7 +65,7 @@ export const AIModels = () => {
           {shouldShowOfficial && (
             <div className="flex flex-col gap-5">
               <p className="flex w-full border-b pb-2 text-base font-normal text-low-emphasis">
-                Official API
+                {t("AI_MODELS.OFFICIAL_API")}
               </p>
               <ProviderGridSkeleton />
             </div>
@@ -71,7 +73,7 @@ export const AIModels = () => {
           {shouldShowOpen && (
             <div className="flex flex-col gap-5">
               <p className="flex w-full border-b pb-2 text-base font-normal text-low-emphasis">
-                Open Deployment
+                {t("AI_MODELS.OPEN_DEPLOYMENT")}
               </p>
               <ProviderGridSkeleton />
             </div>
@@ -80,10 +82,16 @@ export const AIModels = () => {
       ) : (
         <>
           {shouldShowOfficial && (
-            <AiModelsList servicePlatform="Official API" providerList={filteredOfficial} />
+            <AiModelsList
+              servicePlatform={t("AI_MODELS.OFFICIAL_API")}
+              providerList={filteredOfficial}
+            />
           )}
           {shouldShowOpen && (
-            <AiModelsList servicePlatform="Open Deployment" providerList={filteredOpen} />
+            <AiModelsList
+              servicePlatform={t("AI_MODELS.OPEN_DEPLOYMENT")}
+              providerList={filteredOpen}
+            />
           )}
         </>
       )}

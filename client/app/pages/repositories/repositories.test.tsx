@@ -12,7 +12,8 @@ const h = vi.hoisted(() => ({
   toast: vi.fn(),
 }));
 
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedTenantGroup: h.selectedTenantGroup }),
 }));
 vi.mock("@seliseblocks/genesis-os/hooks", () => ({

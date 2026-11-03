@@ -15,9 +15,10 @@ const h = vi.hoisted(() => ({
   showSuccessToast: vi.fn(),
 }));
 
-vi.mock("@seliseblocks/genesis-os", () => {
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => {
   const Passthrough = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
   return {
+    ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
     useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
     Tooltip: Passthrough,
     TooltipTrigger: Passthrough,
@@ -1125,13 +1126,17 @@ describe("CreateOIDC", () => {
         "utf8",
       );
       expect(source).toContain('import { Input } from "@/components/ui-kits/input/input";');
-      expect(source).toContain('placeholder="Project setting"');
-      expect(source).toContain("Custom for this client");
+      expect(source).toContain("CREATE_OIDC.PLACEHOLDER_PROJECT_SETTING");
+      expect(source).toContain("CREATE_OIDC.MODE_CUSTOM");
       expect(source).not.toContain("Leave a field empty to use the project setting.");
     });
   });
   describe("sign-in policy", () => {
-    const provider = (itemId: string, displayName: string, extra: Record<string, unknown> = {}) => ({
+    const provider = (
+      itemId: string,
+      displayName: string,
+      extra: Record<string, unknown> = {},
+    ) => ({
       itemId,
       displayName,
       provider: displayName.toLowerCase(),
@@ -1212,7 +1217,9 @@ describe("CreateOIDC", () => {
       await openCreate(user);
       await fillValidCreate(user);
       await user.click(providersRadio("Selected"));
-      expect(await screen.findByText("Select at least one provider, or choose Default.")).toBeTruthy();
+      expect(
+        await screen.findByText("Select at least one provider, or choose Default."),
+      ).toBeTruthy();
       await waitFor(() => expect(submitButton().disabled).toBe(true));
       expect(h.saveOidc).not.toHaveBeenCalled();
     });
@@ -1315,7 +1322,9 @@ describe("CreateOIDC", () => {
       });
       const user = userEvent.setup();
       await openEdit(user);
-      expect(await screen.findByText("Select at least one provider, or choose Default.")).toBeTruthy();
+      expect(
+        await screen.findByText("Select at least one provider, or choose Default."),
+      ).toBeTruthy();
       expect(submitButton("Update").disabled).toBe(true);
     });
   });

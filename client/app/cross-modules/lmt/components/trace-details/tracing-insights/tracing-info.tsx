@@ -13,6 +13,7 @@ import { getTraceStatus, getTypeColor } from "@blocks-lmt/models/trace.model";
 import { useContext } from "react";
 import AnnotationBar from "../annotation-bar/annotation-bar";
 import { timelineContext } from "../trace-details";
+import { useT } from "@seliseblocks/genesis-os";
 /**
  * Label above a value, so every field in the panel keeps the same vertical rhythm. The panel
  * runs on two sizes and only two: 14px names the thing, 12px carries the data. Field is the
@@ -27,20 +28,27 @@ const Field = ({ label, children }: { label: string; children: React.ReactNode }
 
 /** Identifiers are compared character by character, so they get a monospace face and a copy
  *  affordance rather than being read as prose. */
-const IdField = ({ label, value }: { label: string; value?: string }) =>
-  value ? (
+const IdField = ({ label, value }: { label: string; value?: string }) => {
+  const { t } = useT("os.lmt");
+  return value ? (
     <Field label={label}>
-      <CopyToClipboardButton textToCopy={value} label={`Copy ${label.toLowerCase()}`} isHoverable>
+      <CopyToClipboardButton
+        textToCopy={value}
+        label={t("TRACING_INFO.COPY", { value1: label.toLowerCase() })}
+        isHoverable
+      >
         <span>{value}</span>
       </CopyToClipboardButton>
     </Field>
   ) : (
     <Field label={label}>
-      <span className="text-low-emphasis">None</span>
+      <span className="text-low-emphasis">{t("TRACING_INFO.NONE")}</span>
     </Field>
   );
+};
 
 export const TracingInfo = () => {
+  const { t } = useT("os.lmt");
   const { selectedTrace: trace } = useContext(timelineContext);
   if (!trace) return null;
   const status = getTraceStatus(trace);
@@ -66,19 +74,19 @@ export const TracingInfo = () => {
         <span className="font-semibold">{trace?.entryPoint?.actionName}</span>
       </p>
       <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4">
-        <Field label="Kind">{trace?.kind}</Field>
-        <Field label="Service">{trace?.serviceName}</Field>
-        <IdField label="Span ID" value={trace?.spanId} />
-        <IdField label="Parent ID" value={trace?.parentId} />
+        <Field label={t("TRACING_INFO.KIND")}>{trace?.kind}</Field>
+        <Field label={t("TRACING_INFO.SERVICE")}>{trace?.serviceName}</Field>
+        <IdField label={t("TRACING_INFO.SPAN_ID")} value={trace?.spanId} />
+        <IdField label={t("TRACING_INFO.PARENT_ID")} value={trace?.parentId} />
         <div className="col-span-2">
-          <Field label="Span name">{trace?.entryPoint?.actionName}</Field>
+          <Field label={t("TRACING_INFO.SPAN_NAME")}>{trace?.entryPoint?.actionName}</Field>
         </div>
       </div>
       <Separator className="my-5" />
       <Accordion type="multiple">
         <AccordionItem value="annotation" className="last:border-none">
           <AccordionTrigger className="text-sm font-medium hover:no-underline">
-            Annotation
+            {t("TRACING_INFO.ANNOTATION")}
           </AccordionTrigger>
           <AccordionContent>
             <div className="flex flex-col py-[12px]">
@@ -89,14 +97,14 @@ export const TracingInfo = () => {
                   rows want, so they need no sizing of their own. */}
               <div className="mb-[12px] grid grid-cols-2 gap-2">
                 <div className="flex items-center text-[12px] tabular-nums text-medium-emphasis">
-                  0 ms
+                  {t("TRACING_INFO.N_0_MS")}
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Field label="Start time">
+                  <Field label={t("TRACING_INFO.START_TIME")}>
                     {formatDate(parseDateString(trace?.startTime?.toString()))}
                   </Field>
-                  <Field label="Value">Server Start</Field>
-                  <Field label="Address">{trace?.entryPoint?.method}</Field>
+                  <Field label={t("TRACING_INFO.VALUE")}>{t("TRACING_INFO.SERVER_START")}</Field>
+                  <Field label={t("TRACING_INFO.ADDRESS")}>{trace?.entryPoint?.method}</Field>
                 </div>
               </div>
               <Separator />
@@ -105,11 +113,11 @@ export const TracingInfo = () => {
                   {formatDurationMs(trace.duration)}
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Field label="End time">
+                  <Field label={t("TRACING_INFO.END_TIME")}>
                     {formatDate(parseDateString(trace?.endTime?.toString()))}
                   </Field>
-                  <Field label="Value">Server Finish</Field>
-                  <Field label="Address">{trace?.entryPoint?.method}</Field>
+                  <Field label={t("TRACING_INFO.VALUE")}>{t("TRACING_INFO.SERVER_FINISH")}</Field>
+                  <Field label={t("TRACING_INFO.ADDRESS")}>{trace?.entryPoint?.method}</Field>
                 </div>
               </div>
             </div>
@@ -118,7 +126,7 @@ export const TracingInfo = () => {
         {Object.keys(trace.attributes).length > 0 && (
           <AccordionItem value="attributes" className="last:border-none">
             <AccordionTrigger className="text-sm font-medium hover:no-underline">
-              Attributes
+              {t("TRACING_INFO.ATTRIBUTES")}
             </AccordionTrigger>
             <AccordionContent className="flex flex-col">
               <div className="flex flex-col gap-3">

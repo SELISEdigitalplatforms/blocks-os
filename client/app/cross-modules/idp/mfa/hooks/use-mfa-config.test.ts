@@ -15,7 +15,7 @@ import {
   mockDisableMfaPayload,
   MOCK_MFA_USER_ID,
 } from "../../test-utils/__mocks__";
-import { TEST_PROJECT_KEY, mockProjectStoreFactory } from "@/test-utils/__mocks__";
+import { TEST_PROJECT_KEY } from "@/test-utils/__mocks__";
 import { mfaService } from "../services/mfa.service";
 import {
   useGetMFAConfig,
@@ -29,7 +29,14 @@ import {
 } from "./use-mfa-config";
 
 vi.mock("@blocks-idp/mfa/services/mfa.service", () => mockMfaServiceFactory());
-vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => {
+  // Loaded inside the factory: the shared mocks import models that import genesis (a cycle otherwise).
+  const { mockProjectStoreFactory } = await import("@/test-utils/__mocks__");
+  return {
+    ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
+    ...mockProjectStoreFactory(),
+  };
+});
 
 describe("use-mfa-config hooks", () => {
   beforeEach(() => {

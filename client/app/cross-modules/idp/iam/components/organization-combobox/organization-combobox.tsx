@@ -9,6 +9,7 @@ import {
   useGetOrganizations,
 } from "@blocks-idp/iam/hooks/use-organization";
 import type { IOrganization } from "@blocks-idp/iam/models/organization";
+import { useT } from "@seliseblocks/genesis-os";
 
 const DEFAULT_ORGANIZATION_ID = "default";
 const PAGE_SIZE = 10;
@@ -42,11 +43,12 @@ export const OrganizationCombobox = ({
   onValueChange,
   preselectedOrganizationIds = [],
   initialSelectedName,
-  emptyMessage = "No organizations available",
+  emptyMessage,
   disabled = false,
   excludeNotEnabled = false,
   id,
 }: OrganizationComboboxProps) => {
+  const { t } = useT("os.idp.iam-ui");
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
@@ -111,12 +113,12 @@ export const OrganizationCombobox = ({
     const defaultMatchesSearch = "default".includes(debouncedSearchTerm.toLowerCase());
     if (defaultMatchesSearch) {
       return [
-        { itemId: DEFAULT_ORGANIZATION_ID, name: "Default" },
+        { itemId: DEFAULT_ORGANIZATION_ID, name: t("ORGANIZATION_COMBOBOX.DEFAULT_NAME") },
         ...organizations.map(({ itemId, name }) => ({ itemId, name })),
       ];
     }
     return organizations.map(({ itemId, name }) => ({ itemId, name }));
-  }, [debouncedSearchTerm, excludeNotEnabled, loadedOrganizations]);
+  }, [debouncedSearchTerm, excludeNotEnabled, loadedOrganizations, t]);
 
   const totalCount = data?.totalCount ?? loadedOrganizations.length;
   const hasMore = loadedOrganizations.length < totalCount;
@@ -127,7 +129,7 @@ export const OrganizationCombobox = ({
   );
   const selectedLabel =
     value === DEFAULT_ORGANIZATION_ID
-      ? "Default"
+      ? t("ORGANIZATION_COMBOBOX.DEFAULT_NAME")
       : (selectedOrganization?.name ??
         (selectedOption?.itemId === value ? selectedOption.name : undefined) ??
         selectedOrganizationDetails?.organization?.name ??
@@ -168,7 +170,7 @@ export const OrganizationCombobox = ({
           disabled={disabled}
         >
           <span className="truncate text-sm font-normal">
-            {value ? selectedLabel : "Select organization"}
+            {value ? selectedLabel : t("ORGANIZATION_COMBOBOX.SELECT_PLACEHOLDER")}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -179,7 +181,7 @@ export const OrganizationCombobox = ({
             autoFocus
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder="Search organizations..."
+            placeholder={t("ORGANIZATION_COMBOBOX.SEARCH_PLACEHOLDER")}
             className="h-11 w-full border-0 bg-transparent px-0 text-sm outline-hidden placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
           />
         </div>
@@ -192,12 +194,14 @@ export const OrganizationCombobox = ({
           {isInitialLoading && (
             <div className="flex items-center justify-center p-4 text-sm text-muted-foreground">
               <Loader className="mr-2 h-4 w-4 animate-spin" />
-              Loading organizations...
+              {t("ORGANIZATION_COMBOBOX.LOADING")}
             </div>
           )}
           {!isInitialLoading && options.length === 0 && (
             <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-              {debouncedSearchTerm ? "No organizations found" : emptyMessage}
+              {debouncedSearchTerm
+                ? t("ORGANIZATION_COMBOBOX.NO_RESULTS")
+                : (emptyMessage ?? t("ORGANIZATION_COMBOBOX.EMPTY"))}
             </div>
           )}
           {options.map((organization) => {
@@ -237,7 +241,7 @@ export const OrganizationCombobox = ({
           {isLoadingMore && (
             <div className="flex items-center justify-center p-2 text-sm text-muted-foreground">
               <Loader className="mr-2 h-4 w-4 animate-spin" />
-              Loading more...
+              {t("ORGANIZATION_COMBOBOX.LOADING_MORE")}
             </div>
           )}
         </div>

@@ -7,6 +7,7 @@ import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { useNavigate } from "react-router";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
+import { useT } from "@seliseblocks/genesis-os";
 import {
   useGetEmailTemplate,
   useSaveEmailTemplate,
@@ -14,6 +15,7 @@ import {
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 
 export function EditEmailTemplate({ params }: { params: { id: string } }) {
+  const { t } = useT("os.communication.mail");
   const { id } = params;
   const { isLoading, isFetching, data } = useGetEmailTemplate(id);
   const [emailDetails, setEmailDetails] = useState<IEmailTemplate | null>(null);
@@ -52,10 +54,10 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
 
   const emailBasePath = scoped("email-management");
   const breadcrumbTitles = {
-    [emailBasePath]: "Email Management",
+    [emailBasePath]: t("EMAIL_TEMPLATE_EDIT.BREADCRUMB_EMAIL_MANAGEMENT"),
     [`${emailBasePath}/communications`]: null,
     [`${emailBasePath}/communications/${emailDetails.itemId}`]: emailDetails.name ?? "",
-    [`${emailBasePath}/communications/${emailDetails.itemId}/edit`]: "Edit",
+    [`${emailBasePath}/communications/${emailDetails.itemId}/edit`]: t("common:EDIT"),
   };
 
   const handleEditorSave = async (data: { htmlFile: string }) => {
@@ -89,7 +91,7 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
             disabled={isLoading || isFetching}
             onClick={() => editorRef?.current?.reset()}
           >
-            <span className="sr-only sm:not-sr-only">Reset</span>
+            <span className="sr-only sm:not-sr-only">{t("common:RESET")}</span>
           </Button>
           <Button
             disabled={isPending || isLoading || isFetching}
@@ -98,7 +100,7 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
               editorRef?.current?.submit();
             }}
           >
-            Save
+            {t("common:SAVE")}
           </Button>
         </div>
       </div>

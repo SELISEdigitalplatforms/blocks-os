@@ -11,7 +11,10 @@ const h = vi.hoisted(() => ({
   user: { sub: "me", org_id: "org-1" } as { sub: string; org_id?: string } | null,
 }));
 
-vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
+  ...mockProjectStoreFactory(),
+}));
 vi.mock("@seliseblocks/genesis-os/store", () => ({
   useAuthStore: () => ({ user: h.user }),
 }));

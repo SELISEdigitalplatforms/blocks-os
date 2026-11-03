@@ -1,6 +1,6 @@
 "use client";
 
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT, tStatic } from "@seliseblocks/genesis-os";
 import { PeopleDetailsTab } from "./people-details-tab";
 import { PeopleEnvironmentsTab } from "./people-environments-tab";
 import { PeopleAccessTab } from "./people-access-tab";
@@ -43,6 +43,7 @@ export const findPersonRow = (
 };
 
 export const PersonDetailPage = () => {
+  const { t } = useT("os.people");
   const { id = "" } = useParams<{
     id: string;
     tenantGroupId: string;
@@ -54,9 +55,11 @@ export const PersonDetailPage = () => {
   // rendered for them alone.
   // An owner's own grants are the whole catalog, so this doubles as the list of everything
   // grantable — no separate per-person endpoint to fetch it from.
-  const { isOwner, can, menus: catalogMenus } = useProjectPermissions(
-    selectedTenantGroup ?? undefined,
-  );
+  const {
+    isOwner,
+    can,
+    menus: catalogMenus,
+  } = useProjectPermissions(selectedTenantGroup ?? undefined);
 
   const { data: userResponse, isLoading: isUserLoading } = useGetUserById({
     id,
@@ -113,7 +116,12 @@ export const PersonDetailPage = () => {
     <main className="flex min-w-0 flex-1 flex-col gap-6 p-6">
       <div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="Back to people">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate(-1)}
+            aria-label={t("PERSON_DETAIL_PAGE.BACK_TO_PEOPLE")}
+          >
             <ArrowLeft className="h-5 w-5" />
           </Button>
           {isLoading ? (
@@ -121,11 +129,11 @@ export const PersonDetailPage = () => {
           ) : (
             <>
               <h1 className="min-w-0 text-2xl font-bold tracking-tight">
-                {fullName || "Person's Details"}
+                {fullName || t("PERSON_DETAIL_PAGE.PERSON_S_DETAILS")}
               </h1>
               {isPending && (
                 <PeopleStatusBadge
-                  status="Pending Invite"
+                  status={tStatic("os.people", "PERSON_DETAIL_PAGE.PENDING_INVITE")}
                   className="w-fit bg-warning-100 px-2 py-0.5 text-xs font-normal text-warning-700"
                 />
               )}
