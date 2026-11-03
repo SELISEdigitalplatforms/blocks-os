@@ -14,9 +14,10 @@ namespace Configuration.DomainService.Mail.Mailbox
 
         /// <summary>
         /// The message as a reader sees it, parsed from the stored MIME. Null when there is no
-        /// stored MIME (outbound mail). When the MIME is too large to preview or cannot be parsed,
-        /// it carries only <see cref="MailBoxMailContent.RawMimeLength"/>, and the client falls back
-        /// to <see cref="MailBoxEntity.Body"/>.
+        /// stored MIME (outbound mail). When the MIME cannot be parsed it carries only
+        /// <see cref="MailBoxMailContent.RawMimeLength"/>, and the client falls back to
+        /// <see cref="MailBoxEntity.Body"/>; when it is too large to preview it also sets
+        /// <see cref="MailBoxMailContent.PreviewTooLarge"/>, and the client offers only the source.
         /// </summary>
         public MailBoxMailContent? Content { get; set; }
     }

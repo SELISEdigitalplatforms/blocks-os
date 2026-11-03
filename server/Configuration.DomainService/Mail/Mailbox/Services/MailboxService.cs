@@ -194,8 +194,9 @@ namespace Configuration.DomainService.Mail.Mailbox.Services
                 return null;
             }
 
-            // Too large to preview, or unparseable: no bodies and no attachments, so the client falls
-            // back to the Body captured at sync time and still offers the source.
+            // Unparseable: no bodies and no attachments, so the client falls back to the Body captured
+            // at sync time and still offers the source. Too large: the same, flagged PreviewTooLarge,
+            // and the client offers only the source download.
             var content = (raw.RawMime is null ? null : MailContentParser.Parse(raw.RawMime))
                 ?? new MailBoxMailContent();
             content.RawMimeLength = raw.Length;

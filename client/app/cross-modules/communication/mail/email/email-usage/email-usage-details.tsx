@@ -118,8 +118,6 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
 
   const bodies = useMemo(() => {
     const content = details?.content;
-    // Too large to parse: the stored body is not a preview of the message either.
-    if (content?.previewTooLarge) return { html: "", text: "" };
     const body = details?.body || "";
     const html = content?.htmlBody || (looksLikeHtml(body) ? body : "");
     const text = content?.textBody || (!looksLikeHtml(body) ? body : "");
@@ -201,7 +199,7 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
                   onClick={() => downloadEml(details.subject)}
                 >
                   {downloadingEml ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin text-muted-foreground" />
                   ) : (
                     <Download className="mr-2 h-4 w-4" />
                   )}

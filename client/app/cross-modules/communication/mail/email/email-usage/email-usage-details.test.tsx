@@ -400,6 +400,45 @@ describe("EmailUsageDetails", () => {
       expect(unhandled).toEqual([]);
     });
 
+    it("shows the spinner again while Original retries after a failure", async () => {
+      h.getSource.mockRejectedValueOnce(new HttpError(404, { errors: {} }));
+      renderDetails();
+      await userEvent.click(screen.getByRole("tab", { name: "Original" }));
+      await screen.findByText(SOURCE_FAILED);
+
+      const pending = deferred<Blob>();
+      h.getSource.mockReturnValueOnce(pending.promise);
+      await userEvent.click(screen.getByRole("tab", { name: "Plain text" }));
+      await userEvent.click(screen.getByRole("tab", { name: "Original" }));
+
+      await waitFor(() => expect(h.getSource).toHaveBeenCalledTimes(2));
+      expect(document.querySelector(".animate-spin")).toBeTruthy();
+      expect(screen.queryByText(SOURCE_FAILED)).toBeNull();
+
+      await act(async () => pending.resolve(blobOf(RAW)));
+      expect(await screen.findByText(/Test Inbound$/)).toBeTruthy();
+    });
+
+    it("does not announce a failure already cached when the page opens again", async () => {
+      h.getSource.mockRejectedValue(new HttpError(404, { errors: {} }));
+      const client = new QueryClient();
+      const page = () => (
+        <QueryClientProvider client={client}>
+          <EmailUsageDetails id="row-1" />
+        </QueryClientProvider>
+      );
+      const first = render(page());
+      await userEvent.click(screen.getByRole("tab", { name: "Original" }));
+      await screen.findByText(SOURCE_FAILED);
+      expect(h.toast).toHaveBeenCalledTimes(1);
+      first.unmount();
+
+      render(page());
+
+      expect(screen.getByRole("button", { name: "Download .eml" })).toBeTruthy();
+      expect(h.toast).toHaveBeenCalledTimes(1);
+    });
+
     it("toasts once when .eml joins a failing Original request", async () => {
       const pending = deferred<Blob>();
       h.getSource.mockReturnValue(pending.promise);
