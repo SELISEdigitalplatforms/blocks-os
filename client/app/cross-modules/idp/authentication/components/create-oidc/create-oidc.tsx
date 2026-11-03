@@ -265,7 +265,7 @@ const TokenLifetimesSection = ({
                           aria-hidden="true"
                           className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground"
                         >
-                          min
+                          {t("CREATE_OIDC.MINUTES_UNIT")}
                         </span>
                       </div>
                       {!fieldState.error && (
@@ -716,6 +716,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                           <label
                             htmlFor="scope-openid"
                             className="cursor-not-allowed text-sm text-muted-foreground"
+                            // eslint-disable-next-line no-restricted-syntax -- OIDC scope identifier
                           >
                             openid
                           </label>

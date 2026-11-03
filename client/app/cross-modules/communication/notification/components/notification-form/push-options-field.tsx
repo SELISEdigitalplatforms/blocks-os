@@ -198,6 +198,7 @@ function WebPanel({ values, onChange }: Readonly<PanelProps>) {
         label={WEB_FIELDS.icon}
         value={w.icon}
         maxLength={500}
+        // eslint-disable-next-line no-restricted-syntax -- URL scheme example, not translatable text
         placeholder="https://"
         onChange={(icon) => set({ icon })}
       />

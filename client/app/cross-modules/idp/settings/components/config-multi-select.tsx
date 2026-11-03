@@ -33,7 +33,7 @@ export const ConfigMultiSelect = ({
 }: ConfigMultiSelectProps) => {
   const { t, language } = useT("os.idp.settings");
   const label = placeholder ?? t("CONFIG_MULTI_SELECT.SELECT_ITEMS");
-  // English nouns are lowercase mid-sentence; German nouns keep their capital.
+  // English lowercases the label mid-sentence; other languages keep it as translated.
   const searchTarget = language === "en" ? label.toLowerCase() : label;
   const [search, setSearch] = useState("");
 

@@ -63,6 +63,7 @@ function FederatedFlow() {
                 <Building2 className="h-4 w-4 text-primary" />
               </div>
               <div className="min-w-0">
+                {/* eslint-disable-next-line no-restricted-syntax -- product name */}
                 <p className="text-[13px] font-semibold text-primary">Blocks OS</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   {t("IDENTITY_PROVIDER_GALLERY.FLOW_APP_DESCRIPTION")}
