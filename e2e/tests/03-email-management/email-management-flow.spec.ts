@@ -42,6 +42,7 @@ test.describe("Email Management flows", () => {
     await expect(page).toHaveURL(/\/email-management/);
     await expect(page.getByRole("navigation")).toBeVisible();
   });
+
   // blocks-os#729 §10: the details page reads the source and attachments as file downloads.
   test("mailbox details: source and attachments on demand, real 404s, too-large notice", async ({
     page,
