@@ -598,6 +598,14 @@ async function openMailDetails(page: Page, run: MailDetailsRun, id: string) {
   await page.goto(`${run.emailManagementUrl}/usage/${encodeURIComponent(id)}`);
 }
 
+/**
+ * Loads the run's details page again with a fresh query. Not page.reload(): a hard reload can
+ * drop the SPA deep link and land on /app/console (see pages/identity-and-access/roles.ts).
+ */
+async function reopenMailDetails(page: Page, run: MailDetailsRun) {
+  await openMailDetails(page, run, run.itemId);
+}
+
 async function expectMailNotFoundResponse(response: Response) {
   expect(response.status()).toBe(404);
   const body = (await response.json()) as { errors?: Record<string, string> };
@@ -694,10 +702,10 @@ export async function mailDetailsAttachmentFlow(page: Page, run: MailDetailsRun)
 }
 
 /** §10 step 5 (C1, C10): without the file stubs the real API answers 404 and the page toasts. */
-export async function mailDetailsFileNotFoundFlow(page: Page) {
+export async function mailDetailsFileNotFoundFlow(page: Page, run: MailDetailsRun) {
   await page.unroute(MAIL_SOURCE_ROUTE);
   await page.unroute(MAIL_ATTACHMENT_FILE_ROUTE);
-  await page.reload();
+  await reopenMailDetails(page, run);
   const emlButton = page.getByRole("button", { name: "Download .eml" });
   await expect(emlButton).toBeVisible({ timeout: 30_000 });
 
@@ -721,7 +729,7 @@ export async function mailDetailsFileNotFoundFlow(page: Page) {
 export async function mailAttachmentFileBadIndexFlow(page: Page, run: MailDetailsRun) {
   // Reuse the app's own API origin and headers, read from its details request.
   const detailsRequest = page.waitForRequest(MAIL_DETAILS_ROUTE, { timeout: 30_000 });
-  await page.reload();
+  await reopenMailDetails(page, run);
   const request = await detailsRequest;
   const apiUrl = new URL(request.url());
   apiUrl.pathname = apiUrl.pathname.replace(/GetMailBoxMail$/, "GetMailBoxMailAttachmentFile");
@@ -739,7 +747,7 @@ export async function mailAttachmentFileBadIndexFlow(page: Page, run: MailDetail
 }
 
 /** §10 step 6 (C10): an older API answering with the SPA shell. */
-export async function mailDetailsOlderApiFlow(page: Page) {
+export async function mailDetailsOlderApiFlow(page: Page, run: MailDetailsRun) {
   await page.unroute(MAIL_SOURCE_ROUTE);
   await page.route(MAIL_SOURCE_ROUTE, (route) =>
     route.fulfill({
@@ -748,7 +756,7 @@ export async function mailDetailsOlderApiFlow(page: Page) {
       body: "<!doctype html><html></html>",
     }),
   );
-  await page.reload();
+  await reopenMailDetails(page, run);
   const original = page.getByRole("tab", { name: "Original", exact: true });
   await expect(original).toBeVisible({ timeout: 30_000 });
   await original.click();
@@ -769,7 +777,7 @@ export async function mailDetailsOriginalLoadingScreenshots(
   });
   await stubDetails(page, run, NORMAL_CONTENT);
   await stubSource(page, run, hold);
-  await page.reload();
+  await reopenMailDetails(page, run);
   const original = page.getByRole("tab", { name: "Original", exact: true });
   await expect(original).toBeVisible({ timeout: 30_000 });
   const requestsBefore = run.sourceRequests.length;
@@ -785,7 +793,7 @@ export async function mailDetailsOriginalLoadingScreenshots(
 /** §10 step 7 (H12) plus its step 9 screenshots. */
 export async function mailDetailsTooLargeFlow(page: Page, run: MailDetailsRun, testInfo: TestInfo) {
   await stubDetails(page, run, TOO_LARGE_CONTENT);
-  await page.reload();
+  await reopenMailDetails(page, run);
   await expect(page.getByText(TOO_LARGE, { exact: true })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("button", { name: "Download .eml" })).toBeVisible();
   for (const tab of ["Formatted", "Plain text", "Original"]) {

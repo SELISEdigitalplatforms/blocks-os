@@ -67,7 +67,7 @@ test.describe("Email Management flows", () => {
     });
 
     await test.step("Real 404s for the source and the attachment show the toast (C1, C10)", async () => {
-      await mailDetailsFileNotFoundFlow(page);
+      await mailDetailsFileNotFoundFlow(page, run);
     });
 
     await test.step("A non-integer Index is a 400 from the real API (C3, E11)", async () => {
@@ -75,7 +75,7 @@ test.describe("Email Management flows", () => {
     });
 
     await test.step("An older API's HTML answer shows the source failure (C10)", async () => {
-      await mailDetailsOlderApiFlow(page);
+      await mailDetailsOlderApiFlow(page, run);
     });
 
     await test.step("Screenshots of the Original view while it loads (§4)", async () => {
