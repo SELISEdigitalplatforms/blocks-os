@@ -31,6 +31,74 @@ interface ProviderEntryItemProps {
   defaultExpanded?: boolean;
 }
 
+// A thrown request error: its own messages when it carries them, otherwise the fallback.
+const showRequestError = (err: unknown, fallback: string) =>
+  showErrorToast({ errors: isErrorWithErrors(err) ? err.errors : fallback });
+
+const statusActionKey = (busy: boolean, flag?: boolean) => {
+  if (busy)
+    return flag
+      ? "IDENTITY_PROVIDER_ENTRY_ITEM.ENABLING"
+      : "IDENTITY_PROVIDER_ENTRY_ITEM.DISABLING";
+  return flag ? "IDENTITY_PROVIDER_ENTRY_ITEM.ENABLE" : "IDENTITY_PROVIDER_ENTRY_ITEM.DISABLE";
+};
+
+type StatusChangeDialogProps = Readonly<{
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  name: string;
+  willEnable: boolean;
+  isUpdating: boolean;
+  onConfirm: () => void;
+}>;
+
+const StatusChangeDialog = ({
+  open,
+  onOpenChange,
+  name,
+  willEnable,
+  isUpdating,
+  onConfirm,
+}: StatusChangeDialogProps) => {
+  const { t } = useT("os.idp.identity-provider");
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {willEnable
+              ? t("IDENTITY_PROVIDER_ENTRY_ITEM.ENABLE_TITLE")
+              : t("IDENTITY_PROVIDER_ENTRY_ITEM.DISABLE_TITLE")}
+          </DialogTitle>
+          <DialogDescription>
+            {willEnable
+              ? t("IDENTITY_PROVIDER_ENTRY_ITEM.ENABLE_DESCRIPTION", { name })
+              : t("IDENTITY_PROVIDER_ENTRY_ITEM.DISABLE_DESCRIPTION", { name })}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onOpenChange(false)}
+            disabled={isUpdating}
+          >
+            {t("common:CANCEL")}
+          </Button>
+          <Button
+            variant={willEnable ? "default" : "destructive"}
+            size="sm"
+            onClick={onConfirm}
+            disabled={isUpdating}
+          >
+            {t(statusActionKey(isUpdating, willEnable))}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 /**
  * A single configured provider, rendered as a plain row inside its type's gallery card
  * (Blocks OIDC / Bring-your-own-SSO can have more than one entry). Carries the same
@@ -75,8 +143,7 @@ export function ProviderEntryItem({ item, defaultExpanded = false }: ProviderEnt
       });
       setShowStatusDialog(false);
     } catch (err) {
-      if (isErrorWithErrors(err)) return showErrorToast({ errors: err.errors });
-      showErrorToast({ errors: t("IDENTITY_PROVIDER_ENTRY_ITEM.ERROR_GENERIC") });
+      showRequestError(err, t("IDENTITY_PROVIDER_ENTRY_ITEM.ERROR_GENERIC"));
     }
   };
 
@@ -89,8 +156,7 @@ export function ProviderEntryItem({ item, defaultExpanded = false }: ProviderEnt
       });
       setShowDeleteDialog(false);
     } catch (err) {
-      if (isErrorWithErrors(err)) return showErrorToast({ errors: err.errors });
-      showErrorToast({ errors: t("IDENTITY_PROVIDER_ENTRY_ITEM.ERROR_GENERIC") });
+      showRequestError(err, t("IDENTITY_PROVIDER_ENTRY_ITEM.ERROR_GENERIC"));
     }
   };
 
@@ -308,46 +374,14 @@ export function ProviderEntryItem({ item, defaultExpanded = false }: ProviderEnt
         editId={item.itemId}
       />
 
-      <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {willEnable
-                ? t("IDENTITY_PROVIDER_ENTRY_ITEM.ENABLE_TITLE")
-                : t("IDENTITY_PROVIDER_ENTRY_ITEM.DISABLE_TITLE")}
-            </DialogTitle>
-            <DialogDescription>
-              {willEnable
-                ? t("IDENTITY_PROVIDER_ENTRY_ITEM.ENABLE_DESCRIPTION", { name: providerLabel })
-                : t("IDENTITY_PROVIDER_ENTRY_ITEM.DISABLE_DESCRIPTION", { name: providerLabel })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowStatusDialog(false)}
-              disabled={isUpdating}
-            >
-              {t("common:CANCEL")}
-            </Button>
-            <Button
-              variant={willEnable ? "default" : "destructive"}
-              size="sm"
-              onClick={handleConfirmStatusChange}
-              disabled={isUpdating}
-            >
-              {isUpdating
-                ? willEnable
-                  ? t("IDENTITY_PROVIDER_ENTRY_ITEM.ENABLING")
-                  : t("IDENTITY_PROVIDER_ENTRY_ITEM.DISABLING")
-                : willEnable
-                  ? t("IDENTITY_PROVIDER_ENTRY_ITEM.ENABLE")
-                  : t("IDENTITY_PROVIDER_ENTRY_ITEM.DISABLE")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <StatusChangeDialog
+        open={showStatusDialog}
+        onOpenChange={setShowStatusDialog}
+        name={providerLabel}
+        willEnable={willEnable}
+        isUpdating={isUpdating}
+        onConfirm={handleConfirmStatusChange}
+      />
 
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>

@@ -426,7 +426,7 @@ export const OidcBrandingForm = () => {
   const [previousTemplate, setPreviousTemplate] = useState(sourceTemplate);
   if (sourceTemplate !== previousTemplate) {
     setPreviousTemplate(sourceTemplate);
-    const next = sourceTemplate ? normalizeOidcUiTemplate(sourceTemplate) : null;
+    const next = normalizedTemplate;
     setSavedTemplate(next);
     setDraft(next);
     setPreviewLogoUrls({
@@ -801,6 +801,22 @@ export const OidcBrandingForm = () => {
   const themeGroups = getThemeGroups();
   const themeFieldDescriptions = getThemeFieldDescriptions();
   const themeFields = getThemeFields();
+  const renderPaletteField = (mode: OidcPreviewTheme, key: keyof IOidcUiThemePalette) => {
+    const field = themeFields.find((item) => item.key === key);
+    if (!field) return null;
+    return (
+      <ColorInput
+        key={key}
+        palette={mode}
+        field={key}
+        label={field.label}
+        description={themeFieldDescriptions[key]}
+        value={draft.theme[mode][key]}
+        error={fieldError(`theme.${mode}.${key}`)}
+        onChange={(value) => updatePalette(mode, key, value)}
+      />
+    );
+  };
   const sharedFields = [
     { key: "helpPrompt", label: t("OIDC_BRANDING_FORM.SHARED_HELP_PROMPT") },
     { key: "supportLinkText", label: t("OIDC_BRANDING_FORM.SHARED_SUPPORT_LINK_TEXT") },
@@ -973,22 +989,7 @@ export const OidcBrandingForm = () => {
                               </span>
                             </div>
                             <div className="space-y-2">
-                              {group.fields.map((key) => {
-                                const field = themeFields.find((item) => item.key === key);
-                                if (!field) return null;
-                                return (
-                                  <ColorInput
-                                    key={key}
-                                    palette={mode}
-                                    field={key}
-                                    label={field.label}
-                                    description={themeFieldDescriptions[key]}
-                                    value={draft.theme[mode][key]}
-                                    error={fieldError(`theme.${mode}.${key}`)}
-                                    onChange={(value) => updatePalette(mode, key, value)}
-                                  />
-                                );
-                              })}
+                              {group.fields.map((key) => renderPaletteField(mode, key))}
                             </div>
                           </section>
                         ))}

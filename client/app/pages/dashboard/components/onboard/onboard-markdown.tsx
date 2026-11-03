@@ -1,9 +1,18 @@
 import { cn } from "@/lib/utils";
+import type { ReactNode } from "react";
 import type { Components } from "react-markdown";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { CopyButton } from "./copy-button";
 import { useT } from "@seliseblocks/genesis-os";
+
+// The text of a fenced block's children: react-markdown passes a string, or an array of them.
+const textOf = (node: ReactNode): string => {
+  if (typeof node === "string") return node;
+  if (typeof node === "number") return node.toString();
+  if (Array.isArray(node)) return node.map(textOf).join("");
+  return "";
+};
 
 type GuideCodeBlockProps = {
   language: string;
@@ -81,7 +90,7 @@ const createGuideComponents = (): Components => ({
         </code>
       );
     }
-    return <GuideCodeBlock language={language} code={String(children).replace(/\n$/, "")} />;
+    return <GuideCodeBlock language={language} code={textOf(children).replace(/\n$/, "")} />;
   },
 });
 

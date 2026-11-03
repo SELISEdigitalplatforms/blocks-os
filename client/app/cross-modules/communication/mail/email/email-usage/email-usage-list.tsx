@@ -256,6 +256,12 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
   const rangeEnd = Math.min(totalCount, (page + 1) * pageSize);
   const EmptyIcon = isInbound ? Inbox : Send;
 
+  let emptyText = isInbound
+    ? t("EMAIL_USAGE_LIST.EMPTY_INBOUND")
+    : t("EMAIL_USAGE_LIST.EMPTY_OUTBOUND");
+  if (search || status || startDate || endDate || (isInbound && configurationId)) {
+    emptyText = t("EMAIL_USAGE_LIST.EMPTY_FILTERED");
+  }
   return (
     <div className="flex flex-col gap-4">
       <EmailUsageFilterToolbar isInbound={isInbound} configurations={inboundConfigs} />
@@ -324,17 +330,7 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
                         <p className="text-sm font-medium text-high-emphasis">
                           {t("EMAIL_USAGE_LIST.NO_RESULTS")}
                         </p>
-                        <p className="text-xs text-muted-foreground">
-                          {search ||
-                          status ||
-                          startDate ||
-                          endDate ||
-                          (isInbound && configurationId)
-                            ? t("EMAIL_USAGE_LIST.EMPTY_FILTERED")
-                            : isInbound
-                              ? t("EMAIL_USAGE_LIST.EMPTY_INBOUND")
-                              : t("EMAIL_USAGE_LIST.EMPTY_OUTBOUND")}
-                        </p>
+                        <p className="text-xs text-muted-foreground">{emptyText}</p>
                       </div>
                     </TableCell>
                   </TableRow>

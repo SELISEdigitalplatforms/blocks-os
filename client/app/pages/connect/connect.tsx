@@ -19,6 +19,7 @@ import {
   useCancelConnectRequest,
   useConnectRequest,
   useReadinessWait,
+  type ReadinessState,
 } from "@/cross-modules/integration/hooks/use-connect";
 import { projectService } from "@/services/project.service";
 import { useCreateProject } from "@/hooks/use-project";
@@ -48,6 +49,18 @@ const environmentLabel = (value: string) =>
  * P3-15 readiness wait). Reached from a CMS redirect; every step must survive a login
  * round-trip via the localStorage pending-request hand-off.
  */
+const createdBannerKey = (hasGroup: boolean, loadFailed: boolean) => {
+  if (hasGroup) return "CONNECT.CHOOSE_AN_ENVIRONMENT_FOR_TO";
+  return loadFailed
+    ? "CONNECT.COULD_NOT_LOAD_ENVIRONMENTS_FOR"
+    : "CONNECT.LOADING_ENVIRONMENTS_FOR";
+};
+
+const connectLabelKey = (isConnecting: boolean, isChecking: boolean) => {
+  if (isConnecting) return "CONNECT.CONNECTING";
+  return isChecking ? "CONNECT.CHECKING" : "CONNECT.CONNECT";
+};
+
 export default function ConnectPage() {
   const { t } = useT(I18N_MODULE);
   const navigate = useNavigate();
@@ -263,17 +276,7 @@ export default function ConnectPage() {
     );
   }
 
-  if (!requestId) {
-    return (
-      <ConnectShell title={t(KEY_CONNECT_WITH_BLOCKS_OS)}>
-        <div className="flex justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-medium-emphasis" />
-        </div>
-      </ConnectShell>
-    );
-  }
-
-  if (!isAuthenticated) {
+  if (!requestId || !isAuthenticated) {
     return (
       <ConnectShell title={t(KEY_CONNECT_WITH_BLOCKS_OS)}>
         <div className="flex justify-center py-8">
@@ -325,35 +328,7 @@ export default function ConnectPage() {
   }
 
   if (requestFailed || !request) {
-    // P3-16: distinguish expired/missing, claimed by another user, and unexpected errors.
-    const errorKeys = isErrorWithErrors(requestError) ? requestError.errors : null;
-    const claimedByOther = !!errorKeys && hasErrorCode(errorKeys, "request_claimed_by_other_user");
-    const expired = !!errorKeys && hasErrorCode(errorKeys, "request_not_found_or_expired");
-    // The entry step saved callback coordinates alongside the pending id; without them there
-    // is nowhere to send the browser back to.
-    const pending = requestId ? readPendingConnectRequest() : null;
-
-    if (claimedByOther) {
-      return (
-        <ConnectShell title={t("CONNECT.THIS_CONNECTION_REQUEST_IS_IN")}>
-          {t("CONNECT.SOMEONE_ELSE_IS_ALREADY_HANDLING")}
-        </ConnectShell>
-      );
-    }
-
-    if (expired) {
-      const backUrl =
-        pending?.redirectUri && pending.state
-          ? `${pending.redirectUri}${pending.redirectUri.includes("?") ? "&" : "?"}error=expired&state=${encodeURIComponent(pending.state)}`
-          : null;
-      return <ExpiredScreen backUrl={backUrl} />;
-    }
-
-    return (
-      <ConnectShell title={t("CONNECT.SOMETHING_WENT_WRONG")}>
-        {t("CONNECT.WE_COULD_NOT_READ_THIS")}
-      </ConnectShell>
-    );
+    return <RequestErrorScreen requestError={requestError} />;
   }
 
   if (projectsQuery.isLoading) {
@@ -384,11 +359,44 @@ export default function ConnectPage() {
     );
   }
 
+  const handleEnvironmentChange = (value: string) => {
+    const project = selectedGroup?.projects.find((p) => p.tenantId === value);
+    if (!project) return;
+    setSelectedEnvironment({
+      itemId: project.itemId,
+      tenantId: project.tenantId,
+      environment: project.environment,
+    });
+    setTemplateKey(
+      request.templates.find((template) => template.key === request.suggestedTemplateKey)?.key ??
+        request.templates.find((template) => template.accessLevel === "read")?.key ??
+        request.templates[0]?.key ??
+        null,
+    );
+    approvalStartedFor.current = null;
+    readiness.reset();
+  };
+
+  const handleProjectChange = (tenantGroupId: string) => {
+    if (tenantGroupId === selectedTenantGroupId) return;
+    setSelectedTenantGroupId(tenantGroupId);
+    if (tenantGroupId !== createdProject?.tenantGroupId) setCreatedProject(null);
+    setSelectedEnvironment(null);
+    setTemplateKey(null);
+    approvalStartedFor.current = null;
+    readiness.reset();
+  };
+
+  const handleSelectTemplate = (key: string) => {
+    setTemplateKey(key);
+    approvalStartedFor.current = null;
+    readiness.reset();
+  };
+
   const waiting = readiness.state.phase === "checking" || readiness.state.phase === "waiting";
   const busy = waiting || approve.isPending;
-  let connectLabel = t("CONNECT.CONNECT");
-  if (approve.isPending) connectLabel = t("CONNECT.CONNECTING");
-  else if (waiting) connectLabel = t("CONNECT.CHECKING");
+  const connectLabel = t(connectLabelKey(approve.isPending, waiting));
+  const chooseExisting = groups.length > 0 ? () => setShowCreateProject(false) : undefined;
 
   return (
     <ConnectShell title={t(KEY_CONNECT_TO_BLOCKS_OS)}>
@@ -419,22 +427,12 @@ export default function ConnectPage() {
       </section>
 
       {createdProject && !showCreateProject && (
-        <Banner variant="success" title={t("CONNECT.PROJECT_CREATED_SUCCESSFULLY")} compact={false}>
-          {selectedGroup
-            ? t("CONNECT.CHOOSE_AN_ENVIRONMENT_FOR_TO", { name: createdProject.name })
-            : projectsQuery.isError
-              ? t("CONNECT.COULD_NOT_LOAD_ENVIRONMENTS_FOR", { name: createdProject.name })
-              : t("CONNECT.LOADING_ENVIRONMENTS_FOR", { name: createdProject.name })}
-          {!selectedGroup && projectsQuery.isError && (
-            <button
-              type="button"
-              className="ml-1 font-semibold underline"
-              onClick={() => void projectsQuery.refetch()}
-            >
-              {t(KEY_COMMON_RETRY)}
-            </button>
-          )}
-        </Banner>
+        <CreatedProjectBanner
+          name={createdProject.name}
+          hasGroup={!!selectedGroup}
+          loadFailed={projectsQuery.isError}
+          onRetry={() => void projectsQuery.refetch()}
+        />
       )}
 
       {showCreateProject || (groups.length === 0 && !createdProject) ? (
@@ -445,210 +443,35 @@ export default function ConnectPage() {
             setSelectedTenantGroupId(tenantGroupId);
             void queryClient.invalidateQueries({ queryKey: PROJECTS_QUERY_KEY });
           }}
-          onChooseExisting={groups.length > 0 ? () => setShowCreateProject(false) : undefined}
+          onChooseExisting={chooseExisting}
         />
       ) : (
         <div className="space-y-6">
-          <section>
-            <p className="mb-2 text-sm font-medium text-high-emphasis">{t("CONNECT.PROJECT")}</p>
-            {groups.length > 0 ? (
-              <ConnectProjectPicker
-                projects={groups.map((group) => ({
-                  tenantGroupId: group.tenantGroupId,
-                  name: group.projects[0]?.name ?? group.tenantGroupId,
-                }))}
-                value={selectedTenantGroupId}
-                onValueChange={(tenantGroupId) => {
-                  if (tenantGroupId === selectedTenantGroupId) return;
-                  setSelectedTenantGroupId(tenantGroupId);
-                  if (tenantGroupId !== createdProject?.tenantGroupId) setCreatedProject(null);
-                  setSelectedEnvironment(null);
-                  setTemplateKey(null);
-                  approvalStartedFor.current = null;
-                  readiness.reset();
-                }}
-              />
-            ) : (
-              <output className="block text-sm text-medium-emphasis">
-                {t("CONNECT.LOADING_PROJECTS")}
-              </output>
-            )}
-            <button
-              type="button"
-              className="mt-2 text-xs font-medium text-primary hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
-              onClick={() => setShowCreateProject(true)}
-            >
-              {t("CONNECT.CREATE_NEW_PROJECT")}
-            </button>
-          </section>
+          <ProjectSection
+            groups={groups}
+            selectedTenantGroupId={selectedTenantGroupId}
+            onSelect={handleProjectChange}
+            onCreateNew={() => setShowCreateProject(true)}
+          />
 
-          {selectedGroup ? (
-            <section>
-              <h2
-                id="connect-environment-heading"
-                className="mb-2 text-sm font-medium text-high-emphasis"
-              >
-                {t("CONNECT.ENVIRONMENT")}
-              </h2>
-              <p className="mb-3 text-xs text-medium-emphasis">
-                {t("CONNECT.SELECT_THE_ENVIRONMENT_THIS")}
-              </p>
-              <RadioGroup
-                aria-labelledby="connect-environment-heading"
-                value={selectedEnvironment?.tenantId ?? ""}
-                onValueChange={(value) => {
-                  const project = selectedGroup.projects.find((p) => p.tenantId === value);
-                  if (project) {
-                    setSelectedEnvironment({
-                      itemId: project.itemId,
-                      tenantId: project.tenantId,
-                      environment: project.environment,
-                    });
-                    setTemplateKey(
-                      request.templates.find(
-                        (template) => template.key === request.suggestedTemplateKey,
-                      )?.key ??
-                        request.templates.find((template) => template.accessLevel === "read")
-                          ?.key ??
-                        request.templates[0]?.key ??
-                        null,
-                    );
-                    approvalStartedFor.current = null;
-                    readiness.reset();
-                  }
-                }}
-              >
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {selectedGroup.projects.map((p) => (
-                    <label
-                      key={p.tenantId}
-                      className={`flex min-h-12 cursor-pointer items-center gap-2.5 rounded-md border px-3 py-2.5 text-sm transition-colors ${
-                        selectedEnvironment?.tenantId === p.tenantId
-                          ? "border-primary bg-primary/5"
-                          : "border-border bg-background hover:border-primary/50 hover:bg-accent/40"
-                      }`}
-                    >
-                      <RadioGroupItem value={p.tenantId} />
-                      <span className="min-w-0 flex-1 truncate font-medium text-high-emphasis">
-                        {environmentLabel(p.environment)}
-                      </span>
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border bg-muted/50 px-2 py-0.5 font-mono text-xs text-medium-emphasis">
-                        <GitBranch className="h-3 w-3" aria-hidden="true" />
-                        {p.environment === "prod" ? "main" : p.environment}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </RadioGroup>
-            </section>
-          ) : (
-            <p className="text-xs text-medium-emphasis">
-              {createdProject
-                ? t("CONNECT.THE_NEW_PROJECT_WILL_APPEAR")
-                : t("CONNECT.SELECT_A_PROJECT_TO_SEE")}
-            </p>
-          )}
+          <EnvironmentSection
+            group={selectedGroup}
+            selectedTenantId={selectedEnvironment?.tenantId}
+            hasCreatedProject={!!createdProject}
+            onSelect={handleEnvironmentChange}
+          />
 
           {selectedEnvironment && (
-            <section aria-labelledby="connect-options-heading" className="space-y-3">
-              <div>
-                <h2 id="connect-options-heading" className="text-sm font-medium text-high-emphasis">
-                  {t("CONNECT.CONNECT_OPTIONS")}
-                </h2>
-                <p className="mt-1 text-xs text-medium-emphasis">
-                  {t("CONNECT.SELECT_THE_LEVEL_OF_LOCALIZATION", {
-                    environment: environmentLabel(selectedEnvironment.environment),
-                  })}
-                </p>
-              </div>
-              <fieldset
-                aria-labelledby="connect-options-heading"
-                className="m-0 grid min-w-0 gap-2 border-0 p-0"
-              >
-                {request.templates.map((template) => {
-                  const isSelected = templateKey === template.key;
-                  let accessLabel: string = template.accessLevel;
-                  if (template.accessLevel === "read") accessLabel = "Read-only";
-                  else if (template.accessLevel === "full") {
-                    accessLabel = tStatic(I18N_MODULE, "CONNECT.FULL_ACCESS");
-                  }
-                  return (
-                    <button
-                      key={template.key}
-                      type="button"
-                      aria-label={t("CONNECT.SELECT", { displayName: template.displayName })}
-                      aria-pressed={isSelected}
-                      disabled={busy}
-                      onClick={() => {
-                        setTemplateKey(template.key);
-                        approvalStartedFor.current = null;
-                        readiness.reset();
-                      }}
-                      className={`relative w-full rounded-lg border p-4 text-left transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed ${isSelected ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/50 hover:bg-accent/30"}`}
-                    >
-                      <span className="block min-w-0">
-                        <span className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="flex items-center gap-2.5">
-                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                              <Plug className="h-4 w-4" aria-hidden="true" />
-                            </span>
-                            <span className="text-sm font-semibold text-high-emphasis">
-                              {template.displayName}
-                            </span>
-                          </span>
-                          <span className="rounded-full border border-border bg-muted/50 px-2 py-0.5 text-xs font-medium text-medium-emphasis">
-                            {accessLabel}
-                          </span>
-                        </span>
-                        {template.description && (
-                          <span className="mt-2 block pr-8 text-xs leading-relaxed text-medium-emphasis">
-                            {template.description}
-                          </span>
-                        )}
-                      </span>
-                      {isSelected && (
-                        <span
-                          className="absolute bottom-3 right-3 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground"
-                          aria-hidden="true"
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </fieldset>
-              {waiting && (
-                <output className="block text-xs text-medium-emphasis">
-                  {t("CONNECT.CHECKING_THAT_THIS_ENVIRONMENT_IS")}
-                </output>
-              )}
-              {readiness.state.phase === "timeout" && (
-                <Banner
-                  variant="warning"
-                  title={t("CONNECT.THIS_ENVIRONMENT_IS_TAKING_LONGER")}
-                  compact={false}
-                >
-                  <span>{t("CONNECT.TRY_THE_READINESS_CHECK_AGAIN")} </span>
-                  <button
-                    type="button"
-                    className="font-semibold underline"
-                    onClick={() => void readiness.retry()}
-                  >
-                    {t(KEY_COMMON_RETRY)}
-                  </button>
-                </Banner>
-              )}
-              {readiness.state.phase === "permissionDenied" && (
-                <Banner
-                  variant="destructive"
-                  title={t("CONNECT.INTEGRATION_PERMISSION_REQUIRED")}
-                  compact={false}
-                >
-                  {t("CONNECT.YOU_DON_T_HAVE_PERMISSION")}
-                </Banner>
-              )}
-            </section>
+            <ConnectOptionsSection
+              templates={request.templates}
+              environment={selectedEnvironment.environment}
+              templateKey={templateKey}
+              busy={busy}
+              waiting={waiting}
+              phase={readiness.state.phase}
+              onSelectTemplate={handleSelectTemplate}
+              onRetry={() => void readiness.retry()}
+            />
           )}
         </div>
       )}
@@ -677,6 +500,304 @@ export default function ConnectPage() {
     </ConnectShell>
   );
 }
+
+type ConnectRequestData = Awaited<ReturnType<typeof integrationConnectService.getRequest>>;
+type ProjectGroup = Awaited<ReturnType<typeof projectService.getProjects>>[number];
+
+// P3-16: distinguish expired/missing, claimed by another user, and unexpected errors.
+const RequestErrorScreen = ({ requestError }: Readonly<{ requestError: unknown }>) => {
+  const { t } = useT(I18N_MODULE);
+  const errorKeys = isErrorWithErrors(requestError) ? requestError.errors : null;
+  const claimedByOther = !!errorKeys && hasErrorCode(errorKeys, "request_claimed_by_other_user");
+  const expired = !!errorKeys && hasErrorCode(errorKeys, "request_not_found_or_expired");
+
+  if (claimedByOther) {
+    return (
+      <ConnectShell title={t("CONNECT.THIS_CONNECTION_REQUEST_IS_IN")}>
+        {t("CONNECT.SOMEONE_ELSE_IS_ALREADY_HANDLING")}
+      </ConnectShell>
+    );
+  }
+
+  if (expired) {
+    // The entry step saved callback coordinates alongside the pending id; without them there
+    // is nowhere to send the browser back to.
+    const pending = readPendingConnectRequest();
+    let backUrl: string | null = null;
+    if (pending?.redirectUri && pending.state) {
+      const separator = pending.redirectUri.includes("?") ? "&" : "?";
+      backUrl = `${pending.redirectUri}${separator}error=expired&state=${encodeURIComponent(pending.state)}`;
+    }
+    return <ExpiredScreen backUrl={backUrl} />;
+  }
+
+  return (
+    <ConnectShell title={t("CONNECT.SOMETHING_WENT_WRONG")}>
+      {t("CONNECT.WE_COULD_NOT_READ_THIS")}
+    </ConnectShell>
+  );
+};
+
+type EnvironmentSectionProps = Readonly<{
+  group: ProjectGroup | undefined;
+  selectedTenantId: string | undefined;
+  hasCreatedProject: boolean;
+  onSelect: (tenantId: string) => void;
+}>;
+
+const EnvironmentSection = ({
+  group,
+  selectedTenantId,
+  hasCreatedProject,
+  onSelect,
+}: EnvironmentSectionProps) => {
+  const { t } = useT(I18N_MODULE);
+  if (!group) {
+    return (
+      <p className="text-xs text-medium-emphasis">
+        {hasCreatedProject
+          ? t("CONNECT.THE_NEW_PROJECT_WILL_APPEAR")
+          : t("CONNECT.SELECT_A_PROJECT_TO_SEE")}
+      </p>
+    );
+  }
+  return (
+    <section>
+      <h2 id="connect-environment-heading" className="mb-2 text-sm font-medium text-high-emphasis">
+        {t("CONNECT.ENVIRONMENT")}
+      </h2>
+      <p className="mb-3 text-xs text-medium-emphasis">
+        {t("CONNECT.SELECT_THE_ENVIRONMENT_THIS")}
+      </p>
+      <RadioGroup
+        aria-labelledby="connect-environment-heading"
+        value={selectedTenantId ?? ""}
+        onValueChange={onSelect}
+      >
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {group.projects.map((p) => (
+            <label
+              key={p.tenantId}
+              className={`flex min-h-12 cursor-pointer items-center gap-2.5 rounded-md border px-3 py-2.5 text-sm transition-colors ${
+                selectedTenantId === p.tenantId
+                  ? "border-primary bg-primary/5"
+                  : "border-border bg-background hover:border-primary/50 hover:bg-accent/40"
+              }`}
+            >
+              <RadioGroupItem value={p.tenantId} />
+              <span className="min-w-0 flex-1 truncate font-medium text-high-emphasis">
+                {environmentLabel(p.environment)}
+              </span>
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border bg-muted/50 px-2 py-0.5 font-mono text-xs text-medium-emphasis">
+                <GitBranch className="h-3 w-3" aria-hidden="true" />
+                {p.environment === "prod" ? "main" : p.environment}
+              </span>
+            </label>
+          ))}
+        </div>
+      </RadioGroup>
+    </section>
+  );
+};
+
+type ConnectOptionsSectionProps = Readonly<{
+  templates: ConnectRequestData["templates"];
+  environment: string;
+  templateKey: string | null;
+  busy: boolean;
+  waiting: boolean;
+  phase: ReadinessState["phase"];
+  onSelectTemplate: (key: string) => void;
+  onRetry: () => void;
+}>;
+
+const ConnectOptionsSection = ({
+  templates,
+  environment,
+  templateKey,
+  busy,
+  waiting,
+  phase,
+  onSelectTemplate,
+  onRetry,
+}: ConnectOptionsSectionProps) => {
+  const { t } = useT(I18N_MODULE);
+  return (
+    <section aria-labelledby="connect-options-heading" className="space-y-3">
+      <div>
+        <h2 id="connect-options-heading" className="text-sm font-medium text-high-emphasis">
+          {t("CONNECT.CONNECT_OPTIONS")}
+        </h2>
+        <p className="mt-1 text-xs text-medium-emphasis">
+          {t("CONNECT.SELECT_THE_LEVEL_OF_LOCALIZATION", {
+            environment: environmentLabel(environment),
+          })}
+        </p>
+      </div>
+      <fieldset
+        aria-labelledby="connect-options-heading"
+        className="m-0 grid min-w-0 gap-2 border-0 p-0"
+      >
+        {templates.map((template) => (
+          <TemplateOption
+            key={template.key}
+            template={template}
+            isSelected={templateKey === template.key}
+            disabled={busy}
+            onSelect={() => onSelectTemplate(template.key)}
+          />
+        ))}
+      </fieldset>
+      {waiting && (
+        <output className="block text-xs text-medium-emphasis">
+          {t("CONNECT.CHECKING_THAT_THIS_ENVIRONMENT_IS")}
+        </output>
+      )}
+      {phase === "timeout" && (
+        <Banner
+          variant="warning"
+          title={t("CONNECT.THIS_ENVIRONMENT_IS_TAKING_LONGER")}
+          compact={false}
+        >
+          <span>{t("CONNECT.TRY_THE_READINESS_CHECK_AGAIN")} </span>
+          <button type="button" className="font-semibold underline" onClick={onRetry}>
+            {t(KEY_COMMON_RETRY)}
+          </button>
+        </Banner>
+      )}
+      {phase === "permissionDenied" && (
+        <Banner
+          variant="destructive"
+          title={t("CONNECT.INTEGRATION_PERMISSION_REQUIRED")}
+          compact={false}
+        >
+          {t("CONNECT.YOU_DON_T_HAVE_PERMISSION")}
+        </Banner>
+      )}
+    </section>
+  );
+};
+
+type TemplateOptionProps = Readonly<{
+  template: ConnectRequestData["templates"][number];
+  isSelected: boolean;
+  disabled: boolean;
+  onSelect: () => void;
+}>;
+
+const TemplateOption = ({ template, isSelected, disabled, onSelect }: TemplateOptionProps) => {
+  const { t } = useT(I18N_MODULE);
+  let accessLabel: string = template.accessLevel;
+  if (template.accessLevel === "read") accessLabel = "Read-only";
+  else if (template.accessLevel === "full") {
+    accessLabel = tStatic(I18N_MODULE, "CONNECT.FULL_ACCESS");
+  }
+  return (
+    <button
+      type="button"
+      aria-label={t("CONNECT.SELECT", { displayName: template.displayName })}
+      aria-pressed={isSelected}
+      disabled={disabled}
+      onClick={onSelect}
+      className={`relative w-full rounded-lg border p-4 text-left transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed ${isSelected ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/50 hover:bg-accent/30"}`}
+    >
+      <span className="block min-w-0">
+        <span className="flex flex-wrap items-center justify-between gap-2">
+          <span className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <Plug className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <span className="text-sm font-semibold text-high-emphasis">{template.displayName}</span>
+          </span>
+          <span className="rounded-full border border-border bg-muted/50 px-2 py-0.5 text-xs font-medium text-medium-emphasis">
+            {accessLabel}
+          </span>
+        </span>
+        {template.description && (
+          <span className="mt-2 block pr-8 text-xs leading-relaxed text-medium-emphasis">
+            {template.description}
+          </span>
+        )}
+      </span>
+      {isSelected && (
+        <span
+          className="absolute bottom-3 right-3 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground"
+          aria-hidden="true"
+        >
+          <Check className="h-3.5 w-3.5" />
+        </span>
+      )}
+    </button>
+  );
+};
+
+type ProjectSectionProps = Readonly<{
+  groups: ProjectGroup[];
+  selectedTenantGroupId: string | null;
+  onSelect: (tenantGroupId: string) => void;
+  onCreateNew: () => void;
+}>;
+
+const ProjectSection = ({
+  groups,
+  selectedTenantGroupId,
+  onSelect,
+  onCreateNew,
+}: ProjectSectionProps) => {
+  const { t } = useT(I18N_MODULE);
+  return (
+    <section>
+      <p className="mb-2 text-sm font-medium text-high-emphasis">{t("CONNECT.PROJECT")}</p>
+      {groups.length > 0 ? (
+        <ConnectProjectPicker
+          projects={groups.map((group) => ({
+            tenantGroupId: group.tenantGroupId,
+            name: group.projects[0]?.name ?? group.tenantGroupId,
+          }))}
+          value={selectedTenantGroupId}
+          onValueChange={onSelect}
+        />
+      ) : (
+        <output className="block text-sm text-medium-emphasis">
+          {t("CONNECT.LOADING_PROJECTS")}
+        </output>
+      )}
+      <button
+        type="button"
+        className="mt-2 text-xs font-medium text-primary hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+        onClick={onCreateNew}
+      >
+        {t("CONNECT.CREATE_NEW_PROJECT")}
+      </button>
+    </section>
+  );
+};
+
+type CreatedProjectBannerProps = Readonly<{
+  name: string;
+  hasGroup: boolean;
+  loadFailed: boolean;
+  onRetry: () => void;
+}>;
+
+const CreatedProjectBanner = ({
+  name,
+  hasGroup,
+  loadFailed,
+  onRetry,
+}: CreatedProjectBannerProps) => {
+  const { t } = useT(I18N_MODULE);
+  return (
+    <Banner variant="success" title={t("CONNECT.PROJECT_CREATED_SUCCESSFULLY")} compact={false}>
+      {t(createdBannerKey(hasGroup, loadFailed), { name })}
+      {!hasGroup && loadFailed && (
+        <button type="button" className="ml-1 font-semibold underline" onClick={onRetry}>
+          {t(KEY_COMMON_RETRY)}
+        </button>
+      )}
+    </Banner>
+  );
+};
 
 const ConnectShell = ({ title, children }: { title: string; children: React.ReactNode }) => {
   const { t } = useT(I18N_MODULE);

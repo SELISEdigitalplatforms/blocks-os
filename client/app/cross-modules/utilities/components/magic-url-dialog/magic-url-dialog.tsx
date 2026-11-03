@@ -41,6 +41,9 @@ interface MagicUrlDialogProps {
   trigger?: React.ReactNode;
   initialData?: MagicUrl;
 }
+const usageLimitText = (limit: number) => (limit > 0 ? limit.toString() : "");
+const expiryDateOf = (value: MagicUrl["expiryDate"]) => (value ? new Date(value) : undefined);
+
 export function MagicUrlDialog({ open, onOpenChange, trigger, initialData }: MagicUrlDialogProps) {
   const { t } = useT("os.utilities");
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
@@ -115,9 +118,9 @@ export function MagicUrlDialog({ open, onOpenChange, trigger, initialData }: Mag
         setLinkBasedActionConfigId(initialData.linkBasedActionConfigId || "");
         setCache(initialData.persistent || false);
         setUsageLimit(initialData.usageLimit > 0);
-        setUsageLimitValue(initialData.usageLimit > 0 ? initialData.usageLimit.toString() : "");
+        setUsageLimitValue(usageLimitText(initialData.usageLimit));
         setAutoExpiry(!!initialData.expiryLifeSpan || !!initialData.expiryDate);
-        setExpiryDate(initialData.expiryDate ? new Date(initialData.expiryDate) : undefined);
+        setExpiryDate(expiryDateOf(initialData.expiryDate));
       } else {
         setUrl("");
         setName("");

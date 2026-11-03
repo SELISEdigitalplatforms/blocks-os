@@ -51,47 +51,50 @@ export const UserOrganizationsList = ({
       </div>
 
       <div className="flex flex-col gap-1">
-        {isLoading ? (
+        {isLoading &&
           Array.from({ length: 3 }).map((_, index) => (
             <Skeleton key={index} className="h-14 w-full rounded-md" />
-          ))
-        ) : organizations.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-8 text-center text-sm text-muted-foreground">
-            <Building2 className="h-5 w-5" />
-            {t("USER_ORGANIZATIONS_LIST.NO_ORGANIZATIONS_FOUND")}
-          </div>
-        ) : (
-          organizations.map((org) => {
-            const isSelected = org.organizationId === selectedOrgId;
-            return (
-              <div
-                key={org.organizationId}
-                className={cn(
-                  "group flex w-full items-center gap-2 rounded-r-md border-l-2 border-transparent pr-1 transition-colors",
-                  isSelected ? "border-l-primary bg-primary/5" : "hover:bg-muted/60",
-                )}
-              >
-                <button
-                  type="button"
-                  onClick={() => onSelect(org.organizationId)}
-                  className="flex flex-1 items-center gap-3 px-2.5 py-2.5 text-left"
+          ))}
+        {!isLoading &&
+          (organizations.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-8 text-center text-sm text-muted-foreground">
+              <Building2 className="h-5 w-5" />
+              {t("USER_ORGANIZATIONS_LIST.NO_ORGANIZATIONS_FOUND")}
+            </div>
+          ) : (
+            organizations.map((org) => {
+              const isSelected = org.organizationId === selectedOrgId;
+              return (
+                <div
+                  key={org.organizationId}
+                  className={cn(
+                    "group flex w-full items-center gap-2 rounded-r-md border-l-2 border-transparent pr-1 transition-colors",
+                    isSelected ? "border-l-primary bg-primary/5" : "hover:bg-muted/60",
+                  )}
                 >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-high-emphasis">{org.name}</p>
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                      {t("USER_ORGANIZATIONS_LIST.SUMMARY", {
-                        roles: t("USER_ORGANIZATIONS_LIST.ROLE_COUNT", { count: org.roleCount }),
-                        permissions: t("USER_ORGANIZATIONS_LIST.PERMISSION_COUNT", {
-                          count: org.permissionCount,
-                        }),
-                      })}
-                    </p>
-                  </div>
-                </button>
-              </div>
-            );
-          })
-        )}
+                  <button
+                    type="button"
+                    onClick={() => onSelect(org.organizationId)}
+                    className="flex flex-1 items-center gap-3 px-2.5 py-2.5 text-left"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-high-emphasis">
+                        {org.name}
+                      </p>
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                        {t("USER_ORGANIZATIONS_LIST.SUMMARY", {
+                          roles: t("USER_ORGANIZATIONS_LIST.ROLE_COUNT", { count: org.roleCount }),
+                          permissions: t("USER_ORGANIZATIONS_LIST.PERMISSION_COUNT", {
+                            count: org.permissionCount,
+                          }),
+                        })}
+                      </p>
+                    </div>
+                  </button>
+                </div>
+              );
+            })
+          ))}
       </div>
 
       {revokeTarget && (

@@ -89,16 +89,22 @@ export const SessionDetailsDrawer = ({
     }
   };
 
+  let view: "loading" | "error" | "notFound" | "details" = "details";
+  if (isLoading) view = "loading";
+  else if (isError) view = "error";
+  else if (!vm) view = "notFound";
+
   return (
     <Sheet open={!!sessionId} onOpenChange={onOpenChange}>
       <SheetContent className="flex w-full flex-col overflow-hidden p-0 sm:max-w-md">
-        {isLoading ? (
+        {view === "loading" && (
           <div className="space-y-4 p-6">
             <Skeleton className="h-10 w-10 rounded-lg" />
             <Skeleton className="h-6 w-40" />
             <Skeleton className="h-24 w-full" />
           </div>
-        ) : isError ? (
+        )}
+        {view === "error" && (
           <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center">
             <p className="text-sm font-medium text-high-emphasis">
               {t("SESSION_DETAILS_DRAWER.LOAD_FAILED_TITLE")}
@@ -112,7 +118,8 @@ export const SessionDetailsDrawer = ({
               {t("common:CLOSE")}
             </Button>
           </div>
-        ) : !vm ? (
+        )}
+        {view === "notFound" && (
           <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center">
             <p className="text-sm font-medium text-high-emphasis">
               {t("SESSION_DETAILS_DRAWER.NOT_FOUND_TITLE")}
@@ -124,7 +131,8 @@ export const SessionDetailsDrawer = ({
               {t("common:CLOSE")}
             </Button>
           </div>
-        ) : (
+        )}
+        {view === "details" && vm && (
           <>
             <SheetHeader className="shrink-0 border-b px-6 py-4">
               <div className="flex items-center gap-3">

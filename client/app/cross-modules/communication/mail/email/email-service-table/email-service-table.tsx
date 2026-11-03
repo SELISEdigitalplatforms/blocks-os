@@ -34,7 +34,7 @@ import {
 const DEFAULT_EMAIL_TAB: EmailTabKey = "Emailstemplates";
 
 const isEmailTabKey = (value: string | null): value is EmailTabKey =>
-  EMAIL_TAB_KEYS.some((key) => key === value);
+  value !== null && (EMAIL_TAB_KEYS as readonly string[]).includes(value);
 
 const LoadingSkelton = () => {
   return (

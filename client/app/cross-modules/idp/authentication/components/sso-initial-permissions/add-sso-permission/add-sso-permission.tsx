@@ -139,7 +139,7 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? (
+                {isLoading &&
                   Array.from({ length: filter.pageSize }).map((_, idx) => (
                     <TableRow key={idx}>
                       <TableCell>
@@ -155,50 +155,52 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
                         <Skeleton className="h-4 w-16 rounded" />
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : data?.data?.length ? (
-                  (data.data as IPermission[]).map((item) => (
-                    <TableRow key={item.itemId}>
-                      <TableCell>
-                        <Checkbox
-                          checked={
-                            permissionsResource.includes(item.resource) ||
-                            selectedPermissionsResource.includes(item.resource)
+                  ))}
+                {!isLoading &&
+                  (data?.data?.length ? (
+                    (data.data as IPermission[]).map((item) => (
+                      <TableRow key={item.itemId}>
+                        <TableCell>
+                          <Checkbox
+                            checked={
+                              permissionsResource.includes(item.resource) ||
+                              selectedPermissionsResource.includes(item.resource)
+                            }
+                            disabled={permissionsResource.includes(item.resource)}
+                            onCheckedChange={(checked) => {
+                              handlePermissionCheckboxChange(checked as boolean, item);
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="w-fit">
+                            {item.name}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className="block min-w-0 max-w-[220px] truncate text-sm text-muted-foreground"
+                            title={item.resource}
+                          >
+                            {item.resource}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {
+                            RESOURCE_TYPE.find(
+                              (resource) => resource.value === item.type.toString(),
+                            )?.label
                           }
-                          disabled={permissionsResource.includes(item.resource)}
-                          onCheckedChange={(checked) => {
-                            handlePermissionCheckboxChange(checked as boolean, item);
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="w-fit">
-                          {item.name}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className="block min-w-0 max-w-[220px] truncate text-sm text-muted-foreground"
-                          title={item.resource}
-                        >
-                          {item.resource}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {
-                          RESOURCE_TYPE.find((resource) => resource.value === item.type.toString())
-                            ?.label
-                        }
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                        {t("ADD_SSO_PERMISSION.EMPTY")}
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                      {t("ADD_SSO_PERMISSION.EMPTY")}
-                    </TableCell>
-                  </TableRow>
-                )}
+                  ))}
               </TableBody>
             </Table>
           </CardContent>

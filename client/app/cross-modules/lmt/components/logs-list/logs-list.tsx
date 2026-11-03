@@ -70,6 +70,10 @@ export const LogsList = () => {
   };
 
   const noServices = services.length === 0;
+  let view: "loadingServices" | "noServices" | "loadingLogs" | "logs" = "logs";
+  if (isServicesLoading) view = "loadingServices";
+  else if (noServices) view = "noServices";
+  else if (isLoading) view = "loadingLogs";
 
   return (
     <Card className="relative">
@@ -77,21 +81,24 @@ export const LogsList = () => {
         <LogsFilterToolbar />
       </CardHeader>
       <CardContent className="h-[calc(100vh-340px)]">
-        {isServicesLoading ? (
+        {view === "loadingServices" && (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
             {t("LOGS_LIST.LOADING_SERVICES")}
           </div>
-        ) : noServices ? (
+        )}
+        {view === "noServices" && (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
             {t("LOGS_LIST.NO_SERVICES_FOUND")}
           </div>
-        ) : isLoading ? (
+        )}
+        {view === "loadingLogs" && (
           <div className="grid h-full w-full gap-2 overflow-hidden">
             {Array.from({ length: 20 }).map((_, index) => (
               <Skeleton key={index} className="h-12 w-full rounded-lg" />
             ))}
           </div>
-        ) : (
+        )}
+        {view === "logs" && (
           <InfiniteScroll<ILog>
             // InfiniteScroll seeds its rows from initialData once, so changing the
             // queried collections needs a fresh instance to drop the previous logs.

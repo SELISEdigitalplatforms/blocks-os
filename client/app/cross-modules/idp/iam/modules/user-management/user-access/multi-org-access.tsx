@@ -249,100 +249,102 @@ export const MultiOrgAccess = ({ userId, projectKey }: MultiOrgAccessProps) => {
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border bg-card p-6">
-      {isLoading ? (
+      {isLoading && (
         <div className="space-y-4">
           <Skeleton className="h-6 w-40" />
           <Skeleton className="h-9 w-full" />
         </div>
-      ) : organizationRows.length === 0 ? (
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 py-16 text-center text-sm text-muted-foreground">
-          <Building2 className="h-6 w-6" />
-          {t("MULTI_ORG_ACCESS.NO_ORGANIZATIONS_ASSIGNED")}
-        </div>
-      ) : (
-        <>
-          <div className="flex shrink-0 items-center justify-between gap-3">
-            <div className="flex min-w-0 flex-1 flex-col gap-2">
-              <label
-                htmlFor="access-org-select"
-                className="mb-2 text-base font-semibold text-high-emphasis"
-              >
-                {t("MULTI_ORG_ACCESS.ORGANIZATION")}
-              </label>
-              <Select value={selectedOrgId} onValueChange={selectOrg}>
-                <SelectTrigger
-                  id="access-org-select"
-                  className="h-auto w-full max-w-[320px] gap-2 border-input bg-background text-md font-semibold text-high-emphasis text-left"
-                >
-                  <SelectValue
-                    placeholder={t("MULTI_ORG_ACCESS.SELECT_ORGANIZATION_PLACEHOLDER")}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {organizationRows.map((org) => (
-                    <SelectItem key={org.organizationId} value={org.organizationId}>
-                      <div className="flex flex-col ">
-                        <span className="font-semibold">{org.name}</span>
-                        <span className="text-xs font-normal text-muted-foreground">
-                          {t("MULTI_ORG_ACCESS.SUMMARY", {
-                            roles: t("MULTI_ORG_ACCESS.ROLE_COUNT", { count: org.roleCount }),
-                            permissions: t("MULTI_ORG_ACCESS.PERMISSION_COUNT", {
-                              count: org.permissionCount,
-                            }),
-                          })}
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {selectedOrgRow && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="mt-6 inline-flex shrink-0">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground disabled:pointer-events-none disabled:opacity-50"
-                        onClick={() => setRevokeTarget(selectedOrgRow)}
-                        aria-label={t("MULTI_ORG_ACCESS.REVOKE_ARIA_LABEL", {
-                          name: selectedOrgRow.name,
-                        })}
-                      >
-                        <UserMinus className="h-4 w-4" />
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent side="left">
-                    {t("MULTI_ORG_ACCESS.REVOKE_USER_ACCESS")}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-          </div>
-          <div className="scrollbar-slim flex min-h-0 flex-1 flex-col overflow-y-auto pt-4 pr-1">
-            {selectedOrgRow ? (
-              <RolesPermissionsPillEditor
-                roles={selectedRoles}
-                permissions={selectedPermissions}
-                onRolesChange={setSelectedRoles}
-                onPermissionsChange={setSelectedPermissions}
-                rolesDescription={t("MULTI_ORG_ACCESS.ROLES_DESCRIPTION")}
-                permissionsDescription={t("MULTI_ORG_ACCESS.PERMISSIONS_DESCRIPTION")}
-                onSave={onSave}
-                organizationId={organizationIdForQueries}
-              />
-            ) : (
-              <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 py-16 text-center text-sm text-muted-foreground">
-                <Building2 className="h-6 w-6" />
-                {t("MULTI_ORG_ACCESS.SELECT_ORGANIZATION_HINT")}
-              </div>
-            )}
-          </div>
-        </>
       )}
+      {!isLoading &&
+        (organizationRows.length === 0 ? (
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 py-16 text-center text-sm text-muted-foreground">
+            <Building2 className="h-6 w-6" />
+            {t("MULTI_ORG_ACCESS.NO_ORGANIZATIONS_ASSIGNED")}
+          </div>
+        ) : (
+          <>
+            <div className="flex shrink-0 items-center justify-between gap-3">
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
+                <label
+                  htmlFor="access-org-select"
+                  className="mb-2 text-base font-semibold text-high-emphasis"
+                >
+                  {t("MULTI_ORG_ACCESS.ORGANIZATION")}
+                </label>
+                <Select value={selectedOrgId} onValueChange={selectOrg}>
+                  <SelectTrigger
+                    id="access-org-select"
+                    className="h-auto w-full max-w-[320px] gap-2 border-input bg-background text-md font-semibold text-high-emphasis text-left"
+                  >
+                    <SelectValue
+                      placeholder={t("MULTI_ORG_ACCESS.SELECT_ORGANIZATION_PLACEHOLDER")}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {organizationRows.map((org) => (
+                      <SelectItem key={org.organizationId} value={org.organizationId}>
+                        <div className="flex flex-col ">
+                          <span className="font-semibold">{org.name}</span>
+                          <span className="text-xs font-normal text-muted-foreground">
+                            {t("MULTI_ORG_ACCESS.SUMMARY", {
+                              roles: t("MULTI_ORG_ACCESS.ROLE_COUNT", { count: org.roleCount }),
+                              permissions: t("MULTI_ORG_ACCESS.PERMISSION_COUNT", {
+                                count: org.permissionCount,
+                              }),
+                            })}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {selectedOrgRow && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="mt-6 inline-flex shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground disabled:pointer-events-none disabled:opacity-50"
+                          onClick={() => setRevokeTarget(selectedOrgRow)}
+                          aria-label={t("MULTI_ORG_ACCESS.REVOKE_ARIA_LABEL", {
+                            name: selectedOrgRow.name,
+                          })}
+                        >
+                          <UserMinus className="h-4 w-4" />
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="left">
+                      {t("MULTI_ORG_ACCESS.REVOKE_USER_ACCESS")}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
+            <div className="scrollbar-slim flex min-h-0 flex-1 flex-col overflow-y-auto pt-4 pr-1">
+              {selectedOrgRow ? (
+                <RolesPermissionsPillEditor
+                  roles={selectedRoles}
+                  permissions={selectedPermissions}
+                  onRolesChange={setSelectedRoles}
+                  onPermissionsChange={setSelectedPermissions}
+                  rolesDescription={t("MULTI_ORG_ACCESS.ROLES_DESCRIPTION")}
+                  permissionsDescription={t("MULTI_ORG_ACCESS.PERMISSIONS_DESCRIPTION")}
+                  onSave={onSave}
+                  organizationId={organizationIdForQueries}
+                />
+              ) : (
+                <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 py-16 text-center text-sm text-muted-foreground">
+                  <Building2 className="h-6 w-6" />
+                  {t("MULTI_ORG_ACCESS.SELECT_ORGANIZATION_HINT")}
+                </div>
+              )}
+            </div>
+          </>
+        ))}
 
       {revokeTarget && (
         <RemoveMembership

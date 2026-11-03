@@ -75,6 +75,13 @@ interface InvitePeopleProps {
   canInvite?: boolean;
 }
 
+// The valid addresses in a recipients field, lower-cased.
+const validEmailsOf = (recipients: string) =>
+  recipients
+    .split(/[\s,]+/)
+    .map((e) => e.trim().toLowerCase())
+    .filter((e) => e.length > 0 && emailRegex.test(e));
+
 export const InvitePeople = ({ existingEmails = [], canInvite = false }: InvitePeopleProps) => {
   const { t } = useT(I18N_MODULE);
   const { isPending, mutateAsync } = useInvitePeople();
@@ -106,20 +113,13 @@ export const InvitePeople = ({ existingEmails = [], canInvite = false }: InviteP
     () =>
       createFormSchema().superRefine((data, ctx) => {
         const emailCounts = new Map<string, number>();
-        data.invitations.forEach((inv) => {
-          const emails = inv.recipients
-            .split(/[\s,]+/)
-            .map((e) => e.trim().toLowerCase())
-            .filter((e) => e.length > 0 && emailRegex.test(e));
-          emails.forEach((email) => {
+        for (const inv of data.invitations) {
+          for (const email of validEmailsOf(inv.recipients)) {
             emailCounts.set(email, (emailCounts.get(email) || 0) + 1);
-          });
-        });
-        data.invitations.forEach((inv, index) => {
-          const emails = inv.recipients
-            .split(/[\s,]+/)
-            .map((e) => e.trim().toLowerCase())
-            .filter((e) => e.length > 0 && emailRegex.test(e));
+          }
+        }
+        for (const [index, inv] of data.invitations.entries()) {
+          const emails = validEmailsOf(inv.recipients);
           const duplicates = emails.filter((email) => existingEmailSet.has(email));
           if (duplicates.length > 0) {
             ctx.addIssue({
@@ -138,7 +138,7 @@ export const InvitePeople = ({ existingEmails = [], canInvite = false }: InviteP
               path: ["invitations", index, "recipients"],
             });
           }
-        });
+        }
       }),
     [existingEmailSet, t],
   );

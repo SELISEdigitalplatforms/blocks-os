@@ -27,6 +27,12 @@ const LoadingSkelton = () => (
   </div>
 );
 
+// Rendered by flexRender as a component, so it reads the language itself.
+function StatusHeader() {
+  const { t } = useT("os.lmt");
+  return <span className="font-bold text-medium-emphasis">{t("common:STATUS")}</span>;
+}
+
 export function TracesList({
   data,
   isLoading,
@@ -73,7 +79,7 @@ export function TracesList({
         // Not sortable: the server sorts on the raw Mongo field, which is the span status,
         // while this column shows the HTTP code. A control that reordered by something other
         // than what is displayed would be worse than no control.
-        header: () => <span className="font-bold text-medium-emphasis">{t("common:STATUS")}</span>,
+        header: StatusHeader,
         cell: ({ row }) => {
           const status = getTraceStatus(row.original);
           return (

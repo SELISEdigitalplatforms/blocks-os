@@ -7,7 +7,7 @@ import type {
 const KEY_FIELD_BACK_TO_LOGIN_BUTTON = "OIDC_TEMPLATE_VALIDATION.FIELD_BACK_TO_LOGIN_BUTTON";
 const KEY_FIELD_EMAIL_LABEL = "OIDC_TEMPLATE_VALIDATION.FIELD_EMAIL_LABEL";
 const KEY_FIELD_HEADING = "OIDC_TEMPLATE_VALIDATION.FIELD_HEADING";
-const KEY_FIELD_PASSWORD_LABEL = "OIDC_TEMPLATE_VALIDATION.FIELD_PASSWORD_LABEL";
+const KEY_FIELD_CREDENTIAL_LABEL = "OIDC_TEMPLATE_VALIDATION.FIELD_PASSWORD_LABEL";
 const KEY_FIELD_RESEND_BUTTON = "OIDC_TEMPLATE_VALIDATION.FIELD_RESEND_BUTTON";
 const KEY_FIELD_SUBMIT_BUTTON = "OIDC_TEMPLATE_VALIDATION.FIELD_SUBMIT_BUTTON";
 const KEY_FIELD_SUCCESS_SUBTITLE = "OIDC_TEMPLATE_VALIDATION.FIELD_SUCCESS_SUBTITLE";
@@ -153,7 +153,7 @@ export const getPageFields = (): Record<OidcPageKey, PageField[]> => ({
     },
     {
       key: "passwordLabel",
-      label: tStatic(I18N_MODULE, KEY_FIELD_PASSWORD_LABEL),
+      label: tStatic(I18N_MODULE, KEY_FIELD_CREDENTIAL_LABEL),
     },
     {
       key: "forgotPasswordLink",
@@ -360,7 +360,7 @@ export const getPageFields = (): Record<OidcPageKey, PageField[]> => ({
     { key: "heading", label: tStatic(I18N_MODULE, KEY_FIELD_HEADING) },
     {
       key: "passwordLabel",
-      label: tStatic(I18N_MODULE, KEY_FIELD_PASSWORD_LABEL),
+      label: tStatic(I18N_MODULE, KEY_FIELD_CREDENTIAL_LABEL),
     },
     {
       key: "confirmPasswordLabel",
@@ -425,7 +425,7 @@ export const getPageFields = (): Record<OidcPageKey, PageField[]> => ({
     },
     {
       key: "passwordLabel",
-      label: tStatic(I18N_MODULE, KEY_FIELD_PASSWORD_LABEL),
+      label: tStatic(I18N_MODULE, KEY_FIELD_CREDENTIAL_LABEL),
     },
     {
       key: "confirmPasswordLabel",

@@ -80,6 +80,13 @@ const RepositoriesLoading = () => (
     </div>
   </main>
 );
+
+// Rendered by flexRender as a component, so it reads the language itself.
+function ActionsHeader() {
+  const { t } = useT(I18N_MODULE);
+  return <span className="sr-only">{t("common:ACTIONS")}</span>;
+}
+
 export const RepositoriesPage = () => {
   const { t } = useT(I18N_MODULE);
   const groupId = useProjectStore().selectedTenantGroup;
@@ -242,7 +249,7 @@ export const RepositoriesPage = () => {
       },
       {
         id: "actions",
-        header: () => <span className="sr-only">{t("common:ACTIONS")}</span>,
+        header: ActionsHeader,
         cell: (repos) => (
           <div className="flex justify-end">
             {canDelete && (

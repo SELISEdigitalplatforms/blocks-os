@@ -25,6 +25,23 @@ interface RepositorySelectionModalProps {
   title?: string;
   description?: string;
 }
+// The repository list after a page arrives: the first page replaces the list, later pages
+// append; hasMore is false once the last page (or an empty one) is in.
+const applyRepositoryPage = (
+  items: IRepository[] | undefined,
+  totalCount: number,
+  page: number,
+  current: IRepository[],
+  perPage: number,
+): { repositories: IRepository[]; hasMore: boolean } => {
+  if (totalCount === 0 || !Array.isArray(items)) return { repositories: [], hasMore: false };
+  if (items.length === 0) return { repositories: page === 0 ? [] : current, hasMore: false };
+  return {
+    repositories: page === 0 ? items : [...current, ...items],
+    hasMore: (page + 1) * perPage < totalCount && items.length === perPage,
+  };
+};
+
 export const RepositorySelectionModal = ({
   open,
   onOpenChange,
@@ -92,26 +109,15 @@ export const RepositorySelectionModal = ({
     setAppliedResponse({ repositories, page: currentPage });
     // Nothing to apply until data arrives
     if (repositories?.data) {
-      // Handle the wrapped response structure
-      const items = repositories.data.items;
-      const totalCount = repositories.data.total_count || 0;
-      if (totalCount === 0 || !Array.isArray(items)) {
-        // No repositories available, or not a valid array
-        setAllRepositories([]);
-        setHasMoreData(false);
-      } else if (items.length > 0) {
-        // First page replaces the list; subsequent pages append to it
-        setAllRepositories(currentPage === 0 ? items : [...allRepositories, ...items]);
-        // Check if there's more data to load
-        const totalLoadedItems = (currentPage + 1) * itemsPerPage;
-        setHasMoreData(totalLoadedItems < totalCount && items.length === itemsPerPage);
-      } else {
-        // Empty array returned - no more data
-        if (currentPage === 0) {
-          setAllRepositories([]);
-        }
-        setHasMoreData(false);
-      }
+      const next = applyRepositoryPage(
+        repositories.data.items,
+        repositories.data.total_count || 0,
+        currentPage,
+        allRepositories,
+        itemsPerPage,
+      );
+      setAllRepositories(next.repositories);
+      setHasMoreData(next.hasMore);
     }
   }
   // Scroll handler for infinite scrolling
@@ -239,6 +245,13 @@ export const RepositorySelectionModal = ({
     confirmButton: t("common:CONFIRM"),
     cancelButton: t("common:CANCEL"),
   };
+  const isBusy = isLoading || isFetching;
+  let triggerLabel: string | undefined = t("REPOSITORY_SELECTION_MODAL.SELECT_A_REPOSITORY");
+  if (selectedRepoId) {
+    triggerLabel = allRepositories.find((r) => String(r.id) === selectedRepoId)?.full_name;
+  } else if (isBusy) {
+    triggerLabel = t("REPOSITORY_SELECTION_MODAL.LOADING_REPOSITORIES");
+  }
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl p-6">
@@ -319,11 +332,7 @@ export const RepositorySelectionModal = ({
                 setHighlightedIndex(allRepositories.length > 0 ? 0 : -1);
               }}
             >
-              {selectedRepoId
-                ? allRepositories.find((r) => String(r.id) === selectedRepoId)?.full_name
-                : isLoading || isFetching
-                  ? t("REPOSITORY_SELECTION_MODAL.LOADING_REPOSITORIES")
-                  : t("REPOSITORY_SELECTION_MODAL.SELECT_A_REPOSITORY")}
+              {triggerLabel}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
             {isPopoverOpen && (

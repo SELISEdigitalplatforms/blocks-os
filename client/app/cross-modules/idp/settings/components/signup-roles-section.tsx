@@ -46,9 +46,8 @@ export const SignupRolesSection = ({
         {roles.length === 0 && removedRoles.length === 0 ? (
           <p className={SETTINGS_FORM_LAYOUT.emptyState}>{t("SIGNUP_ROLES_SECTION.EMPTY")}</p>
         ) : (
-          <div
+          <ul
             className="flex flex-col gap-2 sm:flex-row sm:flex-wrap"
-            role="list"
             aria-label={t("SIGNUP_ROLES_SECTION.ASSIGNED_ROLES")}
           >
             {roles.map((role) => (
@@ -69,7 +68,7 @@ export const SignupRolesSection = ({
                 className="sm:max-w-[280px]"
               />
             ))}
-          </div>
+          </ul>
         )}
       </CardContent>
     </Card>

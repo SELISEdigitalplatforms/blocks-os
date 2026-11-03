@@ -202,82 +202,84 @@ export const OrganizationsSidebarList = ({
       </div>
 
       <div className={cn("overflow-y-auto p-2", SIDEBAR_LIST_HEIGHT)}>
-        {isLoading ? (
+        {isLoading && (
           <div className="space-y-2 p-1">
             {Array.from({ length: 5 }).map((_, index) => (
               <Skeleton key={index} className="h-[62px] w-full rounded-md" />
             ))}
           </div>
-        ) : visibleOrgs.length === 0 ? (
-          <div className="flex h-40 flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground">
-            <Building2 className="h-6 w-6" />
-            {t("ORGANIZATIONS_SIDEBAR_LIST.EMPTY")}
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {visibleOrgs.map((org) => {
-              const palette = getAvatarPalette(org.itemId);
-              const isSelected = org.itemId === selectedOrgId;
-              const updatedLabel = formatUpdatedAgo(
-                org.lastUpdatedDate,
-                language === "de" ? de : undefined,
-              );
+        )}
+        {!isLoading &&
+          (visibleOrgs.length === 0 ? (
+            <div className="flex h-40 flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground">
+              <Building2 className="h-6 w-6" />
+              {t("ORGANIZATIONS_SIDEBAR_LIST.EMPTY")}
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {visibleOrgs.map((org) => {
+                const palette = getAvatarPalette(org.itemId);
+                const isSelected = org.itemId === selectedOrgId;
+                const updatedLabel = formatUpdatedAgo(
+                  org.lastUpdatedDate,
+                  language === "de" ? de : undefined,
+                );
 
-              return (
-                <button
-                  key={org.itemId}
-                  type="button"
-                  onClick={() => onSelect(org)}
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-r-md border-l-2 border-transparent px-2.5 py-2.5 text-left transition-colors",
-                    isSelected ? "border-l-primary bg-primary/5" : "hover:bg-muted/60",
-                  )}
-                >
-                  <div
+                return (
+                  <button
+                    key={org.itemId}
+                    type="button"
+                    onClick={() => onSelect(org)}
                     className={cn(
-                      "flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg",
-                      palette.bg,
-                      palette.text,
+                      "flex w-full items-center gap-3 rounded-r-md border-l-2 border-transparent px-2.5 py-2.5 text-left transition-colors",
+                      isSelected ? "border-l-primary bg-primary/5" : "hover:bg-muted/60",
                     )}
                   >
-                    {org.logoUrl ? (
-                      <img
-                        src={org.logoUrl}
-                        alt={org.name}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <Building2 className="h-4.5 w-4.5" />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex min-w-0 items-center gap-1.5">
-                      <span className="truncate text-sm font-semibold text-high-emphasis">
-                        {org.name}
-                      </span>
-                      {org.isDisabled && (
-                        <Badge variant="error" className="shrink-0 px-1.5 py-0 text-[10px]">
-                          {t("common:DISABLED")}
-                        </Badge>
+                    <div
+                      className={cn(
+                        "flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg",
+                        palette.bg,
+                        palette.text,
+                      )}
+                    >
+                      {org.logoUrl ? (
+                        <img
+                          src={org.logoUrl}
+                          alt={org.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <Building2 className="h-4.5 w-4.5" />
                       )}
                     </div>
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                      {updatedLabel &&
-                        t("ORGANIZATIONS_SIDEBAR_LIST.UPDATED_AGO", { time: updatedLabel })}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <span className="truncate text-sm font-semibold text-high-emphasis">
+                          {org.name}
+                        </span>
+                        {org.isDisabled && (
+                          <Badge variant="error" className="shrink-0 px-1.5 py-0 text-[10px]">
+                            {t("common:DISABLED")}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                        {updatedLabel &&
+                          t("ORGANIZATIONS_SIDEBAR_LIST.UPDATED_AGO", { time: updatedLabel })}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
 
-            <div ref={sentinelRef} />
-            {isLoadingMore && (
-              <div className="space-y-2 p-1">
-                <Skeleton className="h-[62px] w-full rounded-md" />
-              </div>
-            )}
-          </div>
-        )}
+              <div ref={sentinelRef} />
+              {isLoadingMore && (
+                <div className="space-y-2 p-1">
+                  <Skeleton className="h-[62px] w-full rounded-md" />
+                </div>
+              )}
+            </div>
+          ))}
       </div>
 
       {!isLoading && (

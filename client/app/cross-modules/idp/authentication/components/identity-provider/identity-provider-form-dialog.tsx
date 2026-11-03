@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { AlertTriangle, Eye, EyeOff, Info, Plus, X } from "lucide-react";
 import {
@@ -55,7 +55,7 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 const PROVIDER_SOCIAL = "social";
 const PROVIDER_BLOCKS_OIDC = "blocks-oidc";
 const PROVIDER_BYOS = "byos";
-const PROVIDER_TYPE_VALUES = [PROVIDER_SOCIAL, PROVIDER_BLOCKS_OIDC, PROVIDER_BYOS];
+const PROVIDER_TYPE_VALUES = new Set([PROVIDER_SOCIAL, PROVIDER_BLOCKS_OIDC, PROVIDER_BYOS]);
 
 type FormValues = {
   displayName: string;
@@ -106,7 +106,7 @@ const parseRedirectUris = (provider: IdentityProvider): string[] => {
 };
 
 const toFormValues = (provider: IdentityProvider): FormValues => {
-  const matched = PROVIDER_TYPE_VALUES.includes(provider.providerType);
+  const matched = PROVIDER_TYPE_VALUES.has(provider.providerType);
   return {
     displayName: provider.displayName,
     providerType: matched ? provider.providerType : PROVIDER_SOCIAL,
@@ -117,6 +117,80 @@ const toFormValues = (provider: IdentityProvider): FormValues => {
     audience: provider.audience ?? "",
   };
 };
+
+const submitLabelKey = (isPending: boolean, isEditing: boolean) => {
+  if (isPending) return "IDENTITY_PROVIDER_FORM_DIALOG.SAVING";
+  return isEditing
+    ? "IDENTITY_PROVIDER_FORM_DIALOG.SAVE_CHANGES"
+    : "IDENTITY_PROVIDER_FORM_DIALOG.ADD_PROVIDER";
+};
+
+// Shows or hides a masked field's value.
+function RevealToggle({ shown, onToggle }: Readonly<{ shown: boolean; onToggle: () => void }>) {
+  return (
+    <button
+      type="button"
+      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+      onClick={onToggle}
+    >
+      {shown ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+    </button>
+  );
+}
+
+// Pre-fill confirmation banner: what was picked from the gallery (social provider or enterprise
+// type), with a way back to the gallery.
+function PresetBanner({
+  presetProvider,
+  presetProviderType,
+  onChange,
+}: Readonly<{ presetProvider?: string; presetProviderType?: string; onChange: () => void }>) {
+  const { t } = useT("os.idp.identity-provider");
+  const pickedSocialMeta = presetProvider
+    ? SOCIAL_AUTH_PROVIDERS_CONFIG[presetProvider as SSO_PROVIDERS]
+    : undefined;
+  const pickedEnterpriseMeta =
+    presetProviderType === PROVIDER_BLOCKS_OIDC || presetProviderType === PROVIDER_BYOS
+      ? ENTERPRISE_CARD_INFO[presetProviderType]
+      : undefined;
+  let icon: ReactNode = null;
+  if (pickedSocialMeta) {
+    icon = (
+      <img
+        src={pickedSocialMeta.imageSrc}
+        alt={pickedSocialMeta.label}
+        className="h-[22px] w-[22px] object-contain"
+      />
+    );
+  } else if (pickedEnterpriseMeta && presetProviderType) {
+    const Icon = PROVIDER_CONFIG[presetProviderType]?.Icon;
+    icon = Icon ? <Icon className="h-[18px] w-[18px] text-primary" /> : null;
+  }
+  return (
+    <div className="flex items-center gap-3.5 rounded-lg border border-primary/25 bg-primary/4 p-3.5">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border bg-background">
+        {icon}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-primary">
+          {pickedSocialMeta?.label ?? pickedEnterpriseMeta?.label}
+        </p>
+        <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+          {pickedSocialMeta?.description ?? pickedEnterpriseMeta?.description}
+        </p>
+      </div>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="h-7 shrink-0 border-primary/40 px-3 text-xs font-semibold text-primary hover:bg-primary/5 hover:text-primary"
+        onClick={onChange}
+      >
+        {t("IDENTITY_PROVIDER_FORM_DIALOG.CHANGE")}
+      </Button>
+    </div>
+  );
+}
 
 export function IdentityProviderFormDialog({
   open,
@@ -274,13 +348,14 @@ export function IdentityProviderFormDialog({
   // dropdowns, and only "Change" (below) clears it.
   const hasPreset = !isEditing && (!!presetProviderType || !!presetProvider);
   const showBanner = hasPreset && !bannerDismissed;
-  const pickedSocialMeta = presetProvider
-    ? SOCIAL_AUTH_PROVIDERS_CONFIG[presetProvider as SSO_PROVIDERS]
-    : undefined;
-  const pickedEnterpriseMeta =
-    presetProviderType === PROVIDER_BLOCKS_OIDC || presetProviderType === PROVIDER_BYOS
-      ? ENTERPRISE_CARD_INFO[presetProviderType]
-      : undefined;
+  const clientIdInputType = showClientId ? "text" : "password";
+  const clientSecretInputType = showClientSecret ? "text" : "password";
+  const clientSecretPlaceholder = isEditing
+    ? "••••••••••••"
+    : t("IDENTITY_PROVIDER_FORM_DIALOG.CLIENT_SECRET_PLACEHOLDER");
+  const clientSecretRequired = isEditing
+    ? false
+    : t("IDENTITY_PROVIDER_FORM_DIALOG.CLIENT_SECRET_REQUIRED");
 
   // The help box, by contrast, tracks the live selection - it shows for a manual pick too
   // (H3), not just a gallery pre-fill, and disappears again in edit mode. Defensive per C6:
@@ -293,12 +368,9 @@ export function IdentityProviderFormDialog({
         ? { title: meta.helpTitle, body: meta.helpBody }
         : undefined;
     }
-    const staticHelp =
-      providerType === PROVIDER_BLOCKS_OIDC
-        ? BLOCKS_OIDC_HELP
-        : providerType === PROVIDER_BYOS
-          ? BYOS_HELP
-          : undefined;
+    let staticHelp: typeof BLOCKS_OIDC_HELP | typeof BYOS_HELP | undefined;
+    if (providerType === PROVIDER_BLOCKS_OIDC) staticHelp = BLOCKS_OIDC_HELP;
+    else if (providerType === PROVIDER_BYOS) staticHelp = BYOS_HELP;
     return staticHelp?.title && staticHelp?.body ? staticHelp : undefined;
   })();
 
@@ -313,9 +385,7 @@ export function IdentityProviderFormDialog({
   const { mutateAsync: create, isPending: isCreating } = useCreateIdentityProvider();
   const { mutateAsync: update, isPending: isUpdating } = useUpdateIdentityProvider();
   const isPending = isCreating || isUpdating;
-  let submitLabel = t("IDENTITY_PROVIDER_FORM_DIALOG.ADD_PROVIDER");
-  if (isPending) submitLabel = t("IDENTITY_PROVIDER_FORM_DIALOG.SAVING");
-  else if (isEditing) submitLabel = t("IDENTITY_PROVIDER_FORM_DIALOG.SAVE_CHANGES");
+  const submitLabel = t(submitLabelKey(isPending, isEditing));
 
   const onSubmit = async (values: FormValues) => {
     const cleanedUris = redirectUris.map((u) => u.trim()).filter(Boolean);
@@ -393,39 +463,11 @@ export function IdentityProviderFormDialog({
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               {/* Pre-fill confirmation banner - add mode + picked from the gallery only */}
               {showBanner && (
-                <div className="flex items-center gap-3.5 rounded-lg border border-primary/25 bg-primary/4 p-3.5">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border bg-background">
-                    {pickedSocialMeta ? (
-                      <img
-                        src={pickedSocialMeta.imageSrc}
-                        alt={pickedSocialMeta.label}
-                        className="h-[22px] w-[22px] object-contain"
-                      />
-                    ) : pickedEnterpriseMeta && presetProviderType ? (
-                      (() => {
-                        const Icon = PROVIDER_CONFIG[presetProviderType]?.Icon;
-                        return Icon ? <Icon className="h-[18px] w-[18px] text-primary" /> : null;
-                      })()
-                    ) : null}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-primary">
-                      {pickedSocialMeta?.label ?? pickedEnterpriseMeta?.label}
-                    </p>
-                    <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                      {pickedSocialMeta?.description ?? pickedEnterpriseMeta?.description}
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 shrink-0 border-primary/40 px-3 text-xs font-semibold text-primary hover:bg-primary/5 hover:text-primary"
-                    onClick={handleChangeProvider}
-                  >
-                    {t("IDENTITY_PROVIDER_FORM_DIALOG.CHANGE")}
-                  </Button>
-                </div>
+                <PresetBanner
+                  presetProvider={presetProvider}
+                  presetProviderType={presetProviderType}
+                  onChange={handleChangeProvider}
+                />
               )}
 
               {/* Select Provider */}
@@ -529,7 +571,7 @@ export function IdentityProviderFormDialog({
                   <div className="relative">
                     <Input
                       id="clientId"
-                      type={showClientId ? "text" : "password"}
+                      type={clientIdInputType}
                       placeholder={t("IDENTITY_PROVIDER_FORM_DIALOG.CLIENT_ID_PLACEHOLDER")}
                       className="pr-10"
                       disabled={isEditing}
@@ -537,13 +579,10 @@ export function IdentityProviderFormDialog({
                         required: t("IDENTITY_PROVIDER_FORM_DIALOG.CLIENT_ID_REQUIRED"),
                       })}
                     />
-                    <button
-                      type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      onClick={() => setShowClientId(!showClientId)}
-                    >
-                      {showClientId ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
+                    <RevealToggle
+                      shown={showClientId}
+                      onToggle={() => setShowClientId(!showClientId)}
+                    />
                   </div>
                   {errors.clientId && (
                     <p className="text-xs text-destructive">{errors.clientId.message}</p>
@@ -562,30 +601,17 @@ export function IdentityProviderFormDialog({
                   <div className="relative">
                     <Input
                       id="clientSecret"
-                      type={showClientSecret ? "text" : "password"}
-                      placeholder={
-                        isEditing
-                          ? "••••••••••••"
-                          : t("IDENTITY_PROVIDER_FORM_DIALOG.CLIENT_SECRET_PLACEHOLDER")
-                      }
+                      type={clientSecretInputType}
+                      placeholder={clientSecretPlaceholder}
                       className="pr-10"
                       {...register("clientSecret", {
-                        required: isEditing
-                          ? false
-                          : t("IDENTITY_PROVIDER_FORM_DIALOG.CLIENT_SECRET_REQUIRED"),
+                        required: clientSecretRequired,
                       })}
                     />
-                    <button
-                      type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      onClick={() => setShowClientSecret(!showClientSecret)}
-                    >
-                      {showClientSecret ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
+                    <RevealToggle
+                      shown={showClientSecret}
+                      onToggle={() => setShowClientSecret(!showClientSecret)}
+                    />
                   </div>
                   {errors.clientSecret && (
                     <p className="text-xs text-destructive">{errors.clientSecret.message}</p>

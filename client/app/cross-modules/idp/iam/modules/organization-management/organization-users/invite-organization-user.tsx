@@ -358,18 +358,18 @@ export const InviteOrganizationUser = ({
                 type="submit"
                 disabled={isPending || isFormInvalid || selectedOrganizationAlreadyAssigned}
               >
-                {isPending ? (
+                {isPending && (
                   <>
                     <Loader className="mr-2 h-4 w-4 animate-spin" />
                     {exists
                       ? t("INVITE_ORGANIZATION_USER.GRANTING")
                       : t("INVITE_ORGANIZATION_USER.SENDING")}
                   </>
-                ) : exists ? (
-                  t("INVITE_ORGANIZATION_USER.GRANT_ACCESS")
-                ) : (
-                  t("INVITE_ORGANIZATION_USER.SEND_INVITE")
                 )}
+                {!isPending &&
+                  (exists
+                    ? t("INVITE_ORGANIZATION_USER.GRANT_ACCESS")
+                    : t("INVITE_ORGANIZATION_USER.SEND_INVITE"))}
               </Button>
             </DialogFooter>
           </form>

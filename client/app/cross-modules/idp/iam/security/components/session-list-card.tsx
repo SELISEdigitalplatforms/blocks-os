@@ -143,64 +143,66 @@ export const SessionListCard = ({
             {readOnlyReason}
           </p>
         ) : null}
-        {loading ? (
-          <LoadingSkeleton />
-        ) : cards.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <ul className="divide-y rounded-lg border bg-card">
-            {cards.map((card) => {
-              const Icon = getDeviceIcon(undefined, card.operatingSystem);
-              return (
-                <li
-                  key={card.id}
-                  className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 hover:bg-muted/30"
-                  onClick={() => setSelectedSessionId(card.id)}
-                >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate font-medium text-high-emphasis">{card.deviceName}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {t("SESSION_LIST_CARD.DEVICE_DETAILS", {
-                          browser: card.browser,
-                          os: card.operatingSystem,
-                          apps: card.applicationSummary,
-                        })}
-                      </p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {t("SESSION_LIST_CARD.LAST_ACTIVE", {
-                          ip: card.ipAddress,
-                          time: card.lastActivityDisplay,
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                  <div
-                    className="flex shrink-0 items-center gap-2"
-                    onClick={(e) => e.stopPropagation()}
+        {loading && <LoadingSkeleton />}
+        {!loading &&
+          (cards.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <ul className="divide-y rounded-lg border bg-card">
+              {cards.map((card) => {
+                const Icon = getDeviceIcon(undefined, card.operatingSystem);
+                return (
+                  <li
+                    key={card.id}
+                    className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 hover:bg-muted/30"
+                    onClick={() => setSelectedSessionId(card.id)}
                   >
-                    {card.isCurrent ? (
-                      <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700">
-                        {t("SESSION_LIST_CARD.THIS_DEVICE")}
-                      </span>
-                    ) : null}
-                    {showSignOut && !readOnlyReason ? (
-                      <SignOutButton
-                        card={card}
-                        onRevoked={() => refetch()}
-                        mutateAsync={mutateAsync}
-                        isPending={isPending}
-                      />
-                    ) : null}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-high-emphasis">{card.deviceName}</p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {t("SESSION_LIST_CARD.DEVICE_DETAILS", {
+                            browser: card.browser,
+                            os: card.operatingSystem,
+                            apps: card.applicationSummary,
+                          })}
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {t("SESSION_LIST_CARD.LAST_ACTIVE", {
+                            ip: card.ipAddress,
+                            time: card.lastActivityDisplay,
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                    <div
+                      role="presentation"
+                      className="flex shrink-0 items-center gap-2"
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
+                      {card.isCurrent ? (
+                        <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700">
+                          {t("SESSION_LIST_CARD.THIS_DEVICE")}
+                        </span>
+                      ) : null}
+                      {showSignOut && !readOnlyReason ? (
+                        <SignOutButton
+                          card={card}
+                          onRevoked={() => refetch()}
+                          mutateAsync={mutateAsync}
+                          isPending={isPending}
+                        />
+                      ) : null}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          ))}
       </CardContent>
 
       <SessionDetailsDrawer

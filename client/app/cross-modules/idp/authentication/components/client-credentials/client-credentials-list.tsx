@@ -92,6 +92,124 @@ interface ClientCredentialRowProps {
   onEdit?: (client: IClientCredentialsConfig) => void;
 }
 
+type CredentialDetail = {
+  key: string;
+  label: string;
+  value: string;
+  copyable?: boolean;
+  sensitive?: boolean;
+  masked?: boolean;
+};
+
+const credentialDetails = (
+  item: ClientCredentialRowProps["item"],
+  t: (key: string) => string,
+): CredentialDetail[] =>
+  [
+    {
+      key: "clientId",
+      label: t("CLIENT_CREDENTIALS_LIST.CLIENT_ID"),
+      value: item.itemId ?? "",
+      copyable: true,
+      masked: true,
+    },
+    // Shown even when it is the tenant-wide "default", because that is the most privileged
+    // scope a credential can have and is worth seeing rather than inferring from an absence.
+    {
+      key: "organization",
+      label: t("CLIENT_CREDENTIALS_LIST.ORGANIZATION"),
+      value:
+        item.organizationId === "default"
+          ? t("CLIENT_CREDENTIALS_LIST.ORGANIZATION_DEFAULT")
+          : (item.organizationId ?? ""),
+    },
+    {
+      key: "tokenLifetime",
+      label: t("CLIENT_CREDENTIALS_LIST.TOKEN_LIFETIME"),
+      value: formatLifetime(item.accessTokenValidForNumberMinutes),
+    },
+    {
+      key: "roles",
+      label: t("CLIENT_CREDENTIALS_LIST.ROLES"),
+      value: item.roles?.length ? item.roles.join(", ") : "",
+    },
+    {
+      key: "permissions",
+      label: t("CLIENT_CREDENTIALS_LIST.PERMISSIONS"),
+      value: item.permissions?.length ? item.permissions.join(", ") : "",
+    },
+    {
+      key: "updatedOn",
+      label: t("CLIENT_CREDENTIALS_LIST.UPDATED_ON"),
+      value: formatDateTime(item.lastUpdatedDate),
+    },
+  ].filter((pair) => pair.value);
+
+// A thrown request error: its own messages when it carries them, otherwise the fallback.
+const showRequestError = (err: unknown, fallback: string) =>
+  showErrorToast({ errors: isErrorWithErrors(err) ? err.errors : fallback });
+
+const statusActionKey = (busy: boolean, flag?: boolean) => {
+  if (busy) return flag ? "CLIENT_CREDENTIALS_LIST.ENABLING" : "CLIENT_CREDENTIALS_LIST.DISABLING";
+  return flag ? "CLIENT_CREDENTIALS_LIST.ENABLE" : "CLIENT_CREDENTIALS_LIST.DISABLE";
+};
+
+type StatusChangeDialogProps = Readonly<{
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  name: string;
+  willEnable: boolean;
+  isUpdating: boolean;
+  onConfirm: () => void;
+}>;
+
+const StatusChangeDialog = ({
+  open,
+  onOpenChange,
+  name,
+  willEnable,
+  isUpdating,
+  onConfirm,
+}: StatusChangeDialogProps) => {
+  const { t } = useT("os.idp.client-credentials");
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {willEnable
+              ? t("CLIENT_CREDENTIALS_LIST.ENABLE_TITLE")
+              : t("CLIENT_CREDENTIALS_LIST.DISABLE_TITLE")}
+          </DialogTitle>
+          <DialogDescription>
+            {willEnable
+              ? t("CLIENT_CREDENTIALS_LIST.ENABLE_DESCRIPTION", { name })
+              : t("CLIENT_CREDENTIALS_LIST.DISABLE_DESCRIPTION", { name })}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onOpenChange(false)}
+            disabled={isUpdating}
+          >
+            {t(KEY_COMMON_CANCEL)}
+          </Button>
+          <Button
+            variant={willEnable ? "default" : "destructive"}
+            size="sm"
+            onClick={onConfirm}
+            disabled={isUpdating}
+          >
+            {t(statusActionKey(isUpdating, willEnable))}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const ClientCredentialRow = ({
   item,
   defaultExpanded = false,
@@ -141,8 +259,7 @@ const ClientCredentialRow = ({
       });
       setShowStatusDialog(false);
     } catch (err) {
-      if (isErrorWithErrors(err)) return showErrorToast({ errors: err.errors });
-      showErrorToast({ errors: t(KEY_ERROR_GENERIC) });
+      showRequestError(err, t(KEY_ERROR_GENERIC));
     }
   };
 
@@ -180,57 +297,11 @@ const ClientCredentialRow = ({
       showSuccessToast({ description: t("CLIENT_CREDENTIALS_LIST.DELETED_SUCCESS") });
       setShowDeleteDialog(false);
     } catch (err) {
-      if (isErrorWithErrors(err)) return showErrorToast({ errors: err.errors });
-      showErrorToast({ errors: t(KEY_ERROR_GENERIC) });
+      showRequestError(err, t(KEY_ERROR_GENERIC));
     }
   };
 
-  const kvPairs: {
-    key: string;
-    label: string;
-    value: string;
-    copyable?: boolean;
-    sensitive?: boolean;
-    masked?: boolean;
-  }[] = [
-    {
-      key: "clientId",
-      label: t("CLIENT_CREDENTIALS_LIST.CLIENT_ID"),
-      value: item.itemId ?? "",
-      copyable: true,
-      masked: true,
-    },
-    // Shown even when it is the tenant-wide "default", because that is the most privileged
-    // scope a credential can have and is worth seeing rather than inferring from an absence.
-    {
-      key: "organization",
-      label: t("CLIENT_CREDENTIALS_LIST.ORGANIZATION"),
-      value:
-        item.organizationId === "default"
-          ? t("CLIENT_CREDENTIALS_LIST.ORGANIZATION_DEFAULT")
-          : (item.organizationId ?? ""),
-    },
-    {
-      key: "tokenLifetime",
-      label: t("CLIENT_CREDENTIALS_LIST.TOKEN_LIFETIME"),
-      value: formatLifetime(item.accessTokenValidForNumberMinutes),
-    },
-    {
-      key: "roles",
-      label: t("CLIENT_CREDENTIALS_LIST.ROLES"),
-      value: item.roles?.length ? item.roles.join(", ") : "",
-    },
-    {
-      key: "permissions",
-      label: t("CLIENT_CREDENTIALS_LIST.PERMISSIONS"),
-      value: item.permissions?.length ? item.permissions.join(", ") : "",
-    },
-    {
-      key: "updatedOn",
-      label: t("CLIENT_CREDENTIALS_LIST.UPDATED_ON"),
-      value: formatDateTime(item.lastUpdatedDate),
-    },
-  ].filter((pair) => pair.value);
+  const kvPairs = credentialDetails(item, t);
 
   return (
     <>
@@ -393,46 +464,14 @@ const ClientCredentialRow = ({
         </TableRow>
       )}
 
-      <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {willEnable
-                ? t("CLIENT_CREDENTIALS_LIST.ENABLE_TITLE")
-                : t("CLIENT_CREDENTIALS_LIST.DISABLE_TITLE")}
-            </DialogTitle>
-            <DialogDescription>
-              {willEnable
-                ? t("CLIENT_CREDENTIALS_LIST.ENABLE_DESCRIPTION", { name: item.name })
-                : t("CLIENT_CREDENTIALS_LIST.DISABLE_DESCRIPTION", { name: item.name })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowStatusDialog(false)}
-              disabled={isUpdating}
-            >
-              {t(KEY_COMMON_CANCEL)}
-            </Button>
-            <Button
-              variant={willEnable ? "default" : "destructive"}
-              size="sm"
-              onClick={handleConfirmStatusChange}
-              disabled={isUpdating}
-            >
-              {isUpdating
-                ? willEnable
-                  ? t("CLIENT_CREDENTIALS_LIST.ENABLING")
-                  : t("CLIENT_CREDENTIALS_LIST.DISABLING")
-                : willEnable
-                  ? t("CLIENT_CREDENTIALS_LIST.ENABLE")
-                  : t("CLIENT_CREDENTIALS_LIST.DISABLE")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <StatusChangeDialog
+        open={showStatusDialog}
+        onOpenChange={setShowStatusDialog}
+        name={item.name}
+        willEnable={willEnable}
+        isUpdating={isUpdating}
+        onConfirm={handleConfirmStatusChange}
+      />
 
       <Dialog open={showRotateDialog} onOpenChange={setShowRotateDialog}>
         <DialogContent>

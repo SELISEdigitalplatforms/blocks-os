@@ -36,7 +36,6 @@ export const LMTQueryAgentChatInput = forwardRef<HTMLTextAreaElement, LMTQueryAg
           <form
             className="w-full"
             onSubmit={form.handleSubmit(onSubmit)}
-            role="form"
             aria-label={t("LMT_QUERY_AGENT_CHAT_INPUT.SEND_MESSAGE_FORM")}
           >
             <div className="flex items-center gap-1 rounded-sm border p-2.5">

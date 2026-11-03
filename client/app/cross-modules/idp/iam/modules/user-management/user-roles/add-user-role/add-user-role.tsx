@@ -148,7 +148,7 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
         <Card>
           <CardContent>
             <div className="grid grid-cols-2">
-              {isLoading ? (
+              {isLoading &&
                 // Show skeletons while loading
                 Array.from({ length: filter.pageSize }).map((_, idx) => (
                   <div key={idx} className="flex animate-pulse items-center space-x-2 py-2">
@@ -156,57 +156,58 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
                     <div className="h-4 w-24 rounded bg-gray-200" />
                     <div className="h-4 w-20 rounded bg-gray-200" />
                   </div>
-                ))
-              ) : data && data.data && data.data.length > 0 ? (
-                data.data.map((item) => {
-                  const isAlreadyAssigned = !!slugs.includes(item.slug);
-                  const isAtCap = slugs.length + selectedRolos.length >= 5;
-                  const isCheckboxDisabled = isAlreadyAssigned || isAtCap;
-                  return (
-                    <div key={item.itemId} className="col-span-1 flex items-center py-2">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span
-                              className="inline-flex"
-                              tabIndex={isCheckboxDisabled ? 0 : undefined}
-                              aria-disabled={isCheckboxDisabled}
-                            >
-                              <Checkbox
-                                checked={isAlreadyAssigned || selectedRolos.includes(item.slug)}
-                                disabled={isCheckboxDisabled}
-                                onCheckedChange={(value) =>
-                                  onCheckedChangeHandler(!!value, item.slug)
-                                }
-                              />
-                            </span>
-                          </TooltipTrigger>
-                          {isAtCap && !isAlreadyAssigned && (
-                            <TooltipContent side="right">
-                              {t("ADD_USER_ROLE.MAX_ROLES_TOOLTIP")}
-                            </TooltipContent>
-                          )}
-                        </Tooltip>
-                      </TooltipProvider>
-                      <div className="ml-2 flex flex-col">
-                        <div className="max-w-[150px] truncate" title={item.name}>
-                          {item.name}
-                        </div>
-                        <div
-                          className="max-w-[150px] truncate text-sm text-muted-foreground"
-                          title={item.slug}
-                        >
-                          {item.slug}
+                ))}
+              {!isLoading &&
+                (data && data.data && data.data.length > 0 ? (
+                  data.data.map((item) => {
+                    const isAlreadyAssigned = !!slugs.includes(item.slug);
+                    const isAtCap = slugs.length + selectedRolos.length >= 5;
+                    const isCheckboxDisabled = isAlreadyAssigned || isAtCap;
+                    return (
+                      <div key={item.itemId} className="col-span-1 flex items-center py-2">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span
+                                className="inline-flex"
+                                tabIndex={isCheckboxDisabled ? 0 : undefined}
+                                aria-disabled={isCheckboxDisabled}
+                              >
+                                <Checkbox
+                                  checked={isAlreadyAssigned || selectedRolos.includes(item.slug)}
+                                  disabled={isCheckboxDisabled}
+                                  onCheckedChange={(value) =>
+                                    onCheckedChangeHandler(!!value, item.slug)
+                                  }
+                                />
+                              </span>
+                            </TooltipTrigger>
+                            {isAtCap && !isAlreadyAssigned && (
+                              <TooltipContent side="right">
+                                {t("ADD_USER_ROLE.MAX_ROLES_TOOLTIP")}
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        </TooltipProvider>
+                        <div className="ml-2 flex flex-col">
+                          <div className="max-w-[150px] truncate" title={item.name}>
+                            {item.name}
+                          </div>
+                          <div
+                            className="max-w-[150px] truncate text-sm text-muted-foreground"
+                            title={item.slug}
+                          >
+                            {item.slug}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="flex h-24 items-center justify-center">
-                  {t("ADD_USER_ROLE.NO_ROLES_FOUND")}
-                </div>
-              )}
+                    );
+                  })
+                ) : (
+                  <div className="flex h-24 items-center justify-center">
+                    {t("ADD_USER_ROLE.NO_ROLES_FOUND")}
+                  </div>
+                ))}
             </div>
           </CardContent>
         </Card>

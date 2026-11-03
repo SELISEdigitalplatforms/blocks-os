@@ -248,21 +248,23 @@ export const ManageOrganizationDialog = ({
                 />
               </SelectTrigger>
               <SelectContent>
-                {isOrgsLoading ? (
+                {isOrgsLoading && (
                   <SelectItem value="loading" disabled>
                     {t("common:LOADING")}
                   </SelectItem>
-                ) : orgOptions.length === 0 ? (
-                  <SelectItem value="none" disabled>
-                    {t("MANAGE_ORGANIZATION_DIALOG.NO_ORGANIZATIONS_FOUND")}
-                  </SelectItem>
-                ) : (
-                  orgOptions.map((org) => (
-                    <SelectItem key={org.itemId} value={org.itemId}>
-                      {org.name}
-                    </SelectItem>
-                  ))
                 )}
+                {!isOrgsLoading &&
+                  (orgOptions.length === 0 ? (
+                    <SelectItem value="none" disabled>
+                      {t("MANAGE_ORGANIZATION_DIALOG.NO_ORGANIZATIONS_FOUND")}
+                    </SelectItem>
+                  ) : (
+                    orgOptions.map((org) => (
+                      <SelectItem key={org.itemId} value={org.itemId}>
+                        {org.name}
+                      </SelectItem>
+                    ))
+                  ))}
               </SelectContent>
             </Select>
           </div>

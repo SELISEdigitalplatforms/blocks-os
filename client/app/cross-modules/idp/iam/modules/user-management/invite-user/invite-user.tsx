@@ -48,6 +48,12 @@ type InviteFormValues = z.infer<typeof inviteUserFormSchema>;
 
 const DEFAULT_ORGANIZATION_ID = "default";
 
+// The first message of an API error map, or the error itself when it is a plain string.
+const firstErrorMessage = (errors: unknown, fallback: string): string =>
+  errors && typeof errors === "object"
+    ? (Object.values(errors as Record<string, string>)[0] ?? fallback)
+    : (errors as string) || fallback;
+
 export const InviteUser = () => {
   const { t } = useT("os.idp.users");
   const { isPending: isCreatingUser, mutateAsync: createUser } = useAddUser();
@@ -166,12 +172,9 @@ export const InviteUser = () => {
           notifyUser,
         });
         if (!res.isSuccess) {
-          const msg =
-            res.errors && typeof res.errors === "object"
-              ? (Object.values(res.errors as Record<string, string>)[0] ??
-                t("INVITE_USER.FAILED_TO_GRANT_ACCESS"))
-              : (res.errors as string) || t("INVITE_USER.FAILED_TO_GRANT_ACCESS");
-          showErrorToast({ errors: msg });
+          showErrorToast({
+            errors: firstErrorMessage(res.errors, t("INVITE_USER.FAILED_TO_GRANT_ACCESS")),
+          });
           return;
         }
         showSuccessToast({ description: t("INVITE_USER.ACCESS_GRANTED") });
@@ -194,12 +197,9 @@ export const InviteUser = () => {
         notifyUser,
       });
       if (!res.isSuccess) {
-        const msg =
-          res.errors && typeof res.errors === "object"
-            ? (Object.values(res.errors as Record<string, string>)[0] ??
-              t("INVITE_USER.FAILED_TO_INVITE"))
-            : (res.errors as string) || t("INVITE_USER.FAILED_TO_INVITE");
-        showErrorToast({ errors: msg });
+        showErrorToast({
+          errors: firstErrorMessage(res.errors, t("INVITE_USER.FAILED_TO_INVITE")),
+        });
         return;
       }
       showSuccessToast({ description: t("INVITE_USER.INVITATION_SENT") });
@@ -341,16 +341,14 @@ export const InviteUser = () => {
                 {t("common:CANCEL")}
               </Button>
               <Button type="submit" disabled={isSubmitDisabled}>
-                {isPending ? (
+                {isPending && (
                   <>
                     <Loader className="mr-2 h-4 w-4 animate-spin" />
                     {exists ? t("INVITE_USER.GRANTING_ACCESS") : t("INVITE_USER.SENDING")}
                   </>
-                ) : exists ? (
-                  t("INVITE_USER.GRANT_ACCESS")
-                ) : (
-                  t("INVITE_USER.SEND_INVITE")
                 )}
+                {!isPending &&
+                  (exists ? t("INVITE_USER.GRANT_ACCESS") : t("INVITE_USER.SEND_INVITE"))}
               </Button>
             </DialogFooter>
           </form>

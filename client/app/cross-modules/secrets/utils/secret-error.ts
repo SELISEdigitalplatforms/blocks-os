@@ -122,10 +122,7 @@ export const describeSecretError = (
   // under its error key. The server's own 400 messages are user-safe and more specific than
   // anything generic, so they beat the fallback.
   const serverMessage = errors
-    ? firstString(
-        Object.entries(errors).find(([key]) => key !== "reason")?.[1] as
-          string | string[] | undefined,
-      )
+    ? firstString(Object.entries(errors).find(([key]) => key !== "reason")?.[1])
     : undefined;
 
   const message =

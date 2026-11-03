@@ -22,32 +22,30 @@ type ConfigureBlockCaptchaFormProps = {
 export const ConfigureBlockCaptchaFormField = ({ form }: ConfigureBlockCaptchaFormProps) => {
   const { t } = useT("os.idp.captcha");
   return (
-    <>
-      <FormField
-        name="captchaGenerator"
-        control={form.control}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>{t("CONFIGURE_BLOCK_CAPTCHA_FORM_FIELD.GENERATOR_TYPE")}</FormLabel>
-            <FormControl>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t("CONFIGURE_BLOCK_CAPTCHA_FORM_FIELD.SELECT_TYPE")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(CAPTCHA_GENERATOR_TYPE).map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-    </>
+    <FormField
+      name="captchaGenerator"
+      control={form.control}
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>{t("CONFIGURE_BLOCK_CAPTCHA_FORM_FIELD.GENERATOR_TYPE")}</FormLabel>
+          <FormControl>
+            <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <SelectTrigger>
+                <SelectValue placeholder={t("CONFIGURE_BLOCK_CAPTCHA_FORM_FIELD.SELECT_TYPE")} />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(CAPTCHA_GENERATOR_TYPE).map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
   );
 };
 ConfigureBlockCaptchaFormField.displayName = "Blocks";

@@ -30,11 +30,12 @@ export const ConfigureGeneralCaptchaFormField = ({
   const { t } = useT("os.idp.captcha");
   const needsNewSecret = !!brokenStatus;
   const isRequired = !isEditing || needsNewSecret;
-  const placeholder = needsNewSecret
-    ? t("CONFIGURE_GENERAL_CAPTCHA_FORM_FIELD.PLACEHOLDER_NEW_SECRET")
-    : isEditing
-      ? t("CONFIGURE_GENERAL_CAPTCHA_FORM_FIELD.PLACEHOLDER_KEEP_SECRET")
-      : t("CONFIGURE_GENERAL_CAPTCHA_FORM_FIELD.PLACEHOLDER_SECRET");
+  let placeholder = t("CONFIGURE_GENERAL_CAPTCHA_FORM_FIELD.PLACEHOLDER_SECRET");
+  if (needsNewSecret) {
+    placeholder = t("CONFIGURE_GENERAL_CAPTCHA_FORM_FIELD.PLACEHOLDER_NEW_SECRET");
+  } else if (isEditing) {
+    placeholder = t("CONFIGURE_GENERAL_CAPTCHA_FORM_FIELD.PLACEHOLDER_KEEP_SECRET");
+  }
   return (
     <>
       <FormField

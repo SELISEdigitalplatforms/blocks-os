@@ -146,44 +146,44 @@ export const ConfigureMFA = () => {
   return (
     <>
       <div>
-        {loading ? (
-          <LoadingSkelton />
-        ) : mfaConfigData.length === 0 ? (
-          <EmptyState
-            icon={ShieldCheck}
-            title={t("CONFIGURE_MFA.EMPTY_TITLE")}
-            description={t("CONFIGURE_MFA.EMPTY_DESCRIPTION")}
-          />
-        ) : (
-          <Card className="border-none shadow-none">
-            <CardContent>
-              <Table className="text-sm md:table-fixed">
-                <TableHeader>
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <TableRow key={headerGroup.id} className="hover:bg-transparent">
-                      {headerGroup.headers.map((header) => (
-                        <TableHead key={header.id}>
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableHeader>
-                <TableBody>
-                  {table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        )}
+        {loading && <LoadingSkelton />}
+        {!loading &&
+          (mfaConfigData.length === 0 ? (
+            <EmptyState
+              icon={ShieldCheck}
+              title={t("CONFIGURE_MFA.EMPTY_TITLE")}
+              description={t("CONFIGURE_MFA.EMPTY_DESCRIPTION")}
+            />
+          ) : (
+            <Card className="border-none shadow-none">
+              <CardContent>
+                <Table className="text-sm md:table-fixed">
+                  <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id} className="hover:bg-transparent">
+                        {headerGroup.headers.map((header) => (
+                          <TableHead key={header.id}>
+                            {flexRender(header.column.columnDef.header, header.getContext())}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {table.getRowModel().rows.map((row) => (
+                      <TableRow key={row.id}>
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          ))}
       </div>
       <Dialog open={openEnableDisableModal} onOpenChange={setOpenEnableDisableModal}>
         <ConfirmationModal

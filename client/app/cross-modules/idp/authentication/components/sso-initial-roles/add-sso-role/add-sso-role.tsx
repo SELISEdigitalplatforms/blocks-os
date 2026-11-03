@@ -88,7 +88,7 @@ export const AddSSORole = ({ onAdd, roles }: AddSSORoleProps) => {
         <Card className="min-h-0 flex-1 overflow-hidden">
           <CardContent className="max-h-[min(50vh,360px)] overflow-y-auto">
             <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
-              {isLoading ? (
+              {isLoading &&
                 // Show skeletons while loading
                 Array.from({ length: filter.pageSize }).map((_, idx) => (
                   <div key={idx} className="flex animate-pulse items-center space-x-2 py-2">
@@ -96,35 +96,36 @@ export const AddSSORole = ({ onAdd, roles }: AddSSORoleProps) => {
                     <div className="h-4 w-24 rounded bg-gray-200" />
                     <div className="h-4 w-20 rounded bg-gray-200" />
                   </div>
-                ))
-              ) : data && data.data && data.data.length > 0 ? (
-                data.data.map((item) => (
-                  <div key={item.itemId} className="col-span-1 flex items-center py-2">
-                    <Checkbox
-                      checked={
-                        rolesSlug.includes(item.slug) || selectedRolesSlug.includes(item.slug)
-                      }
-                      disabled={rolesSlug.includes(item.slug)}
-                      onCheckedChange={(value) => onCheckedChangeHandler(!!value, item)}
-                    />
-                    <div className="ml-2 flex flex-col">
-                      <div className="max-w-[150px] truncate" title={item.name}>
-                        {item.name}
-                      </div>
-                      <div
-                        className="max-w-[150px] truncate text-sm text-muted-foreground"
-                        title={item.slug}
-                      >
-                        {item.slug}
+                ))}
+              {!isLoading &&
+                (data && data.data && data.data.length > 0 ? (
+                  data.data.map((item) => (
+                    <div key={item.itemId} className="col-span-1 flex items-center py-2">
+                      <Checkbox
+                        checked={
+                          rolesSlug.includes(item.slug) || selectedRolesSlug.includes(item.slug)
+                        }
+                        disabled={rolesSlug.includes(item.slug)}
+                        onCheckedChange={(value) => onCheckedChangeHandler(!!value, item)}
+                      />
+                      <div className="ml-2 flex flex-col">
+                        <div className="max-w-[150px] truncate" title={item.name}>
+                          {item.name}
+                        </div>
+                        <div
+                          className="max-w-[150px] truncate text-sm text-muted-foreground"
+                          title={item.slug}
+                        >
+                          {item.slug}
+                        </div>
                       </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="flex h-24 items-center justify-center">
+                    {t("ADD_SSO_ROLE.EMPTY")}
                   </div>
-                ))
-              ) : (
-                <div className="flex h-24 items-center justify-center">
-                  {t("ADD_SSO_ROLE.EMPTY")}
-                </div>
-              )}
+                ))}
             </div>
             {/* <Table>
               <TableHeader>

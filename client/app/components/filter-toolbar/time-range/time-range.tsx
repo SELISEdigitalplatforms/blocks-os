@@ -110,7 +110,7 @@ export function TimeRange({
   timeZone = "utc",
   openEndHint,
   bounds,
-}: TimeRangeProps) {
+}: Readonly<TimeRangeProps>) {
   const { t } = useT("os.shared");
   const utc = timeZone === "utc";
   const effective = value ?? defaultRange;

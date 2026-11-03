@@ -16,7 +16,7 @@ import { getCannotManageUserTooltip } from "@blocks-idp/iam/utils/grant-scope";
 import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
 
 const KEY_RESEND_ACTIVATION = "USER_ACTION_MENU.RESEND_ACTIVATION";
-const KEY_RESET_PASSWORD = "USER_ACTION_MENU.RESET_PASSWORD";
+const KEY_RESET_CREDENTIAL = "USER_ACTION_MENU.RESET_PASSWORD";
 
 type UserActionMenuProps = {
   id: string;
@@ -37,7 +37,7 @@ export const UserActionMenu = ({ id, projectKey }: UserActionMenuProps) => {
     return (
       <DisabledReason reason={blockedReason}>
         <Button variant="outline" size="sm" className="gap-1.5" disabled>
-          {isActive ? t(KEY_RESET_PASSWORD) : t(KEY_RESEND_ACTIVATION)}
+          {isActive ? t(KEY_RESET_CREDENTIAL) : t(KEY_RESEND_ACTIVATION)}
         </Button>
       </DisabledReason>
     );
@@ -55,12 +55,12 @@ export const UserActionMenu = ({ id, projectKey }: UserActionMenuProps) => {
                   size="icon"
                   className="lg:hidden"
                   onClick={() => setIsResetPasswordModalOpen(true)}
-                  aria-label={t(KEY_RESET_PASSWORD)}
+                  aria-label={t(KEY_RESET_CREDENTIAL)}
                 >
                   <RotateCcw className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom">{t(KEY_RESET_PASSWORD)}</TooltipContent>
+              <TooltipContent side="bottom">{t(KEY_RESET_CREDENTIAL)}</TooltipContent>
             </Tooltip>
           </TooltipProvider>
         ) : (
@@ -89,7 +89,7 @@ export const UserActionMenu = ({ id, projectKey }: UserActionMenuProps) => {
             onClick={() => setIsResetPasswordModalOpen(true)}
           >
             <RotateCcw className="h-4 w-4" />
-            {t(KEY_RESET_PASSWORD)}
+            {t(KEY_RESET_CREDENTIAL)}
           </Button>
         ) : (
           <Button

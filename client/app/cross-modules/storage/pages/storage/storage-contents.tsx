@@ -97,7 +97,7 @@ export function StorageContents() {
             setOpen(true);
           }}
         />
-        {loading ? (
+        {loading && (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {[...Array(4)].map((_, index) => (
               <div
@@ -115,24 +115,26 @@ export function StorageContents() {
               </div>
             ))}
           </div>
-        ) : filteredData.length > 0 ? (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filteredData.map((storage) => (
-              <StorageCard
-                key={storage.id}
-                data={storage}
-                onViewDetails={handleViewDetails}
-                onEdit={handleEdit}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="flex h-64 items-center justify-center">
-            <p className="text-muted-foreground">
-              {t("STORAGE_CONTENTS.NO_STORAGE_CONFIGURATIONS_FOUND")}
-            </p>
-          </div>
         )}
+        {!loading &&
+          (filteredData.length > 0 ? (
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {filteredData.map((storage) => (
+                <StorageCard
+                  key={storage.id}
+                  data={storage}
+                  onViewDetails={handleViewDetails}
+                  onEdit={handleEdit}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="flex h-64 items-center justify-center">
+              <p className="text-muted-foreground">
+                {t("STORAGE_CONTENTS.NO_STORAGE_CONFIGURATIONS_FOUND")}
+              </p>
+            </div>
+          ))}
       </div>
       <Dialog
         open={open}

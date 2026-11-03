@@ -174,51 +174,52 @@ export const BulkRolesDialog = ({
         <Card>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2">
-              {isLoading ? (
+              {isLoading &&
                 Array.from({ length: PAGE_SIZE }).map((_, index) => (
                   <div key={index} className="flex animate-pulse items-center space-x-2 py-2">
                     <div className="h-4 w-4 rounded bg-gray-200" />
                     <div className="h-4 w-24 rounded bg-gray-200" />
                   </div>
-                ))
-              ) : roles.length > 0 ? (
-                roles.map((role) => {
-                  const heldCount = heldRoleCounts?.[role.slug];
+                ))}
+              {!isLoading &&
+                (roles.length > 0 ? (
+                  roles.map((role) => {
+                    const heldCount = heldRoleCounts?.[role.slug];
 
-                  return (
-                    <div key={role.itemId} className="col-span-1 flex items-center py-2">
-                      <Checkbox
-                        id={`bulk-role-${role.slug}`}
-                        checked={selectedSlugs.includes(role.slug)}
-                        onCheckedChange={(value) => toggle(role.slug, !!value)}
-                      />
-                      <label
-                        htmlFor={`bulk-role-${role.slug}`}
-                        className="ml-2 flex cursor-pointer flex-col"
-                      >
-                        <span className="max-w-[180px] truncate" title={role.name}>
-                          {role.name}
-                        </span>
-                        <span
-                          className="max-w-[180px] truncate text-sm text-muted-foreground"
-                          title={role.slug}
+                    return (
+                      <div key={role.itemId} className="col-span-1 flex items-center py-2">
+                        <Checkbox
+                          id={`bulk-role-${role.slug}`}
+                          checked={selectedSlugs.includes(role.slug)}
+                          onCheckedChange={(value) => toggle(role.slug, !!value)}
+                        />
+                        <label
+                          htmlFor={`bulk-role-${role.slug}`}
+                          className="ml-2 flex cursor-pointer flex-col"
                         >
-                          {isRemove && heldCount !== undefined
-                            ? t("BULK_ROLES_DIALOG.HELD_BY", {
-                                count: heldCount,
-                                total: selectedCount,
-                              })
-                            : role.slug}
-                        </span>
-                      </label>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="col-span-full flex h-24 items-center justify-center text-sm text-muted-foreground">
-                  {t("BULK_ROLES_DIALOG.NO_ROLES_FOUND")}
-                </div>
-              )}
+                          <span className="max-w-[180px] truncate" title={role.name}>
+                            {role.name}
+                          </span>
+                          <span
+                            className="max-w-[180px] truncate text-sm text-muted-foreground"
+                            title={role.slug}
+                          >
+                            {isRemove && heldCount !== undefined
+                              ? t("BULK_ROLES_DIALOG.HELD_BY", {
+                                  count: heldCount,
+                                  total: selectedCount,
+                                })
+                              : role.slug}
+                          </span>
+                        </label>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="col-span-full flex h-24 items-center justify-center text-sm text-muted-foreground">
+                    {t("BULK_ROLES_DIALOG.NO_ROLES_FOUND")}
+                  </div>
+                ))}
             </div>
           </CardContent>
         </Card>

@@ -35,14 +35,12 @@ function FilterContent<TData extends TableFilterData>({ table }: { table: Table<
         <DataTableFacetedFilter
           column={table.getColumn("resourceGroup")}
           title={t("USERS_ROLE_PERMISSION_TABLE_TOOLBAR.GROUP")}
-          options={[
-            ...Array.from(
-              new Set(table.getRowModel().rows.map((row) => row.original.resourceGroup)),
-            ).map((group) => ({
-              label: group,
-              value: group,
-            })),
-          ]}
+          options={Array.from(
+            new Set(table.getRowModel().rows.map((row) => row.original.resourceGroup)),
+          ).map((group) => ({
+            label: group,
+            value: group,
+          }))}
         />
       )}
     </>

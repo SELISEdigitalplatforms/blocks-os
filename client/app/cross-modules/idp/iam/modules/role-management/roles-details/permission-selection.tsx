@@ -351,79 +351,84 @@ export const PermissionSelection = forwardRef(function PermissionSelection(
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  {isLoading ? (
+                  {isLoading && (
                     <div className="py-4 text-center">
                       {t("PERMISSION_SELECTION.LOADING_GROUP")}
                     </div>
-                  ) : groupObj.allIds.length === 0 ? (
-                    <div className="py-4 text-center">
-                      {t("PERMISSION_SELECTION.CLICK_TO_LOAD")}
-                    </div>
-                  ) : (
-                    <ul className="ml-4">
-                      {groupObj.feActions.map((fa) => (
-                        <li key={fa.itemId} className="mb-2">
-                          <div className="flex items-center gap-2">
+                  )}
+                  {!isLoading &&
+                    (groupObj.allIds.length === 0 ? (
+                      <div className="py-4 text-center">
+                        {t("PERMISSION_SELECTION.CLICK_TO_LOAD")}
+                      </div>
+                    ) : (
+                      <ul className="ml-4">
+                        {groupObj.feActions.map((fa) => (
+                          <li key={fa.itemId} className="mb-2">
+                            <div className="flex items-center gap-2">
+                              <Checkbox
+                                checked={selectedPermissions.includes(fa.itemId)}
+                                onCheckedChange={() => handleToggle(fa)}
+                                id={`perm-${fa.itemId}`}
+                              />
+                              <label
+                                htmlFor={`perm-${fa.itemId}`}
+                                className="cursor-pointer font-medium"
+                              >
+                                {fa.name}
+                              </label>
+                              <span className="ml-2 rounded border bg-muted px-2 py-0.5 text-xs">
+                                {t("PERMISSION_SELECTION.FE_ACTION")}
+                              </span>
+                            </div>
+                            {fa.dependents.length > 0 && (
+                              <ul className="ml-8 mt-1">
+                                {fa.dependents.map((dep) => (
+                                  <li key={dep.itemId} className="mb-1 flex items-center gap-2">
+                                    <Checkbox
+                                      checked={selectedPermissions.includes(dep.itemId)}
+                                      onCheckedChange={() => handleToggle(dep, fa)}
+                                      id={`perm-${dep.itemId}`}
+                                    />
+                                    <label
+                                      htmlFor={`perm-${dep.itemId}`}
+                                      className="cursor-pointer"
+                                    >
+                                      {dep.name}
+                                    </label>
+                                    {dep.type && (
+                                      <span className="ml-2 rounded border bg-muted px-2 py-0.5 text-xs">
+                                        {ResourceType[dep.type]}
+                                      </span>
+                                    )}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </li>
+                        ))}
+                        {groupObj.independentPerms.map((perm) => (
+                          <li key={perm.itemId} className="mb-2 flex items-center gap-2">
                             <Checkbox
-                              checked={selectedPermissions.includes(fa.itemId)}
-                              onCheckedChange={() => handleToggle(fa)}
-                              id={`perm-${fa.itemId}`}
+                              checked={selectedPermissions.includes(perm.itemId)}
+                              onCheckedChange={() => handleToggle(perm)}
+                              id={`perm-${perm.itemId}`}
                             />
                             <label
-                              htmlFor={`perm-${fa.itemId}`}
+                              htmlFor={`perm-${perm.itemId}`}
                               className="cursor-pointer font-medium"
                             >
-                              {fa.name}
+                              {perm.name}
                             </label>
-                            <span className="ml-2 rounded border bg-muted px-2 py-0.5 text-xs">
-                              {t("PERMISSION_SELECTION.FE_ACTION")}
-                            </span>
-                          </div>
-                          {fa.dependents.length > 0 && (
-                            <ul className="ml-8 mt-1">
-                              {fa.dependents.map((dep) => (
-                                <li key={dep.itemId} className="mb-1 flex items-center gap-2">
-                                  <Checkbox
-                                    checked={selectedPermissions.includes(dep.itemId)}
-                                    onCheckedChange={() => handleToggle(dep, fa)}
-                                    id={`perm-${dep.itemId}`}
-                                  />
-                                  <label htmlFor={`perm-${dep.itemId}`} className="cursor-pointer">
-                                    {dep.name}
-                                  </label>
-                                  {dep.type && (
-                                    <span className="ml-2 rounded border bg-muted px-2 py-0.5 text-xs">
-                                      {ResourceType[dep.type]}
-                                    </span>
-                                  )}
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </li>
-                      ))}
-                      {groupObj.independentPerms.map((perm) => (
-                        <li key={perm.itemId} className="mb-2 flex items-center gap-2">
-                          <Checkbox
-                            checked={selectedPermissions.includes(perm.itemId)}
-                            onCheckedChange={() => handleToggle(perm)}
-                            id={`perm-${perm.itemId}`}
-                          />
-                          <label
-                            htmlFor={`perm-${perm.itemId}`}
-                            className="cursor-pointer font-medium"
-                          >
-                            {perm.name}
-                          </label>
-                          {perm.type && (
-                            <span className="ml-2 rounded border bg-muted px-2 py-0.5 text-xs">
-                              {ResourceType[perm.type]}
-                            </span>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                            {perm.type && (
+                              <span className="ml-2 rounded border bg-muted px-2 py-0.5 text-xs">
+                                {ResourceType[perm.type]}
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    ))}
                 </AccordionContent>
               </AccordionItem>
             );

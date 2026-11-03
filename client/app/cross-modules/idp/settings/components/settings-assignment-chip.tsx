@@ -48,8 +48,7 @@ export const SettingsAssignmentChip = ({
     : baseName;
 
   return (
-    <span
-      role="listitem"
+    <li
       aria-label={accessibleName}
       title={accessibleName}
       className={cn(
@@ -67,6 +66,6 @@ export const SettingsAssignmentChip = ({
           <span className="truncate text-xs font-normal text-muted-foreground">({meta})</span>
         ) : null}
       </span>
-    </span>
+    </li>
   );
 };

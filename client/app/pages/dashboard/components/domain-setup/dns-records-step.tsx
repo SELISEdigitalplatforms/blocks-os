@@ -44,12 +44,12 @@ interface DnsRecordCardProps {
 
 const DnsRecordCard = ({ index, record, isApex, cnameTarget }: DnsRecordCardProps) => {
   const { t } = useT(I18N_MODULE);
-  const purpose =
-    record.purpose === "api"
-      ? tStatic(I18N_MODULE, "DNS_RECORDS_STEP.BLOCKS_API_FOR_YOUR_APP")
-      : isApex
-        ? tStatic(I18N_MODULE, "DNS_RECORDS_STEP.YOUR_APP_ROOT_DOMAIN")
-        : tStatic(I18N_MODULE, "DNS_RECORDS_STEP.YOUR_APP");
+  let purpose = tStatic(I18N_MODULE, "DNS_RECORDS_STEP.YOUR_APP");
+  if (record.purpose === "api") {
+    purpose = tStatic(I18N_MODULE, "DNS_RECORDS_STEP.BLOCKS_API_FOR_YOUR_APP");
+  } else if (isApex) {
+    purpose = tStatic(I18N_MODULE, "DNS_RECORDS_STEP.YOUR_APP_ROOT_DOMAIN");
+  }
   const hint = valueHint(record, cnameTarget);
 
   return (

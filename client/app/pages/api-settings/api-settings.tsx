@@ -348,65 +348,67 @@ export default function ApiSettingsPage() {
           {t("API_SETTINGS.CONFIGURE_SECURITY_POLICIES_FOR")}
         </p>
       </div>
-      {isLoading ? (
+      {isLoading && (
         <div className="flex flex-col gap-4">
           {Array.from({ length: 3 }).map((_, i) => (
             <ServiceGroupSkeleton key={i} />
           ))}
         </div>
-      ) : serviceGroups.length === 0 ? (
-        <div className="flex h-40 items-center justify-center rounded-lg border border-dashed bg-card text-muted-foreground">
-          {t("API_SETTINGS.NO_API_ENDPOINTS_CONFIGURED")}
-        </div>
-      ) : (
-        <div className="flex flex-col gap-8">
-          {serviceGroups.map(({ service, swaggerUrl, controllers }) => (
-            <div key={service} className="flex flex-col gap-3">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-base font-bold capitalize sm:text-lg">{service}</h2>
+      )}
+      {!isLoading &&
+        (serviceGroups.length === 0 ? (
+          <div className="flex h-40 items-center justify-center rounded-lg border border-dashed bg-card text-muted-foreground">
+            {t("API_SETTINGS.NO_API_ENDPOINTS_CONFIGURED")}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-8">
+            {serviceGroups.map(({ service, swaggerUrl, controllers }) => (
+              <div key={service} className="flex flex-col gap-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-base font-bold capitalize sm:text-lg">{service}</h2>
+                    {swaggerUrl && (
+                      <a
+                        href={swaggerUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hidden items-center gap-1 text-[11px] text-muted-foreground transition-colors hover:text-primary hover:underline sm:inline-flex"
+                        title={swaggerUrl}
+                      >
+                        <span className="truncate">{swaggerUrl}</span>
+                        <ExternalLink className="h-3 w-3 shrink-0" />
+                      </a>
+                    )}
+                  </div>
                   {swaggerUrl && (
-                    <a
-                      href={swaggerUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="hidden items-center gap-1 text-[11px] text-muted-foreground transition-colors hover:text-primary hover:underline sm:inline-flex"
-                      title={swaggerUrl}
-                    >
-                      <span className="truncate">{swaggerUrl}</span>
-                      <ExternalLink className="h-3 w-3 shrink-0" />
-                    </a>
+                    <Button size="sm" variant="outline" asChild className="w-fit shrink-0 gap-1.5">
+                      <a href={swaggerUrl} target="_blank" rel="noreferrer">
+                        <BookOpen className="h-3.5 w-3.5" />
+                        <span>{t("API_SETTINGS.API_DOCS")}</span>
+                      </a>
+                    </Button>
                   )}
                 </div>
-                {swaggerUrl && (
-                  <Button size="sm" variant="outline" asChild className="w-fit shrink-0 gap-1.5">
-                    <a href={swaggerUrl} target="_blank" rel="noreferrer">
-                      <BookOpen className="h-3.5 w-3.5" />
-                      <span>{t("API_SETTINGS.API_DOCS")}</span>
-                    </a>
-                  </Button>
-                )}
+                <div className="flex flex-col gap-3">
+                  {controllers.map(([controller, eps]) => (
+                    <ServiceGroupCard
+                      key={controller}
+                      controller={controller}
+                      endpoints={eps}
+                      selectedIds={selectedIds}
+                      onSelectEndpoint={handleSelectEndpoint}
+                      onSelectGroup={handleSelectGroup}
+                      onToggleMfa={handleToggleMfa}
+                      onToggleCaptcha={handleToggleCaptcha}
+                      onBulkGroupMfa={handleBulkGroupMfa}
+                      onBulkGroupCaptcha={handleBulkGroupCaptcha}
+                    />
+                  ))}
+                </div>
               </div>
-              <div className="flex flex-col gap-3">
-                {controllers.map(([controller, eps]) => (
-                  <ServiceGroupCard
-                    key={controller}
-                    controller={controller}
-                    endpoints={eps}
-                    selectedIds={selectedIds}
-                    onSelectEndpoint={handleSelectEndpoint}
-                    onSelectGroup={handleSelectGroup}
-                    onToggleMfa={handleToggleMfa}
-                    onToggleCaptcha={handleToggleCaptcha}
-                    onBulkGroupMfa={handleBulkGroupMfa}
-                    onBulkGroupCaptcha={handleBulkGroupCaptcha}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        ))}
       {isFetchingNextPage && (
         <div className="flex flex-col gap-4">
           {Array.from({ length: 2 }).map((_, i) => (

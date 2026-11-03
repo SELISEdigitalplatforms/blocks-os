@@ -435,7 +435,7 @@ export const PeopleTable = ({
           ))}
         </TableHeader>
         <TableBody>
-          {isLoading ? (
+          {isLoading &&
             Array.from({ length: 5 }).map((_, index) => (
               <TableRow key={index}>
                 {columns.map((_, colIndex) => (
@@ -444,35 +444,36 @@ export const PeopleTable = ({
                   </TableCell>
                 ))}
               </TableRow>
-            ))
-          ) : !people.length ? (
-            <TableRow>
-              <TableCell
-                colSpan={columns.length}
-                className="h-24 text-center text-muted-foreground"
-              >
-                {t("PEOPLE_TABLE.NO_RESULTS_FOUND")}
-              </TableCell>
-            </TableRow>
-          ) : (
-            table.getRowModel().rows.map((row) => (
-              <TableRow
-                key={row.id}
-                className="cursor-pointer hover:bg-muted/50"
-                onClick={() =>
-                  navigate(
-                    `/app/project/${tenantGroupId}/people/${row.original.peopleDetails.userId}`,
-                  )
-                }
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
+            ))}
+          {!isLoading &&
+            (!people.length ? (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center text-muted-foreground"
+                >
+                  {t("PEOPLE_TABLE.NO_RESULTS_FOUND")}
+                </TableCell>
               </TableRow>
-            ))
-          )}
+            ) : (
+              table.getRowModel().rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() =>
+                    navigate(
+                      `/app/project/${tenantGroupId}/people/${row.original.peopleDetails.userId}`,
+                    )
+                  }
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ))}
         </TableBody>
       </Table>
 

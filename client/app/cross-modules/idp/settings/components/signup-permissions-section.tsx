@@ -47,9 +47,8 @@ export const SignupPermissionsSection = ({
         {permissions.length === 0 && removedPermissions.length === 0 ? (
           <p className={SETTINGS_FORM_LAYOUT.emptyState}>{t("SIGNUP_PERMISSIONS_SECTION.EMPTY")}</p>
         ) : (
-          <div
+          <ul
             className="flex flex-col gap-2 sm:flex-row sm:flex-wrap"
-            role="list"
             aria-label={t("SIGNUP_PERMISSIONS_SECTION.ASSIGNED_PERMISSIONS")}
           >
             {permissions.map((permission) => (
@@ -70,7 +69,7 @@ export const SignupPermissionsSection = ({
                 className="sm:max-w-[320px]"
               />
             ))}
-          </div>
+          </ul>
         )}
       </CardContent>
     </Card>

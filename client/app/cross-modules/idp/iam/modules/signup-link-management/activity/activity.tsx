@@ -39,6 +39,38 @@ const rangeCaption = (range: string, fromUtc?: string, toUtc?: string) => {
   return tStatic(I18N_MODULE, "ACTIVITY.RANGE_CUSTOM");
 };
 
+type SummaryBodyInput = {
+  isHardError: boolean;
+  summaryLoading: boolean;
+  summary: ReturnType<typeof useSignupLinkSummary>["data"];
+  isBadRequest: boolean;
+  range: Parameters<typeof rangeCaption>[0];
+  onRetry: () => void;
+};
+
+// What the card shows once a configuration is selected.
+const summaryBody = ({
+  isHardError,
+  summaryLoading,
+  summary,
+  isBadRequest,
+  range,
+  onRetry,
+}: SummaryBodyInput): ReactNode => {
+  if (isHardError) return <ActivityErrorState onRetry={onRetry} />;
+  if (summaryLoading) return <ActivitySummaryTilesSkeleton />;
+  if (summary?.configurationName === null && !isBadRequest) return <ActivityUnknownState />;
+  if (summary?.totalGenerated === 0 && !isBadRequest) return <ActivityEmptyState />;
+  if (!summary) return <ActivitySummaryTilesSkeleton />;
+  return (
+    <ActivitySummaryTiles
+      summary={summary}
+      rangeLabel={rangeCaption(range, summary.fromUtc, summary.toUtc)}
+      dimmed={isBadRequest}
+    />
+  );
+};
+
 export const SignupLinkActivity = () => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { queryParams } = useSignupLinkActivityQueryParams();
@@ -85,30 +117,17 @@ export const SignupLinkActivity = () => {
     body = <ActivityNoneState />;
   } else if (!configurationSelected) {
     body = <ActivityChooseState />;
-  } else if (isHardError) {
-    body = (
-      <ActivityErrorState
-        onRetry={() => {
-          void summaryQuery.refetch();
-        }}
-      />
-    );
-  } else if (summaryLoading) {
-    body = <ActivitySummaryTilesSkeleton />;
-  } else if (summary?.configurationName === null && !isBadRequest) {
-    body = <ActivityUnknownState />;
-  } else if (summary?.totalGenerated === 0 && !isBadRequest) {
-    body = <ActivityEmptyState />;
-  } else if (summary) {
-    body = (
-      <ActivitySummaryTiles
-        summary={summary}
-        rangeLabel={rangeCaption(queryParams.range, summary.fromUtc, summary.toUtc)}
-        dimmed={isBadRequest}
-      />
-    );
   } else {
-    body = <ActivitySummaryTilesSkeleton />;
+    body = summaryBody({
+      isHardError,
+      summaryLoading,
+      summary,
+      isBadRequest,
+      range: queryParams.range,
+      onRetry: () => {
+        void summaryQuery.refetch();
+      },
+    });
   }
 
   return (

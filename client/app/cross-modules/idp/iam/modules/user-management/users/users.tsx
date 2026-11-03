@@ -36,29 +36,19 @@ import { useMemo, useState } from "react";
 
 const DEFAULT_ORGANIZATION_ID = "default";
 
-export const Users = () => {
-  const { t } = useT("os.idp.users");
-  const { queryParams, setQueryParams } = useUsersFilterQueryParams();
-  const { sortQueryParams } = useUsersSortQueryParams();
-  const tenantId = useProjectStore().selectedProject?.tenantId || "";
-  const { isSelf, canManage } = useUserManageability();
-  const { data: orgConfig } = useGetOrganizationConfig(tenantId);
-  const { data: organizationsData, hasNextPage: hasMoreOrganizations } =
-    useGetEnabledOrganizationsInfinite(tenantId, {
-      enabled: orgConfig?.isMultiOrgEnabled === true || orgConfig?.isMultiOrgEnabled === false,
-    });
-  const organizations = useMemo(
-    () => getEnabledOrganizationsFromPages(organizationsData?.pages),
-    [organizationsData?.pages],
-  );
-  const hasOrganizationOptions = organizations.length > 0 || hasMoreOrganizations === true;
+type UsersQueryParams = ReturnType<typeof useUsersFilterQueryParams>["queryParams"];
+
+/** The list request and filter count the URL's filters amount to, given the organization setup. */
+const deriveUserListQuery = (
+  queryParams: UsersQueryParams,
+  isMultiOrgEnabled: boolean | undefined,
+  hasOrganizationOptions: boolean,
+) => {
   const organizationIds =
-    orgConfig?.isMultiOrgEnabled === true && hasOrganizationOptions
-      ? (queryParams.organizationIds ?? [])
-      : [];
+    isMultiOrgEnabled === true && hasOrganizationOptions ? (queryParams.organizationIds ?? []) : [];
   const canFilterByRoles =
-    orgConfig?.isMultiOrgEnabled === false ||
-    (orgConfig?.isMultiOrgEnabled === true && hasOrganizationOptions && organizationIds.length > 0);
+    isMultiOrgEnabled === false ||
+    (isMultiOrgEnabled === true && hasOrganizationOptions && organizationIds.length > 0);
   const roles = canFilterByRoles ? (queryParams.roles ?? []) : [];
 
   const searchText =
@@ -75,6 +65,76 @@ export const Users = () => {
     ...(roles.length > 0 ? { roles } : {}),
     ...(accountStates.length > 0 ? { accountStates } : {}),
   };
+
+  const appliedFilterCount = [
+    queryParams.name,
+    queryParams.email,
+    queryParams["joinedOn-start"],
+    queryParams["lastLogin-start"],
+    queryParams["lastUpdatedDate-start"],
+    organizationIds.length > 0 ? "organizations" : "",
+    roles.length > 0 ? "roles" : "",
+    accountStates.length > 0 ? "accountStates" : "",
+  ].filter((value) => !!value).length;
+
+  return { organizationIds, searchText, listFilter, appliedFilterCount };
+};
+
+/**
+ * Roles live under an organization key, so a bulk change needs exactly one.
+ * With multi-organization off there is only ever "default", which is why that
+ * tenant's operator never sees an organization anywhere in this flow.
+ */
+const effectiveOrganizationIdFor = (
+  isMultiOrgEnabled: boolean | undefined,
+  organizationIds: string[],
+): string | null => {
+  if (isMultiOrgEnabled === false) return DEFAULT_ORGANIZATION_ID;
+  return organizationIds.length === 1 ? organizationIds[0] : null;
+};
+
+const selectTriggerFor = (
+  appliedFilterCount: number,
+  effectiveOrganizationId: string | null,
+): SelectTriggerState => {
+  if (appliedFilterCount === 0) return "hidden";
+  return effectiveOrganizationId === null ? "disabled" : "enabled";
+};
+
+// Who a bulk change applies to: every user the filters match, or the ones picked by hand.
+const matchedByLabel = (
+  t: ReturnType<typeof useT>["t"],
+  isAllMatchingSelected: boolean,
+  organizationLabel: string,
+  selectedCount: number,
+) => {
+  if (!isAllMatchingSelected) return t("USERS.MATCHED_BY_SELECTED", { count: selectedCount });
+  return organizationLabel
+    ? t("USERS.MATCHED_BY_ALL_IN_ORGANIZATION", { organization: organizationLabel })
+    : t("USERS.MATCHED_BY_ALL");
+};
+
+export const Users = () => {
+  const { t } = useT("os.idp.users");
+  const { queryParams, setQueryParams } = useUsersFilterQueryParams();
+  const { sortQueryParams } = useUsersSortQueryParams();
+  const tenantId = useProjectStore().selectedProject?.tenantId || "";
+  const { isSelf, canManage } = useUserManageability();
+  const { data: orgConfig } = useGetOrganizationConfig(tenantId);
+  const { data: organizationsData, hasNextPage: hasMoreOrganizations } =
+    useGetEnabledOrganizationsInfinite(tenantId, {
+      enabled: orgConfig?.isMultiOrgEnabled === true || orgConfig?.isMultiOrgEnabled === false,
+    });
+  const organizations = useMemo(
+    () => getEnabledOrganizationsFromPages(organizationsData?.pages),
+    [organizationsData?.pages],
+  );
+  const hasOrganizationOptions = organizations.length > 0 || hasMoreOrganizations === true;
+  const { organizationIds, searchText, listFilter, appliedFilterCount } = deriveUserListQuery(
+    queryParams,
+    orgConfig?.isMultiOrgEnabled,
+    hasOrganizationOptions,
+  );
 
   const { isLoading, isFetching, data, dataUpdatedAt } = useGetUsers({
     page: queryParams.page,
@@ -103,31 +163,12 @@ export const Users = () => {
   const previewMutation = usePreviewBulkRoleChange();
   const submitMutation = useSubmitBulkRoleChange();
 
-  const appliedFilterCount = [
-    queryParams.name,
-    queryParams.email,
-    queryParams["joinedOn-start"],
-    queryParams["lastLogin-start"],
-    queryParams["lastUpdatedDate-start"],
-    organizationIds.length > 0 ? "organizations" : "",
-    roles.length > 0 ? "roles" : "",
-    accountStates.length > 0 ? "accountStates" : "",
-  ].filter((value) => !!value).length;
+  const effectiveOrganizationId = effectiveOrganizationIdFor(
+    orgConfig?.isMultiOrgEnabled,
+    organizationIds,
+  );
 
-  /**
-   * Roles live under an organization key, so a bulk change needs exactly one.
-   * With multi-organization off there is only ever "default", which is why that
-   * tenant's operator never sees an organization anywhere in this flow.
-   */
-  const effectiveOrganizationId =
-    orgConfig?.isMultiOrgEnabled === false
-      ? DEFAULT_ORGANIZATION_ID
-      : organizationIds.length === 1
-        ? organizationIds[0]
-        : null;
-
-  const selectTrigger: SelectTriggerState =
-    appliedFilterCount === 0 ? "hidden" : effectiveOrganizationId === null ? "disabled" : "enabled";
+  const selectTrigger = selectTriggerFor(appliedFilterCount, effectiveOrganizationId);
 
   // How many organizations the result set could span, for the blocked message. With
   // several picked it is that many; with none picked the list spans every
@@ -238,12 +279,12 @@ export const Users = () => {
       : { userIds: Array.from(selectedUserIds) },
   });
 
-  const matchedAllLabel = organizationLabel
-    ? t("USERS.MATCHED_BY_ALL_IN_ORGANIZATION", { organization: organizationLabel })
-    : t("USERS.MATCHED_BY_ALL");
-  const matchedBy = isAllMatchingSelected
-    ? matchedAllLabel
-    : t("USERS.MATCHED_BY_SELECTED", { count: selectedUserIds.size });
+  const matchedBy = matchedByLabel(
+    t,
+    isAllMatchingSelected,
+    organizationLabel,
+    selectedUserIds.size,
+  );
 
   const handleContinue = async (roleSlugs: string[]) => {
     if (!dialogMode) return;

@@ -76,6 +76,31 @@ const ListSkeleton = () => (
  * nothing here filters or sorts client-side. Filters live in the URL (see
  * {@link useSecretFilterQueryParams}) so the view survives a reload and can be linked to.
  */
+// The empty state: a search that found nothing, an empty archive, or no secrets at all.
+const emptyStateFor = (hasFilters: boolean, isArchived: boolean, t: (key: string) => string) => {
+  if (hasFilters) {
+    return {
+      icon: SearchX,
+      title: isArchived
+        ? t("SECRET_LIST.NO_MATCHING_ARCHIVED_SECRETS")
+        : t("SECRET_LIST.NO_MATCHING_SECRETS"),
+      description: t("SECRET_LIST.TRY_A_DIFFERENT_SEARCH_OR"),
+    };
+  }
+  if (isArchived) {
+    return {
+      icon: Archive,
+      title: t("SECRET_LIST.NO_ARCHIVED_SECRETS"),
+      description: t("SECRET_LIST.SECRETS_YOU_ARCHIVE_WILL_APPEAR"),
+    };
+  }
+  return {
+    icon: KeyRound,
+    title: t("SECRET_LIST.NO_SECRETS_YET"),
+    description: t("SECRET_LIST.CREATE_YOUR_FIRST_SECRET_TO"),
+  };
+};
+
 export function SecretList() {
   const { t } = useT(I18N_MODULE);
   const { values, filter, view, queryParams, setPage, setPageSize } = useSecretFilterQueryParams();
@@ -89,25 +114,7 @@ export function SecretList() {
   const hasFilters =
     !!values.search || !!values.type || values.tags.length > 0 || (!isArchived && !!values.status);
 
-  const empty = hasFilters
-    ? {
-        icon: SearchX,
-        title: isArchived
-          ? t("SECRET_LIST.NO_MATCHING_ARCHIVED_SECRETS")
-          : t("SECRET_LIST.NO_MATCHING_SECRETS"),
-        description: t("SECRET_LIST.TRY_A_DIFFERENT_SEARCH_OR"),
-      }
-    : isArchived
-      ? {
-          icon: Archive,
-          title: t("SECRET_LIST.NO_ARCHIVED_SECRETS"),
-          description: t("SECRET_LIST.SECRETS_YOU_ARCHIVE_WILL_APPEAR"),
-        }
-      : {
-          icon: KeyRound,
-          title: t("SECRET_LIST.NO_SECRETS_YET"),
-          description: t("SECRET_LIST.CREATE_YOUR_FIRST_SECRET_TO"),
-        };
+  const empty = emptyStateFor(hasFilters, isArchived, t);
 
   // 403 is a routine outcome, not a bug: the value/rotate/access/audit endpoints default to
   // admin-only, and until secret permissions are seeded for a tenant every endpoint refuses.

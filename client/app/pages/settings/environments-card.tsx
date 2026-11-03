@@ -156,44 +156,46 @@ export const EnvironmentsCard = ({ environments, isLoading = false }: Environmen
             </TableRow>
           </TableHeader>
           <TableBody>
-            {showRowLoading ? (
-              <EnvironmentsTableLoading />
-            ) : environments.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={COLUMN_COUNT}
-                  className="h-24 text-center text-sm text-muted-foreground"
-                >
-                  {t("ENVIRONMENTS_CARD.NO_ENVIRONMENTS_FOUND_FOR_THIS")}
-                </TableCell>
-              </TableRow>
-            ) : (
-              environments.map((environment) => (
-                <TableRow key={environment.itemId} className="text-xs md:text-sm">
-                  <TableCell>
-                    <EnvironmentBadge environment={environment.environment} />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex h-6 items-center gap-2 font-mono text-medium-emphasis">
-                      <CopyToClipboardButton textToCopy={environment.tenantId}>
-                        <MaskedText
-                          text={environment.tenantId}
-                          showFirstN={3}
-                          showLastN={3}
-                          length={20}
-                        />
-                      </CopyToClipboardButton>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <EnvironmentDomain project={environment} hasDeployment={hasAnyDeployment} />
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap text-medium-emphasis">
-                    {environment.createdDate ? formatDate(new Date(environment.createdDate)) : "-"}
+            {showRowLoading && <EnvironmentsTableLoading />}
+            {!showRowLoading &&
+              (environments.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={COLUMN_COUNT}
+                    className="h-24 text-center text-sm text-muted-foreground"
+                  >
+                    {t("ENVIRONMENTS_CARD.NO_ENVIRONMENTS_FOUND_FOR_THIS")}
                   </TableCell>
                 </TableRow>
-              ))
-            )}
+              ) : (
+                environments.map((environment) => (
+                  <TableRow key={environment.itemId} className="text-xs md:text-sm">
+                    <TableCell>
+                      <EnvironmentBadge environment={environment.environment} />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex h-6 items-center gap-2 font-mono text-medium-emphasis">
+                        <CopyToClipboardButton textToCopy={environment.tenantId}>
+                          <MaskedText
+                            text={environment.tenantId}
+                            showFirstN={3}
+                            showLastN={3}
+                            length={20}
+                          />
+                        </CopyToClipboardButton>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <EnvironmentDomain project={environment} hasDeployment={hasAnyDeployment} />
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-medium-emphasis">
+                      {environment.createdDate
+                        ? formatDate(new Date(environment.createdDate))
+                        : "-"}
+                    </TableCell>
+                  </TableRow>
+                ))
+              ))}
           </TableBody>
         </Table>
       </CardContent>

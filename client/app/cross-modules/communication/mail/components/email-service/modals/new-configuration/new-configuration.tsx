@@ -66,6 +66,118 @@ const EMAIL_PATTERN = /^(?=.{1,320}$)[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{
  */
 type TranslateFn = ReturnType<typeof useT>["t"];
 
+type FormIssue = { message: string; path: string };
+type ConfigValues = {
+  provider: number;
+  isInbound: boolean;
+  senderName?: string;
+  senderAddress?: string;
+  senderUserName?: string;
+  accountPassword?: string;
+  tenantId?: string;
+  clientId?: string;
+  clientSecret?: string;
+  mailboxAddress?: string;
+};
+
+const providerIssues = (t: TranslateFn, data: ConfigValues): FormIssue[] => {
+  const provider = getMailProvider(data.provider);
+  if (!provider || (data.isInbound ? provider.supportsInbound : provider.supportsOutbound)) {
+    return [];
+  }
+  const key = data.isInbound
+    ? "NEW_CONFIGURATION.ERROR_PROVIDER_NOT_INBOUND"
+    : "NEW_CONFIGURATION.ERROR_PROVIDER_NOT_OUTBOUND";
+  return [{ message: t(key, { provider: provider.label }), path: "provider" }];
+};
+
+const senderIssues = (t: TranslateFn, data: ConfigValues): FormIssue[] => {
+  if (data.isInbound) return [];
+  const issues: FormIssue[] = [];
+  if (!data.senderName || data.senderName.length < 3 || data.senderName.length > 100) {
+    issues.push({ message: t("NEW_CONFIGURATION.ERROR_SENDER_NAME_LENGTH"), path: "senderName" });
+  }
+  if (!data.senderAddress || !EMAIL_PATTERN.test(data.senderAddress)) {
+    issues.push({
+      message: t("NEW_CONFIGURATION.ERROR_SENDER_ADDRESS_INVALID"),
+      path: "senderAddress",
+    });
+  }
+  return issues;
+};
+
+// Username and password belong to password authentication, not to a
+// particular provider id, so a later OAuth provider needs no change here.
+const passwordIssues = (t: TranslateFn, data: ConfigValues): FormIssue[] => {
+  const issues: FormIssue[] = [];
+  if (!data.senderUserName) {
+    issues.push({
+      message: t("NEW_CONFIGURATION.ERROR_SENDER_USERNAME_REQUIRED"),
+      path: "senderUserName",
+    });
+  }
+  if (!data.accountPassword) {
+    issues.push({
+      message: t("NEW_CONFIGURATION.ERROR_PASSWORD_REQUIRED"),
+      path: "accountPassword",
+    });
+  } else if (data.accountPassword.length < 6) {
+    issues.push({ message: t("NEW_CONFIGURATION.ERROR_PASSWORD_MIN"), path: "accountPassword" });
+  }
+  return issues;
+};
+
+// Empty means "keep the secret on file", which is only an option when
+// there is one. A value of pure whitespace is a mistake either way.
+const clientSecretIssue = (
+  t: TranslateFn,
+  clientSecret: string | undefined,
+  hasClientSecretOnFile: boolean,
+  needsNewClientSecret: boolean,
+): FormIssue | null => {
+  if (clientSecret) {
+    return clientSecret.trim()
+      ? null
+      : { message: t("NEW_CONFIGURATION.ERROR_CLIENT_SECRET_BLANK"), path: "clientSecret" };
+  }
+  if (hasClientSecretOnFile) return null;
+  return {
+    message: needsNewClientSecret
+      ? linkedSecretRepairRequiredMessage()
+      : t("NEW_CONFIGURATION.ERROR_CLIENT_SECRET_REQUIRED"),
+    path: "clientSecret",
+  };
+};
+
+const oauthIssues = (
+  t: TranslateFn,
+  data: ConfigValues,
+  hasClientSecretOnFile: boolean,
+  needsNewClientSecret: boolean,
+): FormIssue[] => {
+  const issues: FormIssue[] = [];
+  if (!data.tenantId?.trim()) {
+    issues.push({ message: t("NEW_CONFIGURATION.ERROR_TENANT_ID_REQUIRED"), path: "tenantId" });
+  }
+  if (!data.clientId?.trim()) {
+    issues.push({ message: t("NEW_CONFIGURATION.ERROR_CLIENT_ID_REQUIRED"), path: "clientId" });
+  }
+  if (!data.mailboxAddress || !EMAIL_PATTERN.test(data.mailboxAddress)) {
+    issues.push({
+      message: t("NEW_CONFIGURATION.ERROR_MAILBOX_ADDRESS_INVALID"),
+      path: "mailboxAddress",
+    });
+  }
+  const secretIssue = clientSecretIssue(
+    t,
+    data.clientSecret,
+    hasClientSecretOnFile,
+    needsNewClientSecret,
+  );
+  if (secretIssue) issues.push(secretIssue);
+  return issues;
+};
+
 const createSchema = ({
   t,
   hasClientSecretOnFile,
@@ -103,103 +215,28 @@ const createSchema = ({
       mailboxAddress: z.string().optional(),
     })
     .superRefine((data, ctx) => {
-      const provider = getMailProvider(data.provider);
-
-      if (provider && (data.isInbound ? !provider.supportsInbound : !provider.supportsOutbound)) {
-        ctx.addIssue({
-          code: "custom",
-          message: data.isInbound
-            ? t("NEW_CONFIGURATION.ERROR_PROVIDER_NOT_INBOUND", { provider: provider.label })
-            : t("NEW_CONFIGURATION.ERROR_PROVIDER_NOT_OUTBOUND", { provider: provider.label }),
-          path: ["provider"],
-        });
-      }
-
-      if (!data.isInbound) {
-        if (!data.senderName || data.senderName.length < 3 || data.senderName.length > 100) {
-          ctx.addIssue({
-            code: "custom",
-            message: t("NEW_CONFIGURATION.ERROR_SENDER_NAME_LENGTH"),
-            path: ["senderName"],
-          });
-        }
-        if (!data.senderAddress || !EMAIL_PATTERN.test(data.senderAddress)) {
-          ctx.addIssue({
-            code: "custom",
-            message: t("NEW_CONFIGURATION.ERROR_SENDER_ADDRESS_INVALID"),
-            path: ["senderAddress"],
-          });
-        }
-      }
-
-      // Username and password belong to password authentication, not to a
-      // particular provider id, so a later OAuth provider needs no change here.
-      if (usesPasswordAuthentication(data.provider, data.isInbound, data.authenticationType)) {
-        if (!data.senderUserName) {
-          ctx.addIssue({
-            code: "custom",
-            message: t("NEW_CONFIGURATION.ERROR_SENDER_USERNAME_REQUIRED"),
-            path: ["senderUserName"],
-          });
-        }
-        if (!data.accountPassword) {
-          ctx.addIssue({
-            code: "custom",
-            message: t("NEW_CONFIGURATION.ERROR_PASSWORD_REQUIRED"),
-            path: ["accountPassword"],
-          });
-        } else if (data.accountPassword.length < 6) {
-          ctx.addIssue({
-            code: "custom",
-            message: t("NEW_CONFIGURATION.ERROR_PASSWORD_MIN"),
-            path: ["accountPassword"],
-          });
-        }
-        return;
-      }
-
-      if (!data.tenantId?.trim()) {
-        ctx.addIssue({
-          code: "custom",
-          message: t("NEW_CONFIGURATION.ERROR_TENANT_ID_REQUIRED"),
-          path: ["tenantId"],
-        });
-      }
-      if (!data.clientId?.trim()) {
-        ctx.addIssue({
-          code: "custom",
-          message: t("NEW_CONFIGURATION.ERROR_CLIENT_ID_REQUIRED"),
-          path: ["clientId"],
-        });
-      }
-      if (!data.mailboxAddress || !EMAIL_PATTERN.test(data.mailboxAddress)) {
-        ctx.addIssue({
-          code: "custom",
-          message: t("NEW_CONFIGURATION.ERROR_MAILBOX_ADDRESS_INVALID"),
-          path: ["mailboxAddress"],
-        });
-      }
-
-      // Empty means "keep the secret on file", which is only an option when
-      // there is one. A value of pure whitespace is a mistake either way.
-      if (!data.clientSecret) {
-        if (!hasClientSecretOnFile) {
-          ctx.addIssue({
-            code: "custom",
-            message: needsNewClientSecret
-              ? linkedSecretRepairRequiredMessage()
-              : t("NEW_CONFIGURATION.ERROR_CLIENT_SECRET_REQUIRED"),
-            path: ["clientSecret"],
-          });
-        }
-      } else if (!data.clientSecret.trim()) {
-        ctx.addIssue({
-          code: "custom",
-          message: t("NEW_CONFIGURATION.ERROR_CLIENT_SECRET_BLANK"),
-          path: ["clientSecret"],
-        });
+      const issues = [
+        ...providerIssues(t, data),
+        ...senderIssues(t, data),
+        ...(usesPasswordAuthentication(data.provider, data.isInbound, data.authenticationType)
+          ? passwordIssues(t, data)
+          : oauthIssues(t, data, hasClientSecretOnFile, needsNewClientSecret)),
+      ];
+      for (const issue of issues) {
+        ctx.addIssue({ code: "custom", message: issue.message, path: [issue.path] });
       }
     });
+
+const clientSecretPlaceholderKey = (needsNew: boolean, keepsOnFile: boolean) => {
+  if (needsNew) return "NEW_CONFIGURATION.PLACEHOLDER_NEW_CLIENT_SECRET";
+  if (keepsOnFile) return "NEW_CONFIGURATION.PLACEHOLDER_KEEP_CLIENT_SECRET";
+  return "NEW_CONFIGURATION.PLACEHOLDER_CLIENT_SECRET";
+};
+
+const submitLabelKey = (isPending: boolean, isEdit?: boolean) => {
+  if (isPending) return isEdit ? "NEW_CONFIGURATION.UPDATING" : "NEW_CONFIGURATION.SAVING";
+  return isEdit ? "NEW_CONFIGURATION.UPDATE_CHANGES" : "common:SAVE";
+};
 
 const NewConfiguration: React.FC<NewConfigurationProps> = ({
   dialogTitle,
@@ -232,6 +269,10 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
     [t, hasClientSecretOnFile, needsNewClientSecret],
   );
   const keepsSecretOnFile = hasClientSecretOnFile && !needsNewClientSecret;
+  const clientSecretPlaceholder = t(
+    clientSecretPlaceholderKey(needsNewClientSecret, keepsSecretOnFile),
+  );
+  const submitLabel = t(submitLabelKey(isPending, isEdit));
 
   const form = useForm<IEmailConfig>({
     defaultValues:
@@ -761,13 +802,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                             <FormControl>
                               <Input
                                 type="password"
-                                placeholder={
-                                  needsNewClientSecret
-                                    ? t("NEW_CONFIGURATION.PLACEHOLDER_NEW_CLIENT_SECRET")
-                                    : keepsSecretOnFile
-                                      ? t("NEW_CONFIGURATION.PLACEHOLDER_KEEP_CLIENT_SECRET")
-                                      : t("NEW_CONFIGURATION.PLACEHOLDER_CLIENT_SECRET")
-                                }
+                                placeholder={clientSecretPlaceholder}
                                 className="border-default col-span-3 mt-1 border shadow-none"
                                 {...field}
                               />
@@ -839,13 +874,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                 disabled={isPending || (!needsNewClientSecret && !form.formState.isValid)}
                 size="default"
               >
-                {isPending
-                  ? isEdit
-                    ? t("NEW_CONFIGURATION.UPDATING")
-                    : t("NEW_CONFIGURATION.SAVING")
-                  : isEdit
-                    ? t("NEW_CONFIGURATION.UPDATE_CHANGES")
-                    : t("common:SAVE")}
+                {submitLabel}
               </Button>
             </div>
           </div>

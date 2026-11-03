@@ -120,6 +120,13 @@ export const SetupProgressStep = ({ phase, steps, error, guide, host }: SetupPro
     (step) => steps[step].status === "failed",
   );
   const failedRecord = failedDnsStep === "api_dns" ? apiRecord : appRecord;
+  const failedRecordNumber = failedDnsStep === "api_dns" ? 2 : 1;
+  let failureTitle = t("SETUP_PROGRESS_STEP.SETUP_DIDN_T_FINISH");
+  if (failedDnsStep) {
+    failureTitle = t("SETUP_PROGRESS_STEP.WE_COULDN_T_FIND_RECORD", { value1: failedRecordNumber });
+  } else if (steps.ssl.status === "failed") {
+    failureTitle = t("SETUP_PROGRESS_STEP.WE_COULDN_T_SECURE_YOUR");
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -128,15 +135,7 @@ export const SetupProgressStep = ({ phase, steps, error, guide, host }: SetupPro
           role="alert"
           className="rounded-lg border border-base-error bg-blocks-error-100 px-4 py-3 text-sm text-blocks-error-800"
         >
-          <p className="font-semibold">
-            {failedDnsStep
-              ? t("SETUP_PROGRESS_STEP.WE_COULDN_T_FIND_RECORD", {
-                  value1: failedDnsStep === "api_dns" ? 2 : 1,
-                })
-              : steps.ssl.status === "failed"
-                ? t("SETUP_PROGRESS_STEP.WE_COULDN_T_SECURE_YOUR")
-                : t("SETUP_PROGRESS_STEP.SETUP_DIDN_T_FINISH")}
-          </p>
+          <p className="font-semibold">{failureTitle}</p>
           <p>{error}</p>
         </div>
       ) : (

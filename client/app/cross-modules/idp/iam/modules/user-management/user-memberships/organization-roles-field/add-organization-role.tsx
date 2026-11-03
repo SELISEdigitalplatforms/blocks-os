@@ -203,7 +203,7 @@ export const AddOrganizationRole = ({
             placeholder={t("ADD_ORGANIZATION_ROLE.SEARCH_PLACEHOLDER")}
           />
         </div>
-        {isLoading ? (
+        {isLoading && (
           <div className="grid grid-cols-2">
             {Array.from({ length: filter.pageSize }, (_, idx) => `skeleton-${idx}`).map((id) => (
               <div key={id} className="flex animate-pulse items-center space-x-2 py-2">
@@ -213,48 +213,50 @@ export const AddOrganizationRole = ({
               </div>
             ))}
           </div>
-        ) : data && data.data && data.data.length > 0 ? (
-          <div className="grid grid-cols-2">
-            {data.data.map((item) => (
-              <div key={item.itemId} className="col-span-1 flex items-center py-2">
-                <Checkbox
-                  checked={isRoleSelectedInModal(item.slug)}
-                  disabled={!isRoleSelectedInModal(item.slug) && isAtMaxRoles}
-                  aria-label={t(
-                    isRoleSelectedInModal(item.slug)
-                      ? "ADD_ORGANIZATION_ROLE.DESELECT_ROLE"
-                      : "ADD_ORGANIZATION_ROLE.SELECT_ROLE",
-                    { name: item.name },
-                  )}
-                  onCheckedChange={(value) => onCheckedChangeHandler(!!value, item)}
-                />
-                <div className="ml-2 flex flex-col">
-                  <div className="max-w-[150px] truncate" title={item.name}>
-                    {item.name}
-                  </div>
-                  <div
-                    className="max-w-[150px] truncate text-sm text-muted-foreground"
-                    title={item.slug}
-                  >
-                    {item.slug}
+        )}
+        {!isLoading &&
+          (data && data.data && data.data.length > 0 ? (
+            <div className="grid grid-cols-2">
+              {data.data.map((item) => (
+                <div key={item.itemId} className="col-span-1 flex items-center py-2">
+                  <Checkbox
+                    checked={isRoleSelectedInModal(item.slug)}
+                    disabled={!isRoleSelectedInModal(item.slug) && isAtMaxRoles}
+                    aria-label={t(
+                      isRoleSelectedInModal(item.slug)
+                        ? "ADD_ORGANIZATION_ROLE.DESELECT_ROLE"
+                        : "ADD_ORGANIZATION_ROLE.SELECT_ROLE",
+                      { name: item.name },
+                    )}
+                    onCheckedChange={(value) => onCheckedChangeHandler(!!value, item)}
+                  />
+                  <div className="ml-2 flex flex-col">
+                    <div className="max-w-[150px] truncate" title={item.name}>
+                      {item.name}
+                    </div>
+                    <div
+                      className="max-w-[150px] truncate text-sm text-muted-foreground"
+                      title={item.slug}
+                    >
+                      {item.slug}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed bg-muted/20 px-6 py-10 text-center">
-            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-              <ShieldCheck className="h-5 w-5 text-primary" />
+              ))}
             </div>
-            <p className="mt-3 text-sm font-medium text-foreground">
-              {t("ADD_ORGANIZATION_ROLE.NO_ROLES_ADDED")}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {t("ADD_ORGANIZATION_ROLE.ADD_AT_LEAST_ONE_ROLE")}
-            </p>
-          </div>
-        )}
+          ) : (
+            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed bg-muted/20 px-6 py-10 text-center">
+              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <ShieldCheck className="h-5 w-5 text-primary" />
+              </div>
+              <p className="mt-3 text-sm font-medium text-foreground">
+                {t("ADD_ORGANIZATION_ROLE.NO_ROLES_ADDED")}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t("ADD_ORGANIZATION_ROLE.ADD_AT_LEAST_ONE_ROLE")}
+              </p>
+            </div>
+          ))}
         <div>
           {!isLoading && data && data.totalCount > filter.pageSize && (
             <div className="flex items-center md:justify-end">

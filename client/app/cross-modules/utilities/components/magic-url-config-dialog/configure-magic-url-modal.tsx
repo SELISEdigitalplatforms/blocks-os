@@ -26,6 +26,15 @@ type ConfigureMagicUrlModalProps = {
   onOpenChange?: (open: boolean) => void;
 };
 
+// An existing configuration's values, or the defaults for a new one.
+const prefillValues = (configuration: ConfigureMagicUrlModalProps["configuration"]) =>
+  configuration
+    ? {
+        contextName: configuration.contextName || "",
+        shortUrlBase: configuration.shortUrlBase || "",
+      }
+    : { contextName: "Default", shortUrlBase: getDefaultShortUrlBase() };
+
 export const ConfigureMagicUrlModal = ({
   configuration,
   children,
@@ -57,13 +66,9 @@ export const ConfigureMagicUrlModal = ({
   if (prefilledFor !== prefillKey) {
     setPrefilledFor(prefillKey);
     if (open) {
-      if (configuration) {
-        setContextName(configuration.contextName || "");
-        setShortUrlBase(configuration.shortUrlBase || "");
-      } else {
-        setContextName("Default");
-        setShortUrlBase(getDefaultShortUrlBase());
-      }
+      const values = prefillValues(configuration);
+      setContextName(values.contextName);
+      setShortUrlBase(values.shortUrlBase);
       setErrors({ contextName: "", shortUrlBase: "" });
     }
   }

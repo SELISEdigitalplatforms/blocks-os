@@ -68,12 +68,13 @@ export function RequestTracesModal({
   // offer a range made entirely of archive-tier dates, which the cold tier cannot serve.
   const boundsReady = Boolean(maxDate) && (!isCold || Boolean(minDate));
 
-  const helperText = !maxDate
-    ? "Loading the available range…"
-    : minDate
-      ? `Allowed range: ${format(minDate, "MMM d, yyyy")} to ${format(maxDate, "MMM d, yyyy")}.`
-      : // "before" would exclude this date, but it is selectable — cold picks up the day after it.
-        `Allowed range: on or before ${format(maxDate, "MMM d, yyyy")}.`;
+  let helperText = "Loading the available range…";
+  if (maxDate && minDate) {
+    helperText = `Allowed range: ${format(minDate, "MMM d, yyyy")} to ${format(maxDate, "MMM d, yyyy")}.`;
+  } else if (maxDate) {
+    // "before" would exclude this date, but it is selectable — cold picks up the day after it.
+    helperText = `Allowed range: on or before ${format(maxDate, "MMM d, yyyy")}.`;
+  }
 
   // Nothing to disable while the bounds are unknown; the picker itself is disabled until then.
   const disabledDays = !maxDate

@@ -166,7 +166,7 @@ export function SecretAuditModal({ open, onOpenChange, secret }: SecretAuditModa
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isBusy ? (
+              {isBusy &&
                 Array.from({ length: 4 }).map((_, index) => (
                   <TableRow key={index}>
                     {Array.from({ length: 5 }).map((_column, cellIndex) => (
@@ -175,18 +175,19 @@ export function SecretAuditModal({ open, onOpenChange, secret }: SecretAuditModa
                       </TableCell>
                     ))}
                   </TableRow>
-                ))
-              ) : logs.length ? (
-                logs.map((log) => <AuditRow key={log.auditId} log={log} />)
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                    {error
-                      ? t("SECRET_AUDIT_MODAL.THE_AUDIT_LOG_COULD_NOT")
-                      : t("SECRET_AUDIT_MODAL.NO_AUDIT_ENTRIES_YET")}
-                  </TableCell>
-                </TableRow>
-              )}
+                ))}
+              {!isBusy &&
+                (logs.length ? (
+                  logs.map((log) => <AuditRow key={log.auditId} log={log} />)
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                      {error
+                        ? t("SECRET_AUDIT_MODAL.THE_AUDIT_LOG_COULD_NOT")
+                        : t("SECRET_AUDIT_MODAL.NO_AUDIT_ENTRIES_YET")}
+                    </TableCell>
+                  </TableRow>
+                ))}
             </TableBody>
           </Table>
         </div>

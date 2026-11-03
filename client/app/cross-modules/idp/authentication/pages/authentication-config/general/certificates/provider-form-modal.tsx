@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type UseFormRegisterReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Eye, EyeOff, Paperclip, UploadCloud } from "lucide-react";
@@ -145,6 +145,121 @@ type ProviderFormModalProps = {
   projectKey: string;
 };
 
+const initialKeySource = (existing?: ThirdPartyJwtProvider | null): AsymmetricKeySource =>
+  existing ? keySourceOf(existing) : "jwks";
+
+type CertificateFieldsProps = Readonly<{
+  files: File[];
+  onFilesChange: (files: File[]) => void;
+  storedCertificatePath: string;
+  keepsStoredCertificate: boolean;
+  storedHasPassphrase: boolean;
+  showPassphrase: boolean;
+  onTogglePassphrase: () => void;
+  passphraseHint: string;
+  passphraseInput: UseFormRegisterReturn<"certificatePassphrase">;
+}>;
+
+// The certificate upload and its passphrase, for an asymmetric key read from a certificate.
+function CertificateFields({
+  files,
+  onFilesChange,
+  storedCertificatePath,
+  keepsStoredCertificate,
+  storedHasPassphrase,
+  showPassphrase,
+  onTogglePassphrase,
+  passphraseHint,
+  passphraseInput,
+}: CertificateFieldsProps) {
+  const { t } = useT("os.idp.auth");
+  const certificateHint = keepsStoredCertificate
+    ? t("PROVIDER_FORM_MODAL.STORED_REPLACE", {
+        label: storedCertificateLabel(storedCertificatePath, t),
+      })
+    : t("PROVIDER_FORM_MODAL.CERTIFICATE_HINT");
+  const passphrasePlaceholder =
+    keepsStoredCertificate && storedHasPassphrase ? t("PROVIDER_FORM_MODAL.KEEP_PLACEHOLDER") : "";
+  return (
+    <>
+      <div className="space-y-1.5">
+        <Label>
+          {t("PROVIDER_FORM_MODAL.CERTIFICATE")}
+          {!storedCertificatePath && <Required />}
+        </Label>
+        <FileUploader
+          value={files}
+          onValueChange={(next) => onFilesChange(next ?? [])}
+          dropzoneOptions={{
+            accept: CERTIFICATE_DROPZONE_ACCEPT,
+            maxFiles: 1,
+            multiple: false,
+            maxSize: CERTIFICATE_MAX_SIZE_BYTES,
+          }}
+          className="rounded-lg"
+        >
+          <FileInput className="rounded-lg border border-dashed border-border/70 bg-muted/10">
+            <div className="flex w-full flex-col items-center justify-center gap-2 py-8">
+              <UploadCloud className="h-6 w-6 text-muted-foreground" />
+              <p className="text-sm font-medium text-foreground">
+                {t("PROVIDER_FORM_MODAL.UPLOAD_PROMPT")}
+              </p>
+              <p className="text-center text-[10px] leading-tight text-muted-foreground">
+                {t("PROVIDER_FORM_MODAL.UPLOAD_LIMITS", {
+                  extensions: CERTIFICATE_EXTENSIONS.join(", "),
+                })}
+              </p>
+            </div>
+          </FileInput>
+          <FileUploaderContent>
+            {files.map((file, index) => (
+              <FileUploaderItem
+                key={`${file.name}-${index}`}
+                index={index}
+                className="flex items-center gap-2 rounded-md border border-border/60 bg-background px-3 py-2 text-sm"
+              >
+                <Paperclip className="h-4 w-4 text-muted-foreground" />
+                <span className="truncate text-foreground">{file.name}</span>
+              </FileUploaderItem>
+            ))}
+          </FileUploaderContent>
+        </FileUploader>
+        <p className="text-xs text-muted-foreground">{certificateHint}</p>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="provider-certificate-passphrase">
+          {t("PROVIDER_FORM_MODAL.PASSPHRASE")}
+        </Label>
+        <div className="relative">
+          <Input
+            id="provider-certificate-passphrase"
+            type={showPassphrase ? "text" : "password"}
+            autoComplete="new-password"
+            placeholder={passphrasePlaceholder}
+            {...passphraseInput}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-label={
+              showPassphrase
+                ? t("PROVIDER_FORM_MODAL.HIDE_PASSPHRASE")
+                : t("PROVIDER_FORM_MODAL.SHOW_PASSPHRASE")
+            }
+            className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+            onClick={onTogglePassphrase}
+          >
+            {showPassphrase ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">{passphraseHint}</p>
+      </div>
+    </>
+  );
+}
+
 export function ProviderFormModal({
   open,
   onOpenChange,
@@ -189,12 +304,12 @@ export function ProviderFormModal({
   // into state. The modal instance is reused across providers, so a useState initializer alone
   // would leave the radio showing whichever provider was opened first.
   const [keySourceChoice, setKeySourceChoice] = useState<AsymmetricKeySource>(() =>
-    existing ? keySourceOf(existing) : "jwks",
+    initialKeySource(existing),
   );
   const [shownItemId, setShownItemId] = useState(existing?.itemId);
   if (shownItemId !== existing?.itemId) {
     setShownItemId(existing?.itemId);
-    setKeySourceChoice(existing ? keySourceOf(existing) : "jwks");
+    setKeySourceChoice(initialKeySource(existing));
     setCertificateFiles([]);
     setShowPassphrase(false);
   }
@@ -616,96 +731,17 @@ export function ProviderFormModal({
                   )}
                 </div>
               ) : (
-                <>
-                  <div className="space-y-1.5">
-                    <Label>
-                      {t("PROVIDER_FORM_MODAL.CERTIFICATE")}
-                      {!storedCertificatePath && <Required />}
-                    </Label>
-                    <FileUploader
-                      value={certificateFiles}
-                      onValueChange={(files) => setCertificateFiles(files ?? [])}
-                      dropzoneOptions={{
-                        accept: CERTIFICATE_DROPZONE_ACCEPT,
-                        maxFiles: 1,
-                        multiple: false,
-                        maxSize: CERTIFICATE_MAX_SIZE_BYTES,
-                      }}
-                      className="rounded-lg"
-                    >
-                      <FileInput className="rounded-lg border border-dashed border-border/70 bg-muted/10">
-                        <div className="flex w-full flex-col items-center justify-center gap-2 py-8">
-                          <UploadCloud className="h-6 w-6 text-muted-foreground" />
-                          <p className="text-sm font-medium text-foreground">
-                            {t("PROVIDER_FORM_MODAL.UPLOAD_PROMPT")}
-                          </p>
-                          <p className="text-center text-[10px] leading-tight text-muted-foreground">
-                            {t("PROVIDER_FORM_MODAL.UPLOAD_LIMITS", {
-                              extensions: CERTIFICATE_EXTENSIONS.join(", "),
-                            })}
-                          </p>
-                        </div>
-                      </FileInput>
-                      <FileUploaderContent>
-                        {certificateFiles.map((file, index) => (
-                          <FileUploaderItem
-                            key={`${file.name}-${index}`}
-                            index={index}
-                            className="flex items-center gap-2 rounded-md border border-border/60 bg-background px-3 py-2 text-sm"
-                          >
-                            <Paperclip className="h-4 w-4 text-muted-foreground" />
-                            <span className="truncate text-foreground">{file.name}</span>
-                          </FileUploaderItem>
-                        ))}
-                      </FileUploaderContent>
-                    </FileUploader>
-                    <p className="text-xs text-muted-foreground">
-                      {keepsStoredCertificate
-                        ? t("PROVIDER_FORM_MODAL.STORED_REPLACE", {
-                            label: storedCertificateLabel(storedCertificatePath, t),
-                          })
-                        : t("PROVIDER_FORM_MODAL.CERTIFICATE_HINT")}
-                    </p>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="provider-certificate-passphrase">
-                      {t("PROVIDER_FORM_MODAL.PASSPHRASE")}
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id="provider-certificate-passphrase"
-                        type={showPassphrase ? "text" : "password"}
-                        autoComplete="new-password"
-                        placeholder={
-                          keepsStoredCertificate && existing?.hasCertificatePassword
-                            ? t("PROVIDER_FORM_MODAL.KEEP_PLACEHOLDER")
-                            : ""
-                        }
-                        {...register("certificatePassphrase")}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        aria-label={
-                          showPassphrase
-                            ? t("PROVIDER_FORM_MODAL.HIDE_PASSPHRASE")
-                            : t("PROVIDER_FORM_MODAL.SHOW_PASSPHRASE")
-                        }
-                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                        onClick={() => setShowPassphrase(!showPassphrase)}
-                      >
-                        {showPassphrase ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground">{passphraseHint}</p>
-                  </div>
-                </>
+                <CertificateFields
+                  files={certificateFiles}
+                  onFilesChange={setCertificateFiles}
+                  storedCertificatePath={storedCertificatePath}
+                  keepsStoredCertificate={keepsStoredCertificate}
+                  storedHasPassphrase={!!existing?.hasCertificatePassword}
+                  showPassphrase={showPassphrase}
+                  onTogglePassphrase={() => setShowPassphrase(!showPassphrase)}
+                  passphraseHint={passphraseHint}
+                  passphraseInput={register("certificatePassphrase")}
+                />
               )}
             </div>
           )}

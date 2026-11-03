@@ -132,21 +132,20 @@ export const Activation = ({ code }: ActivationProps) => {
       >
         <Logo src={"/Logo.svg"} width={128} height={54.931} />
       </Link>
-      {activationError === null ? (
-        <>
-          <Card className="mx-auto w-full rounded border-solid border-background shadow-none sm:max-w-md sm:border-[#95ADC4]">
-            <CardHeader className="text-center">
-              <CardTitle className="text-3xl leading-9">{t("ACTIVATION.TITLE")}</CardTitle>
-              <CardDescription className="mt-2 text-xl text-foreground">
-                {t("ACTIVATION.SUBTITLE")}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ActivationForm code={code ?? ""} />
-            </CardContent>
-          </Card>
-        </>
-      ) : activationError === "already_activated" ? (
+      {activationError === null && (
+        <Card className="mx-auto w-full rounded border-solid border-background shadow-none sm:max-w-md sm:border-[#95ADC4]">
+          <CardHeader className="text-center">
+            <CardTitle className="text-3xl leading-9">{t("ACTIVATION.TITLE")}</CardTitle>
+            <CardDescription className="mt-2 text-xl text-foreground">
+              {t("ACTIVATION.SUBTITLE")}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ActivationForm code={code ?? ""} />
+          </CardContent>
+        </Card>
+      )}
+      {activationError === "already_activated" && (
         <Card className="mx-auto w-full max-w-lg rounded-none border-none text-center shadow-none">
           <CardContent className="p-8">
             <CheckCircle2 className="mx-auto flex h-10 w-10 items-center justify-center text-success" />
@@ -159,7 +158,8 @@ export const Activation = ({ code }: ActivationProps) => {
             </div>
           </CardContent>
         </Card>
-      ) : activationError === "invalid" ? (
+      )}
+      {activationError === "invalid" && (
         <Card className="mx-auto w-full max-w-lg rounded-none border-none text-center shadow-none">
           <CardContent className="p-8">
             <AlertTriangle className="mx-auto flex h-10 w-10 items-center justify-center text-amber-600" />
@@ -172,7 +172,8 @@ export const Activation = ({ code }: ActivationProps) => {
             </div>
           </CardContent>
         </Card>
-      ) : (
+      )}
+      {activationError === "expired" && (
         <Card className="mx-auto w-full max-w-lg rounded-none border-none text-center shadow-none">
           <CardContent className="p-8">
             <AlertTriangle className="mx-auto flex h-10 w-10 items-center justify-center text-amber-600" />

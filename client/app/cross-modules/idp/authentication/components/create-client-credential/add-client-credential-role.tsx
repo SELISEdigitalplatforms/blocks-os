@@ -95,42 +95,43 @@ export const AddClientCredentialRole = ({ onAdd, selectedSlugs }: AddClientCrede
         <Card className="min-h-0 flex-1 overflow-hidden">
           <CardContent className="max-h-[min(50vh,360px)] overflow-y-auto">
             <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
-              {isLoading ? (
+              {isLoading &&
                 Array.from({ length: filter.pageSize }, (_, idx) => `skeleton-${idx}`).map((id) => (
                   <div key={id} className="flex items-center space-x-2 py-2">
                     <Skeleton className="h-4 w-4 rounded" />
                     <Skeleton className="h-4 w-24 rounded" />
                     <Skeleton className="h-4 w-20 rounded" />
                   </div>
-                ))
-              ) : data?.data?.length ? (
-                data.data.map((item) => (
-                  <div key={item.itemId} className="col-span-1 flex items-center py-2">
-                    <Checkbox
-                      checked={
-                        selectedSlugs.includes(item.slug) || pendingSlugs.includes(item.slug)
-                      }
-                      disabled={selectedSlugs.includes(item.slug)}
-                      onCheckedChange={(value) => handleCheckedChange(!!value, item)}
-                    />
-                    <div className="ml-2 flex flex-col">
-                      <div className="max-w-[150px] truncate" title={item.name}>
-                        {item.name}
-                      </div>
-                      <div
-                        className="max-w-[150px] truncate text-sm text-muted-foreground"
-                        title={item.slug}
-                      >
-                        {item.slug}
+                ))}
+              {!isLoading &&
+                (data?.data?.length ? (
+                  data.data.map((item) => (
+                    <div key={item.itemId} className="col-span-1 flex items-center py-2">
+                      <Checkbox
+                        checked={
+                          selectedSlugs.includes(item.slug) || pendingSlugs.includes(item.slug)
+                        }
+                        disabled={selectedSlugs.includes(item.slug)}
+                        onCheckedChange={(value) => handleCheckedChange(!!value, item)}
+                      />
+                      <div className="ml-2 flex flex-col">
+                        <div className="max-w-[150px] truncate" title={item.name}>
+                          {item.name}
+                        </div>
+                        <div
+                          className="max-w-[150px] truncate text-sm text-muted-foreground"
+                          title={item.slug}
+                        >
+                          {item.slug}
+                        </div>
                       </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="flex h-24 items-center justify-center sm:col-span-2">
+                    {t("ADD_CLIENT_CREDENTIAL_ROLE.EMPTY")}
                   </div>
-                ))
-              ) : (
-                <div className="flex h-24 items-center justify-center sm:col-span-2">
-                  {t("ADD_CLIENT_CREDENTIAL_ROLE.EMPTY")}
-                </div>
-              )}
+                ))}
             </div>
           </CardContent>
         </Card>

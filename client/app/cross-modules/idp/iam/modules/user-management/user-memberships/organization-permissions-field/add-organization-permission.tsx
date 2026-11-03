@@ -197,7 +197,7 @@ export const AddOrganizationPermission = ({
             className="h-fit w-full py-3"
           />
         </div>
-        {isLoading ? (
+        {isLoading && (
           <Table>
             <TableHeader>
               <TableRow>
@@ -222,63 +222,65 @@ export const AddOrganizationPermission = ({
               ))}
             </TableBody>
           </Table>
-        ) : data && data.data.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead></TableHead>
-                <TableHead>{t("ADD_ORGANIZATION_PERMISSION.COLUMN_NAME")}</TableHead>
-                <TableHead>{t("ADD_ORGANIZATION_PERMISSION.COLUMN_TYPE")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.data.map((item) => {
-                const checked = isPermissionInList(item, selectedPermissions);
-                const disabled = shouldDisablePermissionCheckbox(
-                  item,
-                  permissions,
-                  selectedPermissions,
-                );
-
-                return (
-                  <TableRow key={item.itemId}>
-                    <TableCell>
-                      <Checkbox
-                        checked={checked}
-                        disabled={disabled}
-                        aria-label={getCheckboxAriaLabel(item)}
-                        onCheckedChange={(value) => onCheckedChangeHandler(!!value, item)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="w-fit">
-                        {item.name}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {
-                        RESOURCE_TYPE.find((resource) => resource.value === item.type.toString())
-                          ?.label
-                      }
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        ) : (
-          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed bg-muted/20 px-6 py-10 text-center">
-            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-              <KeyRound className="h-5 w-5 text-primary" />
-            </div>
-            <p className="mt-3 text-sm font-medium text-foreground">
-              {t("ADD_ORGANIZATION_PERMISSION.NO_PERMISSIONS_ADDED")}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {t("ADD_ORGANIZATION_PERMISSION.OPTIONAL_HINT")}
-            </p>
-          </div>
         )}
+        {!isLoading &&
+          (data && data.data.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead></TableHead>
+                  <TableHead>{t("ADD_ORGANIZATION_PERMISSION.COLUMN_NAME")}</TableHead>
+                  <TableHead>{t("ADD_ORGANIZATION_PERMISSION.COLUMN_TYPE")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.data.map((item) => {
+                  const checked = isPermissionInList(item, selectedPermissions);
+                  const disabled = shouldDisablePermissionCheckbox(
+                    item,
+                    permissions,
+                    selectedPermissions,
+                  );
+
+                  return (
+                    <TableRow key={item.itemId}>
+                      <TableCell>
+                        <Checkbox
+                          checked={checked}
+                          disabled={disabled}
+                          aria-label={getCheckboxAriaLabel(item)}
+                          onCheckedChange={(value) => onCheckedChangeHandler(!!value, item)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="w-fit">
+                          {item.name}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {
+                          RESOURCE_TYPE.find((resource) => resource.value === item.type.toString())
+                            ?.label
+                        }
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed bg-muted/20 px-6 py-10 text-center">
+              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <KeyRound className="h-5 w-5 text-primary" />
+              </div>
+              <p className="mt-3 text-sm font-medium text-foreground">
+                {t("ADD_ORGANIZATION_PERMISSION.NO_PERMISSIONS_ADDED")}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t("ADD_ORGANIZATION_PERMISSION.OPTIONAL_HINT")}
+              </p>
+            </div>
+          ))}
         <div className="flex items-center justify-end">
           {!isLoading && data && data.totalCount > filter.pageSize && (
             <Pagination

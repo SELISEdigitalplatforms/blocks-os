@@ -8,6 +8,15 @@ const I18N_MODULE = "os.idp.captcha";
 // never returns the existing secret, so an edit form can only ever offer to replace it, not
 // require re-entering it every time. The exception is a repair: when the linked secret is
 // archived or missing there is nothing to keep, so an edit needs a new value too.
+const captchaSecretSchema = (isEditing: boolean, needsNewSecret: boolean) => {
+  if (!isEditing) {
+    return z.string().min(1, tStatic(I18N_MODULE, "CONFIGURE_CAPTCHA_FORM.SECRET_REQUIRED"));
+  }
+  return needsNewSecret
+    ? z.string().min(1, linkedSecretRepairRequiredMessage())
+    : z.string().optional();
+};
+
 export const buildConfigureCaptchaFormSchema = (isEditing: boolean, needsNewSecret = false) =>
   z.object({
     provider: z.enum(["recaptcha", "hcaptcha"], {
@@ -20,11 +29,7 @@ export const buildConfigureCaptchaFormSchema = (isEditing: boolean, needsNewSecr
     captchaGenerator: z
       .string()
       .min(1, tStatic(I18N_MODULE, "CONFIGURE_CAPTCHA_FORM.GENERATOR_REQUIRED")),
-    captchaSecret: !isEditing
-      ? z.string().min(1, tStatic(I18N_MODULE, "CONFIGURE_CAPTCHA_FORM.SECRET_REQUIRED"))
-      : needsNewSecret
-        ? z.string().min(1, linkedSecretRepairRequiredMessage())
-        : z.string().optional(),
+    captchaSecret: captchaSecretSchema(isEditing, needsNewSecret),
   });
 
 export type ConfigureCaptchaFormValues = z.infer<

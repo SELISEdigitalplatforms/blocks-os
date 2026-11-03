@@ -174,10 +174,9 @@ if (typeof window !== "undefined") {
 // Genesis creates its Rollbar client while loading; under jsdom the server build of Rollbar needs
 // parts of Node's `process` that genesis replaces. Tests never report, so use a no-op client.
 vi.mock("rollbar", () => ({
-  default: class {
-    constructor() {
-      return new Proxy({}, { get: () => () => undefined });
-    }
+  // Called with `new`; returning an object from a constructor function hands back that object.
+  default: function Rollbar() {
+    return new Proxy({}, { get: () => () => undefined });
   },
 }));
 
@@ -189,6 +188,6 @@ await import("@/i18n");
 
 // Genesis replaced `process` by `{ env }` while loading. Let it fall back to Node's real one, so
 // libraries that read `process.stderr` or `process.listeners` (debug, micromark) keep working.
-if (typeof window !== "undefined" && globalThis.process !== realProcess) {
+if (globalThis.window !== undefined && globalThis.process !== realProcess) {
   Object.setPrototypeOf(globalThis.process, realProcess);
 }

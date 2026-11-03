@@ -155,7 +155,7 @@ export const AddClientCredentialPermission = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? (
+                {isLoading &&
                   Array.from({ length: filter.pageSize }).map((_, idx) => (
                     <TableRow key={idx}>
                       <TableCell>
@@ -171,50 +171,52 @@ export const AddClientCredentialPermission = ({
                         <Skeleton className="h-4 w-16 rounded" />
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : data?.data?.length ? (
-                  data.data.map((item) => (
-                    <TableRow key={item.itemId}>
-                      <TableCell>
-                        <Checkbox
-                          checked={
-                            selectedResources.includes(item.resource) ||
-                            pendingResources.includes(item.resource)
+                  ))}
+                {!isLoading &&
+                  (data?.data?.length ? (
+                    data.data.map((item) => (
+                      <TableRow key={item.itemId}>
+                        <TableCell>
+                          <Checkbox
+                            checked={
+                              selectedResources.includes(item.resource) ||
+                              pendingResources.includes(item.resource)
+                            }
+                            disabled={selectedResources.includes(item.resource)}
+                            onCheckedChange={(checked) => {
+                              handlePermissionCheckboxChange(checked as boolean, item);
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="w-fit">
+                            {item.name}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className="block min-w-0 max-w-[220px] truncate text-sm text-muted-foreground"
+                            title={item.resource}
+                          >
+                            {item.resource}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {
+                            RESOURCE_TYPE.find(
+                              (resource) => resource.value === item.type.toString(),
+                            )?.label
                           }
-                          disabled={selectedResources.includes(item.resource)}
-                          onCheckedChange={(checked) => {
-                            handlePermissionCheckboxChange(checked as boolean, item);
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="w-fit">
-                          {item.name}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className="block min-w-0 max-w-[220px] truncate text-sm text-muted-foreground"
-                          title={item.resource}
-                        >
-                          {item.resource}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {
-                          RESOURCE_TYPE.find((resource) => resource.value === item.type.toString())
-                            ?.label
-                        }
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                        {t("ADD_CLIENT_CREDENTIAL_PERMISSION.EMPTY")}
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                      {t("ADD_CLIENT_CREDENTIAL_PERMISSION.EMPTY")}
-                    </TableCell>
-                  </TableRow>
-                )}
+                  ))}
               </TableBody>
             </Table>
           </CardContent>

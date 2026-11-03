@@ -70,6 +70,11 @@ type CreateClientCredentialProps = {
   hideTrigger?: boolean;
 };
 
+const submitLabelKey = (busy: boolean, flag?: boolean) => {
+  if (busy) return flag ? "CREATE_CLIENT_CREDENTIAL.UPDATING" : "CREATE_CLIENT_CREDENTIAL.SAVING";
+  return flag ? "CREATE_CLIENT_CREDENTIAL.UPDATE_CHANGES" : "common:ADD";
+};
+
 export const CreateClientCredential = ({
   editClient,
   open: controlledOpen,
@@ -377,13 +382,7 @@ export const CreateClientCredential = ({
                 </Button>
               </DialogClose>
               <Button disabled={isPending || isConfigLoading || !isDirty || !isValid} type="submit">
-                {isPending
-                  ? isEdit
-                    ? t("CREATE_CLIENT_CREDENTIAL.UPDATING")
-                    : t("CREATE_CLIENT_CREDENTIAL.SAVING")
-                  : isEdit
-                    ? t("CREATE_CLIENT_CREDENTIAL.UPDATE_CHANGES")
-                    : t("common:ADD")}
+                {t(submitLabelKey(isPending, isEdit))}
               </Button>
             </DialogFooter>
           </form>

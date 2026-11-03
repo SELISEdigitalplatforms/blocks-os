@@ -29,6 +29,62 @@ interface EmailConfigurationProps {
   addConfigOpen?: boolean;
   onAddConfigOpenChange?: (open: boolean) => void;
 }
+// Credentials follow the authentication type in both directions: an Office 365
+// inbound record signs in with OAuth and has no username or password to show.
+function ConfigCredentials({
+  config,
+  gridClassName,
+}: Readonly<{ config: IEmailConfig; gridClassName: string }>) {
+  const { t } = useT("os.communication.mail");
+  if (usesPasswordAuthentication(config.provider, config.isInbound, config.authenticationType)) {
+    return (
+      <div className={gridClassName}>
+        <div>
+          <p className="text-sm text-muted-foreground">
+            {config.isInbound
+              ? t("EMAIL_CONFIGURE.USERNAME")
+              : t("EMAIL_CONFIGURE.SENDER_USERNAME")}
+          </p>
+          <p className="text-base">{config.senderUserName}</p>
+        </div>
+        <div>
+          <p className="text-sm text-muted-foreground">{t("EMAIL_CONFIGURE.ACCOUNT_PASSWORD")}</p>
+          <p className="trucate break-all text-base">*********************</p>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className={gridClassName}>
+      <div>
+        <p className="text-sm text-muted-foreground">{t("EMAIL_CONFIGURE.TENANT_ID")}</p>
+        <p className="trucate break-all text-base">{config.tenantId}</p>
+      </div>
+      <div>
+        <p className="text-sm text-muted-foreground">{t("EMAIL_CONFIGURE.CLIENT_ID")}</p>
+        <p className="trucate break-all text-base">{config.clientId}</p>
+      </div>
+      <div>
+        <p className="text-sm text-muted-foreground">{t("EMAIL_CONFIGURE.MAILBOX_ADDRESS")}</p>
+        <p className="trucate break-all text-base">{config.mailboxAddress}</p>
+      </div>
+      <div>
+        <p className="text-sm text-muted-foreground">{t("EMAIL_CONFIGURE.CLIENT_SECRET")}</p>
+        <LinkedSecretStatusValue
+          status={config.clientSecretStatus}
+          fallback={
+            <p className="text-base">
+              {config.isClientSecretConfigured
+                ? t("EMAIL_CONFIGURE.CONFIGURED")
+                : t("EMAIL_CONFIGURE.NOT_CONFIGURED")}
+            </p>
+          }
+        />
+      </div>
+    </div>
+  );
+}
+
 export function EmailConfiguration({
   addConfigOpen,
   onAddConfigOpenChange,
@@ -217,78 +273,14 @@ export function EmailConfiguration({
                     <p className="text-base">{getMailProviderLabel(config.provider)}</p>
                   </div>
                 </div>
-                {/* Credentials follow the authentication type in both directions: an Office 365
-                    inbound record signs in with OAuth and has no username or password to show. */}
-                {usesPasswordAuthentication(
-                  config.provider,
-                  config.isInbound,
-                  config.authenticationType,
-                ) ? (
-                  <div
-                    className={cn(
-                      "mt-5 grid grid-cols-3 space-y-2",
-                      isMediumScreen && "gap-12",
-                      isMobileScreen && "grid-cols-1 gap-6",
-                    )}
-                  >
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        {config.isInbound
-                          ? t("EMAIL_CONFIGURE.USERNAME")
-                          : t("EMAIL_CONFIGURE.SENDER_USERNAME")}
-                      </p>
-                      <p className="text-base">{config.senderUserName}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        {t("EMAIL_CONFIGURE.ACCOUNT_PASSWORD")}
-                      </p>
-                      <p className="trucate break-all text-base">*********************</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div
-                    className={cn(
-                      "mt-5 grid grid-cols-3 space-y-2",
-                      isMediumScreen && "gap-12",
-                      isMobileScreen && "grid-cols-1 gap-6",
-                    )}
-                  >
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        {t("EMAIL_CONFIGURE.TENANT_ID")}
-                      </p>
-                      <p className="trucate break-all text-base">{config.tenantId}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        {t("EMAIL_CONFIGURE.CLIENT_ID")}
-                      </p>
-                      <p className="trucate break-all text-base">{config.clientId}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        {t("EMAIL_CONFIGURE.MAILBOX_ADDRESS")}
-                      </p>
-                      <p className="trucate break-all text-base">{config.mailboxAddress}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        {t("EMAIL_CONFIGURE.CLIENT_SECRET")}
-                      </p>
-                      <LinkedSecretStatusValue
-                        status={config.clientSecretStatus}
-                        fallback={
-                          <p className="text-base">
-                            {config.isClientSecretConfigured
-                              ? t("EMAIL_CONFIGURE.CONFIGURED")
-                              : t("EMAIL_CONFIGURE.NOT_CONFIGURED")}
-                          </p>
-                        }
-                      />
-                    </div>
-                  </div>
-                )}
+                <ConfigCredentials
+                  config={config}
+                  gridClassName={cn(
+                    "mt-5 grid grid-cols-3 space-y-2",
+                    isMediumScreen && "gap-12",
+                    isMobileScreen && "grid-cols-1 gap-6",
+                  )}
+                />
               </AccordionContent>
             </AccordionItem>
           ))}
