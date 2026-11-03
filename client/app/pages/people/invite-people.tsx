@@ -260,6 +260,7 @@ export const InvitePeople = ({ existingEmails = [], canInvite = false }: InviteP
                           render={({ field: emailField, fieldState }) => (
                             <FormItem className="w-full">
                               <FormControl>
+                                {/* eslint-disable-next-line no-restricted-syntax -- example email address */}
                                 <Input {...emailField} placeholder="name@company.com" />
                               </FormControl>
                               {fieldState.isTouched && <FormMessage />}

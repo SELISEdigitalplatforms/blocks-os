@@ -273,6 +273,7 @@ export const ConfigurationFormFields = ({ form, formLevelError, isPending = fals
                   </Select>
                 ) : (
                   <FormControl>
+                    {/* eslint-disable-next-line no-restricted-syntax -- example callback URL */}
                     <Input {...field} placeholder="https://example.com/callback" />
                   </FormControl>
                 )}

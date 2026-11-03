@@ -113,6 +113,7 @@ const AccountActionBaseUrlInput = ({
           ? "border-muted-foreground/20 bg-muted/80 text-muted-foreground"
           : "border-input bg-muted text-muted-foreground",
       )}
+      // eslint-disable-next-line no-restricted-syntax -- URL scheme prefix
     >
       https://
     </span>
@@ -130,6 +131,7 @@ const AccountActionBaseUrlInput = ({
           ? "cursor-not-allowed bg-muted/80 text-muted-foreground opacity-100 focus-visible:outline-hidden"
           : "bg-transparent",
       )}
+      // eslint-disable-next-line no-restricted-syntax -- example domain
       placeholder="console.enterprise.cloud"
     />
   </div>
@@ -248,6 +250,7 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
                         <FormControl>
                           <Input
                             className={SETTINGS_FORM_LAYOUT.inputFull}
+                            // eslint-disable-next-line no-restricted-syntax -- example route path
                             placeholder="/auth/activate-account"
                             {...field}
                           />
@@ -269,6 +272,7 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
                           <FormControl>
                             <Input
                               className={SETTINGS_FORM_LAYOUT.inputFull}
+                              // eslint-disable-next-line no-restricted-syntax -- example route path
                               placeholder="/auth/verify-identity"
                               {...field}
                             />
@@ -286,6 +290,7 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
                           <FormControl>
                             <Input
                               className={SETTINGS_FORM_LAYOUT.inputFull}
+                              // eslint-disable-next-line no-restricted-syntax -- example route path
                               placeholder="/auth/recovery"
                               {...field}
                             />

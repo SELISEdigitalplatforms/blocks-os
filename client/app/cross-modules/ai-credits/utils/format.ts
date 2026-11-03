@@ -1,5 +1,6 @@
 import { ILastTopUp } from "../models/ai-credits.model";
-import { getLanguageCode, tStatic } from "@seliseblocks/genesis-os";
+import { tStatic } from "@seliseblocks/genesis-os";
+import { uiDateLocale } from "@/lib/ui-locale";
 
 const I18N_MODULE = "os.ai-credits";
 
@@ -12,7 +13,7 @@ export const percentOf = (part: number, whole: number): number =>
   whole > 0 ? Math.min(100, Math.max(0, (part / whole) * 100)) : 0;
 
 /** Date format follows the chosen UI language (English keeps the day-month order used so far). */
-const dateLocale = () => (getLanguageCode() === "de" ? "de-DE" : "en-GB");
+const dateLocale = () => uiDateLocale();
 
 export const formatShortDate = (iso: string): string =>
   new Date(iso).toLocaleDateString(dateLocale(), { day: "numeric", month: "short" });

@@ -1,14 +1,9 @@
-import { formatDistanceToNow } from "date-fns";
-import { de } from "date-fns/locale/de";
-import { getLanguageCode } from "@seliseblocks/genesis-os";
+import { relativeTimeFromNow } from "@/lib/ui-locale";
 
 export const formatRelative = (value?: string | null): string => {
   if (!value) return "—";
   try {
-    return formatDistanceToNow(new Date(value), {
-      addSuffix: true,
-      locale: getLanguageCode() === "de" ? de : undefined,
-    });
+    return relativeTimeFromNow(new Date(value));
   } catch {
     return value;
   }

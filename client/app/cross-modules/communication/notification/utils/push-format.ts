@@ -1,12 +1,12 @@
-import { getLanguageCode } from "@seliseblocks/genesis-os";
+import { uiDateLocale } from "@/lib/ui-locale";
 import { tn } from "../i18n";
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
 
-/** Date format of the shown language: day first in both English (UK) and German. */
-const locale = () => (getLanguageCode() === "de" ? "de-DE" : "en-GB");
+/** Date format of the shown language; English keeps the UK day-first order. */
+const locale = () => uiDateLocale();
 
 const validDate = (iso: string | null | undefined): Date | null => {
   if (!iso) return null;

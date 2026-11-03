@@ -237,7 +237,7 @@ export const ModelEditKeyModal = ({
                   name="organizationId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>OpenAI Organization ID</FormLabel>
+                      <FormLabel>{t("AIMODEL_EDITKEY_MODAL.OPENAI_ORGANIZATION_ID")}</FormLabel>
                       <FormControl>
                         <Input
                           placeholder={t("AIMODEL_EDITKEY_MODAL.ENTER_ORGANIZATION_ID")}
@@ -255,7 +255,7 @@ export const ModelEditKeyModal = ({
                   name="projectId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>OpenAI Project ID</FormLabel>
+                      <FormLabel>{t("AIMODEL_EDITKEY_MODAL.OPENAI_PROJECT_ID")}</FormLabel>
                       <FormControl>
                         <Input
                           placeholder={t("AIMODEL_EDITKEY_MODAL.ENTER_PROJECT_ID")}

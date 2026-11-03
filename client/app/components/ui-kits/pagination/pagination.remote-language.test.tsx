@@ -3,20 +3,20 @@ import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { Pagination } from "./pagination";
 
-describe("Pagination in German", () => {
+describe("Pagination in a non-default language", () => {
   afterEach(() => {
     useAppSettingsStore.getState().setSettings({ language: "en" });
   });
 
-  it("shows the German page label when a German dictionary is registered", () => {
-    useI18nStore.getState().setRemote("de", "os.shared", {
-      "PAGINATION.PAGE_OF": "Seite {{page}} von {{total}}",
+  it("shows the non-default language page label when a remote dictionary is registered", () => {
+    useI18nStore.getState().setRemote("xx", "os.shared", {
+      "PAGINATION.PAGE_OF": "[xx] PAGINATION.PAGE_OF {{page}} {{total}}",
     });
-    useAppSettingsStore.getState().setSettings({ language: "de" });
+    useAppSettingsStore.getState().setSettings({ language: "xx" });
 
     render(<Pagination page={0} onChange={() => {}} totalCount={30} pageSize={10} />);
 
-    expect(screen.getByText("Seite 1 von 3")).toBeTruthy();
+    expect(screen.getByText("[xx] PAGINATION.PAGE_OF 1 3")).toBeTruthy();
   });
 
   it("falls back to English when the language is English", () => {
