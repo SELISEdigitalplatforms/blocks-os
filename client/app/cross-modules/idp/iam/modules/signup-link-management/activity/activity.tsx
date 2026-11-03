@@ -115,9 +115,7 @@ export const SignupLinkActivity = () => {
     body = <ActivitySummaryTilesSkeleton />;
   } else if (!hasConfigurations && !configurationSelected) {
     body = <ActivityNoneState />;
-  } else if (!configurationSelected) {
-    body = <ActivityChooseState />;
-  } else {
+  } else if (configurationSelected) {
     body = summaryBody({
       isHardError,
       summaryLoading,
@@ -128,6 +126,8 @@ export const SignupLinkActivity = () => {
         void summaryQuery.refetch();
       },
     });
+  } else {
+    body = <ActivityChooseState />;
   }
 
   return (
