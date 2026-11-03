@@ -509,6 +509,7 @@ const MAIL_ATTACHMENT_FILE_ROUTE = /\/api\/Mail\/GetMailBoxMailAttachmentFile\?/
 const MAIL_SOURCE_BODY = "Subject: e2e\r\n\r\nE2E body";
 const SOURCE_FAILED = "The original message could not be loaded. Try again later.";
 const TOO_LARGE = "This message is too large to preview — download .eml";
+const ATTACHMENT_FAILED = "e2e.txt could not be downloaded. Try again, or download the .eml.";
 
 export interface MailDetailsRun {
   runId: string;
@@ -712,7 +713,8 @@ export async function mailDetailsFileNotFoundFlow(page: Page) {
   await page.getByRole("button", { name: "Download e2e.txt" }).click();
   await expectMailNotFoundResponse(await fileResponse);
   await expect(page.getByText("Download failed", { exact: true })).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByText("e2e.txt could not be downloaded", { exact: false })).toBeVisible();
+  // Exact text: the toaster's aria-live region repeats the title and description in one string.
+  await expect(page.getByText(ATTACHMENT_FAILED, { exact: true })).toBeVisible();
 }
 
 /** E11 (C3): a non-integer Index is rejected by model binding with a 400 on the real API. */
