@@ -79,6 +79,7 @@ const InvitationResultShell = ({
     </div>
     <Card className="mx-auto w-full rounded border-solid border-background shadow-none sm:max-w-md sm:border-[#95ADC4]">
       <CardHeader className="text-center">
+        {/* eslint-disable-next-line no-restricted-syntax -- product name */}
         <CardTitle className="text-3xl leading-9">Blocks OS</CardTitle>
         <CardDescription className="mt-4 text-xl font-semibold text-foreground">
           {title}

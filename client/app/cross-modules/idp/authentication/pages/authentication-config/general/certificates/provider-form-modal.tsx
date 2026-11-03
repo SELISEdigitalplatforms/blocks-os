@@ -577,6 +577,7 @@ export function ProviderFormModal({
             <Label htmlFor="provider-issuer">{t("PROVIDER_FORM_MODAL.ISSUER")}</Label>
             <Input
               id="provider-issuer"
+              // eslint-disable-next-line no-restricted-syntax -- example issuer URL
               placeholder="https://your-tenant.us.auth0.com/"
               {...register("issuer")}
             />
@@ -600,6 +601,7 @@ export function ProviderFormModal({
             <Label htmlFor="provider-audiences">{t("PROVIDER_FORM_MODAL.AUDIENCES")}</Label>
             <Input
               id="provider-audiences"
+              // eslint-disable-next-line no-restricted-syntax -- example audience values
               placeholder="https://your-api, another-api"
               {...register("audiences")}
             />
@@ -720,6 +722,7 @@ export function ProviderFormModal({
                   <Input
                     id="provider-jwks"
                     aria-required
+                    // eslint-disable-next-line no-restricted-syntax -- example JWKS URL
                     placeholder="https://your-tenant.us.auth0.com/.well-known/jwks.json"
                     {...register("jwksUrl")}
                   />

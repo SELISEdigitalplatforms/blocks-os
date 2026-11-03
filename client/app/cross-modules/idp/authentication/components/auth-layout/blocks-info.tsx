@@ -35,6 +35,7 @@ export const BlockInfo = () => {
                 to="https://www.npmjs.com/package/@seliseblocks/cli-os"
                 className="text-primary"
                 target="_blank"
+                // eslint-disable-next-line no-restricted-syntax -- package registry name (npm)
               >
                 Npm
               </Link>
@@ -43,6 +44,7 @@ export const BlockInfo = () => {
                 to="https://github.com/SELISEdigitalplatforms/l3-react-blocks-construct"
                 className="text-primary"
                 target="_blank"
+                // eslint-disable-next-line no-restricted-syntax -- product name
               >
                 GitHub
               </Link>
@@ -86,6 +88,7 @@ export const BlockInfo = () => {
                 to="https://www.nuget.org/profiles/SELISE"
                 className="text-primary"
                 target="_blank"
+                // eslint-disable-next-line no-restricted-syntax -- package registry name (NuGet)
               >
                 NuGet
               </Link>
@@ -94,6 +97,7 @@ export const BlockInfo = () => {
                 to="https://github.com/SELISEdigitalplatforms/l0-net-blocks-construct"
                 className="text-primary"
                 target="_blank"
+                // eslint-disable-next-line no-restricted-syntax -- product name
               >
                 GitHub
               </Link>

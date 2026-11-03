@@ -1,7 +1,6 @@
 import { useT } from "@seliseblocks/genesis-os";
 import { useEffect, useRef, useState } from "react";
-import { formatDistanceToNow, type Locale } from "date-fns";
-import { de } from "date-fns/locale";
+import { relativeTimeFromNow } from "@/lib/ui-locale";
 import { IOrganization } from "@blocks-idp/iam/models/organization";
 import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
@@ -27,10 +26,10 @@ const getAvatarPalette = (id: string) => {
   return AVATAR_PALETTES[hash % AVATAR_PALETTES.length];
 };
 
-const formatUpdatedAgo = (value: string | undefined, locale?: Locale) => {
+const formatUpdatedAgo = (value: string | undefined, language: string) => {
   if (!value) return undefined;
   try {
-    return formatDistanceToNow(new Date(value), { addSuffix: true, locale });
+    return relativeTimeFromNow(new Date(value), language);
   } catch {
     return undefined;
   }
@@ -220,10 +219,7 @@ export const OrganizationsSidebarList = ({
               {visibleOrgs.map((org) => {
                 const palette = getAvatarPalette(org.itemId);
                 const isSelected = org.itemId === selectedOrgId;
-                const updatedLabel = formatUpdatedAgo(
-                  org.lastUpdatedDate,
-                  language === "de" ? de : undefined,
-                );
+                const updatedLabel = formatUpdatedAgo(org.lastUpdatedDate, language);
 
                 return (
                   <button
