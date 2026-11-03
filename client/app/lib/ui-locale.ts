@@ -3,17 +3,14 @@ import { getLanguageCode } from "@seliseblocks/genesis-os";
 
 const ENGLISH_DATE_LOCALE = "en-GB";
 
-const isEnglish = (code: string | undefined): boolean =>
-  !code || code.toLowerCase().startsWith("en");
-
 /**
  * Intl locale for dates in the shown language. English keeps the UK day-first order used so far; any other
  * language the project enables uses its own locale, and a code the browser does not know falls back to English.
  */
 export const uiDateLocale = (code: string | undefined = getLanguageCode()): string => {
-  if (isEnglish(code)) return ENGLISH_DATE_LOCALE;
+  if (!code || code.toLowerCase().startsWith("en")) return ENGLISH_DATE_LOCALE;
   try {
-    return Intl.DateTimeFormat.supportedLocalesOf([code!]).length > 0 ? code! : ENGLISH_DATE_LOCALE;
+    return Intl.DateTimeFormat.supportedLocalesOf([code]).length > 0 ? code : ENGLISH_DATE_LOCALE;
   } catch {
     return ENGLISH_DATE_LOCALE;
   }
