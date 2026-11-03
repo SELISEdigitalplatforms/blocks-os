@@ -10,7 +10,6 @@ import {
 } from "@/components/ui-kits/tooltip/tooltip";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { SingleOrgAccess } from "./single-org-access";
-import { UserAccessAttributes } from "../user-access-attributes";
 import { MultiOrgAccess } from "./multi-org-access";
 
 const getAccessLockedReason = (isSelf: boolean, canManage: boolean): string | null => {
@@ -51,10 +50,11 @@ export const UserAccessTab = ({ userId, projectKey }: UserAccessTabProps) => {
       <SingleOrgAccess userId={userId} projectKey={projectKey} />
     </div>
   );
+  // The Access attributes section (../user-access-attributes) is hidden until the feature's
+  // purpose is confirmed; render <UserAccessAttributes> under the access editor to bring it back.
   const content = (
     <div className="flex h-full min-h-0 min-w-0 flex-col gap-4">
       <div className="min-h-0 flex-1">{access}</div>
-      <UserAccessAttributes userId={userId} projectKey={projectKey} />
     </div>
   );
 
