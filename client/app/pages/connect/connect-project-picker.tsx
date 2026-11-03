@@ -43,7 +43,7 @@ export function ConnectProjectPicker({
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
-        <button
+        <button // NOSONAR: Radix/cmdk combobox trigger pattern
           type="button"
           role="combobox"
           aria-label={t("CONNECT_PROJECT_PICKER.PROJECT")}

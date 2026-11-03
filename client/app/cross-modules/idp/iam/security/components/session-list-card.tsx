@@ -178,11 +178,9 @@ export const SessionListCard = ({
                         </p>
                       </div>
                     </div>
-                    <div
-                      role="presentation"
+                    <div // NOSONAR: not a control; only keeps action clicks (also from the sign-out dialog portal) from opening the row
                       className="flex shrink-0 items-center gap-2"
                       onClick={(e) => e.stopPropagation()}
-                      onKeyDown={(e) => e.stopPropagation()}
                     >
                       {card.isCurrent ? (
                         <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700">

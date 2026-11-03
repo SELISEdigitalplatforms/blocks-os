@@ -75,7 +75,7 @@ export function ScopeMultiSelect({ value, onChange, disabled }: Props) {
                 <Badge key={scope} variant="secondary" className="gap-1 pr-1 font-normal">
                   {scope}
                   {scope !== "openid" && (
-                    <span
+                    <span // NOSONAR: remove chip sits inside the popover trigger button; a nested <button> is invalid
                       role="button"
                       tabIndex={-1}
                       aria-label={t("SCOPE_MULTI_SELECT.REMOVE_SCOPE", { scope })}

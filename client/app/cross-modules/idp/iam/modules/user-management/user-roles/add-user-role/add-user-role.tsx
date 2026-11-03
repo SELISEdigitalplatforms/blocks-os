@@ -158,7 +158,7 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
                   </div>
                 ))}
               {!isLoading &&
-                (data && data.data && data.data.length > 0 ? (
+                (data?.data?.length ? (
                   data.data.map((item) => {
                     const isAlreadyAssigned = !!slugs.includes(item.slug);
                     const isAtCap = slugs.length + selectedRolos.length >= 5;

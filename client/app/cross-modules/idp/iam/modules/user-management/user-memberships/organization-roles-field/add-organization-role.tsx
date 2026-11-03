@@ -215,7 +215,7 @@ export const AddOrganizationRole = ({
           </div>
         )}
         {!isLoading &&
-          (data && data.data && data.data.length > 0 ? (
+          (data?.data?.length ? (
             <div className="grid grid-cols-2">
               {data.data.map((item) => (
                 <div key={item.itemId} className="col-span-1 flex items-center py-2">

@@ -117,7 +117,7 @@ export const ConfigMultiSelect = ({
         />
       </div>
 
-      <div
+      <div // NOSONAR: checkbox list exposed as a multi-select listbox; a native <select multiple> can't show descriptions
         className={cn(
           "max-h-44 overflow-y-auto rounded-md border bg-muted/20 sm:max-h-52",
           disabled && "pointer-events-none opacity-60",

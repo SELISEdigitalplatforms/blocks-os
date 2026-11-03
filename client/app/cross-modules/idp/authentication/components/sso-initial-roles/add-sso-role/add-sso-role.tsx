@@ -98,7 +98,7 @@ export const AddSSORole = ({ onAdd, roles }: AddSSORoleProps) => {
                   </div>
                 ))}
               {!isLoading &&
-                (data && data.data && data.data.length > 0 ? (
+                (data?.data?.length ? (
                   data.data.map((item) => (
                     <div key={item.itemId} className="col-span-1 flex items-center py-2">
                       <Checkbox

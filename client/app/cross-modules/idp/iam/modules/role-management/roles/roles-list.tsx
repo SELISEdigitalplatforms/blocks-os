@@ -146,7 +146,7 @@ export const RolesList = ({
           </div>
 
           {roles.map((role) => (
-            <div
+            <div // NOSONAR: row opens the role by click/Enter/Space; it holds action buttons, so it can't be a <button>
               key={role.itemId}
               role="button"
               aria-label={t("ROLES_LIST.OPEN_ROLE", { name: role.name })}

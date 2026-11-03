@@ -132,7 +132,7 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
         {permissions.map((permission) => {
           const resourceName = ResourceType[permission.type] as string;
           return (
-            <div
+            <div // NOSONAR: row opens details by click/Enter/Space; it holds action buttons, so it can't be a <button>
               key={permission.itemId}
               role="button"
               aria-label={t("PERMISSIONS_LIST.OPEN_ARIA", { name: permission.name })}
