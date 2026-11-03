@@ -16,32 +16,14 @@ recorded without a connection fails rather than reading somewhere else — readi
 tenant placed elsewhere would return an empty list rather than an error, and a write would put a
 credential on a cluster nobody expects it on.
 
-Values are the exception when Key Vault is in use: see below.
+Values are the exception: see below.
 
 ## Configuration
 
-**Values** live in Azure Key Vault, or — in an environment with no vault provisioned yet — in
-the same `SecretStore` database as the metadata.
-
-| Variable | Required | Purpose |
-|---|---|---|
-| `Secrets__ValueStore` | no | `KeyVault` or `Database`. Overrides the inference below. |
-
-With nothing set, the store is inferred: `KeyVault` when `KeyVault__KeyVaultUrl` is present,
-`Database` when it is not. That way an environment with a vault keeps using it and the values
-already in it stay readable, while an environment without one gets a working store instead of a
-startup failure.
-
-The two stores keep their bytes in different places, so **a value written to one is invisible to
-the other**. Switching an environment that already holds values means re-entering them, not just
-setting a variable.
-
-`Database` stores values **unencrypted**, in a `SecretValues` collection of their own so a metadata
-read can never carry one out with it. It keeps the whole `ISecretService` contract around them —
-tenant-scoped authorization, rotation, soft delete, audit — and keeps a value out of the
-configuration document that owns it and out of every configuration API response. What it does not
-do is protect a value from anyone who can read the `SecretStore` database. It is the interim
-option; `KeyVault` is the intended production store.
+**Values** live only in Azure Key Vault — never in the database, so a database read, dump or
+backup cannot expose them. There is no other value store and no fallback: every deployment,
+on-prem included, needs a vault. A host without one still starts; its first secret operation
+fails.
 
 ### Key Vault
 
@@ -67,8 +49,7 @@ network round trip and take the host down on a transient AAD blip.
 One vault serves every tenant the host serves, whichever cluster their metadata is on. Vault keys
 come from the globally unique secret id, so tenants cannot collide, but the vault rather than the
 cluster is the blast radius for values. Separating values per placement means a separate host with
-its own `KeyVault__KeyVaultUrl`, not a code change. The `Database` store has no such split — its
-values sit beside the metadata, so they follow the tenant's placement automatically.
+its own `KeyVault__KeyVaultUrl`, not a code change.
 
 ## Setup
 
