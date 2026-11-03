@@ -38,7 +38,7 @@ export interface ISaveMailConfigPayload {
 // Blob. Anything else (JSON or text from an older API) is not the file.
 const requireBlob = (result: unknown, what: string): Blob => {
   if (!(result instanceof Blob)) {
-    throw new Error(`Unexpected ${what} response`);
+    throw new TypeError(`Unexpected ${what} response`);
   }
   return result;
 };

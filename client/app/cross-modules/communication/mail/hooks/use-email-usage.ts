@@ -98,7 +98,7 @@ export const useFetchEmailUsageSource = (id: string) => {
   const queryClient = useQueryClient();
   return useCallback(
     () =>
-      queryClient.fetchQuery({
+      queryClient.query({
         queryKey: emailUsageSourceQueryKey(id, tenantId),
         queryFn: () => fetchEmailUsageSource(id),
         ...SOURCE_QUERY_OPTIONS,

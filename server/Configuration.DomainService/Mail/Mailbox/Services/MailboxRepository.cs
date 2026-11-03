@@ -229,10 +229,10 @@ namespace Configuration.DomainService.Mail.Mailbox.Services
                 })
             };
 
-            return await collection
-                .Aggregate(PipelineDefinition<MailBoxEntity, MailBoxRawMime>.Create(stages))
-                .FirstOrDefaultAsync()
+            using var cursor = await collection
+                .AggregateAsync(PipelineDefinition<MailBoxEntity, MailBoxRawMime>.Create(stages))
                 .ConfigureAwait(false);
+            return await cursor.FirstOrDefaultAsync().ConfigureAwait(false);
         }
     }
 }

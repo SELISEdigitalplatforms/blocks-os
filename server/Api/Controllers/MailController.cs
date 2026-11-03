@@ -7,11 +7,13 @@ using Configuration.DomainService.Mail.Template;
 using Configuration.DomainService.Mail.Template.Services;
 using Configuration.DomainService.Shared.Services;
 using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics.CodeAnalysis;
 
 namespace BlocksOs.Api.Controllers
 {
     [ApiController]
     [Route("[controller]/[action]")]
+    [SuppressMessage("Major Code Smell", "S6960:Controllers should not have mixed responsibilities", Justification = "Splitting would change controller names, Swagger grouping and operation ids that clients rely on.")]
     public class MailController : ControllerBase
     {
         private readonly IMailConfigurationService _mailConfigurationService;
@@ -235,6 +237,7 @@ namespace BlocksOs.Api.Controllers
         }
 
         [Obsolete("Use GetMailBoxMailAttachmentFile.")]
+        [SuppressMessage("Info Code Smell", "S1133:Deprecated code should be removed", Justification = "CONTRIBUTING: an old route stays, marked [Obsolete]; routes are never deleted.")]
         [HttpGet]
         [ProtectedEndPoint("blocks-os::mailbox::gets")]
         public async Task<IActionResult> GetMailBoxMailAttachment([FromQuery] GetMailBoxMailAttachmentRequest request)

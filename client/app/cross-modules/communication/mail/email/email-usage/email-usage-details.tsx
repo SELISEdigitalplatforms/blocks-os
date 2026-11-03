@@ -56,9 +56,9 @@ const saveBlob = (blob: Blob, fileName: string) => {
 };
 
 const emlFileName = (subject: string) =>
-  `${(subject || "message").replace(/[\\/:*?"<>|]+/g, "_").slice(0, 80)}.eml`;
+  `${(subject || "message").replaceAll(/[\\/:*?"<>|]+/g, "_").slice(0, 80)}.eml`;
 
-// Larger arguments risk exceeding the engine's argument limit in String.fromCharCode.
+// Larger arguments risk exceeding the engine's argument limit in String.fromCodePoint.
 const CHAR_CODE_CHUNK = 32768;
 
 // Every byte becomes the character with the same code (U+0000-U+00FF), which is the text the
@@ -66,12 +66,52 @@ const CHAR_CODE_CHUNK = 32768;
 const bytesToText = (bytes: Uint8Array) => {
   const parts: string[] = [];
   for (let offset = 0; offset < bytes.length; offset += CHAR_CODE_CHUNK) {
-    parts.push(String.fromCharCode(...bytes.subarray(offset, offset + CHAR_CODE_CHUNK)));
+    parts.push(String.fromCodePoint(...bytes.subarray(offset, offset + CHAR_CODE_CHUNK)));
   }
   return parts.join("");
 };
 
 const NOTICE_CLASS = "p-5 text-sm italic text-muted-foreground";
+
+// Formatted, plain text and the original, in that order; none when the message is too large.
+const getAvailableViews = (
+  tooLarge: boolean,
+  bodies: { html: string; text: string },
+  hasSource: boolean,
+): BodyView[] => {
+  if (tooLarge) return [];
+  const views: BodyView[] = [];
+  if (bodies.html) views.push("html");
+  if (bodies.text) views.push("text");
+  if (hasSource) views.push("source");
+  return views;
+};
+
+const SourcePane = ({
+  loaded,
+  isError,
+  text,
+  failedText,
+}: {
+  loaded: boolean;
+  isError: boolean;
+  text: string;
+  failedText: string;
+}) => {
+  if (loaded) {
+    return (
+      <pre className="max-h-[70vh] overflow-auto whitespace-pre p-5 font-mono text-xs leading-relaxed text-muted-foreground">
+        {text}
+      </pre>
+    );
+  }
+  if (isError) return <p className={NOTICE_CLASS}>{failedText}</p>;
+  return (
+    <div className="p-5">
+      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+    </div>
+  );
+};
 
 export const EmailUsageDetails = ({ id }: { id: string }) => {
   const { t } = useT("os.communication.mail");
@@ -129,13 +169,7 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
   const content = details?.content;
   const tooLarge = !!content?.previewTooLarge;
   const hasSource = (content?.rawMimeLength ?? 0) > 0;
-  const availableViews: BodyView[] = tooLarge
-    ? []
-    : [
-        ...(bodies.html ? (["html"] as const) : []),
-        ...(bodies.text ? (["text"] as const) : []),
-        ...(hasSource ? (["source"] as const) : []),
-      ];
+  const availableViews = getAvailableViews(tooLarge, bodies, hasSource);
   const activeView = view && availableViews.includes(view) ? view : availableViews[0];
 
   const source = useGetEmailUsageSource(id, activeView === "source");
@@ -331,18 +365,14 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
               {bodies.text}
             </pre>
           )}
-          {activeView === "source" &&
-            (source.data ? (
-              <pre className="max-h-[70vh] overflow-auto whitespace-pre p-5 font-mono text-xs leading-relaxed text-muted-foreground">
-                {sourceText}
-              </pre>
-            ) : source.isError ? (
-              <p className={NOTICE_CLASS}>{t("EMAIL_USAGE_DETAILS.SOURCE_FAILED_DESCRIPTION")}</p>
-            ) : (
-              <div className="p-5">
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-              </div>
-            ))}
+          {activeView === "source" && (
+            <SourcePane
+              loaded={!!source.data}
+              isError={source.isError}
+              text={sourceText}
+              failedText={t("EMAIL_USAGE_DETAILS.SOURCE_FAILED_DESCRIPTION")}
+            />
+          )}
           {tooLarge && (
             <p className={NOTICE_CLASS}>{t("EMAIL_USAGE_DETAILS.TOO_LARGE_TO_PREVIEW")}</p>
           )}
