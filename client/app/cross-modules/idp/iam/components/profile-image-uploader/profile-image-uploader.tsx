@@ -121,7 +121,9 @@ export const ProfileImageUploader = ({
         errors: t("PROFILE_IMAGE_UPLOADER.FILE_TOO_LARGE", { size: MAX_SIZE_MB }),
       });
     }
-    setLocalPreview(URL.createObjectURL(selectedFile));
+    // The preview is the file's own object URL; only a blob: URL is ever used as the image source.
+    const preview = new URL(URL.createObjectURL(selectedFile));
+    if (preview.protocol === "blob:") setLocalPreview(preview.href);
     uploadImage(selectedFile);
     event.target.value = "";
   };
