@@ -12,6 +12,9 @@ import {
   verifyInboundProviderAndFieldsFlow,
   verifyOutboundProvidersOfferedFlow,
   verifySaveDisabledFlow,
+  verifyConfigMenuFlow,
+  verifyConfigUsageFlow,
+  verifyNoOrganizationUiFlow,
 } from "../../pages/secrets-and-configs/email";
 import {
   editOffice365KeepingSecretFlow,
@@ -31,6 +34,10 @@ test.describe("flows", () => {
 
     await test.step("Navigate to Email", async () => {
       await navigateToEmailFlow(page);
+    });
+
+    await test.step("Multi-org is off: the page is as before, with no organization picker (blocks-os#732 H12)", async () => {
+      await verifyNoOrganizationUiFlow(page);
     });
 
     await test.step("Empty state shows if no configuration exists yet", async () => {
@@ -67,15 +74,23 @@ test.describe("flows", () => {
       await expandConfigRowAndVerifyFlow(page, configName);
     });
 
+    await test.step("Its ⋮ menu offers Edit and Delete (blocks-os#732 H10)", async () => {
+      await verifyConfigMenuFlow(page, configName);
+    });
+
+    await test.step("The expanded card says no template uses it yet (blocks-os#732 H11)", async () => {
+      await verifyConfigUsageFlow(page, configName, 0);
+    });
+
     await test.step("Reopen the configuration for editing and close without changes", async () => {
       await openEditEmailAndCloseFlow(page, configName);
     });
 
-    await test.step("Edit the configuration and actually save the change", async () => {
+    await test.step("Edit the configuration, which has no Organization field, and save the change", async () => {
       await editEmailConfigAndSaveFlow(page, configName, "Flow Sender Updated");
     });
 
-    await test.step("Delete the configuration via its confirmation dialog", async () => {
+    await test.step("Delete it from the ⋮ menu; the dialog shows its usage (blocks-os#732 C9)", async () => {
       await deleteEmailConfigFlow(page, configName);
     });
   });

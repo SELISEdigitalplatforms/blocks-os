@@ -14,10 +14,11 @@ export async function verifyEmptyEmailStateFlow(page: Page) {
 }
 
 export async function verifyDefaultConfigLockedFlow(page: Page) {
-  const defaultTrigger = page.getByRole("button", { name: "Default" });
+  // exact: the card's ⋮ button is "More actions for Default" (blocks-os#732 H10).
+  const defaultTrigger = page.getByRole("button", { name: "Default", exact: true });
   if (!(await defaultTrigger.isVisible({ timeout: 5000 }))) return;
   await defaultTrigger.click();
-  const defaultPanel = page.getByLabel("Default");
+  const defaultPanel = page.getByLabel("Default", { exact: true });
   await expect(defaultPanel.getByRole("button", { name: "Edit" })).toHaveCount(0);
   await expect(defaultPanel.getByRole("button", { name: "Delete" })).toHaveCount(0);
   await defaultTrigger.click();
@@ -135,28 +136,59 @@ export async function fillAndSaveEmailConfigFlow(page: Page, configName: string)
 }
 
 export async function expandConfigRowAndVerifyFlow(page: Page, configName: string) {
-  const configTrigger = page.getByRole("button", { name: configName });
+  // exact: the card's ⋮ button, "More actions for <name>", also contains the name.
+  const configTrigger = page.getByRole("button", { name: configName, exact: true });
   await expect(configTrigger).toBeVisible({ timeout: 15000 });
   await configTrigger.click();
-  const panel = page.getByLabel(configName);
+  const panel = page.getByLabel(configName, { exact: true });
   await expect(panel.getByText("smtp.example.com")).toBeVisible({ timeout: 10000 });
   await expect(panel.getByText("587")).toBeVisible();
   await expect(panel.getByText("Outbound")).toBeVisible();
 }
 
+/** blocks-os#732 H12: a project with multi-org off sees no organization picker, field or chips. */
+export async function verifyNoOrganizationUiFlow(page: Page) {
+  await expect(page.getByRole("button", { name: "Add Configuration" })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByLabel("Organization", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("ORG DEFAULT", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("PROJECT DEFAULT", { exact: true })).toHaveCount(0);
+}
+
 /**
- * Edit/Delete sit in each configuration's accordion header. The Default record
- * now has its own Edit (sender name only), so `.first()` on the page would open
- * the Default dialog instead; scope to the configuration under test.
+ * blocks-os#732 H10: Edit and Delete sit in each card's ⋮ menu, labelled with the card's name, so
+ * the Default record's own menu (Edit sender name only) is never the one opened.
  */
-function configHeaderButton(page: Page, configName: string, name: "Edit" | "Delete") {
-  return page.getByRole("button", { name: configName }).getByRole("button", { name, exact: true });
+export function configMenuButton(page: Page, configName: string) {
+  return page.getByRole("button", { name: `More actions for ${configName}`, exact: true });
+}
+
+async function chooseFromConfigMenu(page: Page, configName: string, item: "Edit" | "Delete") {
+  const menuButton = configMenuButton(page, configName);
+  await expect(menuButton).toBeVisible({ timeout: 15000 });
+  await menuButton.click();
+  await page.getByRole("menuitem", { name: item, exact: true }).click();
+}
+
+/** blocks-os#732 H10: the card's ⋮ menu offers exactly Edit and Delete. */
+export async function verifyConfigMenuFlow(page: Page, configName: string) {
+  const menuButton = configMenuButton(page, configName);
+  await expect(menuButton).toBeVisible({ timeout: 15000 });
+  await menuButton.click();
+  const items = page.getByRole("menuitem");
+  await expect(items).toHaveText(["Edit", "Delete"]);
+  await page.keyboard.press("Escape");
+  await expect(items).toHaveCount(0);
+}
+
+/** blocks-os#732 H11: the expanded card says how many templates use it. */
+export async function verifyConfigUsageFlow(page: Page, configName: string, count: number) {
+  const panel = page.getByLabel(configName, { exact: true });
+  const text = count === 1 ? "Used by 1 template" : `Used by ${count} templates`;
+  await expect(panel.getByText(text, { exact: true })).toBeVisible({ timeout: 15000 });
 }
 
 export async function openEditEmailAndCloseFlow(page: Page, configName: string) {
-  const editButton = configHeaderButton(page, configName, "Edit");
-  if (!(await editButton.isVisible({ timeout: 8000 }))) return;
-  await editButton.click();
+  await chooseFromConfigMenu(page, configName, "Edit");
   await expect(page.getByRole("heading", { name: "Edit Configuration" })).toBeVisible();
   await page.getByRole("button", { name: "Cancel" }).click();
 }
@@ -166,10 +198,10 @@ export async function editEmailConfigAndSaveFlow(
   configName: string,
   newSenderName: string,
 ) {
-  const editButton = configHeaderButton(page, configName, "Edit");
-  if (!(await editButton.isVisible({ timeout: 8000 }))) return;
-  await editButton.click();
+  await chooseFromConfigMenu(page, configName, "Edit");
   await expect(page.getByRole("heading", { name: "Edit Configuration" })).toBeVisible();
+  // blocks-os#732 §10 step 4: multi-org is off, so the form has no Organization field.
+  await expect(page.getByRole("dialog").getByText("Organization", { exact: true })).toHaveCount(0);
   await page.getByPlaceholder("Enter sender name").fill(newSenderName);
   await page.getByPlaceholder("Enter password").fill("SuperSecret123");
   const updateButton = page.getByRole("button", { name: "Update Changes" });
@@ -183,10 +215,14 @@ export async function editEmailConfigAndSaveFlow(
 }
 
 export async function deleteEmailConfigFlow(page: Page, configName: string) {
-  const deleteButton = configHeaderButton(page, configName, "Delete");
-  if (!(await deleteButton.isVisible({ timeout: 8000 }))) return;
-  await deleteButton.click();
+  await chooseFromConfigMenu(page, configName, "Delete");
   await expect(page.getByRole("heading", { name: "Delete configuration" })).toBeVisible();
+  // blocks-os#732 C9: the dialog says how many templates use it and that they fall back.
+  await expect(
+    page.getByText("Used by 0 templates; they'll use the organization default or the project default.", {
+      exact: true,
+    }),
+  ).toBeVisible({ timeout: 15000 });
   if (
     await page
       .getByText("Are you sure you'd like to delete this configuration?")
@@ -197,6 +233,8 @@ export async function deleteEmailConfigFlow(page: Page, configName: string) {
     ).toBeVisible();
   }
   await page.getByRole("button", { name: "Delete Configuration" }).click();
+  // The card is gone once the list reloads.
+  await expect(configMenuButton(page, configName)).toHaveCount(0, { timeout: 15000 });
   if (
     await page.getByText("Configuration deleted successfully.", { exact: true }).isVisible({ timeout: 15000 })
   ) {

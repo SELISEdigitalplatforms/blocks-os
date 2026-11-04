@@ -126,11 +126,12 @@ export async function expandOffice365RowAndVerifyFlow(
   expect(listBody).not.toContain(clientSecret)
   expect(listBody.toLowerCase()).not.toContain("clientsecretreference")
 
-  const configTrigger = page.getByRole("button", { name: configName })
+  // exact: the card's ⋮ button, "More actions for <name>", also contains the name.
+  const configTrigger = page.getByRole("button", { name: configName, exact: true })
   await expect(configTrigger).toBeVisible({ timeout: 15000 })
   await configTrigger.click()
 
-  const panel = page.getByLabel(configName)
+  const panel = page.getByLabel(configName, { exact: true })
   await expect(panel.getByText(OFFICE_365)).toBeVisible({ timeout: 10000 })
   await expect(panel.getByText("smtp.office365.com")).toBeVisible()
   await expect(panel.getByText("587")).toBeVisible()
@@ -146,14 +147,17 @@ export async function expandOffice365RowAndVerifyFlow(
 }
 
 /**
- * Edit lives in the configuration's accordion header. The Default record has
- * its own Edit (sender name only), so scope to the configuration under test.
+ * blocks-os#732 H10: Edit is an item of the card's ⋮ menu, labelled with the card's name, so the
+ * Default record's own menu is never the one opened.
  */
-function editButtonFor(page: Page, configName: string) {
-  return page
-    .getByRole("button", { name: configName })
-    .getByRole("button", { name: "Edit", exact: true })
-}
+const editButtonFor = (page: Page, configName: string) => ({
+  async click() {
+    const menuButton = page.getByRole("button", { name: `More actions for ${configName}`, exact: true })
+    await expect(menuButton).toBeVisible({ timeout: 15000 })
+    await menuButton.click()
+    await page.getByRole("menuitem", { name: "Edit", exact: true }).click()
+  },
+})
 
 /** H4: a blank secret keeps the one on file. */
 export async function editOffice365KeepingSecretFlow(
