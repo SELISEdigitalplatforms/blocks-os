@@ -103,34 +103,32 @@ namespace XUnitTest.Webhooks
         [InlineData(408, null)]
         [InlineData(null, WebhookAttemptErrors.Timeout)]
         [InlineData(null, WebhookAttemptErrors.NetworkError)]
-        public async Task ServerErrorTimeoutOrNetwork_RetriesAfterOneMinute(int? status, string? error)
+        public async Task ServerErrorTimeoutOrNetwork_RetriesAfterThirtySeconds(int? status, string? error)
         {
             Answer(status, error);
 
             await RunAsync();
 
-            var next = _clock.Now.AddMinutes(1);
+            var next = _clock.Now.AddSeconds(30);
             VerifyRecorded(WebhookDeliveryStatus.Retrying, status, error ?? WebhookAttemptErrors.HttpError, next.UtcDateTime);
             _jobs.Verify(j => j.EnqueueDeliveryAsync("d1", 2, next), Times.Once);
         }
 
         [Theory]
-        [InlineData(2, 5)]
-        [InlineData(3, 30)]
-        [InlineData(4, 120)]
-        [InlineData(5, 360)]
-        public async Task Retries_WaitLongerEachTime(int runAttempts, int waitMinutes)
+        [InlineData(2, 90)]
+        [InlineData(3, 180)]
+        public async Task Retries_WaitLongerEachTime(int runAttempts, int waitSeconds)
         {
             _row.RunAttempts = runAttempts;
             Answer(503);
 
             await RunAsync(runAttempts);
 
-            _jobs.Verify(j => j.EnqueueDeliveryAsync("d1", runAttempts + 1, _clock.Now.AddMinutes(waitMinutes)), Times.Once);
+            _jobs.Verify(j => j.EnqueueDeliveryAsync("d1", runAttempts + 1, _clock.Now.AddSeconds(waitSeconds)), Times.Once);
         }
 
         [Fact]
-        public async Task SixthAttemptFails_EndsTheRowAsFailed()
+        public async Task FourthAttemptFails_EndsTheRowAsFailed()
         {
             _row.RunAttempts = WebhookRetryPolicy.MaxAttempts;
             Answer(503);
@@ -144,11 +142,21 @@ namespace XUnitTest.Webhooks
         [Fact]
         public async Task TooManyRequests_UsesALongerRetryAfter()
         {
+            Answer(429, retryAfter: TimeSpan.FromSeconds(60));
+
+            await RunAsync();
+
+            _jobs.Verify(j => j.EnqueueDeliveryAsync("d1", 2, _clock.Now.AddSeconds(60)), Times.Once);
+        }
+
+        [Fact]
+        public async Task TooManyRequests_RetryAfterIsCappedAt180Seconds()
+        {
             Answer(429, retryAfter: TimeSpan.FromMinutes(10));
 
             await RunAsync();
 
-            _jobs.Verify(j => j.EnqueueDeliveryAsync("d1", 2, _clock.Now.AddMinutes(10)), Times.Once);
+            _jobs.Verify(j => j.EnqueueDeliveryAsync("d1", 2, _clock.Now.AddSeconds(180)), Times.Once);
         }
 
         [Fact]
@@ -181,7 +189,7 @@ namespace XUnitTest.Webhooks
 
             await RunAsync();
 
-            _jobs.Verify(j => j.EnqueueDeliveryAsync("d1", 2, _clock.Now.AddMinutes(1)), Times.Once);
+            _jobs.Verify(j => j.EnqueueDeliveryAsync("d1", 2, _clock.Now.AddSeconds(30)), Times.Once);
         }
 
         [Fact]

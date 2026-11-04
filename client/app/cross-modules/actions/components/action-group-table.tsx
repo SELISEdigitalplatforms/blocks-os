@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useT } from "@seliseblocks/genesis-os";
 import { Button } from "@/components/ui-kits/button/button";
+import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { Switch } from "@/components/ui-kits/switch/switch";
 import {
   Table,
@@ -10,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui-kits/table/table";
+import { useClientPagination } from "@/hooks/use-client-pagination";
 import { ACTIONS_I18N_MODULE } from "../constants/actions.constant";
 import { ACTION_TARGETS, type ActionTarget, type IAction } from "../models/actions.model";
 import { buildPayloadExample } from "../utils/action-groups";
@@ -36,6 +38,7 @@ export function ActionGroupTable({
   onTurnOff,
 }: Readonly<ActionGroupTableProps>) {
   const { t } = useT(ACTIONS_I18N_MODULE);
+  const paging = useClientPagination(actions);
   const targetLabels: Record<ActionTarget, string> = {
     workflow: t("ACTIONS_PAGE.WORKFLOW"),
     function: t("ACTIONS_PAGE.FUNCTION"),
@@ -59,7 +62,7 @@ export function ActionGroupTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {actions.map((action) => {
+            {paging.pageItems.map((action) => {
               const isOpen = expanded.has(action.name);
               const panelId = `payload-${action.name}`;
               return (
@@ -78,6 +81,16 @@ export function ActionGroupTable({
             })}
           </TableBody>
         </Table>
+        <div className="border-t border-border p-2">
+          <Pagination
+            page={paging.page}
+            pageSize={paging.pageSize}
+            totalCount={paging.totalCount}
+            onChange={paging.setPage}
+            onPageSizeChange={paging.setPageSize}
+            compact
+          />
+        </div>
       </div>
     </section>
   );

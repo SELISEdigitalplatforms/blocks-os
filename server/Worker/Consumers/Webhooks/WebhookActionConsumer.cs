@@ -20,16 +20,19 @@ namespace Worker.Consumers.Webhooks
     public class WebhookFanOutRetryConsumer : IConsumer<WebhookFanOutRetry>
     {
         private readonly IWebhookFanOutService _fanOut;
+        private readonly TimeProvider _timeProvider;
 
-        public WebhookFanOutRetryConsumer(IWebhookFanOutService fanOut)
+        public WebhookFanOutRetryConsumer(IWebhookFanOutService fanOut, TimeProvider timeProvider)
         {
             _fanOut = fanOut;
+            _timeProvider = timeProvider;
         }
 
-        public Task Consume(WebhookFanOutRetry context)
+        public async Task Consume(WebhookFanOutRetry context)
         {
             ArgumentNullException.ThrowIfNull(context);
-            return _fanOut.FanOutAsync(context.Action, context.Attempt, CancellationToken.None);
+            await WebhookJobWait.UntilAsync(context.NotBefore, _timeProvider, CancellationToken.None);
+            await _fanOut.FanOutAsync(context.Action, context.Attempt, CancellationToken.None);
         }
     }
 
@@ -37,12 +40,20 @@ namespace Worker.Consumers.Webhooks
     public class WebhookDeliveryJobConsumer : IConsumer<WebhookDeliveryJob>
     {
         private readonly IWebhookDeliveryProcessor _processor;
+        private readonly TimeProvider _timeProvider;
 
-        public WebhookDeliveryJobConsumer(IWebhookDeliveryProcessor processor)
+        public WebhookDeliveryJobConsumer(IWebhookDeliveryProcessor processor, TimeProvider timeProvider)
         {
             _processor = processor;
+            _timeProvider = timeProvider;
         }
 
-        public Task Consume(WebhookDeliveryJob context) => _processor.ProcessAsync(context, CancellationToken.None);
+        public async Task Consume(WebhookDeliveryJob context)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+            // A retry waits for its time here when the bus delivered it early (RabbitMQ ignores scheduled sends).
+            await WebhookJobWait.UntilAsync(context.NotBefore, _timeProvider, CancellationToken.None);
+            await _processor.ProcessAsync(context, CancellationToken.None);
+        }
     }
 }

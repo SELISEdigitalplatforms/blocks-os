@@ -104,4 +104,42 @@ describe("WebhooksPage", () => {
 
     expect(await screen.findByText("Add webhook form")).toBeTruthy();
   });
+
+  describe("paging", () => {
+    const many = (n: number) =>
+      Array.from({ length: n }, (_, i) =>
+        makeWebhook({ id: `wh-${i + 1}`, name: `Hook ${String(i + 1).padStart(2, "0")}` }),
+      );
+
+    it("shows 10 webhooks per page and moves between pages", async () => {
+      const user = userEvent.setup();
+      vi.mocked(http.get).mockResolvedValue(many(23));
+      renderPage();
+
+      expect(await screen.findByText("Hook 01")).toBeTruthy();
+      expect(screen.getByText("Hook 10")).toBeTruthy();
+      expect(screen.queryByText("Hook 11")).toBeNull();
+      expect(screen.getByText("Page 1 of 3")).toBeTruthy();
+
+      await user.click(screen.getByRole("button", { name: "Go to last page" }));
+
+      expect(screen.getByText("Hook 21")).toBeTruthy();
+      expect(screen.getByText("Hook 23")).toBeTruthy();
+      expect(screen.queryByText("Hook 01")).toBeNull();
+    });
+
+    it("goes back to page 1 when the page size changes", async () => {
+      const user = userEvent.setup();
+      vi.mocked(http.get).mockResolvedValue(many(23));
+      renderPage();
+      await screen.findByText("Hook 01");
+      await user.click(screen.getByRole("button", { name: "Go to next page" }));
+
+      await user.click(screen.getByRole("combobox"));
+      await user.click(await screen.findByRole("option", { name: "25" }));
+
+      expect(screen.getByText("Hook 01")).toBeTruthy();
+      expect(screen.getByText("Hook 23")).toBeTruthy();
+    });
+  });
 });

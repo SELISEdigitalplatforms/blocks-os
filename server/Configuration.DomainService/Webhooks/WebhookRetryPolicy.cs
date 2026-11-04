@@ -10,24 +10,23 @@ public enum WebhookAttemptDecision
 
 /// <summary>
 /// Retry rules: 2xx delivered; 3xx and 4xx (except 408 and 429) fail at once; 408, 429, 5xx, timeout and network
-/// errors retry up to <see cref="MaxAttempts"/> attempts per run, waiting 1 min, 5 min, 30 min, 2 h, 6 h. A longer
-/// Retry-After on a 429 wins (capped at <see cref="MaxRetryAfter"/>).
+/// errors retry up to <see cref="MaxAttempts"/> attempts per run (one call and 3 retries), waiting 30 s, 90 s, 180 s.
+/// A longer Retry-After on a 429 wins, capped at <see cref="MaxRetryAfter"/>.
 /// </summary>
 public static class WebhookRetryPolicy
 {
-    public const int MaxAttempts = 6;
-    public static readonly TimeSpan MaxRetryAfter = TimeSpan.FromHours(24);
+    public const int MaxAttempts = 4;
+    public static readonly TimeSpan MaxRetryAfter = TimeSpan.FromSeconds(180);
 
     private const int TooManyRequests = 429;
     private const int RequestTimeout = 408;
 
-    private static readonly TimeSpan[] Waits =
+    /// <summary>The waits between attempts; also used by the fan-out retry.</summary>
+    internal static readonly TimeSpan[] Waits =
     [
-        TimeSpan.FromMinutes(1),
-        TimeSpan.FromMinutes(5),
-        TimeSpan.FromMinutes(30),
-        TimeSpan.FromHours(2),
-        TimeSpan.FromHours(6)
+        TimeSpan.FromSeconds(30),
+        TimeSpan.FromSeconds(90),
+        TimeSpan.FromSeconds(180)
     ];
 
     /// <param name="result">The attempt's outcome.</param>

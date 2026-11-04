@@ -5,6 +5,7 @@ import { useT } from "@seliseblocks/genesis-os";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { Button } from "@/components/ui-kits/button/button";
 import { EmptyState } from "@/components/ui-kits/empty-state";
+import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import {
   Table,
   TableBody,
@@ -13,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui-kits/table/table";
+import { useClientPagination } from "@/hooks/use-client-pagination";
 import { WebhookFormDialog } from "../../components/webhook-form-dialog";
 import { WebhookStatusBadges } from "../../components/webhook-status-badges";
 import { ADD_WEBHOOK_QUERY_KEY, WEBHOOKS_I18N_MODULE } from "../../constants/webhooks.constant";
@@ -29,6 +31,7 @@ export function WebhooksPage() {
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const { data, isLoading, isError, refetch } = useGetWebhooks();
+  const paging = useClientPagination(data ?? []);
   const [isAddOpen, setIsAddOpen] = useQueryState(
     ADD_WEBHOOK_QUERY_KEY,
     parseAsBoolean.withDefault(false),
@@ -89,11 +92,21 @@ export function WebhooksPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((webhook) => (
+            {paging.pageItems.map((webhook) => (
               <WebhookRow key={webhook.id} webhook={webhook} onOpen={openDetails} />
             ))}
           </TableBody>
         </Table>
+        <div className="border-t border-border p-2">
+          <Pagination
+            page={paging.page}
+            pageSize={paging.pageSize}
+            totalCount={paging.totalCount}
+            onChange={paging.setPage}
+            onPageSizeChange={paging.setPageSize}
+            compact
+          />
+        </div>
       </div>
       {addDialog}
     </>
