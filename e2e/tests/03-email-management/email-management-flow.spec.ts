@@ -25,10 +25,12 @@ test.describe("Email Management flows", () => {
   }) => {
     test.setTimeout(300_000);
 
+    // Named before step 1 saves it, so the cleanup below finds it even if a later step fails.
+    const templateName = `FlowTemplate${Date.now()}`;
     let created: CreatedTemplate | undefined;
     try {
       await test.step("Add Template (full lifecycle + Edit/Template validation)", async () => {
-        created = await addTemplateFlow(page);
+        created = await addTemplateFlow(page, templateName);
       });
 
       await test.step("Templates (listing + built-in menus)", async () => {
@@ -42,12 +44,9 @@ test.describe("Email Management flows", () => {
       });
     } finally {
       // §10 cleanup: whatever the lifecycle step did not delete.
-      const name = created?.name;
-      if (name) {
-        await test.step("Cleanup: delete the templates this test created", async () => {
-          await deleteTemplatesNamed(page, name);
-        });
-      }
+      await test.step("Cleanup: delete the templates this test created", async () => {
+        await deleteTemplatesNamed(page, templateName);
+      });
     }
 
     await test.step("Incoming Mails", async () => {

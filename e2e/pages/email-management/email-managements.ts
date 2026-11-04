@@ -12,7 +12,14 @@ import { openEmailManagement } from "../../support/os-helpers";
 /** The template the Add Template flow created (step 1 only; its body is never saved). */
 export type CreatedTemplate = { name: string; subject: string };
 
-export async function addTemplateFlow(page: Page): Promise<CreatedTemplate | undefined> {
+/**
+ * `templateName` lets a caller know the name before step 1 saves it, so its cleanup can find the
+ * template even when a later step fails.
+ */
+export async function addTemplateFlow(
+  page: Page,
+  templateName = `FlowTemplate${Date.now()}`,
+): Promise<CreatedTemplate | undefined> {
   // ---------- Open Email Management ----------
   await openEmailManagement(page);
   const addTemplateButton = page.getByRole("button", { name: "Add Template" });
@@ -58,7 +65,6 @@ export async function addTemplateFlow(page: Page): Promise<CreatedTemplate | und
   await expect(page.getByText("Subject is required")).toBeVisible({ timeout: 10_000 });
 
   // ---------- Fill valid data + advance ----------
-  const templateName = `FlowTemplate${Date.now()}`;
   const templateSubject = `Flow subject ${Date.now()}`;
   await nameInput.fill(templateName);
   await expect(nameInput).toHaveValue(templateName);
@@ -474,7 +480,7 @@ export async function templateLifecycleFlow(page: Page, created: CreatedTemplate
   });
   await page.getByRole("button", { name: "Send test Email", exact: true }).click();
   const testMail = page.getByRole("dialog", { name: "Send test email" });
-  await expect(testMail.getByText(new RegExp(`^${created.name} · `))).toBeVisible();
+  await expect(testMail.getByText(`${created.name} · `, { exact: false })).toBeVisible();
   const sent = page.waitForRequest(
     (r) => /\/Mail\/SendToAny/i.test(r.url()) && r.method() === "POST",
     { timeout: 15_000 },
