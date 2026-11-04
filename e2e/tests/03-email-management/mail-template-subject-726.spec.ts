@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { expect, test } from "../../support/test-base";
 import {
+  anotherLanguageCode,
   cloneTemplate,
   createTemplateInConsoleFlow,
   deleteTemplate,
@@ -98,15 +99,18 @@ test.describe("Mail template subject (#726)", () => {
       });
 
       await test.step("H7: a clone without a subject takes the source's subject", async () => {
-        // The console's Clone Template sends only the id (email-template-list.tsx).
-        const result = await cloneTemplate(page, mail, { itemId: source.itemId });
+        // blocks-os#733 (SPEC31 §6.4, H10): a clone names its language and keeps the source's
+        // name; the Clone dialog sends `{ itemId, language }` and no subject.
+        const language = anotherLanguageCode(mail, source.body.language);
+        const result = await cloneTemplate(page, mail, { itemId: source.itemId, language });
         expectSaved(result, "clone");
         const cloneId = result.json.itemId as string;
         created.push(cloneId);
 
         const clone = await getTemplate(page, mail, cloneId);
         expect(clone.status).toBe(200);
-        expect(clone.json.name).toBe(`${source.body.name}_clone`);
+        expect(clone.json.name).toBe(source.body.name);
+        expect(clone.json.language).toBe(language);
         expect(clone.json.templateSubject).toBe(source.body.templateSubject);
       });
 

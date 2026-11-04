@@ -12,23 +12,43 @@ import {
   mailDetailsTooLargeFlow,
   outgoingMailsFlow,
   startMailDetailsRun,
+  templateLifecycleFlow,
   templatesFlow,
+  type CreatedTemplate,
 } from "../../pages/email-management/email-managements";
+import { deleteTemplatesNamed } from "../../pages/email-management/mail-template-subject";
 import { test, expect } from "../../support/test-base";
 
 test.describe("Email Management flows", () => {
   test("all imported flows in sequence: add-template → templates → incoming → outgoing", async ({
     page,
   }) => {
-    test.setTimeout(180_000);
+    test.setTimeout(300_000);
 
-    await test.step("Add Template (full lifecycle + Edit/Template validation)", async () => {
-      await addTemplateFlow(page);
-    });
+    let created: CreatedTemplate | undefined;
+    try {
+      await test.step("Add Template (full lifecycle + Edit/Template validation)", async () => {
+        created = await addTemplateFlow(page);
+      });
 
-    await test.step("Templates (listing + clone flow)", async () => {
-      await templatesFlow(page);
-    });
+      await test.step("Templates (listing + built-in menus)", async () => {
+        await templatesFlow(page);
+      });
+
+      // blocks-os#733 §10 steps 1-6 (H6, H9, H10, C8, H12, H11, C11).
+      await test.step("Template lifecycle: edit locks, clone into another language, test mail, delete", async () => {
+        if (!created) throw new Error("Add Template created no template (no language options?)");
+        await templateLifecycleFlow(page, created);
+      });
+    } finally {
+      // §10 cleanup: whatever the lifecycle step did not delete.
+      const name = created?.name;
+      if (name) {
+        await test.step("Cleanup: delete the templates this test created", async () => {
+          await deleteTemplatesNamed(page, name);
+        });
+      }
+    }
 
     await test.step("Incoming Mails", async () => {
       await incomingMailsFlow(page);

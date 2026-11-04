@@ -1,5 +1,6 @@
 import { expect, type Page, type Request, type Response } from "@playwright/test";
 import { addTemplateFlow } from "./email-managements";
+import { openEmailManagement } from "../../support/os-helpers";
 
 /**
  * #726: a mail template is never stored without a subject. The console already requires one, so
@@ -12,6 +13,8 @@ export const SUBJECT_REQUIRED = { TemplateSubject: "Subject is required." };
 export const DUPLICATE_ERROR = "Template with the same Name and Language already exists";
 
 const SAVE_TEMPLATE_URL = /\/api\/Mail\/SaveTemplate\/?(\?.*)?$/i;
+// The project's languages, as the basic-information step loads them (useGetLanguages).
+const LANGUAGES_URL = /\/api\/Language\/Gets\/?(\?.*)?$/i;
 
 // Headers the browser sets on its own; everything else the console sent is replayed.
 const BROWSER_HEADERS = new Set([
@@ -61,6 +64,8 @@ export type MailApi = {
   headers: Record<string, string>;
   /** The console's first SaveTemplate body and the id the server gave the new template. */
   created: { body: ConsoleStepOneBody; itemId: string };
+  /** The language codes the project has enabled, from the console's own language request. */
+  languageCodes: string[];
 };
 
 function replayableHeaders(request: Request): Record<string, string> {
@@ -82,8 +87,22 @@ function replayableHeaders(request: Request): Record<string, string> {
 export async function createTemplateInConsoleFlow(page: Page): Promise<MailApi> {
   type Save = { request: Request; status: number; json: MailApiResult["json"] };
   const pending: Promise<Save>[] = [];
+  let languageCodes: string[] = [];
   const onResponse = (response: Response) => {
     const request = response.request();
+    if (request.method() === "GET" && LANGUAGES_URL.test(request.url())) {
+      void response
+        .json()
+        .then((json: unknown) => {
+          const data = (json as { data?: unknown } | null)?.data;
+          const list = (Array.isArray(json) ? json : Array.isArray(data) ? data : []) as {
+            languageCode?: string;
+          }[];
+          languageCodes = list.map((l) => l.languageCode ?? "").filter(Boolean);
+        })
+        .catch(() => undefined);
+      return;
+    }
     if (request.method() !== "POST" || !SAVE_TEMPLATE_URL.test(request.url())) return;
     pending.push(
       response
@@ -115,6 +134,7 @@ export async function createTemplateInConsoleFlow(page: Page): Promise<MailApi> 
     base: save.request.url().replace(/\/SaveTemplate\/?(\?.*)?$/i, ""),
     headers: replayableHeaders(save.request),
     created: { body, itemId: save.json.itemId as string },
+    languageCodes,
   };
 }
 
@@ -149,7 +169,19 @@ export function saveTemplate(page: Page, api: MailApi, body: Record<string, unkn
   });
 }
 
-/** POST CloneTemplate with the console's `{itemId}` shape (email-template-list.tsx). */
+/**
+ * An enabled language of the project other than `language`. Clones keep the name, so a clone
+ * needs another language (SPEC31 §6.4); the test never names which one it is.
+ */
+export function anotherLanguageCode(api: MailApi, language: string): string {
+  const other = api.languageCodes.find((code) => code !== language);
+  if (!other) {
+    throw new Error("The project has one enabled language; cloning needs another one.");
+  }
+  return other;
+}
+
+/** POST CloneTemplate: `{ itemId, language }`, as the console's Clone dialog sends it. */
 export function cloneTemplate(page: Page, api: MailApi, body: Record<string, unknown>) {
   return callMailApi(page, api, "POST", "CloneTemplate", body);
 }
@@ -195,4 +227,41 @@ export function expectSaved(result: MailApiResult, what: string) {
   expect(result.status, `${what}: ${JSON.stringify(result.json?.errors ?? null)}`).toBe(200);
   expect(result.json.isSuccess, `${what}: isSuccess`).toBe(true);
   expect(result.json.itemId, `${what}: itemId`).toBeTruthy();
+}
+
+const GET_TEMPLATES_URL = /\/api\/Mail\/GetTemplates\/?(\?.*)?$/i;
+
+/**
+ * Cleanup for UI flows: deletes every template named exactly `name` through the Mail API, with
+ * the session headers of the console's own GetTemplates request. Returns how many it deleted.
+ */
+export async function deleteTemplatesNamed(page: Page, name: string): Promise<number> {
+  const listRequest = page.waitForRequest((r) => GET_TEMPLATES_URL.test(r.url()), {
+    timeout: 60_000,
+  });
+  await openEmailManagement(page);
+  const request = await listRequest;
+  const organizationId = new URL(request.url()).searchParams.get("organizationId") ?? "default";
+  const api: MailApi = {
+    base: request.url().replace(/\/GetTemplates\/?(\?.*)?$/i, ""),
+    headers: replayableHeaders(request),
+    created: { body: {} as ConsoleStepOneBody, itemId: "" },
+    languageCodes: [],
+  };
+  const query = new URLSearchParams({
+    pageNumber: "0",
+    pageSize: "50",
+    searchKey: name,
+    sortProperty: "Name",
+    isDescending: "false",
+    language: "",
+    mailConfigurationId: "",
+    organizationId,
+  });
+  const list = await callMailApi(page, api, "GET", `GetTemplates?${query.toString()}`);
+  const ids = (list.json.templates ?? []).filter((t) => t.name === name).map((t) => t.itemId);
+  for (const itemId of ids) {
+    await deleteTemplate(page, api, itemId);
+  }
+  return ids.length;
 }
