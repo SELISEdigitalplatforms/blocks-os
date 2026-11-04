@@ -841,4 +841,261 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
     expect(h.showErrorToast).toHaveBeenCalledWith({ errors: "Failed to save template" });
     expect(h.saveTemplate).not.toHaveBeenCalled();
   });
+
+  describe("Show animation panel switch", () => {
+    const animationSwitch = () => screen.getByRole("switch", { name: "Show animation panel" });
+    const withPanel = (showAnimationPanel: boolean) => {
+      const template = structuredClone(DEFAULT_OIDC_UI_TEMPLATE);
+      template.layout.showAnimationPanel = showAnimationPanel;
+      return template;
+    };
+
+    it("H1/H7: renders checked in a Layout section after Brand logos", async () => {
+      await renderForm();
+      const panelSwitch = animationSwitch();
+      expect(panelSwitch.getAttribute("aria-checked")).toBe("true");
+      expect(screen.getByText("Layout")).toBeTruthy();
+      expect(screen.getByText("Choose what appears on your sign-in pages.")).toBeTruthy();
+      // Brand logos precedes Layout in document order.
+      expect(
+        screen.getByText("Brand logos").compareDocumentPosition(screen.getByText("Layout")) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(latestActions().isDirty).toBe(false);
+    });
+
+    it("H2: renders unchecked and not dirty when the stored value is false", async () => {
+      h.useGetOidcTemplate.mockReturnValue({
+        data: withPanel(false),
+        isLoading: false,
+        isError: false,
+      });
+      await renderForm();
+      expect(animationSwitch().getAttribute("aria-checked")).toBe("false");
+      expect(latestActions().isDirty).toBe(false);
+    });
+
+    it.each([
+      ["a null template", null],
+      ["a template with no layout", "missing"],
+      ["layout: null", "null"],
+      ["showAnimationPanel: null", "null-value"],
+    ])("C1: renders checked and not dirty for %s", async (_label, variant) => {
+      let data: unknown = null;
+      if (variant !== null) {
+        const template = structuredClone(DEFAULT_OIDC_UI_TEMPLATE) as unknown as Record<
+          string,
+          unknown
+        >;
+        if (variant === "missing") delete template.layout;
+        if (variant === "null") template.layout = null;
+        if (variant === "null-value") template.layout = { showAnimationPanel: null };
+        data = template;
+      }
+      h.useGetOidcTemplate.mockReturnValue({ data, isLoading: false, isError: false });
+      await renderForm();
+      expect(animationSwitch().getAttribute("aria-checked")).toBe("true");
+      expect(latestActions().isDirty).toBe(false);
+    });
+
+    it("C7: is not rendered while the template is loading", () => {
+      h.useGetOidcTemplate.mockReturnValue({ data: undefined, isLoading: true, isError: false });
+      renderOidcForm();
+      expect(screen.queryByRole("switch", { name: "Show animation panel" })).toBeNull();
+    });
+
+    it("H8: exposes the helper text as its description and toggles on Space", async () => {
+      const user = userEvent.setup();
+      await renderForm();
+      const panelSwitch = animationSwitch();
+      const describedBy = panelSwitch.getAttribute("aria-describedby");
+      expect(describedBy && document.getElementById(describedBy)?.textContent).toBe(
+        "When off, sign-in, sign-up, activation and reset-password pages show only the form, in a centered card. The live preview always shows the form only.",
+      );
+
+      panelSwitch.focus();
+      await user.keyboard(" ");
+      expect(animationSwitch().getAttribute("aria-checked")).toBe("false");
+    });
+
+    it("H3/H9: toggling marks the form dirty, leaves the preview alone, and makes no request", async () => {
+      const user = userEvent.setup();
+      await renderForm();
+      const previewBefore = JSON.parse(screen.getByTestId("preview-template").textContent ?? "");
+
+      await user.click(animationSwitch());
+
+      expect(animationSwitch().getAttribute("aria-checked")).toBe("false");
+      expect(latestActions().isDirty).toBe(true);
+      expect(latestActions().isValid).toBe(true);
+      const previewAfter = JSON.parse(screen.getByTestId("preview-template").textContent ?? "");
+      // Only the layout flag differs; the preview's rendered content is unchanged.
+      expect({ ...previewAfter, layout: undefined }).toEqual({
+        ...previewBefore,
+        layout: undefined,
+      });
+      expect(h.saveTemplate).not.toHaveBeenCalled();
+      expect(h.getPresignedUrl).not.toHaveBeenCalled();
+    });
+
+    it("H4/H11: saves the switch state in a single PUT and returns to a clean baseline", async () => {
+      const user = userEvent.setup();
+      await renderForm();
+      await user.click(animationSwitch());
+
+      await act(async () => latestActions().onSave());
+
+      expect(h.saveTemplate).toHaveBeenCalledTimes(1);
+      expect(h.saveTemplate.mock.calls[0][0].layout).toEqual({ showAnimationPanel: false });
+      expect(h.showSuccessToast).toHaveBeenCalledWith({
+        description: "Template saved successfully",
+      });
+      await waitFor(() => expect(latestActions().isDirty).toBe(false));
+      expect(animationSwitch().getAttribute("aria-checked")).toBe("false");
+    });
+
+    it("H5: Undo restores the saved value and clears the dirty state", async () => {
+      const user = userEvent.setup();
+      await renderForm();
+      await user.click(animationSwitch());
+      expect(latestActions().isDirty).toBe(true);
+
+      act(() => latestActions().onUndo());
+
+      expect(animationSwitch().getAttribute("aria-checked")).toBe("true");
+      expect(latestActions().isDirty).toBe(false);
+    });
+
+    it("H6: Save page sends the saved layout and keeps the unsaved switch change in the draft", async () => {
+      const user = userEvent.setup();
+      await renderForm();
+      await user.click(animationSwitch());
+
+      await user.click(screen.getByRole("tab", { name: "Pages" }));
+      await user.click(screen.getByRole("tab", { name: "Login" }));
+      await user.type(screen.getByLabelText(/Heading/), " updated");
+      await user.click(screen.getByRole("button", { name: "Save Login page" }));
+
+      await waitFor(() => expect(h.saveTemplate).toHaveBeenCalledTimes(1));
+      expect(h.saveTemplate.mock.calls[0][0].layout).toEqual({ showAnimationPanel: true });
+      await waitFor(() => expect(h.showSuccessToast).toHaveBeenCalled());
+      expect(latestActions().isDirty).toBe(true);
+
+      await user.click(screen.getByRole("tab", { name: "Branding" }));
+      expect(animationSwitch().getAttribute("aria-checked")).toBe("false");
+    });
+
+    it("H10: keeps an unsaved switch change across tab switches", async () => {
+      const user = userEvent.setup();
+      await renderForm();
+      await user.click(animationSwitch());
+
+      await user.click(screen.getByRole("tab", { name: "Theme" }));
+      await user.click(screen.getByRole("tab", { name: "Branding" }));
+
+      expect(animationSwitch().getAttribute("aria-checked")).toBe("false");
+    });
+
+    it("C9: an unrelated save never resets a stored false", async () => {
+      h.useGetOidcTemplate.mockReturnValue({
+        data: withPanel(false),
+        isLoading: false,
+        isError: false,
+      });
+      const user = userEvent.setup();
+      await renderForm();
+      await user.type(screen.getByLabelText(/Brand name/), " updated");
+
+      await act(async () => latestActions().onSave());
+
+      expect(h.saveTemplate.mock.calls[0][0].layout).toEqual({ showAnimationPanel: false });
+    });
+
+    it("C4: is disabled while a save is in progress", async () => {
+      let resolveSave: (value: unknown) => void = () => {};
+      h.saveTemplate.mockReturnValue(new Promise((resolve) => (resolveSave = resolve)));
+      const user = userEvent.setup();
+      await renderForm();
+      await user.click(animationSwitch());
+
+      let saving: Promise<void> = Promise.resolve();
+      act(() => {
+        saving = latestActions().onSave();
+      });
+      await waitFor(() => expect(animationSwitch()).toHaveProperty("disabled", true));
+
+      await act(async () => {
+        resolveSave({ isSuccess: true });
+        await saving;
+      });
+      expect(animationSwitch()).toHaveProperty("disabled", false);
+    });
+
+    it("C5/E7: a failed save keeps the switch off, maps the error, and stays dirty", async () => {
+      h.saveTemplate.mockResolvedValue({
+        isSuccess: false,
+        errors: { "Branding.BrandName": "server brand error" },
+      });
+      const user = userEvent.setup();
+      await renderForm();
+      await user.click(animationSwitch());
+
+      await act(async () => latestActions().onSave());
+
+      expect(h.showErrorToast).toHaveBeenCalledWith({
+        errors: { "Branding.BrandName": "server brand error" },
+      });
+      expect(screen.getByText("Brand name server brand error")).toBeTruthy();
+      expect(animationSwitch().getAttribute("aria-checked")).toBe("false");
+      expect(latestActions().isDirty).toBe(true);
+    });
+
+    it("C5: a network error keeps the switch off and stays dirty", async () => {
+      h.saveTemplate.mockRejectedValue(new Error("network"));
+      const user = userEvent.setup();
+      await renderForm();
+      await user.click(animationSwitch());
+
+      await act(async () => latestActions().onSave());
+
+      expect(h.showErrorToast).toHaveBeenCalledWith({ errors: "Failed to save template" });
+      expect(animationSwitch().getAttribute("aria-checked")).toBe("false");
+      expect(latestActions().isDirty).toBe(true);
+    });
+
+    it("C6: toggling does not bypass validation elsewhere in the draft", async () => {
+      const user = userEvent.setup();
+      await renderForm();
+      await user.clear(screen.getByLabelText(/Brand name/));
+      await user.click(animationSwitch());
+
+      expect(latestActions().isValid).toBe(false);
+      await act(async () => latestActions().onSave());
+      expect(h.saveTemplate).not.toHaveBeenCalled();
+    });
+
+    it("C8: uploads a pending logo first, then sends the URL and the switch in one PUT", async () => {
+      h.getPresignedUrl.mockResolvedValue({ isSuccess: true, uploadUrl: "u", fileId: "f1" });
+      h.uploadFile.mockResolvedValue({});
+      h.getFileByFileId.mockResolvedValue({ url: "https://cdn.example.com/light.png" });
+      const user = userEvent.setup();
+      await renderForm();
+      await user.upload(
+        document.getElementById("client-logo-upload-light") as HTMLInputElement,
+        new File(["x"], "light.png", { type: "image/png" }),
+      );
+      await user.click(animationSwitch());
+
+      await act(async () => latestActions().onSave());
+
+      expect(h.uploadFile).toHaveBeenCalledTimes(1);
+      expect(h.saveTemplate).toHaveBeenCalledTimes(1);
+      expect(h.uploadFile.mock.invocationCallOrder[0]).toBeLessThan(
+        h.saveTemplate.mock.invocationCallOrder[0],
+      );
+      const payload = h.saveTemplate.mock.calls[0][0];
+      expect(payload.branding.logoUrlLight).toBe("https://cdn.example.com/light.png");
+      expect(payload.layout).toEqual({ showAnimationPanel: false });
+    });
+  });
 });

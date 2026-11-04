@@ -17,6 +17,7 @@ import { Input } from "@/components/ui-kits/input/input";
 import { Label } from "@/components/ui-kits/label/label";
 import { ScrollArea } from "@/components/ui-kits/scroll-area/scroll-area";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
+import { Switch } from "@/components/ui-kits/switch/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
 import { ModuleName } from "@/constants/modules.constants";
@@ -462,6 +463,11 @@ export const OidcBrandingForm = () => {
       current ? { ...current, branding: { ...current.branding, [field]: value } } : current,
     );
     clearServerFieldError(`branding.${field}`);
+  };
+
+  const updateLayout = (showAnimationPanel: boolean) => {
+    setDraft((current) => (current ? { ...current, layout: { showAnimationPanel } } : current));
+    clearServerFieldError("layout.showAnimationPanel");
   };
 
   /** Each preview mode's logo lives under its own field name on `branding`. */
@@ -932,6 +938,36 @@ export const OidcBrandingForm = () => {
                         }
                         onFile={(file) => applyLogoFile("dark", file)}
                         onRemove={() => removeLogo("dark")}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <Label>{t("OIDC_BRANDING_FORM.LAYOUT_TITLE")}</Label>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {t("OIDC_BRANDING_FORM.LAYOUT_HINT")}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-3">
+                      <div className="min-w-0 space-y-0.5">
+                        <Label htmlFor="oidc-show-animation-panel" className="text-sm">
+                          {t("OIDC_BRANDING_FORM.SHOW_ANIMATION_PANEL")}
+                        </Label>
+                        <p
+                          id="oidc-show-animation-panel-hint"
+                          className="text-xs text-muted-foreground"
+                        >
+                          {t("OIDC_BRANDING_FORM.SHOW_ANIMATION_PANEL_HINT")}
+                        </p>
+                      </div>
+                      <Switch
+                        id="oidc-show-animation-panel"
+                        size="md"
+                        checked={draft.layout.showAnimationPanel}
+                        onCheckedChange={updateLayout}
+                        disabled={isBusy}
+                        aria-describedby="oidc-show-animation-panel-hint"
                       />
                     </div>
                   </div>
