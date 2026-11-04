@@ -10,6 +10,7 @@ import {
   configMenuButton,
   dialogSelect,
   fillAndSaveEmailConfigFlow,
+  isMultiOrgPage,
   keepOrganizationDefaultUnticked,
   navigateToEmailFlow,
   openAddEmailConfigDialogFlow,
@@ -39,7 +40,8 @@ export function assignFixtureNames(stamp = Date.now()): AssignFixtures {
     configA: `${prefix} A`,
     configB: `${prefix} B`,
     inbound: `${prefix} Inbox`,
-    templates: ["a", "b", "c"].map((suffix) => `${prefix}${suffix}`),
+    // Four, so two are left for Select all in step 3 and its texts are the plural ones.
+    templates: ["a", "b", "c", "d"].map((suffix) => `${prefix}${suffix}`),
   };
 }
 
@@ -81,7 +83,7 @@ async function templatesNamedWithPrefix(page: Page, api: MailApi, prefix: string
   return (result.json.templates ?? []).filter((t) => t.name?.startsWith(prefix));
 }
 
-/** §10 fixtures: E2E-A and E2E-B (outbound) and three templates on E2E-A. */
+/** §10 fixtures: E2E-A and E2E-B (outbound) and the templates on E2E-A. */
 export async function createAssignFixtures(page: Page, api: MailApi, names: AssignFixtures) {
   for (const configName of [names.configA, names.configB]) {
     await openAddEmailConfigDialogFlow(page);
@@ -124,6 +126,11 @@ export async function openAssignDialog(page: Page, names: AssignFixtures, config
     }),
   ).toBeVisible();
   await dialog.getByRole("searchbox", { name: "Search templates" }).fill(names.prefix);
+  // The search applies after a short pause: wait until the list shows only the test's templates.
+  const count = names.templates.length;
+  await expect(dialog.getByText(`1–${count} of ${count}`, { exact: true })).toBeVisible({
+    timeout: 15_000,
+  });
   for (const name of names.templates) {
     await expect(dialog.getByRole("checkbox", { name: new RegExp(`^${name} · `) })).toBeVisible({
       timeout: 15_000,
@@ -148,7 +155,9 @@ export async function assignTwoTemplatesFlow(page: Page, names: AssignFixtures) 
   await rowCheckbox(page, first).check();
   await rowCheckbox(page, second).check();
   await expect(dialog.getByText(`Switches to ${names.configB}`, { exact: true })).toHaveCount(2);
-  await expect(dialog.getByText("No change", { exact: true })).toHaveCount(1);
+  await expect(dialog.getByText("No change", { exact: true })).toHaveCount(
+    names.templates.length - 2,
+  );
   await dialog.getByRole("button", { name: "Assign 2 templates", exact: true }).click();
   await expect(page.getByText(`2 templates now use ${names.configB}`, { exact: true })).toBeVisible(
     {
@@ -161,10 +170,12 @@ export async function assignTwoTemplatesFlow(page: Page, names: AssignFixtures) 
 /** §10 step 2 (H4): the two assigned rows are disabled and say so. */
 export async function alreadyAssignedRowsFlow(page: Page, names: AssignFixtures) {
   const dialog = await openAssignDialog(page, names, names.configB);
-  const [first, second, third] = names.templates;
+  const [first, second, ...rest] = names.templates;
   await expect(rowCheckbox(page, first)).toBeDisabled();
   await expect(rowCheckbox(page, second)).toBeDisabled();
-  await expect(rowCheckbox(page, third)).toBeEnabled();
+  for (const name of rest) {
+    await expect(rowCheckbox(page, name)).toBeEnabled();
+  }
   await expect(dialog.getByText(`Already uses ${names.configB}`, { exact: true })).toHaveCount(2);
   return dialog;
 }
@@ -175,14 +186,25 @@ export async function alreadyAssignedRowsFlow(page: Page, names: AssignFixtures)
  */
 export async function selectAllMatchingFlow(page: Page, names: AssignFixtures) {
   const dialog = page.getByRole("dialog", { name: "Assign templates" });
+  const left = names.templates.length - 2;
+  // The Default organization's card: its texts name the organization only with multi-org on.
+  const where = (await isMultiOrgPage(page)) ? " in the Default organization" : "";
   await dialog.getByRole("checkbox", { name: "Select all templates on this page" }).check();
-  await expect(dialog.getByText("All 1 on this page are selected.", { exact: true })).toBeVisible();
-  await dialog.getByRole("button", { name: /^Select all 1 template/ }).click();
-  await expect(dialog.getByText(/are selected, on every page\.$/)).toBeVisible();
+  await expect(
+    dialog.getByText(`All ${left} on this page are selected.`, { exact: true }),
+  ).toBeVisible();
+  await dialog
+    .getByRole("button", { name: `Select all ${left} templates${where}`, exact: true })
+    .click();
+  await expect(
+    dialog.getByText(`All ${left} templates${where} are selected, on every page.`, {
+      exact: true,
+    }),
+  ).toBeVisible();
   const assign = page.waitForRequest(
     (r) => /\/api\/Mail\/AssignTemplates\/?$/i.test(r.url()) && r.method() === "POST",
   );
-  await dialog.getByRole("button", { name: "Assign 1 template", exact: true }).click();
+  await dialog.getByRole("button", { name: `Assign ${left} templates`, exact: true }).click();
   const body = (await assign).postDataJSON() as {
     allMatching?: boolean;
     searchKey?: string;
@@ -190,11 +212,11 @@ export async function selectAllMatchingFlow(page: Page, names: AssignFixtures) {
   };
   expect(body.allMatching, "Select all submits allMatching").toBe(true);
   expect(body.searchKey, "allMatching carries the test's own search (Q1: A)").toBe(names.prefix);
-  await expect(page.getByText(`1 template now uses ${names.configB}`, { exact: true })).toBeVisible(
-    {
-      timeout: 15_000,
-    },
-  );
+  await expect(
+    page.getByText(`${left} templates now use ${names.configB}`, { exact: true }),
+  ).toBeVisible({
+    timeout: 15_000,
+  });
 }
 
 /** §10 step 4 (C1): an inbound configuration's menu has no Assign templates. */

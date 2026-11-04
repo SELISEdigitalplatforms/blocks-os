@@ -24,7 +24,7 @@ test.describe("Assign templates (#734)", () => {
     const api = await openEmailPageWithApi(page);
 
     try {
-      await test.step("Fixtures: two outbound configurations and three templates on the first", async () => {
+      await test.step("Fixtures: two outbound configurations and four templates on the first", async () => {
         await createAssignFixtures(page, api, names);
       });
 
