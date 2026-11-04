@@ -8,7 +8,7 @@ import {
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
 import { Button } from "@/components/ui-kits/button/button";
-import { useForm, type Resolver } from "react-hook-form";
+import { useForm, type Control, type Resolver } from "react-hook-form";
 import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -281,6 +281,167 @@ const submitLabelKey = (isPending: boolean, isEdit?: boolean) => {
   return isEdit ? "NEW_CONFIGURATION.UPDATE_CHANGES" : "common:SAVE";
 };
 
+/** An edit keeps the stored organization; a create starts from the page's. */
+const initialOrganizationId = (
+  isEdit: boolean | undefined,
+  previousData: IEmailConfig | undefined,
+  organization: { id: string } | undefined,
+) => (isEdit && previousData ? organizationOf(previousData) : (organization?.id ?? ""));
+
+/** The save request for the form's values; `configurationId` is the edited record's id, if any. */
+const buildSavePayload = (data: IEmailConfig, configurationId?: string): ISaveMailConfigPayload => {
+  const transport = getFixedTransport(data.provider, data.isInbound);
+  const options = getAuthenticationOptions(data.provider, data.isInbound);
+  const selectedAuthentication =
+    data.authenticationType !== undefined && options.includes(data.authenticationType)
+      ? data.authenticationType
+      : options[0];
+
+  const payload: ISaveMailConfigPayload = {
+    configurationName: data.configurationName,
+    configurationId: configurationId ?? "",
+    host: transport?.host ?? data.host,
+    port: transport?.port ?? data.port,
+    enableSSL: transport?.enableSSL ?? data.enableSSL,
+    senderName: data.senderName || "",
+    senderAddress: data.senderAddress || "",
+    isInbound: data.isInbound,
+    provider: data.provider,
+    authenticationType: selectedAuthentication,
+    securityMode: transport?.securityMode ?? MailSecurityMode.Legacy,
+  };
+
+  if (selectedAuthentication === MailAuthenticationType.Password) {
+    payload.senderUserName = data.senderUserName;
+    payload.accountPassword = data.accountPassword || "";
+  } else {
+    payload.tenantId = data.tenantId?.trim();
+    payload.clientId = data.clientId?.trim();
+    payload.mailboxAddress = data.mailboxAddress?.trim();
+    // Omitted when blank, which the server reads as "keep the secret on
+    // file". Sending "" would mean the same thing, but leaving the key out
+    // keeps a secret-shaped field out of the request entirely.
+    if (data.clientSecret) {
+      payload.clientSecret = data.clientSecret;
+    }
+  }
+  return payload;
+};
+
+interface OrganizationFieldProps {
+  isEdit: boolean;
+  organization: { id: string; name: string };
+  organizationId: string;
+  /** The page organization's name while it is the one selected. */
+  hintName?: string;
+  errorKey: string | null;
+  projectKey: string;
+  onChange: (organizationId: string) => void;
+}
+
+/** Organization: picked on create (pre-filled from the page), read-only on edit. */
+function OrganizationField({
+  isEdit,
+  organization,
+  organizationId,
+  hintName,
+  errorKey,
+  projectKey,
+  onChange,
+}: Readonly<OrganizationFieldProps>) {
+  const { t } = useT("os.communication.mail");
+  // The Default organization's configurations are shared, so no "only".
+  const showHint = !!hintName && organizationId !== DEFAULT_ORGANIZATION_ID;
+  return (
+    <div className="mb-4 flex flex-col gap-2">
+      <Label
+        htmlFor="mail-configuration-organization"
+        className="text-left font-medium text-high-emphasis"
+      >
+        {t("NEW_CONFIGURATION.ORGANIZATION")} <span className="text-destructive">*</span>
+      </Label>
+      {isEdit ? (
+        <>
+          {/* Read-only, not disabled: it stays focusable and readable under its label. */}
+          <Input
+            id="mail-configuration-organization"
+            value={organization.name}
+            readOnly
+            className="border-default mt-1 border shadow-none"
+          />
+          <p className="text-sm text-muted-foreground">
+            {t("NEW_CONFIGURATION.ORGANIZATION_READ_ONLY")}
+          </p>
+        </>
+      ) : (
+        <>
+          <OrganizationCombobox
+            id="mail-configuration-organization"
+            projectKey={projectKey}
+            value={organizationId}
+            onValueChange={onChange}
+            excludeNotEnabled
+            defaultOptionLabel={t("EMAIL_CONFIGURE.DEFAULT_ORGANIZATION")}
+          />
+          {showHint && (
+            <p className="text-sm text-muted-foreground">
+              {t("NEW_CONFIGURATION.ORGANIZATION_HINT", { organization: hintName })}
+            </p>
+          )}
+        </>
+      )}
+      {errorKey && <p className="text-sm font-medium text-destructive">{t(errorKey)}</p>}
+    </div>
+  );
+}
+
+interface OrganizationDefaultFieldProps {
+  control: Control<IEmailConfig>;
+  hintName?: string;
+  /** A create for an organization without a default: the hint says this one becomes it. */
+  isFirstDefault: boolean;
+}
+
+/** "Use as organization default", for outbound configurations in multi-org projects. */
+function OrganizationDefaultField({
+  control,
+  hintName,
+  isFirstDefault,
+}: Readonly<OrganizationDefaultFieldProps>) {
+  const { t } = useT("os.communication.mail");
+  const hintKey = isFirstDefault
+    ? "NEW_CONFIGURATION.ORGANIZATION_DEFAULT_HINT_FIRST"
+    : "NEW_CONFIGURATION.ORGANIZATION_DEFAULT_HINT";
+  return (
+    <div className="mt-4">
+      <FormField
+        name="isOrganizationDefault"
+        control={control}
+        render={({ field }) => (
+          <FormItem>
+            <FormControl>
+              <Checkbox
+                className="mr-2"
+                checked={!!field.value}
+                onCheckedChange={(checked) => field.onChange(checked === true)}
+              />
+            </FormControl>
+            <FormLabel className="flex-start inline-flex">
+              {t("NEW_CONFIGURATION.USE_AS_ORGANIZATION_DEFAULT")}
+            </FormLabel>
+            {hintName && (
+              <p className="text-sm text-muted-foreground">
+                {t(hintKey, { organization: hintName })}
+              </p>
+            )}
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </div>
+  );
+}
+
 const NewConfiguration: React.FC<NewConfigurationProps> = ({
   dialogTitle,
   onClose,
@@ -292,8 +453,8 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
   const { t } = useT("os.communication.mail");
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   // An edit keeps the stored organization; a create starts from the page's and may pick another.
-  const [organizationId, setOrganizationId] = useState(
-    isEdit && previousData ? organizationOf(previousData) : (organization?.id ?? ""),
+  const [organizationId, setOrganizationId] = useState(() =>
+    initialOrganizationId(isEdit, previousData, organization),
   );
   const [organizationErrorKey, setOrganizationErrorKey] = useState<string | null>(null);
   // const { saveEmailConfig, isPending } = useSaveEmailConfig();
@@ -430,47 +591,11 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
   }
   const formSubmitHandler = async (data: IEmailConfig) => {
     try {
-      const transport = getFixedTransport(data.provider, data.isInbound);
-      const options = getAuthenticationOptions(data.provider, data.isInbound);
-      const selectedAuthentication =
-        data.authenticationType !== undefined && options.includes(data.authenticationType)
-          ? data.authenticationType
-          : options[0];
-      const isPasswordProvider = selectedAuthentication === MailAuthenticationType.Password;
-
-      const payload: ISaveMailConfigPayload = {
-        configurationName: data.configurationName,
-        configurationId: isEdit && previousData?.itemId ? previousData.itemId : "",
-        host: transport?.host ?? data.host,
-        port: transport?.port ?? data.port,
-        enableSSL: transport?.enableSSL ?? data.enableSSL,
-        senderName: data.senderName || "",
-        senderAddress: data.senderAddress || "",
-        isInbound: data.isInbound,
-        provider: data.provider,
-        authenticationType: selectedAuthentication,
-        securityMode: transport?.securityMode ?? MailSecurityMode.Legacy,
-      };
-
+      const payload = buildSavePayload(data, isEdit ? previousData?.itemId : undefined);
       if (organization) {
         payload.organizationId = organizationId;
         // Inbound configurations are never an organization's default.
         payload.isOrganizationDefault = !data.isInbound && !!data.isOrganizationDefault;
-      }
-
-      if (isPasswordProvider) {
-        payload.senderUserName = data.senderUserName;
-        payload.accountPassword = data.accountPassword || "";
-      } else {
-        payload.tenantId = data.tenantId?.trim();
-        payload.clientId = data.clientId?.trim();
-        payload.mailboxAddress = data.mailboxAddress?.trim();
-        // Omitted when blank, which the server reads as "keep the secret on
-        // file". Sending "" would mean the same thing, but leaving the key out
-        // keeps a secret-shaped field out of the request entirely.
-        if (data.clientSecret) {
-          payload.clientSecret = data.clientSecret;
-        }
       }
       setOrganizationErrorKey(null);
       const res = await mutateAsync(payload);
@@ -493,23 +618,24 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
       }
     } catch (error) {
       if (isErrorWithErrors(error)) {
-        const { fieldKeys, rest } = splitOrganizationErrors(
-          error.errors as Record<string, string | string[]>,
-        );
-        if (fieldKeys.OrganizationId) {
-          setOrganizationErrorKey(fieldKeys.OrganizationId);
-        }
-        if (fieldKeys.IsOrganizationDefault) {
-          form.setError("isOrganizationDefault", { message: t(fieldKeys.IsOrganizationDefault) });
-        }
-        if (Object.keys(rest).length > 0) {
-          showErrorToast({ errors: rest });
-        }
+        showSaveErrors(error.errors);
       }
     }
   };
-  const organizationHintName =
-    organization && organizationId === organization.id ? organization.name : undefined;
+  /** Organization errors go under their fields as English keys; the rest keep going to the toast. */
+  const showSaveErrors = (errors: Record<string, string | string[]>) => {
+    const { fieldKeys, rest } = splitOrganizationErrors(errors);
+    if (fieldKeys.OrganizationId) {
+      setOrganizationErrorKey(fieldKeys.OrganizationId);
+    }
+    if (fieldKeys.IsOrganizationDefault) {
+      form.setError("isOrganizationDefault", { message: t(fieldKeys.IsOrganizationDefault) });
+    }
+    if (Object.keys(rest).length > 0) {
+      showErrorToast({ errors: rest });
+    }
+  };
+  const organizationHintName = organization?.id === organizationId ? organization?.name : undefined;
   // Another organization than the page's: its default is unknown here, so the option starts
   // unticked rather than silently replacing that organization's default.
   const changeOrganization = (nextOrganizationId: string) => {
@@ -530,53 +656,15 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
             <DialogDescription asChild>
               <div className="pb-4 pt-4 text-left">
                 {organization && (
-                  <div className="mb-4 flex flex-col gap-2">
-                    <Label
-                      htmlFor="mail-configuration-organization"
-                      className="text-left font-medium text-high-emphasis"
-                    >
-                      {t("NEW_CONFIGURATION.ORGANIZATION")}{" "}
-                      <span className="text-destructive">*</span>
-                    </Label>
-                    {isEdit ? (
-                      <>
-                        {/* Read-only, not disabled: it stays focusable and readable under its label. */}
-                        <Input
-                          id="mail-configuration-organization"
-                          value={organization.name}
-                          readOnly
-                          className="border-default mt-1 border shadow-none"
-                        />
-                        <p className="text-sm text-muted-foreground">
-                          {t("NEW_CONFIGURATION.ORGANIZATION_READ_ONLY")}
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <OrganizationCombobox
-                          id="mail-configuration-organization"
-                          projectKey={tenantId}
-                          value={organizationId}
-                          onValueChange={changeOrganization}
-                          excludeNotEnabled
-                          defaultOptionLabel={t("EMAIL_CONFIGURE.DEFAULT_ORGANIZATION")}
-                        />
-                        {/* The Default organization's configurations are shared, so no "only". */}
-                        {organizationHintName && organizationId !== DEFAULT_ORGANIZATION_ID && (
-                          <p className="text-sm text-muted-foreground">
-                            {t("NEW_CONFIGURATION.ORGANIZATION_HINT", {
-                              organization: organizationHintName,
-                            })}
-                          </p>
-                        )}
-                      </>
-                    )}
-                    {organizationErrorKey && (
-                      <p className="text-sm font-medium text-destructive">
-                        {t(organizationErrorKey)}
-                      </p>
-                    )}
-                  </div>
+                  <OrganizationField
+                    isEdit={!!isEdit}
+                    organization={organization}
+                    organizationId={organizationId}
+                    hintName={organizationHintName}
+                    errorKey={organizationErrorKey}
+                    projectKey={tenantId}
+                    onChange={changeOrganization}
+                  />
                 )}
                 <div className="grid grid-cols-1 gap-4">
                   <FormField
@@ -992,37 +1080,11 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                   </div>
                 )}
                 {organization && !isInbound && (
-                  <div className="mt-4">
-                    <FormField
-                      name="isOrganizationDefault"
-                      control={form.control}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormControl>
-                            <Checkbox
-                              className="mr-2"
-                              checked={!!field.value}
-                              onCheckedChange={(checked) => field.onChange(checked === true)}
-                            />
-                          </FormControl>
-                          <FormLabel className="flex-start inline-flex">
-                            {t("NEW_CONFIGURATION.USE_AS_ORGANIZATION_DEFAULT")}
-                          </FormLabel>
-                          {organizationHintName && (
-                            <p className="text-sm text-muted-foreground">
-                              {t(
-                                !isEdit && !organizationHasDefault
-                                  ? "NEW_CONFIGURATION.ORGANIZATION_DEFAULT_HINT_FIRST"
-                                  : "NEW_CONFIGURATION.ORGANIZATION_DEFAULT_HINT",
-                                { organization: organizationHintName },
-                              )}
-                            </p>
-                          )}
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                  <OrganizationDefaultField
+                    control={form.control}
+                    hintName={organizationHintName}
+                    isFirstDefault={!isEdit && !organizationHasDefault}
+                  />
                 )}
               </div>
             </DialogDescription>

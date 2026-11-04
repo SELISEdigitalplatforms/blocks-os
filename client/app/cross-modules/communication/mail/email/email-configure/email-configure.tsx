@@ -106,56 +106,94 @@ function ConfigList({
   );
 }
 
+/** The page's organization, its name, and whether the page is split by organization at all. */
+function useListedOrganization(organizationScoped: boolean) {
+  const { t } = useT("os.communication.mail");
+  const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
+  const organization = useEmailOrganization();
+  const byOrganization = organizationScoped && organization.isMultiOrgEnabled;
+  const selectedOrganizationId = organization.selectedOrganizationId;
+  // A non-Default organization of a multi-org page; the Default organization is not an IAM record.
+  const isOtherOrganization = byOrganization && selectedOrganizationId !== DEFAULT_ORGANIZATION_ID;
+  const { data: selectedOrganization } = useGetOrganizationById({
+    projectKey: tenantId,
+    itemId: isOtherOrganization ? selectedOrganizationId : "",
+  });
+  const defaultOrganizationName = t("EMAIL_CONFIGURE.DEFAULT_ORGANIZATION");
+  const selectedOrganizationName = isOtherOrganization
+    ? (selectedOrganization?.organization?.name ?? selectedOrganizationId)
+    : defaultOrganizationName;
+
+  return {
+    byOrganization,
+    isOtherOrganization,
+    selectedOrganizationId,
+    selectedOrganizationName,
+    // The Email page waits for the organization config; other hosts list everything at once.
+    isLoading: organizationScoped && organization.isLoading,
+    organizationNameOf: (config: IEmailConfig) =>
+      organizationOf(config) === DEFAULT_ORGANIZATION_ID
+        ? defaultOrganizationName
+        : selectedOrganizationName,
+  };
+}
+
+/** The selected organization's configurations, and the Default organization's shared ones below them. */
+const splitByOrganization = (
+  data: IEmailConfig[],
+  listed: { byOrganization: boolean; isOtherOrganization: boolean; selectedOrganizationId: string },
+) => ({
+  organizationConfigs: listed.byOrganization
+    ? data.filter((config) => organizationOf(config) === listed.selectedOrganizationId)
+    : data,
+  sharedConfigs: listed.isOtherOrganization
+    ? data.filter((config) => organizationOf(config) === DEFAULT_ORGANIZATION_ID)
+    : [],
+});
+
+/** No configurations: the project's empty state, or the selected organization's. */
+function ConfigurationsEmptyState({ organizationName }: Readonly<{ organizationName?: string }>) {
+  const { t } = useT("os.communication.mail");
+  return organizationName ? (
+    <EmptyState
+      icon={Mail}
+      title={t("EMAIL_CONFIGURE.ORGANIZATION_EMPTY_TITLE", { organization: organizationName })}
+      description={t("EMAIL_CONFIGURE.ORGANIZATION_EMPTY_DESCRIPTION", {
+        organization: organizationName,
+      })}
+    />
+  ) : (
+    <EmptyState
+      icon={Mail}
+      title={t("EMAIL_CONFIGURE.EMPTY_TITLE")}
+      description={t("EMAIL_CONFIGURE.EMPTY_DESCRIPTION")}
+    />
+  );
+}
+
 export function EmailConfiguration({
   addConfigOpen,
   onAddConfigOpenChange,
   organizationScoped = false,
 }: EmailConfigurationProps = {}) {
   const { t } = useT("os.communication.mail");
-  const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const [internalOpen, setInternalOpen] = useState<boolean>(false);
   const open = addConfigOpen ?? internalOpen;
   const setOpen = onAddConfigOpenChange || setInternalOpen;
 
-  const organization = useEmailOrganization();
-  const byOrganization = organizationScoped && organization.isMultiOrgEnabled;
-  const selectedOrganizationId = organization.selectedOrganizationId;
-  const { data: selectedOrganization } = useGetOrganizationById({
-    projectKey: tenantId,
-    itemId:
-      byOrganization && selectedOrganizationId !== DEFAULT_ORGANIZATION_ID
-        ? selectedOrganizationId
-        : "",
-  });
-
+  const listed = useListedOrganization(organizationScoped);
   // Without organizations the page lists everything, as before; it waits for the organization
   // config on the Email page so it doesn't list everything first and then one organization.
   const { isLoading, data: secretData } = useGetEmailSecretConfigs(
-    byOrganization ? selectedOrganizationId : undefined,
-    !organizationScoped || !organization.isLoading,
+    listed.byOrganization ? listed.selectedOrganizationId : undefined,
+    !listed.isLoading,
   );
-  const data = secretData?.configurations || [];
+  const { organizationConfigs, sharedConfigs } = splitByOrganization(
+    secretData?.configurations || [],
+    listed,
+  );
 
-  const defaultOrganizationName = t("EMAIL_CONFIGURE.DEFAULT_ORGANIZATION");
-  const selectedOrganizationName =
-    selectedOrganizationId === DEFAULT_ORGANIZATION_ID
-      ? defaultOrganizationName
-      : (selectedOrganization?.organization?.name ?? selectedOrganizationId);
-  const organizationNameOf = (config: IEmailConfig) =>
-    organizationOf(config) === DEFAULT_ORGANIZATION_ID
-      ? defaultOrganizationName
-      : selectedOrganizationName;
-
-  const organizationConfigs = byOrganization
-    ? data.filter((config) => organizationOf(config) === selectedOrganizationId)
-    : data;
-  const sharedConfigs =
-    byOrganization && selectedOrganizationId !== DEFAULT_ORGANIZATION_ID
-      ? data.filter((config) => organizationOf(config) === DEFAULT_ORGANIZATION_ID)
-      : [];
-  const organizationHasDefault = organizationConfigs.some((config) => config.isOrganizationDefault);
-
-  if (isLoading || (organizationScoped && organization.isLoading)) {
+  if (isLoading || listed.isLoading) {
     return (
       <div className="grid gap-2">
         {Array.from({ length: 6 }).map((_, index) => (
@@ -174,23 +212,25 @@ export function EmailConfiguration({
             onClose={() => setOpen(false)}
             isEdit={false}
             organization={
-              byOrganization
-                ? { id: selectedOrganizationId, name: selectedOrganizationName }
+              listed.byOrganization
+                ? { id: listed.selectedOrganizationId, name: listed.selectedOrganizationName }
                 : undefined
             }
-            organizationHasDefault={organizationHasDefault}
+            organizationHasDefault={organizationConfigs.some(
+              (config) => config.isOrganizationDefault,
+            )}
           />
         )}
       </Dialog>
-      {byOrganization && (
+      {listed.byOrganization && (
         <div className="mt-6 flex flex-col gap-1">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             {t("EMAIL_CONFIGURE.ORGANIZATION_SECTION", {
-              organization: selectedOrganizationName,
+              organization: listed.selectedOrganizationName,
               count: organizationConfigs.length,
             })}
           </h2>
-          {selectedOrganizationId === DEFAULT_ORGANIZATION_ID && (
+          {!listed.isOtherOrganization && (
             <p className="text-sm text-muted-foreground">
               {t("EMAIL_CONFIGURE.DEFAULT_ORGANIZATION_SECTION_HINT")}
             </p>
@@ -200,26 +240,14 @@ export function EmailConfiguration({
       {organizationConfigs.length > 0 ? (
         <ConfigList
           configs={organizationConfigs}
-          showOrganization={byOrganization}
-          organizationNameOf={organizationNameOf}
+          showOrganization={listed.byOrganization}
+          organizationNameOf={listed.organizationNameOf}
           expandFirst
         />
       ) : (
-        <EmptyState
-          icon={Mail}
-          title={
-            byOrganization && selectedOrganizationId !== DEFAULT_ORGANIZATION_ID
-              ? t("EMAIL_CONFIGURE.ORGANIZATION_EMPTY_TITLE", {
-                  organization: selectedOrganizationName,
-                })
-              : t("EMAIL_CONFIGURE.EMPTY_TITLE")
-          }
-          description={
-            byOrganization && selectedOrganizationId !== DEFAULT_ORGANIZATION_ID
-              ? t("EMAIL_CONFIGURE.ORGANIZATION_EMPTY_DESCRIPTION", {
-                  organization: selectedOrganizationName,
-                })
-              : t("EMAIL_CONFIGURE.EMPTY_DESCRIPTION")
+        <ConfigurationsEmptyState
+          organizationName={
+            listed.isOtherOrganization ? listed.selectedOrganizationName : undefined
           }
         />
       )}
@@ -233,8 +261,8 @@ export function EmailConfiguration({
           </p>
           <ConfigList
             configs={sharedConfigs}
-            showOrganization={byOrganization}
-            organizationNameOf={organizationNameOf}
+            showOrganization={listed.byOrganization}
+            organizationNameOf={listed.organizationNameOf}
             expandFirst={organizationConfigs.length === 0}
           />
         </section>
