@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Input } from "@/components/ui-kits/input/input";
 import {
   DialogDescription,
@@ -9,7 +9,7 @@ import {
 } from "@/components/ui-kits/dialog/dialog";
 import { Button } from "@/components/ui-kits/button/button";
 import { useForm, type Resolver } from "react-hook-form";
-import { useT } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -50,12 +50,54 @@ import {
   LINKED_SECRET_REPAIR_NOTICE,
   linkedSecretRepairRequiredMessage,
 } from "@/cross-modules/secrets/components/linked-secret-status/linked-secret-status";
+import { Label } from "@/components/ui-kits/label/label";
+import { OrganizationCombobox } from "@blocks-idp/iam/components/organization-combobox";
+import { organizationOf } from "../../../../constants/organization";
 interface NewConfigurationProps {
   dialogTitle: string;
   onClose: () => void;
   previousData?: IEmailConfig;
   isEdit?: boolean;
+  /**
+   * Multi-org projects only: the page's organization on create, the card's on edit. Without it
+   * the form has no organization field and no organization-default option, as before.
+   */
+  organization?: { id: string; name: string };
+  /** Whether the page's organization already has a default; on create the option starts ticked when it hasn't. */
+  organizationHasDefault?: boolean;
 }
+
+/** Server field errors this form shows under its own fields, as English keys. */
+const ORGANIZATION_ERROR_KEYS: Record<string, Record<string, string>> = {
+  OrganizationId: {
+    "Organization not found": "NEW_CONFIGURATION.ERROR_ORGANIZATION_NOT_FOUND",
+    "A configuration's organization can't be changed":
+      "NEW_CONFIGURATION.ERROR_ORGANIZATION_CHANGED",
+  },
+  IsOrganizationDefault: {
+    "An inbound configuration can't be the organization default":
+      "NEW_CONFIGURATION.ERROR_INBOUND_ORGANIZATION_DEFAULT",
+  },
+};
+
+/**
+ * Splits a save's errors into the organization ones this form shows under its fields (as keys)
+ * and the rest, which keep going to the toast as before.
+ */
+const splitOrganizationErrors = (errors: Record<string, string | string[]>) => {
+  const fieldKeys: Partial<Record<"OrganizationId" | "IsOrganizationDefault", string>> = {};
+  const rest: Record<string, string | string[]> = {};
+  for (const [field, value] of Object.entries(errors)) {
+    const message = Array.isArray(value) ? value[0] : value;
+    const key = ORGANIZATION_ERROR_KEYS[field]?.[message];
+    if (key) {
+      fieldKeys[field as "OrganizationId" | "IsOrganizationDefault"] = key;
+    } else {
+      rest[field] = value;
+    }
+  }
+  return { fieldKeys, rest };
+};
 const EMAIL_PATTERN = /^(?=.{1,320}$)[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
 /**
@@ -213,6 +255,7 @@ const createSchema = ({
       clientId: z.string().optional(),
       clientSecret: z.string().optional(),
       mailboxAddress: z.string().optional(),
+      isOrganizationDefault: z.boolean().optional(),
     })
     .superRefine((data, ctx) => {
       const issues = [
@@ -243,8 +286,16 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
   onClose,
   previousData,
   isEdit,
+  organization,
+  organizationHasDefault = false,
 }) => {
   const { t } = useT("os.communication.mail");
+  const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
+  // An edit keeps the stored organization; a create starts from the page's and may pick another.
+  const [organizationId, setOrganizationId] = useState(
+    isEdit && previousData ? organizationOf(previousData) : (organization?.id ?? ""),
+  );
+  const [organizationErrorKey, setOrganizationErrorKey] = useState<string | null>(null);
   // const { saveEmailConfig, isPending } = useSaveEmailConfig();
   const { isPending, mutateAsync } = useSaveEmailConfig();
 
@@ -297,6 +348,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
             // Never prefilled, for the same reason the password is not: a value
             // rendered here is a value that can be read back out.
             clientSecret: "",
+            isOrganizationDefault: !!previousData?.isOrganizationDefault,
           }
         : {
             configurationId: "",
@@ -315,6 +367,8 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
             clientId: "",
             mailboxAddress: "",
             clientSecret: "",
+            // An organization's first configuration becomes its default unless unticked.
+            isOrganizationDefault: !!organization && !organizationHasDefault,
           },
     resolver: zodResolver(schema) as unknown as Resolver<IEmailConfig>,
     mode: "onChange",
@@ -398,6 +452,12 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
         securityMode: transport?.securityMode ?? MailSecurityMode.Legacy,
       };
 
+      if (organization) {
+        payload.organizationId = organizationId;
+        // Inbound configurations are never an organization's default.
+        payload.isOrganizationDefault = !data.isInbound && !!data.isOrganizationDefault;
+      }
+
       if (isPasswordProvider) {
         payload.senderUserName = data.senderUserName;
         payload.accountPassword = data.accountPassword || "";
@@ -412,6 +472,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
           payload.clientSecret = data.clientSecret;
         }
       }
+      setOrganizationErrorKey(null);
       const res = await mutateAsync(payload);
       if (res?.isSuccess) {
         toast({
@@ -432,10 +493,23 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
       }
     } catch (error) {
       if (isErrorWithErrors(error)) {
-        showErrorToast({ errors: error.errors as Record<string, string | string[]> });
+        const { fieldKeys, rest } = splitOrganizationErrors(
+          error.errors as Record<string, string | string[]>,
+        );
+        if (fieldKeys.OrganizationId) {
+          setOrganizationErrorKey(fieldKeys.OrganizationId);
+        }
+        if (fieldKeys.IsOrganizationDefault) {
+          form.setError("isOrganizationDefault", { message: t(fieldKeys.IsOrganizationDefault) });
+        }
+        if (Object.keys(rest).length > 0) {
+          showErrorToast({ errors: rest });
+        }
       }
     }
   };
+  const organizationHintName =
+    organization && organizationId === organization.id ? organization.name : undefined;
   return (
     <DialogContent className="rounded-md sm:max-w-[700px]">
       <Form {...form}>
@@ -445,6 +519,50 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
             <DialogTitle className="mb-2 text-left">{dialogTitle}</DialogTitle>
             <DialogDescription asChild>
               <div className="pb-4 pt-4 text-left">
+                {organization && (
+                  <div className="mb-4 flex flex-col gap-2">
+                    <Label
+                      htmlFor="mail-configuration-organization"
+                      className="text-left font-medium text-high-emphasis"
+                    >
+                      {t("NEW_CONFIGURATION.ORGANIZATION")}{" "}
+                      <span className="text-destructive">*</span>
+                    </Label>
+                    {isEdit ? (
+                      <>
+                        <p id="mail-configuration-organization" className="text-base">
+                          {organization.name}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {t("NEW_CONFIGURATION.ORGANIZATION_READ_ONLY")}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <OrganizationCombobox
+                          id="mail-configuration-organization"
+                          projectKey={tenantId}
+                          value={organizationId}
+                          onValueChange={setOrganizationId}
+                          excludeNotEnabled
+                          defaultOptionLabel={t("EMAIL_CONFIGURE.DEFAULT_ORGANIZATION")}
+                        />
+                        {organizationHintName && (
+                          <p className="text-sm text-muted-foreground">
+                            {t("NEW_CONFIGURATION.ORGANIZATION_HINT", {
+                              organization: organizationHintName,
+                            })}
+                          </p>
+                        )}
+                      </>
+                    )}
+                    {organizationErrorKey && (
+                      <p className="text-sm font-medium text-destructive">
+                        {t(organizationErrorKey)}
+                      </p>
+                    )}
+                  </div>
+                )}
                 <div className="grid grid-cols-1 gap-4">
                   <FormField
                     name="configurationName"
@@ -853,6 +971,39 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                             {" "}
                             {t("NEW_CONFIGURATION.ENABLE_SSL")}{" "}
                           </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+                {organization && !isInbound && (
+                  <div className="mt-4">
+                    <FormField
+                      name="isOrganizationDefault"
+                      control={form.control}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Checkbox
+                              className="mr-2"
+                              checked={!!field.value}
+                              onCheckedChange={(checked) => field.onChange(checked === true)}
+                            />
+                          </FormControl>
+                          <FormLabel className="flex-start inline-flex">
+                            {t("NEW_CONFIGURATION.USE_AS_ORGANIZATION_DEFAULT")}
+                          </FormLabel>
+                          {organizationHintName && (
+                            <p className="text-sm text-muted-foreground">
+                              {t(
+                                !isEdit && !organizationHasDefault
+                                  ? "NEW_CONFIGURATION.ORGANIZATION_DEFAULT_HINT_FIRST"
+                                  : "NEW_CONFIGURATION.ORGANIZATION_DEFAULT_HINT",
+                                { organization: organizationHintName },
+                              )}
+                            </p>
+                          )}
+                          <FormMessage />
                         </FormItem>
                       )}
                     />

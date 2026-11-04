@@ -33,6 +33,9 @@ export interface ISaveMailConfigPayload {
   /** Omitted to keep the secret already on file; never read back. */
   clientSecret?: string;
   mailboxAddress?: string;
+  /** Sent only in multi-org projects; the server keeps an edited configuration's organization. */
+  organizationId?: string;
+  isOrganizationDefault?: boolean;
 }
 
 class EmailService {
@@ -44,11 +47,19 @@ class EmailService {
     );
   };
 
+  /**
+   * Without an organization: every configuration. With one: that organization's configurations
+   * plus the Default organization's, which every organization shares.
+   */
   getEmailSecretConfigs = (
     pageNumber: number = 0,
     pageSize: number = 10,
+    organizationId?: string,
   ): Promise<{ configurations: IEmailConfig[] }> => {
-    const url = `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}?pageNumber=${pageNumber + 1}&pageSize=${pageSize}`;
+    const organizationQuery = organizationId
+      ? `&organizationId=${encodeURIComponent(organizationId)}`
+      : "";
+    const url = `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}?pageNumber=${pageNumber + 1}&pageSize=${pageSize}${organizationQuery}`;
     return http.get<IEmailConfig[]>(url, undefined, { absoluteUrl: true }).then((response) => {
       const list = Array.isArray(response)
         ? response
@@ -159,6 +170,21 @@ class EmailService {
         itemId: response?.itemId ?? payload.configurationId ?? "",
       }));
   };
+
+  /** How many templates name the configuration, across every organization and language. */
+  getConfigurationUsage = (configurationId: string): Promise<number> =>
+    http
+      .get<{ isSuccess: boolean; templateCount?: number }>(
+        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIG_USAGE}?configurationId=${encodeURIComponent(configurationId)}`,
+        undefined,
+        { absoluteUrl: true },
+      )
+      .then((response) => {
+        if (!response?.isSuccess || typeof response.templateCount !== "number") {
+          throw new Error("Mail/GetConfigurationUsage failed");
+        }
+        return response.templateCount;
+      });
 
   sendTestMail = (data: {
     to: string;

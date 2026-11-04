@@ -20,6 +20,7 @@ import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
 import { useNotificationNavigation } from "@/cross-modules/communication/notification/hooks/use-notification-navigation";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
+import { EmailOrganizationPicker } from "@blocks-communication/mail/components/email-service/email-organization-picker/email-organization-picker";
 
 const KEY_ADD_CONFIGURATION = "SECRET_MANAGEMENT.ADD_CONFIGURATION";
 
@@ -142,12 +143,16 @@ function SecretManagementHeaderActions({
         </>
       )}
       {currentPath === "email" && (
-        <Button size="sm" onClick={() => setIsEmailConfigOpen(true)}>
-          <Plus className="h-5 w-5" />
-          <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
-            {t(KEY_ADD_CONFIGURATION)}
-          </span>
-        </Button>
+        <>
+          {/* Multi-org projects only; the page lists the picked organization's configurations. */}
+          <EmailOrganizationPicker />
+          <Button size="sm" onClick={() => setIsEmailConfigOpen(true)}>
+            <Plus className="h-5 w-5" />
+            <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
+              {t(KEY_ADD_CONFIGURATION)}
+            </span>
+          </Button>
+        </>
       )}
       {currentPath === "notification" && (
         <>

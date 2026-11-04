@@ -26,6 +26,12 @@ interface OrganizationComboboxProps {
   /** Also hide organizations with `isEnable === false`. Defaults to false for existing callers. */
   excludeNotEnabled?: boolean;
   id?: string;
+  /** Label of the Default organization option and trigger; defaults to the shared "Default". */
+  defaultOptionLabel?: string;
+  /** A second line under the Default organization option. */
+  defaultOptionDescription?: string;
+  /** Shown when the organizations request fails; without it the list shows no error, as before. */
+  errorMessage?: string;
 }
 
 const mergeOrganizations = (
@@ -47,6 +53,9 @@ export const OrganizationCombobox = ({
   disabled = false,
   excludeNotEnabled = false,
   id,
+  defaultOptionLabel,
+  defaultOptionDescription,
+  errorMessage,
 }: OrganizationComboboxProps) => {
   const { t } = useT("os.idp.iam-ui");
   const [open, setOpen] = useState(false);
@@ -71,7 +80,7 @@ export const OrganizationCombobox = ({
     return () => window.clearTimeout(timeout);
   }, [searchTerm]);
 
-  const { data, isLoading, isFetching, isPlaceholderData } = useGetOrganizations({
+  const { data, isLoading, isFetching, isPlaceholderData, isError } = useGetOrganizations({
     projectKey,
     page,
     pageSize: PAGE_SIZE,
@@ -110,15 +119,20 @@ export const OrganizationCombobox = ({
         !(excludeNotEnabled && organization.isEnable === false) &&
         organization.itemId !== DEFAULT_ORGANIZATION_ID,
     );
-    const defaultMatchesSearch = "default".includes(debouncedSearchTerm.toLowerCase());
+    const term = debouncedSearchTerm.toLowerCase();
+    const defaultMatchesSearch =
+      "default".includes(term) || (defaultOptionLabel?.toLowerCase().includes(term) ?? false);
     if (defaultMatchesSearch) {
       return [
-        { itemId: DEFAULT_ORGANIZATION_ID, name: t("ORGANIZATION_COMBOBOX.DEFAULT_NAME") },
+        {
+          itemId: DEFAULT_ORGANIZATION_ID,
+          name: defaultOptionLabel ?? t("ORGANIZATION_COMBOBOX.DEFAULT_NAME"),
+        },
         ...organizations.map(({ itemId, name }) => ({ itemId, name })),
       ];
     }
     return organizations.map(({ itemId, name }) => ({ itemId, name }));
-  }, [debouncedSearchTerm, excludeNotEnabled, loadedOrganizations, t]);
+  }, [debouncedSearchTerm, defaultOptionLabel, excludeNotEnabled, loadedOrganizations, t]);
 
   const totalCount = data?.totalCount ?? loadedOrganizations.length;
   const hasMore = loadedOrganizations.length < totalCount;
@@ -129,7 +143,7 @@ export const OrganizationCombobox = ({
   );
   const selectedLabel =
     value === DEFAULT_ORGANIZATION_ID
-      ? t("ORGANIZATION_COMBOBOX.DEFAULT_NAME")
+      ? (defaultOptionLabel ?? t("ORGANIZATION_COMBOBOX.DEFAULT_NAME"))
       : (selectedOrganization?.name ??
         (selectedOption?.itemId === value ? selectedOption.name : undefined) ??
         selectedOrganizationDetails?.organization?.name ??
@@ -191,6 +205,11 @@ export const OrganizationCombobox = ({
           onScroll={handleScroll}
           className="max-h-60 overflow-y-auto overflow-x-hidden p-1"
         >
+          {isError && errorMessage && (
+            <div role="alert" className="px-2 py-2 text-sm text-destructive">
+              {errorMessage}
+            </div>
+          )}
           {isInitialLoading && (
             <div className="flex items-center justify-center p-4 text-sm text-muted-foreground">
               <Loader className="mr-2 h-4 w-4 animate-spin" />
@@ -226,7 +245,16 @@ export const OrganizationCombobox = ({
                   isPreselected && "cursor-default",
                 )}
               >
-                <span className="flex-1 truncate">{organization.name}</span>
+                {organization.itemId === DEFAULT_ORGANIZATION_ID && defaultOptionDescription ? (
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate">{organization.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {defaultOptionDescription}
+                    </span>
+                  </span>
+                ) : (
+                  <span className="flex-1 truncate">{organization.name}</span>
+                )}
                 {(isSelected || isPreselected) && (
                   <Check
                     className={cn(

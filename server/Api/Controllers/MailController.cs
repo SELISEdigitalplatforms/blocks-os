@@ -64,8 +64,17 @@ namespace BlocksOs.Api.Controllers
         [ProtectedEndPoint("blocks-os::mail::gets")]
         public async Task<IActionResult> Gets([FromQuery] GetAllMailConfigurationsRequest request)
         {
-            var result = await _mailConfigurationService.GetAllAsync();
+            var result = await _mailConfigurationService.GetAllAsync(request);
             return Ok(result);
+        }
+
+        /// <summary>How many templates name the configuration, so the console can say what a delete affects.</summary>
+        [HttpGet]
+        [ProtectedEndPoint("blocks-os::mail::gets")]
+        public async Task<IActionResult> GetConfigurationUsage([FromQuery] GetMailConfigurationUsageRequest request)
+        {
+            var result = await _mailConfigurationService.GetUsageAsync(request);
+            return result.IsSuccess ? Ok(result) : BadRequest(result);
         }
 
         [HttpDelete]

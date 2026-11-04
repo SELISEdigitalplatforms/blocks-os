@@ -276,6 +276,10 @@ export interface IEmailConfig {
    * Office 365 OAuth configurations.
    */
   clientSecretStatus?: LinkedSecretStatus;
+  /** The organization the configuration belongs to; `"default"` for the Default organization. */
+  organizationId?: string;
+  /** Whether it is its organization's default. */
+  isOrganizationDefault?: boolean;
 }
 
 /**

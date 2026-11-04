@@ -163,6 +163,9 @@
             far, freeing the user to request a different range straight away.
             </summary>
         </member>
+        <member name="M:BlocksOs.Api.Controllers.MailController.GetConfigurationUsage(Configuration.DomainService.Mail.RequestModel.GetMailConfigurationUsageRequest)">
+            <summary>How many templates name the configuration, so the console can say what a delete affects.</summary>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.MailController.ToActionResult(Configuration.DomainService.Mail.Services.MailConfigurationMutationResult)">
             <summary>
             Turns a mail configuration outcome into a status code.

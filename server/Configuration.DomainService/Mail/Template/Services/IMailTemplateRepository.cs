@@ -11,6 +11,9 @@ namespace Configuration.DomainService.Mail.Template.Services
         Task<EmailTemplate?> GetByNameAndLanguageAsync(string name, string language);
         Task<GetAllMailTemplatesResponse> GetsAsync(GetAllMailTemplatesRequest request);
         Task DeleteAsync(string itemId);
+
+        /// <summary>How many templates, in every organization and language, name the configuration.</summary>
+        Task<long> CountByMailConfigurationIdAsync(string mailConfigurationId);
     }
 }
 

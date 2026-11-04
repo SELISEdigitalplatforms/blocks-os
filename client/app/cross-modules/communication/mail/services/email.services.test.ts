@@ -20,6 +20,17 @@ vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 
 const ABSOLUTE_OPTIONS = undefined;
 const ABSOLUTE_FLAGS = { absoluteUrl: true };
+const mockSaveConfigPayloadForOrg = {
+  configurationName: "Acme SMTP",
+  configurationId: "",
+  host: "smtp.example.com",
+  port: 587,
+  enableSSL: true,
+  senderName: "Acme",
+  senderAddress: "orders@acme.example",
+  isInbound: false,
+  provider: 1,
+};
 
 describe("EmailService", () => {
   let service: EmailService;
@@ -591,6 +602,62 @@ describe("EmailService", () => {
       };
 
       await expect(service.deleteMailConfig(payload)).rejects.toThrow("Failed to delete config");
+    });
+  });
+  describe("organizations (blocks-os#732)", () => {
+    it("asks Mail/Gets for one organization when given one (H4)", async () => {
+      vi.mocked(http.get).mockResolvedValue([]);
+
+      await service.getEmailSecretConfigs(0, 10, "acme corp");
+
+      expect(http.get).toHaveBeenCalledWith(
+        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}?pageNumber=1&pageSize=10&organizationId=acme%20corp`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
+    });
+
+    it("keeps the unfiltered Mail/Gets call without one (H5)", async () => {
+      vi.mocked(http.get).mockResolvedValue([]);
+
+      await service.getEmailSecretConfigs(0, 10, undefined);
+
+      expect(http.get).toHaveBeenCalledWith(
+        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}?pageNumber=1&pageSize=10`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
+    });
+
+    it("returns a configuration's template count (H6)", async () => {
+      vi.mocked(http.get).mockResolvedValue({ isSuccess: true, templateCount: 6 });
+
+      await expect(service.getConfigurationUsage("acme smtp")).resolves.toBe(6);
+
+      expect(http.get).toHaveBeenCalledWith(
+        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIG_USAGE}?configurationId=acme%20smtp`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
+    });
+
+    it("fails the usage read when the server reports a failure (C8)", async () => {
+      vi.mocked(http.get).mockResolvedValue({ isSuccess: false, errors: { ConfigurationId: "Configuration not found" } });
+
+      await expect(service.getConfigurationUsage("missing")).rejects.toThrow();
+    });
+
+    it("sends the organization fields on save", async () => {
+      vi.mocked(http.post).mockResolvedValue({ isSuccess: true, itemId: "cfg-9" });
+
+      await service.saveMailConfig({ ...mockSaveConfigPayloadForOrg, organizationId: "acme", isOrganizationDefault: true });
+
+      expect(http.post).toHaveBeenCalledWith(
+        MAIL_CONFIG_ENDPOINTS.SAVE_CONFIG,
+        expect.objectContaining({ organizationId: "acme", isOrganizationDefault: true }),
+        undefined,
+        ABSOLUTE_FLAGS,
+      );
     });
   });
 });

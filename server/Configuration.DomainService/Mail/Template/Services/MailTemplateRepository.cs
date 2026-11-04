@@ -119,6 +119,16 @@ namespace Configuration.DomainService.Mail.Template.Services
             };
         }
 
+        public async Task<long> CountByMailConfigurationIdAsync(string mailConfigurationId)
+        {
+            var collection = _dbContextProvider.GetCollection<EmailTemplate>(CollectionName);
+            var filter = Builders<EmailTemplate>.Filter.Eq(t => t.MailConfigurationId, mailConfigurationId);
+
+            // Every document counts, one per template and language, as the template list's total does.
+            var scope = await _dataAccess.ReadAsync(OsSchemas.EmailTemplate, filter, "MailTemplateRepository.CountByMailConfigurationIdAsync");
+            return scope.Granted ? await collection.CountDocumentsAsync(scope.Filter) : 0;
+        }
+
         public async Task DeleteAsync(string itemId)
         {
             var collection = _dbContextProvider.GetCollection<EmailTemplate>(CollectionName);

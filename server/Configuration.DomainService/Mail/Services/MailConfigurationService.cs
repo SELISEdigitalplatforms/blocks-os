@@ -3,6 +3,8 @@ using Blocks.Secrets;
 using Configuration.DomainService.Mail.Providers;
 using Configuration.DomainService.Mail.RequestModel;
 using Configuration.DomainService.Mail.ResponseModel;
+using Configuration.DomainService.Mail.Template.Services;
+using Configuration.DomainService.Organizations;
 using Configuration.DomainService.Shared.Secrets;
 using Configuration.DomainService.Shared.Services;
 using FluentValidation;
@@ -17,22 +19,30 @@ namespace Configuration.DomainService.Mail.Services
         private const string MaskedSecretValue = "********";
         private const string ConfigurationNotFound = "Configuration not found";
         private const string ConfigurationIdField = "ConfigurationId";
+        private const string OrganizationIdField = nameof(MailConfiguration.OrganizationId);
+        private const string IsOrganizationDefaultField = nameof(MailConfiguration.IsOrganizationDefault);
 
         private readonly IConfigurationRepository _configurationRepository;
         private readonly IMailConfigurationProviderRegistry _providers;
         private readonly IValidator<MailConfiguration> _validator;
         private readonly ILogger<MailConfigurationService> _logger;
+        private readonly IOrganizationReader _organizations;
+        private readonly IMailTemplateRepository _templates;
 
         public MailConfigurationService(
             IConfigurationRepository configurationRepository,
             IMailConfigurationProviderRegistry providers,
             IValidator<MailConfiguration> validator,
-            ILogger<MailConfigurationService> logger)
+            ILogger<MailConfigurationService> logger,
+            IOrganizationReader organizations,
+            IMailTemplateRepository templates)
         {
             _configurationRepository = configurationRepository;
             _providers = providers;
             _validator = validator;
             _logger = logger;
+            _organizations = organizations;
+            _templates = templates;
         }
 
         public async Task<MailConfigurationMutationResult> SaveAsync(
@@ -101,6 +111,8 @@ namespace Configuration.DomainService.Mail.Services
 
             await AddSharedValidationErrorsAsync(configuration, errors, cancellationToken).ConfigureAwait(false);
 
+            var organizationId = await ResolveOrganizationAsync(configuration, existing, errors, cancellationToken).ConfigureAwait(false);
+
             if (errors.Count > 0)
             {
                 _logger.LogInformation("Saving mail configuration end -- Validation Error");
@@ -144,7 +156,7 @@ namespace Configuration.DomainService.Mail.Services
                 return MailConfigurationMutationResult.SecretStoreUnavailable();
             }
 
-            var entity = MapToEntity(configuration, existing, definition, credential.Reference);
+            var entity = MapToEntity(configuration, existing, definition, credential.Reference, organizationId);
 
             try
             {
@@ -154,6 +166,14 @@ namespace Configuration.DomainService.Mail.Services
             {
                 await CompensateUnsavedAsync(definition, credential, entity.ItemId, "save").ConfigureAwait(false);
                 throw;
+            }
+
+            // After the save, so the new default exists before the old one loses its mark.
+            if (entity.IsOrganizationDefault)
+            {
+                await _configurationRepository
+                    .ClearOtherOrganizationDefaultsAsync(entity.OrganizationId, entity.ItemId, entity.LastUpdatedDate)
+                    .ConfigureAwait(false);
             }
 
             _logger.LogInformation("Saving mail configuration end -- Success");
@@ -171,9 +191,38 @@ namespace Configuration.DomainService.Mail.Services
             return configuration is null ? null : await ProjectAsync(configuration, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<List<MailConfigurationResponse>> GetAllAsync(CancellationToken cancellationToken = default)
+        public async Task<MailConfigurationUsageResponse> GetUsageAsync(
+            GetMailConfigurationUsageRequest request,
+            CancellationToken cancellationToken = default)
         {
-            var configurations = await _configurationRepository.GetAllMailConfigurationsAsync().ConfigureAwait(false);
+            ArgumentNullException.ThrowIfNull(request);
+
+            var configuration = string.IsNullOrWhiteSpace(request.ConfigurationId)
+                ? null
+                : await _configurationRepository.GetMailConfigurationByIdAsync(request.ConfigurationId).ConfigureAwait(false);
+
+            if (configuration is null)
+            {
+                return new MailConfigurationUsageResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string> { [ConfigurationIdField] = ConfigurationNotFound }
+                };
+            }
+
+            var templateCount = await _templates.CountByMailConfigurationIdAsync(configuration.ItemId).ConfigureAwait(false);
+            return new MailConfigurationUsageResponse { IsSuccess = true, TemplateCount = templateCount };
+        }
+
+        public async Task<List<MailConfigurationResponse>> GetAllAsync(
+            GetAllMailConfigurationsRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+
+            // No organization asked for: every configuration, as before organizations existed.
+            var organizationId = string.IsNullOrWhiteSpace(request.OrganizationId) ? null : request.OrganizationId;
+            var configurations = await _configurationRepository.GetAllMailConfigurationsAsync(organizationId).ConfigureAwait(false);
 
             // Sequential on purpose: the provider resolves status through the scoped
             // ISecretService, which is not documented as safe for concurrent use.
@@ -343,7 +392,49 @@ namespace Configuration.DomainService.Mail.Services
         }
 
         /// <summary>
-        /// Updates the sender name of the default configuration and nothing else.
+        /// The organization the saved configuration belongs to, adding an error when the request
+        /// can't have it, and checking the organization-default mark.
+        /// </summary>
+        /// <remarks>
+        /// A create takes the request's organization, which must be the Default organization or an
+        /// enabled organization of the project. An edit keeps the stored one (missing or empty is
+        /// the Default organization): sending another is an error, and sending none keeps it, so
+        /// callers that predate organizations can still edit.
+        /// </remarks>
+        private async Task<string> ResolveOrganizationAsync(
+            MailConfiguration configuration,
+            MailServerConfiguration? existing,
+            IDictionary<string, string> errors,
+            CancellationToken cancellationToken)
+        {
+            if (configuration.IsInbound && configuration.IsOrganizationDefault)
+            {
+                errors[IsOrganizationDefaultField] = "An inbound configuration can't be the organization default";
+            }
+
+            var requested = OrganizationIds.Normalize(configuration.OrganizationId);
+
+            if (existing is not null)
+            {
+                var stored = OrganizationIds.Normalize(existing.OrganizationId);
+                if (!string.IsNullOrWhiteSpace(configuration.OrganizationId) && requested != stored)
+                {
+                    errors[OrganizationIdField] = "A configuration's organization can't be changed";
+                }
+                return stored;
+            }
+
+            // The Default organization is not an IAM record, so there is nothing to look up.
+            if (requested != OrganizationIds.Default
+                && !await _organizations.ExistsEnabledAsync(requested, cancellationToken).ConfigureAwait(false))
+            {
+                errors[OrganizationIdField] = "Organization not found";
+            }
+            return requested;
+        }
+
+        /// <summary>
+        /// Adds the shared validator's errors to the provider's, which win a collision.
         /// </summary>
         private async Task AddSharedValidationErrorsAsync(
             MailConfiguration configuration,
@@ -360,6 +451,9 @@ namespace Configuration.DomainService.Mail.Services
             }
         }
 
+        /// <summary>
+        /// Updates the sender name of the default configuration and nothing else.
+        /// </summary>
         private async Task<MailConfigurationMutationResult> SaveDefaultSenderNameAsync(
             MailServerConfiguration existing,
             string? senderName)
@@ -409,7 +503,8 @@ namespace Configuration.DomainService.Mail.Services
             MailConfiguration configuration,
             MailServerConfiguration? existing,
             IMailConfigurationProvider definition,
-            string? credentialReference)
+            string? credentialReference,
+            string organizationId)
         {
             var entity = existing ?? new MailServerConfiguration
             {
@@ -439,6 +534,8 @@ namespace Configuration.DomainService.Mail.Services
             entity.TenantId = configuration.TenantId;
             entity.ClientId = configuration.ClientId;
             entity.MailboxAddress = configuration.MailboxAddress;
+            entity.OrganizationId = organizationId;
+            entity.IsOrganizationDefault = configuration.IsOrganizationDefault && !configuration.IsInbound;
 
             // Only ever a reference, and only one the provider just handed back, in the field of
             // the provider's own mode. The plaintext on the request is not assigned anywhere here.
@@ -479,7 +576,12 @@ namespace Configuration.DomainService.Mail.Services
                 SecurityMode = source.SecurityMode,
                 TenantId = source.TenantId,
                 ClientId = source.ClientId,
-                MailboxAddress = source.MailboxAddress
+                MailboxAddress = source.MailboxAddress,
+
+                // The copy stays in the source's organization but is never its default: an
+                // organization has one.
+                OrganizationId = OrganizationIds.Normalize(source.OrganizationId),
+                IsOrganizationDefault = false
             };
 
         /// <summary>
@@ -513,6 +615,8 @@ namespace Configuration.DomainService.Mail.Services
                 IsDefault = entity.IsDefault,
                 IsInbound = entity.IsInbound,
                 Provider = entity.Provider,
+                OrganizationId = OrganizationIds.Normalize(entity.OrganizationId),
+                IsOrganizationDefault = entity.IsOrganizationDefault,
                 IsEnableSnsConfiguration = entity.IsEnableSnsConfiguration,
                 AuthenticationType = entity.AuthenticationType,
                 SecurityMode = entity.SecurityMode,
