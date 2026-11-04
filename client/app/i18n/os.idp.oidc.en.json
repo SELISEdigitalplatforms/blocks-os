@@ -64,6 +64,7 @@
   "OIDC_BRANDING_FORM.SHOW_ANIMATION_PANEL": "Show animation panel",
   "OIDC_BRANDING_FORM.SHOW_ANIMATION_PANEL_HINT": "When off, sign-in, sign-up, activation and reset-password pages show only the form, in a centered card. The live preview always shows the form only.",
   "OIDC_BRANDING_FORM.TAB_BRANDING": "Branding",
+  "OIDC_BRANDING_FORM.TAB_LAYOUT": "Layout",
   "OIDC_BRANDING_FORM.TAB_PAGES": "Pages",
   "OIDC_BRANDING_FORM.TAB_THEME": "Theme",
   "OIDC_BRANDING_FORM.THEME_DESC_ACCENT_SOFT": "Tinted highlights",

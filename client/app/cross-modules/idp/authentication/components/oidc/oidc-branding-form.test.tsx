@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NuqsTestingAdapter, type OnUrlUpdateFunction } from "nuqs/adapters/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -849,18 +849,23 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
       template.layout.showAnimationPanel = showAnimationPanel;
       return template;
     };
+    const renderLayoutTab = () => renderForm("?section=layout");
 
-    it("H1/H7: renders checked in a Layout section after Brand logos", async () => {
+    it("H1/H7: renders checked on a fourth Layout tab", async () => {
+      const user = userEvent.setup();
       await renderForm();
-      const panelSwitch = animationSwitch();
-      expect(panelSwitch.getAttribute("aria-checked")).toBe("true");
-      expect(screen.getByText("Layout")).toBeTruthy();
-      expect(screen.getByText("Choose what appears on your sign-in pages.")).toBeTruthy();
-      // Brand logos precedes Layout in document order.
+      const sections = screen.getByRole("tablist", { name: "Template sections" });
       expect(
-        screen.getByText("Brand logos").compareDocumentPosition(screen.getByText("Layout")) &
-          Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy();
+        within(sections)
+          .getAllByRole("tab")
+          .map((tab) => tab.textContent),
+      ).toEqual(["Branding", "Theme", "Pages", "Layout"]);
+      expect(screen.queryByRole("switch", { name: "Show animation panel" })).toBeNull();
+
+      await user.click(screen.getByRole("tab", { name: "Layout" }));
+      expect(screen.getByRole("heading", { name: "Layout" })).toBeTruthy();
+      expect(screen.getByText("Choose what appears on your sign-in pages.")).toBeTruthy();
+      expect(animationSwitch().getAttribute("aria-checked")).toBe("true");
       expect(latestActions().isDirty).toBe(false);
     });
 
@@ -870,7 +875,7 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
         isLoading: false,
         isError: false,
       });
-      await renderForm();
+      await renderLayoutTab();
       expect(animationSwitch().getAttribute("aria-checked")).toBe("false");
       expect(latestActions().isDirty).toBe(false);
     });
@@ -893,7 +898,7 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
         data = template;
       }
       h.useGetOidcTemplate.mockReturnValue({ data, isLoading: false, isError: false });
-      await renderForm();
+      await renderLayoutTab();
       expect(animationSwitch().getAttribute("aria-checked")).toBe("true");
       expect(latestActions().isDirty).toBe(false);
     });
@@ -906,7 +911,7 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
 
     it("H8: exposes the helper text as its description and toggles on Space", async () => {
       const user = userEvent.setup();
-      await renderForm();
+      await renderLayoutTab();
       const panelSwitch = animationSwitch();
       const describedBy = panelSwitch.getAttribute("aria-describedby");
       expect(describedBy && document.getElementById(describedBy)?.textContent).toBe(
@@ -920,7 +925,7 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
 
     it("H3/H9: toggling marks the form dirty, leaves the preview alone, and makes no request", async () => {
       const user = userEvent.setup();
-      await renderForm();
+      await renderLayoutTab();
       const previewBefore = JSON.parse(screen.getByTestId("preview-template").textContent ?? "");
 
       await user.click(animationSwitch());
@@ -940,7 +945,7 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
 
     it("H4/H11: saves the switch state in a single PUT and returns to a clean baseline", async () => {
       const user = userEvent.setup();
-      await renderForm();
+      await renderLayoutTab();
       await user.click(animationSwitch());
 
       await act(async () => latestActions().onSave());
@@ -956,7 +961,7 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
 
     it("H5: Undo restores the saved value and clears the dirty state", async () => {
       const user = userEvent.setup();
-      await renderForm();
+      await renderLayoutTab();
       await user.click(animationSwitch());
       expect(latestActions().isDirty).toBe(true);
 
@@ -968,7 +973,7 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
 
     it("H6: Save page sends the saved layout and keeps the unsaved switch change in the draft", async () => {
       const user = userEvent.setup();
-      await renderForm();
+      await renderLayoutTab();
       await user.click(animationSwitch());
 
       await user.click(screen.getByRole("tab", { name: "Pages" }));
@@ -981,17 +986,17 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
       await waitFor(() => expect(h.showSuccessToast).toHaveBeenCalled());
       expect(latestActions().isDirty).toBe(true);
 
-      await user.click(screen.getByRole("tab", { name: "Branding" }));
+      await user.click(screen.getByRole("tab", { name: "Layout" }));
       expect(animationSwitch().getAttribute("aria-checked")).toBe("false");
     });
 
     it("H10: keeps an unsaved switch change across tab switches", async () => {
       const user = userEvent.setup();
-      await renderForm();
+      await renderLayoutTab();
       await user.click(animationSwitch());
 
       await user.click(screen.getByRole("tab", { name: "Theme" }));
-      await user.click(screen.getByRole("tab", { name: "Branding" }));
+      await user.click(screen.getByRole("tab", { name: "Layout" }));
 
       expect(animationSwitch().getAttribute("aria-checked")).toBe("false");
     });
@@ -1015,7 +1020,7 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
       let resolveSave: (value: unknown) => void = () => {};
       h.saveTemplate.mockReturnValue(new Promise((resolve) => (resolveSave = resolve)));
       const user = userEvent.setup();
-      await renderForm();
+      await renderLayoutTab();
       await user.click(animationSwitch());
 
       let saving: Promise<void> = Promise.resolve();
@@ -1037,7 +1042,7 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
         errors: { "Branding.BrandName": "server brand error" },
       });
       const user = userEvent.setup();
-      await renderForm();
+      await renderLayoutTab();
       await user.click(animationSwitch());
 
       await act(async () => latestActions().onSave());
@@ -1045,15 +1050,16 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
       expect(h.showErrorToast).toHaveBeenCalledWith({
         errors: { "Branding.BrandName": "server brand error" },
       });
-      expect(screen.getByText("Brand name server brand error")).toBeTruthy();
       expect(animationSwitch().getAttribute("aria-checked")).toBe("false");
       expect(latestActions().isDirty).toBe(true);
+      await user.click(screen.getByRole("tab", { name: "Branding" }));
+      expect(screen.getByText("Brand name server brand error")).toBeTruthy();
     });
 
     it("C5: a network error keeps the switch off and stays dirty", async () => {
       h.saveTemplate.mockRejectedValue(new Error("network"));
       const user = userEvent.setup();
-      await renderForm();
+      await renderLayoutTab();
       await user.click(animationSwitch());
 
       await act(async () => latestActions().onSave());
@@ -1067,6 +1073,7 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
       const user = userEvent.setup();
       await renderForm();
       await user.clear(screen.getByLabelText(/Brand name/));
+      await user.click(screen.getByRole("tab", { name: "Layout" }));
       await user.click(animationSwitch());
 
       expect(latestActions().isValid).toBe(false);
@@ -1084,6 +1091,7 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
         document.getElementById("client-logo-upload-light") as HTMLInputElement,
         new File(["x"], "light.png", { type: "image/png" }),
       );
+      await user.click(screen.getByRole("tab", { name: "Layout" }));
       await user.click(animationSwitch());
 
       await act(async () => latestActions().onSave());

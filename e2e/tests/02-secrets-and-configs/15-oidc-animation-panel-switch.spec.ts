@@ -34,9 +34,12 @@ test.describe("OIDC branding: show animation panel switch", () => {
     test.setTimeout(180_000);
 
     const branding = await openManageTemplateFlow(page);
+    const layoutTab = branding.templateSections.getByRole("tab", { name: "Layout" });
+    await layoutTab.click();
+    await expect(layoutTab).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("heading", { name: "Layout" })).toBeVisible();
     const toggle = panelSwitch(page);
     await expect(toggle).toBeVisible();
-    await expect(page.getByText("Layout", { exact: true })).toBeVisible();
     const initial = (await toggle.getAttribute("aria-checked")) === "true";
     const flipped = String(!initial);
 
@@ -74,7 +77,8 @@ test.describe("OIDC branding: show animation panel switch", () => {
 
     await test.step("H11: the saved value survives a reload", async () => {
       await page.reload({ waitUntil: "domcontentloaded" });
-      await expect(page.getByRole("heading", { name: "Brand identity" })).toBeVisible({
+      // The editor keeps the open section in the URL, so the reload lands back on Layout.
+      await expect(page.getByRole("heading", { name: "Layout" })).toBeVisible({
         timeout: 30_000,
       });
       await expect(panelSwitch(page)).toHaveAttribute("aria-checked", flipped, {

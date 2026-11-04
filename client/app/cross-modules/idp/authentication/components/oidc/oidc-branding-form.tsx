@@ -6,6 +6,7 @@ import {
   Loader2,
   Moon,
   Palette,
+  PanelRight,
   Sun,
   Trash2,
   Upload,
@@ -60,7 +61,7 @@ const DEFAULT_COLOR = "#0066b2";
 const MAX_LOGO_SIZE_MB = 2;
 const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/svg+xml", "image/webp"];
 
-type EditorTab = "branding" | "theme" | "pages";
+type EditorTab = "branding" | "theme" | "pages" | "layout";
 
 const getEditorTabs = (): Array<{
   value: EditorTab;
@@ -74,9 +75,14 @@ const getEditorTabs = (): Array<{
   },
   { value: "theme", label: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.TAB_THEME"), Icon: Palette },
   { value: "pages", label: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.TAB_PAGES"), Icon: FileText },
+  {
+    value: "layout",
+    label: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.TAB_LAYOUT"),
+    Icon: PanelRight,
+  },
 ];
 
-const EDITOR_TAB_VALUES = ["branding", "theme", "pages"] as const;
+const EDITOR_TAB_VALUES = ["branding", "theme", "pages", "layout"] as const;
 const PREVIEW_MODE_VALUES = ["system", "light", "dark"] as const;
 
 const getThemeGroups = (): Array<{
@@ -839,7 +845,7 @@ export const OidcBrandingForm = () => {
           <section className="flex min-h-0 min-w-0 flex-col border-b border-border bg-card xl:flex-row xl:border-b-0 xl:border-r">
             <div className="shrink-0 border-b border-border bg-muted/20 p-2 xl:w-22 xl:border-b-0 xl:border-r">
               <TabsList
-                className="grid h-auto w-full grid-cols-3 gap-1 rounded-lg bg-transparent p-0 xl:flex xl:h-full xl:flex-col xl:justify-start xl:gap-2"
+                className="grid h-auto w-full grid-cols-4 gap-1 rounded-lg bg-transparent p-0 xl:flex xl:h-full xl:flex-col xl:justify-start xl:gap-2"
                 aria-label={t("OIDC_BRANDING_FORM.SECTIONS_LABEL")}
               >
                 {editorTabs.map(({ value, label, Icon }) => (
@@ -938,36 +944,6 @@ export const OidcBrandingForm = () => {
                         }
                         onFile={(file) => applyLogoFile("dark", file)}
                         onRemove={() => removeLogo("dark")}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div>
-                      <Label>{t("OIDC_BRANDING_FORM.LAYOUT_TITLE")}</Label>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {t("OIDC_BRANDING_FORM.LAYOUT_HINT")}
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-3">
-                      <div className="min-w-0 space-y-0.5">
-                        <Label htmlFor="oidc-show-animation-panel" className="text-sm">
-                          {t("OIDC_BRANDING_FORM.SHOW_ANIMATION_PANEL")}
-                        </Label>
-                        <p
-                          id="oidc-show-animation-panel-hint"
-                          className="text-xs text-muted-foreground"
-                        >
-                          {t("OIDC_BRANDING_FORM.SHOW_ANIMATION_PANEL_HINT")}
-                        </p>
-                      </div>
-                      <Switch
-                        id="oidc-show-animation-panel"
-                        size="md"
-                        checked={draft.layout.showAnimationPanel}
-                        onCheckedChange={updateLayout}
-                        disabled={isBusy}
-                        aria-describedby="oidc-show-animation-panel-hint"
                       />
                     </div>
                   </div>
@@ -1245,6 +1221,43 @@ export const OidcBrandingForm = () => {
                         )}
                       </div>
                     ))}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="layout" className="m-0 space-y-6">
+                  <div className="flex gap-3">
+                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/30 text-muted-foreground">
+                      <PanelRight className="h-4 w-4" aria-hidden />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-semibold">
+                        {t("OIDC_BRANDING_FORM.LAYOUT_TITLE")}
+                      </h2>
+                      <p className="mt-0.5 text-sm text-muted-foreground">
+                        {t("OIDC_BRANDING_FORM.LAYOUT_HINT")}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-3">
+                    <div className="min-w-0 space-y-0.5">
+                      <Label htmlFor="oidc-show-animation-panel" className="text-sm">
+                        {t("OIDC_BRANDING_FORM.SHOW_ANIMATION_PANEL")}
+                      </Label>
+                      <p
+                        id="oidc-show-animation-panel-hint"
+                        className="text-xs text-muted-foreground"
+                      >
+                        {t("OIDC_BRANDING_FORM.SHOW_ANIMATION_PANEL_HINT")}
+                      </p>
+                    </div>
+                    <Switch
+                      id="oidc-show-animation-panel"
+                      size="md"
+                      checked={draft.layout.showAnimationPanel}
+                      onCheckedChange={updateLayout}
+                      disabled={isBusy}
+                      aria-describedby="oidc-show-animation-panel-hint"
+                    />
                   </div>
                 </TabsContent>
               </div>
