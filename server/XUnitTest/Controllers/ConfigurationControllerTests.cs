@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Blocks.Genesis;
 using BlocksOs.Api.Controllers;
@@ -115,12 +116,76 @@ namespace XUnitTest.Controllers
         public async Task Gets_ReturnsList()
         {
             var configs = new List<MailConfigurationResponse> { new() };
-            _service.Setup(s => s.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync(configs);
+            _service.Setup(s => s.GetAllAsync(It.IsAny<GetAllMailConfigurationsRequest>(), It.IsAny<CancellationToken>())).ReturnsAsync(configs);
 
             var result = await Controller().Gets(new GetAllMailConfigurationsRequest());
 
             result.Should().BeOfType<OkObjectResult>()
                   .Which.Value.Should().BeSameAs(configs);
+        }
+
+        [Fact]
+        public async Task Gets_PassesTheOrganizationFilterToTheService()
+        {
+            GetAllMailConfigurationsRequest? captured = null;
+            _service.Setup(s => s.GetAllAsync(It.IsAny<GetAllMailConfigurationsRequest>(), It.IsAny<CancellationToken>()))
+                    .Callback<GetAllMailConfigurationsRequest, CancellationToken>((r, _) => captured = r)
+                    .ReturnsAsync(new List<MailConfigurationResponse>());
+
+            await Controller().Gets(new GetAllMailConfigurationsRequest { OrganizationId = "acme" });
+
+            captured!.OrganizationId.Should().Be("acme");
+        }
+
+        [Fact]
+        public async Task GetConfigurationUsage_Found_ReturnsOkWithTheCount()
+        {
+            var usage = new MailConfigurationUsageResponse { IsSuccess = true, TemplateCount = 6 };
+            _service.Setup(s => s.GetUsageAsync(It.Is<GetMailConfigurationUsageRequest>(r => r.ConfigurationId == "acme-smtp"), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(usage);
+
+            var result = await new MailConfigurationUsageController(_service.Object).GetConfigurationUsage(new GetMailConfigurationUsageRequest { ConfigurationId = "acme-smtp" });
+
+            result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeSameAs(usage);
+        }
+
+        [Fact]
+        public async Task GetConfigurationUsage_UnknownConfiguration_IsBadRequestLikeTheOtherFieldErrors()
+        {
+            // Q1 (answer A): field errors of the mail endpoints stay HTTP 400 with the error body.
+            var usage = new MailConfigurationUsageResponse
+            {
+                IsSuccess = false,
+                Errors = new Dictionary<string, string> { ["ConfigurationId"] = "Configuration not found" }
+            };
+            _service.Setup(s => s.GetUsageAsync(It.IsAny<GetMailConfigurationUsageRequest>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(usage);
+
+            var result = await new MailConfigurationUsageController(_service.Object).GetConfigurationUsage(new GetMailConfigurationUsageRequest { ConfigurationId = "missing" });
+
+            result.Should().BeOfType<BadRequestObjectResult>().Which.Value.Should().BeSameAs(usage);
+        }
+
+        [Fact]
+        public void GetConfigurationUsage_IsServedUnderTheMailRoute()
+        {
+            // §6.3: GET Mail/GetConfigurationUsage, beside the other mail configuration actions.
+            typeof(MailConfigurationUsageController)
+                .GetCustomAttributes(typeof(RouteAttribute), false)
+                .Cast<RouteAttribute>()
+                .Select(a => a.Template)
+                .Should().Equal("Mail/[action]");
+        }
+
+        [Fact]
+        public void GetConfigurationUsage_IsProtectedByTheMailReadPermission()
+        {
+            // C10: an unauthenticated or unauthorized caller gets 401/403 from ProtectedEndPoint.
+            typeof(MailConfigurationUsageController).GetMethod(nameof(MailConfigurationUsageController.GetConfigurationUsage))!
+                .GetCustomAttributes(typeof(ProtectedEndPointAttribute), false)
+                .Cast<ProtectedEndPointAttribute>()
+                .Select(a => a.ResourceName)
+                .Should().Equal("blocks-os::mail::gets");
         }
 
         [Fact]

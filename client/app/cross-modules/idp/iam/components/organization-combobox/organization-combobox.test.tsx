@@ -9,6 +9,7 @@ const h = vi.hoisted(() => ({
   responses: new Map<string, unknown>(),
   byIdLookups: [] as string[],
   byId: new Map<string, unknown>(),
+  failing: false,
 }));
 
 vi.mock("@blocks-idp/iam/hooks/use-organization", () => ({
@@ -25,6 +26,7 @@ vi.mock("@blocks-idp/iam/hooks/use-organization", () => ({
       isLoading: false,
       isFetching: false,
       isPlaceholderData: false,
+      isError: options.enabled ? h.failing : false,
     };
   },
   useGetOrganizationById: ({ itemId }: { itemId: string; projectKey: string }) => {
@@ -47,6 +49,7 @@ describe("OrganizationCombobox", () => {
     h.responses.clear();
     h.byIdLookups = [];
     h.byId.clear();
+    h.failing = false;
   });
 
   it("debounces search and sends it to the organizations query", async () => {
@@ -211,5 +214,59 @@ describe("OrganizationCombobox", () => {
     await user.click(await screen.findByRole("option", { name: "Organization 2" }));
     expect(screen.getByRole("combobox").textContent).toContain("Organization 2");
     expect(h.byIdLookups.at(-1)).toBe("");
+  });
+
+  describe("optional Default label, description and error state (blocks-os#732)", () => {
+    it("keeps today's Default option and no error text when the props are not given", async () => {
+      h.failing = true;
+      const user = userEvent.setup();
+      render(
+        <OrganizationCombobox projectKey="tenant-1" value="default" onValueChange={vi.fn()} />,
+      );
+
+      expect(screen.getByRole("combobox").textContent).toBe("Default");
+      await user.click(screen.getByRole("combobox"));
+      expect(screen.getByRole("option", { name: "Default" })).toBeTruthy();
+      expect(screen.queryByRole("alert")).toBeNull();
+    });
+
+    it("uses the caller's Default label and description", async () => {
+      h.responses.set("0:", { organizations: [organization(1)], totalCount: 1 });
+      const user = userEvent.setup();
+      render(
+        <OrganizationCombobox
+          projectKey="tenant-1"
+          value="default"
+          onValueChange={vi.fn()}
+          defaultOptionLabel="Default organization"
+          defaultOptionDescription="Shared by every organization"
+        />,
+      );
+
+      expect(screen.getByRole("combobox").textContent).toBe("Default organization");
+      await user.click(screen.getByRole("combobox"));
+      const options = await screen.findAllByRole("option");
+      expect(options[0].textContent).toContain("Default organization");
+      expect(options[0].textContent).toContain("Shared by every organization");
+      expect(options[1].textContent).toBe("Organization 1");
+    });
+
+    it("shows the caller's error text when the organizations request fails", async () => {
+      h.failing = true;
+      const user = userEvent.setup();
+      render(
+        <OrganizationCombobox
+          projectKey="tenant-1"
+          value="default"
+          onValueChange={vi.fn()}
+          errorMessage="Couldn't load organizations."
+        />,
+      );
+
+      await user.click(screen.getByRole("combobox"));
+      expect(screen.getByRole("alert").textContent).toBe("Couldn't load organizations.");
+      // The Default organization stays selectable.
+      expect(screen.getByRole("option", { name: "Default" })).toBeTruthy();
+    });
   });
 });

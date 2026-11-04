@@ -39,6 +39,14 @@ namespace Configuration.DomainService.Mail.ResponseModel
         public bool UseDefaultCredentials { get; set; }
         public SmtpClient SmtpClient { get; set; }
         public bool IsDefault { get; set; }
+
+        /// <summary>
+        /// Whether this is its organization's default. The organization itself is the inherited
+        /// <see cref="BaseEntity.OrganizationId"/>, always set: <c>"default"</c> for a document
+        /// stored without one.
+        /// </summary>
+        public bool IsOrganizationDefault { get; set; }
+
         public bool IsInbound { get; set; }
         public MailServiceProvider Provider { get; set; }
         public bool IsEnableSnsConfiguration { get; set; }

@@ -66,7 +66,7 @@ namespace BlocksOs.Api.Controllers
         [ProtectedEndPoint("blocks-os::mail::gets")]
         public async Task<IActionResult> Gets([FromQuery] GetAllMailConfigurationsRequest request)
         {
-            var result = await _mailConfigurationService.GetAllAsync();
+            var result = await _mailConfigurationService.GetAllAsync(request);
             return Ok(result);
         }
 

@@ -26,6 +26,7 @@ using Configuration.DomainService.Captcha.Services;
 using Configuration.DomainService.Captcha.Validators;
 using Configuration.DomainService.Mail.Providers;
 using Configuration.DomainService.Mail.Services;
+using Configuration.DomainService.Organizations;
 using Configuration.DomainService.Integration.RequestModel;
 using Configuration.DomainService.Integration.Services;
 using Configuration.DomainService.Integration.Validators;
@@ -84,6 +85,7 @@ namespace Configuration.DomainService.Shared.Utilities
             serviceCollection.AddScoped<IMailConfigurationProvider, GmailMailConfigurationProvider>();
             serviceCollection.AddScoped<IMailConfigurationProviderRegistry, MailConfigurationProviderRegistry>();
             serviceCollection.AddScoped<IMailConfigurationService, MailConfigurationService>();
+            serviceCollection.AddSingleton<IOrganizationReader, OrganizationReader>();
 
             // Actions and Webhooks pages (Config): KV lists, webhook secrets in Blocks Secrets, delivery history.
             serviceCollection.AddActionsAndWebhooks();

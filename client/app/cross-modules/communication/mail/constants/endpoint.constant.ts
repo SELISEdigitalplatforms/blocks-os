@@ -30,4 +30,5 @@ export const MAIL_CONFIG_ENDPOINTS = {
   GET_CONFIGS: `${MAIL_BASE}/${MAIL_SUBPATH}/Gets`,
   SAVE_CONFIG: `${MAIL_BASE}/${MAIL_SUBPATH}/Save`,
   DELETE_CONFIG: `${MAIL_BASE}/${MAIL_SUBPATH}/Delete`,
+  GET_CONFIG_USAGE: `${MAIL_BASE}/${MAIL_SUBPATH}/GetConfigurationUsage`,
 } as const;

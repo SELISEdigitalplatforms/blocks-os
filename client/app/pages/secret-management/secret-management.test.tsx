@@ -50,6 +50,10 @@ vi.mock(
     CreateClientCredential: () => <div data-testid="create-client-credential" />,
   }),
 );
+vi.mock(
+  "@blocks-communication/mail/components/email-service/email-organization-picker/email-organization-picker",
+  () => ({ EmailOrganizationPicker: () => <div data-testid="email-organization-picker" /> }),
+);
 vi.mock("@blocks-identifier/components/add-service/add-service", () => ({
   AddService: () => <div data-testid="add-service" />,
 }));
@@ -188,6 +192,20 @@ describe("SecretManagementLayout", () => {
     expect(screen.queryByText("Add")).toBeNull();
     expect(screen.queryByText("Edit")).toBeNull();
     expect(screen.queryByText("Map JWT Claim")).toBeNull();
+  });
+
+  it("puts the organization picker before Add Configuration on the email page only (blocks-os#732 H7)", () => {
+    h.pathname = "/app/proj/secret-management/email";
+    render(<SecretManagementLayout />);
+    const picker = screen.getByTestId("email-organization-picker");
+    const add = screen.getByText(ADD_CONFIGURATION);
+    expect(picker.compareDocumentPosition(add) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("has no organization picker outside the email page", () => {
+    h.pathname = "/app/proj/secret-management/captcha";
+    render(<SecretManagementLayout />);
+    expect(screen.queryByTestId("email-organization-picker")).toBeNull();
   });
 
   it("always shows the Add Configuration action on the captcha page, since a tenant may configure more than one", () => {
