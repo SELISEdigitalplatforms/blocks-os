@@ -257,31 +257,40 @@ namespace Configuration.DomainService.Shared.Services
 
             // One update for the whole organization. Saves are ordered by (LastUpdatedDate, ItemId), so
             // of two saves racing to be the default the later one wins, and a tie still has a winner.
-            var earlier = builder.And(
-                marked,
-                builder.Ne(mc => mc.ItemId, keepConfigurationId),
-                builder.Or(
-                    builder.Lt(mc => mc.LastUpdatedDate, savedAt),
-                    builder.And(builder.Eq(mc => mc.LastUpdatedDate, savedAt), builder.Lt(mc => mc.ItemId, keepConfigurationId))));
-            if (!await ClearDefaultsAsync(collection, earlier, update))
+            if (!await ClearDefaultsAsync(collection, builder.And(marked, OrderedBefore(keepConfigurationId, savedAt)), update))
             {
                 return;
             }
 
             // A slower save stamped earlier can land after this one's clear. Whoever finishes last
-            // sees both marks here and keeps only the latest, so exactly one remains.
-            var defaults = await collection.Find(marked)
-                .Project<MailServerConfiguration>(Builders<MailServerConfiguration>.Projection
-                    .Include(mc => mc.ItemId).Include(mc => mc.LastUpdatedDate))
-                .ToListAsync();
+            // sees both marks here and clears every mark ordered before the latest one; a save landing
+            // meanwhile that is later still is left alone and settles the organization itself.
+            var scope = await _dataAccess.ReadAsync(OsSchemas.MailServerConfiguration, marked, "ConfigurationRepository.ClearOtherOrganizationDefaultsAsync", useProjection: false);
+            if (!scope.Granted)
+            {
+                return;
+            }
+
+            var defaults = await scope.Apply(collection).ToListAsync();
             if (defaults.Count > 1)
             {
-                var winner = defaults
+                var latest = defaults
                     .OrderByDescending(mc => mc.LastUpdatedDate)
                     .ThenByDescending(mc => mc.ItemId, StringComparer.Ordinal)
                     .First();
-                await ClearDefaultsAsync(collection, builder.And(marked, builder.Ne(mc => mc.ItemId, winner.ItemId)), update);
+                await ClearDefaultsAsync(collection, builder.And(marked, OrderedBefore(latest.ItemId, latest.LastUpdatedDate)), update);
             }
+        }
+
+        /// <summary>Configurations saved before the given one: earlier, or at the same millisecond with a smaller id.</summary>
+        private static FilterDefinition<MailServerConfiguration> OrderedBefore(string itemId, DateTime savedAt)
+        {
+            var builder = Builders<MailServerConfiguration>.Filter;
+            return builder.And(
+                builder.Ne(mc => mc.ItemId, itemId),
+                builder.Or(
+                    builder.Lt(mc => mc.LastUpdatedDate, savedAt),
+                    builder.And(builder.Eq(mc => mc.LastUpdatedDate, savedAt), builder.Lt(mc => mc.ItemId, itemId))));
         }
 
         private async Task<bool> ClearDefaultsAsync(

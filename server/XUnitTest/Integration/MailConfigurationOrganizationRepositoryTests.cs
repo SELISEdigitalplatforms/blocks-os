@@ -203,6 +203,55 @@ namespace XUnitTest.Integration
             flags.Count(f => f).Should().Be(1);
         }
 
+        /// <summary>Lets a test run code just before the reconciling clear's update, as a racing save would.</summary>
+        private sealed class BeforeSecondClear : Os.DataAccess.IOsDataAccess
+        {
+            private readonly PassThroughOsDataAccess _inner = new();
+            private readonly Func<Task> _hook;
+            private int _clears;
+            public BeforeSecondClear(Func<Task> hook) => _hook = hook;
+
+            public Task<Os.DataAccess.ReadScope<T>> ReadAsync<T>(string schema, FilterDefinition<T> filter, string callSite, string? tenantId = null, bool useProjection = true) =>
+                _inner.ReadAsync(schema, filter, callSite, tenantId, useProjection);
+            public async Task<FilterDefinition<T>?> EditFilterAsync<T>(string schema, FilterDefinition<T> filter, string callSite, string? tenantId = null)
+            {
+                if (callSite == "ConfigurationRepository.ClearOtherOrganizationDefaultsAsync" && ++_clears == 2)
+                {
+                    await _hook();
+                }
+                return await _inner.EditFilterAsync(schema, filter, callSite, tenantId);
+            }
+            public Task<FilterDefinition<T>?> DeleteFilterAsync<T>(string schema, FilterDefinition<T> filter, string callSite, string? tenantId = null) =>
+                _inner.DeleteFilterAsync(schema, filter, callSite, tenantId);
+            public Task<bool> InsertAllowedAsync(string schema, string callSite, string? tenantId = null) => _inner.InsertAllowedAsync(schema, callSite, tenantId);
+            public Task<T> PrepareWriteAsync<T>(string schema, T entity, bool isInsert, string callSite, string? tenantId = null) =>
+                _inner.PrepareWriteAsync(schema, entity, isInsert, callSite, tenantId);
+            public Task<T> PrepareUpsertAsync<T>(string schema, T entity, IMongoCollection<T> collection, FilterDefinition<T> filter, string callSite, string? tenantId = null) =>
+                _inner.PrepareUpsertAsync(schema, entity, collection, filter, callSite, tenantId);
+            public Task<T> PrepareReplaceAsync<T>(string schema, T entity, IMongoCollection<T> collection, FilterDefinition<T> filter, string callSite, string? tenantId = null) =>
+                _inner.PrepareReplaceAsync(schema, entity, collection, filter, callSite, tenantId);
+            public Task CheckUpdateAsync<T>(string schema, UpdateDefinition<T> update, string callSite, string? tenantId = null) =>
+                _inner.CheckUpdateAsync(schema, update, callSite, tenantId);
+        }
+
+        [Fact]
+        public async Task ClearOtherOrganizationDefaults_LeavesASaveThatLandsDuringTheReconcile()
+        {
+            // A and B are both marked when A reconciles; C, later than both, lands just before A's
+            // reconciling clear. That clear may remove A's own mark, never C's.
+            var tA = new DateTime(2026, 11, 4, 10, 0, 0, DateTimeKind.Utc);
+            await InsertAsync("rc-a", $"acme-{_tag}", true, tA);
+            await InsertAsync("rc-b", $"acme-{_tag}", true, tA.AddMilliseconds(5));
+            var repo = new ConfigurationRepository(_fixture.DbContextProvider, new InMemoryKeyValueStore(),
+                new BeforeSecondClear(() => InsertAsync("rc-c", $"acme-{_tag}", true, tA.AddMilliseconds(10))));
+
+            await repo.ClearOtherOrganizationDefaultsAsync($"acme-{_tag}", Id("rc-a"), tA);
+
+            (await RawAsync("rc-a"))["IsOrganizationDefault"].AsBoolean.Should().BeFalse();
+            (await RawAsync("rc-b"))["IsOrganizationDefault"].AsBoolean.Should().BeTrue("it was the latest when A reconciled");
+            (await RawAsync("rc-c"))["IsOrganizationDefault"].AsBoolean.Should().BeTrue("it is later still and settles the rest itself");
+        }
+
         // ---------- C4: the project default record ----------
 
         [Fact]

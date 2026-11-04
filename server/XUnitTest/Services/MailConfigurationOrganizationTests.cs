@@ -249,6 +249,20 @@ namespace XUnitTest.Services
         }
 
         [Fact]
+        public async Task Save_AsOrganizationDefault_WhenClearingTheOthersFails_StillReportsTheSave()
+        {
+            // The configuration is already written; the next default save settles the marks.
+            using var _ = new BlocksTestContext();
+            _repo.Setup(r => r.ClearOtherOrganizationDefaultsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>()))
+                 .ThrowsAsync(new InvalidOperationException("clear failed"));
+
+            var result = await Service().SaveAsync(ZohoRequest("acme", isOrganizationDefault: true));
+
+            result.Outcome.Should().Be(MailConfigurationOutcome.Success);
+            _saved.Single().IsOrganizationDefault.Should().BeTrue();
+        }
+
+        [Fact]
         public async Task Save_NotAsOrganizationDefault_ClearsNothing()
         {
             using var _ = new BlocksTestContext();

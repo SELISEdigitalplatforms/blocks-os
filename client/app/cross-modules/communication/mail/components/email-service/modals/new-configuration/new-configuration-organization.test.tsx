@@ -173,7 +173,9 @@ describe("NewConfiguration organizations", { timeout: 20_000 }, () => {
     });
 
     expect(screen.queryByTestId("organization-picker")).toBeNull();
-    expect(screen.getByText("Acme Corp")).toBeTruthy();
+    const readOnly = screen.getByLabelText(/^Organization/) as HTMLInputElement;
+    expect(readOnly.value).toBe("Acme Corp");
+    expect(readOnly.readOnly).toBe(true);
     expect(screen.getByText("A configuration's organization can't be changed.")).toBeTruthy();
     expect(
       screen

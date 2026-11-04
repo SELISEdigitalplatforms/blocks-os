@@ -171,9 +171,7 @@ namespace Configuration.DomainService.Mail.Services
             // After the save, so the new default exists before the old one loses its mark.
             if (entity.IsOrganizationDefault)
             {
-                await _configurationRepository
-                    .ClearOtherOrganizationDefaultsAsync(entity.OrganizationId, entity.ItemId, entity.LastUpdatedDate)
-                    .ConfigureAwait(false);
+                await ClearOtherOrganizationDefaultsAsync(entity).ConfigureAwait(false);
             }
 
             _logger.LogInformation("Saving mail configuration end -- Success");
@@ -448,6 +446,31 @@ namespace Configuration.DomainService.Mail.Services
             foreach (var failure in sharedResult.Errors.Where(failure => !errors.ContainsKey(failure.PropertyName)))
             {
                 errors[failure.PropertyName] = failure.ErrorMessage;
+            }
+        }
+
+        /// <summary>
+        /// Clears the organization's other default marks once the new default is saved.
+        /// </summary>
+        /// <remarks>
+        /// The configuration is already written, so a failure here must not report the save as
+        /// failed: the organization keeps two marks until its next default save settles them, and
+        /// that is logged for an operator. Only the exception type is logged.
+        /// </remarks>
+        private async Task ClearOtherOrganizationDefaultsAsync(MailServerConfiguration entity)
+        {
+            try
+            {
+                await _configurationRepository
+                    .ClearOtherOrganizationDefaultsAsync(entity.OrganizationId, entity.ItemId, entity.LastUpdatedDate)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogWarning(
+                    "Saving mail configuration -- the organization's other default marks could not be cleared ({FailureType}) for configuration {ConfigurationId}",
+                    exception.GetType().Name,
+                    LogSafe.Value(entity.ItemId));
             }
         }
 

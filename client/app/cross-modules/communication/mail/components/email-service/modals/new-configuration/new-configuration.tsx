@@ -532,8 +532,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                 {organization && (
                   <div className="mb-4 flex flex-col gap-2">
                     <Label
-                      id="mail-configuration-organization-label"
-                      htmlFor={isEdit ? undefined : "mail-configuration-organization"}
+                      htmlFor="mail-configuration-organization"
                       className="text-left font-medium text-high-emphasis"
                     >
                       {t("NEW_CONFIGURATION.ORGANIZATION")}{" "}
@@ -541,12 +540,13 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                     </Label>
                     {isEdit ? (
                       <>
-                        <p
-                          aria-labelledby="mail-configuration-organization-label"
-                          className="text-base"
-                        >
-                          {organization.name}
-                        </p>
+                        {/* Read-only, not disabled: it stays focusable and readable under its label. */}
+                        <Input
+                          id="mail-configuration-organization"
+                          value={organization.name}
+                          readOnly
+                          className="border-default mt-1 border shadow-none"
+                        />
                         <p className="text-sm text-muted-foreground">
                           {t("NEW_CONFIGURATION.ORGANIZATION_READ_ONLY")}
                         </p>
