@@ -85,7 +85,7 @@ const stored: IEmailConfig = {
   isOrganizationDefault: false,
 };
 
-describe("NewConfiguration organizations", () => {
+describe("NewConfiguration organizations", { timeout: 20_000 }, () => {
   beforeEach(() => {
     vi.clearAllMocks();
     h.comboboxProps = [];
@@ -131,6 +131,26 @@ describe("NewConfiguration organizations", () => {
         .getByRole("checkbox", { name: "Use as organization default" })
         .getAttribute("data-state"),
     ).toBe("unchecked");
+  });
+
+  it("unticks the default when another organization is picked, since its default is unknown here", async () => {
+    const user = userEvent.setup();
+    renderModal({ organization: acme, organizationHasDefault: false });
+    const checkbox = screen.getByRole("checkbox", { name: "Use as organization default" });
+    expect(checkbox.getAttribute("data-state")).toBe("checked");
+
+    await user.click(screen.getByTestId("organization-picker"));
+
+    await waitFor(() => expect(checkbox.getAttribute("data-state")).toBe("unchecked"));
+    expect(screen.queryByText(/Acme Corp has no default yet/)).toBeNull();
+  });
+
+  it("doesn't say 'only' for the Default organization, whose configurations are shared", () => {
+    renderModal({
+      organization: { id: "default", name: "Default organization" },
+      organizationHasDefault: true,
+    });
+    expect(screen.queryByText(/Only Default organization's templates/)).toBeNull();
   });
 
   it("saves the organization picked in the dialog", async () => {

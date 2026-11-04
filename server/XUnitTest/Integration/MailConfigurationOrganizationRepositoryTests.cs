@@ -114,7 +114,7 @@ namespace XUnitTest.Integration
         // ---------- H3, C5 ----------
 
         [Fact]
-        public async Task ClearOtherOrganizationDefaults_ClearsOnlyOlderOnesOfThatOrganization()
+        public async Task ClearOtherOrganizationDefaults_LeavesOnlyTheLatestOfThatOrganization()
         {
             var savedAt = new DateTime(2026, 11, 4, 10, 0, 0, DateTimeKind.Utc);
             await InsertAsync("older", $"acme-{_tag}", true, savedAt.AddMinutes(-5));
@@ -125,9 +125,10 @@ namespace XUnitTest.Integration
             await Repository().ClearOtherOrganizationDefaultsAsync($"acme-{_tag}", Id("kept"), savedAt);
 
             (await RawAsync("older"))["IsOrganizationDefault"].AsBoolean.Should().BeFalse();
-            (await RawAsync("kept"))["IsOrganizationDefault"].AsBoolean.Should().BeTrue();
-            // A later save of the same organization wins: it is not cleared by an earlier one.
+            // A later save of the same organization wins: it is not cleared by an earlier one, and the
+            // earlier save gives up its own mark rather than leave two.
             (await RawAsync("newer"))["IsOrganizationDefault"].AsBoolean.Should().BeTrue();
+            (await RawAsync("kept"))["IsOrganizationDefault"].AsBoolean.Should().BeFalse();
             (await RawAsync("other-org"))["IsOrganizationDefault"].AsBoolean.Should().BeTrue();
         }
 
@@ -166,6 +167,42 @@ namespace XUnitTest.Integration
             marked.Should().Equal(Id("second"));
         }
 
+        [Fact]
+        public async Task ClearOtherOrganizationDefaults_WhenASlowerEarlierSaveLandsLast_KeepsOnlyTheLatest()
+        {
+            // B (later stamp) saves and clears before A's document lands; A then clears and spares B.
+            var repo = Repository();
+            var tA = new DateTime(2026, 11, 4, 10, 0, 0, DateTimeKind.Utc);
+            var tB = tA.AddMilliseconds(5);
+            await InsertAsync("race-b", $"acme-{_tag}", true, tB);
+            await repo.ClearOtherOrganizationDefaultsAsync($"acme-{_tag}", Id("race-b"), tB);
+            await InsertAsync("race-a", $"acme-{_tag}", true, tA);
+            await repo.ClearOtherOrganizationDefaultsAsync($"acme-{_tag}", Id("race-a"), tA);
+
+            (await RawAsync("race-a"))["IsOrganizationDefault"].AsBoolean.Should().BeFalse();
+            (await RawAsync("race-b"))["IsOrganizationDefault"].AsBoolean.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task ClearOtherOrganizationDefaults_OnATimestampTie_KeepsExactlyOne()
+        {
+            var repo = Repository();
+            // Sub-millisecond ticks differ, as two in-memory stamps would; MongoDB keeps milliseconds.
+            var t = new DateTime(2026, 11, 4, 10, 0, 0, DateTimeKind.Utc);
+            await InsertAsync("tie-1", $"acme-{_tag}", true, t);
+            await InsertAsync("tie-2", $"acme-{_tag}", true, t);
+            await repo.ClearOtherOrganizationDefaultsAsync($"acme-{_tag}", Id("tie-1"), t.AddTicks(300));
+            await repo.ClearOtherOrganizationDefaultsAsync($"acme-{_tag}", Id("tie-2"), t.AddTicks(100));
+
+            var marked = new[] { "tie-1", "tie-2" };
+            var flags = new List<bool>();
+            foreach (var name in marked)
+            {
+                flags.Add((await RawAsync(name))["IsOrganizationDefault"].AsBoolean);
+            }
+            flags.Count(f => f).Should().Be(1);
+        }
+
         // ---------- C4: the project default record ----------
 
         [Fact]
@@ -190,7 +227,7 @@ namespace XUnitTest.Integration
             foreach (var (id, language, configuration) in new[]
             {
                 ("t1-en", "en", configurationId),
-                ("t1-other", "de", configurationId),
+                ("t1-other", "xx", configurationId),
                 ("t2-en", "en", configurationId),
                 ("t3-en", "en", Id("another"))
             })

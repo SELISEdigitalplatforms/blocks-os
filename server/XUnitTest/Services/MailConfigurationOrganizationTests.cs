@@ -75,7 +75,7 @@ namespace XUnitTest.Services
                 _repo.Object, registry, validator, NullLogger<MailConfigurationService>.Instance, _organizations.Object, _templates.Object);
         }
 
-        private static MailConfiguration ZohoRequest(string? organizationId = null, bool isOrganizationDefault = false, string id = "") => new()
+        private static MailConfiguration ZohoRequest(string? organizationId = null, bool? isOrganizationDefault = false, string id = "") => new()
         {
             ConfigurationId = id,
             ConfigurationName = "Acme SMTP",
@@ -266,6 +266,28 @@ namespace XUnitTest.Services
             GivenStored(StoredZoho("cfg-acme", "acme", isOrganizationDefault: true));
 
             await Service().SaveAsync(ZohoRequest("acme", isOrganizationDefault: false, id: "cfg-acme"));
+
+            _saved.Single().IsOrganizationDefault.Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task Save_EditWithoutTheDefaultFlag_KeepsTheStoredMark()
+        {
+            // Hosts without organizations (the authentication dialog, blocks-cli) don't send it.
+            using var _ = new BlocksTestContext();
+            GivenStored(StoredZoho("cfg-acme", "acme", isOrganizationDefault: true));
+
+            await Service().SaveAsync(ZohoRequest(null, isOrganizationDefault: null, id: "cfg-acme"));
+
+            _saved.Single().IsOrganizationDefault.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task Save_CreateWithoutTheDefaultFlag_IsNotTheDefault()
+        {
+            using var _ = new BlocksTestContext();
+
+            await Service().SaveAsync(ZohoRequest("acme", isOrganizationDefault: null));
 
             _saved.Single().IsOrganizationDefault.Should().BeFalse();
         }

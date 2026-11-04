@@ -250,23 +250,54 @@ namespace Configuration.DomainService.Shared.Services
             var collection = _dbContextProvider.GetCollection<MailServerConfiguration>(_mailConfigurationCollectionName);
             var builder = Builders<MailServerConfiguration>.Filter;
 
-            // One update for the whole organization. A configuration saved after this one keeps its
-            // mark, so of two saves racing to be the default, the later one wins.
-            var filter = builder.And(
-                OfOrganization(organizationId),
-                builder.Eq(mc => mc.IsOrganizationDefault, true),
-                builder.Ne(mc => mc.ItemId, keepConfigurationId),
-                builder.Lte(mc => mc.LastUpdatedDate, savedAt));
+            // MongoDB keeps milliseconds, so compare at that precision or a tie never matches.
+            savedAt = new DateTime(savedAt.Ticks - (savedAt.Ticks % TimeSpan.TicksPerMillisecond), savedAt.Kind);
+            var marked = builder.And(OfOrganization(organizationId), builder.Eq(mc => mc.IsOrganizationDefault, true));
             var update = Builders<MailServerConfiguration>.Update.Set(mc => mc.IsOrganizationDefault, false);
 
-            var editFilter = await _dataAccess.EditFilterAsync(OsSchemas.MailServerConfiguration, filter, "ConfigurationRepository.ClearOtherOrganizationDefaultsAsync");
-            if (editFilter is null)
+            // One update for the whole organization. Saves are ordered by (LastUpdatedDate, ItemId), so
+            // of two saves racing to be the default the later one wins, and a tie still has a winner.
+            var earlier = builder.And(
+                marked,
+                builder.Ne(mc => mc.ItemId, keepConfigurationId),
+                builder.Or(
+                    builder.Lt(mc => mc.LastUpdatedDate, savedAt),
+                    builder.And(builder.Eq(mc => mc.LastUpdatedDate, savedAt), builder.Lt(mc => mc.ItemId, keepConfigurationId))));
+            if (!await ClearDefaultsAsync(collection, earlier, update))
             {
                 return;
             }
 
+            // A slower save stamped earlier can land after this one's clear. Whoever finishes last
+            // sees both marks here and keeps only the latest, so exactly one remains.
+            var defaults = await collection.Find(marked)
+                .Project<MailServerConfiguration>(Builders<MailServerConfiguration>.Projection
+                    .Include(mc => mc.ItemId).Include(mc => mc.LastUpdatedDate))
+                .ToListAsync();
+            if (defaults.Count > 1)
+            {
+                var winner = defaults
+                    .OrderByDescending(mc => mc.LastUpdatedDate)
+                    .ThenByDescending(mc => mc.ItemId, StringComparer.Ordinal)
+                    .First();
+                await ClearDefaultsAsync(collection, builder.And(marked, builder.Ne(mc => mc.ItemId, winner.ItemId)), update);
+            }
+        }
+
+        private async Task<bool> ClearDefaultsAsync(
+            IMongoCollection<MailServerConfiguration> collection,
+            FilterDefinition<MailServerConfiguration> filter,
+            UpdateDefinition<MailServerConfiguration> update)
+        {
+            var editFilter = await _dataAccess.EditFilterAsync(OsSchemas.MailServerConfiguration, filter, "ConfigurationRepository.ClearOtherOrganizationDefaultsAsync");
+            if (editFilter is null)
+            {
+                return false;
+            }
+
             await _dataAccess.CheckUpdateAsync(OsSchemas.MailServerConfiguration, update, "ConfigurationRepository.ClearOtherOrganizationDefaultsAsync");
             await collection.UpdateManyAsync(editFilter, update);
+            return true;
         }
 
         /// <summary>

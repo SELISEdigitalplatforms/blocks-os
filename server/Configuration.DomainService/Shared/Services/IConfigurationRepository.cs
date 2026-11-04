@@ -48,7 +48,8 @@ namespace Configuration.DomainService.Shared.Services
         /// <summary>
         /// Clears <see cref="MailServerConfiguration.IsOrganizationDefault"/> on the organization's
         /// other configurations in one update, sparing <paramref name="keepConfigurationId"/> and any
-        /// configuration saved after <paramref name="savedAt"/>.
+        /// configuration saved after it (by <paramref name="savedAt"/>, then id); when racing saves
+        /// still leave several marked, only the latest keeps its mark.
         /// </summary>
         Task ClearOtherOrganizationDefaultsAsync(string organizationId, string keepConfigurationId, DateTime savedAt);
 

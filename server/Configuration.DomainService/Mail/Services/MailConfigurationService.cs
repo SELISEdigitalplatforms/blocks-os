@@ -407,7 +407,7 @@ namespace Configuration.DomainService.Mail.Services
             IDictionary<string, string> errors,
             CancellationToken cancellationToken)
         {
-            if (configuration.IsInbound && configuration.IsOrganizationDefault)
+            if (configuration.IsInbound && configuration.IsOrganizationDefault == true)
             {
                 errors[IsOrganizationDefaultField] = "An inbound configuration can't be the organization default";
             }
@@ -535,7 +535,8 @@ namespace Configuration.DomainService.Mail.Services
             entity.ClientId = configuration.ClientId;
             entity.MailboxAddress = configuration.MailboxAddress;
             entity.OrganizationId = organizationId;
-            entity.IsOrganizationDefault = configuration.IsOrganizationDefault && !configuration.IsInbound;
+            entity.IsOrganizationDefault = !configuration.IsInbound
+                && (configuration.IsOrganizationDefault ?? existing?.IsOrganizationDefault ?? false);
 
             // Only ever a reference, and only one the provider just handed back, in the field of
             // the provider's own mode. The plaintext on the request is not assigned anywhere here.

@@ -70,9 +70,10 @@ namespace Configuration.DomainService.Mail.RequestModel
 
         /// <summary>
         /// Marks the configuration as its organization's default. Outbound only; saving one clears
-        /// the mark on the organization's other configurations.
+        /// the mark on the organization's other configurations. Null keeps the stored mark on edit
+        /// (callers that predate organizations don't send it) and means false on create.
         /// </summary>
-        public bool IsOrganizationDefault { get; set; }
+        public bool? IsOrganizationDefault { get; set; }
     }
 
 }

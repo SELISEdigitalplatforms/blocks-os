@@ -52,7 +52,7 @@ import {
 } from "@/cross-modules/secrets/components/linked-secret-status/linked-secret-status";
 import { Label } from "@/components/ui-kits/label/label";
 import { OrganizationCombobox } from "@blocks-idp/iam/components/organization-combobox";
-import { organizationOf } from "../../../../constants/organization";
+import { DEFAULT_ORGANIZATION_ID, organizationOf } from "../../../../constants/organization";
 interface NewConfigurationProps {
   dialogTitle: string;
   onClose: () => void;
@@ -510,6 +510,16 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
   };
   const organizationHintName =
     organization && organizationId === organization.id ? organization.name : undefined;
+  // Another organization than the page's: its default is unknown here, so the option starts
+  // unticked rather than silently replacing that organization's default.
+  const changeOrganization = (nextOrganizationId: string) => {
+    setOrganizationId(nextOrganizationId);
+    setOrganizationErrorKey(null);
+    form.setValue(
+      "isOrganizationDefault",
+      nextOrganizationId === organization?.id ? !organizationHasDefault : false,
+    );
+  };
   return (
     <DialogContent className="rounded-md sm:max-w-[700px]">
       <Form {...form}>
@@ -522,7 +532,8 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                 {organization && (
                   <div className="mb-4 flex flex-col gap-2">
                     <Label
-                      htmlFor="mail-configuration-organization"
+                      id="mail-configuration-organization-label"
+                      htmlFor={isEdit ? undefined : "mail-configuration-organization"}
                       className="text-left font-medium text-high-emphasis"
                     >
                       {t("NEW_CONFIGURATION.ORGANIZATION")}{" "}
@@ -530,7 +541,10 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                     </Label>
                     {isEdit ? (
                       <>
-                        <p id="mail-configuration-organization" className="text-base">
+                        <p
+                          aria-labelledby="mail-configuration-organization-label"
+                          className="text-base"
+                        >
                           {organization.name}
                         </p>
                         <p className="text-sm text-muted-foreground">
@@ -543,11 +557,12 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                           id="mail-configuration-organization"
                           projectKey={tenantId}
                           value={organizationId}
-                          onValueChange={setOrganizationId}
+                          onValueChange={changeOrganization}
                           excludeNotEnabled
                           defaultOptionLabel={t("EMAIL_CONFIGURE.DEFAULT_ORGANIZATION")}
                         />
-                        {organizationHintName && (
+                        {/* The Default organization's configurations are shared, so no "only". */}
+                        {organizationHintName && organizationId !== DEFAULT_ORGANIZATION_ID && (
                           <p className="text-sm text-muted-foreground">
                             {t("NEW_CONFIGURATION.ORGANIZATION_HINT", {
                               organization: organizationHintName,
