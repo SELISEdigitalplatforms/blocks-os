@@ -333,6 +333,76 @@ describe("EmailService", () => {
     });
   });
 
+  describe("getMailBoxMailSource", () => {
+    it("requests the stored message by its encoded ItemId and returns the file", async () => {
+      const file = new Blob(["Subject: hi"], { type: "application/octet-stream" });
+      vi.mocked(http.get).mockResolvedValue(file);
+
+      const result = await service.getMailBoxMailSource("row 1/&x");
+
+      expect(http.get).toHaveBeenCalledWith(
+        `${MAIL_ENDPOINTS.GET_MAILBOX_MAIL_SOURCE}?ItemId=row%201%2F%26x`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
+      expect(MAIL_ENDPOINTS.GET_MAILBOX_MAIL_SOURCE).toMatch(/\/api\/Mail\/GetMailBoxMailSource$/);
+      expect(result).toBe(file);
+    });
+
+    it.each([
+      ["JSON", { isSuccess: false, errors: {} }],
+      ["text", "Subject: hi"],
+      ["nothing", undefined],
+    ])("throws when an older API answers with %s instead of a file", async (_, answer) => {
+      vi.mocked(http.get).mockResolvedValue(answer);
+
+      await expect(service.getMailBoxMailSource("row-1")).rejects.toThrow(
+        "Unexpected message source response",
+      );
+    });
+
+    it("passes HTTP errors through", async () => {
+      vi.mocked(http.get).mockRejectedValue(new Error("Mail not found"));
+
+      await expect(service.getMailBoxMailSource("nope")).rejects.toThrow("Mail not found");
+    });
+  });
+
+  describe("getMailBoxMailAttachmentFile", () => {
+    it("requests the attachment by ItemId and Index and returns the file", async () => {
+      const file = new Blob(["pdf"], { type: "application/octet-stream" });
+      vi.mocked(http.get).mockResolvedValue(file);
+
+      const result = await service.getMailBoxMailAttachmentFile("row 1/&x", 2);
+
+      expect(http.get).toHaveBeenCalledWith(
+        `${MAIL_ENDPOINTS.GET_MAILBOX_MAIL_ATTACHMENT_FILE}?ItemId=row+1%2F%26x&Index=2`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
+      expect(MAIL_ENDPOINTS.GET_MAILBOX_MAIL_ATTACHMENT_FILE).toMatch(
+        /\/api\/Mail\/GetMailBoxMailAttachmentFile$/,
+      );
+      expect(result).toBe(file);
+    });
+
+    it("throws when the answer is not a file", async () => {
+      vi.mocked(http.get).mockResolvedValue({ attachment: null, isSuccess: true, errors: null });
+
+      await expect(service.getMailBoxMailAttachmentFile("row-1", 0)).rejects.toThrow(
+        "Unexpected attachment response",
+      );
+    });
+
+    it("passes HTTP errors through", async () => {
+      vi.mocked(http.get).mockRejectedValue(new Error("Attachment not found"));
+
+      await expect(service.getMailBoxMailAttachmentFile("row-1", 5)).rejects.toThrow(
+        "Attachment not found",
+      );
+    });
+  });
+
   describe("saveMailConfig", () => {
     it("should call correct endpoint with flat payload", async () => {
       const payload = {

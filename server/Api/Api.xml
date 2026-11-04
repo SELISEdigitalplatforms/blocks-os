@@ -195,6 +195,12 @@
             will never succeed.
             </remarks>
         </member>
+        <member name="M:BlocksOs.Api.Controllers.MailController.GetMailBoxMailSource(Configuration.DomainService.Mail.Mailbox.GetMailBoxMailRequest)">
+            <summary>The stored message as an <c>.eml</c> download.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.MailController.GetMailBoxMailAttachmentFile(Configuration.DomainService.Mail.Mailbox.GetMailBoxMailAttachmentFileRequest)">
+            <summary>One attachment of the stored message as a download, streamed from the message.</summary>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.MigrationController.#ctor(DomainService.Migration.IMigrationService,DomainService.Migration.Services.IMigrationRepository,Blocks.Genesis.IMessageClient)">
             <summary>
             Initializes a new instance of the MigrationController.

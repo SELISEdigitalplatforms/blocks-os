@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Blocks.Genesis;
@@ -18,6 +20,7 @@ using Configuration.DomainService.Storage.RequestModel;
 using Configuration.DomainService.Storage.Services;
 using DomainService.Configuration;
 using FluentAssertions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using Blocks.Genesis.Entities.Data;
@@ -397,6 +400,112 @@ namespace XUnitTest.Controllers
             var result = await FullController().GetMailBoxMail(new GetMailBoxMailRequest { MessageId = "missing" });
 
             result.Should().BeOfType<NotFoundObjectResult>();
+        }
+
+        // The file actions set a response header, so they need an HttpContext.
+        private MailController FileController()
+        {
+            var controller = FullController();
+            controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+            return controller;
+        }
+
+        [Fact]
+        public async Task GetMailBoxMailSource_Found_ReturnsTheEmlAsAnOpaqueDownload()
+        {
+            // H4/C11/E5.
+            var bytes = new byte[] { 0x53, 0x80, 0xFF };
+            _mailboxService.Setup(s => s.GetMailBoxMailSourceAsync(It.Is<GetMailBoxMailRequest>(r => r.ItemId == "row-1")))
+                           .ReturnsAsync(new GetMailBoxMailSourceResponse { IsSuccess = true, Content = bytes });
+            var controller = FileController();
+
+            var result = await controller.GetMailBoxMailSource(new GetMailBoxMailRequest { ItemId = "row-1" });
+
+            var file = result.Should().BeOfType<FileContentResult>().Subject;
+            file.FileContents.Should().Equal(bytes);
+            file.ContentType.Should().Be("application/octet-stream");
+            file.FileDownloadName.Should().Be("message.eml");
+            controller.Response.Headers["X-Content-Type-Options"].ToString().Should().Be("nosniff");
+        }
+
+        [Theory]
+        [InlineData("MessageId", "Mail not found")]
+        [InlineData("RawMime", "No stored message source")]
+        public async Task GetMailBoxMailSource_Failure_ReturnsNotFoundWithTheErrorsOnly(string key, string message)
+        {
+            // C1/C2/E9/E10.
+            var errors = new Dictionary<string, string> { [key] = message };
+            _mailboxService.Setup(s => s.GetMailBoxMailSourceAsync(It.IsAny<GetMailBoxMailRequest>()))
+                           .ReturnsAsync(new GetMailBoxMailSourceResponse { IsSuccess = false, Errors = errors });
+
+            var result = await FileController().GetMailBoxMailSource(new GetMailBoxMailRequest { ItemId = "nope" });
+
+            var body = result.Should().BeOfType<NotFoundObjectResult>().Which.Value.Should().BeOfType<BaseResponse>().Subject;
+            body.IsSuccess.Should().BeFalse();
+            body.Errors.Should().Equal(errors);
+        }
+
+        [Fact]
+        public async Task GetMailBoxMailAttachmentFile_Found_StreamsTheFileAsAnOpaqueDownload()
+        {
+            // H5/C11/E7: an HTML attachment is still served as octet-stream, never inline.
+            using var content = new MemoryStream(new byte[] { 1, 2, 3 });
+            _mailboxService.Setup(s => s.GetMailBoxMailAttachmentFileAsync(
+                    It.Is<GetMailBoxMailAttachmentFileRequest>(r => r.ItemId == "row-1" && r.Index == 0)))
+                .ReturnsAsync(new GetMailBoxMailAttachmentFileResponse { IsSuccess = true, FileName = "page.html", Content = content });
+            var controller = FileController();
+
+            var result = await controller.GetMailBoxMailAttachmentFile(
+                new GetMailBoxMailAttachmentFileRequest { ItemId = "row-1", Index = 0 });
+
+            var file = result.Should().BeOfType<FileStreamResult>().Subject;
+            file.FileStream.Should().BeSameAs(content);
+            file.ContentType.Should().Be("application/octet-stream");
+            file.FileDownloadName.Should().Be("page.html");
+            controller.Response.Headers["X-Content-Type-Options"].ToString().Should().Be("nosniff");
+        }
+
+        [Theory]
+        [InlineData("MessageId", "Mail not found")]
+        [InlineData("Index", "Attachment not found")]
+        public async Task GetMailBoxMailAttachmentFile_Failure_ReturnsNotFoundWithTheErrorsOnly(string key, string message)
+        {
+            // C1/C3/E8.
+            var errors = new Dictionary<string, string> { [key] = message };
+            _mailboxService.Setup(s => s.GetMailBoxMailAttachmentFileAsync(It.IsAny<GetMailBoxMailAttachmentFileRequest>()))
+                           .ReturnsAsync(new GetMailBoxMailAttachmentFileResponse { IsSuccess = false, Errors = errors });
+
+            var result = await FileController().GetMailBoxMailAttachmentFile(
+                new GetMailBoxMailAttachmentFileRequest { ItemId = "row-1", Index = 5 });
+
+            var body = result.Should().BeOfType<NotFoundObjectResult>().Which.Value.Should().BeOfType<BaseResponse>().Subject;
+            body.Errors.Should().Equal(errors);
+        }
+
+        [Fact]
+        public async Task GetMailBoxMailAttachment_Obsolete_KeepsItsJsonContract()
+        {
+            // H6.
+            var ok = new GetMailBoxMailAttachmentResponse
+            {
+                IsSuccess = true,
+                Attachment = new MailBoxMailAttachmentContent { FileName = "invoice.pdf", ContentType = "application/pdf", ContentBase64 = "AA==" }
+            };
+            _mailboxService.Setup(s => s.GetMailBoxMailAttachmentAsync(It.Is<GetMailBoxMailAttachmentRequest>(r => r.MessageId == "m1")))
+                           .ReturnsAsync(ok);
+            _mailboxService.Setup(s => s.GetMailBoxMailAttachmentAsync(It.Is<GetMailBoxMailAttachmentRequest>(r => r.MessageId == "nope")))
+                           .ReturnsAsync(new GetMailBoxMailAttachmentResponse { IsSuccess = false });
+
+#pragma warning disable CS0618 // the obsolete route is kept for compatibility and still tested
+            var found = await FullController().GetMailBoxMailAttachment(new GetMailBoxMailAttachmentRequest { MessageId = "m1" });
+            var missing = await FullController().GetMailBoxMailAttachment(new GetMailBoxMailAttachmentRequest { MessageId = "nope" });
+#pragma warning restore CS0618
+
+            found.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeSameAs(ok);
+            missing.Should().BeOfType<NotFoundObjectResult>();
+            typeof(MailController).GetMethod(nameof(MailController.GetMailBoxMailAttachment))!
+                .GetCustomAttributes(typeof(ObsoleteAttribute), false).Should().ContainSingle()
+                .Which.As<ObsoleteAttribute>().Message.Should().Be("Use GetMailBoxMailAttachmentFile.");
         }
     }
 

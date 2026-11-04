@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Download, Loader2, Mail, Paperclip } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useT } from "@seliseblocks/genesis-os";
@@ -7,7 +7,12 @@ import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { Button } from "@/components/ui-kits/button/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
 import { formatSize } from "@/lib/utils";
-import { useGetEmailUsageById } from "@blocks-communication/mail/hooks/use-email-usage";
+import {
+  useFetchEmailUsageSource,
+  useGetEmailUsageById,
+  useGetEmailUsageSource,
+} from "@blocks-communication/mail/hooks/use-email-usage";
+import type { IMailBoxMailAttachment } from "@blocks-communication/mail/models/email";
 import { StatusBadge } from "@blocks-communication/mail/email/email-usage/status-badge";
 import { EmailUsageDetailsSkeleton } from "@blocks-communication/mail/email/email-usage/email-usage-details-skeleton";
 import { EmailUsageDetailsBreadcrumb } from "@blocks-communication/mail/email/email-usage/email-usage-details-breadcrumb";
@@ -50,39 +55,104 @@ const saveBlob = (blob: Blob, fileName: string) => {
   URL.revokeObjectURL(url);
 };
 
-const downloadEml = (rawMime: string, subject: string) =>
-  saveBlob(
-    new Blob([rawMime], { type: "message/rfc822" }),
-    `${(subject || "message").replace(/[\\/:*?"<>|]+/g, "_").slice(0, 80)}.eml`,
+const emlFileName = (subject: string) =>
+  `${(subject || "message").replaceAll(/[\\/:*?"<>|]+/g, "_").slice(0, 80)}.eml`;
+
+// Larger arguments risk exceeding the engine's argument limit in String.fromCodePoint.
+const CHAR_CODE_CHUNK = 32768;
+
+// Every byte becomes the character with the same code (U+0000-U+00FF), which is the text the
+// stored message holds. TextDecoder("latin1") is windows-1252 and would change 0x80-0x9F.
+const bytesToText = (bytes: Uint8Array) => {
+  const parts: string[] = [];
+  for (let offset = 0; offset < bytes.length; offset += CHAR_CODE_CHUNK) {
+    parts.push(String.fromCodePoint(...bytes.subarray(offset, offset + CHAR_CODE_CHUNK)));
+  }
+  return parts.join("");
+};
+
+const NOTICE_CLASS = "p-5 text-sm italic text-muted-foreground";
+
+// Formatted, plain text and the original, in that order; none when the message is too large.
+const getAvailableViews = (
+  tooLarge: boolean,
+  bodies: { html: string; text: string },
+  hasSource: boolean,
+): BodyView[] => {
+  if (tooLarge) return [];
+  const views: BodyView[] = [];
+  if (bodies.html) views.push("html");
+  if (bodies.text) views.push("text");
+  if (hasSource) views.push("source");
+  return views;
+};
+
+const SourcePane = ({
+  loaded,
+  isError,
+  text,
+  failedText,
+}: {
+  loaded: boolean;
+  isError: boolean;
+  text: string;
+  failedText: string;
+}) => {
+  if (loaded) {
+    return (
+      <pre className="max-h-[70vh] overflow-auto whitespace-pre p-5 font-mono text-xs leading-relaxed text-muted-foreground">
+        {text}
+      </pre>
+    );
+  }
+  if (isError) return <p className={NOTICE_CLASS}>{failedText}</p>;
+  return (
+    <div className="p-5">
+      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+    </div>
   );
+};
 
 export const EmailUsageDetails = ({ id }: { id: string }) => {
   const { t } = useT("os.communication.mail");
   const { data: details, isLoading } = useGetEmailUsageById(id);
   const [view, setView] = useState<BodyView | null>(null);
   const [downloadingIndex, setDownloadingIndex] = useState<number | null>(null);
+  const [downloadingEml, setDownloadingEml] = useState(false);
+  const fetchSource = useFetchEmailUsageSource(id);
 
-  const downloadAttachment = async (messageId: string, index: number, fallbackName: string) => {
+  const downloadAttachment = async (index: number, attachment: IMailBoxMailAttachment) => {
     setDownloadingIndex(index);
     try {
-      const response = await emailService.getMailBoxMailAttachment(messageId, index);
-      const file = response?.attachment;
-      if (!response?.isSuccess || !file) {
-        throw new Error("Attachment not found");
-      }
-      const bytes = Uint8Array.from(atob(file.contentBase64), (ch) => ch.charCodeAt(0));
+      // The route id names the mail row; the file endpoint resolves it like the details read.
+      const blob = await emailService.getMailBoxMailAttachmentFile(id, index);
       saveBlob(
-        new Blob([bytes], { type: file.contentType || "application/octet-stream" }),
-        file.fileName || fallbackName,
+        new Blob([blob], { type: attachment.contentType || "application/octet-stream" }),
+        attachment.fileName,
       );
     } catch {
       toast({
         variant: "destructive",
         title: t("EMAIL_USAGE_DETAILS.DOWNLOAD_FAILED_TITLE"),
-        description: t("EMAIL_USAGE_DETAILS.DOWNLOAD_FAILED_DESCRIPTION", { name: fallbackName }),
+        description: t("EMAIL_USAGE_DETAILS.DOWNLOAD_FAILED_DESCRIPTION", {
+          name: attachment.fileName,
+        }),
       });
     } finally {
       setDownloadingIndex(null);
+    }
+  };
+
+  const downloadEml = async (subject: string) => {
+    setDownloadingEml(true);
+    try {
+      const bytes = await fetchSource();
+      saveBlob(new Blob([bytes], { type: "message/rfc822" }), emlFileName(subject));
+    } catch {
+      // The failure lands on the shared source query, whose effect below shows the toast once,
+      // also when this click joined a request the Original view had already started.
+    } finally {
+      setDownloadingEml(false);
     }
   };
 
@@ -95,6 +165,29 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
     // something worth a tab of its own.
     return { html: html.trim() ? html : "", text: text.trim() ? text : "" };
   }, [details]);
+
+  const content = details?.content;
+  const tooLarge = !!content?.previewTooLarge;
+  const hasSource = (content?.rawMimeLength ?? 0) > 0;
+  const availableViews = getAvailableViews(tooLarge, bodies, hasSource);
+  const activeView = view && availableViews.includes(view) ? view : availableViews[0];
+
+  const source = useGetEmailUsageSource(id, activeView === "source");
+  const sourceText = useMemo(() => (source.data ? bytesToText(source.data) : ""), [source.data]);
+
+  // One toast per failed source request, whether the Original view or the `.eml` button made it.
+  // A failure already in the cache when a message opens is not announced again.
+  const toastedSourceErrors = useRef({ id, count: source.errorUpdateCount });
+  useEffect(() => {
+    const seen = toastedSourceErrors.current;
+    toastedSourceErrors.current = { id, count: source.errorUpdateCount };
+    if (seen.id !== id || source.errorUpdateCount <= seen.count) return;
+    toast({
+      variant: "destructive",
+      title: t("EMAIL_USAGE_DETAILS.DOWNLOAD_FAILED_TITLE"),
+      description: t("EMAIL_USAGE_DETAILS.SOURCE_FAILED_DESCRIPTION"),
+    });
+  }, [id, source.errorUpdateCount, t]);
 
   if (isLoading) return <EmailUsageDetailsSkeleton />;
   if (!details) {
@@ -112,13 +205,7 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
   }
 
   const sender = parseAddress(details.from);
-  const attachments = details.content?.attachments ?? [];
-  const availableViews: BodyView[] = [
-    ...(bodies.html ? (["html"] as const) : []),
-    ...(bodies.text ? (["text"] as const) : []),
-    ...(details.rawMime ? (["source"] as const) : []),
-  ];
-  const activeView = view && availableViews.includes(view) ? view : availableViews[0];
+  const attachments = tooLarge ? [] : (content?.attachments ?? []);
 
   return (
     <main className="flex flex-col gap-6">
@@ -138,13 +225,18 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
             </h1>
             <div className="flex shrink-0 items-center gap-2">
               {!details.isInbound && <StatusBadge status={details.status} />}
-              {details.rawMime && (
+              {hasSource && (
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => downloadEml(details.rawMime as string, details.subject)}
+                  disabled={downloadingEml}
+                  onClick={() => downloadEml(details.subject)}
                 >
-                  <Download className="mr-2 h-4 w-4" />
+                  {downloadingEml ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin text-muted-foreground" />
+                  ) : (
+                    <Download className="mr-2 h-4 w-4" />
+                  )}
                   {t("EMAIL_USAGE_DETAILS.DOWNLOAD_EML")}
                 </Button>
               )}
@@ -177,11 +269,8 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
                 </p>
               </div>
               <AddressLine label={t("EMAIL_USAGE_DETAILS.LABEL_TO")} raw={details.to} />
-              <AddressLine label={t("EMAIL_USAGE_DETAILS.LABEL_CC")} raw={details.content?.cc} />
-              <AddressLine
-                label={t("EMAIL_USAGE_DETAILS.LABEL_REPLY_TO")}
-                raw={details.content?.replyTo}
-              />
+              <AddressLine label={t("EMAIL_USAGE_DETAILS.LABEL_CC")} raw={content?.cc} />
+              <AddressLine label={t("EMAIL_USAGE_DETAILS.LABEL_REPLY_TO")} raw={content?.replyTo} />
             </div>
           </div>
 
@@ -210,9 +299,7 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
                       name: attachment.fileName,
                     })}
                     disabled={downloadingIndex === index}
-                    onClick={() =>
-                      downloadAttachment(details.messageId || id, index, attachment.fileName)
-                    }
+                    onClick={() => downloadAttachment(index, attachment)}
                   >
                     {downloadingIndex === index ? (
                       <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
@@ -279,14 +366,18 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
             </pre>
           )}
           {activeView === "source" && (
-            <pre className="max-h-[70vh] overflow-auto whitespace-pre p-5 font-mono text-xs leading-relaxed text-muted-foreground">
-              {details.rawMime}
-            </pre>
+            <SourcePane
+              loaded={!!source.data}
+              isError={source.isError}
+              text={sourceText}
+              failedText={t("EMAIL_USAGE_DETAILS.SOURCE_FAILED_DESCRIPTION")}
+            />
           )}
-          {!activeView && (
-            <p className="p-5 text-sm italic text-muted-foreground">
-              {t("EMAIL_USAGE_DETAILS.NO_BODY")}
-            </p>
+          {tooLarge && (
+            <p className={NOTICE_CLASS}>{t("EMAIL_USAGE_DETAILS.TOO_LARGE_TO_PREVIEW")}</p>
+          )}
+          {!activeView && !tooLarge && (
+            <p className={NOTICE_CLASS}>{t("EMAIL_USAGE_DETAILS.NO_BODY")}</p>
           )}
         </CardContent>
       </Card>
