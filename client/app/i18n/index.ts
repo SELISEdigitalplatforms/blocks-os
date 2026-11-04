@@ -2,6 +2,7 @@
  * i18n modules. English lives here (`<module>.en.json`); other languages come from the
  * localization service.
  *
+ * - `os.actions` (25 keys): cross-modules/actions
  * - `os.ai` (114 keys): cross-modules/ai
  * - `os.ai-credits` (46 keys): cross-modules/ai-credits
  * - `os.api-settings` (24 keys): pages/api-settings
@@ -41,16 +42,18 @@
  * - `os.lmt` (377 keys): cross-modules/lmt, pages/lmt
  * - `os.people` (111 keys): pages/people, components/people
  * - `os.repositories` (26 keys): pages/repositories
- * - `os.secret-management` (7 keys): pages/secret-management
+ * - `os.secret-management` (8 keys): pages/secret-management
  * - `os.secrets` (178 keys): cross-modules/secrets
  * - `os.settings` (24 keys): pages/settings
- * - `os.shared` (213 keys): components (except those listed under feature modules), hooks, layouts, lib, routes, constants (navigation, breadcrumb, environment options, lmt/secret/auth nav)
+ * - `os.shared` (217 keys): components (except those listed under feature modules), hooks, layouts, lib, routes, constants (navigation, breadcrumb, environment options, lmt/secret/auth nav)
  * - `os.storage` (84 keys): cross-modules/storage
  * - `os.subscription-usage` (41 keys): pages/subscription-usage
  * - `os.utilities` (57 keys): cross-modules/utilities
- * Total: 5065 keys.
+ * - `os.webhooks` (104 keys): cross-modules/webhooks
+ * Total: 5199 keys.
  */
 import { registerTranslations } from "@seliseblocks/genesis-os";
+import osActions from "./os.actions.en.json";
 import osAi from "./os.ai.en.json";
 import osAiCredits from "./os.ai-credits.en.json";
 import osApiSettings from "./os.api-settings.en.json";
@@ -97,7 +100,9 @@ import osShared from "./os.shared.en.json";
 import osStorage from "./os.storage.en.json";
 import osSubscriptionUsage from "./os.subscription-usage.en.json";
 import osUtilities from "./os.utilities.en.json";
+import osWebhooks from "./os.webhooks.en.json";
 
+registerTranslations("os.actions", osActions);
 registerTranslations("os.ai", osAi);
 registerTranslations("os.ai-credits", osAiCredits);
 registerTranslations("os.api-settings", osApiSettings);
@@ -144,3 +149,4 @@ registerTranslations("os.shared", osShared);
 registerTranslations("os.storage", osStorage);
 registerTranslations("os.subscription-usage", osSubscriptionUsage);
 registerTranslations("os.utilities", osUtilities);
+registerTranslations("os.webhooks", osWebhooks);
