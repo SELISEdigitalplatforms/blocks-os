@@ -4,6 +4,7 @@ import type {
 } from "../models/third-party-jwt-provider.model";
 import { http } from "@/lib/http/http-client";
 import { IValidateCnameProjectPayload } from "@/models/project.model";
+import type { IDomainSetupGuideResponse } from "@/models/domain-setup.model";
 import {
   CLOUD_BUILD_ENDPOINTS,
   DOMAIN_ENDPOINTS,
@@ -37,6 +38,11 @@ import {
   JwtClaimPayload,
   JwtClaimResponse,
 } from "@blocks-idp/authentication/models/jwt.claim.model";
+import { tStatic } from "@seliseblocks/genesis-os";
+
+const KEY_INVALID_PROVIDE_A_VALID_JWKS = "PROJECT_SERVICE.INVALID_PROVIDE_A_VALID_JWKS";
+
+const I18N_MODULE = "os.identifier";
 
 export class ProjectService {
   getProjects(page: number, pageSize: number, tenantGroupId: string): Promise<IProjectGroup[]> {
@@ -135,6 +141,23 @@ export class ProjectService {
     return http.post(DOMAIN_ENDPOINTS.CONFIGURE, payload);
   }
 
+  getDomainSetupGuide(): Promise<IDomainSetupGuideResponse> {
+    return http.get(DOMAIN_ENDPOINTS.SETUP_GUIDE);
+  }
+
+  // Server-sent events: `step` updates while the setup runs, then one `result`
+  configureDomainStream(
+    payload: IValidateCnameProjectPayload,
+    signal?: AbortSignal,
+  ): Promise<ReadableStream<Uint8Array>> {
+    return http.stream(
+      DOMAIN_ENDPOINTS.CONFIGURE_STREAM,
+      payload,
+      { Accept: "text/event-stream" },
+      { signal },
+    );
+  }
+
   updateProject(payload: IUpdateProjectPayload): Promise<IUpdateProjectResponse> {
     return http.post(PROJECT_ENDPOINTS.UPDATE_PROJECT, payload);
   }
@@ -147,15 +170,11 @@ export class ProjectService {
   }
 
   // Data Migration Methods
-  initiateMigration(
-    payload: IMigrationRequest,
-  ): Promise<IMigrationInitiateResponse> {
+  initiateMigration(payload: IMigrationRequest): Promise<IMigrationInitiateResponse> {
     return http.post(MIGRATION_ENDPOINTS.MIGRATE, payload, undefined, { absoluteUrl: true });
   }
 
-  verifyMigration(
-    payload: IVerifyMigrationRequest,
-  ): Promise<IMigrationVerificationResponse> {
+  verifyMigration(payload: IVerifyMigrationRequest): Promise<IMigrationVerificationResponse> {
     return http.post(MIGRATION_ENDPOINTS.VERIFY, payload, undefined, { absoluteUrl: true });
   }
 
@@ -168,9 +187,7 @@ export class ProjectService {
     return http.post(PROJECT_ENDPOINTS.UPDATE_TOKEN_VALIDATION, payload);
   }
 
-  getPublicCertificateInformation(
-
-  ): Promise<IGetPublicCertificateResponse | null> {
+  getPublicCertificateInformation(): Promise<IGetPublicCertificateResponse | null> {
     const url = `${PROJECT_ENDPOINTS.GET_TOKEN_VALIDATION}`;
     return http.get<IGetPublicCertificateResponse | null>(url);
   }
@@ -193,7 +210,7 @@ export class ProjectService {
         // HTTP error
         return {
           isValid: false,
-          error: `Invalid, provide a valid jwks URL`,
+          error: tStatic(I18N_MODULE, KEY_INVALID_PROVIDE_A_VALID_JWKS),
         };
       }
 
@@ -203,7 +220,7 @@ export class ProjectService {
         // Response is not JSON
         return {
           isValid: false,
-          error: "Invalid, provide a valid jwks URL",
+          error: tStatic(I18N_MODULE, KEY_INVALID_PROVIDE_A_VALID_JWKS),
         };
       }
 
@@ -215,7 +232,7 @@ export class ProjectService {
         // Missing or invalid 'keys' array in JWKS
         return {
           isValid: false,
-          error: "Invalid, provide a valid jwks URL",
+          error: tStatic(I18N_MODULE, KEY_INVALID_PROVIDE_A_VALID_JWKS),
         };
       }
 
@@ -224,7 +241,7 @@ export class ProjectService {
       console.error("JWKS URL Validation Error:", error);
       return {
         isValid: false,
-        error: "Invalid, provide a valid jwks URL",
+        error: tStatic(I18N_MODULE, KEY_INVALID_PROVIDE_A_VALID_JWKS),
       };
     }
   }

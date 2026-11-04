@@ -17,21 +17,21 @@ namespace BlocksOs.Api.Controllers
             _service = service;
         }
 
-        [Authorize]
+        [ProtectedEndPoint("blocks-iam::iam::permissions")]
         [HttpPost]
         public async Task<IActionResult> GetList([FromBody] GetApiEndpointConfigsRequest request)
         {
             var response = await _service.GetListAsync(request);
             return Ok(response);
         }
-        [Authorize]
+        [ProtectedEndPoint("blocks-iam::iam::mutate-permissions")]
         [HttpPost]
         public async Task<IActionResult> Update([FromBody] UpdateApiEndpointConfigRequest request)
         {
             var response = await _service.UpdateAsync(request);
             return response.IsSuccess ? Ok(response) : BadRequest(response);
         }
-        [Authorize]
+        [ProtectedEndPoint("blocks-iam::iam::mutate-permissions")]
         [HttpPost]
         public async Task<IActionResult> BulkUpdate([FromBody] BulkUpdateApiEndpointConfigRequest request)
         {

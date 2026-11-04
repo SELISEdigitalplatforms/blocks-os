@@ -1,11 +1,13 @@
 import type { IActivityItemApi } from "../api";
 import type { IActivityRowViewModel } from "../view-models/activity.view-model";
 import { formatRelative } from "../utils/date-format";
+import { tStatic } from "@seliseblocks/genesis-os";
 
 export const toActivityRowViewModel = (api: IActivityItemApi): IActivityRowViewModel => {
-  const device = api.context?.deviceInformation?.device
-    ?? api.context?.deviceName
-    ?? "Unknown device";
+  const device =
+    api.context?.deviceInformation?.device ??
+    api.context?.deviceName ??
+    tStatic("os.idp.security", "ACTIVITY_MAPPER.UNKNOWN_DEVICE");
   const browser = api.context?.deviceInformation?.browser;
   const os = api.context?.deviceInformation?.os;
   const tone =
@@ -19,9 +21,10 @@ export const toActivityRowViewModel = (api: IActivityItemApi): IActivityRowViewM
     id: api.itemId,
     eventLabel: api.event,
     timestampDisplay: formatRelative(api.createdDate),
-    deviceLabel: browser && os
-      ? `${device} · ${browser} on ${os}`
-      : device,
+    deviceLabel:
+      browser && os
+        ? tStatic("os.idp.security", "ACTIVITY_MAPPER.DEVICE_LABEL", { device, browser, os })
+        : device,
     ipAddress: api.context?.ipAddress ?? "—",
     tone,
   };

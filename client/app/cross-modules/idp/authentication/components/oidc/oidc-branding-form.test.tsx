@@ -16,7 +16,8 @@ const h = vi.hoisted(() => ({
   authConfig: undefined as unknown,
 }));
 
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "t1" } }),
 }));
 vi.mock("@blocks-idp/authentication/contexts/oidc-branding-header-context", () => ({
@@ -150,7 +151,7 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
     await renderForm("?section=pages");
     const previewFrame = screen.getByTestId("preview").parentElement;
 
-    expect(previewFrame?.className).toContain("max-w-[42rem]");
+    expect(previewFrame?.className).toContain("max-w-2xl");
     expect(previewFrame?.parentElement?.className).toContain("min-h-[500px]");
     expect(previewFrame?.parentElement?.className).toContain("lg:min-h-[620px]");
   });
@@ -376,7 +377,7 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
       pages: {
         ...DEFAULT_OIDC_UI_TEMPLATE.pages,
         signup: { ...DEFAULT_OIDC_UI_TEMPLATE.pages.signup, heading: "Join Acme" },
-        shared: { footerText: "Acme {year}" },
+        shared: { ...DEFAULT_OIDC_UI_TEMPLATE.pages.shared, footerText: "Acme {year}" },
       },
     });
     expect(Object.keys(payload.theme.light)).toHaveLength(12);

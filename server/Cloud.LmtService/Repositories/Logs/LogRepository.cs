@@ -55,7 +55,7 @@ namespace Cloud.LmtService.Repositories.Logs
             int skip = 0)
         {
             var collection = _database.GetCollection<BsonDocument>(serviceName);
-            var sort = Builders<BsonDocument>.Sort.Descending("Timestamp");
+            var sort = Builders<BsonDocument>.Sort.Descending(Constants.Timestamp);
             var projection = Builders<BsonDocument>.Projection.As<LogProjection>();
 
             var countTask = collection.CountDocumentsAsync(filter);
@@ -78,8 +78,8 @@ namespace Cloud.LmtService.Repositories.Logs
             // on serialize, so a Kind.Unspecified value (any caller that omits the trailing 'Z')
             // would be read as server-local and shift the window. LogTimeRange.AsUtc pins the
             // contract: unmarked input is UTC, not server-local.
-            var filter = Builders<BsonDocument>.Filter.Eq("TenantId", bc?.TenantId)
-                & Builders<BsonDocument>.Filter.Gt("Timestamp", LogTimeRange.AsUtc(query.LastDate));
+            var filter = Builders<BsonDocument>.Filter.Eq(TenantIdField, bc?.TenantId)
+                & Builders<BsonDocument>.Filter.Gt(Constants.Timestamp, LogTimeRange.AsUtc(query.LastDate));
             var serviceNames = GetServiceNames(query.Name, query.ServiceNames);
             var logTasks = serviceNames.Select(serviceName =>
                 QueryCollectionAsync(serviceName, filter, int.MaxValue));
@@ -106,7 +106,7 @@ namespace Cloud.LmtService.Repositories.Logs
         public async Task<(IQueryable<LogProjection>, long)> GetLogs(GetLogsRequest query)
         {
             var bc = BlocksContext.GetContext();
-            var filter = Builders<BsonDocument>.Filter.Eq("TenantId", bc?.TenantId);
+            var filter = Builders<BsonDocument>.Filter.Eq(TenantIdField, bc?.TenantId);
 
             if (!string.IsNullOrWhiteSpace(query.Search))
             {
@@ -126,10 +126,10 @@ namespace Cloud.LmtService.Repositories.Logs
             // See the note in GetLogs(LiveLogRequest): unmarked (Kind.Unspecified) dates must be
             // read as UTC, otherwise Mongo's serializer shifts them by the server's offset.
             if (query.Filter?.StartDate != null)
-                filter &= Builders<BsonDocument>.Filter.Gt("Timestamp", LogTimeRange.AsUtc(query.Filter.StartDate));
+                filter &= Builders<BsonDocument>.Filter.Gt(Constants.Timestamp, LogTimeRange.AsUtc(query.Filter.StartDate));
 
             if (query.Filter?.EndDate != null)
-                filter &= Builders<BsonDocument>.Filter.Lte("Timestamp", LogTimeRange.AsUtc(query.Filter.EndDate));
+                filter &= Builders<BsonDocument>.Filter.Lte(Constants.Timestamp, LogTimeRange.AsUtc(query.Filter.EndDate));
 
             var serviceNames = GetServiceNames(query.ServiceName, query.ServiceNames);
             var page = Math.Max(query.Page, 0);
@@ -151,7 +151,7 @@ namespace Cloud.LmtService.Repositories.Logs
         public async Task<(IQueryable<LogProjection>, long)> GetLogs(LogsByDateRequest request)
         {
             var bc = BlocksContext.GetContext();
-            var filter = Builders<BsonDocument>.Filter.Eq("TenantId", bc?.TenantId);
+            var filter = Builders<BsonDocument>.Filter.Eq(TenantIdField, bc?.TenantId);
 
             if (!string.IsNullOrWhiteSpace(request.Search))
             {
@@ -171,10 +171,10 @@ namespace Cloud.LmtService.Repositories.Logs
             // See the note in GetLogs(LiveLogRequest): unmarked (Kind.Unspecified) dates must be
             // read as UTC, otherwise Mongo's serializer shifts them by the server's offset.
             if (request.Filter?.StartDate != null)
-                filter &= Builders<BsonDocument>.Filter.Gte("Timestamp", LogTimeRange.AsUtc(request.Filter.StartDate));
+                filter &= Builders<BsonDocument>.Filter.Gte(Constants.Timestamp, LogTimeRange.AsUtc(request.Filter.StartDate));
 
             if (request.Filter?.EndDate != null)
-                filter &= Builders<BsonDocument>.Filter.Lt("Timestamp", LogTimeRange.AsUtc(request.Filter.EndDate));
+                filter &= Builders<BsonDocument>.Filter.Lt(Constants.Timestamp, LogTimeRange.AsUtc(request.Filter.EndDate));
 
             var serviceNames = GetServiceNames(request.ServiceName, request.ServiceNames);
             var pageSize = Math.Max(request.PageSize, 1);
@@ -463,7 +463,7 @@ namespace Cloud.LmtService.Repositories.Logs
 
             try
             {
-                var collections = await _database.ListCollectionNames().ToListAsync();
+                var collections = await (await _database.ListCollectionNamesAsync()).ToListAsync();
                 if (!collections.Contains(collectionName))
                     return;
 
@@ -530,18 +530,6 @@ namespace Cloud.LmtService.Repositories.Logs
             return filter;
         }
 
-        private static ProjectionDefinition<BsonDocument> BuildStoredLogWithTenantProjection()
-        {
-            return Builders<BsonDocument>.Projection
-                .Include(TenantIdField)
-                .Include(Constants.Timestamp)
-                .Include(LevelField)
-                .Include(MessageField)
-                .Include(TraceIdField)
-                .Include(SpanIdField)
-                .Include(ServiceNameField);
-        }
-
         private static ProjectionDefinition<BsonDocument> BuildStoredLogProjection()
         {
             return Builders<BsonDocument>.Projection
@@ -564,7 +552,7 @@ namespace Cloud.LmtService.Repositories.Logs
         {
             return new StoredLog
             {
-                Timestamp = GetBsonValueAsString(doc, "Timestamp"),
+                Timestamp = GetBsonValueAsString(doc, Constants.Timestamp),
                 ActionName = doc.GetValue("ActionName", BsonNull.Value).IsBsonNull ? string.Empty : doc["ActionName"].AsString,
                 TraceId = doc.GetValue(TraceIdField, BsonNull.Value).IsBsonNull ? string.Empty : doc[TraceIdField].AsString,
                 EnvironmentName = doc.GetValue("EnvironmentName", BsonNull.Value).IsBsonNull ? string.Empty : doc["EnvironmentName"].AsString,

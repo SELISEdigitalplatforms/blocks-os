@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
 import { cn } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 import { useState } from "react";
 
 const DEFAULT_VISIBLE_COUNT = 8;
@@ -11,11 +12,14 @@ type ConfigTagListProps = {
   className?: string;
 };
 
-export const ConfigTagList = ({ items, emptyLabel = "None", className }: ConfigTagListProps) => {
+export const ConfigTagList = ({ items, emptyLabel, className }: ConfigTagListProps) => {
+  const { t } = useT("os.idp.settings");
   const [expanded, setExpanded] = useState(false);
 
   if (!items.length) {
-    return <p className="text-sm text-muted-foreground">{emptyLabel}</p>;
+    return (
+      <p className="text-sm text-muted-foreground">{emptyLabel ?? t("CONFIG_TAG_LIST.NONE")}</p>
+    );
   }
 
   const visibleItems = expanded ? items : items.slice(0, DEFAULT_VISIBLE_COUNT);
@@ -43,7 +47,9 @@ export const ConfigTagList = ({ items, emptyLabel = "None", className }: ConfigT
           className="h-7 px-2 text-xs text-muted-foreground"
           onClick={() => setExpanded((current) => !current)}
         >
-          {expanded ? "Show less" : `Show ${hiddenCount} more`}
+          {expanded
+            ? t("CONFIG_TAG_LIST.SHOW_LESS")
+            : t("CONFIG_TAG_LIST.SHOW_MORE", { count: hiddenCount })}
         </Button>
       ) : null}
     </div>

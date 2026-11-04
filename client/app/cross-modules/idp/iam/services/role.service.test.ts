@@ -38,11 +38,55 @@ describe("RoleService", () => {
 
       expect(http.post).toHaveBeenCalledWith(
         ROLE_ENDPOINTS.GET_ROLES,
-        mockGetRolesPayload,
+        { ...mockGetRolesPayload, filter: { search: "" } },
         undefined,
         { absoluteUrl: true },
       );
       expect(result).toEqual(mockRolesResponse);
+    });
+
+    it("sends organizationId and drops projectKey", async () => {
+      // projectKey is not on IAM's request model, so sending it only made the body
+      // look organization-aware. organizationId is what actually scopes the query.
+      vi.mocked(http.post).mockResolvedValue(mockRolesResponse);
+
+      await service.getRoles({
+        page: 0,
+        pageSize: 10,
+        projectKey: "tenant-1",
+        organizationId: "org-1",
+        filter: { search: "man" },
+      });
+
+      const body = vi.mocked(http.post).mock.calls[0][1] as Record<string, unknown>;
+      expect(body).not.toHaveProperty("projectKey");
+      expect(body.organizationId).toBe("org-1");
+    });
+
+    it("always sends a search string, even for a slugs-only filter", async () => {
+      // IAM rejected a slugs-only body with
+      // { "Filter.Search": ["The Search field is required."] }, which broke the bulk
+      // role dialog's held-role lookup outright.
+      vi.mocked(http.post).mockResolvedValue(mockRolesResponse);
+
+      await service.getRoles({
+        page: 0,
+        pageSize: 5,
+        organizationId: "org-1",
+        filter: { slugs: ["manager", "clouduser"] },
+      });
+
+      const body = vi.mocked(http.post).mock.calls[0][1] as { filter: Record<string, unknown> };
+      expect(body.filter).toEqual({ slugs: ["manager", "clouduser"], search: "" });
+    });
+
+    it("does not overwrite a search the caller supplied", async () => {
+      vi.mocked(http.post).mockResolvedValue(mockRolesResponse);
+
+      await service.getRoles({ page: 0, pageSize: 5, filter: { search: "admin" } });
+
+      const body = vi.mocked(http.post).mock.calls[0][1] as { filter: Record<string, unknown> };
+      expect(body.filter.search).toBe("admin");
     });
 
     it("should throw when the API call fails", async () => {

@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { Button } from "@/components/ui-kits/button/button";
 import {
   DialogContent,
@@ -20,13 +21,23 @@ export const ToggleOrganizationStatus = ({
   organization,
   onClose,
 }: ToggleOrganizationStatusProps) => {
+  const { t } = useT("os.idp.organizations");
   const { mutateAsync, isPending } = useUpdateOrganization();
 
   // isDisabled is optional on the OS organization model, so normalise it to a boolean.
   const isEnabling = !!organization.isDisabled;
-  const action = isEnabling ? "enable" : "disable";
-  const actionLabel = isEnabling ? "Enable" : "Disable";
-  const actioningLabel = isEnabling ? "Enabling..." : "Disabling...";
+  const title = isEnabling
+    ? t("TOGGLE_ORGANIZATION_STATUS.TITLE_ENABLE")
+    : t("TOGGLE_ORGANIZATION_STATUS.TITLE_DISABLE");
+  const description = isEnabling
+    ? t("TOGGLE_ORGANIZATION_STATUS.DESCRIPTION_ENABLE", { name: organization.name })
+    : t("TOGGLE_ORGANIZATION_STATUS.DESCRIPTION_DISABLE", { name: organization.name });
+  const actionLabel = isEnabling
+    ? t("TOGGLE_ORGANIZATION_STATUS.ENABLE")
+    : t("TOGGLE_ORGANIZATION_STATUS.DISABLE");
+  const actioningLabel = isEnabling
+    ? t("TOGGLE_ORGANIZATION_STATUS.ENABLING")
+    : t("TOGGLE_ORGANIZATION_STATUS.DISABLING");
 
   const handleConfirm = async () => {
     try {
@@ -40,7 +51,9 @@ export const ToggleOrganizationStatus = ({
         return;
       }
       showSuccessToast({
-        description: `Organization ${isEnabling ? "enabled" : "disabled"} successfully`,
+        description: isEnabling
+          ? t("TOGGLE_ORGANIZATION_STATUS.ENABLED_SUCCESS")
+          : t("TOGGLE_ORGANIZATION_STATUS.DISABLED_SUCCESS"),
       });
       onClose();
     } catch (error: unknown) {
@@ -53,17 +66,13 @@ export const ToggleOrganizationStatus = ({
   return (
     <DialogContent>
       <DialogHeader className="mb-4">
-        <DialogTitle>{actionLabel} Organization</DialogTitle>
-        <DialogDescription>
-          Are you sure you want to {action} the organization &quot;{organization.name}&quot;?
-          {!isEnabling && " This will make it inactive."}
-          {isEnabling && " This will make it active again."}
-        </DialogDescription>
+        <DialogTitle>{title}</DialogTitle>
+        <DialogDescription>{description}</DialogDescription>
       </DialogHeader>
       <DialogFooter className="mt-6">
         <DialogTrigger asChild>
           <Button className="min-w-[80px]" variant="outline" disabled={isPending}>
-            Cancel
+            {t("common:CANCEL")}
           </Button>
         </DialogTrigger>
         <Button

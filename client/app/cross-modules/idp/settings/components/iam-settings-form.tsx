@@ -33,6 +33,7 @@ import {
   toIamConfigFormValues,
   type IamConfigFormValues,
 } from "@blocks-idp/settings/utils/auth-config-form";
+import { useT } from "@seliseblocks/genesis-os";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useEffect, useMemo } from "react";
 import { useForm, useFormState } from "react-hook-form";
@@ -48,27 +49,30 @@ type MinutesInputProps = {
   name: string;
 };
 
-const MinutesInput = ({ value, onChange, onBlur, name }: MinutesInputProps) => (
-  <div className="relative w-full">
-    <Input
-      type="number"
-      min={0}
-      name={name}
-      value={value}
-      onBlur={onBlur}
-      onChange={(event) => onChange(Number(event.target.value))}
-      className={SETTINGS_FORM_LAYOUT.inputWithSuffix}
-    />
-    <span
-      className={cn(
-        "pointer-events-none absolute inset-y-0 right-3 flex items-center",
-        SETTINGS_FORM_LAYOUT.inputSuffix,
-      )}
-    >
-      Minutes
-    </span>
-  </div>
-);
+const MinutesInput = ({ value, onChange, onBlur, name }: MinutesInputProps) => {
+  const { t } = useT("os.idp.settings");
+  return (
+    <div className="relative w-full">
+      <Input
+        type="number"
+        min={0}
+        name={name}
+        value={value}
+        onBlur={onBlur}
+        onChange={(event) => onChange(Number(event.target.value))}
+        className={SETTINGS_FORM_LAYOUT.inputWithSuffix}
+      />
+      <span
+        className={cn(
+          "pointer-events-none absolute inset-y-0 right-3 flex items-center",
+          SETTINGS_FORM_LAYOUT.inputSuffix,
+        )}
+      >
+        {t("IAM_SETTINGS_FORM.MINUTES")}
+      </span>
+    </div>
+  );
+};
 
 type AccountActionBaseUrlInputProps = {
   value: string;
@@ -109,6 +113,7 @@ const AccountActionBaseUrlInput = ({
           ? "border-muted-foreground/20 bg-muted/80 text-muted-foreground"
           : "border-input bg-muted text-muted-foreground",
       )}
+      // eslint-disable-next-line no-restricted-syntax -- URL scheme prefix
     >
       https://
     </span>
@@ -123,9 +128,10 @@ const AccountActionBaseUrlInput = ({
       className={cn(
         "h-full min-w-0 flex-1 rounded-none border-0 py-2 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0",
         readOnly
-          ? "cursor-not-allowed bg-muted/80 text-muted-foreground opacity-100 focus-visible:outline-none"
+          ? "cursor-not-allowed bg-muted/80 text-muted-foreground opacity-100 focus-visible:outline-hidden"
           : "bg-transparent",
       )}
+      // eslint-disable-next-line no-restricted-syntax -- example domain
       placeholder="console.enterprise.cloud"
     />
   </div>
@@ -142,7 +148,7 @@ type SwitchRowProps = {
 const SwitchRow = ({ label, description, checked, onCheckedChange, disabled }: SwitchRowProps) => (
   <FormItem className={cn(SETTINGS_FORM_LAYOUT.toggleRow, "pb-2")}>
     <div className={SETTINGS_FORM_LAYOUT.toggleLabelGroup}>
-      <FormLabel className={cn("!mt-0", SETTINGS_FORM_LAYOUT.toggleTitle)}>{label}</FormLabel>
+      <FormLabel className={cn("mt-0!", SETTINGS_FORM_LAYOUT.toggleTitle)}>{label}</FormLabel>
       {description ? <p className={SETTINGS_FORM_LAYOUT.toggleDescription}>{description}</p> : null}
     </div>
     <FormControl className="shrink-0 self-start sm:self-center">
@@ -157,6 +163,7 @@ const SwitchRow = ({ label, description, checked, onCheckedChange, disabled }: S
 );
 
 export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
+  const { t } = useT("os.idp.settings");
   const { mutateAsync, isPending } = useSaveSettingsAuthConfig();
 
   const formValues = useMemo(() => toIamConfigFormValues(config), [config]);
@@ -191,13 +198,13 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
         const payload = buildSavePayload(config, applyOidcIamConfigOverrides(values));
         const res = await mutateAsync(payload);
         if (!res.isSuccess) return showErrorToast({ errors: res.errors });
-        showSuccessToast({ description: "IAM configuration updated successfully" });
+        showSuccessToast({ description: t("IAM_SETTINGS_FORM.UPDATED") });
       } catch (error) {
         if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
-        showErrorToast({ errors: "Something went wrong" });
+        showErrorToast({ errors: t("IAM_SETTINGS_FORM.SOMETHING_WENT_WRONG") });
       }
     },
-    [config, mutateAsync],
+    [config, mutateAsync, t],
   );
 
   const tabActions = useMemo(
@@ -222,15 +229,15 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
             control={form.control}
             render={({ field }) => (
               <SettingsToggleCard
-                label="OpenID Connect (OIDC)"
-                description="Routes account activation and recovery through your OIDC provider. Path settings are hidden while this is on; account action links use the Blocks IAM base URL."
+                label={t("IAM_SETTINGS_FORM.OIDC_LABEL")}
+                description={t("IAM_SETTINGS_FORM.OIDC_DESCRIPTION")}
                 checked={field.value}
                 onCheckedChange={field.onChange}
               />
             )}
           />
 
-          <SettingsFormSection title="Activation & Recovery Paths">
+          <SettingsFormSection title={t("IAM_SETTINGS_FORM.ACTIVATION_RECOVERY_PATHS")}>
             <div className={SETTINGS_FORM_LAYOUT.stackedFields}>
               {!isOidcEnabled ? (
                 <>
@@ -239,16 +246,17 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
                     control={form.control}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Account Activation Path</FormLabel>
+                        <FormLabel>{t("IAM_SETTINGS_FORM.ACCOUNT_ACTIVATION_PATH")}</FormLabel>
                         <FormControl>
                           <Input
                             className={SETTINGS_FORM_LAYOUT.inputFull}
+                            // eslint-disable-next-line no-restricted-syntax -- example route path
                             placeholder="/auth/activate-account"
                             {...field}
                           />
                         </FormControl>
                         <FormDescription>
-                          Redirect URL for initial user activation flows.
+                          {t("IAM_SETTINGS_FORM.ACTIVATION_PATH_DESCRIPTION")}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -260,10 +268,11 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
                       control={form.control}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Account Verification Path</FormLabel>
+                          <FormLabel>{t("IAM_SETTINGS_FORM.ACCOUNT_VERIFICATION_PATH")}</FormLabel>
                           <FormControl>
                             <Input
                               className={SETTINGS_FORM_LAYOUT.inputFull}
+                              // eslint-disable-next-line no-restricted-syntax -- example route path
                               placeholder="/auth/verify-identity"
                               {...field}
                             />
@@ -277,10 +286,11 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
                       control={form.control}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Recover Account Path</FormLabel>
+                          <FormLabel>{t("IAM_SETTINGS_FORM.RECOVER_ACCOUNT_PATH")}</FormLabel>
                           <FormControl>
                             <Input
                               className={SETTINGS_FORM_LAYOUT.inputFull}
+                              // eslint-disable-next-line no-restricted-syntax -- example route path
                               placeholder="/auth/recovery"
                               {...field}
                             />
@@ -295,11 +305,13 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
               <div className={cn("space-y-3", !isOidcEnabled && "pt-4")}>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className={SETTINGS_FORM_LAYOUT.toggleLabelGroup}>
-                    <p className={SETTINGS_FORM_LAYOUT.toggleTitle}>Account Action Base URL</p>
+                    <p className={SETTINGS_FORM_LAYOUT.toggleTitle}>
+                      {t("IAM_SETTINGS_FORM.ACCOUNT_ACTION_BASE_URL")}
+                    </p>
                     <p className={SETTINGS_FORM_LAYOUT.toggleDescription}>
                       {isOidcEnabled
-                        ? "OIDC account actions use the Blocks IAM base URL."
-                        : "Activation, verification, and recovery links use this host as the default prefix."}
+                        ? t("IAM_SETTINGS_FORM.BASE_URL_OIDC_DESCRIPTION")
+                        : t("IAM_SETTINGS_FORM.BASE_URL_DESCRIPTION")}
                     </p>
                   </div>
                   {!isOidcEnabled ? (
@@ -310,16 +322,16 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
                         <FormItem className="flex shrink-0 items-center gap-2 space-y-0 self-start sm:self-center">
                           <FormLabel
                             htmlFor="use-account-action-base-url-as-default"
-                            className="!mt-0 cursor-pointer font-normal text-muted-foreground"
+                            className="mt-0! cursor-pointer font-normal text-muted-foreground"
                           >
-                            Use as default
+                            {t("IAM_SETTINGS_FORM.USE_AS_DEFAULT")}
                           </FormLabel>
                           <FormControl>
                             <Switch
                               id="use-account-action-base-url-as-default"
                               checked={field.value}
                               onCheckedChange={field.onChange}
-                              aria-label="Use account action base URL as default"
+                              aria-label={t("IAM_SETTINGS_FORM.USE_BASE_URL_AS_DEFAULT")}
                             />
                           </FormControl>
                         </FormItem>
@@ -349,14 +361,14 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
             </div>
           </SettingsFormSection>
 
-          <SettingsFormSection title="Expiration Lifetimes">
+          <SettingsFormSection title={t("IAM_SETTINGS_FORM.EXPIRATION_LIFETIMES")}>
             <SettingsFieldGrid>
               <FormField
                 name="activationUrlLifetimeInMinutes"
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Activation URL Lifetime</FormLabel>
+                    <FormLabel>{t("IAM_SETTINGS_FORM.ACTIVATION_URL_LIFETIME")}</FormLabel>
                     <FormControl>
                       <MinutesInput
                         name={field.name}
@@ -374,7 +386,7 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Recover Account URL Lifetime</FormLabel>
+                    <FormLabel>{t("IAM_SETTINGS_FORM.RECOVER_URL_LIFETIME")}</FormLabel>
                     <FormControl>
                       <MinutesInput
                         name={field.name}
@@ -390,7 +402,7 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
             </SettingsFieldGrid>
           </SettingsFormSection>
 
-          <SettingsFormSection title="Security">
+          <SettingsFormSection title={t("IAM_SETTINGS_FORM.SECURITY")}>
             <div className={SETTINGS_FORM_LAYOUT.stackedFields}>
               {/* Only the IAM-hosted OIDC activation page reads this, so it is offered only
                   while OIDC is on. App-hosted activation pages own their own form. */}
@@ -400,8 +412,8 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
                   control={form.control}
                   render={({ field }) => (
                     <SwitchRow
-                      label="Set Password During Activation"
-                      description="Ask users to create a password on the activation page. Turn this off to activate on confirmation alone and send users to login."
+                      label={t("IAM_SETTINGS_FORM.SET_PASSWORD_LABEL")}
+                      description={t("IAM_SETTINGS_FORM.SET_PASSWORD_DESCRIPTION")}
                       checked={field.value}
                       onCheckedChange={field.onChange}
                     />
@@ -413,8 +425,8 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
                 control={form.control}
                 render={({ field }) => (
                   <SwitchRow
-                    label="Logout on Password Change"
-                    description="Sign users out of all active sessions when their password is changed"
+                    label={t("IAM_SETTINGS_FORM.LOGOUT_ON_PASSWORD_CHANGE")}
+                    description={t("IAM_SETTINGS_FORM.LOGOUT_DESCRIPTION")}
                     checked={field.value}
                     onCheckedChange={field.onChange}
                   />
@@ -429,12 +441,11 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
                       data-testid="password-strength-regex-header"
                       className="flex flex-wrap items-center justify-between gap-2"
                     >
-                      <FormLabel>Password Strength Regex</FormLabel>
+                      <FormLabel>{t("IAM_SETTINGS_FORM.PASSWORD_STRENGTH_REGEX")}</FormLabel>
                       <PasswordPolicyRegexBuilder onChange={field.onChange} />
                     </div>
                     <FormDescription>
-                      Use the policy builder to compose and preview
-                      common IAM password requirements.
+                      {t("IAM_SETTINGS_FORM.POLICY_BUILDER_DESCRIPTION")}
                     </FormDescription>
                     <FormControl>
                       <Textarea

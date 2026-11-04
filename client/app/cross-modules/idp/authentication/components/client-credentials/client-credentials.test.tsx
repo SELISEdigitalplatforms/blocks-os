@@ -10,7 +10,8 @@ const h = vi.hoisted(() => ({
   listProps: undefined as Record<string, unknown> | undefined,
 }));
 
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 vi.mock("@blocks-idp/authentication/hooks/use-auth-clients", () => ({
@@ -62,6 +63,12 @@ describe("ClientCredentials", () => {
     onEdit(null);
     expect(h.setItemId).toHaveBeenCalledWith("");
     expect(h.setOpen).toHaveBeenCalledWith(true);
+  });
+
+  it("keeps the list mounted while it refetches, so a row's secret dialog stays open", () => {
+    h.isFetching = true;
+    render(<ClientCredentials />);
+    expect(h.listProps?.isLoading).toBe(false);
   });
 
   it("passes an empty list through when there is no data", () => {

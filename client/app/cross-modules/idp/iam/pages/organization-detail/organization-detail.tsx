@@ -1,6 +1,6 @@
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { useGetOrganizationById } from "@blocks-idp/iam/hooks/use-organization";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { Card } from "@/components/ui-kits/card/card";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
@@ -41,6 +41,7 @@ const formatDate = (value?: string) => {
 };
 
 export const OrganizationDetail = ({ id }: { id: string }) => {
+  const { t } = useT("os.idp.iam");
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data, isLoading } = useGetOrganizationById({ itemId: id, projectKey: tenantId });
 
@@ -63,53 +64,57 @@ export const OrganizationDetail = ({ id }: { id: string }) => {
           <Skeleton className="h-8 w-48" />
         ) : (
           <h3 className="text-2xl font-bold tracking-tight text-high-emphasis">
-            {org?.name ?? "Organization"}
+            {org?.name ?? t("ORGANIZATION_DETAIL.TITLE_FALLBACK")}
           </h3>
         )}
         {org && (
-          <Badge variant={!org.isDisabled ? "success" : "secondary"}>
-            {!org.isDisabled ? "Active" : "Disabled"}
+          <Badge variant={org.isDisabled ? "secondary" : "success"}>
+            {org.isDisabled ? t("common:DISABLED") : t("ORGANIZATION_DETAIL.STATUS_ACTIVE")}
           </Badge>
         )}
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-12">
         <aside className="lg:col-span-3 xl:col-span-2">
-          <Card className="sticky top-4 border-none shadow-sm">
+          <Card className="sticky top-4 border-none shadow-xs">
             <div className="divide-y divide-border">
-              <InfoRow icon={<Mail className="h-3.5 w-3.5" />} label="Email" value={org?.email} />
+              <InfoRow
+                icon={<Mail className="h-3.5 w-3.5" />}
+                label={t("common:EMAIL")}
+                value={org?.email}
+              />
               <InfoRow
                 icon={<Phone className="h-3.5 w-3.5" />}
-                label="Phone"
+                label={t("ORGANIZATION_DETAIL.LABEL_PHONE")}
                 value={org?.phoneNumber}
               />
               <InfoRow
                 icon={<Globe className="h-3.5 w-3.5" />}
-                label="Website"
+                label={t("ORGANIZATION_DETAIL.LABEL_WEBSITE")}
                 value={org?.websiteUrl}
               />
               <InfoRow
                 icon={<Languages className="h-3.5 w-3.5" />}
-                label="Language"
+                label={t("ORGANIZATION_DETAIL.LABEL_LANGUAGE")}
                 value={org?.language}
               />
               <InfoRow
                 icon={<MapPin className="h-3.5 w-3.5" />}
-                label="Addresses"
+                label={t("ORGANIZATION_DETAIL.LABEL_ADDRESSES")}
                 value={
                   Array.isArray(org?.addresses) && org.addresses.length > 0
-                    ? `${org.addresses.length} configured`
-                    : "None"
+                    ? t("ORGANIZATION_DETAIL.ADDRESSES_CONFIGURED", { count: org.addresses.length })
+                    : t("ORGANIZATION_DETAIL.ADDRESSES_NONE")
                 }
               />
               <InfoRow
                 icon={<Calendar className="h-3.5 w-3.5" />}
-                label="Created"
+                label={t("ORGANIZATION_DETAIL.LABEL_CREATED")}
                 value={formatDate(org?.createdDate)}
               />
               <InfoRow
                 icon={<History className="h-3.5 w-3.5" />}
-                label="Updated"
+                label={t("ORGANIZATION_DETAIL.LABEL_UPDATED")}
                 value={formatDate(org?.lastUpdatedDate)}
               />
             </div>

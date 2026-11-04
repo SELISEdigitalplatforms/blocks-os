@@ -4,6 +4,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { cn } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 import { IdentityProvider } from "@blocks-idp/authentication/models/identity-provider.model";
 import {
   SOCIAL_AUTH_PROVIDERS_CONFIG,
@@ -16,8 +17,11 @@ import {
   SOCIAL_CARD_TAGS,
 } from "./identity-provider-visual.constant";
 
+const I18N_MODULE = "os.idp.identity-provider";
+
 /** The federated sign-in explainer, shown only while nothing is configured yet. */
 function FederatedFlow() {
+  const { t } = useT(I18N_MODULE);
   const googleLogo = SOCIAL_AUTH_PROVIDERS_CONFIG[SSO_PROVIDERS.google];
   const microsoftLogo = SOCIAL_AUTH_PROVIDERS_CONFIG[SSO_PROVIDERS.microsoft];
 
@@ -27,12 +31,11 @@ function FederatedFlow() {
         <div className="flex items-center gap-2">
           <Route className="h-4 w-4 text-primary" />
           <h2 className="text-sm font-semibold text-high-emphasis">
-            How a federated sign-in works
+            {t("IDENTITY_PROVIDER_GALLERY.FLOW_TITLE")}
           </h2>
         </div>
         <p className="mt-1 text-xs text-muted-foreground sm:text-[13px]">
-          You configure the provider once here — Blocks OS handles the redirect, token exchange and
-          role assignment.
+          {t("IDENTITY_PROVIDER_GALLERY.FLOW_INTRO")}
         </p>
 
         <div className="mt-5 flex flex-col items-stretch gap-3 lg:flex-row lg:items-center">
@@ -42,9 +45,11 @@ function FederatedFlow() {
                 <User className="h-4 w-4 text-medium-emphasis" />
               </div>
               <div className="min-w-0">
-                <p className="text-[13px] font-semibold text-high-emphasis">Your user</p>
+                <p className="text-[13px] font-semibold text-high-emphasis">
+                  {t("IDENTITY_PROVIDER_GALLERY.FLOW_USER_TITLE")}
+                </p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  Clicks “Continue with Google”
+                  {t("IDENTITY_PROVIDER_GALLERY.FLOW_USER_DESCRIPTION")}
                 </p>
               </div>
             </div>
@@ -52,15 +57,16 @@ function FederatedFlow() {
 
           <ArrowRight className="mx-auto h-4 w-4 shrink-0 rotate-90 text-border-medium-emphasis lg:rotate-0" />
 
-          <div className="flex-1 rounded-lg border border-primary/25 bg-primary/[0.04] px-4 py-3.5">
+          <div className="flex-1 rounded-lg border border-primary/25 bg-primary/4 px-4 py-3.5">
             <div className="flex items-center gap-2.5">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                 <Building2 className="h-4 w-4 text-primary" />
               </div>
               <div className="min-w-0">
+                {/* eslint-disable-next-line no-restricted-syntax -- product name */}
                 <p className="text-[13px] font-semibold text-primary">Blocks OS</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  Verifies the token, applies roles
+                  {t("IDENTITY_PROVIDER_GALLERY.FLOW_APP_DESCRIPTION")}
                 </p>
               </div>
             </div>
@@ -84,8 +90,12 @@ function FederatedFlow() {
                 )}
               </div>
               <div className="min-w-0">
-                <p className="text-[13px] font-semibold text-high-emphasis">Identity provider</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">Authenticates the account</p>
+                <p className="text-[13px] font-semibold text-high-emphasis">
+                  {t("IDENTITY_PROVIDER_GALLERY.FLOW_IDP_TITLE")}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {t("IDENTITY_PROVIDER_GALLERY.FLOW_IDP_DESCRIPTION")}
+                </p>
               </div>
             </div>
           </div>
@@ -107,10 +117,11 @@ function SectionHeading({ title, hint }: { title: string; hint: string }) {
 }
 
 function NotConfiguredPill() {
+  const { t } = useT(I18N_MODULE);
   return (
     <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-medium-emphasis">
       <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-low-emphasis" />
-      Not configured
+      {t("IDENTITY_PROVIDER_GALLERY.NOT_CONFIGURED")}
     </span>
   );
 }
@@ -121,13 +132,14 @@ function NotConfiguredPill() {
  * available no matter how many are already configured.
  */
 function AddProviderButton({ label, onAdd }: { label: string; onAdd: () => void }) {
+  const { t } = useT(I18N_MODULE);
   return (
     <Button
       type="button"
       variant="outline"
       size="sm"
-      aria-label={`Add ${label}`}
-      title={`Add ${label}`}
+      aria-label={t("IDENTITY_PROVIDER_GALLERY.ADD_PROVIDER", { label })}
+      title={t("IDENTITY_PROVIDER_GALLERY.ADD_PROVIDER", { label })}
       className="h-7 w-7 shrink-0 p-0 hover:border-primary hover:bg-transparent hover:text-primary"
       onClick={onAdd}
     >
@@ -154,6 +166,7 @@ function ConfigurationStatus({
   onToggle: () => void;
   listId: string;
 }) {
+  const { t } = useT(I18N_MODULE);
   if (count === 0) return <NotConfiguredPill />;
 
   return (
@@ -162,7 +175,7 @@ function ConfigurationStatus({
       aria-expanded={expanded}
       aria-controls={listId}
       onClick={onToggle}
-      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-medium-emphasis transition-colors hover:text-high-emphasis focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-medium-emphasis transition-colors hover:text-high-emphasis focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
       <ChevronRight
         className={cn(
@@ -170,7 +183,7 @@ function ConfigurationStatus({
           expanded && "rotate-90",
         )}
       />
-      {count} configured
+      {t("IDENTITY_PROVIDER_GALLERY.CONFIGURED_COUNT", { count })}
     </button>
   );
 }
@@ -188,10 +201,15 @@ function ProviderEntriesList({
   expanded: boolean;
   listId: string;
 }) {
+  const { t } = useT(I18N_MODULE);
   if (entries.length === 0 || !expanded) return null;
 
   return (
-    <ul id={listId} aria-label={`Configured ${label} providers`} className="space-y-2">
+    <ul
+      id={listId}
+      aria-label={t("IDENTITY_PROVIDER_GALLERY.CONFIGURED_LIST", { label })}
+      className="space-y-2"
+    >
       {entries.map((entry) => (
         <ProviderEntryItem key={entry.itemId} item={entry} />
       ))}
@@ -206,6 +224,7 @@ interface SocialProviderCardProps {
 }
 
 function SocialProviderCard({ provider, entries, onAdd }: SocialProviderCardProps) {
+  const { t } = useT(I18N_MODULE);
   const config = SOCIAL_AUTH_PROVIDERS_CONFIG[provider as SSO_PROVIDERS];
   const [expanded, setExpanded] = useState(true);
   const listId = useId();
@@ -232,6 +251,9 @@ function SocialProviderCard({ provider, entries, onAdd }: SocialProviderCardProp
                   {tag}
                 </span>
               ))}
+              <span className="rounded-sm bg-muted px-2 py-0.5 text-[11px] font-medium text-medium-emphasis">
+                {t("IDENTITY_PROVIDER_GALLERY.TAG_CLIENT_ID_SECRET")}
+              </span>
             </div>
           </div>
           <AddProviderButton label={config.label} onAdd={onAdd} />
@@ -350,14 +372,15 @@ export function IdentityProviderGallery({
   onSelectBlocksOidc,
   onSelectByos,
 }: IdentityProviderGalleryProps) {
+  const { t } = useT(I18N_MODULE);
   return (
     <div className="space-y-6">
       <FederatedFlow />
 
       <section className="space-y-3">
         <SectionHeading
-          title="Social logins"
-          hint="Pick a provider to configure it — no forms to hunt through."
+          title={t("IDENTITY_PROVIDER_GALLERY.SOCIAL_TITLE")}
+          hint={t("IDENTITY_PROVIDER_GALLERY.SOCIAL_HINT")}
         />
         <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
           <SocialProviderCard provider="google" entries={googleEntries} onAdd={onSelectGoogle} />
@@ -371,8 +394,8 @@ export function IdentityProviderGallery({
 
       <section className="space-y-3">
         <SectionHeading
-          title="Enterprise & custom"
-          hint="For providers that aren't a public social login."
+          title={t("IDENTITY_PROVIDER_GALLERY.ENTERPRISE_TITLE")}
+          hint={t("IDENTITY_PROVIDER_GALLERY.ENTERPRISE_HINT")}
         />
         <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
           <EnterpriseProviderCard

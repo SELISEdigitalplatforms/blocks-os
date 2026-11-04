@@ -1,7 +1,6 @@
 using Blocks.Genesis;
 using Cloud.LmtService.Models.ArchiveAndDelete;
 using Cloud.LmtService.Models.LogTraceBackup;
-using Cloud.LmtService.Repositories.ArchiveAndDelete;
 using Cloud.LmtService.Repositories.LogTraceBackup;
 using Cloud.LmtService.Repositories.Logs;
 using Cloud.LmtService.Repositories.Trace;
@@ -17,7 +16,6 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
         private readonly ILogger<ArchiveService> _logger;
         private readonly ILogRepository _logRepository;
         private readonly ITraceRepository _traceRepository;
-        private readonly IArchiveRepository _archiveRepository;
         private readonly ILogTraceBackupRepository _backupRepository;
         private readonly IBlobStorage _blobStorage;
         private readonly ILmtArchiveRestoreConfigurationRepository _lmtArchiveRestoreConfigurationRepository;
@@ -26,7 +24,6 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
             ILogger<ArchiveService> logger,
             ILogRepository logRepository,
             ITraceRepository traceRepository,
-            IArchiveRepository archiveRepository,
             ILogTraceBackupRepository backupRepository,
             IBlobStorage blobStorage,
             ILmtArchiveRestoreConfigurationRepository lmtArchiveRestoreConfigurationRepository)
@@ -34,7 +31,6 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _logRepository = logRepository;
             _traceRepository = traceRepository;
-            _archiveRepository = archiveRepository;
             _backupRepository = backupRepository;
             _blobStorage = blobStorage;
             _lmtArchiveRestoreConfigurationRepository = lmtArchiveRestoreConfigurationRepository;
@@ -84,7 +80,9 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "StartBackupAsync - Unhandled error in backup job {RunId}", runId);
+                // Not logged here: StartBackupConsumer logs the exception once it propagates, and
+                // the job document records it against this run id. The original type is rethrown
+                // unchanged because callers and tests depend on it.
                 await TrySilentAsync(() => _backupRepository.FailJobAsync(runId, ex.ToString()));
                 throw;
             }
@@ -285,11 +283,7 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
 
                     try
                     {
-                        if (!archivedByTenant.ContainsKey(tenantId))
-                        {
-                            var traceId = logs.FirstOrDefault(l => !string.IsNullOrWhiteSpace(l.TraceId))?.TraceId;
-                            await createProgressAsync(tenantId, traceId);
-                        }
+                        await CreateProgressOnFirstBatchAsync(archivedByTenant, tenantId, logs, createProgressAsync);
 
                         await _logRepository.ArchiveLogsAsync(logs, TenantWindow(tenantId, startDate, endDate));
                         archivedByTenant[tenantId] = archivedByTenant.GetValueOrDefault(tenantId) + logs.Count;
@@ -322,6 +316,23 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
             }
 
             return archivedByTenant;
+        }
+
+        /// <summary>
+        /// Creates the tenant's progress row the first time one of its batches is archived, taking
+        /// the TraceId from the first log in that batch that has one.
+        /// </summary>
+        private static async Task CreateProgressOnFirstBatchAsync(
+            IReadOnlyDictionary<string, int> archivedByTenant,
+            string tenantId,
+            List<StoredLog> logs,
+            Func<string, string?, Task> createProgressAsync)
+        {
+            if (archivedByTenant.ContainsKey(tenantId))
+                return;
+
+            var traceId = logs.FirstOrDefault(l => !string.IsNullOrWhiteSpace(l.TraceId))?.TraceId;
+            await createProgressAsync(tenantId, traceId);
         }
 
         /// <summary>

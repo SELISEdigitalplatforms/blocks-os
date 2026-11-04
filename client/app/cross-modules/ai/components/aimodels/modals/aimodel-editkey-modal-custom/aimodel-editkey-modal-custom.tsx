@@ -1,7 +1,8 @@
 import React, { Dispatch, SetStateAction, useMemo, useState } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { isParsableUrl } from "@/lib/url-format";
 import {
   Dialog,
   DialogClose,
@@ -29,27 +30,45 @@ import {
 } from "@/components/ui-kits/tooltip/tooltip";
 import { Info, Trash2, Pen } from "lucide-react";
 import { IModelInfo, IUpdateModelPayload } from "@blocks-ai/types/aimodel.service.type";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT, tStatic } from "@seliseblocks/genesis-os";
 import { useUpdateModel } from "@blocks-ai/hooks/use-aimodel";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-const CustomEditKeyFormSchema = z.object({
-  model: z.string().trim().min(1, "Model name is required"),
-  providerName: z.string().trim().min(1, "Provider name is required"),
-  url: z.string().trim().url("Must be a valid URL"),
-  apiKey: z.string().optional(),
-  apiVersion: z.string().trim().min(1, "API version is required"),
-  DefaultTemp: z.number().min(0).max(2),
-  MaxTokens: z.number().min(1).max(32768),
-  customHeaders: z
-    .array(
-      z.object({
-        key: z.string().trim().optional().nullable(),
-        value: z.string().trim().optional().nullable(),
-      }),
-    )
-    .default([]),
-});
-type FormSchema = z.infer<typeof CustomEditKeyFormSchema>;
+
+const I18N_MODULE = "os.ai";
+const createCustomEditKeyFormSchema = () =>
+  z.object({
+    model: z
+      .string()
+      .trim()
+      .min(1, tStatic(I18N_MODULE, "AIMODEL_EDITKEY_MODAL_CUSTOM.MODEL_NAME_IS_REQUIRED")),
+    providerName: z
+      .string()
+      .trim()
+      .min(1, tStatic(I18N_MODULE, "AIMODEL_EDITKEY_MODAL_CUSTOM.PROVIDER_NAME_IS_REQUIRED")),
+    url: z
+      .string()
+      .trim()
+      .refine(
+        isParsableUrl,
+        tStatic(I18N_MODULE, "AIMODEL_EDITKEY_MODAL_CUSTOM.MUST_BE_A_VALID_URL"),
+      ),
+    apiKey: z.string().optional(),
+    apiVersion: z
+      .string()
+      .trim()
+      .min(1, tStatic(I18N_MODULE, "AIMODEL_EDITKEY_MODAL_CUSTOM.API_VERSION_IS_REQUIRED")),
+    DefaultTemp: z.number().min(0).max(2),
+    MaxTokens: z.number().min(1).max(32768),
+    customHeaders: z
+      .array(
+        z.object({
+          key: z.string().trim().optional().nullable(),
+          value: z.string().trim().optional().nullable(),
+        }),
+      )
+      .default([]),
+  });
+type FormSchema = z.infer<ReturnType<typeof createCustomEditKeyFormSchema>>;
 interface CustomModelEditKeyModalProps {
   editKeyModalOpen: boolean;
   setEditKeyModalOpen: Dispatch<SetStateAction<boolean>>;
@@ -60,7 +79,8 @@ export const CustomModelEditKeyModal = ({
   setEditKeyModalOpen,
   model,
 }: CustomModelEditKeyModalProps) => {
-  const project_key = useProjectStore().selectedProject?.tenantId || "";
+  const { t } = useT(I18N_MODULE);
+  const projectKey = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useUpdateModel();
   const initialValues: FormSchema = useMemo(() => {
     const customParams = (model.CustomParameters ?? {}) as Record<string, unknown>;
@@ -85,7 +105,7 @@ export const CustomModelEditKeyModal = ({
   }, [model]);
   const form = useForm<FormSchema>({
     defaultValues: initialValues,
-    resolver: zodResolver(CustomEditKeyFormSchema),
+    resolver: zodResolver(createCustomEditKeyFormSchema()) as Resolver<FormSchema>,
     mode: "onChange",
   });
   const { control, handleSubmit } = form;
@@ -108,7 +128,7 @@ export const CustomModelEditKeyModal = ({
           .map((h) => [h.key as string, h.value as string]),
       );
       const payload: IUpdateModelPayload & { model_name: string } = {
-        project_key,
+        project_key: projectKey,
         display_name: model.DisplayName || data.model,
         base_url: data.url || model.BaseUrl || "",
         is_active: model.IsActive,
@@ -124,7 +144,9 @@ export const CustomModelEditKeyModal = ({
       if (trimmedApiKey) payload.api_key = trimmedApiKey;
       const res = await mutateAsync({ modelId: model._id, payload });
       if (res.is_success) {
-        showSuccessToast({ description: "Model updated successfully." });
+        showSuccessToast({
+          description: t("AIMODEL_EDITKEY_MODAL_CUSTOM.MODEL_UPDATED_SUCCESSFULLY"),
+        });
       } else {
         showErrorToast({ errors: res.detail });
       }
@@ -143,7 +165,7 @@ export const CustomModelEditKeyModal = ({
     >
       <DialogContent className="w-[calc(100%-2rem)] p-6 sm:mx-0 sm:w-[720px]">
         <DialogHeader>
-          <DialogTitle>Update Custom Model</DialogTitle>
+          <DialogTitle>{t("AIMODEL_EDITKEY_MODAL_CUSTOM.UPDATE_CUSTOM_MODEL")}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form
@@ -156,28 +178,33 @@ export const CustomModelEditKeyModal = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    Model Name <span className="text-red-500">*</span>
+                    {t("AIMODEL_EDITKEY_MODAL_CUSTOM.MODEL_NAME", { span: "*" })}
                   </FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter model name" {...field} disabled />
+                    <Input
+                      placeholder={t("AIMODEL_EDITKEY_MODAL_CUSTOM.ENTER_MODEL_NAME")}
+                      {...field}
+                      disabled
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <div className="rounded border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900 dark:border-blue-600 dark:bg-blue-950/60 dark:text-blue-200">
-              Connect any model via an OpenAI-compatible API
+              {t("AIMODEL_EDITKEY_MODAL_CUSTOM.CONNECT_ANY_MODEL_VIA_AN")}
             </div>
             <FormField
               control={control}
               name="url"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>
-                    API URL <span className="text-red-500">*</span>
-                  </FormLabel>
+                  <FormLabel>{t("AIMODEL_EDITKEY_MODAL_CUSTOM.API_URL", { span: "*" })}</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter API URL" {...field} />
+                    <Input
+                      placeholder={t("AIMODEL_EDITKEY_MODAL_CUSTOM.ENTER_API_URL")}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -188,7 +215,7 @@ export const CustomModelEditKeyModal = ({
               name="apiKey"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>API Key [Optional]</FormLabel>
+                  <FormLabel>{t("AIMODEL_EDITKEY_MODAL_CUSTOM.API_KEY_OPTIONAL")}</FormLabel>
                   <div className="flex items-center justify-between gap-2 rounded-md border px-2 py-1">
                     <FormControl className="flex-1">
                       <Input
@@ -202,7 +229,11 @@ export const CustomModelEditKeyModal = ({
                           if (apiKeyEditable) field.onChange(e.target.value);
                         }}
                         disabled={!apiKeyEditable}
-                        placeholder={apiKeyEditable ? "Enter new API key" : "API Key"}
+                        placeholder={
+                          apiKeyEditable
+                            ? t("AIMODEL_EDITKEY_MODAL_CUSTOM.ENTER_NEW_API_KEY")
+                            : t("AIMODEL_EDITKEY_MODAL_CUSTOM.API_KEY")
+                        }
                         className="inline-block w-full truncate border-none shadow-none focus-visible:ring-0"
                       />
                     </FormControl>
@@ -230,10 +261,13 @@ export const CustomModelEditKeyModal = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    API Version <span className="text-red-500">*</span>
+                    {t("AIMODEL_EDITKEY_MODAL_CUSTOM.API_VERSION", { span: "*" })}
                   </FormLabel>
                   <FormControl>
-                    <Input placeholder="API Version" {...field} />
+                    <Input
+                      placeholder={t("AIMODEL_EDITKEY_MODAL_CUSTOM.API_VERSION_2")}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -245,15 +279,14 @@ export const CustomModelEditKeyModal = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center gap-2 text-base font-medium">
-                    Temperature
+                    {t("AIMODEL_EDITKEY_MODAL_CUSTOM.TEMPERATURE")}
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Info className="h-4 w-4 text-muted-foreground" />
                         </TooltipTrigger>
                         <TooltipContent>
-                          Lower values make LLM responses more accurate and stable, while higher
-                          values make them more random and creative.
+                          {t("AIMODEL_EDITKEY_MODAL_CUSTOM.LOWER_VALUES_MAKE_LLM_RESPONSES")}
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -284,15 +317,14 @@ export const CustomModelEditKeyModal = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center gap-2 text-base font-medium">
-                    Maximum tokens
+                    {t("AIMODEL_EDITKEY_MODAL_CUSTOM.MAXIMUM_TOKENS")}
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Info className="h-4 w-4 text-muted-foreground" />
                         </TooltipTrigger>
                         <TooltipContent>
-                          Used to roughly control the maximum number of tokens in LLM responses (1
-                          token ≈ 1 English short word).
+                          {t("AIMODEL_EDITKEY_MODAL_CUSTOM.USED_TO_ROUGHLY_CONTROL_THE")}
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -317,8 +349,12 @@ export const CustomModelEditKeyModal = ({
             />
             <div>
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-medium">Custom Headers (Optional)</h4>
-                <span className="text-sm text-medium-emphasis">Key / Value pairs</span>
+                <h4 className="text-sm font-medium">
+                  {t("AIMODEL_EDITKEY_MODAL_CUSTOM.CUSTOM_HEADERS_OPTIONAL")}
+                </h4>
+                <span className="text-sm text-medium-emphasis">
+                  {t("AIMODEL_EDITKEY_MODAL_CUSTOM.KEY_VALUE_PAIRS")}
+                </span>
               </div>
               <div className="mt-3 space-y-2">
                 {fields.map((f, idx) => (
@@ -330,7 +366,7 @@ export const CustomModelEditKeyModal = ({
                         <FormItem className="flex-1">
                           <FormControl>
                             <Input
-                              placeholder="Header Key"
+                              placeholder={t("AIMODEL_EDITKEY_MODAL_CUSTOM.HEADER_KEY")}
                               value={field.value ?? ""}
                               onChange={field.onChange}
                               onBlur={field.onBlur}
@@ -349,7 +385,7 @@ export const CustomModelEditKeyModal = ({
                         <FormItem className="flex-1">
                           <FormControl>
                             <Input
-                              placeholder="Enter value"
+                              placeholder={t("AIMODEL_EDITKEY_MODAL_CUSTOM.ENTER_VALUE")}
                               value={field.value ?? ""}
                               onChange={field.onChange}
                               onBlur={field.onBlur}
@@ -378,7 +414,7 @@ export const CustomModelEditKeyModal = ({
                   onClick={() => append({ key: "", value: "" })}
                   className="mt-2"
                 >
-                  + Add ({fields.length})
+                  {t("AIMODEL_EDITKEY_MODAL_CUSTOM.ADD", { count: fields.length })}
                 </Button>
               </div>
             </div>
@@ -390,11 +426,11 @@ export const CustomModelEditKeyModal = ({
                   onClick={() => setEditKeyModalOpen(false)}
                   disabled={isPending}
                 >
-                  Cancel
+                  {t("common:CANCEL")}
                 </Button>
               </DialogClose>
               <Button disabled={!form.formState.isValid || isPending} type="submit">
-                {isPending ? "Saving..." : "Save"}
+                {isPending ? t("AIMODEL_EDITKEY_MODAL_CUSTOM.SAVING") : t("common:SAVE")}
               </Button>
             </DialogFooter>
           </form>

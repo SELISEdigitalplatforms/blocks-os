@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui-kits/button/button";
 import { ArrowDownToLine, CloudUpload } from "lucide-react";
 import { useState } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 import {
   FileUploader,
   FileUploaderContent,
@@ -17,20 +18,24 @@ import {
   FileInput,
 } from "@/components/file-uploader/file-uploader";
 const FileSvgDraw = () => {
+  const { t } = useT("os.communication.mail");
   return (
     <>
       <div className="text-gmedium-emphasis mb-3 h-8 w-8">
         <CloudUpload />
       </div>
       <p className="mb-1 text-sm text-high-emphasis">
-        <span className="font-semibold text-primary">Click to upload</span>
-        &nbsp; or drag and drop
+        <span className="font-semibold text-primary">
+          {t("IMPORT_COMMUNICATIONS.CLICK_TO_UPLOAD")}
+        </span>
+        &nbsp; {t("IMPORT_COMMUNICATIONS.OR_DRAG_AND_DROP")}
       </p>
-      <p className="text-xs text-low-emphasis">SVG, PNG, JPG or GIF</p>
+      <p className="text-xs text-low-emphasis">{t("IMPORT_COMMUNICATIONS.FILE_TYPES")}</p>
     </>
   );
 };
 export default function ImportCommunications() {
+  const { t } = useT("os.communication.mail");
   const [files, setFiles] = useState<File[] | null>(null);
   const dropZoneConfig = {
     maxFiles: 5,
@@ -40,9 +45,9 @@ export default function ImportCommunications() {
   return (
     <DialogContent className="rounded-md sm:max-w-[450px]">
       <DialogHeader>
-        <DialogTitle className="text-left">Import communications</DialogTitle>
+        <DialogTitle className="text-left">{t("IMPORT_COMMUNICATIONS.TITLE")}</DialogTitle>
         <DialogDescription className="text-left">
-          <div>Lorem ipsum dolor sit amet consectetur.</div>
+          <div>{t("IMPORT_COMMUNICATIONS.DESCRIPTION")}</div>
           <FileUploader
             value={files}
             onValueChange={setFiles}
@@ -70,14 +75,14 @@ export default function ImportCommunications() {
       <DialogFooter className="mr-1 grid grid-cols-2 gap-2">
         <div className="mt-2 flex flex-row gap-2 text-primary">
           <ArrowDownToLine size={20} />
-          <h3 className="text-sm font-medium">File Template</h3>
+          <h3 className="text-sm font-medium">{t("IMPORT_COMMUNICATIONS.FILE_TEMPLATE")}</h3>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <Button variant="outline" size="default">
-            Cancel
+            {t("common:CANCEL")}
           </Button>
           <Button size="default" className="bg-primary">
-            Upload
+            {t("common:UPLOAD")}
           </Button>
         </div>
       </DialogFooter>

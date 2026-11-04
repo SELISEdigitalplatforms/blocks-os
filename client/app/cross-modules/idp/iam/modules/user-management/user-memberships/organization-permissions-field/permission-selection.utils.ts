@@ -1,8 +1,12 @@
+import { tStatic } from "@seliseblocks/genesis-os";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 
 export const MAX_PERMISSIONS_PER_USER = 5;
 
-export const PERMISSION_LIMIT_MESSAGE = `You can select up to ${MAX_PERMISSIONS_PER_USER} permissions.`;
+export const getPermissionLimitMessage = () =>
+  tStatic("os.idp.users", "PERMISSION_SELECTION_UTILS.PERMISSION_LIMIT", {
+    max: MAX_PERMISSIONS_PER_USER,
+  });
 
 export const permissionMatches = (left: IPermission, right: IPermission) =>
   left.resource === right.resource || left.name === right.name;
@@ -10,22 +14,20 @@ export const permissionMatches = (left: IPermission, right: IPermission) =>
 export const isPermissionInList = (permission: IPermission, list: IPermission[]) =>
   list.some((item) => permissionMatches(item, permission));
 
-export const isPermissionAssigned = (
-  permission: IPermission,
-  assignedPermissions: IPermission[],
-) =>
+export const isPermissionAssigned = (permission: IPermission, assignedPermissions: IPermission[]) =>
   assignedPermissions.some((item) => permissionMatches(item, permission));
 
 export const getNewlySelectedPermissions = (
   selectedPermissions: IPermission[],
   assignedPermissions: IPermission[],
-) =>
-  selectedPermissions.filter((item) => !isPermissionAssigned(item, assignedPermissions));
+) => selectedPermissions.filter((item) => !isPermissionAssigned(item, assignedPermissions));
 
 export const getTotalPermissionCount = (
   assignedPermissions: IPermission[],
   selectedPermissions: IPermission[],
-) => assignedPermissions.length + getNewlySelectedPermissions(selectedPermissions, assignedPermissions).length;
+) =>
+  assignedPermissions.length +
+  getNewlySelectedPermissions(selectedPermissions, assignedPermissions).length;
 
 export const isAtMaxPermissions = (
   assignedPermissions: IPermission[],
@@ -77,9 +79,7 @@ export const togglePermissionSelection = (
   }
 
   return {
-    selectedPermissions: selectedPermissions.filter(
-      (item) => !permissionMatches(item, permission),
-    ),
+    selectedPermissions: selectedPermissions.filter((item) => !permissionMatches(item, permission)),
     blocked: false,
   };
 };

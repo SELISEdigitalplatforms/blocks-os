@@ -7,6 +7,7 @@ import {
 import { Button } from "@/components/ui-kits/button/button";
 import { EllipsisVertical } from "lucide-react";
 import { IModelInfo } from "@blocks-ai/types/aimodel.service.type";
+import { useT } from "@seliseblocks/genesis-os";
 type AIModelRowActionsDropdownProps = {
   model: IModelInfo;
   onEdit: (model: IModelInfo) => void;
@@ -19,6 +20,7 @@ export const AIModelRowActionsDropdown = ({
   onDelete,
   onOpenChange,
 }: AIModelRowActionsDropdownProps) => {
+  const { t } = useT("os.ai");
   return (
     <DropdownMenu onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>
@@ -38,16 +40,16 @@ export const AIModelRowActionsDropdown = ({
             onEdit(model);
           }}
         >
-          Edit
+          {t("common:EDIT")}
         </DropdownMenuItem>
         <DropdownMenuItem
-          className="!text-error"
+          className="text-error!"
           onClick={(e) => {
             e.stopPropagation();
             onDelete(model);
           }}
         >
-          Delete
+          {t("common:DELETE")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

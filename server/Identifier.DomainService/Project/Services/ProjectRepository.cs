@@ -9,6 +9,10 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using Pipelines.Sockets.Unofficial.Arenas;
 using System.Collections;
+using System.Diagnostics.CodeAnalysis;
+using System.Text.RegularExpressions;
+using Blocks.Genesis.Entities.Os;
+using Os.DataAccess;
 
 namespace DomainService.Projects
 {
@@ -18,34 +22,39 @@ namespace DomainService.Projects
         private readonly IBlocksSecret _blocksSecret;
         private readonly IConfiguration _configuration;
         private readonly IEncodingService _urlEncodingService;
-        private IMongoDatabase _clientDb;
+        private readonly IMongoDatabase _clientDb;
+        private readonly IDataGatewayRootProvisioner _dataGatewayRoot;
+        private readonly IOsDataAccess _dataAccess;
+        private readonly IStorageConfigurationSeedCopier _storageSeedCopier;
+        private readonly IMailConfigurationSeedCopier _mailSeedCopier;
 
         private const string _projectStatusTraceCollectionName = "ProjectStatusTracers";
         private const string _legacyDefaultUserRoleSlug = "user";
         private const string _cloudUserRoleSlug = "clouduser";
+        // Mongo field name; must match the stored documents exactly.
+        private const string LastUpdatedDateField = "LastUpdatedDate";
 
+        [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "DI constructor: each parameter is an injected dependency.")]
         public ProjectRepository(IDbContextProvider dbContextProvider,
                                  IConfiguration configuration,
                                  IBlocksSecret blocksSecret,
-                                 IEncodingService urlEncodingService)
+                                 IEncodingService urlEncodingService,
+                                 IDataGatewayRootProvisioner dataGatewayRoot,
+                                 IOsDataAccess dataAccess,
+                                 IStorageConfigurationSeedCopier storageSeedCopier,
+                                 IMailConfigurationSeedCopier mailSeedCopier)
         {
+            _dataAccess = dataAccess;
+            _storageSeedCopier = storageSeedCopier;
+            _mailSeedCopier = mailSeedCopier;
             _dbContextProvider = dbContextProvider;
             _blocksSecret = blocksSecret;
             _configuration = configuration;
             _urlEncodingService = urlEncodingService;
-            _clientDb = ResolvedClientDb();
-        }
-
-        private IMongoDatabase ResolvedClientDb()
-        {
-            var blocksContext = BlocksContext.GetContext();
-
-            if (blocksContext?.Impersonated ?? true)
-            {
-                return _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, IdentifierConstants.RootDatabaseName);
-            }
-
-            return _dbContextProvider.GetDatabase(blocksContext.TenantId);
+            _dataGatewayRoot = dataGatewayRoot;
+            // Registry, memberships, assets, and provisioning metadata have one owner:
+            // main/root. Never bind this singleton to the first caller's tenant.
+            _clientDb = _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, _blocksSecret.RootDatabaseName);
         }
 
         // Genesis resolves this collection from the caller's tenant database when it maps an
@@ -72,11 +81,15 @@ namespace DomainService.Projects
             return await collection.Find(filter).FirstOrDefaultAsync();
         }
 
+        // Live environments only. Deleting an environment just disables its row, so a group keeps
+        // it, and adding that environment back inserts a second row under the same TenantId.
+        // Ne(true) rather than Eq(false): a row without the flag is live, which is how Genesis reads it.
         public async Task<List<Tenant>> GetByGroupIdAsync(string tenantGroupId)
         {
             var collection = _clientDb.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
 
-            var filter = Builders<Tenant>.Filter.Eq(mc => mc.TenantGroupId, tenantGroupId);
+            var filter = Builders<Tenant>.Filter.Eq(mc => mc.TenantGroupId, tenantGroupId)
+                       & Builders<Tenant>.Filter.Ne(mc => mc.IsDisabled, true);
             return await collection.Find(filter).ToListAsync();
         }
 
@@ -84,8 +97,23 @@ namespace DomainService.Projects
         {
             var collection = _clientDb.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
             var listDomain = new List<string> { name };
-            var filter = Builders<Tenant>.Filter.ElemMatch(x => x.Applications, app => listDomain.Contains(app.Domain));
+            var filter = Builders<Tenant>.Filter.ElemMatch(x => x.Applications, app => listDomain.Contains(app.Domain))
+                       & Builders<Tenant>.Filter.Ne(mc => mc.IsDisabled, true);
             return await collection.Find(filter).FirstOrDefaultAsync();
+        }
+
+        public async Task<bool> IsDomainUsedByAnotherProjectAsync(string normalizedDomain, string tenantId)
+        {
+            var collection = _clientDb.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
+
+            // Domains are stored as "x", "http://x" or "https://x", with or without a trailing
+            // slash and in any case, so the match covers every form. Disabled projects count too:
+            // one can be restored with its domains.
+            var pattern = new BsonRegularExpression($"^(https?://)?{Regex.Escape(normalizedDomain)}/?$", "i");
+            var filter = Builders<Tenant>.Filter.ElemMatch(x => x.Applications, Builders<Applications>.Filter.Regex(a => a.Domain, pattern))
+                       & Builders<Tenant>.Filter.Ne(x => x.TenantId, tenantId);
+
+            return await collection.Find(filter).AnyAsync();
         }
 
         public async Task InsertProjectAsync(Tenant project)
@@ -173,6 +201,18 @@ namespace DomainService.Projects
             var filter = Builders<Tenant>.Filter.Eq(mc => mc.ItemId, project.ItemId);
 
             await collection.ReplaceOneAsync(filter, project);
+        }
+
+        // Provisioning owns this one field. Setting it alone, rather than replacing the document
+        // with the copy the worker was handed at creation, keeps whatever changed on the tenant
+        // while provisioning ran, such as the host of a repository added in the meantime.
+        public async Task SetPublicCertificatePathAsync(string itemId, string publicCertificatePath)
+        {
+            var collection = _clientDb.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
+
+            await collection.UpdateOneAsync(
+                Builders<Tenant>.Filter.Eq(mc => mc.ItemId, itemId),
+                Builders<Tenant>.Update.Set(mc => mc.JwtTokenParameters.PublicCertificatePath, publicCertificatePath));
         }
 
         // ProjectPeople.IsCreator is the single source of truth for project ownership — see
@@ -388,12 +428,25 @@ namespace DomainService.Projects
 
         public async Task CreateDefaultConfigurationAsync(ProjectStatusTracer statusTracer, Tenant project)
         {
-            if (statusTracer.IsDefaultConfigurationCopied) return;
+            if (statusTracer.IsDefaultConfigurationCopied && statusTracer.IsSeedSchemaApplied) return;
 
-            var dataBase = _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, $"{project.DBName}");
+            var dataBase = _dbContextProvider.GetDatabase(project.DbConnectionString, project.DBName);
 
-            await InitializeDefaultConfigurationsAsync(dataBase, project);
-            statusTracer.IsDefaultConfigurationCopied = true;
+            if (!statusTracer.IsDefaultConfigurationCopied)
+            {
+                await InitializeDefaultConfigurationsAsync(dataBase, project);
+                statusTracer.IsDefaultConfigurationCopied = true;
+            }
+
+            // After the document copy on purpose: CopyDocumentAsync skips any collection that
+            // already exists, so creating the seed collections first would stop the copy.
+            if (!statusTracer.IsSeedSchemaApplied)
+            {
+                var seedDb = _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, "BlocksConfiguration");
+                var result = await SeedSchemaReplicator.ApplyAsync(seedDb, dataBase);
+                statusTracer.SeedSchemaErrors = result.Errors;
+                statusTracer.IsSeedSchemaApplied = true;
+            }
         }
 
         private async Task InitializeDefaultConfigurationsAsync(IMongoDatabase consumerDb, Tenant project)
@@ -401,25 +454,63 @@ namespace DomainService.Projects
             var sourceDatabase = _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, "BlocksConfiguration");
 
             await Task.WhenAll(
-                CopyDocumentAsync(sourceDatabase, consumerDb, "MailServerConfigurations", project),
+                // The project's own mail secrets, not a raw copy (the seed's secret ids belong to the root tenant).
+                CopyMailConfigurationsAsync(sourceDatabase, consumerDb, project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "EmailTemplates", project),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "StorageConfigurations", project),
+                // Settings rows + the project's own secrets, not a raw copy (the seed's secret ids belong to the root tenant).
+                CopyStorageConfigurationsAsync(sourceDatabase, consumerDb, project),
+                // Built-in notification configs + MFA config: without them the project's notifications find no config.
+                KeyValueSeedCopier.CopyAsync(sourceDatabase, consumerDb, project.CreatedBy),
+                // Texts of the built-in push messages (Localization module "notifications"), insert-only.
+                NotificationLocalizationSeedCopier.CopyAsync(sourceDatabase, consumerDb, project.TenantId, project.CreatedBy),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "BlocksLanguages", project),
                 // The remaining localization collections (UilmFiles, BlocksLanguageModules,
                 // BlocksLanguageKeys) are deliberately not seeded here. DataCleanupAsync still
                 // copies them from BlocksConfiguration on demand.
                 CopyDocumentAsync(sourceDatabase, consumerDb, "Roles", project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "Permissions", project),
-                // CopyDocumentAsync(sourceDatabase, consumerDb, "SchemaDefinitions", project),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "TenantConfigurations", project),
+                // Only the platform (system entity) schemas: the seed's own app schemas stay in the seed.
+                CopySystemSchemasAsync(sourceDatabase, consumerDb),
+                // Also carries the tenant configuration; TenantConfigurations itself is no longer copied.
                 CopyAndCustomizeIdentityConfigurationAsync(sourceDatabase, consumerDb, project),
                 // CopyAndCustomizeResourceLimitsAsync(sourceDatabase, consumerDb, project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "LinkBasedActionConfigs", project),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "TemplatePluginConfigs", project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "FileDirectories", project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "ObjectItems", project),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "DataServiceConfigurations", project));
+                // Data source: default root doc (BlocksRootDb, _id = TenantId) + secret, not a copy of a seed tenant doc.
+                _dataGatewayRoot.EnsureAsync(project.TenantId, project.CreatedBy));
 
+        }
+
+        /// <summary>The seed's storage secrets live in the root tenant (config <c>RootTenantId</c>).</summary>
+        private Task CopyStorageConfigurationsAsync(IMongoDatabase sourceDb, IMongoDatabase targetDb, Tenant project) =>
+            _storageSeedCopier.CopyAsync(sourceDb, targetDb, _configuration["RootTenantId"], project.TenantId);
+
+        /// <summary>The seed's mail secrets live in the root tenant (config <c>RootTenantId</c>).</summary>
+        private Task CopyMailConfigurationsAsync(IMongoDatabase sourceDb, IMongoDatabase targetDb, Tenant project) =>
+            _mailSeedCopier.CopyAsync(sourceDb, targetDb, _configuration["RootTenantId"], project.TenantId, project.CreatedBy);
+
+        /// <summary>
+        /// Copies the system entity schemas (IAM, OS, Logic, Release, Monitor) of the seed into the project, unchanged:
+        /// same _id and CreatedBy "system", as the schema seed script writes them into existing tenants.
+        /// Insert-only and safe to re-run: a schema the project already has (same _id) is left as it is.
+        /// </summary>
+        private static async Task CopySystemSchemasAsync(IMongoDatabase sourceDb, IMongoDatabase targetDb)
+        {
+            const string collectionName = "SchemaDefinitions";
+            var filter = Builders<BsonDocument>.Filter.Eq("IsSystemEntity", true) & Builders<BsonDocument>.Filter.Ne("IsDeleted", true);
+            var schemas = await (await sourceDb.GetCollection<BsonDocument>(collectionName).FindAsync(filter)).ToListAsync();
+            if (schemas.Count == 0) return;
+
+            try
+            {
+                await targetDb.GetCollection<BsonDocument>(collectionName)
+                    .InsertManyAsync(schemas, new InsertManyOptions { IsOrdered = false });
+            }
+            catch (MongoBulkWriteException<BsonDocument> ex) when (ex.WriteErrors.All(e => e.Category == ServerErrorCategory.DuplicateKey) && ex.WriteConcernError is null)
+            {
+                // Already there from an earlier, interrupted run: that is the goal.
+            }
         }
 
         private async Task CopyDocumentAsync(IMongoDatabase sourceDb, IMongoDatabase targetDb, string collectionName, Tenant project)
@@ -556,6 +647,12 @@ namespace DomainService.Projects
                 identityConfiguration["CreatedBy"] = userId;
                 identityConfiguration["LastUpdatedBy"] = userId;
 
+                // Since the collection cut, blocks-iam reads the tenant configuration from this document. It is
+                // the project's only copy: the seed's TenantConfigurations collection is not copied.
+                var seedTenantConfiguration = await sourceDb.GetCollection<BsonDocument>(TenantConfigurationEmbedding.LegacyCollection)
+                    .Find(FilterDefinition<BsonDocument>.Empty).FirstOrDefaultAsync();
+                TenantConfigurationEmbedding.Apply(identityConfiguration, seedTenantConfiguration, project.CreatedBy);
+
                 var targetCollection = targetDb.GetCollection<BsonDocument>("IdentityConfigurations");
                 await targetCollection.InsertOneAsync(identityConfiguration);
             }
@@ -572,7 +669,7 @@ namespace DomainService.Projects
                 resourceLimit["CreatedBy"] = userId;
                 resourceLimit["LastUpdatedBy"] = userId;
                 resourceLimit["CreatedDate"] = DateTime.UtcNow;
-                resourceLimit["LastUpdatedDate"] = DateTime.UtcNow;
+                resourceLimit[LastUpdatedDateField] = DateTime.UtcNow;
                 resourceLimit["Language"] = "en-US";
                 resourceLimit["TenantId"] = project.TenantId;
                 resourceLimit["Lifetime"] = DateTime.UtcNow.AddMonths(1);
@@ -583,38 +680,15 @@ namespace DomainService.Projects
             }
         }
 
-        public async Task UpdateIamConfigurationAsync(Tenant project)
-        {
-            var targetedDb = _dbContextProvider.GetDatabase(project.TenantId);
-            var collection = targetedDb.GetCollection<BsonDocument>("IamConfigurations");
-
-            var iamConfiguration = await collection.Find(_ => true).FirstOrDefaultAsync();
-
-            if (iamConfiguration != null)
-            {
-                var filter = Builders<BsonDocument>.Filter.Eq("_id", iamConfiguration["_id"]);
-
-                var applicationDomain = project.Applications.FirstOrDefault()?.Domain;
-
-                var update = Builders<BsonDocument>.Update
-                    .Set("AccountActivationUrl", $"{applicationDomain}/activate")
-                    .Set("AccountVerificationUrl", $"{applicationDomain}/verify")
-                    .Set("RecoverAccountUrl", $"{applicationDomain}/resetpassword")
-                    .Set("CreatedBy", project.TenantId)
-                    .Set("LastUpdatedBy", project.TenantId);
-
-                await collection.UpdateOneAsync(filter, update);
-            }
-        }
-
 
         public async Task SaveRepoInfoAsync(Tenant project, List<Resource>? resources)
         {
-            var targetDb = _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, $"{project.DBName}");
+            // This runs alongside tenant insertion, so the registry may not contain it yet.
+            var targetDb = _dbContextProvider.GetDatabase(project.DbConnectionString, project.DBName);
             var tenantSlug = await _urlEncodingService.EncodeToBase26Async(project.TenantGroupId, project.TenantGroupId, 5);
 
             List<BsonDocument> documents = [];
-            foreach (var resource in resources)
+            foreach (var resource in resources ?? [])
             {
                 var repoSlug = await _urlEncodingService.EncodeToBase26Async(resource.ResourceId, project.TenantGroupId, 5);
                 documents.Add(GetRepoObject(resource, project, tenantSlug, repoSlug));
@@ -637,7 +711,9 @@ namespace DomainService.Projects
             var projects = await GetByGroupIdAsync(request.TenantGroupId);
             var repoSlug = await _urlEncodingService.EncodeToBase26Async(request.Resource.ResourceId, request.TenantGroupId, 5);
 
-            foreach (var project in projects)
+            // One copy per tenant database. GetDatabase resolves by TenantId, so two live rows under
+            // one TenantId (an environment registered twice) would each insert into the same database.
+            foreach (var project in projects.DistinctBy(p => p.TenantId))
             {
                 var tenantSlug = await _urlEncodingService.EncodeToBase26Async(project.TenantGroupId, request.TenantGroupId, 5);
                 var targetedDb = _dbContextProvider.GetDatabase(project.TenantId);
@@ -657,7 +733,7 @@ namespace DomainService.Projects
                 .Set("RepoName", request.Resource.Name)
                 .Set("RepoUrl", request.Resource.Link)
                 .Set("IsArchived", false)
-                .Set("LastUpdatedDate", DateTime.UtcNow)
+                .Set(LastUpdatedDateField, DateTime.UtcNow)
                 .Set("LastUpdatedBy", BlocksContext.GetContext()?.UserId ?? string.Empty);
 
             await UpdateGroupReposAsync(request.TenantGroupId, request.Resource.ResourceId, update);
@@ -670,7 +746,7 @@ namespace DomainService.Projects
         {
             var update = Builders<BsonDocument>.Update
                 .Set("IsArchived", true)
-                .Set("LastUpdatedDate", DateTime.UtcNow)
+                .Set(LastUpdatedDateField, DateTime.UtcNow)
                 .Set("LastUpdatedBy", BlocksContext.GetContext()?.UserId ?? string.Empty);
 
             await UpdateGroupReposAsync(request.TenantGroupId, request.ResourceId, update);
@@ -701,7 +777,7 @@ namespace DomainService.Projects
                 ["RepoUrl"] = resource.Link,
                 ["IsArchived"] = false,
                 ["CreatedDate"] = DateTime.UtcNow,
-                ["LastUpdatedDate"] = DateTime.UtcNow,
+                [LastUpdatedDateField] = DateTime.UtcNow,
                 ["CreatedBy"] = BlocksContext.GetContext()?.UserId ?? string.Empty,
                 ["Branch"] = project.Environment == "prod" ? "main" : project.Environment,
                 ["ProjectId"] = project.TenantId,
@@ -711,7 +787,7 @@ namespace DomainService.Projects
             };
         }
 
-        public async Task<long> GetProjectCountAsync()
+        public async Task<long> GetOwnedProjectGroupCountAsync()
         {
             var ownedTenantIds = await GetOwnedTenantIdsAsync(BlocksContext.GetContext()?.UserId);
 
@@ -720,7 +796,11 @@ namespace DomainService.Projects
             var filter = Builders<Project>.Filter.And(Builders<Project>.Filter.In(mc => mc.TenantId, ownedTenantIds),
                                                       Builders<Project>.Filter.Eq(mc => mc.IsDisabled, false));
 
-            return await collection.CountDocumentsAsync(filter);
+            // A project is its group, not each environment in it: one project with dev, stg and
+            // prod is one project, which is what the console counts and shows.
+            using var cursor = await collection.DistinctAsync(mc => mc.TenantGroupId, filter);
+            var groupIds = await cursor.ToListAsync();
+            return groupIds.Count(id => !string.IsNullOrEmpty(id));
         }
 
         public async Task<bool> IsExistingEnviroment(List<string> enviroments, string tenantGroupId)
@@ -751,7 +831,7 @@ namespace DomainService.Projects
             var collection = _clientDb.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
 
             var filter = Builders<Tenant>.Filter.And(Builders<Tenant>.Filter.Eq(mc => mc.TenantId, tenantId),
-                                                     Builders<Tenant>.Filter.Eq(mc => mc.IsDisabled, false));
+                                                     Builders<Tenant>.Filter.Ne(mc => mc.IsDisabled, true));
 
             return await (await collection.FindAsync(filter)).FirstOrDefaultAsync();
         }
@@ -782,9 +862,27 @@ namespace DomainService.Projects
         {
             var collection = ResolveThirdPartyJWTClaimsCollection();
             var filter = Builders<ThirdPartyJWTClaims>.Filter.Eq(m => m.ItemId, mapper.ItemId);
-            await collection.ReplaceOneAsync(filter, mapper, new ReplaceOptions { IsUpsert = true });
+
+            // The collection is the caller's own tenant DB, so the resolver applies. Upsert = update or insert.
+            var editFilter = await _dataAccess.EditFilterAsync(OsSchemas.ThirdPartyJWTClaims, filter, "ProjectRepository.SaveJWTClaimsAsync");
+            if (editFilter is null || !await _dataAccess.InsertAllowedAsync(OsSchemas.ThirdPartyJWTClaims, "ProjectRepository.SaveJWTClaimsAsync"))
+            {
+                return new BaseResponse { IsSuccess = false };
+            }
+
+            mapper = await _dataAccess.PrepareUpsertAsync(OsSchemas.ThirdPartyJWTClaims, mapper, collection, editFilter, "ProjectRepository.SaveJWTClaimsAsync");
+            await collection.ReplaceOneAsync(editFilter, mapper, new ReplaceOptions { IsUpsert = true });
 
             return new BaseResponse { IsSuccess = true };
+        }
+
+        public async Task<ThirdPartyJWTClaims> GetThirdPartyJWTClaimsForViewAsync()
+        {
+            var collection = ResolveThirdPartyJWTClaimsCollection();
+
+            // Masked: View column (property) rules clear what the caller may not see.
+            var scope = await _dataAccess.ReadAsync(OsSchemas.ThirdPartyJWTClaims, Builders<ThirdPartyJWTClaims>.Filter.Empty, "ProjectRepository.GetThirdPartyJWTClaimsForViewAsync");
+            return scope.Granted ? scope.ForView(await scope.Apply(collection).FirstOrDefaultAsync()) : default!;
         }
 
         public async Task<ThirdPartyJWTClaims> GetThirdPartyJWTClaimsAsync(string itemId)
@@ -795,7 +893,9 @@ namespace DomainService.Projects
                          Builders<ThirdPartyJWTClaims>.Filter.Eq(mc => mc.ItemId, itemId) :
                          Builders<ThirdPartyJWTClaims>.Filter.Empty;
 
-            return await collection.Find(filter).FirstOrDefaultAsync();
+            // No projection: the claims are edited and saved back as a whole document.
+            var scope = await _dataAccess.ReadAsync(OsSchemas.ThirdPartyJWTClaims, filter, "ProjectRepository.GetThirdPartyJWTClaimsAsync", useProjection: false);
+            return scope.Granted ? await scope.Apply(collection).FirstOrDefaultAsync() : default!;
         }
 
         // Providers live in the root database beside Tenants, not in the tenant's own database:

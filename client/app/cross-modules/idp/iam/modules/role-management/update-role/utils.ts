@@ -1,4 +1,7 @@
+import { tStatic } from "@seliseblocks/genesis-os";
 import { z } from "zod";
+
+const I18N_MODULE = "os.idp.roles";
 
 // DEADCODE 2026-07-29: no references in client or e2e; commented pending review
 // export const updateRoleFormDefaultValue = {
@@ -6,11 +9,19 @@ import { z } from "zod";
 //   description: "",
 // };
 
-export const updateRoleFormSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, "Name field must not be empty")
-    .max(50, "Name must be at most 50 characters"),
-  description: z.string().trim().max(150, "Description must be at most 150 characters").optional(),
-});
+export const createUpdateRoleFormSchema = () =>
+  z.object({
+    name: z
+      .string()
+      .trim()
+      .min(1, tStatic(I18N_MODULE, "UPDATE_ROLE.NAME_REQUIRED"))
+      .max(50, tStatic(I18N_MODULE, "UPDATE_ROLE.NAME_MAX_50")),
+    description: z
+      .string()
+      .trim()
+      .max(150, tStatic(I18N_MODULE, "UPDATE_ROLE.DESCRIPTION_MAX_150"))
+      .optional(),
+    parentRoleSlug: z.string().nullish(),
+  });
+
+export type UpdateRoleFormValues = z.infer<ReturnType<typeof createUpdateRoleFormSchema>>;

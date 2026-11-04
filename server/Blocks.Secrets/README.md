@@ -1,9 +1,34 @@
 # SeliseBlocks.Secrets.OS
 
+## Where the store lives
+
+Metadata and audit live in a `SecretStore` database **on the calling tenant's own Mongo
+connection** — the `DbConnectionString` recorded in the root registry when the environment was
+provisioned. A dev environment's secrets are on the dev cluster, a staging environment's on the
+other cluster, prod and root on main. Tenants sharing a connection share one `SecretStore`, and
+the mandatory `TenantId` filter on every query is what separates them.
+
+Nothing needs migrating to adopt this. An existing tenant's registry record already names the
+main connection, so it resolves to exactly the database it used before.
+
+There is no fallback to main. A request whose tenant is missing from the registry, disabled, or
+recorded without a connection fails rather than reading somewhere else — reading main for a
+tenant placed elsewhere would return an empty list rather than an error, and a write would put a
+credential on a cluster nobody expects it on.
+
+Values are the exception: see below.
+
 ## Configuration
 
-Values live in Azure Key Vault, configured through the `KeyVault` environment section — the same
-keys `Blocks.Genesis` reads, so a host already configured for Genesis needs nothing extra.
+**Values** live only in Azure Key Vault — never in the database, so a database read, dump or
+backup cannot expose them. There is no other value store and no fallback: every deployment,
+on-prem included, needs a vault. A host without one still starts; its first secret operation
+fails.
+
+### Key Vault
+
+Configured through the `KeyVault` environment section — the same keys `Blocks.Genesis` reads, so a
+host already configured for Genesis needs nothing extra.
 
 | Variable | Required | Purpose |
 |---|---|---|
@@ -20,6 +45,11 @@ hosts with no CLI login and no managed identity. A partially filled set is ignor
 Bad credentials surface on the first vault call, not at startup: resolution happens in a
 synchronous singleton constructor, so probing the token there would block container build on a
 network round trip and take the host down on a transient AAD blip.
+
+One vault serves every tenant the host serves, whichever cluster their metadata is on. Vault keys
+come from the globally unique secret id, so tenants cannot collide, but the vault rather than the
+cluster is the blast radius for values. Separating values per placement means a separate host with
+its own `KeyVault__KeyVaultUrl`, not a code change.
 
 ## Setup
 
@@ -202,6 +232,11 @@ SecretAuditListResult logs = await _secrets.GetAuditLogsAsync(new SecretAuditFil
 | `SecretNotFoundException` | 404 |
 | `SecretStateException` | 409 |
 | `SecretVaultException` | 502 |
+
+A tenant that is unknown to the registry or disabled raises `SecretAccessDeniedException`
+(`INVALID_CONTEXT`), the same as an unauthenticated caller — the store it would have been routed
+to is not confirmed either way. A tenant recorded without a connection is a provisioning fault,
+not a caller error, and surfaces as an unmapped failure the host reports as 500.
 
 ## HTTP
 

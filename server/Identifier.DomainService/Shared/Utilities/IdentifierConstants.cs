@@ -38,7 +38,10 @@ namespace DomainService.Shared
         // service has no consumer for would let the broker hand it deletes it would silently drop.
         public const string ReleaseProjectDeleteQueue = "blocks_release_project_delete_listener";
         public const string MigrationCompletionTopic = "blocks_migration_topic";
-        public const string ProjectPeopleInvitationMailPurpose = "project_invitation";
+        public const string ProjectPeopleInvitationMailPurpose = "ProjectInvitation";
+        // The pre-rename value. IAM echoes the EventType it was sent, so a reply queued before the
+        // rename still carries this one and must not be dropped as unrelated.
+        public const string LegacyProjectPeopleInvitationMailPurpose = "project_invitation";
         public const string BlocksDomain = "seliseblocks.com";
         public const string ConstructCookieDomain = "slsblx.com";
 

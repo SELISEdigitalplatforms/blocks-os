@@ -15,6 +15,7 @@ import {
 } from "@/components/ui-kits/dialog/dialog";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { cn } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 
 export interface AccessPickerItem {
   /** The value that is stored and sent to the API — a user GUID or a role slug. */
@@ -74,6 +75,7 @@ export function AccessPickerDialog({
   onSearchChange,
   onAdd,
 }: AccessPickerDialogProps) {
+  const { t } = useT("os.secrets");
   const [pending, setPending] = useState<string[]>([]);
 
   const handleOpenChange = (next: boolean) => {
@@ -116,7 +118,7 @@ export function AccessPickerDialog({
 
         <Card className="min-h-0 flex-1 overflow-hidden">
           <CardContent className="max-h-[min(50vh,360px)] overflow-y-auto">
-            {isLoading ? (
+            {isLoading && (
               <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
                 {Array.from({ length: pageSize }).map((_, index) => (
                   <div key={index} className="flex animate-pulse items-center space-x-2 py-2">
@@ -125,59 +127,63 @@ export function AccessPickerDialog({
                   </div>
                 ))}
               </div>
-            ) : items.length ? (
-              // One row per line rather than two columns: an email is long, and truncating it
-              // to fit a half-width cell defeats the point of showing it.
-              <div className="divide-y">
-                {items.map((item) => {
-                  const alreadySelected = selected.includes(item.id);
-                  const checked = alreadySelected || pending.includes(item.id);
-                  return (
-                    <label
-                      key={item.id}
-                      className={cn(
-                        "flex items-center gap-3 rounded-sm px-1 py-2.5",
-                        alreadySelected
-                          ? "cursor-default opacity-60"
-                          : "cursor-pointer hover:bg-muted/50",
-                      )}
-                    >
-                      <Checkbox
-                        checked={checked}
-                        disabled={alreadySelected}
-                        onCheckedChange={(value) => toggle(!!value, item.id)}
-                        aria-label={item.primary}
-                      />
-                      {showAvatar && (
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold uppercase text-primary">
-                          {item.primary.trim().charAt(0) || "?"}
-                        </span>
-                      )}
-                      <div className="flex min-w-0 flex-1 flex-col">
-                        <span className="truncate text-sm font-medium" title={item.primary}>
-                          {item.primary}
-                        </span>
-                        {item.secondary && (
-                          <span
-                            className="truncate text-xs text-muted-foreground"
-                            title={item.secondary}
-                          >
-                            {item.secondary}
+            )}
+            {!isLoading &&
+              (items.length ? (
+                // One row per line rather than two columns: an email is long, and truncating it
+                // to fit a half-width cell defeats the point of showing it.
+                <div className="divide-y">
+                  {items.map((item) => {
+                    const alreadySelected = selected.includes(item.id);
+                    const checked = alreadySelected || pending.includes(item.id);
+                    return (
+                      <label
+                        key={item.id}
+                        className={cn(
+                          "flex items-center gap-3 rounded-sm px-1 py-2.5",
+                          alreadySelected
+                            ? "cursor-default opacity-60"
+                            : "cursor-pointer hover:bg-muted/50",
+                        )}
+                      >
+                        <Checkbox
+                          checked={checked}
+                          disabled={alreadySelected}
+                          onCheckedChange={(value) => toggle(!!value, item.id)}
+                          aria-label={item.primary}
+                        />
+                        {showAvatar && (
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold uppercase text-primary">
+                            {item.primary.trim().charAt(0) || "?"}
                           </span>
                         )}
-                      </div>
-                      {alreadySelected && (
-                        <span className="shrink-0 text-xs text-muted-foreground">Added</span>
-                      )}
-                    </label>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="flex h-24 items-center justify-center text-sm text-muted-foreground">
-                {emptyLabel}
-              </div>
-            )}
+                        <div className="flex min-w-0 flex-1 flex-col">
+                          <span className="truncate text-sm font-medium" title={item.primary}>
+                            {item.primary}
+                          </span>
+                          {item.secondary && (
+                            <span
+                              className="truncate text-xs text-muted-foreground"
+                              title={item.secondary}
+                            >
+                              {item.secondary}
+                            </span>
+                          )}
+                        </div>
+                        {alreadySelected && (
+                          <span className="shrink-0 text-xs text-muted-foreground">
+                            {t("ACCESS_PICKER_DIALOG.ADDED")}
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex h-24 items-center justify-center text-sm text-muted-foreground">
+                  {emptyLabel}
+                </div>
+              ))}
           </CardContent>
         </Card>
 
@@ -195,7 +201,7 @@ export function AccessPickerDialog({
 
         <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
           <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
-            Cancel
+            {t("common:CANCEL")}
           </Button>
           <Button
             type="button"
@@ -205,7 +211,7 @@ export function AccessPickerDialog({
               handleOpenChange(false);
             }}
           >
-            Add
+            {t("common:ADD")}
           </Button>
         </DialogFooter>
       </DialogContent>

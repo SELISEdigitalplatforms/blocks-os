@@ -1,4 +1,4 @@
-using Blocks.Genesis;
+﻿using Blocks.Genesis;
 using DomainService.Certificate;
 using Microsoft.AspNetCore.Mvc;
 
@@ -32,14 +32,16 @@ namespace BlocksOs.Api.Controllers
         /// </remarks>
         [HttpPost]
         [ProtectedEndPoint("blocks-os::project::mutate-token-validation-params")]
-        public Task<UploadCertificateResponse> UploadCertificate(
+        public async Task<UploadCertificateResponse> UploadCertificate(
              IFormFile? certificate,
-            [FromQuery] bool isThirdParty)
+            [FromQuery] bool isThirdParty,
+            [FromQuery] string? providerRef = null)
         {
-            return _certificateUploadService.UploadPublicCertificateAsync(new UploadCertificateRequest
+            return await _certificateUploadService.UploadPublicCertificateAsync(new UploadCertificateRequest
             {
                 Certificate = certificate,
-                IsThirdParty = isThirdParty
+                IsThirdParty = isThirdParty,
+                ProviderRef = providerRef
             });
         }
     }

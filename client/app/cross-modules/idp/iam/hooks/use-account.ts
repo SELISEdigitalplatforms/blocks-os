@@ -39,6 +39,13 @@ export const useAccountRecover = () => {
   });
 };
 
+export const useAdminResetPassword = () => {
+  return useMutation({
+    mutationKey: ["account", "admin-reset-password"],
+    mutationFn: userService.adminResetPassword,
+  });
+};
+
 export const useAccountResetPassword = () => {
   return useMutation({
     mutationKey: ["account", "reset-password"],

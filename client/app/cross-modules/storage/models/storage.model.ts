@@ -1,3 +1,8 @@
+import type { LinkedSecretStatus } from "@/cross-modules/secrets/models/secret.model";
+import { tStatic } from "@seliseblocks/genesis-os";
+
+const I18N_MODULE = "os.storage";
+
 // "Azure"
 export type StorageStrategyType = "AWS" | "Azure" | "SftpStorage" | "S3Compatible";
 
@@ -13,11 +18,48 @@ export const STORAGE_STRATEGIES: StorageStrategyOption[] = [
   { id: "sftp", label: "SFTP", value: "SftpStorage" },
   { id: "s3compatible", label: "AWS S3 Compatible", value: "S3Compatible" },
 ];
-export interface IStorageConfiguration {
+/**
+ * State of each secret of a configuration, from the server. A secret value (or a masked one) is
+ * never returned; "none" = not set for this provider.
+ */
+export interface IStorageSecretStatuses {
+  connectionStringStatus: LinkedSecretStatus;
+  secretKeyStatus: LinkedSecretStatus;
+  accessKeyStatus: LinkedSecretStatus;
+  passwordStatus: LinkedSecretStatus;
+  sftpSecretKeyStatus: LinkedSecretStatus;
+}
+
+export type StorageSecretStatusKey = keyof IStorageSecretStatuses;
+
+/** The secrets each provider uses, in display order. */
+export const getStorageSecretFields = (): Record<
+  StorageStrategyType,
+  { key: StorageSecretStatusKey; label: string }[]
+> => ({
+  AWS: [
+    { key: "accessKeyStatus", label: tStatic(I18N_MODULE, "STORAGE_MODEL.ACCESS_KEY") },
+    { key: "secretKeyStatus", label: tStatic(I18N_MODULE, "STORAGE_MODEL.SECRET_KEY") },
+  ],
+  Azure: [
+    {
+      key: "connectionStringStatus",
+      label: tStatic(I18N_MODULE, "STORAGE_MODEL.CONNECTION_STRING"),
+    },
+  ],
+  SftpStorage: [
+    { key: "passwordStatus", label: tStatic(I18N_MODULE, "STORAGE_MODEL.PASSWORD") },
+    { key: "sftpSecretKeyStatus", label: tStatic(I18N_MODULE, "STORAGE_MODEL.SFTP_SECRET_KEY") },
+  ],
+  S3Compatible: [
+    { key: "accessKeyStatus", label: tStatic(I18N_MODULE, "STORAGE_MODEL.ACCESS_KEY") },
+    { key: "secretKeyStatus", label: tStatic(I18N_MODULE, "STORAGE_MODEL.SECRET_KEY") },
+  ],
+});
+
+export interface IStorageConfiguration extends IStorageSecretStatuses {
   storageStrategy: StorageStrategyType;
-  accessKey: string | null;
   cloudStorageRegionEndPoint: string | null;
-  connectionString: string | null;
   createdBy: string;
   createdDate: string;
   itemId: string;
@@ -25,12 +67,10 @@ export interface IStorageConfiguration {
   lastUpdatedDate: string;
   name: string;
   organizationIds: string[];
-  secretKey: string | null;
   tags: string[];
   host: string | null;
   port: string | null;
   userName: string | null;
-  password: string | null;
   remoteBasePath: string | null;
   /**
    * Phase 1 upload-security fields. Optional because a configuration predating Phase 1, or one
@@ -72,8 +112,7 @@ export interface IStorageConfigurationCreatePayload extends IStorageConfiguratio
 /**
  * An update carries nothing but the settings it is allowed to change, plus what identifies the
  * configuration being changed. The name, provider and credentials are deliberately absent: the
- * server discards them on an update anyway, and the only value a client could send back for a
- * secret is the masked one the read endpoint gave it.
+ * server ignores them on an update anyway, and the read endpoint never returns a secret.
  */
 export interface IStorageConfigurationUpdatePayload extends IStorageConfigurationMutableSettings {
   projectKey: string;
@@ -82,8 +121,7 @@ export interface IStorageConfigurationUpdatePayload extends IStorageConfiguratio
 }
 
 export type IStorageConfigurationSavePayload =
-  | IStorageConfigurationCreatePayload
-  | IStorageConfigurationUpdatePayload;
+  IStorageConfigurationCreatePayload | IStorageConfigurationUpdatePayload;
 export interface IStorageConfigurationDeletePayload {
   projectKey: string;
   configurationName: string;
@@ -172,6 +210,12 @@ export interface IUploadImagePayload {
 export interface IPublicCertificatePayload {
   TenantId: string;
   file: File;
+  /**
+   * Which external provider the certificate belongs to. The blob name is derived from it, so
+   * without it every provider on a tenant shares one slot and each upload replaces the previous
+   * provider's certificate.
+   */
+  ProviderRef?: string;
 }
 
 export interface IUploadFileToLocalStorage {

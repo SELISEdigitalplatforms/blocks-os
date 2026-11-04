@@ -36,11 +36,25 @@ export interface GetRolesPayload {
   page?: number;
   pageSize?: number;
   /**
-   * Scopes the role list to a tenant or organization. The service posts the
-   * payload straight through, so callers that manage per-organization access
-   * (the user-detail Access tab) can narrow the list to one organization.
+   * Client-side cache discriminator only -- **this is not sent to IAM**.
+   *
+   * `iam/roles` has no `projectKey` on its request model, so anything put here
+   * was silently dropped by model binding. It is kept because it still varies the
+   * React Query key, which is what stops one tenant's or organization's role list
+   * being served from another's cache entry.
+   *
+   * To actually scope the query, set {@link GetRolesPayload.organizationId}.
    */
   projectKey?: string;
+  /**
+   * The organization whose roles to return. Roles are stored per organization
+   * (`Role.OrganizationId`), so omitting this falls back to the caller token's own
+   * organization -- `"default"` for a tenant-wide admin -- which is rarely what an
+   * organization-scoped screen means.
+   *
+   * Only a tenant-wide caller may name one; an organization-scoped token is pinned
+   * to its own by IAM regardless of what is sent.
+   */
   organizationId?: string;
 }
 export interface GetRolesResponse {
@@ -62,6 +76,8 @@ export interface CreateRolePayload {
   name: string;
   description: string;
   slug: string;
+  /** "Managed by": the role above this one. Empty or absent means a top-level role. */
+  parentRoleSlug?: string | null;
   /**
    * Acknowledges that other organizations already have a role with this name, and that creating
    * this one gives them a second role sharing it. Sent only on the second attempt, after the
@@ -153,8 +169,6 @@ export enum ResourceType {
   Endpoint = 1,
   /** Permission guards a client-side user action / UI affordance. */
   "FE action" = 2,
-  /** Permission guards access to a specific data record or data class. */
-  "Data protection" = 3,
 }
 
 export interface IGetRoles {

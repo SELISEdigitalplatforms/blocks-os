@@ -8,7 +8,6 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="SeliseBlocks.ConfigurationDriver" />
     <PackageReference Include="SeliseBlocks.Genesis.OS" />
-   <PackageReference Include="SeliseBlocks.MailDriver.OS" />
    <PackageReference Include="FluentValidation" />
   </ItemGroup>
 

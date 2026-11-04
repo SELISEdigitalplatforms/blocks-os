@@ -31,7 +31,7 @@ import {
   useUpdateUserAccessControl,
 } from "@blocks-idp/iam/hooks/use-user";
 import { z } from "zod";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { useEffect, useMemo, useState } from "react";
 import { Check, CircleCheck, Loader } from "lucide-react";
 import { isErrorWithErrors } from "@/lib/error";
@@ -42,15 +42,24 @@ import {
   useGetOrganizations,
 } from "@blocks-idp/iam/hooks/use-organization";
 import { OrganizationCombobox } from "@blocks-idp/iam/components/organization-combobox";
+import { NotifyUserCheckbox } from "@blocks-idp/iam/components/notify-user-checkbox";
 
 type InviteFormValues = z.infer<typeof inviteUserFormSchema>;
 
 const DEFAULT_ORGANIZATION_ID = "default";
 
+// The first message of an API error map, or the error itself when it is a plain string.
+const firstErrorMessage = (errors: unknown, fallback: string): string =>
+  errors && typeof errors === "object"
+    ? (Object.values(errors as Record<string, string>)[0] ?? fallback)
+    : (errors as string) || fallback;
+
 export const InviteUser = () => {
+  const { t } = useT("os.idp.users");
   const { isPending: isCreatingUser, mutateAsync: createUser } = useAddUser();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const [open, setOpen] = useState(false);
+  const [notifyUser, setNotifyUser] = useState(true);
 
   const { data: orgsData } = useGetOrganizations({
     projectKey: tenantId,
@@ -124,6 +133,7 @@ export const InviteUser = () => {
   useEffect(() => {
     if (!open) {
       form.reset();
+      setNotifyUser(true);
       return;
     }
     // When multi-org is disabled we don't show an org picker, and the server
@@ -151,7 +161,7 @@ export const InviteUser = () => {
       if (exists) {
         if (!existingUserId) {
           showErrorToast({
-            errors: "Could not find this user's account. Please try again.",
+            errors: t("INVITE_USER.USER_ACCOUNT_NOT_FOUND"),
           });
           return;
         }
@@ -159,16 +169,15 @@ export const InviteUser = () => {
           organizationId: isMultiOrgEnabled ? selectedOrgId : DEFAULT_ORGANIZATION_ID,
           roles: [],
           permissions: [],
+          notifyUser,
         });
         if (!res.isSuccess) {
-          const msg =
-            res.errors && typeof res.errors === "object"
-              ? (Object.values(res.errors as Record<string, string>)[0] ?? "Failed to grant access")
-              : (res.errors as string) || "Failed to grant access";
-          showErrorToast({ errors: msg });
+          showErrorToast({
+            errors: firstErrorMessage(res.errors, t("INVITE_USER.FAILED_TO_GRANT_ACCESS")),
+          });
           return;
         }
-        showSuccessToast({ description: "User granted access to the organization" });
+        showSuccessToast({ description: t("INVITE_USER.ACCESS_GRANTED") });
         form.reset();
         setOpen(false);
         return;
@@ -185,23 +194,22 @@ export const InviteUser = () => {
         platform: "blocks_portal",
         projectKey: tenantId,
         ...(isMultiOrgEnabled ? { organizationId: selectedOrgId } : {}),
+        notifyUser,
       });
       if (!res.isSuccess) {
-        const msg =
-          res.errors && typeof res.errors === "object"
-            ? (Object.values(res.errors as Record<string, string>)[0] ?? "Failed to invite user")
-            : (res.errors as string) || "Failed to invite user";
-        showErrorToast({ errors: msg });
+        showErrorToast({
+          errors: firstErrorMessage(res.errors, t("INVITE_USER.FAILED_TO_INVITE")),
+        });
         return;
       }
-      showSuccessToast({ description: "Invitation is sent" });
+      showSuccessToast({ description: t("INVITE_USER.INVITATION_SENT") });
       form.reset();
       setOpen(false);
     } catch (error) {
       if (isErrorWithErrors(error)) {
         showErrorToast({ errors: error.errors });
       } else {
-        showErrorToast({ errors: "Something went wrong" });
+        showErrorToast({ errors: t("INVITE_USER.SOMETHING_WENT_WRONG") });
       }
     }
   };
@@ -219,13 +227,13 @@ export const InviteUser = () => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <PrimaryButton label="Invite User" />
+        <PrimaryButton label={t("INVITE_USER.TITLE")} />
       </DialogTrigger>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader className="mb-4">
-          <DialogTitle>Invite User</DialogTitle>
-          <DialogDescription className="!mt-2 text-sm text-medium-emphasis">
-            Add a user to an organization.
+          <DialogTitle>{t("INVITE_USER.TITLE")}</DialogTitle>
+          <DialogDescription className="mt-2! text-sm text-medium-emphasis">
+            {t("INVITE_USER.DESCRIPTION")}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -236,12 +244,12 @@ export const InviteUser = () => {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>{t("common:EMAIL")}</FormLabel>
                     <div className="relative">
                       <FormControl>
                         <Input
                           type="email"
-                          placeholder="name@company.com"
+                          placeholder={t("INVITE_USER.EMAIL_PLACEHOLDER")}
                           autoComplete="off"
                           className={cn(
                             isValidEmailFormat && (isCheckingUserExists || exists) && "pr-9",
@@ -270,7 +278,7 @@ export const InviteUser = () => {
                   role="alert"
                   className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-400"
                 >
-                  A user with this email already exists in the system.
+                  {t("INVITE_USER.USER_ALREADY_EXISTS")}
                 </div>
               )}
 
@@ -280,7 +288,7 @@ export const InviteUser = () => {
                   name="organizationIds"
                   render={() => (
                     <FormItem>
-                      <FormLabel>Organization</FormLabel>
+                      <FormLabel>{t("INVITE_USER.ORGANIZATION")}</FormLabel>
                       <OrganizationCombobox
                         projectKey={tenantId}
                         value={selectedOrgId}
@@ -290,8 +298,8 @@ export const InviteUser = () => {
                         preselectedOrganizationIds={existingUserOrgIds}
                         emptyMessage={
                           exists
-                            ? "This user is already a member of all organizations"
-                            : "No organizations available"
+                            ? t("INVITE_USER.MEMBER_OF_ALL_ORGANIZATIONS")
+                            : t("INVITE_USER.NO_ORGANIZATIONS_AVAILABLE")
                         }
                       />
                       {selectedOrganizationAlreadyAssigned && (
@@ -300,12 +308,23 @@ export const InviteUser = () => {
                           className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400"
                         >
                           <CircleCheck className="h-3.5 w-3.5 shrink-0" />
-                          This user already has access to the selected organization.
+                          {t("INVITE_USER.ALREADY_HAS_ACCESS")}
                         </p>
                       )}
                       <FormMessage />
                     </FormItem>
                   )}
+                />
+              )}
+
+              {/* A new account always gets its activation mail, so the choice only
+                  applies when an existing user is being added to an organization. */}
+              {exists && isMultiOrgEnabled && !selectedOrganizationAlreadyAssigned && (
+                <NotifyUserCheckbox
+                  checked={notifyUser}
+                  onCheckedChange={setNotifyUser}
+                  disabled={isPending}
+                  description={t("INVITE_USER.NOTIFY_DESCRIPTION")}
                 />
               )}
             </div>
@@ -319,19 +338,17 @@ export const InviteUser = () => {
                   setOpen(false);
                 }}
               >
-                Cancel
+                {t("common:CANCEL")}
               </Button>
               <Button type="submit" disabled={isSubmitDisabled}>
-                {isPending ? (
+                {isPending && (
                   <>
                     <Loader className="mr-2 h-4 w-4 animate-spin" />
-                    {exists ? "Granting access..." : "Sending..."}
+                    {exists ? t("INVITE_USER.GRANTING_ACCESS") : t("INVITE_USER.SENDING")}
                   </>
-                ) : exists ? (
-                  "Grant access"
-                ) : (
-                  "Send invite"
                 )}
+                {!isPending &&
+                  (exists ? t("INVITE_USER.GRANT_ACCESS") : t("INVITE_USER.SEND_INVITE"))}
               </Button>
             </DialogFooter>
           </form>

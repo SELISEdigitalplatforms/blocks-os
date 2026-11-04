@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { useEffect } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { Button } from "@/components/ui-kits/button/button";
@@ -20,36 +21,43 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui-kits/form/form";
-import { z } from "zod";
-import { updateRoleFormSchema } from "./utils";
+import { createUpdateRoleFormSchema, UpdateRoleFormValues } from "./utils";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { useUpdateRole } from "@blocks-idp/iam/hooks/use-roles";
 import { isErrorWithErrors } from "@/lib/error";
+import { ManagedBySelect } from "../managed-by-select";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
 type UpdateRoleProps = { role: IRole; isOpen: boolean; onClose: () => void };
 export const UpdateRole = ({ role, isOpen, onClose }: UpdateRoleProps) => {
+  const { t } = useT("os.idp.roles");
   const { toast } = useToast();
   const { mutateAsync, isPending } = useUpdateRole();
   const form = useForm({
     defaultValues: role,
-    resolver: zodResolver(updateRoleFormSchema),
+    resolver: zodResolver(createUpdateRoleFormSchema()),
   });
   const {
     formState: { isDirty },
   } = form;
-  const onSubmit: SubmitHandler<z.infer<typeof updateRoleFormSchema>> = async (data) => {
+  const onSubmit: SubmitHandler<UpdateRoleFormValues> = async (data) => {
+    const { parentRoleSlug, ...rest } = data;
+    const currentParent = role.parentRoleSlug ?? "";
     const newRole = {
-      ...data,
+      ...rest,
       itemId: role.itemId,
+      // Sent only when "Managed by" changed; an empty choice clears it with an explicit null.
+      ...((parentRoleSlug ?? "") === currentParent
+        ? {}
+        : { parentRoleSlug: parentRoleSlug || null }),
     };
     try {
       await mutateAsync(newRole);
       toast({
         variant: "success",
-        title: "Success",
-        description: "Role updated successfully",
+        title: t("common:SUCCESS"),
+        description: t("UPDATE_ROLE.UPDATED_SUCCESS"),
       });
-      showSuccessToast({ description: "Role updated successfully" });
+      showSuccessToast({ description: t("UPDATE_ROLE.UPDATED_SUCCESS") });
       onClose();
     } catch (error) {
       if (isErrorWithErrors(error)) {
@@ -64,7 +72,7 @@ export const UpdateRole = ({ role, isOpen, onClose }: UpdateRoleProps) => {
   return (
     <DialogContent>
       <DialogHeader className="mb-4">
-        <DialogTitle>Update Role</DialogTitle>
+        <DialogTitle>{t("UPDATE_ROLE.TITLE")}</DialogTitle>
         <DialogDescription></DialogDescription>
       </DialogHeader>
       <Form {...form}>
@@ -74,9 +82,9 @@ export const UpdateRole = ({ role, isOpen, onClose }: UpdateRoleProps) => {
             control={form.control}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Name</FormLabel>
+                <FormLabel>{t("common:NAME")}</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="Enter name" />
+                  <Input {...field} placeholder={t("UPDATE_ROLE.NAME_PLACEHOLDER")} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -87,22 +95,34 @@ export const UpdateRole = ({ role, isOpen, onClose }: UpdateRoleProps) => {
             control={form.control}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Description</FormLabel>
+                <FormLabel>{t("common:DESCRIPTION")}</FormLabel>
                 <FormControl>
-                  <Textarea {...field} placeholder="Enter description" />
+                  <Textarea {...field} placeholder={t("UPDATE_ROLE.DESCRIPTION_PLACEHOLDER")} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
+          <FormField
+            name="parentRoleSlug"
+            control={form.control}
+            render={({ field }) => (
+              <ManagedBySelect
+                value={field.value}
+                onChange={(slug) => field.onChange(slug)}
+                excludeSlug={role.slug}
+                disabled={isPending}
+              />
+            )}
+          />
           <DialogFooter className="mt-6">
             <DialogTrigger asChild>
               <Button className="min-w-[80px]" variant="outline" disabled={isPending}>
-                Cancel
+                {t("common:CANCEL")}
               </Button>
             </DialogTrigger>
             <Button className="min-w-[80px]" type="submit" disabled={isPending || !isDirty}>
-              {isPending ? "Updating..." : "Update"}
+              {isPending ? t("UPDATE_ROLE.UPDATING") : t("common:UPDATE")}
             </Button>
           </DialogFooter>
         </form>

@@ -6,16 +6,14 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Blocks.Genesis;
-using Configuration.DomainService.Mail.Entities;
 using Configuration.DomainService.Mail.Template;
-using Configuration.DomainService.Mail.Template.Models;
 using Configuration.DomainService.Mail.Template.Services;
 using FluentAssertions;
 using FluentValidation;
 using FluentValidation.Results;
-using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using XUnitTest.TestSupport;
+using Blocks.Genesis.Entities.Os;
 
 namespace XUnitTest.Services
 {
@@ -23,10 +21,23 @@ namespace XUnitTest.Services
     {
         private readonly Mock<IValidator<SaveMailTemplateRequest>> _validator = new();
         private readonly Mock<IMailTemplateRepository> _repo = new();
-        private readonly Mock<IHttpService> _httpService = new();
+        private readonly Mock<IMailTemplateHtmlChecker> _htmlChecker = new();
 
         private MailTemplateService Service() =>
-            new(_validator.Object, _repo.Object, _httpService.Object, NullLogger<MailTemplateService>.Instance);
+            new(_validator.Object, _repo.Object, _htmlChecker.Object);
+
+        [Fact]
+        public async Task CloneTemplateAsync_WhenTheSourceBodyBreaksTheHtmlRules_SavesNothing()
+        {
+            _repo.Setup(r => r.GetByIdAsync("src")).ReturnsAsync(new EmailTemplate { ItemId = "src", Name = "Old", TemplateBody = "<a href=\"https://evil.example\">x</a>" });
+            _htmlChecker.Setup(c => c.FindProblem(It.IsAny<string?>())).Returns("A link to evil.example is not allowed.");
+
+            var response = await Service().CloneTemplateAsync(new CloneMailTemplateRequest { ItemId = "src" });
+
+            response.IsSuccess.Should().BeFalse();
+            response.Errors.Should().ContainKey(nameof(EmailTemplate.TemplateBody));
+            _repo.Verify(r => r.SaveAsync(It.IsAny<EmailTemplate>()), Times.Never);
+        }
 
         private void ValidationSucceeds() =>
             _validator.Setup(v => v.ValidateAsync(It.IsAny<SaveMailTemplateRequest>(), It.IsAny<CancellationToken>()))
@@ -138,7 +149,8 @@ namespace XUnitTest.Services
             {
                 ItemId = "ghost",
                 Name = "Fresh",
-                Language = "en"
+                Language = "en",
+                TemplateSubject = "Hi"
             });
 
             response.IsSuccess.Should().BeTrue();
@@ -158,10 +170,10 @@ namespace XUnitTest.Services
         }
 
         [Fact]
-        public async Task GetAsync_DelegatesToRepository()
+        public async Task GetAsync_ReadsTheTemplateAsTheCallerMayView()
         {
             var template = new EmailTemplate { ItemId = "t1" };
-            _repo.Setup(r => r.GetByIdAsync("t1")).ReturnsAsync(template);
+            _repo.Setup(r => r.GetForViewAsync("t1")).ReturnsAsync(template);
 
             var response = await Service().GetAsync(new GetMailTemplateRequest { ItemId = "t1" });
 
@@ -225,7 +237,8 @@ namespace XUnitTest.Services
             {
                 ItemId = "src",
                 Name = "Original",
-                Language = "en"
+                Language = "en",
+                TemplateSubject = "OrigSub"
             });
             EmailTemplate? saved = null;
             _repo.Setup(r => r.SaveAsync(It.IsAny<EmailTemplate>()))
@@ -261,118 +274,393 @@ namespace XUnitTest.Services
             _repo.Verify(r => r.DeleteAsync("t1"), Times.Once);
         }
 
-        private void PluginConfigExists(string provider, string contentType, Dictionary<string, string>? headers = null) =>
-            _repo.Setup(r => r.GetPluginConfigAsync(provider))
-                 .ReturnsAsync(new TemplatePluginConfig
-                 {
-                     ItemId = "cfg-1",
-                     PluginProvider = provider,
-                     HttpMethod = "POST",
-                     RequestUri = "https://auth.getbee.io/loginV2",
-                     ContentType = contentType,
-                     Payload = "{\"client_id\":\"cid\",\"client_secret\":\"secret\",\"uid\":\"placeholder\"}",
-                     HttpHeders = headers
-                 });
+        // #726: a template is never stored without a subject (Logic cannot send it). The rule
+        // checks the subject the template would be stored with, after merging and clone fallback.
 
-        private void HttpReturns(BeeLoginResponse? response, string error = "") =>
-            _httpService.Setup(h => h.SendRequest<BeeLoginResponse>(
-                    It.IsAny<HttpMethod>(),
-                    It.IsAny<string>(),
-                    It.IsAny<object>(),
-                    It.IsAny<string>(),
-                    It.IsAny<Dictionary<string, string>>(),
-                    It.IsAny<CancellationToken>(),
-                    It.IsAny<int?>()))
-                .ReturnsAsync((response!, error));
-
-        [Fact]
-        public async Task GetTemplatePluginTokenAsync_WhenUidMissing_ReturnsNull()
+        private static readonly Dictionary<string, string> SubjectRequired = new()
         {
-            var response = await Service().GetTemplatePluginTokenAsync("Bee", string.Empty);
+            { nameof(EmailTemplate.TemplateSubject), "Subject is required." }
+        };
 
-            response.Should().BeNull();
-            _repo.Verify(r => r.GetPluginConfigAsync(It.IsAny<string>()), Times.Never);
+        private void NoTemplateWithTheSameNameAndLanguage() =>
+            _repo.Setup(r => r.GetByNameAndLanguageAsync(It.IsAny<string>(), It.IsAny<string>()))
+                 .ReturnsAsync((EmailTemplate?)null);
+
+        private Func<EmailTemplate?> CaptureSaved()
+        {
+            EmailTemplate? saved = null;
+            _repo.Setup(r => r.SaveAsync(It.IsAny<EmailTemplate>()))
+                 .Callback<EmailTemplate>(t => saved = t)
+                 .Returns(Task.CompletedTask);
+            return () => saved;
+        }
+
+        private void ShouldBeRejectedForTheSubject(BaseMutationResponse response)
+        {
+            response.IsSuccess.Should().BeFalse();
+            response.Errors.Should().BeEquivalentTo(SubjectRequired);
+            response.ItemId.Should().BeNull();
+            _repo.Verify(r => r.SaveAsync(It.IsAny<EmailTemplate>()), Times.Never);
         }
 
         [Fact]
-        public async Task GetTemplatePluginTokenAsync_WhenNoConfig_ReturnsNull()
+        public async Task SaveTemplateAsync_Create_WithSubjectAndNoBody_StoresTheSubjectAndANullBody()
         {
-            _repo.Setup(r => r.GetPluginConfigAsync("Bee")).ReturnsAsync((TemplatePluginConfig?)null);
+            using var _ = new BlocksTestContext();
+            ValidationSucceeds();
+            NoTemplateWithTheSameNameAndLanguage();
+            var saved = CaptureSaved();
 
-            var response = await Service().GetTemplatePluginTokenAsync("Bee", "uid-1");
-
-            response.Should().BeNull();
-        }
-
-        [Fact]
-        public async Task GetTemplatePluginTokenAsync_WithJsonPayload_ReturnsTokenAndOverwritesUid()
-        {
-            PluginConfigExists("Bee", "application/json");
-            HttpReturns(new BeeLoginResponse { AccessToken = "token-123" });
-
-            var response = await Service().GetTemplatePluginTokenAsync("Bee", "uid-1");
-
-            response!.AccessToken.Should().Be("token-123");
-            _httpService.Verify(h => h.SendRequest<BeeLoginResponse>(
-                It.IsAny<HttpMethod>(),
-                "https://auth.getbee.io/loginV2",
-                It.Is<object>(p => ((Dictionary<string, JsonElement>)p)["uid"].GetString() == "uid-1"),
-                "application/json",
-                It.IsAny<Dictionary<string, string>>(),
-                It.IsAny<CancellationToken>(),
-                It.IsAny<int?>()), Times.Once);
-        }
-
-        [Fact]
-        public async Task GetTemplatePluginTokenAsync_WithFormPayload_OverwritesUid()
-        {
-            PluginConfigExists("Bee", "application/x-www-form-urlencoded");
-            HttpReturns(new BeeLoginResponse { AccessToken = "token-456" });
-
-            var response = await Service().GetTemplatePluginTokenAsync("Bee", "uid-2");
-
-            response!.AccessToken.Should().Be("token-456");
-            _httpService.Verify(h => h.SendRequest<BeeLoginResponse>(
-                It.IsAny<HttpMethod>(),
-                It.IsAny<string>(),
-                It.Is<object>(p => ((Dictionary<string, string>)p)["uid"] == "uid-2"),
-                It.IsAny<string>(),
-                It.IsAny<Dictionary<string, string>>(),
-                It.IsAny<CancellationToken>(),
-                It.IsAny<int?>()), Times.Once);
-        }
-
-        [Fact]
-        public async Task GetTemplatePluginTokenAsync_DropsStoredAuthorizationHeader()
-        {
-            PluginConfigExists("Bee", "application/json", new Dictionary<string, string>
+            var response = await Service().SaveTemplateAsync(new SaveMailTemplateRequest
             {
-                ["Authorization"] = "should-be-dropped",
-                ["X-Api"] = "keep"
+                Name = "welcome",
+                Language = "en",
+                MailConfigurationId = "c1",
+                TemplateSubject = "Welcome {{name}}"
             });
-            HttpReturns(new BeeLoginResponse { AccessToken = "token-789" });
 
-            await Service().GetTemplatePluginTokenAsync("Bee", "uid-3");
-
-            _httpService.Verify(h => h.SendRequest<BeeLoginResponse>(
-                It.IsAny<HttpMethod>(),
-                It.IsAny<string>(),
-                It.IsAny<object>(),
-                It.IsAny<string>(),
-                It.Is<Dictionary<string, string>>(h2 => !h2.ContainsKey("Authorization") && h2["X-Api"] == "keep"),
-                It.IsAny<CancellationToken>(),
-                It.IsAny<int?>()), Times.Once);
+            response.IsSuccess.Should().BeTrue();
+            response.ItemId.Should().NotBeNullOrEmpty().And.Be(saved()!.ItemId);
+            saved()!.TemplateSubject.Should().Be("Welcome {{name}}");
+            saved()!.TemplateBody.Should().BeNull();
+            _repo.Verify(r => r.SaveAsync(It.IsAny<EmailTemplate>()), Times.Once);
         }
 
         [Fact]
-        public async Task GetTemplatePluginTokenAsync_WhenHttpFails_ReturnsNull()
+        public async Task SaveTemplateAsync_Create_WithSubjectAndBody_StoresBoth()
         {
-            PluginConfigExists("Bee", "application/json");
-            HttpReturns(null, "boom");
+            using var _ = new BlocksTestContext();
+            ValidationSucceeds();
+            NoTemplateWithTheSameNameAndLanguage();
+            var saved = CaptureSaved();
 
-            var response = await Service().GetTemplatePluginTokenAsync("Bee", "uid-1");
+            var response = await Service().SaveTemplateAsync(new SaveMailTemplateRequest
+            {
+                Name = "welcome",
+                Language = "en",
+                TemplateSubject = "Welcome",
+                TemplateBody = "<p>Hi</p>"
+            });
 
-            response.Should().BeNull();
+            response.IsSuccess.Should().BeTrue();
+            saved()!.TemplateSubject.Should().Be("Welcome");
+            saved()!.TemplateBody.Should().Be("<p>Hi</p>");
+        }
+
+        [Fact]
+        public async Task SaveTemplateAsync_Update_WithoutASubject_KeepsTheStoredSubject()
+        {
+            using var _ = new BlocksTestContext();
+            ValidationSucceeds();
+            _repo.Setup(r => r.GetByIdAsync("item-1"))
+                 .ReturnsAsync(new EmailTemplate { ItemId = "item-1", Name = "welcome", TemplateSubject = "Welcome" });
+            var saved = CaptureSaved();
+
+            var response = await Service().SaveTemplateAsync(new SaveMailTemplateRequest
+            {
+                ItemId = "item-1",
+                TemplateBody = "<p>Hi</p>"
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            response.ItemId.Should().Be("item-1");
+            saved()!.TemplateSubject.Should().Be("Welcome");
+            saved()!.TemplateBody.Should().Be("<p>Hi</p>");
+        }
+
+        [Theory]
+        [InlineData("Welcome")]
+        [InlineData(null)]
+        public async Task SaveTemplateAsync_Update_WithANewSubject_StoresIt(string? storedSubject)
+        {
+            using var _ = new BlocksTestContext();
+            ValidationSucceeds();
+            _repo.Setup(r => r.GetByIdAsync("item-1"))
+                 .ReturnsAsync(new EmailTemplate { ItemId = "item-1", Name = "welcome", TemplateSubject = storedSubject });
+            var saved = CaptureSaved();
+
+            var response = await Service().SaveTemplateAsync(new SaveMailTemplateRequest
+            {
+                ItemId = "item-1",
+                TemplateSubject = "Now set"
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            saved()!.TemplateSubject.Should().Be("Now set");
+        }
+
+        [Fact]
+        public async Task SaveTemplateAsync_SubjectWithOuterSpaces_IsStoredUnchanged()
+        {
+            using var _ = new BlocksTestContext();
+            ValidationSucceeds();
+            NoTemplateWithTheSameNameAndLanguage();
+            _repo.Setup(r => r.GetByIdAsync("item-1"))
+                 .ReturnsAsync(new EmailTemplate { ItemId = "item-1", TemplateSubject = "Old" });
+            var saved = CaptureSaved();
+
+            var created = await Service().SaveTemplateAsync(new SaveMailTemplateRequest
+            {
+                Name = "welcome",
+                Language = "en",
+                TemplateSubject = "  Hi  "
+            });
+            created.IsSuccess.Should().BeTrue();
+            saved()!.TemplateSubject.Should().Be("  Hi  ");
+
+            var updated = await Service().SaveTemplateAsync(new SaveMailTemplateRequest
+            {
+                ItemId = "item-1",
+                TemplateSubject = "  Hi  "
+            });
+            updated.IsSuccess.Should().BeTrue();
+            saved()!.ItemId.Should().Be("item-1");
+            saved()!.TemplateSubject.Should().Be("  Hi  ");
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        [InlineData("\t\n")]
+        public async Task SaveTemplateAsync_Create_WithoutANonBlankSubject_IsRejected(string? subject)
+        {
+            using var _ = new BlocksTestContext();
+            ValidationSucceeds();
+            NoTemplateWithTheSameNameAndLanguage();
+
+            var response = await Service().SaveTemplateAsync(new SaveMailTemplateRequest
+            {
+                Name = "spec-nosub",
+                Language = "en",
+                MailConfigurationId = "c1",
+                TemplateSubject = subject
+            });
+
+            ShouldBeRejectedForTheSubject(response);
+            // No read beyond today's: the mapping's name/language lookup only.
+            _repo.Verify(r => r.GetByNameAndLanguageAsync("spec-nosub", "en"), Times.Once);
+            _repo.Verify(r => r.GetByIdAsync(It.IsAny<string>()), Times.Never);
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("   ")]
+        public async Task SaveTemplateAsync_Update_BlankingTheSubject_IsRejected(string subject)
+        {
+            using var _ = new BlocksTestContext();
+            ValidationSucceeds();
+            _repo.Setup(r => r.GetByIdAsync("item-1"))
+                 .ReturnsAsync(new EmailTemplate { ItemId = "item-1", TemplateSubject = "Welcome" });
+
+            var response = await Service().SaveTemplateAsync(new SaveMailTemplateRequest
+            {
+                ItemId = "item-1",
+                TemplateSubject = subject
+            });
+
+            ShouldBeRejectedForTheSubject(response);
+            _repo.Verify(r => r.GetByIdAsync("item-1"), Times.Once);
+            _repo.Verify(r => r.GetByNameAndLanguageAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task SaveTemplateAsync_BodyOnlyUpdateOfASubjectlessTemplate_IsRejected()
+        {
+            using var _ = new BlocksTestContext();
+            ValidationSucceeds();
+            _repo.Setup(r => r.GetByIdAsync("legacy"))
+                 .ReturnsAsync(new EmailTemplate { ItemId = "legacy", Name = "spec-legacy", Language = "en" });
+
+            var response = await Service().SaveTemplateAsync(new SaveMailTemplateRequest
+            {
+                ItemId = "legacy",
+                TemplateBody = "<p>x</p>"
+            });
+
+            ShouldBeRejectedForTheSubject(response);
+            _repo.Verify(r => r.GetByIdAsync("legacy"), Times.Once);
+        }
+
+        [Fact]
+        public async Task SaveTemplateAsync_UpsertOfAnUnknownIdWithoutASubject_IsRejected()
+        {
+            using var _ = new BlocksTestContext();
+            ValidationSucceeds();
+            NoTemplateWithTheSameNameAndLanguage();
+            _repo.Setup(r => r.GetByIdAsync("ghost")).ReturnsAsync((EmailTemplate?)null);
+
+            var response = await Service().SaveTemplateAsync(new SaveMailTemplateRequest
+            {
+                ItemId = "ghost",
+                Name = "spec-upsert",
+                Language = "en"
+            });
+
+            ShouldBeRejectedForTheSubject(response);
+            _repo.Verify(r => r.GetByNameAndLanguageAsync("spec-upsert", "en"), Times.Once);
+            _repo.Verify(r => r.GetByIdAsync("ghost"), Times.Once);
+        }
+
+        [Fact]
+        public async Task SaveTemplateAsync_DuplicateNameAndLanguageWithoutASubject_ReturnsOnlyTheDuplicateError()
+        {
+            using var _ = new BlocksTestContext();
+            ValidationSucceeds();
+            _repo.Setup(r => r.GetByNameAndLanguageAsync("welcome", "en"))
+                 .ReturnsAsync(new EmailTemplate { ItemId = "other", Name = "welcome", Language = "en", TemplateSubject = "Hi" });
+
+            var created = await Service().SaveTemplateAsync(new SaveMailTemplateRequest { Name = "welcome", Language = "en" });
+            var updated = await Service().SaveTemplateAsync(new SaveMailTemplateRequest { ItemId = "item-1", Name = "welcome", Language = "en" });
+
+            var duplicate = new Dictionary<string, string> { { "Template", "Template with the same Name and Language already exists" } };
+            created.IsSuccess.Should().BeFalse();
+            created.Errors.Should().BeEquivalentTo(duplicate);
+            updated.IsSuccess.Should().BeFalse();
+            updated.Errors.Should().BeEquivalentTo(duplicate);
+            _repo.Verify(r => r.SaveAsync(It.IsAny<EmailTemplate>()), Times.Never);
+        }
+
+        [Theory]
+        [InlineData("Template", "Template with the same Name and Language already exists")]
+        [InlineData(nameof(EmailTemplate.TemplateBody), "A link to evil.example is not allowed.")]
+        public async Task SaveTemplateAsync_ValidatorErrorWithoutASubject_ReturnsOnlyTheValidatorError(string property, string message)
+        {
+            _validator.Setup(v => v.ValidateAsync(It.IsAny<SaveMailTemplateRequest>(), It.IsAny<CancellationToken>()))
+                      .ReturnsAsync(new ValidationResult(new[] { new ValidationFailure(property, message) }));
+
+            var response = await Service().SaveTemplateAsync(new SaveMailTemplateRequest
+            {
+                Name = "welcome",
+                Language = "en",
+                TemplateBody = "<a href=\"https://evil.example\">x</a>"
+            });
+
+            response.IsSuccess.Should().BeFalse();
+            response.Errors.Should().BeEquivalentTo(new Dictionary<string, string> { { property, message } });
+            _repo.Verify(r => r.SaveAsync(It.IsAny<EmailTemplate>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task CloneTemplateAsync_WithASubject_FromASubjectlessSource_StoresThatSubject()
+        {
+            using var _ = new BlocksTestContext();
+            _repo.Setup(r => r.GetByIdAsync("legacy"))
+                 .ReturnsAsync(new EmailTemplate { ItemId = "legacy", Name = "spec-legacy", Language = "en" });
+            var saved = CaptureSaved();
+
+            var response = await Service().CloneTemplateAsync(new CloneMailTemplateRequest { ItemId = "legacy", TemplateSubject = "Hello" });
+
+            response.IsSuccess.Should().BeTrue();
+            response.ItemId.Should().Be(saved()!.ItemId);
+            saved()!.TemplateSubject.Should().Be("Hello");
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        public async Task CloneTemplateAsync_WithoutASubject_KeepsTheSourceSubject(string? requestSubject)
+        {
+            using var _ = new BlocksTestContext();
+            _repo.Setup(r => r.GetByIdAsync("src"))
+                 .ReturnsAsync(new EmailTemplate { ItemId = "src", Name = "Original", Language = "en", TemplateSubject = "OrigSub" });
+            var saved = CaptureSaved();
+
+            var response = await Service().CloneTemplateAsync(new CloneMailTemplateRequest { ItemId = "src", TemplateSubject = requestSubject });
+
+            response.IsSuccess.Should().BeTrue();
+            saved()!.TemplateSubject.Should().Be("OrigSub");
+        }
+
+        [Fact]
+        public async Task CloneTemplateAsync_SubjectWithOuterSpaces_IsStoredUnchanged()
+        {
+            using var _ = new BlocksTestContext();
+            _repo.Setup(r => r.GetByIdAsync("src"))
+                 .ReturnsAsync(new EmailTemplate { ItemId = "src", Name = "Original", Language = "en" });
+            var saved = CaptureSaved();
+
+            var response = await Service().CloneTemplateAsync(new CloneMailTemplateRequest { ItemId = "src", TemplateSubject = "  Hi  " });
+
+            response.IsSuccess.Should().BeTrue();
+            saved()!.TemplateSubject.Should().Be("  Hi  ");
+        }
+
+        [Theory]
+        [InlineData(null, null)]
+        [InlineData(null, "")]
+        [InlineData(null, "   ")]
+        [InlineData("   ", null)]
+        [InlineData("\t", "")]
+        public async Task CloneTemplateAsync_WithoutANonBlankSubjectAnywhere_IsRejected(string? requestSubject, string? sourceSubject)
+        {
+            using var _ = new BlocksTestContext();
+            _repo.Setup(r => r.GetByIdAsync("legacy"))
+                 .ReturnsAsync(new EmailTemplate { ItemId = "legacy", Name = "spec-legacy", Language = "en", TemplateSubject = sourceSubject });
+
+            var response = await Service().CloneTemplateAsync(new CloneMailTemplateRequest { ItemId = "legacy", TemplateSubject = requestSubject });
+
+            ShouldBeRejectedForTheSubject(response);
+            _repo.Verify(r => r.GetByIdAsync("legacy"), Times.Once);
+        }
+
+        [Fact]
+        public async Task CloneTemplateAsync_MissingSource_ReturnsOnlyNotFound()
+        {
+            _repo.Setup(r => r.GetByIdAsync("missing")).ReturnsAsync((EmailTemplate?)null);
+
+            var response = await Service().CloneTemplateAsync(new CloneMailTemplateRequest { ItemId = "missing" });
+
+            response.IsSuccess.Should().BeFalse();
+            response.Errors.Should().BeEquivalentTo(new Dictionary<string, string> { { "Template", "Template not found" } });
+            _repo.Verify(r => r.SaveAsync(It.IsAny<EmailTemplate>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task CloneTemplateAsync_SubjectlessSourceWithABodyProblem_ReturnsOnlyTheBodyError()
+        {
+            _repo.Setup(r => r.GetByIdAsync("legacy"))
+                 .ReturnsAsync(new EmailTemplate { ItemId = "legacy", TemplateBody = "<a href=\"https://evil.example\">x</a>" });
+            _htmlChecker.Setup(c => c.FindProblem(It.IsAny<string?>())).Returns("A link to evil.example is not allowed.");
+
+            var response = await Service().CloneTemplateAsync(new CloneMailTemplateRequest { ItemId = "legacy" });
+
+            response.IsSuccess.Should().BeFalse();
+            response.Errors.Should().BeEquivalentTo(new Dictionary<string, string>
+            {
+                { nameof(EmailTemplate.TemplateBody), "A link to evil.example is not allowed." }
+            });
+            _repo.Verify(r => r.SaveAsync(It.IsAny<EmailTemplate>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task GetAsync_And_GetAllTemplatesAsync_ReturnSubjectlessTemplatesAsStored()
+        {
+            var legacy = new EmailTemplate { ItemId = "legacy", Name = "spec-legacy", Language = "en" };
+            var page = new GetAllMailTemplatesResponse { TotalCount = 1, Templates = [legacy] };
+            _repo.Setup(r => r.GetForViewAsync("legacy")).ReturnsAsync(legacy);
+            _repo.Setup(r => r.GetsAsync(It.IsAny<GetAllMailTemplatesRequest>())).ReturnsAsync(page);
+
+            var one = await Service().GetAsync(new GetMailTemplateRequest { ItemId = "legacy" });
+            var all = await Service().GetAllTemplatesAsync(new GetAllMailTemplatesRequest());
+
+            one.Should().BeSameAs(legacy);
+            one!.TemplateSubject.Should().BeNull();
+            all.Should().BeSameAs(page);
+            all.Templates.Should().ContainSingle().Which.TemplateSubject.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task DeleteAsync_SubjectlessTemplate_Deletes()
+        {
+            _repo.Setup(r => r.GetByIdAsync("legacy"))
+                 .ReturnsAsync(new EmailTemplate { ItemId = "legacy", Name = "spec-legacy", Language = "en" });
+
+            var response = await Service().DeleteAsync(new DeleteMailTemplateRequest { ItemId = "legacy" });
+
+            response.IsSuccess.Should().BeTrue();
+            _repo.Verify(r => r.DeleteAsync("legacy"), Times.Once);
         }
     }
 }

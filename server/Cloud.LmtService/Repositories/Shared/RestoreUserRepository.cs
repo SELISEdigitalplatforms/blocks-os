@@ -8,10 +8,8 @@ namespace Cloud.LmtService.Repositories.Shared
     public sealed class RestoreUserRepository : IRestoreUserRepository
     {
         private const string UsersCollectionName = "Users";
-        private IMongoDatabase _clientDb;
         private readonly IDbContextProvider _dbContextProvider;
         private readonly ILogger<RestoreUserRepository> _logger;
-        private const string _rootDatabaseName = "BlocksRootDb";
         private readonly IBlocksSecret _blocksSecret;
         public RestoreUserRepository(IDbContextProvider dbContextProvider, IBlocksSecret blocksSecret, ILogger<RestoreUserRepository> logger)
         {
@@ -21,11 +19,11 @@ namespace Cloud.LmtService.Repositories.Shared
         }
         private IMongoDatabase ResolvedClientDb ( )
         {
-            var blocksContext = BlocksContext.GetContext();
-            _logger.LogInformation($"Blocks Context {blocksContext.ToString()}");
+            var blocksContext = BlocksContext.GetContext()
+                ?? throw new InvalidOperationException("Tenant context is required to resolve the restore requester.");
             if (blocksContext.Impersonated)
             {
-             return _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, _rootDatabaseName);
+             return _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, _blocksSecret.RootDatabaseName);
             }
 
             return _dbContextProvider.GetDatabase(blocksContext.TenantId);
@@ -42,8 +40,8 @@ namespace Cloud.LmtService.Repositories.Shared
                // Reads the Users collection of whichever database ResolvedClientDb picked. Either
                // way the choice depends on the ambient BlocksContext, which is why this lookup
                // belongs on the request path rather than in the worker that later sends the mail.
-               _clientDb = ResolvedClientDb();
-               var users = _clientDb.GetCollection<RestoreUser>(UsersCollectionName);
+               var database = ResolvedClientDb();
+               var users = database.GetCollection<RestoreUser>(UsersCollectionName);
 
                 var email = await users
                     .Find(Builders<RestoreUser>.Filter.Eq(user => user.ItemId, userId))

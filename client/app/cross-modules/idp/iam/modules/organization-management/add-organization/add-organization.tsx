@@ -28,7 +28,7 @@ import {
   useSaveOrganization,
   useGetOrganizationConfig,
 } from "@blocks-idp/iam/hooks/use-organization";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { Plus } from "lucide-react";
 import {
   Tooltip,
@@ -42,6 +42,7 @@ interface AddOrganizationProps {
 }
 
 export const AddOrganization = ({ disabled }: AddOrganizationProps) => {
+  const { t } = useT("os.idp.organizations");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { mutateAsync, isPending } = useSaveOrganization();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
@@ -68,7 +69,7 @@ export const AddOrganization = ({ disabled }: AddOrganizationProps) => {
         showErrorToast({ errors: res.errors });
         return;
       }
-      showSuccessToast({ description: "Organization added successfully" });
+      showSuccessToast({ description: t("ADD_ORGANIZATION.ADDED_SUCCESS") });
       setIsModalOpen(false);
       form.reset();
     } catch (error: unknown) {
@@ -77,7 +78,7 @@ export const AddOrganization = ({ disabled }: AddOrganizationProps) => {
       } else {
         // Empty-body 4xx/5xx (e.g. 403 with Content-Length: 0) still need a
         // user-visible failure — otherwise the dialog just sits open.
-        showErrorToast({ errors: "Something went wrong" });
+        showErrorToast({ errors: t("ADD_ORGANIZATION.SOMETHING_WENT_WRONG") });
       }
     }
   };
@@ -102,24 +103,20 @@ export const AddOrganization = ({ disabled }: AddOrganizationProps) => {
                   className="gap-2 disabled:cursor-not-allowed disabled:opacity-40 disabled:grayscale"
                 >
                   <Plus className="h-4 w-4" />
-                  <span className="sr-only sm:not-sr-only">Add Organization</span>
+                  <span className="sr-only sm:not-sr-only">{t("ADD_ORGANIZATION.ADD_BUTTON")}</span>
                 </Button>
               </DialogTrigger>
             </span>
           </TooltipTrigger>
           {isDisabled && (
-            <TooltipContent side="left">
-              Organization creation from cloud is not enabled
-            </TooltipContent>
+            <TooltipContent side="left">{t("ADD_ORGANIZATION.NOT_ENABLED")}</TooltipContent>
           )}
         </Tooltip>
       </TooltipProvider>
       <DialogContent>
         <DialogHeader className="mb-4">
-          <DialogTitle>Add Organization</DialogTitle>
-          <DialogDescription>
-            Please fill in the details to add a new organization.
-          </DialogDescription>
+          <DialogTitle>{t("ADD_ORGANIZATION.TITLE")}</DialogTitle>
+          <DialogDescription>{t("ADD_ORGANIZATION.DESCRIPTION")}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
@@ -128,9 +125,9 @@ export const AddOrganization = ({ disabled }: AddOrganizationProps) => {
               control={form.control}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>{t("common:NAME")}</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Enter organization name" />
+                    <Input {...field} placeholder={t("ADD_ORGANIZATION.NAME_PLACEHOLDER")} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -139,11 +136,11 @@ export const AddOrganization = ({ disabled }: AddOrganizationProps) => {
             <DialogFooter className="mt-6">
               <DialogClose asChild>
                 <Button className="min-w-[80px]" variant="outline" disabled={isPending}>
-                  Cancel
+                  {t("common:CANCEL")}
                 </Button>
               </DialogClose>
               <Button className="min-w-[80px]" type="submit" disabled={isPending || !isDirty}>
-                {isPending ? "Adding..." : "Add"}
+                {isPending ? t("ADD_ORGANIZATION.ADDING") : t("common:ADD")}
               </Button>
             </DialogFooter>
           </form>

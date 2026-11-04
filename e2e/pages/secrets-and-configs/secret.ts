@@ -150,14 +150,15 @@ export async function revealAndCopySecretValueFlow(page: Page, secretRow: Locato
 
 export async function openActionsMenuFlow(page: Page, secretName: string): Promise<boolean> {
   const actionsButton = page.getByRole("button", {
-    name: new RegExp(`Actions for.*${secretName}`),
+    name: `Actions for ${secretName}`,
   });
   if (!(await actionsButton.isVisible({ timeout: 5000 }))) return false;
   await actionsButton.click();
   await expect(page.getByRole("menuitem", { name: "Edit" })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Rotate" })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Lock" })).toBeVisible();
-  await expect(page.getByRole("menuitem", { name: "Delete" })).toBeVisible();
+  // Soft delete is presented as "Archive"; Restore and Purge live on the archived row.
+  await expect(page.getByRole("menuitem", { name: "Archive" })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Audit" })).toBeVisible();
   await page.keyboard.press("Escape");
   return true;
@@ -165,7 +166,7 @@ export async function openActionsMenuFlow(page: Page, secretName: string): Promi
 
 export async function editSecretDescriptionFlow(page: Page, secretName: string, newDescription: string) {
   const actionsButton = page.getByRole("button", {
-    name: new RegExp(`Actions for.*${secretName}`),
+    name: `Actions for ${secretName}`,
   });
   if (!(await actionsButton.isVisible({ timeout: 5000 }))) return;
   await actionsButton.click();
@@ -180,12 +181,12 @@ export async function editSecretDescriptionFlow(page: Page, secretName: string, 
 
 export async function rotateSecretValueFlow(page: Page, secretName: string, newValue: string) {
   const actionsButton = page.getByRole("button", {
-    name: new RegExp(`Actions for.*${secretName}`),
+    name: `Actions for ${secretName}`,
   });
   if (!(await actionsButton.isVisible({ timeout: 5000 }))) return;
   await actionsButton.click();
   await page.getByRole("menuitem", { name: "Rotate" }).click();
-  await expect(page.getByRole("heading", { name: new RegExp(`Rotate ${secretName}`) })).toBeVisible();
+  await expect(page.getByRole("heading", { name: `Rotate ${secretName}` })).toBeVisible();
   if (
     await page.getByText("Anything still using the old value will start failing").isVisible()
   ) {
@@ -194,19 +195,19 @@ export async function rotateSecretValueFlow(page: Page, secretName: string, newV
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByPlaceholder("Paste the new secret value").fill(newValue);
   await page.getByRole("button", { name: "Rotate", exact: true }).click();
-  await expect(page.getByRole("heading", { name: new RegExp(`Rotate ${secretName}`) })).toBeHidden({
+  await expect(page.getByRole("heading", { name: `Rotate ${secretName}` })).toBeHidden({
     timeout: 15000,
   });
 }
 
 export async function lockAndUnlockSecretFlow(page: Page, secretRow: Locator, secretName: string) {
   const actionsButton = page.getByRole("button", {
-    name: new RegExp(`Actions for.*${secretName}`),
+    name: `Actions for ${secretName}`,
   });
   if (!(await actionsButton.isVisible({ timeout: 5000 }))) return;
   await actionsButton.click();
   await page.getByRole("menuitem", { name: "Lock" }).click();
-  await expect(page.getByRole("heading", { name: new RegExp(`Lock ${secretName}`) })).toBeVisible();
+  await expect(page.getByRole("heading", { name: `Lock ${secretName}` })).toBeVisible();
   await page.getByRole("button", { name: "Lock", exact: true }).click();
   if (await secretRow.getByText("Locked").isVisible({ timeout: 15000 })) {
     await expect(secretRow.getByText("Locked")).toBeVisible();
@@ -214,7 +215,7 @@ export async function lockAndUnlockSecretFlow(page: Page, secretRow: Locator, se
 
   await actionsButton.click();
   await page.getByRole("menuitem", { name: "Unlock" }).click();
-  await expect(page.getByRole("heading", { name: new RegExp(`Unlock ${secretName}`) })).toBeVisible();
+  await expect(page.getByRole("heading", { name: `Unlock ${secretName}` })).toBeVisible();
   await page.getByRole("button", { name: "Unlock", exact: true }).click();
   if (await secretRow.getByText("Active").isVisible({ timeout: 15000 })) {
     await expect(secretRow.getByText("Active")).toBeVisible();
@@ -223,44 +224,45 @@ export async function lockAndUnlockSecretFlow(page: Page, secretRow: Locator, se
 
 export async function openAuditLogFlow(page: Page, secretName: string) {
   const actionsButton = page.getByRole("button", {
-    name: new RegExp(`Actions for.*${secretName}`),
+    name: `Actions for ${secretName}`,
   });
   if (!(await actionsButton.isVisible({ timeout: 5000 }))) return;
   await actionsButton.click();
   await page.getByRole("menuitem", { name: "Audit" }).click();
   await expect(
-    page.getByRole("heading", { name: new RegExp(`Audit log.*${secretName}`) }),
+    page.getByRole("heading", { name: `Audit log ${secretName}` }),
   ).toBeVisible({ timeout: 10000 });
   await page.keyboard.press("Escape");
 }
 
 export async function deleteSecretAndRestoreFlow(page: Page, secretRow: Locator, secretName: string) {
   const actionsButton = page.getByRole("button", {
-    name: new RegExp(`Actions for.*${secretName}`),
+    name: `Actions for ${secretName}`,
   });
   if (!(await actionsButton.isVisible({ timeout: 5000 }))) return;
   await actionsButton.click();
-  await page.getByRole("menuitem", { name: "Delete" }).click();
-  await expect(page.getByRole("heading", { name: new RegExp(`Delete ${secretName}`) })).toBeVisible();
-  if (await page.getByText("This is a soft delete").isVisible()) {
-    await expect(page.getByText("This is a soft delete")).toBeVisible();
-  }
-  await page.getByRole("button", { name: "Delete", exact: true }).click();
-  await expect(page.getByRole("heading", { name: new RegExp(`Delete ${secretName}`) })).toBeHidden({
-    timeout: 15000,
-  });
-  if (await secretRow.isVisible({ timeout: 3000 })) {
-    await expect(secretRow).toBeHidden({ timeout: 10000 });
-  }
+  await page.getByRole("menuitem", { name: "Archive" }).click();
+  const archiveHeading = page.getByRole("heading", { name: `Archive ${secretName}?` });
+  await expect(archiveHeading).toBeVisible();
+  await expect(page.getByText("You can restore it later", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "Archive", exact: true }).click();
+  await expect(archiveHeading).toBeHidden({ timeout: 15000 });
+  await expect(secretRow).toBeHidden({ timeout: 10000 });
 
-  const statusFilter = page.getByRole("button", { name: /^Status$/i });
-  if (!(await statusFilter.isVisible({ timeout: 5000 }))) return;
-  await statusFilter.click();
-  await page.getByRole("radio", { name: "Deleted", exact: true }).click();
+  // Archived is its own toggle beside the filters; it shows the soft-deleted rows.
+  const archivedToggle = page.getByRole("button", { name: /^Archived/ });
+  await archivedToggle.click();
+  await expect(archivedToggle).toHaveAttribute("aria-pressed", "true");
   await expect(secretRow).toBeVisible({ timeout: 10000 });
 
-  await secretRow.getByRole("button", { name: new RegExp(`Actions for.*${secretName}`) }).click();
-  await page.getByRole("menuitem", { name: "Restore" }).click();
-  await expect(page.getByRole("heading", { name: new RegExp(`Restore ${secretName}`) })).toBeVisible();
-  await page.getByRole("button", { name: "Restore", exact: true }).click();
+  await secretRow.getByRole("button", { name: "Restore", exact: true }).click();
+  const restoreHeading = page.getByRole("heading", { name: `Restore ${secretName}?` });
+  await expect(restoreHeading).toBeVisible();
+  await page.getByRole("dialog").getByRole("button", { name: "Restore", exact: true }).click();
+  await expect(restoreHeading).toBeHidden({ timeout: 15000 });
+  await expect(secretRow).toBeHidden({ timeout: 10000 });
+
+  await archivedToggle.click();
+  await expect(archivedToggle).toHaveAttribute("aria-pressed", "false");
+  await expect(secretRow).toBeVisible({ timeout: 10000 });
 }

@@ -1,6 +1,7 @@
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { ChevronRight } from "lucide-react";
 import { useState } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 
 /**
  * Collapsed-by-default view of a log's exception. Renders nothing when the log carried no
@@ -10,6 +11,7 @@ import { useState } from "react";
  * Shared by the logs list and the trace-details log panel so both read the same way.
  */
 export const LogStackTrace = ({ exception }: { exception?: string }) => {
+  const { t } = useT("os.lmt");
   const [isOpen, setIsOpen] = useState(false);
   const stackTrace = exception?.trim() ?? "";
 
@@ -21,7 +23,7 @@ export const LogStackTrace = ({ exception }: { exception?: string }) => {
         type="button"
         onClick={() => setIsOpen((open) => !open)}
         aria-expanded={isOpen}
-        className="inline-flex items-center gap-1 rounded-sm text-xs font-medium text-error hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="inline-flex items-center gap-1 rounded-sm text-xs font-medium text-error hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
       >
         <ChevronRight
           aria-hidden="true"
@@ -29,19 +31,22 @@ export const LogStackTrace = ({ exception }: { exception?: string }) => {
             isOpen ? "rotate-90" : ""
           }`}
         />
-        {isOpen ? "Hide stack trace" : "Show stack trace"}
+        {isOpen ? t("LOG_STACK_TRACE.HIDE_STACK_TRACE") : t("LOG_STACK_TRACE.SHOW_STACK_TRACE")}
       </button>
 
       {isOpen && (
         <div className="mt-2 rounded-sm border border-border bg-muted/40">
           <div className="flex items-center border-b border-border px-3 py-1.5">
-            <CopyToClipboardButton textToCopy={stackTrace} label="Copy stack trace">
+            <CopyToClipboardButton
+              textToCopy={stackTrace}
+              label={t("LOG_STACK_TRACE.COPY_STACK_TRACE")}
+            >
               <span className="text-xs font-medium uppercase tracking-wide text-medium-emphasis">
-                Exception
+                {t("LOG_STACK_TRACE.EXCEPTION")}
               </span>
             </CopyToClipboardButton>
           </div>
-          <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words px-3 py-2 font-sans text-xs leading-relaxed text-medium-emphasis">
+          <pre className="max-h-80 overflow-auto whitespace-pre-wrap wrap-break-word px-3 py-2 font-sans text-xs leading-relaxed text-medium-emphasis">
             {stackTrace}
           </pre>
         </div>

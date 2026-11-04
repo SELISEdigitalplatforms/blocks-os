@@ -6,12 +6,18 @@ const dialog = (page: Page): Locator => page.getByRole("dialog");
 
 const IDP_HEADER = "x-blocks-idp";
 
+// "JWKS URL" labels both the key-source radio and the URL field, so lookups
+// use the role: textbox for the field, radio for the source switch.
+
 /**
  * The API returns keys masked, so every label built from a key has to be masked too. Mirrors
  * ProjectManagementService.MaskProviderKey: six characters or fewer have no middle to hide.
  */
 export const maskKey = (key: string): string =>
   key.length <= 6 ? "*".repeat(key.length) : `${key.slice(0, 3)}***${key.slice(-3)}`;
+
+/** The provider `fillProviderFormFlow` picks. Toasts name the provider, since the key is masked. */
+const E2E_PROVIDER_NAME = "Keycloak";
 
 export async function navigateToExternalIdpFlow(page: Page) {
   await openSecretManagement(page, "external-idp", "External IdP");
@@ -40,7 +46,10 @@ export async function verifyRequiredFieldsRejectedFlow(page: Page) {
 
   await expect(form.getByText("Pick a provider")).toBeVisible({ timeout: 10000 });
   await expect(form.getByText(/Key is required/)).toBeVisible();
-  await expect(form.getByText(/Issuer is required/)).toBeVisible();
+  // Issuer is optional (blank means "tokens without iss"), so an empty submit
+  // explains that instead of rejecting it.
+  await expect(form.getByText(/Issuer is required/)).toBeHidden();
+  await expect(form.getByText(/Tokens carrying any issuer will not reach this provider/)).toBeVisible();
 }
 
 async function selectOption(page: Page, triggerName: string, optionName: string) {
@@ -70,15 +79,92 @@ export async function verifyStatusBlockFlow(page: Page) {
 
 export async function verifyKeySourceFollowsAlgorithmFlow(page: Page) {
   const form = dialog(page);
-  await expect(form.getByLabel("JWKS URL")).toBeVisible();
+  await expect(form.getByRole("textbox", { name: "JWKS URL" })).toBeVisible();
 
   await selectOption(page, "Signing algorithm", "HS256");
   await expect(form.getByLabel("Signing secret")).toBeVisible();
-  await expect(form.getByLabel("JWKS URL")).toBeHidden();
+  await expect(form.getByRole("textbox", { name: "JWKS URL" })).toBeHidden();
 
   await selectOption(page, "Signing algorithm", "RS256");
-  await expect(form.getByLabel("JWKS URL")).toBeVisible();
+  await expect(form.getByRole("textbox", { name: "JWKS URL" })).toBeVisible();
   await expect(form.getByLabel("Signing secret")).toBeHidden();
+}
+
+/**
+ * The key source follows the algorithm family, not the provider brand.
+ *
+ * Both asymmetric sources are offered for every provider: brand is a leaky proxy for capability,
+ * since a self-hosted Keycloak frequently has no JWKS this platform can reach. HMAC has no public
+ * key to fetch at all, so it offers neither.
+ */
+export async function verifyKeySourceFollowsTheAlgorithmNotTheBrandFlow(page: Page) {
+  const form = dialog(page);
+
+  for (const provider of ["Keycloak", "Auth0", "Others"]) {
+    await selectOption(page, "Provider", provider);
+    await expect(form.getByRole("textbox", { name: "JWKS URL" })).toBeVisible();
+    await expect(form.getByLabel("Upload certificate")).toBeVisible();
+  }
+
+  // HMAC verifies with the shared secret, so there is no certificate to choose.
+  await selectOption(page, "Signing algorithm", "HS256");
+  await expect(form.getByLabel("Upload certificate")).toBeHidden();
+  await expect(form.getByLabel("Signing secret")).toBeVisible();
+
+  await selectOption(page, "Signing algorithm", "RS256");
+  await expect(form.getByLabel("Upload certificate")).toBeVisible();
+}
+
+/**
+ * Issuer is optional, and leaving it blank is a deliberate configuration rather than an omission:
+ * the provider then receives exactly the tokens that carry no `iss` claim.
+ */
+export async function verifyIssuerIsOptionalFlow(page: Page) {
+  const form = dialog(page);
+
+  await selectOption(page, "Provider", "Others");
+  await form.getByLabel("Issuer").fill("");
+
+  // Stated at the point of entry, because a blank issuer is easy to read as "matches anything"
+  // when it means the opposite.
+  await expect(form.getByText(/Tokens carrying any issuer will not reach this provider/)).toBeVisible();
+
+  // And saving is not blocked on it.
+  await expect(form.getByText(/Issuer is required/)).toBeHidden();
+}
+
+/** Picking the certificate source replaces the JWKS field with a dropzone and an optional passphrase. */
+export async function verifyCertificateUploadAndPassphraseFlow(page: Page) {
+  const form = dialog(page);
+
+  await selectOption(page, "Provider", "Others");
+  await form.getByLabel("Upload certificate").click();
+
+  await expect(form.getByRole("textbox", { name: "JWKS URL" })).toBeHidden();
+  await expect(form.getByText("Click to upload or drag and drop")).toBeVisible();
+  await expect(form.getByText(/\.crt, \.pem, \.der, \.pfx, \.p12/)).toBeVisible();
+
+  // The certificate source always offers an optional passphrase field next to the dropzone.
+  await expect(form.getByText("Passphrase (optional)")).toBeVisible();
+
+  await form.locator('input[type="file"]').setInputFiles({
+    name: "provider.pfx",
+    mimeType: "application/x-pkcs12",
+    buffer: Buffer.from("not-a-real-certificate"),
+  });
+
+  await expect(form.getByText("provider.pfx")).toBeVisible();
+  await expect(form.getByLabel(/Passphrase/)).toBeVisible();
+
+  // Masked by default, revealed by the toggle beside it.
+  const passphrase = form.getByLabel(/Passphrase/);
+  await expect(passphrase).toHaveAttribute("type", "password");
+  await form.getByRole("button", { name: "Show passphrase" }).click();
+  await expect(passphrase).toHaveAttribute("type", "text");
+
+  // Back to the JWKS source, which drops the certificate fields again.
+  await form.getByRole("radio", { name: "JWKS URL" }).click();
+  await expect(form.getByText("Click to upload or drag and drop")).toBeHidden();
 }
 
 export async function fillProviderFormFlow(
@@ -86,11 +172,11 @@ export async function fillProviderFormFlow(
   provider: { key: string; issuer: string; audience: string },
 ) {
   const form = dialog(page);
-  await selectOption(page, "Provider", "Keycloak");
+  await selectOption(page, "Provider", E2E_PROVIDER_NAME);
   await form.getByLabel("Key").fill(provider.key);
   await form.getByLabel("Issuer").fill(provider.issuer);
   await form.getByLabel("Audiences").fill(provider.audience);
-  await form.getByLabel("JWKS URL").fill("https://www.googleapis.com/oauth2/v3/certs");
+  await form.getByRole("textbox", { name: "JWKS URL" }).fill("https://www.googleapis.com/oauth2/v3/certs");
 }
 
 /** Claim mapping moved out of the create form: it is picked from a real token afterwards. */
@@ -101,7 +187,7 @@ export async function verifyFormAsksNothingAboutClaimsFlow(page: Page) {
 
 export async function saveNewProviderFlow(page: Page) {
   await dialog(page).getByRole("button", { name: "Add provider" }).click();
-  await expect(page.getByText("Provider added")).toBeVisible({ timeout: 20000 });
+  await expect(page.getByText("Provider added", { exact: true })).toBeVisible({ timeout: 20000 });
   await expect(dialog(page)).toBeHidden({ timeout: 10000 });
 }
 
@@ -114,7 +200,14 @@ export async function verifyProviderCardFlow(
   });
   await expect(page.getByText(provider.issuer)).toBeVisible();
   await expect(page.getByText(provider.audience)).toBeVisible();
-  await expect(page.getByText("https://www.googleapis.com/oauth2/v3/certs")).toBeVisible();
+  // Scope to this provider's card: providers left by earlier runs share the same JWKS URL.
+  const jwksUrl = "https://www.googleapis.com/oauth2/v3/certs";
+  const card = page
+    .locator("div")
+    .filter({ has: page.getByText(provider.audience) })
+    .filter({ has: page.getByText(jwksUrl) })
+    .last();
+  await expect(card.getByText(jwksUrl)).toBeVisible();
 
   // The raw key is never rendered: the API only ever sends the mask.
   await expect(page.getByText(provider.key, { exact: true })).toHaveCount(0);
@@ -131,7 +224,7 @@ export async function openDetailsAndVerifyIntegrationFlow(page: Page, key: strin
     timeout: 15000,
   });
   await expect(page.getByText("Header optional")).toBeVisible();
-  await expect(page.getByText("Claim mapping")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Claim mapping" })).toBeVisible();
 
   await expect(page.getByRole("button", { name: "Copy x-blocks-key" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Copy x-blocks-idp" })).toBeVisible();
@@ -157,7 +250,7 @@ export async function editProviderAndSaveFlow(page: Page, key: string, newIssuer
   await dialog(page).getByLabel("Issuer").fill(newIssuer);
   await dialog(page).getByRole("button", { name: "Save changes" }).click();
 
-  await expect(page.getByText("Provider updated")).toBeVisible({ timeout: 20000 });
+  await expect(page.getByText("Provider updated", { exact: true })).toBeVisible({ timeout: 20000 });
   await expect(page.getByText(newIssuer)).toBeVisible({ timeout: 15000 });
 }
 
@@ -170,11 +263,16 @@ export async function openEditProviderAndCloseFlow(page: Page, key: string) {
 
 export async function deleteProviderFlow(page: Page, key: string) {
   await page.getByRole("button", { name: `Delete ${maskKey(key)}` }).click();
-  await expect(page.getByText(`Removed ${maskKey(key)}`)).toBeVisible({ timeout: 20000 });
-  await expect(page.getByRole("button", { name: `Delete ${maskKey(key)}` })).toBeHidden({ timeout: 15000 });
+  await expect(
+    page.getByText(`${E2E_PROVIDER_NAME} provider removed`, { exact: true }).first(),
+  ).toBeVisible({ timeout: 20000 });
+  await expect(page.getByRole("button", { name: `Delete ${maskKey(key)}` })).toBeHidden({
+    timeout: 15000,
+  });
 }
 
-const drawer = (page: Page): Locator => page.getByRole("dialog").filter({ hasText: "Mapping table" });
+const drawer = (page: Page): Locator =>
+  page.getByRole("dialog").filter({ hasText: "Mapping table" });
 
 export async function mapClaimsFromTokenFlow(page: Page, key: string, token: string) {
   await page.getByRole("button", { name: `Map JWT claim for ${maskKey(key)}` }).click();
@@ -182,8 +280,8 @@ export async function mapClaimsFromTokenFlow(page: Page, key: string, token: str
   const panel = drawer(page);
   await expect(panel.getByText("Mapping table")).toBeVisible({ timeout: 15000 });
 
-  // Nothing is mappable until a token names the claims, which is the point of the flow.
-  await expect(panel.getByText("Decode a token above to list the claims it carries.")).toBeVisible();
+  // The table opens on the default claim per field; decoding a token lists the other claims.
+  await expect(panel.getByRole("combobox", { name: "User ID" })).toBeVisible();
 
   await panel.getByLabel("JSON Web Token (JWT)").fill(token);
   await panel.getByRole("button", { name: "Decode" }).click();
@@ -196,7 +294,9 @@ export async function mapClaimsFromTokenFlow(page: Page, key: string, token: str
   await page.getByRole("option", { name: "preferred_username", exact: true }).click();
 
   await panel.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByText(`Claim mapping saved for ${maskKey(key)}`)).toBeVisible({ timeout: 20000 });
+  await expect(page.getByText(`Claim mapping saved for ${E2E_PROVIDER_NAME}`, { exact: true })).toBeVisible({
+    timeout: 20000,
+  });
 }
 
 export async function verifyUnreadableTokenRejectedFlow(page: Page, key: string) {
@@ -225,7 +325,7 @@ export async function verifyEditFormLeavesTheKeyBlankFlow(page: Page, key: strin
 
   // Saving without touching it must not clear or rename the key.
   await dialog(page).getByRole("button", { name: "Save changes" }).click();
-  await expect(page.getByText("Provider updated")).toBeVisible({ timeout: 20000 });
+  await expect(page.getByText("Provider updated", { exact: true })).toBeVisible({ timeout: 20000 });
   await expect(page.getByText(maskKey(key), { exact: true }).first()).toBeVisible();
 }
 
@@ -241,11 +341,15 @@ export async function toggleProviderFromListFlow(page: Page, key: string) {
     timeout: 15000,
   });
   await page.getByRole("button", { name: "Disable", exact: true }).click();
-  await expect(page.getByText(`${masked} disabled`)).toBeVisible({ timeout: 20000 });
+  await expect(
+    page.getByText(`${E2E_PROVIDER_NAME} provider disabled`, { exact: true }),
+  ).toBeVisible({ timeout: 20000 });
   await expect(page.getByText("Inactive")).toBeVisible({ timeout: 15000 });
 
   await page.getByRole("button", { name: `Enable ${masked}` }).click();
   await expect(page.getByRole("heading", { name: "Enable provider" })).toBeVisible();
   await page.getByRole("button", { name: "Enable", exact: true }).click();
-  await expect(page.getByText(`${masked} enabled`)).toBeVisible({ timeout: 20000 });
+  await expect(
+    page.getByText(`${E2E_PROVIDER_NAME} provider enabled`, { exact: true }),
+  ).toBeVisible({ timeout: 20000 });
 }

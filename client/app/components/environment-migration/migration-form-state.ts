@@ -1,11 +1,12 @@
 import { create } from "zustand";
 import {
-  environmentServiceSelectionFormDefaultValue,
+  getEnvironmentServiceSelectionFormDefaultValue,
   reviewConfirmFormDefaultValue,
 } from "@/components/environment-migration/migration-form-schema";
 
-export type EnvironmentServiceSelectionFormValues =
-  typeof environmentServiceSelectionFormDefaultValue;
+export type EnvironmentServiceSelectionFormValues = ReturnType<
+  typeof getEnvironmentServiceSelectionFormDefaultValue
+>;
 export type ReviewConfirmFormValues = typeof reviewConfirmFormDefaultValue;
 
 export type MigrationFormData = [EnvironmentServiceSelectionFormValues, ReviewConfirmFormValues];
@@ -20,7 +21,7 @@ type MigrationFormState = {
 };
 
 export const useDataMigrationFormState = create<MigrationFormState>((set) => ({
-  formData: [environmentServiceSelectionFormDefaultValue, reviewConfirmFormDefaultValue],
+  formData: [getEnvironmentServiceSelectionFormDefaultValue(), reviewConfirmFormDefaultValue],
   setFormData: (index, data) => {
     set((state) => {
       if (index === 0) {
@@ -35,7 +36,7 @@ export const useDataMigrationFormState = create<MigrationFormState>((set) => ({
   },
   resetFormData: () => {
     set({
-      formData: [environmentServiceSelectionFormDefaultValue, reviewConfirmFormDefaultValue],
+      formData: [getEnvironmentServiceSelectionFormDefaultValue(), reviewConfirmFormDefaultValue],
     });
   },
 }));

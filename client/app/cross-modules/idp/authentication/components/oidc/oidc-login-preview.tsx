@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import {
   OidcPreviewShell,
   PreviewButton,
@@ -8,9 +9,10 @@ import {
 } from "./oidc-preview-shared";
 
 export const OidcLoginPreview = (props: OidcPagePreviewProps) => {
+  const { t } = useT("os.idp.oidc");
   const copy = props.template.pages.login;
   return (
-    <OidcPreviewShell {...props} pageLabel="Login">
+    <OidcPreviewShell {...props} pageLabel={t("OIDC_LOGIN_PREVIEW.PAGE_LABEL")}>
       <PreviewHeading>{copy.heading}</PreviewHeading>
       <div className="flex flex-col gap-3 sm:gap-4">
         <PreviewField label={copy.emailLabel} />
@@ -24,13 +26,13 @@ export const OidcLoginPreview = (props: OidcPagePreviewProps) => {
         <PreviewButton>{copy.submitButton}</PreviewButton>
       </div>
       <PreviewSsoSeparator text={copy.ssoSeparatorText} />
-      <p className="mt-3 text-xs text-[var(--muted)] sm:mt-4">
+      <p className="mt-3 text-xs text-(--muted) sm:mt-4">
         {copy.signupPrompt} <span className="oidc-sci-fi-link">{copy.signupLink}</span>
       </p>
-      <div className="mt-3 rounded-lg border border-[var(--border-strong)] p-2.5 sm:mt-4 sm:p-3">
-        <p className="text-sm font-semibold text-[var(--danger)]">{copy.activationErrorTitle}</p>
-        <p className="mt-1 text-xs text-[var(--danger)]">{copy.activationErrorMessage}</p>
-        <div className="mt-2 flex flex-wrap gap-2 text-xs text-[var(--accent)]">
+      <div className="mt-3 rounded-lg border border-(--border-strong) p-2.5 sm:mt-4 sm:p-3">
+        <p className="text-sm font-semibold text-(--danger)">{copy.activationErrorTitle}</p>
+        <p className="mt-1 text-xs text-(--danger)">{copy.activationErrorMessage}</p>
+        <div className="mt-2 flex flex-wrap gap-2 text-xs text-(--accent)">
           <span>{copy.activateAccountButton}</span>
           <span>·</span>
           <span>{copy.backToLoginButton}</span>

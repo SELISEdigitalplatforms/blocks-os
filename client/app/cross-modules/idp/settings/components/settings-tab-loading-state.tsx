@@ -7,7 +7,10 @@ import {
 import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout";
 import type { SettingsTabValue } from "@blocks-idp/settings/models/settings.model";
 import { cn } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 import type { ReactNode } from "react";
+
+const I18N_MODULE = "os.idp.settings";
 
 type SettingsTabLoadingShellProps = {
   tabId: SettingsTabValue;
@@ -78,9 +81,9 @@ const SectionCardSkeleton = ({
               key={index}
               className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 p-3 sm:p-4"
             >
-              <Skeleton className="col-start-1 row-start-1 h-4 w-full max-w-[12rem]" />
+              <Skeleton className="col-start-1 row-start-1 h-4 w-full max-w-48" />
               <Skeleton className="col-start-2 row-start-1 h-6 w-11 rounded-full" />
-              <Skeleton className="col-start-1 row-start-2 h-3 w-full max-w-[10rem]" />
+              <Skeleton className="col-start-1 row-start-2 h-3 w-full max-w-40" />
             </div>
           ))}
         </div>
@@ -132,52 +135,78 @@ type SettingsTabLoadingStateProps = {
   className?: string;
 };
 
-export const AuthTabLoadingState = ({ className }: { className?: string }) => (
-  <SettingsTabLoadingShell
-    tabId="auth-config"
-    label="Loading authentication settings"
-    className={className}
-  >
-    <SectionCardSkeleton fieldCount={4} />
-    <SectionCardSkeleton fieldCount={2} />
-    <SectionCardSkeleton fieldCount={1} stacked />
-  </SettingsTabLoadingShell>
-);
+export const AuthTabLoadingState = ({ className }: { className?: string }) => {
+  const { t } = useT(I18N_MODULE);
+  return (
+    <SettingsTabLoadingShell
+      tabId="auth-config"
+      label={t("SETTINGS_TAB_LOADING_STATE.AUTH")}
+      className={className}
+    >
+      <SectionCardSkeleton fieldCount={4} />
+      <SectionCardSkeleton fieldCount={2} />
+      <SectionCardSkeleton fieldCount={1} stacked />
+    </SettingsTabLoadingShell>
+  );
+};
 
-export const IamTabLoadingState = ({ className }: { className?: string }) => (
-  <SettingsTabLoadingShell tabId="iam-config" label="Loading IAM settings" className={className}>
-    <ToggleCardSkeleton />
-    <SectionCardSkeleton fieldCount={3} stacked />
-    <SectionCardSkeleton fieldCount={2} />
-    <SectionCardSkeleton fieldCount={2} stacked />
-  </SettingsTabLoadingShell>
-);
+export const IamTabLoadingState = ({ className }: { className?: string }) => {
+  const { t } = useT(I18N_MODULE);
+  return (
+    <SettingsTabLoadingShell
+      tabId="iam-config"
+      label={t("SETTINGS_TAB_LOADING_STATE.IAM")}
+      className={className}
+    >
+      <ToggleCardSkeleton />
+      <SectionCardSkeleton fieldCount={3} stacked />
+      <SectionCardSkeleton fieldCount={2} />
+      <SectionCardSkeleton fieldCount={2} stacked />
+    </SettingsTabLoadingShell>
+  );
+};
 
 export const SettingsTabLoadingState = ({
   tabId,
   includeToggle = false,
   sectionCount = 2,
   className,
-}: SettingsTabLoadingStateProps) => (
-  <SettingsTabLoadingShell tabId={tabId} label="Loading settings" className={className}>
-    {includeToggle ? <ToggleCardSkeleton /> : null}
-    {Array.from({ length: sectionCount }).map((_, index) => (
-      <SectionCardSkeleton key={index} />
-    ))}
-  </SettingsTabLoadingShell>
-);
+}: SettingsTabLoadingStateProps) => {
+  const { t } = useT(I18N_MODULE);
+  return (
+    <SettingsTabLoadingShell
+      tabId={tabId}
+      label={t("SETTINGS_TAB_LOADING_STATE.SETTINGS")}
+      className={className}
+    >
+      {includeToggle ? <ToggleCardSkeleton /> : null}
+      {Array.from({ length: sectionCount }, (_, index) => `section-${index}`).map((id) => (
+        <SectionCardSkeleton key={id} />
+      ))}
+    </SettingsTabLoadingShell>
+  );
+};
 
-export const OrganizationTabLoadingState = () => (
-  <SettingsTabLoadingShell tabId="organization-config" label="Loading organization settings">
-    <ToggleCardSkeleton />
-    <SectionCardSkeleton withTrackBar />
-  </SettingsTabLoadingShell>
-);
+export const OrganizationTabLoadingState = () => {
+  const { t } = useT(I18N_MODULE);
+  return (
+    <SettingsTabLoadingShell
+      tabId="organization-config"
+      label={t("SETTINGS_TAB_LOADING_STATE.ORGANIZATION")}
+    >
+      <ToggleCardSkeleton />
+      <SectionCardSkeleton withTrackBar />
+    </SettingsTabLoadingShell>
+  );
+};
 
-export const SignupTabLoadingState = () => (
-  <SettingsTabLoadingShell tabId="signup-settings" label="Loading signup settings">
-    <ToggleCardSkeleton />
-    <BadgeSectionSkeleton titleWidth="w-16" />
-    <BadgeSectionSkeleton titleWidth="w-28" />
-  </SettingsTabLoadingShell>
-);
+export const SignupTabLoadingState = () => {
+  const { t } = useT(I18N_MODULE);
+  return (
+    <SettingsTabLoadingShell tabId="signup-settings" label={t("SETTINGS_TAB_LOADING_STATE.SIGNUP")}>
+      <ToggleCardSkeleton />
+      <BadgeSectionSkeleton titleWidth="w-16" />
+      <BadgeSectionSkeleton titleWidth="w-28" />
+    </SettingsTabLoadingShell>
+  );
+};

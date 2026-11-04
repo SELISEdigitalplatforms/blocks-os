@@ -8,7 +8,7 @@ import {
 } from "@/components/ui-kits/command/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui-kits/popover/popover";
 import { cn } from "@/lib/utils";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { useGetResourceGroup } from "@blocks-idp/iam/hooks/use-permission";
 import { ChevronDown, Plus, X } from "lucide-react";
 import { useMemo, useState, type MouseEvent } from "react";
@@ -24,6 +24,7 @@ export function PermissionGroupCombobox({
   onChange,
   disabled,
 }: PermissionGroupComboboxProps) {
+  const { t } = useT("os.idp.iam-ui");
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data: resourceGroupData } = useGetResourceGroup({ projectKey: tenantId });
   const [open, setOpen] = useState(false);
@@ -81,8 +82,8 @@ export function PermissionGroupCombobox({
           disabled={disabled}
           aria-disabled={disabled}
           className={cn(
-            "flex h-10 w-full items-center gap-1 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm",
-            "ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+            "flex h-10 w-full items-center gap-1 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs",
+            "ring-offset-background focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
             disabled
               ? "cursor-not-allowed opacity-50"
               : "cursor-pointer disabled:cursor-not-allowed disabled:opacity-50",
@@ -91,12 +92,12 @@ export function PermissionGroupCombobox({
           <span
             className={cn("min-w-0 flex-1 truncate text-left", !value && "text-muted-foreground")}
           >
-            {value || "Select or create group..."}
+            {value || t("PERMISSION_GROUP_COMBOBOX.PLACEHOLDER")}
           </span>
           {value && !disabled ? (
             <button
               type="button"
-              aria-label="Clear group"
+              aria-label={t("PERMISSION_GROUP_COMBOBOX.CLEAR_GROUP")}
               className="rounded-sm p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
               onClick={handleClear}
             >
@@ -106,10 +107,10 @@ export function PermissionGroupCombobox({
           <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+      <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
         <Command shouldFilter={false}>
           <CommandInput
-            placeholder="Search or create a group..."
+            placeholder={t("PERMISSION_GROUP_COMBOBOX.SEARCH_PLACEHOLDER")}
             value={inputValue}
             onValueChange={setInputValue}
             onKeyDown={(e) => {
@@ -126,7 +127,7 @@ export function PermissionGroupCombobox({
                 className="text-muted-foreground"
               >
                 <X className="mr-2 h-4 w-4" aria-hidden="true" />
-                Clear selection
+                {t("PERMISSION_GROUP_COMBOBOX.CLEAR_SELECTION")}
               </CommandItem>
             ) : null}
 
@@ -137,13 +138,21 @@ export function PermissionGroupCombobox({
                 className="font-medium text-primary"
               >
                 <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-                <span>Create group &ldquo;{trimmedInput}&rdquo;</span>
-                <span className="ml-auto text-xs text-muted-foreground">Enter</span>
+                <span>{t("PERMISSION_GROUP_COMBOBOX.CREATE_GROUP", { name: trimmedInput })}</span>
+                <span className="ml-auto text-xs text-muted-foreground">
+                  {t("PERMISSION_GROUP_COMBOBOX.ENTER_KEY")}
+                </span>
               </CommandItem>
             ) : null}
 
             {filtered.length > 0 ? (
-              <CommandGroup heading={canCreate ? "Existing groups" : "Groups"}>
+              <CommandGroup
+                heading={
+                  canCreate
+                    ? t("PERMISSION_GROUP_COMBOBOX.EXISTING_GROUPS")
+                    : t("PERMISSION_GROUP_COMBOBOX.GROUPS")
+                }
+              >
                 {filtered.map((opt) => (
                   <CommandItem key={opt} value={opt} onSelect={() => handleSelect(opt)}>
                     {opt}
@@ -155,8 +164,8 @@ export function PermissionGroupCombobox({
             {!canCreate && filtered.length === 0 ? (
               <CommandEmpty>
                 {trimmedInput
-                  ? `No groups match "${trimmedInput}". Type a new name to create one.`
-                  : "Type a name to create a new group, or pick one below."}
+                  ? t("PERMISSION_GROUP_COMBOBOX.NO_MATCH", { name: trimmedInput })
+                  : t("PERMISSION_GROUP_COMBOBOX.EMPTY_HINT")}
               </CommandEmpty>
             ) : null}
           </CommandList>

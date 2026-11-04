@@ -70,10 +70,23 @@ export async function fillAndSaveDomainFlow(page: Page, domainName: string) {
   await expect(page.getByRole("heading", { name: "Add Domain" })).toBeHidden({ timeout: 10000 });
 }
 
+/**
+ * The domains table is paginated and the shared project keeps domains from
+ * earlier runs, so a new domain can land on page 2. Narrow the table with the
+ * search box before asserting on the row.
+ */
+async function narrowDomainsTo(page: Page, domainName: string) {
+  const searchInput = page.getByPlaceholder("Search domains...");
+  if (await searchInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+    await searchInput.fill(domainName);
+  }
+}
+
 export async function verifyNewDomainAppearsAsUnverifiedFlow(
   page: Page,
   domainName: string,
 ): Promise<Locator> {
+  await narrowDomainsTo(page, domainName);
   const domainRow = page.getByRole("row").filter({ hasText: domainName });
   await expect(domainRow).toBeVisible({ timeout: 15000 });
   await expect(domainRow.getByText("Unverified")).toBeVisible();
@@ -82,7 +95,7 @@ export async function verifyNewDomainAppearsAsUnverifiedFlow(
 
 export async function verifyDomainRowActionsFlow(page: Page, domainRow: Locator) {
   await expect(domainRow.getByTitle("Configure domain")).toBeVisible();
-  await expect(domainRow.getByTitle("Validate CNAME")).toBeVisible();
+  await expect(domainRow.getByTitle("Set up domain")).toBeVisible();
 }
 
 export async function copyDomainFromRowFlow(page: Page, domainRow: Locator) {
@@ -110,27 +123,20 @@ export async function openConfigureDomainDialogFlow(
   await expect(page.getByRole("heading", { name: "Edit Domain" })).toBeHidden();
 }
 
-export async function validateDomainCnameFlow(page: Page, domainName: string) {
+/**
+ * "Validate CNAME" was replaced by the "Set up domain" guide. Open it for the
+ * unverified domain, check it names the host, and leave without starting the
+ * verification run (that would provision DNS/TLS for a fake domain).
+ */
+export async function openDomainSetupGuideFlow(page: Page, domainName: string) {
+  await narrowDomainsTo(page, domainName);
   const domainRow = page.getByRole("row").filter({ hasText: domainName });
-  await domainRow.getByTitle("Validate CNAME").click();
-  await expect(page.getByRole("heading", { name: "Validate Domain" })).toBeVisible();
-  await expect(page.getByText("No servers found for", { exact: false }))
-    .toBeVisible({ timeout: 10000 })
-    .catch(() => {});
-
-  const lookupButton = page.getByRole("button", { name: "CNAME Lookup" });
-  await expect(lookupButton).toBeEnabled({ timeout: 5000 });
-  await lookupButton.click();
-
-  await expect(
-    page
-      .getByText("CName is validated successfully")
-      .or(page.getByText("Could not verify the domain", { exact: false })),
-  )
-    .toBeVisible({ timeout: 20000 })
-    .catch(() => {});
-
-  await page.keyboard.press("Escape");
+  await domainRow.getByTitle("Set up domain").click();
+  const dialog = page.getByRole("dialog", { name: "Set up custom domain" });
+  await expect(dialog).toBeVisible({ timeout: 10000 });
+  await expect(dialog.getByText(domainName, { exact: false }).first()).toBeVisible();
+  await dialog.getByRole("button", { name: /do it later/i }).click();
+  await expect(dialog).toBeHidden({ timeout: 10000 });
 }
 
 export async function filterDomainsBySearchFlow(page: Page, domainName: string) {
@@ -164,15 +170,18 @@ export async function paginateDomainsFlow(page: Page, domainName: string) {
     return;
   }
 
+  // Leftover domains from earlier runs decide which page the new domain is
+  // on, so check the page indicator instead of where the new row sits.
   await nextPageButton.click();
-  await expect(page.getByRole("row").filter({ hasText: domainName })).toHaveCount(0);
+  await expect(page.getByText(/Page 2 of \d+/)).toBeVisible({ timeout: 8000 });
 
   await paginationNav.locator("button:has(svg.lucide-chevrons-left)").first().click();
-  const domainRow = page.getByRole("row").filter({ hasText: domainName });
-  await expect(domainRow).toBeVisible({ timeout: 8000 });
+  await expect(page.getByText(/Page 1 of \d+/)).toBeVisible({ timeout: 8000 });
+  void domainName;
 }
 
 export async function deleteDomainFlow(page: Page, domainName: string) {
+  await narrowDomainsTo(page, domainName);
   const domainRow = page.getByRole("row").filter({ hasText: domainName });
   await domainRow.getByTitle("Delete domain").click();
   await expect(page.getByRole("heading", { name: "Delete Domain" })).toBeVisible();

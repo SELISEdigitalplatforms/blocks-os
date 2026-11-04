@@ -5,10 +5,6 @@ namespace Blocks.Secrets;
 
 public sealed class SecretRepository : ISecretRepository
 {
-    // The store is a single database, so indexes need ensuring once per process rather than
-    // once per tenant.
-    private static int _indexesEnsured;
-
     private readonly SecretStoreContext _store;
     private readonly ILogger<SecretRepository> _logger;
 
@@ -146,7 +142,9 @@ public sealed class SecretRepository : ISecretRepository
 
     private async Task EnsureIndexesAsync(IMongoCollection<Secret> collection)
     {
-        if (Interlocked.Exchange(ref _indexesEnsured, 1) == 1)
+        // Once per cluster, not once per process: a tenant's store lives on the connection its
+        // registry record names, so each of them needs these indexes of its own.
+        if (!SecretStoreIndexes.ShouldEnsure(collection))
         {
             return;
         }

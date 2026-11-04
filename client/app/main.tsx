@@ -1,4 +1,5 @@
 import "@seliseblocks/genesis-os/lib";
+import "./i18n";
 import "@/styles/globals.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -11,6 +12,10 @@ import { SERVICE_NAME } from "@/constants/service.constant";
 import { router } from "./router";
 import { BlocksAppLayout, ThemeProvider } from "@seliseblocks/genesis-os/providers";
 import { RollbarProvider } from "@seliseblocks/genesis-os/observability";
+import { captureDeepLink } from "@/lib/deep-link";
+
+// Before the router mounts: the guards redirect straight away and drop the query string.
+captureDeepLink(window.location);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

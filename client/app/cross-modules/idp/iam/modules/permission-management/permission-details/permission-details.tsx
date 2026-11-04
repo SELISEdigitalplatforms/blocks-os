@@ -1,7 +1,9 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { useGetPermissionById, useUpdatePermission } from "@blocks-idp/iam/hooks/use-permission";
+import { useSystemOnlyReason } from "@blocks-idp/iam/hooks/use-grant-scope";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { useMemo } from "react";
-import { mapPermissionToFormValues, permissionFormSchemaType } from "../permission-form/utils";
+import { mapPermissionToFormValues, PermissionFormSchemaType } from "../permission-form/utils";
 import { PermissionForm } from "../permission-form";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
@@ -37,16 +39,18 @@ const PermissionDetailsPageSkeleton = () => (
 );
 
 export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
+  const { t } = useT("os.idp.permissions");
   const { data: permissionData, isLoading } = useGetPermissionById({ id });
   const { isPending, mutateAsync } = useUpdatePermission({ id });
+  const readOnlyReason = useSystemOnlyReason();
   const permission = permissionData?.data;
   const formValues = useMemo(() => {
     if (!permission) return null;
     return mapPermissionToFormValues(permission);
   }, [permission]);
 
-  const onSubmit = async (formData: permissionFormSchemaType) => {
-    if (permission?.isBuiltIn) return;
+  const onSubmit = async (formData: PermissionFormSchemaType) => {
+    if (permission?.isBuiltIn || readOnlyReason) return;
     try {
       const res = await mutateAsync({
         ...formData,
@@ -56,10 +60,10 @@ export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
         itemId: id,
       });
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
-      showSuccessToast({ description: "Permission Updated successfully" });
+      showSuccessToast({ description: t("PERMISSION_DETAILS.UPDATED_SUCCESS") });
     } catch (error) {
       if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
-      showErrorToast({ errors: "Something went wrong" });
+      showErrorToast({ errors: t("PERMISSION_DETAILS.SOMETHING_WENT_WRONG") });
     }
   };
 
@@ -81,11 +85,13 @@ export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
           className={cn(
             "shrink-0",
             permission.isBuiltIn
-              ? "!bg-gray-300 !text-gray-800"
-              : "!bg-purple-100 !text-purple-700",
+              ? "bg-gray-300! text-gray-800!"
+              : "bg-purple-100! text-purple-700!",
           )}
         >
-          {permission.isBuiltIn ? "Built In" : "Custom"}
+          {permission.isBuiltIn
+            ? t("PERMISSION_DETAILS.BADGE_BUILT_IN")
+            : t("PERMISSION_DETAILS.BADGE_CUSTOM")}
         </Badge>
       </div>
       <PermissionForm
@@ -93,6 +99,7 @@ export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
         isPending={isPending}
         values={formValues}
         isBuiltIn={permission.isBuiltIn}
+        readOnlyReason={readOnlyReason}
         showTags={false}
       />
       {/* <PermissionRolesList slugs={permission.roles || []} /> */}

@@ -1,6 +1,7 @@
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { toast } from "@/hooks/use-toast";
+import { useT } from "@seliseblocks/genesis-os";
 import { useAccountResendActivation } from "@blocks-idp/iam/hooks/use-account";
 
 type UserResendActivationMailProps = {
@@ -14,6 +15,7 @@ export const UserResendActivationMail = ({
   open,
   setOpen,
 }: UserResendActivationMailProps) => {
+  const { t } = useT("os.idp.users");
   const { mutateAsync, isPending } = useAccountResendActivation();
   const onClickHandler = async () => {
     try {
@@ -21,15 +23,25 @@ export const UserResendActivationMail = ({
       if (res.isSuccess) {
         toast({
           variant: "success",
-          title: "Success",
-          description: `Activation email has been resent successfully`,
+          title: t("USER_RESEND_ACTIVATION.SUCCESS_TITLE"),
+          description: t("USER_RESEND_ACTIVATION.SUCCESS_DESCRIPTION"),
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: t("USER_RESEND_ACTIVATION.ERROR_TITLE"),
+          description: t("USER_RESEND_ACTIVATION.FAILED_DESCRIPTION", {
+            details: JSON.stringify(res.errors),
+          }),
         });
       }
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: `Something went wrong | ${JSON.stringify(error)}`,
+        title: t("USER_RESEND_ACTIVATION.ERROR_TITLE"),
+        description: t("USER_RESEND_ACTIVATION.SOMETHING_WENT_WRONG", {
+          details: JSON.stringify(error),
+        }),
       });
     } finally {
       setOpen(false);
@@ -42,10 +54,9 @@ export const UserResendActivationMail = ({
         onCancel={() => setOpen(false)}
         onConfirm={onClickHandler}
         data={{
-          dialogTitle: "Confirmation",
-          dialogSubtitle:
-            "Do you want to resend the activation email to this user? ",
-          confirmButton: "Resend",
+          dialogTitle: t("USER_RESEND_ACTIVATION.DIALOG_TITLE"),
+          dialogSubtitle: t("USER_RESEND_ACTIVATION.DIALOG_SUBTITLE"),
+          confirmButton: t("USER_RESEND_ACTIVATION.CONFIRM"),
         }}
         buttonState={{
           confirm: { disable: isPending },

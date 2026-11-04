@@ -16,7 +16,8 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 vi.mock("@seliseblocks/genesis-os/hooks", () => ({
@@ -95,7 +96,7 @@ describe("AIModelSelectedPage", () => {
   it("shows pagination when the total exceeds the page size", () => {
     h.models = { models: [{}], total: 25, page: 1 };
     render(<AIModelSelectedPage provider="openai" />);
-    // Pagination renders its controls once total > page_size.
+    // 25 rows at the default size of 10 leave a real choice (10 or 25).
     expect(screen.getByText("Rows per page")).toBeTruthy();
     expect(screen.getByText(/Page 1 of/)).toBeTruthy();
   });

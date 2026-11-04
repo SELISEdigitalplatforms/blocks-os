@@ -9,7 +9,7 @@ import type { Components } from "react-markdown";
 
 export const MarkdownComponentsMap: Partial<Components> = {
   p: (props) => (
-    <p className="my-1 whitespace-pre-wrap break-words leading-relaxed">{props.children}</p>
+    <p className="my-1 whitespace-pre-wrap wrap-break-word leading-relaxed">{props.children}</p>
   ),
 
   a: (props) => (
@@ -30,7 +30,7 @@ export const MarkdownComponentsMap: Partial<Components> = {
     </th>
   ),
   td: (props) => (
-    <td className="min-w-[150px] max-w-[350px] break-words border border-border p-2">
+    <td className="min-w-[150px] max-w-[350px] wrap-break-word border border-border p-2">
       {props.children}
     </td>
   ),

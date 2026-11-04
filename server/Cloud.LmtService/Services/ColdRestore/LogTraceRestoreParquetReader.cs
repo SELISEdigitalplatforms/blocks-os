@@ -181,7 +181,7 @@ namespace Cloud.LmtService.Services.ColdRestore
         {
             var raw = GetStringValue(values, index);
             if (string.IsNullOrWhiteSpace(raw)) return null;
-            return DateTime.TryParse(raw, null, System.Globalization.DateTimeStyles.RoundtripKind, out var parsed)
+            return DateTime.TryParse(raw, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out var parsed)
                 ? parsed
                 : null;
         }

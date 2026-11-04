@@ -25,6 +25,12 @@ namespace Cloud.LmtService.Repositories.Trace
         private const string OperationNameField = "OperationName";
         private const string ServiceNameField = "ServiceName";
         private const string TimestampField = "Timestamp";
+        // $getField reads the span attributes by key, because the keys themselves contain dots.
+        private const string GetFieldOperator = "$getField";
+        private const string GetFieldFieldKey = "field";
+        private const string GetFieldInputKey = "input";
+        private const string AttributesFieldPath = "$Attributes";
+        private static readonly TimeSpan DefaultTracesWindow = TimeSpan.FromHours(24);
 
         public TraceRepository(
             IBlocksSecret blocksSecret,
@@ -41,7 +47,7 @@ namespace Cloud.LmtService.Repositories.Trace
             var bc = BlocksContext.GetContext();
             var collection = _database.GetCollection<BsonDocument>(bc?.TenantId);
 
-            var filter = Builders<BsonDocument>.Filter.Eq("TraceId", query.TraceId);
+            var filter = Builders<BsonDocument>.Filter.Eq(TraceIdField, query.TraceId);
             var projection = Builders<BsonDocument>.Projection.As<SingleTraceProjection>();
 
             var logs = await collection
@@ -58,8 +64,8 @@ namespace Cloud.LmtService.Repositories.Trace
             var collection = _database.GetCollection<BsonDocument>(bc.TenantId);
 
             var filter = Builders<BsonDocument>.Filter.Or(
-                Builders<BsonDocument>.Filter.Eq("ParentId", string.Empty),
-                Builders<BsonDocument>.Filter.Eq("ParentId", BsonNull.Value)
+                Builders<BsonDocument>.Filter.Eq(ParentIdField, string.Empty),
+                Builders<BsonDocument>.Filter.Eq(ParentIdField, BsonNull.Value)
             );
 
             if (!string.IsNullOrWhiteSpace(query.Search))
@@ -67,30 +73,36 @@ namespace Cloud.LmtService.Repositories.Trace
                 var regex = new BsonRegularExpression(query.Search, "i");
 
                 filter &= Builders<BsonDocument>.Filter.Or(
-                          Builders<BsonDocument>.Filter.Regex("OperationName", regex),
-                          Builders<BsonDocument>.Filter.Eq("TraceId", query.Search));
+                          Builders<BsonDocument>.Filter.Regex(OperationNameField, regex),
+                          Builders<BsonDocument>.Filter.Eq(TraceIdField, query.Search));
             }
 
             if (query.Filter?.Services != null && query.Filter.Services.Count > 0)
-                filter &= Builders<BsonDocument>.Filter.In("ServiceName", query.Filter.Services);
+                filter &= Builders<BsonDocument>.Filter.In(ServiceNameField, query.Filter.Services);
 
             if (query.Filter?.Excepts != null && query.Filter.Excepts.Count > 0)
-                filter &= Builders<BsonDocument>.Filter.Nin("ServiceName", query.Filter.Excepts);
+                filter &= Builders<BsonDocument>.Filter.Nin(ServiceNameField, query.Filter.Excepts);
 
             // See the note on LogTimeRange: unmarked (Kind.Unspecified) dates must be read as
             // UTC, otherwise Mongo's serializer shifts them by the server's offset.
-            if (query.Filter?.StartDate != null)
-                filter &= Builders<BsonDocument>.Filter.Gt("Timestamp", LogTimeRange.AsUtc(query.Filter.StartDate));
+            var endDate = LogTimeRange.AsUtc(query.Filter?.EndDate);
 
-            if (query.Filter?.EndDate != null)
-                filter &= Builders<BsonDocument>.Filter.Lte("Timestamp", LogTimeRange.AsUtc(query.Filter.EndDate));
+            // Without a start the query walks the tenant's whole retention window, which on busy
+            // tenants outlasts the gateway timeout. Default to the 24 hours before the end (or now).
+            var startDate = LogTimeRange.AsUtc(query.Filter?.StartDate)
+                            ?? (endDate ?? DateTime.UtcNow) - DefaultTracesWindow;
+
+            filter &= Builders<BsonDocument>.Filter.Gt(TimestampField, startDate);
+
+            if (endDate != null)
+                filter &= Builders<BsonDocument>.Filter.Lte(TimestampField, endDate);
 
             if (query.Filter?.StatusCodes != null && query.Filter.StatusCodes.Count > 0)
             {
-                var statusCodeField = new BsonDocument("$getField", new BsonDocument
+                var statusCodeField = new BsonDocument(GetFieldOperator, new BsonDocument
                 {
-                    { "field", "response.status.code" },
-                    { "input", "$Attributes" }
+                    { GetFieldFieldKey, "response.status.code" },
+                    { GetFieldInputKey, AttributesFieldPath }
                 });
 
                 var inArray = new BsonArray(query.Filter.StatusCodes);
@@ -102,10 +114,10 @@ namespace Cloud.LmtService.Repositories.Trace
             if (query.Filter?.StatusCodeClasses != null && query.Filter.StatusCodeClasses.Count > 0)
             {
                 // $getField because the attribute key itself contains dots.
-                var statusCodeField = new BsonDocument("$getField", new BsonDocument
+                var statusCodeField = new BsonDocument(GetFieldOperator, new BsonDocument
                 {
-                    { "field", "response.status.code" },
-                    { "input", "$Attributes" }
+                    { GetFieldFieldKey, "response.status.code" },
+                    { GetFieldInputKey, AttributesFieldPath }
                 });
 
                 // Guarded by $isNumber: roots with no HTTP code at all (message-worker consumers)
@@ -129,7 +141,7 @@ namespace Cloud.LmtService.Repositories.Trace
                 ? (query.Sort.IsDescending
                     ? Builders<BsonDocument>.Sort.Descending(query.Sort.Property)
                     : Builders<BsonDocument>.Sort.Ascending(query.Sort.Property))
-                : Builders<BsonDocument>.Sort.Descending("Timestamp");
+                : Builders<BsonDocument>.Sort.Descending(TimestampField);
 
             var projection = Builders<BsonDocument>.Projection.As<TraceProjection>();
 
@@ -154,17 +166,17 @@ namespace Cloud.LmtService.Repositories.Trace
             string serviceName,
             string? operationSearch = null)
         {
-            var filter = Builders<BsonDocument>.Filter.Gte("Timestamp", startTime) &
-                         Builders<BsonDocument>.Filter.Lte("Timestamp", endTime) &
-                         Builders<BsonDocument>.Filter.Eq("ServiceName", serviceName);
+            var filter = Builders<BsonDocument>.Filter.Gte(TimestampField, startTime) &
+                         Builders<BsonDocument>.Filter.Lte(TimestampField, endTime) &
+                         Builders<BsonDocument>.Filter.Eq(ServiceNameField, serviceName);
 
             if (!string.IsNullOrWhiteSpace(operationSearch))
             {
                 var regex = new BsonRegularExpression(operationSearch, "i");
-                filter &= Builders<BsonDocument>.Filter.Regex("OperationName", regex);
+                filter &= Builders<BsonDocument>.Filter.Regex(OperationNameField, regex);
             }
 
-            return await RunAnalyticsQuery(filter, "OperationName");
+            return await RunAnalyticsQuery(filter, OperationNameField);
         }
 
         public async Task<object> GetServiceAnalytics(
@@ -172,33 +184,33 @@ namespace Cloud.LmtService.Repositories.Trace
             DateTime endTime,
             string? serviceName = null)
         {
-            var filter = Builders<BsonDocument>.Filter.Gte("Timestamp", startTime) &
-                         Builders<BsonDocument>.Filter.Lte("Timestamp", endTime) &
+            var filter = Builders<BsonDocument>.Filter.Gte(TimestampField, startTime) &
+                         Builders<BsonDocument>.Filter.Lte(TimestampField, endTime) &
                          Builders<BsonDocument>.Filter.Eq("Attributes.usage", true);
 
             if (!string.IsNullOrWhiteSpace(serviceName))
             {
-                filter &= Builders<BsonDocument>.Filter.Eq("ServiceName", serviceName);
+                filter &= Builders<BsonDocument>.Filter.Eq(ServiceNameField, serviceName);
             }
 
-            return await RunAnalyticsQuery(filter, "ServiceName");
+            return await RunAnalyticsQuery(filter, ServiceNameField);
         }
         private async Task<List<Dictionary<string, object>>> RunAnalyticsQuery(FilterDefinition<BsonDocument> filter, string groupBy)
         {
             var collection = GetTenantCollection();
 
             var statusCodeField = new BsonDocument("$toInt",
-                new BsonDocument("$getField", new BsonDocument
+                new BsonDocument(GetFieldOperator, new BsonDocument
                 {
-                    { "field", "response.status.code" },
-                    { "input", "$Attributes" }
+                    { GetFieldFieldKey, "response.status.code" },
+                    { GetFieldInputKey, AttributesFieldPath }
                 })
             );
 
-            var throughputField = new BsonDocument("$toInt", new BsonDocument("$getField", new BsonDocument
+            var throughputField = new BsonDocument("$toInt", new BsonDocument(GetFieldOperator, new BsonDocument
                 {
-                    { "field", "throughput.total.bytes" },
-                    { "input", "$Attributes" }
+                    { GetFieldFieldKey, "throughput.total.bytes" },
+                    { GetFieldInputKey, AttributesFieldPath }
                 })
             );
 
@@ -382,7 +394,7 @@ namespace Cloud.LmtService.Repositories.Trace
 
             try
             {
-                var collections = await _database.ListCollectionNames().ToListAsync();
+                var collections = await (await _database.ListCollectionNamesAsync()).ToListAsync();
                 if (!collections.Contains(collectionName))
                     return;
 

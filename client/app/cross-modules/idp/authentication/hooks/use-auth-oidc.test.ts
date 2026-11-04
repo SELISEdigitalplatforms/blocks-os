@@ -12,7 +12,7 @@ import {
   mockRotateOidcSecretPayload,
   MOCK_OIDC_ITEM_ID,
 } from "../../test-utils/__mocks__";
-import { TEST_PROJECT_KEY, mockProjectStoreFactory } from "@/test-utils/__mocks__";
+import { TEST_PROJECT_KEY } from "@/test-utils/__mocks__";
 import { authOidc } from "@blocks-idp/authentication/services/auth-clients-oidc.service";
 import { getBlocksOidcWellKnownUrl } from "@/lib/get-api-path";
 import {
@@ -27,7 +27,14 @@ vi.mock("@blocks-idp/authentication/services/auth-clients-oidc.service", () =>
   mockAuthOidcServiceFactory(),
 );
 
-vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => {
+  // Loaded inside the factory: the shared mocks import models that import genesis (a cycle otherwise).
+  const { mockProjectStoreFactory } = await import("@/test-utils/__mocks__");
+  return {
+    ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
+    ...mockProjectStoreFactory(),
+  };
+});
 
 type BlocksWindow = Window & {
   __BLOCKS_ENV__?: Record<string, string | undefined>;

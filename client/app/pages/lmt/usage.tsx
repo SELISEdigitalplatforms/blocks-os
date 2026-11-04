@@ -13,12 +13,14 @@ import {
   CardHeader,
   CardTitle,
   useProjectStore,
+  useT,
 } from "@seliseblocks/genesis-os";
 import { Network, Clock, CircleCheck, CircleAlert } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
 
 // usage-route.tsx
 export function UsageRoute() {
+  const { t } = useT("os.lmt");
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const LMT_BASE_PATH = useLmtBasePath();
   const [timeRange] = useQueryState("timeRange", parseAsString.withDefault("1h"));
@@ -33,31 +35,31 @@ export function UsageRoute() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Global overview</CardTitle>
+          <CardTitle>{t("USAGE.GLOBAL_OVERVIEW")}</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           <UsageSummaryCard
-            description="Total API calls"
+            description={t("USAGE.TOTAL_API_CALLS")}
             title={data ? abbreviateNumber(data.accumulatedApiCall) : ""}
             isLoading={isLoading || isFetching}
             Icon={Network}
           />
           <UsageSummaryCard
-            description="Average response time"
+            description={t("USAGE.AVERAGE_RESPONSE_TIME")}
             title={data ? abbreviateDurationMs(data.accumulatedAverageDuration) : ""}
             isLoading={isLoading || isFetching}
             Icon={Clock}
             className="bg-blocks-secondary-50 text-blocks-secondary-600"
           />
           <UsageSummaryCard
-            description="Successful calls"
+            description={t("USAGE.SUCCESSFUL_CALLS")}
             title={data ? abbreviateNumber(data.accumulatedSuccess) : ""}
             isLoading={isLoading || isFetching}
             className="bg-green-50 text-green-600"
             Icon={CircleCheck}
           />
           <UsageSummaryCard
-            description="Total errors"
+            description={t("USAGE.TOTAL_ERRORS")}
             title={data ? abbreviateNumber(data.accumulatedError) : ""}
             isLoading={isLoading || isFetching}
             className="bg-red-50 text-red-600"
@@ -81,15 +83,17 @@ export function UsageRoute() {
           </div>
           {data && (
             <div className="border-t pt-4 text-center text-xs text-medium-emphasis">
-              Last updated: {new Date(data.endTime).toLocaleDateString()} at{" "}
-              {new Date(data.endTime).toLocaleTimeString()}
+              {t("USAGE.LAST_UPDATED_AT", {
+                value1: new Date(data.endTime).toLocaleDateString(),
+                value2: new Date(data.endTime).toLocaleTimeString(),
+              })}
             </div>
           )}
         </>
       ) : (
         <Card>
           <CardContent className="flex h-32 items-center justify-center text-sm text-muted-foreground">
-            Select a project to load LMT usage data.
+            {t("USAGE.SELECT_A_PROJECT_TO_LOAD")}
           </CardContent>
         </Card>
       )}

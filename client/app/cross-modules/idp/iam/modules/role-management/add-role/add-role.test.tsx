@@ -17,6 +17,29 @@ vi.mock("@/hooks/use-toast", () => ({
   showSuccessToast: h.showSuccessToast,
 }));
 
+vi.mock("../managed-by-select", () => ({
+  ManagedBySelect: ({
+    value,
+    onChange,
+    excludeSlug,
+  }: {
+    value?: string | null;
+    onChange: (slug: string) => void;
+    excludeSlug?: string;
+  }) => (
+    <div>
+      <span data-testid="managed-by-current">{value ?? "none"}</span>
+      <span data-testid="managed-by-exclude">{excludeSlug ?? ""}</span>
+      <button type="button" onClick={() => onChange("lead")}>
+        pick lead
+      </button>
+      <button type="button" onClick={() => onChange("")}>
+        pick none
+      </button>
+    </div>
+  ),
+}));
+
 import { AddRole } from "./add-role";
 
 const openDialog = async (user: ReturnType<typeof userEvent.setup>) => {
@@ -70,6 +93,52 @@ describe("AddRole", () => {
       description: "Support staff",
     });
     expect(h.showSuccessToast).toHaveBeenCalledWith({ description: "Role added successfully" });
+  });
+
+  it("sends the chosen Managed by role", async () => {
+    const user = userEvent.setup();
+    render(<AddRole />);
+    await openDialog(user);
+
+    await user.type(screen.getByPlaceholderText("Enter name"), "Support");
+    await user.click(screen.getByRole("button", { name: "pick lead" }));
+    await user.click(screen.getByRole("button", { name: "Add" }));
+
+    await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(h.mutateAsync).toHaveBeenCalledWith({
+      name: "Support",
+      slug: "support",
+      description: "",
+      parentRoleSlug: "lead",
+    });
+  });
+
+  it("sends no Managed by after it was cleared again", async () => {
+    const user = userEvent.setup();
+    render(<AddRole />);
+    await openDialog(user);
+
+    await user.type(screen.getByPlaceholderText("Enter name"), "Support");
+    await user.click(screen.getByRole("button", { name: "pick lead" }));
+    await user.click(screen.getByRole("button", { name: "pick none" }));
+    await user.click(screen.getByRole("button", { name: "Add" }));
+
+    await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(h.mutateAsync.mock.calls[0][0]).not.toHaveProperty("parentRoleSlug");
+  });
+
+  it("explains a grant refusal instead of a bare Forbidden", async () => {
+    const user = userEvent.setup();
+    h.mutateAsync.mockRejectedValue({ status: 403, errors: { Access_Grant_Not_Allowed: "x" } });
+    render(<AddRole />);
+    await openDialog(user);
+
+    await user.type(screen.getByPlaceholderText("Enter name"), "Support");
+    await user.click(screen.getByRole("button", { name: "Add" }));
+
+    await waitFor(() =>
+      expect(h.showErrorToast).toHaveBeenCalledWith({ errors: { Access_Grant_Not_Allowed: "x" } }),
+    );
   });
 
   it("keeps Add disabled until the form is dirty", async () => {

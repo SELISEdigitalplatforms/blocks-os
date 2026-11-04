@@ -3,6 +3,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { cn } from "@/lib/utils";
 import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout";
+import { useT } from "@seliseblocks/genesis-os";
 import { X } from "lucide-react";
 import { useState } from "react";
 
@@ -27,6 +28,7 @@ export const SettingsDismissibleChip = ({
   readOnly = false,
   variant = "chip",
 }: SettingsDismissibleChipProps) => {
+  const { t } = useT("os.idp.settings");
   const [open, setOpen] = useState(false);
 
   const handleConfirm = () => {
@@ -39,7 +41,7 @@ export const SettingsDismissibleChip = ({
       className={cn(
         variant === "badge"
           ? "relative inline-flex min-h-10 w-full max-w-full flex-col items-start justify-center rounded-xl border bg-muted/40 px-3 py-1.5 pr-8 sm:w-auto"
-          : "relative rounded-lg border bg-card p-4 pr-10 shadow-sm",
+          : "relative rounded-lg border bg-card p-4 pr-10 shadow-xs",
         className,
       )}
     >
@@ -74,7 +76,7 @@ export const SettingsDismissibleChip = ({
                 "absolute rounded-full text-muted-foreground hover:text-foreground",
                 variant === "badge" ? "right-1 top-1 h-5 w-5" : "right-1.5 top-1.5 h-7 w-7",
               )}
-              aria-label={`Remove ${title}`}
+              aria-label={t("SETTINGS_DISMISSIBLE_CHIP.REMOVE_TITLE", { title })}
             >
               <X className={cn(variant === "badge" ? "h-3 w-3" : "h-3.5 w-3.5")} />
             </Button>
@@ -83,7 +85,7 @@ export const SettingsDismissibleChip = ({
             data={{
               dialogTitle: confirmTitle,
               dialogSubtitle: confirmSubtitle,
-              confirmButton: "Remove",
+              confirmButton: t("common:REMOVE"),
             }}
             onConfirm={handleConfirm}
             onCancel={() => setOpen(false)}

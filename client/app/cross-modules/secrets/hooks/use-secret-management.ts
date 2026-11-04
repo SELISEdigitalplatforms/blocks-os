@@ -1,12 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, tStatic } from "@seliseblocks/genesis-os";
 import { secretManagementService } from "@/cross-modules/secrets/services/secret-management.service";
 import {
+  SECRET_STATUS,
   looksLikeSecretId,
   secretTags,
   type SecretAccess,
   type SecretAuditFilter,
   type SecretAuditListResult,
+  type SecretDependentsResult,
   type SecretFilter,
   type SecretListResult,
   type SecretResult,
@@ -17,6 +19,8 @@ import {
 import { describeSecretError } from "@/cross-modules/secrets/utils/secret-error";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isHttpErrorStatus } from "@/lib/http/http-error.util";
+
+const I18N_MODULE = "os.secrets";
 
 /**
  * The secret endpoints resolve the tenant from the request token, so the same URL returns
@@ -34,7 +38,15 @@ export const secretQueryKeys = {
   tags: (tenantId: string) => ["secrets", "tags", tenantId] as const,
   audit: (tenantId: string, secretId: string, filter?: unknown) =>
     ["secrets", "audit", tenantId, secretId, filter] as const,
+  dependents: (tenantId: string, secretId: string) =>
+    ["secrets", "dependents", tenantId, secretId] as const,
 };
+
+/**
+ * Query keys owned by the configuration screens whose status depends on a secret's lifecycle.
+ * Prefixes only, so every tenant's and page's entry is refreshed.
+ */
+const LINKED_CONFIGURATION_QUERY_KEYS = [["captcha-config"], ["email-configs"]] as const;
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
@@ -77,6 +89,19 @@ export const useFindSecrets = (filter: SecretFilter = {}, enabled = true) => {
   });
 };
 
+/**
+ * How many secrets are archived, for the Archived filter's badge. A one-row page: only
+ * `totalCount` is read. It shares the list key prefix, so every archive, restore and purge
+ * refreshes it along with the list.
+ */
+export const useArchivedSecretCount = (): number | undefined =>
+  useFindSecrets({
+    status: SECRET_STATUS.Deleted,
+    includeDeleted: true,
+    pageNumber: 1,
+    pageSize: 1,
+  }).data?.totalCount;
+
 export const useGetSecret = (secretId: string, enabled = true) => {
   const tenantId = useTenantId();
   return useQuery<SecretResult>({
@@ -99,6 +124,38 @@ export const useSecretTags = (enabled = true) => {
     queryFn: () => secretManagementService.getTags(),
     enabled: enabled && !!tenantId,
     staleTime: 5 * 60 * 1000,
+  });
+};
+
+/** How long the Archive/Purge dialog waits for the dependents lookup before giving up. */
+export const SECRET_DEPENDENTS_TIMEOUT_MS = 10_000;
+
+/**
+ * The configurations that point at a secret, for the Archive and Purge dialogs on the Secrets
+ * list page — and only there.
+ *
+ * Always refetched when a dialog opens (`staleTime: 0`), because the answer changes whenever a
+ * configuration is repaired. No retry, and the request is aborted after
+ * `SECRET_DEPENDENTS_TIMEOUT_MS`: confirm is disabled only while the lookup loads, so a slow or
+ * hung lookup must end as "couldn't check" instead of holding the button indefinitely.
+ */
+export const useSecretDependents = (secretId: string, enabled = true) => {
+  const tenantId = useTenantId();
+  return useQuery<SecretDependentsResult>({
+    queryKey: secretQueryKeys.dependents(tenantId, secretId),
+    queryFn: ({ signal }) => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), SECRET_DEPENDENTS_TIMEOUT_MS);
+      const cancel = () => controller.abort();
+      signal.addEventListener("abort", cancel);
+      return secretManagementService.getDependents(secretId, controller.signal).finally(() => {
+        clearTimeout(timer);
+        signal.removeEventListener("abort", cancel);
+      });
+    },
+    enabled: enabled && !!secretId && !!tenantId,
+    staleTime: 0,
+    retry: false,
   });
 };
 
@@ -127,6 +184,14 @@ const useSecretMutationHelpers = () => {
     // A write can introduce a tag the catalogue has not seen, and the server adds it there.
     invalidateTags: () =>
       queryClient.invalidateQueries({ queryKey: secretQueryKeys.tags(tenantId) }),
+    // Archive, restore and purge change the status the CAPTCHA and email screens report for
+    // any configuration pointing at the secret, so their cached lists are stale too.
+    invalidateLinkedConfigurations: () =>
+      Promise.all(
+        LINKED_CONFIGURATION_QUERY_KEYS.map((queryKey) =>
+          queryClient.invalidateQueries({ queryKey }),
+        ),
+      ),
     toastError: (error: unknown, fallback?: string) =>
       showErrorToast({ errors: describeSecretError(error, fallback).message }),
   };
@@ -144,7 +209,8 @@ export const useRevealSecret = () => {
   return useMutation({
     mutationFn: (secretId: string) => secretManagementService.getValue(secretId),
     // No cache write and no toast on success — the caller renders the value and drops it.
-    onError: (error) => toastError(error, "Could not read the secret value."),
+    onError: (error) =>
+      toastError(error, tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.COULD_NOT_READ_THE_SECRET")),
     gcTime: 0,
   });
 };
@@ -156,7 +222,9 @@ export const useSetSecret = () => {
     onSuccess: () => {
       invalidateList();
       invalidateTags();
-      showSuccessToast({ description: "Secret created." });
+      showSuccessToast({
+        description: tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.SECRET_CREATED"),
+      });
     },
     // Errors surface as inline field messages in the form (NAME_INVALID maps onto the name
     // input), so no toast here — it would duplicate the field error.
@@ -196,9 +264,12 @@ export const useRotateSecret = () => {
     onSuccess: (_, variables) => {
       invalidateList();
       invalidateItem(variables.secretId);
-      showSuccessToast({ description: "Secret rotated." });
+      showSuccessToast({
+        description: tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.SECRET_ROTATED"),
+      });
     },
-    onError: (error) => toastError(error, "Could not rotate the secret."),
+    onError: (error) =>
+      toastError(error, tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.COULD_NOT_ROTATE_THE_SECRET")),
   });
 };
 
@@ -209,9 +280,12 @@ export const useLockSecret = () => {
     onSuccess: (_, secretId) => {
       invalidateList();
       invalidateItem(secretId);
-      showSuccessToast({ description: "Secret locked." });
+      showSuccessToast({
+        description: tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.SECRET_LOCKED"),
+      });
     },
-    onError: (error) => toastError(error, "Could not lock the secret."),
+    onError: (error) =>
+      toastError(error, tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.COULD_NOT_LOCK_THE_SECRET")),
   });
 };
 
@@ -222,34 +296,65 @@ export const useUnlockSecret = () => {
     onSuccess: (_, secretId) => {
       invalidateList();
       invalidateItem(secretId);
-      showSuccessToast({ description: "Secret unlocked." });
+      showSuccessToast({
+        description: tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.SECRET_UNLOCKED"),
+      });
     },
-    onError: (error) => toastError(error, "Could not unlock the secret."),
+    onError: (error) =>
+      toastError(error, tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.COULD_NOT_UNLOCK_THE_SECRET")),
   });
 };
 
 export const useDeleteSecret = () => {
-  const { invalidateList, invalidateItem, toastError } = useSecretMutationHelpers();
+  const { invalidateList, invalidateItem, invalidateLinkedConfigurations, toastError } =
+    useSecretMutationHelpers();
   return useMutation({
     mutationFn: (secretId: string) => secretManagementService.remove(secretId),
     onSuccess: (_, secretId) => {
       invalidateList();
       invalidateItem(secretId);
-      showSuccessToast({ description: "Secret deleted. It can still be restored." });
+      invalidateLinkedConfigurations();
+      showSuccessToast({
+        description: tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.SECRET_ARCHIVED_FIND_IT_UNDER"),
+      });
     },
-    onError: (error) => toastError(error, "Could not delete the secret."),
+    onError: (error) =>
+      toastError(error, tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.COULD_NOT_ARCHIVE_THE_SECRET")),
   });
 };
 
 export const useRestoreSecret = () => {
-  const { invalidateList, invalidateItem, toastError } = useSecretMutationHelpers();
+  const { invalidateList, invalidateItem, invalidateLinkedConfigurations, toastError } =
+    useSecretMutationHelpers();
   return useMutation({
     mutationFn: (secretId: string) => secretManagementService.restore(secretId),
     onSuccess: (_, secretId) => {
       invalidateList();
       invalidateItem(secretId);
-      showSuccessToast({ description: "Secret restored." });
+      invalidateLinkedConfigurations();
+      showSuccessToast({
+        description: tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.SECRET_RESTORED"),
+      });
     },
-    onError: (error) => toastError(error, "Could not restore the secret."),
+    onError: (error) =>
+      toastError(error, tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.COULD_NOT_RESTORE_THE_SECRET")),
+  });
+};
+
+export const usePurgeSecret = () => {
+  const { invalidateList, invalidateItem, invalidateLinkedConfigurations, toastError } =
+    useSecretMutationHelpers();
+  return useMutation({
+    mutationFn: (secretId: string) => secretManagementService.purge(secretId),
+    onSuccess: (_, secretId) => {
+      invalidateList();
+      invalidateItem(secretId);
+      invalidateLinkedConfigurations();
+      showSuccessToast({
+        description: tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.SECRET_PURGED"),
+      });
+    },
+    onError: (error) =>
+      toastError(error, tStatic(I18N_MODULE, "USE_SECRET_MANAGEMENT.COULD_NOT_PURGE_THE_SECRET")),
   });
 };

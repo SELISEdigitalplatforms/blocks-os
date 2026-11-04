@@ -21,6 +21,8 @@ export interface IProject {
   environment: string;
   tenantGroupId: string;
   tenantSlug: string;
+  /** Gates Genesis third-party token trust for this tenant (Phase 1 Project/Get). */
+  isThirdPartyJwtEnabled: boolean;
 }
 
 export interface IResource {
@@ -41,6 +43,7 @@ export interface IProjectGroup {
   tenantGroupId: string;
   projects: IProject[];
 }
+
 export interface ICreateProjectPayload {
   name: string;
   isAcceptBlocksTerms: boolean;
@@ -143,14 +146,14 @@ export interface IDisableProjectResponse {
   errors: unknown | null;
   isSuccess: boolean;
 }
-type SSO_INFO = {
+type SsoInfo = {
   provider: SSO_PROVIDERS;
   audience: string;
 };
 
 export type LoginOption = {
   allowedGrantTypes: GRANT_TYPES[];
-  ssoInfo: SSO_INFO[];
+  ssoInfo: SsoInfo[];
 };
 export type IGetProjectLoginOptionResponse = LoginOption;
 
@@ -189,6 +192,11 @@ export interface IMigrationVerificationResponse {
   errors: unknown | null;
 }
 
+/**
+ * One tracker per migration. Besides these fields it carries one status object per service
+ * ({ isCompleted, errorMessage, ... }); a service that failed keeps isCompleted false with an
+ * errorMessage.
+ */
 export type IMigrationStatusResponse = Array<{
   targetedProjectKey: string;
   createdDate?: string;

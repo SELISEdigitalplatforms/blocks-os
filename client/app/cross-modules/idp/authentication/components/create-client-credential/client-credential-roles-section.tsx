@@ -5,16 +5,29 @@ import { SSORolesList } from "@blocks-idp/authentication/components/sso-initial-
 import { toRoleStubs } from "@blocks-idp/iam/utils/role-stub";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { AddClientCredentialRole } from "./add-client-credential-role";
+import { useT } from "@seliseblocks/genesis-os";
 
 type ClientCredentialRolesSectionProps = {
   selectedSlugs: string[];
   onChange: (slugs: string[]) => void;
+  /** Copy overrides so other features can reuse this section verbatim. */
+  label?: string;
+  description?: string;
+  emptyTitle?: string;
+  emptyHint?: string;
+  required?: boolean;
 };
 
 export const ClientCredentialRolesSection = ({
   selectedSlugs,
   onChange,
+  label,
+  description,
+  emptyTitle,
+  emptyHint,
+  required = true,
 }: ClientCredentialRolesSectionProps) => {
+  const { t } = useT("os.idp.client-credentials");
   const [filter, setFilter] = useState({ page: 0, pageSize: 5 });
   const roles = useMemo(() => toRoleStubs(selectedSlugs), [selectedSlugs]);
 
@@ -38,7 +51,8 @@ export const ClientCredentialRolesSection = ({
         <div className="flex-1 space-y-1">
           <div className="flex items-center gap-2">
             <Label className="text-base font-medium">
-              Roles <span className="text-destructive">*</span>
+              {label ?? t("CLIENT_CREDENTIAL_ROLES_SECTION.LABEL")}{" "}
+              {required && <span className="text-destructive">*</span>}
             </Label>
             {roles.length > 0 && (
               <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
@@ -47,7 +61,7 @@ export const ClientCredentialRolesSection = ({
             )}
           </div>
           <p className="text-sm text-muted-foreground">
-            Select the default roles granted when this client credential is used.
+            {description ?? t("CLIENT_CREDENTIAL_ROLES_SECTION.DESCRIPTION")}
           </p>
         </div>
         <div className="shrink-0">
@@ -72,8 +86,12 @@ export const ClientCredentialRolesSection = ({
               />
             </svg>
           </div>
-          <p className="mt-3 text-sm font-medium text-foreground">No roles added</p>
-          <p className="mt-1 text-xs text-muted-foreground">Add roles for this client credential</p>
+          <p className="mt-3 text-sm font-medium text-foreground">
+            {emptyTitle ?? t("CLIENT_CREDENTIAL_ROLES_SECTION.EMPTY_TITLE")}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {emptyHint ?? t("CLIENT_CREDENTIAL_ROLES_SECTION.EMPTY_HINT")}
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -83,15 +101,16 @@ export const ClientCredentialRolesSection = ({
           {roles.length > filter.pageSize && (
             <div className="flex items-center justify-between border-t pt-3">
               <p className="text-xs text-muted-foreground">
-                Showing {filter.page * filter.pageSize + 1} to{" "}
-                {Math.min((filter.page + 1) * filter.pageSize, roles.length)} of {roles.length}{" "}
-                roles
+                {t("CLIENT_CREDENTIAL_ROLES_SECTION.SHOWING", {
+                  from: filter.page * filter.pageSize + 1,
+                  to: Math.min((filter.page + 1) * filter.pageSize, roles.length),
+                  total: roles.length,
+                })}
               </p>
               <Pagination
                 page={filter.page}
                 onChange={(page) => setFilter((prev) => ({ ...prev, page }))}
                 totalCount={roles.length}
-                pageSizeOptions={[filter.pageSize]}
                 pageSize={filter.pageSize}
               />
             </div>

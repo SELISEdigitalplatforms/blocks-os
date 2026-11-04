@@ -1,6 +1,11 @@
 import { expect, type Page } from "@playwright/test";
 import { openIam } from "../../support/os-helpers";
 
+// The tab's Reset and Save sit together in the page header. Since 6e4164cf the Signup tab also
+// holds the Sign-in methods card with its own Save, so the header Save is found next to Reset.
+const tabHeaderSaveButton = (page: Page) =>
+  page.getByRole("button", { name: "Reset" }).locator("..").getByRole("button", { name: "Save" });
+
 export async function navigateToSettingsFlow(page: Page) {
   await openIam(page, "settings", "Auth Configuration");
   await expect(page.getByRole("heading", { name: "Auth Configuration" })).toBeVisible({
@@ -37,8 +42,16 @@ export async function lockoutValidationFlow(page: Page) {
   // set — so clicking Save is what surfaces the validation message.
   await expect(saveButton).toBeEnabled({ timeout: 10_000 });
   await saveButton.click();
-  // Strict: zero MUST surface the validation error.
-  await expect(page.getByText("Value must be greater than zero.")).toBeVisible();
+  // Strict: zero MUST surface the validation error on the lockout field.
+  // Scope to that field's own message — a fresh project loads every numeric
+  // Auth field as 0, so Save flags all six and a page-wide getByText hits a
+  // strict-mode violation. FormControl gives the input id "<id>-form-item"
+  // and FormMessage renders as "<id>-form-item-message".
+  await expect(lockoutInput).toHaveAttribute("aria-invalid", "true");
+  const lockoutInputId = await lockoutInput.getAttribute("id");
+  await expect(page.locator(`[id="${lockoutInputId}-message"]`)).toHaveText(
+    "Value must be greater than zero.",
+  );
 }
 
 export async function resetDiscardsEditFlow(page: Page) {
@@ -62,7 +75,10 @@ export async function resetDiscardsEditFlow(page: Page) {
 export async function saveValidAuthSettingFlow(page: Page) {
   const lockoutInput = page.getByLabel("Maximum Failed Login Attempts");
   await expect(lockoutInput).toBeVisible({ timeout: 5_000 });
-  await lockoutInput.fill("7");
+  // The shared project keeps the last run's value, and re-entering the same
+  // number leaves the form pristine (Save disabled). Alternate 7 and 8.
+  const current = await lockoutInput.inputValue();
+  await lockoutInput.fill(current === "7" ? "8" : "7");
 
   const saveButton = page.getByRole("button", { name: "Save" });
   await expect(saveButton).toBeEnabled({ timeout: 10_000 });
@@ -122,6 +138,22 @@ export async function toggleLogoutAndEditRegexFlow(page: Page) {
   );
 }
 
+/**
+ * The assign dialogs load their list after opening, and isVisible() does not
+ * wait, so the old check often saw no checkbox, toggled nothing, and left Save
+ * disabled once Sign Up was already on from an earlier run. Wait for the list
+ * (or its empty state) and toggle the first entry, which always differs from
+ * what is stored.
+ */
+async function toggleFirstListedItem(page: Page, emptyText: RegExp) {
+  const dialog = page.getByRole("dialog");
+  const firstCheckbox = dialog.getByRole("checkbox").first();
+  await expect(firstCheckbox.or(dialog.getByText(emptyText))).toBeVisible({ timeout: 15_000 });
+  if (await firstCheckbox.isVisible()) {
+    await firstCheckbox.click();
+  }
+}
+
 export async function enableSignupAndAssignRolesFlow(page: Page) {
   const signUpSwitch = page.getByLabel("Sign Up Enabled");
   await expect(signUpSwitch).toBeVisible({ timeout: 8_000 });
@@ -134,10 +166,7 @@ export async function enableSignupAndAssignRolesFlow(page: Page) {
   if (await manageRolesButton.isVisible({ timeout: 5_000 })) {
     await manageRolesButton.click();
     await expect(page.getByRole("heading", { name: "Assign roles" })).toBeVisible();
-    const firstRoleCheckbox = page.getByRole("checkbox").first();
-    if (await firstRoleCheckbox.isVisible({ timeout: 5_000 })) {
-      await firstRoleCheckbox.click();
-    }
+    await toggleFirstListedItem(page, /No roles (are )?found/);
     await page.getByRole("button", { name: "Set", exact: true }).click();
   }
 
@@ -148,14 +177,11 @@ export async function enableSignupAndAssignRolesFlow(page: Page) {
     await expect(page.getByRole("heading", { name: "Assign permissions" })).toBeVisible({
       timeout: 8_000,
     });
-    const firstPermissionCheckbox = page.getByRole("checkbox").first();
-    if (await firstPermissionCheckbox.isVisible({ timeout: 5_000 })) {
-      await firstPermissionCheckbox.click();
-    }
+    await toggleFirstListedItem(page, /No permissions (are )?found/);
     await page.getByRole("button", { name: "Set", exact: true }).click();
   }
 
-  const saveButton = page.getByRole("button", { name: "Save" });
+  const saveButton = tabHeaderSaveButton(page);
   // Strict: the Save button MUST become enabled once the form is dirty.
   await expect(saveButton).toBeEnabled({ timeout: 10_000 });
   await saveButton.click();
@@ -212,6 +238,64 @@ export async function confirmMultiOrgFlow(page: Page) {
   // Now saved and permanent for this (disposable, per-test) project — the
   // toggle MUST be disabled since it can no longer be turned off.
   await expect(multiOrgSwitch).toBeDisabled({ timeout: 10_000 });
+}
+
+// Ticket #658: the auto-join card sits after multi-org, reveals the organization
+// picker, warns on Default, and sends both fields on Save. The save request is
+// answered in the browser so the run never changes IAM state.
+export async function signupAutoJoinFlow(page: Page) {
+  const multiOrgSwitch = page.getByLabel("Multi-Organization Environment");
+  const autoJoinSwitch = page.getByRole("switch", { name: "Add new sign-ups to an organization" });
+  await expect(autoJoinSwitch).toBeVisible({ timeout: 10_000 });
+
+  // H1: the new card renders directly after the multi-org card.
+  const switchLabels = await page.getByRole("switch").evaluateAll((nodes) =>
+    nodes.map((node) => node.getAttribute("aria-label")),
+  );
+  const multiOrgIndex = switchLabels.indexOf("Multi-Organization Environment");
+  expect(switchLabels[multiOrgIndex + 1]).toBe("Add new sign-ups to an organization");
+
+  if (!(await multiOrgSwitch.isChecked())) {
+    // C1: disabled while multi-org is off.
+    await expect(autoJoinSwitch).toBeDisabled();
+    return;
+  }
+
+  if (!(await autoJoinSwitch.isChecked())) await autoJoinSwitch.click();
+  const picker = page.getByRole("combobox", { name: "Organization for new sign-ups" });
+  await expect(picker).toBeVisible({ timeout: 5_000 });
+  await expect(
+    page.getByText("Sign-ups fail if this organization is deleted or disabled."),
+  ).toBeVisible();
+
+  // H4/H6: Default is listed first and selecting it shows the warning.
+  await picker.click();
+  const firstOption = page.getByRole("option").first();
+  await expect(firstOption).toHaveText("Default", { timeout: 10_000 });
+  await firstOption.click();
+  await expect(page.getByText("New users get tenant-wide access")).toBeVisible();
+
+  let savedBody: Record<string, unknown> | undefined;
+  await page.route("**/organizations/config", async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    savedBody = route.request().postDataJSON() as Record<string, unknown>;
+    await route.fulfill({ status: 200, json: { isSuccess: true, errors: null } });
+  });
+  try {
+    const saveButton = page.getByRole("button", { name: "Save" });
+    await expect(saveButton).toBeEnabled({ timeout: 10_000 });
+    await saveButton.click();
+    await expect(
+      page.getByText("Organization configuration updated successfully", { exact: true }),
+    ).toBeVisible({ timeout: 15_000 });
+    // H8: one POST carrying the flag and the chosen target.
+    expect(savedBody).toMatchObject({
+      isSignupAutoJoinEnabled: true,
+      signupAutoJoinOrganizationId: "default",
+    });
+  } finally {
+    await page.unroute("**/organizations/config");
+  }
 }
 
 export async function mobileTabsSwitchFlow(page: Page) {

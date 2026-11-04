@@ -1,4 +1,4 @@
-import { KeyRound, SearchX, ShieldAlert } from "lucide-react";
+import { Archive, KeyRound, SearchX, ShieldAlert } from "lucide-react";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { EmptyState } from "@/components/ui-kits/empty-state";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
@@ -14,9 +14,30 @@ import {
 import { useFindSecrets } from "@/cross-modules/secrets/hooks/use-secret-management";
 import { describeSecretError } from "@/cross-modules/secrets/utils/secret-error";
 import { SecretRow } from "../secret-row/secret-row";
-import { SecretToolbar, useSecretFilterQueryParams } from "../secret-toolbar/secret-toolbar";
+import {
+  SECRET_VIEW,
+  SecretToolbar,
+  useSecretFilterQueryParams,
+} from "../secret-toolbar/secret-toolbar";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
 
-const COLUMNS = ["Secret", "Type", "Status", "Created On"] as const;
+const I18N_MODULE = "os.secrets";
+
+const columns = () =>
+  [
+    tStatic(I18N_MODULE, "SECRET_LIST.SECRET"),
+    tStatic(I18N_MODULE, "common:TYPE"),
+    tStatic(I18N_MODULE, "common:STATUS"),
+    tStatic(I18N_MODULE, "SECRET_LIST.CREATED"),
+  ] as const;
+// Every archived row has the same status, so that column gives way to when it was archived.
+const archivedColumns = () =>
+  [
+    tStatic(I18N_MODULE, "SECRET_LIST.SECRET"),
+    tStatic(I18N_MODULE, "common:TYPE"),
+    tStatic(I18N_MODULE, "SECRET_LIST.CREATED"),
+    tStatic(I18N_MODULE, "SECRET_LIST.ARCHIVED"),
+  ] as const;
 
 const ListSkeleton = () => (
   <TableBody>
@@ -55,19 +76,52 @@ const ListSkeleton = () => (
  * nothing here filters or sorts client-side. Filters live in the URL (see
  * {@link useSecretFilterQueryParams}) so the view survives a reload and can be linked to.
  */
+// The empty state: a search that found nothing, an empty archive, or no secrets at all.
+const emptyStateFor = (hasFilters: boolean, isArchived: boolean, t: (key: string) => string) => {
+  if (hasFilters) {
+    return {
+      icon: SearchX,
+      title: isArchived
+        ? t("SECRET_LIST.NO_MATCHING_ARCHIVED_SECRETS")
+        : t("SECRET_LIST.NO_MATCHING_SECRETS"),
+      description: t("SECRET_LIST.TRY_A_DIFFERENT_SEARCH_OR"),
+    };
+  }
+  if (isArchived) {
+    return {
+      icon: Archive,
+      title: t("SECRET_LIST.NO_ARCHIVED_SECRETS"),
+      description: t("SECRET_LIST.SECRETS_YOU_ARCHIVE_WILL_APPEAR"),
+    };
+  }
+  return {
+    icon: KeyRound,
+    title: t("SECRET_LIST.NO_SECRETS_YET"),
+    description: t("SECRET_LIST.CREATE_YOUR_FIRST_SECRET_TO"),
+  };
+};
+
 export function SecretList() {
-  const { values, filter, queryParams, setPage, setPageSize } = useSecretFilterQueryParams();
+  const { t } = useT(I18N_MODULE);
+  const { values, filter, view, queryParams, setPage, setPageSize } = useSecretFilterQueryParams();
   const { data, isLoading, isFetching, error } = useFindSecrets(filter);
 
   const secrets = data?.data ?? [];
   const totalCount = data?.totalCount ?? 0;
   const isBusy = isLoading || isFetching;
-  const hasFilters = !!values.search || !!values.type || !!values.status;
+  const isArchived = view === SECRET_VIEW.Archived;
+  // Archived on its own is a view, not a narrowing search: its empty state should say so.
+  const hasFilters =
+    !!values.search || !!values.type || values.tags.length > 0 || (!isArchived && !!values.status);
+
+  const empty = emptyStateFor(hasFilters, isArchived, t);
 
   // 403 is a routine outcome, not a bug: the value/rotate/access/audit endpoints default to
   // admin-only, and until secret permissions are seeded for a tenant every endpoint refuses.
   // Neither should read as a crash.
-  const errorInfo = error ? describeSecretError(error, "Could not load secrets.") : null;
+  const errorInfo = error
+    ? describeSecretError(error, tStatic(I18N_MODULE, "SECRET_LIST.COULD_NOT_LOAD_SECRETS"))
+    : null;
 
   return (
     // Toolbar, table and pagination share one card, matching the Roles and Users screens — the
@@ -81,7 +135,9 @@ export function SecretList() {
             className="border-0 shadow-none"
             icon={ShieldAlert}
             title={
-              errorInfo.status === 403 ? "Not available for your account" : "Secrets unavailable"
+              errorInfo.status === 403
+                ? t("SECRET_LIST.NOT_AVAILABLE_FOR_YOUR_ACCOUNT")
+                : t("SECRET_LIST.SECRETS_UNAVAILABLE")
             }
             description={errorInfo.message}
           />
@@ -92,7 +148,7 @@ export function SecretList() {
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
                     <TableHead className="w-8 pl-4" />
-                    {COLUMNS.map((column) => (
+                    {(isArchived ? archivedColumns() : columns()).map((column) => (
                       <TableHead
                         key={column}
                         className="text-xs font-semibold uppercase tracking-wide text-high-emphasis"
@@ -101,7 +157,7 @@ export function SecretList() {
                       </TableHead>
                     ))}
                     <TableHead className="pr-4 text-right text-xs font-semibold uppercase tracking-wide text-high-emphasis">
-                      Actions
+                      {t("common:ACTIONS")}
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -117,13 +173,9 @@ export function SecretList() {
                         <TableCell colSpan={6} className="p-0">
                           <EmptyState
                             className="border-0 shadow-none"
-                            icon={hasFilters ? SearchX : KeyRound}
-                            title={hasFilters ? "No matching secrets" : "No secrets yet"}
-                            description={
-                              hasFilters
-                                ? "Try a different search or clear the filters."
-                                : "Create your first secret to get started."
-                            }
+                            icon={empty.icon}
+                            title={empty.title}
+                            description={empty.description}
                           />
                         </TableCell>
                       </TableRow>
@@ -140,7 +192,6 @@ export function SecretList() {
                   page={queryParams.secretPage}
                   pageSize={queryParams.secretPageSize}
                   totalCount={totalCount}
-                  pageSizeOptions={[10, 20, 50]}
                   onChange={setPage}
                   onPageSizeChange={setPageSize}
                 />

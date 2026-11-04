@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { Button } from "@/components/ui-kits/button/button";
 import {
   Dialog,
@@ -19,10 +20,11 @@ export const AffectedPermissionsDialog = ({
   onOpenChange,
   open,
 }: PermissionDialogProps) => {
+  const { t } = useT("os.idp.roles");
   const permissionMap = useRoleDetailsStore((state) => state.permissionMap);
   const changePermissionSelection = useRoleDetailsStore((state) => state.changePermissionSelection);
-  const title = `Review Permission Changes`;
-  const description = `The following permissions depend on this permission. Changing it may impact their functionality. Please review carefully`;
+  const title = t("AFFECTED_DEPENDENTS_DIALOG.TITLE");
+  const description = t("AFFECTED_DEPENDENTS_DIALOG.DESCRIPTION");
   const permissionSeverity = useMemo(() => {
     return PERMISSION_SEVERITY_OPTIONS.find(
       (option) => option.value === permission.permissionSeverity,
@@ -49,7 +51,7 @@ export const AffectedPermissionsDialog = ({
               <div
                 key={`parent-${parent?.itemId}`}
                 className={cn(
-                  "flex items-center justify-between gap-3 rounded-md border p-3 cursor-pointer [&_*]:cursor-[inherit]",
+                  "flex items-center justify-between gap-3 rounded-md border p-3 cursor-pointer **:cursor-[inherit]",
                 )}
               >
                 <label
@@ -62,7 +64,7 @@ export const AffectedPermissionsDialog = ({
                       <h5>{parent?.name}</h5>
                     </div>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      {parent?.description || "No description available."}
+                      {parent?.description || t("AFFECTED_DEPENDENTS_DIALOG.NO_DESCRIPTION")}
                     </p>
                   </div>
                   <div className="md:self-center space-x-2">
@@ -86,9 +88,9 @@ export const AffectedPermissionsDialog = ({
         </ScrollArea>
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
+            <Button variant="outline">{t("common:CANCEL")}</Button>
           </DialogClose>
-          <Button onClick={onSaveClick}>Save</Button>
+          <Button onClick={onSaveClick}>{t("common:SAVE")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

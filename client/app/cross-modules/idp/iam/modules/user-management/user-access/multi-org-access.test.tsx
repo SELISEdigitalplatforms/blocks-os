@@ -8,7 +8,8 @@ vi.mock("@/components/ui-kits/tooltip/tooltip", () => ({
   TooltipContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 
@@ -208,7 +209,7 @@ describe("MultiOrgAccess", () => {
     await waitFor(() => expect(screen.queryByTestId("remove-membership")).toBeNull());
   });
 
-  it("disables revoke access for the default organization", () => {
+  it("allows revoking access from the default organization", () => {
     h.userResult = {
       data: {
         data: {
@@ -229,6 +230,6 @@ describe("MultiOrgAccess", () => {
     expect(
       (screen.getByLabelText(/Revoke user's access from Default/i) as HTMLButtonElement)
         .disabled,
-    ).toBe(true);
+    ).toBe(false);
   });
 });

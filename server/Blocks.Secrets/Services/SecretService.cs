@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
@@ -190,24 +191,24 @@ public sealed partial class SecretService : ISecretService
 
     private async Task CompensateAsync(SecretCallerContext caller, IReadOnlyList<Secret> created)
     {
-        foreach (var secret in created)
+        foreach (var secretId in created.Select(secret => secret.ItemId))
         {
             try
             {
-                await _repository.HardDeleteAsync(caller.TenantId, secret.ItemId, CancellationToken.None).ConfigureAwait(false);
-                await _valueStore.DeleteAsync(secret.ItemId, CancellationToken.None).ConfigureAwait(false);
+                await _repository.HardDeleteAsync(caller.TenantId, secretId, CancellationToken.None).ConfigureAwait(false);
+                await _valueStore.DeleteAsync(secretId, CancellationToken.None).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex,
-                    "Could not roll back secret {SecretId} after a failed batch. It may need manual removal.", secret.ItemId);
+                    "Could not roll back secret {SecretId} after a failed batch. It may need manual removal.", secretId);
 
                 await _audit.RecordAsync(
                     caller,
                     SecretAuditActions.VaultOrphan,
                     outcome: SecretAuditOutcomes.Failed,
                     reason: SecretAuditReasons.CleanupFailed,
-                    secretId: secret.ItemId,
+                    secretId: secretId,
                     cancellationToken: CancellationToken.None).ConfigureAwait(false);
             }
         }
@@ -400,6 +401,8 @@ public sealed partial class SecretService : ISecretService
         }
     }
 
+    [SuppressMessage("Major Code Smell", "S2139:Exceptions should be either logged or rethrown but not both",
+        Justification = "The log records that the vault value is already rotated while its metadata is not, with the secret id, for reconciliation; no outer handler knows that. The original exception type must reach callers unchanged (SecretExceptionFilter mapping, cancellation, tests).")]
     public async Task RotateAsync(string secretId, RotateSecretRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -480,6 +483,90 @@ public sealed partial class SecretService : ISecretService
 
         await _repository.ReplaceAsync(secret, cancellationToken).ConfigureAwait(false);
         await _audit.RecordAsync(caller, SecretAuditActions.Restore, secret, cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <remarks>
+    /// Vault first, metadata second. If the metadata removal fails the secret is still listed as
+    /// deleted with no value behind it, and purging again finishes the job (an absent value is a
+    /// no-op). The reverse order could strand a value nothing points at.
+    /// <para>
+    /// Only a deleted secret can be purged, so the soft delete stays the undo window. Unlike the
+    /// soft delete, this cannot be taken back, so the access list is enforced as for a mutation.
+    /// </para>
+    /// </remarks>
+    public async Task PurgeAsync(string secretId, CancellationToken cancellationToken = default)
+    {
+        var caller = _authorization.ResolveContext();
+        var secret = await LoadAsync(caller, secretId, cancellationToken).ConfigureAwait(false);
+
+        EnsureTransitionAllowed(secret, "permanently delete", [SecretStatuses.Deleted]);
+
+        if (!caller.IsRoot && SecretTypes.HasAccessList(secret.Type))
+        {
+            var denial = CheckMutationAccess(caller, secret);
+            if (denial is not null)
+            {
+                await _audit.RecordAsync(
+                    caller,
+                    SecretAuditActions.AccessDenied,
+                    secret,
+                    SecretAuditOutcomes.Denied,
+                    denial,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                throw new SecretAccessDeniedException(denial);
+            }
+        }
+
+        var purgeRefused = false;
+
+        try
+        {
+            await _valueStore.PurgeAsync(secret.ItemId, cancellationToken).ConfigureAwait(false);
+        }
+        catch (SecretVaultException ex) when (ex.Operation == SecretVaultOperations.Purge)
+        {
+            // Deleted but not purged: unreadable, and the vault drops it when retention ends.
+            // Not a reason to keep the metadata — the user asked for the secret to be gone.
+            purgeRefused = true;
+        }
+        catch (SecretVaultException)
+        {
+            await _audit.RecordAsync(
+                caller,
+                SecretAuditActions.Purge,
+                secret,
+                SecretAuditOutcomes.Failed,
+                SecretAuditReasons.VaultFailure,
+                cancellationToken: CancellationToken.None).ConfigureAwait(false);
+            throw;
+        }
+
+        // Past the vault: the value is gone, so do not let a late cancellation leave the
+        // metadata behind half way through.
+        try
+        {
+            await _repository.HardDeleteAsync(caller.TenantId, secret.ItemId, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            await _audit.RecordAsync(
+                caller,
+                SecretAuditActions.Purge,
+                secret,
+                SecretAuditOutcomes.PartialFailure,
+                SecretAuditReasons.MetadataWriteFailed,
+                cancellationToken: CancellationToken.None).ConfigureAwait(false);
+            throw;
+        }
+
+        await _audit.RecordAsync(
+            caller,
+            SecretAuditActions.Purge,
+            secret,
+            purgeRefused ? SecretAuditOutcomes.PartialFailure : SecretAuditOutcomes.Success,
+            purgeRefused ? SecretAuditReasons.VaultPurgeFailed : null,
+            cancellationToken: CancellationToken.None).ConfigureAwait(false);
     }
 
     public async Task UpdateAccessAsync(string secretId, SecretAccess access, CancellationToken cancellationToken = default)

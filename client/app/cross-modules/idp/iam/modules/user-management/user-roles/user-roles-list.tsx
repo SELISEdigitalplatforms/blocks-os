@@ -1,5 +1,6 @@
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { X } from "lucide-react";
+import { useT } from "@seliseblocks/genesis-os";
 
 import { IRole } from "@blocks-idp/iam/models/role";
 
@@ -15,7 +16,7 @@ const LoadingSkelton = () => (
   <div className="grid w-full grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
     {Array.from({ length: 5 }).map((_, index) => (
       <div key={index} className="col-span-1 flex items-center py-2">
-        <div className="flex w-full items-center rounded-2xl border border-border px-4 py-2 shadow-sm">
+        <div className="flex w-full items-center rounded-2xl border border-border px-4 py-2 shadow-xs">
           <div className="flex min-w-0 flex-1 flex-col space-y-1">
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-3 w-16" />
@@ -29,11 +30,9 @@ const LoadingSkelton = () => (
   </div>
 );
 
-export const UserRolesList = ({
-  roles,
-  isLoading,
-  onRemoveRole,
-}: UserRolesListProps) => {
+export const UserRolesList = ({ roles, isLoading, onRemoveRole }: UserRolesListProps) => {
+  const { t } = useT("os.idp.users");
+
   if (isLoading) return <LoadingSkelton />;
 
   return (
@@ -43,12 +42,9 @@ export const UserRolesList = ({
           roles.length > 0 &&
           roles.map((item) => (
             <div key={item.itemId} className="col-span-1 flex items-center py-2">
-              <div className="flex w-full items-center rounded-2xl border border-border px-4 py-2 shadow-sm">
+              <div className="flex w-full items-center rounded-2xl border border-border px-4 py-2 shadow-xs">
                 <div className="flex min-w-0 flex-1 flex-col">
-                  <span
-                    className="truncate text-base font-medium leading-tight"
-                    title={item.name}
-                  >
+                  <span className="truncate text-base font-medium leading-tight" title={item.name}>
                     {item.name}
                   </span>
                   <span
@@ -63,7 +59,7 @@ export const UserRolesList = ({
                     type="button"
                     className="flex h-7 w-7 items-center justify-center rounded-md bg-secondary transition-colors hover:bg-secondary/80"
                     onClick={() => onRemoveRole(item.slug)}
-                    aria-label="Remove role"
+                    aria-label={t("USER_ROLES_LIST.REMOVE_ROLE")}
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -74,7 +70,7 @@ export const UserRolesList = ({
       </div>
       {roles && roles.length === 0 && (
         <div className="flex h-24 items-center justify-center text-muted-foreground">
-          No roles found
+          {t("USER_ROLES_LIST.NO_ROLES_FOUND")}
         </div>
       )}
     </>

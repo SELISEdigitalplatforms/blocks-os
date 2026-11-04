@@ -1,9 +1,11 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { FilterControls } from "@/components/filter-toolbar";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { cn } from "@/lib/utils";
 import { ArchiveAction } from "@blocks-idp/iam/components/archive-action";
+import { useSystemOnlyReason } from "@blocks-idp/iam/hooks/use-grant-scope";
 import { useDeletePermission } from "@blocks-idp/iam/hooks/use-permission";
 import {
   IPermission,
@@ -17,9 +19,6 @@ import { Link, useNavigate } from "react-router";
 import { usePermissionsSortQuaryParams } from "./permissions-filter-toolbar";
 
 type PermissionTableProps = { permissions: IPermission[]; isLoading: boolean };
-
-/** Built-ins ship with the platform; the tenant owns neither their definition nor their lifecycle. */
-const BUILT_IN_ARCHIVE_REASON = "Built-in permissions cannot be deleted.";
 
 const LoadingSkelton = () => (
   <div className="flex flex-col gap-3">
@@ -40,8 +39,10 @@ export const PermissionSeverityBadge = ({ severity }: { severity: PermissionSeve
 };
 
 const PermissionRowActions = ({ row }: { row: IPermission }) => {
+  const { t } = useT("os.idp.permissions");
   const { mutateAsync, isPending } = useDeletePermission();
   const scoped = useScopedPath();
+  const systemOnlyReason = useSystemOnlyReason();
   return (
     <div
       className="flex justify-end"
@@ -55,7 +56,7 @@ const PermissionRowActions = ({ row }: { row: IPermission }) => {
             size="icon"
             className="rounded-full"
             variant="ghost"
-            aria-label={`Edit permission ${row.name}`}
+            aria-label={t("PERMISSIONS_LIST.EDIT_ARIA", { name: row.name })}
           >
             <Pencil className="h-4 w-4" />
           </Button>
@@ -67,13 +68,16 @@ const PermissionRowActions = ({ row }: { row: IPermission }) => {
         itemId={row.itemId}
         archive={mutateAsync}
         isPending={isPending}
-        disabledReason={row.isBuiltIn ? BUILT_IN_ARCHIVE_REASON : undefined}
+        disabledReason={
+          row.isBuiltIn ? t("PERMISSIONS_LIST.BUILT_IN_ARCHIVE_REASON") : systemOnlyReason
+        }
       />
     </div>
   );
 };
 
 export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps) => {
+  const { t } = useT("os.idp.permissions");
   const { sortQueryParams, setSortQueryParams } = usePermissionsSortQuaryParams();
   const navigate = useNavigate();
   const scoped = useScopedPath();
@@ -84,7 +88,7 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
     return (
       <div className="flex min-h-[420px] flex-col items-center justify-center gap-3 rounded-xl py-16 text-center text-sm text-muted-foreground">
         <KeyRound className="h-6 w-6" />
-        No permission found. Please create new permission.
+        {t("PERMISSIONS_LIST.EMPTY")}
       </div>
     );
   }
@@ -95,37 +99,43 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
         <div className="hidden grid-cols-[minmax(220px,1fr)_110px_110px_110px_110px_88px] items-center gap-4 px-4 md:grid">
           <div className="flex min-w-0 items-center gap-4">
             <FilterControls.SortHeader
-              label="Name"
+              label={t("common:NAME")}
               id="Name"
               value={sortQueryParams}
               onChange={setSortQueryParams}
             />
             <FilterControls.SortHeader
-              label="Resource"
+              label={t("PERMISSIONS_LIST.COLUMN_RESOURCE")}
               id="Resource"
               value={sortQueryParams}
               onChange={setSortQueryParams}
             />
           </div>
-          <span className="font-bold text-medium-emphasis">Source</span>
+          <span className="font-bold text-medium-emphasis">
+            {t("PERMISSIONS_LIST.COLUMN_SOURCE")}
+          </span>
           <FilterControls.SortHeader
-            label="Type"
+            label={t("common:TYPE")}
             id="Type"
             value={sortQueryParams}
             onChange={setSortQueryParams}
           />
-          <span className="font-bold text-medium-emphasis">Severity</span>
-          <span className="font-bold text-medium-emphasis">No of Roles</span>
+          <span className="font-bold text-medium-emphasis">
+            {t("PERMISSIONS_LIST.COLUMN_SEVERITY")}
+          </span>
+          <span className="font-bold text-medium-emphasis">
+            {t("PERMISSIONS_LIST.COLUMN_ROLES")}
+          </span>
           <span />
         </div>
 
         {permissions.map((permission) => {
           const resourceName = ResourceType[permission.type] as string;
           return (
-            <div
+            <div // NOSONAR: row opens details by click/Enter/Space; it holds action buttons, so it can't be a <button>
               key={permission.itemId}
               role="button"
-              aria-label={`Open permission ${permission.name}`}
+              aria-label={t("PERMISSIONS_LIST.OPEN_ARIA", { name: permission.name })}
               tabIndex={0}
               onClick={() => openPermission(permission.itemId)}
               onKeyDown={(event) => {
@@ -134,7 +144,7 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
                   openPermission(permission.itemId);
                 }
               }}
-              className="group flex cursor-pointer flex-col gap-3 rounded-xl border bg-card p-4 outline-none transition-colors hover:border-primary/30 focus-visible:border-primary/30 md:grid md:grid-cols-[minmax(220px,1fr)_110px_110px_110px_110px_88px] md:items-center md:gap-4"
+              className="group flex cursor-pointer flex-col gap-3 rounded-xl border bg-card p-4 outline-hidden transition-colors hover:border-primary/30 focus-visible:border-primary/30 md:grid md:grid-cols-[minmax(220px,1fr)_110px_110px_110px_110px_88px] md:items-center md:gap-4"
             >
               <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -153,24 +163,31 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
                 </div>
               </div>
               <div className="flex items-center justify-between gap-3 md:block">
-                <span className="text-xs text-muted-foreground md:hidden">Source</span>
+                <span className="text-xs text-muted-foreground md:hidden">
+                  {t("PERMISSIONS_LIST.COLUMN_SOURCE")}
+                </span>
                 <Badge variant={permission.isBuiltIn ? "secondary" : "default"} className="w-fit">
-                  {permission.isBuiltIn ? "Built In" : "Custom"}
+                  {permission.isBuiltIn
+                    ? t("PERMISSIONS_LIST.BADGE_BUILT_IN")
+                    : t("PERMISSIONS_LIST.BADGE_CUSTOM")}
                 </Badge>
               </div>
               <div className="flex min-w-0 items-center justify-between gap-3 text-sm text-muted-foreground md:block">
-                <span className="text-xs md:hidden">Type</span>
+                <span className="text-xs md:hidden">{t("common:TYPE")}</span>
                 <span className="block truncate">{resourceName}</span>
               </div>
               <div className="flex items-center justify-between gap-3 md:block">
-                <span className="text-xs text-muted-foreground md:hidden">Severity</span>
+                <span className="text-xs text-muted-foreground md:hidden">
+                  {t("PERMISSIONS_LIST.COLUMN_SEVERITY")}
+                </span>
                 <PermissionSeverityBadge severity={permission.permissionSeverity} />
               </div>
               <div className="flex items-center justify-between gap-3 md:block">
-                <span className="text-xs text-muted-foreground md:hidden">No of Roles</span>
+                <span className="text-xs text-muted-foreground md:hidden">
+                  {t("PERMISSIONS_LIST.COLUMN_ROLES")}
+                </span>
                 <Badge variant="secondary" className="w-fit">
-                  <span>{permission.roles.length}</span>&nbsp;
-                  {permission.roles.length === 1 ? "role" : "roles"}
+                  {t("PERMISSIONS_LIST.ROLE_COUNT", { count: permission.roles.length })}
                 </Badge>
               </div>
               <PermissionRowActions row={permission} />

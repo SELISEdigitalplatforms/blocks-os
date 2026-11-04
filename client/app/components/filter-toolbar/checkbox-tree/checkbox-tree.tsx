@@ -11,6 +11,7 @@ import { Input } from "@/components/ui-kits/input/input";
 import { ChevronRight, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 
 export interface CheckboxTreeOption {
   label: string;
@@ -60,6 +61,7 @@ export function CheckboxTree({
   onChange,
   value: selectedValues,
 }: CheckboxTreeProps) {
+  const { t } = useT("os.shared");
   const [search, setSearch] = useState("");
   const [expandedOverrides, setExpandedOverrides] = useState<Record<string, boolean>>({});
   const [buttonRef, popoverWidth] = usePopoverWidth();
@@ -99,10 +101,10 @@ export function CheckboxTree({
             const child = option.children?.find((item) => item.value === selected[0]);
             return `${option.label} · ${child?.label ?? selected[0]}`;
           }
-          return `${option.label} · ${selected.length} selected`;
+          return `${option.label} · ${t("CHECKBOX_TREE.SELECTED_COUNT", { count: selected.length })}`;
         })
         .filter((item): item is string => item !== null),
-    [options, value],
+    [options, value, t],
   );
 
   const searchedOptions = useMemo(() => {
@@ -135,7 +137,7 @@ export function CheckboxTree({
                 <div className="flex space-x-1">
                   {selectedBadges.length > 2 ? (
                     <Badge variant="secondary" className="rounded-sm px-1 font-normal">
-                      {selectedBadges.length} selected
+                      {t("CHECKBOX_TREE.SELECTED_COUNT", { count: selectedBadges.length })}
                     </Badge>
                   ) : (
                     selectedBadges.map((badge) => (
@@ -162,7 +164,7 @@ export function CheckboxTree({
         <div className="flex items-center border-b px-3">
           <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
           <Input
-            className="flex h-11 w-full rounded-md border-none bg-transparent px-0 py-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-11 w-full rounded-md border-none bg-transparent px-0 py-3 text-sm outline-hidden placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
             placeholder={label}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -238,7 +240,9 @@ export function CheckboxTree({
             })}
           </div>
         ) : (
-          <div className="py-6 text-center text-sm !text-popover-foreground">No results found.</div>
+          <div className="py-6 text-center text-sm text-popover-foreground!">
+            {t("CHECKBOX_TREE.NO_RESULTS_FOUND")}
+          </div>
         )}
       </PopoverContent>
     </Popover>

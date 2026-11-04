@@ -66,6 +66,21 @@ describe("EmailUsageFilterToolbar", () => {
     expect(screen.getByTestId("filter-keys").textContent).not.toContain("status");
   });
 
+  it("offers a configuration filter for inbound usage only", () => {
+    const configurations = [{ itemId: "cfg-1", name: "Support inbox" }];
+
+    const { unmount } = render(<EmailUsageFilterToolbar isInbound configurations={configurations} />);
+    expect(screen.getByTestId("filter-keys").textContent).toContain("configurationId");
+    const filters = h.toolbarProps!.filters as Array<{ key: string; props?: { options?: unknown } }>;
+    expect(filters.find((f) => f.key === "configurationId")!.props!.options).toEqual([
+      { label: "Support inbox", value: "cfg-1" },
+    ]);
+    unmount();
+
+    render(<EmailUsageFilterToolbar isInbound={false} configurations={configurations} />);
+    expect(screen.getByTestId("filter-keys").textContent).not.toContain("configurationId");
+  });
+
   it("updates a simple filter value and resets to the first page", () => {
     render(<EmailUsageFilterToolbar isInbound={false} />);
     fireEvent.click(screen.getByTestId("change-search"));

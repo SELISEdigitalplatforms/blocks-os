@@ -12,7 +12,8 @@ const { mutateAsync, showErrorToast, showSuccessToast, useGetProjects } = vi.hoi
 if (!Element.prototype.hasPointerCapture) Element.prototype.hasPointerCapture = () => false;
 if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => {};
 
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedTenantGroup: "group-1" }),
 }));
 

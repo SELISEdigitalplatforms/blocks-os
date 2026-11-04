@@ -12,7 +12,7 @@ import {
 } from "@/components/ui-kits/select/select";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
-import { EMAIL_TABS, type EmailTabKey } from "@blocks-communication/mail/constants/email-tabs";
+import { EMAIL_TAB_KEYS, type EmailTabKey } from "@blocks-communication/mail/constants/email-tabs";
 import { EmailTemplateList } from "@blocks-communication/mail/email/email-service-table/email-template-list";
 import { EmailUsageList } from "@blocks-communication/mail/email/email-usage/email-usage-list";
 import { useGetEmailConfigs } from "@blocks-communication/mail/hooks/use-email-config";
@@ -22,6 +22,7 @@ import { CirclePlus } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useMemo } from "react";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
+import { useT } from "@seliseblocks/genesis-os";
 import { useEmailUsageFilterQueryParams } from "../email-usage/email-usage-filter-toolbar";
 import { useQueryState } from "nuqs";
 import {
@@ -30,32 +31,10 @@ import {
   useTemplatesSortQueryParams,
 } from "./template-filter-toolbar";
 
-const EMAIL_MANAGEMENT_TABS: { value: EmailTabKey; label: string }[] = [
-  { value: "Emailstemplates", label: EMAIL_TABS.Emailstemplates.label },
-  { value: "Inbox", label: EMAIL_TABS.Inbox.label },
-  { value: "Outgoingmails", label: EMAIL_TABS.Outgoingmails.label },
-];
-
-const EMAIL_MANAGEMENT_TAB_META: Record<EmailTabKey, { title: string; description: string }> = {
-  Emailstemplates: {
-    title: "Email Templates",
-    description:
-      "Create, review, and manage reusable email templates for application communication.",
-  },
-  Inbox: {
-    title: "Incoming Mails",
-    description: "Review received email activity, delivery details, and message history.",
-  },
-  Outgoingmails: {
-    title: "Outgoing Mails",
-    description: "Monitor sent email activity, delivery status, and failure details.",
-  },
-};
-
 const DEFAULT_EMAIL_TAB: EmailTabKey = "Emailstemplates";
 
 const isEmailTabKey = (value: string | null): value is EmailTabKey =>
-  EMAIL_MANAGEMENT_TABS.some((tab) => tab.value === value);
+  value !== null && (EMAIL_TAB_KEYS as readonly string[]).includes(value);
 
 const LoadingSkelton = () => {
   return (
@@ -70,6 +49,27 @@ interface EmailServiceTableProps {
   onRowClick?: (id: string | number) => void;
 }
 export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
+  const { t } = useT("os.communication.mail");
+  const tabLabels: Record<EmailTabKey, string> = {
+    Emailstemplates: t("EMAIL_SERVICE_TABLE.TAB_TEMPLATES"),
+    Inbox: t("EMAIL_SERVICE_TABLE.TAB_INCOMING_MAILS"),
+    Outgoingmails: t("EMAIL_SERVICE_TABLE.TAB_OUTGOING_MAILS"),
+  };
+  const tabMeta: Record<EmailTabKey, { title: string; description: string }> = {
+    Emailstemplates: {
+      title: t("EMAIL_SERVICE_TABLE.TITLE_TEMPLATES"),
+      description: t("EMAIL_SERVICE_TABLE.DESCRIPTION_TEMPLATES"),
+    },
+    Inbox: {
+      title: t("EMAIL_SERVICE_TABLE.TAB_INCOMING_MAILS"),
+      description: t("EMAIL_SERVICE_TABLE.DESCRIPTION_INCOMING_MAILS"),
+    },
+    Outgoingmails: {
+      title: t("EMAIL_SERVICE_TABLE.TAB_OUTGOING_MAILS"),
+      description: t("EMAIL_SERVICE_TABLE.DESCRIPTION_OUTGOING_MAILS"),
+    },
+  };
+  const tabs = EMAIL_TAB_KEYS.map((value) => ({ value, label: tabLabels[value] }));
   const { queryParams, setQueryParams } = useTemplatesFilterQueryParams();
   const { sortQueryParams } = useTemplatesSortQueryParams();
   const { isLoading, data } = useGetEmailTemplates(
@@ -90,7 +90,7 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
     defaultValue: DEFAULT_EMAIL_TAB,
   });
   const activeTab: EmailTabKey = isEmailTabKey(emailTab) ? emailTab : DEFAULT_EMAIL_TAB;
-  const activeTabMeta = EMAIL_MANAGEMENT_TAB_META[activeTab];
+  const activeTabMeta = tabMeta[activeTab];
 
   const handleTabChange = (value: string) => {
     void setEmailTab(value);
@@ -128,11 +128,14 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
                   value={activeTab}
                   onValueChange={(value) => handleTabChange(value as EmailTabKey)}
                 >
-                  <SelectTrigger className="w-56" aria-label="Email management section">
+                  <SelectTrigger
+                    className="w-56"
+                    aria-label={t("EMAIL_SERVICE_TABLE.SECTION_ARIA_LABEL")}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {EMAIL_MANAGEMENT_TABS.map(({ value, label }) => (
+                    {tabs.map(({ value, label }) => (
                       <SelectItem key={value} value={value}>
                         {label}
                       </SelectItem>
@@ -143,7 +146,7 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
 
               <div className="hidden items-center md:flex">
                 <TabsList className="h-[42px] bg-blocks-primary-shades-300">
-                  {EMAIL_MANAGEMENT_TABS.map(({ value, label }) => (
+                  {tabs.map(({ value, label }) => (
                     <TabsTrigger key={value} value={value} className="h-8 px-4 text-sm">
                       {label}
                     </TabsTrigger>
@@ -161,7 +164,9 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
                   onClick={() => navigate(scoped("email-management/new-communication"))}
                 >
                   <CirclePlus className="h-5 w-5 lg:mr-2" />
-                  <span className="sr-only lg:not-sr-only">Add Template</span>
+                  <span className="sr-only lg:not-sr-only">
+                    {t("EMAIL_SERVICE_TABLE.ADD_TEMPLATE")}
+                  </span>
                 </Button>
               </div>
             ) : null}
@@ -199,7 +204,6 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
                     page={queryParams.pageNumber}
                     pageSize={queryParams.pageSize}
                     totalCount={data?.totalCount || 0}
-                    pageSizeOptions={[10]}
                     onChange={onPageChangeHandler}
                   />
                 </div>

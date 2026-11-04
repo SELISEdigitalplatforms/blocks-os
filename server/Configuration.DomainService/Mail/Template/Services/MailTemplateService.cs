@@ -1,9 +1,6 @@
 using Blocks.Genesis;
-using Configuration.DomainService.Mail.Entities;
-using Configuration.DomainService.Mail.Template.Models;
 using FluentValidation;
-using Microsoft.Extensions.Logging;
-using System.Text.Json;
+using Blocks.Genesis.Entities.Os;
 
 namespace Configuration.DomainService.Mail.Template.Services
 {
@@ -11,19 +8,16 @@ namespace Configuration.DomainService.Mail.Template.Services
     {
         private readonly IValidator<SaveMailTemplateRequest> _validator;
         private readonly IMailTemplateRepository _templateRepository;
-        private readonly IHttpService _httpService;
-        private readonly ILogger<MailTemplateService> _logger;
+        private readonly IMailTemplateHtmlChecker _htmlChecker;
 
         public MailTemplateService(
             IValidator<SaveMailTemplateRequest> validator,
             IMailTemplateRepository templateRepository,
-            IHttpService httpService,
-            ILogger<MailTemplateService> logger)
+            IMailTemplateHtmlChecker htmlChecker)
         {
             _validator = validator;
             _templateRepository = templateRepository;
-            _httpService = httpService;
-            _logger = logger;
+            _htmlChecker = htmlChecker;
         }
 
         public async Task<BaseMutationResponse> SaveTemplateAsync(SaveMailTemplateRequest template)
@@ -52,6 +46,12 @@ namespace Configuration.DomainService.Mail.Template.Services
                 };
             }
 
+            // Checked on the merged template, so a body-only update keeps a stored subject.
+            if (IsSubjectMissing(repoTemplate))
+            {
+                return SubjectRequiredResponse();
+            }
+
             await _templateRepository.SaveAsync(repoTemplate);
 
             return new BaseMutationResponse { IsSuccess = true, ItemId = repoTemplate.ItemId };
@@ -64,7 +64,7 @@ namespace Configuration.DomainService.Mail.Template.Services
 
         public async Task<EmailTemplate?> GetAsync(GetMailTemplateRequest request)
         {
-            return await _templateRepository.GetByIdAsync(request.ItemId);
+            return await _templateRepository.GetForViewAsync(request.ItemId);
         }
 
         public async Task<BaseMutationResponse> CloneTemplateAsync(CloneMailTemplateRequest request)
@@ -76,6 +76,18 @@ namespace Configuration.DomainService.Mail.Template.Services
                 {
                     IsSuccess = false,
                     Errors = new Dictionary<string, string> { { "Template", "Template not found" } }
+                };
+            }
+
+            // A clone is a new template, so its body meets the same rules as a saved one; an old
+            // template saved before the rules existed cannot be copied as it is.
+            var bodyProblem = _htmlChecker.FindProblem(repoTemplate.TemplateBody);
+            if (bodyProblem != null)
+            {
+                return new BaseMutationResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string> { { nameof(EmailTemplate.TemplateBody), bodyProblem } }
                 };
             }
 
@@ -101,6 +113,11 @@ namespace Configuration.DomainService.Mail.Template.Services
                     : repoTemplate.TemplateSubject
             };
 
+            if (IsSubjectMissing(clone))
+            {
+                return SubjectRequiredResponse();
+            }
+
             await _templateRepository.SaveAsync(clone);
 
             return new BaseMutationResponse { IsSuccess = true, ItemId = clone.ItemId };
@@ -123,81 +140,19 @@ namespace Configuration.DomainService.Mail.Template.Services
             return new BaseMutationResponse { IsSuccess = true };
         }
 
-        public async Task<BeeLoginResponse?> GetTemplatePluginTokenAsync(string provider, string uId)
-        {
-            _logger.LogInformation("GetTemplatePluginTokenAsync: started for provider {Provider}", provider);
+        // Logic cannot send a mail whose template has no subject, so none is stored without one.
+        private static bool IsSubjectMissing(EmailTemplate template) =>
+            string.IsNullOrWhiteSpace(template.TemplateSubject);
 
-            try
+        private static BaseMutationResponse SubjectRequiredResponse() =>
+            new()
             {
-                if (string.IsNullOrWhiteSpace(uId))
+                IsSuccess = false,
+                Errors = new Dictionary<string, string>
                 {
-                    throw new ArgumentException("UID cannot be empty.", nameof(uId));
+                    { nameof(EmailTemplate.TemplateSubject), "Subject is required." }
                 }
-
-                var pluginConfig = await _templateRepository.GetPluginConfigAsync(provider);
-                if (pluginConfig == null)
-                {
-                    _logger.LogError("No template plugin config found for provider {Provider}", provider);
-                    return null;
-                }
-
-                // The stored Authorization header belongs to the config document, not to
-                // this outbound call — the credentials travel in the payload instead.
-                var headers = pluginConfig.HttpHeders?
-                    .Where(header => !header.Key.Equals("Authorization", StringComparison.OrdinalIgnoreCase))
-                    .ToDictionary(header => header.Key, header => header.Value)
-                    ?? new Dictionary<string, string>();
-
-                var payload = PreparePayload(pluginConfig, uId);
-
-                var (response, errorMessage) = await _httpService.SendRequest<BeeLoginResponse>(
-                    new HttpMethod(pluginConfig.HttpMethod ?? "POST"),
-                    pluginConfig.RequestUri,
-                    payload,
-                    pluginConfig.ContentType,
-                    headers);
-
-                if (response is null)
-                {
-                    _logger.LogError(
-                        "Template plugin request failed. Provider: {Provider}, Error: {Error}",
-                        provider,
-                        errorMessage);
-
-                    return null;
-                }
-
-                return response;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "GetTemplatePluginTokenAsync failed for provider {Provider}", provider);
-                return null;
-            }
-        }
-
-        private static object PreparePayload(TemplatePluginConfig pluginConfig, string uid)
-        {
-            if (pluginConfig.ContentType != null &&
-                pluginConfig.ContentType.Equals("application/x-www-form-urlencoded", StringComparison.OrdinalIgnoreCase))
-            {
-                var formPayload = JsonSerializer.Deserialize<Dictionary<string, string>>(pluginConfig.Payload ?? "{}")
-                    ?? new Dictionary<string, string>();
-
-                // Always overwrite the configured UID.
-                formPayload["uid"] = uid;
-
-                return formPayload;
-            }
-
-            var jsonPayload = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(pluginConfig.Payload ?? "{}")
-                ?? new Dictionary<string, JsonElement>();
-
-            // Always overwrite the configured UID.
-            jsonPayload["uid"] = JsonSerializer.SerializeToElement(uid);
-
-            return jsonPayload;
-        }
+            };
 
         private async Task<EmailTemplate?> MapIntoRepoTemplateAsync(SaveMailTemplateRequest template)
         {

@@ -27,7 +27,8 @@ vi.mock("@blocks-idp/iam/hooks/use-organization", () => ({
   },
   useGetOrganizationConfig: () => h.configResult,
 }));
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: h.selectedProject }),
 }));
 vi.mock("./organizations-filter-toolbar", () => ({

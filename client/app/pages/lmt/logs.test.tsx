@@ -34,7 +34,11 @@ vi.mock("@blocks-lmt/components", () => ({
     );
   },
 }));
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@blocks-ai/components/lmt-query-agent/lmt-query-agent-sheet", () => ({
+  LMTQueryAgentSheet: () => <button type="button">Blocks Agent</button>,
+}));
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 vi.mock("nuqs", () => ({
@@ -49,6 +53,17 @@ describe("LogsRoute", () => {
     render(<LogsRoute />);
 
     expect(h.viewerProps?.projectKey).toBe("tenant-1");
+  });
+
+  /**
+   * The agent sits in the page header beside the title, where Tracing's does, rather than in
+   * the viewer's own list header.
+   */
+  it("hosts the agent in the page header instead of the list header", () => {
+    render(<LogsRoute />);
+
+    expect(screen.getByRole("button", { name: /blocks agent/i })).toBeTruthy();
+    expect(h.viewerProps?.showAgent).toBe(false);
   });
 
   beforeEach(() => {

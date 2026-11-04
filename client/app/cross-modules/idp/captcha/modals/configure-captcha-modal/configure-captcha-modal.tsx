@@ -36,13 +36,21 @@ import {
 } from "@/components/ui-kits/select/select";
 import { Button } from "@/components/ui-kits/button/button";
 import { ReactNode, useState } from "react";
+import { isBrokenLinkedSecretStatus } from "@/cross-modules/secrets/models/secret.model";
+import { useT } from "@seliseblocks/genesis-os";
 type ConfigureCaptchaModalProps = {
   configuration?: ICaptchaConfig | null;
   children: ReactNode;
 };
 export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCaptchaModalProps) => {
+  const { t } = useT("os.idp.captcha");
   const [open, setOpen] = useState<boolean>(false);
   const isEditing = !!configuration;
+  // Repair mode: the linked secret is archived or missing, so saving needs a new value, which
+  // the server stores as a new secret and points this configuration at.
+  const secretStatus = configuration?.secretStatus;
+  const brokenStatus = isBrokenLinkedSecretStatus(secretStatus) ? secretStatus : null;
+  const needsNewSecret = !!brokenStatus;
   const defaultValues: ConfigureCaptchaFormValues = configuration
     ? {
         provider: configuration.provider,
@@ -54,7 +62,7 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
     : ConfigureCaptchaFormDefaultValue;
   const form = useForm({
     defaultValues,
-    resolver: zodResolver(buildConfigureCaptchaFormSchema(isEditing)),
+    resolver: zodResolver(buildConfigureCaptchaFormSchema(isEditing, needsNewSecret)),
     mode: "onChange",
   });
   const {
@@ -74,7 +82,9 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
         ...(values.captchaSecret ? { captchaSecret: values.captchaSecret } : {}),
       });
       showSuccessToast({
-        description: configuration ? "Captcha updated successfully" : "Captcha added successfully",
+        description: configuration
+          ? t("CONFIGURE_CAPTCHA_MODAL.UPDATED")
+          : t("CONFIGURE_CAPTCHA_MODAL.ADDED"),
       });
       form.reset();
       setOpen(false);
@@ -85,6 +95,9 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
     }
   };
   const ConfigureFormField = ConfigureGeneralCaptchaFormField;
+  let submitLabel = t("common:SAVE");
+  if (isPending) submitLabel = t("CONFIGURE_CAPTCHA_MODAL.SAVING");
+  else if (configuration) submitLabel = t("CONFIGURE_CAPTCHA_MODAL.UPDATE_CHANGES");
   return (
     <Dialog
       open={open}
@@ -98,8 +111,10 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
         <DialogHeader>
           <DialogTitle>
             {configuration
-              ? `Edit ${CAPTCHA_PROVIDERS[configuration.provider].label}`
-              : "Add Captcha Configuration"}{" "}
+              ? t("CONFIGURE_CAPTCHA_MODAL.TITLE_EDIT", {
+                  provider: CAPTCHA_PROVIDERS[configuration.provider].label,
+                })
+              : t("CONFIGURE_CAPTCHA_MODAL.TITLE_ADD")}
           </DialogTitle>
         </DialogHeader>
         <div className="mt-2">
@@ -111,12 +126,15 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Captcha Provider <span className="text-destructive">*</span>
+                      {t("CONFIGURE_CAPTCHA_MODAL.PROVIDER")}{" "}
+                      <span className="text-destructive">*</span>
                     </FormLabel>
                     <FormControl>
                       <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                          <SelectValue placeholder="Select configuration provider" />
+                        <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                          <SelectValue
+                            placeholder={t("CONFIGURE_CAPTCHA_MODAL.PROVIDER_PLACEHOLDER")}
+                          />
                         </SelectTrigger>
                         <SelectContent>
                           {Object.values(CAPTCHA_PROVIDERS).map((item) => (
@@ -131,16 +149,22 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
                   </FormItem>
                 )}
               />
-              <ConfigureFormField form={form} isEditing={isEditing} />
+              <ConfigureFormField form={form} isEditing={isEditing} brokenStatus={brokenStatus} />
               <ConfigureBlockCaptchaFormField form={form} />
               <DialogFooter className="mt-4">
                 <DialogTrigger asChild>
                   <Button variant="outline" size="sm">
-                    Cancel
+                    {t("common:CANCEL")}
                   </Button>
                 </DialogTrigger>
-                <Button size="sm" disabled={isPending || !isDirty || !isValid} type="submit">
-                  {isPending ? "Saving..." : configuration ? "Update Changes" : "Save"}
+                {/* In repair mode the button stays enabled so an empty submit can explain, inline,
+                    that a new secret is required — rather than sitting disabled with no reason. */}
+                <Button
+                  size="sm"
+                  disabled={isPending || (!needsNewSecret && (!isDirty || !isValid))}
+                  type="submit"
+                >
+                  {submitLabel}
                 </Button>
               </DialogFooter>
             </form>

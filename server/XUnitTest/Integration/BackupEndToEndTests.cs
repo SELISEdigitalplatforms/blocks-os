@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -6,7 +7,6 @@ using System.Threading.Tasks;
 using Blocks.Genesis;
 using Cloud.LmtService.Models.ArchiveAndDelete;
 using Cloud.LmtService.Models.Shared;
-using Cloud.LmtService.Repositories.ArchiveAndDelete;
 using Cloud.LmtService.Repositories.LogTraceBackup;
 using Cloud.LmtService.Repositories.Logs;
 using Cloud.LmtService.Repositories.Shared;
@@ -35,7 +35,10 @@ namespace XUnitTest.Integration
         private readonly Mock<ILogTraceBackupRepository> _backupRepository = new();
         private readonly Mock<IBlobStorage> _blobStorage = new();
         private readonly Mock<ILmtArchiveRestoreConfigurationRepository> _configRepository = new();
-        private readonly Dictionary<string, byte[]> _uploads = [];
+        // The upload phase runs several collections at once (bounded by MongoQueryMaxConcurrency),
+        // so SaveAsync is called concurrently. A plain Dictionary can silently drop one of two
+        // concurrent inserts, which made the two-tenant test miss a file that was uploaded.
+        private readonly ConcurrentDictionary<string, byte[]> _uploads = new();
 
         public BackupEndToEndTests(MongoIntegrationFixture fixture)
         {
@@ -72,7 +75,6 @@ namespace XUnitTest.Integration
                 NullLogger<ArchiveService>.Instance,
                 new LogRepository(secret.Object, _fixture.DbContextProvider, NullLogger<LogRepository>.Instance, config),
                 new TraceRepository(secret.Object, _fixture.DbContextProvider, NullLogger<TraceRepository>.Instance, config),
-                new Mock<IArchiveRepository>().Object,
                 _backupRepository.Object,
                 _blobStorage.Object,
                 _configRepository.Object);

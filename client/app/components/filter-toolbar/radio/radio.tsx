@@ -12,6 +12,7 @@ import { ChevronRight, Search } from "lucide-react";
 import { Input } from "@/components/ui-kits/input/input";
 import { ClearButton } from "../clear-button/clear-button";
 import { cn } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 
 interface RadioOption {
   label: string;
@@ -24,23 +25,32 @@ interface MultiSelectProps {
   value: string;
   onChange: (value: unknown) => void;
 }
+/** The option (or child option) matching `value`, with its parent's label for children. */
+function findSelected(
+  options: RadioOption[],
+  value: string,
+): { label: string; parentLabel?: string } | null {
+  for (const option of options) {
+    if (option.value === value) return { label: option.label };
+    const child = option.children?.find((item) => item.value === value);
+    if (child) return { label: child.label, parentLabel: option.label };
+  }
+  return null;
+}
+
 export function Radio({ label, options, onChange, value }: MultiSelectProps) {
+  const { t } = useT("os.shared");
   const [search, setSearch] = useState("");
   const [manuallyExpanded, setManuallyExpanded] = useState<string | null>(null);
   const [buttonRef, popoverWidth] = usePopoverWidth();
   const isMobile = useIsMobile();
-  const selected = useMemo(() => {
-    for (const option of options) {
-      if (option.value === value) return { label: option.label };
-      const child = option.children?.find((item) => item.value === value);
-      if (child) return { label: child.label, parentLabel: option.label };
-    }
-    return null;
-  }, [options, value]);
+  const selected = useMemo(() => findSelected(options, value), [options, value]);
   // The parent of the current selection is expanded by default, so reopening the
   // popover shows the active child instead of hiding it behind a collapsed row.
   const autoExpanded = useMemo(
-    () => options.find((option) => option.children?.some((item) => item.value === value))?.value ?? null,
+    () =>
+      options.find((option) => option.children?.some((item) => item.value === value))?.value ??
+      null,
     [options, value],
   );
   const expandedValue = manuallyExpanded ?? autoExpanded;
@@ -72,7 +82,9 @@ export function Radio({ label, options, onChange, value }: MultiSelectProps) {
                 <Separator orientation="vertical" className="hidden h-4 sm:mx-2 sm:block" />
                 <div className="flex space-x-1">
                   <Badge variant="secondary" className="rounded-sm px-1 font-normal">
-                    {selected.parentLabel ? `${selected.parentLabel} · ${selected.label}` : selected.label}
+                    {selected.parentLabel
+                      ? `${selected.parentLabel} · ${selected.label}`
+                      : selected.label}
                   </Badge>
                 </div>
               </>
@@ -89,7 +101,7 @@ export function Radio({ label, options, onChange, value }: MultiSelectProps) {
           <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
           <Input
             className={
-              "flex h-11 w-full rounded-md border-none bg-transparent px-0 py-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
+              "flex h-11 w-full rounded-md border-none bg-transparent px-0 py-3 text-sm outline-hidden placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
             }
             placeholder={label}
             value={search}
@@ -110,24 +122,24 @@ export function Radio({ label, options, onChange, value }: MultiSelectProps) {
                   return (
                     <div key={option.value}>
                       <div className="flex items-center gap-2 rounded-sm px-2 py-2 hover:bg-accent">
-                        <Label
-                          className="flex flex-1 items-center gap-2"
-                          htmlFor={option.value}
-                        >
+                        <Label className="flex flex-1 items-center gap-2" htmlFor={option.value}>
                           <RadioGroupItem value={option.value} id={option.value} />
                           <span>{option.label}</span>
                         </Label>
                         {hasChildren && (
                           <button
                             type="button"
-                            aria-label={isExpanded ? `Collapse ${option.label}` : `Expand ${option.label}`}
-                            className="rounded-sm p-1 text-muted-foreground hover:bg-accent-foreground/10"
-                            onClick={() =>
-                              setManuallyExpanded(isExpanded ? "" : option.value)
+                            aria-label={
+                              isExpanded ? `Collapse ${option.label}` : `Expand ${option.label}`
                             }
+                            className="rounded-sm p-1 text-muted-foreground hover:bg-accent-foreground/10"
+                            onClick={() => setManuallyExpanded(isExpanded ? "" : option.value)}
                           >
                             <ChevronRight
-                              className={cn("h-3.5 w-3.5 transition-transform", isExpanded && "rotate-90")}
+                              className={cn(
+                                "h-3.5 w-3.5 transition-transform",
+                                isExpanded && "rotate-90",
+                              )}
                             />
                           </button>
                         )}
@@ -151,8 +163,8 @@ export function Radio({ label, options, onChange, value }: MultiSelectProps) {
                 })}
             </RadioGroup>
           ) : (
-            <div className="py-6 text-center text-sm !text-popover-foreground">
-              No results found.
+            <div className="py-6 text-center text-sm text-popover-foreground!">
+              {t("RADIO.NO_RESULTS_FOUND")}
             </div>
           )}
         </>

@@ -5,6 +5,7 @@ using DomainService.Subscription.RequestModel;
 using DomainService.Subscription.Services;
 using FluentAssertions;
 using Moq;
+using Blocks.Genesis.Entities.Os;
 
 namespace XUnitTest.Services
 {

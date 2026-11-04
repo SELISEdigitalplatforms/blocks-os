@@ -1,6 +1,6 @@
 import { useQueryState } from "nuqs";
 import { useGetOrganizationById } from "@blocks-idp/iam/hooks/use-organization";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import {
   Tabs,
@@ -29,6 +29,7 @@ export const OrganizationWorkspacePanel = ({
   organizationId,
   onBack,
 }: OrganizationWorkspacePanelProps) => {
+  const { t } = useT("os.idp.organizations");
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data, isLoading } = useGetOrganizationById({
     itemId: organizationId,
@@ -49,7 +50,7 @@ export const OrganizationWorkspacePanel = ({
             className="flex w-fit items-center gap-1 text-sm text-muted-foreground lg:hidden"
           >
             <ChevronLeft className="h-4 w-4" />
-            Organizations
+            {t("ORGANIZATION_WORKSPACE_PANEL.BACK")}
           </button>
         )}
         <div className="flex items-center gap-3">
@@ -74,7 +75,7 @@ export const OrganizationWorkspacePanel = ({
           className="mb-3 flex w-fit items-center gap-1 text-sm text-muted-foreground lg:hidden"
         >
           <ChevronLeft className="h-4 w-4" />
-          Organizations
+          {t("ORGANIZATION_WORKSPACE_PANEL.BACK")}
         </button>
       )}
       <div className="flex items-start justify-between gap-3">
@@ -101,7 +102,7 @@ export const OrganizationWorkspacePanel = ({
             )}
             <CopyToClipboardButton textToCopy={organization.itemId}>
               <p className="break-all text-xs text-muted-foreground">
-                Organization ID: {organization.itemId}
+                {t("ORGANIZATION_WORKSPACE_PANEL.ORGANIZATION_ID", { id: organization.itemId })}
               </p>
             </CopyToClipboardButton>
           </div>
@@ -116,10 +117,10 @@ export const OrganizationWorkspacePanel = ({
       >
         <TabsList className={underlineTabsListClass}>
           <TabsTrigger value="details" className={underlineTabTriggerClass}>
-            Details
+            {t("common:DETAILS")}
           </TabsTrigger>
           <TabsTrigger value="members" className={underlineTabTriggerClass}>
-            Members ({memberCount})
+            {t("ORGANIZATION_WORKSPACE_PANEL.TAB_MEMBERS", { members: memberCount })}
           </TabsTrigger>
         </TabsList>
 

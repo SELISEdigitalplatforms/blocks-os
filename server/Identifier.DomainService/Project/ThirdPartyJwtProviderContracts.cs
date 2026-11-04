@@ -1,4 +1,4 @@
-using Blocks.Genesis;
+﻿using Blocks.Genesis;
 
 namespace DomainService.Projects
 {
@@ -24,14 +24,55 @@ namespace DomainService.Projects
 
         public bool IsActive { get; set; } = true;
 
+        /// <summary>
+        /// Matched exactly against the token's <c>iss</c>.
+        /// </summary>
+        /// <remarks>
+        /// <b>Optional.</b> Left blank, this provider receives the tokens that carry no <c>iss</c>
+        /// claim at all — which some third parties do not emit — and is chosen by the
+        /// <c>x-blocks-idp</c> header when more than one provider does the same. Blank is not a
+        /// wildcard: an issuer-bearing token is never routed to a provider that declares none.
+        /// </remarks>
         public string Issuer { get; set; } = string.Empty;
 
         public List<string> Audiences { get; set; } = [];
 
         public List<JwtSigningAlgorithm> Algorithms { get; set; } = [];
 
-        /// <summary>Key source for the asymmetric families.</summary>
+        /// <summary>
+        /// One of the two key sources for the asymmetric families. Exactly one of this and
+        /// <see cref="PublicCertificatePath"/> is configured; both together is refused.
+        /// </summary>
         public string? JwksUrl { get; set; }
+
+        /// <summary>
+        /// The other asymmetric key source: a single public certificate, for an issuer that
+        /// publishes no JWKS. The URL the certificate upload handed back, which Genesis re-fetches
+        /// on every validation, so it must stay readable without credentials and never expire.
+        /// </summary>
+        public string? PublicCertificatePath { get; set; }
+
+        /// <summary>
+        /// Passphrase for a PKCS#12 certificate, in plaintext. Stored encrypted and never read
+        /// back, so <b>empty means untouched</b> exactly as <see cref="SigningSecret"/> does.
+        /// </summary>
+        /// <remarks>
+        /// Blank is also the ordinary case for a <c>.crt</c> or <c>.der</c>, which has nothing to
+        /// protect — so it cannot be told apart from "keep what is stored" on its own, and
+        /// <see cref="ClearCertificatePassword"/> exists to say the difference.
+        /// </remarks>
+        public string? PublicCertificatePassword { get; set; }
+
+        /// <summary>
+        /// Removes a stored certificate passphrase, for replacing a protected certificate with an
+        /// unprotected one.
+        /// </summary>
+        /// <remarks>
+        /// Needed because empty means untouched: without an explicit signal, a stored passphrase
+        /// could never be taken off again, and the stale value would fail every load of the new
+        /// certificate.
+        /// </remarks>
+        public bool ClearCertificatePassword { get; set; }
 
         /// <summary>
         /// Shared secret for the HMAC family, in plaintext. Stored encrypted and never read back.
@@ -79,10 +120,38 @@ namespace DomainService.Projects
         public List<string> Audiences { get; set; } = [];
         public List<JwtSigningAlgorithm> Algorithms { get; set; } = [];
         public string JwksUrl { get; set; } = string.Empty;
+
+        /// <summary>
+        /// The configured certificate's URL. Safe to return: it addresses a public certificate,
+        /// which is published key material rather than a secret.
+        /// </summary>
+        public string PublicCertificatePath { get; set; } = string.Empty;
+
+        /// <summary>Subject of the configured certificate, read from the file when it was saved.</summary>
+        public string CertificateSubject { get; set; } = string.Empty;
+
+        /// <summary>SHA-1 thumbprint, for matching against what the provider published.</summary>
+        public string CertificateThumbprint { get; set; } = string.Empty;
+
+        /// <summary>
+        /// When the configured certificate lapses, or <c>null</c> if it could not be read.
+        /// </summary>
+        /// <remarks>
+        /// A certificate pins one key, so this is when the provider's tokens start being refused.
+        /// A display value only — validation reads the certificate's own expiry, not this copy.
+        /// </remarks>
+        public DateTime? CertificateNotAfter { get; set; }
+
         public string CookieKey { get; set; } = string.Empty;
 
         /// <summary>Whether a signing secret is stored, so the form can mask rather than blank.</summary>
         public bool HasSigningSecret { get; set; }
+
+        /// <summary>
+        /// Whether a certificate passphrase is stored, so the form can offer to keep it rather
+        /// than silently dropping it on the next save.
+        /// </summary>
+        public bool HasCertificatePassword { get; set; }
 
         public ThirdPartyClaimsMappingRequest ClaimsMapping { get; set; } = new();
     }

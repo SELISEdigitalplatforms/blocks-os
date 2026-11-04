@@ -5,6 +5,7 @@ import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { IProvider } from "@blocks-ai/types/aimodel.service.type";
 import { getProviderDisplayName, ProviderType } from "@blocks-ai/utils/aimodel-provider.utils";
+import { useT } from "@seliseblocks/genesis-os";
 const PROVIDER_PNG_MAP: Record<string, string> = {
   google: "/assets/images/google.png",
   azure: "/assets/images/azure.png",
@@ -27,6 +28,7 @@ const ProviderIconFallback = ({ provider }: { provider: string }) => {
   );
 };
 export const ProviderCard = (provider: IProvider) => {
+  const { t } = useT("os.ai");
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const pngUrl = getProviderPng(provider.Provider.toLowerCase());
@@ -35,7 +37,7 @@ export const ProviderCard = (provider: IProvider) => {
   };
   return (
     <Card
-      className="w-75 group flex cursor-pointer flex-col items-start gap-4 rounded-md px-4 py-5 transition hover:bg-accent hover:shadow-sm"
+      className="w-75 group flex cursor-pointer flex-col items-start gap-4 rounded-md px-4 py-5 transition hover:bg-accent hover:shadow-xs"
       onClick={handleClick}
     >
       <CardHeader className="mb-0 flex w-full flex-row justify-between p-0">
@@ -52,7 +54,9 @@ export const ProviderCard = (provider: IProvider) => {
               {getProviderDisplayName(provider.Provider)}
             </CardTitle>
             <p className="text-sm font-light text-low-emphasis">
-              {provider.Provider.toLowerCase() === ProviderType.CUSTOM ? "My Model" : "My Key"}
+              {provider.Provider.toLowerCase() === ProviderType.CUSTOM
+                ? t("AIMODEL_CARD.MY_MODEL")
+                : t("AIMODEL_CARD.MY_KEY")}
             </p>
           </div>
         </div>

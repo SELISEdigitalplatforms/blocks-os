@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Blocks.Genesis;
-using Blocks.MailDriver;
 using Cloud.LmtService.Models.ColdRestore;
 using Cloud.LmtService.Models.Shared;
 using Cloud.LmtService.Repositories.ColdRestore;
@@ -16,11 +15,14 @@ using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
+using XUnitTest.TestHelpers;
 
 namespace XUnitTest.Services
 {
-    public class LogTraceRestoreServiceTests
+    public class LogTraceRestoreServiceTests : IDisposable
     {
+        public void Dispose() => TestBlocksContext.Clear();
+
         private readonly Mock<ILogger<LogTraceRestoreService>> _logger = new();
         private readonly Mock<ILogTraceRestoreRepository> _coldRestoreRepository = new();
         private readonly Mock<IMessageClient> _messageClient = new();
@@ -29,10 +31,7 @@ namespace XUnitTest.Services
         private readonly Mock<IBlobStorage> _blobStorage = new();
         private readonly Mock<IConfiguration> _configuration = new();
         private readonly Mock<ILmtArchiveRestoreConfigurationRepository> _configRepository = new();
-        private readonly Mock<IMailDriverService> _mailDriverService = new();
-        private readonly Mock<IHttpService> _httpService = new();
-        private readonly Mock<ICryptoService> _cryptoService = new();
-        private readonly Mock<ITenants> _tenants = new();
+        private readonly MailPreCheckDb _mailDb = new();
         private readonly Mock<IArchiveRestoreRepository> _archiveRestoreRepository = new();
         private readonly Mock<IRestoreUserRepository> _userRepository = new();
 
@@ -45,12 +44,9 @@ namespace XUnitTest.Services
             _blobStorage.Object,
             _configuration.Object,
             _configRepository.Object,
-            _mailDriverService.Object,
-            _httpService.Object,
-            _cryptoService.Object,
-            _tenants.Object,
+            _mailDb.Object,
             _archiveRestoreRepository.Object,
-            _userRepository.Object);
+            _userRepository.Object, new XUnitTest.TestHelpers.PassThroughOsDataAccess());
 
         [Fact]
         public async Task GetStatusAsync_MissingRequestId_Throws()
@@ -210,66 +206,7 @@ namespace XUnitTest.Services
 
             await Service().UpdateFileRequestStatus("req-1");
 
-            _mailDriverService.Verify(m => m.SendAsync(It.IsAny<SendMail>()), Times.Never);
-        }
-
-        /// <summary>
-        /// The in-app notification must not be collateral damage of a missing email address — the
-        /// UI relies on it to drop its progress overlay.
-        /// </summary>
-        [Fact]
-        public async Task UpdateFileRequestStatus_StillNotifiesInApp_WhenNoEmailWasCaptured()
-        {
-            GivenRequest(new RestoreRequestRecord
-            {
-                RequestId = "req-1",
-                TenantId = "tenant-a",
-                Status = RestoreRequestStatus.InProgress,
-                UserEmail = null
-            });
-
-            GivenAllFilesCompleted();
-            GivenCompletionTransitionWon();
-            GivenNotificationEndpointAccepts();
-
-            await Service().UpdateFileRequestStatus("req-1");
-
-            _httpService.Verify(h => h.Post<NotificationResponse>(
-                It.IsAny<object>(),
-                "https://notify.example.com/send",
-                It.IsAny<string>(),
-                It.IsAny<Dictionary<string, string>>(),
-                It.IsAny<CancellationToken>(),
-                It.IsAny<int?>()), Times.Once);
-        }
-
-        /// <summary>
-        /// The worker has no ambient request context, so the tenant used to sign the notification
-        /// has to come from the persisted request rather than BlocksContext.
-        /// </summary>
-        [Fact]
-        public async Task UpdateFileRequestStatus_SignsTheNotificationWithTheRequestsTenant()
-        {
-            GivenRequest(new RestoreRequestRecord
-            {
-                RequestId = "req-1",
-                TenantId = "tenant-from-record",
-                Status = RestoreRequestStatus.InProgress
-            });
-
-            GivenAllFilesCompleted();
-            GivenCompletionTransitionWon();
-            GivenNotificationEndpointAccepts();
-
-            await Service().UpdateFileRequestStatus("req-1");
-
-            _httpService.Verify(h => h.Post<NotificationResponse>(
-                It.IsAny<object>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.Is<Dictionary<string, string>>(headers => headers["x-blocks-key"] == "tenant-from-record"),
-                It.IsAny<CancellationToken>(),
-                It.IsAny<int?>()), Times.Once);
+            _messageClient.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<SendMail>>()), Times.Never);
         }
 
         /// <summary>
@@ -389,6 +326,104 @@ namespace XUnitTest.Services
             created.Should().OnlyContain(record => record.Status == RestoreFileProgressStatus.Pending);
         }
 
+        private void GivenCompletedRequestWithEmail(string? templateName = "restore-done")
+        {
+            TestBlocksContext.Set("tenant-a");
+            GivenRequest(new RestoreRequestRecord
+            {
+                RequestId = "req-1",
+                TenantId = "tenant-a",
+                Status = RestoreRequestStatus.InProgress,
+                UserEmail = "someone@example.com"
+            });
+            GivenAllFilesCompleted();
+            GivenCompletionTransitionWon();
+            _configRepository
+                .Setup(r => r.GetLmtArchiveRestoreConfigurationsAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new LmtArchiveRestoreConfigurations
+                {
+                    RetentionDay = 7,
+                    EmailTemplateConfig = new LogTraceRestoreEmailTConfig { TemplateName = templateName! }
+                });
+        }
+
+        private void AssertNoMailQueued() =>
+            _messageClient.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<SendMail>>()), Times.Never);
+
+        [Fact]
+        public async Task RestoreMail_IsQueuedToTheMailListenerWithSendPhoneNumberAsEmail()
+        {
+            GivenCompletedRequestWithEmail();
+            _mailDb.UserExists = false; // restore mail is not limited to registered users
+
+            await Service().UpdateFileRequestStatus("req-1");
+
+            _messageClient.Verify(m => m.SendToConsumerAsync(It.Is<ConsumerMessage<SendMail>>(msg =>
+                msg.ConsumerName == "blocks_email_listener"
+                && msg.Payload.Purpose == "restore-done"
+                && msg.Payload.Language == "en-US"
+                && msg.Payload.To.Single() == "someone@example.com"
+                && msg.Payload.SendPhoneNumberAsEmail
+                && msg.Payload.BodyDataContext.ContainsKey("tier")
+                && msg.Payload.BodyDataContext.ContainsKey("status"))), Times.Once);
+        }
+
+        [Fact]
+        public void RestoreMail_PayloadTypeIsNamedSendMail()
+        {
+            // Genesis routes by payload type name; the logic listener consumes "SendMail".
+            typeof(SendMail).Name.Should().Be("SendMail");
+            Cloud.LmtService.Utilities.Constants.MailQueue.Should().Be("blocks_email_listener");
+        }
+
+        [Fact]
+        public async Task RestoreMail_EnqueueThrows_DoesNotFailTheRequest()
+        {
+            GivenCompletedRequestWithEmail();
+            _messageClient.Setup(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<SendMail>>()))
+                .ThrowsAsync(new InvalidOperationException("queue down"));
+
+            var act = async () => await Service().UpdateFileRequestStatus("req-1");
+
+            await act.Should().NotThrowAsync();
+            _coldRestoreRepository.Verify(
+                r => r.TryCompleteRequestAsync("req-1", It.IsAny<RestoreRequestStatus>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task RestoreMail_TemplateMissing_QueuesNothing()
+        {
+            GivenCompletedRequestWithEmail();
+            _mailDb.TemplateExists = false;
+
+            await Service().UpdateFileRequestStatus("req-1");
+
+            AssertNoMailQueued();
+        }
+
+        [Fact]
+        public async Task RestoreMail_MailServerConfigMissing_QueuesNothing()
+        {
+            GivenCompletedRequestWithEmail();
+            _mailDb.ConfigExists = false;
+
+            await Service().UpdateFileRequestStatus("req-1");
+
+            AssertNoMailQueued();
+        }
+
+        [Fact]
+        public async Task RestoreMail_NoTenantContext_QueuesNothing()
+        {
+            GivenCompletedRequestWithEmail();
+            BlocksContext.ClearContext();
+
+            await Service().UpdateFileRequestStatus("req-1");
+
+            AssertNoMailQueued();
+        }
+
         private void GivenRequest(RestoreRequestRecord record) =>
             _coldRestoreRepository
                 .Setup(r => r.GetRequestByIdAsync(record.RequestId, It.IsAny<CancellationToken>()))
@@ -411,63 +446,6 @@ namespace XUnitTest.Services
             _coldRestoreRepository
                 .Setup(r => r.TryCompleteRequestAsync("req-1", It.IsAny<RestoreRequestStatus>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
-
-        /// <summary>
-        /// The notification API rejects a payload without ConfigurationName with HTTP 400, and the
-        /// send is fire-and-forget, so the only visible symptom was a logged null result. The field
-        /// was being set on an anonymous object under a misspelled name — which the compiler
-        /// accepts silently, since any name is a valid property on an anonymous type.
-        /// </summary>
-        [Fact]
-        public async Task UpdateFileRequestStatus_SendsTheConfigurationNameTheNotificationApiRequires()
-        {
-            GivenRequest(new RestoreRequestRecord
-            {
-                RequestId = "req-1",
-                TenantId = "tenant-a",
-                Status = RestoreRequestStatus.InProgress
-            });
-
-            GivenAllFilesCompleted();
-            GivenCompletionTransitionWon();
-            GivenNotificationEndpointAccepts();
-
-            var posted = CaptureNotificationPayload();
-
-            await Service().UpdateFileRequestStatus("req-1");
-
-            NotificationField(posted, "ConfigurationName").Should().Be("log_trace_restore");
-        }
-
-        /// <summary>Reads a field off the posted payload the way the receiving API binds it: by name,
-        /// case-insensitively. A misspelling therefore reads as absent rather than as a different name.</summary>
-        private static string? NotificationField(IReadOnlyList<object> posted, string name)
-        {
-            posted.Should().HaveCount(1, "exactly one notification should have been posted");
-
-            return posted[0].GetType().GetProperties()
-                .FirstOrDefault(property => string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase))
-                ?.GetValue(posted[0]) as string;
-        }
-
-        private List<object> CaptureNotificationPayload()
-        {
-            var posted = new List<object>();
-
-            _httpService
-                .Setup(h => h.Post<NotificationResponse>(
-                    It.IsAny<object>(),
-                    It.IsAny<string>(),
-                    It.IsAny<string>(),
-                    It.IsAny<Dictionary<string, string>>(),
-                    It.IsAny<CancellationToken>(),
-                    It.IsAny<int?>()))
-                .Callback<object, string, string, Dictionary<string, string>, CancellationToken, int?>(
-                    (payload, _, _, _, _, _) => posted.Add(payload))
-                .ReturnsAsync((new NotificationResponse { isSuccess = true }, "ok"));
-
-            return posted;
-        }
 
         /// <summary>
         /// A tenant that has never asked for a restore is the normal first-visit state, not a
@@ -499,35 +477,6 @@ namespace XUnitTest.Services
                 new GetLatestColdRestoreRequestIdRequest { SourceType = "Cold" });
 
             response.RequestId.Should().Be("req-7");
-        }
-
-        private void GivenNotificationEndpointAccepts()
-        {
-            _configRepository
-                .Setup(r => r.GetLmtArchiveRestoreConfigurationsAsync(It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new LmtArchiveRestoreConfigurations
-                {
-                    RetentionDay = 7,
-                    NotificationConfig = new NotificationConfig
-                    {
-                        NotificationUrl = "https://notify.example.com/send",
-                        NotificationConfigName = "log_trace_restore"
-                    }
-                });
-
-            // GetTenantByID is left returning null: the salt lookup is null-conditional in
-            // production and Tenant has required members that add nothing to these assertions.
-            _cryptoService.Setup(c => c.Hash(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).Returns("hashed");
-
-            _httpService
-                .Setup(h => h.Post<NotificationResponse>(
-                    It.IsAny<object>(),
-                    It.IsAny<string>(),
-                    It.IsAny<string>(),
-                    It.IsAny<Dictionary<string, string>>(),
-                    It.IsAny<CancellationToken>(),
-                    It.IsAny<int?>()))
-                .ReturnsAsync((new NotificationResponse { isSuccess = true }, "ok"));
         }
 
         [Fact]

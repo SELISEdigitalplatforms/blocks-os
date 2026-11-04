@@ -3,7 +3,7 @@ import * as SwitchPrimitive from "@radix-ui/react-switch";
 import { cn } from "@/lib/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 const switchVariants = cva(
-  "relative cursor-pointer rounded-full border-[1px] border-solid transition-colors duration-200",
+  "relative shrink-0 cursor-pointer rounded-full border border-solid transition-colors duration-200",
   {
     variants: {
       size: {
@@ -22,9 +22,9 @@ const switchThumbVariants = cva(
   {
     variants: {
       size: {
-        sm: "size-3 translate-x-[1px] data-[state=checked]:translate-x-[17px]", // 12px thumb
-        md: "size-5 translate-x-[1px] data-[state=checked]:translate-x-[23px]", // 20px thumb
-        lg: "size-[20px] translate-x-[1px] data-[state=checked]:translate-x-[23px]", // 20px thumb
+        sm: "size-3 translate-x-px data-[state=checked]:translate-x-[17px]", // 12px thumb
+        md: "size-5 translate-x-px data-[state=checked]:translate-x-[23px]", // 20px thumb
+        lg: "size-[20px] translate-x-px data-[state=checked]:translate-x-[23px]", // 20px thumb
       },
     },
     defaultVariants: {
@@ -52,8 +52,9 @@ const Switch = React.forwardRef<
     <SwitchPrimitive.Thumb
       className={cn(
         switchThumbVariants({ size }),
-        "bg-white shadow-sm",
-        "group-data-[disabled]:bg-neutral-50 group-data-[disabled]:shadow-none",
+        "bg-white shadow-xs",
+        // A ring rather than a lighter fill: on the pale disabled track a near-white thumb vanished.
+        "group-data-disabled:shadow-none group-data-disabled:ring-1 group-data-disabled:ring-neutral-300",
       )}
     />
   </SwitchPrimitive.Root>

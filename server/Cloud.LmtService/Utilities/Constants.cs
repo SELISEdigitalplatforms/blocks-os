@@ -9,6 +9,9 @@ namespace Cloud.LmtService.Utilities
         public const string ColdRestoreQueue = "blocks-cold-restore-queue";
         public const string ArchiveRestoreQueue = "blocks-archive-restore-queue";
 
+        /// <summary>Queue of the blocks-logic mail listener. os only sends to it; never subscribe an os consumer to it.</summary>
+        public const string MailQueue = "blocks_email_listener";
+
         /// <summary>Expired-data cleanup. Scheduled separately from the backup so a cleanup failure cannot force a whole backup retry.</summary>
         public const string LmtCleanupQueue = "lmt-cleanup-queue";
 
@@ -71,12 +74,10 @@ namespace Cloud.LmtService.Utilities
 
         private static string GetProvider(string messageConnectionString)
         {
-            if (Uri.TryCreate(messageConnectionString, UriKind.Absolute, out var uri))
-            {
-                if (uri.Scheme.Equals("amqp", StringComparison.OrdinalIgnoreCase) ||
-                    uri.Scheme.Equals("amqps", StringComparison.OrdinalIgnoreCase))
-                    return RabbitMqProvider;
-            }
+            if (Uri.TryCreate(messageConnectionString, UriKind.Absolute, out var uri) &&
+                (uri.Scheme.Equals("amqp", StringComparison.OrdinalIgnoreCase) ||
+                 uri.Scheme.Equals("amqps", StringComparison.OrdinalIgnoreCase)))
+                return RabbitMqProvider;
             return DefaultProvider;
         }
 

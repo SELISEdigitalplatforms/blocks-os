@@ -8,6 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui-kits/dropdown-menu/dropdown-menu";
+import { useT } from "@seliseblocks/genesis-os";
 export interface StorageCardData {
   id: string;
   provider: StorageStrategyType;
@@ -31,6 +32,7 @@ const providerColors: Record<StorageStrategyType, string> = {
   S3Compatible: "bg-purple-100 text-purple-600",
 };
 export const StorageCard = ({ data, onClick, onViewDetails, onEdit }: StorageCardProps) => {
+  const { t } = useT("os.storage");
   const handleClick = () => {
     onClick?.(data.id);
   };
@@ -55,7 +57,7 @@ export const StorageCard = ({ data, onClick, onViewDetails, onEdit }: StorageCar
         <div className="flex flex-1 items-center gap-3">
           <div
             className={cn(
-              "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md",
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-md",
               providerColorClass,
             )}
           >
@@ -63,7 +65,11 @@ export const StorageCard = ({ data, onClick, onViewDetails, onEdit }: StorageCar
               <img src="/assets/images/amazon.png" alt="AWS" className="h-5 w-5 object-contain" />
             )}
             {data.provider === "Azure" && (
-              <img src="/assets/images/azure.png" alt="Azure" className="h-5 w-5 object-contain" />
+              <img
+                src="/assets/images/azure.png"
+                alt={t("STORAGE_CARD.AZURE")}
+                className="h-5 w-5 object-contain"
+              />
             )}
             {data.provider === "SftpStorage" && <PackageOpen className="h-5 w-5" />}
           </div>
@@ -78,7 +84,7 @@ export const StorageCard = ({ data, onClick, onViewDetails, onEdit }: StorageCar
           <DropdownMenuTrigger asChild>
             <button
               onClick={(e) => e.stopPropagation()}
-              className="flex-shrink-0 text-muted-foreground hover:text-foreground"
+              className="shrink-0 text-muted-foreground hover:text-foreground"
             >
               <MoreVertical className="h-5 w-5" />
             </button>
@@ -86,11 +92,11 @@ export const StorageCard = ({ data, onClick, onViewDetails, onEdit }: StorageCar
           <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
             <DropdownMenuItem onClick={handleViewDetails} className="cursor-pointer">
               <Info className="mr-2 h-4 w-4" />
-              View Details
+              {t("STORAGE_CARD.VIEW_DETAILS")}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleEdit} className="cursor-pointer">
               <Pencil className="mr-2 h-4 w-4" />
-              Edit
+              {t("common:EDIT")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

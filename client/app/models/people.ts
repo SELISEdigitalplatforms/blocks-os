@@ -63,6 +63,8 @@ export interface PeopleDetails {
   profileImageUrl: string | null;
   userId: string;
   allowResendActivation: boolean;
+  /** False only for a deactivated user; a pending invitee is still true. Absent on older servers. */
+  isActive?: boolean;
 }
 
 export interface PeopleGroupedByEnvironments {

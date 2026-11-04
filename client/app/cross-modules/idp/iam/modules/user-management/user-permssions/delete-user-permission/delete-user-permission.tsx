@@ -10,7 +10,7 @@ import {
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
 import { toast } from "@/hooks/use-toast";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { useUserPermissions } from "@blocks-idp/iam/hooks/use-user";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import { X } from "lucide-react";
@@ -22,6 +22,7 @@ type DeleteUserPermissionProps = {
 };
 
 export const DeleteUserPermission = ({ permission, userId }: DeleteUserPermissionProps) => {
+  const { t } = useT("os.idp.users");
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const [open, setOpen] = useState<boolean>(false);
   const { deletePermissions, isPending } = useUserPermissions({ userId, projectKey: tenantId });
@@ -32,22 +33,24 @@ export const DeleteUserPermission = ({ permission, userId }: DeleteUserPermissio
       if (res.isSuccess) {
         toast({
           variant: "success",
-          title: "Success",
-          description: "Permission is excluded successfully",
+          title: t("DELETE_USER_PERMISSION.SUCCESS_TITLE"),
+          description: t("DELETE_USER_PERMISSION.EXCLUDED"),
         });
         setOpen(false);
       } else {
         toast({
           variant: "destructive",
-          title: "Error",
-          description: "Something went wrong",
+          title: t("DELETE_USER_PERMISSION.ERROR_TITLE"),
+          description: t("DELETE_USER_PERMISSION.SOMETHING_WENT_WRONG"),
         });
       }
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: `Something went wrong | ${JSON.stringify(error)}`,
+        title: t("DELETE_USER_PERMISSION.ERROR_TITLE"),
+        description: t("DELETE_USER_PERMISSION.SOMETHING_WENT_WRONG_DETAILS", {
+          details: JSON.stringify(error),
+        }),
       });
     }
   };
@@ -59,13 +62,13 @@ export const DeleteUserPermission = ({ permission, userId }: DeleteUserPermissio
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Exclude Permission</DialogTitle>
-          <DialogDescription>Are you sure you want to exclude permssion?</DialogDescription>
+          <DialogTitle>{t("DELETE_USER_PERMISSION.TITLE")}</DialogTitle>
+          <DialogDescription>{t("DELETE_USER_PERMISSION.DESCRIPTION")}</DialogDescription>
         </DialogHeader>
         <DialogFooter className="gap-2">
           <DialogClose asChild>
             <Button className="min-w-[80px]" variant="outline" size="default" disabled={isPending}>
-              Cancel
+              {t("common:CANCEL")}
             </Button>
           </DialogClose>
           <Button
@@ -74,7 +77,7 @@ export const DeleteUserPermission = ({ permission, userId }: DeleteUserPermissio
             disabled={isPending}
             onClick={onClickHandler}
           >
-            {isPending ? "Processing" : "Yes"}
+            {isPending ? t("DELETE_USER_PERMISSION.PROCESSING") : t("common:YES")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -6,7 +6,8 @@ const h = vi.hoisted(() => ({
   tenantId: "tenant-1",
 }));
 
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: h.tenantId } }),
 }));
 vi.mock("../../hooks/use-captcha-config", () => ({

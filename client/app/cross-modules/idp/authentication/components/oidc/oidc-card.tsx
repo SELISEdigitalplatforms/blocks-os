@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { format } from "date-fns";
-import { ChevronRight, RotateCw, Shield, Trash2 } from "lucide-react";
+import { ChevronRight, Power, PowerOff, RotateCw, Shield, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
 import {
@@ -19,27 +19,468 @@ import { cn } from "@/lib/utils";
 import {
   useDeleteAuthOidc,
   useRotateAuthOidcSecret,
+  useSaveAuthOidc,
 } from "@blocks-idp/authentication/hooks/use-auth-oidc";
 import {
   IDeleteOidcClientPayload,
   IOidcConfig,
+  ISaveOidcCredentialPayload,
 } from "@blocks-idp/authentication/models/auth.oidc.model";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import type { IOidcClientLoginPolicy } from "@blocks-idp/authentication/models/login-policy.model";
+import { describeClientLoginPolicy } from "@blocks-idp/authentication/utils/login-policy.util";
+import { tStatic, useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { CreateOIDC } from "../create-oidc/create-oidc";
 import { KVDetailItem } from "../kv-detail-item";
-import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
+import { maskId } from "../../utils/mask-id.util";
+import { OneTimeSecret, OneTimeSecretDialog } from "../one-time-secret-dialog";
+
+const KEY_COMMON_CANCEL = "common:CANCEL";
+const KEY_COMMON_DELETE = "common:DELETE";
+
+const I18N_MODULE = "os.idp.oidc";
 
 interface OIDCRowProps {
   item: IOidcConfig;
+  /** From the list response; missing means the client follows the project setting. */
+  loginPolicy?: IOidcClientLoginPolicy;
   defaultExpanded?: boolean;
 }
 
-const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
+type KvPair = {
+  key: string;
+  label: string;
+  value: string;
+  copyable?: boolean;
+  sensitive?: boolean;
+  masked?: boolean;
+};
+
+const getRedirectUris = (item: IOidcConfig): string[] => {
+  if (item.redirectUris?.length) return item.redirectUris;
+  return item.redirectUri ? [item.redirectUri] : [];
+};
+
+const getResponseTypes = (item: IOidcConfig): string[] =>
+  item.allowedResponseTypes?.length ? item.allowedResponseTypes : ["code"];
+
+const buildKvPairs = (item: IOidcConfig): KvPair[] => {
+  const browserOnly: KvPair[] = item.isDeviceFlowClient
+    ? []
+    : [
+        {
+          key: "pkce",
+          label: tStatic(I18N_MODULE, "OIDC_CARD.KV_PKCE"),
+          value: item.requirePkce
+            ? tStatic(I18N_MODULE, "OIDC_CARD.KV_REQUIRED")
+            : tStatic(I18N_MODULE, "OIDC_CARD.KV_NOT_REQUIRED"),
+        },
+        {
+          key: "autoRedirect",
+          label: tStatic(I18N_MODULE, "OIDC_CARD.KV_AUTO_REDIRECT"),
+          value: item.isAutoRedirect
+            ? tStatic(I18N_MODULE, "OIDC_CARD.KV_TRUE")
+            : tStatic(I18N_MODULE, "OIDC_CARD.KV_FALSE"),
+        },
+      ];
+  const pairs: KvPair[] = [
+    {
+      key: "clientId",
+      label: tStatic(I18N_MODULE, "OIDC_CARD.KV_CLIENT_ID"),
+      value: item.itemId,
+      copyable: true,
+      masked: true,
+    },
+    {
+      key: "redirectUris",
+      label: tStatic(I18N_MODULE, "OIDC_CARD.KV_REDIRECT_URIS"),
+      value: getRedirectUris(item).join(", "),
+      copyable: true,
+    },
+    {
+      key: "responseTypes",
+      label: tStatic(I18N_MODULE, "OIDC_CARD.KV_RESPONSE_TYPES"),
+      value: getResponseTypes(item).join(", "),
+    },
+    {
+      key: "scopes",
+      label: tStatic(I18N_MODULE, "OIDC_CARD.KV_SCOPES"),
+      value: item.scope ?? "",
+    },
+    ...browserOnly,
+  ];
+  return pairs.filter((pair) => pair.value);
+};
+
+/**
+ * The save endpoint replaces the whole client, so a status toggle resends its current configuration and
+ * flips only isActive -- the same shape the edit form submits. No loginPolicy: the server keeps it.
+ */
+const buildStatusTogglePayload = (item: IOidcConfig): ISaveOidcCredentialPayload => {
+  const device = item.isDeviceFlowClient ?? false;
+  return {
+    itemId: item.itemId,
+    clientDisplayName: item.clientDisplayName,
+    redirectUris: device ? [] : getRedirectUris(item),
+    scope: item.scope,
+    isAutoRedirect: device ? false : item.isAutoRedirect,
+    isActive: !item.isActive,
+    requirePkce: device ? false : item.requirePkce,
+    registerAsIdentityProvider: device ? false : (item.registerAsIdentityProvider ?? false),
+    isDeviceFlowClient: device,
+    allowedResponseTypes: device ? [] : getResponseTypes(item),
+    allowedServiceAccessResources: item.allowedServiceAccessResources,
+    // Resend the stored client type and token delivery so a status toggle never turns a
+    // public (for example Mobile app) client confidential or back to cookie delivery.
+    clientType: item.clientType,
+    useTokensCookie: item.useTokensCookie,
+  };
+};
+
+const statusButtonLabel = (isUpdating: boolean, willEnable: boolean): string => {
+  if (isUpdating) {
+    return willEnable
+      ? tStatic(I18N_MODULE, "OIDC_CARD.STATUS_ENABLING")
+      : tStatic(I18N_MODULE, "OIDC_CARD.STATUS_DISABLING");
+  }
+  return willEnable
+    ? tStatic(I18N_MODULE, "OIDC_CARD.ENABLE")
+    : tStatic(I18N_MODULE, "OIDC_CARD.DISABLE");
+};
+
+const showActionError = (error: unknown) => {
+  showErrorToast({
+    errors: isErrorWithErrors(error)
+      ? error.errors
+      : tStatic(I18N_MODULE, "OIDC_CARD.ERROR_GENERIC"),
+  });
+};
+
+const withBoldName = (text: string, name: string): ReactNode => {
+  if (!name) return text;
+  const nodes: ReactNode[] = [];
+  let offset = 0;
+  for (const [index, part] of text.split(name).entries()) {
+    if (index > 0) {
+      nodes.push(<strong key={`name-${offset}`}>{name}</strong>);
+      offset += name.length;
+    }
+    nodes.push(part);
+    offset += part.length;
+  }
+  return nodes;
+};
+
+const OidcClientNameCell = ({
+  item,
+  loginPolicy,
+}: Readonly<{ item: IOidcConfig; loginPolicy?: IOidcClientLoginPolicy }>) => {
+  const { t } = useT(I18N_MODULE);
+  return (
+    <TableCell className="py-3.5">
+      <div className="flex items-center gap-3">
+        <div
+          className={cn(
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+            item.isActive ? "bg-emerald-100 dark:bg-emerald-950" : "bg-muted",
+          )}
+        >
+          <Shield
+            className={cn(
+              "h-4 w-4",
+              item.isActive ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground",
+            )}
+          />
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium">
+            {item.clientDisplayName || t("OIDC_CARD.CLIENT_FALLBACK_NAME")}
+          </p>
+          <p className="truncate font-mono text-xs text-muted-foreground">{maskId(item.itemId)}</p>
+          {!item.isDeviceFlowClient && (
+            <p className="truncate text-xs text-muted-foreground">
+              {describeClientLoginPolicy(loginPolicy)}
+            </p>
+          )}
+        </div>
+      </div>
+    </TableCell>
+  );
+};
+
+const OidcTypeCell = ({ isDeviceFlowClient }: Readonly<{ isDeviceFlowClient?: boolean }>) => {
+  const { t } = useT(I18N_MODULE);
+  return (
+    <TableCell className="hidden py-3.5 sm:table-cell">
+      <div className="flex flex-wrap gap-1.5">
+        <Badge
+          variant="outline"
+          className="w-fit gap-1.5 border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis"
+        >
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+          {"OIDC"}
+        </Badge>
+        {isDeviceFlowClient && (
+          <Badge
+            variant="outline"
+            className="w-fit border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis"
+          >
+            {t("OIDC_CARD.DEVICE_FLOW")}
+          </Badge>
+        )}
+      </div>
+    </TableCell>
+  );
+};
+
+const OidcStatusCell = ({ isActive }: Readonly<{ isActive: boolean }>) => {
+  const { t } = useT(I18N_MODULE);
+  return (
+    <TableCell className="hidden py-3.5 sm:table-cell">
+      <Badge
+        variant="outline"
+        className="w-fit gap-1.5 border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis"
+      >
+        <span
+          className={cn(
+            "h-1.5 w-1.5 shrink-0 rounded-full",
+            isActive ? "bg-emerald-500" : "bg-muted-foreground/40",
+          )}
+        />
+        {isActive ? t("OIDC_CARD.ACTIVE") : t("OIDC_CARD.INACTIVE")}
+      </Badge>
+    </TableCell>
+  );
+};
+
+type OidcRowActionsProps = Readonly<{
+  item: IOidcConfig;
+  isRotating: boolean;
+  isUpdating: boolean;
+  onRotate: () => void;
+  onToggleStatus: () => void;
+  onDelete: () => void;
+}>;
+
+const OidcRowActions = ({
+  item,
+  isRotating,
+  isUpdating,
+  onRotate,
+  onToggleStatus,
+  onDelete,
+}: OidcRowActionsProps) => {
+  const { t } = useT(I18N_MODULE);
+  const isActive = item.isActive;
+  return (
+    <TableCell className="py-3.5 pl-4 text-left" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center justify-start gap-1">
+        <CreateOIDC itemId={item.itemId} triggerVariant="ghost" />
+        {!item.isDeviceFlowClient && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
+                aria-label={t("OIDC_CARD.ROTATE_SECRET_LABEL")}
+                onClick={onRotate}
+                disabled={isRotating}
+              >
+                <RotateCw className={cn("h-3.5 w-3.5", isRotating && "animate-spin")} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t("OIDC_CARD.ROTATE_SECRET")}</TooltipContent>
+          </Tooltip>
+        )}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                "h-7 w-7 p-0",
+                isActive
+                  ? "text-emerald-600 hover:text-destructive"
+                  : "text-muted-foreground hover:text-emerald-600",
+              )}
+              aria-label={isActive ? t("OIDC_CARD.DISABLE_CLIENT") : t("OIDC_CARD.ENABLE_CLIENT")}
+              onClick={onToggleStatus}
+              disabled={isUpdating}
+            >
+              {isActive ? <Power className="h-3.5 w-3.5" /> : <PowerOff className="h-3.5 w-3.5" />}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {isActive ? t("OIDC_CARD.DISABLE") : t("OIDC_CARD.ENABLE")}
+          </TooltipContent>
+        </Tooltip>
+        <span className="mx-0.5 h-4 w-px shrink-0 bg-border" aria-hidden />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+              aria-label={t(KEY_COMMON_DELETE)}
+              onClick={onDelete}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t(KEY_COMMON_DELETE)}</TooltipContent>
+        </Tooltip>
+      </div>
+    </TableCell>
+  );
+};
+
+const OidcDetailsRow = ({ kvPairs }: Readonly<{ kvPairs: KvPair[] }>) => (
+  <TableRow className="border-b-2 border-border hover:bg-transparent">
+    <TableCell colSpan={6} className="max-w-0 bg-muted/20 px-3 py-3 pl-8 sm:px-6 sm:py-4 sm:pl-12">
+      <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
+        {kvPairs.map(({ key, label, value, copyable, sensitive, masked }) => (
+          <KVDetailItem
+            key={key}
+            label={label}
+            value={value}
+            copyable={copyable}
+            sensitive={sensitive}
+            masked={masked}
+          />
+        ))}
+      </div>
+    </TableCell>
+  </TableRow>
+);
+
+type ConfirmDialogProps = Readonly<{
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  clientLabel: string;
+  isPending: boolean;
+  onConfirm: () => void;
+}>;
+
+const OidcStatusDialog = ({
+  open,
+  onOpenChange,
+  clientLabel,
+  isPending,
+  onConfirm,
+  willEnable,
+}: ConfirmDialogProps & Readonly<{ willEnable: boolean }>) => {
+  const { t } = useT(I18N_MODULE);
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {willEnable ? t("OIDC_CARD.ENABLE_CLIENT") : t("OIDC_CARD.DISABLE_CLIENT")}
+          </DialogTitle>
+          <DialogDescription>
+            {withBoldName(
+              willEnable
+                ? t("OIDC_CARD.ENABLE_DESC", { name: clientLabel })
+                : t("OIDC_CARD.DISABLE_DESC", { name: clientLabel }),
+              clientLabel,
+            )}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onOpenChange(false)}
+            disabled={isPending}
+          >
+            {t(KEY_COMMON_CANCEL)}
+          </Button>
+          <Button
+            variant={willEnable ? "default" : "destructive"}
+            size="sm"
+            onClick={onConfirm}
+            disabled={isPending}
+          >
+            {statusButtonLabel(isPending, willEnable)}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const OidcRotateDialog = ({
+  open,
+  onOpenChange,
+  clientLabel,
+  isPending,
+  onConfirm,
+}: ConfirmDialogProps) => {
+  const { t } = useT(I18N_MODULE);
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t("OIDC_CARD.ROTATE_SECRET_LABEL")}</DialogTitle>
+          <DialogDescription>
+            {withBoldName(t("OIDC_CARD.ROTATE_DESC", { name: clientLabel }), clientLabel)}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onOpenChange(false)}
+            disabled={isPending}
+          >
+            {t(KEY_COMMON_CANCEL)}
+          </Button>
+          <Button size="sm" onClick={onConfirm} disabled={isPending}>
+            {isPending ? t("OIDC_CARD.ROTATING") : t("OIDC_CARD.ROTATE_SECRET")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const OidcDeleteDialog = ({
+  open,
+  onOpenChange,
+  clientLabel,
+  isPending,
+  onConfirm,
+}: ConfirmDialogProps) => {
+  const { t } = useT(I18N_MODULE);
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t("OIDC_CARD.DELETE_TITLE")}</DialogTitle>
+          <DialogDescription>
+            {withBoldName(t("OIDC_CARD.DELETE_DESC", { name: clientLabel }), clientLabel)}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+            {t(KEY_COMMON_CANCEL)}
+          </Button>
+          <Button variant="destructive" size="sm" onClick={onConfirm} disabled={isPending}>
+            {isPending ? t("OIDC_CARD.DELETING") : t(KEY_COMMON_DELETE)}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const OIDCRow = ({ item, loginPolicy, defaultExpanded = false }: Readonly<OIDCRowProps>) => {
+  const { t } = useT(I18N_MODULE);
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [showRotateDialog, setShowRotateDialog] = useState(false);
-  const [showRotatedSecretDialog, setShowRotatedSecretDialog] = useState(false);
-  const [rotatedSecret, setRotatedSecret] = useState<string | null>(null);
+  const [rotatedSecret, setRotatedSecret] = useState<OneTimeSecret | null>(null);
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync: deleteOidc, isPending: isDeleting } = useDeleteAuthOidc({
     projectKey: tenantId,
@@ -47,65 +488,15 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
   const { mutateAsync: rotateSecret, isPending: isRotating } = useRotateAuthOidcSecret({
     projectKey: tenantId,
   });
+  const { mutateAsync: saveOidc, isPending: isUpdating } = useSaveAuthOidc();
 
-  const clientSecret = rotatedSecret ?? item.clientSecret;
-
+  const isActive = item.isActive;
   const createdAt = item.createdDate ? format(new Date(item.createdDate), "dd MMM yyyy") : "—";
-
-  const redirectUris =
-    item.redirectUris && item.redirectUris.length
-      ? item.redirectUris
-      : item.redirectUri
-        ? [item.redirectUri]
-        : [];
-
-  const responseTypes = item.allowedResponseTypes?.length ? item.allowedResponseTypes : ["code"];
-
-  const kvPairs: {
-    key: string;
-    value: string;
-    copyable?: boolean;
-    sensitive?: boolean;
-  }[] = [
-    { key: "Client Id", value: item.itemId, copyable: true },
-    { key: "Client Secret", value: clientSecret, sensitive: true },
-    {
-      key: "Redirect URI(s)",
-      value: redirectUris.join(", "),
-      copyable: true,
-    },
-    {
-      key: "Allowed Response Types",
-      value: responseTypes.join(", "),
-    },
-    {
-      key: "Scope(s)",
-      value: item.scope ?? "",
-    },
-    ...(item.isDeviceFlowClient
-      ? []
-      : [
-          {
-            key: "PKCE",
-            value: item.requirePkce ? "required" : "not required",
-          },
-        ]),
-    ...(item.isDeviceFlowClient
-      ? []
-      : [
-          {
-            key: "Redirect automatically after authentication",
-            value: item.isAutoRedirect ? "true" : "false",
-          },
-        ]),
-    {
-      key: "Status",
-      value: item.isActive ? "active" : "inactive",
-    },
-  ].filter((pair) => pair.value);
+  const kvPairs = buildKvPairs(item);
+  const hasDetails = kvPairs.length > 0;
 
   const clientLabel = useMemo(
-    () => item.clientDisplayName || item.itemId,
+    () => item.clientDisplayName || maskId(item.itemId),
     [item.clientDisplayName, item.itemId],
   );
 
@@ -116,12 +507,30 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
         projectKey: tenantId,
       };
       const res = await deleteOidc(payload);
-      if (!res.isSuccess) return showErrorToast({ errors: res.error });
-      showSuccessToast({ description: "OIDC credential deleted successfully" });
+      if (!res.isSuccess) {
+        showErrorToast({ errors: res.error });
+        return;
+      }
+      showSuccessToast({ description: t("OIDC_CARD.TOAST_DELETED") });
       setShowDeleteDialog(false);
     } catch (error) {
-      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
-      showErrorToast({ errors: "Something went wrong" });
+      showActionError(error);
+    }
+  };
+
+  const handleConfirmStatusChange = async () => {
+    try {
+      const res = await saveOidc(buildStatusTogglePayload(item));
+      if (!res.isSuccess) {
+        showErrorToast({ errors: res.error });
+        return;
+      }
+      showSuccessToast({
+        description: isActive ? t("OIDC_CARD.TOAST_DISABLED") : t("OIDC_CARD.TOAST_ENABLED"),
+      });
+      setShowStatusDialog(false);
+    } catch (error) {
+      showActionError(error);
     }
   };
 
@@ -131,21 +540,20 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
         itemId: item.itemId,
         projectKey: tenantId,
       });
-      if (!res.isSuccess) {
-        return showErrorToast({
-          errors: res.errors ?? "Failed to rotate secret",
-        });
+      if (!res.isSuccess || !res.clientSecret) {
+        showErrorToast({ errors: res.errors ?? t("OIDC_CARD.ERROR_ROTATE") });
+        return;
       }
-      setRotatedSecret(res.clientSecret);
       setShowRotateDialog(false);
-      setShowRotatedSecretDialog(true);
-      setExpanded(true);
-      showSuccessToast({ description: "Client secret rotated successfully" });
+      setRotatedSecret({
+        label: clientLabel,
+        clientId: res.clientId || item.itemId,
+        clientSecret: res.clientSecret,
+        reason: "rotated",
+      });
+      showSuccessToast({ description: t("OIDC_CARD.TOAST_ROTATED") });
     } catch (error) {
-      if (isErrorWithErrors(error)) {
-        return showErrorToast({ errors: error.errors });
-      }
-      showErrorToast({ errors: "Something went wrong" });
+      showActionError(error);
     }
   };
 
@@ -154,194 +562,80 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
       <TableRow
         className={cn(
           "hover:bg-muted/50",
-          kvPairs.length > 0 && "cursor-pointer",
-          expanded && kvPairs.length > 0 ? "border-b-0" : "border-b-2 border-border",
+          hasDetails && "cursor-pointer",
+          expanded && hasDetails ? "border-b-0" : "border-b-2 border-border",
+          !isActive && "opacity-75",
         )}
-        onClick={() => kvPairs.length > 0 && setExpanded((e) => !e)}
+        onClick={() => hasDetails && setExpanded((e) => !e)}
       >
         <TableCell className="w-8 py-3.5 pl-4">
-          {kvPairs.length > 0 ? (
+          {hasDetails ? (
             <ChevronRight
-              className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
+              className={cn(
+                "h-4 w-4 text-muted-foreground transition-transform duration-200",
+                expanded && "rotate-90",
+              )}
             />
           ) : (
             <span className="block h-4 w-4" />
           )}
         </TableCell>
-        <TableCell className="py-3.5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-950">
-              <Shield className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium">
-                {item.clientDisplayName || item.itemId}
-              </p>
-              <p className="truncate font-mono text-xs text-muted-foreground">{item.itemId}</p>
-            </div>
-          </div>
-        </TableCell>
-        <TableCell className="hidden py-3.5 sm:table-cell">
-          <div className="flex flex-wrap gap-1.5">
-            <Badge
-              variant="outline"
-              className="w-fit gap-1.5 border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis"
-            >
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
-              OIDC
-            </Badge>
-            {item.isDeviceFlowClient && (
-              <Badge
-                variant="outline"
-                className="w-fit border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis"
-              >
-                Device Flow
-              </Badge>
-            )}
-          </div>
-        </TableCell>
+        <OidcClientNameCell item={item} loginPolicy={loginPolicy} />
+        <OidcTypeCell isDeviceFlowClient={item.isDeviceFlowClient} />
+        <OidcStatusCell isActive={isActive} />
         <TableCell className="hidden py-3.5 text-sm text-muted-foreground md:table-cell">
           {createdAt}
         </TableCell>
-        <TableCell className="py-3.5 pl-4 text-left" onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center justify-start gap-1">
-            <CreateOIDC itemId={item.itemId} triggerVariant="ghost" />
-            {!item.isDeviceFlowClient && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
-                    aria-label="Rotate client secret"
-                    onClick={() => setShowRotateDialog(true)}
-                    disabled={isRotating}
-                  >
-                    <RotateCw className={cn("h-3.5 w-3.5", isRotating && "animate-spin")} />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Rotate Secret</TooltipContent>
-              </Tooltip>
-            )}
-            <span className="mx-0.5 h-4 w-px shrink-0 bg-border" aria-hidden />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                  aria-label="Delete"
-                  onClick={() => setShowDeleteDialog(true)}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Delete</TooltipContent>
-            </Tooltip>
-          </div>
-        </TableCell>
+        <OidcRowActions
+          item={item}
+          isRotating={isRotating}
+          isUpdating={isUpdating}
+          onRotate={() => setShowRotateDialog(true)}
+          onToggleStatus={() => setShowStatusDialog(true)}
+          onDelete={() => setShowDeleteDialog(true)}
+        />
       </TableRow>
 
-      {expanded && (
-        <TableRow className="border-b-2 border-border hover:bg-transparent">
-          <TableCell
-            colSpan={5}
-            className="max-w-0 bg-muted/20 px-3 py-3 pl-8 sm:px-6 sm:py-4 sm:pl-12"
-          >
-            <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
-              {kvPairs.map(({ key, value, copyable, sensitive }) => (
-                <KVDetailItem
-                  key={key}
-                  label={key}
-                  value={value}
-                  copyable={copyable}
-                  sensitive={sensitive}
-                />
-              ))}
-            </div>
-          </TableCell>
-        </TableRow>
-      )}
+      {expanded && <OidcDetailsRow kvPairs={kvPairs} />}
 
-      <Dialog open={showRotateDialog} onOpenChange={setShowRotateDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Rotate client secret</DialogTitle>
-            <DialogDescription>
-              Do you want to rotate the client secret for <strong>{clientLabel}</strong>?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowRotateDialog(false)}
-              disabled={isRotating}
-            >
-              Cancel
-            </Button>
-            <Button size="sm" onClick={handleConfirmRotate} disabled={isRotating}>
-              {isRotating ? "Rotating…" : "Rotate Secret"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <OidcStatusDialog
+        open={showStatusDialog}
+        onOpenChange={setShowStatusDialog}
+        clientLabel={clientLabel}
+        isPending={isUpdating}
+        onConfirm={handleConfirmStatusChange}
+        willEnable={!isActive}
+      />
 
-      <Dialog open={showRotatedSecretDialog} onOpenChange={setShowRotatedSecretDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>New client secret</DialogTitle>
-            <DialogDescription>
-              Copy the new secret for <strong>{clientLabel}</strong> now. The previous secret no
-              longer works.
-            </DialogDescription>
-          </DialogHeader>
-          {rotatedSecret ? (
-            <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
-              <code className="min-w-0 flex-1 break-all text-sm">{rotatedSecret}</code>
-              <CopyToClipboardButton textToCopy={rotatedSecret}>
-                <span />
-              </CopyToClipboardButton>
-            </div>
-          ) : null}
-          <DialogFooter>
-            <Button size="sm" onClick={() => setShowRotatedSecretDialog(false)}>
-              Done
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <OidcRotateDialog
+        open={showRotateDialog}
+        onOpenChange={setShowRotateDialog}
+        clientLabel={clientLabel}
+        isPending={isRotating}
+        onConfirm={handleConfirmRotate}
+      />
 
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete OIDC Client</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete <strong>{clientLabel}</strong>? This action cannot be
-              undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setShowDeleteDialog(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleConfirmDelete}
-              disabled={isDeleting}
-            >
-              {isDeleting ? "Deleting…" : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <OneTimeSecretDialog secret={rotatedSecret} onClose={() => setRotatedSecret(null)} />
+
+      <OidcDeleteDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        clientLabel={clientLabel}
+        isPending={isDeleting}
+        onConfirm={handleConfirmDelete}
+      />
     </>
   );
 };
 
 export const OIDCRowExport = OIDCRow;
 
-export const OIDCCard = ({ oidc }: { oidc: IOidcConfig }) => {
-  return <OIDCRow item={oidc} defaultExpanded />;
+export const OIDCCard = ({
+  oidc,
+  loginPolicy,
+}: {
+  oidc: IOidcConfig;
+  loginPolicy?: IOidcClientLoginPolicy;
+}) => {
+  return <OIDCRow item={oidc} loginPolicy={loginPolicy} defaultExpanded />;
 };

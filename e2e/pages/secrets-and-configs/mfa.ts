@@ -43,13 +43,13 @@ export async function toggleAndConfirmMfaFlow(
   if (
     await page
       .getByText(
-        new RegExp(`Are you sure you want to ${action.toLowerCase()} ${methodName} MFA\\??`, "i"),
+        `Are you sure you want to ${action.toLowerCase()} ${methodName} MFA`,
       )
       .isVisible()
   ) {
     await expect(
       page.getByText(
-        new RegExp(`Are you sure you want to ${action.toLowerCase()} ${methodName} MFA\\??`, "i"),
+        `Are you sure you want to ${action.toLowerCase()} ${methodName} MFA`,
       ),
     ).toBeVisible();
   }
@@ -57,11 +57,11 @@ export async function toggleAndConfirmMfaFlow(
 
   if (
     await page
-      .getByText(new RegExp(`${methodName} MFA ${action.toLowerCase()}d successfully`))
+      .getByText(`${methodName} MFA ${action.toLowerCase()}d successfully`, { exact: false })
       .isVisible({ timeout: 15000 })
   ) {
     await expect(
-      page.getByText(new RegExp(`${methodName} MFA ${action.toLowerCase()}d successfully`)),
+      page.getByText(`${methodName} MFA ${action.toLowerCase()}d successfully`, { exact: false }),
     ).toBeVisible();
   }
 }

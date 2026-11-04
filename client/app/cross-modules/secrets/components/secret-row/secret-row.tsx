@@ -9,6 +9,7 @@ import {
   MoreHorizontal,
   Pencil,
   RefreshCw,
+  Archive,
   RotateCcw,
   Trash2,
   Unlock,
@@ -42,7 +43,10 @@ import {
   type SecretResult,
   type SecretStatus,
 } from "@/cross-modules/secrets/models/secret.model";
-import { useRevealSecret, useSecretTags } from "@/cross-modules/secrets/hooks/use-secret-management";
+import {
+  useRevealSecret,
+  useSecretTags,
+} from "@/cross-modules/secrets/hooks/use-secret-management";
 import { describeSecretError } from "@/cross-modules/secrets/utils/secret-error";
 import { SecretDetail } from "../secret-detail/secret-detail";
 import { RevealSecretModal } from "../reveal-secret-modal/reveal-secret-modal";
@@ -53,6 +57,9 @@ import {
   SecretActionDialog,
   type SecretLifecycleAction,
 } from "../secret-action-dialog/secret-action-dialog";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
+
+const I18N_MODULE = "os.secrets";
 
 const STATUS_VARIANT: Record<SecretStatus, "success" | "warning" | "secondary"> = {
   active: "success",
@@ -60,9 +67,10 @@ const STATUS_VARIANT: Record<SecretStatus, "success" | "warning" | "secondary"> 
   deleted: "secondary",
 };
 
-const NO_READ_PERMISSION = "You do not have permission to read this value";
+const noReadPermission = () => tStatic(I18N_MODULE, "SECRET_ROW.YOU_DO_NOT_HAVE_PERMISSION");
 
-const formatCreated = (value: string): string => {
+const formatCreated = (value?: string | null): string => {
+  if (!value) return "—";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : format(date, "dd MMM yyyy");
 };
@@ -135,6 +143,7 @@ interface SecretRowProps {
  * root override are all already folded into it, so nothing here re-derives the rule.
  */
 export function SecretRow({ secret }: SecretRowProps) {
+  const { t } = useT(I18N_MODULE);
   const [expanded, setExpanded] = useState(false);
   const [revealOpen, setRevealOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -163,9 +172,14 @@ export function SecretRow({ secret }: SecretRowProps) {
     try {
       const { value } = await readValue(secret.secretId);
       await navigator.clipboard.writeText(value);
-      showSuccessToast({ description: "Secret value copied to the clipboard." });
+      showSuccessToast({ description: t("SECRET_ROW.SECRET_VALUE_COPIED_TO_THE") });
     } catch (error) {
-      showErrorToast({ errors: describeSecretError(error, "Could not copy the value.").message });
+      showErrorToast({
+        errors: describeSecretError(
+          error,
+          tStatic(I18N_MODULE, "SECRET_ROW.COULD_NOT_COPY_THE_VALUE"),
+        ).message,
+      });
     }
   };
 
@@ -183,7 +197,13 @@ export function SecretRow({ secret }: SecretRowProps) {
 
         <TableCell className="py-3.5">
           {/* Name and tags. The description lives in the expanded panel, where it has room. */}
-          <p className="truncate font-medium text-high-emphasis" title={secret.name}>
+          <p
+            className={cn(
+              "truncate font-medium",
+              isDeleted ? "text-muted-foreground" : "text-high-emphasis",
+            )}
+            title={secret.name}
+          >
             {displaySecretName(secret.name)}
           </p>
           {tags.length > 0 && (
@@ -212,31 +232,74 @@ export function SecretRow({ secret }: SecretRowProps) {
           </Badge>
         </TableCell>
 
-        <TableCell className="py-3.5">
-          <Badge variant={STATUS_VARIANT[secret.status]} className="w-fit whitespace-nowrap font-normal">
-            {SECRET_STATUS_LABEL[secret.status]}
-          </Badge>
-        </TableCell>
+        {isDeleted ? (
+          // Matches the archived view's columns: Created On, then Archived On in place of status.
+          <>
+            <TableCell className="py-3.5 text-sm text-muted-foreground">
+              {formatCreated(secret.createdDate)}
+            </TableCell>
+            <TableCell className="py-3.5 text-sm text-muted-foreground">
+              {formatCreated(secret.deletedDate)}
+            </TableCell>
+          </>
+        ) : (
+          <>
+            <TableCell className="py-3.5">
+              <Badge
+                variant={STATUS_VARIANT[secret.status]}
+                className="w-fit whitespace-nowrap font-normal"
+              >
+                {SECRET_STATUS_LABEL[secret.status]}
+              </Badge>
+            </TableCell>
 
-        <TableCell className="py-3.5 text-sm text-muted-foreground">
-          {formatCreated(secret.createdDate)}
-        </TableCell>
+            <TableCell className="py-3.5 text-sm text-muted-foreground">
+              {formatCreated(secret.createdDate)}
+            </TableCell>
+          </>
+        )}
 
         <TableCell className="py-3.5 pr-4 text-right" onClick={(event) => event.stopPropagation()}>
           <div className="flex items-center justify-end gap-0.5">
+            {isDeleted && (
+              // The two things an archived secret is for, in plain sight rather than in the menu.
+              <div className="mr-1 flex items-center gap-1.5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1.5 px-2.5"
+                  onClick={() => setLifecycleAction("restore")}
+                >
+                  <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+                  {t("SECRET_ROW.RESTORE")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1.5 px-2.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => setLifecycleAction("purge")}
+                >
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                  {t("SECRET_ROW.PURGE")}
+                </Button>
+              </div>
+            )}
+
             {showValueActions && !isLocked && (
               <>
                 <ExplainedButton
-                  label="Reveal value"
-                  reason={NO_READ_PERMISSION}
+                  label={t("SECRET_ROW.REVEAL_VALUE")}
+                  reason={noReadPermission()}
                   unavailable={!canRead}
                   onClick={() => setRevealOpen(true)}
                 >
                   <Eye className="h-3.5 w-3.5" />
                 </ExplainedButton>
                 <ExplainedButton
-                  label="Copy value"
-                  reason={NO_READ_PERMISSION}
+                  label={t("SECRET_ROW.COPY_VALUE")}
+                  reason={noReadPermission()}
                   unavailable={!canRead}
                   busy={isCopying}
                   onClick={copyValue}
@@ -253,52 +316,45 @@ export function SecretRow({ secret }: SecretRowProps) {
                   variant="ghost"
                   size="sm"
                   className="h-7 w-7 p-0"
-                  aria-label={`Actions for ${secret.name}`}
+                  aria-label={t("SECRET_ROW.ACTIONS_FOR", { name: secret.name })}
                 >
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {isDeleted ? (
-                  // A deleted secret cannot be edited, rotated or locked — only brought back.
-                  <DropdownMenuItem onClick={() => setLifecycleAction("restore")}>
-                    <RotateCcw className="mr-2 h-4 w-4" />
-                    Restore
-                  </DropdownMenuItem>
-                ) : (
+                {/* Restore and Purge sit on the row itself for an archived secret; its menu
+                    keeps only what applies to any state. */}
+                {!isDeleted && (
                   <>
                     <DropdownMenuItem onClick={() => setEditOpen(true)}>
                       <Pencil className="mr-2 h-4 w-4" />
-                      Edit
+                      {t("common:EDIT")}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setRotateOpen(true)}>
                       <RefreshCw className="mr-2 h-4 w-4" />
-                      Rotate
+                      {t("SECRET_ROW.ROTATE")}
                     </DropdownMenuItem>
                     {isLocked ? (
                       <DropdownMenuItem onClick={() => setLifecycleAction("unlock")}>
                         <Unlock className="mr-2 h-4 w-4" />
-                        Unlock
+                        {t("SECRET_ROW.UNLOCK")}
                       </DropdownMenuItem>
                     ) : (
                       <DropdownMenuItem onClick={() => setLifecycleAction("lock")}>
                         <Lock className="mr-2 h-4 w-4" />
-                        Lock
+                        {t("SECRET_ROW.LOCK")}
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
-                      onClick={() => setLifecycleAction("delete")}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
+                    <DropdownMenuItem onClick={() => setLifecycleAction("delete")}>
+                      <Archive className="mr-2 h-4 w-4" />
+                      {t("SECRET_ROW.ARCHIVE")}
                     </DropdownMenuItem>
                   </>
                 )}
-                <DropdownMenuSeparator />
+                {!isDeleted && <DropdownMenuSeparator />}
                 <DropdownMenuItem onClick={() => setAuditOpen(true)}>
                   <History className="mr-2 h-4 w-4" />
-                  Audit
+                  {t("SECRET_ROW.AUDIT")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -317,9 +373,7 @@ export function SecretRow({ secret }: SecretRowProps) {
       {revealOpen && (
         <RevealSecretModal open={revealOpen} onOpenChange={setRevealOpen} secret={secret} />
       )}
-      {editOpen && (
-        <SecretFormModal open={editOpen} onOpenChange={setEditOpen} secret={secret} />
-      )}
+      {editOpen && <SecretFormModal open={editOpen} onOpenChange={setEditOpen} secret={secret} />}
       {rotateOpen && (
         <RotateSecretModal open={rotateOpen} onOpenChange={setRotateOpen} secret={secret} />
       )}

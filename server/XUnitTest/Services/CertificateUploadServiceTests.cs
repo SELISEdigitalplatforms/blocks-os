@@ -1,4 +1,4 @@
-using Azure;
+﻿using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using DomainService.Certificate;
@@ -164,7 +164,7 @@ namespace XUnitTest.Services
 
             await _service.UploadPublicCertificateAsync(Request(CertificateFile()));
 
-            _storage.Verify(s => s.GetBlobClientAsync("tenant-123_3rdparty"), Times.Once);
+            _storage.Verify(s => s.GetBlobClientAsync("tenant-123_3rdparty.pfx"), Times.Once);
         }
 
         [Fact]
@@ -175,6 +175,19 @@ namespace XUnitTest.Services
             await _service.UploadPublicCertificateAsync(Request(CertificateFile(), isThirdParty: false));
 
             _storage.Verify(s => s.GetBlobClientAsync("tenant-123"), Times.Once);
+        }
+
+        [Fact]
+        public async Task UploadPublicCertificateAsync_KeepsTheExtensionSoTheUrlSaysWhatItPointsAt()
+        {
+            // Without it the stored URL ends in an opaque identifier, and nothing downstream can
+            // tell a PKCS#12 that needs a passphrase from a bare certificate that does not.
+            ArrangeBlob();
+
+            await _service.UploadPublicCertificateAsync(
+                Request(CertificateFile("recyclium.crt", contentType: "application/x-x509-ca-cert")));
+
+            _storage.Verify(s => s.GetBlobClientAsync("tenant-123_3rdparty.crt"), Times.Once);
         }
 
         [Fact]

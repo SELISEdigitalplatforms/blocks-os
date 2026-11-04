@@ -64,16 +64,10 @@ namespace XUnitTest.Integration
             var secret = new Mock<IBlocksSecret>();
             secret.SetupGet(s => s.TraceConnectionString).Returns(ConnectionString);
 
-            var configRepository = new Mock<ILmtArchiveRestoreConfigurationRepository>();
-            configRepository
-                .Setup(r => r.GetLmtArchiveRestoreConfigurationsAsync(It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new LmtArchiveRestoreConfigurations { RetentionDay = 7 });
-
             return new LogTraceRestoreResultRepository(
                 secret.Object,
                 _fixture.DbContextProvider,
                 NullLogger<LogTraceRestoreResultRepository>.Instance,
-                configRepository.Object,
                 new ConfigurationBuilder().Build());
         }
 

@@ -65,14 +65,6 @@ public static class SecretTag
             return false;
         }
 
-        foreach (var character in tag)
-        {
-            if (!char.IsAsciiLetterOrDigit(character) && character is not ('.' or '_' or '-' or ':'))
-            {
-                return false;
-            }
-        }
-
-        return true;
+        return tag.All(character => char.IsAsciiLetterOrDigit(character) || character is '.' or '_' or '-' or ':');
     }
 }

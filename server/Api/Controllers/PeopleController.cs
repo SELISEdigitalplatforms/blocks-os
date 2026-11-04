@@ -4,11 +4,13 @@ using DomainService.People;
 using Microsoft.AspNetCore.Mvc;
 using Blocks.Genesis;
 using Microsoft.AspNetCore.Authorization;
+using System.Diagnostics.CodeAnalysis;
 
 namespace BlocksOs.Api.Controllers
 {
     [ApiController]
     [Route("[controller]/[action]")]
+    [SuppressMessage("Major Code Smell", "S6960:Controllers should not have mixed responsibilities", Justification = "Splitting would change controller names, Swagger grouping and operation ids that clients rely on.")]
     public class PeopleController : ControllerBase
     {
         private readonly IPeopleService _peopleService;
@@ -101,7 +103,7 @@ namespace BlocksOs.Api.Controllers
 
         /// <summary>Owner-only, always — a grant must never be able to widen itself.</summary>
         [HttpPost]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::people::save-access-policy")]
         [ProjectPolicy(OwnerOnly = true)]
         public async Task<IActionResult> SaveAccessPolicy([FromBody] SaveAccessPolicyRequest request)
         {

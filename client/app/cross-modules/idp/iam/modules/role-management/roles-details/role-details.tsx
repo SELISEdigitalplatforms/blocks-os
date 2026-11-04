@@ -4,8 +4,10 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { useSetRoles } from "@blocks-idp/iam/hooks/use-roles";
+import { useGrantScope } from "@blocks-idp/iam/hooks/use-grant-scope";
+import { DisabledReason } from "@blocks-idp/iam/components/disabled-reason";
 import { useGetOrganizationConfig } from "@blocks-idp/iam/hooks/use-organization";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 // import { IPermission, PermissionSeverityLevel } from "@blocks-idp/iam/models/permission";
 import { RoleDetailsProvider, useRoleDetailsStore } from "./role-details-state";
 // import { PermissionSeverity } from "@blocks-idp/iam/components/permission-severity/permission-severity";
@@ -40,6 +42,7 @@ const RoleDetailsPageSkeleton = () => (
 type PendingChange = { added: string[]; removed: string[] };
 
 export function RoleDetailsContainer() {
+  const { t } = useT("os.idp.roles");
   const role = useRoleDetailsStore((state) => state.role);
   const isEditMode = useRoleDetailsStore((state) => state.isEditMode);
   const discardChanges = useRoleDetailsStore((state) => state.discardChanges);
@@ -48,6 +51,8 @@ export function RoleDetailsContainer() {
   const isInitialized = useRoleDetailsStore((state) => state.isInitialized);
   const permissionMap = useRoleDetailsStore((state) => state.permissionMap);
   const { isPending, mutateAsync } = useSetRoles();
+  const { roleEditBlock } = useGrantScope();
+  const editBlock = role ? roleEditBlock(role) : undefined;
   const { tenantId } = useProjectStore().selectedProject || { tenantId: "" };
   const { data: orgConfig } = useGetOrganizationConfig(tenantId);
 
@@ -94,8 +99,8 @@ export function RoleDetailsContainer() {
       commitChanges();
       showSuccessToast({
         description: propagateToAllOrganizations
-          ? "Role permissions updated across all organizations"
-          : "Role permissions updated successfully",
+          ? t("ROLE_DETAILS.UPDATED_ALL_ORGS")
+          : t("ROLE_DETAILS.UPDATED_SUCCESS"),
       });
     } catch (error) {
       if (error && typeof error === "object" && "errors" in error) {
@@ -137,17 +142,25 @@ export function RoleDetailsContainer() {
           customTitles={breadcrumbTitles}
         />
         <div className="flex shrink-0 items-center gap-2">
-          {!isEditMode ? (
+          {!isEditMode && editBlock && (
+            <DisabledReason reason={editBlock}>
+              <Button variant="outline" disabled>
+                <span>{t("ROLE_DETAILS.EDIT_PERMISSIONS")}</span>
+              </Button>
+            </DisabledReason>
+          )}
+          {!isEditMode && !editBlock && (
             <Button variant="outline" onClick={() => changeEditMode(true)}>
-              <span>Edit Permissions</span>
+              <span>{t("ROLE_DETAILS.EDIT_PERMISSIONS")}</span>
             </Button>
-          ) : (
+          )}
+          {isEditMode && (
             <>
               <Button variant="outline" disabled={isPending} onClick={() => discardChanges()}>
-                <span>Discard</span>
+                <span>{t("ROLE_DETAILS.DISCARD")}</span>
               </Button>
               <Button disabled={isPending} onClick={onSaveClick}>
-                <span>Save Changes</span>
+                <span>{t("ROLE_DETAILS.SAVE_CHANGES")}</span>
               </Button>
             </>
           )}

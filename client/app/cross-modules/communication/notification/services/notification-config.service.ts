@@ -1,6 +1,7 @@
 import { http } from "@/lib/http/http-client";
 import type { IAPIResponse } from "@/models/api-response";
 import { NOTIFICATION_ENDPOINTS } from "../constants/endpoint.constant";
+import { tn } from "../i18n";
 import {
   IGetNotificationConfigsPayload,
   IGetNotificationConfigsResponse,
@@ -39,6 +40,59 @@ const filterBySearch = (
   );
 };
 
+/** The list endpoint answers either wrapped in `data` or as the bare response. */
+const toConfigsResponse = (
+  response: INotificationGetsApiResponse | IAPIResponse<INotificationGetsApiResponse>,
+): INotificationGetsApiResponse => {
+  const wrapped = (response as IAPIResponse<INotificationGetsApiResponse>).data;
+  if (Array.isArray(wrapped)) return wrapped;
+  const bare = response as INotificationGetsApiResponse;
+  if (bare.configurations !== undefined) return bare;
+  return { configurations: [], totalCount: 0 };
+};
+
+const BUILT_IN_FIELD_KEYS = [
+  "isBuiltIn",
+  "isDisabled",
+  "description",
+  "importance",
+  "kind",
+  "sourceService",
+  "consumerAppRecommendation",
+  "consumerAppNote",
+] as const;
+
+/** Only fields the caller set are sent, so an unchanged config keeps the old payload shape. */
+const pickBuiltInFields = (payload: ISaveNotificationConfigPayload) => {
+  const picked: Partial<Record<(typeof BUILT_IN_FIELD_KEYS)[number], unknown>> = {};
+  for (const key of BUILT_IN_FIELD_KEYS) {
+    if (payload[key] !== undefined) picked[key] = payload[key];
+  }
+  return picked;
+};
+
+const DELIVERY_FIELD_KEYS = [
+  "scope",
+  "audience",
+  "liveEnabled",
+  "pushEnabled",
+  "pushTemplate",
+  "pushPlatforms",
+  "pushOptions",
+  "rateLimitPerMinute",
+  "defaultAudience",
+  "audienceLocked",
+] as const;
+
+/** Same rule as the built-in fields: a field the caller did not set is not sent. */
+const pickDeliveryFields = (payload: ISaveNotificationConfigPayload) => {
+  const picked: Partial<Record<(typeof DELIVERY_FIELD_KEYS)[number], unknown>> = {};
+  for (const key of DELIVERY_FIELD_KEYS) {
+    if (payload[key] !== undefined) picked[key] = payload[key];
+  }
+  return picked;
+};
+
 export class NotificationConfigService {
   getNotificationConfigs(
     payload: IGetNotificationConfigsPayload,
@@ -57,13 +111,7 @@ export class NotificationConfigService {
         `${NOTIFICATION_ENDPOINTS.GET_CONFIGS}?${params.toString()}`,
       )
       .then((response) => {
-        const data: INotificationGetsApiResponse = Array.isArray(
-          (response as IAPIResponse<INotificationGetsApiResponse>).data,
-        )
-          ? (response as IAPIResponse<INotificationGetsApiResponse>).data
-          : (response as INotificationGetsApiResponse).configurations !== undefined
-            ? (response as INotificationGetsApiResponse)
-            : { configurations: [], totalCount: 0 };
+        const data = toConfigsResponse(response);
 
         const configurations = data.configurations ?? [];
         const filtered = filterBySearch(configurations, payload.searchText);
@@ -87,6 +135,8 @@ export class NotificationConfigService {
         notifyMethod: payload.notifyMethod,
         itemId: payload.itemId ?? "",
         isUpdateRequest: !!payload.itemId,
+        ...pickBuiltInFields(payload),
+        ...pickDeliveryFields(payload),
       })
       .then((response): ISaveNotificationConfigResponse => ({
         isSuccess: !!response?.isSuccess,
@@ -100,7 +150,15 @@ export class NotificationConfigService {
       .delete<INotificationDeleteApiResponse>(
         `${NOTIFICATION_ENDPOINTS.DELETE_CONFIG}?itemId=${encodeURIComponent(itemId)}`,
       )
-      .then(() => undefined);
+      .then((response) => {
+        // A refusal (for example a built-in config deleted by a non-root user) can arrive as a 200.
+        if (response?.isSuccess === false) {
+          const message = tn("NOTIFICATION_CONFIG_SERVICE.DELETE_FAILED");
+          throw Object.assign(new Error(message), {
+            errors: response.errors ?? { itemId: message },
+          });
+        }
+      });
   }
 
   getNotificationConfig(itemId: string): Promise<INotificationConfigRow> {

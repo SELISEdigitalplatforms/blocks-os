@@ -1,11 +1,10 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Configuration.DomainService.Mail.Entities;
-using Configuration.DomainService.Mail.Enums;
 using Configuration.DomainService.Mail.Mailbox;
 using Configuration.DomainService.Mail.Mailbox.Services;
 using FluentAssertions;
 using Moq;
+using Blocks.Genesis.Entities.Logic;
 
 namespace XUnitTest.Services
 {
@@ -80,6 +79,31 @@ namespace XUnitTest.Services
 
             response.IsSuccess.Should().BeTrue();
             response.Mail.Should().BeSameAs(mail);
+        }
+
+        [Fact]
+        public async Task GetMailBoxMailAsync_ByItemId_ResolvesMessageId()
+        {
+            var mail = new MailBoxEntity { ItemId = "row-1", MessageId = "CAP+x@mail.gmail.com", Status = MailStatus.Received };
+            _repo.Setup(r => r.GetMessageIdByItemIdAsync("row-1")).ReturnsAsync("CAP+x@mail.gmail.com");
+            _repo.Setup(r => r.GetMailBoxMailAsync("CAP+x@mail.gmail.com")).ReturnsAsync(mail);
+
+            var response = await Service().GetMailBoxMailAsync(new GetMailBoxMailRequest { ItemId = "row-1" });
+
+            response.IsSuccess.Should().BeTrue();
+            response.Mail.Should().BeSameAs(mail);
+        }
+
+        [Fact]
+        public async Task GetMailBoxMailAsync_UnknownItemId_ReturnsError()
+        {
+            _repo.Setup(r => r.GetMessageIdByItemIdAsync("missing")).ReturnsAsync((string?)null);
+
+            var response = await Service().GetMailBoxMailAsync(new GetMailBoxMailRequest { ItemId = "missing" });
+
+            response.IsSuccess.Should().BeFalse();
+            response.Errors.Should().ContainKey("MessageId");
+            _repo.Verify(r => r.GetMailBoxMailAsync(It.IsAny<string>()), Times.Never);
         }
     }
 }

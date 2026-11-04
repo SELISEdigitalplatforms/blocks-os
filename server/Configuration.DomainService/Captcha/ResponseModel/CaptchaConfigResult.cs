@@ -1,3 +1,6 @@
+using Configuration.DomainService.Shared.Secrets;
+using MongoDB.Bson.Serialization.Attributes;
+
 namespace Configuration.DomainService.Captcha.ResponseModel
 {
     /// <summary>
@@ -28,5 +31,18 @@ namespace Configuration.DomainService.Captcha.ResponseModel
 
         /// <summary>Id of the linked secret holding the captcha secret, or null when none is set.</summary>
         public string? SecretId { get; set; }
+
+        /// <summary>
+        /// The linked secret's state — one of the <see cref="LinkedSecretStatus"/> values —
+        /// computed on every read from secret metadata.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="BsonIgnoreAttribute"/> because this type is also the stored record: the
+        /// status is a read-time fact about another document, so persisting it would only ever
+        /// store a value that is already stale, and it must not leak into what blocks-iam reads.
+        /// Still serialized to JSON, which is the only place it belongs.
+        /// </remarks>
+        [BsonIgnore]
+        public string SecretStatus { get; set; } = LinkedSecretStatus.None;
     }
 }

@@ -37,6 +37,8 @@ export type IDomainRequest = Omit<IDomain, "domainType">;
 /** The package's project, with the local {@link IDomain} in place of its own. */
 export type IProject = Omit<IPackageProject, "applications"> & {
   applications: IDomain[];
+  /** Gates Genesis third-party token trust for this tenant (Phase 1 Project/Get). */
+  isThirdPartyJwtEnabled: boolean;
 };
 
 export interface IProjectGroup {

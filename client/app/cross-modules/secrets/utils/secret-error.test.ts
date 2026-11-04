@@ -72,6 +72,44 @@ describe("describeSecretError", () => {
   });
 });
 
+describe("archived value reads", () => {
+  const archivedRead = () =>
+    new FakeHttpError(400, {
+      invalid_request: "This secret is archived. Restore it to read its value.",
+      reason: "STATUS_DELETED",
+    });
+
+  it("explains a 400 STATUS_DELETED as an archived secret", () => {
+    const info = describeSecretError(archivedRead(), "Could not read the secret value.");
+    expect(info.status).toBe(400);
+    expect(info.reason).toBe("STATUS_DELETED");
+    expect(info.message).toBe("This secret is archived. Restore it to read its value.");
+    expect(info.field).toBeUndefined();
+  });
+
+  it("treats a 400 STATUS_DELETED as a stale view, so the list refreshes", () => {
+    expect(isStaleSecretError(archivedRead())).toBe(true);
+  });
+
+  it("does not treat other 400s as stale", () => {
+    expect(isStaleSecretError(new FakeHttpError(400, { reason: "NAME_INVALID" }))).toBe(false);
+    expect(isStaleSecretError(new FakeHttpError(400, {}))).toBe(false);
+  });
+
+  it("keeps the stale-view copy for STATUS_DELETED on a lifecycle action's 409", () => {
+    const info = describeSecretError(new FakeHttpError(409, { reason: "STATUS_DELETED" }));
+    expect(info.message).toBe("The secret's status has changed. Refresh and try again.");
+  });
+
+  it("keeps 409 STATUS_LOCKED unchanged", () => {
+    const error = new FakeHttpError(409, { reason: "STATUS_LOCKED" });
+    expect(describeSecretError(error).message).toBe(
+      "The secret's status has changed. Refresh and try again.",
+    );
+    expect(isStaleSecretError(error)).toBe(true);
+  });
+});
+
 describe("error predicates", () => {
   it("treats 404 and 409 as a stale view", () => {
     expect(isStaleSecretError(new FakeHttpError(404, {}))).toBe(true);

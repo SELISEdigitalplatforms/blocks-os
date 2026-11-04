@@ -16,6 +16,7 @@ import { githubInfoService } from "@/cross-modules/devops/services/github-info.s
 import { cn, debounce } from "@/lib/utils";
 import { Check, ChevronsUpDown, ExternalLink, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 interface RepositorySelectionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -24,6 +25,23 @@ interface RepositorySelectionModalProps {
   title?: string;
   description?: string;
 }
+// The repository list after a page arrives: the first page replaces the list, later pages
+// append; hasMore is false once the last page (or an empty one) is in.
+const applyRepositoryPage = (
+  items: IRepository[] | undefined,
+  totalCount: number,
+  page: number,
+  current: IRepository[],
+  perPage: number,
+): { repositories: IRepository[]; hasMore: boolean } => {
+  if (totalCount === 0 || !Array.isArray(items)) return { repositories: [], hasMore: false };
+  if (items.length === 0) return { repositories: page === 0 ? [] : current, hasMore: false };
+  return {
+    repositories: page === 0 ? items : [...current, ...items],
+    hasMore: (page + 1) * perPage < totalCount && items.length === perPage,
+  };
+};
+
 export const RepositorySelectionModal = ({
   open,
   onOpenChange,
@@ -32,6 +50,7 @@ export const RepositorySelectionModal = ({
   title = "Select repository",
   description = "Select the repositories you want to link to this project",
 }: RepositorySelectionModalProps) => {
+  const { t } = useT("os.create-project");
   const [selectedRepoId, setSelectedRepoId] = useState<string>("");
   const [repoError, setRepoError] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -61,11 +80,13 @@ export const RepositorySelectionModal = ({
     };
   }, [searchTerm, debouncedSetSearch]);
   // Reset pagination when debounced search term changes
-  useEffect(() => {
+  const [searchTermForPaging, setSearchTermForPaging] = useState(debouncedSearchTerm);
+  if (searchTermForPaging !== debouncedSearchTerm) {
+    setSearchTermForPaging(debouncedSearchTerm);
     setCurrentPage(0);
     setAllRepositories([]);
     setHasMoreData(true);
-  }, [debouncedSearchTerm]);
+  }
   const itemsPerPage = 10;
   // Query only active while modal is open
   const {
@@ -78,47 +99,27 @@ export const RepositorySelectionModal = ({
     currentPage + 1, // API expects 1-based indexing
     itemsPerPage,
   );
-  // Update accumulated repositories when new data arrives
-  useEffect(() => {
-    // Early return if no data
-    if (!repositories?.data) {
-      return;
+  // Update accumulated repositories when new data (or a new page) arrives. Done while
+  // rendering, keyed on the response and page it was last applied for.
+  const [appliedResponse, setAppliedResponse] = useState<{
+    repositories: typeof repositories;
+    page: number;
+  }>({ repositories: undefined, page: 0 });
+  if (appliedResponse.repositories !== repositories || appliedResponse.page !== currentPage) {
+    setAppliedResponse({ repositories, page: currentPage });
+    // Nothing to apply until data arrives
+    if (repositories?.data) {
+      const next = applyRepositoryPage(
+        repositories.data.items,
+        repositories.data.total_count || 0,
+        currentPage,
+        allRepositories,
+        itemsPerPage,
+      );
+      setAllRepositories(next.repositories);
+      setHasMoreData(next.hasMore);
     }
-    // Handle the wrapped response structure
-    const items = repositories.data.items;
-    const totalCount = repositories.data.total_count || 0;
-    // If total_count is 0, no repositories available
-    if (totalCount === 0) {
-      setAllRepositories([]);
-      setHasMoreData(false);
-      return;
-    }
-    // Check if items is a valid array
-    if (!Array.isArray(items)) {
-      setAllRepositories([]);
-      setHasMoreData(false);
-      return;
-    }
-    if (items.length > 0) {
-      if (currentPage === 0) {
-        // First page - replace all repositories
-        setAllRepositories(items);
-      } else {
-        // Subsequent pages - append to existing repositories
-        setAllRepositories((prev) => [...prev, ...items]);
-      }
-      // Check if there's more data to load
-      const totalLoadedItems = (currentPage + 1) * itemsPerPage;
-      const hasMore = totalLoadedItems < totalCount && items.length === itemsPerPage;
-      setHasMoreData(hasMore);
-    } else {
-      // Empty array returned - no more data
-      if (currentPage === 0) {
-        setAllRepositories([]);
-      }
-      setHasMoreData(false);
-    }
-  }, [repositories, currentPage, itemsPerPage]);
+  }
   // Scroll handler for infinite scrolling
   const handleScroll = useCallback(
     (e: React.UIEvent<HTMLDivElement>) => {
@@ -146,9 +147,11 @@ export const RepositorySelectionModal = ({
   }, [isPopoverOpen]);
 
   // Reset highlight when list changes
-  useEffect(() => {
+  const [highlightedList, setHighlightedList] = useState(allRepositories);
+  if (highlightedList !== allRepositories) {
+    setHighlightedList(allRepositories);
     setHighlightedIndex(allRepositories.length > 0 ? 0 : -1);
-  }, [allRepositories]);
+  }
 
   // Scroll highlighted item into view
   useEffect(() => {
@@ -174,13 +177,13 @@ export const RepositorySelectionModal = ({
     const repo = allRepositories.find((r) => String(r.id) === selectedRepoId);
     if (!repo) return;
     if (selectedRepositories.some((r) => r.id === repo.id)) {
-      setRepoError("Repository already selected.");
+      setRepoError(t("REPOSITORY_SELECTION_MODAL.REPOSITORY_ALREADY_SELECTED"));
       return;
     }
     setRepoError("");
     onSelectRepository(repo);
     setSelectedRepoId("");
-  }, [selectedRepoId, allRepositories, selectedRepositories, onSelectRepository]);
+  }, [selectedRepoId, allRepositories, selectedRepositories, onSelectRepository, t]);
   const handleRepoChange = useCallback((val: string) => {
     setSelectedRepoId(val);
     setRepoError("");
@@ -237,11 +240,18 @@ export const RepositorySelectionModal = ({
     }
   };
   const modalData = {
-    dialogTitle: "Revoke Access",
-    dialogSubtitle: <>You will no longer be able to access the repositories.</>,
-    confirmButton: "Confirm",
-    cancelButton: "Cancel",
+    dialogTitle: t("REPOSITORY_SELECTION_MODAL.REVOKE_ACCESS"),
+    dialogSubtitle: <>{t("REPOSITORY_SELECTION_MODAL.YOU_WILL_NO_LONGER_BE")}</>,
+    confirmButton: t("common:CONFIRM"),
+    cancelButton: t("common:CANCEL"),
   };
+  const isBusy = isLoading || isFetching;
+  let triggerLabel: string | undefined = t("REPOSITORY_SELECTION_MODAL.SELECT_A_REPOSITORY");
+  if (selectedRepoId) {
+    triggerLabel = allRepositories.find((r) => String(r.id) === selectedRepoId)?.full_name;
+  } else if (isBusy) {
+    triggerLabel = t("REPOSITORY_SELECTION_MODAL.LOADING_REPOSITORIES");
+  }
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl p-6">
@@ -274,13 +284,13 @@ export const RepositorySelectionModal = ({
           })}
         </div>
         <div className="mb-2 gap-1 text-xs text-gray-500 sm:flex">
-          {"Not seeing the repositories you expected here? "}
+          {t("REPOSITORY_SELECTION_MODAL.NOT_SEEING_THE_REPOSITORIES_YOU")}
           <span
             className="cursor-pointer text-blue-600 underline transition-colors hover:text-blue-800"
             onClick={() => setShowAccessModal(true)}
           >
             <span className="flex items-center gap-1">
-              Revoke repository access
+              {t("REPOSITORY_SELECTION_MODAL.REVOKE_REPOSITORY_ACCESS")}
               <ExternalLink className="h-3 w-3" />
             </span>
           </span>
@@ -302,8 +312,11 @@ export const RepositorySelectionModal = ({
         </div>
         <div className="mb-6">
           <label className="mb-1 block text-sm font-medium">
-            Github repository{" "}
-            {repositories?.data?.total_count ? `(${repositories.data.total_count} results)` : ""}
+            {repositories?.data?.total_count
+              ? t("REPOSITORY_SELECTION_MODAL.GITHUB_REPOSITORY_RESULTS", {
+                  count: repositories.data.total_count,
+                })
+              : t("REPOSITORY_SELECTION_MODAL.GITHUB_REPOSITORY")}
           </label>
           <div className="relative" onKeyDown={handleKeyDown}>
             <Button
@@ -319,11 +332,7 @@ export const RepositorySelectionModal = ({
                 setHighlightedIndex(allRepositories.length > 0 ? 0 : -1);
               }}
             >
-              {selectedRepoId
-                ? allRepositories.find((r) => String(r.id) === selectedRepoId)?.full_name
-                : isLoading || isFetching
-                  ? "Loading repositories..."
-                  : "Select a repository"}
+              {triggerLabel}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
             {isPopoverOpen && (
@@ -331,10 +340,10 @@ export const RepositorySelectionModal = ({
                 <div className="flex items-center border-b px-3">
                   <Input
                     autoFocus
-                    placeholder="Search repositories..."
+                    placeholder={t("REPOSITORY_SELECTION_MODAL.SEARCH_REPOSITORIES")}
                     value={searchTerm}
                     onChange={(e) => handleSearchChange(e.target.value)}
-                    className="h-11 w-full border-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
+                    className="h-11 w-full border-0 bg-transparent text-sm outline-hidden placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                 </div>
                 <div
@@ -343,12 +352,14 @@ export const RepositorySelectionModal = ({
                   className="max-h-60 overflow-y-auto overflow-x-hidden p-1"
                 >
                   {!isLoading && !isFetching && allRepositories.length === 0 && (
-                    <div className="py-6 text-center text-sm">No repositories found.</div>
+                    <div className="py-6 text-center text-sm">
+                      {t("REPOSITORY_SELECTION_MODAL.NO_REPOSITORIES_FOUND")}
+                    </div>
                   )}
                   {(isLoading || isFetching) && allRepositories.length === 0 && (
                     <div className="flex items-center justify-center p-4 text-sm text-gray-500">
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Loading repositories...
+                      {t("REPOSITORY_SELECTION_MODAL.LOADING_REPOSITORIES")}
                     </div>
                   )}
                   {allRepositories.map((repo: IRepository, idx: number) => (
@@ -365,7 +376,7 @@ export const RepositorySelectionModal = ({
                       }}
                       onMouseEnter={() => setHighlightedIndex(idx)}
                       className={cn(
-                        "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none",
+                        "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-hidden",
                         highlightedIndex === idx && "bg-accent text-accent-foreground",
                         selectedRepoId === String(repo.id) && "bg-accent text-accent-foreground",
                       )}
@@ -384,7 +395,7 @@ export const RepositorySelectionModal = ({
                   {(isLoading || isFetching) && allRepositories.length > 0 && (
                     <div className="flex items-center justify-center p-2 text-sm text-gray-500">
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Loading more...
+                      {t("REPOSITORY_SELECTION_MODAL.LOADING_MORE")}
                     </div>
                   )}
                 </div>
@@ -395,14 +406,14 @@ export const RepositorySelectionModal = ({
         </div>
         <div className="mt-6 flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={handleCancel}>
-            Cancel
+            {t("common:CANCEL")}
           </Button>
           <Button
             type="button"
             disabled={!selectedRepoId || isLoading || isFetching}
             onClick={handleSelectRepository}
           >
-            Add
+            {t("common:ADD")}
           </Button>
         </div>
       </DialogContent>

@@ -1,9 +1,9 @@
-import { formatDistanceToNow } from "date-fns";
+import { relativeTimeFromNow } from "@/lib/ui-locale";
 
 export const formatRelative = (value?: string | null): string => {
   if (!value) return "—";
   try {
-    return formatDistanceToNow(new Date(value), { addSuffix: true });
+    return relativeTimeFromNow(new Date(value));
   } catch {
     return value;
   }

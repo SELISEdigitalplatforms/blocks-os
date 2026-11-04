@@ -1,4 +1,4 @@
-import { ILanguage, ILanguageConfig } from "../models/language";
+import { ILanguageConfig } from "../models/language";
 
 // DEADCODE 2026-07-29: dummy data with no importers; commented pending review
 // export const langData: ILanguage[] = [

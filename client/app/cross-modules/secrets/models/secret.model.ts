@@ -1,3 +1,5 @@
+import { tStatic } from "@seliseblocks/genesis-os";
+
 /**
  * Client-side contract for the secret store (`/api/secrets`).
  *
@@ -46,26 +48,32 @@ export const SECRET_TYPE_DESCRIPTION: Record<SecretType, string> = {
     "and rotate it, so it has no per-person access list.",
 };
 
+/**
+ * A `deleted` secret is shown as "Archived": the backend's delete is a soft delete the user can
+ * restore, and "Purge" is the one that removes it for good. The wire value stays `deleted`.
+ */
 export const SECRET_STATUS_LABEL: Record<SecretStatus, string> = {
   active: "Active",
   locked: "Locked",
-  deleted: "Deleted",
+  deleted: "Archived",
 };
 
 /** Toolbar options. `""` is "All" — an empty filter value is omitted from the query. */
-export const SECRET_TYPE_OPTIONS = [
-  { value: "", label: "All" },
-  { value: SECRET_TYPE.Api, label: SECRET_TYPE_LABEL.api },
-  { value: SECRET_TYPE.Service, label: SECRET_TYPE_LABEL.service },
-  { value: SECRET_TYPE.Both, label: SECRET_TYPE_LABEL.both },
-] as const;
+export const getSecretTypeOptions = () =>
+  [
+    { value: "", label: tStatic("os.secrets", "common:ALL") },
+    { value: SECRET_TYPE.Api, label: SECRET_TYPE_LABEL.api },
+    { value: SECRET_TYPE.Service, label: SECRET_TYPE_LABEL.service },
+    { value: SECRET_TYPE.Both, label: SECRET_TYPE_LABEL.both },
+  ] as const;
 
-export const SECRET_STATUS_OPTIONS = [
-  { value: "", label: "All" },
-  { value: SECRET_STATUS.Active, label: SECRET_STATUS_LABEL.active },
-  { value: SECRET_STATUS.Locked, label: SECRET_STATUS_LABEL.locked },
-  { value: SECRET_STATUS.Deleted, label: SECRET_STATUS_LABEL.deleted },
-] as const;
+export const getSecretStatusOptions = () =>
+  [
+    { value: "", label: tStatic("os.secrets", "common:ALL") },
+    { value: SECRET_STATUS.Active, label: SECRET_STATUS_LABEL.active },
+    { value: SECRET_STATUS.Locked, label: SECRET_STATUS_LABEL.locked },
+    { value: SECRET_STATUS.Deleted, label: SECRET_STATUS_LABEL.deleted },
+  ] as const;
 
 // ─── Resources ────────────────────────────────────────────────────────────────
 
@@ -237,6 +245,19 @@ export const SECRET_AUDIT_OUTCOME = {
   PartialFailure: "PartialFailure",
 } as const;
 
+/**
+ * Display names for audit actions, matching what the UI calls them. Unknown actions fall back
+ * to the raw value, so a new backend action still shows up.
+ */
+export const SECRET_AUDIT_ACTION_LABEL: Record<string, string> = {
+  Delete: "Archive",
+  Restore: "Restore",
+  Purge: "Purge",
+};
+
+export const secretAuditActionLabel = (action: string): string =>
+  SECRET_AUDIT_ACTION_LABEL[action] ?? action;
+
 export type SecretAuditOutcome = (typeof SECRET_AUDIT_OUTCOME)[keyof typeof SECRET_AUDIT_OUTCOME];
 
 /** Human-readable labels for the reason codes the API returns in audit rows and errors. */
@@ -245,11 +266,12 @@ export const SECRET_AUDIT_REASON_LABEL: Record<string, string> = {
   INVALID_CONTEXT: "Invalid context",
   NOT_IN_ACCESS_LIST: "Not in the access list",
   STATUS_LOCKED: "Secret is locked",
-  STATUS_DELETED: "Secret is deleted",
+  STATUS_DELETED: "Secret is archived",
   VALUE_MISSING: "Value missing from the store",
   VAULT_FAILURE: "Secret store failure",
   METADATA_WRITE_FAILED: "Metadata write failed",
   CLEANUP_FAILED: "Cleanup failed",
+  VAULT_PURGE_FAILED: "Removed, but the vault kept a recoverable copy until its retention ends",
   ACCESS_NOT_APPLICABLE: "Access list not applicable",
   TAG_INVALID: "Invalid tag",
   TOO_MANY_TAGS: "Too many tags",
@@ -284,7 +306,49 @@ export const SECRET_ERROR_REASON = {
   DuplicateNameInBatch: "DUPLICATE_NAME_IN_BATCH",
   TagInvalid: "TAG_INVALID",
   TooManyTags: "TOO_MANY_TAGS",
+  /** A value read on an archived secret. Answered with 400; the row needs refreshing. */
+  StatusDeleted: "STATUS_DELETED",
 } as const;
+
+/**
+ * State of the secret a configuration points at, computed by the server on every read from
+ * secret metadata. Locked is shown exactly like active; only archived and missing are broken.
+ */
+export const LINKED_SECRET_STATUS = {
+  None: "none",
+  Active: "active",
+  Locked: "locked",
+  Archived: "archived",
+  Missing: "missing",
+  Unavailable: "unavailable",
+} as const;
+
+export type LinkedSecretStatus = (typeof LINKED_SECRET_STATUS)[keyof typeof LINKED_SECRET_STATUS];
+
+export type BrokenLinkedSecretStatus =
+  typeof LINKED_SECRET_STATUS.Archived | typeof LINKED_SECRET_STATUS.Missing;
+
+/**
+ * Whether the pointer is known to be dead, so the configuration cannot work until a new value
+ * is entered. Unavailable is deliberately not broken: an outage must not force re-entry.
+ */
+export const isBrokenLinkedSecretStatus = (
+  status: LinkedSecretStatus | null | undefined,
+): status is BrokenLinkedSecretStatus =>
+  status === LINKED_SECRET_STATUS.Archived || status === LINKED_SECRET_STATUS.Missing;
+
+/** A configuration that points at a secret, as `GET /secrets/dependents` names it. */
+export interface SecretDependent {
+  kind: "captcha" | "mail";
+  id: string;
+  /** The CAPTCHA provider, or the mail configuration's name. */
+  name: string;
+}
+
+export interface SecretDependentsResult {
+  secretId: string;
+  dependents: SecretDependent[];
+}
 
 /**
  * UTF-8 byte length of a candidate secret value. Key Vault's limit is on the encoded payload,

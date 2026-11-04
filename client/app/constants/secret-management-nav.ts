@@ -1,3 +1,4 @@
+import { navText } from "@/constants/nav-text";
 import {
   Bell,
   BrainCircuit,
@@ -9,6 +10,8 @@ import {
   Layers,
   Link2,
   Mail,
+  Network,
+  Plug,
   ShieldAlert,
   ShieldCheck,
   Smartphone,
@@ -32,120 +35,206 @@ export type NavGroup = {
 
 export const SECRET_MANAGEMENT_NAV_GROUPS: NavGroup[] = [
   {
-    label: "Secrets & Keys",
+    get label() {
+      return navText("SECRET_MANAGEMENT_NAV.SECRETS_KEYS");
+    },
     items: [
       {
         id: "secret-management",
-        label: "Secret",
+        get label() {
+          return navText("SECRET_MANAGEMENT_NAV.SECRET");
+        },
         value: "secret",
         icon: KeyRound,
-        desc: "Securely manage API and service secrets for this environment",
+        get desc() {
+          return navText("SECRET_MANAGEMENT_NAV.SECURELY_MANAGE_API_AND_SERVICE");
+        },
       },
       {
         id: "my-services",
-        label: "My Services",
+        get label() {
+          return navText("SECRET_MANAGEMENT_NAV.MY_SERVICES");
+        },
         value: "my-services",
         icon: Layers,
-        desc: "Manage connected services",
+        get desc() {
+          return navText("SECRET_MANAGEMENT_NAV.MANAGE_CONNECTED_SERVICES");
+        },
       },
     ],
   },
   {
-    label: "Authentication",
+    get label() {
+      return navText("SECRET_MANAGEMENT_NAV.AUTHENTICATION");
+    },
     items: [
       {
         id: "oidc",
-        label: "OIDC",
+        get label() {
+          return navText("SECRET_MANAGEMENT_NAV.OIDC");
+        },
         value: "oidc",
         icon: ShieldCheck,
-        desc: "OpenID Connect configuration",
+        get desc() {
+          return navText("SECRET_MANAGEMENT_NAV.OPENID_CONNECT_CONFIGURATION");
+        },
       },
       {
         id: "client-credentials",
-        label: "Client Credentials",
+        get label() {
+          return navText("SECRET_MANAGEMENT_NAV.CLIENT_CREDENTIALS");
+        },
         value: "client-credentials",
         icon: Fingerprint,
-        desc: "OAuth client credentials for service-to-service access",
+        get desc() {
+          return navText("SECRET_MANAGEMENT_NAV.OAUTH_CLIENT_CREDENTIALS_FOR_SERVICE");
+        },
       },
       {
         id: "identity-providers",
-        label: "Identity Provider",
+        get label() {
+          return navText("SECRET_MANAGEMENT_NAV.IDENTITY_PROVIDER");
+        },
         value: "identity-providers",
         icon: Building2,
-        desc: "Let people sign in to your app with accounts they already have.",
+        get desc() {
+          return navText("SECRET_MANAGEMENT_NAV.LET_PEOPLE_SIGN");
+        },
       },
       {
         id: "sso",
-        label: "SSO",
+        get label() {
+          return navText("SECRET_MANAGEMENT_NAV.SSO");
+        },
         value: "sso",
         icon: Users,
-        desc: "Single sign-on providers",
+        get desc() {
+          return navText("SECRET_MANAGEMENT_NAV.SINGLE_SIGN_ON_PROVIDERS");
+        },
       },
       {
         id: "external-idp",
-        label: "External IdP",
+        get label() {
+          return navText("SECRET_MANAGEMENT_NAV.EXTERNAL_IDP");
+        },
         value: "external-idp",
         icon: Globe,
-        desc: "External identity providers & certificates",
+        get desc() {
+          return navText("SECRET_MANAGEMENT_NAV.EXTERNAL_IDENTITY_PROVIDERS_CERTIFICATES");
+        },
       },
       {
         id: "captcha",
-        label: "Captcha",
+        get label() {
+          return navText("SECRET_MANAGEMENT_NAV.CAPTCHA");
+        },
         value: "captcha",
         icon: ShieldAlert,
-        desc: "Bot protection configuration",
+        get desc() {
+          return navText("SECRET_MANAGEMENT_NAV.BOT_PROTECTION_CONFIGURATION");
+        },
       },
       {
         id: "mfa",
-        label: "MFA",
+        get label() {
+          return navText("SECRET_MANAGEMENT_NAV.MFA");
+        },
         value: "mfa",
         icon: Smartphone,
-        desc: "Multi-factor authentication settings",
+        get desc() {
+          return navText("SECRET_MANAGEMENT_NAV.MULTI_FACTOR_AUTHENTICATION_SETTINGS");
+        },
       },
       {
         id: "magic-url",
-        label: "Magic URL",
+        get label() {
+          return navText("SECRET_MANAGEMENT_NAV.MAGIC_URL");
+        },
         value: "magic-url",
         icon: Link2,
-        desc: "Passwordless magic link settings",
+        get desc() {
+          return navText("SECRET_MANAGEMENT_NAV.PASSWORDLESS_MAGIC_LINK_SETTINGS");
+        },
       },
     ],
   },
   {
-    label: "Communication",
+    get label() {
+      return navText("SECRET_MANAGEMENT_NAV.COMMUNICATION");
+    },
     items: [
       {
         id: "email",
-        label: "Email",
+        get label() {
+          return navText("common:EMAIL");
+        },
         value: "email",
         icon: Mail,
-        desc: "Email provider configuration",
+        get desc() {
+          return navText("SECRET_MANAGEMENT_NAV.EMAIL_PROVIDER_CONFIGURATION");
+        },
       },
       {
         id: "notification",
-        label: "Notification",
+        get label() {
+          return navText("SECRET_MANAGEMENT_NAV.NOTIFICATION");
+        },
         value: "notification",
         icon: Bell,
-        desc: "Push & notification settings",
+        get desc() {
+          return navText("SECRET_MANAGEMENT_NAV.PUSH_NOTIFICATION_SETTINGS");
+        },
       },
     ],
   },
   {
-    label: "Intelligence",
+    get label() {
+      return navText("SECRET_MANAGEMENT_NAV.INTELLIGENCE");
+    },
     items: [
       {
         id: "storage",
-        label: "Storage",
+        get label() {
+          return navText("SECRET_MANAGEMENT_NAV.STORAGE");
+        },
         value: "storage",
         icon: Database,
-        desc: "File and object storage",
+        get desc() {
+          return navText("SECRET_MANAGEMENT_NAV.FILE_AND_OBJECT_STORAGE");
+        },
+      },
+      {
+        id: "data-gateway",
+        get label() {
+          return navText("SECRET_MANAGEMENT_NAV.DATA_GATEWAY");
+        },
+        value: "data-gateway",
+        icon: Network,
+        get desc() {
+          return navText("SECRET_MANAGEMENT_NAV.PER_PROJECT_DATA_SOURCE_CONFIGURATION");
+        },
       },
       {
         id: "ai-models",
-        label: "AI Models",
+        get label() {
+          return navText("SECRET_MANAGEMENT_NAV.AI_MODELS");
+        },
         value: "ai-models",
         icon: BrainCircuit,
-        desc: "AI model integrations",
+        get desc() {
+          return navText("SECRET_MANAGEMENT_NAV.AI_MODEL_INTEGRATIONS");
+        },
+      },
+      {
+        id: "integration",
+        get label() {
+          return navText("SECRET_MANAGEMENT_NAV.INTEGRATIONS");
+        },
+        value: "integration",
+        icon: Plug,
+        get desc() {
+          return navText("SECRET_MANAGEMENT_NAV.SET_UP_THIS_PROJECTS_BLOCKS");
+        },
       },
     ],
   },

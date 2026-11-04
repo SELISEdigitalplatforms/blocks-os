@@ -1,13 +1,27 @@
+import { tStatic } from "@seliseblocks/genesis-os";
+import type { LinkedSecretStatus } from "@/cross-modules/secrets/models/secret.model";
+
 export const CAPTCHA_PROVIDERS = {
   recaptcha: { value: "recaptcha", label: "Google reCAPTCHA" },
   hcaptcha: { value: "hcaptcha", label: "hCAPTCHA" },
 } as const;
 export const CAPTCHA_GENERATOR_TYPE = {
-  EasyCaptchaGenerator: { value: "EasyCaptchaGenerator", label: "Easy" },
-  HardCaptchaGenerator: { value: "HardCaptchaGenerator", label: "Hard" },
+  EasyCaptchaGenerator: {
+    value: "EasyCaptchaGenerator",
+    // Getter: the text is looked up when it is shown, so a language change is picked up.
+    get label() {
+      return tStatic("os.idp.captcha", "CAPTCHA_MODEL.GENERATOR_EASY");
+    },
+  },
+  HardCaptchaGenerator: {
+    value: "HardCaptchaGenerator",
+    get label() {
+      return tStatic("os.idp.captcha", "CAPTCHA_MODEL.GENERATOR_HARD");
+    },
+  },
 } as const;
 
-export type CAPTCHA_PROVIDERS_KEY = keyof typeof CAPTCHA_PROVIDERS;
+export type CaptchaProvidersKey = keyof typeof CAPTCHA_PROVIDERS;
 
 /**
  * A tenant may have multiple captcha configurations, each identified by `id`. The backend never
@@ -16,11 +30,17 @@ export type CAPTCHA_PROVIDERS_KEY = keyof typeof CAPTCHA_PROVIDERS;
  */
 export interface ICaptchaConfig {
   id: string;
-  provider: CAPTCHA_PROVIDERS_KEY;
+  provider: CaptchaProvidersKey;
   captchaKey: string;
   captchaGenerator: keyof typeof CAPTCHA_GENERATOR_TYPE;
   isEnable: boolean;
   secretId: string | null;
+  /**
+   * The linked secret's state, computed by the server on every read. `archived` or `missing`
+   * means the configuration cannot work until a new secret is entered, and an edit then
+   * requires one. After such a repair `secretId` is a new id.
+   */
+  secretStatus?: LinkedSecretStatus;
 }
 
 export interface IGetCaptchaConfigPayload {

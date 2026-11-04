@@ -56,7 +56,7 @@ export const Banner = ({
         className,
       )}
     >
-      <span className={cn("mt-0.5 flex-shrink-0", iconColorStyles[variant])}>
+      <span className={cn("mt-0.5 shrink-0", iconColorStyles[variant])}>
         {icon ?? <Icon className="h-4 w-4" />}
       </span>
       <div className="min-w-0 flex-1 text-xs leading-relaxed">

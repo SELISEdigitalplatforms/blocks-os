@@ -29,20 +29,21 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { EllipsisVertical, ArrowRightLeft, Mail, RefreshCw, User } from "lucide-react";
+import { EllipsisVertical, ArrowRightLeft, Mail, RefreshCw, User, UserMinus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { useRemoveAccess, useResendInvitation, useTransferOwnership } from "@/hooks/use-people";
-import { useAccountResendActivation } from "@blocks-idp/iam/hooks/use-account";
 import { useNavigate, useParams } from "react-router";
 import { PeopleGroupedByEnvironments } from "@/models/people";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT, tStatic } from "@seliseblocks/genesis-os";
+import { useAuthStore } from "@seliseblocks/genesis-os/store";
 import { environmentOptions } from "@/constants/environment-options";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { PeopleStatusBadge } from "@/components/people/status-badge";
-import { getRuntimeEnv } from "@/lib/runtime-env";
 import { getUserDisplayName } from "@blocks-idp/iam/utils/user-display-name";
+
+const KEY_COMMON_CANCEL = "common:CANCEL";
 
 type PeopleTableProps = {
   people: PeopleGroupedByEnvironments[];
@@ -61,6 +62,7 @@ export const PeopleTable = ({
   canRemove = false,
   isOwner: isViewerOwner = false,
 }: PeopleTableProps) => {
+  const { t } = useT("os.people");
   const navigate = useNavigate();
   const { tenantGroupId = "" } = useParams<{ tenantGroupId: string }>();
   const [isResendInvitationDialogOpen, setIsResendInvitationDialogOpen] = useState(false);
@@ -71,12 +73,16 @@ export const PeopleTable = ({
     null,
   );
 
-  const xBlocksKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
   const { mutateAsync: removeAsync } = useRemoveAccess();
   const { mutateAsync: resendInvitation } = useResendInvitation();
-  const { mutateAsync: resendActivation } = useAccountResendActivation();
   const { mutateAsync: transferOwnership, isPending: isTransferring } = useTransferOwnership();
   const groupId = useProjectStore().selectedTenantGroup || "";
+  const viewerUserId = useAuthStore((state) => state.user?.sub);
+
+  const openRemoveAccessDialog = (rowData: PeopleGroupedByEnvironments) => {
+    setIsRemoveAccessDialogOpen(true);
+    setSelectedPeopleData(rowData);
+  };
 
   const openResendDialog = (rowData: PeopleGroupedByEnvironments) => {
     setIsResendInvitationDialogOpen(true);
@@ -103,13 +109,17 @@ export const PeopleTable = ({
 
       if (!groupId || tenantIds.length === 0) return;
 
-      await removeAsync({
+      const res = await removeAsync({
         email: selectedPeopleData.peopleDetails.email,
         tenantIds,
         groupId,
       });
+      if (!res?.isSuccess) {
+        showErrorToast({ errors: res?.errors });
+        return;
+      }
 
-      showSuccessToast({ description: "Removed access successfully" });
+      showSuccessToast({ description: t("PEOPLE_TABLE.REMOVED_ACCESS_SUCCESSFULLY") });
       setIsRemoveAccessDialogOpen(false);
     } catch (error) {
       showErrorToast({ errors: error });
@@ -119,11 +129,15 @@ export const PeopleTable = ({
   const onConfirmResendInvitation = async () => {
     if (!selectedPeopleData) return;
     try {
-      await resendInvitation({
+      const res = await resendInvitation({
         email: selectedPeopleData.peopleDetails.email,
         groupId,
       });
-      showSuccessToast({ description: "Resend invitation mail successfully" });
+      if (!res?.isSuccess) {
+        showErrorToast({ errors: res?.errors });
+        return;
+      }
+      showSuccessToast({ description: t("PEOPLE_TABLE.RESEND_INVITATION_MAIL") });
       setIsResendInvitationDialogOpen(false);
     } catch (error) {
       showErrorToast({ errors: error });
@@ -133,11 +147,17 @@ export const PeopleTable = ({
   const onConfirmResendActivation = async () => {
     if (!selectedPeopleData) return;
     try {
-      await resendActivation({
-        userId: selectedPeopleData.peopleDetails.userId,
-        projectKey: xBlocksKey,
+      // The first mail comes from blocks-os (a /invitation?code= link), so the resend must too.
+      // The IAM resend sends a different mail with an IAM link.
+      const res = await resendInvitation({
+        email: selectedPeopleData.peopleDetails.email,
+        groupId,
       });
-      showSuccessToast({ description: "Resend activation mail successfully" });
+      if (!res?.isSuccess) {
+        showErrorToast({ errors: res?.errors });
+        return;
+      }
+      showSuccessToast({ description: t("PEOPLE_TABLE.RESEND_ACTIVATION_MAIL") });
       setIsResendActivationDialogOpen(false);
     } catch (error) {
       showErrorToast({ errors: error });
@@ -151,7 +171,7 @@ export const PeopleTable = ({
         tenantGroupId: groupId,
         transferToUserEmail: selectedPeopleData.peopleDetails.email,
       });
-      showSuccessToast({ description: "Ownership transferred successfully" });
+      showSuccessToast({ description: t("PEOPLE_TABLE.OWNERSHIP_TRANSFERRED_SUCCESSFULLY") });
       setIsTransferOwnershipDialogOpen(false);
     } catch (error) {
       showErrorToast({ errors: error });
@@ -165,7 +185,7 @@ export const PeopleTable = ({
         accessorFn: (row) => getUserDisplayName(row.peopleDetails),
         header: () => (
           <div className="flex w-[220px] items-center">
-            <span className="font-bold text-medium-emphasis">Name</span>
+            <span className="font-bold text-medium-emphasis">{t("common:NAME")}</span>
           </div>
         ),
         cell: (info) => {
@@ -191,13 +211,14 @@ export const PeopleTable = ({
               ) &&
                 !info.row.original.sharedEnviroments.some((env) => env.isCreator) && (
                   <PeopleStatusBadge
-                    status="Pending Invite"
+                    status={tStatic("os.people", "PEOPLE_TABLE.PENDING_INVITE")}
                     className="w-fit bg-warning-100 px-2 py-0.5 text-[10px] text-xs font-normal text-warning-700"
                   />
                 )}
               {/* Inactive: the account itself is not activated yet (no password / unverified).
                   Independent of invite acceptance — accepting an invite does not activate the account. */}
-              {info.row.original.peopleDetails.allowResendActivation &&
+              {(info.row.original.peopleDetails.allowResendActivation ||
+                info.row.original.peopleDetails.isActive === false) &&
                 !info.row.original.sharedEnviroments.some((env) => env.isCreator) && (
                   <PeopleStatusBadge
                     status="Inactive"
@@ -217,7 +238,7 @@ export const PeopleTable = ({
         id: "role",
         header: () => (
           <div className="flex w-[110px] items-center">
-            <span className="font-bold text-medium-emphasis">Role</span>
+            <span className="font-bold text-medium-emphasis">{t("PEOPLE_TABLE.ROLE")}</span>
           </div>
         ),
         cell: ({ row }: CellContext<PeopleGroupedByEnvironments, unknown>) => {
@@ -232,7 +253,7 @@ export const PeopleTable = ({
                 className={
                   isOwner
                     ? "w-fit bg-primary/10 px-2 py-0.5 text-xs font-normal text-primary"
-                    : "w-fit bg-neutral-100 px-2 py-0.5 text-xs font-normal text-medium-emphasis"
+                    : "w-fit bg-neutral-100 px-2 py-0.5 text-xs font-normal text-medium-emphasis dark:bg-primary/10 dark:text-primary"
                 }
               />
             </div>
@@ -244,7 +265,7 @@ export const PeopleTable = ({
         accessorFn: (row) => row.peopleDetails.email,
         header: () => (
           <div className="flex w-[180px] items-center">
-            <span className="font-bold text-medium-emphasis">Email</span>
+            <span className="font-bold text-medium-emphasis">{t("common:EMAIL")}</span>
           </div>
         ),
         cell: (info) => (
@@ -257,7 +278,7 @@ export const PeopleTable = ({
         id: "environments",
         header: () => (
           <div className="flex w-[180px] items-center">
-            <span className="font-bold text-medium-emphasis">Environments</span>
+            <span className="font-bold text-medium-emphasis">{t("PEOPLE_TABLE.ENVIRONMENTS")}</span>
           </div>
         ),
         cell: ({ row }: CellContext<PeopleGroupedByEnvironments, unknown>) => {
@@ -302,6 +323,9 @@ export const PeopleTable = ({
                 const isRowUserOwner = row.original.sharedEnviroments.some((env) => env.isCreator);
                 if (isRowUserOwner) return null;
 
+                // A deactivated user has no actions: access cannot change and mail would bounce.
+                if (row.original.peopleDetails.isActive === false) return null;
+
                 const hasPending = row.original.sharedEnviroments.some(
                   (env) => !env.isInvitationConfirmed,
                 );
@@ -312,11 +336,23 @@ export const PeopleTable = ({
                   row.original.peopleDetails.allowResendActivation &&
                   row.original.sharedEnviroments.some((env) => env.isInvitationConfirmed);
 
+                // The owner row is already skipped above; never offer a person removing themselves.
+                const showRemoveAccess =
+                  canRemove && row.original.peopleDetails.userId !== viewerUserId;
+
+                if (
+                  !showResendInvite &&
+                  !showResendActivation &&
+                  !showRemoveAccess &&
+                  !isViewerOwner
+                )
+                  return null;
+
                 return (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Open menu</span>
+                        <span className="sr-only">{t("PEOPLE_TABLE.OPEN_MENU")}</span>
                         <EllipsisVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -329,7 +365,7 @@ export const PeopleTable = ({
                           }}
                         >
                           <Mail className="mr-2 h-4 w-4" />
-                          <span>Resend Invitation</span>
+                          <span>{t("PEOPLE_TABLE.RESEND_INVITATION")}</span>
                         </DropdownMenuItem>
                       )}
                       {showResendActivation && (
@@ -340,7 +376,18 @@ export const PeopleTable = ({
                           }}
                         >
                           <RefreshCw className="mr-2 h-4 w-4" />
-                          <span>Resend Activation</span>
+                          <span>{t("PEOPLE_TABLE.RESEND_ACTIVATION")}</span>
+                        </DropdownMenuItem>
+                      )}
+                      {showRemoveAccess && (
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openRemoveAccessDialog(row.original);
+                          }}
+                        >
+                          <UserMinus className="mr-2 h-4 w-4" />
+                          <span>{t("PEOPLE_TABLE.REMOVE_ACCESS")}</span>
                         </DropdownMenuItem>
                       )}
                       {!showResendInvite && isViewerOwner && (
@@ -351,7 +398,7 @@ export const PeopleTable = ({
                           }}
                         >
                           <ArrowRightLeft className="mr-2 h-4 w-4" />
-                          <span>Transfer Ownership</span>
+                          <span>{t("PEOPLE_TABLE.TRANSFER_OWNERSHIP")}</span>
                         </DropdownMenuItem>
                       )}
                     </DropdownMenuContent>
@@ -362,7 +409,7 @@ export const PeopleTable = ({
           ]
         : []),
     ],
-    [canInvite, canRemove, isViewerOwner],
+    [canInvite, canRemove, isViewerOwner, viewerUserId, t],
   );
 
   const table = useReactTable({
@@ -388,7 +435,7 @@ export const PeopleTable = ({
           ))}
         </TableHeader>
         <TableBody>
-          {isLoading ? (
+          {isLoading &&
             Array.from({ length: 5 }).map((_, index) => (
               <TableRow key={index}>
                 {columns.map((_, colIndex) => (
@@ -397,17 +444,19 @@ export const PeopleTable = ({
                   </TableCell>
                 ))}
               </TableRow>
-            ))
-          ) : !people.length ? (
+            ))}
+          {!isLoading && people.length === 0 && (
             <TableRow>
               <TableCell
                 colSpan={columns.length}
                 className="h-24 text-center text-muted-foreground"
               >
-                No results found.
+                {t("PEOPLE_TABLE.NO_RESULTS_FOUND")}
               </TableCell>
             </TableRow>
-          ) : (
+          )}
+          {!isLoading &&
+            people.length > 0 &&
             table.getRowModel().rows.map((row) => (
               <TableRow
                 key={row.id}
@@ -424,8 +473,7 @@ export const PeopleTable = ({
                   </TableCell>
                 ))}
               </TableRow>
-            ))
-          )}
+            ))}
         </TableBody>
       </Table>
 
@@ -435,10 +483,12 @@ export const PeopleTable = ({
             onCancel={() => setIsRemoveAccessDialogOpen(false)}
             onConfirm={onRemoveConfirm}
             data={{
-              dialogTitle: "Revoke Access",
-              dialogSubtitle: `Are you sure you want to revoke access for ${getUserDisplayName(selectedPeopleData.peopleDetails)}?`,
-              confirmButton: "Revoke",
-              cancelButton: "Cancel",
+              dialogTitle: t("PEOPLE_TABLE.REVOKE_ACCESS"),
+              dialogSubtitle: t("PEOPLE_TABLE.ARE_YOU_SURE_YOU_WANT_4", {
+                peopleDetails: getUserDisplayName(selectedPeopleData.peopleDetails),
+              }),
+              confirmButton: t("PEOPLE_TABLE.REVOKE"),
+              cancelButton: t(KEY_COMMON_CANCEL),
             }}
           />
         )}
@@ -447,17 +497,18 @@ export const PeopleTable = ({
       <Dialog open={isResendInvitationDialogOpen} onOpenChange={setIsResendInvitationDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Resend Invitation</DialogTitle>
+            <DialogTitle>{t("PEOPLE_TABLE.RESEND_INVITATION")}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to resend the invitation to{" "}
-              {selectedPeopleData?.peopleDetails.email}?
+              {t("PEOPLE_TABLE.ARE_YOU_SURE_YOU_WANT", {
+                email: selectedPeopleData?.peopleDetails.email ?? "",
+              })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsResendInvitationDialogOpen(false)}>
-              Cancel
+              {t(KEY_COMMON_CANCEL)}
             </Button>
-            <Button onClick={onConfirmResendInvitation}>Resend</Button>
+            <Button onClick={onConfirmResendInvitation}>{t("PEOPLE_TABLE.RESEND")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -465,17 +516,18 @@ export const PeopleTable = ({
       <Dialog open={isResendActivationDialogOpen} onOpenChange={setIsResendActivationDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Resend Activation</DialogTitle>
+            <DialogTitle>{t("PEOPLE_TABLE.RESEND_ACTIVATION")}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to resend the activation mail to{" "}
-              {selectedPeopleData?.peopleDetails.email}?
+              {t("PEOPLE_TABLE.ARE_YOU_SURE_YOU_WANT_2", {
+                email: selectedPeopleData?.peopleDetails.email ?? "",
+              })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsResendActivationDialogOpen(false)}>
-              Cancel
+              {t(KEY_COMMON_CANCEL)}
             </Button>
-            <Button onClick={onConfirmResendActivation}>Resend</Button>
+            <Button onClick={onConfirmResendActivation}>{t("PEOPLE_TABLE.RESEND")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -483,10 +535,11 @@ export const PeopleTable = ({
       <Dialog open={isTransferOwnershipDialogOpen} onOpenChange={setIsTransferOwnershipDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Transfer Ownership</DialogTitle>
+            <DialogTitle>{t("PEOPLE_TABLE.TRANSFER_OWNERSHIP")}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to transfer ownership to{" "}
-              {selectedPeopleData?.peopleDetails.email}?
+              {t("PEOPLE_TABLE.ARE_YOU_SURE_YOU_WANT_3", {
+                email: selectedPeopleData?.peopleDetails.email ?? "",
+              })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -495,10 +548,10 @@ export const PeopleTable = ({
               onClick={() => setIsTransferOwnershipDialogOpen(false)}
               disabled={isTransferring}
             >
-              Cancel
+              {t(KEY_COMMON_CANCEL)}
             </Button>
             <Button onClick={onConfirmTransferOwnership} disabled={isTransferring}>
-              {isTransferring ? "Transferring..." : "Transfer"}
+              {isTransferring ? t("PEOPLE_TABLE.TRANSFERRING") : t("PEOPLE_TABLE.TRANSFER")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -98,11 +98,18 @@ export const useGetUserById = (
   });
 };
 
+const USER_EXISTS_QUERY_KEY = "user-exists";
+
+const userExistsQueryKey = (email: string) => [
+  USER_EXISTS_QUERY_KEY,
+  (email?.trim() ?? "").toLowerCase(),
+];
+
 export const useCheckUserExists = (email: string, queryOptions?: { enabled?: boolean }) => {
   const trimmed = email?.trim() ?? "";
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
   return useQuery({
-    queryKey: ["user-exists", trimmed.toLowerCase()],
+    queryKey: userExistsQueryKey(trimmed),
     queryFn: () => userService.isUserExist(trimmed),
     enabled: isValidEmail && (queryOptions?.enabled ?? true),
     retry: false,
@@ -124,7 +131,7 @@ export const useAddUser = () => {
   return useMutation({
     mutationKey: ["users", "add"],
     mutationFn: userService.addUser,
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       queryClient.invalidateQueries({ queryKey: ["organizations"] });
       queryClient.invalidateQueries({ queryKey: ["user-by-id"] });
@@ -133,6 +140,9 @@ export const useAddUser = () => {
       queryClient.invalidateQueries({ queryKey: ["user-permissions"] });
       queryClient.invalidateQueries({ queryKey: ["subscription-usage"] });
       queryClient.invalidateQueries({ queryKey: ["organization"] });
+      // The invite dialogs cache "does this email exist" for 30 s. Without this,
+      // reopening one right after an invite still offers "Send invite".
+      queryClient.invalidateQueries({ queryKey: userExistsQueryKey(variables.email) });
     },
   });
 };
@@ -155,6 +165,9 @@ export const useUpdateUser = (options: { id: string; projectKey: string; own?: b
       if (!own) {
         queryClient.invalidateQueries({ queryKey: ["user-by-id", rest] });
       }
+      // An update can change the email or the organizations, both of which the
+      // existence check returns. The previous email isn't known here.
+      queryClient.invalidateQueries({ queryKey: [USER_EXISTS_QUERY_KEY] });
     },
   });
 };
@@ -223,6 +236,9 @@ export const useUpdateUserAccessControl = (option: { id: string; projectKey: str
       queryClient.invalidateQueries({ queryKey: ["user-permissions"] });
       queryClient.invalidateQueries({ queryKey: ["organizations"] });
       queryClient.invalidateQueries({ queryKey: ["organization"] });
+      // The existence check also returns the user's organizationIds, which the
+      // invite dialogs use. Only the userId is known here, so refresh them all.
+      queryClient.invalidateQueries({ queryKey: [USER_EXISTS_QUERY_KEY] });
     },
   });
 };
@@ -241,6 +257,9 @@ export const useRevokeAccess = (option: { id: string }) => {
       queryClient.invalidateQueries({ queryKey: ["user-permissions"] });
       queryClient.invalidateQueries({ queryKey: ["organizations"] });
       queryClient.invalidateQueries({ queryKey: ["organization"] });
+      // The existence check also returns the user's organizationIds, which the
+      // invite dialogs use. Only the userId is known here, so refresh them all.
+      queryClient.invalidateQueries({ queryKey: [USER_EXISTS_QUERY_KEY] });
     },
   });
 };

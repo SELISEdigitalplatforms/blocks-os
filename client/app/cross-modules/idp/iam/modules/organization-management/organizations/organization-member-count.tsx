@@ -1,5 +1,5 @@
 import { useGetUsers } from "@blocks-idp/iam/hooks/use-user";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 
 export const useOrganizationMemberCount = (organizationId: string) => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
@@ -14,13 +14,10 @@ export const useOrganizationMemberCount = (organizationId: string) => {
 };
 
 export const OrganizationMemberCount = ({ organizationId }: { organizationId: string }) => {
+  const { t } = useT("os.idp.organizations");
   const { count, isLoading } = useOrganizationMemberCount(organizationId);
 
   if (isLoading) return <span className="inline-block h-3 w-14 animate-pulse rounded bg-muted" />;
 
-  return (
-    <span>
-      {count} member{count === 1 ? "" : "s"}
-    </span>
-  );
+  return <span>{t("ORGANIZATION_MEMBER_COUNT.MEMBERS", { count })}</span>;
 };

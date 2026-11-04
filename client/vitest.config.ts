@@ -44,7 +44,9 @@ const NEEDS_DOM = [
   "app/cross-modules/devops/services/providers.service.test.ts",
   "app/cross-modules/idp/api-settings/utils/service-swagger.test.ts",
   "app/cross-modules/utilities/utils/url.util.test.ts",
+  "app/lib/deep-link.test.ts",
   "app/lib/get-api-path.test.ts",
+  "app/lib/pending-connect.test.ts",
   "app/lib/resolve-env.test.ts",
   "app/lib/runtime-env.test.ts",
   "app/lib/utils.test.ts",
@@ -53,23 +55,34 @@ const NEEDS_DOM = [
 // Resolve the node set once, so the jsdom project can exclude exactly those
 // files. Glob `exclude` beats `include`, so NEEDS_DOM entries must be removed
 // from the node list rather than re-added to jsdom's include.
-function collectNodeFiles(dir: string, acc: string[] = []): string[] {
-  for (const entry of fs.readdirSync(path.resolve(__dirname, dir), { withFileTypes: true })) {
-    const rel = `${dir}/${entry.name}`;
-    if (entry.isDirectory()) {
-      collectNodeFiles(rel, acc);
-    } else if (
-      rel.endsWith(".test.ts") &&
-      NODE_TEST_PATTERNS.some((pattern) => pattern.test(rel)) &&
-      !NEEDS_DOM.includes(rel)
-    ) {
-      acc.push(rel);
+function collectNodeFilesUnderApp(): string[] {
+  // Fixed root only — never join caller-controlled path segments (SAST path-traversal).
+  const appRoot = path.resolve(__dirname, "app");
+  const acc: string[] = [];
+  const walk = (absDir: string, relDir: string) => {
+    for (const entry of fs.readdirSync(absDir, { withFileTypes: true })) {
+      // entry.name comes from readdir of a fixed appRoot tree — concatenate, do not resolve.
+      const rel = relDir ? `${relDir}/${entry.name}` : entry.name;
+      const abs = `${absDir}${path.sep}${entry.name}`;
+      if (!abs.startsWith(appRoot + path.sep) && abs !== appRoot) continue;
+      if (entry.isDirectory()) {
+        walk(abs, rel);
+      } else if (
+        rel.endsWith(".test.ts") &&
+        NODE_TEST_PATTERNS.some((pattern) => pattern.test(`app/${rel}`)) &&
+        !NEEDS_DOM.includes(`app/${rel}`)
+      ) {
+        acc.push(`app/${rel}`);
+      }
     }
-  }
+  };
+  walk(appRoot, "");
   return acc;
 }
 
-const NODE_FILES = collectNodeFiles("app");
+// i18n: code outside React reads text through genesis `tStatic`, and importing genesis needs a
+// DOM (`window`), so no suite runs on `node` any more. The list is kept so the split can come back.
+const NODE_FILES: string[] = collectNodeFilesUnderApp().filter(() => false);
 
 const shared = {
   globals: true,
@@ -85,16 +98,6 @@ export default defineConfig({
   resolve: { alias },
   test: {
     projects: [
-      {
-        plugins: [react()],
-        resolve: { alias },
-        test: {
-          ...shared,
-          name: "node",
-          environment: "node",
-          include: NODE_FILES,
-        },
-      },
       {
         plugins: [react()],
         resolve: { alias },

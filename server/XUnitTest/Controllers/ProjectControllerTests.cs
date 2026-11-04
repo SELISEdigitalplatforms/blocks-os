@@ -11,6 +11,7 @@ using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
+using Blocks.Genesis.Entities.Os;
 
 namespace XUnitTest.Controllers
 {

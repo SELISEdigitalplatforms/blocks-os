@@ -26,7 +26,7 @@ import { resolveModelConfig } from "@blocks-ai/utils/aimodel-form.utils";
 import { IModelInfo, IUpdateModelPayload } from "@blocks-ai/types/aimodel.service.type";
 import { useUpdateModel } from "@blocks-ai/hooks/use-aimodel";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 interface ModelEditKeyModalProps {
   modelOptions: { model: string; goodName: string }[];
   editKeyModalOpen: boolean;
@@ -46,7 +46,8 @@ export const ModelEditKeyModal = ({
   setEditKeyModalOpen,
   model,
 }: ModelEditKeyModalProps) => {
-  const project_key = useProjectStore().selectedProject?.tenantId || "";
+  const { t } = useT("os.ai");
+  const projectKey = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useUpdateModel();
   const {
     schema: baseSchema,
@@ -62,7 +63,10 @@ export const ModelEditKeyModal = ({
     [model.Provider, model.ServicePlatform, modelOptions],
   );
   const schema = useMemo(
-    () => (baseSchema as z.AnyZodObject).extend({ apiKey: z.string().optional() }),
+    () =>
+      (
+        baseSchema as z.ZodObject<Record<string, z.ZodType<string | undefined, string | undefined>>>
+      ).extend({ apiKey: z.string().optional() }),
     [baseSchema],
   );
   const initialValues = useMemo(() => {
@@ -91,10 +95,10 @@ export const ModelEditKeyModal = ({
   };
   const onSubmitHandler = async (data: z.infer<typeof schema>) => {
     try {
-      const rawApiKey = (data.apiKey ?? "") as string;
+      const rawApiKey = data.apiKey ?? "";
       const trimmedApiKey = rawApiKey.trim();
       const payload: IUpdateModelPayload & { model_name: string } = {
-        project_key,
+        project_key: projectKey,
         display_name: model.DisplayName,
         base_url: data.url ?? model.BaseUrl ?? "",
         openai_organization_id: data.organizationId ?? model.OpenAiOrganizationId,
@@ -106,7 +110,8 @@ export const ModelEditKeyModal = ({
       };
       if (trimmedApiKey && trimmedApiKey !== originalApiKey) payload.api_key = trimmedApiKey;
       const res = await mutateAsync({ modelId: model._id, payload });
-      if (res.is_success) showSuccessToast({ description: "Model updated successfully." });
+      if (res.is_success)
+        showSuccessToast({ description: t("AIMODEL_EDITKEY_MODAL.MODEL_UPDATED_SUCCESSFULLY") });
       else showErrorToast({ errors: res.detail });
       setEditKeyModalOpen(false);
     } catch (err) {
@@ -132,7 +137,11 @@ export const ModelEditKeyModal = ({
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle>Update {getProviderDisplayName(model.Provider)} Key</DialogTitle>
+          <DialogTitle>
+            {t("AIMODEL_EDITKEY_MODAL.UPDATE_KEY", {
+              Provider: getProviderDisplayName(model.Provider),
+            })}
+          </DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmitHandler)}>
@@ -140,7 +149,7 @@ export const ModelEditKeyModal = ({
               {fields.includes("model") && (
                 <div className="flex flex-col gap-1">
                   <span className="text-sm font-medium">
-                    Model <span className="text-red-500">*</span>
+                    {t("AIMODEL_EDITKEY_MODAL.MODEL", { span: "*" })}
                   </span>
                   <div className="flex cursor-not-allowed items-center justify-between rounded-md border bg-muted px-3 py-2 text-sm font-normal text-foreground/80">
                     <span>{selectedGoodName}</span>
@@ -154,13 +163,11 @@ export const ModelEditKeyModal = ({
                   name="url"
                   render={({ field }) => (
                     <FormItem className="w-full">
-                      <FormLabel>
-                        URL <span className="text-red-500">*</span>
-                      </FormLabel>
+                      <FormLabel>{t("AIMODEL_EDITKEY_MODAL.URL", { span: "*" })}</FormLabel>
                       <FormControl className="w-full">
                         <Input
                           className="flex w-full"
-                          placeholder="Enter URL"
+                          placeholder={t("AIMODEL_EDITKEY_MODAL.ENTER_URL")}
                           {...field}
                           disabled={
                             model.ServicePlatform === ServicePlatform.OFFICIAL_API ||
@@ -175,9 +182,7 @@ export const ModelEditKeyModal = ({
               )}
               {fields.includes("deploymentName") && (
                 <FormItem>
-                  <FormLabel>
-                    Deployment Name <span className="text-red-500">*</span>
-                  </FormLabel>
+                  <FormLabel>{t("AIMODEL_EDITKEY_MODAL.DEPLOYMENT_NAME", { span: "*" })}</FormLabel>
                   <Input value={selectedModel} disabled />
                 </FormItem>
               )}
@@ -187,7 +192,7 @@ export const ModelEditKeyModal = ({
                   name="apiKey"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>API Key</FormLabel>
+                      <FormLabel>{t("AIMODEL_EDITKEY_MODAL.API_KEY")}</FormLabel>
                       <div className="flex items-center justify-between gap-2 rounded-md border px-2 py-1">
                         <FormControl className="flex-1">
                           <Input
@@ -201,7 +206,9 @@ export const ModelEditKeyModal = ({
                               if (apiKeyEditable) field.onChange(e.target.value);
                             }}
                             disabled={!apiKeyEditable}
-                            placeholder={apiKeyEditable ? "Enter new API key" : ""}
+                            placeholder={
+                              apiKeyEditable ? t("AIMODEL_EDITKEY_MODAL.ENTER_NEW_API_KEY") : ""
+                            }
                             className="inline-block w-full truncate border-none shadow-none focus-visible:ring-0"
                           />
                         </FormControl>
@@ -230,9 +237,12 @@ export const ModelEditKeyModal = ({
                   name="organizationId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>OpenAI Organization ID</FormLabel>
+                      <FormLabel>{t("AIMODEL_EDITKEY_MODAL.OPENAI_ORGANIZATION_ID")}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter organization ID" {...field} />
+                        <Input
+                          placeholder={t("AIMODEL_EDITKEY_MODAL.ENTER_ORGANIZATION_ID")}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -245,9 +255,12 @@ export const ModelEditKeyModal = ({
                   name="projectId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>OpenAI Project ID</FormLabel>
+                      <FormLabel>{t("AIMODEL_EDITKEY_MODAL.OPENAI_PROJECT_ID")}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter project ID" {...field} />
+                        <Input
+                          placeholder={t("AIMODEL_EDITKEY_MODAL.ENTER_PROJECT_ID")}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -258,11 +271,11 @@ export const ModelEditKeyModal = ({
             <DialogFooter className="mt-6">
               <DialogClose asChild>
                 <Button variant="secondary" disabled={isPending}>
-                  Cancel
+                  {t("common:CANCEL")}
                 </Button>
               </DialogClose>
               <Button disabled={!form.formState.isValid || isPending} type="submit">
-                {isPending ? "Saving..." : "Save"}
+                {isPending ? t("AIMODEL_EDITKEY_MODAL.SAVING") : t("common:SAVE")}
               </Button>
             </DialogFooter>
           </form>

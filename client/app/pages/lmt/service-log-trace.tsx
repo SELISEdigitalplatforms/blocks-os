@@ -1,6 +1,6 @@
 import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
 import { TraceDetails } from "@blocks-lmt/components/trace-details";
-import { SERVICES } from "@blocks-lmt/constants/services.constant";
+import { getServices } from "@blocks-lmt/constants/services.constant";
 import { useMemo } from "react";
 import { useParams } from "react-router";
 
@@ -14,7 +14,7 @@ export function LmtServiceLogTraceRoute() {
   // Try to find the base service (removing -api/-worker suffix if present)
   const service = useMemo(() => {
     const baseServiceName = serviceName?.replace(/-api$/, "").replace(/-worker$/, "");
-    return SERVICES.find((item) => item.name === baseServiceName && item.showInLogs);
+    return getServices().find((item) => item.name === baseServiceName && item.showInLogs);
   }, [serviceName]);
 
   const id = traceId ?? "";

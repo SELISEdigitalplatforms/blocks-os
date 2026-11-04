@@ -63,6 +63,29 @@ namespace XUnitTest.Services
             publicCert.Subject.Should().Contain("Selise-Blocks");
         }
 
+
+        [Fact]
+        public void GenerateCertificates_CertificateDnStaysSeliseBlocks_WhenIssuerIsUrl()
+        {
+            // #606: JwtTokenParameters.Issuer is now the OIDC issuer URL; the certificate
+            // subject must remain CN=SeliseBlocks (IdentifierConstants.Issuer).
+            var parameters = new JwtTokenParameters
+            {
+                Issuer = "https://dev-iam.blocksdevelopers.com/D00220c69fdb84c7ca63b4f69a4ceadfc",
+                Subject = "Selise-Blocks",
+                CertificateValidForNumberOfDays = 30,
+                IssueDate = System.DateTime.UtcNow,
+                PrivateCertificatePassword = "priv-pass",
+                PublicCertificatePassword = "pub-pass"
+            };
+
+            var (publicCert, privateCert) = Manager().GenerateCertificates(parameters);
+
+            publicCert.Issuer.Should().Contain("CN=SeliseBlocks");
+            privateCert.Issuer.Should().Contain("CN=SeliseBlocks");
+            publicCert.Subject.Should().Contain("Selise-Blocks");
+        }
+
         private static X509Certificate2 CreateSelfSignedCertificate()
         {
             using var rsa = System.Security.Cryptography.RSA.Create(2048);

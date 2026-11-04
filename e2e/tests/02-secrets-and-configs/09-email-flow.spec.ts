@@ -13,6 +13,15 @@ import {
   verifyOutboundProvidersOfferedFlow,
   verifySaveDisabledFlow,
 } from "../../pages/secrets-and-configs/email";
+import {
+  editOffice365KeepingSecretFlow,
+  editOffice365RotatingSecretFlow,
+  expandOffice365RowAndVerifyFlow,
+  fillAndSaveOffice365ConfigFlow,
+  selectOffice365AndVerifyFormFlow,
+  verifyOffice365BlankSecretRejectedFlow,
+  verifyOffice365OfferedForBothDirectionsFlow,
+} from "../../pages/secrets-and-configs/office365-email";
 
 test.describe("flows", () => {
   test("Email flow: strict validation -> create -> expand details -> edit -> delete", async ({
@@ -59,15 +68,67 @@ test.describe("flows", () => {
     });
 
     await test.step("Reopen the configuration for editing and close without changes", async () => {
-      await openEditEmailAndCloseFlow(page);
+      await openEditEmailAndCloseFlow(page, configName);
     });
 
     await test.step("Edit the configuration and actually save the change", async () => {
-      await editEmailConfigAndSaveFlow(page, "Flow Sender Updated");
+      await editEmailConfigAndSaveFlow(page, configName, "Flow Sender Updated");
     });
 
     await test.step("Delete the configuration via its confirmation dialog", async () => {
-      await deleteEmailConfigFlow(page);
+      await deleteEmailConfigFlow(page, configName);
+    });
+  });
+
+  test("Office 365 flow: outbound OAuth -> create -> details -> keep secret -> rotate -> delete", async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+
+    // No Microsoft tenant and no live SMTP connection are needed: this covers
+    // configuration only. Delivery belongs to the blocks-logic dependency.
+    const configName = `Flow O365 Config ${Date.now()}`;
+    const clientSecret = `o365-disposable-${Date.now()}`;
+    const replacementSecret = `o365-rotated-${Date.now()}`;
+
+    await test.step("Navigate to Email", async () => {
+      await navigateToEmailFlow(page);
+    });
+
+    await test.step("Open the Add Configuration dialog", async () => {
+      await openAddEmailConfigDialogFlow(page);
+    });
+
+    await test.step("Provider offers Office 365 for Outbound and Inbound", async () => {
+      await verifyOffice365OfferedForBothDirectionsFlow(page);
+    });
+
+    await test.step("Selecting it locks the transport, hides the password controls and shows the OAuth fields", async () => {
+      await selectOffice365AndVerifyFormFlow(page);
+    });
+
+    await test.step("Save a valid configuration and check the response carries no secret material", async () => {
+      await fillAndSaveOffice365ConfigFlow(page, configName, clientSecret);
+    });
+
+    await test.step("Expand the new row and verify the label, transport and 'Configured' secret", async () => {
+      await expandOffice365RowAndVerifyFlow(page, configName, clientSecret);
+    });
+
+    await test.step("A whitespace-only replacement secret is rejected rather than preserved", async () => {
+      await verifyOffice365BlankSecretRejectedFlow(page, configName);
+    });
+
+    await test.step("Editing with a blank secret keeps the one on file", async () => {
+      await editOffice365KeepingSecretFlow(page, configName, "Contoso Alerts");
+    });
+
+    await test.step("Editing with a replacement secret rotates it, leaking nothing", async () => {
+      await editOffice365RotatingSecretFlow(page, configName, replacementSecret);
+    });
+
+    await test.step("Delete the configuration via its confirmation dialog", async () => {
+      await deleteEmailConfigFlow(page, configName);
     });
   });
 });

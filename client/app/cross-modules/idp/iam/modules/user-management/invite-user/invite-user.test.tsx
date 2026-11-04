@@ -3,7 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createWrapper } from "@/test-utils/test-providers/query-client";
 
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 
@@ -26,6 +27,7 @@ vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
 }));
 vi.mock("@blocks-idp/iam/hooks/use-organization", () => ({
   useGetOrganizations: () => h.orgs,
+  useGetOrganizationById: () => ({ data: undefined }),
   useGetOrganizationConfig: () => h.config,
 }));
 vi.mock("@/store/useProjectStore", () => ({
@@ -219,9 +221,43 @@ describe("InviteUser", () => {
     await user.click(submit);
 
     await waitFor(() => expect(h.updateUserAccess).toHaveBeenCalled());
-    expect(h.updateUserAccess.mock.calls[0][0]).toMatchObject({ organizationId: "org-1" });
+    expect(h.updateUserAccess.mock.calls[0][0]).toMatchObject({
+      organizationId: "org-1",
+      notifyUser: true,
+    });
     expect(h.showSuccessToast).toHaveBeenCalledWith({
       description: "User granted access to the organization",
+    });
+  });
+
+  it("sends notifyUser false when the notify checkbox is unchecked", async () => {
+    h.config = { data: { isMultiOrgEnabled: true }, isLoading: false };
+    h.orgs = {
+      data: { organizations: [{ itemId: "org-1", name: "Acme Org", isDisabled: false }] },
+      isLoading: false,
+    };
+    h.checkExists = { data: { userId: "u1", organizationIds: [] }, isFetching: false };
+    h.updateUserAccess.mockResolvedValue({ isSuccess: true });
+    const user = userEvent.setup();
+    renderInvite();
+    await user.click(screen.getByRole("button", { name: /invite user/i }));
+    await user.type(screen.getByPlaceholderText("name@company.com"), "existing@user.com");
+
+    await user.click(await screen.findByRole("combobox"));
+    await user.click(await screen.findByText("Acme Org"));
+
+    const checkbox = screen.getByRole("checkbox", { name: "Notify user by email" });
+    expect(checkbox.getAttribute("data-state")).toBe("checked");
+    await user.click(checkbox);
+
+    const submit = screen.getByRole("button", { name: /grant access/i });
+    await waitFor(() => expect((submit as HTMLButtonElement).disabled).toBe(false));
+    await user.click(submit);
+
+    await waitFor(() => expect(h.updateUserAccess).toHaveBeenCalled());
+    expect(h.updateUserAccess.mock.calls[0][0]).toMatchObject({
+      organizationId: "org-1",
+      notifyUser: false,
     });
   });
 

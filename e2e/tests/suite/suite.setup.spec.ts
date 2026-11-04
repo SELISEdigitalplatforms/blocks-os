@@ -4,11 +4,12 @@ import path from "path"
 import { reuseOrCreateSharedProject } from "../../support/create-and-delete-project"
 import { loginThroughOidc } from "../../support/login-helper"
 import { OS_SESSION_PATH, writeOsProject } from "../../support/os-project"
+import { seedDataTimeoutMs, waitForProjectSeedData } from "../../support/project-readiness"
 import { resetSessionRefreshClock } from "../../support/session-lifecycle"
 
 test.describe("os suite setup", () => {
   test("login, reuse or create one shared project on Blocks OS", async ({ page }) => {
-    test.setTimeout(300_000)
+    test.setTimeout(300_000 + seedDataTimeoutMs())
 
     await loginThroughOidc(page)
     await expect(
@@ -38,5 +39,10 @@ test.describe("os suite setup", () => {
     fs.mkdirSync(path.dirname(OS_SESSION_PATH), { recursive: true })
     await page.context().storageState({ path: OS_SESSION_PATH })
     resetSessionRefreshClock()
+
+    // A new project's roles, permissions, email templates, languages and
+    // storage directories are copied in by a background worker after create
+    // returns. Don't start the feature tests on a half-provisioned project.
+    await waitForProjectSeedData(page)
   })
 })

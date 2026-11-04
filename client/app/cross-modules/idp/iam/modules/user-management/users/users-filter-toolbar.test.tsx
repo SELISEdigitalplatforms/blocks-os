@@ -37,7 +37,8 @@ vi.mock("nuqs", () => ({
   parseAsString: { withDefault: (d: unknown) => ({ _d: d }) },
   useQueryStates: () => [h.queryParams, h.setQueryParams],
 }));
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 vi.mock("@blocks-idp/iam/hooks/use-organization", () => ({
@@ -108,6 +109,9 @@ vi.mock("@/components/filter-toolbar", () => ({
         </button>
         <button onClick={() => onChange("organizationIds", ["org-1"])}>change-orgs</button>
         <button onClick={() => onChange("roles", ["admin"])}>change-roles</button>
+        <button onClick={() => onChange("accountStates", ["Suspended", "LockedOut"])}>
+          change-status
+        </button>
         <button onClick={onReset}>reset</button>
       </div>
     );
@@ -195,6 +199,29 @@ describe("UsersDateFilters", () => {
     });
   });
 
+  it("offers every account state, plus Locked out, in one multi-select", () => {
+    render(<UsersDateFilters />);
+    const statusFilter = h.lastFilters.find((filter) => filter.key === "accountStates") as
+      | { type: string; label: string; props?: { options?: Array<{ value: string }> } }
+      | undefined;
+    expect(statusFilter?.type).toBe("MultiSelect");
+    expect(statusFilter?.label).toBe("Status");
+    expect(statusFilter?.props?.options?.map((option) => option.value)).toEqual([
+      "Active",
+      "PendingVerification",
+      "Suspended",
+      "Deactivated",
+      "LockedOut",
+    ]);
+  });
+
+  it("stores the chosen states and returns to the first page", () => {
+    render(<UsersDateFilters />);
+    fireEvent.click(screen.getByText("change-status"));
+    const updater = h.setQueryParams.mock.calls[0][0] as (p: object) => object;
+    expect(updater({ page: 2 })).toEqual({ accountStates: ["Suspended", "LockedOut"], page: 0 });
+  });
+
   it("updates roles without changing organizations", () => {
     render(<UsersDateFilters />);
     fireEvent.click(screen.getByText("change-roles"));
@@ -209,7 +236,9 @@ describe("UsersDateFilters", () => {
   it("hides organization and role filters when no organizations are available", () => {
     h.organizations = [];
     render(<UsersDateFilters />);
+    // Status does not depend on organizations, so it stays.
     expect(h.lastFilters.map((filter) => filter.key)).toEqual([
+      "accountStates",
       "joinedOn",
       "lastLogin",
       "lastUpdatedDate",
@@ -275,6 +304,7 @@ describe("UsersDateFilters", () => {
       name: "alice",
       organizationIds: [],
       roles: [],
+      accountStates: [],
       "joinedOn-start": "",
       "joinedOn-end": "",
       "lastLogin-start": "",

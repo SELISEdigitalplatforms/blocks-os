@@ -4,6 +4,7 @@ import { useGetEnvRepositories } from "@/hooks/use-project";
 import type { IProject } from "@/models/project.model";
 import { useState } from "react";
 import { ProjectRepoTable } from "./repo-table";
+import { useT } from "@seliseblocks/genesis-os";
 
 export const ProjectRepoList = ({
   project,
@@ -12,6 +13,7 @@ export const ProjectRepoList = ({
   project: IProject;
   isLoading: boolean;
 }) => {
+  const { t } = useT("os.dashboard");
   const { applications } = project;
   // Held here rather than in the table: the skeleton branch below unmounts the table on
   // every background refetch, which would silently return a reader to the first page.
@@ -29,7 +31,7 @@ export const ProjectRepoList = ({
 
   if (isLoading || isLoadingEnvRepos || isFetchingEnvRepos) {
     return (
-      <div className="mt-6 rounded-lg border bg-card px-2 py-2 shadow-sm md:mt-0">
+      <div className="mt-6 rounded-lg border bg-card px-2 py-2 shadow-xs md:mt-0">
         <div className="grid-col-1 grid gap-3 px-2 py-4 md:grid-cols-2 md:gap-4 lg:gap-6">
           {Array.from({ length: 6 }).map((_item, index) => (
             <div key={index}>
@@ -44,8 +46,8 @@ export const ProjectRepoList = ({
 
   return (
     <DashboardSectionCard
-      title="Repositories"
-      description="Repositories deployed for this project"
+      title={t("REPO_LIST.REPOSITORIES")}
+      description={t("REPO_LIST.REPOSITORIES_DEPLOYED_FOR_THIS")}
       contentClassName="p-0"
     >
       <ProjectRepoTable

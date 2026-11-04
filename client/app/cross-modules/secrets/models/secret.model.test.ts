@@ -7,7 +7,9 @@ import {
   SECRET_TYPE_DESCRIPTION,
   SECRET_VALUE_MAX_BYTES,
   isApiSecret,
+  isBrokenLinkedSecretStatus,
   isDeleted,
+  secretAuditActionLabel,
   looksLikeSecretId,
   secretValueByteLength,
   supportsValueReveal,
@@ -50,7 +52,18 @@ describe("secret model", () => {
     it("capitalises statuses for display", () => {
       expect(SECRET_STATUS_LABEL.active).toBe("Active");
       expect(SECRET_STATUS_LABEL.locked).toBe("Locked");
-      expect(SECRET_STATUS_LABEL.deleted).toBe("Deleted");
+      expect(SECRET_STATUS_LABEL.deleted).toBe("Archived");
+    });
+  });
+
+  describe("audit action labels", () => {
+    it("names the soft delete Archive and keeps Purge", () => {
+      expect(secretAuditActionLabel("Delete")).toBe("Archive");
+      expect(secretAuditActionLabel("Purge")).toBe("Purge");
+    });
+
+    it("falls back to the raw action for anything it does not know", () => {
+      expect(secretAuditActionLabel("Rotate")).toBe("Rotate");
     });
   });
 
@@ -202,5 +215,20 @@ describe("secret model", () => {
       expect(secretTagLabel("iam", catalogue)).toBe("Blocks Iam");
       expect(secretTagLabel("payments", catalogue)).toBe("payments");
     });
+  });
+});
+
+describe("isBrokenLinkedSecretStatus", () => {
+  it.each([
+    ["archived", true],
+    ["missing", true],
+    ["active", false],
+    ["locked", false],
+    ["unavailable", false],
+    ["none", false],
+    [undefined, false],
+    [null, false],
+  ] as const)("treats %s as broken: %s", (status, expected) => {
+    expect(isBrokenLinkedSecretStatus(status)).toBe(expected);
   });
 });

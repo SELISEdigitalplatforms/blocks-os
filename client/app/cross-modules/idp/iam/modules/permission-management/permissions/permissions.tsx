@@ -53,7 +53,6 @@ export function Permissions() {
                 page={queryParams.page}
                 onChange={onPageChangeHandler}
                 totalCount={totalCount}
-                pageSizeOptions={[5, 10, 20]}
                 onPageSizeChange={onPageSizeChangeHandler}
                 pageSize={queryParams.pageSize}
               />

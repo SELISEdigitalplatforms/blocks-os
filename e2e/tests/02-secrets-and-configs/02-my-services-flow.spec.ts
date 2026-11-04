@@ -3,7 +3,6 @@ import {
   copyServiceIdAndKeyFlow,
   expandServiceRowAndVerifyFlow,
   navigateToMyServicesFlow,
-  openDocsInNewTabFlow,
   openRegisterServiceDialogFlow,
   openServiceScopedLogsFlow,
   openSetupGuideFlow,
@@ -47,9 +46,8 @@ test.describe("flows", () => {
       await registerServiceFlow(page, serviceName, "Backend");
     });
 
-    let serviceTrigger: Awaited<ReturnType<typeof expandServiceRowAndVerifyFlow>>;
     await test.step("Find the new service and expand its accordion row", async () => {
-      serviceTrigger = await expandServiceRowAndVerifyFlow(page, serviceName);
+      await expandServiceRowAndVerifyFlow(page, serviceName);
     });
 
     await test.step("Copy Service ID and X-Blocks-Key to the clipboard", async () => {
@@ -62,15 +60,6 @@ test.describe("flows", () => {
 
     await test.step("'Traces' button navigates away from My Services", async () => {
       await verifyNavAwayFromMyServicesFlow(page, "Traces");
-    });
-
-    await test.step("'Docs' opens the external documentation site in a new tab", async () => {
-      if (
-        !(await page.getByText("Service ID").first().isVisible({ timeout: 3000 }))
-      ) {
-        await serviceTrigger.click();
-      }
-      await openDocsInNewTabFlow(page);
     });
 
     await test.step("Open the Setup Guide panel", async () => {

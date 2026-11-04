@@ -19,24 +19,18 @@ import {
 } from "@/components/ui-kits/tooltip/tooltip";
 import { useNotificationListener } from "@/cross-modules/communication/hooks/use-notification-listener";
 import { useGetMigrationStatus, useGetProjects } from "@/hooks/use-project";
+import { showErrorToast } from "@/hooks/use-toast";
+import {
+  getMigrationNotificationOutcome,
+  getMigrationStateForTarget,
+} from "@/utils/migration-status";
 import { useProjectPermissions } from "@/hooks/use-project-access";
-import type { IMigrationStatusResponse } from "@blocks-identifier/models/project.model";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { ArrowRightLeft, CircleHelp, Plus } from "lucide-react";
 import { useCallback, useState } from "react";
 import { Navigate, useNavigate } from "react-router";
 
-const isRecentMigrationForTarget = (
-  data: IMigrationStatusResponse[number],
-  tenantId: string,
-): boolean => {
-  if (data.targetedProjectKey !== tenantId || !data.createdDate) {
-    return false;
-  }
-  const createdDate = new Date(data.createdDate);
-  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-  return createdDate > tenMinutesAgo;
-};
+const KEY_START_MIGRATION = "ENVIRONMENTS.START_MIGRATION";
 
 const ProjectGroupLoading = () => (
   <main className="flex flex-1 flex-col gap-4 p-4 sm:mx-10 md:gap-6">
@@ -59,6 +53,7 @@ const ProjectGroupLoading = () => (
   </main>
 );
 export const EnvironmentsPage = () => {
+  const { t } = useT("os.environments");
   const groupId = useProjectStore().selectedTenantGroup;
   const {
     data: environmentList,
@@ -76,10 +71,16 @@ export const EnvironmentsPage = () => {
     groupId as string,
   );
   const handleMigrationNotification = useCallback(
-    (_: unknown) => {
+    (detail: unknown) => {
+      // A push means the tracker changed, so re-read it. The spinner follows the tracker, and
+      // a failed run also gets a toast, since nothing else tells the user it ended badly.
       void refetchMigrationStatus();
+      const outcome = getMigrationNotificationOutcome(detail);
+      if (outcome && !outcome.isSuccess) {
+        showErrorToast({ errors: outcome.description ?? t("ENVIRONMENTS.MIGRATION_FAILED") });
+      }
     },
-    [refetchMigrationStatus],
+    [refetchMigrationStatus, t],
   );
   useNotificationListener("EnvironmentDataMigration", handleMigrationNotification);
   const handleAddEnvModalClose = () => {
@@ -91,31 +92,65 @@ export const EnvironmentsPage = () => {
   // Creating an environment is owner-only and deliberately absent from the grant catalog:
   // provisioning one writes an owner row, so a contributor able to do it could widen their own
   // standing. Migration is delegable, so it is a grant like any other.
-  const canAddEnvironment =
-    environmentList && environmentList[0]?.projects?.length < 8 && isOwner;
+  const canAddEnvironment = environmentList && environmentList[0]?.projects?.length < 8 && isOwner;
   const canMigrate = can("environments", "migrate");
+  // Counts the environments this user can open (the same list the wizard offers), so greyed-out
+  // "Others" never make a single accessible environment look migratable.
+  const accessibleEnvironmentCount = environmentList[0]?.projects?.length ?? 0;
+  const canStartMigration = canMigrate && accessibleEnvironmentCount >= 2;
   return (
     <main className="flex flex-1 flex-col gap-4 p-6 md:gap-6">
       <div>
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h4 className="text-lg font-semibold md:text-xl">Environments</h4>
+            <h4 className="text-lg font-semibold md:text-xl">{t("ENVIRONMENTS.TITLE")}</h4>
             {/* The eight-environment cap is already enforced by hiding New Environment;
                 saying so up front beats the button quietly disappearing. */}
             <p className="mt-0.5 text-sm text-medium-emphasis">
-              {environmentList[0]?.projects?.length ?? 0} of 8 environments used
+              {t("ENVIRONMENTS.USED_OF_MAX", { used: environmentList[0]?.projects?.length ?? 0 })}
             </p>
           </div>
           <div className="flex gap-2 sm:gap-4">
-            {canMigrate && (
+            {canStartMigration && (
               <Button
                 variant="outline"
                 size="sm"
+                aria-label={t(KEY_START_MIGRATION)}
                 onClick={() => navigate("/app/data-migration")}
-                className="h-10 whitespace-nowrap text-sm">
+                className="h-10 whitespace-nowrap text-sm"
+              >
                 <ArrowRightLeft className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Start Migration</span>
+                <span className="hidden sm:inline">{t(KEY_START_MIGRATION)}</span>
               </Button>
+            )}
+            {canMigrate && !canStartMigration && (
+              <TooltipProvider>
+                <Tooltip>
+                  {/* A disabled button gets no pointer or focus events, so the focusable
+                      wrapper is what opens the explanation. */}
+                  <TooltipTrigger asChild>
+                    <span
+                      tabIndex={0}
+                      data-testid="start-migration-disabled-trigger"
+                      className="inline-flex"
+                    >
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        aria-label={t(KEY_START_MIGRATION)}
+                        disabled
+                        className="h-10 whitespace-nowrap text-sm"
+                      >
+                        <ArrowRightLeft className="mr-2 h-4 w-4" />
+                        <span className="hidden sm:inline">{t(KEY_START_MIGRATION)}</span>
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent className="border-none bg-neutral-500 text-white shadow-none">
+                    {t("ENVIRONMENTS.ADD_ANOTHER_TO_MIGRATE")}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
             {canAddEnvironment && (
               <Button
@@ -125,14 +160,16 @@ export const EnvironmentsPage = () => {
                 className="h-10 whitespace-nowrap text-sm"
               >
                 <Plus className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">New Environment</span>
+                <span className="hidden sm:inline">{t("ENVIRONMENTS.NEW_ENVIRONMENT")}</span>
               </Button>
             )}
           </div>
         </div>
         {environmentList[0]?.isShared && (
           <div className="mb-4 mt-6 border-b-2 border-border pb-2">
-            <h5 className="text-sm font-medium text-muted-foreground">Shared with you</h5>
+            <h5 className="text-sm font-medium text-muted-foreground">
+              {t("ENVIRONMENTS.SHARED_WITH_YOU")}
+            </h5>
           </div>
         )}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -141,8 +178,10 @@ export const EnvironmentsPage = () => {
               key={`shared-${project.itemId}`}
               project={project}
               isMigrationOngoing={
-                Array.isArray(migrationStatus) &&
-                migrationStatus.some((data) => isRecentMigrationForTarget(data, project.tenantId))
+                getMigrationStateForTarget(migrationStatus, project.tenantId) === "in-progress"
+              }
+              isMigrationFailed={
+                getMigrationStateForTarget(migrationStatus, project.tenantId) === "failed"
               }
             />
           ))}
@@ -150,7 +189,9 @@ export const EnvironmentsPage = () => {
         {environmentList[0]?.isShared && environmentList[0]?.nonSharedProject?.length > 0 && (
           <>
             <div className="mb-4 mt-8 border-b-2 border-border pb-2">
-              <h5 className="text-sm font-medium text-muted-foreground">Others</h5>
+              <h5 className="text-sm font-medium text-muted-foreground">
+                {t("ENVIRONMENTS.OTHERS")}
+              </h5>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {environmentList[0]?.nonSharedProject?.map((project) => (
@@ -159,10 +200,11 @@ export const EnvironmentsPage = () => {
                     key={`others-${project.itemId}`}
                     project={project}
                     isMigrationOngoing={
-                      Array.isArray(migrationStatus) &&
-                      migrationStatus.some((data) =>
-                        isRecentMigrationForTarget(data, project.tenantId),
-                      )
+                      getMigrationStateForTarget(migrationStatus, project.tenantId) ===
+                      "in-progress"
+                    }
+                    isMigrationFailed={
+                      getMigrationStateForTarget(migrationStatus, project.tenantId) === "failed"
                     }
                     className="bg-muted"
                   />
@@ -175,17 +217,19 @@ export const EnvironmentsPage = () => {
       <Dialog open={addEnvModalOpen} onOpenChange={setAddEnvModalOpen}>
         <DialogContent className="max-h-[90vh] w-[calc(100%-2rem)] overflow-y-auto rounded-lg border p-6 shadow-lg md:max-h-[85vh] md:w-[500px]">
           <DialogHeader className="mb-4">
-            <DialogTitle className="text-lg md:text-xl">Add Environment</DialogTitle>
+            <DialogTitle className="text-lg md:text-xl">
+              {t("ENVIRONMENTS.ADD_ENVIRONMENT")}
+            </DialogTitle>
             <DialogDescription className="flex flex-col gap-2 text-sm md:flex-row md:items-start md:gap-2">
               <span className="flex flex-row items-start gap-2">
-                <span>Please add the environments you want to configure.</span>
+                <span>{t("ENVIRONMENTS.ADD_ENVIRONMENTS_HINT")}</span>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger type="button" asChild>
-                      <CircleHelp className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                      <CircleHelp className="mt-0.5 h-4 w-4 shrink-0" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs text-xs font-normal md:max-w-96 md:text-sm">
-                      You must have the corresponding branch in your repository.
+                      {t("ENVIRONMENTS.BRANCH_REQUIRED")}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>

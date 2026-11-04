@@ -4,8 +4,12 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui-kits/popover/popover";
 import { cn } from "@/lib/utils";
-import { useGetOrganizations } from "@blocks-idp/iam/hooks/use-organization";
+import {
+  useGetOrganizationById,
+  useGetOrganizations,
+} from "@blocks-idp/iam/hooks/use-organization";
 import type { IOrganization } from "@blocks-idp/iam/models/organization";
+import { useT } from "@seliseblocks/genesis-os";
 
 const DEFAULT_ORGANIZATION_ID = "default";
 const PAGE_SIZE = 10;
@@ -19,6 +23,9 @@ interface OrganizationComboboxProps {
   initialSelectedName?: string;
   emptyMessage?: string;
   disabled?: boolean;
+  /** Also hide organizations with `isEnable === false`. Defaults to false for existing callers. */
+  excludeNotEnabled?: boolean;
+  id?: string;
 }
 
 const mergeOrganizations = (
@@ -36,9 +43,12 @@ export const OrganizationCombobox = ({
   onValueChange,
   preselectedOrganizationIds = [],
   initialSelectedName,
-  emptyMessage = "No organizations available",
+  emptyMessage,
   disabled = false,
+  excludeNotEnabled = false,
+  id,
 }: OrganizationComboboxProps) => {
+  const { t } = useT("os.idp.iam-ui");
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
@@ -69,6 +79,14 @@ export const OrganizationCombobox = ({
     enabled: open && !disabled,
   });
 
+  // A saved value arrives as a bare id; fetch its name until the user picks an option.
+  const needsSelectedLookup =
+    !!value && value !== DEFAULT_ORGANIZATION_ID && selectedOption?.itemId !== value;
+  const { data: selectedOrganizationDetails } = useGetOrganizationById({
+    projectKey,
+    itemId: needsSelectedLookup ? value : "",
+  });
+
   const [lastSearchTerm, setLastSearchTerm] = useState(debouncedSearchTerm);
   const [lastData, setLastData] = useState<typeof data>(undefined);
 
@@ -88,17 +106,19 @@ export const OrganizationCombobox = ({
   const options = useMemo(() => {
     const organizations = loadedOrganizations.filter(
       (organization) =>
-        organization.isDisabled !== true && organization.itemId !== DEFAULT_ORGANIZATION_ID,
+        organization.isDisabled !== true &&
+        !(excludeNotEnabled && organization.isEnable === false) &&
+        organization.itemId !== DEFAULT_ORGANIZATION_ID,
     );
     const defaultMatchesSearch = "default".includes(debouncedSearchTerm.toLowerCase());
     if (defaultMatchesSearch) {
       return [
-        { itemId: DEFAULT_ORGANIZATION_ID, name: "Default" },
+        { itemId: DEFAULT_ORGANIZATION_ID, name: t("ORGANIZATION_COMBOBOX.DEFAULT_NAME") },
         ...organizations.map(({ itemId, name }) => ({ itemId, name })),
       ];
     }
     return organizations.map(({ itemId, name }) => ({ itemId, name }));
-  }, [debouncedSearchTerm, loadedOrganizations]);
+  }, [debouncedSearchTerm, excludeNotEnabled, loadedOrganizations, t]);
 
   const totalCount = data?.totalCount ?? loadedOrganizations.length;
   const hasMore = loadedOrganizations.length < totalCount;
@@ -109,9 +129,10 @@ export const OrganizationCombobox = ({
   );
   const selectedLabel =
     value === DEFAULT_ORGANIZATION_ID
-      ? "Default"
+      ? t("ORGANIZATION_COMBOBOX.DEFAULT_NAME")
       : (selectedOrganization?.name ??
         (selectedOption?.itemId === value ? selectedOption.name : undefined) ??
+        selectedOrganizationDetails?.organization?.name ??
         value);
 
   const handleOpenChange = useCallback((nextOpen: boolean) => {
@@ -140,6 +161,7 @@ export const OrganizationCombobox = ({
     <Popover open={open} onOpenChange={handleOpenChange} modal>
       <PopoverTrigger asChild>
         <Button
+          id={id}
           type="button"
           variant="outline"
           role="combobox"
@@ -148,19 +170,19 @@ export const OrganizationCombobox = ({
           disabled={disabled}
         >
           <span className="truncate text-sm font-normal">
-            {value ? selectedLabel : "Select organization"}
+            {value ? selectedLabel : t("ORGANIZATION_COMBOBOX.SELECT_PLACEHOLDER")}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+      <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
         <div className="border-b px-3">
           <Input
             autoFocus
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder="Search organizations..."
-            className="h-11 w-full border-0 bg-transparent px-0 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
+            placeholder={t("ORGANIZATION_COMBOBOX.SEARCH_PLACEHOLDER")}
+            className="h-11 w-full border-0 bg-transparent px-0 text-sm outline-hidden placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
           />
         </div>
         <div
@@ -172,12 +194,14 @@ export const OrganizationCombobox = ({
           {isInitialLoading && (
             <div className="flex items-center justify-center p-4 text-sm text-muted-foreground">
               <Loader className="mr-2 h-4 w-4 animate-spin" />
-              Loading organizations...
+              {t("ORGANIZATION_COMBOBOX.LOADING")}
             </div>
           )}
           {!isInitialLoading && options.length === 0 && (
             <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-              {debouncedSearchTerm ? "No organizations found" : emptyMessage}
+              {debouncedSearchTerm
+                ? t("ORGANIZATION_COMBOBOX.NO_RESULTS")
+                : (emptyMessage ?? t("ORGANIZATION_COMBOBOX.EMPTY"))}
             </div>
           )}
           {options.map((organization) => {
@@ -217,7 +241,7 @@ export const OrganizationCombobox = ({
           {isLoadingMore && (
             <div className="flex items-center justify-center p-2 text-sm text-muted-foreground">
               <Loader className="mr-2 h-4 w-4 animate-spin" />
-              Loading more...
+              {t("ORGANIZATION_COMBOBOX.LOADING_MORE")}
             </div>
           )}
         </div>

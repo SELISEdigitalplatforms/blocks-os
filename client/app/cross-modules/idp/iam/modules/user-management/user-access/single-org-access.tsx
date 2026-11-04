@@ -3,13 +3,11 @@ import { IRole } from "@blocks-idp/iam/models/role";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
-import {
-  useGetUserById,
-  useUpdateUserAccessControl,
-} from "@blocks-idp/iam/hooks/use-user";
+import { useGetUserById, useUpdateUserAccessControl } from "@blocks-idp/iam/hooks/use-user";
 import { createRoleStub } from "@blocks-idp/iam/utils/role-stub";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
+import { useT } from "@seliseblocks/genesis-os";
 import { RolesPermissionsPillEditor } from "./roles-permissions-pill-editor";
 
 type SingleOrgAccessProps = {
@@ -20,6 +18,7 @@ type SingleOrgAccessProps = {
 const DEFAULT_ORG_ID = "default";
 
 export const SingleOrgAccess = ({ userId, projectKey }: SingleOrgAccessProps) => {
+  const { t } = useT("os.idp.users");
   const { data: userData, isLoading: isUserLoading } = useGetUserById({ id: userId, projectKey });
   const { data: rolesData, isLoading: isRolesLoading } = useGetRoles({
     page: 0,
@@ -27,9 +26,14 @@ export const SingleOrgAccess = ({ userId, projectKey }: SingleOrgAccessProps) =>
     sort: { property: "Name", isDescending: false },
     filter: { search: "" },
     projectKey,
+    // Stated rather than left to the fallback. This screen only ever edits the
+    // "default" organization -- that is what makes it the single-org editor -- and
+    // the fallback happens to agree today only because the caller is tenant-wide.
+    organizationId: DEFAULT_ORG_ID,
   });
   const { data: permissionsData, isLoading: isPermissionsLoading } = useGetPermissions({
     projectKey,
+    organizationId: DEFAULT_ORG_ID,
     page: 0,
     pageSize: 1000,
     search: "",
@@ -54,8 +58,7 @@ export const SingleOrgAccess = ({ userId, projectKey }: SingleOrgAccessProps) =>
 
   const user = userData?.data;
   const orgId = DEFAULT_ORG_ID;
-  const roleSlugs =
-    user?.OrganizationsRoles?.[orgId] ?? user?.roles?.[orgId] ?? [];
+  const roleSlugs = user?.OrganizationsRoles?.[orgId] ?? user?.roles?.[orgId] ?? [];
   const permissionResources =
     user?.OrganizationsPermissions?.[orgId] ?? user?.permissions?.[orgId] ?? [];
 
@@ -120,9 +123,7 @@ export const SingleOrgAccess = ({ userId, projectKey }: SingleOrgAccessProps) =>
     if (!user) return;
 
     const hydrationKey = `${user.itemId}:${rolesData?.data?.length ?? 0}:${permissionsData?.data?.length ?? 0}`;
-    const shouldHydrate =
-      !isInitialized ||
-      hydrationKey !== hydratedKeyRef.current;
+    const shouldHydrate = !isInitialized || hydrationKey !== hydratedKeyRef.current;
 
     if (!shouldHydrate) return;
 
@@ -144,13 +145,13 @@ export const SingleOrgAccess = ({ userId, projectKey }: SingleOrgAccessProps) =>
         showErrorToast({ errors: res.errors });
         return;
       }
-      showSuccessToast({ description: "Roles and permissions updated successfully" });
+      showSuccessToast({ description: t("SINGLE_ORG_ACCESS.UPDATED") });
     } catch (error) {
       showErrorToast({
         errors:
           typeof error === "object" && error !== null && "errors" in error
             ? (error as { errors: unknown }).errors
-            : "Something went wrong",
+            : t("SINGLE_ORG_ACCESS.SOMETHING_WENT_WRONG"),
       });
     }
   };
@@ -172,10 +173,10 @@ export const SingleOrgAccess = ({ userId, projectKey }: SingleOrgAccessProps) =>
       permissions={selectedPermissions}
       onRolesChange={setSelectedRoles}
       onPermissionsChange={setSelectedPermissions}
-      rolesDescription="Roles assigned to you."
-      permissionsDescription="Permissions assigned to you."
+      rolesDescription={t("SINGLE_ORG_ACCESS.ROLES_DESCRIPTION")}
+      permissionsDescription={t("SINGLE_ORG_ACCESS.PERMISSIONS_DESCRIPTION")}
       onSave={onSave}
+      organizationId={DEFAULT_ORG_ID}
     />
   );
 };
- 

@@ -2,7 +2,7 @@ import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { useDeleteModel } from "@blocks-ai/hooks/use-aimodel";
 type DeleteModelProps = {
   modelId: string;
@@ -10,15 +10,16 @@ type DeleteModelProps = {
   onOpenChange: (value: boolean) => void;
 };
 export const DeleteModel = ({ modelId, open, onOpenChange }: DeleteModelProps) => {
-  const project_key = useProjectStore().selectedProject?.tenantId || "";
+  const { t } = useT("os.ai");
+  const projectKey = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync } = useDeleteModel();
   const confirmHandler = async () => {
     try {
       if (!modelId) {
-        showErrorToast({ errors: "Something went wrong" });
+        showErrorToast({ errors: t("AIMODEL_DELETEMODEL_MODAL.SOMETHING_WENT_WRONG") });
         return onOpenChange(false);
       }
-      const res = await mutateAsync({ modelId, project_key });
+      const res = await mutateAsync({ modelId, project_key: projectKey });
       if (!res?.is_success) {
         return showErrorToast({
           errors:
@@ -26,13 +27,13 @@ export const DeleteModel = ({ modelId, open, onOpenChange }: DeleteModelProps) =
             (res as unknown as { detail?: string }).detail,
         });
       }
-      showSuccessToast({ description: "Model deleted successfully" });
+      showSuccessToast({ description: t("AIMODEL_DELETEMODEL_MODAL.MODEL_DELETED_SUCCESSFULLY") });
       onOpenChange(false);
     } catch (error) {
       if (isErrorWithErrors(error)) {
         return showErrorToast({ errors: error.errors });
       }
-      return showErrorToast({ errors: "Something went wrong" });
+      return showErrorToast({ errors: t("AIMODEL_DELETEMODEL_MODAL.SOMETHING_WENT_WRONG") });
     }
   };
   return (
@@ -44,8 +45,8 @@ export const DeleteModel = ({ modelId, open, onOpenChange }: DeleteModelProps) =
     >
       <ConfirmationModal
         data={{
-          dialogTitle: "Delete Model",
-          dialogSubtitle: "Are you sure you want to delete the model?",
+          dialogTitle: t("AIMODEL_DELETEMODEL_MODAL.DELETE_MODEL"),
+          dialogSubtitle: t("AIMODEL_DELETEMODEL_MODAL.ARE_YOU_SURE_YOU_WANT"),
         }}
         onConfirm={confirmHandler}
         onCancel={() => onOpenChange(false)}

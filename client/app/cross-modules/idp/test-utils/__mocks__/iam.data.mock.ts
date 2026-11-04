@@ -18,7 +18,6 @@ import type {
   ISaveRolesAndPermissionsPayload,
   IGetSessionPayload,
   IGetHistoriesPayload,
-  IGeneratePATPayload,
   IGetUserRolesPayload,
   IGetUserPermissionsPayload,
 } from "../../iam/models/user";
@@ -163,12 +162,6 @@ export const mockGetHistoriesPayload: IGetHistoriesPayload = {
   pageSize: 10,
   filter: { UserId: MOCK_USER_ITEM_ID },
   projectKey: TEST_PROJECT_KEY,
-};
-
-export const mockGeneratePATPayload: IGeneratePATPayload = {
-  note: "test pat",
-  codeTtlInMinute: 60,
-  clientId: "client-123",
 };
 
 export const mockGetUserRolesPayload: IGetUserRolesPayload = {

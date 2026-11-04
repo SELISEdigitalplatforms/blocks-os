@@ -54,8 +54,8 @@ public sealed class SecretAuthorizationService : ISecretAuthorizationService
         ArgumentNullException.ThrowIfNull(caller);
         ArgumentNullException.ThrowIfNull(secret);
 
-        // Status gates first, and they bind root too. A locked secret is locked for everyone;
-        // root override is about bypassing the access list, not about ignoring lifecycle.
+        // Status gates first, and they bind root too. A locked secret is locked for everyone.
+        // Root override is about bypassing the access list, not about ignoring lifecycle.
         switch (secret.Status)
         {
             case SecretStatuses.Locked:

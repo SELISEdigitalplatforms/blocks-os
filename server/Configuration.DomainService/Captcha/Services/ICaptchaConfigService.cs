@@ -25,21 +25,35 @@ namespace Configuration.DomainService.Captcha.Services
         /// secret's value when <see cref="SaveCaptchaConfigRequest.CaptchaSecret"/> is supplied;
         /// leaves it untouched otherwise.
         /// </summary>
+        /// <remarks>
+        /// When the linked secret is archived or missing, a supplied value cannot be rotated in;
+        /// instead a new secret is created and the same record (same id) is repointed at it, so
+        /// the response can carry a different <see cref="CaptchaConfigResult.SecretId"/>. The old
+        /// secret is not touched. If the record cannot be written, the new secret is retired again.
+        /// </remarks>
         /// <exception cref="Blocks.Secrets.SecretValidationException">
         /// <see cref="SaveCaptchaConfigRequest.Id"/> was supplied but no such record exists.
         /// </exception>
         Task<CaptchaConfigResult> SaveAsync(SaveCaptchaConfigRequest request, CancellationToken cancellationToken = default);
 
-        /// <summary>Reads one configuration record by its id. Returns null when it does not exist.</summary>
+        /// <summary>
+        /// Reads one configuration record by its id, with its linked secret's status. Returns null
+        /// when it does not exist.
+        /// </summary>
         Task<CaptchaConfigResult?> GetAsync(string id, CancellationToken cancellationToken = default);
 
-        /// <summary>Reads every configuration record belonging to this tenant.</summary>
+        /// <summary>
+        /// Reads every configuration record belonging to this tenant, each with its linked
+        /// secret's status. A status that cannot be read is reported as unavailable rather than
+        /// failing the list.
+        /// </summary>
         Task<IReadOnlyList<CaptchaConfigResult>> GetListAsync(CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Deletes the configuration record identified by <paramref name="id"/>, if any. If it
         /// has a linked secret, that secret is soft-deleted first; the record is removed only
-        /// after that succeeds. A no-op, not an error, when there is nothing to delete.
+        /// after that succeeds; a secret that is already archived or purged counts as retired and
+        /// is left as it is. A no-op, not an error, when there is nothing to delete.
         /// </summary>
         Task DeleteAsync(string id, CancellationToken cancellationToken = default);
     }

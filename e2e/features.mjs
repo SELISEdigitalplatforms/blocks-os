@@ -43,6 +43,12 @@ export const OS_FEATURES = [
     spec: "tests/02-secrets-and-configs/03-oidc-flow.spec.ts",
   },
   {
+    id: "oidc-mobile-app",
+    name: "Secrets & Configs — OIDC application type (Web / Mobile app, #680)",
+    enabled: true,
+    spec: "tests/02-secrets-and-configs/14-oidc-mobile-app-680.spec.ts",
+  },
+  {
     id: "client-credentials",
     name: "Secrets & Configs — Client Credentials",
     enabled: true,
@@ -97,6 +103,12 @@ export const OS_FEATURES = [
     enabled: true,
     spec: "tests/03-email-management/email-management-flow.spec.ts",
   },
+  {
+    id: "mail-template-subject",
+    name: "Email Management — template subject required (#726)",
+    enabled: true,
+    spec: "tests/03-email-management/mail-template-subject-726.spec.ts",
+  },
 
   // Identity & Access (sidebar submenu order)
   {
@@ -118,6 +130,12 @@ export const OS_FEATURES = [
     spec: "tests/04-identity-and-access/02-users-flow.spec.ts",
   },
   {
+    id: "org-membership-notify",
+    name: "Identity & Access — Organization membership notify",
+    enabled: true,
+    spec: "tests/04-identity-and-access/08-organization-membership-notify.spec.ts",
+  },
+  {
     id: "roles",
     name: "Identity & Access — Roles",
     enabled: true,
@@ -128,6 +146,18 @@ export const OS_FEATURES = [
     name: "Identity & Access — Permissions",
     enabled: true,
     spec: "tests/04-identity-and-access/05-permissions-flow.spec.ts",
+  },
+  {
+    id: "signup-link-configurations",
+    name: "Identity & Access — Signup Link Configurations",
+    enabled: true,
+    spec: "tests/04-identity-and-access/06-signup-link-configurations-617.spec.ts",
+  },
+  {
+    id: "signup-link-activity",
+    name: "Identity & Access — Signup Link Activity",
+    enabled: true,
+    spec: "tests/04-identity-and-access/07-signup-link-activity-618.spec.ts",
   },
 
   // Logs & Traces (sidebar submenu order)

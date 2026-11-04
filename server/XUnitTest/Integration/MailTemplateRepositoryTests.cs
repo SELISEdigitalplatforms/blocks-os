@@ -1,10 +1,10 @@
 using System;
 using System.Threading.Tasks;
-using Configuration.DomainService.Mail.Entities;
 using Configuration.DomainService.Mail.Template;
 using Configuration.DomainService.Mail.Template.Services;
 using FluentAssertions;
 using MongoDB.Driver;
+using Blocks.Genesis.Entities.Os;
 
 namespace XUnitTest.Integration
 {
@@ -19,7 +19,7 @@ namespace XUnitTest.Integration
             _fixture = fixture;
         }
 
-        private MailTemplateRepository NewRepository() => new(_fixture.DbContextProvider);
+        private MailTemplateRepository NewRepository() => new(_fixture.DbContextProvider, new XUnitTest.TestHelpers.PassThroughOsDataAccess());
 
         private static EmailTemplate NewTemplate(string itemId, string name, string language,
             string? subject = null, string? mailConfigId = null)

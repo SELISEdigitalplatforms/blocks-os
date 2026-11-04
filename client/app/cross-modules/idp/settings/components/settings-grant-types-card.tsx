@@ -24,6 +24,7 @@ import {
   grantTypesFormSchema,
   type GrantTypesFormValues,
 } from "@blocks-idp/settings/utils/auth-config-form";
+import { useT } from "@seliseblocks/genesis-os";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
@@ -34,6 +35,7 @@ type SettingsGrantTypesCardProps = {
 };
 
 export const SettingsGrantTypesCard = ({ config }: SettingsGrantTypesCardProps) => {
+  const { t } = useT("os.idp.settings");
   const { mutateAsync, isPending } = useSaveSettingsAuthConfig();
   const form = useForm<GrantTypesFormValues>({
     defaultValues: { allowedGrantTypes: config.allowedGrantTypes },
@@ -46,11 +48,11 @@ export const SettingsGrantTypesCard = ({ config }: SettingsGrantTypesCardProps) 
       const payload = buildSavePayload(config, values);
       const res = await mutateAsync(payload);
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
-      showSuccessToast({ description: "Grant types updated successfully" });
+      showSuccessToast({ description: t("SETTINGS_GRANT_TYPES_CARD.UPDATED") });
       form.reset(values);
     } catch (error) {
       if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
-      showErrorToast({ errors: "Something went wrong" });
+      showErrorToast({ errors: t("SETTINGS_GRANT_TYPES_CARD.SOMETHING_WENT_WRONG") });
     }
   };
 
@@ -60,7 +62,7 @@ export const SettingsGrantTypesCard = ({ config }: SettingsGrantTypesCardProps) 
     <Card>
       <CardHeader>
         <CardTitle>
-          <RequiredFieldLabel>Grant Types</RequiredFieldLabel>
+          <RequiredFieldLabel>{t("SETTINGS_GRANT_TYPES_CARD.TITLE")}</RequiredFieldLabel>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -90,7 +92,7 @@ export const SettingsGrantTypesCard = ({ config }: SettingsGrantTypesCardProps) 
                         }}
                       />
                     </FormControl>
-                    <FormLabel className="!mt-0">{item.label}</FormLabel>
+                    <FormLabel className="mt-0!">{item.label}</FormLabel>
                   </FormItem>
                 )}
               />
@@ -98,7 +100,7 @@ export const SettingsGrantTypesCard = ({ config }: SettingsGrantTypesCardProps) 
             <FormMessage />
             <div>
               <Button type="submit" disabled={isPending || !isValid || !isDirty}>
-                Save
+                {t("common:SAVE")}
               </Button>
             </div>
           </form>

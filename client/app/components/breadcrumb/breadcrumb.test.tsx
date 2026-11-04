@@ -70,7 +70,7 @@ describe("PageBreadcrumb", () => {
 
   it("renders the separator chevron at size-4 (16px)", () => {
     renderCrumb();
-    const separators = document.querySelectorAll('[role="presentation"]');
+    const separators = document.querySelectorAll('li[aria-hidden="true"]');
     expect(separators.length).toBeGreaterThan(0);
     separators.forEach((sep) => {
       expect(sep.className).toContain("[&>svg]:size-4");

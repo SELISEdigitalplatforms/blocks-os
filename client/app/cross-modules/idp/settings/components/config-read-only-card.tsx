@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
+import { useT } from "@seliseblocks/genesis-os";
 import { Pencil } from "lucide-react";
 
 type ConfigReadOnlyCardProps = {
@@ -17,28 +18,31 @@ export const ConfigReadOnlyCard = ({
   showEditButton = true,
   onEdit,
   editAction,
-}: ConfigReadOnlyCardProps) => (
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center justify-between">
-        {title}
-        {editAction}
-        {!editAction && showEditButton && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            aria-label={`Edit ${title}`}
-            onClick={onEdit}
-            disabled={!onEdit}
-          >
-            <Pencil className="h-4 w-4" />
-            Edit
-          </Button>
-        )}
-      </CardTitle>
-    </CardHeader>
-    <CardContent>{children}</CardContent>
-  </Card>
-);
+}: ConfigReadOnlyCardProps) => {
+  const { t } = useT("os.idp.settings");
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          {title}
+          {editAction}
+          {!editAction && showEditButton && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              aria-label={t("CONFIG_READ_ONLY_CARD.EDIT_TITLE", { title })}
+              onClick={onEdit}
+              disabled={!onEdit}
+            >
+              <Pencil className="h-4 w-4" />
+              {t("common:EDIT")}
+            </Button>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
+  );
+};

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui-kits/command/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui-kits/popover/popover";
 import { cn } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 
 type ScopeOption = { value: string; label: string; locked?: boolean };
 
@@ -26,6 +27,7 @@ type Props = {
 };
 
 export function ScopeMultiSelect({ value, onChange, disabled }: Props) {
+  const { t } = useT("os.idp.identity-provider");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -65,16 +67,18 @@ export function ScopeMultiSelect({ value, onChange, disabled }: Props) {
         >
           <span className="flex flex-1 flex-wrap items-center gap-1.5 text-left">
             {value.length === 0 ? (
-              <span className="text-sm text-muted-foreground">Select scope(s)</span>
+              <span className="text-sm text-muted-foreground">
+                {t("SCOPE_MULTI_SELECT.SELECT_SCOPES")}
+              </span>
             ) : (
               value.map((scope) => (
                 <Badge key={scope} variant="secondary" className="gap-1 pr-1 font-normal">
                   {scope}
                   {scope !== "openid" && (
-                    <span
+                    <span // NOSONAR: remove chip sits inside the popover trigger button; a nested <button> is invalid
                       role="button"
                       tabIndex={-1}
-                      aria-label={`Remove ${scope}`}
+                      aria-label={t("SCOPE_MULTI_SELECT.REMOVE_SCOPE", { scope })}
                       className="rounded-sm p-0.5 hover:bg-muted"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -91,12 +95,12 @@ export function ScopeMultiSelect({ value, onChange, disabled }: Props) {
           <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+      <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
         <Command>
           <CommandInput
             value={query}
             onValueChange={setQuery}
-            placeholder="Search or add a scope..."
+            placeholder={t("SCOPE_MULTI_SELECT.SEARCH_PLACEHOLDER")}
           />
           <CommandList>
             <CommandEmpty>
@@ -107,10 +111,10 @@ export function ScopeMultiSelect({ value, onChange, disabled }: Props) {
                   onClick={addCustomScope}
                 >
                   <Plus className="h-4 w-4" />
-                  Add &quot;{trimmedQuery}&quot;
+                  {t("SCOPE_MULTI_SELECT.ADD_SCOPE", { scope: trimmedQuery })}
                 </button>
               ) : (
-                "No scopes found."
+                t("SCOPE_MULTI_SELECT.NO_SCOPES")
               )}
             </CommandEmpty>
             <CommandGroup>
@@ -129,7 +133,9 @@ export function ScopeMultiSelect({ value, onChange, disabled }: Props) {
                     />
                     {option.label}
                     {option.locked && (
-                      <span className="ml-auto text-xs text-muted-foreground">required</span>
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        {t("SCOPE_MULTI_SELECT.REQUIRED")}
+                      </span>
                     )}
                   </CommandItem>
                 );
@@ -137,7 +143,7 @@ export function ScopeMultiSelect({ value, onChange, disabled }: Props) {
               {canAddCustom && (
                 <CommandItem value={trimmedQuery} onSelect={addCustomScope}>
                   <Plus className="mr-2 h-4 w-4" />
-                  Add &quot;{trimmedQuery}&quot;
+                  {t("SCOPE_MULTI_SELECT.ADD_SCOPE", { scope: trimmedQuery })}
                 </CommandItem>
               )}
             </CommandGroup>

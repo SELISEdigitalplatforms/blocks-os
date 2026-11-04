@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { useMemo } from "react";
 import { FilterToolbar, useSortQueryParams } from "@/components/filter-toolbar";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
@@ -24,6 +25,7 @@ export const useRolesSortQueryParams = () =>
     },
   });
 export const RolesFilterToolBar = () => {
+  const { t } = useT("os.idp.roles");
   const {
     queryParams: { search, orgId },
     setQueryParams,
@@ -53,11 +55,11 @@ export const RolesFilterToolBar = () => {
   return (
     <FilterToolbar<RolesFilter>
       filters={[
-        { key: "search", type: "SearchInput", label: "Search" },
+        { key: "search", type: "SearchInput", label: t("common:SEARCH") },
         {
           key: "orgId",
           type: "Radio",
-          label: "Organization",
+          label: t("ROLES_FILTER_TOOLBAR.ORGANIZATION"),
           props: {
             options: orgOptions || [],
           },

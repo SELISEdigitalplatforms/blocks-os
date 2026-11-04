@@ -15,9 +15,15 @@ namespace Cloud.LmtService.Utilities
         /// </summary>
         public const string Placeholder = "***REDACTED***";
 
+        // Per-match limit for every pattern below. Ordinary log messages and exception stack
+        // traces are matched in well under a millisecond; the limit only bounds pathological
+        // input. A timeout makes Redact fail closed (see ApplyFailClosed).
+        private static readonly TimeSpan MatchTimeout = TimeSpan.FromSeconds(1);
+
         private static readonly Regex BearerTokenRegex = new(
             @"\bBearer\s+[A-Za-z0-9\-._~+/]+=*",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            RegexOptions.IgnoreCase | RegexOptions.Compiled,
+            MatchTimeout);
 
         // Three base64url segments separated by dots (a JWT not preceded by "Bearer"),
         // anchored on the "eyJ" header prefix. A JWT's first segment is base64url of a JSON
@@ -27,23 +33,27 @@ namespace Cloud.LmtService.Utilities
         // out of the match; a segment-length minimum alone does not.
         private static readonly Regex JwtRegex = new(
             @"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]+",
-            RegexOptions.Compiled);
+            RegexOptions.Compiled,
+            MatchTimeout);
 
         private static readonly Regex EmailRegex = new(
             @"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b",
-            RegexOptions.Compiled);
+            RegexOptions.Compiled,
+            MatchTimeout);
 
         // JSON-style "password": "value" (any casing / pwd / passwd), value redacted, key kept.
         private static readonly Regex JsonPasswordRegex = new(
             @"(""(?:password|pwd|passwd)""\s*:\s*"")[^""]*("")",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            RegexOptions.IgnoreCase | RegexOptions.Compiled,
+            MatchTimeout);
 
         // key=value style, terminated by '&', ';', whitespace, or end of string. Covers both
         // query-string/form-encoded passwords and semicolon-delimited connection-string
         // Password=/Pwd= segments.
         private static readonly Regex KeyValuePasswordRegex = new(
             @"\b(pwd|password|passwd)\s*=\s*[^&;\s]+",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            RegexOptions.IgnoreCase | RegexOptions.Compiled,
+            MatchTimeout);
 
         // Candidate matcher only: 13-19 digit sequences, optionally grouped in 4s with spaces
         // or hyphens. A bare \d{13,19} run also matches ordinary log content -- a Unix
@@ -51,13 +61,37 @@ namespace Cloud.LmtService.Utilities
         // against the Luhn checksum before it is replaced (see PassesLuhn).
         private static readonly Regex CreditCardRegex = new(
             @"\b\d{4}[ -]\d{4}[ -]\d{4}[ -]\d{4}\b|\b\d{13,19}\b",
-            RegexOptions.Compiled);
+            RegexOptions.Compiled,
+            MatchTimeout);
 
         public static string Redact(string? text)
         {
             if (string.IsNullOrEmpty(text))
                 return text!;
 
+            return ApplyFailClosed(text, ApplyPatterns);
+        }
+
+        /// <summary>
+        /// Runs <paramref name="redact"/> over <paramref name="text"/>. If any pattern times out,
+        /// the whole text is replaced by <see cref="Placeholder"/>: a partially redacted or
+        /// unredacted string must never be returned, so the redactor fails closed.
+        /// Public rather than internal because the test project has no InternalsVisibleTo.
+        /// </summary>
+        public static string ApplyFailClosed(string text, Func<string, string> redact)
+        {
+            try
+            {
+                return redact(text);
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                return Placeholder;
+            }
+        }
+
+        private static string ApplyPatterns(string text)
+        {
             var result = text;
             result = BearerTokenRegex.Replace(result, Placeholder);
             result = JwtRegex.Replace(result, Placeholder);

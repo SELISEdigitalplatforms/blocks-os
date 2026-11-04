@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Blocks.Genesis;
@@ -18,6 +18,7 @@ using DomainService.Storage;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using XUnitTest.TestSupport;
+using Blocks.Genesis.Entities.Os;
 
 namespace XUnitTest.Services
 {
@@ -76,7 +77,7 @@ namespace XUnitTest.Services
         }
     }
 
-    public class ProjectManagementServiceTests
+    public partial class ProjectManagementServiceTests
     {
         private readonly Mock<IProjectRepository> _repo = new();
         private readonly Mock<IBlocksSecret> _blocksSecret = new();
@@ -96,7 +97,9 @@ namespace XUnitTest.Services
                     { "KbtclIdentifier", ".blocks.dev" },
                     { "IamDomain", "https://iam.blocks.dev" },
                     { "IamCookieDomain", "blocks.dev" },
-                    { "CertificateStorageType", "Azure" }
+                    { "CertificateStorageType", "Azure" },
+                    // Required for project create after #606 — without it SaveProjectAsync fails closed.
+                    { "FrontendRuntime:BLOCKS_IAM_BASE_URL", "https://dev-iam.blocksdevelopers.com" }
                 })
                 .Build();
 
@@ -108,7 +111,8 @@ namespace XUnitTest.Services
         private ProjectManagementService Service(IConfiguration? configuration = null) => new(
             _repo.Object, _blocksSecret.Object, _messageClient.Object, configuration ?? _configuration,
             _storage.Object, _tenants.Object, _certManager.Object, _encoding.Object, _cache.Object,
-            new CryptoService());
+            new CryptoService(),
+            HttpFactoryStub.Unreachable());
 
         // The environment's CNAME label, which the shared API host is built from.
         private static IConfiguration WithCnameRecordDomain(string label) =>
@@ -301,6 +305,7 @@ namespace XUnitTest.Services
                 TenantGroupId = "grp",
                 Environment = "dev",
                 Name = "Proj",
+                IsThirdPartyJwtEnabled = true,
                 Applications = new List<Applications> { new() { CookieDomain = "example.com", IsDomainVerified = true } }
             };
             _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
@@ -311,6 +316,7 @@ namespace XUnitTest.Services
             response.Data.Name.Should().Be("Proj");
             response.Data.TenantSlug.Should().Be("dxyz"); // env 'dev' => 'd' + encoded
             response.Data.IsDomainVerified.Should().BeTrue();
+            response.Data.IsThirdPartyJwtEnabled.Should().BeTrue();
         }
 
         [Fact]
@@ -423,6 +429,57 @@ namespace XUnitTest.Services
 
             response.IsSuccess.Should().BeTrue();
             tenant.Applications[0].Domain.Should().Be("https://new.example.com");
+        }
+
+        [Theory]
+        [InlineData(ApplicationAction.Add, null)]
+        [InlineData(ApplicationAction.Edit, "https://old.example.com")]
+        public async Task UpdateProjectAsync_DomainOfAnotherProject_IsRefused_AndNothingIsSaved(ApplicationAction action, string? currentDomain)
+        {
+            using var _ = new BlocksTestContext();
+            var tenant = new Tenant
+            { DbConnectionString = "mongodb://x", JwtTokenParameters = new JwtTokenParameters { IssueDate = System.DateTime.UtcNow, PrivateCertificatePassword = "pwd" },
+                TenantId = "t1",
+                Applications = new List<Applications> { new() { Domain = "https://old.example.com" } }
+            };
+            _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
+            _repo.Setup(r => r.IsDomainUsedByAnotherProjectAsync("taken.example.com", "t1")).ReturnsAsync(true);
+
+            var response = await Service().UpdateProjectAsync(new UpdateProjectRequest
+            {
+                Action = action,
+                ApplicationDomain = currentDomain,
+                Application = new Application { Domain = "https://Taken.example.com/", CookieDomain = "example.com" }
+            });
+
+            response.IsSuccess.Should().BeFalse();
+            response.Errors.Should().ContainKey("domain_in_use");
+            tenant.Applications.Should().ContainSingle().Which.Domain.Should().Be("https://old.example.com");
+            _repo.Verify(r => r.UpdateProjectAsync(It.IsAny<Tenant>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task UpdateProjectAsync_EditKeepingTheSameDomain_DoesNotCheckOtherProjects()
+        {
+            using var _ = new BlocksTestContext();
+            var tenant = new Tenant
+            { DbConnectionString = "mongodb://x", JwtTokenParameters = new JwtTokenParameters { IssueDate = System.DateTime.UtcNow, PrivateCertificatePassword = "pwd" },
+                TenantId = "t1",
+                Applications = new List<Applications> { new() { Domain = "https://shared.example.com" } }
+            };
+            _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
+            _repo.Setup(r => r.IsDomainUsedByAnotherProjectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+
+            var response = await Service().UpdateProjectAsync(new UpdateProjectRequest
+            {
+                Action = ApplicationAction.Edit,
+                ApplicationDomain = "https://shared.example.com",
+                Application = new Application { Domain = "https://shared.example.com", CookieDomain = "new.example.com" }
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            _repo.Verify(r => r.IsDomainUsedByAnotherProjectAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         }
 
         [Fact]
@@ -1256,6 +1313,8 @@ namespace XUnitTest.Services
         public async Task SaveThirdPartyJWTClaimsAsync_New_SavesAndReturnsItemId()
         {
             using var _ = new BlocksTestContext();
+            _repo.Setup(r => r.SaveJWTClaimsAsync(It.IsAny<ThirdPartyJWTClaims>()))
+                 .ReturnsAsync(new BaseResponse { IsSuccess = true });
 
             var response = await Service().SaveThirdPartyJWTClaimsAsync(new SaveThirdPartyJWTClaimsRequest
             {
@@ -1273,6 +1332,8 @@ namespace XUnitTest.Services
         public async Task SaveThirdPartyJWTClaimsAsync_Existing_LoadsThenSaves()
         {
             using var _ = new BlocksTestContext();
+            _repo.Setup(r => r.SaveJWTClaimsAsync(It.IsAny<ThirdPartyJWTClaims>()))
+                 .ReturnsAsync(new BaseResponse { IsSuccess = true });
             _repo.Setup(r => r.GetThirdPartyJWTClaimsAsync("c-1"))
                  .ReturnsAsync(new ThirdPartyJWTClaims { ItemId = "c-1" });
 
@@ -1290,7 +1351,7 @@ namespace XUnitTest.Services
         public async Task GetThirdPartyJWTClaimsAsync_DelegatesToRepository()
         {
             var claims = new ThirdPartyJWTClaims { ItemId = "c-1" };
-            _repo.Setup(r => r.GetThirdPartyJWTClaimsAsync(string.Empty)).ReturnsAsync(claims);
+            _repo.Setup(r => r.GetThirdPartyJWTClaimsForViewAsync()).ReturnsAsync(claims);
 
             var result = await Service().GetThirdPartyJWTClaimsAsync();
 
@@ -1323,7 +1384,8 @@ namespace XUnitTest.Services
             _repo.Verify(r => r.InsertPeopleAsync(It.IsAny<ProjectPeople>()), Times.Once);
             _certManager.Verify(c => c.UploadPrivateCertificateAsync(
                 CertificateStorageType.Filefilesystem, It.IsAny<X509Certificate2>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once);
-            _repo.Verify(r => r.UpdateProjectAsync(project), Times.Once);
+            _repo.Verify(r => r.SetPublicCertificatePathAsync("item-1", "https://download/cert"), Times.Once);
+            _repo.Verify(r => r.UpdateProjectAsync(It.IsAny<Tenant>()), Times.Never);
             _repo.Verify(r => r.CreateDefaultConfigurationAsync(It.IsAny<ProjectStatusTracer>(), project), Times.Once);
             // Public certificate download URL should be persisted on the project.
             project.JwtTokenParameters.PublicCertificatePath.Should().Be("https://download/cert");
@@ -1351,6 +1413,7 @@ namespace XUnitTest.Services
         {
             using var _ = new BlocksTestContext();
             SetupCertificatePipeline();
+            _repo.Setup(r => r.GetByIdAsync("item-1")).ReturnsAsync(StoredTenantForConfigure());
 
             var project = NewTenantForConfigure();
 
@@ -1366,16 +1429,34 @@ namespace XUnitTest.Services
         }
 
         [Fact]
+        public async Task ConfigureProjectAsync_AnnouncesTheStoredTenant_NotTheCopyItWasHanded()
+        {
+            // A repository added while provisioning ran registered its host on the stored row and
+            // broadcast it. Announcing the creation-time copy afterwards put every cache back to
+            // the host list from before, and the setup guide lost the repository's host.
+            using var _ = new BlocksTestContext();
+            SetupCertificatePipeline();
+            var stored = StoredTenantForConfigure();
+            stored.Applications.Add(new Applications { Domain = "https://sbpqto-ehxqx.dev.slsblx.com" });
+            _repo.Setup(r => r.GetByIdAsync("item-1")).ReturnsAsync(stored);
+
+            await Service().ConfigureProjectAsync(NewTenantForConfigure());
+
+            _tenants.Verify(t => t.UpdateTenantVersionAsync(It.Is<TenantCacheUpdateMessage>(m => m.Tenant == stored)), Times.Once);
+        }
+
+        [Fact]
         public async Task ConfigureProjectAsync_DoesNotAnnounce_WhenResumedRunHasNoCertificatePath()
         {
             using var _ = new BlocksTestContext();
             SetupCertificatePipeline();
+            _repo.Setup(r => r.GetByIdAsync("item-1")).ReturnsAsync(NewTenantForConfigure());
 
             var project = NewTenantForConfigure();
 
             // A resumed run: the certificates are already marked uploaded, so the upload step
-            // short-circuits and never re-assigns the path. Broadcasting the blank project here
-            // would replace good cached copies with a useless one.
+            // short-circuits and never re-assigns the path, and the earlier run never saved it.
+            // Broadcasting that tenant would replace good cached copies with a useless one.
             var tracer = new ProjectStatusTracer
             {
                 ProjectId = project.ItemId,
@@ -1469,7 +1550,7 @@ namespace XUnitTest.Services
                     .ReturnsAsync(new CompleteUploadResponse
                     {
                         IsSuccess = true,
-                        VerificationStatus = Storage.DomainService.Enums.FileVerificationStatus.Verified,
+                        VerificationStatus = Blocks.Genesis.Entities.Data.FileVerificationStatus.Verified,
                     });
             _storage.Setup(s => s.GetUrlForDownloadFileAsync(It.IsAny<GetFileRequest>()))
                     .ReturnsAsync(new FileResponse { IsSuccess = true, Url = "https://download/cert" });
@@ -1495,7 +1576,7 @@ namespace XUnitTest.Services
                     .ReturnsAsync(new CompleteUploadResponse
                     {
                         IsSuccess = true,
-                        VerificationStatus = Storage.DomainService.Enums.FileVerificationStatus.Rejected,
+                        VerificationStatus = Blocks.Genesis.Entities.Data.FileVerificationStatus.Rejected,
                         RejectionReason = "real_file_type_mismatch",
                     });
 
@@ -1536,6 +1617,14 @@ namespace XUnitTest.Services
                 CertificateStorageType = CertificateStorageType.Filefilesystem
             }
         };
+
+        // The row as provisioning leaves it in the database: the certificate path saved.
+        private static Tenant StoredTenantForConfigure()
+        {
+            var stored = NewTenantForConfigure();
+            stored.JwtTokenParameters.PublicCertificatePath = "https://download/cert";
+            return stored;
+        }
 
         // ---- Domain typing -------------------------------------------------------------
         //
@@ -1635,6 +1724,275 @@ namespace XUnitTest.Services
                 .Select(a => a.Domain)
                 .Should().BeEquivalentTo(new[] { "https://iam.blocks.dev" },
                     "IAM is the same host in every tenant's list; Studio is absent from this configuration");
+        }
+
+        // --- #606 JWT issuer on project creation ---
+
+        private static IConfiguration WithIamBaseUrl(string? url)
+        {
+            var values = new Dictionary<string, string?>
+            {
+                { "KbtclIdentifier", ".blocks.dev" },
+                { "IamDomain", "https://iam.blocks.dev" },
+                { "IamCookieDomain", "blocks.dev" },
+                { "CertificateStorageType", "Azure" }
+            };
+            if (url is not null)
+            {
+                values["FrontendRuntime:BLOCKS_IAM_BASE_URL"] = url;
+            }
+
+            return new ConfigurationBuilder().AddInMemoryCollection(values).Build();
+        }
+
+        [Fact]
+        public async Task SaveProjectAsync_StoresIssuerAsIamBaseUrlPlusTenantId()
+        {
+            using var _ = new BlocksTestContext();
+            Tenant? inserted = null;
+            _repo.Setup(r => r.InsertProjectAsync(It.IsAny<Tenant>()))
+                 .Callback<Tenant>(t => inserted = t)
+                 .Returns(Task.CompletedTask);
+
+            var response = await Service().SaveProjectAsync(new CreateProjectRequest
+            {
+                Name = "Proj",
+                applicationContexts = [new() { Environment = "dev", Domain = "https://dev.example.com" }]
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            inserted.Should().NotBeNull();
+            inserted!.TenantId.Should().StartWith("D");
+            inserted.JwtTokenParameters.Issuer.Should().Be(
+                "https://dev-iam.blocksdevelopers.com/" + inserted.TenantId);
+            // Sibling JWT fields stay on their existing defaults (H7-adjacent).
+            inserted.JwtTokenParameters.Subject.Should().Be(IdentifierConstants.Subject);
+            inserted.JwtTokenParameters.CertificateStorageType.Should().Be(CertificateStorageType.Azure);
+        }
+
+        [Fact]
+        public async Task SaveProjectAsync_TrimsTrailingSlashesFromIamBaseUrl()
+        {
+            using var _ = new BlocksTestContext();
+            Tenant? inserted = null;
+            _repo.Setup(r => r.InsertProjectAsync(It.IsAny<Tenant>()))
+                 .Callback<Tenant>(t => inserted = t)
+                 .Returns(Task.CompletedTask);
+
+            await Service(WithIamBaseUrl("https://iam.seliseblocks.com/")).SaveProjectAsync(new CreateProjectRequest
+            {
+                Name = "Proj",
+                applicationContexts = [new() { Environment = "prod", Domain = "https://example.com" }]
+            });
+
+            inserted!.JwtTokenParameters.Issuer.Should().Be(
+                "https://iam.seliseblocks.com/" + inserted.TenantId);
+            inserted.JwtTokenParameters.Issuer.Should().NotContain("//" + inserted.TenantId);
+        }
+
+        [Fact]
+        public async Task SaveProjectAsync_EnvVarOverrideWinsOverConfiguration()
+        {
+            using var _ = new BlocksTestContext();
+            const string envKey = "FrontendRuntime__BLOCKS_IAM_BASE_URL";
+            var previous = Environment.GetEnvironmentVariable(envKey);
+            Environment.SetEnvironmentVariable(envKey, "https://stg-iam.override.test");
+            try
+            {
+                Tenant? inserted = null;
+                _repo.Setup(r => r.InsertProjectAsync(It.IsAny<Tenant>()))
+                     .Callback<Tenant>(t => inserted = t)
+                     .Returns(Task.CompletedTask);
+
+                await Service(WithIamBaseUrl("https://stg-iam.blocksdevelopers.com")).SaveProjectAsync(
+                    new CreateProjectRequest
+                    {
+                        Name = "Proj",
+                        applicationContexts = [new() { Environment = "stg", Domain = "https://stg.example.com" }]
+                    });
+
+                inserted!.JwtTokenParameters.Issuer.Should().Be(
+                    "https://stg-iam.override.test/" + inserted.TenantId);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(envKey, previous);
+            }
+        }
+
+        [Fact]
+        public async Task SaveProjectAsync_PreservesTenantIdCaseInIssuer()
+        {
+            using var _ = new BlocksTestContext();
+            Tenant? inserted = null;
+            _repo.Setup(r => r.InsertProjectAsync(It.IsAny<Tenant>()))
+                 .Callback<Tenant>(t => inserted = t)
+                 .Returns(Task.CompletedTask);
+
+            await Service().SaveProjectAsync(new CreateProjectRequest
+            {
+                Name = "Proj",
+                applicationContexts = [new() { Environment = "dev", Domain = "https://dev.example.com" }]
+            });
+
+            // Leading environment letter uppercase; GUID remainder lowercase (not lowercased as a whole).
+            inserted!.TenantId[0].Should().Be('D');
+            inserted.TenantId[1..].Should().Be(inserted.TenantId[1..].ToLowerInvariant());
+            inserted.JwtTokenParameters.Issuer.Should().EndWith("/" + inserted.TenantId);
+        }
+
+        [Fact]
+        public async Task SaveProjectAsync_LeavesIamDomainApplicationUnchanged()
+        {
+            using var _ = new BlocksTestContext();
+            Tenant? inserted = null;
+            _repo.Setup(r => r.InsertProjectAsync(It.IsAny<Tenant>()))
+                 .Callback<Tenant>(t => inserted = t)
+                 .Returns(Task.CompletedTask);
+
+            await Service().SaveProjectAsync(new CreateProjectRequest
+            {
+                Name = "Proj",
+                Resources = [RepositoryNamed("repo-1")],
+                applicationContexts = [new() { Environment = "dev" }]
+            });
+
+            inserted!.Applications.Should().Contain(a =>
+                a.Domain == "https://iam.blocks.dev" && a.DomainType == DomainType.PlatformDefault);
+        }
+
+        [Fact]
+        public async Task SaveProjectAsync_MissingIamBaseUrl_FailsWithoutInserting()
+        {
+            using var _ = new BlocksTestContext();
+            const string envKey = "FrontendRuntime__BLOCKS_IAM_BASE_URL";
+            var previous = Environment.GetEnvironmentVariable(envKey);
+            Environment.SetEnvironmentVariable(envKey, null);
+            try
+            {
+                var response = await Service(WithIamBaseUrl(null)).SaveProjectAsync(new CreateProjectRequest
+                {
+                    Name = "Proj",
+                    applicationContexts = [new() { Environment = "dev", Domain = "https://dev.example.com" }]
+                });
+
+                response.IsSuccess.Should().BeFalse();
+                response.Errors.Should().ContainKey("iam_configuration");
+                response.Errors["iam_configuration"].Should().Contain("not configured");
+                _repo.Verify(r => r.InsertProjectAsync(It.IsAny<Tenant>()), Times.Never);
+                _repo.Verify(r => r.UpdateTenantAssetAsync(It.IsAny<TenantAsset>()), Times.Never);
+                _repo.Verify(r => r.InsertPeopleAsync(It.IsAny<ProjectPeople>()), Times.Never);
+                _messageClient.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<Tenant>>()), Times.Never);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(envKey, previous);
+            }
+        }
+
+        [Theory]
+        [InlineData("dev-iam.blocksdevelopers.com")]
+        [InlineData("https://dev-iam.blocksdevelopers.com/?x=1")]
+        [InlineData("https://dev-iam.blocksdevelopers.com/#frag")]
+        [InlineData("ftp://dev-iam.blocksdevelopers.com")]
+        public async Task SaveProjectAsync_InvalidIamBaseUrl_FailsWithoutInserting(string badUrl)
+        {
+            using var _ = new BlocksTestContext();
+            const string envKey = "FrontendRuntime__BLOCKS_IAM_BASE_URL";
+            var previous = Environment.GetEnvironmentVariable(envKey);
+            Environment.SetEnvironmentVariable(envKey, null);
+            try
+            {
+                var response = await Service(WithIamBaseUrl(badUrl)).SaveProjectAsync(new CreateProjectRequest
+                {
+                    Name = "Proj",
+                    applicationContexts = [new() { Environment = "dev", Domain = "https://dev.example.com" }]
+                });
+
+                response.IsSuccess.Should().BeFalse();
+                response.Errors.Should().ContainKey("iam_configuration");
+                response.Errors["iam_configuration"].Should().Contain("absolute http or https");
+                _repo.Verify(r => r.InsertProjectAsync(It.IsAny<Tenant>()), Times.Never);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(envKey, previous);
+            }
+        }
+
+        [Fact]
+        public async Task SaveProjectAsync_MultiEnvironment_FailsPreflightBeforeAnyInsert()
+        {
+            // Blank IAM base URL fails the whole multi-env request during pre-flight (C3).
+            using var _ = new BlocksTestContext();
+            const string envKey = "FrontendRuntime__BLOCKS_IAM_BASE_URL";
+            var previous = Environment.GetEnvironmentVariable(envKey);
+            Environment.SetEnvironmentVariable(envKey, "   ");
+            try
+            {
+                var response = await Service(WithIamBaseUrl(null)).SaveProjectAsync(new CreateProjectRequest
+                {
+                    Name = "Proj",
+                    applicationContexts =
+                    [
+                        new() { Environment = "dev", Domain = "https://dev.example.com" },
+                        new() { Environment = "stg", Domain = "https://stg.example.com" }
+                    ]
+                });
+
+                response.IsSuccess.Should().BeFalse();
+                response.Errors.Should().ContainKey("iam_configuration");
+                _repo.Verify(r => r.InsertProjectAsync(It.IsAny<Tenant>()), Times.Never);
+                _repo.Verify(r => r.InsertPeopleAsync(It.IsAny<ProjectPeople>()), Times.Never);
+                _messageClient.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<Tenant>>()), Times.Never);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(envKey, previous);
+            }
+        }
+
+        [Fact]
+        public void BuildJwtIssuer_EmptyTenantId_Throws()
+        {
+            // C4: refuse a host-only issuer. Method is private; invoke via reflection.
+            var service = Service();
+            var method = typeof(ProjectManagementService).GetMethod(
+                "BuildJwtIssuer",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            method.Should().NotBeNull();
+            var act = () => method!.Invoke(service, new object[] { "" });
+            act.Should().Throw<System.Reflection.TargetInvocationException>()
+               .WithInnerException<InvalidOperationException>()
+               .WithMessage("*TenantId is required*");
+        }
+
+        [Fact]
+        public async Task SaveProjectAsync_AddingEnvironment_UsesCallerBaseUrlAndLeavesOthersUntouched()
+        {
+            // H5: new env tenant gets this process's base URL + its own TenantId; we never rewrite
+            // existing tenants (no repository Update of siblings).
+            using var _ = new BlocksTestContext();
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("existing-group"))
+                 .ReturnsAsync(new TenantAsset { Resources = new List<Resource>() });
+
+            Tenant? inserted = null;
+            _repo.Setup(r => r.InsertProjectAsync(It.IsAny<Tenant>()))
+                 .Callback<Tenant>(t => inserted = t)
+                 .Returns(Task.CompletedTask);
+
+            await Service(WithIamBaseUrl("https://stg-iam.blocksdevelopers.com")).SaveProjectAsync(
+                new CreateProjectRequest
+                {
+                    Name = "Proj",
+                    TenantGroupId = "existing-group",
+                    applicationContexts = [new() { Environment = "stg", Domain = "https://stg.example.com" }]
+                });
+
+            inserted!.TenantId.Should().StartWith("S");
+            inserted.JwtTokenParameters.Issuer.Should().Be(
+                "https://stg-iam.blocksdevelopers.com/" + inserted.TenantId);
+            _repo.Verify(r => r.InsertProjectAsync(It.IsAny<Tenant>()), Times.Once);
         }
 
         [Theory]

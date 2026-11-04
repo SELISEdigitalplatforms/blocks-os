@@ -1,33 +1,34 @@
 import React from "react";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { LogsViewer } from "@blocks-lmt/components";
-
-const BREADCRUMB_TITLES = {
-  "/email-management": "Email Management",
-  "/email-management/logs": "Logs",
-};
+import { useT } from "@seliseblocks/genesis-os";
 
 export function EmailLogs() {
+  const { t } = useT("os.communication.mail");
+  const breadcrumbTitles = {
+    "/email-management": t("EMAIL_LOGS.BREADCRUMB_EMAIL_MANAGEMENT"),
+    "/email-management/logs": t("EMAIL_LOGS.BREADCRUMB_LOGS"),
+  };
   return (
     <div>
-      <PageBreadcrumb breadcrumbIndex={2} customTitles={BREADCRUMB_TITLES} />
+      <PageBreadcrumb breadcrumbIndex={2} customTitles={breadcrumbTitles} />
       <LogsViewer
         services={[
           {
             id: "blocks-communication-api",
-            label: "Api",
+            label: t("EMAIL_LOGS.SERVICE_API"),
             serviceName: "blocks-communication-api",
           },
           {
             id: "blocks-communication-worker",
-            label: "Worker",
+            label: t("EMAIL_LOGS.SERVICE_WORKER"),
             serviceName: "blocks-communication-worker",
           },
         ]}
         predefinedQueries={[
-          "Has anyone faced any email issues?",
-          "Any errors in the last hour?",
-          "Any errors in the last hour?",
+          t("EMAIL_LOGS.QUERY_EMAIL_ISSUES"),
+          t("EMAIL_LOGS.QUERY_ERRORS_LAST_HOUR"),
+          t("EMAIL_LOGS.QUERY_ERRORS_LAST_HOUR"),
         ]}
       />
     </div>

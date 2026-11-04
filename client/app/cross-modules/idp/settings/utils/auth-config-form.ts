@@ -1,16 +1,23 @@
 import { getRuntimeEnv } from "@/lib/runtime-env";
+import { tStatic } from "@seliseblocks/genesis-os";
 import { z } from "zod";
+
+const I18N_MODULE = "os.idp.settings";
 
 const trimTrailingSlash = (value: string) => value.replace(/\/$/, "");
 
 export const getBlocksIamBaseUrl = () => trimTrailingSlash(getRuntimeEnv("BLOCKS_IAM_BASE_URL"));
 
+// Number.isInteger, not .int(): zod 4's .int() also rejects unsafe integers and skips the checks
+// after it and iamConfigFormSchema's superRefine; zod 3's did neither.
 const positiveInt = z.coerce
-  .number()
-  .int({ message: "Must be a whole number." })
-  .min(1, { message: "Value must be greater than zero." })
+  .number<number>()
+  .refine(Number.isInteger, {
+    error: () => tStatic(I18N_MODULE, "AUTH_CONFIG_FORM.WHOLE_NUMBER"),
+  })
+  .min(1, { error: () => tStatic(I18N_MODULE, "AUTH_CONFIG_FORM.GREATER_THAN_ZERO") })
   .max(2147483647, {
-    message: "Value exceeds the allowed limit (1 - 2,147,483,647).",
+    error: () => tStatic(I18N_MODULE, "AUTH_CONFIG_FORM.EXCEEDS_LIMIT"),
   });
 
 export const authSettingsFormSchema = z.object({
@@ -24,7 +31,9 @@ export const authSettingsFormSchema = z.object({
 });
 
 export const grantTypesFormSchema = z.object({
-  allowedGrantTypes: z.array(z.string()).min(1, "Select at least one grant type."),
+  allowedGrantTypes: z
+    .array(z.string())
+    .min(1, { error: () => tStatic(I18N_MODULE, "AUTH_CONFIG_FORM.SELECT_GRANT_TYPE") }),
 });
 
 export type GrantTypesFormValues = z.infer<typeof grantTypesFormSchema>;
@@ -49,9 +58,9 @@ export const iamConfigFormSchema = z
     if (values.isOidcEnabled || values.accountActionBaseUrl.trim()) return;
 
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: "custom",
       path: ["accountActionBaseUrl"],
-      message: "Account action base URL is required.",
+      message: tStatic(I18N_MODULE, "AUTH_CONFIG_FORM.BASE_URL_REQUIRED"),
     });
   });
 

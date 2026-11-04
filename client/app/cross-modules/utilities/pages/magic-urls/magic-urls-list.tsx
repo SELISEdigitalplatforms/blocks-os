@@ -26,6 +26,7 @@ import { useDeleteMagicUrlConfig } from "@blocks-utilities/hooks/use-magic-url-c
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import { useT } from "@seliseblocks/genesis-os";
 
 const LoadingSkelton = () => (
   <div className="grid w-full gap-2">
@@ -41,6 +42,7 @@ type MagicUrlsListProps = {
 };
 
 export function MagicUrlsList({ configurations, isLoading }: MagicUrlsListProps) {
+  const { t } = useT("os.utilities");
   const { mutateAsync: deleteConfig, isPending: isDeleting } = useDeleteMagicUrlConfig();
   const [itemToDelete, setItemToDelete] = React.useState<IMagicUrlConfig | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
@@ -56,11 +58,11 @@ export function MagicUrlsList({ configurations, isLoading }: MagicUrlsListProps)
     if (!itemToDelete) return;
     try {
       await deleteConfig(itemToDelete.itemId);
-      showSuccessToast({ description: "Configuration deleted successfully" });
+      showSuccessToast({ description: t("MAGIC_URLS_LIST.CONFIGURATION_DELETED_SUCCESSFULLY") });
       setIsDeleteModalOpen(false);
       setItemToDelete(null);
     } catch {
-      showErrorToast({ errors: "Failed to delete configuration" });
+      showErrorToast({ errors: t("MAGIC_URLS_LIST.FAILED_TO_DELETE_CONFIGURATION") });
     }
   };
 
@@ -68,7 +70,7 @@ export function MagicUrlsList({ configurations, isLoading }: MagicUrlsListProps)
     () => [
       {
         accessorKey: "contextName",
-        header: "Context Name",
+        header: t("MAGIC_URLS_LIST.CONTEXT_NAME"),
         cell: ({ row }) => (
           <span className="font-medium" title={row.original.contextName}>
             {row.original.contextName || "-"}
@@ -77,7 +79,7 @@ export function MagicUrlsList({ configurations, isLoading }: MagicUrlsListProps)
       },
       {
         accessorKey: "shortUrlBase",
-        header: "Short URL Base",
+        header: t("MAGIC_URLS_LIST.SHORT_URL_BASE"),
         cell: ({ row }) => (
           <CopyToClipboardButton textToCopy={row.original.shortUrlBase} isHoverable>
             <span className="truncate font-medium">{row.original.shortUrlBase || "-"}</span>
@@ -86,7 +88,7 @@ export function MagicUrlsList({ configurations, isLoading }: MagicUrlsListProps)
       },
       {
         accessorKey: "lastUpdatedDate",
-        header: "Last Updated",
+        header: t("MAGIC_URLS_LIST.LAST_UPDATED"),
         cell: ({ row }) => {
           const dateStr = row.original.lastUpdatedDate || row.original.createdDate;
           if (!dateStr) return <span>-</span>;
@@ -114,7 +116,7 @@ export function MagicUrlsList({ configurations, isLoading }: MagicUrlsListProps)
                   }}
                 >
                   <Pencil className="mr-2 h-4 w-4" />
-                  <span>Edit</span>
+                  <span>{t("common:EDIT")}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="cursor-pointer text-error"
@@ -126,7 +128,7 @@ export function MagicUrlsList({ configurations, isLoading }: MagicUrlsListProps)
                   }}
                 >
                   <Trash className="mr-2 h-4 w-4" />
-                  <span>Delete</span>
+                  <span>{t("common:DELETE")}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -134,7 +136,7 @@ export function MagicUrlsList({ configurations, isLoading }: MagicUrlsListProps)
         ),
       },
     ],
-    [isDeleting],
+    [isDeleting, t],
   );
 
   const table = useReactTable({
@@ -196,10 +198,12 @@ export function MagicUrlsList({ configurations, isLoading }: MagicUrlsListProps)
           onCancel={() => setIsDeleteModalOpen(false)}
           onConfirm={handleDelete}
           data={{
-            dialogTitle: "Delete Magic URL Configuration",
-            dialogSubtitle: `Are you sure you want to delete "${itemToDelete?.contextName ?? "this configuration"}"?`,
-            confirmButton: "Delete",
-            cancelButton: "Cancel",
+            dialogTitle: t("MAGIC_URLS_LIST.DELETE_MAGIC_URL_CONFIGURATION"),
+            dialogSubtitle: t("MAGIC_URLS_LIST.ARE_YOU_SURE_YOU_WANT", {
+              contextName: itemToDelete?.contextName ?? "this configuration",
+            }),
+            confirmButton: t("common:DELETE"),
+            cancelButton: t("common:CANCEL"),
           }}
           buttonState={{ confirm: { disable: isDeleting } }}
         />

@@ -1,16 +1,11 @@
 import { expect, type Page } from "@playwright/test";
-import { openProjectOverview, openSecretManagement } from "../../support/os-helpers";
+import { openIam, openSecretManagement } from "../../support/os-helpers";
 
 export async function seedTestRoleFlow(page: Page) {
-  await openProjectOverview(page, "environments");
-  await expect(page.getByRole("heading", { name: "Environments" })).toBeVisible({
-    timeout: 30000,
-  });
-
-  await page.goto(
-    (await page.evaluate(() => window.location.origin)) + "/iam/role",
-  );
-  await expect(page.getByRole("heading", { name: "Roles" })).toBeVisible({ timeout: 30000 });
+  // Roles live under the project-scoped /app/{id}/iam/role route now; the old
+  // bare /iam/role path bounces to the console.
+  await openIam(page, "role", "Roles");
+  await expect(page.getByRole("button", { name: "Add Role" })).toBeVisible({ timeout: 30000 });
   await page.getByRole("button", { name: "Add Role" }).click();
   await expect(page.getByRole("heading", { name: "Add Role" })).toBeVisible();
 
@@ -18,7 +13,7 @@ export async function seedTestRoleFlow(page: Page) {
   await page.getByPlaceholder("Enter name").fill(`Flow CC Role ${suffix}`);
   await page.getByPlaceholder("Enter slug").fill(`flow-cc-role-${suffix}`);
   await page.getByRole("button", { name: "Add", exact: true }).click();
-  await expect(page.getByText("Role added successfully")).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText("Role added successfully", { exact: true })).toBeVisible({ timeout: 15000 });
 }
 
 export async function navigateToClientCredentialsFlow(page: Page) {
@@ -102,6 +97,29 @@ export async function cancelClientCredentialDialogFlow(page: Page) {
 
 export async function fillClientNameFlow(page: Page, clientName: string) {
   await page.getByPlaceholder("Enter client name").fill(clientName);
+  await pickOrganizationIfRequiredFlow(page);
+}
+
+/**
+ * With multi-organization on (the Organizations flow leaves the shared project
+ * that way), a new credential must name its organization before Add enables.
+ */
+export async function pickOrganizationIfRequiredFlow(page: Page) {
+  const organizationPicker = page
+    .getByRole("dialog")
+    .getByRole("combobox")
+    .filter({ hasText: "Select organization" });
+  if (!(await organizationPicker.waitFor({ state: "visible", timeout: 5000 }).then(() => true, () => false))) {
+    return;
+  }
+  await organizationPicker.click();
+  const firstOrganization = page
+    .getByTestId("organization-options-list")
+    .locator('[role="option"][aria-disabled="false"]')
+    .first();
+  await expect(firstOrganization).toBeVisible({ timeout: 15000 });
+  await firstOrganization.click();
+  await expect(organizationPicker).toHaveCount(0);
 }
 
 export async function assignRoleFlow(page: Page): Promise<boolean> {
@@ -176,7 +194,7 @@ export async function saveClientCredentialFlow(page: Page) {
       await page.waitForTimeout(500);
     }
   }
-  await expect(page.getByText("Client credential created successfully")).toBeVisible({
+  await expect(page.getByText("Client credential created successfully", { exact: true })).toBeVisible({
     timeout: 15000,
   });
 }

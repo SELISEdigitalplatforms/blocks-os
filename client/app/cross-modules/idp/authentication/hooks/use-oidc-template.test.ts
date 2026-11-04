@@ -10,7 +10,10 @@ import { useGetOidcTemplate, useSaveOidcTemplate } from "./use-oidc-template";
 vi.mock("@blocks-idp/authentication/services/auth-clients-oidc.service", () =>
   mockAuthOidcServiceFactory(),
 );
-vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
+  ...mockProjectStoreFactory(),
+}));
 
 const template = {
   branding: { brandName: "Blocks IAM", logoUrl: null },

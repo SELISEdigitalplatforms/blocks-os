@@ -1,10 +1,12 @@
 import { ProviderCard } from "@blocks-ai/components/aimodels/aimodel-card/aimodel-card";
 import { IProvider } from "@blocks-ai/types/aimodel.service.type";
+import { useT } from "@seliseblocks/genesis-os";
 interface ProviderListProps {
   providerList: IProvider[];
   servicePlatform: string;
 }
 export const AiModelsList = ({ servicePlatform, providerList }: ProviderListProps) => {
+  const { t } = useT("os.ai");
   const sortedProviderList = [...providerList].sort((a, b) => Number(a.Order) - Number(b.Order));
   const modelsGrid = (providers: IProvider[]) => {
     return (
@@ -17,13 +19,13 @@ export const AiModelsList = ({ servicePlatform, providerList }: ProviderListProp
   };
   return (
     <div className="flex flex-col gap-5">
-      <p className="border-b-1 border-gray-150 flex w-full border-b pb-2 text-base font-normal text-low-emphasis">
+      <p className="border-b border-gray-150 flex w-full border-b pb-2 text-base font-normal text-low-emphasis">
         {servicePlatform}
       </p>
       {providerList.length ? (
         modelsGrid(sortedProviderList)
       ) : (
-        <p className="my-4 text-center text-sm text-gray-500">No results</p>
+        <p className="my-4 text-center text-sm text-gray-500">{t("AI_MODELS_LIST.NO_RESULTS")}</p>
       )}
     </div>
   );

@@ -57,8 +57,12 @@ export class StorageService {
       payload.file,
       (payload.file as File)?.name ?? "public-certificate.pfx",
     );
+    const providerRef = payload.ProviderRef
+      ? `&ProviderRef=${encodeURIComponent(payload.ProviderRef)}`
+      : "";
+
     return http.post(
-      `${STORAGE_FILE_ENDPOINTS.UPLOAD_PUBLIC_CERTIFICATE}?TenantId=${payload.TenantId}&IsThirdParty=true`,
+      `${STORAGE_FILE_ENDPOINTS.UPLOAD_PUBLIC_CERTIFICATE}?TenantId=${payload.TenantId}&IsThirdParty=true${providerRef}`,
       formData,
       { Accept: "*/*" },
       { absoluteUrl: true },

@@ -1,24 +1,30 @@
+import { PageHeader } from "@/components/page-header/page-header";
+import { LMTQueryAgentSheet } from "@blocks-ai/components/lmt-query-agent/lmt-query-agent-sheet";
 import { useGetAllServices } from "@blocks-identifier/hooks/use-services";
 import { useGetBlocksServices } from "@blocks-lmt/hooks/use-log";
 import { LogsViewer, type Service } from "@blocks-lmt/components";
 import {
-  LOG_SERVICE_AI_DESCRIPTION,
+  getLogServiceAiDescription,
   LOG_SERVICE_AI_QUERIES,
 } from "@blocks-lmt/constants/logs-service-meta.constant";
+import { useLogsTier } from "@blocks-lmt/hooks/use-logs-tier";
+import { TRACE_PROVIDERS } from "@blocks-lmt/constants/trace.constant";
 import { createParser, useQueryState } from "nuqs";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT, tStatic } from "@seliseblocks/genesis-os";
 import { useMemo } from "react";
+
+const I18N_MODULE = "os.lmt";
 
 type LogSource = "blocks" | "managed";
 
-const SOURCE_OPTIONS: { label: string; value: LogSource }[] = [
-  { label: "Managed Service", value: "blocks" },
-  { label: "My Service", value: "managed" },
+const getSourceOptions = (): { label: string; value: LogSource }[] => [
+  { label: tStatic(I18N_MODULE, "LOGS.MANAGED_SERVICE"), value: "blocks" },
+  { label: tStatic(I18N_MODULE, "LOGS.MY_SERVICE"), value: "managed" },
 ];
 
 export const parseAsLogSource = createParser({
   parse(value: string) {
-    if (SOURCE_OPTIONS.some((option) => option.value === value)) {
+    if (getSourceOptions().some((option) => option.value === value)) {
       return value as LogSource;
     }
     return null;
@@ -28,11 +34,19 @@ export const parseAsLogSource = createParser({
   },
 });
 export function LogsRoute() {
+  const { t } = useT(I18N_MODULE);
   const [source] = useQueryState<LogSource>("source", parseAsLogSource.withDefault("blocks"));
   // Cold and archive rows belong to a restore of this project, so the viewer needs to know
   // which project's restore to look up.
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
-  const { data: managedServicesData, isLoading, isFetching } = useGetAllServices({
+  // The agent sits in the page header, where Tracing's does. It queries hot storage, so over a
+  // restore it would answer about days other than the ones on screen and is withheld there.
+  const { tier } = useLogsTier(Boolean(projectKey));
+  const {
+    data: managedServicesData,
+    isLoading,
+    isFetching,
+  } = useGetAllServices({
     page: 0,
     pageSize: 1000,
   });
@@ -86,23 +100,36 @@ export function LogsRoute() {
   );
 
   const services = source === "blocks" ? blocksServices : managedServices;
-  const isServicesLoading =
-    source === "blocks" ? isBlocksServicesLoading : isLoading || isFetching;
+  const isServicesLoading = source === "blocks" ? isBlocksServicesLoading : isLoading || isFetching;
   const predefinedQueries = source === "blocks" ? Object.values(LOG_SERVICE_AI_QUERIES).flat() : [];
 
   return (
-    <div className="flex flex-col gap-5 sm:gap-4">
-      <LogsViewer
-        key={source}
-        services={services}
-        projectKey={projectKey}
-        predefinedQueries={predefinedQueries}
-        askAiDescription={LOG_SERVICE_AI_DESCRIPTION}
-        agentName="Ask AI"
-        useGenericTraceLinks
-        isSourceBlocks={source === "blocks"}
-        isServicesLoading={isServicesLoading}
+    <>
+      <PageHeader
+        title={t("LOGS.LOGS")}
+        description={t("LOGS.SEARCH_AND_VIEW_APPLICATION_LOGS")}
+        actions={
+          tier === TRACE_PROVIDERS.hot ? (
+            <LMTQueryAgentSheet
+              description={getLogServiceAiDescription()}
+              questions={predefinedQueries}
+            />
+          ) : undefined
+        }
       />
-    </div>
+      <div className="flex flex-col gap-5 sm:gap-4">
+        <LogsViewer
+          key={source}
+          services={services}
+          projectKey={projectKey}
+          predefinedQueries={predefinedQueries}
+          askAiDescription={getLogServiceAiDescription()}
+          showAgent={false}
+          useGenericTraceLinks
+          isSourceBlocks={source === "blocks"}
+          isServicesLoading={isServicesLoading}
+        />
+      </div>
+    </>
   );
 }

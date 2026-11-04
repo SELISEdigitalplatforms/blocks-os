@@ -1,50 +1,84 @@
+import { navText } from "@/constants/nav-text";
+
 export const environmentOptions = [
   {
     index: 0,
-    label: "Development",
+    get label() {
+      return navText("ENVIRONMENT_OPTIONS.DEVELOPMENT");
+    },
     value: "dev",
-    subtext: "For day-to-day development and testing unstable changes.",
+    get subtext() {
+      return navText("ENVIRONMENT_OPTIONS.FOR_DAY_TO_DAY_DEVELOPMENT");
+    },
   },
   {
     index: 1,
-    label: "Testing",
+    get label() {
+      return navText("ENVIRONMENT_OPTIONS.TESTING");
+    },
     value: "test",
-    subtext: "For QA testing and validation of new features.",
+    get subtext() {
+      return navText("ENVIRONMENT_OPTIONS.FOR_QA_TESTING_AND_VALIDATION");
+    },
   },
   {
     index: 2,
-    label: "Staging",
+    get label() {
+      return navText("ENVIRONMENT_OPTIONS.STAGING");
+    },
     value: "stg",
-    subtext: "For final pre-prod validation in a near-production replica.",
+    get subtext() {
+      return navText("ENVIRONMENT_OPTIONS.FOR_FINAL_PRE_PROD_VALIDATION");
+    },
   },
   {
     index: 3,
-    label: "IAT",
+    get label() {
+      return navText("ENVIRONMENT_OPTIONS.IAT");
+    },
     value: "iat",
-    subtext: "For testing service integrations across modules/systems.",
+    get subtext() {
+      return navText("ENVIRONMENT_OPTIONS.FOR_TESTING_SERVICE_INTEGRATIONS_ACROSS");
+    },
   },
   {
     index: 4,
-    label: "UAT",
+    get label() {
+      return navText("ENVIRONMENT_OPTIONS.UAT");
+    },
     value: "uat",
-    subtext: "For end-user or stakeholder validation of new features.",
+    get subtext() {
+      return navText("ENVIRONMENT_OPTIONS.FOR_END_USER_OR_STAKEHOLDER");
+    },
   },
   {
     index: 5,
-    label: "Prod Shadow",
+    get label() {
+      return navText("ENVIRONMENT_OPTIONS.PROD_SHADOW");
+    },
     value: "prod-shadow",
-    subtext: "For mirroring production data/traffic to validate changes invisibly.",
+    get subtext() {
+      return navText("ENVIRONMENT_OPTIONS.FOR_MIRRORING_PRODUCTION_DATA_TRAFFIC");
+    },
   },
   {
     index: 6,
-    label: "Pre-Prod",
+    get label() {
+      return navText("ENVIRONMENT_OPTIONS.PRE_PROD");
+    },
     value: "pre-prod",
-    subtext: "For load testing, security checks, or final sanity tests before production.",
+    get subtext() {
+      return navText("ENVIRONMENT_OPTIONS.FOR_LOAD_TESTING_SECURITY_CHECKS");
+    },
   },
   {
     index: 7,
-    label: "Production",
+    get label() {
+      return navText("ENVIRONMENT_OPTIONS.PRODUCTION");
+    },
     value: "prod",
-    subtext: "The live environment serving actual users.",
+    get subtext() {
+      return navText("ENVIRONMENT_OPTIONS.THE_LIVE_ENVIRONMENT_SERVING_ACTUAL");
+    },
   },
 ];

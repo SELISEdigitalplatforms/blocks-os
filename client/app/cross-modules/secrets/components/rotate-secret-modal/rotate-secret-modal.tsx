@@ -13,9 +13,8 @@ import { Label } from "@/components/ui-kits/label/label";
 import { PasswordInput } from "@/components/password-input/password-input";
 import { useRotateSecret } from "@/cross-modules/secrets/hooks/use-secret-management";
 import { describeSecretError } from "@/cross-modules/secrets/utils/secret-error";
-import {
-  type SecretResult,
-} from "@/cross-modules/secrets/models/secret.model";
+import { type SecretResult } from "@/cross-modules/secrets/models/secret.model";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
 
 interface RotateSecretModalProps {
   open: boolean;
@@ -33,6 +32,7 @@ interface RotateSecretModalProps {
  * Mount this only while it is open; a fresh mount is what clears the entered value.
  */
 export function RotateSecretModal({ open, onOpenChange, secret }: RotateSecretModalProps) {
+  const { t } = useT("os.secrets");
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
@@ -49,7 +49,12 @@ export function RotateSecretModal({ open, onOpenChange, secret }: RotateSecretMo
       await rotate({ secretId: secret.secretId, value });
       onOpenChange(false);
     } catch (cause) {
-      setError(describeSecretError(cause, "Could not rotate the secret.").message);
+      setError(
+        describeSecretError(
+          cause,
+          tStatic("os.secrets", "ROTATE_SECRET_MODAL.COULD_NOT_ROTATE_THE_SECRET"),
+        ).message,
+      );
     }
   };
 
@@ -57,36 +62,36 @@ export function RotateSecretModal({ open, onOpenChange, secret }: RotateSecretMo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[calc(100vw-1.5rem)] max-w-lg sm:w-full">
         <DialogHeader>
-          <DialogTitle className="text-left">Rotate {secret.name}</DialogTitle>
+          <DialogTitle className="text-left">
+            {t("ROTATE_SECRET_MODAL.ROTATE", { name: secret.name })}
+          </DialogTitle>
           <DialogDescription className="text-left">
-            The old value is replaced immediately.
+            {t("ROTATE_SECRET_MODAL.THE_OLD_VALUE_IS_REPLACED")}
           </DialogDescription>
         </DialogHeader>
 
-        <Banner variant="warning">
-          Anything still using the old value will start failing until it picks up the new one.
-        </Banner>
+        <Banner variant="warning">{t("ROTATE_SECRET_MODAL.ANYTHING_STILL_USING_THE_OLD")}</Banner>
 
         {error && <Banner variant="destructive">{error}</Banner>}
 
         {!confirmed ? (
           <p className="text-sm text-muted-foreground">
-            Confirm you want to rotate this secret before entering a new value.
+            {t("ROTATE_SECRET_MODAL.CONFIRM_YOU_WANT_TO_ROTATE")}
           </p>
         ) : (
           <div className="space-y-2">
             <Label htmlFor="rotate-secret-value">
-              New value <span className="text-destructive">*</span>
+              {t("ROTATE_SECRET_MODAL.NEW_VALUE", { span: "*" })}
             </Label>
             <PasswordInput
               id="rotate-secret-value"
-              placeholder="Paste the new secret value"
+              placeholder={t("ROTATE_SECRET_MODAL.PASTE_THE_NEW_SECRET_VALUE")}
               autoComplete="off"
               value={value}
               onChange={(event) => setValue(event.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Consumers keep using the old value until they pick this one up.
+              {t("ROTATE_SECRET_MODAL.CONSUMERS_KEEP_USING_THE_OLD")}
             </p>
           </div>
         )}
@@ -98,15 +103,15 @@ export function RotateSecretModal({ open, onOpenChange, secret }: RotateSecretMo
             onClick={() => onOpenChange(false)}
             disabled={isPending}
           >
-            Cancel
+            {t("common:CANCEL")}
           </Button>
           {!confirmed ? (
             <Button type="button" onClick={() => setConfirmed(true)}>
-              Continue
+              {t("common:CONTINUE")}
             </Button>
           ) : (
             <Button type="button" onClick={submit} disabled={!canSubmit}>
-              {isPending ? "Rotating…" : "Rotate"}
+              {isPending ? t("ROTATE_SECRET_MODAL.ROTATING") : t("ROTATE_SECRET_MODAL.ROTATE_2")}
             </Button>
           )}
         </DialogFooter>

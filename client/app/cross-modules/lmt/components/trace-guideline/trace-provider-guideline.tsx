@@ -2,9 +2,10 @@ import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TraceGuideLine } from "./trace-guideline";
 import { Separator } from "@/components/ui-kits/separator/separator";
-import { TraceGuideSteps } from "./trace-guideline-steps-docs";
+import { getTraceGuideSteps } from "./trace-guideline-steps-docs";
 import { Button } from "@/components/ui-kits/button/button";
 import { TRACE_PROVIDERS } from "../../constants/trace.constant";
+import { useT } from "@seliseblocks/genesis-os";
 type TraceProviderSetupGuideLineProps = {
   provider: TRACE_PROVIDERS;
   open: boolean;
@@ -15,7 +16,8 @@ export const TraceProviderSetupGuideLine = ({
   open,
   onOpenChange,
 }: TraceProviderSetupGuideLineProps) => {
-  const steps = TraceGuideSteps[provider] || null;
+  const { t } = useT("os.lmt");
+  const steps = getTraceGuideSteps(t)[provider] || null;
   if (!steps) return;
   return (
     <AnimatePresence>
@@ -29,11 +31,11 @@ export const TraceProviderSetupGuideLine = ({
         >
           <div>
             <div className="flex items-center justify-between gap-2 p-4">
-              <h2 className="text-lg font-semibold">Trace Guide</h2>
+              <h2 className="text-lg font-semibold">{t("TRACE_PROVIDER_GUIDELINE.TRACE_GUIDE")}</h2>
               <Button
                 variant="ghost"
                 onClick={() => onOpenChange(false)}
-                className="h-fit w-fit !p-2"
+                className="h-fit w-fit p-2!"
               >
                 <X className="aspect-square w-4" />
               </Button>

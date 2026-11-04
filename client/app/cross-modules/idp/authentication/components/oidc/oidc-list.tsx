@@ -1,6 +1,6 @@
 import { useGetAuthOidcCredentials } from "@blocks-idp/authentication/hooks/use-auth-oidc";
 import { useMemo } from "react";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { EmptyState } from "@/components/ui-kits/empty-state";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
@@ -35,8 +35,11 @@ const LoadingSkeleton = () => (
             </div>
           </div>
           <Skeleton className="h-5 w-16 rounded-full" />
+          <Skeleton className="h-5 w-16 rounded-full" />
           <Skeleton className="h-3 w-24" />
           <div className="ml-auto flex gap-1.5">
+            <Skeleton className="h-7 w-7 rounded" />
+            <Skeleton className="h-7 w-7 rounded" />
             <Skeleton className="h-7 w-7 rounded" />
             <Skeleton className="h-7 w-7 rounded" />
           </div>
@@ -47,8 +50,9 @@ const LoadingSkeleton = () => (
 );
 
 export const OidcList = () => {
+  const { t } = useT("os.idp.oidc");
   const { tenantId } = useProjectStore().selectedProject || { tenantId: "" };
-  const { isLoading, isFetching, data } = useGetAuthOidcCredentials({
+  const { isLoading, data } = useGetAuthOidcCredentials({
     projectKey: tenantId,
   });
   // OIDC client credentials are backed by Secret Management. Keep its default list query
@@ -67,14 +71,17 @@ export const OidcList = () => {
     });
   }, [data]);
 
-  if (isLoading || isFetching) return <LoadingSkeleton />;
+  // Only the first load shows the skeleton. Swapping it in on every refetch unmounts the rows,
+  // which closes any dialog a row has open, including the one-time "New client secret" reveal
+  // that opens right as the rotate mutation invalidates this list.
+  if (isLoading) return <LoadingSkeleton />;
 
   if (!sortedOidcData.length) {
     return (
       <EmptyState
         icon={Shield}
-        title="No OIDC clients yet"
-        description="Add your first OIDC client to get started."
+        title={t("OIDC_LIST.EMPTY_TITLE")}
+        description={t("OIDC_LIST.EMPTY_DESCRIPTION")}
       />
     );
   }
@@ -87,22 +94,30 @@ export const OidcList = () => {
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-8 pl-4" />
               <TableHead className="text-xs font-semibold uppercase tracking-wide text-high-emphasis sm:w-64">
-                Client
+                {t("OIDC_LIST.COLUMN_CLIENT")}
               </TableHead>
               <TableHead className="hidden w-32 text-xs font-semibold uppercase tracking-wide text-high-emphasis sm:table-cell">
-                Type
+                {t("common:TYPE")}
+              </TableHead>
+              <TableHead className="hidden w-32 text-xs font-semibold uppercase tracking-wide text-high-emphasis sm:table-cell">
+                {t("common:STATUS")}
               </TableHead>
               <TableHead className="hidden w-40 text-xs font-semibold uppercase tracking-wide text-high-emphasis md:table-cell">
-                Created On
+                {t("OIDC_LIST.COLUMN_CREATED_ON")}
               </TableHead>
-              <TableHead className="w-28 text-left text-xs font-semibold uppercase tracking-wide text-high-emphasis">
-                Actions
+              <TableHead className="w-36 text-left text-xs font-semibold uppercase tracking-wide text-high-emphasis">
+                {t("common:ACTIONS")}
               </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody className="[&_tr:last-child]:border-b">
             {sortedOidcData.map((item, index) => (
-              <OIDCRowExport key={item.itemId} item={item} defaultExpanded={index === 0} />
+              <OIDCRowExport
+                key={item.itemId}
+                item={item}
+                loginPolicy={data?.loginPolicies?.[item.itemId]}
+                defaultExpanded={index === 0}
+              />
             ))}
           </TableBody>
         </Table>

@@ -1,6 +1,10 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock(
+  "@blocks-idp/iam/hooks/use-grant-scope",
+  () => import("@/test-utils/__mocks__/grant-scope.mock"),
+);
 
 const h = vi.hoisted(() => ({
   roles: {
@@ -16,11 +20,12 @@ const h = vi.hoisted(() => ({
   lastArgs: undefined as unknown,
 }));
 
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 vi.mock("@blocks-idp/iam/hooks/use-roles", () => ({
-  useGetRoles: (args: unknown) => {
+  useGetAssignableRoles: (args: unknown) => {
     h.lastArgs = args;
     return h.roles;
   },
@@ -77,9 +82,7 @@ describe("AssignSignupRolesDialog", () => {
     await user.click(screen.getByRole("checkbox", { name: "Assign role Admin" }));
     await user.click(screen.getByRole("button", { name: "Set" }));
     await waitFor(() =>
-      expect(onAssign).toHaveBeenCalledWith([
-        expect.objectContaining({ slug: "admin" }),
-      ]),
+      expect(onAssign).toHaveBeenCalledWith([expect.objectContaining({ slug: "admin" })]),
     );
   });
 
@@ -97,8 +100,6 @@ describe("AssignSignupRolesDialog", () => {
     const user = userEvent.setup();
     await openDialog(user);
     await user.type(screen.getByPlaceholderText("Search by role name"), "adm");
-    await waitFor(() =>
-      expect(h.lastArgs).toMatchObject({ filter: { search: "adm" }, page: 0 }),
-    );
+    await waitFor(() => expect(h.lastArgs).toMatchObject({ filter: { search: "adm" }, page: 0 }));
   });
 });

@@ -16,12 +16,14 @@ import {
   FormMessage,
 } from "@/components/ui-kits/form/form";
 import { Button } from "@/components/ui-kits/button/button";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
 
-const formSchema = z.object({
-  domain: z.string().min(1, "Please select a domain"),
-});
+const createFormSchema = () =>
+  z.object({
+    domain: z.string().min(1, tStatic("os.dashboard", "FORM.PLEASE_SELECT_A_DOMAIN")),
+  });
 
-type FormValues = z.infer<typeof formSchema>;
+type FormValues = z.infer<ReturnType<typeof createFormSchema>>;
 
 interface SetCustomDomainFormProps {
   defaultDomain: string;
@@ -38,8 +40,9 @@ export const SetCustomDomainForm = ({
   onSubmit,
   onCancel,
 }: SetCustomDomainFormProps) => {
+  const { t } = useT("os.dashboard");
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(createFormSchema()),
     defaultValues: { domain: defaultDomain },
   });
 
@@ -65,8 +68,8 @@ export const SetCustomDomainForm = ({
                     <SelectValue
                       placeholder={
                         verifiedDomains.length === 0
-                          ? "No verified domains available"
-                          : "Select a domain"
+                          ? t("FORM.NO_VERIFIED_DOMAINS_AVAILABLE")
+                          : t("FORM.SELECT_A_DOMAIN")
                       }
                     />
                   </SelectTrigger>
@@ -88,10 +91,10 @@ export const SetCustomDomainForm = ({
 
         <div className="mt-4 flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
+            {t("common:CANCEL")}
           </Button>
           <Button type="submit" disabled={isPending}>
-            Set
+            {t("FORM.SET")}
           </Button>
         </div>
       </form>

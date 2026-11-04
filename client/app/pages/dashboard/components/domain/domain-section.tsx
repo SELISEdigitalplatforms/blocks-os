@@ -5,12 +5,14 @@ import { DashboardSectionCard } from "@seliseblocks/genesis-os/components";
 import { DomainFormDialog } from "./domain-form-dialog";
 import { DomainTable } from "./domain-table";
 import type { IDomain } from "@/models/project.model";
+import { useT } from "@seliseblocks/genesis-os";
 
 interface DomainsSectionProps {
   applications: IDomain[];
 }
 
 export const DomainsSection = ({ applications }: DomainsSectionProps) => {
+  const { t } = useT("os.dashboard");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
   return (
@@ -23,8 +25,8 @@ export const DomainsSection = ({ applications }: DomainsSectionProps) => {
       />
 
       <DashboardSectionCard
-        title="Domains"
-        description="Domains and cookie domains configured for this project"
+        title={t("DOMAIN_SECTION.DOMAINS")}
+        description={t("DOMAIN_SECTION.DOMAINS_WHERE_YOUR_APPS_ARE")}
         contentClassName="p-0"
         headerRight={
           <Button
@@ -34,7 +36,7 @@ export const DomainsSection = ({ applications }: DomainsSectionProps) => {
             onClick={() => setAddDialogOpen(true)}
           >
             <Plus className="h-4 w-4" />
-            Add Domain
+            {t("DOMAIN_SECTION.ADD_DOMAIN")}
           </Button>
         }
       >

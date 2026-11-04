@@ -30,9 +30,14 @@ import {
 import { useCountDown } from "@seliseblocks/genesis-os/hooks";
 import { useInitiateMigration, useVerifyMigration } from "@/hooks/use-project";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT, tStatic } from "@seliseblocks/genesis-os";
 import { useDataMigrationFormState } from "./migration-form-state";
-import { MIGRATION_SERVICE_NAME_TO_ID, migrationVerificationSchema } from "./migration-form-schema";
+import {
+  MIGRATION_SERVICE_NAME_TO_ID,
+  createMigrationVerificationSchema,
+} from "./migration-form-schema";
+
+const I18N_MODULE = "os.environments";
 
 const CustomInputOTPSlot = ({ index }: { index: number }) => (
   <InputOTPSlot
@@ -42,6 +47,7 @@ const CustomInputOTPSlot = ({ index }: { index: number }) => (
 );
 
 export const ReviewConfirmForm = () => {
+  const { t } = useT(I18N_MODULE);
   const navigate = useNavigate();
   const { formData } = useDataMigrationFormState();
   const groupId = useProjectStore().selectedTenantGroup;
@@ -53,7 +59,7 @@ export const ReviewConfirmForm = () => {
   const { mutateAsync: verifyMigration, isPending: isVerifying } = useVerifyMigration();
 
   const verificationForm = useForm({
-    resolver: zodResolver(migrationVerificationSchema),
+    resolver: zodResolver(createMigrationVerificationSchema()),
     defaultValues: { verificationCode: "" },
   });
 
@@ -75,7 +81,9 @@ export const ReviewConfirmForm = () => {
 
   const handleStartMigration = async () => {
     if (!groupId) {
-      showErrorToast({ errors: { general: "No project selected" } });
+      showErrorToast({
+        errors: { general: tStatic(I18N_MODULE, "REVIEW_CONFIRM_FORM.NO_PROJECT_SELECTED") },
+      });
       return;
     }
 
@@ -87,17 +95,25 @@ export const ReviewConfirmForm = () => {
         reset();
         return;
       }
-      showErrorToast({ errors: { general: "Failed to initiate migration" } });
+      showErrorToast({
+        errors: {
+          general: tStatic(I18N_MODULE, "REVIEW_CONFIRM_FORM.FAILED_TO_INITIATE_MIGRATION"),
+        },
+      });
     } catch {
       showErrorToast({
-        errors: { general: "An error occurred while initiating migration" },
+        errors: {
+          general: tStatic(I18N_MODULE, "REVIEW_CONFIRM_FORM.AN_ERROR_OCCURRED_WHILE_INITIATING"),
+        },
       });
     }
   };
 
   const handleResendVerification = async () => {
     if (!groupId) {
-      showErrorToast({ errors: { general: "No project selected" } });
+      showErrorToast({
+        errors: { general: tStatic(I18N_MODULE, "REVIEW_CONFIRM_FORM.NO_PROJECT_SELECTED") },
+      });
       return;
     }
 
@@ -107,17 +123,19 @@ export const ReviewConfirmForm = () => {
         setVerificationId(response.verificationId);
         reset();
         showSuccessToast({
-          description: "Verification code sent successfully!",
+          description: t("REVIEW_CONFIRM_FORM.VERIFICATION_CODE_SENT"),
         });
         return;
       }
       showErrorToast({
-        errors: { general: "Failed to resend verification code" },
+        errors: {
+          general: tStatic(I18N_MODULE, "REVIEW_CONFIRM_FORM.FAILED_TO_RESEND_VERIFICATION_CODE"),
+        },
       });
     } catch {
       showErrorToast({
         errors: {
-          general: "An error occurred while resending verification code",
+          general: tStatic(I18N_MODULE, "REVIEW_CONFIRM_FORM.AN_ERROR_OCCURRED_WHILE_RESENDING"),
         },
       });
     }
@@ -132,15 +150,22 @@ export const ReviewConfirmForm = () => {
       });
 
       if (response.isSuccess && response.isValid) {
-        showSuccessToast({ description: "Migration has been started, you will be notified once it's complete!" });
+        showSuccessToast({ description: t("REVIEW_CONFIRM_FORM.MIGRATION_HAS_BEEN_STARTED_YOU") });
         setIsVerificationModalOpen(false);
         navigate(groupId ? `/app/project/${groupId}/environments` : "/app/console");
         return;
       }
-      showErrorToast({ errors: { general: "Invalid verification code" } });
+      showErrorToast({
+        errors: { general: tStatic(I18N_MODULE, "REVIEW_CONFIRM_FORM.INVALID_VERIFICATION_CODE") },
+      });
     } catch {
       showErrorToast({
-        errors: { general: "An error occurred during verification" },
+        errors: {
+          general: tStatic(
+            I18N_MODULE,
+            "REVIEW_CONFIRM_FORM.AN_ERROR_OCCURRED_DURING_VERIFICATION",
+          ),
+        },
       });
     }
   };
@@ -151,33 +176,40 @@ export const ReviewConfirmForm = () => {
     <>
       <div className="mt-4 flex flex-col gap-6 text-left">
         <div>
-          <p className="text-3xl font-bold tracking-tight">Review &amp; confirm</p>
+          <p className="text-3xl font-bold tracking-tight">
+            {t("REVIEW_CONFIRM_FORM.REVIEW_CONFIRM")}
+          </p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Check the details below before starting the migration.
+            {t("REVIEW_CONFIRM_FORM.CHECK_THE_DETAILS_BELOW_BEFORE")}
           </p>
         </div>
 
         <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
           <p className="text-sm text-yellow-800">
-            <strong>Please note:</strong> You are about to migrate data across environments. Please
-            ensure that all the details below are correct, as this action is permanent.
+            {t("REVIEW_CONFIRM_FORM.YOU_ARE_ABOUT_TO_MIGRATE", {
+              strong: t("REVIEW_CONFIRM_FORM.PLEASE_NOTE"),
+            })}
           </p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Summary</CardTitle>
+            <CardTitle>{t("REVIEW_CONFIRM_FORM.SUMMARY")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Source environment</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  {t("REVIEW_CONFIRM_FORM.SOURCE_ENVIRONMENT")}
+                </p>
                 <p className="text-base font-medium">
                   {formData[0].sourceEnvironmentName || formData[0].sourceEnvironment}
                 </p>
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Target environment</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  {t("REVIEW_CONFIRM_FORM.TARGET_ENVIRONMENT")}
+                </p>
                 <p className="text-base font-medium">
                   {formData[0].targetEnvironmentName || formData[0].targetEnvironment}
                 </p>
@@ -185,7 +217,9 @@ export const ReviewConfirmForm = () => {
             </div>
 
             <div>
-              <p className="mb-2 text-sm font-medium text-muted-foreground">Services selected</p>
+              <p className="mb-2 text-sm font-medium text-muted-foreground">
+                {t("REVIEW_CONFIRM_FORM.SERVICES_SELECTED")}
+              </p>
               <TooltipProvider>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                   {selectedServices.map((service) => (
@@ -206,8 +240,8 @@ export const ReviewConfirmForm = () => {
                       <TooltipContent side="top">
                         <p className="text-xs text-muted-foreground">
                           {service.overrideData
-                            ? "This will overwrite existing data in the target environment"
-                            : "Overwriting data disabled"}
+                            ? t("REVIEW_CONFIRM_FORM.THIS_WILL_OVERWRITE_EXISTING_DATA")
+                            : t("REVIEW_CONFIRM_FORM.OVERWRITING_DATA_DISABLED")}
                         </p>
                       </TooltipContent>
                     </Tooltip>
@@ -224,7 +258,9 @@ export const ReviewConfirmForm = () => {
             onClick={handleStartMigration}
             disabled={isInitiating || selectedServices.length === 0}
           >
-            {isInitiating ? "Starting migration..." : "Start migration"}
+            {isInitiating
+              ? t("REVIEW_CONFIRM_FORM.STARTING_MIGRATION")
+              : t("REVIEW_CONFIRM_FORM.START_MIGRATION")}
           </Button>
         </div>
       </div>
@@ -232,18 +268,18 @@ export const ReviewConfirmForm = () => {
       <Dialog open={isVerificationModalOpen} onOpenChange={setIsVerificationModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Verify your migration</DialogTitle>
+            <DialogTitle>{t("REVIEW_CONFIRM_FORM.VERIFY_YOUR_MIGRATION")}</DialogTitle>
             <DialogDescription>
-              You&apos;re about to migrate services from{" "}
-              <strong>{formData[0].sourceEnvironmentName || formData[0].sourceEnvironment}</strong>{" "}
-              to{" "}
-              <strong>{formData[0].targetEnvironmentName || formData[0].targetEnvironment}</strong>.
+              {t("REVIEW_CONFIRM_FORM.YOU_RE_ABOUT_TO_MIGRATE", {
+                strong: `${formData[0].sourceEnvironmentName || formData[0].sourceEnvironment}`,
+                strong2: `${formData[0].targetEnvironmentName || formData[0].targetEnvironment}`,
+              })}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <p className="text-sm text-medium-emphasis">
-              We&apos;ve sent a verification code to your email. Enter the code below to continue.
+              {t("REVIEW_CONFIRM_FORM.WE_VE_SENT_A_VERIFICATION")}
             </p>
 
             <Form {...verificationForm}>
@@ -256,7 +292,7 @@ export const ReviewConfirmForm = () => {
                   name="verificationCode"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Verification code</FormLabel>
+                      <FormLabel>{t("REVIEW_CONFIRM_FORM.VERIFICATION_CODE")}</FormLabel>
                       <FormControl>
                         <InputOTP maxLength={5} {...field}>
                           <InputOTPGroup className="gap-4">
@@ -275,17 +311,20 @@ export const ReviewConfirmForm = () => {
 
                 <div className="text-sm text-medium-emphasis">
                   <p>
-                    Did not receive mail?{" "}
+                    {t("REVIEW_CONFIRM_FORM.DID_NOT_RECEIVE_MAIL")}{" "}
                     <Button
                       type="button"
                       variant="link"
-                      className="p-0 text-sm font-medium !no-underline"
+                      className="p-0 text-sm font-medium no-underline!"
                       disabled={!!remainingTime || isInitiating}
                       onClick={handleResendVerification}
                     >
                       {remainingTime
-                        ? `Resend in (${Math.floor(remainingTime / 60)}:${String(remainingTime % 60).padStart(2, "0")})`
-                        : "Resend"}
+                        ? t("REVIEW_CONFIRM_FORM.RESEND_IN", {
+                            value1: Math.floor(remainingTime / 60),
+                            value2: String(remainingTime % 60).padStart(2, "0"),
+                          })
+                        : t("REVIEW_CONFIRM_FORM.RESEND")}
                     </Button>
                   </p>
                 </div>
@@ -297,10 +336,12 @@ export const ReviewConfirmForm = () => {
                     onClick={() => setIsVerificationModalOpen(false)}
                     disabled={isVerifying}
                   >
-                    Cancel
+                    {t("common:CANCEL")}
                   </Button>
                   <Button type="submit" disabled={isVerifying}>
-                    {isVerifying ? "Verifying..." : "Verify & Begin"}
+                    {isVerifying
+                      ? t("REVIEW_CONFIRM_FORM.VERIFYING")
+                      : t("REVIEW_CONFIRM_FORM.VERIFY_BEGIN")}
                   </Button>
                 </div>
               </form>

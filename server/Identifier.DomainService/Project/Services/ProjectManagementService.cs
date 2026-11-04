@@ -1,4 +1,4 @@
-using Blocks.Genesis;
+﻿using Blocks.Genesis;
 using DomainService.Certificate;
 using DomainService.Dtos;
 using DomainService.Entities;
@@ -14,6 +14,9 @@ using Storage.DomainService.Enums;
 using StorageDriver;
 using System.Net.Http.Headers;
 using System.Security.Cryptography.X509Certificates;
+using Blocks.Genesis.Entities.Data;
+using Blocks.Genesis.Entities.Os;
+using Os.DataAccess.Notifications;
 
 namespace DomainService.Projects
 {
@@ -29,8 +32,13 @@ namespace DomainService.Projects
         private readonly IEncodingService _urlEncodingService;
         private readonly ICacheClient _cacheClient;
         private readonly ICryptoService _cryptoService;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IBuiltInNotificationSender? _notificationSender;
 
         private const string _tenantTokenPublicCertificateCachePrefix = "tetocertpublic::";
+        private const string UpsertAction = "upsert";
+        // Error code clients match on; the value is part of the API contract.
+        private const string ProjectNotFoundErrorCode = "project_not_found";
 
 
         public ProjectManagementService(IProjectRepository projectRepository,
@@ -42,7 +50,9 @@ namespace DomainService.Projects
                                         ICertificateManager certificateManager,
                                         IEncodingService urlEncodingService,
                                         ICacheClient cacheClient,
-                                        ICryptoService cryptoService)
+                                        ICryptoService cryptoService,
+                                        IHttpClientFactory httpClientFactory,
+                                        IBuiltInNotificationSender? notificationSender = null)
         {
             _projectRepository = projectRepository;
             _blocksSecret = blocksSecret;
@@ -54,6 +64,8 @@ namespace DomainService.Projects
             _urlEncodingService = urlEncodingService;
             _cacheClient = cacheClient;
             _cryptoService = cryptoService;
+            _httpClientFactory = httpClientFactory;
+            _notificationSender = notificationSender;
         }
 
         public async Task ConfigureProjectAsync(Tenant project, ProjectStatusTracer? projectStatus = null)
@@ -77,12 +89,38 @@ namespace DomainService.Projects
             catch (Exception ex)
             {
                 await HandleConfigurationErrorAsync(projectStatus, ex.Message);
+                await NotifyProjectSetupFailedAsync(project);
             }
         }
 
         /// <summary>
-        /// Broadcasts the provisioned tenant so every service replaces the copy it may have
-        /// cached while the certificate was still being generated.
+        /// Tells the project creator that setup failed. Sent only after the error is saved on the
+        /// status tracer; the error text itself is not sent.
+        /// </summary>
+        private Task NotifyProjectSetupFailedAsync(Tenant project)
+        {
+            if (_notificationSender is null) return Task.CompletedTask;
+
+            return _notificationSender.SendAsync(new BuiltInNotification
+            {
+                ConfigurationName = BuiltInNotificationNames.ProjectSetupFailed,
+                Event = "project-setup-failed",
+                Title = "Project setup failed",
+                Description = "Setting up the project or environment did not finish. You can retry it from the project page.",
+                IsSuccess = false,
+                Ids = new Dictionary<string, string?>
+                {
+                    ["projectId"] = project.ItemId,
+                    ["projectKey"] = project.TenantId,
+                    ["tenantGroupId"] = project.TenantGroupId
+                },
+                UserIds = [project.CreatedBy]
+            });
+        }
+
+        /// <summary>
+        /// Broadcasts the provisioned tenant, as stored, so every service replaces the copy it
+        /// may have cached while the certificate was still being generated.
         /// </summary>
         /// <remarks>
         /// Provisioning is the only write that sets <c>JwtTokenParameters.PublicCertificatePath</c>,
@@ -92,19 +130,25 @@ namespace DomainService.Projects
         /// </remarks>
         private async Task AnnounceTenantUpdateIfNeeded(Tenant project)
         {
-            // A resumed run whose certificates were already marked uploaded never re-assigns the
-            // path, so the in-memory project can still be blank here. Broadcasting that would
-            // replace good cached copies with a useless one, which is worse than staying quiet.
-            if (string.IsNullOrWhiteSpace(project.JwtTokenParameters?.PublicCertificatePath))
+            // The stored row, not the copy this run was handed at creation. Provisioning takes
+            // long enough for the tenant to change underneath it — adding a repository registers
+            // its host and broadcasts — and announcing the creation-time copy afterwards put every
+            // service's cache back to before that change.
+            var stored = await _projectRepository.GetByIdAsync(project.ItemId);
+
+            // A resumed run can find the certificates marked uploaded and the path never saved.
+            // Broadcasting that would replace good cached copies with a useless one, which is
+            // worse than staying quiet.
+            if (string.IsNullOrWhiteSpace(stored?.JwtTokenParameters?.PublicCertificatePath))
             {
                 return;
             }
 
             await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
             {
-                Action = "upsert",
-                TenantId = project.TenantId,
-                Tenant = project
+                Action = UpsertAction,
+                TenantId = stored.TenantId,
+                Tenant = stored
             });
         }
 
@@ -181,7 +225,9 @@ namespace DomainService.Projects
         {
             if (statusTracer.IsProjectUpdated) return;
 
-            await _projectRepository.UpdateProjectAsync(project);
+            // The certificate path is the only thing provisioning changes on the tenant. Replacing
+            // the whole document with this run's copy undid anything saved since creation.
+            await _projectRepository.SetPublicCertificatePathAsync(project.ItemId, project.JwtTokenParameters.PublicCertificatePath);
             statusTracer.IsProjectUpdated = true;
         }
 
@@ -312,13 +358,74 @@ namespace DomainService.Projects
 
         public async Task<CreateProjectResponse> SaveProjectAsync(CreateProjectRequest project)
         {
+            // Resolve all placements before creating assets, tenant records, or messages.
+            // Existing tenants retain their stored connection; this only provisions new ones.
+            var connections = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (project.applicationContexts is null || project.applicationContexts.Count == 0)
+            {
+                return new CreateProjectResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string> { ["environment"] = "At least one environment is required." }
+                };
+            }
+            foreach (var application in project.applicationContexts)
+            {
+                if (application is null || !IdentifierHelper.IsSupportedEnvironment(application.Environment))
+                {
+                    return new CreateProjectResponse
+                    {
+                        IsSuccess = false,
+                        Errors = new Dictionary<string, string> { ["environment"] = "One or more projects have unsupported environment." }
+                    };
+                }
+
+                if (connections.ContainsKey(application.Environment))
+                {
+                    return new CreateProjectResponse
+                    {
+                        IsSuccess = false,
+                        Errors = new Dictionary<string, string> { ["environment"] = "Projects should not contain duplicate environments." }
+                    };
+                }
+
+                try
+                {
+                    connections[application.Environment] = ResolveDatabaseConnectionString(application.Environment);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    return new CreateProjectResponse
+                    {
+                        IsSuccess = false,
+                        Errors = new Dictionary<string, string> { ["database_configuration"] = ex.Message }
+                    };
+                }
+            }
+
+            // Issuer host is required before any tenant is written. A blank issuer would make
+            // Genesis set ValidateIssuer=false for that tenant forever, so fail loudly here
+            // (same shape as database_configuration) rather than half-building a group.
+            try
+            {
+                _ = ResolveIamBaseUrl();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return new CreateProjectResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string> { ["iam_configuration"] = ex.Message }
+                };
+            }
+
             var isNewGroup = string.IsNullOrEmpty(project.TenantGroupId);
             var groupId = isNewGroup ? Guid.NewGuid().ToString("n") : project.TenantGroupId;
             await ManageTenantAssetAsync(project, groupId);
 
             foreach (var applicationContext in project.applicationContexts)
             {
-                var tenant = await MapAsync(project, applicationContext, groupId);
+                var tenant = await MapAsync(project, applicationContext, groupId, connections[applicationContext.Environment]);
                 await Task.WhenAll(_projectRepository.SaveRepoInfoAsync(tenant, project.Resources),
                                    _projectRepository.InsertProjectAsync(tenant));
 
@@ -444,9 +551,7 @@ namespace DomainService.Projects
                 DomainType = DomainType.PlatformDefault
             });
 
-            var studioDomain = Environment.GetEnvironmentVariable("FrontendRuntime__BLOCKS_STUDIO_BASE_URL") is { Length: > 0 } fromEnv
-                ? fromEnv
-                : _configuration["FrontendRuntime:BLOCKS_STUDIO_BASE_URL"];
+            var studioDomain = ResolveFrontendRuntimeValue("BLOCKS_STUDIO_BASE_URL");
 
             if (!string.IsNullOrWhiteSpace(studioDomain))
             {
@@ -474,7 +579,72 @@ namespace DomainService.Projects
             return applications.Any(a => NormalizeDomain(a.Domain) == normalized);
         }
 
-        private async Task<Tenant> MapAsync(CreateProjectRequest createProjectRequest, ApplicationContext applicationContext, string groupId)
+
+        // Env var FrontendRuntime__{key} wins over the FrontendRuntime:{key} configuration
+        // entry (Mongo secrets / appsettings). Empty env values are treated as unset so a
+        // blank override does not shadow a configured secret.
+        private string? ResolveFrontendRuntimeValue(string key)
+        {
+            var fromEnv = Environment.GetEnvironmentVariable($"FrontendRuntime__{key}");
+            if (!string.IsNullOrEmpty(fromEnv))
+            {
+                return fromEnv;
+            }
+
+            return _configuration[$"FrontendRuntime:{key}"];
+        }
+
+        private string ResolveIamBaseUrl()
+        {
+            return Blocks.Secrets.FrontendRuntimeUrl.ResolveIamBaseUrl(
+                _configuration,
+                "FrontendRuntime:BLOCKS_IAM_BASE_URL is not configured; a tenant cannot be created without a JWT issuer.");
+        }
+
+        // Issuer format forced by blocks-iam OidcServices.ResolveEndpoints:
+        // issuer + "/.well-known/jwks.json" == the JWKS URL served for this TenantId.
+        private string BuildJwtIssuer(string tenantId)
+        {
+            if (string.IsNullOrEmpty(tenantId))
+            {
+                throw new InvalidOperationException(
+                    "TenantId is required to build a JWT issuer; refusing a host-only issuer.");
+            }
+
+            return ResolveIamBaseUrl().TrimEnd('/') + "/" + tenantId;
+        }
+
+        private string ResolveDatabaseConnectionString(string environment)
+        {
+            var connectionString = environment switch
+            {
+                "prod" => _blocksSecret.DatabaseConnectionString,
+                "dev" => _blocksSecret.DevDatabaseConnectionString,
+                _ => _blocksSecret.OtherDatabaseConnectionString
+            };
+
+            // A missing optional placement secret deliberately falls back to main.
+            if (string.IsNullOrWhiteSpace(connectionString))
+                connectionString = _blocksSecret.DatabaseConnectionString;
+
+            if (string.IsNullOrWhiteSpace(connectionString))
+                throw new InvalidOperationException($"No database connection is configured for environment '{environment}'.");
+
+            connectionString = connectionString.Trim();
+            try
+            {
+                _ = MongoUrl.Create(connectionString);
+            }
+            catch (Exception ex) when (ex is ArgumentException or FormatException or MongoConfigurationException)
+            {
+                // Do not include a connection string (or a parser exception containing it).
+                throw new InvalidOperationException($"The database connection configured for environment '{environment}' is invalid.");
+            }
+
+            return connectionString;
+        }
+
+        private async Task<Tenant> MapAsync(CreateProjectRequest createProjectRequest, ApplicationContext applicationContext, string groupId, string connectionString)
         {
             var certificateStorageType = GetCertificateStorageType();
             var applicationDomains = await GetDefaultDomainsAsync(createProjectRequest.Resources, applicationContext, groupId);
@@ -484,10 +654,14 @@ namespace DomainService.Projects
             // every caller that reads it.
             var applicationDomain = applicationDomains[0];
 
+            // TenantId is stamped before JwtTokenParameters so the issuer can append it
+            // byte-for-byte (uppercase environment letter + lowercase group GUID).
+            var tenantId = IdentifierHelper.EnvironmentMapper(applicationContext.Environment).ToUpper() + groupId;
+
             var project = new Tenant
             {
                 ItemId = Guid.NewGuid().ToString(),
-                TenantId = IdentifierHelper.EnvironmentMapper(applicationContext.Environment).ToUpper() + groupId,
+                TenantId = tenantId,
                 TenantGroupId = groupId,
                 Environment = applicationContext.Environment,
                 CreatedDate = DateTime.UtcNow,
@@ -498,7 +672,7 @@ namespace DomainService.Projects
                 IsAcceptBlocksTerms = createProjectRequest.IsAcceptBlocksTerms,
                 IsUseBlocksExclusively = createProjectRequest.IsUseBlocksExclusively,
                // ApplicationDomain = applicationDomain,
-                DbConnectionString = _blocksSecret.DatabaseConnectionString,
+                DbConnectionString = connectionString,
                // CookieDomain = applicationContext.CookieDomain,
                // IsDomainVerified = applicationContext.CookieDomain == IdentifierConstants.BlocsDomain,
 
@@ -506,7 +680,7 @@ namespace DomainService.Projects
 
                 JwtTokenParameters = new JwtTokenParameters
                 {
-                    Issuer = IdentifierConstants.Issuer,
+                    Issuer = BuildJwtIssuer(tenantId),
                     Subject = IdentifierConstants.Subject,
                     CertificateValidForNumberOfDays = 2 * 365,
                     IssueDate = DateTime.UtcNow,
@@ -596,8 +770,6 @@ namespace DomainService.Projects
 
         public async Task<RestoreProjectResponse> RestoreProjectAsync(RestoreProjectRequest restoreProjectRequest)
         {
-           //await _messageClient.SendToConsumerAsync(new ConsumerMessage<RestoreProjectRequest> { ConsumerName = IdentifierConstants.IdentifierQueueName, Payload = restoreProjectRequest });
-
            var project = await _projectRepository.GetByIdAsync(restoreProjectRequest.ItemId);
            ProjectStatusTracer? projectStatusTracer = await _projectRepository.GetUnfinishedProjectByIdAsync(restoreProjectRequest.ItemId);
 
@@ -668,7 +840,8 @@ namespace DomainService.Projects
                 IsDisabled = tenant.IsDisabled,
                 Environment = tenant.Environment,
                 TenantGroupId = tenant.TenantGroupId,
-                TenantSlug = tenantSlug
+                TenantSlug = tenantSlug,
+                IsThirdPartyJwtEnabled = tenant.IsThirdPartyJwtEnabled
             };
 
             return new GetProjectResponse { Data = project };
@@ -685,7 +858,7 @@ namespace DomainService.Projects
             // being reported as one.
             if (project == null)
             {
-                return new BaseResponse() { IsSuccess = false, Errors = new Dictionary<string, string> { { "project_not_found", $"No project found with id {blocksContext.TenantId}" } } };
+                return new BaseResponse() { IsSuccess = false, Errors = new Dictionary<string, string> { { ProjectNotFoundErrorCode, $"No project found with id {blocksContext.TenantId}" } } };
             }
 
             if(project.IsRootTenant)
@@ -708,31 +881,18 @@ namespace DomainService.Projects
             var previousCookieDomain = applicationBeforeUpdate?.CookieDomain;
             var previousDomainWasProvisioned = applicationBeforeUpdate is not null && IsSelfProvisioned(applicationBeforeUpdate);
 
-            switch (request.Action)
-            {
-                case ApplicationAction.Add:
-                    var addResult = AddApplication(project, request);
-                    if (!addResult.IsSuccess)
-                        return addResult;
-                    break;
+            var domainInUse = await RejectDomainOfAnotherProjectAsync(project, request);
+            if (domainInUse != null)
+                return domainInUse;
 
-                case ApplicationAction.Edit:
-                    var editResult = EditApplication(project, request);
-                    if (!editResult.IsSuccess)
-                        return editResult;
-                    break;
-
-                case ApplicationAction.Delete:
-                    var deleteResult = DeleteApplication(project, request);
-                    if (!deleteResult.IsSuccess)
-                        return deleteResult;
-                    break;
-            }
+            var applicationActionFailure = ApplyApplicationAction(project, request);
+            if (applicationActionFailure != null)
+                return applicationActionFailure;
 
             await _projectRepository.UpdateProjectAsync(project);
             await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
             {
-                Action = "upsert",
+                Action = UpsertAction,
                 TenantId = project.TenantId,
                 Tenant = project
             });
@@ -757,6 +917,53 @@ namespace DomainService.Projects
             }
 
             return new BaseResponse { IsSuccess = true };
+        }
+
+        // A request without a tenant key finds its tenant by domain, and the first match wins, so
+        // two projects on one domain would send requests to the wrong one. Only a new or changed
+        // domain is checked; duplicates saved before this check are left as they are.
+        private async Task<BaseResponse?> RejectDomainOfAnotherProjectAsync(Tenant project, UpdateProjectRequest request)
+        {
+            var domain = NormalizeDomain(request.Application?.Domain);
+            var isNewDomain = request.Action == ApplicationAction.Add
+                || (request.Action == ApplicationAction.Edit && domain != NormalizeDomain(request.ApplicationDomain));
+
+            if (!isNewDomain || domain.Length == 0
+                || !await _projectRepository.IsDomainUsedByAnotherProjectAsync(domain, project.TenantId))
+            {
+                return null;
+            }
+
+            return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "domain_in_use", $"The domain {request.Application!.Domain} is already used by another project" } } };
+        }
+
+        // Applies the requested add/edit/delete to the project in memory. Returns the failed
+        // response when the action was rejected, or null when the project is ready to be saved
+        // (including for an action this method does not recognise, which changes nothing).
+        private BaseResponse? ApplyApplicationAction(Tenant project, UpdateProjectRequest request)
+        {
+            switch (request.Action)
+            {
+                case ApplicationAction.Add:
+                    var addResult = AddApplication(project, request);
+                    if (!addResult.IsSuccess)
+                        return addResult;
+                    break;
+
+                case ApplicationAction.Edit:
+                    var editResult = EditApplication(project, request);
+                    if (!editResult.IsSuccess)
+                        return editResult;
+                    break;
+
+                case ApplicationAction.Delete:
+                    var deleteResult = DeleteApplication(project, request);
+                    if (!deleteResult.IsSuccess)
+                        return deleteResult;
+                    break;
+            }
+
+            return null;
         }
 
         // The API host serves every application under the same cookie domain, so
@@ -923,7 +1130,7 @@ namespace DomainService.Projects
 
             if (project == null)
             {
-                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "project_not_found", $"No project exist with {projectId}" } } };
+                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { ProjectNotFoundErrorCode, $"No project exist with {projectId}" } } };
             }
 
             project.IsDisabled = true;
@@ -931,11 +1138,12 @@ namespace DomainService.Projects
             project.LastUpdatedDate = DateTime.UtcNow;
 
             await _projectRepository.UpdateProjectAsync(project);
+
             await _projectRepository.DeletePrjectPeopleAsync(project.TenantId);
 
             await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
             {
-                Action = "upsert",
+                Action = UpsertAction,
                 TenantId = project.TenantId,
                 Tenant = project
             });
@@ -1086,7 +1294,7 @@ namespace DomainService.Projects
                 await _projectRepository.UpdateProjectAsync(project);
                 await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
                 {
-                    Action = "upsert",
+                    Action = UpsertAction,
                     TenantId = project.TenantId,
                     Tenant = project
                 });
@@ -1147,7 +1355,7 @@ namespace DomainService.Projects
 
             if (project == null)
             {
-                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "project_not_found", $"No project found with id {tenantId}" } } };
+                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { ProjectNotFoundErrorCode, $"No project found with id {tenantId}" } } };
             }
 
             project.ThirdPartyJwtTokenParameters ??= new();
@@ -1165,7 +1373,7 @@ namespace DomainService.Projects
 
             await Task.WhenAll( _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
             {
-                Action = "upsert",
+                Action = UpsertAction,
                 TenantId = project.TenantId,
                 Tenant = project
             }), _cacheClient.RemoveKeyAsync($"{_tenantTokenPublicCertificateCachePrefix}{tenantId}"));
@@ -1210,13 +1418,13 @@ namespace DomainService.Projects
         public async Task<SaveThirdPartyJWTClaimsResponse> SaveThirdPartyJWTClaimsAsync(SaveThirdPartyJWTClaimsRequest request)
         {
             var claimsMapper = await MapJWTClaims(request);
-            await _projectRepository.SaveJWTClaimsAsync(claimsMapper);
-            return new SaveThirdPartyJWTClaimsResponse { IsSuccess = true , ItemId = claimsMapper.ItemId};
+            var saved = await _projectRepository.SaveJWTClaimsAsync(claimsMapper);
+            return new SaveThirdPartyJWTClaimsResponse { IsSuccess = saved.IsSuccess, ItemId = claimsMapper.ItemId };
         }
 
         public async Task<ThirdPartyJWTClaims?> GetThirdPartyJWTClaimsAsync()
         {
-            return await _projectRepository.GetThirdPartyJWTClaimsAsync(string.Empty);
+            return await _projectRepository.GetThirdPartyJWTClaimsForViewAsync();
         }
 
         private async Task<ThirdPartyJWTClaims> MapJWTClaims(SaveThirdPartyJWTClaimsRequest request)
@@ -1257,7 +1465,7 @@ namespace DomainService.Projects
 
             if (tenant == null)
             {
-                return Failed("project_not_found", $"No project found with id {tenantId}");
+                return Failed(ProjectNotFoundErrorCode, $"No project found with id {tenantId}");
             }
 
             var siblings = await _projectRepository.GetThirdPartyJwtProvidersAsync(tenantId);
@@ -1299,7 +1507,9 @@ namespace DomainService.Projects
             provider.Key = request.Key.Trim();
             provider.ProviderName = request.ProviderName?.Trim() ?? string.Empty;
             provider.IsActive = request.IsActive;
-            provider.Issuer = request.Issuer.Trim();
+            // Blank is a real configuration, not a missing value: it means "this provider receives
+            // the tokens that name no issuer".
+            provider.Issuer = request.Issuer?.Trim() ?? string.Empty;
             provider.Audiences = request.Audiences ?? [];
             provider.Algorithms = request.Algorithms;
             provider.CookieKey = request.CookieKey?.Trim() ?? string.Empty;
@@ -1309,26 +1519,28 @@ namespace DomainService.Projects
 
             if (isSymmetric)
             {
-                provider.JwksUrl = string.Empty;
-
-                // Empty means untouched, never cleared: a masked field round-trips as "" from most
-                // frontends, and treating that as a clear would silently break authentication.
-                if (!string.IsNullOrEmpty(request.SigningSecret))
-                {
-                    provider.SigningSecretCipher = _cryptoService.Encrypt(request.SigningSecret, tenant.TenantSalt);
-                }
+                ApplySymmetricKeySource(provider, request, tenant);
             }
             else
             {
-                provider.JwksUrl = request.JwksUrl!.Trim();
-
-                // Switching a provider away from the HMAC family drops the stored secret. Leaving
-                // it would keep a dormant signing authority alive for the moment someone switches
-                // the algorithm back.
-                provider.SigningSecretCipher = string.Empty;
+                var rejection = await ApplyAsymmetricKeySourceAsync(provider, request, tenant);
+                if (rejection != null)
+                {
+                    return rejection;
+                }
             }
 
             await _projectRepository.SaveThirdPartyJwtProviderAsync(provider);
+
+            var flagSync = await SyncThirdPartyJwtEnabledAfterProviderWriteAsync(tenantId, tenant);
+            if (!flagSync.IsSuccess)
+            {
+                return new SaveThirdPartyJwtProviderResponse
+                {
+                    IsSuccess = false,
+                    Errors = flagSync.Errors
+                };
+            }
 
             return new SaveThirdPartyJwtProviderResponse { IsSuccess = true, ItemId = provider.ItemId };
         }
@@ -1342,13 +1554,26 @@ namespace DomainService.Projects
 
             // The encrypted secret lives on the row, so deleting the row is what revokes it —
             // there is no separate vault entry left behind.
-            return deleted
-                ? new BaseResponse { IsSuccess = true }
-                : new BaseResponse
+            if (!deleted)
+            {
+                return new BaseResponse
                 {
                     IsSuccess = false,
                     Errors = new Dictionary<string, string> { { "provider_not_found", $"No provider found with id {request.ItemId}" } }
                 };
+            }
+
+            var tenant = await _projectRepository.GetByTenantIdAsync(tenantId);
+            if (tenant == null)
+            {
+                return new BaseResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string> { { ProjectNotFoundErrorCode, $"No project found with id {tenantId}" } }
+                };
+            }
+
+            return await SyncThirdPartyJwtEnabledAfterProviderWriteAsync(tenantId, tenant);
         }
 
         public async Task<BaseResponse> UpdateThirdPartyJwtEnabledAsync(UpdateThirdPartyJwtEnabledRequest request)
@@ -1363,8 +1588,29 @@ namespace DomainService.Projects
                 return new BaseResponse
                 {
                     IsSuccess = false,
-                    Errors = new Dictionary<string, string> { { "project_not_found", $"No project found with id {tenantId}" } }
+                    Errors = new Dictionary<string, string> { { ProjectNotFoundErrorCode, $"No project found with id {tenantId}" } }
                 };
+            }
+
+            // Raising the flag requires at least one active provider. Lowering it is never guarded —
+            // an operator kill switch must always stick.
+            if (request.IsEnabled)
+            {
+                var providers = await _projectRepository.GetThirdPartyJwtProvidersAsync(tenantId);
+                if (providers == null || !providers.Any(p => p.IsActive))
+                {
+                    return new BaseResponse
+                    {
+                        IsSuccess = false,
+                        Errors = new Dictionary<string, string>
+                        {
+                            {
+                                "no_active_provider",
+                                "This tenant has no active external identity provider, so third-party token trust cannot be enabled. Add or activate a provider first."
+                            }
+                        }
+                    };
+                }
             }
 
             project.IsThirdPartyJwtEnabled = request.IsEnabled;
@@ -1377,7 +1623,7 @@ namespace DomainService.Projects
             // that cache happened to expire.
             await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
             {
-                Action = "upsert",
+                Action = UpsertAction,
                 TenantId = project.TenantId,
                 Tenant = project
             });
@@ -1386,9 +1632,247 @@ namespace DomainService.Projects
         }
 
         /// <summary>
+        /// After a provider save or delete, lower <see cref="Tenant.IsThirdPartyJwtEnabled"/> when
+        /// no active provider remains. Never raises the flag — that stays a deliberate enable.
+        /// Evaluates the provider list as it stands after the write.
+        /// </summary>
+        private async Task<BaseResponse> SyncThirdPartyJwtEnabledAfterProviderWriteAsync(string tenantId, Tenant tenant)
+        {
+            var providers = await _projectRepository.GetThirdPartyJwtProvidersAsync(tenantId);
+            var activeCount = providers?.Count(p => p.IsActive) ?? 0;
+
+            if (activeCount > 0 || !tenant.IsThirdPartyJwtEnabled)
+            {
+                return new BaseResponse { IsSuccess = true };
+            }
+
+            try
+            {
+                tenant.IsThirdPartyJwtEnabled = false;
+                tenant.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
+                tenant.LastUpdatedDate = DateTime.UtcNow;
+
+                await _projectRepository.UpdateProjectAsync(tenant);
+
+                await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
+                {
+                    Action = UpsertAction,
+                    TenantId = tenant.TenantId,
+                    Tenant = tenant
+                });
+
+                return new BaseResponse { IsSuccess = true };
+            }
+            catch (Exception)
+            {
+                return new BaseResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string>
+                    {
+                        {
+                            "third_party_flag_update_failed",
+                            "The provider change was saved, but third-party token trust could not be switched off. Retry the provider change."
+                        }
+                    }
+                };
+            }
+        }
+
+        private void ApplySymmetricKeySource(
+            ThirdPartyJwtProvider provider,
+            SaveThirdPartyJwtProviderRequest request,
+            Tenant tenant)
+        {
+            provider.JwksUrl = string.Empty;
+
+            // Switching a provider to the HMAC family drops the certificate for the same
+            // reason the reverse drops the secret: an unused key source left behind is a
+            // dormant signing authority waiting for the algorithm to be switched back.
+            provider.PublicCertificatePath = string.Empty;
+            provider.PublicCertificatePasswordCipher = string.Empty;
+            provider.CertificateSubject = string.Empty;
+            provider.CertificateThumbprint = string.Empty;
+            provider.CertificateNotAfter = null;
+
+            // Empty means untouched, never cleared: a masked field round-trips as "" from most
+            // frontends, and treating that as a clear would silently break authentication.
+            if (!string.IsNullOrEmpty(request.SigningSecret))
+            {
+                provider.SigningSecretCipher = _cryptoService.Encrypt(request.SigningSecret, tenant.TenantSalt);
+            }
+        }
+
+        // Returns the rejection when the uploaded certificate cannot be used, otherwise null.
+        private async Task<SaveThirdPartyJwtProviderResponse?> ApplyAsymmetricKeySourceAsync(
+            ThirdPartyJwtProvider provider,
+            SaveThirdPartyJwtProviderRequest request,
+            Tenant tenant)
+        {
+            // Switching a provider away from the HMAC family drops the stored secret. Leaving
+            // it would keep a dormant signing authority alive for the moment someone switches
+            // the algorithm back.
+            provider.SigningSecretCipher = string.Empty;
+
+            // Validation has already established exactly one of the two is set.
+            if (!string.IsNullOrWhiteSpace(request.PublicCertificatePath))
+            {
+                ApplyCertificateKeySource(provider, request, tenant);
+
+                var inspection = await InspectCertificateAsync(provider, tenant);
+                if (inspection.Rejection != null)
+                {
+                    return inspection.Rejection;
+                }
+
+                provider.CertificateSubject = inspection.Subject;
+                provider.CertificateThumbprint = inspection.Thumbprint;
+                provider.CertificateNotAfter = inspection.NotAfter;
+            }
+            else
+            {
+                provider.JwksUrl = request.JwksUrl!.Trim();
+                provider.PublicCertificatePath = string.Empty;
+                provider.PublicCertificatePasswordCipher = string.Empty;
+                provider.CertificateSubject = string.Empty;
+                provider.CertificateThumbprint = string.Empty;
+                provider.CertificateNotAfter = null;
+            }
+
+            return null;
+        }
+
+        /// <summary>
         /// Enforces the rules that cannot be recovered at validation time: one key source per
         /// provider, a usable subject mapping, and audiences wherever two providers share an issuer.
         /// </summary>
+        /// <summary>
+        /// Points a provider at an uploaded public certificate and settles what happens to the
+        /// passphrase that unlocks it.
+        /// </summary>
+        /// <remarks>
+        /// A passphrase belongs to one specific file, so the three cases are kept apart
+        /// deliberately. A new passphrase replaces the stored one. An explicit clear removes it,
+        /// which is the only way to go from a protected certificate to an unprotected one — empty
+        /// on its own cannot mean that, because empty is also what a form sends for "keep what is
+        /// stored". A certificate uploaded to a different path drops the passphrase regardless,
+        /// since it unlocked the file that is no longer configured.
+        /// </remarks>
+        private void ApplyCertificateKeySource(
+            ThirdPartyJwtProvider provider,
+            SaveThirdPartyJwtProviderRequest request,
+            Tenant tenant)
+        {
+            var path = request.PublicCertificatePath!.Trim();
+            var pathChanged = !string.Equals(provider.PublicCertificatePath, path, StringComparison.Ordinal);
+
+            provider.JwksUrl = string.Empty;
+            provider.PublicCertificatePath = path;
+
+            if (!string.IsNullOrEmpty(request.PublicCertificatePassword))
+            {
+                provider.PublicCertificatePasswordCipher =
+                    _cryptoService.Encrypt(request.PublicCertificatePassword, tenant.TenantSalt);
+            }
+            else if (request.ClearCertificatePassword || pathChanged)
+            {
+                provider.PublicCertificatePasswordCipher = string.Empty;
+            }
+        }
+
+        /// <summary>What reading the configured certificate produced.</summary>
+        private readonly record struct CertificateInspection(
+            SaveThirdPartyJwtProviderResponse? Rejection,
+            string Subject,
+            string Thumbprint,
+            DateTime? NotAfter);
+
+        /// <summary>
+        /// Reads the certificate the provider now points at, to describe it and to prove it can be
+        /// opened at all.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The point is <b>when</b> a mistake surfaces. A passphrase that does not match the file,
+        /// or a file that is not a certificate, is otherwise discovered by Genesis on the first
+        /// real request — and the symptom there is a 401 carrying a perfectly valid token, which
+        /// sends people looking at the token. Opening it here turns that into an error on the form
+        /// where it can still be corrected.
+        /// </para>
+        /// <para>
+        /// A parse failure is therefore refused, but a <b>fetch</b> failure is not: the blob may be
+        /// momentarily unreachable, and blocking configuration on a transient network fault would
+        /// be worse than saving without the descriptive fields. Genesis reports the same fetch
+        /// problem with <c>third_party_certificate_unreadable</c> if it persists.
+        /// </para>
+        /// </remarks>
+        private async Task<CertificateInspection> InspectCertificateAsync(
+            ThirdPartyJwtProvider provider,
+            Tenant tenant)
+        {
+            byte[] data;
+
+            try
+            {
+                data = await _httpClientFactory
+                    .CreateClient()
+                    .GetByteArrayAsync(provider.PublicCertificatePath);
+            }
+            catch (Exception)
+            {
+                // Saved without the descriptive fields rather than refused. Deliberate: see above.
+                return new CertificateInspection(null, string.Empty, string.Empty, null);
+            }
+
+            // Empty means untouched, in which case the stored cipher is the only copy there is.
+            var passphrase = string.IsNullOrWhiteSpace(provider.PublicCertificatePasswordCipher)
+                ? null
+                : _cryptoService.Decrypt(provider.PublicCertificatePasswordCipher, tenant.TenantSalt);
+
+            try
+            {
+                using var certificate = LoadCertificate(data, passphrase);
+
+                return new CertificateInspection(
+                    null,
+                    certificate.Subject,
+                    certificate.Thumbprint,
+                    certificate.NotAfter.ToUniversalTime());
+            }
+            catch (Exception)
+            {
+                return new CertificateInspection(
+                    Failed(
+                        "certificate_unreadable",
+                        string.IsNullOrEmpty(passphrase)
+                            ? "The uploaded file could not be read as a certificate. A PKCS#12 file (.pfx, .p12) " +
+                              "that is passphrase protected needs its passphrase supplied here."
+                            : "The uploaded file could not be opened with that passphrase. Check the passphrase, " +
+                              "or re-upload the certificate."),
+                    string.Empty,
+                    string.Empty,
+                    null);
+            }
+        }
+
+        /// <summary>
+        /// Opens a certificate in any of the forms the upload accepts: PKCS#12 first, since only
+        /// that one can be passphrase protected, then PEM or DER.
+        /// </summary>
+        private static X509Certificate2 LoadCertificate(byte[] data, string? passphrase)
+        {
+            try
+            {
+                return X509CertificateLoader.LoadPkcs12(data, passphrase);
+            }
+            catch
+            {
+                // Not a PKCS#12 container. A bare certificate carries no passphrase, so one being
+                // present does not change how it is read -- it simply does not apply.
+                return X509CertificateLoader.LoadCertificate(data);
+            }
+        }
+
         private static SaveThirdPartyJwtProviderResponse? ValidateProvider(
             SaveThirdPartyJwtProviderRequest request,
             ThirdPartyJwtProvider? existing,
@@ -1405,11 +1889,10 @@ namespace DomainService.Projects
                 return Failed("duplicate_key", $"Another provider already uses the key '{request.Key}'.");
             }
 
-            if (string.IsNullOrWhiteSpace(request.Issuer))
-            {
-                return Failed("issuer_required", "Issuer is required; it is how a token is routed to this provider.");
-            }
-
+            // Issuer is optional on purpose. A provider that leaves it blank receives the tokens
+            // that carry no `iss` claim at all -- which some third parties simply do not emit --
+            // and is reached by the x-blocks-idp header when more than one does so. A blank issuer
+            // is not a wildcard: Genesis will not route an issuer-bearing token to it.
             if (!request.Algorithms.IsSingleKeySource())
             {
                 return Failed(
@@ -1420,31 +1903,15 @@ namespace DomainService.Projects
 
             var isSymmetric = request.Algorithms[0].IsSymmetric();
 
-            if (isSymmetric)
+            var hasJwksUrl = !string.IsNullOrWhiteSpace(request.JwksUrl);
+            var hasCertificate = !string.IsNullOrWhiteSpace(request.PublicCertificatePath);
+
+            var keySourceFailure = isSymmetric
+                ? ValidateSymmetricKeySource(request, existing, hasJwksUrl, hasCertificate)
+                : ValidateAsymmetricKeySource(request, hasJwksUrl, hasCertificate);
+            if (keySourceFailure != null)
             {
-                var hasStoredSecret = !string.IsNullOrWhiteSpace(existing?.SigningSecretCipher);
-
-                if (string.IsNullOrEmpty(request.SigningSecret) && !hasStoredSecret)
-                {
-                    return Failed("signing_secret_required", "An HMAC provider needs a signing secret.");
-                }
-
-                if (!string.IsNullOrWhiteSpace(request.JwksUrl))
-                {
-                    return Failed("unexpected_jwks_url", "An HMAC provider must not carry a JWKS URL.");
-                }
-            }
-            else
-            {
-                if (string.IsNullOrWhiteSpace(request.JwksUrl))
-                {
-                    return Failed("jwks_url_required", "An asymmetric provider needs a JWKS URL.");
-                }
-
-                if (!string.IsNullOrEmpty(request.SigningSecret))
-                {
-                    return Failed("unexpected_signing_secret", "An asymmetric provider must not carry a signing secret.");
-                }
+                return keySourceFailure;
             }
 
             if (string.IsNullOrWhiteSpace(request.ClaimsMapping?.UserId))
@@ -1457,9 +1924,22 @@ namespace DomainService.Projects
             // Two providers sharing an issuer AND an audience validate identically, so nothing
             // cryptographic tells their tokens apart and the caller's header alone selects the
             // claim mapping. Requiring audiences keeps that choice out of the caller's hands.
+            //
+            // Deliberately not applied to a blank issuer. A token with no `iss` normally carries
+            // no `aud` either, so demanding audiences there would produce a provider that can
+            // never match anything -- the rule would create the dead configuration it exists to
+            // prevent. Those providers are separated by the header instead, which the integration
+            // card already marks as required once there are two of them.
+            var issuer = request.Issuer?.Trim() ?? string.Empty;
+
+            if (issuer.Length == 0)
+            {
+                return null;
+            }
+
             var sharesIssuer = siblings.Any(p => p.ItemId != existing?.ItemId
                                                  && p.IsActive
-                                                 && string.Equals(p.Issuer, request.Issuer.Trim(), StringComparison.Ordinal));
+                                                 && string.Equals(p.Issuer, issuer, StringComparison.Ordinal));
 
             if (sharesIssuer && (request.Audiences == null || request.Audiences.Count == 0))
             {
@@ -1467,6 +1947,73 @@ namespace DomainService.Projects
                     "audiences_required_for_shared_issuer",
                     "Another active provider already uses this issuer, so both must declare audiences. " +
                     "Without them the two cannot be told apart and the caller chooses which mapping applies.");
+            }
+
+            return null;
+        }
+
+        private static SaveThirdPartyJwtProviderResponse? ValidateSymmetricKeySource(
+            SaveThirdPartyJwtProviderRequest request,
+            ThirdPartyJwtProvider? existing,
+            bool hasJwksUrl,
+            bool hasCertificate)
+        {
+            var hasStoredSecret = !string.IsNullOrWhiteSpace(existing?.SigningSecretCipher);
+
+            if (string.IsNullOrEmpty(request.SigningSecret) && !hasStoredSecret)
+            {
+                return Failed("signing_secret_required", "An HMAC provider needs a signing secret.");
+            }
+
+            if (hasJwksUrl)
+            {
+                return Failed("unexpected_jwks_url", "An HMAC provider must not carry a JWKS URL.");
+            }
+
+            if (hasCertificate)
+            {
+                return Failed(
+                    "unexpected_certificate",
+                    "An HMAC provider must not carry a public certificate. HMAC verifies with the shared " +
+                    "secret; a certificate would be a second, unrelated signing authority.");
+            }
+
+            return null;
+        }
+
+        private static SaveThirdPartyJwtProviderResponse? ValidateAsymmetricKeySource(
+            SaveThirdPartyJwtProviderRequest request,
+            bool hasJwksUrl,
+            bool hasCertificate)
+        {
+            if (!hasJwksUrl && !hasCertificate)
+            {
+                return Failed(
+                    "key_source_required",
+                    "An asymmetric provider needs a key source: either a JWKS URL, or a public certificate " +
+                    "to pin a single key.");
+            }
+
+            // Which of the two got consulted would otherwise come down to the order this code
+            // happens to check them in, and the other would sit there looking configured.
+            if (hasJwksUrl && hasCertificate)
+            {
+                return Failed(
+                    "ambiguous_key_source",
+                    "Configure a JWKS URL or a public certificate, not both. Two key sources for one " +
+                    "provider is two independent signing authorities behind a single claim mapping.");
+            }
+
+            if (!string.IsNullOrEmpty(request.SigningSecret))
+            {
+                return Failed("unexpected_signing_secret", "An asymmetric provider must not carry a signing secret.");
+            }
+
+            if (hasJwksUrl && !string.IsNullOrEmpty(request.PublicCertificatePassword))
+            {
+                return Failed(
+                    "unexpected_certificate_password",
+                    "A JWKS URL needs no passphrase; a passphrase only ever unlocks a PKCS#12 certificate.");
             }
 
             return null;
@@ -1515,8 +2062,13 @@ namespace DomainService.Projects
             Audiences = provider.Audiences,
             Algorithms = provider.Algorithms,
             JwksUrl = provider.JwksUrl,
+            PublicCertificatePath = provider.PublicCertificatePath,
+            CertificateSubject = provider.CertificateSubject,
+            CertificateThumbprint = provider.CertificateThumbprint,
+            CertificateNotAfter = provider.CertificateNotAfter,
             CookieKey = provider.CookieKey,
             HasSigningSecret = !string.IsNullOrWhiteSpace(provider.SigningSecretCipher),
+            HasCertificatePassword = !string.IsNullOrWhiteSpace(provider.PublicCertificatePasswordCipher),
             ClaimsMapping = new ThirdPartyClaimsMappingRequest
             {
                 UserId = provider.ClaimsMapping?.UserId ?? string.Empty,

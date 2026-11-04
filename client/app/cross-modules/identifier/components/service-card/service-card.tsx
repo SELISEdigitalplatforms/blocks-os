@@ -1,23 +1,18 @@
 import { useState } from "react";
-import { getRuntimeEnv } from "@/lib/runtime-env";
 import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
 import { useNavigate } from "react-router";
 import { RegisteredService } from "@blocks-identifier/models/service.model";
 import { Button } from "@/components/ui-kits/button/button";
-import { Activity, BookOpen, Braces, Copy, EllipsisVertical, FileText } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui-kits/dropdown-menu/dropdown-menu";
+import { Activity, Copy, FileText } from "lucide-react";
 import { MaskedText } from "@/components/masked-text";
 import { useCopyToClipboard } from "@seliseblocks/genesis-os/hooks";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import { showSuccessToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { AccordionTrigger } from "@/components/ui-kits/accordion/accordion";
 import { AccordionContent } from "@radix-ui/react-accordion";
+import { useT } from "@seliseblocks/genesis-os";
 const ServiceCardCopiedItem = ({ label, value }: { label: string; value: string }) => {
+  const { t } = useT("os.identifier");
   const { copy } = useCopyToClipboard();
   return (
     <div className="text-sm">
@@ -32,7 +27,8 @@ const ServiceCardCopiedItem = ({ label, value }: { label: string; value: string 
           className="h-5 w-5 p-0 text-gray-400 hover:text-gray-600"
           onClick={() =>
             copy(value, {
-              onSuccess: () => showSuccessToast({ description: `${label} copied` }),
+              onSuccess: () =>
+                showSuccessToast({ description: t("SERVICE_CARD.COPIED", { label }) }),
             })
           }
         >
@@ -46,18 +42,16 @@ const LinkButton = ({ onClick, children }: { onClick: () => void; children: Reac
   <button
     type="button"
     onClick={onClick}
-    className="inline-flex items-center justify-center whitespace-nowrap rounded-sm border border-input bg-background p-2 py-1.5 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+    className="inline-flex items-center justify-center whitespace-nowrap rounded-sm border border-input bg-background p-2 py-1.5 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
   >
     {children}
   </button>
 );
 export const ServiceCard = ({ service }: { service: RegisteredService }) => {
+  const { t } = useT("os.identifier");
   const LMT_BASE_PATH = useLmtBasePath();
   const [showAllTags, setShowAllTags] = useState(false);
   const navigate = useNavigate();
-  const blocksOsBaseUrl = getRuntimeEnv("BLOCKS_OS_BASE_URL");
-  const swaggerUrl = blocksOsBaseUrl ? `${blocksOsBaseUrl}/swagger/index.html` : "";
-  const docsUrl = "https://docs.seliseblocks.com/";
   return (
     <>
       <AccordionTrigger className="overflow-hidden p-4 hover:no-underline">
@@ -79,7 +73,7 @@ export const ServiceCard = ({ service }: { service: RegisteredService }) => {
               }
             >
               <FileText className="h-4 w-4" />
-              <span className="sr-only sm:not-sr-only sm:ml-2">Logs</span>
+              <span className="sr-only sm:not-sr-only sm:ml-2">{t("SERVICE_CARD.LOGS")}</span>
             </LinkButton>
             <LinkButton
               onClick={() =>
@@ -89,56 +83,26 @@ export const ServiceCard = ({ service }: { service: RegisteredService }) => {
               }
             >
               <Activity className="h-4 w-4" />
-              <span className="sr-only sm:not-sr-only sm:ml-2">Traces</span>
+              <span className="sr-only sm:not-sr-only sm:ml-2">{t("SERVICE_CARD.TRACES")}</span>
             </LinkButton>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <div className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-sm p-0 hover:bg-accent hover:text-accent-foreground">
-                  <EllipsisVertical className="h-4 w-4" />
-                </div>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  disabled={!swaggerUrl}
-                  onClick={() => {
-                    if (!swaggerUrl) {
-                      showErrorToast({
-                        errors: "Swagger is not configured for this environment.",
-                      });
-                      return;
-                    }
-                    window.open(swaggerUrl, "_blank", "noopener,noreferrer");
-                  }}
-                >
-                  <Braces className="mr-2 aspect-square w-4" />
-                  Swagger
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => window.open(docsUrl, "_blank", "noopener,noreferrer")}
-                >
-                  <BookOpen className="mr-2 aspect-square w-4" />
-                  Docs
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </div>
       </AccordionTrigger>
       <AccordionContent className="p-4">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <ServiceCardCopiedItem label="Service ID" value={service.serviceId} />
+          <ServiceCardCopiedItem label={t("SERVICE_CARD.SERVICE_ID")} value={service.serviceId} />
           {service.serviceBusConnectionString && service.serviceType !== "frontend" && (
             <ServiceCardCopiedItem
-              label="Connection String"
+              label={t("SERVICE_CARD.CONNECTION_STRING")}
               value={service.serviceBusConnectionString}
             />
           )}
-          <ServiceCardCopiedItem label="X-Blocks-Key" value={service.tenantId} />
+          <ServiceCardCopiedItem label={t("SERVICE_CARD.X_BLOCKS_KEY")} value={service.tenantId} />
         </div>
         {service.description && (
           <div className="mt-3 text-sm">
-            <h3 className="text-low-emphasis">Description</h3>
-            <p className="break-words text-high-emphasis">{service.description}</p>
+            <h3 className="text-low-emphasis">{t("common:DESCRIPTION")}</h3>
+            <p className="wrap-break-word text-high-emphasis">{service.description}</p>
           </div>
         )}
         {service.tags?.length > 0 && (
