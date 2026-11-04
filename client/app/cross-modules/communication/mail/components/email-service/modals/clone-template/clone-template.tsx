@@ -40,7 +40,7 @@ interface CloneTemplateDialogProps {
 const LANGUAGE_ID = "clone-template-language";
 
 /**
- * Board CloneTemplate: the clone keeps the name and the organization and takes another language.
+ * SPEC31 §4 CloneTemplate design: the clone keeps the name and the organization and takes another language.
  * Languages the name already has in the organization are listed but disabled.
  */
 export function CloneTemplateDialog({

@@ -419,6 +419,5 @@
   "TEMPLATE_ORGANIZATION.ORGANIZATION_DEFAULT": "Organization default",
   "TEMPLATE_ORGANIZATION.ORGANIZATION_DEFAULT_DESCRIPTION": "The sending organization's default, then the project default",
   "TEMPLATE_ORGANIZATION.OUTBOUND_ONLY_HINT": "Outbound configurations only. Inbound ones can't send mail.",
-  "TEMPLATE_ORGANIZATION.READ_ONLY": "Read-only",
   "TEMPLATE_ORGANIZATION.VIA": "via {{name}}"
 }

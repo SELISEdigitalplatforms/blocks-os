@@ -24,7 +24,7 @@ interface SendTestEmailDialogProps {
   onClose: () => void;
 }
 
-/** Board TestMail: a test mail of exactly this template, sent by its id (H12). */
+/** SPEC31 §4 TestMail design: a test mail of exactly this template, sent by its id (H12). */
 export function SendTestEmailDialog({
   template,
   to,

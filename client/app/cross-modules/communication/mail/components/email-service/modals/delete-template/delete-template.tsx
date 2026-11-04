@@ -28,7 +28,7 @@ interface DeleteTemplateDialogProps {
 
 /**
  * Deletes one template. With multi-org on, an organization's template says the Default
- * organization's template takes over (board DeleteTemplateOrg), and a Default organization
+ * organization's template takes over (SPEC31 §4, DeleteTemplateOrg design), and a Default organization
  * template warns that organizations without their own copy lose the mail (C11). With multi-org
  * off it is the plain confirm (SPEC34 §4: "the dialog shows only the confirm text").
  */

@@ -59,7 +59,7 @@ interface EditCommunicationProps {
 type EditForm = { templateSubject: string; mailConfigurationId: string };
 
 /**
- * Board EditTemplate. Name and language are fixed after creation (another language is a clone),
+ * SPEC31 §4 EditTemplate design. Name and language are fixed after creation (another language is a clone),
  * so only the subject and the configuration are edited and sent; the server keeps the stored
  * name, language and organization.
  */

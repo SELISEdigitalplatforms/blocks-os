@@ -107,7 +107,7 @@ namespace DomainService.Migration
 
         /// <summary>
         /// Whether logic would find a configuration for the template: the template's own, else the Default
-        /// organization's organization default, else the project default. Inbound configurations never send.
+        /// organization's default configuration (IsOrganizationDefault), else the project default. Inbound configurations never send.
         /// </summary>
         private static async Task<bool> HasMailServerConfigurationAsync(IDbContextProvider dbContextProvider, IOsDataAccess dataAccess, BsonDocument template)
         {
