@@ -1,8 +1,9 @@
 import { AuthResolver, ProtectedGuard, PublicGuard } from "@seliseblocks/genesis-os/guards";
-import { ConsoleLayout, DashboardRoute } from "@seliseblocks/genesis-os/layouts";
+import { ConsoleLayout } from "@seliseblocks/genesis-os/layouts";
 import { CallbackPage, ConsolePage, LoginPage, ProfilePage } from "@seliseblocks/genesis-os/pages";
 import { createBrowserRouter, matchRoutes, Navigate, Outlet, useLocation } from "react-router";
 import { navigationMenus } from "@/constants/navigation-menus";
+import { ScopedDashboardRoute } from "@/routes/scoped-dashboard-route";
 import { DeepLinkRedirect } from "@/components/deep-link-redirect/deep-link-redirect";
 import { PendingConnectRedirect } from "@/components/pending-connect-redirect/pending-connect-redirect";
 // Temporarily disabled
@@ -223,7 +224,7 @@ export const router = createBrowserRouter([
               {
                 path: ":itemId",
                 element: (
-                  <DashboardRoute redirectPaths={redirectPaths} navigationMenus={navigationMenus} />
+                  <ScopedDashboardRoute redirectPaths={redirectPaths} navigationMenus={navigationMenus} />
                 ),
                 children: [
                   {
