@@ -169,10 +169,7 @@ namespace Configuration.DomainService.Mail.Services
             }
 
             // After the save, so the new default exists before the old one loses its mark.
-            if (entity.IsOrganizationDefault)
-            {
-                await ClearOtherOrganizationDefaultsAsync(entity).ConfigureAwait(false);
-            }
+            await ClearOtherOrganizationDefaultsAsync(entity).ConfigureAwait(false);
 
             _logger.LogInformation("Saving mail configuration end -- Success");
             return MailConfigurationMutationResult.Success(entity.ItemId);
@@ -450,15 +447,22 @@ namespace Configuration.DomainService.Mail.Services
         }
 
         /// <summary>
-        /// Clears the organization's other default marks once the new default is saved.
+        /// Clears the organization's other default marks once a new default is saved; nothing for a
+        /// configuration that isn't its organization's default.
         /// </summary>
         /// <remarks>
         /// The configuration is already written, so a failure here must not report the save as
         /// failed: the organization keeps two marks until its next default save settles them, and
-        /// that is logged for an operator. Only the exception type is logged.
+        /// that is logged for an operator. The exception is logged whole: this update touches only
+        /// the default flag and carries no credential reference.
         /// </remarks>
         private async Task ClearOtherOrganizationDefaultsAsync(MailServerConfiguration entity)
         {
+            if (!entity.IsOrganizationDefault)
+            {
+                return;
+            }
+
             try
             {
                 await _configurationRepository
@@ -468,8 +472,8 @@ namespace Configuration.DomainService.Mail.Services
             catch (Exception exception)
             {
                 _logger.LogWarning(
-                    "Saving mail configuration -- the organization's other default marks could not be cleared ({FailureType}) for configuration {ConfigurationId}",
-                    exception.GetType().Name,
+                    exception,
+                    "Saving mail configuration -- the organization's other default marks could not be cleared for configuration {ConfigurationId}",
                     LogSafe.Value(entity.ItemId));
             }
         }

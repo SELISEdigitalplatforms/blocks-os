@@ -163,8 +163,19 @@
             far, freeing the user to request a different range straight away.
             </summary>
         </member>
-        <member name="M:BlocksOs.Api.Controllers.MailController.GetConfigurationUsage(Configuration.DomainService.Mail.RequestModel.GetMailConfigurationUsageRequest)">
-            <summary>How many templates name the configuration, so the console can say what a delete affects.</summary>
+        <member name="T:BlocksOs.Api.Controllers.MailConfigurationUsageController">
+            <summary>
+            <c>GET Mail/GetConfigurationUsage</c>: how many templates name a mail configuration, so the
+            console can say what a delete affects.
+            </summary>
+            <remarks>
+            Served under the Mail route like the other mail configuration actions, but kept out of
+            <see cref="T:BlocksOs.Api.Controllers.MailController"/>, which already carries three responsibilities (configurations,
+            templates, mailbox) and is flagged for it.
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.MailConfigurationUsageController.GetConfigurationUsage(Configuration.DomainService.Mail.RequestModel.GetMailConfigurationUsageRequest)">
+            <summary>Unknown id: HTTP 400 with <c>errors.ConfigurationId</c>, like the other mail field errors.</summary>
         </member>
         <member name="M:BlocksOs.Api.Controllers.MailController.ToActionResult(Configuration.DomainService.Mail.Services.MailConfigurationMutationResult)">
             <summary>

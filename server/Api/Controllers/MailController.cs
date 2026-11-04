@@ -68,15 +68,6 @@ namespace BlocksOs.Api.Controllers
             return Ok(result);
         }
 
-        /// <summary>How many templates name the configuration, so the console can say what a delete affects.</summary>
-        [HttpGet]
-        [ProtectedEndPoint("blocks-os::mail::gets")]
-        public async Task<IActionResult> GetConfigurationUsage([FromQuery] GetMailConfigurationUsageRequest request)
-        {
-            var result = await _mailConfigurationService.GetUsageAsync(request);
-            return result.IsSuccess ? Ok(result) : BadRequest(result);
-        }
-
         [HttpDelete]
         [ProtectedEndPoint("blocks-os::mail::delete")]
         public async Task<IActionResult> Delete([FromQuery] DeleteMailConfigurationRequest request)

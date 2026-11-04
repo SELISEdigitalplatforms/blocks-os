@@ -141,7 +141,7 @@ namespace XUnitTest.Controllers
             _service.Setup(s => s.GetUsageAsync(It.Is<GetMailConfigurationUsageRequest>(r => r.ConfigurationId == "acme-smtp"), It.IsAny<CancellationToken>()))
                     .ReturnsAsync(usage);
 
-            var result = await Controller().GetConfigurationUsage(new GetMailConfigurationUsageRequest { ConfigurationId = "acme-smtp" });
+            var result = await new MailConfigurationUsageController(_service.Object).GetConfigurationUsage(new GetMailConfigurationUsageRequest { ConfigurationId = "acme-smtp" });
 
             result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeSameAs(usage);
         }
@@ -158,16 +158,27 @@ namespace XUnitTest.Controllers
             _service.Setup(s => s.GetUsageAsync(It.IsAny<GetMailConfigurationUsageRequest>(), It.IsAny<CancellationToken>()))
                     .ReturnsAsync(usage);
 
-            var result = await Controller().GetConfigurationUsage(new GetMailConfigurationUsageRequest { ConfigurationId = "missing" });
+            var result = await new MailConfigurationUsageController(_service.Object).GetConfigurationUsage(new GetMailConfigurationUsageRequest { ConfigurationId = "missing" });
 
             result.Should().BeOfType<BadRequestObjectResult>().Which.Value.Should().BeSameAs(usage);
+        }
+
+        [Fact]
+        public void GetConfigurationUsage_IsServedUnderTheMailRoute()
+        {
+            // §6.3: GET Mail/GetConfigurationUsage, beside the other mail configuration actions.
+            typeof(MailConfigurationUsageController)
+                .GetCustomAttributes(typeof(RouteAttribute), false)
+                .Cast<RouteAttribute>()
+                .Select(a => a.Template)
+                .Should().Equal("Mail/[action]");
         }
 
         [Fact]
         public void GetConfigurationUsage_IsProtectedByTheMailReadPermission()
         {
             // C10: an unauthenticated or unauthorized caller gets 401/403 from ProtectedEndPoint.
-            typeof(MailController).GetMethod(nameof(MailController.GetConfigurationUsage))!
+            typeof(MailConfigurationUsageController).GetMethod(nameof(MailConfigurationUsageController.GetConfigurationUsage))!
                 .GetCustomAttributes(typeof(ProtectedEndPointAttribute), false)
                 .Cast<ProtectedEndPointAttribute>()
                 .Select(a => a.ResourceName)
