@@ -14,7 +14,7 @@ import {
   verifySaveDisabledFlow,
   verifyConfigMenuFlow,
   verifyConfigUsageFlow,
-  verifyNoOrganizationUiFlow,
+  verifyOrganizationUiFlow,
 } from "../../pages/secrets-and-configs/email";
 import {
   editOffice365KeepingSecretFlow,
@@ -36,8 +36,8 @@ test.describe("flows", () => {
       await navigateToEmailFlow(page);
     });
 
-    await test.step("Multi-org is off: the page is as before, with no organization picker (blocks-os#732 H12)", async () => {
-      await verifyNoOrganizationUiFlow(page);
+    await test.step("The organization UI follows the project's multi-org setting (blocks-os#732 H7/H12)", async () => {
+      await verifyOrganizationUiFlow(page);
     });
 
     await test.step("Empty state shows if no configuration exists yet", async () => {
@@ -86,7 +86,7 @@ test.describe("flows", () => {
       await openEditEmailAndCloseFlow(page, configName);
     });
 
-    await test.step("Edit the configuration, which has no Organization field, and save the change", async () => {
+    await test.step("Edit the configuration (Organization absent, or read-only with multi-org) and save", async () => {
       await editEmailConfigAndSaveFlow(page, configName, "Flow Sender Updated");
     });
 

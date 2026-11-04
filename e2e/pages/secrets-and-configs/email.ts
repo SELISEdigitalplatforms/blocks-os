@@ -1,6 +1,52 @@
 import { expect, type Page } from "@playwright/test";
 import { openSecretManagement } from "../../support/os-helpers";
 
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * A card's accessible name: the configuration's name, followed by its ORG DEFAULT / PROJECT DEFAULT
+ * chips when the project uses organizations (blocks-os#732 H10). Matched whole, so the card's
+ * "More actions for <name>" button never matches.
+ */
+export function cardName(configName: string) {
+  return new RegExp(`^${escapeRegExp(configName)}( (ORG|PROJECT) DEFAULT)*$`);
+}
+
+export function cardTrigger(page: Page, configName: string) {
+  return page.getByRole("button", { name: cardName(configName) });
+}
+
+export function cardPanel(page: Page, configName: string) {
+  return page.getByRole("region", { name: cardName(configName) });
+}
+
+/**
+ * The Add/Edit dialog's Type and Provider selects, by position. In a multi-org project the
+ * dialog's Organization picker is a combobox too, before them (blocks-os#732 H9), so it is left out.
+ */
+export function dialogSelect(page: Page, index: number) {
+  return page
+    .getByRole("dialog")
+    .locator('[role="combobox"]:not(#mail-configuration-organization)')
+    .nth(index);
+}
+
+/** Whether the page shows the organization picker, i.e. the project uses organizations. */
+export async function isMultiOrgPage(page: Page) {
+  return (await page.locator("#email-organization-picker").count()) > 0;
+}
+
+/**
+ * blocks-os#732 H9: an organization's first configuration starts as its default. The flows create
+ * throwaway configurations, so they never take over the shared project's organization default.
+ */
+export async function keepOrganizationDefaultUnticked(page: Page) {
+  const option = page.getByRole("dialog").getByRole("checkbox", { name: "Use as organization default" });
+  if ((await option.count()) === 0) return;
+  if ((await option.getAttribute("data-state")) === "checked") await option.click();
+  await expect(option).toHaveAttribute("data-state", "unchecked");
+}
+
 export async function navigateToEmailFlow(page: Page) {
   await openSecretManagement(page, "email", "Email");
 }
@@ -77,7 +123,7 @@ export async function verifySaveDisabledFlow(page: Page) {
 }
 
 export async function verifyOutboundProvidersOfferedFlow(page: Page) {
-  const providerSelect = page.getByRole("dialog").getByRole("combobox").nth(1);
+  const providerSelect = dialogSelect(page, 1);
   await providerSelect.click();
   await expect(page.getByRole("option", { name: "Amazon SES" })).toBeVisible();
   await expect(page.getByRole("option", { name: "Zoho" })).toBeVisible();
@@ -87,11 +133,11 @@ export async function verifyOutboundProvidersOfferedFlow(page: Page) {
 }
 
 export async function verifyInboundProviderAndFieldsFlow(page: Page) {
-  const typeSelect = page.getByRole("dialog").getByRole("combobox").first();
+  const typeSelect = dialogSelect(page, 0);
   await typeSelect.click();
   await page.getByRole("option", { name: "Inbound" }).click();
 
-  const providerSelect = page.getByRole("dialog").getByRole("combobox").nth(1);
+  const providerSelect = dialogSelect(page, 1);
   await expect(providerSelect).toHaveText(/Zoho/);
   await providerSelect.click();
   await expect(page.getByRole("option", { name: "Amazon SES" })).toHaveCount(0);
@@ -119,7 +165,8 @@ export async function fillAndSaveEmailConfigFlow(page: Page, configName: string)
     .fill(`flow-sender-${Date.now()}@example.com`);
   await page.getByPlaceholder("Enter sender username").fill("flow-sender-user");
   await page.getByPlaceholder("Enter password").fill("SuperSecret123");
-  await page.getByRole("checkbox").click();
+  await page.getByRole("dialog").getByRole("checkbox", { name: "Enable SSL" }).click();
+  await keepOrganizationDefaultUnticked(page);
 
   const saveButton = page.getByRole("button", { name: "Save", exact: true });
   await expect(saveButton).toBeEnabled({ timeout: 10000 });
@@ -139,22 +186,35 @@ export async function fillAndSaveEmailConfigFlow(page: Page, configName: string)
 }
 
 export async function expandConfigRowAndVerifyFlow(page: Page, configName: string) {
-  // exact: the card's ⋮ button, "More actions for <name>", also contains the name.
-  const configTrigger = page.getByRole("button", { name: configName, exact: true });
+  const configTrigger = cardTrigger(page, configName);
   await expect(configTrigger).toBeVisible({ timeout: 15000 });
   await configTrigger.click();
-  const panel = page.getByLabel(configName, { exact: true });
+  const panel = cardPanel(page, configName);
   await expect(panel.getByText("smtp.example.com")).toBeVisible({ timeout: 10000 });
   await expect(panel.getByText("587")).toBeVisible();
   await expect(panel.getByText("Outbound")).toBeVisible();
 }
 
-/** blocks-os#732 H12: a project with multi-org off sees no organization picker, field or chips. */
-export async function verifyNoOrganizationUiFlow(page: Page) {
+/**
+ * blocks-os#732: the organization UI follows the project's multi-org setting. Off (H12): no
+ * picker, sections or chips. On (H7, H10): the picker in the header shows "Default organization",
+ * the list is the Default organization's, and the seeded Default card is the project default.
+ * The spec's E2E project was described as multi-org off; the shared project has it on, so the
+ * flow checks whichever applies.
+ */
+export async function verifyOrganizationUiFlow(page: Page) {
   await expect(page.getByRole("button", { name: "Add Configuration" })).toBeVisible({ timeout: 15000 });
-  // The picker would render once the organization config has loaded, which is also when the list
-  // shows: wait for the list (the seeded Default card) before checking it is absent.
-  await expect(page.getByRole("button", { name: "Default", exact: true })).toBeVisible({ timeout: 15000 });
+  // The picker renders once the organization config has loaded, which is also when the list
+  // shows: wait for the list (the seeded Default card) first.
+  await expect(cardTrigger(page, "Default")).toBeVisible({ timeout: 15000 });
+  if (await isMultiOrgPage(page)) {
+    await expect(page.locator("#email-organization-picker")).toHaveText(/Default organization/);
+    await expect(
+      page.getByRole("heading", { name: /^Default organization · \d+ configurations?$/ }),
+    ).toBeVisible();
+    await expect(cardTrigger(page, "Default")).toHaveAccessibleName("Default PROJECT DEFAULT");
+    return;
+  }
   await expect(page.getByLabel("Organization", { exact: true })).toHaveCount(0);
   await expect(page.getByText("ORG DEFAULT", { exact: true })).toHaveCount(0);
   await expect(page.getByText("PROJECT DEFAULT", { exact: true })).toHaveCount(0);
@@ -188,7 +248,7 @@ export async function verifyConfigMenuFlow(page: Page, configName: string) {
 
 /** blocks-os#732 H11: the expanded card says how many templates use it. */
 export async function verifyConfigUsageFlow(page: Page, configName: string, count: number) {
-  const panel = page.getByLabel(configName, { exact: true });
+  const panel = cardPanel(page, configName);
   const text = count === 1 ? "Used by 1 template" : `Used by ${count} templates`;
   await expect(panel.getByText(text, { exact: true })).toBeVisible({ timeout: 15000 });
 }
@@ -206,11 +266,17 @@ export async function editEmailConfigAndSaveFlow(
 ) {
   await chooseFromConfigMenu(page, configName, "Edit");
   await expect(page.getByRole("heading", { name: "Edit Configuration" })).toBeVisible();
-  // blocks-os#732 §10 step 4: multi-org is off, so the form has no Organization field (its label
-  // would read "Organization *") and no organization-default option.
+  // blocks-os#732 §10 step 4: with multi-org off the form has no Organization field (its label reads
+  // "Organization *"); with it on, the field shows the configuration's organization read-only (C6).
   const dialog = page.getByRole("dialog");
-  await expect(dialog.getByText(/^Organization\b/)).toHaveCount(0);
-  await expect(dialog.getByText("Use as organization default", { exact: true })).toHaveCount(0);
+  if (await isMultiOrgPage(page)) {
+    const organization = dialog.getByLabel(/^Organization/);
+    await expect(organization).toHaveValue("Default organization");
+    await expect(organization).toHaveAttribute("readonly", "");
+  } else {
+    await expect(dialog.getByText(/^Organization\b/)).toHaveCount(0);
+    await expect(dialog.getByText("Use as organization default", { exact: true })).toHaveCount(0);
+  }
   await page.getByPlaceholder("Enter sender name").fill(newSenderName);
   await page.getByPlaceholder("Enter password").fill("SuperSecret123");
   const updateButton = page.getByRole("button", { name: "Update Changes" });

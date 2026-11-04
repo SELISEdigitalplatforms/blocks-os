@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test"
+import { cardPanel, cardTrigger, dialogSelect, keepOrganizationDefaultUnticked } from "./email"
 
 /**
  * The Office 365 configuration flows.
@@ -12,12 +13,14 @@ import { expect, type Page } from "@playwright/test"
 
 const OFFICE_365 = "Office 365"
 
+// blocks-os#732: by position among the Type and Provider selects, leaving out the Organization
+// picker that multi-org projects show first.
 function dialogProviderSelect(page: Page) {
-  return page.getByRole("dialog").getByRole("combobox").nth(1)
+  return dialogSelect(page, 1)
 }
 
 function dialogTypeSelect(page: Page) {
-  return page.getByRole("dialog").getByRole("combobox").first()
+  return dialogSelect(page, 0)
 }
 
 /** Offered for outbound and for inbound. */
@@ -89,6 +92,7 @@ export async function fillAndSaveOffice365ConfigFlow(
   await page.getByPlaceholder("Enter client ID").fill("mailer-app")
   await page.getByPlaceholder("Enter mailbox address").fill("mailer@example.com")
   await page.getByPlaceholder("Enter client secret").fill(clientSecret)
+  await keepOrganizationDefaultUnticked(page)
 
   const saveButton = page.getByRole("button", { name: "Save", exact: true })
   await expect(saveButton).toBeEnabled({ timeout: 10000 })
@@ -126,12 +130,11 @@ export async function expandOffice365RowAndVerifyFlow(
   expect(listBody).not.toContain(clientSecret)
   expect(listBody.toLowerCase()).not.toContain("clientsecretreference")
 
-  // exact: the card's ⋮ button, "More actions for <name>", also contains the name.
-  const configTrigger = page.getByRole("button", { name: configName, exact: true })
+  const configTrigger = cardTrigger(page, configName)
   await expect(configTrigger).toBeVisible({ timeout: 15000 })
   await configTrigger.click()
 
-  const panel = page.getByLabel(configName, { exact: true })
+  const panel = cardPanel(page, configName)
   await expect(panel.getByText(OFFICE_365)).toBeVisible({ timeout: 10000 })
   await expect(panel.getByText("smtp.office365.com")).toBeVisible()
   await expect(panel.getByText("587")).toBeVisible()
