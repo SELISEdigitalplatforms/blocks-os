@@ -27,7 +27,7 @@ import { useGetEmailTemplates } from "@blocks-communication/mail/hooks/use-email
 import { useGetLanguages } from "@blocks-localization/hooks/use-language-manager";
 import { CirclePlus } from "lucide-react";
 import { useNavigate } from "react-router";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { useT } from "@seliseblocks/genesis-os";
 import { useEmailUsageFilterQueryParams } from "../email-usage/email-usage-filter-toolbar";
@@ -84,6 +84,14 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
   const { sortQueryParams } = useTemplatesSortQueryParams();
   const organization = useEmailOrganization();
   const organizationId = organization.selectedOrganizationId;
+  // Another organization has its own pages and configurations: start it on page 1 with no
+  // configuration filter, so a page or filter of the previous one never empties the list.
+  const shownOrganizationId = useRef(organizationId);
+  useEffect(() => {
+    if (shownOrganizationId.current === organizationId) return;
+    shownOrganizationId.current = organizationId;
+    setQueryParams((prev) => ({ ...prev, pageNumber: 0, mailConfigurationId: "" }));
+  }, [organizationId, setQueryParams]);
   const organizationName = useOrganizationName(organizationId);
   const { isLoading, isError, refetch, data } = useGetEmailTemplates(
     queryParams.pageNumber ?? 0,

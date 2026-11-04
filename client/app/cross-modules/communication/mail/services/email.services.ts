@@ -98,7 +98,7 @@ class EmailService {
     const organizationQuery = organizationId
       ? `&organizationId=${encodeURIComponent(organizationId)}`
       : "";
-    const url = `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATES}?pageNumber=${pageNumber}&pageSize=${pageSize}&searchKey=${searchKey}&sortProperty=${sortProperty}&isDescending=${isDescending}&language=${language}&mailConfigurationId=${mailConfigurationId}${organizationQuery}`;
+    const url = `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATES}?pageNumber=${pageNumber}&pageSize=${pageSize}&searchKey=${encodeURIComponent(searchKey)}&sortProperty=${sortProperty}&isDescending=${isDescending}&language=${language}&mailConfigurationId=${mailConfigurationId}${organizationQuery}`;
     return http.get(url, undefined, { absoluteUrl: true });
   };
 

@@ -145,6 +145,22 @@ describe("EmailServiceTable per organization (H6, C12, C13)", () => {
     expect(h.refetch).toHaveBeenCalled();
   });
 
+  it("starts another organization on page 1 with no configuration filter", () => {
+    const { rerender } = render(<EmailServiceTable />);
+    expect(h.setQueryParams).not.toHaveBeenCalled();
+
+    h.organization = { ...h.organization, selectedOrganizationId: "globex" };
+    rerender(<EmailServiceTable />);
+
+    expect(h.setQueryParams).toHaveBeenCalledTimes(1);
+    const update = h.setQueryParams.mock.calls[0][0] as (prev: object) => object;
+    expect(update({ pageNumber: 2, mailConfigurationId: "acme-smtp", search: "x" })).toEqual({
+      pageNumber: 0,
+      mailConfigurationId: "",
+      search: "x",
+    });
+  });
+
   it("pages with a range and rows per page", () => {
     render(<EmailServiceTable />);
     expect(screen.getByText("1–10 of 14")).toBeTruthy();

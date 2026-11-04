@@ -184,6 +184,7 @@ const BasicInformation = forwardRef(function Inner(
   // Read itemId into a local so the compiler infers this exact dependency rather than the whole
   // templateData object; the callback keeps its current identity lifetime.
   const templateItemId = templateData?.itemId;
+  const isSaved = !!templateItemId;
   const handleFormSubmit = useCallback(
     async (data: IEmailTemplate) => {
       try {
@@ -262,6 +263,8 @@ const BasicInformation = forwardRef(function Inner(
                         className="border-default shadow-none"
                         aria-required="true"
                         {...field}
+                        // Once step 1 has saved, going back edits that template, whose name is fixed (SPEC31 C2).
+                        readOnly={isSaved}
                         onKeyDown={(e) => {
                           if (e.key === " " || e.key === "_") {
                             e.preventDefault();
@@ -315,7 +318,12 @@ const BasicInformation = forwardRef(function Inner(
                     <FormLabel className="font-medium text-high-emphasis">
                       {t("BASIC_INFORMATION.LANGUAGE")} <RequiredMark />
                     </FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    {/* The language is fixed once saved, like the name (SPEC31 C3). */}
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      disabled={isSaved}
+                    >
                       <FormControl>
                         <SelectTrigger
                           className="border-default h-10 shadow-none"

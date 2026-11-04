@@ -166,7 +166,8 @@ describe("BasicInformation", () => {
     };
 
     const user = userEvent.setup();
-    render(<BasicInformation templateData={template({ language: "en-US" })} />);
+    // A new template (no id yet): the language can still be chosen (SPEC31 C3).
+    render(<BasicInformation templateData={template({ itemId: "", language: "en-US" })} />);
 
     await waitFor(() => expect(screen.getByText("About the Template")).toBeTruthy());
     await user.click(screen.getByRole("combobox", { name: /language/i }));

@@ -107,6 +107,22 @@ describe("BasicInformation per organization (H1, H8, D9)", () => {
     });
   });
 
+  it("keeps the name and language fixed once step 1 has saved (C2, C3)", () => {
+    render(
+      <BasicInformation
+        templateData={{ ...blank, itemId: "t-1", name: "OrderConfirmation", language: "en-US" }}
+      />,
+    );
+    expect((screen.getByPlaceholderText("Enter name") as HTMLInputElement).readOnly).toBe(true);
+    expect(screen.getByRole("combobox", { name: /language/i })).toHaveProperty("disabled", true);
+  });
+
+  it("lets a new template choose its name and language", () => {
+    render(<BasicInformation templateData={blank} />);
+    expect((screen.getByPlaceholderText("Enter name") as HTMLInputElement).readOnly).toBe(false);
+    expect(screen.getByRole("combobox", { name: /language/i })).toHaveProperty("disabled", false);
+  });
+
   it("has no Organization field with multi-org off and creates in the Default organization (H2, C13)", async () => {
     h.organization = {
       isMultiOrgEnabled: false,

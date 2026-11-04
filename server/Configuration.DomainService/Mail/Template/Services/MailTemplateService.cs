@@ -220,7 +220,7 @@ namespace Configuration.DomainService.Mail.Template.Services
                 GeneratedBy = userId,
                 Name = template.Name,
                 OrganizationId = organizationId,
-                MailConfigurationId = template.MailConfigurationId,
+                MailConfigurationId = BlankAsEmpty(template.MailConfigurationId),
                 ImageId = template.ImageId,
                 ImageUrl = template.ImageUrl,
                 JsonContent = template.JsonContent,
@@ -229,6 +229,10 @@ namespace Configuration.DomainService.Mail.Template.Services
                 TemplateSubject = template.TemplateSubject
             }, null);
         }
+
+        // A blank configuration id means "Organization default" and is stored as empty, never as whitespace.
+        private static string? BlankAsEmpty(string? mailConfigurationId) =>
+            mailConfigurationId != null && string.IsNullOrWhiteSpace(mailConfigurationId) ? string.Empty : mailConfigurationId;
 
         /// <summary>
         /// Merges an edit into the stored template. Name, Language and organization are fixed after creation:
@@ -248,13 +252,14 @@ namespace Configuration.DomainService.Mail.Template.Services
                 return new Mapped(null, Failure(nameof(SaveMailTemplateRequest.Language), "A template's language can't be changed"));
             }
 
-            if (template.OrganizationId != null && template.OrganizationId != storedOrganizationId)
+            // Compared normalized, as a create reads it: "" or blank sent for a Default template is the same organization.
+            if (template.OrganizationId != null && OrganizationIds.Normalize(template.OrganizationId) != storedOrganizationId)
             {
                 return new Mapped(null, Failure(nameof(SaveMailTemplateRequest.OrganizationId), "A template's organization can't be changed"));
             }
 
             stored.OrganizationId = storedOrganizationId;
-            stored.MailConfigurationId = template.MailConfigurationId ?? stored.MailConfigurationId;
+            stored.MailConfigurationId = BlankAsEmpty(template.MailConfigurationId) ?? stored.MailConfigurationId;
             stored.ImageId = template.ImageId ?? stored.ImageId;
             stored.ImageUrl = template.ImageUrl ?? stored.ImageUrl;
             stored.JsonContent = template.JsonContent ?? stored.JsonContent;

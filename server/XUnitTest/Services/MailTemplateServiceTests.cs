@@ -865,6 +865,36 @@ namespace XUnitTest.Services
             ShouldBeRejected(response, "OrganizationId", "A template's organization can't be changed");
         }
 
+        [Theory] // C4: a blank organization sent for a Default template is the Default organization
+        [InlineData("")]
+        [InlineData("   ")]
+        public async Task SaveTemplateAsync_Edit_OfADefaultTemplate_WithABlankOrganization_IsAccepted(string organizationId)
+        {
+            using var _ = new BlocksTestContext();
+            ValidationSucceeds();
+            StoredAcmeTemplate(organizationId: "default");
+            var saved = CaptureSaved();
+
+            var response = await Service().SaveTemplateAsync(new SaveMailTemplateRequest { ItemId = "t-acme", OrganizationId = organizationId, TemplateSubject = "New" });
+
+            response.IsSuccess.Should().BeTrue();
+            saved()!.OrganizationId.Should().Be("default");
+        }
+
+        [Fact] // Organization default: a blank configuration id is stored empty
+        public async Task SaveTemplateAsync_Edit_WithABlankConfiguration_StoresItEmpty()
+        {
+            using var _ = new BlocksTestContext();
+            ValidationSucceeds();
+            StoredAcmeTemplate();
+            var saved = CaptureSaved();
+
+            var response = await Service().SaveTemplateAsync(new SaveMailTemplateRequest { ItemId = "t-acme", MailConfigurationId = "  " });
+
+            response.IsSuccess.Should().BeTrue();
+            saved()!.MailConfigurationId.Should().BeEmpty();
+        }
+
         [Theory] // C4 with stored missing organization = Default
         [InlineData(null)]
         [InlineData("")]
