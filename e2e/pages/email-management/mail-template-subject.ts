@@ -232,10 +232,10 @@ export function expectSaved(result: MailApiResult, what: string) {
 const GET_TEMPLATES_URL = /\/api\/Mail\/GetTemplates\/?(\?.*)?$/i;
 
 /**
- * Cleanup for UI flows: deletes every template named exactly `name` through the Mail API, with
- * the session headers of the console's own GetTemplates request. Returns how many it deleted.
+ * The Mail API with the session headers of the console's own GetTemplates request, and the ids of
+ * the templates named exactly `name` in the organization the list shows.
  */
-export async function deleteTemplatesNamed(page: Page, name: string): Promise<number> {
+async function templatesNamed(page: Page, name: string): Promise<{ api: MailApi; ids: string[] }> {
   const listRequest = page.waitForRequest((r) => GET_TEMPLATES_URL.test(r.url()), {
     timeout: 60_000,
   });
@@ -260,8 +260,31 @@ export async function deleteTemplatesNamed(page: Page, name: string): Promise<nu
   });
   const list = await callMailApi(page, api, "GET", `GetTemplates?${query.toString()}`);
   const ids = (list.json.templates ?? []).filter((t) => t.name === name).map((t) => t.itemId);
+  return { api, ids };
+}
+
+/**
+ * Cleanup for UI flows: deletes every template named exactly `name` through the Mail API.
+ * Returns how many it deleted.
+ */
+export async function deleteTemplatesNamed(page: Page, name: string): Promise<number> {
+  const { api, ids } = await templatesNamed(page, name);
   for (const itemId of ids) {
     await deleteTemplate(page, api, itemId);
   }
   return ids.length;
+}
+
+/**
+ * Gives the templates named `name` a body, as the console's step 2 saves it (`{ itemId,
+ * templateBody }`); step 1 already stored the subject. The flows never drive the editor, and
+ * logic refuses to send a template without a subject or body, test mails included.
+ */
+export async function saveBodyOfTemplatesNamed(page: Page, name: string, templateBody: string) {
+  const { api, ids } = await templatesNamed(page, name);
+  expect(ids, `templates named ${name}`).not.toHaveLength(0);
+  for (const itemId of ids) {
+    const result = await callMailApi(page, api, "POST", "SaveTemplate", { itemId, templateBody });
+    expectSaved(result, `body save of ${itemId}`);
+  }
 }

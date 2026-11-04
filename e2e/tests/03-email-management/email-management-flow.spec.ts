@@ -16,7 +16,10 @@ import {
   templatesFlow,
   type CreatedTemplate,
 } from "../../pages/email-management/email-managements";
-import { deleteTemplatesNamed } from "../../pages/email-management/mail-template-subject";
+import {
+  deleteTemplatesNamed,
+  saveBodyOfTemplatesNamed,
+} from "../../pages/email-management/mail-template-subject";
 import { test, expect } from "../../support/test-base";
 
 test.describe("Email Management flows", () => {
@@ -40,6 +43,9 @@ test.describe("Email Management flows", () => {
       // blocks-os#733 §10 steps 1-6 (H6, H9, H10, C8, H12, H11, C11).
       await test.step("Template lifecycle: edit locks, clone into another language, test mail, delete", async () => {
         if (!created) throw new Error("Add Template created no template (no language options?)");
+        // The test mail (H12) needs a subject and a body (logic's EmailValidator); step 1 saved the
+        // subject, and the clone copies this body too.
+        await saveBodyOfTemplatesNamed(page, created.name, "<p>E2E test email body.</p>");
         await templateLifecycleFlow(page, created);
       });
     } finally {
