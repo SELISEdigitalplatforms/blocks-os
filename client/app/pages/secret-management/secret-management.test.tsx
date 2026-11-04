@@ -113,6 +113,19 @@ describe("SecretManagementLayout", () => {
     expect(screen.getByText(ADD_NOTIFICATION)).toBeTruthy();
   });
 
+  it("shows Add webhook on the webhook list, and no header on one webhook's page", () => {
+    h.pathname = "/app/proj/secret-management/webhooks";
+    const { unmount } = render(<SecretManagementLayout />);
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Webhooks");
+    expect(screen.getByText("Add webhook")).toBeTruthy();
+    unmount();
+
+    h.pathname = "/app/proj/secret-management/webhooks/wh-1";
+    render(<SecretManagementLayout />);
+    expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
+    expect(screen.queryByText("Add webhook")).toBeNull();
+  });
+
   it.each(["new", "item-1", "push"])(
     "hides the list header while the notification page at /notification/%s is shown",
     (segment) => {

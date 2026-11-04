@@ -14,6 +14,9 @@ import { DataGatewayContents } from "@/cross-modules/data-gateway/pages/data-gat
 import { AiCreditsPage } from "@/cross-modules/ai-credits/pages/ai-credits/ai-credits-page";
 import { SecretList } from "@/cross-modules/secrets/components/secret-list/secret-list";
 import { StorageContents } from "@/cross-modules/storage/pages/storage/storage-contents";
+import { ActionsPage } from "@/cross-modules/actions/pages/actions/actions-page";
+import { WebhooksPage } from "@/cross-modules/webhooks/pages/webhooks/webhooks-page";
+import { WebhookDetailsPage } from "@/cross-modules/webhooks/pages/webhook-details/webhook-details-page";
 // Temporarily disabled
 // import { MagicUrls } from "@/cross-modules/utilities/pages/magic-urls/magic-urls";
 import ActivatePage from "@/pages/auth/activate-page";
@@ -316,6 +319,23 @@ export const router = createBrowserRouter([
                       {
                         path: "data-gateway",
                         element: <DataGatewayContents />,
+                      },
+                      {
+                        path: "actions",
+                        element: <ActionsPage />,
+                      },
+                      {
+                        path: "webhooks",
+                        children: [
+                          {
+                            index: true,
+                            element: <WebhooksPage />,
+                          },
+                          {
+                            path: ":id",
+                            element: <WebhookDetailsPage />,
+                          },
+                        ],
                       },
                       {
                         path: "email",
