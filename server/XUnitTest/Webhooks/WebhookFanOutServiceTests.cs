@@ -117,7 +117,7 @@ namespace XUnitTest.Webhooks
             await FanOutAsTenantAsync();
 
             _rows.Should().BeEmpty();
-            _jobs.Verify(j => j.EnqueueFanOutRetryAsync(It.Is<BlocksAction>(a => a.Id == "evt_1"), 2, _clock.Now.AddMinutes(1)), Times.Once);
+            _jobs.Verify(j => j.EnqueueFanOutRetryAsync(It.Is<BlocksAction>(a => a.Id == "evt_1"), 2, _clock.Now.AddSeconds(30)), Times.Once);
         }
 
         [Fact]

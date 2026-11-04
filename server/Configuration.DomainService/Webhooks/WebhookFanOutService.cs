@@ -18,11 +18,9 @@ public sealed class WebhookFanOutService : IWebhookFanOutService
 {
     /// <summary>
     /// Genesis completes a message even when its consumer throws, so a failed read is retried here instead:
-    /// up to this many fan-out attempts in all, waiting <see cref="RetryWaits"/>.
+    /// up to this many fan-out attempts in all, waiting the same 30 s, 90 s, 180 s as a delivery.
     /// </summary>
     public const int MaxAttempts = 4;
-
-    private static readonly TimeSpan[] RetryWaits = [TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(30)];
 
     private readonly IActionsRepository _actions;
     private readonly IWebhookRepository _webhooks;
@@ -169,7 +167,7 @@ public sealed class WebhookFanOutService : IWebhookFanOutService
             return;
         }
 
-        var wait = RetryWaits[Math.Clamp(attempt - 1, 0, RetryWaits.Length - 1)];
+        var wait = WebhookRetryPolicy.Waits[Math.Clamp(attempt - 1, 0, WebhookRetryPolicy.Waits.Length - 1)];
         try
         {
             await _jobs.EnqueueFanOutRetryAsync(action, attempt + 1, _timeProvider.GetUtcNow().Add(wait));
