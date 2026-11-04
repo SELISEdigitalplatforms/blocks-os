@@ -4,11 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
   navigate: vi.fn(),
-  clone: vi.fn(),
-  del: vi.fn(),
   toast: vi.fn(),
-  isClonePending: false,
-  isDeletePending: false,
 }));
 
 vi.mock("react-router", () => ({
@@ -18,10 +14,30 @@ vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useScopedPath: () => (p: string) => `/scoped/${p}`,
 }));
 vi.mock("@/hooks/use-toast", () => ({ toast: h.toast }));
-vi.mock("@blocks-communication/mail/hooks/use-email-template", () => ({
-  useCloneTemplate: () => ({ mutateAsync: h.clone, isPending: h.isClonePending }),
-  useDeleteEmailTemplate: () => ({ mutateAsync: h.del, isPending: h.isDeletePending }),
-}));
+// The clone and delete dialogs have their own tests; here they only report what they were
+// opened for and call back as a finished clone or delete would.
+vi.mock(
+  "@blocks-communication/mail/components/email-service/modals/clone-template/clone-template",
+  () => ({
+    CloneTemplateDialog: (p: { template: { itemId: string }; onCloned: (id: string) => void }) => (
+      <div role="dialog">
+        clone {p.template.itemId}
+        <button onClick={() => p.onCloned("clone-1")}>finish clone</button>
+      </div>
+    ),
+  }),
+);
+vi.mock(
+  "@blocks-communication/mail/components/email-service/modals/delete-template/delete-template",
+  () => ({
+    DeleteTemplateDialog: (p: { template: { itemId: string }; onDeleted: () => void }) => (
+      <div role="dialog">
+        delete {p.template.itemId}
+        <button onClick={p.onDeleted}>finish delete</button>
+      </div>
+    ),
+  }),
+);
 // The sort toolbar hook depends on the nuqs query-param adapter which is not
 // mounted in unit tests; stub it with a static value.
 vi.mock("./template-filter-toolbar", () => ({
@@ -71,10 +87,6 @@ const renderList = (overrides: Partial<React.ComponentProps<typeof EmailTemplate
 describe("EmailTemplateList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    h.isClonePending = false;
-    h.isDeletePending = false;
-    h.clone.mockResolvedValue({ isSuccess: true, itemId: "clone-1" });
-    h.del.mockResolvedValue({ isSuccess: true });
   });
 
   it("renders a loading skeleton while loading", () => {
@@ -125,7 +137,7 @@ describe("EmailTemplateList", () => {
     expect(await screen.findByText("Delete")).toBeTruthy();
   });
 
-  it("clones a template and navigates to the new communication on success", async () => {
+  it("opens the clone dialog for the row and goes to the clone when it is made (H10)", async () => {
     const user = userEvent.setup();
     renderList();
     const menuButtons = screen.getAllByRole("button", { name: /Open menu/i });
@@ -133,32 +145,13 @@ describe("EmailTemplateList", () => {
     await user.click(await screen.findByText("Clone Template"));
 
     const dialog = await screen.findByRole("dialog");
-    await user.click(within(dialog).getByRole("button", { name: "Yes" }));
-
-    await waitFor(() => expect(h.clone).toHaveBeenCalledWith({ itemId: "t-1" }));
-    expect(h.toast).toHaveBeenCalledWith(
-      expect.objectContaining({ variant: "success", description: "Cloned template successfully" }),
-    );
+    expect(within(dialog).getByText("clone t-1")).toBeTruthy();
+    await user.click(within(dialog).getByRole("button", { name: "finish clone" }));
     expect(h.navigate).toHaveBeenCalledWith("/scoped/email-management/communications/clone-1");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
-  it("surfaces a destructive toast when cloning fails", async () => {
-    h.clone.mockResolvedValue({ isSuccess: false, errors: { code: "nope" } });
-    const user = userEvent.setup();
-    renderList();
-    const menuButtons = screen.getAllByRole("button", { name: /Open menu/i });
-    await user.click(menuButtons[0]);
-    await user.click(await screen.findByText("Clone Template"));
-    const dialog = await screen.findByRole("dialog");
-    await user.click(within(dialog).getByRole("button", { name: "Yes" }));
-
-    await waitFor(() =>
-      expect(h.toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "destructive" })),
-    );
-    expect(h.navigate).not.toHaveBeenCalled();
-  });
-
-  it("deletes a template and reports success", async () => {
+  it("opens the delete dialog for the row and closes it when done (H11)", async () => {
     const user = userEvent.setup();
     renderList();
     const menuButtons = screen.getAllByRole("button", { name: /Open menu/i });
@@ -166,11 +159,8 @@ describe("EmailTemplateList", () => {
     await user.click(await screen.findByText("Delete"));
 
     const dialog = await screen.findByRole("dialog");
-    await user.click(within(dialog).getByRole("button", { name: "Yes" }));
-
-    await waitFor(() => expect(h.del).toHaveBeenCalledWith({ itemId: "t-2" }));
-    expect(h.toast).toHaveBeenCalledWith(
-      expect.objectContaining({ variant: "success", description: "Deleted template successfully" }),
-    );
+    expect(within(dialog).getByText("delete t-2")).toBeTruthy();
+    await user.click(within(dialog).getByRole("button", { name: "finish delete" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 });

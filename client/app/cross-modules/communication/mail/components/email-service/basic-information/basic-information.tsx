@@ -3,7 +3,6 @@ import React, {
   useCallback,
   useImperativeHandle,
   useMemo,
-  useState,
   type ReactNode,
 } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
@@ -21,7 +20,21 @@ import { useForm, type Resolver } from "react-hook-form";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useGetEmailConfigs } from "@blocks-communication/mail/hooks/use-email-config";
+import { useGetEmailSecretConfigs } from "@blocks-communication/mail/hooks/use-email-config";
+import {
+  useEmailOrganization,
+  useOrganizationName,
+} from "@blocks-communication/mail/hooks/use-email-organization";
+import {
+  fromConfigurationValue,
+  toConfigurationValue,
+} from "@blocks-communication/mail/constants/template-organization";
+import {
+  ConfigurationHint,
+  TemplateConfigurationOptions,
+} from "@blocks-communication/mail/components/email-service/template-configuration-options/template-configuration-options";
+import { LockedField } from "@blocks-communication/mail/components/email-service/locked-field/locked-field";
+import { templateErrorMessages } from "@blocks-communication/mail/constants/template-errors";
 import { useSaveMailTemplate } from "@blocks-communication/mail/hooks/use-email-template";
 import { useGetLanguages } from "@blocks-localization/hooks/use-language-manager";
 import { useProjectStore, useT } from "@seliseblocks/genesis-os";
@@ -133,15 +146,23 @@ const BasicInformation = forwardRef(function Inner(
   const { t } = useT("os.communication.mail");
   const schema = useMemo(() => createSchema(t), [t]);
   const { isLoading: isLanguageListLoading, data: languageListData } = useGetLanguages();
-  const [filterData] = useState({ pageNumber: 0, pageSize: 10 });
-  const { isLoading, data } = useGetEmailConfigs(filterData.pageNumber, filterData.pageSize);
+  // New Template opens in the page's organization; the Default organization with multi-org off.
+  const organization = useEmailOrganization();
+  const organizationId = organization.selectedOrganizationId;
+  const organizationName = useOrganizationName(organizationId);
+  const { isLoading, data: configsResponse } = useGetEmailSecretConfigs(organizationId);
+  const data = configsResponse?.configurations;
   const { isPending, mutateAsync: saveTemplate } = useSaveMailTemplate();
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const uniqueLanguages = getUniqueLanguages(languageListData ?? []);
   const form = useForm<IEmailTemplate>({
     defaultValues: {
       itemId: templateData.itemId,
-      mailConfigurationId: templateData.mailConfigurationId,
+      // A saved template without a configuration uses "Organization default"; a new one starts
+      // with nothing picked, so the required rule asks for a choice.
+      mailConfigurationId: templateData.itemId
+        ? toConfigurationValue(templateData.mailConfigurationId)
+        : (templateData.mailConfigurationId ?? ""),
       language: templateData.language,
       name: templateData.name,
       templateSubject: templateData.templateSubject,
@@ -168,6 +189,8 @@ const BasicInformation = forwardRef(function Inner(
       try {
         const payload = {
           ...data,
+          mailConfigurationId: fromConfigurationValue(data.mailConfigurationId ?? ""),
+          organizationId,
           itemId: templateItemId || "",
           projectKey: tenantId,
         };
@@ -181,16 +204,16 @@ const BasicInformation = forwardRef(function Inner(
           return;
         }
 
-        showErrorToast({ errors: res.errors });
+        showErrorToast({ errors: res.errors, customMessages: templateErrorMessages(t) });
       } catch (error) {
         if (isErrorWithErrors(error)) {
-          showErrorToast({ errors: error.errors });
+          showErrorToast({ errors: error.errors, customMessages: templateErrorMessages(t) });
         } else {
           showErrorToast({ errors: t("BASIC_INFORMATION.SOMETHING_WENT_WRONG") });
         }
       }
     },
-    [onSaveSuccess, saveTemplate, templateItemId, tenantId, t],
+    [onSaveSuccess, saveTemplate, templateItemId, tenantId, organizationId, t],
   );
 
   const { isValid } = form.formState;
@@ -271,15 +294,14 @@ const BasicInformation = forwardRef(function Inner(
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {data
-                          .filter((config) => !config.isInbound)
-                          .map((config) => (
-                            <SelectItem key={config.itemId} value={config.itemId}>
-                              {config.name}
-                            </SelectItem>
-                          ))}
+                        <TemplateConfigurationOptions
+                          configs={data}
+                          organizationId={organizationId}
+                          organizationName={organizationName}
+                        />
                       </SelectContent>
                     </Select>
+                    <ConfigurationHint value={field.value} />
                     <FormMessage />
                   </FormItem>
                 )}
@@ -314,6 +336,14 @@ const BasicInformation = forwardRef(function Inner(
                   </FormItem>
                 )}
               />
+
+              {organization.isMultiOrgEnabled ? (
+                <LockedField
+                  id="basic-information-organization"
+                  label={t("TEMPLATE_ORGANIZATION.ORGANIZATION")}
+                  value={organizationName}
+                />
+              ) : null}
 
               <FormField
                 name="templateSubject"

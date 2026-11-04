@@ -21,22 +21,25 @@ import {
 } from "@/components/ui-kits/dropdown-menu/dropdown-menu";
 import { Button } from "@/components/ui-kits/button/button";
 import { AlignLeft, Copy, MoreVertical, Trash } from "lucide-react";
-import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
-import { toast } from "@/hooks/use-toast";
-import {
-  useCloneTemplate,
-  useDeleteEmailTemplate,
-} from "@blocks-communication/mail/hooks/use-email-template";
+import { CloneTemplateDialog } from "@blocks-communication/mail/components/email-service/modals/clone-template/clone-template";
+import { DeleteTemplateDialog } from "@blocks-communication/mail/components/email-service/modals/delete-template/delete-template";
+import { TemplateConfigurationName } from "@blocks-communication/mail/email/email-service-table/template-configuration-name";
+import { languageNameOf } from "@blocks-communication/mail/constants/template-organization";
 import { useNavigate } from "react-router";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { useT } from "@seliseblocks/genesis-os";
 
-const KEY_COMMON_ERROR = "common:ERROR";
 type EmailTemplateListProps = {
   templates: IEmailTemplate[];
   isLoading: boolean;
+  /** The listed organization's configurations and the Default organization's. */
   emailConfigsData: IEmailConfig[];
+  /** The project's languages, for the Language column. */
+  languages?: Array<{ languageCode: string; languageName: string }>;
+  /** The listed organization's name. */
+  organizationName?: string;
+  isMultiOrgEnabled?: boolean;
   onRowClick: (emailId: number | string) => void;
 };
 const LoadingSkeleton = () => (
@@ -50,14 +53,15 @@ export const EmailTemplateList = ({
   templates,
   isLoading,
   emailConfigsData,
+  languages,
+  organizationName = "",
+  isMultiOrgEnabled = false,
   onRowClick,
 }: EmailTemplateListProps) => {
   const { t } = useT("os.communication.mail");
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const { sortQueryParams, setSortQueryParams } = useTemplatesSortQueryParams();
-  const { isPending: isClonePending, mutateAsync: cloneMailTemplate } = useCloneTemplate();
-  const { isPending: isDeletePending, mutateAsync: deleteMailTemplate } = useDeleteEmailTemplate();
   const [isCloneDialogOpen, setIsCloneDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedTemplateData, setSelectedTemplateData] = useState<IEmailTemplate | null>(null);
@@ -68,63 +72,6 @@ export const EmailTemplateList = ({
   const DeleteEmailTemplate = (rowData: IEmailTemplate) => {
     setSelectedTemplateData(rowData);
     setIsDeleteDialogOpen(true);
-  };
-  const onConfirmDeleteTemplate = async () => {
-    try {
-      const payload = {
-        itemId: selectedTemplateData?.itemId ?? "",
-      };
-      const res = await deleteMailTemplate(payload);
-      if (res?.isSuccess) {
-        toast({
-          variant: "success",
-          title: t("common:SUCCESS"),
-          description: t("EMAIL_TEMPLATE_LIST.DELETED_SUCCESS"),
-        });
-        setIsDeleteDialogOpen(false);
-      } else {
-        toast({
-          variant: "destructive",
-          title: t(KEY_COMMON_ERROR),
-          description: JSON.stringify(res?.errors),
-        });
-      }
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: t(KEY_COMMON_ERROR),
-        description: JSON.stringify(error),
-      });
-    }
-  };
-  const onConfirmCloneTemplate = async () => {
-    try {
-      const payload = {
-        itemId: selectedTemplateData?.itemId ?? "",
-      };
-      const res = await cloneMailTemplate(payload);
-      if (res?.isSuccess) {
-        toast({
-          variant: "success",
-          title: t("common:SUCCESS"),
-          description: t("EMAIL_TEMPLATE_LIST.CLONED_SUCCESS"),
-        });
-        setIsCloneDialogOpen(false);
-        navigate(scoped(`email-management/communications/${res?.itemId}`));
-      } else {
-        toast({
-          variant: "destructive",
-          title: t(KEY_COMMON_ERROR),
-          description: JSON.stringify(res?.errors),
-        });
-      }
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: t(KEY_COMMON_ERROR),
-        description: JSON.stringify(error),
-      });
-    }
   };
   const columns = useMemo<ColumnDef<IEmailTemplate>[]>(
     () => [
@@ -141,15 +88,17 @@ export const EmailTemplateList = ({
         cell: ({ row }) => <div className="truncate">{row.getValue("name")}</div>,
       },
       {
+        accessorKey: "language",
+        header: t("EMAIL_TEMPLATE_LIST.COLUMN_LANGUAGE"),
+        cell: ({ row }) => (
+          <div className="truncate">{languageNameOf(row.original.language, languages)}</div>
+        ),
+      },
+      {
         accessorKey: "MailConfigurationId",
         header: t("EMAIL_TEMPLATE_LIST.COLUMN_CONFIGURATION"),
         cell: ({ row }) => (
-          <div className="truncate">
-            {
-              emailConfigsData?.find((config) => config.itemId === row.original.mailConfigurationId)
-                ?.name
-            }
-          </div>
+          <TemplateConfigurationName template={row.original} configs={emailConfigsData} />
         ),
       },
       {
@@ -228,7 +177,7 @@ export const EmailTemplateList = ({
         },
       },
     ],
-    [sortQueryParams, setSortQueryParams, emailConfigsData, onRowClick, t],
+    [sortQueryParams, setSortQueryParams, emailConfigsData, languages, onRowClick, t],
   );
   const table = useReactTable({
     data: templates,
@@ -279,34 +228,30 @@ export const EmailTemplateList = ({
         )}
       </TableBody>
       <Dialog open={isCloneDialogOpen} onOpenChange={setIsCloneDialogOpen}>
-        {!isLoading && selectedTemplateData && (
-          <ConfirmationModal
-            onCancel={() => {}}
-            onConfirm={() => onConfirmCloneTemplate()}
-            data={{
-              dialogTitle: t("EMAIL_TEMPLATE_LIST.CONFIRMATION_TITLE"),
-              dialogSubtitle: t("EMAIL_TEMPLATE_LIST.CLONE_CONFIRM", {
-                name: selectedTemplateData?.name ?? "",
-              }),
+        {!isLoading && selectedTemplateData && isCloneDialogOpen ? (
+          <CloneTemplateDialog
+            template={selectedTemplateData}
+            organizationName={organizationName}
+            showOrganization={isMultiOrgEnabled}
+            onClose={() => setIsCloneDialogOpen(false)}
+            onCloned={(itemId) => {
+              setIsCloneDialogOpen(false);
+              navigate(scoped(`email-management/communications/${itemId}`));
             }}
-            buttonState={{ confirm: { disable: isClonePending } }}
           />
-        )}
+        ) : null}
       </Dialog>
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        {!isLoading && selectedTemplateData && (
-          <ConfirmationModal
-            onCancel={() => {}}
-            onConfirm={() => onConfirmDeleteTemplate()}
-            data={{
-              dialogTitle: t("EMAIL_TEMPLATE_LIST.CONFIRMATION_TITLE"),
-              dialogSubtitle: t("EMAIL_TEMPLATE_LIST.DELETE_CONFIRM", {
-                name: selectedTemplateData?.name ?? "",
-              }),
-            }}
-            buttonState={{ confirm: { disable: isDeletePending } }}
+        {!isLoading && selectedTemplateData && isDeleteDialogOpen ? (
+          <DeleteTemplateDialog
+            template={selectedTemplateData}
+            languageName={languageNameOf(selectedTemplateData.language, languages)}
+            organizationName={organizationName}
+            isMultiOrgEnabled={isMultiOrgEnabled}
+            onClose={() => setIsDeleteDialogOpen(false)}
+            onDeleted={() => setIsDeleteDialogOpen(false)}
           />
-        )}
+        ) : null}
       </Dialog>
     </Table>
   );

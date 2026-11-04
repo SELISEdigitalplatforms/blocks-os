@@ -27,7 +27,12 @@ export interface IEmailTemplate {
   lastUpdatedDate?: string;
   createdBy?: string;
   lastUpdatedBy?: string;
-  organizationIds?: string[];
+  /**
+   * The organization the template belongs to; "default" for the Default organization. The API
+   * always returns it; it is optional only because the console builds partial templates (a new
+   * step-1 draft, a body-only save) that must not send one.
+   */
+  organizationId?: string;
   tags?: string[];
   mailConfigurationId?: string;
   templateBody?: string;

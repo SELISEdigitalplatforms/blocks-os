@@ -1,6 +1,7 @@
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { emailService } from "@blocks-communication/mail/services/email.services";
+import { DEFAULT_ORGANIZATION_ID } from "@blocks-communication/mail/constants/organization";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -42,12 +43,14 @@ export const useGetEmailTemplates = (
   isDescending: boolean,
   language: string,
   mailConfigurationId: string,
+  organizationId: string = DEFAULT_ORGANIZATION_ID,
 ) => {
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   return useQuery({
     queryKey: [
       "email-templates",
       tenantId,
+      organizationId,
       pageNumber,
       pageSize,
       searchKey,
@@ -66,7 +69,39 @@ export const useGetEmailTemplates = (
         isDescending,
         language,
         mailConfigurationId,
+        organizationId,
       ),
+  });
+};
+
+/** Enough rows for every language a project enables. */
+const LANGUAGE_LOOKUP_PAGE_SIZE = 100;
+
+/**
+ * The languages a template name already has in an organization, for the clone dialog. The list
+ * search matches parts of names and subjects, so only exact name matches count.
+ */
+export const useGetTemplateLanguages = (name: string, organizationId: string, enabled: boolean) => {
+  const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
+  return useQuery({
+    queryKey: ["email-templates", tenantId, organizationId, "languages", name],
+    staleTime: 0,
+    enabled: enabled && !!name,
+    queryFn: async () => {
+      const response = await emailService.fetchEmailTemplates(
+        0,
+        LANGUAGE_LOOKUP_PAGE_SIZE,
+        name,
+        "Name",
+        false,
+        "",
+        "",
+        organizationId,
+      );
+      return (response?.templates ?? [])
+        .filter((template) => template.name === name && !!template.language)
+        .map((template) => template.language as string);
+    },
   });
 };
 

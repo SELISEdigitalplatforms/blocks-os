@@ -69,7 +69,7 @@ public class OsRepositoryDenialTests
         var repo = new MailTemplateRepository(StrictCollections(), Deny);
 
         (await repo.GetByIdAsync("1")).Should().BeNull();
-        (await repo.GetByNameAndLanguageAsync("n", "en")).Should().BeNull();
+        (await repo.GetByNameAndLanguageAsync("n", "en", "default")).Should().BeNull();
         var list = await repo.GetsAsync(new GetAllMailTemplatesRequest());
         list.TotalCount.Should().Be(0);
         list.Templates.Should().BeEmpty();

@@ -92,8 +92,13 @@ class EmailService {
     isDescending: boolean = false,
     language: string,
     mailConfigurationId: string,
+    organizationId?: string,
   ): Promise<{ templates: IEmailTemplate[]; totalCount: number }> => {
-    const url = `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATES}?pageNumber=${pageNumber}&pageSize=${pageSize}&searchKey=${searchKey}&sortProperty=${sortProperty}&isDescending=${isDescending}&language=${language}&mailConfigurationId=${mailConfigurationId}`;
+    // Without an organization the server lists the Default organization's templates.
+    const organizationQuery = organizationId
+      ? `&organizationId=${encodeURIComponent(organizationId)}`
+      : "";
+    const url = `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATES}?pageNumber=${pageNumber}&pageSize=${pageSize}&searchKey=${searchKey}&sortProperty=${sortProperty}&isDescending=${isDescending}&language=${language}&mailConfigurationId=${mailConfigurationId}${organizationQuery}`;
     return http.get(url, undefined, { absoluteUrl: true });
   };
 
@@ -164,9 +169,13 @@ class EmailService {
   };
 
   getMailBoxMail = (itemId: string): Promise<IGetMailBoxMailResponse> => {
-    return http.get(`${MAIL_ENDPOINTS.GET_MAILBOX_MAIL}?ItemId=${encodeURIComponent(itemId)}`, undefined, {
-      absoluteUrl: true,
-    });
+    return http.get(
+      `${MAIL_ENDPOINTS.GET_MAILBOX_MAIL}?ItemId=${encodeURIComponent(itemId)}`,
+      undefined,
+      {
+        absoluteUrl: true,
+      },
+    );
   };
 
   saveMailConfig = (
@@ -207,10 +216,12 @@ class EmailService {
         return response.templateCount;
       });
 
+  /** A test mail of exactly this template: blocks-logic sends the template by its id. */
   sendTestMail = (data: {
     to: string;
     purpose: string;
     language: string;
+    templateId: string;
   }): Promise<{
     errors: null | unknown;
     isSuccess: boolean;
@@ -222,6 +233,7 @@ class EmailService {
       language: data.language,
       replyTo: [data.to],
       isTestMail: true,
+      templateId: data.templateId,
     };
     return http.post(MAIL_ENDPOINTS.SEND_TO_ANY, payload, undefined, {
       absoluteUrl: true,
@@ -230,6 +242,8 @@ class EmailService {
 
   saveMailTemplate(requestBody: {
     itemId: string;
+    /** On create only; an edit keeps the stored organization. */
+    organizationId?: string;
     mailConfigurationId?: string;
     language?: string;
     name?: string;
@@ -253,10 +267,11 @@ class EmailService {
       .then((response) => response);
   }
 
+  /** A clone keeps the source's name and organization, in another language. */
   cloneMailTemplate(requestBody: {
     itemId: string;
     mailConfigurationId?: string;
-    language?: string;
+    language: string;
     name?: string;
     templateSubject?: string;
   }): Promise<{

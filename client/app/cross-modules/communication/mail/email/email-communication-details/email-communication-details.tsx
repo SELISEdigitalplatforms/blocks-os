@@ -1,23 +1,41 @@
 import React, { useState } from "react";
-import { ArrowLeft, Pencil, Send } from "lucide-react";
+import { ArrowLeft, Copy, EllipsisVertical, Pencil, Send, Trash } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
-import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import EditCommunication from "@blocks-communication/mail/components/email-service/modals/edit-communication/edit-communication";
 import { checkValidDate, formatFullDate, parseDateString } from "@/lib/utils";
-import { toast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui-kits/dropdown-menu/dropdown-menu";
 import { useNavigate } from "react-router";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { useT } from "@seliseblocks/genesis-os";
 import { useUserStore } from "@seliseblocks/genesis-os/store";
-import { useGetEmailConfigs } from "@blocks-communication/mail/hooks/use-email-config";
-import { langConfigureData } from "@blocks-localization/constants/language-dummy-data";
+import { useGetEmailSecretConfigs } from "@blocks-communication/mail/hooks/use-email-config";
 import {
-  useGetEmailTemplate,
-  useSendTestMail,
-} from "@blocks-communication/mail/hooks/use-email-template";
+  EMAIL_ORGANIZATION_PARAM,
+  useEmailOrganization,
+  useOrganizationName,
+} from "@blocks-communication/mail/hooks/use-email-organization";
+import { useGetLanguages } from "@blocks-localization/hooks/use-language-manager";
+import { useGetEmailTemplate } from "@blocks-communication/mail/hooks/use-email-template";
+import {
+  DEFAULT_ORGANIZATION_ID,
+  organizationOf,
+} from "@blocks-communication/mail/constants/organization";
+import {
+  languageNameOf,
+  resolveOrganizationDefault,
+} from "@blocks-communication/mail/constants/template-organization";
+import { TemplateConfigurationName } from "@blocks-communication/mail/email/email-service-table/template-configuration-name";
+import { CloneTemplateDialog } from "@blocks-communication/mail/components/email-service/modals/clone-template/clone-template";
+import { DeleteTemplateDialog } from "@blocks-communication/mail/components/email-service/modals/delete-template/delete-template";
+import { SendTestEmailDialog } from "@blocks-communication/mail/components/email-service/modals/send-test-email/send-test-email";
 import { EmailTemplateDetailsSkeleton } from "./email-template-details-skeleton";
 import { withStyleNonce } from "@/lib/csp-nonce";
 export function EmailCommunicationDetails({
@@ -32,12 +50,21 @@ export function EmailCommunicationDetails({
   const { isLoading, isFetching, data } = useGetEmailTemplate(id);
   const { userDetails } = useUserStore();
   const [emailDetails, setEmailDetails] = useState<IEmailTemplate | null>(null);
+  // The template's organization's configurations and the Default organization's, for the
+  // Configuration field and what a test mail sends through.
+  const organizationId = organizationOf(data ?? {});
   const {
     isLoading: isConfigsLoading,
     isFetching: isConfigsFetching,
-    data: emailConfigsData,
-  } = useGetEmailConfigs(0, 100);
-  const { isPending, mutateAsync } = useSendTestMail();
+    data: configsResponse,
+  } = useGetEmailSecretConfigs(organizationId);
+  const emailConfigsData = configsResponse?.configurations ?? [];
+  const { isMultiOrgEnabled } = useEmailOrganization();
+  const organizationName = useOrganizationName(organizationId);
+  const { data: languageListData } = useGetLanguages();
+  const languages = Array.isArray(languageListData) ? languageListData : [];
+  const [isCloneDialogOpen, setIsCloneDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -63,63 +90,16 @@ export function EmailCommunicationDetails({
     [`${emailBasePath}/communications`]: null,
     [`${emailBasePath}/communications/${emailDetails.itemId}`]: emailDetails.name ?? "",
   };
-  const confirmationModalData = {
-    dialogTitle: t("EMAIL_COMMUNICATION_DETAILS.SEND_TEST_TITLE"),
-    dialogSubtitle: t("EMAIL_COMMUNICATION_DETAILS.SEND_TEST_CONFIRM"),
-    confirmButton: t("EMAIL_COMMUNICATION_DETAILS.SEND"),
-    cancelButton: t("common:CANCEL"),
-  };
-  const dat: IEmailTemplate = {
-    itemId: "",
-    createdDate: "",
-    lastUpdatedDate: "",
-    createdBy: "",
-    lastUpdatedBy: "",
-    organizationIds: [],
-    tags: [],
-    mailConfigurationId: "",
-    templateBody: "",
-    jsonContent: "",
-    imageId: "",
-    imageUrl: "",
-    language: "",
-    name: "",
-    templateSubject: "",
-    generatedBy: "",
-  };
-  const editData = emailDetails ? emailDetails : dat;
-  const sendTestEmail = async () => {
-    try {
-      const payload = {
-        to: userDetails?.email || "",
-        purpose: emailDetails.name || "",
-        language: emailDetails.language || "",
-      };
-      const res = await mutateAsync(payload);
-      if (res?.isSuccess) {
-        toast({
-          variant: "success",
-          title: t("common:SUCCESS"),
-          description: t("EMAIL_COMMUNICATION_DETAILS.TEST_SENT"),
-        });
-        setIsSendTestEmailModalOpen(false);
-      } else {
-        toast({
-          variant: "destructive",
-          title: t("common:ERROR"),
-          description: JSON.stringify(res?.errors),
-        });
-        setIsSendTestEmailModalOpen(false);
-      }
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: t("common:ERROR"),
-        description: JSON.stringify(error),
-      });
-      setIsSendTestEmailModalOpen(false);
-    }
-  };
+  const editData = emailDetails;
+  const languageName = languageNameOf(emailDetails.language, languages);
+  const sendsThrough = emailDetails.mailConfigurationId
+    ? (emailConfigsData.find((config) => config.itemId === emailDetails.mailConfigurationId)
+        ?.name ?? "-")
+    : (resolveOrganizationDefault(emailConfigsData, organizationId)?.name ?? "-");
+  const listPath =
+    isMultiOrgEnabled && organizationId !== DEFAULT_ORGANIZATION_ID
+      ? `${emailBasePath}?${EMAIL_ORGANIZATION_PARAM}=${encodeURIComponent(organizationId)}`
+      : emailBasePath;
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 sm:gap-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
@@ -144,12 +124,11 @@ export function EmailCommunicationDetails({
             </h1>
           </div>
         </div>
-        <div className="flex shrink-0 justify-end sm:self-end">
+        <div className="flex shrink-0 justify-end gap-2 sm:self-end">
           <Button
             size="default"
             variant="outline"
             className="gap-2 shadow-none hover:bg-white"
-            disabled={isPending}
             onClick={sendTestEmailModalOpen}
           >
             <Send className="h-5 w-5" />
@@ -158,14 +137,78 @@ export function EmailCommunicationDetails({
             </span>
           </Button>
           <Dialog open={isSendTestEmailModalOpen} onOpenChange={setIsSendTestEmailModalOpen}>
-            <ConfirmationModal
-              onCancel={() => {
-                setIsSendTestEmailModalOpen(false);
-              }}
-              onConfirm={sendTestEmail}
-              data={confirmationModalData}
-              buttonState={{ confirm: { disable: isPending } }}
-            />
+            {isSendTestEmailModalOpen ? (
+              <SendTestEmailDialog
+                template={emailDetails}
+                to={userDetails?.email || ""}
+                languageName={languageName}
+                organizationName={organizationName}
+                showOrganization={isMultiOrgEnabled}
+                sendsThrough={sendsThrough}
+                onClose={() => setIsSendTestEmailModalOpen(false)}
+              />
+            ) : null}
+          </Dialog>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="icon"
+                variant="outline"
+                className="shadow-none"
+                aria-label={t("EMAIL_COMMUNICATION_DETAILS.MORE_ACTIONS", {
+                  name: emailDetails.name ?? "",
+                })}
+              >
+                <EllipsisVertical className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={() => setIsCloneDialogOpen(true)}
+              >
+                <Copy className="mr-2 h-4 w-4" />
+                <span>{t("EMAIL_TEMPLATE_LIST.CLONE_TEMPLATE")}</span>
+              </DropdownMenuItem>
+              {emailDetails.generatedBy !== "Tenant" && (
+                <DropdownMenuItem
+                  className="cursor-pointer text-error"
+                  onClick={() => setIsDeleteDialogOpen(true)}
+                >
+                  <Trash className="mr-2 h-4 w-4" />
+                  <span>{t("common:DELETE")}</span>
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Dialog open={isCloneDialogOpen} onOpenChange={setIsCloneDialogOpen}>
+            {isCloneDialogOpen ? (
+              <CloneTemplateDialog
+                template={emailDetails}
+                organizationName={organizationName}
+                showOrganization={isMultiOrgEnabled}
+                onClose={() => setIsCloneDialogOpen(false)}
+                onCloned={(itemId) => {
+                  setIsCloneDialogOpen(false);
+                  navigate(scoped(`email-management/communications/${itemId}`));
+                }}
+              />
+            ) : null}
+          </Dialog>
+          <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            {isDeleteDialogOpen ? (
+              <DeleteTemplateDialog
+                template={emailDetails}
+                languageName={languageName}
+                organizationName={organizationName}
+                isMultiOrgEnabled={isMultiOrgEnabled}
+                onClose={() => setIsDeleteDialogOpen(false)}
+                onDeleted={() => {
+                  setIsDeleteDialogOpen(false);
+                  navigate(listPath);
+                }}
+              />
+            ) : null}
           </Dialog>
         </div>
       </div>
@@ -241,22 +284,27 @@ export function EmailCommunicationDetails({
                 {t("EMAIL_COMMUNICATION_DETAILS.LANGUAGE")}
               </h3>
               <p className="wrap-break-word text-base font-medium text-high-emphasis">
-                {langConfigureData.find(
-                  (lang) =>
-                    lang.itemId.split("-")[0] === (emailDetails.language ?? "").split("-")[0],
-                )?.languageName || "-"}
+                {languageName}
               </p>
             </div>
             <div className="grid min-w-0 gap-1">
               <h3 className="text-sm font-medium text-low-emphasis">
                 {t("EMAIL_COMMUNICATION_DETAILS.CONFIGURATION")}
               </h3>
-              <p className="wrap-break-word text-base font-medium text-high-emphasis">
-                {emailConfigsData?.find(
-                  (config) => config.itemId === emailDetails.mailConfigurationId,
-                )?.name || "-"}
-              </p>
+              <div className="wrap-break-word text-base font-medium text-high-emphasis">
+                <TemplateConfigurationName template={emailDetails} configs={emailConfigsData} />
+              </div>
             </div>
+            {isMultiOrgEnabled ? (
+              <div className="grid min-w-0 gap-1">
+                <h3 className="text-sm font-medium text-low-emphasis">
+                  {t("EMAIL_COMMUNICATION_DETAILS.ORGANIZATION")}
+                </h3>
+                <p className="wrap-break-word text-base font-medium text-high-emphasis">
+                  {organizationName}
+                </p>
+              </div>
+            ) : null}
             <div className="grid min-w-0 gap-1">
               <h3 className="text-sm font-medium text-low-emphasis">
                 {t("EMAIL_COMMUNICATION_DETAILS.CREATED_ON")}

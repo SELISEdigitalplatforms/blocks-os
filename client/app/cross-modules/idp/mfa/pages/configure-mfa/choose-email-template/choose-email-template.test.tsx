@@ -9,6 +9,7 @@ const h = vi.hoisted(() => ({
   isPending: false,
   mutateAsync: vi.fn(),
   toast: vi.fn(),
+  templatesArgs: [] as unknown[],
 }));
 
 vi.mock("@blocks-idp/mfa/hooks/use-mfa-config", () => ({
@@ -16,11 +17,14 @@ vi.mock("@blocks-idp/mfa/hooks/use-mfa-config", () => ({
   useSaveMFAConfig: () => ({ mutateAsync: h.mutateAsync, isPending: h.isPending }),
 }));
 vi.mock("@blocks-communication/mail/hooks/use-email-template", () => ({
-  useGetEmailTemplates: () => ({
-    data: h.templatesData,
-    isLoading: h.isLoading,
-    isFetching: h.isFetching,
-  }),
+  useGetEmailTemplates: (...args: unknown[]) => {
+    h.templatesArgs = args;
+    return {
+      data: h.templatesData,
+      isLoading: h.isLoading,
+      isFetching: h.isFetching,
+    };
+  },
 }));
 vi.mock("@/hooks/use-toast", () => ({ toast: (...a: unknown[]) => h.toast(...a) }));
 
@@ -38,6 +42,11 @@ describe("ChooseEmailTemplate", () => {
     h.isFetching = false;
     h.isPending = false;
     h.mutateAsync.mockResolvedValue({ isSuccess: true });
+  });
+
+  it("lists the Default organization's templates, which IAM sends MFA mail from (H13)", () => {
+    render(<ChooseEmailTemplate open setOpen={vi.fn()} />);
+    expect(h.templatesArgs[7]).toBe("default");
   });
 
   it("lists the default and fetched templates", () => {
@@ -63,7 +72,9 @@ describe("ChooseEmailTemplate", () => {
     render(<ChooseEmailTemplate open setOpen={setOpen} />);
     fireEvent.click(screen.getByText("Welcome"));
     fireEvent.click(screen.getByRole("button", { name: "Choose" }));
-    await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledWith({ enabled: true, allowedMethods: [1] }));
+    await waitFor(() =>
+      expect(h.mutateAsync).toHaveBeenCalledWith({ enabled: true, allowedMethods: [1] }),
+    );
     expect(h.toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "success" }));
     expect(setOpen).toHaveBeenCalledWith(false);
   });

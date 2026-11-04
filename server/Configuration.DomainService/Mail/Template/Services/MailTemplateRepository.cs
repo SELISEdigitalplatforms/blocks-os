@@ -4,6 +4,7 @@ using MongoDB.Driver;
 using System.Text.RegularExpressions;
 using Blocks.Genesis.Entities.Os;
 using Os.DataAccess;
+using Configuration.DomainService.Organizations;
 
 namespace Configuration.DomainService.Mail.Template.Services
 {
@@ -50,15 +51,16 @@ namespace Configuration.DomainService.Mail.Template.Services
 
             // Masked: View column (property) rules clear what the caller may not see.
             var scope = await _dataAccess.ReadAsync(OsSchemas.EmailTemplate, filter, "MailTemplateRepository.GetForViewAsync");
-            return scope.Granted ? scope.ForView(await scope.Apply(collection).FirstOrDefaultAsync()) : null;
+            return scope.Granted ? WithOrganization(scope.ForView(await scope.Apply(collection).FirstOrDefaultAsync())) : null;
         }
 
-        public async Task<EmailTemplate?> GetByNameAndLanguageAsync(string name, string language)
+        public async Task<EmailTemplate?> GetByNameAndLanguageAsync(string name, string language, string organizationId)
         {
             var collection = _dbContextProvider.GetCollection<EmailTemplate>(CollectionName);
             var filter = Builders<EmailTemplate>.Filter.And(
                 Builders<EmailTemplate>.Filter.Eq(t => t.Name, name),
-                Builders<EmailTemplate>.Filter.Eq(t => t.Language, language));
+                Builders<EmailTemplate>.Filter.Eq(t => t.Language, language),
+                OfOrganization(organizationId));
 
             var scope = await _dataAccess.ReadAsync(OsSchemas.EmailTemplate, filter, "MailTemplateRepository.GetByNameAndLanguageAsync", useProjection: false);
             return scope.Granted ? await scope.Apply(collection).FirstOrDefaultAsync() : null;
@@ -68,7 +70,8 @@ namespace Configuration.DomainService.Mail.Template.Services
         {
             var collection = _dbContextProvider.GetCollection<EmailTemplate>(CollectionName);
             var filterBuilder = Builders<EmailTemplate>.Filter;
-            var filter = filterBuilder.Empty;
+            // Organization-only lists: one organization's templates, never mixed with the Default ones.
+            var filter = OfOrganization(OrganizationIds.Normalize(request.OrganizationId));
 
             if (!string.IsNullOrWhiteSpace(request.SearchKey))
             {
@@ -114,9 +117,25 @@ namespace Configuration.DomainService.Mail.Template.Services
 
             return new GetAllMailTemplatesResponse
             {
-                Templates = scope.ForView(templates),
+                Templates = scope.ForView(templates).ConvertAll(t => WithOrganization(t)!),
                 TotalCount = totalCount
             };
+        }
+
+        /// <summary>The organization's templates; the Default organization's include those stored without one.</summary>
+        private static FilterDefinition<EmailTemplate> OfOrganization(string organizationId) =>
+            OrganizationIds.Normalize(organizationId) == OrganizationIds.Default
+                ? Builders<EmailTemplate>.Filter.In(t => t.OrganizationId, OrganizationIds.StoredDefaultValues)
+                : Builders<EmailTemplate>.Filter.Eq(t => t.OrganizationId, organizationId);
+
+        // A template stored with an empty OrganizationId is the Default organization's, and says so.
+        private static EmailTemplate? WithOrganization(EmailTemplate? template)
+        {
+            if (template is not null)
+            {
+                template.OrganizationId = OrganizationIds.Normalize(template.OrganizationId);
+            }
+            return template;
         }
 
         public async Task<long> CountByMailConfigurationIdAsync(string mailConfigurationId)

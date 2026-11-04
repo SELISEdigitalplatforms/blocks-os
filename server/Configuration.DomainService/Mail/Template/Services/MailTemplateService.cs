@@ -1,6 +1,8 @@
 using Blocks.Genesis;
 using FluentValidation;
 using Blocks.Genesis.Entities.Os;
+using Configuration.DomainService.Organizations;
+using Configuration.DomainService.Shared.Services;
 
 namespace Configuration.DomainService.Mail.Template.Services
 {
@@ -9,15 +11,21 @@ namespace Configuration.DomainService.Mail.Template.Services
         private readonly IValidator<SaveMailTemplateRequest> _validator;
         private readonly IMailTemplateRepository _templateRepository;
         private readonly IMailTemplateHtmlChecker _htmlChecker;
+        private readonly IOrganizationReader _organizationReader;
+        private readonly IConfigurationRepository _configurationRepository;
 
         public MailTemplateService(
             IValidator<SaveMailTemplateRequest> validator,
             IMailTemplateRepository templateRepository,
-            IMailTemplateHtmlChecker htmlChecker)
+            IMailTemplateHtmlChecker htmlChecker,
+            IOrganizationReader organizationReader,
+            IConfigurationRepository configurationRepository)
         {
             _validator = validator;
             _templateRepository = templateRepository;
             _htmlChecker = htmlChecker;
+            _organizationReader = organizationReader;
+            _configurationRepository = configurationRepository;
         }
 
         public async Task<BaseMutationResponse> SaveTemplateAsync(SaveMailTemplateRequest template)
@@ -33,23 +41,34 @@ namespace Configuration.DomainService.Mail.Template.Services
                 };
             }
 
-            var repoTemplate = await MapIntoRepoTemplateAsync(template);
-            if (repoTemplate == null)
+            var stored = string.IsNullOrWhiteSpace(template.ItemId)
+                ? null
+                : await _templateRepository.GetByIdAsync(template.ItemId);
+
+            // An unknown id is saved as a new template with that id, as before organizations.
+            var mapped = stored == null
+                ? await MapNewTemplateAsync(template)
+                : MapEditedTemplate(stored, template);
+            if (mapped.Error != null)
             {
-                return new BaseMutationResponse
-                {
-                    IsSuccess = false,
-                    Errors = new Dictionary<string, string>
-                    {
-                        { "Template", "Template with the same Name and Language already exists" }
-                    }
-                };
+                return mapped.Error;
             }
+
+            var repoTemplate = mapped.Template!;
 
             // Checked on the merged template, so a body-only update keeps a stored subject.
             if (IsSubjectMissing(repoTemplate))
             {
                 return SubjectRequiredResponse();
+            }
+
+            if (template.MailConfigurationId != null)
+            {
+                var configurationError = await FindConfigurationErrorAsync(template.MailConfigurationId, repoTemplate.OrganizationId);
+                if (configurationError != null)
+                {
+                    return configurationError;
+                }
             }
 
             await _templateRepository.SaveAsync(repoTemplate);
@@ -72,11 +91,18 @@ namespace Configuration.DomainService.Mail.Template.Services
             var repoTemplate = await _templateRepository.GetByIdAsync(request.ItemId);
             if (repoTemplate == null)
             {
-                return new BaseMutationResponse
-                {
-                    IsSuccess = false,
-                    Errors = new Dictionary<string, string> { { "Template", "Template not found" } }
-                };
+                return Failure("Template", "Template not found");
+            }
+
+            // A clone is the same template in another language: same name, same organization.
+            if (!string.IsNullOrWhiteSpace(request.Name) && request.Name != repoTemplate.Name)
+            {
+                return Failure(nameof(CloneMailTemplateRequest.Name), "A clone keeps the template's name");
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Language))
+            {
+                return Failure(nameof(CloneMailTemplateRequest.Language), "Language is required");
             }
 
             // A clone is a new template, so its body meets the same rules as a saved one; an old
@@ -84,22 +110,27 @@ namespace Configuration.DomainService.Mail.Template.Services
             var bodyProblem = _htmlChecker.FindProblem(repoTemplate.TemplateBody);
             if (bodyProblem != null)
             {
-                return new BaseMutationResponse
-                {
-                    IsSuccess = false,
-                    Errors = new Dictionary<string, string> { { nameof(EmailTemplate.TemplateBody), bodyProblem } }
-                };
+                return Failure(nameof(EmailTemplate.TemplateBody), bodyProblem);
             }
 
+            var organizationId = OrganizationIds.Normalize(repoTemplate.OrganizationId);
+            if (!string.IsNullOrWhiteSpace(repoTemplate.Name)
+                && await _templateRepository.GetByNameAndLanguageAsync(repoTemplate.Name, request.Language, organizationId) != null)
+            {
+                return Failure(nameof(CloneMailTemplateRequest.Language), "This template already exists in that language");
+            }
+
+            var userId = BlocksContext.GetContext()?.UserId ?? "no_user";
             var clone = new EmailTemplate
             {
                 ItemId = Guid.NewGuid().ToString(),
                 CreatedDate = DateTime.UtcNow,
                 LastUpdatedDate = DateTime.UtcNow,
-                CreatedBy = BlocksContext.GetContext()?.UserId ?? "no_user",
-                LastUpdatedBy = BlocksContext.GetContext()?.UserId ?? "no_user",
-                GeneratedBy = BlocksContext.GetContext()?.UserId ?? "no_user",
-                Name = !string.IsNullOrWhiteSpace(request.Name) ? request.Name : repoTemplate.Name + "_clone",
+                CreatedBy = userId,
+                LastUpdatedBy = userId,
+                GeneratedBy = userId,
+                Name = repoTemplate.Name,
+                OrganizationId = organizationId,
                 MailConfigurationId = !string.IsNullOrWhiteSpace(request.MailConfigurationId)
                     ? request.MailConfigurationId
                     : repoTemplate.MailConfigurationId,
@@ -107,15 +138,26 @@ namespace Configuration.DomainService.Mail.Template.Services
                 ImageUrl = repoTemplate.ImageUrl,
                 JsonContent = repoTemplate.JsonContent,
                 TemplateBody = repoTemplate.TemplateBody,
-                Language = !string.IsNullOrWhiteSpace(request.Language) ? request.Language : repoTemplate.Language,
+                Language = request.Language,
                 TemplateSubject = !string.IsNullOrWhiteSpace(request.TemplateSubject)
                     ? request.TemplateSubject
-                    : repoTemplate.TemplateSubject
+                    : repoTemplate.TemplateSubject,
+                // The organization made this one itself, even when the source was a copy from Default.
+                CreatedFromDefault = false
             };
 
             if (IsSubjectMissing(clone))
             {
                 return SubjectRequiredResponse();
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.MailConfigurationId))
+            {
+                var configurationError = await FindConfigurationErrorAsync(request.MailConfigurationId, organizationId);
+                if (configurationError != null)
+                {
+                    return configurationError;
+                }
             }
 
             await _templateRepository.SaveAsync(clone);
@@ -128,11 +170,7 @@ namespace Configuration.DomainService.Mail.Template.Services
             var template = await _templateRepository.GetByIdAsync(request.ItemId);
             if (template == null)
             {
-                return new BaseMutationResponse
-                {
-                    IsSuccess = false,
-                    Errors = new Dictionary<string, string> { { "ItemId", "ItemId not found" } }
-                };
+                return Failure("ItemId", "ItemId not found");
             }
 
             await _templateRepository.DeleteAsync(request.ItemId);
@@ -145,67 +183,43 @@ namespace Configuration.DomainService.Mail.Template.Services
             string.IsNullOrWhiteSpace(template.TemplateSubject);
 
         private static BaseMutationResponse SubjectRequiredResponse() =>
+            Failure(nameof(EmailTemplate.TemplateSubject), "Subject is required.");
+
+        private static BaseMutationResponse Failure(string field, string message) =>
             new()
             {
                 IsSuccess = false,
-                Errors = new Dictionary<string, string>
-                {
-                    { nameof(EmailTemplate.TemplateSubject), "Subject is required." }
-                }
+                Errors = new Dictionary<string, string> { { field, message } }
             };
 
-        private async Task<EmailTemplate?> MapIntoRepoTemplateAsync(SaveMailTemplateRequest template)
+        private sealed record Mapped(EmailTemplate? Template, BaseMutationResponse? Error);
+
+        private async Task<Mapped> MapNewTemplateAsync(SaveMailTemplateRequest template)
         {
-            EmailTemplate? existingTemplateWithNameLanguage = null;
-            if (!string.IsNullOrWhiteSpace(template.Name) && !string.IsNullOrWhiteSpace(template.Language))
+            var organizationId = OrganizationIds.Normalize(template.OrganizationId);
+            if (!await _organizationReader.ExistsEnabledAsync(organizationId))
             {
-                existingTemplateWithNameLanguage =
-                    await _templateRepository.GetByNameAndLanguageAsync(template.Name, template.Language);
+                return new Mapped(null, Failure(nameof(SaveMailTemplateRequest.OrganizationId), "Organization not found"));
             }
 
-            if (string.IsNullOrWhiteSpace(template.ItemId))
+            // One template per Name + Language in each organization; another organization's doesn't count.
+            if (!string.IsNullOrWhiteSpace(template.Name) && !string.IsNullOrWhiteSpace(template.Language)
+                && await _templateRepository.GetByNameAndLanguageAsync(template.Name, template.Language, organizationId) != null)
             {
-                if (existingTemplateWithNameLanguage != null)
-                {
-                    return null;
-                }
-
-                return CreateNewEmailTemplate(template);
+                return new Mapped(null, Failure("Template", "Template with the same Name and Language already exists"));
             }
 
-            if (existingTemplateWithNameLanguage != null &&
-                existingTemplateWithNameLanguage.ItemId != template.ItemId)
-            {
-                return null;
-            }
-
-            var repoTemplate = await _templateRepository.GetByIdAsync(template.ItemId)
-                ?? new EmailTemplate
-                {
-                    ItemId = template.ItemId,
-                    CreatedDate = DateTime.UtcNow,
-                    CreatedBy = BlocksContext.GetContext()?.UserId ?? "no_user"
-                };
-
-            UpdateExistingTemplate(repoTemplate, template);
-            repoTemplate.LastUpdatedDate = DateTime.UtcNow;
-            repoTemplate.LastUpdatedBy = BlocksContext.GetContext()?.UserId ?? "no_user";
-
-            return repoTemplate;
-        }
-
-        private static EmailTemplate CreateNewEmailTemplate(SaveMailTemplateRequest template)
-        {
             var userId = BlocksContext.GetContext()?.UserId ?? "no_user";
-            return new EmailTemplate
+            return new Mapped(new EmailTemplate
             {
-                ItemId = Guid.NewGuid().ToString(),
+                ItemId = string.IsNullOrWhiteSpace(template.ItemId) ? Guid.NewGuid().ToString() : template.ItemId,
                 CreatedDate = DateTime.UtcNow,
                 LastUpdatedDate = DateTime.UtcNow,
                 CreatedBy = userId,
                 LastUpdatedBy = userId,
                 GeneratedBy = userId,
                 Name = template.Name,
+                OrganizationId = organizationId,
                 MailConfigurationId = template.MailConfigurationId,
                 ImageId = template.ImageId,
                 ImageUrl = template.ImageUrl,
@@ -213,23 +227,71 @@ namespace Configuration.DomainService.Mail.Template.Services
                 Language = template.Language,
                 TemplateBody = template.TemplateBody,
                 TemplateSubject = template.TemplateSubject
-            };
+            }, null);
         }
 
-        private static void UpdateExistingTemplate(EmailTemplate repoTemplate, SaveMailTemplateRequest template)
+        /// <summary>
+        /// Merges an edit into the stored template. Name, Language and organization are fixed after creation:
+        /// a field the request leaves out keeps its stored value (New Template's step 2 sends only the body),
+        /// and a different value is refused. CreatedFromDefault is never changed here.
+        /// </summary>
+        private static Mapped MapEditedTemplate(EmailTemplate stored, SaveMailTemplateRequest template)
         {
-            repoTemplate.Name = template.Name ?? repoTemplate.Name;
-            repoTemplate.MailConfigurationId = template.MailConfigurationId ?? repoTemplate.MailConfigurationId;
-            repoTemplate.ImageId = template.ImageId ?? repoTemplate.ImageId;
-            repoTemplate.ImageUrl = template.ImageUrl ?? repoTemplate.ImageUrl;
-            repoTemplate.JsonContent = template.JsonContent ?? repoTemplate.JsonContent;
-            repoTemplate.Language = template.Language ?? repoTemplate.Language;
-            repoTemplate.TemplateBody = template.TemplateBody ?? repoTemplate.TemplateBody;
-            repoTemplate.TemplateSubject = template.TemplateSubject ?? repoTemplate.TemplateSubject;
+            var storedOrganizationId = OrganizationIds.Normalize(stored.OrganizationId);
+            if (template.Name != null && template.Name != stored.Name)
+            {
+                return new Mapped(null, Failure(nameof(SaveMailTemplateRequest.Name), "A template's name can't be changed"));
+            }
+
+            if (template.Language != null && template.Language != stored.Language)
+            {
+                return new Mapped(null, Failure(nameof(SaveMailTemplateRequest.Language), "A template's language can't be changed"));
+            }
+
+            if (template.OrganizationId != null && template.OrganizationId != storedOrganizationId)
+            {
+                return new Mapped(null, Failure(nameof(SaveMailTemplateRequest.OrganizationId), "A template's organization can't be changed"));
+            }
+
+            stored.OrganizationId = storedOrganizationId;
+            stored.MailConfigurationId = template.MailConfigurationId ?? stored.MailConfigurationId;
+            stored.ImageId = template.ImageId ?? stored.ImageId;
+            stored.ImageUrl = template.ImageUrl ?? stored.ImageUrl;
+            stored.JsonContent = template.JsonContent ?? stored.JsonContent;
+            stored.TemplateBody = template.TemplateBody ?? stored.TemplateBody;
+            stored.TemplateSubject = template.TemplateSubject ?? stored.TemplateSubject;
+            stored.LastUpdatedDate = DateTime.UtcNow;
+            stored.LastUpdatedBy = BlocksContext.GetContext()?.UserId ?? "no_user";
+            return new Mapped(stored, null);
+        }
+
+        /// <summary>
+        /// Empty means "Organization default" and is always allowed. Otherwise the configuration must be an
+        /// outbound one of the template's organization or of the Default organization, which every
+        /// organization shares.
+        /// </summary>
+        private async Task<BaseMutationResponse?> FindConfigurationErrorAsync(string mailConfigurationId, string templateOrganizationId)
+        {
+            if (string.IsNullOrWhiteSpace(mailConfigurationId))
+            {
+                return null;
+            }
+
+            var configuration = await _configurationRepository.GetMailConfigurationByIdAsync(mailConfigurationId);
+            var configurationOrganizationId = configuration == null ? null : OrganizationIds.Normalize(configuration.OrganizationId);
+            if (configurationOrganizationId == null
+                || (configurationOrganizationId != OrganizationIds.Normalize(templateOrganizationId)
+                    && configurationOrganizationId != OrganizationIds.Default))
+            {
+                return Failure(nameof(SaveMailTemplateRequest.MailConfigurationId), "Configuration not found");
+            }
+
+            if (configuration!.IsInbound)
+            {
+                return Failure(nameof(SaveMailTemplateRequest.MailConfigurationId), "An inbound configuration can't send mail");
+            }
+
+            return null;
         }
     }
 }
-
-
-
-

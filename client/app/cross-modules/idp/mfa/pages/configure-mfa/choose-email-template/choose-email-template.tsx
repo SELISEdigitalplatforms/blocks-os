@@ -14,6 +14,7 @@ import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { useState } from "react";
 import { useGetMFAConfig, useSaveMFAConfig } from "@blocks-idp/mfa/hooks/use-mfa-config";
 import { useGetEmailTemplates } from "@blocks-communication/mail/hooks/use-email-template";
+import { DEFAULT_ORGANIZATION_ID } from "@blocks-communication/mail/constants/organization";
 import { useT } from "@seliseblocks/genesis-os";
 type ChooseEmailTemplateProps = {
   open: boolean;
@@ -36,6 +37,7 @@ export const ChooseEmailTemplate = ({ open, setOpen }: ChooseEmailTemplateProps)
   const { t } = useT("os.idp.mfa");
   const { data: mfaConfigData } = useGetMFAConfig();
   const [filter, setFilter] = useState({ page: 0, pageSize: 10 });
+  // IAM sends MFA mail from the Default organization, so only its templates are offered.
   const { data, isLoading, isFetching } = useGetEmailTemplates(
     filter.page,
     filter.pageSize,
@@ -44,6 +46,7 @@ export const ChooseEmailTemplate = ({ open, setOpen }: ChooseEmailTemplateProps)
     false,
     "",
     "",
+    DEFAULT_ORGANIZATION_ID,
   );
   const { isPending, mutateAsync } = useSaveMFAConfig();
   const [seletedTemplate, setSelectedTemplate] = useState<IEmailTemplate | null>(null);

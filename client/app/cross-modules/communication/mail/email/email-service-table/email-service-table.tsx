@@ -15,7 +15,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui-kits/t
 import { EMAIL_TAB_KEYS, type EmailTabKey } from "@blocks-communication/mail/constants/email-tabs";
 import { EmailTemplateList } from "@blocks-communication/mail/email/email-service-table/email-template-list";
 import { EmailUsageList } from "@blocks-communication/mail/email/email-usage/email-usage-list";
-import { useGetEmailConfigs } from "@blocks-communication/mail/hooks/use-email-config";
+import { useGetEmailSecretConfigs } from "@blocks-communication/mail/hooks/use-email-config";
+import {
+  EMAIL_ORGANIZATION_PARAM,
+  useEmailOrganization,
+  useOrganizationName,
+} from "@blocks-communication/mail/hooks/use-email-organization";
+import { EmailOrganizationPicker } from "@blocks-communication/mail/components/email-service/email-organization-picker/email-organization-picker";
+import { DEFAULT_ORGANIZATION_ID } from "@blocks-communication/mail/constants/organization";
 import { useGetEmailTemplates } from "@blocks-communication/mail/hooks/use-email-template";
 import { useGetLanguages } from "@blocks-localization/hooks/use-language-manager";
 import { CirclePlus } from "lucide-react";
@@ -45,6 +52,9 @@ const LoadingSkelton = () => {
     </div>
   );
 };
+/** Whether the list is narrowed, in which case an empty result is not "no templates yet". */
+const hasFilters = (params: { search?: string; language?: string; mailConfigurationId?: string }) =>
+  !!(params.search || params.language || params.mailConfigurationId);
 interface EmailServiceTableProps {
   onRowClick?: (id: string | number) => void;
 }
@@ -72,7 +82,10 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
   const tabs = EMAIL_TAB_KEYS.map((value) => ({ value, label: tabLabels[value] }));
   const { queryParams, setQueryParams } = useTemplatesFilterQueryParams();
   const { sortQueryParams } = useTemplatesSortQueryParams();
-  const { isLoading, data } = useGetEmailTemplates(
+  const organization = useEmailOrganization();
+  const organizationId = organization.selectedOrganizationId;
+  const organizationName = useOrganizationName(organizationId);
+  const { isLoading, isError, refetch, data } = useGetEmailTemplates(
     queryParams.pageNumber ?? 0,
     queryParams.pageSize ?? 10,
     queryParams.search ?? "",
@@ -80,8 +93,13 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
     sortQueryParams.isDescending ?? false,
     queryParams.language ?? "",
     queryParams.mailConfigurationId ?? "",
+    organizationId,
   );
-  const { isLoading: isConfigsLoading, data: emailConfigsData } = useGetEmailConfigs(0, 100);
+  // The organization's configurations and the Default organization's: the filter, the
+  // Configuration column and its "via" line all read this one list.
+  const { isLoading: isConfigsLoading, data: configsResponse } =
+    useGetEmailSecretConfigs(organizationId);
+  const emailConfigsData = configsResponse?.configurations;
   const { isLoading: isLanguageListLoading, data: languageListData } = useGetLanguages();
   const navigate = useNavigate();
   const scoped = useScopedPath();
@@ -104,6 +122,40 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
       pageNumber,
     }));
   };
+  const onPageSizeChangeHandler = (pageSize: number) => {
+    setQueryParams((prev) => ({
+      ...prev,
+      pageSize,
+      pageNumber: 0,
+    }));
+  };
+  // New Template opens in the page's organization (the same URL parameter as the picker).
+  const newTemplatePath = () => {
+    const path = scoped("email-management/new-communication");
+    return organization.isMultiOrgEnabled && organizationId !== DEFAULT_ORGANIZATION_ID
+      ? `${path}?${EMAIL_ORGANIZATION_PARAM}=${encodeURIComponent(organizationId)}`
+      : path;
+  };
+  const totalCount = data?.totalCount ?? 0;
+  const pageSize = queryParams.pageSize ?? 10;
+  const pageNumber = queryParams.pageNumber ?? 0;
+  const pageFrom = totalCount === 0 ? 0 : pageNumber * pageSize + 1;
+  const pageTo = Math.min(totalCount, (pageNumber + 1) * pageSize);
+  const showFallbackHint =
+    organization.isMultiOrgEnabled && organizationId !== DEFAULT_ORGANIZATION_ID;
+  const countLabel = organization.isMultiOrgEnabled
+    ? t("EMAIL_SERVICE_TABLE.ORGANIZATION_TEMPLATE_COUNT", {
+        organization: organizationName,
+        count: totalCount,
+      })
+    : t("EMAIL_SERVICE_TABLE.TEMPLATE_COUNT", { count: totalCount });
+  const isEmpty =
+    !isLoading &&
+    !isError &&
+    !!data &&
+    totalCount === 0 &&
+    !data.templates?.length &&
+    !hasFilters(queryParams);
   const handleRowClick = (emailId: number | string) => {
     if (onRowClick) {
       onRowClick(emailId);
@@ -156,12 +208,13 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
             </div>
 
             {activeTab === "Emailstemplates" ? (
-              <div className="ml-auto flex items-center gap-2">
+              <div className="ml-auto flex flex-wrap items-center gap-2">
+                {organization.isMultiOrgEnabled ? <EmailOrganizationPicker /> : null}
                 <Button
                   size="default"
                   variant="default"
                   className="bg-primary text-primary-foreground shadow-none"
-                  onClick={() => navigate(scoped("email-management/new-communication"))}
+                  onClick={() => navigate(newTemplatePath())}
                 >
                   <CirclePlus className="h-5 w-5 lg:mr-2" />
                   <span className="sr-only lg:not-sr-only">
@@ -184,27 +237,73 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
                 )}
               </CardContent>
               <CardContent>
+                {!isLoading && !isError && data ? (
+                  <div className="mb-3 flex flex-col gap-1">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-low-emphasis">
+                      {countLabel}
+                    </p>
+                    {showFallbackHint ? (
+                      <p className="text-sm text-low-emphasis">
+                        {t("EMAIL_SERVICE_TABLE.ORGANIZATION_FALLBACK_HINT", {
+                          organization: organizationName,
+                        })}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
                 <ScrollArea className="w-full">
-                  {isLoading || isConfigsLoading ? (
+                  {isLoading || isConfigsLoading || organization.isLoading ? (
                     <LoadingSkelton />
+                  ) : isError ? (
+                    <div role="alert" className="flex flex-col items-center gap-3 py-10">
+                      <p className="text-sm text-high-emphasis">
+                        {t("EMAIL_SERVICE_TABLE.TEMPLATES_LOAD_FAILED")}
+                      </p>
+                      <Button variant="outline" onClick={() => void refetch()}>
+                        {t("EMAIL_SERVICE_TABLE.RETRY")}
+                      </Button>
+                    </div>
+                  ) : isEmpty ? (
+                    <div className="flex flex-col items-center gap-3 py-10">
+                      <p className="text-sm text-high-emphasis">
+                        {t("EMAIL_SERVICE_TABLE.ORGANIZATION_EMPTY", {
+                          organization: organizationName,
+                        })}
+                      </p>
+                      <Button onClick={() => navigate(newTemplatePath())}>
+                        <CirclePlus className="mr-2 h-5 w-5" />
+                        {t("EMAIL_SERVICE_TABLE.ADD_TEMPLATE")}
+                      </Button>
+                    </div>
                   ) : (
                     <EmailTemplateList
                       templates={tableData}
                       isLoading={isLoading}
                       emailConfigsData={Array.isArray(emailConfigsData) ? emailConfigsData : []}
+                      languages={Array.isArray(languageListData) ? languageListData : []}
+                      organizationName={organizationName}
+                      isMultiOrgEnabled={organization.isMultiOrgEnabled}
                       onRowClick={handleRowClick}
                     />
                   )}
                   <ScrollBar orientation="horizontal" />
                 </ScrollArea>
               </CardContent>
-              {!isLoading && data && data.totalCount > queryParams.pageSize && (
-                <div className="mt-5 flex items-center md:justify-end">
+              {!isLoading && !isError && totalCount > 0 && (
+                <div className="mt-5 flex flex-col items-start gap-2 px-6 pb-4 md:flex-row md:items-center md:justify-end md:gap-6">
+                  <p className="text-sm text-medium-emphasis">
+                    {t("EMAIL_SERVICE_TABLE.PAGE_RANGE", {
+                      from: pageFrom,
+                      to: pageTo,
+                      total: totalCount,
+                    })}
+                  </p>
                   <Pagination
-                    page={queryParams.pageNumber}
-                    pageSize={queryParams.pageSize}
-                    totalCount={data?.totalCount || 0}
+                    page={pageNumber}
+                    pageSize={pageSize}
+                    totalCount={totalCount}
                     onChange={onPageChangeHandler}
+                    onPageSizeChange={onPageSizeChangeHandler}
                   />
                 </div>
               )}
