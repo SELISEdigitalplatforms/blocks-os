@@ -1162,13 +1162,15 @@ describe("CreateOIDC", () => {
         },
       });
 
-    const methodRadio = (name: "Default" | "Password" | "Social") =>
+    const methodRadioNames = { Default: /Default/, Password: /Password/, Social: /Social/ };
+    const providersRadioNames = { Default: /Default/, Selected: /Selected/ };
+    const methodRadio = (name: keyof typeof methodRadioNames) =>
       within(screen.getByRole("radiogroup", { name: "Sign-in method" })).getByRole("radio", {
-        name: new RegExp(name),
+        name: methodRadioNames[name],
       });
-    const providersRadio = (name: "Default" | "Selected") =>
+    const providersRadio = (name: keyof typeof providersRadioNames) =>
       within(screen.getByRole("radiogroup", { name: "Social providers" })).getByRole("radio", {
-        name: new RegExp(name),
+        name: providersRadioNames[name],
       });
     const fillValidCreate = async (user: User) => {
       await user.type(screen.getByPlaceholderText("Enter client name"), "My App");

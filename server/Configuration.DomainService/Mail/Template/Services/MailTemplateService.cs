@@ -46,6 +46,12 @@ namespace Configuration.DomainService.Mail.Template.Services
                 };
             }
 
+            // Checked on the merged template, so a body-only update keeps a stored subject.
+            if (IsSubjectMissing(repoTemplate))
+            {
+                return SubjectRequiredResponse();
+            }
+
             await _templateRepository.SaveAsync(repoTemplate);
 
             return new BaseMutationResponse { IsSuccess = true, ItemId = repoTemplate.ItemId };
@@ -107,6 +113,11 @@ namespace Configuration.DomainService.Mail.Template.Services
                     : repoTemplate.TemplateSubject
             };
 
+            if (IsSubjectMissing(clone))
+            {
+                return SubjectRequiredResponse();
+            }
+
             await _templateRepository.SaveAsync(clone);
 
             return new BaseMutationResponse { IsSuccess = true, ItemId = clone.ItemId };
@@ -128,6 +139,20 @@ namespace Configuration.DomainService.Mail.Template.Services
 
             return new BaseMutationResponse { IsSuccess = true };
         }
+
+        // Logic cannot send a mail whose template has no subject, so none is stored without one.
+        private static bool IsSubjectMissing(EmailTemplate template) =>
+            string.IsNullOrWhiteSpace(template.TemplateSubject);
+
+        private static BaseMutationResponse SubjectRequiredResponse() =>
+            new()
+            {
+                IsSuccess = false,
+                Errors = new Dictionary<string, string>
+                {
+                    { nameof(EmailTemplate.TemplateSubject), "Subject is required." }
+                }
+            };
 
         private async Task<EmailTemplate?> MapIntoRepoTemplateAsync(SaveMailTemplateRequest template)
         {
