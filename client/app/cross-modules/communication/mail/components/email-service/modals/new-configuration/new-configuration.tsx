@@ -647,7 +647,9 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
     );
   };
   return (
-    <DialogContent className="rounded-md sm:max-w-[700px]">
+    // Scrolls within the viewport: with the Organization field and the organization-default option
+    // the form is taller than a 720 px window, and Save must stay reachable.
+    <DialogContent className="max-h-[90vh] overflow-y-auto rounded-md sm:max-w-[700px]">
       <Form {...form}>
         {" "}
         <form onSubmit={form.handleSubmit(formSubmitHandler)}>

@@ -92,6 +92,11 @@ describe("NewConfiguration organizations", { timeout: 20_000 }, () => {
     h.mutateAsync.mockResolvedValue({ isSuccess: true });
   });
 
+  it("keeps the dialog within the viewport and scrolls it, so Save stays reachable", () => {
+    renderModal({ organization: acme, organizationHasDefault: false });
+    expect(screen.getByRole("dialog").className).toMatch(/max-h-\[90vh\].*overflow-y-auto/);
+  });
+
   it("has no organization field or default checkbox when multi-org is off (H12)", async () => {
     const user = userEvent.setup();
     renderModal();
