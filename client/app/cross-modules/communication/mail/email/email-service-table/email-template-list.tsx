@@ -222,13 +222,6 @@ export const EmailTemplateList = ({
                     <span>{t("common:DELETE")}</span>
                   </DropdownMenuItem>
                 )}
-                {/* <DropdownMenuItem className="cursor-pointer text-error" onClick={(e) => {
-                      e.stopPropagation();
-                      DeleteEmailTemplate(row.original);
-                    }}>
-                      <Trash className="mr-2 h-4 w-4" />
-                      <span>Delete</span>
-                    </DropdownMenuItem> */}
               </DropdownMenuContent>
             </DropdownMenu>
           );

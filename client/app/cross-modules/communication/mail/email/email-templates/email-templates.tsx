@@ -4,67 +4,33 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { useT } from "@seliseblocks/genesis-os";
-const templateData = [
-  {
-    id: "1",
-    name: "Simple Text",
-    thumbnailUrl: "/assets/images/services/email/email-template-sample-1.png",
-    description: "This is the first template.",
-  },
+// Sample layouts; each name is an English key in os.communication.mail.
+const SAMPLE_IMAGE_SINGLE = "/assets/images/services/email/email-template-sample-1.png";
+const SAMPLE_IMAGE_COLUMNS = "/assets/images/services/email/email-template-sample-2.png";
+const templateData: Array<{
+  id: string;
+  nameKey: string;
+  nameParams?: Record<string, number>;
+  thumbnailUrl: string;
+}> = [
+  { id: "1", nameKey: "EMAIL_TEMPLATES.SAMPLE_SIMPLE_TEXT", thumbnailUrl: SAMPLE_IMAGE_SINGLE },
   {
     id: "2",
-    name: "1:2:1:2 Column",
-    thumbnailUrl: "/assets/images/services/email/email-template-sample-2.png",
-    description: "This is the second template.",
+    nameKey: "EMAIL_TEMPLATES.SAMPLE_COLUMNS_1_2_1_2",
+    thumbnailUrl: SAMPLE_IMAGE_COLUMNS,
   },
-  {
-    id: "3",
-    name: "1:2 Column",
-    thumbnailUrl: "/assets/images/services/email/email-template-sample-2.png",
-    description: "This is the third template.",
-  },
+  { id: "3", nameKey: "EMAIL_TEMPLATES.SAMPLE_COLUMNS_1_2", thumbnailUrl: SAMPLE_IMAGE_COLUMNS },
   {
     id: "4",
-    name: "1:2 Column • Alternate",
-    thumbnailUrl: "/assets/images/services/email/email-template-sample-2.png",
-    description: "This is the third template.",
+    nameKey: "EMAIL_TEMPLATES.SAMPLE_COLUMNS_1_2_ALTERNATE",
+    thumbnailUrl: SAMPLE_IMAGE_COLUMNS,
   },
-  {
-    id: "5",
-    name: "1:2 Column • Alternate • 2",
-    thumbnailUrl: "/assets/images/services/email/email-template-sample-2.png",
-    description: "This is the third template.",
-  },
-  {
-    id: "6",
-    name: "1:2 Column • Alternate • 3",
-    thumbnailUrl: "/assets/images/services/email/email-template-sample-2.png",
-    description: "This is the third template.",
-  },
-  {
-    id: "7",
-    name: "1:2 Column • Alternate • 4",
-    thumbnailUrl: "/assets/images/services/email/email-template-sample-2.png",
-    description: "This is the third template.",
-  },
-  {
-    id: "8",
-    name: "1:2 Column • Alternate • 5",
-    thumbnailUrl: "/assets/images/services/email/email-template-sample-2.png",
-    description: "This is the third template.",
-  },
-  {
-    id: "9",
-    name: "1:2 Column • Alternate • 6",
-    thumbnailUrl: "/assets/images/services/email/email-template-sample-2.png",
-    description: "This is the third template.",
-  },
-  {
-    id: "10",
-    name: "1:2 Column • Alternate • 7",
-    thumbnailUrl: "/assets/images/services/email/email-template-sample-2.png",
-    description: "This is the third template.",
-  },
+  ...[2, 3, 4, 5, 6, 7].map((number, index) => ({
+    id: String(index + 5),
+    nameKey: "EMAIL_TEMPLATES.SAMPLE_COLUMNS_1_2_ALTERNATE_NUMBERED",
+    nameParams: { number },
+    thumbnailUrl: SAMPLE_IMAGE_COLUMNS,
+  })),
 ];
 const EmailTemplates = () => {
   const { t } = useT("os.communication.mail");
@@ -111,7 +77,7 @@ const EmailTemplates = () => {
                       height={360}
                     />
                   </div>
-                  <p className="mt-3 text-base">{item.name}</p>
+                  <p className="mt-3 text-base">{t(item.nameKey, item.nameParams)}</p>
                 </div>
               ))}
             </div>
@@ -131,7 +97,7 @@ const EmailTemplates = () => {
                       height={360}
                     />
                   </div>
-                  <p className="mt-3 text-base">{item.name}</p>
+                  <p className="mt-3 text-base">{t(item.nameKey, item.nameParams)}</p>
                 </div>
               ))}
             </div>
