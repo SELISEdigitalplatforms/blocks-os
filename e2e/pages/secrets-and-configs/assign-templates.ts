@@ -132,7 +132,7 @@ export async function openAssignDialog(page: Page, names: AssignFixtures, config
     timeout: 15_000,
   });
   for (const name of names.templates) {
-    await expect(dialog.getByRole("checkbox", { name: new RegExp(`^${name} · `) })).toBeVisible({
+    await expect(dialog.getByRole("checkbox", { name: `${name} · `, exact: false })).toBeVisible({
       timeout: 15_000,
     });
   }
@@ -142,7 +142,7 @@ export async function openAssignDialog(page: Page, names: AssignFixtures, config
 function rowCheckbox(page: Page, name: string) {
   return page
     .getByRole("dialog", { name: "Assign templates" })
-    .getByRole("checkbox", { name: new RegExp(`^${name} · `) });
+    .getByRole("checkbox", { name: `${name} · `, exact: false });
 }
 
 /** §10 step 1 (H6, H7, H10): tick two of the three, see what happens, assign. */
