@@ -31,6 +31,7 @@ import {
   Smartphone,
   Ticket,
   Users,
+  Webhook,
   Zap,
 } from "lucide-react";
 
@@ -278,6 +279,30 @@ export const navigationMenus: Menu[] = [
         icon: Network,
         get desc() {
           return navText("NAVIGATION_MENUS.PER_PROJECT_DATA_SOURCE_CONFIGURATION");
+        },
+        type: "menu",
+      },
+      {
+        id: "actions",
+        get name() {
+          return navText("NAVIGATION_MENUS.ACTIONS");
+        },
+        path: "/app/secret-management/actions",
+        icon: Zap,
+        get desc() {
+          return navText("NAVIGATION_MENUS.CHOOSE_WHAT_RUNS_WHEN_SOMETHING_HAPPENS");
+        },
+        type: "menu",
+      },
+      {
+        id: "webhooks",
+        get name() {
+          return navText("NAVIGATION_MENUS.WEBHOOKS");
+        },
+        path: "/app/secret-management/webhooks",
+        icon: Webhook,
+        get desc() {
+          return navText("NAVIGATION_MENUS.SEND_ACTIONS_TO_YOUR_OWN_SYSTEMS");
         },
         type: "menu",
       },

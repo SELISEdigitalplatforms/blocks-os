@@ -9,9 +9,10 @@ namespace DomainService.Projects
     /// <summary>
     /// Gives a new project the seed's (<c>BlocksConfiguration</c>) key-value rows that every project needs:
     /// the built-in notification configs for project users (scope App or Both; Console-only ones and dropped
-    /// names stay in the root tenant), the MFA config, and the Blocks Event Trigger catalog (every event off until
-    /// the project enables it). Other keys are never copied: storage configs have
-    /// their own copier (new secrets per project), and the OIDC UI template would carry the seed's branding.
+    /// names stay in the root tenant), the MFA config, and the actions list (<see cref="ActionConstants.ActionsKey"/>,
+    /// every target off until the project turns it on). Other keys are never copied: storage configs have
+    /// their own copier (new secrets per project), the OIDC UI template would carry the seed's branding, and
+    /// webhooks belong to the project that made them.
     /// Insert-only: a key the project already has keeps its value, so a retry makes no duplicate.
     /// </summary>
     public static class KeyValueSeedCopier
@@ -22,9 +23,11 @@ namespace DomainService.Projects
 
         public static readonly IReadOnlyList<string> CopiedKeyPrefixes = [NotificationKeyPrefix];
 
-        public const string BlocksEventTriggersKey = "blocks-event-triggers";
+        public static readonly IReadOnlyList<string> CopiedKeys = ["mfa-config", ActionConstants.ActionsKey];
 
-        public static readonly IReadOnlyList<string> CopiedKeys = ["mfa-config", BlocksEventTriggersKey];
+        /// <summary>The target flags of an action; a new project starts with all of them off.</summary>
+        private static readonly string[] ActionTargetFlags =
+            [nameof(ActionDefinition.Workflow), nameof(ActionDefinition.Function), nameof(ActionDefinition.Webhook)];
 
         public static Task<int> CopyAsync(IMongoDatabase seedDb, IMongoDatabase projectDb, string? createdBy, CancellationToken cancellationToken = default)
         {
@@ -78,9 +81,17 @@ namespace DomainService.Projects
             return filter.Or(byPrefix.Append(filter.In(e => e.Key, CopiedKeys)));
         }
 
-        /// <summary>The project starts without the root tenant's own receivers and with the notification on.</summary>
+        /// <summary>
+        /// The project starts without the root tenant's own receivers and with the notification on, and with every
+        /// action target off.
+        /// </summary>
         private static BsonValue? ProjectCopyOf(KeyValueEntry row)
         {
+            if (string.Equals(row.Key, ActionConstants.ActionsKey, StringComparison.Ordinal))
+            {
+                return ActionsWithTargetsOff(row.Value);
+            }
+
             if (!row.Key.StartsWith(NotificationKeyPrefix, StringComparison.Ordinal) || row.Value is not { IsBsonDocument: true })
             {
                 return row.Value;
@@ -90,6 +101,25 @@ namespace DomainService.Projects
             value.Remove("Audience");
             value.Remove("IsDisabled");
             return value;
+        }
+
+        private static BsonValue? ActionsWithTargetsOff(BsonValue? value)
+        {
+            if (value is not { IsBsonArray: true })
+            {
+                return value;
+            }
+
+            var actions = value.AsBsonArray.DeepClone().AsBsonArray;
+            foreach (var action in actions.Where(a => a.IsBsonDocument).Select(a => a.AsBsonDocument))
+            {
+                foreach (var flag in ActionTargetFlags)
+                {
+                    action[flag] = false;
+                }
+            }
+
+            return actions;
         }
 
         /// <summary>The project's own row: the seed's key, value and tags with a new id and dates.</summary>

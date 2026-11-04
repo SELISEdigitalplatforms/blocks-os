@@ -1,7 +1,6 @@
 ﻿using Configuration.DomainService.Notification.Services;
 using FluentValidation;
 using Os.DataAccess;
-using Os.DataAccess;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Protocols;
@@ -33,6 +32,7 @@ using Configuration.DomainService.Integration.Services;
 using Configuration.DomainService.Integration.Validators;
 using Configuration.DomainService.Shared.Secrets;
 using Configuration.DomainService.Notification.Push;
+using Configuration.DomainService.Webhooks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Configuration.DomainService.Shared.Utilities
@@ -86,6 +86,9 @@ namespace Configuration.DomainService.Shared.Utilities
             serviceCollection.AddScoped<IMailConfigurationProviderRegistry, MailConfigurationProviderRegistry>();
             serviceCollection.AddScoped<IMailConfigurationService, MailConfigurationService>();
             serviceCollection.AddSingleton<IOrganizationReader, OrganizationReader>();
+
+            // Actions and Webhooks pages (Config): KV lists, webhook secrets in Blocks Secrets, delivery history.
+            serviceCollection.AddActionsAndWebhooks();
 
             // Data-source page: scoped (the connection string goes through ISecretService); the root store is a singleton.
             serviceCollection.AddSingleton<IDataGatewayRootStore, DataGatewayRootStore>();

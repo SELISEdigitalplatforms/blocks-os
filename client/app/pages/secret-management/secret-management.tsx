@@ -21,6 +21,7 @@ import { useNotificationNavigation } from "@/cross-modules/communication/notific
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { EmailOrganizationPicker } from "@blocks-communication/mail/components/email-service/email-organization-picker/email-organization-picker";
+import { ADD_WEBHOOK_QUERY_KEY } from "@/cross-modules/webhooks/constants/webhooks.constant";
 
 const KEY_ADD_CONFIGURATION = "SECRET_MANAGEMENT.ADD_CONFIGURATION";
 
@@ -33,6 +34,7 @@ function SecretManagementHeaderActions({
   openNotificationPush,
   setIsManagedServicesGuideOpen,
   setIsClientCredentialOpen,
+  setIsAddWebhookOpen,
 }: Readonly<{
   isOidcBranding: boolean;
   currentPath: string;
@@ -42,6 +44,7 @@ function SecretManagementHeaderActions({
   openNotificationPush: () => void;
   setIsManagedServicesGuideOpen: (value: boolean) => void;
   setIsClientCredentialOpen: (value: boolean) => void;
+  setIsAddWebhookOpen: (value: boolean) => void;
 }>) {
   const { t } = useT("os.secret-management");
   const brandingHeader = useOidcBrandingHeaderOptional();
@@ -170,6 +173,14 @@ function SecretManagementHeaderActions({
           </Button>
         </>
       )}
+      {currentPath === "webhooks" && (
+        <Button size="sm" onClick={() => setIsAddWebhookOpen(true)}>
+          <Plus className="h-5 w-5" />
+          <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
+            {t("SECRET_MANAGEMENT.ADD_WEBHOOK")}
+          </span>
+        </Button>
+      )}
       {currentPath === "secret" && <CreateSecretButton />}
     </>
   );
@@ -196,6 +207,10 @@ export default function SecretManagementLayout() {
   // Shared via URL so child routes can read/close the same modal
   const [, setIsAddIdpOpen] = useQueryState("addIdp", parseAsBoolean.withDefault(false));
   const [, setIsEmailConfigOpen] = useQueryState("emailConfig", parseAsBoolean.withDefault(false));
+  const [, setIsAddWebhookOpen] = useQueryState(
+    ADD_WEBHOOK_QUERY_KEY,
+    parseAsBoolean.withDefault(false),
+  );
   const notificationNav = useNotificationNavigation();
   // The notification form and the push page show their own title, so the list header steps aside.
   const isNotificationPageOpen = Boolean(notificationMatch?.[1]);
@@ -237,6 +252,7 @@ export default function SecretManagementLayout() {
       openNotificationPush={notificationNav.openPush}
       setIsManagedServicesGuideOpen={setIsManagedServicesGuideOpen}
       setIsClientCredentialOpen={setIsClientCredentialOpen}
+      setIsAddWebhookOpen={setIsAddWebhookOpen}
     />
   );
 

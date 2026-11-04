@@ -12,6 +12,8 @@ using Worker.Configuration;
 using Worker.Consumers.Identifier;
 using Worker.Consumers.Migration;
 using Worker.Consumers.Notification;
+using Worker.Consumers.Webhooks;
+using Configuration.DomainService.Webhooks;
 using Configuration.DomainService.Notification.Propagation;
 using ConfigurationConstants = Configuration.DomainService.Shared.Utilities.Constants;
 
@@ -63,8 +65,17 @@ IHostBuilder CreateHostBuilder(string[] args) =>
             // Root built-in notification config changes, copied to the seed database and every other tenant.
             services.AddSingleton<INotificationConfigurationPropagator, NotificationConfigurationPropagator>();
             services.AddSingleton<IConsumer<BuiltInNotificationConfigurationChangedEvent>, BuiltInNotificationConfigurationConsumer>();
-         ApplicationConfigurations.ConfigureWorker(services, ConfigurationConstants.WithNotificationConfigurationQueue(
-             IdentifierConstants.GetMessageConfiguration(secret.MessageConnectionString)));
+            #endregion
+
+            #region Webhook Consumers
+            // Actions with the webhook target on, fanned out to the tenant's webhooks, then one job per delivery attempt.
+            services.AddActionsAndWebhooks();
+            services.AddSingleton<IConsumer<BlocksAction>, WebhookActionConsumer>();
+            services.AddSingleton<IConsumer<WebhookFanOutRetry>, WebhookFanOutRetryConsumer>();
+            services.AddSingleton<IConsumer<WebhookDeliveryJob>, WebhookDeliveryJobConsumer>();
+         ApplicationConfigurations.ConfigureWorker(services, ConfigurationConstants.WithWebhookQueues(
+             ConfigurationConstants.WithNotificationConfigurationQueue(
+                 IdentifierConstants.GetMessageConfiguration(secret.MessageConnectionString))));
             #endregion
         });
 

@@ -16,6 +16,8 @@ import {
   ShieldCheck,
   Smartphone,
   Users,
+  Webhook,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
 
@@ -212,6 +214,28 @@ export const SECRET_MANAGEMENT_NAV_GROUPS: NavGroup[] = [
         icon: Network,
         get desc() {
           return navText("SECRET_MANAGEMENT_NAV.PER_PROJECT_DATA_SOURCE_CONFIGURATION");
+        },
+      },
+      {
+        id: "actions",
+        get label() {
+          return navText("SECRET_MANAGEMENT_NAV.ACTIONS");
+        },
+        value: "actions",
+        icon: Zap,
+        get desc() {
+          return navText("SECRET_MANAGEMENT_NAV.CHOOSE_WHAT_RUNS_WHEN_SOMETHING_HAPPENS");
+        },
+      },
+      {
+        id: "webhooks",
+        get label() {
+          return navText("SECRET_MANAGEMENT_NAV.WEBHOOKS");
+        },
+        value: "webhooks",
+        icon: Webhook,
+        get desc() {
+          return navText("SECRET_MANAGEMENT_NAV.SEND_ACTIONS_TO_YOUR_OWN_SYSTEMS");
         },
       },
       {
