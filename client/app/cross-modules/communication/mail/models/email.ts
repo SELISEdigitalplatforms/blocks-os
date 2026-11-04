@@ -308,7 +308,10 @@ export interface IEmailUsage {
   status: string;
   error: string;
   date: string;
-  /** Only on the details read; list rows omit it. */
+  /**
+   * No longer read by the client: the details read returns `null` and the stored message is
+   * fetched on demand from `GetMailBoxMailSource` (see `IMailBoxMailContent.rawMimeLength`).
+   */
   rawMime?: string | null;
   isInbound?: boolean;
   /** The inbound configuration that read the mail. Empty for outbound mail. */
@@ -329,17 +332,15 @@ export interface IMailBoxMailContent {
   cc?: string | null;
   replyTo?: string | null;
   attachments: IMailBoxMailAttachment[];
+  /** Length of the stored message source; above 0 the `.eml` and the Original view are offered. */
+  rawMimeLength?: number;
+  /** The message is too large to parse: no bodies or attachments, only the `.eml`. */
+  previewTooLarge?: boolean;
 }
 
 export interface IEmailUsageResponse {
   totalCount: number;
   mails: IEmailUsage[];
-  errors: Record<string, unknown> | null;
-  isSuccess: boolean;
-}
-
-export interface IGetMailBoxMailAttachmentResponse {
-  attachment?: { fileName: string; contentType: string; contentBase64: string } | null;
   errors: Record<string, unknown> | null;
   isSuccess: boolean;
 }

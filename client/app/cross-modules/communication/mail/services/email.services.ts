@@ -2,7 +2,6 @@ import {
   IEmailConfig,
   IEmailTemplate,
   IEmailUsageResponse,
-  IGetMailBoxMailAttachmentResponse,
   IGetMailBoxMailResponse,
 } from "../models/email";
 import { http } from "@/lib/http/http-client";
@@ -34,6 +33,15 @@ export interface ISaveMailConfigPayload {
   clientSecret?: string;
   mailboxAddress?: string;
 }
+
+// The file endpoints answer `application/octet-stream`, which the HTTP client hands back as a
+// Blob. Anything else (JSON or text from an older API) is not the file.
+const requireBlob = (result: unknown, what: string): Blob => {
+  if (!(result instanceof Blob)) {
+    throw new TypeError(`Unexpected ${what} response`);
+  }
+  return result;
+};
 
 class EmailService {
   fetchEmailConfigs = (pageNumber: number, pageSize: number): Promise<IEmailConfig[]> => {
@@ -121,14 +129,27 @@ class EmailService {
     });
   };
 
-  getMailBoxMailAttachment = (
-    messageId: string,
-    index: number,
-  ): Promise<IGetMailBoxMailAttachmentResponse> => {
-    const params = new URLSearchParams({ MessageId: messageId, Index: String(index) });
-    return http.get(`${MAIL_ENDPOINTS.GET_MAILBOX_MAIL_ATTACHMENT}?${params.toString()}`, undefined, {
-      absoluteUrl: true,
-    });
+  /** The stored message (`.eml`) as a file. Fetched on demand, never part of the details read. */
+  getMailBoxMailSource = (itemId: string): Promise<Blob> => {
+    return http
+      .get<Blob>(
+        `${MAIL_ENDPOINTS.GET_MAILBOX_MAIL_SOURCE}?ItemId=${encodeURIComponent(itemId)}`,
+        undefined,
+        { absoluteUrl: true },
+      )
+      .then((result) => requireBlob(result, "message source"));
+  };
+
+  /** One attachment of a stored message, by its position, as a file. */
+  getMailBoxMailAttachmentFile = (itemId: string, index: number): Promise<Blob> => {
+    const params = new URLSearchParams({ ItemId: itemId, Index: String(index) });
+    return http
+      .get<Blob>(
+        `${MAIL_ENDPOINTS.GET_MAILBOX_MAIL_ATTACHMENT_FILE}?${params.toString()}`,
+        undefined,
+        { absoluteUrl: true },
+      )
+      .then((result) => requireBlob(result, "attachment"));
   };
 
   getMailBoxMail = (itemId: string): Promise<IGetMailBoxMailResponse> => {

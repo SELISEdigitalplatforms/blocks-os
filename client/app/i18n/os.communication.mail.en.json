@@ -157,6 +157,8 @@
   "EMAIL_USAGE_DETAILS.NO_SUBJECT": "(no subject)",
   "EMAIL_USAGE_DETAILS.RECEIVED": "Received",
   "EMAIL_USAGE_DETAILS.SENT": "Sent",
+  "EMAIL_USAGE_DETAILS.SOURCE_FAILED_DESCRIPTION": "The original message could not be loaded. Try again later.",
+  "EMAIL_USAGE_DETAILS.TOO_LARGE_TO_PREVIEW": "This message is too large to preview — download .eml",
   "EMAIL_USAGE_DETAILS.VIEW_FORMATTED": "Formatted",
   "EMAIL_USAGE_DETAILS.VIEW_ORIGINAL": "Original",
   "EMAIL_USAGE_DETAILS.VIEW_PLAIN_TEXT": "Plain text",
