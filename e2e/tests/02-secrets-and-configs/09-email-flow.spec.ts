@@ -44,7 +44,7 @@ test.describe("flows", () => {
       await verifyEmptyEmailStateFlow(page);
     });
 
-    await test.step("The pre-existing Default configuration hides its Edit/Delete actions", async () => {
+    await test.step("The seeded Default configuration offers only Edit in its ⋮ menu (blocks-os#732 H10)", async () => {
       await verifyDefaultConfigLockedFlow(page);
     });
 

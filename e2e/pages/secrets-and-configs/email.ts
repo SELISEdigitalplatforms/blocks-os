@@ -13,15 +13,18 @@ export async function verifyEmptyEmailStateFlow(page: Page) {
   }
 }
 
+/**
+ * The seeded Default record can only have its sender name edited, never be deleted. Since
+ * blocks-os#732 (H10) its actions are in its ⋮ menu, which must offer Edit only.
+ */
 export async function verifyDefaultConfigLockedFlow(page: Page) {
-  // exact: the card's ⋮ button is "More actions for Default" (blocks-os#732 H10).
-  const defaultTrigger = page.getByRole("button", { name: "Default", exact: true });
-  if (!(await defaultTrigger.isVisible({ timeout: 5000 }))) return;
-  await defaultTrigger.click();
-  const defaultPanel = page.getByLabel("Default", { exact: true });
-  await expect(defaultPanel.getByRole("button", { name: "Edit" })).toHaveCount(0);
-  await expect(defaultPanel.getByRole("button", { name: "Delete" })).toHaveCount(0);
-  await defaultTrigger.click();
+  const menuButton = page.getByRole("button", { name: "More actions for Default", exact: true });
+  await expect(menuButton).toBeVisible({ timeout: 15000 });
+  await menuButton.click();
+  const items = page.getByRole("menuitem");
+  await expect(items).toHaveText(["Edit"]);
+  await page.keyboard.press("Escape");
+  await expect(items).toHaveCount(0);
 }
 
 export async function openAddEmailConfigDialogFlow(page: Page) {
@@ -149,6 +152,9 @@ export async function expandConfigRowAndVerifyFlow(page: Page, configName: strin
 /** blocks-os#732 H12: a project with multi-org off sees no organization picker, field or chips. */
 export async function verifyNoOrganizationUiFlow(page: Page) {
   await expect(page.getByRole("button", { name: "Add Configuration" })).toBeVisible({ timeout: 15000 });
+  // The picker would render once the organization config has loaded, which is also when the list
+  // shows: wait for the list (the seeded Default card) before checking it is absent.
+  await expect(page.getByRole("button", { name: "Default", exact: true })).toBeVisible({ timeout: 15000 });
   await expect(page.getByLabel("Organization", { exact: true })).toHaveCount(0);
   await expect(page.getByText("ORG DEFAULT", { exact: true })).toHaveCount(0);
   await expect(page.getByText("PROJECT DEFAULT", { exact: true })).toHaveCount(0);
@@ -200,8 +206,11 @@ export async function editEmailConfigAndSaveFlow(
 ) {
   await chooseFromConfigMenu(page, configName, "Edit");
   await expect(page.getByRole("heading", { name: "Edit Configuration" })).toBeVisible();
-  // blocks-os#732 §10 step 4: multi-org is off, so the form has no Organization field.
-  await expect(page.getByRole("dialog").getByText("Organization", { exact: true })).toHaveCount(0);
+  // blocks-os#732 §10 step 4: multi-org is off, so the form has no Organization field (its label
+  // would read "Organization *") and no organization-default option.
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByText(/^Organization\b/)).toHaveCount(0);
+  await expect(dialog.getByText("Use as organization default", { exact: true })).toHaveCount(0);
   await page.getByPlaceholder("Enter sender name").fill(newSenderName);
   await page.getByPlaceholder("Enter password").fill("SuperSecret123");
   const updateButton = page.getByRole("button", { name: "Update Changes" });
