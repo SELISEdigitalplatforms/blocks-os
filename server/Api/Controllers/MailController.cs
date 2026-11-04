@@ -192,6 +192,18 @@ namespace BlocksOs.Api.Controllers
             return result.IsSuccess ? Ok(result) : BadRequest(result);
         }
 
+        /// <summary>
+        /// Points many templates of a configuration's organization at that configuration in one update.
+        /// A field error is HTTP 400 with <c>{ isSuccess:false, errors }</c>, as the other template endpoints.
+        /// </summary>
+        [HttpPost]
+        [ProtectedEndPoint("blocks-os::mail-template::save")]
+        public async Task<IActionResult> AssignTemplates([FromBody] AssignTemplatesRequest request)
+        {
+            var result = await _mailTemplateService!.AssignTemplatesAsync(request);
+            return result.IsSuccess ? Ok(result) : BadRequest(result);
+        }
+
         [HttpGet]
         [ProtectedEndPoint("blocks-os::mailbox::gets")]
         public async Task<IActionResult> GetMailBoxMails([FromQuery] GetMailBoxMailsRequest request)

@@ -195,6 +195,12 @@
             will never succeed.
             </remarks>
         </member>
+        <member name="M:BlocksOs.Api.Controllers.MailController.AssignTemplates(Configuration.DomainService.Mail.Template.AssignTemplatesRequest)">
+            <summary>
+            Points many templates of a configuration's organization at that configuration in one update.
+            A field error is HTTP 400 with <c>{ isSuccess:false, errors }</c>, as the other template endpoints.
+            </summary>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.MailController.GetMailBoxMailSource(Configuration.DomainService.Mail.Mailbox.GetMailBoxMailRequest)">
             <summary>The stored message as an <c>.eml</c> download.</summary>
         </member>

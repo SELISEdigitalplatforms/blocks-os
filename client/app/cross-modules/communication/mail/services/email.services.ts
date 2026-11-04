@@ -1,4 +1,6 @@
 import {
+  IAssignTemplatesRequest,
+  IAssignTemplatesResponse,
   IEmailConfig,
   IEmailTemplate,
   IEmailUsageResponse,
@@ -288,6 +290,19 @@ class EmailService {
         absoluteUrl: true,
       })
       .then((response) => response);
+  }
+
+  /**
+   * Points many templates of the configuration's organization at the configuration in one
+   * update: the given ids, or with `allMatching` every template matching the list's filters.
+   */
+  assignTemplates(requestBody: IAssignTemplatesRequest): Promise<IAssignTemplatesResponse> {
+    return http.post<IAssignTemplatesResponse>(
+      EMAIL_TEMPLATE_ENDPOINTS.ASSIGN_TEMPLATES,
+      requestBody,
+      undefined,
+      { absoluteUrl: true },
+    );
   }
 
   deleteMailTemplate(payload: { itemId: string }): Promise<{

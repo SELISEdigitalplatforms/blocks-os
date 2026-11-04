@@ -10,6 +10,7 @@ namespace Configuration.DomainService.Mail.Template.Services
         Task<EmailTemplate?> GetAsync(GetMailTemplateRequest request);
         Task<BaseMutationResponse> CloneTemplateAsync(CloneMailTemplateRequest request);
         Task<BaseMutationResponse> DeleteAsync(DeleteMailTemplateRequest request);
+        Task<AssignTemplatesResponse> AssignTemplatesAsync(AssignTemplatesRequest request);
     }
 }
 

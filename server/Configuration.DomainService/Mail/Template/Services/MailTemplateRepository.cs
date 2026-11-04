@@ -71,28 +71,15 @@ namespace Configuration.DomainService.Mail.Template.Services
             var collection = _dbContextProvider.GetCollection<EmailTemplate>(CollectionName);
             var filterBuilder = Builders<EmailTemplate>.Filter;
             // Organization-only lists: one organization's templates, never mixed with the Default ones.
-            var filter = OfOrganization(OrganizationIds.Normalize(request.OrganizationId));
-
-            if (!string.IsNullOrWhiteSpace(request.SearchKey))
-            {
-                var escapedSearchKey = Regex.Escape(request.SearchKey);
-                var regexFilter = filterBuilder.Or(
-                    filterBuilder.Regex(t => t.Name, new BsonRegularExpression($".*{escapedSearchKey}.*", "i")),
-                    filterBuilder.Regex(t => t.TemplateSubject, new BsonRegularExpression($".*{escapedSearchKey}.*", "i")));
-
-                filter = filterBuilder.And(filter, regexFilter);
-            }
+            var filter = filterBuilder.And(
+                OfOrganization(OrganizationIds.Normalize(request.OrganizationId)),
+                Matching(request.SearchKey, request.Language));
 
             if (!string.IsNullOrWhiteSpace(request.MailConfigurationId))
             {
                 filter = filterBuilder.And(
                     filter,
                     filterBuilder.Eq(t => t.MailConfigurationId, request.MailConfigurationId));
-            }
-
-            if (!string.IsNullOrWhiteSpace(request.Language))
-            {
-                filter = filterBuilder.And(filter, filterBuilder.Eq(t => t.Language, request.Language));
             }
 
             var scope = await _dataAccess.ReadAsync(OsSchemas.EmailTemplate, filter, "MailTemplateRepository.GetsAsync");
@@ -122,6 +109,31 @@ namespace Configuration.DomainService.Mail.Template.Services
             };
         }
 
+        /// <summary>
+        /// The list's search and language rules, shared by GetTemplates and AssignTemplates so "all matching"
+        /// means what the list shows: the search key is a literal, case-insensitive part of the name or subject.
+        /// </summary>
+        private static FilterDefinition<EmailTemplate> Matching(string? searchKey, string? language)
+        {
+            var filterBuilder = Builders<EmailTemplate>.Filter;
+            var filter = filterBuilder.Empty;
+
+            if (!string.IsNullOrWhiteSpace(searchKey))
+            {
+                var escapedSearchKey = Regex.Escape(searchKey);
+                filter &= filterBuilder.Or(
+                    filterBuilder.Regex(t => t.Name, new BsonRegularExpression($".*{escapedSearchKey}.*", "i")),
+                    filterBuilder.Regex(t => t.TemplateSubject, new BsonRegularExpression($".*{escapedSearchKey}.*", "i")));
+            }
+
+            if (!string.IsNullOrWhiteSpace(language))
+            {
+                filter &= filterBuilder.Eq(t => t.Language, language);
+            }
+
+            return filter;
+        }
+
         /// <summary>The organization's templates; the Default organization's include those stored without one.</summary>
         private static FilterDefinition<EmailTemplate> OfOrganization(string organizationId) =>
             OrganizationIds.Normalize(organizationId) == OrganizationIds.Default
@@ -146,6 +158,44 @@ namespace Configuration.DomainService.Mail.Template.Services
             // Every document counts, one per template and language, as the template list's total does.
             var scope = await _dataAccess.ReadAsync(OsSchemas.EmailTemplate, filter, "MailTemplateRepository.CountByMailConfigurationIdAsync");
             return scope.Granted ? await collection.CountDocumentsAsync(scope.Filter) : 0;
+        }
+
+        public async Task<long> CountOutsideOrganizationAsync(IReadOnlyCollection<string> templateIds, string organizationId)
+        {
+            var collection = _dbContextProvider.GetCollection<EmailTemplate>(CollectionName);
+            var filterBuilder = Builders<EmailTemplate>.Filter;
+            var filter = filterBuilder.In(t => t.ItemId, templateIds) & filterBuilder.Not(OfOrganization(organizationId));
+
+            var scope = await _dataAccess.ReadAsync(OsSchemas.EmailTemplate, filter, "MailTemplateRepository.CountOutsideOrganizationAsync");
+            return scope.Granted ? await collection.CountDocumentsAsync(scope.Filter) : 0;
+        }
+
+        public async Task<int> AssignConfigurationAsync(string configurationId, string organizationId, IReadOnlyCollection<string>? templateIds, string? searchKey, string? language)
+        {
+            var collection = _dbContextProvider.GetCollection<EmailTemplate>(CollectionName);
+            var filterBuilder = Builders<EmailTemplate>.Filter;
+
+            // The organization is always part of the filter, so no id can reach another organization's template;
+            // templates already on the configuration are not touched, so they are not counted either.
+            var filter = OfOrganization(organizationId)
+                & (templateIds != null ? filterBuilder.In(t => t.ItemId, templateIds) : Matching(searchKey, language))
+                & filterBuilder.Ne(t => t.MailConfigurationId, configurationId);
+
+            const string callSite = "MailTemplateRepository.AssignConfigurationAsync";
+            var editFilter = await _dataAccess.EditFilterAsync(OsSchemas.EmailTemplate, filter, callSite);
+            if (editFilter is null)
+                throw new UnauthorizedAccessException("Access to the email templates was denied by the data access policy.");
+
+            // Only the configuration and the last-updated fields change: name, language, body, organization and
+            // CreatedFromDefault stay as they are.
+            var update = Builders<EmailTemplate>.Update
+                .Set(t => t.MailConfigurationId, configurationId)
+                .Set(t => t.LastUpdatedDate, DateTime.UtcNow)
+                .Set(t => t.LastUpdatedBy, BlocksContext.GetContext()?.UserId ?? "no_user");
+            await _dataAccess.CheckUpdateAsync(OsSchemas.EmailTemplate, update, callSite);
+
+            var result = await collection.UpdateManyAsync(editFilter, update);
+            return (int)result.ModifiedCount;
         }
 
         public async Task DeleteAsync(string itemId)

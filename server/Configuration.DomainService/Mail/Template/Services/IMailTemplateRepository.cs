@@ -15,6 +15,16 @@ namespace Configuration.DomainService.Mail.Template.Services
 
         /// <summary>How many templates, in every organization and language, name the configuration.</summary>
         Task<long> CountByMailConfigurationIdAsync(string mailConfigurationId);
+
+        /// <summary>How many of the templates with these ids exist in an organization other than <paramref name="organizationId"/>.</summary>
+        Task<long> CountOutsideOrganizationAsync(IReadOnlyCollection<string> templateIds, string organizationId);
+
+        /// <summary>
+        /// Points the organization's templates at the configuration in one update: those with the given ids, or,
+        /// when <paramref name="templateIds"/> is null, every one matching <paramref name="searchKey"/> and
+        /// <paramref name="language"/>. Templates already on it are left alone. Returns how many changed.
+        /// </summary>
+        Task<int> AssignConfigurationAsync(string configurationId, string organizationId, IReadOnlyCollection<string>? templateIds, string? searchKey, string? language);
     }
 }
 

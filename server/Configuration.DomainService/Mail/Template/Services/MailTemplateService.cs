@@ -270,6 +270,73 @@ namespace Configuration.DomainService.Mail.Template.Services
             return new Mapped(stored, null);
         }
 
+        /// <summary>The most templates one AssignTemplates request may name.</summary>
+        public const int MaxAssignTemplateIds = 500;
+
+        /// <summary>
+        /// Points templates of the configuration's organization at the configuration (SPEC32 §6): explicit ids, or
+        /// with AllMatching every template matching the list's search and language (the ids are then ignored).
+        /// Ids are de-duplicated and blank ones dropped before the limit is applied; an id that no longer exists
+        /// is skipped, while an id of another organization's template refuses the whole request.
+        /// </summary>
+        public async Task<AssignTemplatesResponse> AssignTemplatesAsync(AssignTemplatesRequest request)
+        {
+            var configuration = string.IsNullOrWhiteSpace(request.ConfigurationId)
+                ? null
+                : await _configurationRepository.GetMailConfigurationByIdAsync(request.ConfigurationId);
+            if (configuration == null)
+            {
+                return AssignFailure(nameof(AssignTemplatesRequest.ConfigurationId), "Configuration not found");
+            }
+
+            if (configuration.IsInbound)
+            {
+                return AssignFailure(nameof(AssignTemplatesRequest.ConfigurationId), "An inbound configuration can't send mail");
+            }
+
+            var organizationId = OrganizationIds.Normalize(configuration.OrganizationId);
+            IReadOnlyCollection<string>? templateIds = null;
+            if (!request.AllMatching)
+            {
+                var ids = (request.TemplateIds ?? new List<string>())
+                    .Where(id => !string.IsNullOrWhiteSpace(id))
+                    .Distinct(StringComparer.Ordinal)
+                    .ToList();
+                if (ids.Count == 0)
+                {
+                    return AssignFailure(nameof(AssignTemplatesRequest.TemplateIds), "Select at least one template");
+                }
+
+                if (ids.Count > MaxAssignTemplateIds)
+                {
+                    return AssignFailure(nameof(AssignTemplatesRequest.TemplateIds), "No more than 500 templates per request");
+                }
+
+                if (await _templateRepository.CountOutsideOrganizationAsync(ids, organizationId) > 0)
+                {
+                    return AssignFailure(nameof(AssignTemplatesRequest.TemplateIds), "Some templates aren't in this configuration's organization");
+                }
+
+                templateIds = ids;
+            }
+
+            var updatedCount = await _templateRepository.AssignConfigurationAsync(
+                configuration.ItemId,
+                organizationId,
+                templateIds,
+                request.AllMatching ? request.SearchKey : null,
+                request.AllMatching ? request.Language : null);
+
+            return new AssignTemplatesResponse { IsSuccess = true, UpdatedCount = updatedCount };
+        }
+
+        private static AssignTemplatesResponse AssignFailure(string field, string message) =>
+            new()
+            {
+                IsSuccess = false,
+                Errors = new Dictionary<string, string> { { field, message } }
+            };
+
         /// <summary>
         /// Empty means "Organization default" and is always allowed. Otherwise the configuration must be an
         /// outbound one of the template's organization or of the Default organization, which every

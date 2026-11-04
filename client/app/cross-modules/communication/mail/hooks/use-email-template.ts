@@ -24,6 +24,19 @@ export const useCloneTemplate = () => {
   });
 };
 
+/** Assigns templates in bulk; the template lists and the cards' "Used by" counts change with it. */
+export const useAssignTemplates = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: ["template", "assign"],
+    mutationFn: emailService.assignTemplates,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["email-templates"] });
+      queryClient.invalidateQueries({ queryKey: ["email-config-usage"] });
+    },
+  });
+};
+
 export const useDeleteEmailTemplate = () => {
   const queryClient = useQueryClient();
   return useMutation({

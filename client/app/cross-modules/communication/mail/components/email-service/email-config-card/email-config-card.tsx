@@ -1,5 +1,5 @@
 import React from "react";
-import { EllipsisVertical, Pencil, Trash } from "lucide-react";
+import { EllipsisVertical, ListChecks, Pencil, Trash } from "lucide-react";
 import { useT } from "@seliseblocks/genesis-os";
 import {
   AccordionContent,
@@ -121,6 +121,11 @@ interface EmailConfigCardProps {
   organizationName?: string;
   onEdit: () => void;
   onDelete: () => void;
+  /**
+   * Opens Assign templates. Offered on outbound cards only, since an inbound configuration can't
+   * send mail; a host without it shows no such item.
+   */
+  onAssign?: () => void;
   /** The open edit and delete dialogs, rendered next to the card rather than inside its header. */
   children?: React.ReactNode;
 }
@@ -133,6 +138,7 @@ export function EmailConfigCard({
   organizationName,
   onEdit,
   onDelete,
+  onAssign,
   children,
 }: Readonly<EmailConfigCardProps>) {
   const { t } = useT("os.communication.mail");
@@ -147,6 +153,7 @@ export function EmailConfigCard({
   // have; it is never deletable.
   const canEdit = !config.isDefault || !config.isInbound;
   const canDelete = !config.isDefault;
+  const canAssign = !!onAssign && !config.isInbound;
 
   return (
     <AccordionItem
@@ -167,7 +174,7 @@ export function EmailConfigCard({
             )}
           </div>
         </AccordionTrigger>
-        {(canEdit || canDelete) && (
+        {(canAssign || canEdit || canDelete) && (
           <div className="absolute right-6 top-1/2 -translate-y-1/2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -181,6 +188,12 @@ export function EmailConfigCard({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                {canAssign && (
+                  <DropdownMenuItem className="gap-2" onSelect={onAssign}>
+                    <ListChecks className="h-3.5 w-3.5" />
+                    <span>{t("EMAIL_CONFIGURE.ASSIGN_TEMPLATES")}</span>
+                  </DropdownMenuItem>
+                )}
                 {canEdit && (
                   <DropdownMenuItem className="gap-2" onSelect={onEdit}>
                     <Pencil className="h-3.5 w-3.5" />

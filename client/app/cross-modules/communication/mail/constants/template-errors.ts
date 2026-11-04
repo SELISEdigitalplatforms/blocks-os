@@ -14,6 +14,10 @@ const TEMPLATE_ERROR_KEYS: Record<string, string> = {
   "Organization not found": "TEMPLATE_ERRORS.ORGANIZATION_NOT_FOUND",
   "Subject is required.": "TEMPLATE_ERRORS.SUBJECT_REQUIRED",
   "Template not found": "TEMPLATE_ERRORS.TEMPLATE_NOT_FOUND",
+  "Select at least one template": "TEMPLATE_ERRORS.ASSIGN_NONE_SELECTED",
+  "No more than 500 templates per request": "TEMPLATE_ERRORS.ASSIGN_TOO_MANY",
+  "Some templates aren't in this configuration's organization":
+    "TEMPLATE_ERRORS.ASSIGN_OTHER_ORGANIZATION",
 };
 
 /** `customMessages` for showErrorToast: each known server message through its English key. */

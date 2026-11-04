@@ -21,6 +21,25 @@ export interface IEmailLogs {
   type: "divider" | "message" | "empty";
 }
 
+/**
+ * `POST Mail/AssignTemplates`: the configuration, and either the chosen template ids or, with
+ * `allMatching`, every template of its organization matching `searchKey` and `language`.
+ */
+export interface IAssignTemplatesRequest {
+  configurationId: string;
+  allMatching: boolean;
+  templateIds?: string[];
+  searchKey?: string;
+  language?: string;
+}
+
+export interface IAssignTemplatesResponse {
+  isSuccess: boolean;
+  /** Templates that switched; ones already on the configuration don't count. */
+  updatedCount?: number;
+  errors?: Record<string, string> | null;
+}
+
 export interface IEmailTemplate {
   itemId: string;
   createdDate?: string;
