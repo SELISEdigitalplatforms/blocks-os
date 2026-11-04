@@ -105,6 +105,31 @@ namespace Configuration.DomainService.Shared.Utilities
 
             return configuration;
         }
+        /// <summary>
+        /// Binds the webhook queues in blocks-os-worker only: Genesis's <see cref="Blocks.Genesis.ActionConstants.WebhookQueue"/>
+        /// (actions with the webhook target on) and the worker's own delivery job queue. The API only sends to the latter.
+        /// </summary>
+        public static MessageConfiguration WithWebhookQueues(MessageConfiguration configuration)
+        {
+            ArgumentNullException.ThrowIfNull(configuration);
+            string[] queues = [Blocks.Genesis.ActionConstants.WebhookQueue, Webhooks.WebhookJobQueue.QueueName];
+            foreach (var queue in queues)
+            {
+                if (configuration.RabbitMqConfiguration is { } rabbit &&
+                    !rabbit.ConsumerSubscriptions.Any(s => s.QueueName == queue))
+                {
+                    rabbit.ConsumerSubscriptions.Add(ConsumerSubscription.BindToQueue(queue));
+                }
+
+                if (configuration.AzureServiceBusConfiguration is { } azure && !azure.Queues.Contains(queue))
+                {
+                    azure.Queues = [.. azure.Queues, queue];
+                }
+            }
+
+            return configuration;
+        }
+
         private const string DefaultProvider = "azure";
         private const string RabbitMqProvider = "rabbitmq";
     }
