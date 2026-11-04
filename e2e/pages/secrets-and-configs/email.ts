@@ -1,23 +1,30 @@
 import { expect, type Page } from "@playwright/test";
 import { openSecretManagement } from "../../support/os-helpers";
 
-const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
 /**
- * A card's accessible name: the configuration's name, followed by its ORG DEFAULT / PROJECT DEFAULT
- * chips when the project uses organizations (blocks-os#732 H10). Matched whole, so the card's
- * "More actions for <name>" button never matches.
+ * A card's accessible names: the configuration's name, followed by its ORG DEFAULT / PROJECT DEFAULT
+ * chips when the project uses organizations (blocks-os#732 H10). Each is matched exactly, so the
+ * card's "More actions for <name>" button never matches.
  */
-export function cardName(configName: string) {
-  return new RegExp(`^${escapeRegExp(configName)}( (ORG|PROJECT) DEFAULT)*$`);
+export function cardNames(configName: string) {
+  return ["", " ORG DEFAULT", " PROJECT DEFAULT", " ORG DEFAULT PROJECT DEFAULT"].map(
+    (chips) => configName + chips,
+  );
+}
+
+function byCardName(page: Page, role: "button" | "region", configName: string) {
+  const [first, ...rest] = cardNames(configName).map((name) =>
+    page.getByRole(role, { name, exact: true }),
+  );
+  return rest.reduce((locator, next) => locator.or(next), first);
 }
 
 export function cardTrigger(page: Page, configName: string) {
-  return page.getByRole("button", { name: cardName(configName) });
+  return byCardName(page, "button", configName);
 }
 
 export function cardPanel(page: Page, configName: string) {
-  return page.getByRole("region", { name: cardName(configName) });
+  return byCardName(page, "region", configName);
 }
 
 /**
