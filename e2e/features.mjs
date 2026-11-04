@@ -85,6 +85,12 @@ export const OS_FEATURES = [
     spec: "tests/02-secrets-and-configs/09-email-flow.spec.ts",
   },
   {
+    id: "email-assign-templates",
+    name: "Secrets & Configs — Email, assign templates (#734)",
+    enabled: true,
+    spec: "tests/02-secrets-and-configs/15-assign-templates-734.spec.ts",
+  },
+  {
     id: "notification",
     name: "Secrets & Configs — Notification",
     enabled: true,

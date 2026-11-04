@@ -68,7 +68,7 @@ export type MailApi = {
   languageCodes: string[];
 };
 
-function replayableHeaders(request: Request): Record<string, string> {
+export function replayableHeaders(request: Request): Record<string, string> {
   const headers: Record<string, string> = {};
   for (const [name, value] of Object.entries(request.headers())) {
     if (!BROWSER_HEADERS.has(name) && !name.startsWith("sec-") && !name.startsWith(":")) {
