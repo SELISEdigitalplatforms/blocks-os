@@ -18,7 +18,7 @@ import {
 
 /**
  * blocks-os#734 (SPEC32) §10: assign templates to a configuration in bulk. The fixtures (two
- * outbound configurations, an inbound one and three templates) are created by the test with one
+ * outbound configurations, an inbound one and four templates) are created by the test with one
  * name prefix and deleted at the end. The shared project has multi-org on (#733 Q2), so they live
  * in its Default organization; every list step searches for the prefix first, so "Select all"
  * (allMatching) only ever touches the test's own templates (#734 Q1: A).
@@ -145,7 +145,7 @@ function rowCheckbox(page: Page, name: string) {
     .getByRole("checkbox", { name: `${name} · `, exact: false });
 }
 
-/** §10 step 1 (H6, H7, H10): tick two of the three, see what happens, assign. */
+/** §10 step 1 (H6, H7, H10): tick two of the four, see what happens, assign. */
 export async function assignTwoTemplatesFlow(page: Page, names: AssignFixtures) {
   const dialog = await openAssignDialog(page, names, names.configB);
   for (const header of ["Name", "Language", "Current configuration", "What happens"]) {
