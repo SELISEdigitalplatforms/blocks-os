@@ -26,6 +26,7 @@ vi.mock("@blocks-communication/mail/hooks/use-email-template", () => ({
       return {
         isLoading: false,
         isError: false,
+        isSuccess: true,
         data: { templates: [], totalCount: h.alreadyCount },
       };
     }
@@ -174,7 +175,7 @@ describe("AssignTemplatesDialog (SPEC32 H7-H11, C7, C9)", () => {
       screen.getByText("All 13 templates in Acme Corp are selected, on every page."),
     ).toBeTruthy();
     expect(screen.getByText("13 selected.")).toBeTruthy();
-    expect(screen.getByText("13 of Acme Corp’s templates switch to Acme SMTP.")).toBeTruthy();
+    expect(screen.getByText("13 of Acme Corp's templates switch to Acme SMTP.")).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "Assign 13 templates" }));
     await waitFor(() => expect(h.assign).toHaveBeenCalled());
@@ -216,6 +217,74 @@ describe("AssignTemplatesDialog (SPEC32 H7-H11, C7, C9)", () => {
       ).toBeNull(),
     );
   });
+
+  it("unticking a row in every-page mode keeps the rest of the page ticked", async () => {
+    const { user } = renderDialog();
+    await user.click(screen.getByRole("checkbox", { name: "Select all templates on this page" }));
+    await user.click(screen.getByRole("button", { name: "Select all 13 templates in Acme Corp" }));
+    await user.click(screen.getByRole("checkbox", { name: "InvoiceReady · English" }));
+    expect(screen.getByRole("checkbox", { name: "InvoiceReady · English" })).toHaveProperty(
+      "ariaChecked",
+      "false",
+    );
+    expect(screen.getByText("1 selected.")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Assign 1 template" }));
+    await waitFor(() => expect(h.assign).toHaveBeenCalled());
+    expect(h.assign.mock.calls[0][0]).toEqual({
+      configurationId: "acme-smtp",
+      allMatching: false,
+      templateIds: ["a2"],
+    });
+  });
+
+  it("says when the only selectable row on the page is selected", async () => {
+    h.pages = { 0: { templates: [row("a1", "InvoiceReady")], totalCount: 1 } };
+    h.alreadyCount = 0;
+    const { user } = renderDialog();
+    await user.click(screen.getByRole("checkbox", { name: "Select all templates on this page" }));
+    expect(screen.getByText("The 1 template on this page is selected.")).toBeTruthy();
+  });
+
+  it("waits for a typed search before it can assign", async () => {
+    const { user } = renderDialog();
+    await user.click(screen.getByRole("checkbox", { name: "InvoiceReady · English" }));
+    await user.type(screen.getByRole("searchbox", { name: "Search templates" }), "Inv");
+    expect(screen.getByRole("button", { name: "Assign 1 template" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Assign 1 template" })).toHaveProperty(
+        "disabled",
+        false,
+      ),
+    );
+  });
+
+  it("refuses more than 500 explicit templates before sending (C4)", async () => {
+    const many = Array.from({ length: 10 }, (_, index) => row(`p${index}`, `T${index}`));
+    h.pages = Object.fromEntries(
+      Array.from({ length: 51 }, (_, page) => [
+        page,
+        {
+          templates: many.map((t) => ({ ...t, itemId: `${t.itemId}-${page}` })),
+          totalCount: 510,
+        },
+      ]),
+    );
+    h.alreadyCount = 0;
+    const { user } = renderDialog();
+    for (let page = 0; page < 51; page++) {
+      await user.click(screen.getByRole("checkbox", { name: "Select all templates on this page" }));
+      if (page < 50) await user.click(screen.getByRole("button", { name: "Go to next page" }));
+    }
+    expect(screen.getByText("510 selected.")).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toBe("No more than 500 templates per request");
+    expect(screen.getByRole("button", { name: "Assign 510 templates" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+  }, 60_000);
 
   it("clears the selection from the every-page bar", async () => {
     const { user } = renderDialog();
@@ -279,7 +348,7 @@ describe("AssignTemplatesDialog (SPEC32 H7-H11, C7, C9)", () => {
     ).toBeTruthy();
     expect(
       screen.getByText(
-        "3 Default organization templates switch to Gmail Test. Organizations’ own copies don’t change.",
+        "3 Default organization templates switch to Gmail Test. Organizations' own copies don't change.",
       ),
     ).toBeTruthy();
   });

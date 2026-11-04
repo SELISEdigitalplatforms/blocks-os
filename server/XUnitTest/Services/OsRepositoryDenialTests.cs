@@ -75,6 +75,8 @@ public class OsRepositoryDenialTests
         list.Templates.Should().BeEmpty();
         await repo.DeleteAsync("1");
         await FluentActions.Invoking(() => repo.SaveAsync(new EmailTemplate { ItemId = "1" })).Should().ThrowAsync<UnauthorizedAccessException>();
+        await FluentActions.Invoking(() => repo.CountOutsideOrganizationAsync(new[] { "1" }, "default")).Should().ThrowAsync<UnauthorizedAccessException>();
+        await FluentActions.Invoking(() => repo.AssignConfigurationAsync("cfg", "default", new[] { "1" }, null, null)).Should().ThrowAsync<UnauthorizedAccessException>();
     }
 
     [Fact]

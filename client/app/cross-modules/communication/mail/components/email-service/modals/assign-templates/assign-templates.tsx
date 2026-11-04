@@ -43,6 +43,7 @@ import { languageNameOf } from "@blocks-communication/mail/constants/template-or
 import { templateErrorMessages } from "@blocks-communication/mail/constants/template-errors";
 import { TemplateConfigurationName } from "@blocks-communication/mail/email/email-service-table/template-configuration-name";
 
+const MAX_TEMPLATE_IDS = 500;
 const PAGE_SIZE = 10;
 
 interface AssignTemplatesDialogProps {
@@ -140,12 +141,22 @@ export function AssignTemplatesDialog({
     allPages ||
     (selectableOnPage.length > 0 && selectableOnPage.every((row) => picked.has(row.itemId)));
   const selectedCount = allPages ? totalSelectable : picked.size;
+  // The server takes at most this many explicit ids per request (C4); every-page mode has no limit.
+  const tooMany = !allPages && picked.size > MAX_TEMPLATE_IDS;
+  // A search still being typed would not be in the request yet (the box waits before it applies).
+  const searchPending = searchInput !== search;
   const projectLanguages = [
     ...new Map((languages ?? []).map((item) => [item.languageCode, item])).values(),
   ];
 
   const toggleRow = (itemId: string) => {
-    setAllPages(false);
+    if (allPages) {
+      // Every row shows ticked in every-page mode; unticking one keeps the rest of this page
+      // ticked and leaves every-page mode, instead of adding the row the user meant to untick.
+      setAllPages(false);
+      setPicked(new Set(selectableOnPage.map((row) => row.itemId).filter((id) => id !== itemId)));
+      return;
+    }
     setPicked((current) => {
       const next = new Set(current);
       if (next.has(itemId)) next.delete(itemId);
@@ -312,7 +323,7 @@ export function AssignTemplatesDialog({
         />
       </div>
 
-      {pageChecked && !allPages && totalSelectable > 0 ? (
+      {pageChecked && !allPages && already.isSuccess && totalSelectable > 0 ? (
         <div
           role="status"
           className="flex flex-wrap items-center justify-center gap-2 rounded-md bg-blocks-primary-shades-300 px-4 py-2 text-sm"
@@ -379,6 +390,11 @@ export function AssignTemplatesDialog({
       </div>
 
       <DialogFooter className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {tooMany ? (
+          <p role="alert" className="text-sm text-destructive">
+            {t("TEMPLATE_ERRORS.ASSIGN_TOO_MANY")}
+          </p>
+        ) : null}
         <p className="text-sm text-muted-foreground">
           <strong className="text-high-emphasis">
             {t("ASSIGN_TEMPLATES.SELECTED", { count: selectedCount })}
@@ -391,7 +407,10 @@ export function AssignTemplatesDialog({
           <Button variant="outline" onClick={onClose}>
             {t("common:CANCEL")}
           </Button>
-          <Button disabled={selectedCount === 0 || isPending} onClick={() => void onAssign()}>
+          <Button
+            disabled={selectedCount === 0 || isPending || tooMany || searchPending}
+            onClick={() => void onAssign()}
+          >
             {t("ASSIGN_TEMPLATES.SUBMIT", { count: selectedCount })}
           </Button>
         </div>

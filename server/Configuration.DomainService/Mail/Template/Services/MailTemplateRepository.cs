@@ -167,7 +167,11 @@ namespace Configuration.DomainService.Mail.Template.Services
             var filter = filterBuilder.In(t => t.ItemId, templateIds) & filterBuilder.Not(OfOrganization(organizationId));
 
             var scope = await _dataAccess.ReadAsync(OsSchemas.EmailTemplate, filter, "MailTemplateRepository.CountOutsideOrganizationAsync");
-            return scope.Granted ? await collection.CountDocumentsAsync(scope.Filter) : 0;
+            // Without read access the organization check (C3) can't be made, so the assignment is refused, as a
+            // refused update is.
+            if (!scope.Granted)
+                throw new UnauthorizedAccessException("Access to the email templates was denied by the data access policy.");
+            return await collection.CountDocumentsAsync(scope.Filter);
         }
 
         public async Task<int> AssignConfigurationAsync(string configurationId, string organizationId, IReadOnlyCollection<string>? templateIds, string? searchKey, string? language)
