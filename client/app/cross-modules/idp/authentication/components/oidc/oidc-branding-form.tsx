@@ -163,7 +163,7 @@ const TemplateSkeleton = () => (
       <div className="grid min-h-136 min-w-0 grid-cols-1 xl:h-[calc(100dvh-10rem)] xl:max-h-184 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <section className="flex border-b xl:border-b-0 xl:border-r">
           <div className="hidden w-22 shrink-0 space-y-2 border-r bg-muted/20 p-2 xl:block">
-            {[0, 1, 2].map((item) => (
+            {[0, 1, 2, 3].map((item) => (
               <Skeleton key={item} className="h-17 w-full rounded-lg" />
             ))}
           </div>
