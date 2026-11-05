@@ -61,7 +61,8 @@ type UseOidcClientFormArgs = {
   /** Loads and resets only while the dialog is open or the page is shown. */
   active: boolean;
   /** After a successful save. A new client hands back its secret, the only time the API sends it. */
-  onSaved: (createdSecret: OneTimeSecret | null) => void;
+  /** May return a promise (for example a navigation); saving waits for it. */
+  onSaved: (createdSecret: OneTimeSecret | null) => void | Promise<void>;
 };
 
 /**
@@ -238,7 +239,7 @@ export const useOidcClientForm = ({ itemId, active, onSaved }: UseOidcClientForm
             }
           : null;
       if (!isEditMode) form.reset();
-      onSaved(createdSecret);
+      await onSaved(createdSecret);
     } catch (error) {
       if (isErrorWithErrors(error)) {
         showErrorToast({ errors: error.errors });
