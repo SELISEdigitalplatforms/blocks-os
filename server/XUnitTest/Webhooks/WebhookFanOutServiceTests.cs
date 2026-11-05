@@ -49,8 +49,8 @@ namespace XUnitTest.Webhooks
             DataJson = "{\"userId\":\"u1\"}"
         };
 
-        private void SetWebhookFlag(bool on) => _actions.Setup(a => a.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ActionDefinition> { new() { Name = ActionName, Webhook = on } });
+        private void SetWebhookFlag(bool on) => _actions.Setup(a => a.GetAsync(ActionName, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ActionDefinition { Name = ActionName, Webhook = on });
 
         private void SetWebhooks(params WebhookEntry[] webhooks) =>
             _webhooks.Setup(w => w.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync(webhooks);
@@ -112,7 +112,7 @@ namespace XUnitTest.Webhooks
         [Fact]
         public async Task KvReadFails_NoRowIsCreated_AndTheFanOutIsRetriedLater()
         {
-            _actions.Setup(a => a.GetAllAsync(It.IsAny<CancellationToken>())).ThrowsAsync(new TimeoutException("db"));
+            _actions.Setup(a => a.GetAsync(ActionName, It.IsAny<CancellationToken>())).ThrowsAsync(new TimeoutException("db"));
 
             await FanOutAsTenantAsync();
 

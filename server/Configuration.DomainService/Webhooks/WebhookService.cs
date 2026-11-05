@@ -126,10 +126,10 @@ public sealed class WebhookService : IWebhookService
 
         // The tenant list holds only the actions an admin switched on: a name is allowed when its webhook flag is on,
         // or when this webhook already has it (so an old webhook can still be saved after the flag went off).
-        var known = (await _actions.GetAllAsync(cancellationToken))?
+        var known = (await _actions.GetAllAsync(cancellationToken))
             .Where(d => d is not null && d.Webhook)
             .Select(d => d.Name)
-            .ToHashSet(StringComparer.Ordinal) ?? [];
+            .ToHashSet(StringComparer.Ordinal);
         known.UnionWith(existing?.Actions ?? []);
         return request.Actions.TrueForAll(known.Contains) ? null : WebhookErrorCodes.ActionNotFound;
     }

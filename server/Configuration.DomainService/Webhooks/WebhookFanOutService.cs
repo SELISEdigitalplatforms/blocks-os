@@ -96,9 +96,8 @@ public sealed class WebhookFanOutService : IWebhookFanOutService
     // Empty when the webhook flag is off, the action is unknown or no active webhook lists it (all logged).
     private async Task<IReadOnlyList<WebhookEntry>> FindTargetsAsync(BlocksAction action, string tenantId, CancellationToken cancellationToken)
     {
-        var definitions = await _actions.GetAllAsync(cancellationToken);
-        var definition = definitions?.Find(d => d is not null && string.Equals(d.Name, action.Action, StringComparison.Ordinal));
-        if (definition is null || !definition.Webhook)
+        var definition = await _actions.GetAsync(action.Action, cancellationToken);
+        if (definition is null || !definition.Webhook || !string.Equals(definition.Name, action.Action, StringComparison.Ordinal))
         {
             _logger.LogInformation("Webhook action {Action} ({EventId}) dropped for tenant {TenantId}: webhook target is off", action.Action, action.Id, tenantId);
             return [];

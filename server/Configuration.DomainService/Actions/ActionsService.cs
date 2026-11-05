@@ -34,10 +34,10 @@ public sealed class ActionsService : IActionsService
             return [];
         }
 
-        var enabled = (await _repository.GetAllAsync(cancellationToken))?
-            .Where(d => d is not null)
+        var enabled = (await _repository.GetAllAsync(cancellationToken))
+            .Where(d => d is not null && !string.IsNullOrEmpty(d.Name))
             .GroupBy(d => d.Name, StringComparer.Ordinal)
-            .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal) ?? [];
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
         return [.. catalog.Where(d => d is not null).Select(d => ViewOf(d, enabled.GetValueOrDefault(d.Name)))];
     }
 
@@ -83,11 +83,7 @@ public sealed class ActionsService : IActionsService
 
         if (request.Enabled)
         {
-            if (!await _repository.EnableAsync(catalogEntry, flagField, cancellationToken))
-            {
-                _logger.LogWarning("Action {Action} target {Target} could not be switched on: concurrent changes", LogSafe.Value(request.Name), flagField);
-                return ServiceOutcome<bool>.Conflict(ActionErrorCodes.UpdateConflict);
-            }
+            await _repository.EnableAsync(catalogEntry, flagField, cancellationToken);
         }
         else
         {
