@@ -43,7 +43,6 @@ public static class ActionErrorCodes
     public const string ActionNotFound = "ACTION_NOT_FOUND";
     public const string ActionsNotSeeded = "ACTIONS_NOT_SEEDED";
     public const string InvalidTarget = "INVALID_TARGET";
-    public const string UpdateConflict = "ACTION_UPDATE_CONFLICT";
 }
 
 /// <summary>Maps a request target to the stored flag field. One entry per target.</summary>

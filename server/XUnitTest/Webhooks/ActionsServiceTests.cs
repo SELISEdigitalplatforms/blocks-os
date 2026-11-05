@@ -21,24 +21,11 @@ namespace XUnitTest.Webhooks
         public async Task Update_Enable_SendsTheCatalogEntryAndOnlyTheNamedFlag()
         {
             _repository.Setup(r => r.GetCatalogAsync(It.IsAny<CancellationToken>())).ReturnsAsync([Catalog]);
-            _repository.Setup(r => r.EnableAsync(Catalog, "Webhook", It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
             var outcome = await Service().UpdateAsync(new UpdateActionRequest { Name = "iam.user.created", Target = "WebHook", Enabled = true }, CancellationToken.None);
 
             outcome.IsOk.Should().BeTrue();
             _repository.Verify(r => r.EnableAsync(Catalog, "Webhook", It.IsAny<CancellationToken>()), Times.Once);
-        }
-
-        [Fact]
-        public async Task Update_Enable_WhenConcurrentRemovalsKeepWinning_IsAConflict()
-        {
-            _repository.Setup(r => r.GetCatalogAsync(It.IsAny<CancellationToken>())).ReturnsAsync([Catalog]);
-            _repository.Setup(r => r.EnableAsync(It.IsAny<ActionDefinition>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
-
-            var outcome = await Service().UpdateAsync(new UpdateActionRequest { Name = "iam.user.created", Target = "workflow", Enabled = true }, CancellationToken.None);
-
-            outcome.Status.Should().Be(OutcomeStatus.Conflict);
-            outcome.ErrorCode.Should().Be(ActionErrorCodes.UpdateConflict);
         }
 
         [Fact]

@@ -38,12 +38,6 @@ namespace XUnitTest.Integration
 
         private IMongoCollection<BsonDocument> KeyValues => _database.GetCollection<BsonDocument>(KeyValueCollection.Name);
 
-        private static BsonDocument Action(string name) => new()
-        {
-            { "Name", name }, { "Label", name }, { "Service", "iam" }, { "Payload", new BsonDocument() },
-            { "Workflow", false }, { "Function", false }, { "Webhook", false }
-        };
-
         private static BsonDocument CatalogAction(string name, string label = "", string payloadType = "string") => new()
         {
             { "Name", name }, { "Label", label == "" ? name : label }, { "Service", "iam" },
@@ -60,7 +54,15 @@ namespace XUnitTest.Integration
         private Task SeedCatalogAsync(params BsonDocument[] items) =>
             _rootDatabase.GetCollection<BsonDocument>(KeyValueCollection.Name).InsertOneAsync(ActionRow(items));
 
-        private Task SeedTenantAsync(params BsonDocument[] items) => KeyValues.InsertOneAsync(ActionRow(items));
+        // One tenant entry per switched-on action, as OS writes it.
+        private Task SeedTenantAsync(params BsonDocument[] items) => KeyValues.InsertManyAsync(items.Select(item => new BsonDocument
+        {
+            { "_id", Guid.NewGuid().ToString("N") }, { "Key", ActionConstants.ActionKey(item["Name"].AsString) },
+            { "Value", item }, { "Tags", new BsonArray() }
+        }));
+
+        private Task<List<BsonDocument>> EntriesAsync(string name) =>
+            KeyValues.Find(new BsonDocument("Key", ActionConstants.ActionKey(name))).ToListAsync();
 
         private ActionsService Service() => new(
             new ActionsRepository(_keyValueStore, _provider, _clock), Microsoft.Extensions.Logging.Abstractions.NullLogger<ActionsService>.Instance);
@@ -87,19 +89,22 @@ namespace XUnitTest.Integration
             var service = Service();
 
             (await service.GetsAsync(CancellationToken.None)).Should().OnlyContain(a => !a.Workflow && !a.Function && !a.Webhook)
-                .And.HaveCount(2, "no tenant row means every flag is off");
+                .And.HaveCount(2, "no tenant entry means every flag is off");
 
             var tenantCopy = CatalogAction("iam.user.created", "old label");
             tenantCopy["Webhook"] = true;
             var tenantOnly = CatalogAction("iam.gone");
             tenantOnly["Workflow"] = true;
             await SeedTenantAsync(tenantCopy, tenantOnly);
+            var oldList = CatalogAction("iam.user.updated");
+            oldList["Function"] = true;
+            await KeyValues.InsertOneAsync(ActionRow([oldList]));
 
             var list = await service.GetsAsync(CancellationToken.None);
 
             list.Select(a => a.Name).Should().Equal("iam.user.created", "iam.user.updated");
             list[0].Should().BeEquivalentTo(new { Label = "Created", Webhook = true, Workflow = false });
-            list[1].Webhook.Should().BeFalse();
+            list[1].Function.Should().BeFalse("a tenant list in the old one-row shape is ignored");
         }
 
         [Fact]
@@ -111,18 +116,20 @@ namespace XUnitTest.Integration
         }
 
         [Fact]
-        public async Task Actions_Enable_CreatesTheTenantRowWithAFullCopyOfTheCatalogEntry()
+        public async Task Actions_Enable_CreatesOneTenantEntryWithAFullCopyOfTheCatalogEntry()
         {
             await SeedCatalogAsync(CatalogAction("iam.user.created", "Created"));
 
             var outcome = await Service().UpdateAsync(Switch("iam.user.created", "webhook", true), CancellationToken.None);
 
             outcome.IsOk.Should().BeTrue();
-            var row = await KeyValues.Find(new BsonDocument("Key", ActionConstants.ActionsKey)).SingleAsync();
-            row["Tags"].AsBsonArray.Should().BeEmpty();
-            row["CreatedDate"].IsValidDateTime.Should().BeTrue();
-            var stored = await _keyValueStore.GetAsync<List<ActionDefinition>>(ActionConstants.ActionsKey, true, CancellationToken.None);
-            stored.Should().ContainSingle().Which.Should().BeEquivalentTo(new
+            var entry = (await EntriesAsync("iam.user.created")).Should().ContainSingle().Subject;
+            entry["Tags"].AsBsonArray.Should().BeEmpty();
+            entry["CreatedDate"].IsValidDateTime.Should().BeTrue();
+            entry["OrganizationId"].AsString.Should().Be("default");
+            (await KeyValues.CountDocumentsAsync(new BsonDocument("Key", ActionConstants.ActionsKey))).Should().Be(0);
+            var stored = await _keyValueStore.GetAsync<ActionDefinition>(ActionConstants.ActionKey("iam.user.created"), true, CancellationToken.None);
+            stored.Should().BeEquivalentTo(new
             {
                 Name = "iam.user.created", Label = "Created", Service = "iam",
                 Payload = new Dictionary<string, string> { ["userId"] = "string" },
@@ -131,7 +138,7 @@ namespace XUnitTest.Integration
         }
 
         [Fact]
-        public async Task Actions_Enable_ASecondFlagKeepsTheFirst_AndRefreshesTheItemFromTheCatalog()
+        public async Task Actions_Enable_ASecondFlagKeepsTheFirst_AndRefreshesTheEntryFromTheCatalog()
         {
             await SeedCatalogAsync(CatalogAction("iam.user.created", "Created", "string"));
             var service = Service();
@@ -142,59 +149,83 @@ namespace XUnitTest.Integration
 
             await service.UpdateAsync(Switch("iam.user.created", "function", true), CancellationToken.None);
 
-            var stored = await _keyValueStore.GetAsync<List<ActionDefinition>>(ActionConstants.ActionsKey, true, CancellationToken.None);
-            stored.Should().ContainSingle().Which.Should().BeEquivalentTo(new
+            var stored = await new ActionsRepository(_keyValueStore, _provider, _clock).GetAsync("iam.user.created", CancellationToken.None);
+            stored.Should().BeEquivalentTo(new
             {
                 Label = "Renamed", Workflow = true, Function = true, Webhook = false,
                 Payload = new Dictionary<string, string> { ["userId"] = "string[]" }
             });
+            (await EntriesAsync("iam.user.created")).Should().ContainSingle();
         }
 
         [Fact]
-        public async Task Actions_Enable_TwoAdminsAtOnce_KeepBothFlags_AndMakeOneItem()
+        public async Task Actions_Enable_TwoAdminsAtOnce_KeepBothFlags_AndMakeOneEntry()
         {
             await SeedCatalogAsync(CatalogAction("iam.user.created"), CatalogAction("iam.user.updated"));
             await SeedTenantAsync(CatalogAction("iam.other"));
             var repository = new ActionsRepository(_keyValueStore, _provider, _clock);
             var entry = new ActionDefinition { Name = "iam.user.created", Label = "x", Service = "iam" };
 
-            var results = await Task.WhenAll(
+            await Task.WhenAll(
                 repository.EnableAsync(entry, "Webhook", CancellationToken.None),
-                repository.EnableAsync(entry, "Workflow", CancellationToken.None),
-                repository.EnableAsync(entry, "Function", CancellationToken.None));
+                repository.EnableAsync(entry, "Workflow", CancellationToken.None));
 
-            results.Should().AllBeEquivalentTo(true);
-            var stored = await repository.GetAllAsync(CancellationToken.None);
-            stored!.Where(a => a.Name == "iam.user.created").Should().ContainSingle()
-                .Which.Should().BeEquivalentTo(new { Webhook = true, Workflow = true, Function = true });
+            (await EntriesAsync("iam.user.created")).Should().ContainSingle();
+            (await repository.GetAsync("iam.user.created", CancellationToken.None))
+                .Should().BeEquivalentTo(new { Webhook = true, Workflow = true, Function = false });
+            (await repository.GetAllAsync(CancellationToken.None)).Select(a => a.Name)
+                .Should().BeEquivalentTo("iam.other", "iam.user.created");
         }
 
         [Fact]
-        public async Task Actions_Disable_RemovesTheItemOnlyWhenTheLastFlagGoes()
+        public async Task Actions_DuplicateEntries_AreMergedIntoTheOldestOne()
+        {
+            var older = CatalogAction("iam.user.created");
+            older["Workflow"] = true;
+            var newer = CatalogAction("iam.user.created");
+            newer["Webhook"] = true;
+            var key = ActionConstants.ActionKey("iam.user.created");
+            await KeyValues.InsertManyAsync(
+            [
+                new BsonDocument { { "_id", "b-newer" }, { "Key", key }, { "Value", newer }, { "CreatedDate", DateTime.UtcNow } },
+                new BsonDocument { { "_id", "a-older" }, { "Key", key }, { "Value", older }, { "CreatedDate", DateTime.UtcNow.AddMinutes(-1) } }
+            ]);
+
+            await ActionsRepository.MergeDuplicatesAsync(KeyValues, "iam.user.created", DateTime.UtcNow, CancellationToken.None);
+
+            var entry = (await EntriesAsync("iam.user.created")).Should().ContainSingle().Subject;
+            entry["_id"].AsString.Should().Be("a-older");
+            entry["Value"]["Workflow"].AsBoolean.Should().BeTrue();
+            entry["Value"]["Webhook"].AsBoolean.Should().BeTrue();
+            entry["Value"]["Function"].AsBoolean.Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task Actions_Disable_DeletesTheEntryOnlyWhenTheLastFlagGoes()
         {
             await SeedCatalogAsync(CatalogAction("iam.user.created"));
             var service = Service();
+            var repository = new ActionsRepository(_keyValueStore, _provider, _clock);
             await service.UpdateAsync(Switch("iam.user.created", "workflow", true), CancellationToken.None);
             await service.UpdateAsync(Switch("iam.user.created", "webhook", true), CancellationToken.None);
 
             await service.UpdateAsync(Switch("iam.user.created", "workflow", false), CancellationToken.None);
-            var afterFirst = await _keyValueStore.GetAsync<List<ActionDefinition>>(ActionConstants.ActionsKey, true, CancellationToken.None);
-            afterFirst.Should().ContainSingle().Which.Should().BeEquivalentTo(new { Workflow = false, Webhook = true });
+            (await repository.GetAsync("iam.user.created", CancellationToken.None))
+                .Should().BeEquivalentTo(new { Workflow = false, Webhook = true });
 
             await service.UpdateAsync(Switch("iam.user.created", "webhook", false), CancellationToken.None);
-            var afterLast = await _keyValueStore.GetAsync<List<ActionDefinition>>(ActionConstants.ActionsKey, true, CancellationToken.None);
-            afterLast.Should().BeEmpty();
+            (await EntriesAsync("iam.user.created")).Should().BeEmpty();
         }
 
         [Fact]
-        public async Task Actions_Disable_WithNoItemOrNoRow_IsOk_AndWritesNothing()
+        public async Task Actions_Disable_WithNoEntry_IsOk_AndWritesNothing()
         {
             await SeedCatalogAsync(CatalogAction("iam.user.created"));
 
             var outcome = await Service().UpdateAsync(Switch("iam.user.created", "webhook", false), CancellationToken.None);
 
             outcome.IsOk.Should().BeTrue();
-            (await KeyValues.CountDocumentsAsync(new BsonDocument("Key", ActionConstants.ActionsKey))).Should().Be(0);
+            (await KeyValues.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(0);
         }
 
         [Fact]
