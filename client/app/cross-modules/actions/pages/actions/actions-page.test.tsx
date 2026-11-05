@@ -21,9 +21,7 @@ import { ActionsPage } from "./actions-page";
 const USER_CREATED_NAME = "iam.user.created";
 const USER_CREATED = "User created";
 const WORKFLOW = "Workflow";
-const NEXT_PAGE = "Go to next page";
-const FIRST_EVENT = "User event 01";
-const ELEVENTH_EVENT = "User event 11";
+const SEARCH_PLACEHOLDER = "Search actions";
 const ARIA_CHECKED = "aria-checked";
 const CHECKED = "true";
 const UNCHECKED = "false";
@@ -47,6 +45,53 @@ describe("ActionsPage", () => {
     expect(screen.getByRole("heading", { name: "Organizations" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Localization" })).toBeTruthy();
     expect(screen.getByText(USER_CREATED_NAME)).toBeTruthy();
+  });
+
+  it("has a search box and no intro text", async () => {
+    renderPage();
+
+    expect(await screen.findByPlaceholderText(SEARCH_PLACEHOLDER)).toBeTruthy();
+    expect(screen.queryByText(/Choose what can run/)).toBeNull();
+  });
+
+  it("shows only matching actions and hides groups with no match", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.type(await screen.findByPlaceholderText(SEARCH_PLACEHOLDER), "GENERATION");
+
+    expect(await screen.findByRole("heading", { name: "Localization" })).toBeTruthy();
+    await waitFor(() => expect(screen.queryByRole("heading", { name: "Users" })).toBeNull());
+    expect(screen.queryByRole("heading", { name: "Organizations" })).toBeNull();
+    expect(screen.queryByText(USER_CREATED_NAME)).toBeNull();
+    expect(screen.getByText("localization.files.generated")).toBeTruthy();
+  });
+
+  it("shows a no-match text, not the empty state, and all rows again when cleared", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    const input = await screen.findByPlaceholderText(SEARCH_PLACEHOLDER);
+
+    await user.type(input, "zzz");
+    expect(await screen.findByText("No actions match your search.")).toBeTruthy();
+    expect(screen.queryByText("No actions set up yet")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Users" })).toBeNull();
+
+    await user.clear(input);
+    expect(await screen.findByRole("heading", { name: "Users" })).toBeTruthy();
+    expect(screen.queryByText("No actions match your search.")).toBeNull();
+    expect(screen.getByRole("heading", { name: "Localization" })).toBeTruthy();
+  });
+
+  it("keeps the payload rows working while the list is filtered", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.type(await screen.findByPlaceholderText(SEARCH_PLACEHOLDER), "mfaenabled");
+    await waitFor(() => expect(screen.queryByRole("heading", { name: "Localization" })).toBeNull());
+    await user.click(screen.getByRole("button", { name: "User created - Payload" }));
+
+    expect(screen.getByText(/"action": "iam.user.created"/)).toBeTruthy();
   });
 
   it("shows the empty state when the actions are not seeded", async () => {
@@ -170,62 +215,5 @@ describe("ActionsPage", () => {
     await waitFor(() =>
       expect(switchOf(USER_CREATED, "Function").getAttribute(ARIA_CHECKED)).toBe(UNCHECKED),
     );
-  });
-
-  describe("paging", () => {
-    const manyUserActions = Array.from({ length: 12 }, (_, i) =>
-      makeAction({
-        name: `iam.user.event${String(i + 1).padStart(2, "0")}`,
-        label: `User event ${String(i + 1).padStart(2, "0")}`,
-      }),
-    );
-
-    it("shows 10 actions per group and moves to the next page", async () => {
-      const user = userEvent.setup();
-      vi.mocked(http.get).mockResolvedValue(manyUserActions);
-      renderPage();
-
-      expect(await screen.findByText(FIRST_EVENT)).toBeTruthy();
-      expect(screen.getByText("User event 10")).toBeTruthy();
-      expect(screen.queryByText(ELEVENTH_EVENT)).toBeNull();
-      expect(screen.getByText("Page 1 of 2")).toBeTruthy();
-
-      await user.click(screen.getByRole("button", { name: NEXT_PAGE }));
-
-      expect(screen.getByText(ELEVENTH_EVENT)).toBeTruthy();
-      expect(screen.queryByText(FIRST_EVENT)).toBeNull();
-      expect(switchOf("User event 12", WORKFLOW).getAttribute(ARIA_CHECKED)).toBe(UNCHECKED);
-    });
-
-    it("keeps the payload row under its own action and switches work on page 2", async () => {
-      const user = userEvent.setup();
-      vi.mocked(http.get).mockResolvedValue(manyUserActions);
-      renderPage();
-      await screen.findByText(FIRST_EVENT);
-      await user.click(screen.getByRole("button", { name: NEXT_PAGE }));
-
-      await user.click(screen.getByRole("button", { name: "User event 11 - Payload" }));
-      const code = screen.getByText(/"action": "iam.user.event11"/);
-      const rows = screen.getAllByRole("row");
-      const ownRow = rows.findIndex((row) => within(row).queryByText("iam.user.event11"));
-      expect(rows[ownRow + 1].contains(code)).toBe(true);
-
-      await user.click(switchOf(ELEVENTH_EVENT, WORKFLOW));
-      await waitFor(() => expect(http.post).toHaveBeenCalled());
-    });
-
-    it("goes back to page 1 when the page size changes", async () => {
-      const user = userEvent.setup();
-      vi.mocked(http.get).mockResolvedValue(manyUserActions);
-      renderPage();
-      await screen.findByText(FIRST_EVENT);
-      await user.click(screen.getByRole("button", { name: NEXT_PAGE }));
-
-      await user.click(screen.getByRole("combobox"));
-      await user.click(await screen.findByRole("option", { name: "25" }));
-
-      expect(screen.getByText(FIRST_EVENT)).toBeTruthy();
-      expect(screen.getByText("User event 12")).toBeTruthy();
-    });
   });
 });

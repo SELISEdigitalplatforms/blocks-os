@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Loader2, Zap } from "lucide-react";
 import { useT } from "@seliseblocks/genesis-os";
 import { Button } from "@/components/ui-kits/button/button";
+import { FilterControls } from "@/components/filter-toolbar";
 import { EmptyState } from "@/components/ui-kits/empty-state";
 import { ConfirmDialog } from "@/components/confirm-dialog/confirm-dialog";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
@@ -11,6 +12,7 @@ import { ACTION_ERROR_CODES, ACTIONS_I18N_MODULE } from "../../constants/actions
 import { useGetActions, useUpdateAction } from "../../hooks/use-actions";
 import type { ActionTarget, IAction } from "../../models/actions.model";
 import { groupActions } from "../../utils/action-groups";
+import { filterActionGroups } from "../../utils/action-search";
 
 interface PendingOff {
   action: IAction;
@@ -31,7 +33,10 @@ export function ActionsPage() {
   const [busy, setBusy] = useState<ReadonlySet<string>>(new Set());
   const [pendingOff, setPendingOff] = useState<PendingOff | null>(null);
 
+  const [search, setSearch] = useState("");
+
   const groups = useMemo(() => groupActions(data ?? []), [data]);
+  const visibleGroups = useMemo(() => filterActionGroups(groups, search), [groups, search]);
 
   const groupTitle = (id: string) => {
     if (id === "iam.user") return t("ACTIONS_PAGE.GROUP_USERS");
@@ -119,8 +124,18 @@ export function ActionsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <p className="text-sm text-muted-foreground">{t("ACTIONS_PAGE.INTRO")}</p>
-      {groups.map((group) => (
+      <div className="flex justify-start">
+        <FilterControls.SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder={t("ACTIONS_PAGE.SEARCH")}
+          className="w-64"
+        />
+      </div>
+      {visibleGroups.length === 0 && (
+        <p className="text-sm text-muted-foreground">{t("ACTIONS_PAGE.NO_MATCH")}</p>
+      )}
+      {visibleGroups.map((group) => (
         <ActionGroupTable
           key={group.id}
           title={groupTitle(group.id)}

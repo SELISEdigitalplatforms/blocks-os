@@ -101,6 +101,8 @@
   "LIST.LOAD_FAILED_DESCRIPTION": "Check your connection and try again.",
   "LIST.LOAD_FAILED_TITLE": "Could not load webhooks",
   "LIST.NAME": "Name",
+  "LIST.NO_MATCH": "No webhooks match your search.",
   "LIST.OFF": "Off",
+  "LIST.SEARCH": "Search webhooks",
   "LIST.STATUS": "Status"
 }
