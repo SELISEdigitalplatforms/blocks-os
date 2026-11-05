@@ -27,7 +27,7 @@ import { useGetEmailTemplates } from "@blocks-communication/mail/hooks/use-email
 import { useGetLanguages } from "@blocks-localization/hooks/use-language-manager";
 import { CirclePlus } from "lucide-react";
 import { useNavigate } from "react-router";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { useT } from "@seliseblocks/genesis-os";
 import { useEmailUsageFilterQueryParams } from "../email-usage/email-usage-filter-toolbar";
@@ -55,11 +55,10 @@ const LoadingSkelton = () => {
 /** Whether the list is narrowed, in which case an empty result is not "no templates yet". */
 const hasFilters = (params: { search?: string; language?: string; mailConfigurationId?: string }) =>
   !!(params.search || params.language || params.mailConfigurationId);
-interface EmailServiceTableProps {
-  onRowClick?: (id: string | number) => void;
-}
-export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
-  const { t } = useT("os.communication.mail");
+type Translate = ReturnType<typeof useT>["t"];
+
+/** Each tab's label, and the page title and description it shows. */
+const tabTexts = (t: Translate) => {
   const tabLabels: Record<EmailTabKey, string> = {
     Emailstemplates: t("EMAIL_SERVICE_TABLE.TAB_TEMPLATES"),
     Inbox: t("EMAIL_SERVICE_TABLE.TAB_INCOMING_MAILS"),
@@ -80,6 +79,151 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
     },
   };
   const tabs = EMAIL_TAB_KEYS.map((value) => ({ value, label: tabLabels[value] }));
+  return { tabs, tabMeta };
+};
+
+/** The tab switcher (a select on small screens) and, on the Templates tab, the page's actions. */
+function EmailTabsBar({
+  tabs,
+  activeTab,
+  showOrganizationPicker,
+  onTabChange,
+  onAddTemplate,
+}: Readonly<{
+  tabs: { value: EmailTabKey; label: string }[];
+  activeTab: EmailTabKey;
+  showOrganizationPicker: boolean;
+  onTabChange: (value: string) => void;
+  onAddTemplate: () => void;
+}>) {
+  const { t } = useT("os.communication.mail");
+  return (
+    <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-4 sm:gap-y-3">
+      <div className="flex min-w-0 items-center gap-4">
+        <div className="md:hidden">
+          <Select value={activeTab} onValueChange={(value) => onTabChange(value as EmailTabKey)}>
+            <SelectTrigger
+              className="w-56"
+              aria-label={t("EMAIL_SERVICE_TABLE.SECTION_ARIA_LABEL")}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {tabs.map(({ value, label }) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="hidden items-center md:flex">
+          <TabsList className="h-[42px] bg-blocks-primary-shades-300">
+            {tabs.map(({ value, label }) => (
+              <TabsTrigger key={value} value={value} className="h-8 px-4 text-sm">
+                {label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
+      </div>
+
+      {activeTab === "Emailstemplates" ? (
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          {showOrganizationPicker ? <EmailOrganizationPicker /> : null}
+          <Button
+            size="default"
+            variant="default"
+            className="bg-primary text-primary-foreground shadow-none"
+            onClick={onAddTemplate}
+          >
+            <CirclePlus className="h-5 w-5 lg:mr-2" />
+            <span className="sr-only lg:not-sr-only">{t("EMAIL_SERVICE_TABLE.ADD_TEMPLATE")}</span>
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** What the Templates list area shows: loading, the error with retry, the empty state, or the list. */
+function TemplatesListBody({
+  isLoading,
+  isError,
+  isEmpty,
+  organizationName,
+  onRetry,
+  onAddTemplate,
+  children,
+}: Readonly<{
+  isLoading: boolean;
+  isError: boolean;
+  isEmpty: boolean;
+  organizationName: string;
+  onRetry: () => void;
+  onAddTemplate: () => void;
+  children: ReactNode;
+}>) {
+  const { t } = useT("os.communication.mail");
+  if (isLoading) {
+    return <LoadingSkelton />;
+  }
+  if (isError) {
+    return (
+      <div role="alert" className="flex flex-col items-center gap-3 py-10">
+        <p className="text-sm text-high-emphasis">
+          {t("EMAIL_SERVICE_TABLE.TEMPLATES_LOAD_FAILED")}
+        </p>
+        <Button variant="outline" onClick={onRetry}>
+          {t("EMAIL_SERVICE_TABLE.RETRY")}
+        </Button>
+      </div>
+    );
+  }
+  if (isEmpty) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-10">
+        <p className="text-sm text-high-emphasis">
+          {t("EMAIL_SERVICE_TABLE.ORGANIZATION_EMPTY", { organization: organizationName })}
+        </p>
+        <Button onClick={onAddTemplate}>
+          <CirclePlus className="mr-2 h-5 w-5" />
+          {t("EMAIL_SERVICE_TABLE.ADD_TEMPLATE")}
+        </Button>
+      </div>
+    );
+  }
+  return <>{children}</>;
+}
+
+/** The organization's template count, and the fallback hint for a non-Default organization. */
+function TemplatesSummary({
+  countLabel,
+  showFallbackHint,
+  organizationName,
+}: Readonly<{ countLabel: string; showFallbackHint: boolean; organizationName: string }>) {
+  const { t } = useT("os.communication.mail");
+  return (
+    <div className="mb-3 flex flex-col gap-1">
+      <p className="text-xs font-semibold uppercase tracking-wide text-low-emphasis">
+        {countLabel}
+      </p>
+      {showFallbackHint ? (
+        <p className="text-sm text-low-emphasis">
+          {t("EMAIL_SERVICE_TABLE.ORGANIZATION_FALLBACK_HINT", { organization: organizationName })}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+interface EmailServiceTableProps {
+  onRowClick?: (id: string | number) => void;
+}
+export function EmailServiceTable({ onRowClick }: Readonly<EmailServiceTableProps> = {}) {
+  const { t } = useT("os.communication.mail");
+  const { tabs, tabMeta } = tabTexts(t);
   const { queryParams, setQueryParams } = useTemplatesFilterQueryParams();
   const { sortQueryParams } = useTemplatesSortQueryParams();
   const organization = useEmailOrganization();
@@ -175,125 +319,57 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
     if (!data?.templates) return [];
     return data.templates;
   }, [data]);
+  const configs = Array.isArray(emailConfigsData) ? emailConfigsData : [];
+  const languages = Array.isArray(languageListData) ? languageListData : [];
   return (
     <main className="flex flex-col">
       <div className="flex w-full flex-col">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="flex w-full flex-col">
           <PageHeader title={activeTabMeta.title} description={activeTabMeta.description} />
 
-          <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-4 sm:gap-y-3">
-            <div className="flex min-w-0 items-center gap-4">
-              <div className="md:hidden">
-                <Select
-                  value={activeTab}
-                  onValueChange={(value) => handleTabChange(value as EmailTabKey)}
-                >
-                  <SelectTrigger
-                    className="w-56"
-                    aria-label={t("EMAIL_SERVICE_TABLE.SECTION_ARIA_LABEL")}
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tabs.map(({ value, label }) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="hidden items-center md:flex">
-                <TabsList className="h-[42px] bg-blocks-primary-shades-300">
-                  {tabs.map(({ value, label }) => (
-                    <TabsTrigger key={value} value={value} className="h-8 px-4 text-sm">
-                      {label}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </div>
-            </div>
-
-            {activeTab === "Emailstemplates" ? (
-              <div className="ml-auto flex flex-wrap items-center gap-2">
-                {organization.isMultiOrgEnabled ? <EmailOrganizationPicker /> : null}
-                <Button
-                  size="default"
-                  variant="default"
-                  className="bg-primary text-primary-foreground shadow-none"
-                  onClick={() => navigate(newTemplatePath())}
-                >
-                  <CirclePlus className="h-5 w-5 lg:mr-2" />
-                  <span className="sr-only lg:not-sr-only">
-                    {t("EMAIL_SERVICE_TABLE.ADD_TEMPLATE")}
-                  </span>
-                </Button>
-              </div>
-            ) : null}
-          </div>
+          <EmailTabsBar
+            tabs={tabs}
+            activeTab={activeTab}
+            showOrganizationPicker={organization.isMultiOrgEnabled}
+            onTabChange={handleTabChange}
+            onAddTemplate={() => navigate(newTemplatePath())}
+          />
           <TabsContent value="Emailstemplates">
             <Card className="rounded shadow-none">
               <CardContent className="mb-4">
                 {isConfigsLoading || isLanguageListLoading ? (
                   <Skeleton className="h-12 w-full rounded" />
                 ) : (
-                  <TemplateFilterToolbar
-                    emailConfigsData={Array.isArray(emailConfigsData) ? emailConfigsData : []}
-                    languageListData={Array.isArray(languageListData) ? languageListData : []}
-                  />
+                  <TemplateFilterToolbar emailConfigsData={configs} languageListData={languages} />
                 )}
               </CardContent>
               <CardContent>
                 {!isLoading && !isError && data ? (
-                  <div className="mb-3 flex flex-col gap-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-low-emphasis">
-                      {countLabel}
-                    </p>
-                    {showFallbackHint ? (
-                      <p className="text-sm text-low-emphasis">
-                        {t("EMAIL_SERVICE_TABLE.ORGANIZATION_FALLBACK_HINT", {
-                          organization: organizationName,
-                        })}
-                      </p>
-                    ) : null}
-                  </div>
+                  <TemplatesSummary
+                    countLabel={countLabel}
+                    showFallbackHint={showFallbackHint}
+                    organizationName={organizationName}
+                  />
                 ) : null}
                 <ScrollArea className="w-full">
-                  {isLoading || isConfigsLoading || organization.isLoading ? (
-                    <LoadingSkelton />
-                  ) : isError ? (
-                    <div role="alert" className="flex flex-col items-center gap-3 py-10">
-                      <p className="text-sm text-high-emphasis">
-                        {t("EMAIL_SERVICE_TABLE.TEMPLATES_LOAD_FAILED")}
-                      </p>
-                      <Button variant="outline" onClick={() => void refetch()}>
-                        {t("EMAIL_SERVICE_TABLE.RETRY")}
-                      </Button>
-                    </div>
-                  ) : isEmpty ? (
-                    <div className="flex flex-col items-center gap-3 py-10">
-                      <p className="text-sm text-high-emphasis">
-                        {t("EMAIL_SERVICE_TABLE.ORGANIZATION_EMPTY", {
-                          organization: organizationName,
-                        })}
-                      </p>
-                      <Button onClick={() => navigate(newTemplatePath())}>
-                        <CirclePlus className="mr-2 h-5 w-5" />
-                        {t("EMAIL_SERVICE_TABLE.ADD_TEMPLATE")}
-                      </Button>
-                    </div>
-                  ) : (
+                  <TemplatesListBody
+                    isLoading={isLoading || isConfigsLoading || organization.isLoading}
+                    isError={isError}
+                    isEmpty={isEmpty}
+                    organizationName={organizationName}
+                    onRetry={() => void refetch()}
+                    onAddTemplate={() => navigate(newTemplatePath())}
+                  >
                     <EmailTemplateList
                       templates={tableData}
                       isLoading={isLoading}
-                      emailConfigsData={Array.isArray(emailConfigsData) ? emailConfigsData : []}
-                      languages={Array.isArray(languageListData) ? languageListData : []}
+                      emailConfigsData={configs}
+                      languages={languages}
                       organizationName={organizationName}
                       isMultiOrgEnabled={organization.isMultiOrgEnabled}
                       onRowClick={handleRowClick}
                     />
-                  )}
+                  </TemplatesListBody>
                   <ScrollBar orientation="horizontal" />
                 </ScrollArea>
               </CardContent>

@@ -49,7 +49,7 @@ export function CloneTemplateDialog({
   showOrganization,
   onClose,
   onCloned,
-}: CloneTemplateDialogProps) {
+}: Readonly<CloneTemplateDialogProps>) {
   const { t } = useT("os.communication.mail");
   const [language, setLanguage] = useState("");
   const { data: languages } = useGetLanguages();

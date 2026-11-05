@@ -34,7 +34,7 @@ interface DeleteTemplateDialogProps {
  * copies (SPEC34 §4, DeleteTemplateDefault design). With multi-org off it is the plain confirm
  * (SPEC34 H10: "the dialog shows only the confirm text").
  */
-export function DeleteTemplateDialog(props: DeleteTemplateDialogProps) {
+export function DeleteTemplateDialog(props: Readonly<DeleteTemplateDialogProps>) {
   const isDefaultTemplate = organizationOf(props.template) === DEFAULT_ORGANIZATION_ID;
   if (props.isMultiOrgEnabled && isDefaultTemplate) {
     return (
@@ -58,7 +58,7 @@ function DeleteSingleTemplate({
   isMultiOrgEnabled,
   onClose,
   onDeleted,
-}: DeleteTemplateDialogProps) {
+}: Readonly<DeleteTemplateDialogProps>) {
   const { t } = useT("os.communication.mail");
   const { mutateAsync: deleteTemplate, isPending } = useDeleteEmailTemplate();
   const name = template.name ?? "";
@@ -108,9 +108,12 @@ function DeleteSingleTemplate({
         <DialogDescription className="text-left">{description}</DialogDescription>
       </DialogHeader>
       {notice ? (
-        <p role="status" className="rounded-md bg-muted px-3 py-2 text-sm text-high-emphasis">
+        <output
+          aria-live="polite"
+          className="block rounded-md bg-muted px-3 py-2 text-sm text-high-emphasis"
+        >
           {notice}
-        </p>
+        </output>
       ) : null}
       <DialogFooter className="flex flex-row gap-2">
         <Button variant="outline" onClick={onClose} autoFocus>

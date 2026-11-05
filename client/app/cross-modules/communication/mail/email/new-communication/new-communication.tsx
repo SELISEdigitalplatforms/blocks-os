@@ -122,13 +122,13 @@ type TemplateDesignStepProps = {
 };
 
 /** SPEC33 §4 TemplateFormDesign: which organizations also get the template when it is saved. */
-const ShareStrip = ({ shareChoice }: { shareChoice: ShareChoice }) => {
+const ShareStrip = ({ shareChoice }: Readonly<{ shareChoice: ShareChoice }>) => {
   const { t } = useT(I18N_MODULE);
   const { prevStep } = useStepper();
   const names = [...shareChoice.selected.values()];
   return (
-    <div
-      role="status"
+    <output
+      aria-live="polite"
       className="flex flex-wrap items-center gap-3 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-blue-800"
     >
       <Copy className="h-5 w-5 shrink-0" aria-hidden="true" />
@@ -144,7 +144,7 @@ const ShareStrip = ({ shareChoice }: { shareChoice: ShareChoice }) => {
       <Button type="button" variant="outline" size="sm" onClick={prevStep}>
         {t("SHARE_WITH_ORGANIZATIONS.CHANGE")}
       </Button>
-    </div>
+    </output>
   );
 };
 

@@ -33,7 +33,7 @@ export function SendTestEmailDialog({
   showOrganization,
   sendsThrough,
   onClose,
-}: SendTestEmailDialogProps) {
+}: Readonly<SendTestEmailDialogProps>) {
   const { t } = useT("os.communication.mail");
   const { mutateAsync: sendTestMail, isPending } = useSendTestMail();
 

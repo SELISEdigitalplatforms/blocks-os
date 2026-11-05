@@ -13,7 +13,7 @@ interface LockedFieldProps {
  * A value the user can see but not change: a read-only input (announced as read-only) with a
  * lock icon, and an optional hint saying why.
  */
-export function LockedField({ id, label, value, hint }: LockedFieldProps) {
+export function LockedField({ id, label, value, hint }: Readonly<LockedFieldProps>) {
   const hintId = hint ? `${id}-hint` : undefined;
   return (
     <div className="grid gap-2">

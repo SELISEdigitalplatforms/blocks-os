@@ -229,14 +229,14 @@ export function DeleteDefaultTemplate({
         />
       ) : null}
 
-      <p
-        role="status"
-        className="rounded-md bg-destructive/10 px-3 py-2 text-sm leading-relaxed text-destructive"
+      <output
+        aria-live="polite"
+        className="block rounded-md bg-destructive/10 px-3 py-2 text-sm leading-relaxed text-destructive"
       >
         {alsoCopies
           ? t("DELETE_TEMPLATE.DEFAULT_STATUS_COPIES", { template: templateLabel })
           : t("DELETE_TEMPLATE.DEFAULT_STATUS", { template: templateLabel })}
-      </p>
+      </output>
 
       <DialogFooter className="flex flex-row gap-2">
         <Button variant="outline" onClick={onClose} autoFocus>

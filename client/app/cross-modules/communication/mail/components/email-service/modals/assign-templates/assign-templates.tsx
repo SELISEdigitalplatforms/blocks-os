@@ -45,6 +45,8 @@ import { TemplateConfigurationName } from "@blocks-communication/mail/email/emai
 
 const MAX_TEMPLATE_IDS = 500;
 const PAGE_SIZE = 10;
+// Fixed keys for the loading placeholders (they have no data of their own).
+const SKELETON_ROW_KEYS = ["skeleton-1", "skeleton-2", "skeleton-3", "skeleton-4", "skeleton-5"];
 
 interface AssignTemplatesDialogProps {
   /** The outbound configuration the chosen templates switch to. */
@@ -219,8 +221,8 @@ export function AssignTemplatesDialog({
 
   const renderRows = () => {
     if (list.isLoading) {
-      return Array.from({ length: 5 }).map((_, index) => (
-        <TableRow key={index}>
+      return SKELETON_ROW_KEYS.map((key) => (
+        <TableRow key={key}>
           <TableCell colSpan={5}>
             <Skeleton className="h-6 w-full rounded" />
           </TableCell>
@@ -319,24 +321,26 @@ export function AssignTemplatesDialog({
             label: item.languageName,
             value: item.languageCode,
           }))}
-          onChange={(value) => applyFilter(() => setLanguage(String(value ?? "")))}
+          onChange={(value) =>
+            applyFilter(() => setLanguage(typeof value === "string" ? value : ""))
+          }
         />
       </div>
 
       {pageChecked && !allPages && already.isSuccess && totalSelectable > 0 ? (
-        <div
-          role="status"
+        <output
+          aria-live="polite"
           className="flex flex-wrap items-center justify-center gap-2 rounded-md bg-blocks-primary-shades-300 px-4 py-2 text-sm"
         >
           <span>{t("ASSIGN_TEMPLATES.PAGE_SELECTED", { count: selectableOnPage.length })}</span>
           <Button variant="link" size="sm" className="h-auto p-0" onClick={() => setAllPages(true)}>
             {t(`ASSIGN_TEMPLATES.SELECT_ALL${variant}`, { ...textValues, count: totalSelectable })}
           </Button>
-        </div>
+        </output>
       ) : null}
       {allPages ? (
-        <div
-          role="status"
+        <output
+          aria-live="polite"
           className="flex flex-wrap items-center justify-center gap-2 rounded-md bg-blocks-primary-shades-300 px-4 py-2 text-sm"
         >
           <span>
@@ -348,7 +352,7 @@ export function AssignTemplatesDialog({
           <Button variant="link" size="sm" className="h-auto p-0" onClick={clearSelection}>
             {t("ASSIGN_TEMPLATES.CLEAR_SELECTION")}
           </Button>
-        </div>
+        </output>
       ) : null}
 
       <div className="rounded-md border">

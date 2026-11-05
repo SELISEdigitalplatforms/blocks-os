@@ -28,6 +28,55 @@ interface OrganizationChecklistProps {
 
 /** Loads the next page once the list is scrolled to within this many pixels of its end. */
 const SCROLL_THRESHOLD = 48;
+// Fixed keys for the loading placeholders (they have no data of their own).
+const SKELETON_ROW_KEYS = ["skeleton-1", "skeleton-2", "skeleton-3", "skeleton-4"];
+
+type Translate = ReturnType<typeof useT>["t"];
+type RowStatus = { text: string; warning: boolean; danger: boolean };
+const status = (text: string, tone: "warning" | "danger" | "plain" = "plain"): RowStatus => ({
+  text,
+  warning: tone === "warning",
+  danger: tone === "danger",
+});
+
+/** A row's status when deleting copies (SPEC34 H7). */
+const deleteRowStatus = (
+  t: Translate,
+  hasCopy: boolean,
+  checked: boolean,
+  lookup: { loading: boolean; failed: boolean },
+): RowStatus => {
+  // A row is only "no copy" once the lookup has answered; until then (or if it failed) say so instead.
+  if (!hasCopy && lookup.loading) return status(t("ORGANIZATION_CHECKLIST.CHECKING_COPY"));
+  if (!hasCopy && lookup.failed) return status(t("ORGANIZATION_CHECKLIST.COPY_UNKNOWN"));
+  if (!hasCopy) return status(t("ORGANIZATION_CHECKLIST.NO_COPY"));
+  return checked
+    ? status(t("ORGANIZATION_CHECKLIST.DELETES_COPY"), "danger")
+    : status(t("ORGANIZATION_CHECKLIST.KEEPS_COPY"));
+};
+
+/** A row's status when copying (SPEC33 §4: CopyToOrgs). */
+const copyRowStatus = (
+  t: Translate,
+  copy: { lastUpdatedDate?: string } | undefined,
+  checked: boolean,
+  existing: ExistingCopies,
+  language: string,
+): RowStatus => {
+  if (copy && existing === "replace" && checked) {
+    const date = formatEditedOn(copy.lastUpdatedDate, language);
+    return status(
+      date
+        ? t("ORGANIZATION_CHECKLIST.REPLACES_COPY", { date })
+        : t("ORGANIZATION_CHECKLIST.REPLACES_COPY_UNDATED"),
+      "warning",
+    );
+  }
+  if (copy) return status(t("ORGANIZATION_CHECKLIST.KEEPS_COPY"));
+  return status(
+    checked ? t("ORGANIZATION_CHECKLIST.CREATES_COPY") : t("ORGANIZATION_CHECKLIST.KEEPS_DEFAULT"),
+  );
+};
 
 /**
  * The organizations a Default template can be copied to (SPEC33 §4: TemplateForm, CopyToOrgs):
@@ -107,43 +156,18 @@ export function OrganizationChecklist({
   const statusOf = (id: string) => {
     const copy = data.copies.get(id);
     const checked = selected.has(id) && !isLocked(id);
-    if (isDelete) {
-      // A row is only "no copy" once the lookup has answered; until then (or if it failed) say so instead.
-      if (!copy && data.copiesLoading)
-        return { text: t("ORGANIZATION_CHECKLIST.CHECKING_COPY"), warning: false, danger: false };
-      if (!copy && data.copiesError)
-        return { text: t("ORGANIZATION_CHECKLIST.COPY_UNKNOWN"), warning: false, danger: false };
-      if (!copy)
-        return { text: t("ORGANIZATION_CHECKLIST.NO_COPY"), warning: false, danger: false };
-      return checked
-        ? { text: t("ORGANIZATION_CHECKLIST.DELETES_COPY"), warning: false, danger: true }
-        : { text: t("ORGANIZATION_CHECKLIST.KEEPS_COPY"), warning: false, danger: false };
-    }
-    if (copy && existing === "replace" && checked) {
-      const date = formatEditedOn(copy.lastUpdatedDate, language);
-      return {
-        text: date
-          ? t("ORGANIZATION_CHECKLIST.REPLACES_COPY", { date })
-          : t("ORGANIZATION_CHECKLIST.REPLACES_COPY_UNDATED"),
-        warning: true,
-        danger: false,
-      };
-    }
-    if (copy)
-      return { text: t("ORGANIZATION_CHECKLIST.KEEPS_COPY"), warning: false, danger: false };
-    return {
-      text: checked
-        ? t("ORGANIZATION_CHECKLIST.CREATES_COPY")
-        : t("ORGANIZATION_CHECKLIST.KEEPS_DEFAULT"),
-      warning: false,
-      danger: false,
-    };
+    return isDelete
+      ? deleteRowStatus(t, !!copy, checked, {
+          loading: data.copiesLoading,
+          failed: data.copiesError,
+        })
+      : copyRowStatus(t, copy, checked, existing, language);
   };
 
   const renderRows = () => {
     if (data.isLoading) {
-      return Array.from({ length: 4 }).map((_, index) => (
-        <li key={index} className="px-3 py-2">
+      return SKELETON_ROW_KEYS.map((key) => (
+        <li key={key} className="px-3 py-2">
           <Skeleton className="h-6 w-full rounded" />
         </li>
       ));

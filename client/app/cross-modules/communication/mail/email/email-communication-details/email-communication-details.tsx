@@ -39,13 +39,121 @@ import { SendTestEmailDialog } from "@blocks-communication/mail/components/email
 import { CopyToOrganizationsDialog } from "@blocks-communication/mail/components/email-service/modals/copy-to-organizations/copy-to-organizations";
 import { EmailTemplateDetailsSkeleton } from "./email-template-details-skeleton";
 import { withStyleNonce } from "@/lib/csp-nonce";
+import type { IEmailConfig } from "@blocks-communication/mail/models/email";
+
+/** A stored date as the details page shows it, or "-". */
+const fullDateOrDash = (value?: string) =>
+  !value || !checkValidDate(value) ? "-" : formatFullDate(parseDateString(value));
+
+/** The configuration a test mail of this template sends through (its own, else the organization default). */
+const sendsThroughName = (
+  template: IEmailTemplate,
+  configs: IEmailConfig[],
+  organizationId: string,
+) =>
+  template.mailConfigurationId
+    ? (configs.find((config) => config.itemId === template.mailConfigurationId)?.name ?? "-")
+    : (resolveOrganizationDefault(configs, organizationId)?.name ?? "-");
+
+/** "Copy to organizations" and its dialog (SPEC33 H8). */
+function CopyToOrganizationsAction({
+  template,
+  languageName,
+}: Readonly<{ template: IEmailTemplate; languageName: string }>) {
+  const { t } = useT("os.communication.mail");
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <>
+      <Button size="default" className="gap-2 shadow-none" onClick={() => setIsOpen(true)}>
+        <CopyPlus className="h-5 w-5" />
+        <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+          {t("COPY_TO_ORGANIZATIONS.BUTTON")}
+        </span>
+      </Button>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        {isOpen ? (
+          <CopyToOrganizationsDialog
+            template={template}
+            languageName={languageName}
+            onClose={() => setIsOpen(false)}
+          />
+        ) : null}
+      </Dialog>
+    </>
+  );
+}
+
+/** One labelled value of the Details panel. */
+function DetailField({
+  label,
+  children,
+  wide = false,
+}: Readonly<{ label: string; children: React.ReactNode; wide?: boolean }>) {
+  return (
+    <div
+      className={
+        wide
+          ? "grid min-w-0 gap-1 sm:col-span-2 xl:col-span-1 2xl:col-span-2"
+          : "grid min-w-0 gap-1"
+      }
+    >
+      <h3 className="text-sm font-medium text-low-emphasis">{label}</h3>
+      {children}
+    </div>
+  );
+}
+
+/** The Details panel's fields: subject, language, configuration, organization, dates. */
+function TemplateDetailsFields({
+  template,
+  languageName,
+  configs,
+  organizationName,
+  showOrganization,
+}: Readonly<{
+  template: IEmailTemplate;
+  languageName: string;
+  configs: IEmailConfig[];
+  organizationName: string;
+  showOrganization: boolean;
+}>) {
+  const { t } = useT("os.communication.mail");
+  const valueClass = "wrap-break-word text-base font-medium text-high-emphasis";
+  return (
+    <div className="grid gap-x-6 gap-y-7 p-5 sm:grid-cols-2 sm:p-6 xl:grid-cols-1 2xl:grid-cols-2">
+      <DetailField label={t("EMAIL_COMMUNICATION_DETAILS.SUBJECT")} wide>
+        <p className={valueClass}>{template.templateSubject || "-"}</p>
+      </DetailField>
+      <DetailField label={t("EMAIL_COMMUNICATION_DETAILS.LANGUAGE")}>
+        <p className={valueClass}>{languageName}</p>
+      </DetailField>
+      <DetailField label={t("EMAIL_COMMUNICATION_DETAILS.CONFIGURATION")}>
+        <div className={valueClass}>
+          <TemplateConfigurationName template={template} configs={configs} />
+        </div>
+      </DetailField>
+      {showOrganization ? (
+        <DetailField label={t("EMAIL_COMMUNICATION_DETAILS.ORGANIZATION")}>
+          <p className={valueClass}>{organizationName}</p>
+        </DetailField>
+      ) : null}
+      <DetailField label={t("EMAIL_COMMUNICATION_DETAILS.CREATED_ON")}>
+        <p className={valueClass}>{fullDateOrDash(template.createdDate)}</p>
+      </DetailField>
+      <DetailField label={t("EMAIL_COMMUNICATION_DETAILS.LAST_MODIFIED")}>
+        <p className={valueClass}>{fullDateOrDash(template.lastUpdatedDate)}</p>
+      </DetailField>
+    </div>
+  );
+}
+
 export function EmailCommunicationDetails({
   params,
   onBack,
-}: {
+}: Readonly<{
   params: { id: string };
   onBack?: () => void;
-}) {
+}>) {
   const { t } = useT("os.communication.mail");
   const { id } = params;
   const { isLoading, isFetching, data } = useGetEmailTemplate(id);
@@ -66,7 +174,6 @@ export function EmailCommunicationDetails({
   const languages = Array.isArray(languageListData) ? languageListData : [];
   const [isCloneDialogOpen, setIsCloneDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -94,10 +201,7 @@ export function EmailCommunicationDetails({
   };
   const editData = emailDetails;
   const languageName = languageNameOf(emailDetails.language, languages);
-  const sendsThrough = emailDetails.mailConfigurationId
-    ? (emailConfigsData.find((config) => config.itemId === emailDetails.mailConfigurationId)
-        ?.name ?? "-")
-    : (resolveOrganizationDefault(emailConfigsData, organizationId)?.name ?? "-");
+  const sendsThrough = sendsThroughName(emailDetails, emailConfigsData, organizationId);
   const listPath =
     isMultiOrgEnabled && organizationId !== DEFAULT_ORGANIZATION_ID
       ? `${emailBasePath}?${EMAIL_ORGANIZATION_PARAM}=${encodeURIComponent(organizationId)}`
@@ -129,27 +233,7 @@ export function EmailCommunicationDetails({
         <div className="flex shrink-0 justify-end gap-2 sm:self-end">
           {/* Only a Default organization template can be copied to organizations (SPEC33 H8, C1, C13). */}
           {isMultiOrgEnabled && organizationId === DEFAULT_ORGANIZATION_ID ? (
-            <>
-              <Button
-                size="default"
-                className="gap-2 shadow-none"
-                onClick={() => setIsCopyDialogOpen(true)}
-              >
-                <CopyPlus className="h-5 w-5" />
-                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                  {t("COPY_TO_ORGANIZATIONS.BUTTON")}
-                </span>
-              </Button>
-              <Dialog open={isCopyDialogOpen} onOpenChange={setIsCopyDialogOpen}>
-                {isCopyDialogOpen ? (
-                  <CopyToOrganizationsDialog
-                    template={emailDetails}
-                    languageName={languageName}
-                    onClose={() => setIsCopyDialogOpen(false)}
-                  />
-                ) : null}
-              </Dialog>
-            </>
+            <CopyToOrganizationsAction template={emailDetails} languageName={languageName} />
           ) : null}
           <Button
             size="default"
@@ -296,62 +380,13 @@ export function EmailCommunicationDetails({
               />
             </Dialog>
           </header>
-          <div className="grid gap-x-6 gap-y-7 p-5 sm:grid-cols-2 sm:p-6 xl:grid-cols-1 2xl:grid-cols-2">
-            <div className="grid min-w-0 gap-1 sm:col-span-2 xl:col-span-1 2xl:col-span-2">
-              <h3 className="text-sm font-medium text-low-emphasis">
-                {t("EMAIL_COMMUNICATION_DETAILS.SUBJECT")}
-              </h3>
-              <p className="wrap-break-word text-base font-medium text-high-emphasis">
-                {emailDetails.templateSubject || "-"}
-              </p>
-            </div>
-            <div className="grid min-w-0 gap-1">
-              <h3 className="text-sm font-medium text-low-emphasis">
-                {t("EMAIL_COMMUNICATION_DETAILS.LANGUAGE")}
-              </h3>
-              <p className="wrap-break-word text-base font-medium text-high-emphasis">
-                {languageName}
-              </p>
-            </div>
-            <div className="grid min-w-0 gap-1">
-              <h3 className="text-sm font-medium text-low-emphasis">
-                {t("EMAIL_COMMUNICATION_DETAILS.CONFIGURATION")}
-              </h3>
-              <div className="wrap-break-word text-base font-medium text-high-emphasis">
-                <TemplateConfigurationName template={emailDetails} configs={emailConfigsData} />
-              </div>
-            </div>
-            {isMultiOrgEnabled ? (
-              <div className="grid min-w-0 gap-1">
-                <h3 className="text-sm font-medium text-low-emphasis">
-                  {t("EMAIL_COMMUNICATION_DETAILS.ORGANIZATION")}
-                </h3>
-                <p className="wrap-break-word text-base font-medium text-high-emphasis">
-                  {organizationName}
-                </p>
-              </div>
-            ) : null}
-            <div className="grid min-w-0 gap-1">
-              <h3 className="text-sm font-medium text-low-emphasis">
-                {t("EMAIL_COMMUNICATION_DETAILS.CREATED_ON")}
-              </h3>
-              <p className="wrap-break-word text-base font-medium text-high-emphasis">
-                {!emailDetails.createdDate || !checkValidDate(emailDetails.createdDate)
-                  ? "-"
-                  : formatFullDate(parseDateString(emailDetails.createdDate))}
-              </p>
-            </div>
-            <div className="grid min-w-0 gap-1">
-              <h3 className="text-sm font-medium text-low-emphasis">
-                {t("EMAIL_COMMUNICATION_DETAILS.LAST_MODIFIED")}
-              </h3>
-              <p className="wrap-break-word text-base font-medium text-high-emphasis">
-                {!emailDetails.lastUpdatedDate || !checkValidDate(emailDetails.lastUpdatedDate)
-                  ? "-"
-                  : formatFullDate(parseDateString(emailDetails.lastUpdatedDate))}
-              </p>
-            </div>
-          </div>
+          <TemplateDetailsFields
+            template={emailDetails}
+            languageName={languageName}
+            configs={emailConfigsData}
+            organizationName={organizationName}
+            showOrganization={isMultiOrgEnabled}
+          />
         </aside>
       </div>
     </div>

@@ -215,12 +215,12 @@ export function CopyToOrganizationsDialog({
       )}
 
       {warningText ? (
-        <p
-          role="status"
-          className="rounded-md bg-warning-50 px-3 py-2 text-sm leading-relaxed text-warning-800"
+        <output
+          aria-live="polite"
+          className="block rounded-md bg-warning-50 px-3 py-2 text-sm leading-relaxed text-warning-800"
         >
           {warningText}
-        </p>
+        </output>
       ) : null}
 
       <DialogFooter className="gap-2">

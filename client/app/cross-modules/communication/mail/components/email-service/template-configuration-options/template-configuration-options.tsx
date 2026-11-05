@@ -22,7 +22,7 @@ export function TemplateConfigurationOptions({
   configs,
   organizationId,
   organizationName,
-}: TemplateConfigurationOptionsProps) {
+}: Readonly<TemplateConfigurationOptionsProps>) {
   const { t } = useT("os.communication.mail");
   const { own, shared } = outboundConfigurationGroups(configs, organizationId);
   return (
@@ -55,7 +55,7 @@ export function TemplateConfigurationOptions({
 }
 
 /** The line under a template's Email Configuration select. */
-export function ConfigurationHint({ value }: { value?: string }) {
+export function ConfigurationHint({ value }: Readonly<{ value?: string }>) {
   const { t } = useT("os.communication.mail");
   return (
     <p className="text-sm text-low-emphasis">

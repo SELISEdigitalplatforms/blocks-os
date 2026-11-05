@@ -10,10 +10,10 @@ import { resolveOrganizationDefault } from "@blocks-communication/mail/constants
 export function TemplateConfigurationName({
   template,
   configs,
-}: {
+}: Readonly<{
   template: IEmailTemplate;
   configs: IEmailConfig[];
-}) {
+}>) {
   const { t } = useT("os.communication.mail");
   if (template.mailConfigurationId) {
     return (

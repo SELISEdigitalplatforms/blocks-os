@@ -30,6 +30,16 @@ import { useNavigate } from "react-router";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { useT } from "@seliseblocks/genesis-os";
 
+type ProjectLanguage = { languageCode: string; languageName: string };
+
+/** The Language column: the language's name in the project, or its code. */
+function TemplateLanguageCell({
+  template,
+  languages,
+}: Readonly<{ template: IEmailTemplate; languages?: ProjectLanguage[] }>) {
+  return <div className="truncate">{languageNameOf(template.language, languages)}</div>;
+}
+
 type EmailTemplateListProps = {
   templates: IEmailTemplate[];
   isLoading: boolean;
@@ -90,9 +100,7 @@ export const EmailTemplateList = ({
       {
         accessorKey: "language",
         header: t("EMAIL_TEMPLATE_LIST.COLUMN_LANGUAGE"),
-        cell: ({ row }) => (
-          <div className="truncate">{languageNameOf(row.original.language, languages)}</div>
-        ),
+        cell: ({ row }) => <TemplateLanguageCell template={row.original} languages={languages} />,
       },
       {
         accessorKey: "MailConfigurationId",
