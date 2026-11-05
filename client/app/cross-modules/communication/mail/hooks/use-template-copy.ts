@@ -35,6 +35,12 @@ export interface OrganizationChecklistData {
   hasNextPage: boolean;
   fetchNextPage: () => void;
   isFetchingNextPage: boolean;
+  /** A copies lookup for the loaded organizations hasn't answered yet: their state isn't known. */
+  copiesLoading: boolean;
+  /** A copies lookup failed: some loaded organizations may have a copy the list doesn't show. */
+  copiesError: boolean;
+  /** Asks the failed copies lookups again. */
+  refetchCopies: () => void;
 }
 
 /**
@@ -84,9 +90,19 @@ export const useOrganizationChecklistData = (
     return byOrganization;
   }, [lookups]);
 
+  const copiesLoading = lookups.some((lookup) => lookup.isLoading);
+  const copiesError = lookups.some((lookup) => lookup.isError);
+
   return {
     organizations,
     copies,
+    copiesLoading,
+    copiesError,
+    refetchCopies: () => {
+      for (const lookup of lookups) {
+        if (lookup.isError) void lookup.refetch();
+      }
+    },
     isLoading: list.isLoading,
     isError: list.isError,
     refetch: () => void list.refetch(),

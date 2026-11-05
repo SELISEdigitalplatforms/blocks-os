@@ -292,62 +292,105 @@ namespace Configuration.DomainService.Mail.Template.Services
                 models.Add(new UpdateOneModel<EmailTemplate>(gate & CopyKey(organizationId, name, language), insert) { IsUpsert = true });
             }
 
+            // Replace: one update for every existing copy of the batch, in the same bulk write as the inserts.
+            var existingOrganizations = existing.Keys.ToList();
+            var existingCopies = existing.Values.Sum(ids => ids.Count);
+            if (replace && existingOrganizations.Count > 0)
+            {
+                models.Add(new UpdateManyModel<EmailTemplate>(gate & CopiesOf(name, language, existingOrganizations), replaceUpdate));
+            }
+
+            var written = models.Count == 0 ? BulkOutcome.None : await BulkWriteAsync(collection, models);
+            result.Created = written.Upserted.Count;
+
+            // An insert that didn't insert lost to another job between our read and our write (it matched the key, or hit
+            // the derived _id). Those organizations most likely have a copy now; the re-read below says for sure.
+            var raced = toCreate.Where((_, index) => !written.Upserted.Contains(index)).ToList();
+            var racedWithoutError = raced.Count - toCreate.Where((_, index) => written.Failed.Contains(index)).Count();
+
+            // MatchedCount covers the replace update and the inserts that found the key instead of inserting.
+            var replaceMatched = written.Matched - racedWithoutError;
+            var recheck = new List<string>(raced);
             if (replace)
             {
-                foreach (var id in existing.Values.SelectMany(ids => ids))
-                {
-                    models.Add(new UpdateOneModel<EmailTemplate>(gate & filterBuilder.Eq(t => t.ItemId, id), replaceUpdate));
-                }
-                result.Replaced = existing.Count;
+                if (replaceMatched >= existingCopies)
+                    result.Replaced = existingOrganizations.Count;
+                else
+                    recheck.AddRange(existingOrganizations); // some copies were gone by the time of the write
             }
             else
             {
-                result.Kept = existing.Count;
+                result.Kept = existingOrganizations.Count;
             }
 
-            if (models.Count == 0)
+            if (recheck.Count == 0)
             {
                 return result;
             }
 
-            var upserted = await BulkWriteAsync(collection, models);
-            result.Created = upserted.Count;
-
-            // An insert that found the copy already there was beaten by another job between our read and our write:
-            // that organization now has a copy, so Keep leaves it and Replace overwrites it, as for any existing copy.
-            var raced = toCreate.Where((_, index) => !upserted.Contains(index)).ToList();
-            if (raced.Count > 0)
+            // Raced organizations: Replace overwrites the copy the other job made; its own update, so a failure here only
+            // fails these organizations, not the inserts that already landed.
+            var racedReplaced = true;
+            if (replace && raced.Count > 0)
             {
-                if (replace)
+                try
                 {
-                    await collection.UpdateManyAsync(gate & filterBuilder.In(t => t.OrganizationId, raced)
-                        & filterBuilder.Eq(t => t.Name, name) & filterBuilder.Eq(t => t.Language, language), replaceUpdate);
-                    result.Replaced += raced.Count;
+                    await collection.UpdateManyAsync(gate & CopiesOf(name, language, raced), replaceUpdate);
                 }
-                else
+#pragma warning disable CA1031 // C5: only the raced organizations failed; the batch's other writes stand.
+                catch (Exception)
+#pragma warning restore CA1031
                 {
-                    result.Kept += raced.Count;
+                    racedReplaced = false;
                 }
             }
 
+            // One read of the organizations whose outcome the write couldn't tell: a copy there is kept or replaced; none
+            // there (a deleted copy, or a derived _id already used by another document) means that organization failed.
+            var recheckScope = await _dataAccess.ReadAsync(OsSchemas.EmailTemplate, CopiesOf(name, language, recheck.Distinct(StringComparer.Ordinal).ToList()), callSite, useProjection: false);
+            if (!recheckScope.Granted)
+                throw new UnauthorizedAccessException("Access to the email templates was denied by the data access policy.");
+            var present = (await recheckScope.Apply(collection).ToListAsync())
+                .Select(t => t.OrganizationId)
+                .ToHashSet(StringComparer.Ordinal);
+            foreach (var organizationId in recheck.Distinct(StringComparer.Ordinal))
+            {
+                var isRaced = raced.Contains(organizationId, StringComparer.Ordinal);
+                if (!present.Contains(organizationId) || (isRaced && replace && !racedReplaced))
+                    result.Failed++;
+                else if (replace)
+                    result.Replaced++;
+                else
+                    result.Kept++;
+            }
+
             return result;
+        }
+
+        /// <summary>What one unordered bulk write did: the models that inserted, those that failed on a duplicate key, and how many documents its updates matched.</summary>
+        private sealed record BulkOutcome(HashSet<int> Upserted, HashSet<int> Failed, long Matched)
+        {
+            public static readonly BulkOutcome None = new([], [], 0);
         }
 
         /// <summary>
         /// One unordered bulk write; the indexes of the models that inserted. A duplicate <c>_id</c> is not a failure:
         /// another job inserted the same copy first. Any other write error fails the batch.
         /// </summary>
-        private static async Task<HashSet<int>> BulkWriteAsync(IMongoCollection<EmailTemplate> collection, List<WriteModel<EmailTemplate>> models)
+        private static async Task<BulkOutcome> BulkWriteAsync(IMongoCollection<EmailTemplate> collection, List<WriteModel<EmailTemplate>> models)
         {
             const int DuplicateKey = 11000;
             try
             {
                 var written = await collection.BulkWriteAsync(models, new BulkWriteOptions { IsOrdered = false });
-                return written.Upserts.Select(u => u.Index).ToHashSet();
+                return new BulkOutcome(written.Upserts.Select(u => u.Index).ToHashSet(), [], written.MatchedCount);
             }
             catch (MongoBulkWriteException<EmailTemplate> ex) when (ex.WriteErrors.All(e => e.Code == DuplicateKey) && ex.WriteConcernError is null)
             {
-                return ex.Result.Upserts.Select(u => u.Index).ToHashSet();
+                return new BulkOutcome(
+                    ex.Result.Upserts.Select(u => u.Index).ToHashSet(),
+                    ex.WriteErrors.Select(e => e.Index).ToHashSet(),
+                    ex.Result.IsAcknowledged ? ex.Result.MatchedCount : 0);
             }
         }
 

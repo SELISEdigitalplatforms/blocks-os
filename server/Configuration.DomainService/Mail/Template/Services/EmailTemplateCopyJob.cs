@@ -33,8 +33,22 @@ namespace Configuration.DomainService.Mail.Template.Services
         {
             ArgumentNullException.ThrowIfNull(command);
 
-            // C6: a source deleted (or no longer a Default template) since the request is copied nowhere.
-            var source = await _templateRepository.GetByIdAsync(command.TemplateId);
+            // C6: a source deleted (or no longer a Default template) since the request is copied nowhere. A source that
+            // can't be read ends the same way: the requester is told, and the message isn't redelivered forever.
+            EmailTemplate? source;
+            try
+            {
+                source = await _templateRepository.GetByIdAsync(command.TemplateId);
+            }
+#pragma warning disable CA1031 // the job always ends with a notification; the error is logged with ids only.
+            catch (Exception ex)
+#pragma warning restore CA1031
+            {
+                _logger.LogError(ex, "Email template copy {JobId}: source template {TemplateId} could not be read. ErrorType={ErrorType}",
+                    command.JobId, command.TemplateId, ex.GetType().Name);
+                source = null;
+            }
+
             if (source is null || OrganizationIds.Normalize(source.OrganizationId) != OrganizationIds.Default)
             {
                 _logger.LogWarning("Email template copy {JobId}: source template {TemplateId} not found in the Default organization; nothing copied",
@@ -56,6 +70,7 @@ namespace Configuration.DomainService.Mail.Template.Services
                     result.Created += written.Created;
                     result.Replaced += written.Replaced;
                     result.Kept += written.Kept;
+                    result.Failed += written.Failed;
                 }
 #pragma warning disable CA1031 // C5: one failed batch is reported and the job goes on with the next one.
                 catch (Exception ex)
@@ -85,8 +100,8 @@ namespace Configuration.DomainService.Mail.Template.Services
                 string? after = null;
                 while (true)
                 {
-                    var page = await _organizationReader.GetEnabledPageAsync(after, BatchSize, cancellationToken);
-                    if (page.Count == 0)
+                    var page = await ReadPageAsync(command, after, result, cancellationToken);
+                    if (page is null || page.Count == 0)
                     {
                         yield break;
                     }
@@ -107,7 +122,14 @@ namespace Configuration.DomainService.Mail.Template.Services
                 .ToList();
             foreach (var chunk in requested.Chunk(BatchSize))
             {
-                var enabled = await _organizationReader.GetEnabledAmongAsync(chunk, cancellationToken);
+                var enabled = await ReadEnabledAsync(command, chunk, cancellationToken);
+                if (enabled is null)
+                {
+                    // C5: organizations that couldn't be checked weren't reached; they are reported as failed.
+                    result.Failed += chunk.Length;
+                    continue;
+                }
+
                 result.Skipped += chunk.Length - enabled.Count;
                 var batch = chunk.Where(enabled.Contains).ToList();
                 if (batch.Count > 0)
@@ -117,15 +139,47 @@ namespace Configuration.DomainService.Mail.Template.Services
             }
         }
 
+        /// <summary>One page of every enabled organization, or null when it can't be read: paging stops there (C5).</summary>
+        private async Task<IReadOnlyList<OrganizationSummary>?> ReadPageAsync(EmailTemplateCopyCommand command, string? after, EmailTemplateCopyResult result, CancellationToken cancellationToken)
+        {
+            try
+            {
+                return await _organizationReader.GetEnabledPageAsync(after, BatchSize, cancellationToken);
+            }
+#pragma warning disable CA1031 // the organizations after this page are never reached; the job reports that and ends.
+            catch (Exception ex)
+#pragma warning restore CA1031
+            {
+                result.Incomplete = true;
+                _logger.LogError(ex, "Email template copy {JobId}: organizations after {After} could not be read; copying stopped there. ErrorType={ErrorType}",
+                    command.JobId, after ?? "(start)", ex.GetType().Name);
+                return null;
+            }
+        }
+
+        /// <summary>The enabled organizations among <paramref name="chunk"/>, or null when they can't be read.</summary>
+        private async Task<IReadOnlySet<string>?> ReadEnabledAsync(EmailTemplateCopyCommand command, string[] chunk, CancellationToken cancellationToken)
+        {
+            try
+            {
+                return await _organizationReader.GetEnabledAmongAsync(chunk, cancellationToken);
+            }
+#pragma warning disable CA1031 // C5: this chunk is reported as failed and the job goes on with the next one.
+            catch (Exception ex)
+#pragma warning restore CA1031
+            {
+                _logger.LogError(ex, "Email template copy {JobId}: organizations could not be checked. OrganizationIds={OrganizationIds} ErrorType={ErrorType}",
+                    command.JobId, string.Join(",", chunk), ex.GetType().Name);
+                return null;
+            }
+        }
+
         /// <summary>H6: the bell notification to the requester. Best effort (C7): a failure here never fails the job.</summary>
         private async Task NotifyAsync(EmailTemplateCopyCommand command, EmailTemplate? source, EmailTemplateCopyResult result, CancellationToken cancellationToken)
         {
-            var succeeded = result.SourceFound && result.Failed == 0;
-            string notificationEvent;
-            if (!result.SourceFound)
-                notificationEvent = "failed";
-            else
-                notificationEvent = result.Failed == 0 ? "finished" : "finished-with-errors";
+            // §6.3 has two events: a missing source, failed organizations or organizations never reached are errors.
+            var succeeded = result.SourceFound && result.Failed == 0 && !result.Incomplete;
+            var notificationEvent = succeeded ? "finished" : "finished-with-errors";
 
             var description = source is null
                 ? "The Default organization template no longer exists. Nothing was copied."

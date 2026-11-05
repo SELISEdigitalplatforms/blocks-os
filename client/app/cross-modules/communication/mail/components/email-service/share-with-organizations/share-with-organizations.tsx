@@ -69,6 +69,7 @@ export function ShareWithOrganizations({
         {t("SHARE_WITH_ORGANIZATIONS.LEGEND")}
       </legend>
       <RadioGroup
+        aria-label={t("SHARE_WITH_ORGANIZATIONS.LEGEND")}
         value={choice.copy ? "copy" : "default"}
         onValueChange={(value) => onChange({ ...choice, copy: value === "copy" })}
       >
@@ -116,12 +117,12 @@ export function ShareWithOrganizations({
             />
           )}
 
-          <div className="grid gap-2">
-            <span id="share-existing-label" className="text-sm font-medium text-high-emphasis">
+          <fieldset className="grid gap-2">
+            <legend className="mb-2 text-sm font-medium text-high-emphasis">
               {t("SHARE_WITH_ORGANIZATIONS.EXISTING_LEGEND")}
-            </span>
+            </legend>
             <RadioGroup
-              aria-labelledby="share-existing-label"
+              aria-label={t("SHARE_WITH_ORGANIZATIONS.EXISTING_LEGEND")}
               value={choice.existing}
               onValueChange={(value) => {
                 const existing = value as ExistingCopies;
@@ -140,7 +141,7 @@ export function ShareWithOrganizations({
                 label={t("SHARE_WITH_ORGANIZATIONS.REPLACE")}
               />
             </RadioGroup>
-          </div>
+          </fieldset>
 
           <p className="text-sm text-low-emphasis">{t("SHARE_WITH_ORGANIZATIONS.NOTE")}</p>
         </div>

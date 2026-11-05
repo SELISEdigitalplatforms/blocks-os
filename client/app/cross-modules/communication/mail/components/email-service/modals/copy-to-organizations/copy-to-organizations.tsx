@@ -16,6 +16,7 @@ import { OrganizationChecklist } from "@blocks-communication/mail/components/ema
 import {
   MAX_COPY_ORGANIZATIONS,
   joinNames,
+  lockedOut,
   toCopyRequest,
   type ExistingCopies,
 } from "@blocks-communication/mail/constants/share-organizations";
@@ -85,11 +86,14 @@ export function CopyToOrganizationsDialog({
     name: template.name ?? "",
     language: languageName,
   });
+  // What is counted and sent: never an organization Keep leaves alone, even when the copies lookup
+  // answered after it was picked.
+  const effective = lockedOut(selected, data.copies, existing);
   const replaced =
     existing === "replace"
-      ? [...selected].filter(([id]) => data.copies.has(id)).map(([, name]) => name)
+      ? [...effective].filter(([id]) => data.copies.has(id)).map(([, name]) => name)
       : [];
-  const created = selected.size - replaced.length;
+  const created = effective.size - replaced.length;
 
   const changeExisting = (value: ExistingCopies) => {
     setExisting(value);
@@ -108,7 +112,7 @@ export function CopyToOrganizationsDialog({
     return t("COPY_TO_ORGANIZATIONS.WARNING", {
       counts: t("COPY_TO_ORGANIZATIONS.COUNTS", {
         creates: t("COPY_TO_ORGANIZATIONS.CREATES", { count: created }),
-        replaced: replaced.length,
+        count: replaced.length,
       }),
       names: joinNames(replaced, t),
       template: templateLabel,
@@ -116,9 +120,12 @@ export function CopyToOrganizationsDialog({
   };
   const warningText = warning();
 
+  // Which chosen organizations already have a copy must be known before Keep or Replace is sent.
+  const copiesKnown = !data.copiesLoading && !data.copiesError;
   const canSubmit =
     !isPending &&
-    (allOrganizations || (selected.size > 0 && selected.size <= MAX_COPY_ORGANIZATIONS));
+    (allOrganizations ||
+      (copiesKnown && effective.size > 0 && effective.size <= MAX_COPY_ORGANIZATIONS));
 
   const showFailure = (errors: unknown) =>
     showErrorToast({ errors, customMessages: templateErrorMessages(t) });
@@ -127,7 +134,7 @@ export function CopyToOrganizationsDialog({
     const request = toCopyRequest(template.itemId, {
       copy: true,
       allOrganizations,
-      selected,
+      selected: effective,
       existing,
     });
     try {
@@ -178,6 +185,7 @@ export function CopyToOrganizationsDialog({
       <fieldset className="grid gap-3 rounded-md border px-4 py-3">
         <legend className="px-1 font-medium">{t("COPY_TO_ORGANIZATIONS.EXISTING_LEGEND")}</legend>
         <RadioGroup
+          aria-label={t("COPY_TO_ORGANIZATIONS.EXISTING_LEGEND")}
           value={existing}
           onValueChange={(value) => changeExisting(value as ExistingCopies)}
         >
@@ -222,7 +230,7 @@ export function CopyToOrganizationsDialog({
         <Button type="button" disabled={!canSubmit} onClick={() => void onCopy()}>
           {allOrganizations
             ? t("COPY_TO_ORGANIZATIONS.SUBMIT_ALL")
-            : t("COPY_TO_ORGANIZATIONS.SUBMIT", { count: selected.size })}
+            : t("COPY_TO_ORGANIZATIONS.SUBMIT", { count: effective.size })}
         </Button>
       </DialogFooter>
     </DialogContent>

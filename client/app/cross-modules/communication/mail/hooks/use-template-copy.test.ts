@@ -129,4 +129,39 @@ describe("useOrganizationChecklistData (H3, H9)", () => {
     renderHook(() => useOrganizationChecklistData(undefined), { wrapper: wrapper() });
     expect(h.copies).not.toHaveBeenCalled();
   });
+
+  it("reports a copies lookup in flight, then done (submit waits for it)", async () => {
+    h.pages = [{ organizations: [org("acme", "Acme Corp")] }];
+    let answer: (value: unknown) => void = () => undefined;
+    h.copies.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+    const { result } = renderHook(() => useOrganizationChecklistData("d-1"), {
+      wrapper: wrapper(),
+    });
+    await waitFor(() => expect(result.current.copiesLoading).toBe(true));
+    answer({ isSuccess: true, copies: [] });
+    await waitFor(() => expect(result.current.copiesLoading).toBe(false));
+    expect(result.current.copiesError).toBe(false);
+  });
+
+  it("reports a failed copies lookup and retries it", async () => {
+    h.pages = [{ organizations: [org("acme", "Acme Corp")] }];
+    h.copies.mockRejectedValueOnce(new Error("down"));
+    const { result } = renderHook(() => useOrganizationChecklistData("d-1"), {
+      wrapper: wrapper(),
+    });
+    await waitFor(() => expect(result.current.copiesError).toBe(true));
+    h.copies.mockResolvedValue({ isSuccess: true, copies: [] });
+    act(() => result.current.refetchCopies());
+    await waitFor(() => expect(result.current.copiesError).toBe(false));
+    expect(h.copies).toHaveBeenCalledTimes(2);
+  });
+
+  it("is never waiting on a lookup before the template exists (Q4: A)", () => {
+    h.pages = [{ organizations: [org("acme", "Acme Corp")] }];
+    const { result } = renderHook(() => useOrganizationChecklistData(undefined), {
+      wrapper: wrapper(),
+    });
+    expect(result.current.copiesLoading).toBe(false);
+    expect(result.current.copiesError).toBe(false);
+  });
 });

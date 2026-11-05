@@ -21,6 +21,9 @@ const h = vi.hoisted(() => ({
     hasNextPage: false,
     fetchNextPage: vi.fn(),
     isFetchingNextPage: false,
+    copiesLoading: false,
+    copiesError: false,
+    refetchCopies: vi.fn(),
   },
   templateIds: [] as Array<string | undefined>,
 }));
@@ -45,12 +48,13 @@ const template = {
 
 const renderDialog = () => {
   const onClose = vi.fn();
-  render(
+  const view = () => (
     <Dialog open>
       <CopyToOrganizationsDialog template={template} languageName="English" onClose={onClose} />
-    </Dialog>,
+    </Dialog>
   );
-  return { onClose, user: userEvent.setup() };
+  const { rerender } = render(view());
+  return { onClose, user: userEvent.setup(), rerender: () => rerender(view()) };
 };
 
 const row = (name: string) => screen.getByRole("checkbox", { name });
@@ -80,6 +84,8 @@ describe("CopyToOrganizationsDialog (SPEC33 H9-H11, board CopyToOrgs)", () => {
       isLoading: false,
       isError: false,
       hasNextPage: false,
+      copiesLoading: false,
+      copiesError: false,
     };
     h.copy.mockResolvedValue({ isSuccess: true, itemId: "job-1" });
   });
@@ -135,7 +141,7 @@ describe("CopyToOrganizationsDialog (SPEC33 H9-H11, board CopyToOrgs)", () => {
     expect(screen.getByText(/^Replaces their copy · edited /)).toBeTruthy();
     const warning = screen.getByRole("status");
     expect(warning.textContent).toBe(
-      "Creates 2 copies and replaces 1. Umbrella Ltd's own changes to OrderConfirmation · English will be overwritten. Copying runs in the background; you get a notification when it's done.",
+      "Creates 2 copies and replaces 1 copy. The changes Umbrella Ltd made to OrderConfirmation · English will be overwritten. Copying runs in the background; you get a notification when it's done.",
     );
     await user.click(screen.getByRole("button", { name: "Copy to 3 organizations" }));
     await waitFor(() => expect(h.copy).toHaveBeenCalled());
@@ -240,5 +246,57 @@ describe("CopyToOrganizationsDialog (SPEC33 H9-H11, board CopyToOrgs)", () => {
     );
     await user.click(screen.getByRole("button", { name: "Show more organizations" }));
     expect(h.data.fetchNextPage).toHaveBeenCalled();
+  });
+
+  it("never counts or sends an organization whose own copy turned up under Keep", async () => {
+    h.data = { ...h.data, copies: new Map() };
+    const { user, rerender } = renderDialog();
+    await user.click(row("Acme Corp"));
+    await user.click(row("Umbrella Ltd"));
+    expect(screen.getByRole("button", { name: "Copy to 2 organizations" })).toBeTruthy();
+
+    // The copies lookup answers after the pick: Umbrella Ltd has its own copy, so Keep locks it.
+    h.data = {
+      ...h.data,
+      copies: new Map([["umbrella", { organizationId: "umbrella", templateId: "u-1" }]]),
+    };
+    rerender();
+    expect(row("Umbrella Ltd")).toHaveProperty("disabled", true);
+    expect(screen.getByText("1 selected")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Copy to 1 organization" }));
+    await waitFor(() => expect(h.copy).toHaveBeenCalled());
+    expect(h.copy.mock.calls[0][0]).toMatchObject({ organizationIds: ["acme"] });
+  });
+
+  it("can't copy while the copies lookup is still running", async () => {
+    h.data = { ...h.data, copiesLoading: true };
+    const { user } = renderDialog();
+    await user.click(row("Acme Corp"));
+    expect(screen.getByRole("button", { name: "Copy to 1 organization" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+  });
+
+  it("says when the copies lookup failed, offers a retry and can't copy", async () => {
+    h.data = { ...h.data, copiesError: true };
+    const { user } = renderDialog();
+    expect(
+      screen.getByText("Couldn't check which organizations already have their own copy."),
+    ).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Retry" }));
+    expect(h.data.refetchCopies).toHaveBeenCalled();
+    await user.click(row("Acme Corp"));
+    expect(screen.getByRole("button", { name: "Copy to 1 organization" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+  });
+
+  it("names the keep-or-replace choice by its legend", () => {
+    renderDialog();
+    expect(
+      screen.getByRole("radiogroup", { name: "If an organization already has its own copy" }),
+    ).toBeTruthy();
   });
 });

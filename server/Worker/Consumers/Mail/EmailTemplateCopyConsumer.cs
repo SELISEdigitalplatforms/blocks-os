@@ -1,6 +1,7 @@
 using Blocks.Genesis;
 using Configuration.DomainService.Mail.Template;
 using Configuration.DomainService.Mail.Template.Services;
+using Microsoft.Extensions.Logging;
 
 namespace Worker.Consumers.Mail
 {
@@ -11,15 +12,24 @@ namespace Worker.Consumers.Mail
     public class EmailTemplateCopyConsumer : IConsumer<EmailTemplateCopyCommand>
     {
         private readonly IEmailTemplateCopyJob _job;
+        private readonly ILogger<EmailTemplateCopyConsumer> _logger;
 
-        public EmailTemplateCopyConsumer(IEmailTemplateCopyJob job)
+        public EmailTemplateCopyConsumer(IEmailTemplateCopyJob job, ILogger<EmailTemplateCopyConsumer> logger)
         {
             _job = job;
+            _logger = logger;
         }
 
         public async Task Consume(EmailTemplateCopyCommand context)
         {
             ArgumentNullException.ThrowIfNull(context);
+            if (string.IsNullOrWhiteSpace(context.TenantId))
+            {
+                // Nothing to run in: dropped, not thrown, so the message isn't redelivered forever.
+                _logger.LogWarning("Email template copy {JobId} dropped: the command has no tenant. TemplateId={TemplateId}", context.JobId, context.TemplateId);
+                return;
+            }
+
             await BlocksContext.ExecuteInContext(JobContext(context), () => _job.RunAsync(context, CancellationToken.None));
         }
 

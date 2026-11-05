@@ -11,6 +11,7 @@ const h = vi.hoisted(() => ({
   showErrorToast: vi.fn(),
   basicMounts: 0,
   choice: null as ShareChoice | null,
+  organization: { isMultiOrgEnabled: true, isLoading: false, selectedOrganizationId: "default" },
 }));
 
 vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
@@ -29,6 +30,9 @@ vi.mock("@blocks-communication/mail/hooks/use-template-copy", () => ({
   useCopyTemplateToOrganizations: () => ({ mutateAsync: h.copy, isPending: false }),
 }));
 vi.mock("@/components/breadcrumb/breadcrumb", () => ({ default: () => <nav /> }));
+vi.mock("@blocks-communication/mail/hooks/use-email-organization", () => ({
+  useEmailOrganization: () => h.organization,
+}));
 
 // Step 1: buttons that set the share choice the way the share block does, then save.
 vi.mock(
@@ -131,6 +135,11 @@ describe("NewCommunication: copy to organizations on create (SPEC33 H7, C10, §6
     vi.clearAllMocks();
     h.basicMounts = 0;
     h.choice = null;
+    h.organization = {
+      isMultiOrgEnabled: true,
+      isLoading: false,
+      selectedOrganizationId: "default",
+    };
     h.saveTemplate.mockResolvedValue({ isSuccess: true, itemId: "tpl-1" });
     h.copy.mockResolvedValue({ isSuccess: true, itemId: "job-1" });
   });
@@ -230,5 +239,24 @@ describe("NewCommunication: copy to organizations on create (SPEC33 H7, C10, §6
       "disabled",
       false,
     );
+  });
+
+  it.each([
+    ["multi-org is off", { isMultiOrgEnabled: false, selectedOrganizationId: "default" }],
+    [
+      "the page is another organization's",
+      { isMultiOrgEnabled: true, selectedOrganizationId: "acme" },
+    ],
+  ])("ignores a stale copy choice once %s (C13)", async (_case, organization) => {
+    const user = userEvent.setup();
+    render(<NewCommunication />);
+    await user.click(screen.getByRole("button", { name: "share-three" }));
+    h.organization = { ...organization, isLoading: false };
+    await user.click(screen.getByRole("button", { name: "submit-basic" }));
+    await screen.findByRole("button", { name: "editor-save" });
+    expect(screen.queryByRole("status")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "editor-save" }));
+    await waitFor(() => expect(h.navigate).toHaveBeenCalled());
+    expect(h.copy).not.toHaveBeenCalled();
   });
 });

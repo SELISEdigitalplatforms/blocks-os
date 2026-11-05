@@ -26,6 +26,14 @@ vi.mock("@blocks-communication/mail/hooks/use-email-template", () => ({
 vi.mock("@blocks-communication/mail/hooks/use-template-copy", () => ({
   useCopyTemplateToOrganizations: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
+// The stepper reads the page's organization for the share choice (SPEC33 C13).
+vi.mock("@blocks-communication/mail/hooks/use-email-organization", () => ({
+  useEmailOrganization: () => ({
+    isMultiOrgEnabled: false,
+    isLoading: false,
+    selectedOrganizationId: "default",
+  }),
+}));
 vi.mock("@/components/breadcrumb/breadcrumb", () => ({
   default: () => <nav data-testid="breadcrumb" />,
 }));

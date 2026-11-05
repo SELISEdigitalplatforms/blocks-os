@@ -48,10 +48,30 @@ namespace XUnitTest.Services
             Existing = "keep",
         };
 
-        private static void ShouldBeRejected(BaseMutationResponse response, string key, string message)
+        // A refusal never queues a job (§6.1: the checks come before the send).
+        private void ShouldBeRejected(BaseMutationResponse response, string key, string message)
         {
             response.IsSuccess.Should().BeFalse();
             response.Errors.Should().BeEquivalentTo(new Dictionary<string, string> { { key, message } });
+            if (key != "Copy")
+            {
+                _sent.Should().BeEmpty();
+            }
+        }
+
+        [Theory] // review: without a project tenant there is nothing to copy into, so nothing is queued
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("  ")]
+        public async Task WithoutATenant_NothingIsQueued(string? tenantId)
+        {
+            using var _ = new BlocksTestContext(tenantId: tenantId!);
+            Stored("d-order");
+
+            var response = await Service().CopyToOrganizationsAsync(Request("d-order"));
+
+            ShouldBeRejected(response, "Copy", "Copying couldn't start. Try again.");
+            _sent.Should().BeEmpty();
         }
 
         [Fact] // H1, example 1
@@ -175,6 +195,7 @@ namespace XUnitTest.Services
             request.OrganizationIds = Enumerable.Range(0, 1000).Select(i => "org" + i).Concat(new[] { "org0" }).ToList();
             (await Service().CopyToOrganizationsAsync(request)).IsSuccess.Should().BeTrue();
 
+            _sent.Clear();
             request.OrganizationIds.Add("org1000");
             ShouldBeRejected(await Service().CopyToOrganizationsAsync(request), "OrganizationIds", "No more than 1000 organizations per request");
         }

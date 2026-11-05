@@ -23,6 +23,19 @@ export const NO_SHARE: ShareChoice = {
   existing: "keep",
 };
 
+/**
+ * The selection without the organizations Keep leaves alone (those that already have their own
+ * copy), so counts, warnings and requests never include a row that shows as locked.
+ */
+export const lockedOut = (
+  selected: ReadonlyMap<string, string>,
+  copies: ReadonlyMap<string, unknown>,
+  existing: ExistingCopies,
+): ReadonlyMap<string, string> =>
+  existing === "keep" && [...selected.keys()].some((id) => copies.has(id))
+    ? new Map([...selected].filter(([id]) => !copies.has(id)))
+    : selected;
+
 /** The most organizations one copy request names (SPEC33 §6.1). */
 export const MAX_COPY_ORGANIZATIONS = 1000;
 
@@ -49,17 +62,37 @@ type TranslateFn = (key: string, values?: Readonly<Record<string, string | numbe
 
 const SHOWN_NAMES = 3;
 
-/** "A", "A and B", "A, B and C", or "A, B, C and N more", through the English list keys. */
+/**
+ * "A", "A and B", "A, B and C", or "A, B, C and N more". The separator and the joining words are
+ * language keys, so every language the project enables writes its own list.
+ */
 export const joinNames = (names: readonly string[], t: TranslateFn): string => {
   if (names.length <= 1) return names[0] ?? "";
+  const separator = t("SHARE_WITH_ORGANIZATIONS.LIST_SEPARATOR");
   if (names.length <= SHOWN_NAMES) {
     return t("SHARE_WITH_ORGANIZATIONS.LIST_AND", {
-      items: names.slice(0, -1).join(", "),
+      items: names.slice(0, -1).join(separator),
       last: names.at(-1) ?? "",
     });
   }
   return t("SHARE_WITH_ORGANIZATIONS.LIST_MORE", {
-    items: names.slice(0, SHOWN_NAMES).join(", "),
+    items: names.slice(0, SHOWN_NAMES).join(separator),
     count: names.length - SHOWN_NAMES,
   });
+};
+
+const EDITED_ON_FORMAT: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+
+/**
+ * "Oct 30" in the language the console shows (useT's language), or nothing when the date can't be
+ * read. A language tag the browser doesn't know falls back to its default formatting.
+ */
+export const formatEditedOn = (date: string | undefined, language: string): string => {
+  const parsed = date ? new Date(date) : null;
+  if (!parsed || Number.isNaN(parsed.getTime())) return "";
+  try {
+    return new Intl.DateTimeFormat(language, EDITED_ON_FORMAT).format(parsed);
+  } catch {
+    return new Intl.DateTimeFormat(undefined, EDITED_ON_FORMAT).format(parsed);
+  }
 };

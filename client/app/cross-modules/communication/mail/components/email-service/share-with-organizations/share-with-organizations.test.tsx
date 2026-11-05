@@ -28,6 +28,9 @@ vi.mock("@blocks-communication/mail/hooks/use-template-copy", () => ({
       hasNextPage: false,
       fetchNextPage: vi.fn(),
       isFetchingNextPage: false,
+      copiesLoading: false,
+      copiesError: false,
+      refetchCopies: vi.fn(),
     };
   },
 }));
@@ -104,5 +107,18 @@ describe("ShareWithOrganizations (SPEC33 H7, board TemplateForm)", () => {
     expect(h.templateIds).toContain("d-1");
     expect(screen.getByText("OWN COPY")).toBeTruthy();
     expect(screen.getByRole("checkbox", { name: "Globex" })).toHaveProperty("disabled", true);
+  });
+
+  it("names both radio groups by the text above them", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    expect(screen.getByRole("radiogroup", { name: "Share with other organizations" })).toBeTruthy();
+    await user.click(screen.getByRole("radio", { name: /Copy to other organizations/ }));
+    expect(
+      screen.getByRole("group", { name: "If an organization already has its own:" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("radiogroup", { name: "If an organization already has its own:" }),
+    ).toBeTruthy();
   });
 });

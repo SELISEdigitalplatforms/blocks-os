@@ -290,7 +290,7 @@ namespace XUnitTest.Integration
             (await Templates.CountDocumentsAsync(FilterDefinition<EmailTemplate>.Empty)).Should().Be(0);
             var sent = _sender.Single(BuiltInNotificationNames.EmailTemplateCopyFinished);
             sent.IsSuccess.Should().BeFalse();
-            sent.Event.Should().Be("failed");
+            sent.Event.Should().Be("finished-with-errors"); // §6.3 knows only finished / finished-with-errors
             sent.Ids["templateId"].Should().Be("deleted");
             sent.Ids["jobId"].Should().Be(command.JobId);
             sent.TenantId.Should().Be("root-tenant");

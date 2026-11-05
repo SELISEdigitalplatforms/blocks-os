@@ -65,7 +65,7 @@ namespace XUnitTest.Worker
                 .Callback(() => seen = BlocksContext.GetContext())
                 .ReturnsAsync(new EmailTemplateCopyResult());
 
-            await new EmailTemplateCopyConsumer(job.Object).Consume(new EmailTemplateCopyCommand
+            await new EmailTemplateCopyConsumer(job.Object, NullLogger<EmailTemplateCopyConsumer>.Instance).Consume(new EmailTemplateCopyCommand
             {
                 JobId = "j", TenantId = "project-9", OriginalTenantId = "root-1", RequestedByUserId = "admin-1", TemplateId = "t",
             });
@@ -75,6 +75,23 @@ namespace XUnitTest.Worker
             seen.OriginalTenantId.Should().Be("root-1");
             seen.UserId.Should().Be("admin-1");
             seen.IsAuthenticated.Should().BeFalse();
+        }
+
+        [Theory] // review: a command without a tenant is dropped (logged), never run nor retried forever
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("  ")]
+        public async Task Consumer_WithoutATenant_DoesNotRunTheJob(string? tenantId)
+        {
+            var job = new Mock<IEmailTemplateCopyJob>(MockBehavior.Strict);
+
+            var consume = () => new EmailTemplateCopyConsumer(job.Object, NullLogger<EmailTemplateCopyConsumer>.Instance).Consume(new EmailTemplateCopyCommand
+            {
+                JobId = "j", TenantId = tenantId!, RequestedByUserId = "admin-1", TemplateId = "t",
+            });
+
+            await consume.Should().NotThrowAsync();
+            job.VerifyNoOtherCalls();
         }
     }
 }

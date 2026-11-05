@@ -18,6 +18,8 @@ import {
   type ShareChoice,
 } from "@blocks-communication/mail/constants/share-organizations";
 import { templateErrorMessages } from "@blocks-communication/mail/constants/template-errors";
+import { DEFAULT_ORGANIZATION_ID } from "@blocks-communication/mail/constants/organization";
+import { useEmailOrganization } from "@blocks-communication/mail/hooks/use-email-organization";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
@@ -257,6 +259,16 @@ function EmailTemplateStepper() {
   });
   // Kept here so it survives the move between the two steps (SPEC33 §6.4).
   const [shareChoice, setShareChoice] = useState<ShareChoice>(NO_SHARE);
+  // The share block exists only for the Default organization's page with multi-org on (C13). If it
+  // stops applying, the choice is dropped, so no strip shows and no copy is requested.
+  const organization = useEmailOrganization();
+  const shareApplies =
+    organization.isMultiOrgEnabled &&
+    organization.selectedOrganizationId === DEFAULT_ORGANIZATION_ID;
+  if (!shareApplies && shareChoice !== NO_SHARE) {
+    setShareChoice(NO_SHARE);
+  }
+  const activeShareChoice = shareApplies ? shareChoice : NO_SHARE;
   const { isPending } = useSaveMailTemplate();
 
   const handleClickStep = (step: number, setStep: (step: number) => void) => {
@@ -296,7 +308,7 @@ function EmailTemplateStepper() {
           templateData={templateData}
           setTemplateData={setTemplateData}
           onStepComplete={handleStepComplete}
-          shareChoice={shareChoice}
+          shareChoice={activeShareChoice}
           onShareChoiceChange={setShareChoice}
         />
       </Step>
@@ -309,7 +321,7 @@ function EmailTemplateStepper() {
         <TemplateDesignStep
           templateData={templateData}
           setTemplateData={setTemplateData}
-          shareChoice={shareChoice}
+          shareChoice={activeShareChoice}
         />
       </Step>
     </Stepper>

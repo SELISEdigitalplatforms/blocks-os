@@ -10,6 +10,9 @@ namespace Configuration.DomainService.Mail.Template.Services
         public int Skipped { get; set; }
         public int Failed { get; set; }
 
+        /// <summary>True when not every target organization could be read, so some were never reached.</summary>
+        public bool Incomplete { get; set; }
+
         /// <summary>The largest batch written, at most <see cref="EmailTemplateCopyJob.BatchSize"/>.</summary>
         public int LargestBatch { get; set; }
     }
@@ -20,5 +23,6 @@ namespace Configuration.DomainService.Mail.Template.Services
         public int Created { get; set; }
         public int Replaced { get; set; }
         public int Kept { get; set; }
+        public int Failed { get; set; }
     }
 }

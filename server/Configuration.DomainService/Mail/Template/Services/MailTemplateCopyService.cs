@@ -50,10 +50,17 @@ namespace Configuration.DomainService.Mail.Template.Services
                 return Failure(nameof(request.OrganizationIds), "No more than 1000 organizations per request");
 
             var context = BlocksContext.GetContext();
+            if (string.IsNullOrWhiteSpace(context?.TenantId))
+            {
+                // A job without a project tenant has nowhere to copy to; it is never queued.
+                _logger.LogError("Email template copy not queued: no project tenant. TemplateId={TemplateId}", template.ItemId);
+                return Failure("Copy", "Copying couldn't start. Try again.");
+            }
+
             var command = new EmailTemplateCopyCommand
             {
                 JobId = Guid.NewGuid().ToString(),
-                TenantId = context?.TenantId ?? string.Empty,
+                TenantId = context.TenantId,
                 OriginalTenantId = string.IsNullOrWhiteSpace(context?.OriginalTenantId) ? null : context.OriginalTenantId,
                 RequestedByUserId = context?.UserId ?? string.Empty,
                 TemplateId = template.ItemId,
