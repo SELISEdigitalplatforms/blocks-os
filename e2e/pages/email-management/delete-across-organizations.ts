@@ -56,7 +56,7 @@ export async function createDeleteSource(page: Page, names: DeleteFixtures) {
   return api;
 }
 
-/** C1, C3 (real calls, refused before anything is deleted or queued). */
+/** C3 (real call, refused before anything is deleted or queued); C1 is in createOrganizationCopy. */
 export async function refusalsFlow(page: Page, api: MailApi, names: DeleteFixtures) {
   const none = await callMailApi(page, api, "POST", "DeleteTemplateAcrossOrganizations", {
     templateId: names.ids.source,
@@ -209,5 +209,6 @@ export async function deleteDeleteFixtures(page: Page, names: DeleteFixtures) {
     const result = await callMailApi(page, api, "DELETE", `DeleteTemplate?itemId=${itemId}`);
     if (result.status !== 200) failed.push(itemId);
   }
-  expect(failed, "the test's templates were deleted").toEqual([]);
+  // Soft, so a cleanup problem never hides the failure that brought the test here.
+  expect.soft(failed, "the test's templates were deleted").toEqual([]);
 }
