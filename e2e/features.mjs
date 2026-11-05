@@ -121,6 +121,12 @@ export const OS_FEATURES = [
     enabled: true,
     spec: "tests/03-email-management/copy-to-organizations-735.spec.ts",
   },
+  {
+    id: "email-template-delete-across",
+    name: "Email Management — delete a Default template across organizations (#736)",
+    enabled: true,
+    spec: "tests/03-email-management/delete-across-organizations-736.spec.ts",
+  },
 
   // Identity & Access (sidebar submenu order)
   {

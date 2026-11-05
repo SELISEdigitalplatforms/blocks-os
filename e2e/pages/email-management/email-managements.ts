@@ -507,6 +507,8 @@ export async function templateLifecycleFlow(page: Page, created: CreatedTemplate
   });
 
   // ---------- H11 / C11: delete both, with the Default template's text ----------
+  // blocks-os#736 (SPEC34 H6, H1; intended change): with multi-org on, a Default template's Delete asks
+  // "What to delete", and "Only the Default organization's template" (the default) deletes just it.
   for (let remaining = 2; remaining > 0; remaining--) {
     await openEmailManagement(page);
     const rows = await rowsNamed(page, created.name, remaining);
@@ -517,9 +519,11 @@ export async function templateLifecycleFlow(page: Page, created: CreatedTemplate
         deleteDialog.getByRole("heading", { name: `Delete ${created.name}?`, exact: true }),
       ).toBeVisible();
       await expect(
+        deleteDialog.getByRole("radio", { name: "Only the Default organization's template" }),
+      ).toBeChecked();
+      await expect(
         deleteDialog.getByText(
-          "This can't be undone. Organizations without their own copy stop getting this mail.",
-          { exact: true },
+          /^This can't be undone\. Organizations without their own copy stop getting .+ mail\.$/,
         ),
       ).toBeVisible();
     } else {

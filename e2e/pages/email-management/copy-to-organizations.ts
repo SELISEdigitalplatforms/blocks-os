@@ -94,7 +94,7 @@ export async function emptyBodyRefusedFlow(page: Page, api: MailApi, names: Copy
   expect(result.json.errors).toEqual({ TemplateId: "Finish the template before copying" });
 }
 
-async function openTemplateDetails(page: Page, name: string) {
+export async function openTemplateDetails(page: Page, name: string) {
   await openEmailManagement(page);
   const tabpanel = page.getByRole("tabpanel", { name: "Templates" });
   await tabpanel.getByPlaceholder("Search...").first().fill(name);
