@@ -20,13 +20,28 @@ import { Input } from "@/components/ui-kits/input/input";
 import {
   Select,
   SelectContent,
-  SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui-kits/select/select";
 import { showErrorToast, toast } from "@/hooks/use-toast";
-import { useGetEmailConfigs } from "@blocks-communication/mail/hooks/use-email-config";
+import { useGetEmailSecretConfigs } from "@blocks-communication/mail/hooks/use-email-config";
+import {
+  useEmailOrganization,
+  useOrganizationName,
+} from "@blocks-communication/mail/hooks/use-email-organization";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
+import { organizationOf } from "@blocks-communication/mail/constants/organization";
+import {
+  fromConfigurationValue,
+  languageNameOf,
+  toConfigurationValue,
+} from "@blocks-communication/mail/constants/template-organization";
+import { templateErrorMessages } from "@blocks-communication/mail/constants/template-errors";
+import {
+  ConfigurationHint,
+  TemplateConfigurationOptions,
+} from "@blocks-communication/mail/components/email-service/template-configuration-options/template-configuration-options";
+import { LockedField } from "@blocks-communication/mail/components/email-service/locked-field/locked-field";
 import { useGetLanguages } from "@blocks-localization/hooks/use-language-manager";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, type Resolver } from "react-hook-form";
@@ -34,52 +49,57 @@ import { z } from "zod";
 import { isErrorWithErrors } from "@/lib/error";
 import { useT } from "@seliseblocks/genesis-os";
 import { useSaveMailTemplate } from "../../../../hooks/use-email-template";
+
 interface EditCommunicationProps {
   dialogTitle: string;
   templateData: IEmailTemplate;
   onClose: () => void;
 }
+
+type EditForm = { templateSubject: string; mailConfigurationId: string };
+
+/**
+ * SPEC31 §4 EditTemplate design. Name and language are fixed after creation (another language is a clone),
+ * so only the subject and the configuration are edited and sent; the server keeps the stored
+ * name, language and organization.
+ */
 const EditCommunication = (props: EditCommunicationProps) => {
   const { t } = useT("os.communication.mail");
-  const { isLoading, data } = useGetEmailConfigs(0, 100);
-  // const { saveEmailTemplate, isPending } = useSaveEmailTemplate();
+  const organizationId = organizationOf(props.templateData);
+  const { isMultiOrgEnabled } = useEmailOrganization();
+  const organizationName = useOrganizationName(organizationId);
+  const { isLoading, data: configsResponse } = useGetEmailSecretConfigs(organizationId);
+  const configs = configsResponse?.configurations;
   const { isPending: isSaveTemplateLoading, mutateAsync: saveTemplate } = useSaveMailTemplate();
   const { isLoading: isLanguageListLoading, data: languageListData } = useGetLanguages();
+  const languageName = languageNameOf(
+    props.templateData.language,
+    Array.isArray(languageListData) ? languageListData : [],
+  );
   const schema = z.object({
     mailConfigurationId: z
       .string()
       .min(1, { message: t("EDIT_COMMUNICATION.ERROR_CONFIGURATION_REQUIRED") }),
-    language: z.string().min(1, { message: t("EDIT_COMMUNICATION.ERROR_LANGUAGE_REQUIRED") }),
-    name: z
-      .string()
-      .min(1, { message: t("EDIT_COMMUNICATION.ERROR_NAME_REQUIRED") })
-      .max(50, { message: t("EDIT_COMMUNICATION.ERROR_NAME_MAX") })
-      .regex(/^[^\s-]+$/, { message: t("EDIT_COMMUNICATION.ERROR_NAME_PATTERN") }),
     templateSubject: z
       .string()
       .min(1, { message: t("EDIT_COMMUNICATION.ERROR_SUBJECT_REQUIRED") })
       .max(150, { message: t("EDIT_COMMUNICATION.ERROR_SUBJECT_MAX") }),
   });
-  const form = useForm<IEmailTemplate>({
-    values: props.templateData
-      ? {
-          itemId: props.templateData.itemId,
-          mailConfigurationId: props.templateData.mailConfigurationId,
-          language: props.templateData.language,
-          name: props.templateData.name,
-          templateSubject: props.templateData.templateSubject,
-          generatedBy: props.templateData.generatedBy,
-        }
-      : undefined,
-    resolver: zodResolver(schema) as unknown as Resolver<IEmailTemplate>,
+  const form = useForm<EditForm>({
+    values: {
+      mailConfigurationId: toConfigurationValue(props.templateData.mailConfigurationId),
+      templateSubject: props.templateData.templateSubject ?? "",
+    },
+    resolver: zodResolver(schema) as unknown as Resolver<EditForm>,
   });
-  const formSubmitHandler = async (data: IEmailTemplate) => {
+  const formSubmitHandler = async (data: EditForm) => {
+    const customMessages = templateErrorMessages(t);
     try {
-      const payload = {
-        ...data,
+      const res = await saveTemplate({
         itemId: props.templateData.itemId,
-      };
-      const res = await saveTemplate(payload);
+        templateSubject: data.templateSubject,
+        mailConfigurationId: fromConfigurationValue(data.mailConfigurationId),
+      });
       props.onClose();
       if (res?.isSuccess) {
         toast({
@@ -88,153 +108,108 @@ const EditCommunication = (props: EditCommunicationProps) => {
           description: t("EDIT_COMMUNICATION.TEMPLATE_UPDATED"),
         });
       } else {
-        showErrorToast({ errors: res.errors });
+        showErrorToast({ errors: res.errors, customMessages });
       }
     } catch (error) {
       if (isErrorWithErrors(error)) {
-        showErrorToast({ errors: error.errors });
+        showErrorToast({ errors: error.errors, customMessages });
       } else {
         showErrorToast({ errors: t("EDIT_COMMUNICATION.SOMETHING_WENT_WRONG") });
       }
     }
   };
+  const summary = isMultiOrgEnabled
+    ? t("EDIT_COMMUNICATION.SUMMARY_ORGANIZATION", {
+        organization: organizationName,
+        name: props.templateData.name ?? "",
+        language: languageName,
+      })
+    : t("EDIT_COMMUNICATION.SUMMARY", {
+        name: props.templateData.name ?? "",
+        language: languageName,
+      });
   return (
     <DialogContent className="rounded-md sm:max-w-[700px]">
       <DialogHeader>
         <DialogTitle className="text-left">{props.dialogTitle}</DialogTitle>
+        <DialogDescription className="text-left">{summary}</DialogDescription>
       </DialogHeader>
-      {data && !isLoading && !isLanguageListLoading && (
+      {configs && !isLoading && !isLanguageListLoading && (
         <Form {...form}>
-          {" "}
           <form onSubmit={form.handleSubmit(formSubmitHandler)}>
-            <DialogDescription className="flex flex-col gap-6 pb-5">
-              <CardContent>
-                <div className="mb-4 grid gap-2">
-                  <FormField
-                    name="templateSubject"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-left font-medium text-high-emphasis">
-                          {" "}
-                          {t("EDIT_COMMUNICATION.SUBJECT")}
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder={t("EDIT_COMMUNICATION.PLACEHOLDER_SUBJECT")}
-                            className="border-default col-span-3 mt-1 border shadow-none"
-                            {...field}
+            <CardContent className="flex flex-col gap-4 px-0 pb-5">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <LockedField
+                  id="edit-template-name"
+                  label={t("EDIT_COMMUNICATION.TEMPLATE_NAME")}
+                  value={props.templateData.name ?? ""}
+                  hint={t("EDIT_COMMUNICATION.NAME_LOCKED_HINT")}
+                />
+                <LockedField
+                  id="edit-template-language"
+                  label={t("EDIT_COMMUNICATION.LANGUAGE")}
+                  value={languageName}
+                  hint={t("EDIT_COMMUNICATION.LANGUAGE_LOCKED_HINT")}
+                />
+              </div>
+              <FormField
+                name="templateSubject"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-left font-medium text-high-emphasis">
+                      {t("EDIT_COMMUNICATION.SUBJECT")}
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder={t("EDIT_COMMUNICATION.PLACEHOLDER_SUBJECT")}
+                        className="border-default mt-1 border shadow-none"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="mailConfigurationId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-left font-medium text-high-emphasis">
+                      {t("EDIT_COMMUNICATION.EMAIL_CONFIGURATION")}
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="border-default flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none">
+                          <SelectValue
+                            placeholder={t("EDIT_COMMUNICATION.PLACEHOLDER_CONFIGURATION")}
                           />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid gap-4 sm:grid-cols-1">
-                  <div className="grid gap-2">
-                    <FormField
-                      name="name"
-                      control={form.control}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-left font-medium text-high-emphasis">
-                            {" "}
-                            {t("EDIT_COMMUNICATION.TEMPLATE_NAME")}
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder={t("EDIT_COMMUNICATION.PLACEHOLDER_TEMPLATE_NAME")}
-                              className="border-default col-span-3 mt-1 border shadow-none"
-                              {...field}
-                              disabled={props.templateData.generatedBy === "Tenant"}
-                              onKeyDown={(e) => {
-                                if (e.key === " " || e.key === "_") {
-                                  e.preventDefault();
-                                }
-                              }}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <div className="grid gap-2">
-                    <FormField
-                      control={form.control}
-                      name="language"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-left font-medium text-high-emphasis">
-                            {t("EDIT_COMMUNICATION.LANGUAGE")}
-                          </FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                                <SelectValue
-                                  placeholder={t("EDIT_COMMUNICATION.PLACEHOLDER_LANGUAGE")}
-                                />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {(languageListData ?? []).map((language) => (
-                                <SelectItem
-                                  key={language.languageCode}
-                                  value={language.languageCode}
-                                >
-                                  {language.languageName}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <FormField
-                      control={form.control}
-                      name="mailConfigurationId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-left font-medium text-high-emphasis">
-                            {t("EDIT_COMMUNICATION.EMAIL_CONFIGURATION")}
-                          </FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                                <SelectValue
-                                  placeholder={t("EDIT_COMMUNICATION.PLACEHOLDER_CONFIGURATION")}
-                                />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {data.map((config) => (
-                                <SelectItem key={config.itemId} value={config.itemId}>
-                                  {config.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </DialogDescription>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <TemplateConfigurationOptions
+                          configs={configs}
+                          organizationId={organizationId}
+                          organizationName={organizationName}
+                        />
+                      </SelectContent>
+                    </Select>
+                    <ConfigurationHint value={field.value} />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
             <DialogFooter className="flex flex-row gap-2">
               <DialogTrigger asChild>
-                <Button disabled={isSaveTemplateLoading} variant="secondary">
+                <Button type="button" disabled={isSaveTemplateLoading} variant="secondary">
                   {t("common:CANCEL")}
                 </Button>
               </DialogTrigger>
-              <Button>{t("common:SAVE")}</Button>
+              <Button type="submit" disabled={isSaveTemplateLoading}>
+                {t("common:SAVE")}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

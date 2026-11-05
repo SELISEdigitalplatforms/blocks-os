@@ -44,7 +44,7 @@ test.describe("flows", () => {
       await verifyEmptyEmailStateFlow(page);
     });
 
-    await test.step("The seeded Default configuration offers only Edit in its ⋮ menu (blocks-os#732 H10)", async () => {
+    await test.step("The seeded Default configuration offers Assign templates and Edit in its ⋮ menu (blocks-os#732 H10, #734 H6)", async () => {
       await verifyDefaultConfigLockedFlow(page);
     });
 
@@ -74,7 +74,7 @@ test.describe("flows", () => {
       await expandConfigRowAndVerifyFlow(page, configName);
     });
 
-    await test.step("Its ⋮ menu offers Edit and Delete (blocks-os#732 H10)", async () => {
+    await test.step("Its ⋮ menu offers Assign templates, Edit and Delete (blocks-os#732 H10, #734 H6)", async () => {
       await verifyConfigMenuFlow(page, configName);
     });
 

@@ -19,15 +19,18 @@ namespace BlocksOs.Api.Controllers
         private readonly IMailConfigurationService _mailConfigurationService;
         private readonly IMailTemplateService? _mailTemplateService;
         private readonly IMailboxService? _mailboxService;
+        private readonly IMailTemplateCopyService? _mailTemplateCopyService;
 
         public MailController(
             IMailConfigurationService mailConfigurationService,
             IMailTemplateService? mailTemplateService = null,
-            IMailboxService? mailboxService = null)
+            IMailboxService? mailboxService = null,
+            IMailTemplateCopyService? mailTemplateCopyService = null)
         {
             _mailConfigurationService = mailConfigurationService;
             _mailTemplateService = mailTemplateService;
             _mailboxService = mailboxService;
+            _mailTemplateCopyService = mailTemplateCopyService;
         }
 
         [HttpPost]
@@ -189,6 +192,52 @@ namespace BlocksOs.Api.Controllers
             }
 
             var result = await _mailTemplateService!.DeleteAsync(request);
+            return result.IsSuccess ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>
+        /// Points many templates of a configuration's organization at that configuration in one update.
+        /// A field error is HTTP 400 with <c>{ isSuccess:false, errors }</c>, as the other template endpoints.
+        /// </summary>
+        [HttpPost]
+        [ProtectedEndPoint("blocks-os::mail-template::save")]
+        public async Task<IActionResult> AssignTemplates([FromBody] AssignTemplatesRequest request)
+        {
+            var result = await _mailTemplateService!.AssignTemplatesAsync(request);
+            return result.IsSuccess ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>
+        /// Deletes a Default organization template now and queues the deletion of the organizations' own copies (same
+        /// Name + Language) in all or the selected organizations; the OS Worker deletes them and the requester gets a
+        /// bell notification. Returns the job id. "Only the Default organization's template" uses DeleteTemplate.
+        /// </summary>
+        [HttpPost]
+        [ProtectedEndPoint("blocks-os::mail-template::delete")]
+        public async Task<IActionResult> DeleteTemplateAcrossOrganizations([FromBody] DeleteTemplateAcrossOrganizationsRequest request)
+        {
+            var result = await _mailTemplateService!.DeleteAcrossOrganizationsAsync(request);
+            return result.IsSuccess ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>
+        /// Queues a copy of a Default organization template to all or selected organizations; the OS Worker makes the
+        /// copies and the requester gets a bell notification. Returns the job id.
+        /// </summary>
+        [HttpPost]
+        [ProtectedEndPoint("blocks-os::mail-template::save")]
+        public async Task<IActionResult> CopyTemplateToOrganizations([FromBody] CopyTemplateToOrganizationsRequest request)
+        {
+            var result = await _mailTemplateCopyService!.CopyToOrganizationsAsync(request);
+            return result.IsSuccess ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>Which of up to 25 organizations already have their own template with the same Name + Language.</summary>
+        [HttpGet]
+        [ProtectedEndPoint("blocks-os::mail-template::gets")]
+        public async Task<IActionResult> GetTemplateOrganizationCopies([FromQuery] GetTemplateOrganizationCopiesRequest request)
+        {
+            var result = await _mailTemplateCopyService!.GetOrganizationCopiesAsync(request);
             return result.IsSuccess ? Ok(result) : BadRequest(result);
         }
 

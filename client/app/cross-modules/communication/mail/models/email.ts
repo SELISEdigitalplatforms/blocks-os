@@ -21,13 +21,80 @@ export interface IEmailLogs {
   type: "divider" | "message" | "empty";
 }
 
+/**
+ * `POST Mail/AssignTemplates`: the configuration, and either the chosen template ids or, with
+ * `allMatching`, every template of its organization matching `searchKey` and `language`.
+ */
+export interface IAssignTemplatesRequest {
+  configurationId: string;
+  allMatching: boolean;
+  templateIds?: string[];
+  searchKey?: string;
+  language?: string;
+}
+
+/** SPEC33 §6.1: copy a Default organization template to organizations, in the Worker. */
+export interface ICopyTemplateToOrganizationsRequest {
+  templateId: string;
+  allOrganizations: boolean;
+  organizationIds?: string[];
+  existing: "keep" | "replace";
+}
+
+export interface ICopyTemplateToOrganizationsResponse {
+  isSuccess: boolean;
+  /** The queued job's id. */
+  itemId?: string | null;
+  errors?: unknown;
+}
+
+/** SPEC34 §6.1: delete a Default template now and its organizations' copies in the background. */
+export interface IDeleteTemplateAcrossOrganizationsRequest {
+  templateId: string;
+  allOrganizations: boolean;
+  /** Sent only when not all organizations; 1 to 1000. */
+  organizationIds?: string[];
+}
+
+export interface IDeleteTemplateAcrossOrganizationsResponse {
+  isSuccess: boolean;
+  /** The queued job's id. */
+  itemId?: string | null;
+  errors?: unknown;
+}
+
+/** SPEC33 §6.2: an organization that already has its own template with the same name and language. */
+export interface ITemplateOrganizationCopy {
+  organizationId: string;
+  templateId: string;
+  lastUpdatedDate?: string;
+}
+
+export interface ITemplateOrganizationCopiesResponse {
+  isSuccess: boolean;
+  copies?: ITemplateOrganizationCopy[];
+  errors?: unknown;
+}
+
+export interface IAssignTemplatesResponse {
+  isSuccess: boolean;
+  /** Templates that switched; ones already on the configuration don't count. */
+  updatedCount?: number;
+  errors?: Record<string, string> | null;
+}
+
 export interface IEmailTemplate {
   itemId: string;
   createdDate?: string;
   lastUpdatedDate?: string;
   createdBy?: string;
   lastUpdatedBy?: string;
-  organizationIds?: string[];
+  /**
+   * The organization the template belongs to; "default" for the Default organization. The API
+   * always returns it; it is optional only because the console builds partial templates (a new
+   * step-1 draft, a body-only save) that must not send one.
+   */
+  organizationId?: string;
   tags?: string[];
   mailConfigurationId?: string;
   templateBody?: string;

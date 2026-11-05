@@ -237,6 +237,7 @@ describe("Email Template Hooks", () => {
         false,
         "en",
         "config-1",
+        "default",
       );
     });
 
@@ -258,6 +259,7 @@ describe("Email Template Hooks", () => {
         true,
         "fr",
         "config-2",
+        "default",
       );
     });
 
@@ -278,6 +280,7 @@ describe("Email Template Hooks", () => {
         false,
         "",
         "",
+        "default",
       );
     });
 

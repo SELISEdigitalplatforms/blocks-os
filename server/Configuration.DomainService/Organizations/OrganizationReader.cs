@@ -78,5 +78,24 @@ namespace Configuration.DomainService.Organizations
 
             public bool IsDisabled { get; set; }
         }
+
+        public async Task<IReadOnlySet<string>> GetEnabledAmongAsync(IReadOnlyCollection<string> organizationIds, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(organizationIds);
+            var ids = organizationIds.Where(id => OrganizationIds.Normalize(id) != OrganizationIds.Default).Distinct(StringComparer.Ordinal).ToList();
+            if (ids.Count == 0)
+            {
+                return new HashSet<string>(StringComparer.Ordinal);
+            }
+
+            var filter = Builders<OrganizationDocument>.Filter.In(o => o.ItemId, ids) & Enabled;
+            var found = await Collection()
+                .Find(filter)
+                .Project(o => o.ItemId)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            return found.ToHashSet(StringComparer.Ordinal);
+        }
     }
 }

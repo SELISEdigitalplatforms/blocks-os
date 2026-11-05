@@ -61,6 +61,12 @@ namespace Configuration.DomainService.Shared.Utilities
         /// </summary>
         public const string NotificationConfigurationQueue = "blocks_os_notification_config_listener";
 
+        /// <summary>
+        /// Carries <c>EmailTemplateCopyCommand</c> (SPEC33) from Api to blocks-os-worker. The worker is the only host
+        /// that binds it (see <see cref="WithEmailTemplateQueue"/>).
+        /// </summary>
+        public const string EmailTemplateQueue = "blocks_os_email_template_listener";
+
         public const string OnlyRootTenantCanManageBuiltInNotificationConfiguration = "Only_Root_Tenant_Can_Manage_Built_In_Notification_Configuration";
         public const string BuiltInNotificationConfigurationIsReadOnly = "Built_In_Notification_Configuration_Is_Read_Only";
         public const string NotificationConfigurationPropagationNotQueued = "Notification_Configuration_Propagation_Not_Queued";
@@ -105,6 +111,24 @@ namespace Configuration.DomainService.Shared.Utilities
 
             return configuration;
         }
+        /// <summary>Adds the email-template queue (organization copy jobs) to a worker's message configuration (Rabbit or Azure).</summary>
+        public static MessageConfiguration WithEmailTemplateQueue(MessageConfiguration configuration)
+        {
+            if (configuration.RabbitMqConfiguration is { } rabbit &&
+                !rabbit.ConsumerSubscriptions.Any(s => s.QueueName == EmailTemplateQueue))
+            {
+                rabbit.ConsumerSubscriptions.Add(ConsumerSubscription.BindToQueue(EmailTemplateQueue));
+            }
+
+            if (configuration.AzureServiceBusConfiguration is { } azure &&
+                !azure.Queues.Contains(EmailTemplateQueue))
+            {
+                azure.Queues = [.. azure.Queues, EmailTemplateQueue];
+            }
+
+            return configuration;
+        }
+
         /// <summary>
         /// Binds the webhook queues in blocks-os-worker only: Genesis's <see cref="Blocks.Genesis.ActionConstants.WebhookQueue"/>
         /// (actions with the webhook target on) and the worker's own delivery job queue. The API only sends to the latter.

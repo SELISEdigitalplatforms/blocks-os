@@ -32,13 +32,13 @@ namespace XUnitTest.Validators
             var result = await Validator().ValidateAsync(new SaveMailTemplateRequest { Name = "", Language = "en" });
 
             result.IsValid.Should().BeTrue();
-            _repo.Verify(r => r.GetByNameAndLanguageAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            _repo.Verify(r => r.GetByNameAndLanguageAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         }
 
         [Fact]
         public async Task Valid_WhenNoExistingTemplate()
         {
-            _repo.Setup(r => r.GetByNameAndLanguageAsync("Welcome", "en")).ReturnsAsync((EmailTemplate?)null);
+            _repo.Setup(r => r.GetByNameAndLanguageAsync("Welcome", "en", "default")).ReturnsAsync((EmailTemplate?)null);
 
             var result = await Validator().ValidateAsync(new SaveMailTemplateRequest { Name = "Welcome", Language = "en" });
 
@@ -46,11 +46,41 @@ namespace XUnitTest.Validators
         }
 
         [Fact]
-        public async Task Valid_WhenExistingIsSameItem()
+        public async Task Invalid_WhenTheOrganizationHasTheNameAndLanguage() // SPEC31 C1
         {
-            _repo.Setup(r => r.GetByNameAndLanguageAsync("Welcome", "en"))
-                 .ReturnsAsync(new EmailTemplate { ItemId = "t1", Name = "Welcome", Language = "en" });
+            _repo.Setup(r => r.GetByNameAndLanguageAsync("Welcome", "en", "acme"))
+                 .ReturnsAsync(new EmailTemplate { ItemId = "other", Name = "Welcome", Language = "en", OrganizationId = "acme" });
 
+            var result = await Validator().ValidateAsync(new SaveMailTemplateRequest
+            {
+                Name = "Welcome",
+                Language = "en",
+                OrganizationId = "acme"
+            });
+
+            result.IsValid.Should().BeFalse();
+            result.Errors.Should().ContainSingle(e => e.ErrorMessage == "Template with the same Name and Language already exists");
+        }
+
+        [Theory] // SPEC31 H2/H3: a create without an organization is checked in the Default organization only
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("default")]
+        public async Task Create_WithoutAnOrganization_LooksInTheDefaultOrganization(string? organizationId)
+        {
+            _repo.Setup(r => r.GetByNameAndLanguageAsync("Welcome", "en", "acme"))
+                 .ReturnsAsync(new EmailTemplate { ItemId = "other", Name = "Welcome", Language = "en", OrganizationId = "acme" });
+
+            var result = await Validator().ValidateAsync(new SaveMailTemplateRequest { Name = "Welcome", Language = "en", OrganizationId = organizationId });
+
+            result.IsValid.Should().BeTrue();
+            _repo.Verify(r => r.GetByNameAndLanguageAsync("Welcome", "en", "default"), Times.Once);
+        }
+
+        [Fact]
+        public async Task Edit_IsLeftToTheService()
+        {
+            // An edit's organization is the stored one, which only the service reads (SPEC31 D2/D3).
             var result = await Validator().ValidateAsync(new SaveMailTemplateRequest
             {
                 ItemId = "t1",
@@ -59,23 +89,7 @@ namespace XUnitTest.Validators
             });
 
             result.IsValid.Should().BeTrue();
-        }
-
-        [Fact]
-        public async Task Invalid_WhenExistingIsDifferentItem()
-        {
-            _repo.Setup(r => r.GetByNameAndLanguageAsync("Welcome", "en"))
-                 .ReturnsAsync(new EmailTemplate { ItemId = "other", Name = "Welcome", Language = "en" });
-
-            var result = await Validator().ValidateAsync(new SaveMailTemplateRequest
-            {
-                ItemId = "t1",
-                Name = "Welcome",
-                Language = "en"
-            });
-
-            result.IsValid.Should().BeFalse();
-            result.Errors.Should().Contain(e => e.ErrorMessage.Contains("already exists"));
+            _repo.Verify(r => r.GetByNameAndLanguageAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         }
     }
 }

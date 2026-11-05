@@ -10,11 +10,15 @@ using SeliseBlocks.ConfigurationDriver;
 using Worker;
 using Worker.Configuration;
 using Worker.Consumers.Identifier;
+using Worker.Consumers.Mail;
 using Worker.Consumers.Migration;
 using Worker.Consumers.Notification;
 using Worker.Consumers.Webhooks;
 using Configuration.DomainService.Webhooks;
 using Configuration.DomainService.Notification.Propagation;
+using Configuration.DomainService.Mail.Template;
+using Configuration.DomainService.Mail.Template.Services;
+using Configuration.DomainService.Shared.Utilities;
 using ConfigurationConstants = Configuration.DomainService.Shared.Utilities.Constants;
 
 const string _serviceName = "blocks-os-worker";
@@ -65,6 +69,13 @@ IHostBuilder CreateHostBuilder(string[] args) =>
             // Root built-in notification config changes, copied to the seed database and every other tenant.
             services.AddSingleton<INotificationConfigurationPropagator, NotificationConfigurationPropagator>();
             services.AddSingleton<IConsumer<BuiltInNotificationConfigurationChangedEvent>, BuiltInNotificationConfigurationConsumer>();
+            // A Default organization template copied to organizations (SPEC33), queued by the Mail API.
+            services.AddEmailTemplateCopyJob();
+            services.AddSingleton<IConsumer<EmailTemplateCopyCommand>, EmailTemplateCopyConsumer>();
+            // The organizations' copies of a deleted Default template (SPEC34), on the same queue. The repository and
+            // organization reader come from AddEmailTemplateCopyJob.
+            services.AddSingleton<IEmailTemplateDeleteJob, EmailTemplateDeleteJob>();
+            services.AddSingleton<IConsumer<EmailTemplateDeleteCommand>, EmailTemplateDeleteConsumer>();
             #endregion
 
             #region Webhook Consumers
@@ -73,9 +84,10 @@ IHostBuilder CreateHostBuilder(string[] args) =>
             services.AddSingleton<IConsumer<BlocksAction>, WebhookActionConsumer>();
             services.AddSingleton<IConsumer<WebhookFanOutRetry>, WebhookFanOutRetryConsumer>();
             services.AddSingleton<IConsumer<WebhookDeliveryJob>, WebhookDeliveryJobConsumer>();
-         ApplicationConfigurations.ConfigureWorker(services, ConfigurationConstants.WithWebhookQueues(
-             ConfigurationConstants.WithNotificationConfigurationQueue(
-                 IdentifierConstants.GetMessageConfiguration(secret.MessageConnectionString))));
+         ApplicationConfigurations.ConfigureWorker(services, ConfigurationConstants.WithEmailTemplateQueue(
+             ConfigurationConstants.WithWebhookQueues(
+                 ConfigurationConstants.WithNotificationConfigurationQueue(
+                     IdentifierConstants.GetMessageConfiguration(secret.MessageConnectionString)))));
             #endregion
         });
 

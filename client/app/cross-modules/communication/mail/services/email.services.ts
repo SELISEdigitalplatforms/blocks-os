@@ -1,8 +1,15 @@
 import {
+  IAssignTemplatesRequest,
+  IAssignTemplatesResponse,
+  ICopyTemplateToOrganizationsRequest,
+  IDeleteTemplateAcrossOrganizationsRequest,
+  IDeleteTemplateAcrossOrganizationsResponse,
+  ICopyTemplateToOrganizationsResponse,
   IEmailConfig,
   IEmailTemplate,
   IEmailUsageResponse,
   IGetMailBoxMailResponse,
+  ITemplateOrganizationCopiesResponse,
 } from "../models/email";
 import { http } from "@/lib/http/http-client";
 import {
@@ -92,8 +99,13 @@ class EmailService {
     isDescending: boolean = false,
     language: string,
     mailConfigurationId: string,
+    organizationId?: string,
   ): Promise<{ templates: IEmailTemplate[]; totalCount: number }> => {
-    const url = `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATES}?pageNumber=${pageNumber}&pageSize=${pageSize}&searchKey=${searchKey}&sortProperty=${sortProperty}&isDescending=${isDescending}&language=${language}&mailConfigurationId=${mailConfigurationId}`;
+    // Without an organization the server lists the Default organization's templates.
+    const organizationQuery = organizationId
+      ? `&organizationId=${encodeURIComponent(organizationId)}`
+      : "";
+    const url = `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATES}?pageNumber=${pageNumber}&pageSize=${pageSize}&searchKey=${encodeURIComponent(searchKey)}&sortProperty=${sortProperty}&isDescending=${isDescending}&language=${language}&mailConfigurationId=${mailConfigurationId}${organizationQuery}`;
     return http.get(url, undefined, { absoluteUrl: true });
   };
 
@@ -164,9 +176,13 @@ class EmailService {
   };
 
   getMailBoxMail = (itemId: string): Promise<IGetMailBoxMailResponse> => {
-    return http.get(`${MAIL_ENDPOINTS.GET_MAILBOX_MAIL}?ItemId=${encodeURIComponent(itemId)}`, undefined, {
-      absoluteUrl: true,
-    });
+    return http.get(
+      `${MAIL_ENDPOINTS.GET_MAILBOX_MAIL}?ItemId=${encodeURIComponent(itemId)}`,
+      undefined,
+      {
+        absoluteUrl: true,
+      },
+    );
   };
 
   saveMailConfig = (
@@ -207,10 +223,12 @@ class EmailService {
         return response.templateCount;
       });
 
+  /** A test mail of exactly this template: blocks-logic sends the template by its id. */
   sendTestMail = (data: {
     to: string;
     purpose: string;
     language: string;
+    templateId: string;
   }): Promise<{
     errors: null | unknown;
     isSuccess: boolean;
@@ -222,6 +240,7 @@ class EmailService {
       language: data.language,
       replyTo: [data.to],
       isTestMail: true,
+      templateId: data.templateId,
     };
     return http.post(MAIL_ENDPOINTS.SEND_TO_ANY, payload, undefined, {
       absoluteUrl: true,
@@ -230,6 +249,8 @@ class EmailService {
 
   saveMailTemplate(requestBody: {
     itemId: string;
+    /** On create only; an edit keeps the stored organization. */
+    organizationId?: string;
     mailConfigurationId?: string;
     language?: string;
     name?: string;
@@ -253,10 +274,11 @@ class EmailService {
       .then((response) => response);
   }
 
+  /** A clone keeps the source's name and organization, in another language. */
   cloneMailTemplate(requestBody: {
     itemId: string;
     mailConfigurationId?: string;
-    language?: string;
+    language: string;
     name?: string;
     templateSubject?: string;
   }): Promise<{
@@ -273,6 +295,63 @@ class EmailService {
         absoluteUrl: true,
       })
       .then((response) => response);
+  }
+
+  /**
+   * Points many templates of the configuration's organization at the configuration in one
+   * update: the given ids, or with `allMatching` every template matching the list's filters.
+   */
+  assignTemplates(requestBody: IAssignTemplatesRequest): Promise<IAssignTemplatesResponse> {
+    return http.post<IAssignTemplatesResponse>(
+      EMAIL_TEMPLATE_ENDPOINTS.ASSIGN_TEMPLATES,
+      requestBody,
+      undefined,
+      { absoluteUrl: true },
+    );
+  }
+
+  /** Queues the Worker job that copies a Default organization template to organizations. */
+  copyTemplateToOrganizations(
+    requestBody: ICopyTemplateToOrganizationsRequest,
+  ): Promise<ICopyTemplateToOrganizationsResponse> {
+    return http.post<ICopyTemplateToOrganizationsResponse>(
+      EMAIL_TEMPLATE_ENDPOINTS.COPY_TEMPLATE_TO_ORGANIZATIONS,
+      requestBody,
+      undefined,
+      { absoluteUrl: true },
+    );
+  }
+
+  /** Which of these organizations (at most 25) already have their own copy of the template. */
+  getTemplateOrganizationCopies(
+    templateId: string,
+    organizationIds: string[],
+  ): Promise<ITemplateOrganizationCopiesResponse> {
+    const query = new URLSearchParams({
+      templateId,
+      organizationIds: organizationIds.join(","),
+    });
+    return http.get<ITemplateOrganizationCopiesResponse>(
+      `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATE_ORGANIZATION_COPIES}?${query.toString()}`,
+      undefined,
+      { absoluteUrl: true },
+    );
+  }
+
+  /**
+   * Deletes a Default organization template now and queues the deletion of the organizations'
+   * copies with the same name and language (SPEC34 §6.1). The Default-only delete stays on
+   * DeleteTemplate.
+   */
+  deleteTemplateAcrossOrganizations(
+    requestBody: IDeleteTemplateAcrossOrganizationsRequest,
+  ): Promise<IDeleteTemplateAcrossOrganizationsResponse> {
+    return http.post<IDeleteTemplateAcrossOrganizationsResponse>(
+      EMAIL_TEMPLATE_ENDPOINTS.DELETE_TEMPLATE_ACROSS_ORGANIZATIONS,
+      requestBody,
+      undefined,
+      { absoluteUrl: true },
+    );
   }
 
   deleteMailTemplate(payload: { itemId: string }): Promise<{

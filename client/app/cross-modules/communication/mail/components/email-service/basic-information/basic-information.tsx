@@ -3,7 +3,6 @@ import React, {
   useCallback,
   useImperativeHandle,
   useMemo,
-  useState,
   type ReactNode,
 } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
@@ -21,7 +20,24 @@ import { useForm, type Resolver } from "react-hook-form";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useGetEmailConfigs } from "@blocks-communication/mail/hooks/use-email-config";
+import { useGetEmailSecretConfigs } from "@blocks-communication/mail/hooks/use-email-config";
+import {
+  useEmailOrganization,
+  useOrganizationName,
+} from "@blocks-communication/mail/hooks/use-email-organization";
+import {
+  fromConfigurationValue,
+  toConfigurationValue,
+} from "@blocks-communication/mail/constants/template-organization";
+import {
+  ConfigurationHint,
+  TemplateConfigurationOptions,
+} from "@blocks-communication/mail/components/email-service/template-configuration-options/template-configuration-options";
+import { LockedField } from "@blocks-communication/mail/components/email-service/locked-field/locked-field";
+import { ShareWithOrganizations } from "@blocks-communication/mail/components/email-service/share-with-organizations/share-with-organizations";
+import { DEFAULT_ORGANIZATION_ID } from "@blocks-communication/mail/constants/organization";
+import type { ShareChoice } from "@blocks-communication/mail/constants/share-organizations";
+import { templateErrorMessages } from "@blocks-communication/mail/constants/template-errors";
 import { useSaveMailTemplate } from "@blocks-communication/mail/hooks/use-email-template";
 import { useGetLanguages } from "@blocks-localization/hooks/use-language-manager";
 import { useProjectStore, useT } from "@seliseblocks/genesis-os";
@@ -41,6 +57,12 @@ interface IBasicInformationProps {
   onValidityChange?: (isValid: boolean) => void;
   onPendingChange?: (isPending: boolean) => void;
   actions?: ReactNode;
+  /**
+   * SPEC33: whether the new template is also copied to other organizations. Offered only for the
+   * Default organization with multi-org on (C13); New Template keeps it across both steps.
+   */
+  shareChoice?: ShareChoice;
+  onShareChoiceChange?: (choice: ShareChoice) => void;
 }
 
 type TranslateFn = ReturnType<typeof useT>["t"];
@@ -127,21 +149,31 @@ const BasicInformation = forwardRef(function Inner(
     onValidityChange,
     onPendingChange,
     actions,
+    shareChoice,
+    onShareChoiceChange,
   }: IBasicInformationProps,
   ref,
 ) {
   const { t } = useT("os.communication.mail");
   const schema = useMemo(() => createSchema(t), [t]);
   const { isLoading: isLanguageListLoading, data: languageListData } = useGetLanguages();
-  const [filterData] = useState({ pageNumber: 0, pageSize: 10 });
-  const { isLoading, data } = useGetEmailConfigs(filterData.pageNumber, filterData.pageSize);
+  // New Template opens in the page's organization; the Default organization with multi-org off.
+  const organization = useEmailOrganization();
+  const organizationId = organization.selectedOrganizationId;
+  const organizationName = useOrganizationName(organizationId);
+  const { isLoading, data: configsResponse } = useGetEmailSecretConfigs(organizationId);
+  const data = configsResponse?.configurations;
   const { isPending, mutateAsync: saveTemplate } = useSaveMailTemplate();
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const uniqueLanguages = getUniqueLanguages(languageListData ?? []);
   const form = useForm<IEmailTemplate>({
     defaultValues: {
       itemId: templateData.itemId,
-      mailConfigurationId: templateData.mailConfigurationId,
+      // A saved template without a configuration uses "Organization default"; a new one starts
+      // with nothing picked, so the required rule asks for a choice.
+      mailConfigurationId: templateData.itemId
+        ? toConfigurationValue(templateData.mailConfigurationId)
+        : (templateData.mailConfigurationId ?? ""),
       language: templateData.language,
       name: templateData.name,
       templateSubject: templateData.templateSubject,
@@ -163,11 +195,14 @@ const BasicInformation = forwardRef(function Inner(
   // Read itemId into a local so the compiler infers this exact dependency rather than the whole
   // templateData object; the callback keeps its current identity lifetime.
   const templateItemId = templateData?.itemId;
+  const isSaved = !!templateItemId;
   const handleFormSubmit = useCallback(
     async (data: IEmailTemplate) => {
       try {
         const payload = {
           ...data,
+          mailConfigurationId: fromConfigurationValue(data.mailConfigurationId ?? ""),
+          organizationId,
           itemId: templateItemId || "",
           projectKey: tenantId,
         };
@@ -181,16 +216,16 @@ const BasicInformation = forwardRef(function Inner(
           return;
         }
 
-        showErrorToast({ errors: res.errors });
+        showErrorToast({ errors: res.errors, customMessages: templateErrorMessages(t) });
       } catch (error) {
         if (isErrorWithErrors(error)) {
-          showErrorToast({ errors: error.errors });
+          showErrorToast({ errors: error.errors, customMessages: templateErrorMessages(t) });
         } else {
           showErrorToast({ errors: t("BASIC_INFORMATION.SOMETHING_WENT_WRONG") });
         }
       }
     },
-    [onSaveSuccess, saveTemplate, templateItemId, tenantId, t],
+    [onSaveSuccess, saveTemplate, templateItemId, tenantId, organizationId, t],
   );
 
   const { isValid } = form.formState;
@@ -239,6 +274,8 @@ const BasicInformation = forwardRef(function Inner(
                         className="border-default shadow-none"
                         aria-required="true"
                         {...field}
+                        // Once step 1 has saved, going back edits that template, whose name is fixed (SPEC31 C2).
+                        readOnly={isSaved}
                         onKeyDown={(e) => {
                           if (e.key === " " || e.key === "_") {
                             e.preventDefault();
@@ -271,15 +308,14 @@ const BasicInformation = forwardRef(function Inner(
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {data
-                          .filter((config) => !config.isInbound)
-                          .map((config) => (
-                            <SelectItem key={config.itemId} value={config.itemId}>
-                              {config.name}
-                            </SelectItem>
-                          ))}
+                        <TemplateConfigurationOptions
+                          configs={data}
+                          organizationId={organizationId}
+                          organizationName={organizationName}
+                        />
                       </SelectContent>
                     </Select>
+                    <ConfigurationHint value={field.value} />
                     <FormMessage />
                   </FormItem>
                 )}
@@ -293,7 +329,12 @@ const BasicInformation = forwardRef(function Inner(
                     <FormLabel className="font-medium text-high-emphasis">
                       {t("BASIC_INFORMATION.LANGUAGE")} <RequiredMark />
                     </FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    {/* The language is fixed once saved, like the name (SPEC31 C3). */}
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      disabled={isSaved}
+                    >
                       <FormControl>
                         <SelectTrigger
                           className="border-default h-10 shadow-none"
@@ -314,6 +355,27 @@ const BasicInformation = forwardRef(function Inner(
                   </FormItem>
                 )}
               />
+
+              {organization.isMultiOrgEnabled ? (
+                <LockedField
+                  id="basic-information-organization"
+                  label={t("TEMPLATE_ORGANIZATION.ORGANIZATION")}
+                  value={organizationName}
+                />
+              ) : null}
+
+              {organization.isMultiOrgEnabled &&
+              organizationId === DEFAULT_ORGANIZATION_ID &&
+              shareChoice &&
+              onShareChoiceChange ? (
+                <div className="md:col-span-2 xl:col-span-3">
+                  <ShareWithOrganizations
+                    choice={shareChoice}
+                    onChange={onShareChoiceChange}
+                    templateId={templateItemId || undefined}
+                  />
+                </div>
+              ) : null}
 
               <FormField
                 name="templateSubject"

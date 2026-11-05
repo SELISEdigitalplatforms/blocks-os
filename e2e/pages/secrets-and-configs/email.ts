@@ -68,14 +68,15 @@ export async function verifyEmptyEmailStateFlow(page: Page) {
 
 /**
  * The seeded Default record can only have its sender name edited, never be deleted. Since
- * blocks-os#732 (H10) its actions are in its ⋮ menu, which must offer Edit only.
+ * blocks-os#732 (H10) its actions are in its ⋮ menu, which must offer Edit only — after
+ * blocks-os#734 H6 "Assign templates" first, because it is outbound.
  */
 export async function verifyDefaultConfigLockedFlow(page: Page) {
   const menuButton = page.getByRole("button", { name: "More actions for Default", exact: true });
   await expect(menuButton).toBeVisible({ timeout: 15000 });
   await menuButton.click();
   const items = page.getByRole("menuitem");
-  await expect(items).toHaveText(["Edit"]);
+  await expect(items).toHaveText(["Assign templates", "Edit"]);
   await page.keyboard.press("Escape");
   await expect(items).toHaveCount(0);
 }
@@ -235,20 +236,24 @@ export function configMenuButton(page: Page, configName: string) {
   return page.getByRole("button", { name: `More actions for ${configName}`, exact: true });
 }
 
-async function chooseFromConfigMenu(page: Page, configName: string, item: "Edit" | "Delete") {
+export async function chooseFromConfigMenu(
+  page: Page,
+  configName: string,
+  item: "Assign templates" | "Edit" | "Delete",
+) {
   const menuButton = configMenuButton(page, configName);
   await expect(menuButton).toBeVisible({ timeout: 15000 });
   await menuButton.click();
   await page.getByRole("menuitem", { name: item, exact: true }).click();
 }
 
-/** blocks-os#732 H10: the card's ⋮ menu offers exactly Edit and Delete. */
+/** blocks-os#732 H10 and #734 H6: an outbound card's ⋮ menu offers Assign templates, Edit, Delete. */
 export async function verifyConfigMenuFlow(page: Page, configName: string) {
   const menuButton = configMenuButton(page, configName);
   await expect(menuButton).toBeVisible({ timeout: 15000 });
   await menuButton.click();
   const items = page.getByRole("menuitem");
-  await expect(items).toHaveText(["Edit", "Delete"]);
+  await expect(items).toHaveText(["Assign templates", "Edit", "Delete"]);
   await page.keyboard.press("Escape");
   await expect(items).toHaveCount(0);
 }

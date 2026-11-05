@@ -203,7 +203,8 @@ namespace XUnitTest.Notifications
                 .Select(f => (string)f.GetRawConstantValue()!)
                 .ToList();
 
-            names.Should().HaveCount(6).And.OnlyHaveUniqueItems().And.OnlyContain(n => n.StartsWith("os-"));
+            // Eight since blocks-os#735 and #736 added os-email-template-copy-finished and -delete-finished (SPEC33 H6, SPEC34 H5).
+            names.Should().HaveCount(8).And.OnlyHaveUniqueItems().And.OnlyContain(n => n.StartsWith("os-"));
             names.Should().OnlyContain(n => !RetiredNotificationNames.Contains(n));
         }
     }

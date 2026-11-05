@@ -69,12 +69,14 @@ public class OsRepositoryDenialTests
         var repo = new MailTemplateRepository(StrictCollections(), Deny);
 
         (await repo.GetByIdAsync("1")).Should().BeNull();
-        (await repo.GetByNameAndLanguageAsync("n", "en")).Should().BeNull();
+        (await repo.GetByNameAndLanguageAsync("n", "en", "default")).Should().BeNull();
         var list = await repo.GetsAsync(new GetAllMailTemplatesRequest());
         list.TotalCount.Should().Be(0);
         list.Templates.Should().BeEmpty();
         await repo.DeleteAsync("1");
         await FluentActions.Invoking(() => repo.SaveAsync(new EmailTemplate { ItemId = "1" })).Should().ThrowAsync<UnauthorizedAccessException>();
+        await FluentActions.Invoking(() => repo.CountOutsideOrganizationAsync(new[] { "1" }, "default")).Should().ThrowAsync<UnauthorizedAccessException>();
+        await FluentActions.Invoking(() => repo.AssignConfigurationAsync("cfg", "default", new[] { "1" }, null, null)).Should().ThrowAsync<UnauthorizedAccessException>();
     }
 
     [Fact]

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Mail } from "lucide-react";
 import DeleteEmailConfig from "@blocks-communication/mail/components/email-service/modals/delete-email-config/delete-email-config";
 import NewConfiguration from "@blocks-communication/mail/components/email-service/modals/new-configuration/new-configuration";
+import { AssignTemplatesDialog } from "@blocks-communication/mail/components/email-service/modals/assign-templates/assign-templates";
 import EditDefaultSenderName from "@blocks-communication/mail/components/email-service/modals/edit-default-sender-name/edit-default-sender-name";
 import { EmailConfigCard } from "@blocks-communication/mail/components/email-service/email-config-card/email-config-card";
 import { Accordion } from "@/components/ui-kits/accordion/accordion";
@@ -35,6 +36,12 @@ interface ConfigListProps {
   organizationNameOf: (config: IEmailConfig) => string;
   /** The list whose first card opens expanded; a later section starts collapsed. */
   expandFirst: boolean;
+  /**
+   * Every configuration the page loaded (the organization's and the Default organization's), for
+   * the Assign templates dialog's "Current configuration" names. Without it, no card offers the
+   * dialog (hosts other than the Email page).
+   */
+  assignConfigs?: IEmailConfig[];
 }
 
 /**
@@ -47,10 +54,12 @@ function ConfigList({
   showOrganization,
   organizationNameOf,
   expandFirst,
+  assignConfigs,
 }: Readonly<ConfigListProps>) {
   const { t } = useT("os.communication.mail");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [assigningId, setAssigningId] = useState<string | null>(null);
 
   return (
     <Accordion
@@ -68,6 +77,7 @@ function ConfigList({
           organizationName={organizationNameOf(config)}
           onEdit={() => setEditingId(config.itemId)}
           onDelete={() => setDeletingId(config.itemId)}
+          onAssign={assignConfigs ? () => setAssigningId(config.itemId) : undefined}
         >
           <Dialog
             open={editingId === config.itemId}
@@ -100,6 +110,23 @@ function ConfigList({
               <DeleteEmailConfig configId={config.itemId} onClose={() => setDeletingId(null)} />
             )}
           </Dialog>
+          {assignConfigs && (
+            <Dialog
+              open={assigningId === config.itemId}
+              onOpenChange={(isOpen) => setAssigningId(isOpen ? config.itemId : null)}
+            >
+              {/* Mounted only while open, so each opening starts with no selection (C9). */}
+              {assigningId === config.itemId && (
+                <AssignTemplatesDialog
+                  config={config}
+                  configs={assignConfigs}
+                  organizationName={organizationNameOf(config)}
+                  showOrganization={showOrganization}
+                  onClose={() => setAssigningId(null)}
+                />
+              )}
+            </Dialog>
+          )}
         </EmailConfigCard>
       ))}
     </Accordion>
@@ -188,6 +215,8 @@ export function EmailConfiguration({
     listed.byOrganization ? listed.selectedOrganizationId : undefined,
     !listed.isLoading,
   );
+  // Assign templates is an Email-page action (SPEC32 H6); other hosts list cards only.
+  const assignConfigs = organizationScoped ? (secretData?.configurations ?? []) : undefined;
   const { organizationConfigs, sharedConfigs } = splitByOrganization(
     secretData?.configurations || [],
     listed,
@@ -243,6 +272,7 @@ export function EmailConfiguration({
           showOrganization={listed.byOrganization}
           organizationNameOf={listed.organizationNameOf}
           expandFirst
+          assignConfigs={assignConfigs}
         />
       ) : (
         <ConfigurationsEmptyState
@@ -264,6 +294,7 @@ export function EmailConfiguration({
             showOrganization={listed.byOrganization}
             organizationNameOf={listed.organizationNameOf}
             expandFirst={organizationConfigs.length === 0}
+            assignConfigs={assignConfigs}
           />
         </section>
       )}

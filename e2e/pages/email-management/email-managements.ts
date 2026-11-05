@@ -1,8 +1,32 @@
 import fs from "node:fs/promises";
-import { expect, type Page, type Response, type Route, type TestInfo } from "@playwright/test";
+import {
+  expect,
+  type Locator,
+  type Page,
+  type Response,
+  type Route,
+  type TestInfo,
+} from "@playwright/test";
 import { openEmailManagement } from "../../support/os-helpers";
 
-export async function addTemplateFlow(page: Page) {
+/** The template the Add Template flow created (step 1 only; its body is never saved). */
+export type CreatedTemplate = { name: string; subject: string };
+
+/** Extra checks a caller runs inside the flow: before step 1 saves, and on step 2 after it. */
+export type AddTemplateHooks = {
+  beforeSave?: (page: Page) => Promise<void>;
+  afterSave?: (page: Page) => Promise<void>;
+};
+
+/**
+ * `templateName` lets a caller know the name before step 1 saves it, so its cleanup can find the
+ * template even when a later step fails.
+ */
+export async function addTemplateFlow(
+  page: Page,
+  templateName = `FlowTemplate${Date.now()}`,
+  hooks: AddTemplateHooks = {},
+): Promise<CreatedTemplate | undefined> {
   // ---------- Open Email Management ----------
   await openEmailManagement(page);
   const addTemplateButton = page.getByRole("button", { name: "Add Template" });
@@ -48,7 +72,6 @@ export async function addTemplateFlow(page: Page) {
   await expect(page.getByText("Subject is required")).toBeVisible({ timeout: 10_000 });
 
   // ---------- Fill valid data + advance ----------
-  const templateName = `FlowTemplate${Date.now()}`;
   const templateSubject = `Flow subject ${Date.now()}`;
   await nameInput.fill(templateName);
   await expect(nameInput).toHaveValue(templateName);
@@ -130,7 +153,13 @@ export async function addTemplateFlow(page: Page) {
         "Skipping the remaining template creation steps.",
     );
 
-    return;
+    return undefined;
+  }
+
+  // blocks-os#733 H8: with multi-org on, step 1 shows the page's organization read-only.
+  const organizationField = page.getByRole("textbox", { name: "Organization", exact: true });
+  if ((await organizationField.count()) > 0) {
+    await expect(organizationField).toHaveAttribute("readonly", "");
   }
 
   // ---------- Step 1 → Step 2 ----------
@@ -195,10 +224,16 @@ export async function addTemplateFlow(page: Page) {
   // Guard against navigation racing the save: the button triggers an async
   // saveTemplate mutation before nextStep() — wait for the design heading
   // instead of assuming the click landed.
+  if (hooks.beforeSave) {
+    await hooks.beforeSave(page);
+    // A share choice must be complete before step 1 can save (blocks-os#735).
+    await expect(saveContinue).toBeEnabled({ timeout: 15_000 });
+  }
   await saveContinue.click();
   await expect(page.getByRole("heading", { name: "Template design" })).toBeVisible({
     timeout: 30_000,
   });
+  await hooks.afterSave?.(page);
 
   // ---------- Step 2 UI ----------
   // The template body is built with the MailCraft editor, a custom element
@@ -222,6 +257,7 @@ export async function addTemplateFlow(page: Page) {
   await expect(page.getByRole("heading", { name: "Email Templates", exact: true })).toBeVisible({
     timeout: 30_000,
   });
+  return { name: templateName, subject: templateSubject };
 }
 
 export async function templatesFlow(page: Page) {
@@ -322,37 +358,186 @@ export async function templatesFlow(page: Page) {
   await expect(page.getByRole("heading", { name: "Email Templates", exact: true })).toBeVisible({
     timeout: 30_000,
   });
+}
 
-  // ---------- Clone the first row ----------
-  const sourceName = (await firstRow.locator("td").first().innerText()).trim();
-  // The list refetches after returning from the details page and can re-render
-  // under an open menu, which closes it. Reopen until the item is there.
-  // The click itself is retried too: a re-render can detach the item between the check and
-  // the click, and a plain click would then wait for it until the test times out.
-  const cloneItem = page.getByRole("menuitem", { name: "Clone Template", exact: true });
-  const confirmation = page.getByRole("heading", { name: "Confirmation", exact: true });
-  await expect(async () => {
-    if (!(await confirmation.isVisible())) {
-      if (!(await cloneItem.isVisible())) {
-        await firstRow.getByRole("button", { name: "Open menu", exact: true }).click();
-      }
-      await cloneItem.click({ timeout: 3_000 });
-    }
-    await expect(confirmation).toBeVisible({ timeout: 3_000 });
-  }).toPass({ timeout: 45_000 });
-  await expect(page.getByText(`clone the ${sourceName} template`, { exact: false })).toBeVisible({
-    timeout: 10_000,
+/** The Templates tab's table, after it loaded. */
+async function templatesTable(page: Page) {
+  const tabpanel = page.getByRole("tabpanel", { name: "Templates", exact: true });
+  const table = tabpanel.getByRole("table");
+  await expect(table).toBeVisible({ timeout: 30_000 });
+  return { tabpanel, table };
+}
+
+/** Narrows the list to the rows named exactly `name` and waits for `count` of them. */
+async function rowsNamed(page: Page, name: string, count: number) {
+  const { tabpanel, table } = await templatesTable(page);
+  await tabpanel.getByPlaceholder("Search...").first().fill(name);
+  const rows = table.getByRole("row").filter({
+    has: page.getByRole("cell", { name, exact: true }),
   });
-  await page.getByRole("button", { name: "Yes", exact: true }).click();
+  await expect(rows).toHaveCount(count, { timeout: 15_000 });
+  return rows;
+}
+
+/** Opens a row's menu and picks an item, retrying when a list refetch closes the menu. */
+async function rowMenuItem(page: Page, row: Locator, item: string, opened: Locator) {
+  const menuItem = page.getByRole("menuitem", { name: item, exact: true });
+  await expect(async () => {
+    if (!(await opened.isVisible())) {
+      if (!(await menuItem.isVisible())) {
+        await row.getByRole("button", { name: "Open menu", exact: true }).click();
+      }
+      await menuItem.click({ timeout: 3_000 });
+    }
+    await expect(opened).toBeVisible({ timeout: 3_000 });
+  }).toPass({ timeout: 45_000 });
+}
+
+/**
+ * blocks-os#733 §10 steps 1-6 on the template the Add Template flow created, in the shared
+ * project (multi-org on, Default organization selected; single-org is covered by unit tests):
+ * list with Language column, organization label and pagination (H6); Edit keeps Name and Language
+ * read-only (H9); Clone into another enabled language keeps the name (H10) and then offers only
+ * languages the name doesn't have (C8); Send test Email (H12); Delete both with the Default
+ * template's text (H11, C11). Languages are never named: the clone takes the first enabled one.
+ */
+export async function templateLifecycleFlow(page: Page, created: CreatedTemplate) {
+  await openEmailManagement(page);
+  const { tabpanel, table } = await templatesTable(page);
+
+  // ---------- H6: columns, label, pagination ----------
+  for (const header of ["Name", "Language", "Configuration", "Subject", "Last Modified"]) {
+    await expect(table.getByRole("columnheader", { name: header, exact: true })).toBeVisible();
+  }
+  const multiOrg = (await page.locator("#email-organization-picker").count()) > 0;
+  await expect(
+    tabpanel.getByText(multiOrg ? /^Default organization · \d+ templates?$/ : /^\d+ templates?$/),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(tabpanel.getByText(/^\d+–\d+ of \d+$/)).toBeVisible({ timeout: 15_000 });
+
+  const source = (await rowsNamed(page, created.name, 1)).first();
+  const sourceLanguage = (await source.getByRole("cell").nth(1).innerText()).trim();
+  expect(sourceLanguage, "the Language column shows the template's language").not.toBe("");
+
+  // ---------- H9 / C2 / C3 UI: Edit keeps Name and Language read-only ----------
+  await source.getByRole("cell", { name: created.name, exact: true }).click();
   await expect(page).toHaveURL(/\/email-management\/communications\/[0-9a-f-]+$/, {
     timeout: 15_000,
   });
-  await expect(page.getByRole("heading", { name: `${sourceName}_clone`, exact: true })).toBeVisible(
-    { timeout: 15_000 },
+  await page.getByRole("button", { name: "Edit", exact: true }).last().click();
+  const editDialog = page.getByRole("dialog");
+  await expect(editDialog.getByRole("textbox", { name: "Template name" })).toHaveAttribute(
+    "readonly",
+    "",
   );
+  await expect(editDialog.getByRole("textbox", { name: "Language" })).toHaveAttribute(
+    "readonly",
+    "",
+  );
+  await expect(
+    editDialog.getByText("Can't be changed after creation.", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    editDialog.getByText("To use another language, clone this template.", { exact: true }),
+  ).toBeVisible();
+  await editDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(editDialog).toBeHidden();
+
+  // ---------- H10: clone into another enabled language, same name ----------
+  await openEmailManagement(page);
+  const cloneDialog = page.getByRole("dialog", { name: "Clone template" });
+  await rowMenuItem(
+    page,
+    (await rowsNamed(page, created.name, 1)).first(),
+    "Clone Template",
+    cloneDialog,
+  );
+  await expect(cloneDialog.getByRole("textbox", { name: "Name" })).toHaveValue(created.name);
+  await cloneDialog.getByRole("combobox", { name: "Language" }).click();
+  await expect(
+    page.getByRole("option", { name: `${sourceLanguage} · already exists`, exact: true }),
+  ).toBeDisabled();
+  const freeLanguage = page.getByRole("option").filter({ hasNotText: "already exists" }).first();
+  await expect(freeLanguage, "the project has another enabled language").toBeVisible();
+  const cloneLanguage = (await freeLanguage.innerText()).trim();
+  await freeLanguage.click();
+  await cloneDialog.getByRole("button", { name: "Clone", exact: true }).click();
   await expect(page.getByText("Cloned template successfully", { exact: true })).toBeVisible({
     timeout: 15_000,
   });
+  await expect(page).toHaveURL(/\/email-management\/communications\/[0-9a-f-]+$/, {
+    timeout: 15_000,
+  });
+  await expect(page.getByRole("heading", { name: created.name, exact: true })).toBeVisible({
+    timeout: 15_000,
+  });
+
+  // ---------- C8 UI: both languages are now taken ----------
+  await openEmailManagement(page);
+  const pair = await rowsNamed(page, created.name, 2);
+  await rowMenuItem(page, pair.first(), "Clone Template", cloneDialog);
+  await cloneDialog.getByRole("combobox", { name: "Language" }).click();
+  for (const language of [sourceLanguage, cloneLanguage]) {
+    await expect(
+      page.getByRole("option", { name: `${language} · already exists`, exact: true }),
+    ).toBeDisabled();
+  }
+  await page.keyboard.press("Escape");
+  await cloneDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(cloneDialog).toBeHidden();
+
+  // ---------- H12: Send test Email sends this exact template ----------
+  await pair.first().getByRole("cell", { name: created.name, exact: true }).click();
+  await expect(page).toHaveURL(/\/email-management\/communications\/[0-9a-f-]+$/, {
+    timeout: 15_000,
+  });
+  await page.getByRole("button", { name: "Send test Email", exact: true }).click();
+  const testMail = page.getByRole("dialog", { name: "Send test email" });
+  await expect(testMail.getByText(`${created.name} · `, { exact: false })).toBeVisible();
+  const sent = page.waitForRequest(
+    (r) => /\/Mail\/SendToAny/i.test(r.url()) && r.method() === "POST",
+    { timeout: 15_000 },
+  );
+  await testMail.getByRole("button", { name: "Send", exact: true }).click();
+  expect((await sent).postDataJSON().templateId, "the test mail names this template").toMatch(
+    /^[0-9a-f-]+$/,
+  );
+  await expect(page.getByText("Sent test email successfully", { exact: true })).toBeVisible({
+    timeout: 30_000,
+  });
+
+  // ---------- H11 / C11: delete both, with the Default template's text ----------
+  // blocks-os#736 (SPEC34 H6, H1; intended change): with multi-org on, a Default template's Delete asks
+  // "What to delete", and "Only the Default organization's template" (the default) deletes just it.
+  for (let remaining = 2; remaining > 0; remaining--) {
+    await openEmailManagement(page);
+    const rows = await rowsNamed(page, created.name, remaining);
+    const deleteDialog = page.getByRole("alertdialog").or(page.getByRole("dialog"));
+    await rowMenuItem(page, rows.first(), "Delete", deleteDialog);
+    if (multiOrg) {
+      await expect(
+        deleteDialog.getByRole("heading", { name: `Delete ${created.name}?`, exact: true }),
+      ).toBeVisible();
+      await expect(
+        deleteDialog.getByRole("radio", { name: "Only the Default organization's template" }),
+      ).toBeChecked();
+      await expect(
+        deleteDialog.getByText(
+          /^This can't be undone\. Organizations without their own copy stop getting .+ mail\.$/,
+        ),
+      ).toBeVisible();
+    } else {
+      await expect(
+        deleteDialog.getByText(`Are you sure you want to delete the ${created.name} template?`),
+      ).toBeVisible();
+    }
+    await deleteDialog.getByRole("button", { name: "Delete", exact: true }).click();
+    await expect(page.getByText("Deleted template successfully", { exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
+  }
+  await openEmailManagement(page);
+  await rowsNamed(page, created.name, 0);
 }
 
 export async function incomingMailsFlow(page: Page) {
@@ -628,7 +813,10 @@ async function screenshotStates(page: Page, testInfo: TestInfo, state: string) {
     for (const theme of ["light", "dark"] as const) {
       // The app's ThemeProvider toggles the "dark" class on <html>; set it directly so the
       // account's saved theme setting is left alone.
-      await page.evaluate((dark) => document.documentElement.classList.toggle("dark", dark), theme === "dark");
+      await page.evaluate(
+        (dark) => document.documentElement.classList.toggle("dark", dark),
+        theme === "dark",
+      );
       await page.screenshot({
         path: testInfo.outputPath(`mail-details-${state}-${size}-${theme}.png`),
         fullPage: true,
