@@ -35,39 +35,48 @@ namespace Configuration.DomainService.Mail.Template.Services
             _job = job;
         }
 
-        public async IAsyncEnumerable<List<string>> BatchesAsync(bool allOrganizations, IEnumerable<string> organizationIds, IOrganizationTargetTally tally,
+        public IAsyncEnumerable<List<string>> BatchesAsync(bool allOrganizations, IEnumerable<string> organizationIds, IOrganizationTargetTally tally,
+            CancellationToken cancellationToken) =>
+            allOrganizations
+                ? AllBatchesAsync(tally, cancellationToken)
+                : RequestedBatchesAsync(organizationIds, tally, cancellationToken);
+
+        /// <summary>Every enabled organization except Default, one page per batch, until a short or unreadable page.</summary>
+        private async IAsyncEnumerable<List<string>> AllBatchesAsync(IOrganizationTargetTally tally,
             [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
         {
-            if (allOrganizations)
+            string? after = null;
+            while (true)
             {
-                string? after = null;
-                while (true)
+                var page = await ReadPageAsync(after, tally, cancellationToken);
+                if (page is null || page.Count == 0)
                 {
-                    var page = await ReadPageAsync(after, tally, cancellationToken);
-                    if (page is null || page.Count == 0)
-                    {
-                        yield break;
-                    }
-
-                    // The Default organization is never a target (H4), even if an organization document carries its id.
-                    var targets = page
-                        .Select(o => o.ItemId)
-                        .Where(id => OrganizationIds.Normalize(id) != OrganizationIds.Default)
-                        .ToList();
-                    if (targets.Count > 0)
-                    {
-                        yield return targets;
-                    }
-
-                    if (page.Count < BatchSize)
-                    {
-                        yield break;
-                    }
-
-                    after = page[^1].ItemId;
+                    yield break;
                 }
-            }
 
+                // The Default organization is never a target (H4), even if an organization document carries its id.
+                var targets = page
+                    .Select(o => o.ItemId)
+                    .Where(id => OrganizationIds.Normalize(id) != OrganizationIds.Default)
+                    .ToList();
+                if (targets.Count > 0)
+                {
+                    yield return targets;
+                }
+
+                if (page.Count < BatchSize)
+                {
+                    yield break;
+                }
+
+                after = page[^1].ItemId;
+            }
+        }
+
+        /// <summary>The requested organizations that exist and are enabled, in chunks of <see cref="BatchSize"/>.</summary>
+        private async IAsyncEnumerable<List<string>> RequestedBatchesAsync(IEnumerable<string> organizationIds, IOrganizationTargetTally tally,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+        {
             var requested = organizationIds
                 .Where(id => !string.IsNullOrWhiteSpace(id) && OrganizationIds.Normalize(id) != OrganizationIds.Default)
                 .Distinct(StringComparer.Ordinal)
