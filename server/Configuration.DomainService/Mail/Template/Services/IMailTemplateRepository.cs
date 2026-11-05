@@ -32,17 +32,17 @@ namespace Configuration.DomainService.Mail.Template.Services
         Task<List<EmailTemplate>> GetOrganizationCopiesAsync(string name, string language, IReadOnlyCollection<string> organizationIds);
 
         /// <summary>
-        /// One batch of a copy job: one read of the organizations' existing copies, then one unordered bulk write.
-        /// An organization without a copy gets one (an upsert keyed by OrganizationId + Name + Language, whose id is
-        /// derived from <paramref name="tenantId"/> and that key); one with a copy keeps it, or with
-        /// <paramref name="replace"/> gets the source's subject, body, editor JSON and image.
-        /// </summary>
-        /// <summary>
         /// SPEC34 §6.2: deletes, in one delete-many, the templates with exactly this Name + Language in the given
         /// organizations (the Default organization is never among them). Returns how many were deleted.
         /// </summary>
         Task<long> DeleteOrganizationCopiesAsync(string name, string language, IReadOnlyCollection<string> organizationIds);
 
+        /// <summary>
+        /// One batch of a copy job: one read of the organizations' existing copies, then one unordered bulk write.
+        /// An organization without a copy gets one (an upsert keyed by OrganizationId + Name + Language, whose id is
+        /// derived from <paramref name="tenantId"/> and that key); one with a copy keeps it, or with
+        /// <paramref name="replace"/> gets the source's subject, body, editor JSON and image.
+        /// </summary>
         Task<OrganizationCopyBatchResult> WriteOrganizationCopiesAsync(EmailTemplate source, IReadOnlyCollection<string> organizationIds, bool replace, string tenantId, string userId);
     }
 }

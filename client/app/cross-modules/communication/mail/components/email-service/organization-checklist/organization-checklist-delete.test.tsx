@@ -61,6 +61,19 @@ describe("OrganizationChecklist in delete mode (SPEC34 H7, board DeleteTemplateD
     expect(screen.getAllByText("OWN COPY")).toHaveLength(2);
   });
 
+  it("doesn't claim there is no copy while the lookup is pending or failed", () => {
+    const pending = render(
+      <Harness checklistData={data({ copies: new Map(), copiesLoading: true })} />,
+    );
+    expect(screen.queryByText("No copy · nothing to delete")).toBeNull();
+    expect(screen.getAllByText("Checking for their copy…")).toHaveLength(3);
+    pending.unmount();
+
+    render(<Harness checklistData={data({ copies: new Map(), copiesError: true })} />);
+    expect(screen.queryByText("No copy · nothing to delete")).toBeNull();
+    expect(screen.getAllByText("Couldn't check for their copy")).toHaveLength(3);
+  });
+
   it("says a ticked copy is deleted and an unticked one is kept", async () => {
     const user = userEvent.setup();
     render(<Harness />);

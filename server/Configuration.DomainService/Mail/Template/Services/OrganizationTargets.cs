@@ -49,7 +49,16 @@ namespace Configuration.DomainService.Mail.Template.Services
                         yield break;
                     }
 
-                    yield return page.Select(o => o.ItemId).ToList();
+                    // The Default organization is never a target (H4), even if an organization document carries its id.
+                    var targets = page
+                        .Select(o => o.ItemId)
+                        .Where(id => OrganizationIds.Normalize(id) != OrganizationIds.Default)
+                        .ToList();
+                    if (targets.Count > 0)
+                    {
+                        yield return targets;
+                    }
+
                     if (page.Count < BatchSize)
                     {
                         yield break;

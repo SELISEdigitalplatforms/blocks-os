@@ -108,6 +108,11 @@ export function OrganizationChecklist({
     const copy = data.copies.get(id);
     const checked = selected.has(id) && !isLocked(id);
     if (isDelete) {
+      // A row is only "no copy" once the lookup has answered; until then (or if it failed) say so instead.
+      if (!copy && data.copiesLoading)
+        return { text: t("ORGANIZATION_CHECKLIST.CHECKING_COPY"), warning: false, danger: false };
+      if (!copy && data.copiesError)
+        return { text: t("ORGANIZATION_CHECKLIST.COPY_UNKNOWN"), warning: false, danger: false };
       if (!copy)
         return { text: t("ORGANIZATION_CHECKLIST.NO_COPY"), warning: false, danger: false };
       return checked

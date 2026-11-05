@@ -122,6 +122,20 @@ namespace XUnitTest.Integration
             Notification().Description.Should().Be("OrderConfirmation · en-US: 4 deleted, 8 had no copy, 0 skipped, 0 failed.");
         }
 
+        [Fact] // H4, review: an organization document with the Default id is never a target nor counted
+        public async Task AllOrganizations_NeverTargetOrCountTheDefaultOrganization()
+        {
+            await SeedOrganizationsAsync(new[] { "default", "org-01", "org-02" });
+            await Templates.InsertManyAsync(new[] { Template("default-source", "default"), Template("org-01-copy", "org-01") });
+
+            var result = await Job().RunAsync(Command(all: true));
+
+            result.Deleted.Should().Be(1);
+            result.NotFound.Should().Be(1);
+            (await RemainingIdsAsync()).Should().Equal("default-source");
+            Notification().Description.Should().Be("OrderConfirmation · en-US: 1 deleted, 1 had no copy, 0 skipped, 0 failed.");
+        }
+
         [Fact] // H4: more than one page of organizations, batches never over 100
         public async Task AllOrganizations_ArePagedBy100()
         {
