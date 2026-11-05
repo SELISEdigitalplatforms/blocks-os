@@ -155,9 +155,23 @@ describe("DeleteTemplateDialog for a Default template with multi-org on (SPEC34 
     expect(dialog.className).toContain("overflow-y-auto");
   });
 
-  it("starts with the focus on Cancel", () => {
+  it("starts with the focus on Cancel", async () => {
     renderDialog(fallback, true);
-    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: "Cancel" })),
+    );
+  });
+
+  it("takes the focus back to Cancel when the opening menu returns focus to its trigger", async () => {
+    const trigger = document.createElement("button");
+    document.body.appendChild(trigger);
+    renderDialog(fallback, true);
+    // What a closing ⋮ menu does right after it opened the dialog.
+    trigger.focus();
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: "Cancel" })),
+    );
+    trigger.remove();
   });
 
   it("deletes only the Default template through the existing delete (H1)", async () => {

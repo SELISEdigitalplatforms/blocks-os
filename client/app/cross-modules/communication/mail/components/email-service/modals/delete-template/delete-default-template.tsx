@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui-kits/button/button";
 import {
   DialogContent,
@@ -90,6 +90,7 @@ export function DeleteDefaultTemplate({
   const { mutateAsync: deleteTemplate, isPending: isDeletingDefault } = useDeleteEmailTemplate();
   const { mutateAsync: deleteAcross, isPending: isDeletingAcross } =
     useDeleteTemplateAcrossOrganizations();
+  const cancelRef = useRef<HTMLButtonElement>(null);
   const [alsoCopies, setAlsoCopies] = useState(false);
   const [allOrganizations, setAllOrganizations] = useState(false);
   const [selected, setSelected] = useState<ReadonlyMap<string, string>>(new Map());
@@ -164,6 +165,12 @@ export function DeleteDefaultTemplate({
     <DialogContent
       role="alertdialog"
       className="w-[min(760px,calc(100%-32px))] max-w-none max-h-[90vh] overflow-y-auto rounded-md sm:max-w-none"
+      onOpenAutoFocus={(event) => {
+        // Focus starts on Cancel (board DeleteTemplateDefault). Opened from a ⋮ menu, the menu hands focus
+        // back to its trigger as it closes, so Cancel takes it one tick later.
+        event.preventDefault();
+        window.setTimeout(() => cancelRef.current?.focus(), 0);
+      }}
     >
       <DialogHeader>
         <DialogTitle className="text-left">
@@ -239,7 +246,7 @@ export function DeleteDefaultTemplate({
       </output>
 
       <DialogFooter className="flex flex-row gap-2">
-        <Button variant="outline" onClick={onClose} autoFocus>
+        <Button ref={cancelRef} variant="outline" onClick={onClose}>
           {t("common:CANCEL")}
         </Button>
         <Button variant="destructive" onClick={() => void onDelete()} disabled={!canDelete}>
