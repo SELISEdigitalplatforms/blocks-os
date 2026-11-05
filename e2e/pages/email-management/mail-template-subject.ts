@@ -232,22 +232,34 @@ export function expectSaved(result: MailApiResult, what: string) {
 const GET_TEMPLATES_URL = /\/api\/Mail\/GetTemplates\/?(\?.*)?$/i;
 
 /**
- * The Mail API with the session headers of the console's own GetTemplates request, and the ids of
- * the templates named exactly `name` in the organization the list shows.
+ * Opens Email Templates and returns the Mail API with the session headers of the console's own
+ * GetTemplates request, and the organization that list shows.
  */
-async function templatesNamed(page: Page, name: string): Promise<{ api: MailApi; ids: string[] }> {
+export async function consoleMailApi(
+  page: Page,
+): Promise<{ api: MailApi; organizationId: string }> {
   const listRequest = page.waitForRequest((r) => GET_TEMPLATES_URL.test(r.url()), {
     timeout: 60_000,
   });
   await openEmailManagement(page);
   const request = await listRequest;
-  const organizationId = new URL(request.url()).searchParams.get("organizationId") ?? "default";
-  const api: MailApi = {
-    base: request.url().replace(/\/GetTemplates\/?(\?.*)?$/i, ""),
-    headers: replayableHeaders(request),
-    created: { body: {} as ConsoleStepOneBody, itemId: "" },
-    languageCodes: [],
+  return {
+    organizationId: new URL(request.url()).searchParams.get("organizationId") ?? "default",
+    api: {
+      base: request.url().replace(/\/GetTemplates\/?(\?.*)?$/i, ""),
+      headers: replayableHeaders(request),
+      created: { body: {} as ConsoleStepOneBody, itemId: "" },
+      languageCodes: [],
+    },
   };
+}
+
+/**
+ * The Mail API with the session headers of the console's own GetTemplates request, and the ids of
+ * the templates named exactly `name` in the organization the list shows.
+ */
+async function templatesNamed(page: Page, name: string): Promise<{ api: MailApi; ids: string[] }> {
+  const { api, organizationId } = await consoleMailApi(page);
   const query = new URLSearchParams({
     pageNumber: "0",
     pageSize: "50",

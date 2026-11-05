@@ -16,9 +16,16 @@ export type CreatedTemplate = { name: string; subject: string };
  * `templateName` lets a caller know the name before step 1 saves it, so its cleanup can find the
  * template even when a later step fails.
  */
+/** Extra checks a caller runs inside the flow: before step 1 saves, and on step 2 after it. */
+export type AddTemplateHooks = {
+  beforeSave?: (page: Page) => Promise<void>;
+  afterSave?: (page: Page) => Promise<void>;
+};
+
 export async function addTemplateFlow(
   page: Page,
   templateName = `FlowTemplate${Date.now()}`,
+  hooks: AddTemplateHooks = {},
 ): Promise<CreatedTemplate | undefined> {
   // ---------- Open Email Management ----------
   await openEmailManagement(page);
@@ -217,10 +224,16 @@ export async function addTemplateFlow(
   // Guard against navigation racing the save: the button triggers an async
   // saveTemplate mutation before nextStep() — wait for the design heading
   // instead of assuming the click landed.
+  if (hooks.beforeSave) {
+    await hooks.beforeSave(page);
+    // A share choice must be complete before step 1 can save (blocks-os#735).
+    await expect(saveContinue).toBeEnabled({ timeout: 15_000 });
+  }
   await saveContinue.click();
   await expect(page.getByRole("heading", { name: "Template design" })).toBeVisible({
     timeout: 30_000,
   });
+  await hooks.afterSave?.(page);
 
   // ---------- Step 2 UI ----------
   // The template body is built with the MailCraft editor, a custom element

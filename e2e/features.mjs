@@ -115,6 +115,12 @@ export const OS_FEATURES = [
     enabled: true,
     spec: "tests/03-email-management/mail-template-subject-726.spec.ts",
   },
+  {
+    id: "email-template-copy",
+    name: "Email Management — copy a Default template to organizations (#735)",
+    enabled: true,
+    spec: "tests/03-email-management/copy-to-organizations-735.spec.ts",
+  },
 
   // Identity & Access (sidebar submenu order)
   {
