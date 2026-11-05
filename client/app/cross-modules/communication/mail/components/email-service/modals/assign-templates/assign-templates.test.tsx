@@ -19,7 +19,18 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("@blocks-communication/mail/hooks/use-email-template", () => ({
-  useGetEmailTemplates: (...args: unknown[]) => {
+  useGetEmailTemplates: (query: Record<string, unknown>) => {
+    // The hook takes one options object; the assertions below read it in the old positional order.
+    const args: unknown[] = [
+      query.pageNumber,
+      query.pageSize,
+      query.searchKey,
+      query.sortProperty,
+      query.isDescending,
+      query.language,
+      query.mailConfigurationId,
+      query.organizationId,
+    ];
     h.listCalls.push(args);
     const [page, , , , , , mailConfigurationId] = args as ListArgs;
     if (mailConfigurationId) {

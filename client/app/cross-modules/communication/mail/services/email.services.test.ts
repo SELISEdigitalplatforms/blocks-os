@@ -134,15 +134,15 @@ describe("EmailService", () => {
     it("should call correct endpoint with all parameters", async () => {
       vi.mocked(http.get).mockResolvedValue(mockEmailTemplatesResponse);
 
-      const result = await service.fetchEmailTemplates(
-        1,
-        10,
-        "welcome",
-        "Name",
-        false,
-        "en",
-        "config-1",
-      );
+      const result = await service.fetchEmailTemplates({
+        pageNumber: 1,
+        pageSize: 10,
+        searchKey: "welcome",
+        sortProperty: "Name",
+        isDescending: false,
+        language: "en",
+        mailConfigurationId: "config-1",
+      });
 
       expect(http.get).toHaveBeenCalledWith(
         `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATES}?pageNumber=1&pageSize=10&searchKey=welcome&sortProperty=Name&isDescending=false&language=en&mailConfigurationId=config-1`,
@@ -155,7 +155,15 @@ describe("EmailService", () => {
     it("should use default sort property and direction", async () => {
       vi.mocked(http.get).mockResolvedValue(mockEmailTemplatesResponse);
 
-      await service.fetchEmailTemplates(0, 10, "", "Name", false, "", "");
+      await service.fetchEmailTemplates({
+        pageNumber: 0,
+        pageSize: 10,
+        searchKey: "",
+        sortProperty: "Name",
+        isDescending: false,
+        language: "",
+        mailConfigurationId: "",
+      });
 
       expect(http.get).toHaveBeenCalledWith(
         `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATES}?pageNumber=0&pageSize=10&searchKey=&sortProperty=Name&isDescending=false&language=&mailConfigurationId=`,
@@ -167,7 +175,15 @@ describe("EmailService", () => {
     it("should handle descending sort", async () => {
       vi.mocked(http.get).mockResolvedValue(mockEmailTemplatesResponse);
 
-      await service.fetchEmailTemplates(0, 10, "", "CreatedDate", true, "en", "");
+      await service.fetchEmailTemplates({
+        pageNumber: 0,
+        pageSize: 10,
+        searchKey: "",
+        sortProperty: "CreatedDate",
+        isDescending: true,
+        language: "en",
+        mailConfigurationId: "",
+      });
 
       expect(http.get).toHaveBeenCalledWith(
         `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATES}?pageNumber=0&pageSize=10&searchKey=&sortProperty=CreatedDate&isDescending=true&language=en&mailConfigurationId=`,
@@ -180,9 +196,17 @@ describe("EmailService", () => {
       const error = new Error("Failed to fetch templates");
       vi.mocked(http.get).mockRejectedValue(error);
 
-      await expect(service.fetchEmailTemplates(0, 10, "", "Name", false, "", "")).rejects.toThrow(
-        "Failed to fetch templates",
-      );
+      await expect(
+        service.fetchEmailTemplates({
+          pageNumber: 0,
+          pageSize: 10,
+          searchKey: "",
+          sortProperty: "Name",
+          isDescending: false,
+          language: "",
+          mailConfigurationId: "",
+        }),
+      ).rejects.toThrow("Failed to fetch templates");
     });
   });
 
@@ -264,7 +288,16 @@ describe("EmailService", () => {
     it("should include optional mail server configuration parameter", async () => {
       vi.mocked(http.get).mockResolvedValue(mockEmailUsageResponse);
 
-      await service.getMailBoxMails(0, 10, true, undefined, undefined, undefined, undefined, "cfg-1");
+      await service.getMailBoxMails(
+        0,
+        10,
+        true,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        "cfg-1",
+      );
 
       expect(http.get).toHaveBeenCalledWith(
         expect.stringContaining("MailServerConfigurationId=cfg-1"),
@@ -712,7 +745,10 @@ describe("EmailService", () => {
     });
 
     it("fails the usage read when the server reports a failure (C8)", async () => {
-      vi.mocked(http.get).mockResolvedValue({ isSuccess: false, errors: { ConfigurationId: "Configuration not found" } });
+      vi.mocked(http.get).mockResolvedValue({
+        isSuccess: false,
+        errors: { ConfigurationId: "Configuration not found" },
+      });
 
       await expect(service.getConfigurationUsage("missing")).rejects.toThrow();
     });
@@ -720,7 +756,11 @@ describe("EmailService", () => {
     it("sends the organization fields on save", async () => {
       vi.mocked(http.post).mockResolvedValue({ isSuccess: true, itemId: "cfg-9" });
 
-      await service.saveMailConfig({ ...mockSaveConfigPayloadForOrg, organizationId: "acme", isOrganizationDefault: true });
+      await service.saveMailConfig({
+        ...mockSaveConfigPayloadForOrg,
+        organizationId: "acme",
+        isOrganizationDefault: true,
+      });
 
       expect(http.post).toHaveBeenCalledWith(
         MAIL_CONFIG_ENDPOINTS.SAVE_CONFIG,

@@ -17,7 +17,18 @@ vi.mock("@blocks-idp/mfa/hooks/use-mfa-config", () => ({
   useSaveMFAConfig: () => ({ mutateAsync: h.mutateAsync, isPending: h.isPending }),
 }));
 vi.mock("@blocks-communication/mail/hooks/use-email-template", () => ({
-  useGetEmailTemplates: (...args: unknown[]) => {
+  useGetEmailTemplates: (query: Record<string, unknown>) => {
+    // The hook takes one options object; the assertions below read it in the old positional order.
+    const args: unknown[] = [
+      query.pageNumber,
+      query.pageSize,
+      query.searchKey,
+      query.sortProperty,
+      query.isDescending,
+      query.language,
+      query.mailConfigurationId,
+      query.organizationId,
+    ];
     h.templatesArgs = args;
     return {
       data: h.templatesData,

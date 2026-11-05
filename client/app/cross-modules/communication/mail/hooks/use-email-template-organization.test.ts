@@ -22,19 +22,59 @@ describe("template hooks per organization", () => {
 
   it("lists one organization's templates (H4)", async () => {
     const { result } = renderHook(
-      () => useGetEmailTemplates(1, 10, "", "Name", false, "", "", "acme"),
+      () =>
+        useGetEmailTemplates({
+          pageNumber: 1,
+          pageSize: 10,
+          searchKey: "",
+          sortProperty: "Name",
+          isDescending: false,
+          language: "",
+          mailConfigurationId: "",
+          organizationId: "acme",
+        }),
       { wrapper: createWrapper() },
     );
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(h.fetchEmailTemplates).toHaveBeenCalledWith(1, 10, "", "Name", false, "", "", "acme");
+    expect(h.fetchEmailTemplates).toHaveBeenCalledWith({
+      pageNumber: 1,
+      pageSize: 10,
+      searchKey: "",
+      sortProperty: "Name",
+      isDescending: false,
+      language: "",
+      mailConfigurationId: "",
+      organizationId: "acme",
+    });
   });
 
   it("asks for the Default organization when none is given (H5, H13)", async () => {
-    const { result } = renderHook(() => useGetEmailTemplates(0, 10, "", "Name", false, "", ""), {
-      wrapper: createWrapper(),
-    });
+    const { result } = renderHook(
+      () =>
+        useGetEmailTemplates({
+          pageNumber: 0,
+          pageSize: 10,
+          searchKey: "",
+          sortProperty: "Name",
+          isDescending: false,
+          language: "",
+          mailConfigurationId: "",
+        }),
+      {
+        wrapper: createWrapper(),
+      },
+    );
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(h.fetchEmailTemplates).toHaveBeenCalledWith(0, 10, "", "Name", false, "", "", "default");
+    expect(h.fetchEmailTemplates).toHaveBeenCalledWith({
+      pageNumber: 0,
+      pageSize: 10,
+      searchKey: "",
+      sortProperty: "Name",
+      isDescending: false,
+      language: "",
+      mailConfigurationId: "",
+      organizationId: "default",
+    });
   });
 
   it("finds the languages a name already has in the organization, by exact name (H10, C8)", async () => {
@@ -51,16 +91,16 @@ describe("template hooks per organization", () => {
     });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual(["en-US", "lang-b"]);
-    expect(h.fetchEmailTemplates).toHaveBeenCalledWith(
-      0,
-      100,
-      "Order",
-      "Name",
-      false,
-      "",
-      "",
-      "acme",
-    );
+    expect(h.fetchEmailTemplates).toHaveBeenCalledWith({
+      pageNumber: 0,
+      pageSize: 100,
+      searchKey: "Order",
+      sortProperty: "Name",
+      isDescending: false,
+      language: "",
+      mailConfigurationId: "",
+      organizationId: "acme",
+    });
   });
 
   it("does not look languages up while the dialog is closed", () => {
