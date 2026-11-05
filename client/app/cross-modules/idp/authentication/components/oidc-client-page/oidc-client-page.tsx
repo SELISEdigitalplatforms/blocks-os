@@ -303,9 +303,7 @@ export const OidcClientEditor = ({ clientId }: Readonly<{ clientId: string }>) =
   const ctl = useOidcClientForm({
     itemId: clientId,
     active: true,
-    onSaved: () => {
-      void navigate(listPath);
-    },
+    onSaved: () => navigate(listPath),
   });
   const { form, isDeviceFlowClient, isMobile, isLoading, loaded } = ctl;
   const credential = loaded?.oIDCClientCredential;
