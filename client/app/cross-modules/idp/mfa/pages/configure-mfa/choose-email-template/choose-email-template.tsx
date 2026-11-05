@@ -38,16 +38,16 @@ export const ChooseEmailTemplate = ({ open, setOpen }: ChooseEmailTemplateProps)
   const { data: mfaConfigData } = useGetMFAConfig();
   const [filter, setFilter] = useState({ page: 0, pageSize: 10 });
   // IAM sends MFA mail from the Default organization, so only its templates are offered.
-  const { data, isLoading, isFetching } = useGetEmailTemplates(
-    filter.page,
-    filter.pageSize,
-    "",
-    "Name",
-    false,
-    "",
-    "",
-    DEFAULT_ORGANIZATION_ID,
-  );
+  const { data, isLoading, isFetching } = useGetEmailTemplates({
+    pageNumber: filter.page,
+    pageSize: filter.pageSize,
+    searchKey: "",
+    sortProperty: "Name",
+    isDescending: false,
+    language: "",
+    mailConfigurationId: "",
+    organizationId: DEFAULT_ORGANIZATION_ID,
+  });
   const { isPending, mutateAsync } = useSaveMFAConfig();
   const [seletedTemplate, setSelectedTemplate] = useState<IEmailTemplate | null>(null);
   const onSaveHandler = async () => {

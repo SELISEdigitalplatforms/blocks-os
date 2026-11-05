@@ -110,27 +110,27 @@ export function AssignTemplatesDialog({
   );
   useEffect(() => () => applySearch.cancel(), [applySearch]);
 
-  const list = useGetEmailTemplates(
-    page,
-    PAGE_SIZE,
-    search,
-    "Name",
-    false,
+  const list = useGetEmailTemplates({
+    pageNumber: page,
+    pageSize: PAGE_SIZE,
+    searchKey: search,
+    sortProperty: "Name",
+    isDescending: false,
     language,
-    "",
+    mailConfigurationId: "",
     organizationId,
-  );
+  });
   // How many of the matching templates already use the configuration (D4).
-  const already = useGetEmailTemplates(
-    0,
-    1,
-    search,
-    "Name",
-    false,
+  const already = useGetEmailTemplates({
+    pageNumber: 0,
+    pageSize: 1,
+    searchKey: search,
+    sortProperty: "Name",
+    isDescending: false,
     language,
-    config.itemId,
+    mailConfigurationId: config.itemId,
     organizationId,
-  );
+  });
   const { data: languages } = useGetLanguages();
   const { mutateAsync: assignTemplates, isPending } = useAssignTemplates();
 

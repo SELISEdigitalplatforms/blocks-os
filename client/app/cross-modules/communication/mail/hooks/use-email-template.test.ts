@@ -112,7 +112,16 @@ describe("Email Template Hooks", () => {
 
       // First, load email templates
       const { result: templatesResult } = renderHook(
-        () => useGetEmailTemplates(0, 10, "", "Name", false, "en", ""),
+        () =>
+          useGetEmailTemplates({
+            pageNumber: 0,
+            pageSize: 10,
+            searchKey: "",
+            sortProperty: "Name",
+            isDescending: false,
+            language: "en",
+            mailConfigurationId: "",
+          }),
         { wrapper },
       );
 
@@ -177,7 +186,16 @@ describe("Email Template Hooks", () => {
 
       // First, load email templates
       const { result: templatesResult } = renderHook(
-        () => useGetEmailTemplates(0, 10, "", "Name", false, "en", ""),
+        () =>
+          useGetEmailTemplates({
+            pageNumber: 0,
+            pageSize: 10,
+            searchKey: "",
+            sortProperty: "Name",
+            isDescending: false,
+            language: "en",
+            mailConfigurationId: "",
+          }),
         { wrapper },
       );
 
@@ -220,7 +238,16 @@ describe("Email Template Hooks", () => {
       vi.mocked(emailService.fetchEmailTemplates).mockResolvedValue(mockEmailTemplatesResponse);
 
       const { result } = renderHook(
-        () => useGetEmailTemplates(0, 10, "welcome", "Name", false, "en", "config-1"),
+        () =>
+          useGetEmailTemplates({
+            pageNumber: 0,
+            pageSize: 10,
+            searchKey: "welcome",
+            sortProperty: "Name",
+            isDescending: false,
+            language: "en",
+            mailConfigurationId: "config-1",
+          }),
         { wrapper: createWrapper() },
       );
 
@@ -229,66 +256,96 @@ describe("Email Template Hooks", () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(result.current.data).toEqual(mockEmailTemplatesResponse);
-      expect(emailService.fetchEmailTemplates).toHaveBeenCalledWith(
-        0,
-        10,
-        "welcome",
-        "Name",
-        false,
-        "en",
-        "config-1",
-        "default",
-      );
+      expect(emailService.fetchEmailTemplates).toHaveBeenCalledWith({
+        pageNumber: 0,
+        pageSize: 10,
+        searchKey: "welcome",
+        sortProperty: "Name",
+        isDescending: false,
+        language: "en",
+        mailConfigurationId: "config-1",
+        organizationId: "default",
+      });
     });
 
     it("should use correct query key for caching with all params", async () => {
       vi.mocked(emailService.fetchEmailTemplates).mockResolvedValue(mockEmailTemplatesResponse);
 
       const { result } = renderHook(
-        () => useGetEmailTemplates(2, 20, "test", "CreatedDate", true, "fr", "config-2"),
+        () =>
+          useGetEmailTemplates({
+            pageNumber: 2,
+            pageSize: 20,
+            searchKey: "test",
+            sortProperty: "CreatedDate",
+            isDescending: true,
+            language: "fr",
+            mailConfigurationId: "config-2",
+          }),
         { wrapper: createWrapper() },
       );
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(emailService.fetchEmailTemplates).toHaveBeenCalledWith(
-        2,
-        20,
-        "test",
-        "CreatedDate",
-        true,
-        "fr",
-        "config-2",
-        "default",
-      );
+      expect(emailService.fetchEmailTemplates).toHaveBeenCalledWith({
+        pageNumber: 2,
+        pageSize: 20,
+        searchKey: "test",
+        sortProperty: "CreatedDate",
+        isDescending: true,
+        language: "fr",
+        mailConfigurationId: "config-2",
+        organizationId: "default",
+      });
     });
 
     it("should handle empty filters", async () => {
       vi.mocked(emailService.fetchEmailTemplates).mockResolvedValue(mockEmailTemplatesResponse);
 
-      const { result } = renderHook(() => useGetEmailTemplates(0, 10, "", "Name", false, "", ""), {
-        wrapper: createWrapper(),
-      });
+      const { result } = renderHook(
+        () =>
+          useGetEmailTemplates({
+            pageNumber: 0,
+            pageSize: 10,
+            searchKey: "",
+            sortProperty: "Name",
+            isDescending: false,
+            language: "",
+            mailConfigurationId: "",
+          }),
+        {
+          wrapper: createWrapper(),
+        },
+      );
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(emailService.fetchEmailTemplates).toHaveBeenCalledWith(
-        0,
-        10,
-        "",
-        "Name",
-        false,
-        "",
-        "",
-        "default",
-      );
+      expect(emailService.fetchEmailTemplates).toHaveBeenCalledWith({
+        pageNumber: 0,
+        pageSize: 10,
+        searchKey: "",
+        sortProperty: "Name",
+        isDescending: false,
+        language: "",
+        mailConfigurationId: "",
+        organizationId: "default",
+      });
     });
 
     it("should have staleTime of 0", async () => {
       vi.mocked(emailService.fetchEmailTemplates).mockResolvedValue(mockEmailTemplatesResponse);
 
       const { result } = renderHook(
-        () => useGetEmailTemplates(0, 10, "", "Name", false, "en", ""),
+        () =>
+          useGetEmailTemplates({
+            pageNumber: 0,
+            pageSize: 10,
+            searchKey: "",
+            sortProperty: "Name",
+            isDescending: false,
+            language: "en",
+            mailConfigurationId: "",
+          }),
         { wrapper: createWrapper() },
       );
 
@@ -304,7 +361,16 @@ describe("Email Template Hooks", () => {
       );
 
       const { result } = renderHook(
-        () => useGetEmailTemplates(0, 10, "", "Name", false, "en", ""),
+        () =>
+          useGetEmailTemplates({
+            pageNumber: 0,
+            pageSize: 10,
+            searchKey: "",
+            sortProperty: "Name",
+            isDescending: false,
+            language: "en",
+            mailConfigurationId: "",
+          }),
         { wrapper: createWrapper() },
       );
 
@@ -476,7 +542,16 @@ describe("Email Template Hooks", () => {
 
       // Load both templates list and single template
       const { result: templatesResult } = renderHook(
-        () => useGetEmailTemplates(0, 10, "", "Name", false, "en", ""),
+        () =>
+          useGetEmailTemplates({
+            pageNumber: 0,
+            pageSize: 10,
+            searchKey: "",
+            sortProperty: "Name",
+            isDescending: false,
+            language: "en",
+            mailConfigurationId: "",
+          }),
         { wrapper },
       );
       const { result: templateResult } = renderHook(() => useGetEmailTemplate("template-1"), {

@@ -83,6 +83,18 @@ export interface IAssignTemplatesResponse {
   errors?: Record<string, string> | null;
 }
 
+/** One page of the email template list (GetTemplates). Without an organization the server lists the Default organization's templates. */
+export interface EmailTemplateListQuery {
+  pageNumber: number;
+  pageSize: number;
+  searchKey: string;
+  sortProperty?: string;
+  isDescending?: boolean;
+  language: string;
+  mailConfigurationId: string;
+  organizationId?: string;
+}
+
 export interface IEmailTemplate {
   itemId: string;
   createdDate?: string;

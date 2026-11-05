@@ -1,5 +1,5 @@
 import { useProjectStore } from "@seliseblocks/genesis-os";
-import { IEmailTemplate } from "@blocks-communication/mail/models/email";
+import { EmailTemplateListQuery, IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { emailService } from "@blocks-communication/mail/services/email.services";
 import { DEFAULT_ORGANIZATION_ID } from "@blocks-communication/mail/constants/organization";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -48,16 +48,16 @@ export const useDeleteEmailTemplate = () => {
   });
 };
 
-export const useGetEmailTemplates = (
-  pageNumber: number,
-  pageSize: number,
-  searchKey: string,
-  sortProperty: string,
-  isDescending: boolean,
-  language: string,
-  mailConfigurationId: string,
-  organizationId: string = DEFAULT_ORGANIZATION_ID,
-) => {
+export const useGetEmailTemplates = ({
+  pageNumber,
+  pageSize,
+  searchKey,
+  sortProperty,
+  isDescending,
+  language,
+  mailConfigurationId,
+  organizationId = DEFAULT_ORGANIZATION_ID,
+}: EmailTemplateListQuery) => {
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   return useQuery({
     queryKey: [
@@ -74,7 +74,7 @@ export const useGetEmailTemplates = (
     ],
     staleTime: 0,
     queryFn: () =>
-      emailService.fetchEmailTemplates(
+      emailService.fetchEmailTemplates({
         pageNumber,
         pageSize,
         searchKey,
@@ -83,7 +83,7 @@ export const useGetEmailTemplates = (
         language,
         mailConfigurationId,
         organizationId,
-      ),
+      }),
   });
 };
 
@@ -101,16 +101,16 @@ export const useGetTemplateLanguages = (name: string, organizationId: string, en
     staleTime: 0,
     enabled: enabled && !!name,
     queryFn: async () => {
-      const response = await emailService.fetchEmailTemplates(
-        0,
-        LANGUAGE_LOOKUP_PAGE_SIZE,
-        name,
-        "Name",
-        false,
-        "",
-        "",
+      const response = await emailService.fetchEmailTemplates({
+        pageNumber: 0,
+        pageSize: LANGUAGE_LOOKUP_PAGE_SIZE,
+        searchKey: name,
+        sortProperty: "Name",
+        isDescending: false,
+        language: "",
+        mailConfigurationId: "",
         organizationId,
-      );
+      });
       return (response?.templates ?? [])
         .filter((template) => template.name === name && !!template.language)
         .map((template) => template.language as string);

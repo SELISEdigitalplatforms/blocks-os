@@ -237,16 +237,16 @@ export function EmailServiceTable({ onRowClick }: Readonly<EmailServiceTableProp
     setQueryParams((prev) => ({ ...prev, pageNumber: 0, mailConfigurationId: "" }));
   }, [organizationId, setQueryParams]);
   const organizationName = useOrganizationName(organizationId);
-  const { isLoading, isError, refetch, data } = useGetEmailTemplates(
-    queryParams.pageNumber ?? 0,
-    queryParams.pageSize ?? 10,
-    queryParams.search ?? "",
-    sortQueryParams.property ?? "Name",
-    sortQueryParams.isDescending ?? false,
-    queryParams.language ?? "",
-    queryParams.mailConfigurationId ?? "",
+  const { isLoading, isError, refetch, data } = useGetEmailTemplates({
+    pageNumber: queryParams.pageNumber ?? 0,
+    pageSize: queryParams.pageSize ?? 10,
+    searchKey: queryParams.search ?? "",
+    sortProperty: sortQueryParams.property ?? "Name",
+    isDescending: sortQueryParams.isDescending ?? false,
+    language: queryParams.language ?? "",
+    mailConfigurationId: queryParams.mailConfigurationId ?? "",
     organizationId,
-  );
+  });
   // The organization's configurations and the Default organization's: the filter, the
   // Configuration column and its "via" line all read this one list.
   const { isLoading: isConfigsLoading, data: configsResponse } =

@@ -19,12 +19,29 @@ describe("email service: templates per organization", () => {
   });
 
   it("asks GetTemplates for one organization (H4)", async () => {
-    await emailService.fetchEmailTemplates(0, 10, "", "Name", false, "", "", "acme corp");
+    await emailService.fetchEmailTemplates({
+      pageNumber: 0,
+      pageSize: 10,
+      searchKey: "",
+      sortProperty: "Name",
+      isDescending: false,
+      language: "",
+      mailConfigurationId: "",
+      organizationId: "acme corp",
+    });
     expect(h.get.mock.calls[0][0]).toContain("&organizationId=acme%20corp");
   });
 
   it("leaves organizationId out when none is given (H5: the server's Default)", async () => {
-    await emailService.fetchEmailTemplates(0, 10, "", "Name", false, "", "");
+    await emailService.fetchEmailTemplates({
+      pageNumber: 0,
+      pageSize: 10,
+      searchKey: "",
+      sortProperty: "Name",
+      isDescending: false,
+      language: "",
+      mailConfigurationId: "",
+    });
     expect(h.get.mock.calls[0][0]).not.toContain("organizationId");
   });
 

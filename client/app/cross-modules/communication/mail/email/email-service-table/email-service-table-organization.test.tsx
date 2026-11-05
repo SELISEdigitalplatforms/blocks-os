@@ -38,7 +38,18 @@ vi.mock("../email-usage/email-usage-filter-toolbar", () => ({
   useEmailUsageFilterQueryParams: () => ({ setQueryParams: vi.fn() }),
 }));
 vi.mock("@blocks-communication/mail/hooks/use-email-template", () => ({
-  useGetEmailTemplates: (...args: unknown[]) => {
+  useGetEmailTemplates: (query: Record<string, unknown>) => {
+    // The hook takes one options object; the assertions below read it in the old positional order.
+    const args: unknown[] = [
+      query.pageNumber,
+      query.pageSize,
+      query.searchKey,
+      query.sortProperty,
+      query.isDescending,
+      query.language,
+      query.mailConfigurationId,
+      query.organizationId,
+    ];
     h.templatesArgs = args;
     return h.templates;
   },

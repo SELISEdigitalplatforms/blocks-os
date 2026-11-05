@@ -6,6 +6,7 @@ import {
   IDeleteTemplateAcrossOrganizationsResponse,
   ICopyTemplateToOrganizationsResponse,
   IEmailConfig,
+  EmailTemplateListQuery,
   IEmailTemplate,
   IEmailUsageResponse,
   IGetMailBoxMailResponse,
@@ -91,16 +92,16 @@ class EmailService {
     });
   };
 
-  fetchEmailTemplates = (
-    pageNumber: number,
-    pageSize: number,
-    searchKey: string,
-    sortProperty: string = "Name",
-    isDescending: boolean = false,
-    language: string,
-    mailConfigurationId: string,
-    organizationId?: string,
-  ): Promise<{ templates: IEmailTemplate[]; totalCount: number }> => {
+  fetchEmailTemplates = ({
+    pageNumber,
+    pageSize,
+    searchKey,
+    sortProperty = "Name",
+    isDescending = false,
+    language,
+    mailConfigurationId,
+    organizationId,
+  }: EmailTemplateListQuery): Promise<{ templates: IEmailTemplate[]; totalCount: number }> => {
     // Without an organization the server lists the Default organization's templates.
     const organizationQuery = organizationId
       ? `&organizationId=${encodeURIComponent(organizationId)}`
