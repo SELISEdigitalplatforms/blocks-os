@@ -148,6 +148,13 @@ describe("DeleteTemplateDialog for a Default template with multi-org on (SPEC34 
     );
   });
 
+  it("scrolls inside the viewport, so Cancel and Delete stay reachable with a long organization list", () => {
+    renderDialog(fallback, true);
+    const dialog = screen.getByRole("alertdialog", { name: "Delete OrderConfirmation?" });
+    expect(dialog.className).toContain("max-h-[90vh]");
+    expect(dialog.className).toContain("overflow-y-auto");
+  });
+
   it("starts with the focus on Cancel", () => {
     renderDialog(fallback, true);
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "Cancel" }));

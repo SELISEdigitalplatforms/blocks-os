@@ -102,6 +102,13 @@ describe("CopyToOrganizationsDialog (SPEC33 H9-H11, board CopyToOrgs)", () => {
     expect(screen.getByText("OWN COPY")).toBeTruthy();
   });
 
+  it("scrolls inside the viewport, so its buttons stay reachable with a long organization list", () => {
+    renderDialog();
+    const dialog = screen.getByRole("dialog", { name: "Copy to organizations" });
+    expect(dialog.className).toContain("max-h-[90vh]");
+    expect(dialog.className).toContain("overflow-y-auto");
+  });
+
   it("with Keep, an organization with its own copy can't be selected (H4)", async () => {
     renderDialog();
     expect(row("Umbrella Ltd")).toHaveProperty("disabled", true);

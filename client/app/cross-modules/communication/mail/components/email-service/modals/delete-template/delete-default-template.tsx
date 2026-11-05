@@ -163,7 +163,7 @@ export function DeleteDefaultTemplate({
   return (
     <DialogContent
       role="alertdialog"
-      className="w-[min(760px,calc(100%-32px))] max-w-none rounded-md sm:max-w-none"
+      className="w-[min(760px,calc(100%-32px))] max-w-none max-h-[90vh] overflow-y-auto rounded-md sm:max-w-none"
     >
       <DialogHeader>
         <DialogTitle className="text-left">
