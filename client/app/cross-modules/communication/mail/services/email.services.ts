@@ -2,6 +2,8 @@ import {
   IAssignTemplatesRequest,
   IAssignTemplatesResponse,
   ICopyTemplateToOrganizationsRequest,
+  IDeleteTemplateAcrossOrganizationsRequest,
+  IDeleteTemplateAcrossOrganizationsResponse,
   ICopyTemplateToOrganizationsResponse,
   IEmailConfig,
   IEmailTemplate,
@@ -331,6 +333,22 @@ class EmailService {
     });
     return http.get<ITemplateOrganizationCopiesResponse>(
       `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATE_ORGANIZATION_COPIES}?${query.toString()}`,
+      undefined,
+      { absoluteUrl: true },
+    );
+  }
+
+  /**
+   * Deletes a Default organization template now and queues the deletion of the organizations'
+   * copies with the same name and language (SPEC34 §6.1). The Default-only delete stays on
+   * DeleteTemplate.
+   */
+  deleteTemplateAcrossOrganizations(
+    requestBody: IDeleteTemplateAcrossOrganizationsRequest,
+  ): Promise<IDeleteTemplateAcrossOrganizationsResponse> {
+    return http.post<IDeleteTemplateAcrossOrganizationsResponse>(
+      EMAIL_TEMPLATE_ENDPOINTS.DELETE_TEMPLATE_ACROSS_ORGANIZATIONS,
+      requestBody,
       undefined,
       { absoluteUrl: true },
     );

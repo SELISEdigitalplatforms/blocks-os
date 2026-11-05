@@ -10,6 +10,7 @@ import { useT } from "@seliseblocks/genesis-os";
 import {
   formatEditedOn,
   lockedOut,
+  withCopiesOnly,
   type ExistingCopies,
 } from "@blocks-communication/mail/constants/share-organizations";
 import type { OrganizationChecklistData } from "@blocks-communication/mail/hooks/use-template-copy";
@@ -21,6 +22,8 @@ interface OrganizationChecklistProps {
   onSelectedChange: (selected: ReadonlyMap<string, string>) => void;
   /** Prefix for the row ids, so two lists on one page never share ids. */
   idPrefix: string;
+  /** "delete": rows say whether their own copy is deleted; organizations without one can't be picked. */
+  mode?: "copy" | "delete";
 }
 
 /** Loads the next page once the list is scrolled to within this many pixels of its end. */
@@ -30,6 +33,8 @@ const SCROLL_THRESHOLD = 48;
  * The organizations a Default template can be copied to (SPEC33 §4: TemplateForm, CopyToOrgs):
  * search, Select all, a count, and per row whether it gets a copy, keeps its own copy or has it
  * replaced. With Keep, organizations that already have their own copy can't be selected.
+ * In delete mode (SPEC34 §4: DeleteTemplateDefault) only organizations with their own copy can be
+ * selected, and each row says whether that copy is deleted or kept.
  */
 export function OrganizationChecklist({
   data,
@@ -37,16 +42,24 @@ export function OrganizationChecklist({
   selected,
   onSelectedChange,
   idPrefix,
+  mode = "copy",
 }: Readonly<OrganizationChecklistProps>) {
   const { t, language } = useT("os.communication.mail");
   const [search, setSearch] = useState("");
 
-  // A copies lookup can answer after a pick: with Keep, an organization that turns out to have its
-  // own copy can't stay selected, so it leaves the selection the parent counts and sends.
+  const isDelete = mode === "delete";
+  // The rows that can't be picked leave the selection the parent counts and sends: with Keep, those
+  // that turn out to have their own copy; when deleting, those without a copy to delete.
+  const pickable = (current: ReadonlyMap<string, string>) =>
+    isDelete ? withCopiesOnly(current, data.copies) : lockedOut(current, data.copies, existing);
+
+  // A copies lookup can answer after a pick, so a row can become unpickable while selected.
   useEffect(() => {
-    const kept = lockedOut(selected, data.copies, existing);
+    const kept = isDelete
+      ? withCopiesOnly(selected, data.copies)
+      : lockedOut(selected, data.copies, existing);
     if (kept.size !== selected.size) onSelectedChange(kept);
-  }, [selected, data.copies, existing, onSelectedChange]);
+  }, [selected, data.copies, existing, onSelectedChange, isDelete]);
 
   const query = search.trim().toLocaleLowerCase();
   const visible = query
@@ -54,14 +67,17 @@ export function OrganizationChecklist({
         organization.name.toLocaleLowerCase().includes(query),
       )
     : data.organizations;
-  const isLocked = (id: string) => existing === "keep" && data.copies.has(id);
+  const isLocked = (id: string) =>
+    isDelete ? !data.copies.has(id) : existing === "keep" && data.copies.has(id);
   const selectable = visible.filter((organization) => !isLocked(organization.itemId));
   const allVisibleSelected =
     selectable.length > 0 && selectable.every((organization) => selected.has(organization.itemId));
-  // Counted without rows Keep locks, even before the effect below has dropped them.
-  const counted = lockedOut(selected, data.copies, existing);
+  // Counted without rows that can't be picked, even before the effect above has dropped them.
+  const counted = pickable(selected);
   const toReplace =
-    existing === "replace" ? [...counted.keys()].filter((id) => data.copies.has(id)).length : 0;
+    !isDelete && existing === "replace"
+      ? [...counted.keys()].filter((id) => data.copies.has(id)).length
+      : 0;
 
   const toggle = (id: string, name: string) => {
     const next = new Map(selected);
@@ -91,6 +107,13 @@ export function OrganizationChecklist({
   const statusOf = (id: string) => {
     const copy = data.copies.get(id);
     const checked = selected.has(id) && !isLocked(id);
+    if (isDelete) {
+      if (!copy)
+        return { text: t("ORGANIZATION_CHECKLIST.NO_COPY"), warning: false, danger: false };
+      return checked
+        ? { text: t("ORGANIZATION_CHECKLIST.DELETES_COPY"), warning: false, danger: true }
+        : { text: t("ORGANIZATION_CHECKLIST.KEEPS_COPY"), warning: false, danger: false };
+    }
     if (copy && existing === "replace" && checked) {
       const date = formatEditedOn(copy.lastUpdatedDate, language);
       return {
@@ -98,14 +121,17 @@ export function OrganizationChecklist({
           ? t("ORGANIZATION_CHECKLIST.REPLACES_COPY", { date })
           : t("ORGANIZATION_CHECKLIST.REPLACES_COPY_UNDATED"),
         warning: true,
+        danger: false,
       };
     }
-    if (copy) return { text: t("ORGANIZATION_CHECKLIST.KEEPS_COPY"), warning: false };
+    if (copy)
+      return { text: t("ORGANIZATION_CHECKLIST.KEEPS_COPY"), warning: false, danger: false };
     return {
       text: checked
         ? t("ORGANIZATION_CHECKLIST.CREATES_COPY")
         : t("ORGANIZATION_CHECKLIST.KEEPS_DEFAULT"),
       warning: false,
+      danger: false,
     };
   };
 
@@ -155,6 +181,7 @@ export function OrganizationChecklist({
           className={cn(
             "flex min-h-11 items-center gap-3 px-3 py-1.5",
             status.warning && "bg-warning-50",
+            status.danger && "bg-destructive/10",
           )}
         >
           <Checkbox
@@ -175,7 +202,9 @@ export function OrganizationChecklist({
           <span
             className={cn(
               "shrink-0 text-sm",
-              status.warning ? "font-medium text-warning-700" : "text-muted-foreground",
+              status.warning && "font-medium text-warning-700",
+              status.danger && "font-medium text-destructive",
+              !status.warning && !status.danger && "text-muted-foreground",
             )}
           >
             {status.text}

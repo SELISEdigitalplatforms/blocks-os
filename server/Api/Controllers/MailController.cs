@@ -208,6 +208,19 @@ namespace BlocksOs.Api.Controllers
         }
 
         /// <summary>
+        /// Deletes a Default organization template now and queues the deletion of the organizations' own copies (same
+        /// Name + Language) in all or the selected organizations; the OS Worker deletes them and the requester gets a
+        /// bell notification. Returns the job id. "Only the Default organization's template" uses DeleteTemplate.
+        /// </summary>
+        [HttpPost]
+        [ProtectedEndPoint("blocks-os::mail-template::delete")]
+        public async Task<IActionResult> DeleteTemplateAcrossOrganizations([FromBody] DeleteTemplateAcrossOrganizationsRequest request)
+        {
+            var result = await _mailTemplateService!.DeleteAcrossOrganizationsAsync(request);
+            return result.IsSuccess ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>
         /// Queues a copy of a Default organization template to all or selected organizations; the OS Worker makes the
         /// copies and the requester gets a bell notification. Returns the job id.
         /// </summary>

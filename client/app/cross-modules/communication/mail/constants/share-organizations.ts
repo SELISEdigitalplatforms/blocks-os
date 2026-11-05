@@ -36,6 +36,18 @@ export const lockedOut = (
     ? new Map([...selected].filter(([id]) => !copies.has(id)))
     : selected;
 
+/**
+ * The selection without organizations that have no copy to delete (SPEC34 H7): only rows with
+ * their own copy can be picked, so counts and requests never include one that has nothing.
+ */
+export const withCopiesOnly = (
+  selected: ReadonlyMap<string, string>,
+  copies: ReadonlyMap<string, unknown>,
+): ReadonlyMap<string, string> =>
+  [...selected.keys()].every((id) => copies.has(id))
+    ? selected
+    : new Map([...selected].filter(([id]) => copies.has(id)));
+
 /** The most organizations one copy request names (SPEC33 §6.1). */
 export const MAX_COPY_ORGANIZATIONS = 1000;
 

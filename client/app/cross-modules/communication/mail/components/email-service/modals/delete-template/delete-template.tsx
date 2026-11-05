@@ -16,6 +16,7 @@ import {
   organizationOf,
 } from "@blocks-communication/mail/constants/organization";
 import { templateErrorMessages } from "@blocks-communication/mail/constants/template-errors";
+import { DeleteDefaultTemplate } from "./delete-default-template";
 
 interface DeleteTemplateDialogProps {
   template: IEmailTemplate;
@@ -28,11 +29,29 @@ interface DeleteTemplateDialogProps {
 
 /**
  * Deletes one template. With multi-org on, an organization's template says the Default
- * organization's template takes over (SPEC31 §4, DeleteTemplateOrg design), and a Default organization
- * template warns that organizations without their own copy lose the mail (C11). With multi-org
- * off it is the plain confirm (SPEC34 §4: "the dialog shows only the confirm text").
+ * organization's template takes over (SPEC31 §4, DeleteTemplateOrg design, SPEC34 H9), and a
+ * Default organization template asks what to delete: only it, or also the organizations' own
+ * copies (SPEC34 §4, DeleteTemplateDefault design). With multi-org off it is the plain confirm
+ * (SPEC34 H10: "the dialog shows only the confirm text").
  */
-export function DeleteTemplateDialog({
+export function DeleteTemplateDialog(props: DeleteTemplateDialogProps) {
+  const isDefaultTemplate = organizationOf(props.template) === DEFAULT_ORGANIZATION_ID;
+  if (props.isMultiOrgEnabled && isDefaultTemplate) {
+    return (
+      <DeleteDefaultTemplate
+        template={props.template}
+        languageName={props.languageName}
+        organizationName={props.organizationName}
+        onClose={props.onClose}
+        onDeleted={props.onDeleted}
+      />
+    );
+  }
+  return <DeleteSingleTemplate {...props} />;
+}
+
+/** An organization's template (multi-org on), or any template with multi-org off. */
+function DeleteSingleTemplate({
   template,
   languageName,
   organizationName,
@@ -43,7 +62,6 @@ export function DeleteTemplateDialog({
   const { t } = useT("os.communication.mail");
   const { mutateAsync: deleteTemplate, isPending } = useDeleteEmailTemplate();
   const name = template.name ?? "";
-  const isDefaultTemplate = organizationOf(template) === DEFAULT_ORGANIZATION_ID;
 
   const showFailure = (errors: unknown) =>
     showErrorToast({ errors, customMessages: templateErrorMessages(t) });
@@ -69,14 +87,7 @@ export function DeleteTemplateDialog({
   let title = t("EMAIL_TEMPLATE_LIST.CONFIRMATION_TITLE");
   let description = t("EMAIL_TEMPLATE_LIST.DELETE_CONFIRM", { name });
   let notice: string | null = null;
-  if (isMultiOrgEnabled && isDefaultTemplate) {
-    title = t("DELETE_TEMPLATE.DEFAULT_TITLE", { name });
-    description = t("DELETE_TEMPLATE.DEFAULT_SUMMARY", {
-      organization: organizationName,
-      language: languageName,
-    });
-    notice = t("DELETE_TEMPLATE.DEFAULT_WARNING");
-  } else if (isMultiOrgEnabled) {
+  if (isMultiOrgEnabled) {
     title = t("DELETE_TEMPLATE.TITLE");
     description = t("DELETE_TEMPLATE.ORGANIZATION_SUMMARY", {
       organization: organizationName,
@@ -97,14 +108,7 @@ export function DeleteTemplateDialog({
         <DialogDescription className="text-left">{description}</DialogDescription>
       </DialogHeader>
       {notice ? (
-        <p
-          role="status"
-          className={
-            isDefaultTemplate
-              ? "rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
-              : "rounded-md bg-muted px-3 py-2 text-sm text-high-emphasis"
-          }
-        >
+        <p role="status" className="rounded-md bg-muted px-3 py-2 text-sm text-high-emphasis">
           {notice}
         </p>
       ) : null}

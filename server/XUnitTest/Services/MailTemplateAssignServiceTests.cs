@@ -1,3 +1,5 @@
+using Blocks.Genesis;
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -22,7 +24,8 @@ namespace XUnitTest.Services
 
         private MailTemplateService Service() =>
             new(new Mock<IValidator<SaveMailTemplateRequest>>().Object, _repo.Object,
-                new Mock<IMailTemplateHtmlChecker>().Object, new Mock<IOrganizationReader>().Object, _configurations.Object);
+                new Mock<IMailTemplateHtmlChecker>().Object, new Mock<IOrganizationReader>().Object, _configurations.Object,
+                new Mock<IMessageClient>().Object, NullLogger<MailTemplateService>.Instance);
 
         private void Configuration(string id, string? organizationId, bool inbound = false) =>
             _configurations.Setup(c => c.GetMailConfigurationByIdAsync(id))

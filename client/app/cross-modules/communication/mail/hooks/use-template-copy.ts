@@ -1,5 +1,5 @@
 import { useProjectStore } from "@seliseblocks/genesis-os";
-import { useMutation, useQueries } from "@tanstack/react-query";
+import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import {
   getEnabledOrganizationsFromPages,
@@ -18,6 +18,21 @@ export const useCopyTemplateToOrganizations = () =>
     mutationKey: ["template", "copy-to-organizations"],
     mutationFn: emailService.copyTemplateToOrganizations,
   });
+
+/**
+ * Deletes a Default template now and queues the deletion of its organizations' copies (SPEC34 H2).
+ * The lists refresh after a failure too: the Default template may already be gone (C5).
+ */
+export const useDeleteTemplateAcrossOrganizations = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: ["template", "delete-across-organizations"],
+    mutationFn: emailService.deleteTemplateAcrossOrganizations,
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ["email-templates"] });
+    },
+  });
+};
 
 export interface CopyTargetOrganization {
   itemId: string;

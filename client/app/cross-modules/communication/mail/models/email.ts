@@ -48,6 +48,21 @@ export interface ICopyTemplateToOrganizationsResponse {
   errors?: unknown;
 }
 
+/** SPEC34 §6.1: delete a Default template now and its organizations' copies in the background. */
+export interface IDeleteTemplateAcrossOrganizationsRequest {
+  templateId: string;
+  allOrganizations: boolean;
+  /** Sent only when not all organizations; 1 to 1000. */
+  organizationIds?: string[];
+}
+
+export interface IDeleteTemplateAcrossOrganizationsResponse {
+  isSuccess: boolean;
+  /** The queued job's id. */
+  itemId?: string | null;
+  errors?: unknown;
+}
+
 /** SPEC33 §6.2: an organization that already has its own template with the same name and language. */
 export interface ITemplateOrganizationCopy {
   organizationId: string;

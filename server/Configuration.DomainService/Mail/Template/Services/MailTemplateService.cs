@@ -3,6 +3,8 @@ using FluentValidation;
 using Blocks.Genesis.Entities.Os;
 using Configuration.DomainService.Organizations;
 using Configuration.DomainService.Shared.Services;
+using Configuration.DomainService.Shared.Utilities;
+using Microsoft.Extensions.Logging;
 
 namespace Configuration.DomainService.Mail.Template.Services
 {
@@ -13,14 +15,20 @@ namespace Configuration.DomainService.Mail.Template.Services
         private readonly IMailTemplateHtmlChecker _htmlChecker;
         private readonly IOrganizationReader _organizationReader;
         private readonly IConfigurationRepository _configurationRepository;
+        private readonly IMessageClient _messageClient;
+        private readonly ILogger<MailTemplateService> _logger;
 
         public MailTemplateService(
             IValidator<SaveMailTemplateRequest> validator,
             IMailTemplateRepository templateRepository,
             IMailTemplateHtmlChecker htmlChecker,
             IOrganizationReader organizationReader,
-            IConfigurationRepository configurationRepository)
+            IConfigurationRepository configurationRepository,
+            IMessageClient messageClient,
+            ILogger<MailTemplateService> logger)
         {
+            _messageClient = messageClient;
+            _logger = logger;
             _validator = validator;
             _templateRepository = templateRepository;
             _htmlChecker = htmlChecker;
@@ -164,6 +172,77 @@ namespace Configuration.DomainService.Mail.Template.Services
 
             return new BaseMutationResponse { IsSuccess = true, ItemId = clone.ItemId };
         }
+
+        /// <summary>Organizations per delete-across request when not all (SPEC34 §6.1).</summary>
+        public const int MaxDeleteOrganizations = 1000;
+
+        public async Task<BaseMutationResponse> DeleteAcrossOrganizationsAsync(DeleteTemplateAcrossOrganizationsRequest request)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+
+            var template = string.IsNullOrWhiteSpace(request.TemplateId) ? null : await _templateRepository.GetByIdAsync(request.TemplateId);
+            if (template is null)
+                return Failure(nameof(request.TemplateId), "Template not found");
+            // C1: an organization's own template is deleted on its own (DeleteTemplate, SPEC31).
+            if (OrganizationIds.Normalize(template.OrganizationId) != OrganizationIds.Default)
+                return Failure(nameof(request.TemplateId), "Only Default organization templates can be deleted across organizations");
+
+            var organizationIds = request.AllOrganizations ? [] : OrganizationsOnly(request.OrganizationIds);
+            if (!request.AllOrganizations && organizationIds.Count == 0)
+                return Failure(nameof(request.OrganizationIds), "Select at least one organization");
+            if (organizationIds.Count > MaxDeleteOrganizations)
+                return Failure(nameof(request.OrganizationIds), "No more than 1000 organizations per request");
+
+            var context = BlocksContext.GetContext();
+            if (string.IsNullOrWhiteSpace(context?.TenantId))
+            {
+                // A job without a project tenant would have nowhere to delete from: nothing is deleted at all.
+                _logger.LogError("Email template delete across organizations refused: no project tenant. TemplateId={TemplateId}", template.ItemId);
+                return Failure("Copies", "Deleting organization copies couldn't start. Try again.");
+            }
+
+            // H2: the Default template goes now, through the same path as DeleteTemplate; the copies follow in the Worker.
+            await _templateRepository.DeleteAsync(template.ItemId);
+
+            var command = new EmailTemplateDeleteCommand
+            {
+                JobId = Guid.NewGuid().ToString(),
+                TenantId = context.TenantId,
+                OriginalTenantId = string.IsNullOrWhiteSpace(context.OriginalTenantId) ? null : context.OriginalTenantId,
+                RequestedByUserId = context.UserId ?? string.Empty,
+                Name = template.Name ?? string.Empty,
+                Language = template.Language ?? string.Empty,
+                AllOrganizations = request.AllOrganizations,
+                OrganizationIds = organizationIds,
+            };
+
+            try
+            {
+                await _messageClient.SendToConsumerAsync(new ConsumerMessage<EmailTemplateDeleteCommand>
+                {
+                    ConsumerName = Constants.EmailTemplateQueue,
+                    Payload = command,
+                });
+            }
+#pragma warning disable CA1031 // C5: any send failure is the same answer; the Default template is already deleted.
+            catch (Exception ex)
+#pragma warning restore CA1031
+            {
+                _logger.LogError(ex, "Email template delete across organizations not queued after the Default delete. JobId={JobId} TemplateId={TemplateId} ErrorType={ErrorType}",
+                    command.JobId, template.ItemId, ex.GetType().Name);
+                return Failure("Copies", "The Default template was deleted, but deleting organization copies couldn't start. Try again from an organization's template.");
+            }
+
+            return new BaseMutationResponse { IsSuccess = true, ItemId = command.JobId };
+        }
+
+        // Distinct organization ids, trimmed; blanks and the Default organization are left out.
+        private static List<string> OrganizationsOnly(IEnumerable<string>? organizationIds) =>
+            (organizationIds ?? [])
+                .Select(id => id?.Trim() ?? string.Empty)
+                .Where(id => id.Length > 0 && OrganizationIds.Normalize(id) != OrganizationIds.Default)
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
 
         public async Task<BaseMutationResponse> DeleteAsync(DeleteMailTemplateRequest request)
         {

@@ -1,5 +1,12 @@
 type TranslateFn = (key: string) => string;
 
+/**
+ * SPEC34 §6.1: the Default template was deleted but its copies' job wasn't queued. The template is
+ * gone, so the dialog closes and the list refreshes even though the request failed (C5).
+ */
+export const DEFAULT_DELETED_COPIES_NOT_STARTED =
+  "The Default template was deleted, but deleting organization copies couldn't start. Try again from an organization's template.";
+
 /** The template endpoints' English messages and the keys the console shows them through. */
 const TEMPLATE_ERROR_KEYS: Record<string, string> = {
   "A clone keeps the template's name": "TEMPLATE_ERRORS.CLONE_KEEPS_NAME",
@@ -25,6 +32,10 @@ const TEMPLATE_ERROR_KEYS: Record<string, string> = {
   "No more than 25 organizations per request": "TEMPLATE_ERRORS.COPY_LOOKUP_TOO_MANY",
   "Choose keep or replace": "TEMPLATE_ERRORS.COPY_EXISTING_REQUIRED",
   "Copying couldn't start. Try again.": "TEMPLATE_ERRORS.COPY_NOT_STARTED",
+  "Only Default organization templates can be deleted across organizations":
+    "TEMPLATE_ERRORS.DELETE_NOT_DEFAULT",
+  [DEFAULT_DELETED_COPIES_NOT_STARTED]: "TEMPLATE_ERRORS.DELETE_COPIES_NOT_STARTED",
+  "Deleting organization copies couldn't start. Try again.": "TEMPLATE_ERRORS.DELETE_NOT_STARTED",
 };
 
 /** `customMessages` for showErrorToast: each known server message through its English key. */

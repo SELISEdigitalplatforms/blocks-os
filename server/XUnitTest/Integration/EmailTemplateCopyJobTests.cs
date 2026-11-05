@@ -408,6 +408,8 @@ namespace XUnitTest.Integration
                 _inner.AssignConfigurationAsync(configurationId, organizationId, templateIds, searchKey, language);
             public Task<List<EmailTemplate>> GetOrganizationCopiesAsync(string name, string language, IReadOnlyCollection<string> organizationIds) =>
                 _inner.GetOrganizationCopiesAsync(name, language, organizationIds);
+            public Task<long> DeleteOrganizationCopiesAsync(string name, string language, IReadOnlyCollection<string> organizationIds) =>
+                _inner.DeleteOrganizationCopiesAsync(name, language, organizationIds);
         }
 
         /// <summary>Every collection from one database: the test's own.</summary>

@@ -230,6 +230,28 @@ namespace Configuration.DomainService.Mail.Template.Services
             return scope.Granted ? await scope.Apply(collection).SortBy(t => t.OrganizationId).ToListAsync() : [];
         }
 
+        public async Task<long> DeleteOrganizationCopiesAsync(string name, string language, IReadOnlyCollection<string> organizationIds)
+        {
+            // C8: exactly this Name + Language in exactly these organizations; the Default organization (stored as
+            // "default", empty or missing) is never among them, so its templates can't match.
+            var organizations = OrganizationsOnly(organizationIds);
+            if (organizations.Count == 0)
+            {
+                return 0;
+            }
+
+            var collection = _dbContextProvider.GetCollection<EmailTemplate>(CollectionName);
+            var deleteFilter = await _dataAccess.DeleteFilterAsync(OsSchemas.EmailTemplate, CopiesOf(name, language, organizations),
+                "MailTemplateRepository.DeleteOrganizationCopiesAsync");
+            if (deleteFilter is null)
+            {
+                throw new UnauthorizedAccessException("Deleting email templates was denied by the data access policy.");
+            }
+
+            var result = await collection.DeleteManyAsync(deleteFilter);
+            return result.IsAcknowledged ? result.DeletedCount : 0;
+        }
+
         public async Task<OrganizationCopyBatchResult> WriteOrganizationCopiesAsync(EmailTemplate source, IReadOnlyCollection<string> organizationIds, bool replace, string tenantId, string userId)
         {
             ArgumentNullException.ThrowIfNull(source);

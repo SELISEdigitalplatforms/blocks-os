@@ -37,6 +37,12 @@ namespace Configuration.DomainService.Mail.Template.Services
         /// derived from <paramref name="tenantId"/> and that key); one with a copy keeps it, or with
         /// <paramref name="replace"/> gets the source's subject, body, editor JSON and image.
         /// </summary>
+        /// <summary>
+        /// SPEC34 §6.2: deletes, in one delete-many, the templates with exactly this Name + Language in the given
+        /// organizations (the Default organization is never among them). Returns how many were deleted.
+        /// </summary>
+        Task<long> DeleteOrganizationCopiesAsync(string name, string language, IReadOnlyCollection<string> organizationIds);
+
         Task<OrganizationCopyBatchResult> WriteOrganizationCopiesAsync(EmailTemplate source, IReadOnlyCollection<string> organizationIds, bool replace, string tenantId, string userId);
     }
 }

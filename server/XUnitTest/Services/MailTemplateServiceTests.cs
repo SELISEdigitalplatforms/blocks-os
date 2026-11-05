@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -35,7 +36,8 @@ namespace XUnitTest.Services
         }
 
         private MailTemplateService Service() =>
-            new(_validator.Object, _repo.Object, _htmlChecker.Object, _organizations.Object, _configurations.Object);
+            new(_validator.Object, _repo.Object, _htmlChecker.Object, _organizations.Object, _configurations.Object,
+                new Mock<IMessageClient>().Object, NullLogger<MailTemplateService>.Instance);
 
         [Fact]
         public async Task CloneTemplateAsync_WhenTheSourceBodyBreaksTheHtmlRules_SavesNothing()

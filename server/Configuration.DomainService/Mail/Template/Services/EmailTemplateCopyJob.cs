@@ -14,7 +14,7 @@ namespace Configuration.DomainService.Mail.Template.Services
     public class EmailTemplateCopyJob : IEmailTemplateCopyJob
     {
         /// <summary>Organizations per read and per bulk write (SPEC33 §5).</summary>
-        public const int BatchSize = 100;
+        public const int BatchSize = OrganizationTargets.BatchSize;
 
         private readonly IMailTemplateRepository _templateRepository;
         private readonly IOrganizationReader _organizationReader;
@@ -61,7 +61,8 @@ namespace Configuration.DomainService.Mail.Template.Services
             var result = new EmailTemplateCopyResult();
             var replace = string.Equals(command.Existing, EmailTemplateCopyExisting.Replace, StringComparison.Ordinal);
 
-            await foreach (var batch in TargetBatchesAsync(command, result, cancellationToken))
+            var targets = new OrganizationTargets(_organizationReader, _logger, $"Email template copy {command.JobId}");
+            await foreach (var batch in targets.BatchesAsync(command.AllOrganizations, command.OrganizationIds, result, cancellationToken))
             {
                 result.LargestBatch = Math.Max(result.LargestBatch, batch.Count);
                 try
@@ -92,92 +93,6 @@ namespace Configuration.DomainService.Mail.Template.Services
                 command.JobId, command.TemplateId, result.Created, result.Replaced, result.Kept, result.Skipped, result.Failed);
             await NotifyAsync(command, source, result, cancellationToken);
             return result;
-        }
-
-        /// <summary>
-        /// The target organizations in batches of <see cref="BatchSize"/>: every enabled organization (H3), or the given
-        /// ones that exist and are enabled (unknown or disabled ones are counted as skipped, C3).
-        /// </summary>
-        private async IAsyncEnumerable<List<string>> TargetBatchesAsync(EmailTemplateCopyCommand command, EmailTemplateCopyResult result,
-            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
-        {
-            if (command.AllOrganizations)
-            {
-                string? after = null;
-                while (true)
-                {
-                    var page = await ReadPageAsync(command, after, result, cancellationToken);
-                    if (page is null || page.Count == 0)
-                    {
-                        yield break;
-                    }
-
-                    yield return page.Select(o => o.ItemId).ToList();
-                    if (page.Count < BatchSize)
-                    {
-                        yield break;
-                    }
-
-                    after = page[^1].ItemId;
-                }
-            }
-
-            var requested = command.OrganizationIds
-                .Where(id => !string.IsNullOrWhiteSpace(id) && OrganizationIds.Normalize(id) != OrganizationIds.Default)
-                .Distinct(StringComparer.Ordinal)
-                .ToList();
-            foreach (var chunk in requested.Chunk(BatchSize))
-            {
-                var enabled = await ReadEnabledAsync(command, chunk, cancellationToken);
-                if (enabled is null)
-                {
-                    // C5: organizations that couldn't be checked weren't reached; they are reported as failed.
-                    result.Failed += chunk.Length;
-                    continue;
-                }
-
-                result.Skipped += chunk.Length - enabled.Count;
-                var batch = chunk.Where(enabled.Contains).ToList();
-                if (batch.Count > 0)
-                {
-                    yield return batch;
-                }
-            }
-        }
-
-        /// <summary>One page of every enabled organization, or null when it can't be read: paging stops there (C5).</summary>
-        private async Task<IReadOnlyList<OrganizationSummary>?> ReadPageAsync(EmailTemplateCopyCommand command, string? after, EmailTemplateCopyResult result, CancellationToken cancellationToken)
-        {
-            try
-            {
-                return await _organizationReader.GetEnabledPageAsync(after, BatchSize, cancellationToken);
-            }
-#pragma warning disable CA1031 // the organizations after this page are never reached; the job reports that and ends.
-            catch (Exception ex)
-#pragma warning restore CA1031
-            {
-                result.Incomplete = true;
-                _logger.LogError(ex, "Email template copy {JobId}: organizations after {After} could not be read; copying stopped there. ErrorType={ErrorType}",
-                    command.JobId, after ?? "(start)", ex.GetType().Name);
-                return null;
-            }
-        }
-
-        /// <summary>The enabled organizations among <paramref name="chunk"/>, or null when they can't be read.</summary>
-        private async Task<IReadOnlySet<string>?> ReadEnabledAsync(EmailTemplateCopyCommand command, string[] chunk, CancellationToken cancellationToken)
-        {
-            try
-            {
-                return await _organizationReader.GetEnabledAmongAsync(chunk, cancellationToken);
-            }
-#pragma warning disable CA1031 // C5: this chunk is reported as failed and the job goes on with the next one.
-            catch (Exception ex)
-#pragma warning restore CA1031
-            {
-                _logger.LogError(ex, "Email template copy {JobId}: organizations could not be checked. OrganizationIds={OrganizationIds} ErrorType={ErrorType}",
-                    command.JobId, string.Join(",", chunk), ex.GetType().Name);
-                return null;
-            }
         }
 
         /// <summary>H6: the bell notification to the requester. Best effort (C7): a failure here never fails the job.</summary>

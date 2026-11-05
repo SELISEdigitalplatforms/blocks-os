@@ -17,6 +17,7 @@ using Worker.Consumers.Webhooks;
 using Configuration.DomainService.Webhooks;
 using Configuration.DomainService.Notification.Propagation;
 using Configuration.DomainService.Mail.Template;
+using Configuration.DomainService.Mail.Template.Services;
 using Configuration.DomainService.Shared.Utilities;
 using ConfigurationConstants = Configuration.DomainService.Shared.Utilities.Constants;
 
@@ -71,6 +72,10 @@ IHostBuilder CreateHostBuilder(string[] args) =>
             // A Default organization template copied to organizations (SPEC33), queued by the Mail API.
             services.AddEmailTemplateCopyJob();
             services.AddSingleton<IConsumer<EmailTemplateCopyCommand>, EmailTemplateCopyConsumer>();
+            // The organizations' copies of a deleted Default template (SPEC34), on the same queue. The repository and
+            // organization reader come from AddEmailTemplateCopyJob.
+            services.AddSingleton<IEmailTemplateDeleteJob, EmailTemplateDeleteJob>();
+            services.AddSingleton<IConsumer<EmailTemplateDeleteCommand>, EmailTemplateDeleteConsumer>();
             #endregion
 
             #region Webhook Consumers

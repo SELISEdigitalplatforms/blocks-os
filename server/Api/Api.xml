@@ -201,6 +201,13 @@
             A field error is HTTP 400 with <c>{ isSuccess:false, errors }</c>, as the other template endpoints.
             </summary>
         </member>
+        <member name="M:BlocksOs.Api.Controllers.MailController.DeleteTemplateAcrossOrganizations(Configuration.DomainService.Mail.Template.DeleteTemplateAcrossOrganizationsRequest)">
+            <summary>
+            Deletes a Default organization template now and queues the deletion of the organizations' own copies (same
+            Name + Language) in all or the selected organizations; the OS Worker deletes them and the requester gets a
+            bell notification. Returns the job id. "Only the Default organization's template" uses DeleteTemplate.
+            </summary>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.MailController.CopyTemplateToOrganizations(Configuration.DomainService.Mail.Template.CopyTemplateToOrganizationsRequest)">
             <summary>
             Queues a copy of a Default organization template to all or selected organizations; the OS Worker makes the

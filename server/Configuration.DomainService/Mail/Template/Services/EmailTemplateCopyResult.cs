@@ -1,7 +1,7 @@
 namespace Configuration.DomainService.Mail.Template.Services
 {
     /// <summary>What one copy job did, as the notification reports it.</summary>
-    public sealed class EmailTemplateCopyResult
+    public sealed class EmailTemplateCopyResult : IOrganizationTargetTally
     {
         public bool SourceFound { get; init; } = true;
         public int Created { get; set; }

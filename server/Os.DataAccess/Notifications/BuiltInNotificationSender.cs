@@ -16,6 +16,7 @@ public static class BuiltInNotificationNames
     public const string ProjectAccessChanged = "os-project-access-changed";
     public const string CustomDomainStatus = "os-custom-domain-status";
     public const string EmailTemplateCopyFinished = "os-email-template-copy-finished";
+    public const string EmailTemplateDeleteFinished = "os-email-template-delete-finished";
 }
 
 /// <summary>
