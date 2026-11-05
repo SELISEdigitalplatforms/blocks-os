@@ -9,14 +9,14 @@ const DEFAULT_PAGE_SIZE = 10;
  */
 export function useClientPagination<T>(items: readonly T[], initialPageSize = DEFAULT_PAGE_SIZE) {
   const [page, setPage] = useState(0);
-  const [pageSize, setPageSizeState] = useState(initialPageSize);
+  const [pageSize, setPageSize] = useState(initialPageSize);
 
   const lastPage = Math.max(0, Math.ceil(items.length / pageSize) - 1);
   const currentPage = Math.min(Math.max(0, page), lastPage);
   const pageItems = items.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
 
-  const setPageSize = (size: number) => {
-    setPageSizeState(size);
+  const changePageSize = (size: number) => {
+    setPageSize(size);
     setPage(0);
   };
   const reset = () => setPage(0);
@@ -27,7 +27,7 @@ export function useClientPagination<T>(items: readonly T[], initialPageSize = DE
     pageItems,
     totalCount: items.length,
     setPage,
-    setPageSize,
+    setPageSize: changePageSize,
     reset,
   };
 }

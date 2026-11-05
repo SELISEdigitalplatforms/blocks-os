@@ -72,8 +72,8 @@ export function WebhookDetailsPage() {
           }),
         });
       }
-    } catch (caught) {
-      reportError(t("DETAILS.TEST_FAILED"), caught);
+    } catch (error_) {
+      reportError(t("DETAILS.TEST_FAILED"), error_);
     }
   };
 
@@ -91,8 +91,8 @@ export function WebhookDetailsPage() {
           name: current.name,
         }),
       });
-    } catch (caught) {
-      reportError(t("FORM.COULD_NOT_SAVE"), caught);
+    } catch (error_) {
+      reportError(t("FORM.COULD_NOT_SAVE"), error_);
     }
   };
 
@@ -101,9 +101,9 @@ export function WebhookDetailsPage() {
       await deleteWebhook(current.id);
       showSuccessToast({ description: t("DETAILS.DELETED", { name: current.name }) });
       navigate(scoped(LIST_PATH));
-    } catch (caught) {
+    } catch (error_) {
       setIsDeleteOpen(false);
-      reportError(t("DETAILS.COULD_NOT_DELETE"), caught);
+      reportError(t("DETAILS.COULD_NOT_DELETE"), error_);
     }
   };
 

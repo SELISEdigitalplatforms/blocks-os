@@ -36,7 +36,7 @@ import { DeliveryDetails } from "./delivery-details";
 import { DeliveryStatusBadge } from "./delivery-status-badge";
 
 const ALL = "all";
-const RESENDABLE: readonly DeliveryStatus[] = ["Delivered", "Failed"];
+const RESENDABLE: ReadonlySet<DeliveryStatus> = new Set<DeliveryStatus>(["Delivered", "Failed"]);
 
 interface WebhookHistoryProps {
   webhookId: string;
@@ -267,7 +267,7 @@ function DeliveryRow({
             >
               {isOpen ? t("HISTORY.HIDE") : t("HISTORY.DETAILS")}
             </Button>
-            {RESENDABLE.includes(delivery.status) && (
+            {RESENDABLE.has(delivery.status) && (
               <Button
                 variant="outline"
                 size="xs"
