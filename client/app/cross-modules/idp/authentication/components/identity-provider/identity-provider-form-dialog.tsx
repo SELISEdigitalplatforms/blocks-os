@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { AlertTriangle, Eye, EyeOff, Info, Plus, X } from "lucide-react";
 import {
@@ -24,6 +24,7 @@ import { IdentityProvider } from "@blocks-idp/authentication/models/identity-pro
 import {
   useCreateIdentityProvider,
   useGetIdentityProviderById,
+  useGetIdentityProviders,
   useUpdateIdentityProvider,
 } from "@blocks-idp/authentication/hooks/use-identity-provider";
 import {
@@ -45,6 +46,11 @@ import {
   getSocialLoginRedirectUri,
   hasRedirectUri,
   addRedirectUriToList,
+  isDisplayNameTaken,
+  isMicrosoftSocial,
+  isValidMicrosoftTenant,
+  microsoftTenantOf,
+  suggestDisplayName,
 } from "./identity-provider-form.util";
 import { getBlocksIamBaseUrl } from "@blocks-idp/settings/utils/auth-config-form";
 import { useProjectStore, useT } from "@seliseblocks/genesis-os";
@@ -65,6 +71,7 @@ type FormValues = {
   clientSecret: string;
   wellKnownUrl?: string;
   audience?: string;
+  tenant: string;
 };
 
 type Props = {
@@ -85,7 +92,15 @@ const BLANK_FORM: FormValues = {
   clientSecret: "",
   wellKnownUrl: "",
   audience: "",
+  tenant: "",
 };
+
+const socialLabel = (provider?: string) =>
+  SOCIAL_AUTH_PROVIDERS_CONFIG[provider as SSO_PROVIDERS]?.label;
+
+const SOCIAL_PROVIDER_LABELS = new Set(
+  Object.values(SOCIAL_AUTH_PROVIDERS_CONFIG).map((config) => config?.label ?? ""),
+);
 
 const parseScopes = (scope?: string): string[] => {
   const scopes = (scope ?? "").split(/[\s,]+/).filter(Boolean);
@@ -108,13 +123,16 @@ const parseRedirectUris = (provider: IdentityProvider): string[] => {
 const toFormValues = (provider: IdentityProvider): FormValues => {
   const matched = PROVIDER_TYPE_VALUES.has(provider.providerType);
   return {
-    displayName: provider.displayName,
+    displayName: provider.displayName ?? "",
     providerType: matched ? provider.providerType : PROVIDER_SOCIAL,
     provider: provider.provider,
     clientId: provider.clientId,
     clientSecret: "",
     wellKnownUrl: provider.wellKnownUrl ?? "",
     audience: provider.audience ?? "",
+    tenant: isMicrosoftSocial(provider.providerType, provider.provider)
+      ? microsoftTenantOf(provider.wellKnownUrl)
+      : "",
   };
 };
 
@@ -206,7 +224,13 @@ export function IdentityProviderFormDialog({
     { value: PROVIDER_BLOCKS_OIDC, label: "Blocks OIDC" },
     { value: PROVIDER_BYOS, label: t("IDENTITY_PROVIDER_FORM_DIALOG.TYPE_BYOS") },
   ];
-  const tenantId = useProjectStore().selectedProject?.tenantId || "";
+  const selectedProject = useProjectStore().selectedProject;
+  const tenantId = selectedProject?.tenantId || "";
+  const { data: providerList } = useGetIdentityProviders({
+    projectId: selectedProject?.itemId || "",
+  });
+  // Several Google or Microsoft entries are told apart by display name.
+  const existingProviders = useMemo(() => providerList?.data ?? [], [providerList]);
 
   const {
     data: providerResponse,
@@ -243,6 +267,8 @@ export function IdentityProviderFormDialog({
     reset,
     watch,
     setValue,
+    getValues,
+    trigger,
     formState: { errors, isValid },
   } = useForm<FormValues>({
     mode: "onChange",
@@ -250,6 +276,9 @@ export function IdentityProviderFormDialog({
   });
 
   const providerType = watch("providerType");
+  const providerName = watch("provider");
+  const isSocialType = providerType === PROVIDER_SOCIAL;
+  const showTenant = isMicrosoftSocial(providerType, providerName);
   const blocksOidcWellKnownUrl = tenantId ? getBlocksOidcWellKnownUrl(tenantId) : "";
   const selectedSocialProvider = SOCIAL_AUTH_PROVIDERS_CONFIG[watch("provider") as SSO_PROVIDERS];
   const loginRedirectUri = getSocialLoginRedirectUri(
@@ -342,6 +371,46 @@ export function IdentityProviderFormDialog({
     }
     onOpenChange(false);
   }, [open, isEditing, isProviderFetchError, providerFetchError, onOpenChange, t]);
+
+  // A new Google or Microsoft entry starts named after its provider, unless another entry of it
+  // already has that name. Only a name filled in this way is replaced when the provider changes.
+  useEffect(() => {
+    if (!open || isEditing || !isFormReady || !isSocialType) return;
+    const current = (getValues("displayName") ?? "").trim();
+    if (current && !SOCIAL_PROVIDER_LABELS.has(current)) return;
+    const suggestion = suggestDisplayName(
+      existingProviders,
+      providerName,
+      socialLabel(providerName),
+    );
+    if (suggestion !== current) setValue("displayName", suggestion, { shouldValidate: true });
+  }, [
+    open,
+    isEditing,
+    isFormReady,
+    isSocialType,
+    providerName,
+    existingProviders,
+    getValues,
+    setValue,
+  ]);
+
+  // The list can arrive after the name was typed: check the name against it again.
+  useEffect(() => {
+    if (open && isFormReady && (getValues("displayName") ?? "").trim()) void trigger("displayName");
+  }, [open, isFormReady, existingProviders, getValues, trigger]);
+
+  const validateDisplayName = (value: string) => {
+    const name = (value ?? "").trim();
+    if (!name) {
+      return isSocialType ? t("IDENTITY_PROVIDER_FORM_DIALOG.DISPLAY_NAME_REQUIRED") : true;
+    }
+    return isDisplayNameTaken(existingProviders, providerName, name, editId)
+      ? t("IDENTITY_PROVIDER_FORM_DIALOG.DISPLAY_NAME_TAKEN", {
+          provider: socialLabel(providerName) ?? providerName,
+        })
+      : true;
+  };
 
   // The pre-fill banner reflects what was picked from the gallery (the original preset
   // props), not the live form value - it stays put even if the admin starts tweaking the
@@ -555,6 +624,54 @@ export function IdentityProviderFormDialog({
                   <p className="text-xs text-destructive">{errors.provider.message}</p>
                 )}
               </div>
+
+              {/* Display name: what tells several Google or Microsoft entries apart */}
+              <div className="space-y-1.5">
+                <Label htmlFor="displayName">
+                  {t("IDENTITY_PROVIDER_FORM_DIALOG.DISPLAY_NAME")}
+                  {isSocialType && (
+                    <>
+                      {" "}
+                      <span className="text-destructive">*</span>
+                    </>
+                  )}
+                </Label>
+                <Input
+                  id="displayName"
+                  placeholder={t("IDENTITY_PROVIDER_FORM_DIALOG.DISPLAY_NAME_PLACEHOLDER")}
+                  {...register("displayName", { validate: validateDisplayName })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t("IDENTITY_PROVIDER_FORM_DIALOG.DISPLAY_NAME_HINT")}
+                </p>
+                {errors.displayName && (
+                  <p className="text-xs text-destructive">{errors.displayName.message}</p>
+                )}
+              </div>
+
+              {/* Microsoft Entra tenant: sent as that tenant's discovery URL */}
+              {showTenant && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="tenant">
+                    {t("IDENTITY_PROVIDER_FORM_DIALOG.MICROSOFT_TENANT")}
+                  </Label>
+                  <Input
+                    id="tenant"
+                    placeholder={t("IDENTITY_PROVIDER_FORM_DIALOG.MICROSOFT_TENANT_PLACEHOLDER")}
+                    {...register("tenant", {
+                      validate: (value) =>
+                        isValidMicrosoftTenant(value ?? "") ||
+                        t("IDENTITY_PROVIDER_FORM_DIALOG.MICROSOFT_TENANT_INVALID"),
+                    })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t("IDENTITY_PROVIDER_FORM_DIALOG.MICROSOFT_TENANT_HINT")}
+                  </p>
+                  {errors.tenant && (
+                    <p className="text-xs text-destructive">{errors.tenant.message}</p>
+                  )}
+                </div>
+              )}
 
               {/* Client ID + Client Secret */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

@@ -31,8 +31,8 @@ vi.mock("@/hooks/use-toast", () => ({
   showErrorToast: h.showErrorToast,
   showSuccessToast: h.showSuccessToast,
 }));
-vi.mock("../create-oidc/create-oidc", () => ({
-  CreateOIDC: () => <button type="button">edit-oidc</button>,
+vi.mock("../oidc-client-page/oidc-client-edit-link", () => ({
+  OidcClientEditLink: () => <button type="button">edit-oidc</button>,
 }));
 
 import { OIDCCard } from "./oidc-card";

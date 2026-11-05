@@ -29,7 +29,7 @@ import {
 import type { IOidcClientLoginPolicy } from "@blocks-idp/authentication/models/login-policy.model";
 import { describeClientLoginPolicy } from "@blocks-idp/authentication/utils/login-policy.util";
 import { tStatic, useProjectStore, useT } from "@seliseblocks/genesis-os";
-import { CreateOIDC } from "../create-oidc/create-oidc";
+import { OidcClientEditLink } from "../oidc-client-page/oidc-client-edit-link";
 import { KVDetailItem } from "../kv-detail-item";
 import { maskId } from "../../utils/mask-id.util";
 import { OneTimeSecret, OneTimeSecretDialog } from "../one-time-secret-dialog";
@@ -274,7 +274,7 @@ const OidcRowActions = ({
   return (
     <TableCell className="py-3.5 pl-4 text-left" onClick={(e) => e.stopPropagation()}>
       <div className="flex items-center justify-start gap-1">
-        <CreateOIDC itemId={item.itemId} triggerVariant="ghost" />
+        <OidcClientEditLink itemId={item.itemId} />
         {!item.isDeviceFlowClient && (
           <Tooltip>
             <TooltipTrigger asChild>

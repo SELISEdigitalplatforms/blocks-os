@@ -74,6 +74,10 @@ import OidcBrandingPage from "@/pages/auth/oidc/oidc-branding";
 import SecretManagementLayout from "@/pages/secret-management/secret-management";
 import { ProjectOverviewRoute } from "@/routes/project-overview/project-overview-route";
 import { OIDC_BRANDING_ROUTE_PATH } from "@/routes/oidc-branding-route";
+import {
+  OIDC_CLIENT_ROUTE_PATH,
+  OidcClientPage,
+} from "@blocks-idp/authentication/components/oidc-client-page";
 import { IdentityProviderPage } from "@blocks-idp/authentication/components/identity-provider/identity-provider";
 import { EmailPage } from "@/pages/email-management/email";
 import { EmailCommunicationDetailsPage } from "@/pages/email-management/email-communication-details";
@@ -274,6 +278,10 @@ export const router = createBrowserRouter([
                           {
                             path: OIDC_BRANDING_ROUTE_PATH,
                             element: <OidcBrandingPage />,
+                          },
+                          {
+                            path: OIDC_CLIENT_ROUTE_PATH,
+                            element: <OidcClientPage />,
                           },
                         ],
                       },
