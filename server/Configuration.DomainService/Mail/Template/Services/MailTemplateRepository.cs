@@ -317,7 +317,7 @@ namespace Configuration.DomainService.Mail.Template.Services
             var racedReplaced = !replace || raced.Count == 0
                 || await ReplaceRacedAsync(collection, gate & CopiesOf(name, language, raced), replaceUpdate, result);
 
-            await RecheckAsync(collection, name, language, recheck, raced, replace, racedReplaced, result, callSite);
+            await RecheckAsync(collection, name, language, recheck, new RacedOutcome(raced, replace, racedReplaced), result, callSite);
             return result;
         }
 
@@ -394,13 +394,17 @@ namespace Configuration.DomainService.Mail.Template.Services
             }
         }
 
+        /// <summary>The organizations another job wrote first, whether this batch replaces copies, and whether their replace succeeded.</summary>
+        private sealed record RacedOutcome(List<string> Raced, bool Replace, bool RacedReplaced);
+
         /// <summary>
         /// One read of the organizations whose outcome the write couldn't tell: a copy there is kept or replaced; none
         /// there (a deleted copy, or a derived _id already used by another document) means that organization failed.
         /// </summary>
         private async Task RecheckAsync(IMongoCollection<EmailTemplate> collection, string name, string language, List<string> recheck,
-            List<string> raced, bool replace, bool racedReplaced, OrganizationCopyBatchResult result, string callSite)
+            RacedOutcome races, OrganizationCopyBatchResult result, string callSite)
         {
+            var (raced, replace, racedReplaced) = races;
             var organizations = recheck.Distinct(StringComparer.Ordinal).ToList();
             var recheckScope = await _dataAccess.ReadAsync(OsSchemas.EmailTemplate, CopiesOf(name, language, organizations), callSite, useProjection: false);
             if (!recheckScope.Granted)
