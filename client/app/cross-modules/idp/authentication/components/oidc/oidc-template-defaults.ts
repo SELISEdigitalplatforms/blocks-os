@@ -150,6 +150,7 @@ export const DEFAULT_OIDC_UI_TEMPLATE: IOidcUiTemplate = {
       supportLinkText: "Contact support",
     },
   },
+  layout: { showAnimationPanel: true },
 };
 
 const mergeDefaults = (defaults: unknown, value: unknown): unknown => {
@@ -172,8 +173,19 @@ const mergeDefaults = (defaults: unknown, value: unknown): unknown => {
   return value;
 };
 
-export const normalizeOidcUiTemplate = (template: IOidcUiTemplate): IOidcUiTemplate =>
-  mergeDefaults(DEFAULT_OIDC_UI_TEMPLATE, template) as IOidcUiTemplate;
+/**
+ * `layout` is coerced on its own rather than through `mergeDefaults`, which keeps a
+ * stored `null`: anything but a literal `false` shows the animation panel, so a
+ * missing, `null`, or malformed value can never hide it by accident.
+ */
+export const normalizeOidcUiTemplate = (
+  template: Omit<IOidcUiTemplate, "layout"> & {
+    layout?: { showAnimationPanel?: boolean | null } | null;
+  },
+): IOidcUiTemplate => ({
+  ...(mergeDefaults(DEFAULT_OIDC_UI_TEMPLATE, template) as IOidcUiTemplate),
+  layout: { showAnimationPanel: template.layout?.showAnimationPanel !== false },
+});
 
 /**
  * Resolves which logo to show for a given preview mode, mirroring blocks-iam's
