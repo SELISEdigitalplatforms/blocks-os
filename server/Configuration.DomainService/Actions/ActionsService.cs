@@ -1,13 +1,14 @@
+using Blocks.Genesis;
 using Configuration.DomainService.Shared.Secrets;
 using Configuration.DomainService.Shared.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Configuration.DomainService.Actions;
 
-/// <summary>Rules of the Actions page: list the tenant's actions and switch one target of one action.</summary>
+/// <summary>Rules of the Actions page: list the root catalog with the tenant's flags and switch one target of one action.</summary>
 public interface IActionsService
 {
-    /// <summary>The tenant's actions; empty when none are seeded.</summary>
+    /// <summary>Every catalog action with the tenant's flags; empty when the catalog is not seeded.</summary>
     Task<IReadOnlyList<ActionView>> GetsAsync(CancellationToken cancellationToken);
 
     Task<ServiceOutcome<bool>> UpdateAsync(UpdateActionRequest request, CancellationToken cancellationToken);
@@ -27,11 +28,27 @@ public sealed class ActionsService : IActionsService
 
     public async Task<IReadOnlyList<ActionView>> GetsAsync(CancellationToken cancellationToken)
     {
-        var definitions = await _repository.GetAllAsync(cancellationToken);
-        return definitions is null
-            ? []
-            : [.. definitions.Where(d => d is not null).Select(ActionView.From)];
+        var catalog = await _repository.GetCatalogAsync(cancellationToken);
+        if (catalog is null)
+        {
+            return [];
+        }
+
+        var enabled = (await _repository.GetAllAsync(cancellationToken))?
+            .Where(d => d is not null)
+            .GroupBy(d => d.Name, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal) ?? [];
+        return [.. catalog.Where(d => d is not null).Select(d => ViewOf(d, enabled.GetValueOrDefault(d.Name)))];
     }
+
+    // Label, service and payload come from the catalog; only the flags come from the tenant's item.
+    private static ActionView ViewOf(ActionDefinition catalogEntry, ActionDefinition? tenantEntry) =>
+        ActionView.From(catalogEntry) with
+        {
+            Workflow = tenantEntry?.Workflow ?? false,
+            Function = tenantEntry?.Function ?? false,
+            Webhook = tenantEntry?.Webhook ?? false
+        };
 
     public Task<ServiceOutcome<bool>> UpdateAsync(UpdateActionRequest request, CancellationToken cancellationToken)
     {
@@ -52,16 +69,32 @@ public sealed class ActionsService : IActionsService
             return ServiceOutcome<bool>.BadRequest(ActionErrorCodes.ActionNotFound);
         }
 
-        var result = await _repository.SetFlagAsync(request.Name, flagField, request.Enabled, cancellationToken);
-        switch (result)
+        var catalog = await _repository.GetCatalogAsync(cancellationToken);
+        if (catalog is null)
         {
-            case ActionFlagUpdate.Updated:
-                _logger.LogInformation("Action {Action} target {Target} set to {Enabled}", LogSafe.Value(request.Name), flagField, request.Enabled);
-                return ServiceOutcome<bool>.Ok(true);
-            case ActionFlagUpdate.NotSeeded:
-                return ServiceOutcome<bool>.BadRequest(ActionErrorCodes.ActionsNotSeeded);
-            default:
-                return ServiceOutcome<bool>.BadRequest(ActionErrorCodes.ActionNotFound);
+            return ServiceOutcome<bool>.BadRequest(ActionErrorCodes.ActionsNotSeeded);
         }
+
+        var catalogEntry = catalog.Find(d => d is not null && string.Equals(d.Name, request.Name, StringComparison.Ordinal));
+        if (catalogEntry is null)
+        {
+            return ServiceOutcome<bool>.BadRequest(ActionErrorCodes.ActionNotFound);
+        }
+
+        if (request.Enabled)
+        {
+            if (!await _repository.EnableAsync(catalogEntry, flagField, cancellationToken))
+            {
+                _logger.LogWarning("Action {Action} target {Target} could not be switched on: concurrent changes", LogSafe.Value(request.Name), flagField);
+                return ServiceOutcome<bool>.Conflict(ActionErrorCodes.UpdateConflict);
+            }
+        }
+        else
+        {
+            await _repository.DisableAsync(catalogEntry.Name, flagField, cancellationToken);
+        }
+
+        _logger.LogInformation("Action {Action} target {Target} set to {Enabled}", LogSafe.Value(request.Name), flagField, request.Enabled);
+        return ServiceOutcome<bool>.Ok(true);
     }
 }

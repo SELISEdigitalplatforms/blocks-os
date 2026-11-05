@@ -397,7 +397,7 @@ namespace XUnitTest.Integration
         }
 
         [Fact]
-        public async Task KeyValueSeedCopier_CopiesTheActionsList_WithEveryTargetOff_AndNeverTheWebhooks()
+        public async Task KeyValueSeedCopier_NeverCopiesTheActionsList_OrTheWebhooks()
         {
             var suffix = Guid.NewGuid().ToString("N");
             var seed = _fixture.DbContextProvider.GetDatabase("", "kvseed-" + suffix[..8]);
@@ -417,16 +417,8 @@ namespace XUnitTest.Integration
 
             var inserted = await KeyValueSeedCopier.CopyAsync(seed, projectDb, "creator");
 
-            inserted.Should().Be(1);
-            var rows = await projectDb.GetCollection<BsonDocument>(KeyValueSeedCopier.CollectionName).Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
-            var copied = rows.Should().ContainSingle().Subject;
-            copied["Key"].AsString.Should().Be(ActionConstants.ActionsKey);
-            var action = copied["Value"].AsBsonArray.Single().AsBsonDocument;
-            action["Name"].AsString.Should().Be("iam.user.created");
-            action["Payload"].Should().Be(new BsonDocument("userId", "string"));
-            action["Workflow"].AsBoolean.Should().BeFalse();
-            action["Function"].AsBoolean.Should().BeFalse();
-            action["Webhook"].AsBoolean.Should().BeFalse();
+            inserted.Should().Be(0);
+            (await projectDb.GetCollection<BsonDocument>(KeyValueSeedCopier.CollectionName).CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(0);
         }
 
         private static BsonDocument KeyValueArrayRow(string key, BsonArray value) => new()

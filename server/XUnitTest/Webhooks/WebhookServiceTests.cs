@@ -145,6 +145,23 @@ namespace XUnitTest.Webhooks
         }
 
         [Fact]
+        public async Task Create_RefusesAnActionWhoseWebhookFlagIsOff_ButUpdateKeepsOneTheWebhookAlreadyHas()
+        {
+            _actions.Setup(a => a.GetAllAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new List<ActionDefinition> { new() { Name = KnownAction, Webhook = false, Workflow = true } });
+            _webhooks.Setup(w => w.GetAsync("w1", It.IsAny<CancellationToken>())).ReturnsAsync(Stored());
+            _webhooks.Setup(w => w.UpdateAsync(It.IsAny<WebhookUpdate>(), It.IsAny<CancellationToken>())).ReturnsAsync(WebhookWriteResult.Written);
+
+            var created = await Service().SaveAsync(Create(), CancellationToken.None);
+            var updateRequest = Create(secret: null);
+            updateRequest.Id = "w1";
+            var updated = await Service().SaveAsync(updateRequest, CancellationToken.None);
+
+            created.ErrorCode.Should().Be(WebhookErrorCodes.ActionNotFound);
+            updated.ErrorCode.Should().NotBe(WebhookErrorCodes.ActionNotFound);
+        }
+
+        [Fact]
         public async Task Update_WithoutASecret_KeepsTheStoredOne()
         {
             _webhooks.Setup(w => w.GetAsync("w1", It.IsAny<CancellationToken>())).ReturnsAsync(Stored());

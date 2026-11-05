@@ -83,7 +83,7 @@ public sealed class WebhookService : IWebhookService
             return ServiceOutcome<WebhookView>.NotFound(WebhookErrorCodes.WebhookNotFound);
         }
 
-        var error = ValidateShape(request, isCreate) ?? await ValidateRulesAsync(request, cancellationToken);
+        var error = ValidateShape(request, isCreate) ?? await ValidateRulesAsync(request, existing, cancellationToken);
         if (error is not null)
         {
             return ServiceOutcome<WebhookView>.BadRequest(error);
@@ -117,17 +117,20 @@ public sealed class WebhookService : IWebhookService
         return request.Actions is null || request.Actions.Count == 0 ? WebhookErrorCodes.ActionsRequired : null;
     }
 
-    private async Task<string?> ValidateRulesAsync(SaveWebhookRequest request, CancellationToken cancellationToken)
+    private async Task<string?> ValidateRulesAsync(SaveWebhookRequest request, WebhookEntry? existing, CancellationToken cancellationToken)
     {
         if (!await _addressGuard.IsUrlAllowedAsync(request.Url, cancellationToken))
         {
             return WebhookErrorCodes.UrlNotAllowed;
         }
 
+        // The tenant list holds only the actions an admin switched on: a name is allowed when its webhook flag is on,
+        // or when this webhook already has it (so an old webhook can still be saved after the flag went off).
         var known = (await _actions.GetAllAsync(cancellationToken))?
-            .Where(d => d is not null)
+            .Where(d => d is not null && d.Webhook)
             .Select(d => d.Name)
             .ToHashSet(StringComparer.Ordinal) ?? [];
+        known.UnionWith(existing?.Actions ?? []);
         return request.Actions.TrueForAll(known.Contains) ? null : WebhookErrorCodes.ActionNotFound;
     }
 

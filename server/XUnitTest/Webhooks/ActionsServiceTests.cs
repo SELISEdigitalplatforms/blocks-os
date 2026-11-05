@@ -1,3 +1,4 @@
+using Blocks.Genesis;
 using System.Threading;
 using System.Threading.Tasks;
 using Configuration.DomainService.Actions;
@@ -14,30 +15,55 @@ namespace XUnitTest.Webhooks
 
         private ActionsService Service() => new(_repository.Object, NullLogger<ActionsService>.Instance);
 
+        private static readonly ActionDefinition Catalog = new() { Name = "iam.user.created", Label = "Created", Service = "iam" };
+
         [Fact]
-        public async Task Update_SetsOnlyTheFlagOfTheNamedTarget()
+        public async Task Update_Enable_SendsTheCatalogEntryAndOnlyTheNamedFlag()
         {
-            _repository.Setup(r => r.SetFlagAsync("iam.user.created", "Webhook", true, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(ActionFlagUpdate.Updated);
+            _repository.Setup(r => r.GetCatalogAsync(It.IsAny<CancellationToken>())).ReturnsAsync([Catalog]);
+            _repository.Setup(r => r.EnableAsync(Catalog, "Webhook", It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
             var outcome = await Service().UpdateAsync(new UpdateActionRequest { Name = "iam.user.created", Target = "WebHook", Enabled = true }, CancellationToken.None);
 
             outcome.IsOk.Should().BeTrue();
-            _repository.Verify(r => r.SetFlagAsync("iam.user.created", "Webhook", true, It.IsAny<CancellationToken>()), Times.Once);
+            _repository.Verify(r => r.EnableAsync(Catalog, "Webhook", It.IsAny<CancellationToken>()), Times.Once);
         }
 
-        [Theory]
-        [InlineData(ActionFlagUpdate.ActionNotFound, ActionErrorCodes.ActionNotFound)]
-        [InlineData(ActionFlagUpdate.NotSeeded, ActionErrorCodes.ActionsNotSeeded)]
-        public async Task Update_RefusesAnUnknownActionOrAMissingList(ActionFlagUpdate stored, string expectedCode)
+        [Fact]
+        public async Task Update_Enable_WhenConcurrentRemovalsKeepWinning_IsAConflict()
         {
-            _repository.Setup(r => r.SetFlagAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(stored);
+            _repository.Setup(r => r.GetCatalogAsync(It.IsAny<CancellationToken>())).ReturnsAsync([Catalog]);
+            _repository.Setup(r => r.EnableAsync(It.IsAny<ActionDefinition>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
 
-            var outcome = await Service().UpdateAsync(new UpdateActionRequest { Name = "nope", Target = "workflow", Enabled = true }, CancellationToken.None);
+            var outcome = await Service().UpdateAsync(new UpdateActionRequest { Name = "iam.user.created", Target = "workflow", Enabled = true }, CancellationToken.None);
 
-            outcome.Status.Should().Be(OutcomeStatus.BadRequest);
-            outcome.ErrorCode.Should().Be(expectedCode);
+            outcome.Status.Should().Be(OutcomeStatus.Conflict);
+            outcome.ErrorCode.Should().Be(ActionErrorCodes.UpdateConflict);
+        }
+
+        [Fact]
+        public async Task Update_Disable_CallsDisableOnly()
+        {
+            _repository.Setup(r => r.GetCatalogAsync(It.IsAny<CancellationToken>())).ReturnsAsync([Catalog]);
+
+            var outcome = await Service().UpdateAsync(new UpdateActionRequest { Name = "iam.user.created", Target = "function", Enabled = false }, CancellationToken.None);
+
+            outcome.IsOk.Should().BeTrue();
+            _repository.Verify(r => r.DisableAsync("iam.user.created", "Function", It.IsAny<CancellationToken>()), Times.Once);
+            _repository.Verify(r => r.EnableAsync(It.IsAny<ActionDefinition>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Update_RefusesAMissingCatalog_AndANameNotInIt()
+        {
+            var service = Service();
+            var request = new UpdateActionRequest { Name = "iam.user.created", Target = "workflow", Enabled = true };
+
+            (await service.UpdateAsync(request, CancellationToken.None)).ErrorCode.Should().Be(ActionErrorCodes.ActionsNotSeeded);
+
+            _repository.Setup(r => r.GetCatalogAsync(It.IsAny<CancellationToken>())).ReturnsAsync([new ActionDefinition { Name = "other" }]);
+            (await service.UpdateAsync(request, CancellationToken.None)).ErrorCode.Should().Be(ActionErrorCodes.ActionNotFound);
+            _repository.Verify(r => r.EnableAsync(It.IsAny<ActionDefinition>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
@@ -46,7 +72,7 @@ namespace XUnitTest.Webhooks
             var outcome = await Service().UpdateAsync(new UpdateActionRequest { Name = "iam.user.created", Target = "email", Enabled = true }, CancellationToken.None);
 
             outcome.ErrorCode.Should().Be(ActionErrorCodes.InvalidTarget);
-            _repository.VerifyNoOtherCalls();
+            _repository.Verify(r => r.GetCatalogAsync(It.IsAny<CancellationToken>()), Times.Never);
         }
     }
 }

@@ -2,7 +2,7 @@ using Blocks.Genesis;
 
 namespace Configuration.DomainService.Actions;
 
-/// <summary>One action of the tenant's <c>actions</c> list as the Actions page shows it.</summary>
+/// <summary>One action of the root catalog as the Actions page shows it, with the tenant's flags.</summary>
 public sealed record ActionView(
     string Name,
     string Label,
@@ -37,20 +37,13 @@ public sealed class UpdateActionRequest
     public bool Enabled { get; set; }
 }
 
-/// <summary>Result of a one-flag update in the stored list.</summary>
-public enum ActionFlagUpdate
-{
-    Updated,
-    ActionNotFound,
-    NotSeeded
-}
-
 /// <summary>Error codes the Actions API returns.</summary>
 public static class ActionErrorCodes
 {
     public const string ActionNotFound = "ACTION_NOT_FOUND";
     public const string ActionsNotSeeded = "ACTIONS_NOT_SEEDED";
     public const string InvalidTarget = "INVALID_TARGET";
+    public const string UpdateConflict = "ACTION_UPDATE_CONFLICT";
 }
 
 /// <summary>Maps a request target to the stored flag field. One entry per target.</summary>
