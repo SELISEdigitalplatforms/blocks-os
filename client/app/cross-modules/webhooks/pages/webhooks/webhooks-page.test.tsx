@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -62,6 +62,47 @@ describe("WebhooksPage", () => {
     expect(screen.queryByText(/token=abc/)).toBeNull();
   });
 
+  it("filters by name, URL or action name and shows a no-match text", async () => {
+    const user = userEvent.setup();
+    vi.mocked(http.get).mockResolvedValue([
+      makeWebhook({ id: "a", name: "CRM sync" }),
+      makeWebhook({
+        id: "b",
+        name: "Billing",
+        url: "https://pay.example.org/in",
+        actions: ["billing.invoice.paid"],
+      }),
+    ]);
+    renderPage();
+    const input = await screen.findByPlaceholderText("Search webhooks");
+
+    await user.type(input, "INVOICE");
+    await waitFor(() => expect(screen.queryByText("CRM sync")).toBeNull());
+    expect(screen.getByText("Billing")).toBeTruthy();
+
+    await user.clear(input);
+    await user.type(input, "acme");
+    await waitFor(() => expect(screen.queryByText("Billing")).toBeNull());
+    expect(screen.getByText("CRM sync")).toBeTruthy();
+
+    await user.clear(input);
+    await user.type(input, "zzz");
+    expect(await screen.findByText("No webhooks match your search.")).toBeTruthy();
+    expect(screen.queryByText("No webhooks yet")).toBeNull();
+
+    await user.clear(input);
+    expect(await screen.findByText("CRM sync")).toBeTruthy();
+    expect(screen.getByText("Billing")).toBeTruthy();
+  });
+
+  it("keeps the empty state, without a search box, when there are no webhooks", async () => {
+    vi.mocked(http.get).mockResolvedValue([]);
+    renderPage();
+
+    expect(await screen.findByText("No webhooks yet")).toBeTruthy();
+    expect(screen.queryByPlaceholderText("Search webhooks")).toBeNull();
+  });
+
   it("flags a failing webhook and one the system turned off", async () => {
     vi.mocked(http.get).mockResolvedValue([
       makeWebhook({ id: "a", name: "Failing", consecutiveFailures: 4 }),
@@ -103,43 +144,5 @@ describe("WebhooksPage", () => {
     renderPage();
 
     expect(await screen.findByText("Add webhook form")).toBeTruthy();
-  });
-
-  describe("paging", () => {
-    const many = (n: number) =>
-      Array.from({ length: n }, (_, i) =>
-        makeWebhook({ id: `wh-${i + 1}`, name: `Hook ${String(i + 1).padStart(2, "0")}` }),
-      );
-
-    it("shows 10 webhooks per page and moves between pages", async () => {
-      const user = userEvent.setup();
-      vi.mocked(http.get).mockResolvedValue(many(23));
-      renderPage();
-
-      expect(await screen.findByText("Hook 01")).toBeTruthy();
-      expect(screen.getByText("Hook 10")).toBeTruthy();
-      expect(screen.queryByText("Hook 11")).toBeNull();
-      expect(screen.getByText("Page 1 of 3")).toBeTruthy();
-
-      await user.click(screen.getByRole("button", { name: "Go to last page" }));
-
-      expect(screen.getByText("Hook 21")).toBeTruthy();
-      expect(screen.getByText("Hook 23")).toBeTruthy();
-      expect(screen.queryByText("Hook 01")).toBeNull();
-    });
-
-    it("goes back to page 1 when the page size changes", async () => {
-      const user = userEvent.setup();
-      vi.mocked(http.get).mockResolvedValue(many(23));
-      renderPage();
-      await screen.findByText("Hook 01");
-      await user.click(screen.getByRole("button", { name: "Go to next page" }));
-
-      await user.click(screen.getByRole("combobox"));
-      await user.click(await screen.findByRole("option", { name: "25" }));
-
-      expect(screen.getByText("Hook 01")).toBeTruthy();
-      expect(screen.getByText("Hook 23")).toBeTruthy();
-    });
   });
 });

@@ -1,11 +1,12 @@
+import { useState } from "react";
 import { Loader2, Plus, Webhook } from "lucide-react";
 import { parseAsBoolean, useQueryState } from "nuqs";
 import { Link, useNavigate } from "react-router";
 import { useT } from "@seliseblocks/genesis-os";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { Button } from "@/components/ui-kits/button/button";
+import { FilterControls } from "@/components/filter-toolbar";
 import { EmptyState } from "@/components/ui-kits/empty-state";
-import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import {
   Table,
   TableBody,
@@ -14,13 +15,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui-kits/table/table";
-import { useClientPagination } from "@/hooks/use-client-pagination";
 import { WebhookFormDialog } from "../../components/webhook-form-dialog";
 import { WebhookStatusBadges } from "../../components/webhook-status-badges";
 import { ADD_WEBHOOK_QUERY_KEY, WEBHOOKS_I18N_MODULE } from "../../constants/webhooks.constant";
 import { useGetWebhooks } from "../../hooks/use-webhooks";
 import type { IWebhook } from "../../models/webhook.model";
 import { formatEndpoint } from "../../utils/format";
+import { filterWebhooks } from "../../utils/webhook-search";
 
 const SHOWN_ACTION_NAMES = 2;
 
@@ -31,11 +32,12 @@ export function WebhooksPage() {
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const { data, isLoading, isError, refetch } = useGetWebhooks();
-  const paging = useClientPagination(data ?? []);
   const [isAddOpen, setIsAddOpen] = useQueryState(
     ADD_WEBHOOK_QUERY_KEY,
     parseAsBoolean.withDefault(false),
   );
+
+  const [search, setSearch] = useState("");
 
   const openDetails = (id: string) => navigate(scoped(detailsPath(id)));
 
@@ -79,35 +81,39 @@ export function WebhooksPage() {
     );
   }
 
+  const visible = filterWebhooks(data, search);
+
   return (
     <>
-      <div className="overflow-hidden rounded-sm border border-border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t("LIST.NAME")}</TableHead>
-              <TableHead>{t("LIST.ENDPOINT")}</TableHead>
-              <TableHead>{t("LIST.ACTIONS")}</TableHead>
-              <TableHead>{t("LIST.STATUS")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paging.pageItems.map((webhook) => (
-              <WebhookRow key={webhook.id} webhook={webhook} onOpen={openDetails} />
-            ))}
-          </TableBody>
-        </Table>
-        <div className="border-t border-border p-2">
-          <Pagination
-            page={paging.page}
-            pageSize={paging.pageSize}
-            totalCount={paging.totalCount}
-            onChange={paging.setPage}
-            onPageSizeChange={paging.setPageSize}
-            compact
-          />
-        </div>
+      <div className="mb-4 flex justify-start">
+        <FilterControls.SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder={t("LIST.SEARCH")}
+          className="w-64"
+        />
       </div>
+      {visible.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{t("LIST.NO_MATCH")}</p>
+      ) : (
+        <div className="overflow-hidden rounded-sm border border-border bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t("LIST.NAME")}</TableHead>
+                <TableHead>{t("LIST.ENDPOINT")}</TableHead>
+                <TableHead>{t("LIST.ACTIONS")}</TableHead>
+                <TableHead>{t("LIST.STATUS")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {visible.map((webhook) => (
+                <WebhookRow key={webhook.id} webhook={webhook} onOpen={openDetails} />
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
       {addDialog}
     </>
   );
