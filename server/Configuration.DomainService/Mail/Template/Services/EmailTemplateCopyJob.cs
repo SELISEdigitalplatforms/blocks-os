@@ -71,6 +71,12 @@ namespace Configuration.DomainService.Mail.Template.Services
                     result.Replaced += written.Replaced;
                     result.Kept += written.Kept;
                     result.Failed += written.Failed;
+                    if (written.Failed > 0)
+                    {
+                        // C5: ids and the error type only, as for a failed batch.
+                        _logger.LogError("Email template copy {JobId}: some organizations failed. TemplateId={TemplateId} OrganizationIds={OrganizationIds} ErrorType={ErrorType}",
+                            command.JobId, command.TemplateId, string.Join(",", written.FailedOrganizationIds), written.RacedReplaceErrorType ?? "NoCopyAfterWrite");
+                    }
                 }
 #pragma warning disable CA1031 // C5: one failed batch is reported and the job goes on with the next one.
                 catch (Exception ex)

@@ -165,6 +165,21 @@ namespace XUnitTest.Integration
             result.Failed.Should().Be(1);
         }
 
+        [Fact] // review: the batch result names the organizations it counted as failed, so the job can log their ids
+        public async Task ABatchResult_NamesItsFailedOrganizations()
+        {
+            await Templates.InsertOneAsync(Source());
+            var taken = Copy("acme", OrganizationCopyIds.For(Tenant, "acme", "OrderConfirmation", "en-US"));
+            taken.Name = "SomethingElse";
+            await Templates.InsertOneAsync(taken);
+
+            var written = await Repository().WriteOrganizationCopiesAsync(Source(), new[] { "acme", "globex" }, false, Tenant, "user-1");
+
+            written.Failed.Should().Be(1);
+            written.FailedOrganizationIds.Should().Equal("acme");
+            written.RacedReplaceErrorType.Should().BeNull();
+        }
+
         [Fact] // review: a copy another job inserts between the read and the write is kept (Keep) ...
         public async Task ARacedCopy_IsKept_WithKeep()
         {

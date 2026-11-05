@@ -24,5 +24,11 @@ namespace Configuration.DomainService.Mail.Template.Services
         public int Replaced { get; set; }
         public int Kept { get; set; }
         public int Failed { get; set; }
+
+        /// <summary>The organizations counted in <see cref="Failed"/>, for the job's log (ids only).</summary>
+        public List<string> FailedOrganizationIds { get; } = [];
+
+        /// <summary>The error type of the raced organizations' replace when it failed, for the job's log.</summary>
+        public string? RacedReplaceErrorType { get; set; }
     }
 }

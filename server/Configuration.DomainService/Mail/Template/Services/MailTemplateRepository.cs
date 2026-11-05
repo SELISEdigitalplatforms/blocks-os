@@ -338,10 +338,11 @@ namespace Configuration.DomainService.Mail.Template.Services
                     await collection.UpdateManyAsync(gate & CopiesOf(name, language, raced), replaceUpdate);
                 }
 #pragma warning disable CA1031 // C5: only the raced organizations failed; the batch's other writes stand.
-                catch (Exception)
+                catch (Exception ex)
 #pragma warning restore CA1031
                 {
                     racedReplaced = false;
+                    result.RacedReplaceErrorType = ex.GetType().Name;
                 }
             }
 
@@ -357,7 +358,10 @@ namespace Configuration.DomainService.Mail.Template.Services
             {
                 var isRaced = raced.Contains(organizationId, StringComparer.Ordinal);
                 if (!present.Contains(organizationId) || (isRaced && replace && !racedReplaced))
+                {
                     result.Failed++;
+                    result.FailedOrganizationIds.Add(organizationId);
+                }
                 else if (replace)
                     result.Replaced++;
                 else
