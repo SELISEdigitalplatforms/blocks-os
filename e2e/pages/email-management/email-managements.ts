@@ -12,16 +12,16 @@ import { openEmailManagement } from "../../support/os-helpers";
 /** The template the Add Template flow created (step 1 only; its body is never saved). */
 export type CreatedTemplate = { name: string; subject: string };
 
-/**
- * `templateName` lets a caller know the name before step 1 saves it, so its cleanup can find the
- * template even when a later step fails.
- */
 /** Extra checks a caller runs inside the flow: before step 1 saves, and on step 2 after it. */
 export type AddTemplateHooks = {
   beforeSave?: (page: Page) => Promise<void>;
   afterSave?: (page: Page) => Promise<void>;
 };
 
+/**
+ * `templateName` lets a caller know the name before step 1 saves it, so its cleanup can find the
+ * template even when a later step fails.
+ */
 export async function addTemplateFlow(
   page: Page,
   templateName = `FlowTemplate${Date.now()}`,

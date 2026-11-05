@@ -199,10 +199,12 @@ export async function organizationTemplateFlow(
     templateSubject: "E2E copy subject",
     templateBody: "<p>E2E copy body.</p>",
   });
+  // A real call, so it names no real organization: even a server regression couldn't queue a job
+  // that touches one.
   const refused = await callMailApi(page, api, "POST", "CopyTemplateToOrganizations", {
     templateId: names.ids.organizationTemplate,
     allOrganizations: false,
-    organizationIds: [organizationId],
+    organizationIds: ["e2e-no-such-organization"],
     existing: "keep",
   });
   expect(refused.status).toBe(400);
@@ -217,11 +219,12 @@ export async function organizationTemplateFlow(
  * step 1 with the choice kept, and leaving before the step-2 save sends no copy request.
  */
 export async function shareInNewTemplateFlow(page: Page, names: CopyFixtures) {
+  // Any copy request is recorded and aborted, so nothing can be queued even if the flow regressed.
   const copyRequests: string[] = [];
-  const watch = (request: Request) => {
-    if (COPY_URL.test(request.url())) copyRequests.push(request.url());
-  };
-  page.on("request", watch);
+  await page.route(COPY_URL, async (route) => {
+    copyRequests.push(route.request().url());
+    await route.abort();
+  });
   try {
     await addTemplateFlow(page, names.wizard, {
       beforeSave: async (p) => {
@@ -262,31 +265,43 @@ export async function shareInNewTemplateFlow(page: Page, names: CopyFixtures) {
       },
     });
   } finally {
-    page.off("request", watch);
+    await page.unroute(COPY_URL);
   }
   expect(copyRequests, "no copy is requested before the step-2 save (C10)").toEqual([]);
 }
 
 /** §10 cleanup: the test's Default templates by name, and its organization template by id. */
 export async function deleteCopyFixtures(page: Page, names: CopyFixtures) {
-  const { api } = await consoleMailApi(page);
-  const query = (searchKey: string) =>
+  const { api, organizationId } = await consoleMailApi(page);
+  const query = (organization: string) =>
     new URLSearchParams({
       pageNumber: "0",
       pageSize: "50",
-      searchKey,
+      searchKey: names.prefix,
       sortProperty: "Name",
       isDescending: "false",
       language: "",
       mailConfigurationId: "",
-      organizationId: "default",
+      organizationId: organization,
     }).toString();
-  const list = await callMailApi(page, api, "GET", `GetTemplates?${query(names.prefix)}`);
-  const ids = (list.json.templates ?? [])
-    .filter((t) => t.name?.startsWith(names.prefix))
-    .map((t) => t.itemId);
-  if (names.ids.organizationTemplate) ids.push(names.ids.organizationTemplate);
-  for (const itemId of ids) {
-    await callMailApi(page, api, "DELETE", `DeleteTemplate?itemId=${encodeURIComponent(itemId)}`);
+  // The Default organization and the one the list shows (where New Template saved, if not Default).
+  const ids = new Set<string>();
+  for (const organization of new Set(["default", organizationId])) {
+    const list = await callMailApi(page, api, "GET", `GetTemplates?${query(organization)}`);
+    for (const t of list.json.templates ?? []) {
+      if (t.name?.startsWith(names.prefix)) ids.add(t.itemId);
+    }
   }
+  if (names.ids.organizationTemplate) ids.add(names.ids.organizationTemplate);
+  const failed: string[] = [];
+  for (const itemId of ids) {
+    const result = await callMailApi(
+      page,
+      api,
+      "DELETE",
+      `DeleteTemplate?itemId=${encodeURIComponent(itemId)}`,
+    );
+    if (result.status !== 200) failed.push(itemId);
+  }
+  expect(failed, "the test's templates were deleted").toEqual([]);
 }
