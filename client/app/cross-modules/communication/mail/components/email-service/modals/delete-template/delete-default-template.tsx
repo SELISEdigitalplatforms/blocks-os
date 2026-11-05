@@ -169,7 +169,7 @@ export function DeleteDefaultTemplate({
         // Focus starts on Cancel (board DeleteTemplateDefault). Opened from a ⋮ menu, the menu hands focus
         // back to its trigger as it closes, so Cancel takes it one tick later.
         event.preventDefault();
-        window.setTimeout(() => cancelRef.current?.focus(), 0);
+        globalThis.setTimeout(() => cancelRef.current?.focus(), 0);
       }}
     >
       <DialogHeader>

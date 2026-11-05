@@ -1,4 +1,10 @@
-import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import {
+  CellContext,
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
 import {
   Table,
   TableBody,
@@ -39,6 +45,16 @@ function TemplateLanguageCell({
 }: Readonly<{ template: IEmailTemplate; languages?: ProjectLanguage[] }>) {
   return <div className="truncate">{languageNameOf(template.language, languages)}</div>;
 }
+
+/** The table's meta: the project's languages, read by the Language cell. */
+type TemplateTableMeta = { languages?: ProjectLanguage[] };
+
+const languageCell = ({ row, table }: CellContext<IEmailTemplate, unknown>) => (
+  <TemplateLanguageCell
+    template={row.original}
+    languages={(table.options.meta as TemplateTableMeta | undefined)?.languages}
+  />
+);
 
 type EmailTemplateListProps = {
   templates: IEmailTemplate[];
@@ -100,7 +116,7 @@ export const EmailTemplateList = ({
       {
         accessorKey: "language",
         header: t("EMAIL_TEMPLATE_LIST.COLUMN_LANGUAGE"),
-        cell: ({ row }) => <TemplateLanguageCell template={row.original} languages={languages} />,
+        cell: languageCell,
       },
       {
         accessorKey: "MailConfigurationId",
@@ -185,12 +201,13 @@ export const EmailTemplateList = ({
         },
       },
     ],
-    [sortQueryParams, setSortQueryParams, emailConfigsData, languages, onRowClick, t],
+    [sortQueryParams, setSortQueryParams, emailConfigsData, onRowClick, t],
   );
   const table = useReactTable({
     data: templates,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    meta: { languages } satisfies TemplateTableMeta,
   });
   if (isLoading) return <LoadingSkeleton />;
   return (
