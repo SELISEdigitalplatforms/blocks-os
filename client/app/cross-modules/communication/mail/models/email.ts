@@ -33,6 +33,34 @@ export interface IAssignTemplatesRequest {
   language?: string;
 }
 
+/** SPEC33 §6.1: copy a Default organization template to organizations, in the Worker. */
+export interface ICopyTemplateToOrganizationsRequest {
+  templateId: string;
+  allOrganizations: boolean;
+  organizationIds?: string[];
+  existing: "keep" | "replace";
+}
+
+export interface ICopyTemplateToOrganizationsResponse {
+  isSuccess: boolean;
+  /** The queued job's id. */
+  itemId?: string | null;
+  errors?: unknown;
+}
+
+/** SPEC33 §6.2: an organization that already has its own template with the same name and language. */
+export interface ITemplateOrganizationCopy {
+  organizationId: string;
+  templateId: string;
+  lastUpdatedDate?: string;
+}
+
+export interface ITemplateOrganizationCopiesResponse {
+  isSuccess: boolean;
+  copies?: ITemplateOrganizationCopy[];
+  errors?: unknown;
+}
+
 export interface IAssignTemplatesResponse {
   isSuccess: boolean;
   /** Templates that switched; ones already on the configuration don't count. */

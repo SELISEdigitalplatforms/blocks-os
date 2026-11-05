@@ -1,10 +1,13 @@
 import {
   IAssignTemplatesRequest,
   IAssignTemplatesResponse,
+  ICopyTemplateToOrganizationsRequest,
+  ICopyTemplateToOrganizationsResponse,
   IEmailConfig,
   IEmailTemplate,
   IEmailUsageResponse,
   IGetMailBoxMailResponse,
+  ITemplateOrganizationCopiesResponse,
 } from "../models/email";
 import { http } from "@/lib/http/http-client";
 import {
@@ -300,6 +303,34 @@ class EmailService {
     return http.post<IAssignTemplatesResponse>(
       EMAIL_TEMPLATE_ENDPOINTS.ASSIGN_TEMPLATES,
       requestBody,
+      undefined,
+      { absoluteUrl: true },
+    );
+  }
+
+  /** Queues the Worker job that copies a Default organization template to organizations. */
+  copyTemplateToOrganizations(
+    requestBody: ICopyTemplateToOrganizationsRequest,
+  ): Promise<ICopyTemplateToOrganizationsResponse> {
+    return http.post<ICopyTemplateToOrganizationsResponse>(
+      EMAIL_TEMPLATE_ENDPOINTS.COPY_TEMPLATE_TO_ORGANIZATIONS,
+      requestBody,
+      undefined,
+      { absoluteUrl: true },
+    );
+  }
+
+  /** Which of these organizations (at most 25) already have their own copy of the template. */
+  getTemplateOrganizationCopies(
+    templateId: string,
+    organizationIds: string[],
+  ): Promise<ITemplateOrganizationCopiesResponse> {
+    const query = new URLSearchParams({
+      templateId,
+      organizationIds: organizationIds.join(","),
+    });
+    return http.get<ITemplateOrganizationCopiesResponse>(
+      `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATE_ORGANIZATION_COPIES}?${query.toString()}`,
       undefined,
       { absoluteUrl: true },
     );

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ArrowLeft, Copy, EllipsisVertical, Pencil, Send, Trash } from "lucide-react";
+import { ArrowLeft, Copy, CopyPlus, EllipsisVertical, Pencil, Send, Trash } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
@@ -36,6 +36,7 @@ import { TemplateConfigurationName } from "@blocks-communication/mail/email/emai
 import { CloneTemplateDialog } from "@blocks-communication/mail/components/email-service/modals/clone-template/clone-template";
 import { DeleteTemplateDialog } from "@blocks-communication/mail/components/email-service/modals/delete-template/delete-template";
 import { SendTestEmailDialog } from "@blocks-communication/mail/components/email-service/modals/send-test-email/send-test-email";
+import { CopyToOrganizationsDialog } from "@blocks-communication/mail/components/email-service/modals/copy-to-organizations/copy-to-organizations";
 import { EmailTemplateDetailsSkeleton } from "./email-template-details-skeleton";
 import { withStyleNonce } from "@/lib/csp-nonce";
 export function EmailCommunicationDetails({
@@ -65,6 +66,7 @@ export function EmailCommunicationDetails({
   const languages = Array.isArray(languageListData) ? languageListData : [];
   const [isCloneDialogOpen, setIsCloneDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -125,6 +127,30 @@ export function EmailCommunicationDetails({
           </div>
         </div>
         <div className="flex shrink-0 justify-end gap-2 sm:self-end">
+          {/* Only a Default organization template can be copied to organizations (SPEC33 H8, C1, C13). */}
+          {isMultiOrgEnabled && organizationId === DEFAULT_ORGANIZATION_ID ? (
+            <>
+              <Button
+                size="default"
+                className="gap-2 shadow-none"
+                onClick={() => setIsCopyDialogOpen(true)}
+              >
+                <CopyPlus className="h-5 w-5" />
+                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                  {t("COPY_TO_ORGANIZATIONS.BUTTON")}
+                </span>
+              </Button>
+              <Dialog open={isCopyDialogOpen} onOpenChange={setIsCopyDialogOpen}>
+                {isCopyDialogOpen ? (
+                  <CopyToOrganizationsDialog
+                    template={emailDetails}
+                    languageName={languageName}
+                    onClose={() => setIsCopyDialogOpen(false)}
+                  />
+                ) : null}
+              </Dialog>
+            </>
+          ) : null}
           <Button
             size="default"
             variant="outline"

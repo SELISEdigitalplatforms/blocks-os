@@ -15,6 +15,7 @@ public static class BuiltInNotificationNames
     public const string ProjectOwnershipTransferred = "os-project-ownership-transferred";
     public const string ProjectAccessChanged = "os-project-access-changed";
     public const string CustomDomainStatus = "os-custom-domain-status";
+    public const string EmailTemplateCopyFinished = "os-email-template-copy-finished";
 }
 
 /// <summary>

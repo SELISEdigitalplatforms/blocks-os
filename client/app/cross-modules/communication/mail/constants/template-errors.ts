@@ -18,6 +18,13 @@ const TEMPLATE_ERROR_KEYS: Record<string, string> = {
   "No more than 500 templates per request": "TEMPLATE_ERRORS.ASSIGN_TOO_MANY",
   "Some templates aren't in this configuration's organization":
     "TEMPLATE_ERRORS.ASSIGN_OTHER_ORGANIZATION",
+  "Only Default organization templates can be copied": "TEMPLATE_ERRORS.COPY_NOT_DEFAULT",
+  "Finish the template before copying": "TEMPLATE_ERRORS.COPY_EMPTY_BODY",
+  "Select at least one organization": "TEMPLATE_ERRORS.COPY_NONE_SELECTED",
+  "No more than 1000 organizations per request": "TEMPLATE_ERRORS.COPY_TOO_MANY",
+  "No more than 25 organizations per request": "TEMPLATE_ERRORS.COPY_LOOKUP_TOO_MANY",
+  "Choose keep or replace": "TEMPLATE_ERRORS.COPY_EXISTING_REQUIRED",
+  "Copying couldn't start. Try again.": "TEMPLATE_ERRORS.COPY_NOT_STARTED",
 };
 
 /** `customMessages` for showErrorToast: each known server message through its English key. */

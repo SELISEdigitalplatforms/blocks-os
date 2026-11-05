@@ -19,15 +19,18 @@ namespace BlocksOs.Api.Controllers
         private readonly IMailConfigurationService _mailConfigurationService;
         private readonly IMailTemplateService? _mailTemplateService;
         private readonly IMailboxService? _mailboxService;
+        private readonly IMailTemplateCopyService? _mailTemplateCopyService;
 
         public MailController(
             IMailConfigurationService mailConfigurationService,
             IMailTemplateService? mailTemplateService = null,
-            IMailboxService? mailboxService = null)
+            IMailboxService? mailboxService = null,
+            IMailTemplateCopyService? mailTemplateCopyService = null)
         {
             _mailConfigurationService = mailConfigurationService;
             _mailTemplateService = mailTemplateService;
             _mailboxService = mailboxService;
+            _mailTemplateCopyService = mailTemplateCopyService;
         }
 
         [HttpPost]
@@ -201,6 +204,27 @@ namespace BlocksOs.Api.Controllers
         public async Task<IActionResult> AssignTemplates([FromBody] AssignTemplatesRequest request)
         {
             var result = await _mailTemplateService!.AssignTemplatesAsync(request);
+            return result.IsSuccess ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>
+        /// Queues a copy of a Default organization template to all or selected organizations; the OS Worker makes the
+        /// copies and the requester gets a bell notification. Returns the job id.
+        /// </summary>
+        [HttpPost]
+        [ProtectedEndPoint("blocks-os::mail-template::save")]
+        public async Task<IActionResult> CopyTemplateToOrganizations([FromBody] CopyTemplateToOrganizationsRequest request)
+        {
+            var result = await _mailTemplateCopyService!.CopyToOrganizationsAsync(request);
+            return result.IsSuccess ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>Which of up to 25 organizations already have their own template with the same Name + Language.</summary>
+        [HttpGet]
+        [ProtectedEndPoint("blocks-os::mail-template::gets")]
+        public async Task<IActionResult> GetTemplateOrganizationCopies([FromQuery] GetTemplateOrganizationCopiesRequest request)
+        {
+            var result = await _mailTemplateCopyService!.GetOrganizationCopiesAsync(request);
             return result.IsSuccess ? Ok(result) : BadRequest(result);
         }
 

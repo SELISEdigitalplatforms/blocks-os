@@ -19,5 +19,11 @@ namespace Configuration.DomainService.Organizations
         /// (null for the first page). The Default organization is not stored, so it is never listed.
         /// </summary>
         Task<IReadOnlyList<OrganizationSummary>> GetEnabledPageAsync(string? after, int size, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Which of <paramref name="organizationIds"/> exist and are enabled, in one read. The Default organization is not
+        /// stored, so it is never among them.
+        /// </summary>
+        Task<IReadOnlySet<string>> GetEnabledAmongAsync(IReadOnlyCollection<string> organizationIds, CancellationToken cancellationToken = default);
     }
 }

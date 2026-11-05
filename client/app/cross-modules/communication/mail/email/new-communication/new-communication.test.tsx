@@ -23,6 +23,9 @@ vi.mock("@/hooks/use-toast", () => ({ toast: h.toast }));
 vi.mock("@blocks-communication/mail/hooks/use-email-template", () => ({
   useSaveMailTemplate: () => ({ mutateAsync: h.saveTemplate, isPending: h.isPending }),
 }));
+vi.mock("@blocks-communication/mail/hooks/use-template-copy", () => ({
+  useCopyTemplateToOrganizations: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
 vi.mock("@/components/breadcrumb/breadcrumb", () => ({
   default: () => <nav data-testid="breadcrumb" />,
 }));
@@ -44,10 +47,7 @@ vi.mock(
         <button type="button" onClick={() => onValidityChange(true)}>
           make-valid
         </button>
-        <button
-          type="button"
-          onClick={() => onSaveSuccess?.({ name: "Welcome", itemId: "tpl-1" })}
-        >
+        <button type="button" onClick={() => onSaveSuccess?.({ name: "Welcome", itemId: "tpl-1" })}>
           submit-basic
         </button>
         {actions}

@@ -34,6 +34,9 @@ import {
   TemplateConfigurationOptions,
 } from "@blocks-communication/mail/components/email-service/template-configuration-options/template-configuration-options";
 import { LockedField } from "@blocks-communication/mail/components/email-service/locked-field/locked-field";
+import { ShareWithOrganizations } from "@blocks-communication/mail/components/email-service/share-with-organizations/share-with-organizations";
+import { DEFAULT_ORGANIZATION_ID } from "@blocks-communication/mail/constants/organization";
+import type { ShareChoice } from "@blocks-communication/mail/constants/share-organizations";
 import { templateErrorMessages } from "@blocks-communication/mail/constants/template-errors";
 import { useSaveMailTemplate } from "@blocks-communication/mail/hooks/use-email-template";
 import { useGetLanguages } from "@blocks-localization/hooks/use-language-manager";
@@ -54,6 +57,12 @@ interface IBasicInformationProps {
   onValidityChange?: (isValid: boolean) => void;
   onPendingChange?: (isPending: boolean) => void;
   actions?: ReactNode;
+  /**
+   * SPEC33: whether the new template is also copied to other organizations. Offered only for the
+   * Default organization with multi-org on (C13); New Template keeps it across both steps.
+   */
+  shareChoice?: ShareChoice;
+  onShareChoiceChange?: (choice: ShareChoice) => void;
 }
 
 type TranslateFn = ReturnType<typeof useT>["t"];
@@ -140,6 +149,8 @@ const BasicInformation = forwardRef(function Inner(
     onValidityChange,
     onPendingChange,
     actions,
+    shareChoice,
+    onShareChoiceChange,
   }: IBasicInformationProps,
   ref,
 ) {
@@ -351,6 +362,19 @@ const BasicInformation = forwardRef(function Inner(
                   label={t("TEMPLATE_ORGANIZATION.ORGANIZATION")}
                   value={organizationName}
                 />
+              ) : null}
+
+              {organization.isMultiOrgEnabled &&
+              organizationId === DEFAULT_ORGANIZATION_ID &&
+              shareChoice &&
+              onShareChoiceChange ? (
+                <div className="md:col-span-2 xl:col-span-3">
+                  <ShareWithOrganizations
+                    choice={shareChoice}
+                    onChange={onShareChoiceChange}
+                    templateId={templateItemId || undefined}
+                  />
+                </div>
               ) : null}
 
               <FormField

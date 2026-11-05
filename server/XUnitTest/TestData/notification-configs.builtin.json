@@ -731,6 +731,23 @@
     "PushEnabled": false
   },
   {
+    "Name": "os-email-template-copy-finished",
+    "ChannelToNotify": 0,
+    "NotificationType": 2,
+    "NotifyMethod": "os-email-template-copy-finished",
+    "EnablePersistence": true,
+    "IsBuiltIn": true,
+    "Scope": 1,
+    "Description": "Copying a Default organization email template to organizations finished, with the created, replaced, kept, skipped and failed counts. Sent to the user who started it.",
+    "Importance": 2,
+    "Kind": 1,
+    "SourceService": "blocks-os",
+    "ConsumerAppRecommendation": "Listen on \"os-email-template-copy-finished\" on the Notifier hub; the payload carries ids and counts only, so re-read the template with the user's token and show the result with a link to it; it is saved to the inbox, so also list it there.",
+    "ConsumerAppNote": "Portal-only: Blocks projects and environments are managed in the Blocks portal; an app that only calls Blocks APIs never receives it.",
+    "LiveEnabled": true,
+    "PushEnabled": false
+  },
+  {
     "Name": "release-custom-domain-failed",
     "ChannelToNotify": 0,
     "NotificationType": 2,

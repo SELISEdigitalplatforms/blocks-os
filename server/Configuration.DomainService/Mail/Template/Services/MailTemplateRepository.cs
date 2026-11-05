@@ -215,6 +215,158 @@ namespace Configuration.DomainService.Mail.Template.Services
 
             await collection.DeleteOneAsync(deleteFilter);
         }
+
+        public async Task<List<EmailTemplate>> GetOrganizationCopiesAsync(string name, string language, IReadOnlyCollection<string> organizationIds)
+        {
+            var organizations = OrganizationsOnly(organizationIds);
+            if (organizations.Count == 0)
+            {
+                return [];
+            }
+
+            var collection = _dbContextProvider.GetCollection<EmailTemplate>(CollectionName);
+            var scope = await _dataAccess.ReadAsync(OsSchemas.EmailTemplate, CopiesOf(name, language, organizations),
+                "MailTemplateRepository.GetOrganizationCopiesAsync", useProjection: false);
+            return scope.Granted ? await scope.Apply(collection).SortBy(t => t.OrganizationId).ToListAsync() : [];
+        }
+
+        public async Task<OrganizationCopyBatchResult> WriteOrganizationCopiesAsync(EmailTemplate source, IReadOnlyCollection<string> organizationIds, bool replace, string tenantId, string userId)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+            const string callSite = "MailTemplateRepository.WriteOrganizationCopiesAsync";
+            var collection = _dbContextProvider.GetCollection<EmailTemplate>(CollectionName);
+            var filterBuilder = Builders<EmailTemplate>.Filter;
+            var name = source.Name ?? string.Empty;
+            var language = source.Language ?? string.Empty;
+            var organizations = OrganizationsOnly(organizationIds);
+            var result = new OrganizationCopyBatchResult();
+            if (organizations.Count == 0)
+            {
+                return result;
+            }
+
+            // One read: which of the batch's organizations already have this Name + Language.
+            var scope = await _dataAccess.ReadAsync(OsSchemas.EmailTemplate, CopiesOf(name, language, organizations), callSite, useProjection: false);
+            if (!scope.Granted)
+                throw new UnauthorizedAccessException("Access to the email templates was denied by the data access policy.");
+            var existing = (await scope.Apply(collection).ToListAsync())
+                .GroupBy(t => t.OrganizationId, StringComparer.Ordinal)
+                .ToDictionary(g => g.Key, g => g.Select(t => t.ItemId).ToList(), StringComparer.Ordinal);
+
+            var gate = await _dataAccess.EditFilterAsync(OsSchemas.EmailTemplate, filterBuilder.Empty, callSite);
+            if (gate is null || !await _dataAccess.InsertAllowedAsync(OsSchemas.EmailTemplate, callSite))
+                throw new UnauthorizedAccessException("Access to the email templates was denied by the data access policy.");
+
+            var now = DateTime.UtcNow;
+            var replaceUpdate = Builders<EmailTemplate>.Update
+                .Set(t => t.TemplateSubject, source.TemplateSubject)
+                .Set(t => t.TemplateBody, source.TemplateBody)
+                .Set(t => t.JsonContent, source.JsonContent)
+                .Set(t => t.ImageId, source.ImageId)
+                .Set(t => t.ImageUrl, source.ImageUrl)
+                .Set(t => t.LastUpdatedDate, now)
+                .Set(t => t.LastUpdatedBy, userId);
+            await _dataAccess.CheckUpdateAsync(OsSchemas.EmailTemplate, replaceUpdate, callSite);
+
+            var toCreate = organizations.Where(o => !existing.ContainsKey(o)).ToList();
+            var models = new List<WriteModel<EmailTemplate>>();
+            foreach (var organizationId in toCreate)
+            {
+                // The key is in the filter, so a re-delivered message finds the copy instead of adding one; the id is
+                // derived from the key, so two jobs inserting at once collide on _id instead (C4).
+                var insert = Builders<EmailTemplate>.Update
+                    .SetOnInsert(t => t.ItemId, OrganizationCopyIds.For(tenantId, organizationId, name, language))
+                    .SetOnInsert(t => t.TemplateSubject, source.TemplateSubject)
+                    .SetOnInsert(t => t.TemplateBody, source.TemplateBody)
+                    .SetOnInsert(t => t.JsonContent, source.JsonContent)
+                    .SetOnInsert(t => t.ImageId, source.ImageId)
+                    .SetOnInsert(t => t.ImageUrl, source.ImageUrl)
+                    .SetOnInsert(t => t.MailConfigurationId, string.Empty)
+                    .SetOnInsert(t => t.CreatedFromDefault, true)
+                    .SetOnInsert(t => t.Tags, new List<string>())
+                    .SetOnInsert(t => t.CreatedBy, userId)
+                    .SetOnInsert(t => t.LastUpdatedBy, userId)
+                    .SetOnInsert(t => t.GeneratedBy, userId)
+                    .SetOnInsert(t => t.CreatedDate, now)
+                    .SetOnInsert(t => t.LastUpdatedDate, now);
+                models.Add(new UpdateOneModel<EmailTemplate>(gate & CopyKey(organizationId, name, language), insert) { IsUpsert = true });
+            }
+
+            if (replace)
+            {
+                foreach (var id in existing.Values.SelectMany(ids => ids))
+                {
+                    models.Add(new UpdateOneModel<EmailTemplate>(gate & filterBuilder.Eq(t => t.ItemId, id), replaceUpdate));
+                }
+                result.Replaced = existing.Count;
+            }
+            else
+            {
+                result.Kept = existing.Count;
+            }
+
+            if (models.Count == 0)
+            {
+                return result;
+            }
+
+            var upserted = await BulkWriteAsync(collection, models);
+            result.Created = upserted.Count;
+
+            // An insert that found the copy already there was beaten by another job between our read and our write:
+            // that organization now has a copy, so Keep leaves it and Replace overwrites it, as for any existing copy.
+            var raced = toCreate.Where((_, index) => !upserted.Contains(index)).ToList();
+            if (raced.Count > 0)
+            {
+                if (replace)
+                {
+                    await collection.UpdateManyAsync(gate & filterBuilder.In(t => t.OrganizationId, raced)
+                        & filterBuilder.Eq(t => t.Name, name) & filterBuilder.Eq(t => t.Language, language), replaceUpdate);
+                    result.Replaced += raced.Count;
+                }
+                else
+                {
+                    result.Kept += raced.Count;
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// One unordered bulk write; the indexes of the models that inserted. A duplicate <c>_id</c> is not a failure:
+        /// another job inserted the same copy first. Any other write error fails the batch.
+        /// </summary>
+        private static async Task<HashSet<int>> BulkWriteAsync(IMongoCollection<EmailTemplate> collection, List<WriteModel<EmailTemplate>> models)
+        {
+            const int DuplicateKey = 11000;
+            try
+            {
+                var written = await collection.BulkWriteAsync(models, new BulkWriteOptions { IsOrdered = false });
+                return written.Upserts.Select(u => u.Index).ToHashSet();
+            }
+            catch (MongoBulkWriteException<EmailTemplate> ex) when (ex.WriteErrors.All(e => e.Code == DuplicateKey) && ex.WriteConcernError is null)
+            {
+                return ex.Result.Upserts.Select(u => u.Index).ToHashSet();
+            }
+        }
+
+        private static FilterDefinition<EmailTemplate> CopyKey(string organizationId, string name, string language) =>
+            Builders<EmailTemplate>.Filter.Eq(t => t.OrganizationId, organizationId)
+            & Builders<EmailTemplate>.Filter.Eq(t => t.Name, name)
+            & Builders<EmailTemplate>.Filter.Eq(t => t.Language, language);
+
+        private static FilterDefinition<EmailTemplate> CopiesOf(string name, string language, IReadOnlyCollection<string> organizations) =>
+            Builders<EmailTemplate>.Filter.Eq(t => t.Name, name)
+            & Builders<EmailTemplate>.Filter.Eq(t => t.Language, language)
+            & Builders<EmailTemplate>.Filter.In(t => t.OrganizationId, organizations);
+
+        // Copies live in organizations: the Default organization's own template is the source, never a copy.
+        private static List<string> OrganizationsOnly(IReadOnlyCollection<string> organizationIds) =>
+            organizationIds
+                .Where(id => OrganizationIds.Normalize(id) != OrganizationIds.Default)
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
     }
 }
 
