@@ -1,15 +1,24 @@
 import { ICreateModelPayload } from "@blocks-ai/types/aimodel.service.type";
 import { z } from "zod";
+import { isParsableUrl } from "@/lib/url-format";
 import { ProviderToPlatformMap, ServicePlatform } from "./aimodel-provider.utils";
+import { tStatic } from "@seliseblocks/genesis-os";
 
-export const OpenAIModelSchema = z.object({
-  model: z.string().trim().min(1, "Model is required"),
-  url: z.string().trim().url("Enter a valid URL"),
-  apiKey: z.string().min(1, "API key is required"),
-  organizationId: z.string().trim().optional(),
-  projectId: z.string().trim().optional(),
-});
-type FormSchemaOpenai = z.infer<typeof OpenAIModelSchema>;
+const KEY_API_KEY_IS_REQUIRED = "AIMODEL_FORM_UTILS.API_KEY_IS_REQUIRED";
+const KEY_ENTER_A_VALID_URL = "AIMODEL_FORM_UTILS.ENTER_A_VALID_URL";
+const KEY_MODEL_IS_REQUIRED = "AIMODEL_FORM_UTILS.MODEL_IS_REQUIRED";
+
+const I18N_MODULE = "os.ai";
+
+export const createOpenAIModelSchema = () =>
+  z.object({
+    model: z.string().trim().min(1, tStatic(I18N_MODULE, KEY_MODEL_IS_REQUIRED)),
+    url: z.string().trim().refine(isParsableUrl, tStatic(I18N_MODULE, KEY_ENTER_A_VALID_URL)),
+    apiKey: z.string().min(1, tStatic(I18N_MODULE, KEY_API_KEY_IS_REQUIRED)),
+    organizationId: z.string().trim().optional(),
+    projectId: z.string().trim().optional(),
+  });
+type FormSchemaOpenai = z.infer<ReturnType<typeof createOpenAIModelSchema>>;
 export const OpenAIModelDefaults = (defaultModel: string): FormSchemaOpenai => ({
   model: defaultModel,
   url: "",
@@ -18,25 +27,30 @@ export const OpenAIModelDefaults = (defaultModel: string): FormSchemaOpenai => (
   projectId: "",
 });
 
-export const OfficialApiModelSchema = z.object({
-  model: z.string().trim().min(1, "Model is required"),
-  url: z.string().trim().url("Enter a valid URL"),
-  apiKey: z.string().min(1, "API key is required"),
-});
-type FormSchemaOfficialApi = z.infer<typeof OfficialApiModelSchema>;
+export const createOfficialApiModelSchema = () =>
+  z.object({
+    model: z.string().trim().min(1, tStatic(I18N_MODULE, KEY_MODEL_IS_REQUIRED)),
+    url: z.string().trim().refine(isParsableUrl, tStatic(I18N_MODULE, KEY_ENTER_A_VALID_URL)),
+    apiKey: z.string().min(1, tStatic(I18N_MODULE, KEY_API_KEY_IS_REQUIRED)),
+  });
+type FormSchemaOfficialApi = z.infer<ReturnType<typeof createOfficialApiModelSchema>>;
 export const OfficialApiModelDefaults = (defaultModel: string): FormSchemaOfficialApi => ({
   model: defaultModel,
   url: "",
   apiKey: "",
 });
 
-export const OpenDeploymentModelSchema = z.object({
-  model: z.string().trim().min(1, "Model is required"),
-  url: z.string().trim().url("Enter a valid URL"),
-  deploymentName: z.string().trim().min(1, "Deployment name is required"),
-  apiKey: z.string().min(1, "API key is required"),
-});
-type FormSchemaOpenDeployment = z.infer<typeof OpenDeploymentModelSchema>;
+export const createOpenDeploymentModelSchema = () =>
+  z.object({
+    model: z.string().trim().min(1, tStatic(I18N_MODULE, KEY_MODEL_IS_REQUIRED)),
+    url: z.string().trim().refine(isParsableUrl, tStatic(I18N_MODULE, KEY_ENTER_A_VALID_URL)),
+    deploymentName: z
+      .string()
+      .trim()
+      .min(1, tStatic(I18N_MODULE, "AIMODEL_FORM_UTILS.DEPLOYMENT_NAME_IS_REQUIRED")),
+    apiKey: z.string().min(1, tStatic(I18N_MODULE, KEY_API_KEY_IS_REQUIRED)),
+  });
+type FormSchemaOpenDeployment = z.infer<ReturnType<typeof createOpenDeploymentModelSchema>>;
 export const OpenDeploymentDefaults = (defaultModel: string): FormSchemaOpenDeployment => ({
   model: defaultModel,
   url: "-",
@@ -94,7 +108,7 @@ export const resolveModelConfig = (
 
   if (provider === "openai") {
     return {
-      schema: OpenAIModelSchema,
+      schema: createOpenAIModelSchema(),
       defaultValues: OpenAIModelDefaults(defaultModel),
       fields: ["model", "url", "apiKey", "organizationId", "projectId"],
     };
@@ -102,14 +116,14 @@ export const resolveModelConfig = (
 
   if (servicePlatform === ServicePlatform.OPEN_DEPLOYMENT) {
     return {
-      schema: OpenDeploymentModelSchema,
+      schema: createOpenDeploymentModelSchema(),
       defaultValues: OpenDeploymentDefaults(defaultModel),
       fields: ["model", "url", "deploymentName", "apiKey"],
     };
   }
 
   return {
-    schema: OfficialApiModelSchema,
+    schema: createOfficialApiModelSchema(),
     defaultValues: OfficialApiModelDefaults(defaultModel),
     fields: ["model", "url", "apiKey"],
   };

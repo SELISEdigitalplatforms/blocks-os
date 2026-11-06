@@ -1,5 +1,5 @@
 using Blocks.Genesis;
-using Cloud.DomainService.Models;
+using Blocks.Genesis.Entities.Iam;
 using Cloud.DomainService.Requests;
 using Cloud.DomainService.Responses;
 using MongoDB.Bson;
@@ -23,9 +23,9 @@ namespace Cloud.DomainService.Repositories
 
         public async Task<(List<ApiEndpointConfigResponse>, long)> GetListAsync(GetApiEndpointConfigsRequest request)
         {
-            var collection = _dbContextProvider.GetCollection<ApiEndpointConfig>(CollectionName);
-            var filter = Builders<ApiEndpointConfig>.Filter.Empty;
-            filter &= Builders<ApiEndpointConfig>.Filter.Nin(
+            var collection = _dbContextProvider.GetCollection<Permission>(CollectionName);
+            var filter = Builders<Permission>.Filter.Empty;
+            filter &= Builders<Permission>.Filter.Nin(
                     x => x.ResourceGroup,
                     new[]
                     {
@@ -37,21 +37,21 @@ namespace Cloud.DomainService.Repositories
                         "uds"
                     });
             if (!string.IsNullOrWhiteSpace(request.Filter?.ResourceGroup))
-                filter &= Builders<ApiEndpointConfig>.Filter.Eq(x => x.ResourceGroup, request.Filter.ResourceGroup);
+                filter &= Builders<Permission>.Filter.Eq(x => x.ResourceGroup, request.Filter.ResourceGroup);
 
             if (!string.IsNullOrWhiteSpace(request.Filter?.Controller) && !string.IsNullOrWhiteSpace(request.Filter?.Method))
             {
-                filter &= Builders<ApiEndpointConfig>.Filter.Regex(x => x.Resource,
+                filter &= Builders<Permission>.Filter.Regex(x => x.Resource,
                     new BsonRegularExpression($"^[^:]+::{Regex.Escape(request.Filter.Controller)}::{Regex.Escape(request.Filter.Method)}$", "i"));
             }
             else if (!string.IsNullOrWhiteSpace(request.Filter?.Controller))
             {
-                filter &= Builders<ApiEndpointConfig>.Filter.Regex(x => x.Resource,
+                filter &= Builders<Permission>.Filter.Regex(x => x.Resource,
                     new BsonRegularExpression($"^[^:]+::{Regex.Escape(request.Filter.Controller)}::", "i"));
             }
             else if (!string.IsNullOrWhiteSpace(request.Filter?.Method))
             {
-                filter &= Builders<ApiEndpointConfig>.Filter.Regex(x => x.Resource,
+                filter &= Builders<Permission>.Filter.Regex(x => x.Resource,
                     new BsonRegularExpression($"::{Regex.Escape(request.Filter.Method)}$", "i"));
             }
 
@@ -70,7 +70,7 @@ namespace Cloud.DomainService.Repositories
                     Method = parts.Length > 2 ? parts[2] : string.Empty,
                     Service = x.ResourceGroup,
                     Name = x.Name,
-                    Type = x.Type,
+                    Type = (int)x.Type,
                     Description = x.Description,
                     Resource = x.Resource,
                     ResourceGroup = x.ResourceGroup,
@@ -78,17 +78,9 @@ namespace Cloud.DomainService.Repositories
                     IsArchived = x.IsArchived,
                     DependentPermissions = x.DependentPermissions,
                     Roles = x.Roles,
-                    UserId = x.UserId,
-                    IsCaptchaRequired = x.IsCaptchaRequired,
-                    IsMFARequired = x.IsMFARequired,
-                    MfaMediaType = x.MfaMediaType,
-                    IsAllowed = x.IsAllowed,
-                    Limit = x.Limit,
-                    Usage = x.Usage,
-                    BaseUrl = x.BaseUrl,
-                    Version = x.Version,
+                    IsCaptchaRequired = x.IsCaptchaRequired ?? false,
+                    IsMFARequired = x.IsMFARequired ?? false,
                     ItemId = x.ItemId,
-                    HttpMethod = x.HttpMethod,
                 };
             }).ToList();
             return (mapped, count);
@@ -96,11 +88,10 @@ namespace Cloud.DomainService.Repositories
 
         public async Task<bool> UpdateAsync(string itemId, bool isCaptchaRequired, bool isMfaRequired, string updatedBy)
         {
-           // var db = _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, _blocksSecret.RootDatabaseName);
-            var collection = _dbContextProvider.GetCollection<ApiEndpointConfig>(CollectionName);
+            var collection = _dbContextProvider.GetCollection<Permission>(CollectionName);
 
-            var filter = Builders<ApiEndpointConfig>.Filter.Eq(x => x.ItemId, itemId);
-            var update = Builders<ApiEndpointConfig>.Update
+            var filter = Builders<Permission>.Filter.Eq(x => x.ItemId, itemId);
+            var update = Builders<Permission>.Update
                 .Set(x => x.IsCaptchaRequired, isCaptchaRequired)
                 .Set(x => x.IsMFARequired, isMfaRequired)
                 .Set(x => x.LastUpdatedBy, updatedBy)
@@ -112,11 +103,10 @@ namespace Cloud.DomainService.Repositories
 
         public async Task<long> BulkUpdateAsync(List<string> itemIds, bool isCaptchaRequired, bool isMfaRequired, string updatedBy)
         {
-           // var db = _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, _blocksSecret.RootDatabaseName);
-            var collection = _dbContextProvider.GetCollection<ApiEndpointConfig>(CollectionName);
+            var collection = _dbContextProvider.GetCollection<Permission>(CollectionName);
 
-            var filter = Builders<ApiEndpointConfig>.Filter.In(x => x.ItemId, itemIds);
-            var update = Builders<ApiEndpointConfig>.Update
+            var filter = Builders<Permission>.Filter.In(x => x.ItemId, itemIds);
+            var update = Builders<Permission>.Update
                 .Set(x => x.IsCaptchaRequired, isCaptchaRequired)
                 .Set(x => x.IsMFARequired, isMfaRequired)
                 .Set(x => x.LastUpdatedBy, updatedBy)

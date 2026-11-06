@@ -23,6 +23,7 @@ import { UserProfileSidebar } from "../user-profile-sidebar";
 import { UpdateUser } from "@blocks-idp/iam/modules/user-management/update-user";
 import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
 import { getUserDisplayName } from "@blocks-idp/iam/utils/user-display-name";
+import { useT } from "@seliseblocks/genesis-os";
 
 export type UserProfileTab = {
   value: string;
@@ -71,6 +72,7 @@ export const UserProfileShell = ({
   isLoading,
   fixedHeaderOffsetPx = 83,
 }: UserProfileShellProps) => {
+  const { t } = useT("os.idp.iam-ui");
   const initialTab = defaultTab ?? tabs[0]?.value ?? "";
   const [tabId, setTabId] = useQueryState("userDetails", { defaultValue: initialTab });
   const activeTab = tabs.find((t) => t.value === tabId) ?? tabs[0];
@@ -79,7 +81,7 @@ export const UserProfileShell = ({
   // mutating the shared map, and it has no isLoadingLastItem prop.
   void isLoading;
   const breadcrumbTitles = {
-    "/app/iam/user-detail": "Users",
+    "/app/iam/user-detail": t("USER_PROFILE_SHELL.BREADCRUMB_USERS"),
     [`/app/iam/user-detail/${id}`]: activeTab?.label || "",
   };
 

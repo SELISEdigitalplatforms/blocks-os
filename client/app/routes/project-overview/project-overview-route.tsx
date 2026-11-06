@@ -1,6 +1,7 @@
 import { useProjectPermissions } from "@/hooks/use-project-access";
 import { useGetProjects } from "@/hooks/use-project";
 import { ProjectOverviewLayout } from "@/layouts/project-overview/project-overview-layout";
+import { useT } from "@seliseblocks/genesis-os";
 import { AppLoadingSpinner } from "@seliseblocks/genesis-os/components";
 import type { LayoutProps } from "@seliseblocks/genesis-os/layouts";
 import { useProjectStore } from "@seliseblocks/genesis-os/store";
@@ -95,6 +96,8 @@ export function ProjectOverviewRoute({
   consolePath = "/app/console",
   paramName = "tenantGroupId",
 }: ProjectOverviewRouteProps) {
+  // Menu texts are read while rendering; subscribing here re-renders the sidebar on a language change.
+  useT("os.shared");
   const params = useParams();
   const location = useLocation();
   const tenantGroupId = params[paramName];

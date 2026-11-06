@@ -184,6 +184,8 @@ export const mockEmailServiceFactory = () => ({
     fetchEmailTemplate: vi.fn(),
     getMailBoxMails: vi.fn(),
     getMailBoxMail: vi.fn(),
+    getMailBoxMailSource: vi.fn(),
+    getMailBoxMailAttachmentFile: vi.fn(),
     saveMailConfig: vi.fn(),
     sendTestMail: vi.fn(),
     saveMailTemplate: vi.fn(),

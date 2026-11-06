@@ -1,6 +1,5 @@
 using Azure;
 using Blocks.Genesis;
-using Blocks.MailDriver;
 using Cloud.LmtService.Models.ArchiveAndDelete;
 using Cloud.LmtService.Models.ColdRestore;
 using Cloud.LmtService.Models.Logs;
@@ -20,6 +19,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text.Json;
+using Os.DataAccess;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -40,19 +40,17 @@ namespace Cloud.LmtService.Services.ColdRestore
         private readonly ILogTraceRestoreResultRepository _coldRestoreResultRepository;
         private readonly ILogTraceRestoreParquetReader _coldRestoreParquetReader;
         private readonly ILmtArchiveRestoreConfigurationRepository _lmtArchiveRestoreConfigurationRepository;
-        private readonly IMailDriverService _mailDriverService;
-        private readonly IHttpService _httpService;
-        private readonly ICryptoService _cryptoService;
-        private readonly ITenants _tenants;
+        private readonly IDbContextProvider _dbContextProvider;
+        private readonly IOsDataAccess _dataAccess;
         private readonly IArchiveRestoreRepository _archiveRestoreRepository;
         private readonly IRestoreUserRepository _userRepository;
         [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "DI constructor: each parameter is an injected dependency.")]
         public LogTraceRestoreService(ILogger<LogTraceRestoreService> logger, ILogTraceRestoreRepository coldRestoreRepository, IMessageClient messageClient, ILogTraceRestoreResultRepository coldRestoreResultRepository,
     ILogTraceRestoreParquetReader coldRestoreParquetReader, IBlobStorage blobStorage, IConfiguration configuration,
-    ILmtArchiveRestoreConfigurationRepository lmtArchiveRestoreConfigurationRepository, IMailDriverService mailDriverService,
-    IHttpService httpService, ICryptoService cryptoService, ITenants tenants, IArchiveRestoreRepository archiveRestoreRepository,
-    IRestoreUserRepository userRepository)
+    ILmtArchiveRestoreConfigurationRepository lmtArchiveRestoreConfigurationRepository, IDbContextProvider dbContextProvider,
+    IArchiveRestoreRepository archiveRestoreRepository, IRestoreUserRepository userRepository, IOsDataAccess dataAccess)
         {
+            _dataAccess = dataAccess;
             _logger = logger;
             _coldRestoreRepository = coldRestoreRepository;
             _messageClient = messageClient;
@@ -61,10 +59,7 @@ namespace Cloud.LmtService.Services.ColdRestore
             _blobStorage = blobStorage;
 
             _lmtArchiveRestoreConfigurationRepository = lmtArchiveRestoreConfigurationRepository;
-            _mailDriverService = mailDriverService;
-            _httpService = httpService;
-            _cryptoService = cryptoService;
-            _tenants = tenants;
+            _dbContextProvider = dbContextProvider;
             _archiveRestoreRepository = archiveRestoreRepository;
             _userRepository = userRepository;
         }
@@ -138,6 +133,7 @@ namespace Cloud.LmtService.Services.ColdRestore
                     ConsumerName = Constants.ColdRestoreQueue,
                     Payload = message
                 });
+
 
             return new StartColdRestoreResponse
             {
@@ -242,9 +238,23 @@ namespace Cloud.LmtService.Services.ColdRestore
                     SendPhoneNumberAsEmail = true
                 };
 
-                var response = await _mailDriverService.SendAsync(sendMailCommand);
-                _logger.LogInformation("Email notification sent to {Email} with tier {Tier} and status {Status}. Success: {IsSuccess}", email, tier, status, response.IsSuccess);
-                return response.IsSuccess;
+                // Same checks the retired mail driver ran in the request; a failure queues nothing.
+                var failedCheck = await MailPreCheck.FindFailureAsync(
+                    _dbContextProvider, _dataAccess, sendMailCommand.Purpose, sendMailCommand.Language, sendMailCommand.To, sendMailCommand.SendPhoneNumberAsEmail, sendMailCommand.BodyDataContext);
+                if (failedCheck != null)
+                {
+                    _logger.LogError("Email notification to {Email} not queued: pre-check failed ({FailedCheck}).", email, failedCheck);
+                    return false;
+                }
+
+                await _messageClient.SendToConsumerAsync(
+                    new ConsumerMessage<SendMail>
+                    {
+                        ConsumerName = Constants.MailQueue,
+                        Payload = sendMailCommand
+                    });
+                _logger.LogInformation("Email notification sent to {Email} with tier {Tier} and status {Status}. Success: {IsSuccess}", email, tier, status, true);
+                return true;
             }
             catch (Exception ex)
             {
@@ -253,105 +263,6 @@ namespace Cloud.LmtService.Services.ColdRestore
             }
 
         }
-        /// <summary>
-        /// What a finished restore says to the person who asked for it: a title that names the
-        /// outcome and a line saying what they can do next.
-        /// </summary>
-        /// <remarks>
-        /// Written out per outcome rather than interpolated from the enum, which read as
-        /// "Cold data restoration has been PartialSuccess." -- an internal name in front of a
-        /// reader who never sees the enum.
-        /// </remarks>
-        private static (string Title, string Description) RestoreNotificationText(string tier, string status)
-        {
-            var tierLabel = string.Equals(tier, nameof(RestoreSourceType.Archive), StringComparison.OrdinalIgnoreCase)
-                ? "Archive"
-                : "Cold storage";
-
-            var outcome = status switch
-            {
-                nameof(RestoreRequestStatus.Completed) => "complete",
-                nameof(RestoreRequestStatus.PartialSuccess) => "partly complete",
-                nameof(RestoreRequestStatus.Failed) => "failed",
-                nameof(RestoreRequestStatus.Cancelled) => "cancelled",
-                _ => "update"
-            };
-
-            var description = status switch
-            {
-                nameof(RestoreRequestStatus.Completed) =>
-                    "The logs and traces you requested are restored and ready to view.",
-                nameof(RestoreRequestStatus.PartialSuccess) =>
-                    "Some files could not be read, so the restored logs and traces are incomplete. What came back is ready to view.",
-                nameof(RestoreRequestStatus.Failed) =>
-                    "No logs or traces could be restored. You can request the same date range again from the Tracing page.",
-                nameof(RestoreRequestStatus.Cancelled) =>
-                    "The restore was cancelled, and its partially restored logs and traces were discarded.",
-                _ => "The restore has finished. Open the Tracing page to see what came back."
-            };
-
-            return ($"{tierLabel} restore {outcome}", description);
-        }
-
-        private async Task<bool> NotifyEvent(string tier, string status, string? messageCoRelationId, string tenantId, string? userId, CancellationToken ct = default)
-        {
-            try
-            {
-                var config = await GetNotificationConfig(ct);
-
-                if (string.IsNullOrWhiteSpace(config.NotificationUrl))
-                {
-                    _logger.LogWarning("Notification URL is not configured. Skipping notification for tenant {TenantId}.", tenantId);
-                    return false;
-                }
-
-                var (title, description) = RestoreNotificationText(tier, status);
-
-                var requestData = new NotificationRequest
-                {
-                    ConnectionId = messageCoRelationId,
-                    UserIds = [userId ?? string.Empty],
-                    DenormalizedPayload = JsonSerializer.Serialize(new
-                    {
-                        title,
-                        description
-                    }),
-                    SaveDenormalizedPayloadAsAnObject = false,
-                    ConfigurationName = config.NotificationConfigName,
-                    ContentAvailable = true,
-                    ResponseKey = "Log and Trace Restoration Status Update",
-                    ResponseValue = description,
-                };
-
-                // Prefer the ambient context's originating tenant, which is what the notification
-                // service authenticates against. Falls back to the tenant on the persisted request
-                // because this also runs on a queue consumer, where there may be no ambient context
-                // at all — and dereferencing a missing one threw inside this try, turning a missing
-                // context into a silently skipped notification.
-                var xblocksKey = BlocksContext.GetContext()?.OriginalTenantId ?? tenantId;
-                var salt = _tenants.GetTenantByID(xblocksKey)?.TenantSalt;
-                var signedSecret = _cryptoService.Hash(xblocksKey, salt);
-
-                var headers = new Dictionary<string, string>
-                {
-                    { "x-blocks-key", xblocksKey },
-                    { "Secret", signedSecret }
-                };
-
-                var (response, _) = await _httpService.Post<NotificationResponse>(
-                     requestData, config.NotificationUrl, "application/json", headers, ct);
-
-                _logger.LogInformation("Notification sent with result {Result} for tenant {TenantId} with tier {Tier} and status {Status}.", response?.isSuccess, tenantId, tier, status);
-                return response != null && response.isSuccess;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to send notification for tenant {TenantId} with tier {Tier} and status {Status}.", tenantId, tier, status);
-                return false;
-            }
-
-        }
-
         private async Task<int> GetRetentionDaysAsync(CancellationToken ct = default)
         {
             var config = await _lmtArchiveRestoreConfigurationRepository.GetLmtArchiveRestoreConfigurationsAsync(ct);
@@ -361,11 +272,6 @@ namespace Cloud.LmtService.Services.ColdRestore
         {
             var config = await _lmtArchiveRestoreConfigurationRepository.GetLmtArchiveRestoreConfigurationsAsync(ct);
             return config.EmailTemplateConfig ?? new LogTraceRestoreEmailTConfig {TemplateName = string.Empty };
-        }
-        private async Task<NotificationConfig>GetNotificationConfig(CancellationToken ct = default)
-        {
-            var config = await _lmtArchiveRestoreConfigurationRepository.GetLmtArchiveRestoreConfigurationsAsync(ct);
-            return config.NotificationConfig ?? new NotificationConfig { NotificationUrl = string.Empty, NotificationConfigName = string.Empty };
         }
         public async Task<GetHotDataUploadToBlobInDays> GetHotDataRetentionPeriodInDays(CancellationToken ct = default)
         {
@@ -545,15 +451,7 @@ namespace Cloud.LmtService.Services.ColdRestore
                 _logger.LogInformation("Email sent status {Result} for RequestId {RequestId}", emailed, requestId);
             }
 
-            // Deliberately outside the email guard: the in-app notification is what lets the UI
-            // drop its progress overlay, so a missing address must not suppress it.
-            await NotifyEvent(
-                requestRecord.SourceType.ToString(),
-                finalStatus.ToString(),
-                requestId,
-                requestRecord.TenantId,
-                requestRecord.UserId,
-                ct);
+
         }
 
         private static bool IsTerminal(RestoreRequestStatus status) =>
@@ -573,17 +471,20 @@ namespace Cloud.LmtService.Services.ColdRestore
         /// mid-flight, which for archive restores (hours of rehydration) deletes the request record
         /// out from under the job that is still working on it.
         /// </summary>
-        private async Task ExtendRetentionFromCompletionAsync(string requestId, CancellationToken ct)
+        /// <returns>The new expiry, or null when it could not be extended.</returns>
+        private async Task<DateTime?> ExtendRetentionFromCompletionAsync(string requestId, CancellationToken ct)
         {
             try
             {
                 var retentionDays = await GetRetentionDaysAsync(ct);
-                await _coldRestoreRepository.ExtendRequestExpiryAsync(
-                    requestId, DateTime.UtcNow.AddDays(retentionDays), ct);
+                var expireAt = DateTime.UtcNow.AddDays(retentionDays);
+                await _coldRestoreRepository.ExtendRequestExpiryAsync(requestId, expireAt, ct);
+                return expireAt;
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Could not extend retention for RequestId {RequestId}", requestId);
+                return null;
             }
         }
         private async Task PrepareRestorePlanAsync(ColdRestoreMessage message, CancellationToken ct = default)

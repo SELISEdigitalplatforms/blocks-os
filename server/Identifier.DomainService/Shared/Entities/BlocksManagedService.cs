@@ -12,6 +12,14 @@ namespace DomainService.Shared.Entities
         public string ServiceId { get; set; }
         public Dictionary<string, object> Metadata { get; set; } = new();
         public string ServiceBusConnectionString { get; set; }
+
+        /// <summary>
+        /// The Blocks Secrets id of the connection string. When set, ServiceBusConnectionString is empty;
+        /// when null, ServiceBusConnectionString holds the TenantSalt ciphertext (rows registered before this field).
+        /// </summary>
+        [BsonIgnoreIfNull]
+        public string? ServiceBusConnectionStringReference { get; set; }
+
         public string ServiceType { get; set; }
     }
 

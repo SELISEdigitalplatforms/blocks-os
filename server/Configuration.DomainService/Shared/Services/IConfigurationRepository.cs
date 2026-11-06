@@ -1,12 +1,12 @@
 ﻿using Blocks.Genesis;
-using Configuration.DomainService.Mail.Entities;
 using Configuration.DomainService.Mail.RequestModel;
-using Configuration.DomainService.Notification.Entities;
 using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Notification.ResponseModel;
 using Configuration.DomainService.Storage.Entities;
-using Configuration.DomainService.DataGateway.Entities;
+using MongoDB.Bson;
 using System.Linq.Expressions;
+using Blocks.Genesis.Entities.Data;
+using Blocks.Genesis.Entities.Os;
 
 namespace Configuration.DomainService.Shared.Services
 {
@@ -22,45 +22,45 @@ namespace Configuration.DomainService.Shared.Services
 
         #endregion
 
-        #region Storage
-
-        public Task SaveStorageConfigurationAsync(StorageConfiguration configuration);
-        Task<StorageConfiguration> GetStorageConfigurationByNameAsync(string configurationName);
-        Task<List<StorageConfiguration>> GetAllStorageConfigurationsByDateAsync();
-        Task DeleteStorageConfigurationByNameAsync(string configurationName);
-        Task<StorageConfiguration> GetStorageConfigurationByIdAsync(string itemId);
-        Task<StorageConfiguration?> GetStorageConfigurationStrategyAsync(string storageStrategy);
-
-        #endregion
-
         #region Mail
 
         Task SaveMailConfigurationAsync(MailServerConfiguration configuration);
 
         /// <summary>
         /// Sets the sender name and audit fields of one configuration in place, leaving every other
-        /// field of the stored document untouched — including any the entity does not map.
+        /// field of the stored document untouched — including any the entity does not map. Also writes
+        /// the Default organization, which the project default record belongs to, so a record stored
+        /// before organizations gets the element on its first save.
         /// </summary>
         Task UpdateMailSenderNameAsync(string configurationId, string senderName, DateTime lastUpdatedDate, string lastUpdatedBy);
         Task<MailServerConfiguration> GetMailConfigurationByIdAsync(string configurationId);
         Task<MailServerConfiguration> GetMailConfigurationByNameAsync(string configurationName);
-        Task<List<MailServerConfiguration>> GetAllMailConfigurationsAsync();
+        /// <summary>The configuration as the caller may see it: properties a column rule hides are left out. Never save it back.</summary>
+        Task<MailServerConfiguration> GetMailConfigurationByNameForViewAsync(string configurationName);
+        /// <summary>
+        /// The configurations the API lists, in one query: all of them for a null
+        /// <paramref name="organizationId"/>, the Default organization's for <c>"default"</c>, and
+        /// that organization's plus the Default organization's for any other id. A document without
+        /// an organization counts as the Default organization's.
+        /// </summary>
+        Task<List<MailServerConfiguration>> GetAllMailConfigurationsAsync(string? organizationId);
 
         /// <summary>
-        /// The configurations whose <see cref="MailServerConfiguration.ClientSecretReference"/>
-        /// equals <paramref name="clientSecretReference"/>, in the caller's tenant. Used to warn
-        /// before a secret is archived or purged; never returns anything for a blank reference.
+        /// Clears <see cref="MailServerConfiguration.IsOrganizationDefault"/>, in one update, on the
+        /// organization's configurations saved before <paramref name="keepConfigurationId"/> (by
+        /// <paramref name="savedAt"/>, then id). Racing saves can still leave several marked; then every
+        /// mark ordered before the latest one is cleared, which can include the kept configuration's own.
         /// </summary>
-        Task<List<MailServerConfiguration>> GetMailConfigurationsByClientSecretReferenceAsync(string clientSecretReference);
+        Task ClearOtherOrganizationDefaultsAsync(string organizationId, string keepConfigurationId, DateTime savedAt);
+
+        /// <summary>
+        /// The configurations whose <see cref="MailServerConfiguration.ClientSecretReference"/> or
+        /// <see cref="MailServerConfiguration.AccountPasswordReference"/> equals
+        /// <paramref name="secretReference"/>, in the caller's tenant. Used to warn before a secret
+        /// is archived or purged; never returns anything for a blank reference.
+        /// </summary>
+        Task<List<MailServerConfiguration>> GetMailConfigurationsBySecretReferenceAsync(string secretReference);
         Task DeleteMailConfigurationAsync(string configurationId);
-
-        #endregion
-
-        #region DataGateway
-
-        Task SaveDataGatewayConfigurationAsync(DataGatewayConfiguration configuration);
-        Task<DataGatewayConfiguration> GetDataGatewayConfigurationAsync();
-        Task<DataGatewayConfiguration> GetDataGatewayConfigurationByIdAsync(string itemId);
 
         #endregion
 

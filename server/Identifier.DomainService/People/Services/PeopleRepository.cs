@@ -6,6 +6,7 @@ using DomainService.Shared;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using System.Text.RegularExpressions;
+using Blocks.Genesis.Entities.Iam;
 
 namespace DomainService.People
 {
@@ -185,14 +186,9 @@ namespace DomainService.People
                         Enviroment = _tenants.GetTenantByID(x.TenantId)?.Environment ?? string.Empty,
                     };
 
-                    var user = users.ContainsKey(x.UserId) ? users[x.UserId] : null; if (user != null)
+                    if (users.TryGetValue(x.UserId, out var user))
                     {
-                        projectPeople.peopleDetails.Email = user.Email;
-                        projectPeople.peopleDetails.FirstName = user.FirstName;
-                        projectPeople.peopleDetails.LastName = user.LastName;
-                        projectPeople.peopleDetails.Salutation = user.Salutation;
-                        projectPeople.peopleDetails.ProfileImageUrl = user.ProfileImageUrl;
-                        projectPeople.peopleDetails.AllowResendActivation = !user.Active || !user.IsVerified;
+                        FillUserDetails(projectPeople.peopleDetails, user);
                     }
                     return projectPeople;
                 });
@@ -200,9 +196,25 @@ namespace DomainService.People
             return (peoples.ToList(), totalCount, peoplesTotalCount, isOwner);
         }
 
+        private static void FillUserDetails(PeopleDetails details, User user)
+        {
+            details.Email = user.Email;
+            details.FirstName = user.FirstName;
+            details.LastName = user.LastName;
+            details.Salutation = user.Salutation;
+            details.ProfileImageUrl = user.ProfileImageUrl;
+            var isDeactivated = UserAccountStatus.IsDeactivated(user);
+            details.IsActive = !isDeactivated;
+            // A deactivated account cannot be re-invited; only an administrator can turn it back on.
+            details.AllowResendActivation = !isDeactivated && (!user.Active || !user.IsVerified);
+        }
+
         public async Task<Tenant> GetProjectByIdAsync(string tenantId)
         {
-            var filter = Builders<Tenant>.Filter.Eq(mc => mc.TenantId, tenantId);
+            // A deleted environment keeps its disabled row, and adding it back inserts a new row under
+            // the same TenantId, so only the live row may be read here.
+            var filter = Builders<Tenant>.Filter.Eq(mc => mc.TenantId, tenantId)
+                       & Builders<Tenant>.Filter.Ne(mc => mc.IsDisabled, true);
             return await _dbContextProvider.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName).Find(filter).FirstOrDefaultAsync();
         }
 

@@ -1,3 +1,4 @@
+import { tStatic } from "@seliseblocks/genesis-os";
 import type { LinkedSecretStatus } from "@/cross-modules/secrets/models/secret.model";
 
 export const CAPTCHA_PROVIDERS = {
@@ -5,8 +6,19 @@ export const CAPTCHA_PROVIDERS = {
   hcaptcha: { value: "hcaptcha", label: "hCAPTCHA" },
 } as const;
 export const CAPTCHA_GENERATOR_TYPE = {
-  EasyCaptchaGenerator: { value: "EasyCaptchaGenerator", label: "Easy" },
-  HardCaptchaGenerator: { value: "HardCaptchaGenerator", label: "Hard" },
+  EasyCaptchaGenerator: {
+    value: "EasyCaptchaGenerator",
+    // Getter: the text is looked up when it is shown, so a language change is picked up.
+    get label() {
+      return tStatic("os.idp.captcha", "CAPTCHA_MODEL.GENERATOR_EASY");
+    },
+  },
+  HardCaptchaGenerator: {
+    value: "HardCaptchaGenerator",
+    get label() {
+      return tStatic("os.idp.captcha", "CAPTCHA_MODEL.GENERATOR_HARD");
+    },
+  },
 } as const;
 
 export type CaptchaProvidersKey = keyof typeof CAPTCHA_PROVIDERS;

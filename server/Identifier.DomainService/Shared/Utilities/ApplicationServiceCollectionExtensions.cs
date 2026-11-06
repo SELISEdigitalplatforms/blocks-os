@@ -1,3 +1,5 @@
+using Os.DataAccess;
+using Os.DataAccess;
 using Blocks.Extension.DependencyInjection;
 using Blocks.Genesis;
 using DomainService.Access;
@@ -11,6 +13,8 @@ using DomainService.ManagedService.Validator;
 using DomainService.Migration;
 using DomainService.Migration.Services;
 using DomainService.People;
+using DomainService.Preference;
+using DomainService.Preference.Services;
 using DomainService.Projects;
 using DomainService.Shared.Services;
 using DomainService.Shared.Utilities;
@@ -38,21 +42,8 @@ namespace DomainService.Shared
             bool isProduction = false,
             string? logicBaseUrl = null)
         {
-            // The catalogue: published to the platform database, served to the console, seeded per
-            // tenant. Adding a meter is an edit to that data, not to this file.
-            services.AddBlocksCatalogue();
-            // Subscriptions: cards, orders, payment and the workers that build what was bought.
-            services.AddBlocksBilling(isProduction, logicBaseUrl);
+            services.AddOsDataAccess();
 
-            // Quota enforcement. Genesis knows how to check and record; it never learns what a
-            // credit costs or what counts as a build.
-            //
-            // Only present on a Genesis that has the quota work. Build with
-            // -p:UseLocalGenesis=true to reference ../../blocks-genesis-net directly; on the
-            // published package this compiles once the version is cut.
-#if GENESIS_QUOTA
-            services.AddBlocksQuota();
-#endif
             // Register validator
             services.AddTransient<IValidator<CreateProjectRequest>, CreateProjectRequestValidator>();
             services.AddTransient<IValidator<UpdateAuthConfigRequest>, UpdateAuthConfigRequestValidator>();
@@ -62,10 +53,9 @@ namespace DomainService.Shared
 
    // Register services
             services.AddSingleton<IProjectManagementService, ProjectManagementService>();
-            // Scoped, not singleton like the service above: both read billing state through
-            // scoped stores, and a singleton would capture one request's instances for ever.
-            services.AddScoped<IProjectCreationGuard, ProjectCreationGuard>();
-            services.AddScoped<IRepositoryDeploymentService, RepositoryDeploymentService>();
+            services.AddSingleton<IDataGatewayRootProvisioner, DataGatewayRootProvisioner>();
+            services.AddSingleton<IStorageConfigurationSeedCopier, StorageConfigurationSeedCopier>();
+            services.AddSingleton<IMailConfigurationSeedCopier, MailConfigurationSeedCopier>();
             services.AddSingleton<IProjectRepository, ProjectRepository>();
 
             services.AddSingleton<IDomainManagementService, DomainManagementService>();
@@ -81,7 +71,13 @@ namespace DomainService.Shared
             services.AddSingleton<IMigrationNotificationService, MigrationNotificationService>();
    // People
             services.AddSingleton<IPeopleService, PeopleService>();
+            services.AddSingleton<IPeopleInvitationMessenger, PeopleInvitationMessenger>();
             services.AddSingleton<IPeopleRepository, PeopleRepository>();
+            // Built-in notifications to project owner + caller
+
+            // User preferences (the caller's own settings, in the root key-value store)
+            services.AddTransient<IValidator<SaveUserPreferenceRequest>, SaveUserPreferenceRequestValidator>();
+            services.AddSingleton<IUserPreferenceService, UserPreferenceService>();
 
             // Project access (owner / contributor grants)
             // Scoped, not singleton: it caches the per-request access resolution through
@@ -94,7 +90,6 @@ namespace DomainService.Shared
             services.AddTransient<IValidator<UpdateFileRequest>, UpdateFileRequestValidator>();
 
             services.RegisterBlocksStorageServices();
-            services.RegisterBlocksMailService();
 
             // Registered after RegisterBlocksStorageServices: it resolves IStorageDriverService.
             services.AddSingleton<ICertificateUploadService, CertificateUploadService>();

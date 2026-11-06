@@ -1,3 +1,7 @@
+import { tStatic } from "@seliseblocks/genesis-os";
+
+const I18N_MODULE = "os.idp.iam";
+
 export interface IParsedDevice {
   deviceName?: string | null;
   deviceModel?: string | null;
@@ -21,8 +25,7 @@ const BROWSER_PATTERNS: Array<{ name: string; test: (ua: string) => boolean }> =
   { name: "Opera", test: (ua) => /OPR\/[0-9.]+|Opera/i.test(ua) },
 ];
 
-const detectOs = (ua: string): string | undefined =>
-  OS_PATTERNS.find((p) => p.test(ua))?.name;
+const detectOs = (ua: string): string | undefined => OS_PATTERNS.find((p) => p.test(ua))?.name;
 
 const detectBrowser = (ua: string): string | undefined =>
   BROWSER_PATTERNS.find((p) => p.test(ua))?.name;
@@ -40,15 +43,15 @@ export const parseUserAgent = (userAgent?: string | null): IParsedDevice => {
     deviceName = /iPad/i.test(userAgent) ? "iPad" : "iPhone";
     deviceModel = deviceName;
   } else if (operatingSystem === "Android") {
-    const match = userAgent.match(/Android.*?;\s*([^)]+)\s+Build/i);
+    const match = /Android[^;]*;([^)]+)\sBuild/i.exec(userAgent);
     deviceModel = match?.[1]?.trim();
-    deviceName = deviceModel ?? "Android device";
+    deviceName = deviceModel ?? tStatic(I18N_MODULE, "PARSE_USER_AGENT.ANDROID_DEVICE");
   } else if (operatingSystem === "macOS") {
     deviceName = "Mac";
   } else if (operatingSystem === "Windows") {
-    deviceName = "Windows PC";
+    deviceName = tStatic(I18N_MODULE, "PARSE_USER_AGENT.WINDOWS_PC");
   } else if (operatingSystem === "Linux") {
-    deviceName = "Linux device";
+    deviceName = tStatic(I18N_MODULE, "PARSE_USER_AGENT.LINUX_DEVICE");
   }
 
   return { deviceName, deviceModel, operatingSystem, browser };

@@ -1,3 +1,7 @@
+import { tStatic } from "@seliseblocks/genesis-os";
+
+const I18N_MODULE = "os.idp.iam";
+
 /**
  * An account's lifecycle state, as IAM derives it (`UserAccountStates` in blocks-iam) and reports
  * it on each user as `accountState`. Neither `active` nor `status` is the state on its own -- an
@@ -11,22 +15,53 @@ export const LOCKED_OUT_FILTER = "LockedOut";
 
 type BadgeVariant = "success" | "warning" | "error" | "secondary";
 
-export const USER_ACCOUNT_STATE_META: Record<UserAccountState, { label: string; variant: BadgeVariant }> = {
-  Active: { label: "Active", variant: "success" },
+// `label` is a getter so it is translated when it is read (at render), not when this file loads.
+export const USER_ACCOUNT_STATE_META: Record<
+  UserAccountState,
+  { label: string; variant: BadgeVariant }
+> = {
+  Active: {
+    get label() {
+      return tStatic(I18N_MODULE, "USER_ACCOUNT_STATE.ACTIVE");
+    },
+    variant: "success",
+  },
   // Labelled "Inactive", as the column read before account states existed; it is the
   // never-activated account, distinct from one an admin turned off (Deactivated).
-  PendingVerification: { label: "Inactive", variant: "error" },
-  Suspended: { label: "Suspended", variant: "warning" },
-  Deactivated: { label: "Deactivated", variant: "secondary" },
+  PendingVerification: {
+    get label() {
+      return tStatic(I18N_MODULE, "USER_ACCOUNT_STATE.INACTIVE");
+    },
+    variant: "error",
+  },
+  Suspended: {
+    get label() {
+      return tStatic(I18N_MODULE, "USER_ACCOUNT_STATE.SUSPENDED");
+    },
+    variant: "warning",
+  },
+  Deactivated: {
+    get label() {
+      return tStatic(I18N_MODULE, "USER_ACCOUNT_STATE.DEACTIVATED");
+    },
+    variant: "secondary",
+  },
 };
 
 /** The Status filter's options: the four lifecycle states, then Locked out. */
 export const USER_ACCOUNT_STATE_FILTER_OPTIONS = [
   ...(Object.keys(USER_ACCOUNT_STATE_META) as UserAccountState[]).map((state) => ({
-    label: USER_ACCOUNT_STATE_META[state].label,
+    get label() {
+      return USER_ACCOUNT_STATE_META[state].label;
+    },
     value: state as string,
   })),
-  { label: "Locked out", value: LOCKED_OUT_FILTER },
+  {
+    get label() {
+      return tStatic(I18N_MODULE, "USER_ACCOUNT_STATE.LOCKED_OUT");
+    },
+    value: LOCKED_OUT_FILTER,
+  },
 ];
 
 /** The recognised values of a Status selection read from the URL, deduplicated, in option order. */

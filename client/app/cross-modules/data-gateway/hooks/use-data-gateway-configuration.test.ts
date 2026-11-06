@@ -16,10 +16,11 @@ import {
 const mockGetState = vi.fn(() => ({
   selectedProject: { tenantId: "t1", tenantSlug: "slug1" },
 }));
-vi.mock("@seliseblocks/genesis-os", () => {
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => {
   const useProjectStore = () => mockGetState();
   (useProjectStore as unknown as { getState: () => unknown }).getState = () => mockGetState();
-  return { useProjectStore };
+  return {
+    ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()), useProjectStore };
 });
 
 vi.mock("@/cross-modules/data-gateway/services/data-gateway.service", () =>

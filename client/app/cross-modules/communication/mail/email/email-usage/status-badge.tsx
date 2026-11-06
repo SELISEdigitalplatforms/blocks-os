@@ -1,9 +1,11 @@
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { MailStatus } from "@blocks-communication/mail/models/email";
+import { useMailStatusLabel } from "@blocks-communication/mail/email/email-usage/use-mail-status-label";
 interface StatusBadgeProps {
   status: string;
 }
 export const StatusBadge = ({ status }: StatusBadgeProps) => {
+  const statusLabel = useMailStatusLabel();
   let variant: "default" | "secondary" | "destructive" | "outline" | "success" | "error" | "info" =
     "outline";
   switch (status) {
@@ -23,7 +25,7 @@ export const StatusBadge = ({ status }: StatusBadgeProps) => {
   }
   return (
     <Badge variant={variant} className="w-24 whitespace-nowrap rounded-full">
-      {status}
+      {statusLabel(status)}
     </Badge>
   );
 };

@@ -2,7 +2,7 @@ import React, {
   forwardRef,
   useCallback,
   useImperativeHandle,
-  useState,
+  useMemo,
   type ReactNode,
 } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
@@ -16,14 +16,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui-kits/select/select";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useGetEmailConfigs } from "@blocks-communication/mail/hooks/use-email-config";
+import { useGetEmailSecretConfigs } from "@blocks-communication/mail/hooks/use-email-config";
+import {
+  useEmailOrganization,
+  useOrganizationName,
+} from "@blocks-communication/mail/hooks/use-email-organization";
+import {
+  fromConfigurationValue,
+  toConfigurationValue,
+} from "@blocks-communication/mail/constants/template-organization";
+import {
+  ConfigurationHint,
+  TemplateConfigurationOptions,
+} from "@blocks-communication/mail/components/email-service/template-configuration-options/template-configuration-options";
+import { LockedField } from "@blocks-communication/mail/components/email-service/locked-field/locked-field";
+import { ShareWithOrganizations } from "@blocks-communication/mail/components/email-service/share-with-organizations/share-with-organizations";
+import { DEFAULT_ORGANIZATION_ID } from "@blocks-communication/mail/constants/organization";
+import type { ShareChoice } from "@blocks-communication/mail/constants/share-organizations";
+import { templateErrorMessages } from "@blocks-communication/mail/constants/template-errors";
 import { useSaveMailTemplate } from "@blocks-communication/mail/hooks/use-email-template";
 import { useGetLanguages } from "@blocks-localization/hooks/use-language-manager";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import {
   Form,
   FormControl,
@@ -40,24 +57,35 @@ interface IBasicInformationProps {
   onValidityChange?: (isValid: boolean) => void;
   onPendingChange?: (isPending: boolean) => void;
   actions?: ReactNode;
+  /**
+   * SPEC33: whether the new template is also copied to other organizations. Offered only for the
+   * Default organization with multi-org on (C13); New Template keeps it across both steps.
+   */
+  shareChoice?: ShareChoice;
+  onShareChoiceChange?: (choice: ShareChoice) => void;
 }
 
-const schema = z.object({
-  mailConfigurationId: z.string().min(1, { message: "MailConfiguration is required" }),
-  language: z.string().min(1, { message: "Language is required" }),
-  name: z
-    .string()
-    .min(1, { message: "Name is required" })
-    .max(50, { message: "Name must be less than 50 characters" })
-    .regex(/^[^\s-]+$/, { message: "Name cannot contain spaces or hyphens" }),
-  templateSubject: z
-    .string()
-    .min(1, { message: "Subject is required" })
-    .max(150, { message: "Subject must be less than 150 characters" })
-    .refine((val) => val.trim().length > 0, {
-      message: "Subject cannot contain only whitespace",
-    }),
-});
+type TranslateFn = ReturnType<typeof useT>["t"];
+
+const createSchema = (t: TranslateFn) =>
+  z.object({
+    mailConfigurationId: z
+      .string()
+      .min(1, { message: t("BASIC_INFORMATION.ERROR_CONFIGURATION_REQUIRED") }),
+    language: z.string().min(1, { message: t("BASIC_INFORMATION.ERROR_LANGUAGE_REQUIRED") }),
+    name: z
+      .string()
+      .min(1, { message: t("BASIC_INFORMATION.ERROR_NAME_REQUIRED") })
+      .max(50, { message: t("BASIC_INFORMATION.ERROR_NAME_MAX") })
+      .regex(/^[^\s-]+$/, { message: t("BASIC_INFORMATION.ERROR_NAME_PATTERN") }),
+    templateSubject: z
+      .string()
+      .min(1, { message: t("BASIC_INFORMATION.ERROR_SUBJECT_REQUIRED") })
+      .max(150, { message: t("BASIC_INFORMATION.ERROR_SUBJECT_MAX") })
+      .refine((val) => val.trim().length > 0, {
+        message: t("BASIC_INFORMATION.ERROR_SUBJECT_WHITESPACE"),
+      }),
+  });
 
 const RequiredMark = () => (
   <span className="text-destructive" aria-hidden="true">
@@ -85,48 +113,73 @@ const getUniqueLanguages = (languages: LanguageOption[] = []): LanguageOption[] 
   return Array.from(uniqueByCode.values());
 };
 
-const BasicInformationSkeleton = () => (
-  <Card className="w-full rounded-sm shadow-none" aria-busy="true" aria-label="Loading form">
-    <CardHeader className="space-y-2 px-6 py-5">
-      <div className="flex items-start justify-between gap-4">
-        <Skeleton className="h-6 w-48" />
-        <Skeleton className="h-10 w-36 shrink-0" />
-      </div>
-      <Skeleton className="h-4 w-80 max-w-full" />
-    </CardHeader>
-    <CardContent className="px-6 pb-6 pt-0">
-      <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="grid gap-2">
-            <Skeleton className="h-4 w-28" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-        ))}
-      </div>
-    </CardContent>
-  </Card>
-);
+const BasicInformationSkeleton = () => {
+  const { t } = useT("os.communication.mail");
+  return (
+    <Card
+      className="w-full rounded-sm shadow-none"
+      aria-busy="true"
+      aria-label={t("BASIC_INFORMATION.LOADING_FORM")}
+    >
+      <CardHeader className="space-y-2 px-6 py-5">
+        <div className="flex items-start justify-between gap-4">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-10 w-36 shrink-0" />
+        </div>
+        <Skeleton className="h-4 w-80 max-w-full" />
+      </CardHeader>
+      <CardContent className="px-6 pb-6 pt-0">
+        <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
+          {["field-1", "field-2", "field-3", "field-4"].map((field) => (
+            <div key={field} className="grid gap-2">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 const BasicInformation = forwardRef(function Inner(
-  { onSaveSuccess, templateData, onValidityChange, onPendingChange, actions }: IBasicInformationProps,
+  {
+    onSaveSuccess,
+    templateData,
+    onValidityChange,
+    onPendingChange,
+    actions,
+    shareChoice,
+    onShareChoiceChange,
+  }: IBasicInformationProps,
   ref,
 ) {
+  const { t } = useT("os.communication.mail");
+  const schema = useMemo(() => createSchema(t), [t]);
   const { isLoading: isLanguageListLoading, data: languageListData } = useGetLanguages();
-  const [filterData] = useState({ pageNumber: 0, pageSize: 10 });
-  const { isLoading, data } = useGetEmailConfigs(filterData.pageNumber, filterData.pageSize);
+  // New Template opens in the page's organization; the Default organization with multi-org off.
+  const organization = useEmailOrganization();
+  const organizationId = organization.selectedOrganizationId;
+  const organizationName = useOrganizationName(organizationId);
+  const { isLoading, data: configsResponse } = useGetEmailSecretConfigs(organizationId);
+  const data = configsResponse?.configurations;
   const { isPending, mutateAsync: saveTemplate } = useSaveMailTemplate();
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const uniqueLanguages = getUniqueLanguages(languageListData ?? []);
   const form = useForm<IEmailTemplate>({
     defaultValues: {
       itemId: templateData.itemId,
-      mailConfigurationId: templateData.mailConfigurationId,
+      // A saved template without a configuration uses "Organization default"; a new one starts
+      // with nothing picked, so the required rule asks for a choice.
+      mailConfigurationId: templateData.itemId
+        ? toConfigurationValue(templateData.mailConfigurationId)
+        : (templateData.mailConfigurationId ?? ""),
       language: templateData.language,
       name: templateData.name,
       templateSubject: templateData.templateSubject,
       generatedBy: templateData.generatedBy,
     },
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as unknown as Resolver<IEmailTemplate>,
     mode: "onChange",
     reValidateMode: "onChange",
   });
@@ -142,11 +195,14 @@ const BasicInformation = forwardRef(function Inner(
   // Read itemId into a local so the compiler infers this exact dependency rather than the whole
   // templateData object; the callback keeps its current identity lifetime.
   const templateItemId = templateData?.itemId;
+  const isSaved = !!templateItemId;
   const handleFormSubmit = useCallback(
     async (data: IEmailTemplate) => {
       try {
         const payload = {
           ...data,
+          mailConfigurationId: fromConfigurationValue(data.mailConfigurationId ?? ""),
+          organizationId,
           itemId: templateItemId || "",
           projectKey: tenantId,
         };
@@ -160,16 +216,16 @@ const BasicInformation = forwardRef(function Inner(
           return;
         }
 
-        showErrorToast({ errors: res.errors });
+        showErrorToast({ errors: res.errors, customMessages: templateErrorMessages(t) });
       } catch (error) {
         if (isErrorWithErrors(error)) {
-          showErrorToast({ errors: error.errors });
+          showErrorToast({ errors: error.errors, customMessages: templateErrorMessages(t) });
         } else {
-          showErrorToast({ errors: "Something went wrong" });
+          showErrorToast({ errors: t("BASIC_INFORMATION.SOMETHING_WENT_WRONG") });
         }
       }
     },
-    [onSaveSuccess, saveTemplate, templateItemId, tenantId],
+    [onSaveSuccess, saveTemplate, templateItemId, tenantId, organizationId, t],
   );
 
   const { isValid } = form.formState;
@@ -195,12 +251,11 @@ const BasicInformation = forwardRef(function Inner(
         <form className="flex h-full flex-col">
           <CardHeader className="space-y-1 px-6 pb-4 pt-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle className="text-lg">About the Template</CardTitle>
+              <CardTitle className="text-lg">{t("BASIC_INFORMATION.TITLE")}</CardTitle>
               {actions ? <div className="flex shrink-0">{actions}</div> : null}
             </div>
             <p className="text-sm font-normal text-low-emphasis">
-              Set the template identity, delivery configuration, and subject line before designing
-              the email body.
+              {t("BASIC_INFORMATION.DESCRIPTION")}
             </p>
           </CardHeader>
           <CardContent className="flex-1 px-6 pb-6 pt-0">
@@ -211,14 +266,16 @@ const BasicInformation = forwardRef(function Inner(
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="font-medium text-high-emphasis">
-                      Name <RequiredMark />
+                      {t("common:NAME")} <RequiredMark />
                     </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Enter name"
+                        placeholder={t("BASIC_INFORMATION.PLACEHOLDER_NAME")}
                         className="border-default shadow-none"
                         aria-required="true"
                         {...field}
+                        // Once step 1 has saved, going back edits that template, whose name is fixed (SPEC31 C2).
+                        readOnly={isSaved}
                         onKeyDown={(e) => {
                           if (e.key === " " || e.key === "_") {
                             e.preventDefault();
@@ -237,7 +294,7 @@ const BasicInformation = forwardRef(function Inner(
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="font-medium text-high-emphasis">
-                      Email Configuration <RequiredMark />
+                      {t("BASIC_INFORMATION.EMAIL_CONFIGURATION")} <RequiredMark />
                     </FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
@@ -245,19 +302,20 @@ const BasicInformation = forwardRef(function Inner(
                           className="border-default h-10 shadow-none"
                           aria-required="true"
                         >
-                          <SelectValue placeholder="Select Configuration" />
+                          <SelectValue
+                            placeholder={t("BASIC_INFORMATION.PLACEHOLDER_CONFIGURATION")}
+                          />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {data
-                          .filter((config) => !config.isInbound)
-                          .map((config) => (
-                            <SelectItem key={config.itemId} value={config.itemId}>
-                              {config.name}
-                            </SelectItem>
-                          ))}
+                        <TemplateConfigurationOptions
+                          configs={data}
+                          organizationId={organizationId}
+                          organizationName={organizationName}
+                        />
                       </SelectContent>
                     </Select>
+                    <ConfigurationHint value={field.value} />
                     <FormMessage />
                   </FormItem>
                 )}
@@ -269,15 +327,20 @@ const BasicInformation = forwardRef(function Inner(
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="font-medium text-high-emphasis">
-                      Language <RequiredMark />
+                      {t("BASIC_INFORMATION.LANGUAGE")} <RequiredMark />
                     </FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    {/* The language is fixed once saved, like the name (SPEC31 C3). */}
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      disabled={isSaved}
+                    >
                       <FormControl>
                         <SelectTrigger
                           className="border-default h-10 shadow-none"
                           aria-required="true"
                         >
-                          <SelectValue placeholder="Select language" />
+                          <SelectValue placeholder={t("BASIC_INFORMATION.PLACEHOLDER_LANGUAGE")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -293,17 +356,38 @@ const BasicInformation = forwardRef(function Inner(
                 )}
               />
 
+              {organization.isMultiOrgEnabled ? (
+                <LockedField
+                  id="basic-information-organization"
+                  label={t("TEMPLATE_ORGANIZATION.ORGANIZATION")}
+                  value={organizationName}
+                />
+              ) : null}
+
+              {organization.isMultiOrgEnabled &&
+              organizationId === DEFAULT_ORGANIZATION_ID &&
+              shareChoice &&
+              onShareChoiceChange ? (
+                <div className="md:col-span-2 xl:col-span-3">
+                  <ShareWithOrganizations
+                    choice={shareChoice}
+                    onChange={onShareChoiceChange}
+                    templateId={templateItemId || undefined}
+                  />
+                </div>
+              ) : null}
+
               <FormField
                 name="templateSubject"
                 control={form.control}
                 render={({ field }) => (
                   <FormItem className="md:col-span-2 xl:col-span-3">
                     <FormLabel className="font-medium text-high-emphasis">
-                      Subject <RequiredMark />
+                      {t("BASIC_INFORMATION.SUBJECT")} <RequiredMark />
                     </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Enter subject"
+                        placeholder={t("BASIC_INFORMATION.PLACEHOLDER_SUBJECT")}
                         className="border-default shadow-none"
                         aria-required="true"
                         {...field}

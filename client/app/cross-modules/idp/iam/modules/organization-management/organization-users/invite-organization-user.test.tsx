@@ -30,9 +30,11 @@ vi.mock("@blocks-idp/iam/hooks/use-organization", () => ({
     }
     return h.orgs;
   },
+  useGetOrganizationById: () => ({ data: undefined }),
   useGetOrganizationConfig: () => h.config,
 }));
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "t1", itemId: "p1" } }),
 }));
 vi.mock("@/hooks/use-toast", () => ({

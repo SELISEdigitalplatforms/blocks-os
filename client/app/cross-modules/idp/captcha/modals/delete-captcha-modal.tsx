@@ -14,6 +14,7 @@ import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { CAPTCHA_PROVIDERS, ICaptchaConfig } from "../models/captcha";
 import { isErrorWithErrors } from "@/lib/error";
 import { Trash2 } from "lucide-react";
+import { useT } from "@seliseblocks/genesis-os";
 
 type DeleteCaptchaModalProps = {
   configuration: ICaptchaConfig;
@@ -21,6 +22,7 @@ type DeleteCaptchaModalProps = {
 };
 
 export const DeleteCaptchaModal = ({ configuration, children }: DeleteCaptchaModalProps) => {
+  const { t } = useT("os.idp.captcha");
   const [open, setOpen] = useState<boolean>(false);
   const { isPending, mutateAsync } = useDeleteCaptcha();
   const providerType = CAPTCHA_PROVIDERS[configuration.provider];
@@ -29,7 +31,7 @@ export const DeleteCaptchaModal = ({ configuration, children }: DeleteCaptchaMod
     try {
       await mutateAsync(configuration.id);
       showSuccessToast({
-        description: `${providerType.label} configuration deleted successfully`,
+        description: t("DELETE_CAPTCHA_MODAL.DELETED", { provider: providerType.label }),
       });
       setOpen(false);
     } catch (error) {
@@ -45,26 +47,25 @@ export const DeleteCaptchaModal = ({ configuration, children }: DeleteCaptchaMod
         {children ?? (
           <Button size="sm" variant="outline">
             <Trash2 className="h-4 w-4" />
-            <span className="ml-2.5">Delete</span>
+            <span className="ml-2.5">{t("common:DELETE")}</span>
           </Button>
         )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Delete CAPTCHA configuration?</DialogTitle>
+          <DialogTitle>{t("DELETE_CAPTCHA_MODAL.TITLE")}</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete the {providerType.label} configuration? This action
-            cannot be undone.
+            {t("DELETE_CAPTCHA_MODAL.DESCRIPTION", { provider: providerType.label })}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm">
-              Cancel
+              {t("common:CANCEL")}
             </Button>
           </DialogTrigger>
           <Button size="sm" variant="destructive" onClick={onConfirm} disabled={isPending}>
-            Yes, delete
+            {t("DELETE_CAPTCHA_MODAL.CONFIRM")}
           </Button>
         </DialogFooter>
       </DialogContent>

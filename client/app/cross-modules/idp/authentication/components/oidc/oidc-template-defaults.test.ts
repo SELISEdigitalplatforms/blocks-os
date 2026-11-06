@@ -80,4 +80,52 @@ describe("normalizeOidcUiTemplate", () => {
     expect(normalized.branding.logoUrlLight).toBe("https://cdn.example.com/light.png");
     expect(normalized.branding.logoUrlDark).toBe("https://cdn.example.com/dark.png");
   });
+
+  describe("layout.showAnimationPanel", () => {
+    const withLayout = (layout: unknown) => {
+      const template = structuredClone(DEFAULT_OIDC_UI_TEMPLATE) as unknown as Record<
+        string,
+        unknown
+      >;
+      if (layout === undefined) delete template.layout;
+      else template.layout = layout;
+      return normalizeOidcUiTemplate(template as never);
+    };
+
+    it("C1: defaults to true when layout is absent (a pre-Phase-1 blocks-iam)", () => {
+      expect(withLayout(undefined).layout).toEqual({ showAnimationPanel: true });
+    });
+
+    it("C1: defaults to true when layout is null", () => {
+      expect(withLayout(null).layout).toEqual({ showAnimationPanel: true });
+    });
+
+    it("C1: defaults to true when showAnimationPanel is null or missing", () => {
+      expect(withLayout({ showAnimationPanel: null }).layout.showAnimationPanel).toBe(true);
+      expect(withLayout({}).layout.showAnimationPanel).toBe(true);
+    });
+
+    it("H2: keeps a stored false", () => {
+      expect(withLayout({ showAnimationPanel: false }).layout.showAnimationPanel).toBe(false);
+    });
+
+    it("C2: treats any value other than the literal false as true", () => {
+      for (const value of ["false", 0, "", "no", {}]) {
+        expect(withLayout({ showAnimationPanel: value }).layout.showAnimationPanel).toBe(true);
+      }
+    });
+
+    it("C3: leaves other fields' stored nulls untouched", () => {
+      const template = structuredClone(DEFAULT_OIDC_UI_TEMPLATE);
+      template.pages.accountSelector.subheading = null;
+      template.pages.mfa.resendButton = null;
+      template.pages.signup.ssoSeparatorText = null;
+
+      const normalized = normalizeOidcUiTemplate(template);
+
+      expect(normalized.pages.accountSelector.subheading).toBeNull();
+      expect(normalized.pages.mfa.resendButton).toBeNull();
+      expect(normalized.pages.signup.ssoSeparatorText).toBeNull();
+    });
+  });
 });

@@ -4,6 +4,7 @@ import { toPermissionStubs } from "@blocks-idp/authentication/components/identit
 import { SSOPermissionsList } from "@blocks-idp/authentication/components/sso-initial-permissions/sso-permissions-list";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import { AddClientCredentialPermission } from "./add-client-credential-permission";
+import { useT } from "@seliseblocks/genesis-os";
 
 type ClientCredentialPermissionsSectionProps = {
   selectedResources: string[];
@@ -18,9 +19,10 @@ export const ClientCredentialPermissionsSection = ({
   selectedResources,
   onChange,
   maxPermissions = 10,
-  label = "Permissions",
-  description = "Select permissions to include in the access token granted by this client.",
+  label,
+  description,
 }: ClientCredentialPermissionsSectionProps) => {
+  const { t } = useT("os.idp.client-credentials");
   const permissions = useMemo(() => toPermissionStubs(selectedResources), [selectedResources]);
 
   const handleAdd = (newResources: string[]) => {
@@ -37,14 +39,18 @@ export const ClientCredentialPermissionsSection = ({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex-1 space-y-1">
           <div className="flex items-center gap-2">
-            <Label className="text-base font-medium">{label}</Label>
+            <Label className="text-base font-medium">
+              {label ?? t("CLIENT_CREDENTIAL_PERMISSIONS_SECTION.LABEL")}
+            </Label>
             {permissions.length > 0 && (
               <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                 {permissions.length}
               </span>
             )}
           </div>
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="text-sm text-muted-foreground">
+            {description ?? t("CLIENT_CREDENTIAL_PERMISSIONS_SECTION.DESCRIPTION")}
+          </p>
         </div>
         <div className="shrink-0">
           <AddClientCredentialPermission
@@ -72,9 +78,11 @@ export const ClientCredentialPermissionsSection = ({
               />
             </svg>
           </div>
-          <p className="mt-3 text-sm font-medium text-foreground">No permissions added</p>
+          <p className="mt-3 text-sm font-medium text-foreground">
+            {t("CLIENT_CREDENTIAL_PERMISSIONS_SECTION.EMPTY_TITLE")}
+          </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Add permissions for this client credential
+            {t("CLIENT_CREDENTIAL_PERMISSIONS_SECTION.EMPTY_HINT")}
           </p>
         </div>
       ) : (
@@ -84,7 +92,7 @@ export const ClientCredentialPermissionsSection = ({
       )}
       {selectedResources.length >= maxPermissions && (
         <p className="text-xs text-muted-foreground">
-          Maximum of {maxPermissions} permissions reached. Remove one to add another.
+          {t("CLIENT_CREDENTIAL_PERMISSIONS_SECTION.MAX_REACHED", { max: maxPermissions })}
         </p>
       )}
     </div>

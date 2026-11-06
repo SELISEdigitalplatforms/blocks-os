@@ -1,10 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<ItemGroup>
+    <ProjectReference Include="..\Os.DataAccess\Os.DataAccess.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
 		<!--<PackageReference Include="MongoDB.Driver" />-->
-		<PackageReference Include="SeliseBlocks.Genesis.OS" Condition="'$(UseLocalGenesis)' != 'true'" />
-		<ProjectReference Include="$(LocalGenesisProject)" Condition="'$(UseLocalGenesis)' == 'true'" />
-		<PackageReference Include="SeliseBlocks.MailDriver.OS" />
+		<PackageReference Include="SeliseBlocks.Genesis.OS" />
 		<PackageReference Include="Azure.Storage.Blobs" />
 		<PackageReference Include="Parquet.Net" />
   <PackageReference Include="FluentValidation" />

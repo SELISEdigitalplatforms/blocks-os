@@ -20,6 +20,20 @@ namespace DomainService.Projects
         public static readonly IReadOnlySet<string> SeedOnlyCollections =
             new HashSet<string>(StringComparer.Ordinal) { "IntegrationTemplates" };
 
+        /// <summary>
+        /// Collections whose data blocks-iam keeps elsewhere since the collection cut. The seed may still have
+        /// them until the cleanup, but a new project never gets them, not even empty.
+        /// </summary>
+        public static readonly IReadOnlySet<string> RetiredCollections = new HashSet<string>(StringComparer.Ordinal)
+        {
+            // In the TenantConfiguration field of IdentityConfigurations.
+            TenantConfigurationEmbedding.LegacyCollection,
+            // In KeyValueStores, key "mfa-config".
+            "MfaConfigurations",
+            // In Redis.
+            "IdpAuthorizationCodes"
+        };
+
         // listIndexes fields that describe the stored index, not the index to build.
         private static readonly string[] _nonSpecFields = ["v", "ns", "background"];
 
@@ -36,7 +50,9 @@ namespace DomainService.Projects
 
             foreach (var name in seedCollections.Select(c => c["name"].AsString).OrderBy(n => n, StringComparer.Ordinal))
             {
-                if (name.StartsWith("system.", StringComparison.Ordinal) || SeedOnlyCollections.Contains(name)) continue;
+                if (name.StartsWith("system.", StringComparison.Ordinal)
+                    || SeedOnlyCollections.Contains(name)
+                    || RetiredCollections.Contains(name)) continue;
 
                 if (!targetNames.Contains(name))
                 {

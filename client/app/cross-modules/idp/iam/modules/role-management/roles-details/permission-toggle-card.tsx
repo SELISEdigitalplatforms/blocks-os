@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import {
   Tooltip,
@@ -10,6 +11,7 @@ import { PERMISSION_SEVERITY_OPTIONS, ResourceType } from "@blocks-idp/iam/model
 import { BadgeAlert, BadgeCheck } from "lucide-react";
 import { useMemo } from "react";
 import { PermissionState, useRoleDetailsStore } from "./role-details-state";
+import { getGrantPermissionTooltip } from "@blocks-idp/iam/utils/grant-scope";
 type PermissionToggleCardProps = {
   permission: PermissionState;
   checked: boolean;
@@ -26,31 +28,38 @@ export const PermissionToggleCard = ({
   hasDependentPermissions,
   isAllDependentPermissionsChecked,
 }: PermissionToggleCardProps) => {
+  const { t } = useT("os.idp.roles");
   const isEditMode = useRoleDetailsStore((state) => state.isEditMode);
+  // A permission the caller does not hold can be neither added nor removed.
+  const isLocked = useRoleDetailsStore(
+    (state) =>
+      Boolean(state.grantableResources) && !state.grantableResources?.has(permission.resource),
+  );
   const permissionSeverity = useMemo(() => {
     return PERMISSION_SEVERITY_OPTIONS.find(
       (option) => option.value === permission.permissionSeverity,
     );
   }, [permission.permissionSeverity]);
-  return (
+  const card = (
     <div
       className={cn(
         "flex items-center justify-between gap-3 rounded-md border p-3 cursor-pointer **:cursor-[inherit]",
-        !isEditMode && "cursor-not-allowed",
+        (!isEditMode || isLocked) && "cursor-not-allowed",
+        isLocked && "opacity-60",
       )}
     >
       <Checkbox
         checked={checked}
         onCheckedChange={onCheckedChange}
         id={id}
-        disabled={!isEditMode}
+        disabled={!isEditMode || isLocked}
         className=" shrink-0"
       />
       <label
-        htmlFor={isEditMode ? id : undefined}
+        htmlFor={isEditMode && !isLocked ? id : undefined}
         className={cn(
           "w-full h-full font-medium text-foreground flex flex-1 flex-col md:flex-row gap-2",
-          !isEditMode && "pointer-events-none",
+          (!isEditMode || isLocked) && "pointer-events-none",
         )}
       >
         <div className="min-w-0 flex-1">
@@ -68,15 +77,15 @@ export const PermissionToggleCard = ({
                   </TooltipTrigger>
                   <TooltipContent side="right">
                     {isAllDependentPermissionsChecked
-                      ? "All dependent permissions are selected"
-                      : "One or more dependent permissions are missing"}
+                      ? t("PERMISSION_TOGGLE_CARD.ALL_DEPENDENTS_SELECTED")
+                      : t("PERMISSION_TOGGLE_CARD.DEPENDENTS_MISSING")}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             )}
           </div>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {permission.description || "No description available."}
+            {permission.description || t("PERMISSION_TOGGLE_CARD.NO_DESCRIPTION")}
           </p>
         </div>
         <div className="md:self-center space-x-2">
@@ -95,5 +104,14 @@ export const PermissionToggleCard = ({
         </div>
       </label>
     </div>
+  );
+  if (!isLocked || !isEditMode) return card;
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>{card}</TooltipTrigger>
+        <TooltipContent side="top">{getGrantPermissionTooltip()}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };

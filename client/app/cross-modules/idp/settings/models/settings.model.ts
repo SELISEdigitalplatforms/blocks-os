@@ -36,6 +36,8 @@ export interface ISettingsOrganizationConfig {
   defaultPermissionsOnOrgCreation: string[];
   keepOrgRolesSameAsDefaultRoles: boolean;
   keepOrgPermissionsSameAsDefaultPermissions: boolean;
+  isSignupAutoJoinEnabled: boolean;
+  signupAutoJoinOrganizationId: string | null;
 }
 
 export interface ISettingsSaveOrganizationConfigPayload {
@@ -49,6 +51,8 @@ export interface ISettingsSaveOrganizationConfigPayload {
   defaultPermissionsOnOrgCreation: string[];
   keepOrgRolesSameAsDefaultRoles: boolean;
   keepOrgPermissionsSameAsDefaultPermissions: boolean;
+  isSignupAutoJoinEnabled: boolean;
+  signupAutoJoinOrganizationId?: string | null;
 }
 
 export interface ISettingsSaveAuthConfigPayload {

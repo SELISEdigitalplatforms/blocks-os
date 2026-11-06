@@ -11,7 +11,7 @@ import {
   useGetEnabledOrganizationsInfinite,
   useGetOrganizationConfig,
 } from "@blocks-idp/iam/hooks/use-organization";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import {
   UsersDateFilters,
   UsersSearchFilter,
@@ -31,32 +31,24 @@ import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { normalizeSearchQueryText } from "@blocks-idp/iam/utils/normalize-search-query";
 import { toAccountStatesFilter } from "@blocks-idp/iam/utils/user-account-state";
+import { useUserManageability } from "@blocks-idp/iam/hooks/use-user-manageability";
 import { useMemo, useState } from "react";
 
 const DEFAULT_ORGANIZATION_ID = "default";
-const DEFAULT_ORGANIZATION_LABEL = "Default organization";
 
-export const Users = () => {
-  const { queryParams, setQueryParams } = useUsersFilterQueryParams();
-  const { sortQueryParams } = useUsersSortQueryParams();
-  const tenantId = useProjectStore().selectedProject?.tenantId || "";
-  const { data: orgConfig } = useGetOrganizationConfig(tenantId);
-  const { data: organizationsData, hasNextPage: hasMoreOrganizations } =
-    useGetEnabledOrganizationsInfinite(tenantId, {
-      enabled: orgConfig?.isMultiOrgEnabled === true || orgConfig?.isMultiOrgEnabled === false,
-    });
-  const organizations = useMemo(
-    () => getEnabledOrganizationsFromPages(organizationsData?.pages),
-    [organizationsData?.pages],
-  );
-  const hasOrganizationOptions = organizations.length > 0 || hasMoreOrganizations === true;
+type UsersQueryParams = ReturnType<typeof useUsersFilterQueryParams>["queryParams"];
+
+/** The list request and filter count the URL's filters amount to, given the organization setup. */
+const deriveUserListQuery = (
+  queryParams: UsersQueryParams,
+  isMultiOrgEnabled: boolean | undefined,
+  hasOrganizationOptions: boolean,
+) => {
   const organizationIds =
-    orgConfig?.isMultiOrgEnabled === true && hasOrganizationOptions
-      ? (queryParams.organizationIds ?? [])
-      : [];
+    isMultiOrgEnabled === true && hasOrganizationOptions ? (queryParams.organizationIds ?? []) : [];
   const canFilterByRoles =
-    orgConfig?.isMultiOrgEnabled === false ||
-    (orgConfig?.isMultiOrgEnabled === true && hasOrganizationOptions && organizationIds.length > 0);
+    isMultiOrgEnabled === false ||
+    (isMultiOrgEnabled === true && hasOrganizationOptions && organizationIds.length > 0);
   const roles = canFilterByRoles ? (queryParams.roles ?? []) : [];
 
   const searchText =
@@ -73,6 +65,76 @@ export const Users = () => {
     ...(roles.length > 0 ? { roles } : {}),
     ...(accountStates.length > 0 ? { accountStates } : {}),
   };
+
+  const appliedFilterCount = [
+    queryParams.name,
+    queryParams.email,
+    queryParams["joinedOn-start"],
+    queryParams["lastLogin-start"],
+    queryParams["lastUpdatedDate-start"],
+    organizationIds.length > 0 ? "organizations" : "",
+    roles.length > 0 ? "roles" : "",
+    accountStates.length > 0 ? "accountStates" : "",
+  ].filter((value) => !!value).length;
+
+  return { organizationIds, searchText, listFilter, appliedFilterCount };
+};
+
+/**
+ * Roles live under an organization key, so a bulk change needs exactly one.
+ * With multi-organization off there is only ever "default", which is why that
+ * tenant's operator never sees an organization anywhere in this flow.
+ */
+const effectiveOrganizationIdFor = (
+  isMultiOrgEnabled: boolean | undefined,
+  organizationIds: string[],
+): string | null => {
+  if (isMultiOrgEnabled === false) return DEFAULT_ORGANIZATION_ID;
+  return organizationIds.length === 1 ? organizationIds[0] : null;
+};
+
+const selectTriggerFor = (
+  appliedFilterCount: number,
+  effectiveOrganizationId: string | null,
+): SelectTriggerState => {
+  if (appliedFilterCount === 0) return "hidden";
+  return effectiveOrganizationId === null ? "disabled" : "enabled";
+};
+
+// Who a bulk change applies to: every user the filters match, or the ones picked by hand.
+const matchedByLabel = (
+  t: ReturnType<typeof useT>["t"],
+  isAllMatchingSelected: boolean,
+  organizationLabel: string,
+  selectedCount: number,
+) => {
+  if (!isAllMatchingSelected) return t("USERS.MATCHED_BY_SELECTED", { count: selectedCount });
+  return organizationLabel
+    ? t("USERS.MATCHED_BY_ALL_IN_ORGANIZATION", { organization: organizationLabel })
+    : t("USERS.MATCHED_BY_ALL");
+};
+
+export const Users = () => {
+  const { t } = useT("os.idp.users");
+  const { queryParams, setQueryParams } = useUsersFilterQueryParams();
+  const { sortQueryParams } = useUsersSortQueryParams();
+  const tenantId = useProjectStore().selectedProject?.tenantId || "";
+  const { isSelf, canManage } = useUserManageability();
+  const { data: orgConfig } = useGetOrganizationConfig(tenantId);
+  const { data: organizationsData, hasNextPage: hasMoreOrganizations } =
+    useGetEnabledOrganizationsInfinite(tenantId, {
+      enabled: orgConfig?.isMultiOrgEnabled === true || orgConfig?.isMultiOrgEnabled === false,
+    });
+  const organizations = useMemo(
+    () => getEnabledOrganizationsFromPages(organizationsData?.pages),
+    [organizationsData?.pages],
+  );
+  const hasOrganizationOptions = organizations.length > 0 || hasMoreOrganizations === true;
+  const { organizationIds, searchText, listFilter, appliedFilterCount } = deriveUserListQuery(
+    queryParams,
+    orgConfig?.isMultiOrgEnabled,
+    hasOrganizationOptions,
+  );
 
   const { isLoading, isFetching, data, dataUpdatedAt } = useGetUsers({
     page: queryParams.page,
@@ -101,31 +163,12 @@ export const Users = () => {
   const previewMutation = usePreviewBulkRoleChange();
   const submitMutation = useSubmitBulkRoleChange();
 
-  const appliedFilterCount = [
-    queryParams.name,
-    queryParams.email,
-    queryParams["joinedOn-start"],
-    queryParams["lastLogin-start"],
-    queryParams["lastUpdatedDate-start"],
-    organizationIds.length > 0 ? "organizations" : "",
-    roles.length > 0 ? "roles" : "",
-    accountStates.length > 0 ? "accountStates" : "",
-  ].filter((value) => !!value).length;
+  const effectiveOrganizationId = effectiveOrganizationIdFor(
+    orgConfig?.isMultiOrgEnabled,
+    organizationIds,
+  );
 
-  /**
-   * Roles live under an organization key, so a bulk change needs exactly one.
-   * With multi-organization off there is only ever "default", which is why that
-   * tenant's operator never sees an organization anywhere in this flow.
-   */
-  const effectiveOrganizationId =
-    orgConfig?.isMultiOrgEnabled === false
-      ? DEFAULT_ORGANIZATION_ID
-      : organizationIds.length === 1
-        ? organizationIds[0]
-        : null;
-
-  const selectTrigger: SelectTriggerState =
-    appliedFilterCount === 0 ? "hidden" : effectiveOrganizationId === null ? "disabled" : "enabled";
+  const selectTrigger = selectTriggerFor(appliedFilterCount, effectiveOrganizationId);
 
   // How many organizations the result set could span, for the blocked message. With
   // several picked it is that many; with none picked the list spans every
@@ -135,12 +178,12 @@ export const Users = () => {
 
   const organizationLabel = useMemo(() => {
     if (effectiveOrganizationId === null) return "";
-    if (effectiveOrganizationId === DEFAULT_ORGANIZATION_ID) return DEFAULT_ORGANIZATION_LABEL;
+    if (effectiveOrganizationId === DEFAULT_ORGANIZATION_ID) return t("USERS.DEFAULT_ORGANIZATION");
     return (
       organizations.find((organization) => organization.itemId === effectiveOrganizationId)?.name ??
       effectiveOrganizationId
     );
-  }, [effectiveOrganizationId, organizations]);
+  }, [effectiveOrganizationId, organizations, t]);
 
   const exitSelection = () => {
     setIsSelecting(false);
@@ -189,7 +232,8 @@ export const Users = () => {
 
   const toggleAllOnPage = (checked: boolean) => {
     setIsAllMatchingSelected(false);
-    setSelectedUserIds(checked ? new Set(users.map((user) => user.itemId)) : new Set());
+    const selectable = users.filter((user) => !isSelf(user.itemId) && canManage(user));
+    setSelectedUserIds(checked ? new Set(selectable.map((user) => user.itemId)) : new Set());
   };
 
   /**
@@ -235,9 +279,12 @@ export const Users = () => {
       : { userIds: Array.from(selectedUserIds) },
   });
 
-  const matchedBy = isAllMatchingSelected
-    ? `Everything matching the current filter${organizationLabel ? ` in ${organizationLabel}` : ""}`
-    : `${selectedUserIds.size} explicitly selected users`;
+  const matchedBy = matchedByLabel(
+    t,
+    isAllMatchingSelected,
+    organizationLabel,
+    selectedUserIds.size,
+  );
 
   const handleContinue = async (roleSlugs: string[]) => {
     if (!dialogMode) return;
@@ -253,7 +300,7 @@ export const Users = () => {
       // Selection mode and the selection both survive, so the operator can narrow
       // the filter and retry without rebuilding what they picked.
       if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
-      showErrorToast({ errors: "Something went wrong" });
+      showErrorToast({ errors: t("USERS.SOMETHING_WENT_WRONG") });
     }
   };
 
@@ -264,21 +311,23 @@ export const Users = () => {
       const response = await submitMutation.mutateAsync(buildPayload(draft.mode, draft.roleSlugs));
       if (!response.isSuccess) return showErrorToast({ errors: response.errors });
 
-      const verb = draft.mode === "add" ? "Adding" : "Removing";
       const affected = preview?.affectedCount ?? response.matchedCount;
-      const direction = draft.mode === "add" ? "to" : "from";
+      const roles = draft.roleSlugs.join(", ");
 
       // The only feedback there is. The worker reports nothing back, so the copy
       // says the work is queued rather than done.
       showSuccessToast({
-        title: "Submitted successfully",
-        description: `${verb} ${draft.roleSlugs.join(", ")} ${direction} ${affected} users. This runs in the background.`,
+        title: t("USERS.SUBMITTED_SUCCESSFULLY"),
+        description:
+          draft.mode === "add"
+            ? t("USERS.SUBMITTED_ADD", { roles, count: affected })
+            : t("USERS.SUBMITTED_REMOVE", { roles, count: affected }),
       });
       setSubmittedAt(Date.now());
       exitSelection();
     } catch (error) {
       if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
-      showErrorToast({ errors: "Something went wrong" });
+      showErrorToast({ errors: t("USERS.SOMETHING_WENT_WRONG") });
     }
   };
 
@@ -367,7 +416,6 @@ export const Users = () => {
               page={queryParams.page}
               pageSize={queryParams.pageSize}
               totalCount={data?.totalCount || 0}
-              pageSizeOptions={[5, 10]}
               onChange={onPageChangeHandler}
               onPageSizeChange={(pageSize) =>
                 setQueryParams((params) => ({ ...params, pageSize, page: 1 }))

@@ -1,12 +1,15 @@
 using Blocks.Genesis;
 using Blocks.Secrets;
-using Configuration.DomainService.Mail.Entities;
 using Configuration.DomainService.Mail.Providers;
 using Configuration.DomainService.Mail.RequestModel;
 using Configuration.DomainService.Mail.ResponseModel;
+using Configuration.DomainService.Mail.Template.Services;
+using Configuration.DomainService.Organizations;
+using Configuration.DomainService.Shared.Secrets;
 using Configuration.DomainService.Shared.Services;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
+using Blocks.Genesis.Entities.Os;
 
 namespace Configuration.DomainService.Mail.Services
 {
@@ -16,22 +19,30 @@ namespace Configuration.DomainService.Mail.Services
         private const string MaskedSecretValue = "********";
         private const string ConfigurationNotFound = "Configuration not found";
         private const string ConfigurationIdField = "ConfigurationId";
+        private const string OrganizationIdField = nameof(MailConfiguration.OrganizationId);
+        private const string IsOrganizationDefaultField = nameof(MailConfiguration.IsOrganizationDefault);
 
         private readonly IConfigurationRepository _configurationRepository;
         private readonly IMailConfigurationProviderRegistry _providers;
         private readonly IValidator<MailConfiguration> _validator;
         private readonly ILogger<MailConfigurationService> _logger;
+        private readonly IOrganizationReader _organizations;
+        private readonly IMailTemplateRepository _templates;
 
         public MailConfigurationService(
             IConfigurationRepository configurationRepository,
             IMailConfigurationProviderRegistry providers,
             IValidator<MailConfiguration> validator,
-            ILogger<MailConfigurationService> logger)
+            ILogger<MailConfigurationService> logger,
+            IOrganizationReader organizations,
+            IMailTemplateRepository templates)
         {
             _configurationRepository = configurationRepository;
             _providers = providers;
             _validator = validator;
             _logger = logger;
+            _organizations = organizations;
+            _templates = templates;
         }
 
         public async Task<MailConfigurationMutationResult> SaveAsync(
@@ -100,6 +111,8 @@ namespace Configuration.DomainService.Mail.Services
 
             await AddSharedValidationErrorsAsync(configuration, errors, cancellationToken).ConfigureAwait(false);
 
+            var organizationId = await ResolveOrganizationAsync(configuration, existing, errors, cancellationToken).ConfigureAwait(false);
+
             if (errors.Count > 0)
             {
                 _logger.LogInformation("Saving mail configuration end -- Validation Error");
@@ -115,6 +128,7 @@ namespace Configuration.DomainService.Mail.Services
             }
 
             MailCredentialResult credential;
+            string? vaultFailureType = null;
             try
             {
                 credential = await definition
@@ -126,15 +140,23 @@ namespace Configuration.DomainService.Mail.Services
                 // Only the vault being unreachable becomes an availability answer. An
                 // authorization or state failure is a different problem with a different fix, and
                 // is left to the global filter to classify as 403/409/404.
+                // The type only: a secret-store exception, or the vault error inside it, can name
+                // the secret, and a reference must never reach a log.
+                vaultFailureType = exception.GetType().Name;
+                credential = MailCredentialResult.None;
+            }
+
+            if (vaultFailureType is not null)
+            {
                 _logger.LogError(
-                    exception,
-                    "Saving mail configuration end -- Secret store unavailable for configuration {ConfigurationId}",
-                    configuration.ConfigurationId);
+                    "Saving mail configuration end -- Secret store unavailable ({FailureType}) for configuration {ConfigurationId}",
+                    vaultFailureType,
+                    LogSafe.Value(configuration.ConfigurationId));
 
                 return MailConfigurationMutationResult.SecretStoreUnavailable();
             }
 
-            var entity = MapToEntity(configuration, existing, credential.Reference);
+            var entity = MapToEntity(configuration, existing, definition, credential.Reference, organizationId);
 
             try
             {
@@ -142,9 +164,12 @@ namespace Configuration.DomainService.Mail.Services
             }
             catch
             {
-                await CompensateAsync(definition, credential, entity.ItemId, "save").ConfigureAwait(false);
+                await CompensateUnsavedAsync(definition, credential, entity.ItemId, "save").ConfigureAwait(false);
                 throw;
             }
+
+            // After the save, so the new default exists before the old one loses its mark.
+            await ClearOtherOrganizationDefaultsAsync(entity).ConfigureAwait(false);
 
             _logger.LogInformation("Saving mail configuration end -- Success");
             return MailConfigurationMutationResult.Success(entity.ItemId);
@@ -155,15 +180,44 @@ namespace Configuration.DomainService.Mail.Services
             CancellationToken cancellationToken = default)
         {
             var configuration = await _configurationRepository
-                .GetMailConfigurationByNameAsync(request.ConfigurationName)
+                .GetMailConfigurationByNameForViewAsync(request.ConfigurationName)
                 .ConfigureAwait(false);
 
             return configuration is null ? null : await ProjectAsync(configuration, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<List<MailConfigurationResponse>> GetAllAsync(CancellationToken cancellationToken = default)
+        public async Task<MailConfigurationUsageResponse> GetUsageAsync(
+            GetMailConfigurationUsageRequest request,
+            CancellationToken cancellationToken = default)
         {
-            var configurations = await _configurationRepository.GetAllMailConfigurationsAsync().ConfigureAwait(false);
+            ArgumentNullException.ThrowIfNull(request);
+
+            var configuration = string.IsNullOrWhiteSpace(request.ConfigurationId)
+                ? null
+                : await _configurationRepository.GetMailConfigurationByIdAsync(request.ConfigurationId).ConfigureAwait(false);
+
+            if (configuration is null)
+            {
+                return new MailConfigurationUsageResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string> { [ConfigurationIdField] = ConfigurationNotFound }
+                };
+            }
+
+            var templateCount = await _templates.CountByMailConfigurationIdAsync(configuration.ItemId).ConfigureAwait(false);
+            return new MailConfigurationUsageResponse { IsSuccess = true, TemplateCount = templateCount };
+        }
+
+        public async Task<List<MailConfigurationResponse>> GetAllAsync(
+            GetAllMailConfigurationsRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+
+            // No organization asked for: every configuration, as before organizations existed.
+            var organizationId = string.IsNullOrWhiteSpace(request.OrganizationId) ? null : request.OrganizationId;
+            var configurations = await _configurationRepository.GetAllMailConfigurationsAsync(organizationId).ConfigureAwait(false);
 
             // Sequential on purpose: the provider resolves status through the scoped
             // ISecretService, which is not documented as safe for concurrent use.
@@ -199,21 +253,29 @@ namespace Configuration.DomainService.Mail.Services
             // that nothing references any more. A credential that is already archived or purged
             // is tolerated, and remembered as not retired by this call.
             var retiredHere = false;
+            string? vaultFailureType = null;
             if (hasDefinition)
             {
                 try
                 {
-                    retiredHere = await definition.DeleteCredentialAsync(config.ClientSecretReference, cancellationToken).ConfigureAwait(false);
+                    retiredHere = await definition
+                        .DeleteCredentialAsync(definition.CredentialReferenceOf(config), cancellationToken)
+                        .ConfigureAwait(false);
                 }
                 catch (SecretVaultException exception)
                 {
-                    _logger.LogError(
-                        exception,
-                        "Deleting mail configuration end -- Secret store unavailable for configuration {ConfigurationId}",
-                        config.ItemId);
-
-                    return MailConfigurationMutationResult.SecretStoreUnavailable();
+                    vaultFailureType = exception.GetType().Name;
                 }
+            }
+
+            if (vaultFailureType is not null)
+            {
+                _logger.LogError(
+                    "Deleting mail configuration end -- Secret store unavailable ({FailureType}) for configuration {ConfigurationId}",
+                    vaultFailureType,
+                    LogSafe.Value(config.ItemId));
+
+                return MailConfigurationMutationResult.SecretStoreUnavailable();
             }
 
             try
@@ -252,6 +314,17 @@ namespace Configuration.DomainService.Mail.Services
                 return MailConfigurationMutationResult.Invalid(ConfigurationIdField, ConfigurationNotFound);
             }
 
+            // The default record is platform-provisioned: its credentials belong to the platform,
+            // not the project. A copy would read the platform password and store it as a secret
+            // the project can read back, so it is refused before any secret call or write.
+            if (config.IsDefault)
+            {
+                _logger.LogInformation("Duplicating mail configuration end -- Default configuration cannot be duplicated");
+                return MailConfigurationMutationResult.Invalid(
+                    ConfigurationIdField,
+                    "The default configuration cannot be duplicated.");
+            }
+
             if (!_providers.TryGet(config.Provider, out var definition))
             {
                 _logger.LogInformation("Duplicating mail configuration end -- Unsupported provider");
@@ -265,22 +338,39 @@ namespace Configuration.DomainService.Mail.Services
                 return MailConfigurationMutationResult.Invalid(errors);
             }
 
+            // Built before the credential step so the copy's own id and name are what its new
+            // secret's description records.
+            var newConfig = CopyForDuplicate(config, definition);
+
             MailCredentialResult credential;
+            string? vaultFailureType = null;
             try
             {
-                credential = await definition.DuplicateCredentialAsync(config, request, cancellationToken).ConfigureAwait(false);
+                credential = await definition.DuplicateCredentialAsync(config, newConfig, request, cancellationToken).ConfigureAwait(false);
             }
             catch (SecretVaultException exception)
             {
+                vaultFailureType = exception.GetType().Name;
+                credential = MailCredentialResult.None;
+            }
+
+            if (vaultFailureType is not null)
+            {
                 _logger.LogError(
-                    exception,
-                    "Duplicating mail configuration end -- Secret store unavailable for configuration {ConfigurationId}",
-                    config.ItemId);
+                    "Duplicating mail configuration end -- Secret store unavailable ({FailureType}) for configuration {ConfigurationId}",
+                    vaultFailureType,
+                    LogSafe.Value(config.ItemId));
 
                 return MailConfigurationMutationResult.SecretStoreUnavailable();
             }
 
-            var newConfig = CopyForDuplicate(config, definition, credential.Reference);
+            if (credential.Error is { } credentialError)
+            {
+                _logger.LogInformation("Duplicating mail configuration end -- Source credential unavailable");
+                return MailConfigurationMutationResult.Invalid(credentialError.Key, credentialError.Value);
+            }
+
+            definition.ApplyCredential(newConfig, credential.Reference);
 
             try
             {
@@ -288,7 +378,7 @@ namespace Configuration.DomainService.Mail.Services
             }
             catch
             {
-                await CompensateAsync(definition, credential, newConfig.ItemId, "duplicate").ConfigureAwait(false);
+                await CompensateUnsavedAsync(definition, credential, newConfig.ItemId, "duplicate").ConfigureAwait(false);
                 throw;
             }
 
@@ -297,7 +387,49 @@ namespace Configuration.DomainService.Mail.Services
         }
 
         /// <summary>
-        /// Updates the sender name of the default configuration and nothing else.
+        /// The organization the saved configuration belongs to, adding an error when the request
+        /// can't have it, and checking the organization-default mark.
+        /// </summary>
+        /// <remarks>
+        /// A create takes the request's organization, which must be the Default organization or an
+        /// enabled organization of the project. An edit keeps the stored one (missing or empty is
+        /// the Default organization): sending another is an error, and sending none keeps it, so
+        /// callers that predate organizations can still edit.
+        /// </remarks>
+        private async Task<string> ResolveOrganizationAsync(
+            MailConfiguration configuration,
+            MailServerConfiguration? existing,
+            IDictionary<string, string> errors,
+            CancellationToken cancellationToken)
+        {
+            if (configuration.IsInbound && configuration.IsOrganizationDefault == true)
+            {
+                errors[IsOrganizationDefaultField] = "An inbound configuration can't be the organization default";
+            }
+
+            var requested = OrganizationIds.Normalize(configuration.OrganizationId);
+
+            if (existing is not null)
+            {
+                var stored = OrganizationIds.Normalize(existing.OrganizationId);
+                if (!string.IsNullOrWhiteSpace(configuration.OrganizationId) && requested != stored)
+                {
+                    errors[OrganizationIdField] = "A configuration's organization can't be changed";
+                }
+                return stored;
+            }
+
+            // The Default organization is not an IAM record, so there is nothing to look up.
+            if (requested != OrganizationIds.Default
+                && !await _organizations.ExistsEnabledAsync(requested, cancellationToken).ConfigureAwait(false))
+            {
+                errors[OrganizationIdField] = "Organization not found";
+            }
+            return requested;
+        }
+
+        /// <summary>
+        /// Adds the shared validator's errors to the provider's, which win a collision.
         /// </summary>
         private async Task AddSharedValidationErrorsAsync(
             MailConfiguration configuration,
@@ -314,6 +446,41 @@ namespace Configuration.DomainService.Mail.Services
             }
         }
 
+        /// <summary>
+        /// Clears the organization's other default marks once a new default is saved; nothing for a
+        /// configuration that isn't its organization's default.
+        /// </summary>
+        /// <remarks>
+        /// The configuration is already written, so a failure here must not report the save as
+        /// failed: the organization keeps two marks until its next default save settles them, and
+        /// that is logged for an operator. The exception is logged whole: this update touches only
+        /// the default flag and carries no credential reference.
+        /// </remarks>
+        private async Task ClearOtherOrganizationDefaultsAsync(MailServerConfiguration entity)
+        {
+            if (!entity.IsOrganizationDefault)
+            {
+                return;
+            }
+
+            try
+            {
+                await _configurationRepository
+                    .ClearOtherOrganizationDefaultsAsync(entity.OrganizationId, entity.ItemId, entity.LastUpdatedDate)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogWarning(
+                    exception,
+                    "Saving mail configuration -- the organization's other default marks could not be cleared for configuration {ConfigurationId}",
+                    LogSafe.Value(entity.ItemId));
+            }
+        }
+
+        /// <summary>
+        /// Updates the sender name of the default configuration and nothing else.
+        /// </summary>
         private async Task<MailConfigurationMutationResult> SaveDefaultSenderNameAsync(
             MailServerConfiguration existing,
             string? senderName)
@@ -350,7 +517,8 @@ namespace Configuration.DomainService.Mail.Services
         }
 
         /// <summary>
-        /// Copies the request's non-secret fields onto the stored document.
+        /// Copies the request's non-secret fields onto the stored document, then lets the provider
+        /// store the credential reference in the field it owns.
         /// </summary>
         /// <remarks>
         /// Provider-agnostic: the flat fields stay the persistence contract for every provider,
@@ -361,7 +529,9 @@ namespace Configuration.DomainService.Mail.Services
         private static MailServerConfiguration MapToEntity(
             MailConfiguration configuration,
             MailServerConfiguration? existing,
-            string? credentialReference)
+            IMailConfigurationProvider definition,
+            string? credentialReference,
+            string organizationId)
         {
             var entity = existing ?? new MailServerConfiguration
             {
@@ -376,7 +546,10 @@ namespace Configuration.DomainService.Mail.Services
             entity.SenderName = configuration.SenderName;
             entity.SenderUserName = configuration.SenderUserName ?? string.Empty;
             entity.SenderAddress = configuration.SenderAddress;
-            entity.AccountPassword = configuration.AccountPassword ?? string.Empty;
+
+            // Never the request's plaintext: a password lives only in Blocks Secrets, and a record
+            // saved before that loses its document copy here, on the save that links its secret.
+            entity.AccountPassword = string.Empty;
             entity.EnableSSL = configuration.EnableSSL;
             entity.CreatedBy = BlocksContext.GetContext()?.UserId ?? "";
             entity.LastUpdatedBy = BlocksContext.GetContext()?.UserId ?? "";
@@ -388,18 +561,24 @@ namespace Configuration.DomainService.Mail.Services
             entity.TenantId = configuration.TenantId;
             entity.ClientId = configuration.ClientId;
             entity.MailboxAddress = configuration.MailboxAddress;
+            entity.OrganizationId = organizationId;
+            entity.IsOrganizationDefault = !configuration.IsInbound
+                && (configuration.IsOrganizationDefault ?? existing?.IsOrganizationDefault ?? false);
 
-            // Only ever a reference, and only one the provider just handed back. The plaintext on
-            // the request is not assigned anywhere in this method.
-            entity.ClientSecretReference = credentialReference;
+            // Only ever a reference, and only one the provider just handed back, in the field of
+            // the provider's own mode. The plaintext on the request is not assigned anywhere here.
+            definition.ApplyCredential(entity, credentialReference);
 
             return entity;
         }
 
+        /// <summary>
+        /// The copy's non-secret fields. It carries no password and no reference until the
+        /// provider applies the copy's own credential.
+        /// </summary>
         private static MailServerConfiguration CopyForDuplicate(
             MailServerConfiguration source,
-            IMailConfigurationProvider definition,
-            string? credentialReference) => new()
+            IMailConfigurationProvider definition) => new()
             {
                 ItemId = Guid.NewGuid().ToString(),
                 CreatedDate = DateTime.UtcNow,
@@ -414,7 +593,7 @@ namespace Configuration.DomainService.Mail.Services
                 SenderName = source.SenderName,
                 SenderAddress = source.SenderAddress,
                 SenderUserName = source.SenderUserName,
-                AccountPassword = source.AccountPassword,
+                AccountPassword = string.Empty,
                 UseDefaultCredentials = source.UseDefaultCredentials,
                 SmtpClient = source.SmtpClient,
                 IsDefault = source.IsDefault && definition.DuplicateInheritsDefault,
@@ -426,13 +605,22 @@ namespace Configuration.DomainService.Mail.Services
                 TenantId = source.TenantId,
                 ClientId = source.ClientId,
                 MailboxAddress = source.MailboxAddress,
-                ClientSecretReference = credentialReference
+
+                // The copy stays in the source's organization but is never its default: an
+                // organization has one.
+                OrganizationId = OrganizationIds.Normalize(source.OrganizationId),
+                IsOrganizationDefault = false
             };
 
         /// <summary>
         /// Builds the browser-facing view of a stored record, including the linked secret's
-        /// status for a provider that owns one.
+        /// status where the provider shows one.
         /// </summary>
+        /// <remarks>
+        /// The status costs one metadata read, so it is resolved only when the provider says the
+        /// response shows it (Office 365 OAuth). Password records show a fixed mask and make no
+        /// secret-store call at all.
+        /// </remarks>
         private async Task<MailConfigurationResponse> ProjectAsync(MailServerConfiguration entity, CancellationToken cancellationToken)
         {
             var response = new MailConfigurationResponse
@@ -455,6 +643,8 @@ namespace Configuration.DomainService.Mail.Services
                 IsDefault = entity.IsDefault,
                 IsInbound = entity.IsInbound,
                 Provider = entity.Provider,
+                OrganizationId = OrganizationIds.Normalize(entity.OrganizationId),
+                IsOrganizationDefault = entity.IsOrganizationDefault,
                 IsEnableSnsConfiguration = entity.IsEnableSnsConfiguration,
                 AuthenticationType = entity.AuthenticationType,
                 SecurityMode = entity.SecurityMode,
@@ -466,7 +656,9 @@ namespace Configuration.DomainService.Mail.Services
 
             if (_providers.TryGet(entity.Provider, out var definition))
             {
-                var credentialStatus = await definition.ResolveCredentialStatusAsync(entity, cancellationToken).ConfigureAwait(false);
+                var credentialStatus = definition.ProjectsCredentialStatus(entity)
+                    ? await definition.ResolveCredentialStatusAsync(entity, cancellationToken).ConfigureAwait(false)
+                    : null;
                 definition.ProjectResponse(entity, response, credentialStatus);
             }
 
@@ -474,15 +666,23 @@ namespace Configuration.DomainService.Mail.Services
         }
 
         /// <summary>
-        /// Retires a credential this operation created but could not finish using.
+        /// Retires a credential this operation created when the write that would reference it
+        /// failed. Every failure here is logged and swallowed so the write failure is what propagates.
         /// </summary>
         /// <remarks>
         /// Only a created credential is compensated. Undoing a rotation would need the previous
         /// plaintext, which the caller no longer holds and this service never keeps — so a failed
         /// write after a rotation leaves the new value in place and the configuration unchanged,
         /// which is recoverable by retrying the edit.
+        /// <para>
+        /// A write can fail after the server applied it (a lost acknowledgement), and retiring the
+        /// secret then would leave the stored document pointing at an archived secret. So the
+        /// document is read back first, as service registration does, and the secret is kept when
+        /// the stored document already references it or the read-back itself fails: an orphaned
+        /// secret is recoverable, a configuration that can no longer authenticate is not.
+        /// </para>
         /// </remarks>
-        private async Task CompensateAsync(
+        private async Task CompensateUnsavedAsync(
             IMailConfigurationProvider definition,
             MailCredentialResult credential,
             string configurationId,
@@ -493,20 +693,61 @@ namespace Configuration.DomainService.Mail.Services
                 return;
             }
 
+            var loggedConfigurationId = LogSafe.Value(configurationId);
+            bool storedReferencesSecret;
+            string? readBackFailureType = null;
+            try
+            {
+                var stored = await _configurationRepository.GetMailConfigurationByIdAsync(configurationId).ConfigureAwait(false);
+                storedReferencesSecret = stored is not null
+                    && string.Equals(definition.CredentialReferenceOf(stored), credential.Reference, StringComparison.Ordinal);
+            }
+            catch (Exception exception)
+            {
+                // Only the type name leaves the catch: the exception message can carry the reference.
+                storedReferencesSecret = false;
+                readBackFailureType = exception.GetType().Name;
+            }
+
+            if (readBackFailureType is not null)
+            {
+                _logger.LogWarning(
+                    "Mail configuration {Operation} failed and the configuration could not be read back ({FailureType}); its new secret is kept. Reconcile configuration {ConfigurationId}.",
+                    operation,
+                    readBackFailureType,
+                    loggedConfigurationId);
+                return;
+            }
+
+            if (storedReferencesSecret)
+            {
+                _logger.LogWarning(
+                    "Mail configuration {Operation} reported a failure but the configuration was written; its new secret is kept. Configuration {ConfigurationId}.",
+                    operation,
+                    loggedConfigurationId);
+                return;
+            }
+
+            string? retireFailureType = null;
             try
             {
                 await definition.DeleteCredentialAsync(credential.Reference, CancellationToken.None).ConfigureAwait(false);
             }
             catch (Exception exception)
             {
+                retireFailureType = exception.GetType().Name;
+            }
+
+            if (retireFailureType is not null)
+            {
                 // Secret-free on purpose: the configuration id and the operation are enough for an
                 // operator to find both sides, and the reference must not reach a log that is
-                // shipped off-box.
+                // shipped off-box. Hence the exception type only: a not-found message carries the id.
                 _logger.LogError(
-                    exception,
-                    "Mail configuration {Operation} failed and its new secret could not be retired. Reconcile configuration {ConfigurationId}.",
+                    "Mail configuration {Operation} failed and its new secret could not be retired ({FailureType}). Reconcile configuration {ConfigurationId}.",
                     operation,
-                    configurationId);
+                    retireFailureType,
+                    loggedConfigurationId);
             }
         }
 
@@ -518,24 +759,31 @@ namespace Configuration.DomainService.Mail.Services
             MailServerConfiguration config,
             CancellationToken cancellationToken)
         {
-            if (string.IsNullOrEmpty(config.ClientSecretReference))
+            var reference = definition.CredentialReferenceOf(config);
+            if (string.IsNullOrEmpty(reference))
             {
                 return;
             }
 
+            string? failureType = null;
             try
             {
-                await definition.RestoreCredentialAsync(config.ClientSecretReference, cancellationToken).ConfigureAwait(false);
+                await definition.RestoreCredentialAsync(reference, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception exception)
+            {
+                failureType = exception.GetType().Name;
+            }
+
+            if (failureType is not null)
             {
                 // The configuration is deliberately left in place for operator repair: it still
                 // points at a secret that is now soft-deleted, which is visible and fixable,
                 // where deleting it would leave nothing to reconcile against.
                 _logger.LogError(
-                    exception,
-                    "Mail configuration delete failed and its secret could not be restored. Reconcile configuration {ConfigurationId}.",
-                    config.ItemId);
+                    "Mail configuration delete failed and its secret could not be restored ({FailureType}). Reconcile configuration {ConfigurationId}.",
+                    failureType,
+                    LogSafe.Value(config.ItemId));
             }
         }
     }

@@ -29,5 +29,12 @@ namespace DomainService.Dtos
         public string? ProfileImageUrl { get; set; }
         public string UserId { get; set; }
         public bool AllowResendActivation { get; set; }
+
+        /// <summary>
+        /// False only when an administrator deactivated the account. A pending invitee who has not
+        /// activated yet is still active. Defaults to true so a person whose account was not found
+        /// is not shown as deactivated.
+        /// </summary>
+        public bool IsActive { get; set; } = true;
     }
 }

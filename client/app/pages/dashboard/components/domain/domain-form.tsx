@@ -15,11 +15,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import {
   domainFormDefaultValues,
-  domainFormSchema,
+  createDomainFormSchema,
   type DomainFormSchema,
 } from "./domain-form.schema";
 import { DomainAction } from "./domain.constant";
 import { showErrorToast, showSuccessToast } from "@seliseblocks/genesis-os/utils";
+import { useT } from "@seliseblocks/genesis-os";
 
 const getCookieDomain = (domain: string) => {
   try {
@@ -41,11 +42,12 @@ interface DomainFormProps {
 }
 
 export const DomainForm = ({ application, onAfterSubmit }: DomainFormProps) => {
+  const { t } = useT("os.dashboard");
   const isEditMode = !!application;
   const { mutateAsync, isPending } = useUpdateProject();
 
   const form = useForm<DomainFormSchema>({
-    resolver: zodResolver(domainFormSchema),
+    resolver: zodResolver(createDomainFormSchema()),
     defaultValues: isEditMode
       ? {
           domain: application.domain.replace(/^https?:\/\//, ""),
@@ -58,7 +60,7 @@ export const DomainForm = ({ application, onAfterSubmit }: DomainFormProps) => {
   // formState.isValid lags behind autofill and programmatic setValue calls,
   // which left the submit button disabled with visibly valid values. Validate
   // the live values directly so the button always reflects what's on screen.
-  const isFormValid = domainFormSchema.safeParse(form.watch()).success;
+  const isFormValid = createDomainFormSchema().safeParse(form.watch()).success;
 
   const onSubmit = async (values: DomainFormSchema) => {
     try {
@@ -77,8 +79,8 @@ export const DomainForm = ({ application, onAfterSubmit }: DomainFormProps) => {
       if (res.isSuccess) {
         showSuccessToast({
           description: isEditMode
-            ? "Application updated successfully"
-            : "Application added successfully",
+            ? t("DOMAIN_FORM.APPLICATION_UPDATED_SUCCESSFULLY")
+            : t("DOMAIN_FORM.APPLICATION_ADDED_SUCCESSFULLY"),
         });
         form.reset();
         onAfterSubmit();
@@ -102,13 +104,15 @@ export const DomainForm = ({ application, onAfterSubmit }: DomainFormProps) => {
           name="domain"
           render={({ field }) => (
             <FormItem className="space-y-1.5">
-              <FormLabel className="text-sm font-medium text-medium-emphasis">Domain</FormLabel>
+              <FormLabel className="text-sm font-medium text-medium-emphasis">
+                {t("DOMAIN_FORM.DOMAIN")}
+              </FormLabel>
               <FormControl>
                 <div className="flex items-center rounded-md border border-input bg-background px-3 py-2">
-                  <span className="text-muted-foreground">https://</span>
+                  <span className="text-muted-foreground">{t("DOMAIN_FORM.HTTPS")}</span>
                   <Input
                     {...field}
-                    placeholder="your-domain.com"
+                    placeholder={t("DOMAIN_FORM.YOUR_DOMAIN_COM")}
                     className="h-auto border-0 bg-transparent p-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     onChange={(e) => {
                       field.onChange(e);
@@ -136,10 +140,10 @@ export const DomainForm = ({ application, onAfterSubmit }: DomainFormProps) => {
           render={({ field }) => (
             <FormItem className="space-y-1.5">
               <FormLabel className="text-sm font-medium text-medium-emphasis">
-                Cookie Domain
+                {t("DOMAIN_FORM.COOKIE_DOMAIN")}
               </FormLabel>
               <FormControl>
-                <Input {...field} placeholder="your-domain.com" />
+                <Input {...field} placeholder={t("DOMAIN_FORM.YOUR_DOMAIN_COM")} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -148,11 +152,11 @@ export const DomainForm = ({ application, onAfterSubmit }: DomainFormProps) => {
         <DialogFooter className="mt-2 flex flex-row justify-end gap-2">
           <DialogClose asChild>
             <Button variant="outline" size="sm" className="w-20">
-              Cancel
+              {t("common:CANCEL")}
             </Button>
           </DialogClose>
           <Button size="sm" className="w-20" type="submit" disabled={!isFormValid || isPending}>
-            {isEditMode ? "Update" : "Add"}
+            {isEditMode ? t("common:UPDATE") : t("common:ADD")}
           </Button>
         </DialogFooter>
       </form>

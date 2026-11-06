@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => import("@/test-utils/__mocks__/grant-scope.mock"));
 import { createWrapper } from "@/test-utils/test-providers/query-client";
 import { IRole } from "@blocks-idp/iam/models/role";
 
@@ -12,7 +13,8 @@ vi.mock("@/components/ui-kits/tooltip/tooltip", () => ({
   ),
   TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 
@@ -29,7 +31,7 @@ vi.mock("@/hooks/use-toast", () => ({
 }));
 
 vi.mock("@blocks-idp/iam/hooks/use-roles", () => ({
-  useGetRoles: () => ({
+  useGetAssignableRoles: () => ({
     data: { data: h.roles, totalCount: h.roles.length },
     isLoading: false,
   }),

@@ -1,0 +1,18 @@
+{
+  "INVITATION_CONFIRM_PAGE.GO_TO_LOGIN": "Go to login",
+  "INVITATION_CONFIRM_PAGE.INVALID_INVITATION_LINK": "Invalid invitation link",
+  "INVITATION_CONFIRM_PAGE.MISSING_CODE": "This invitation link is missing a confirmation code. Open the link from your invitation email or sign in if you already have an account.",
+  "PEOPLE_INVITATION_RESULT.ACCEPTED_ACTIVATE": "You have successfully accepted the invitation. The project has been shared with you. Please proceed to activate your account to get started.",
+  "PEOPLE_INVITATION_RESULT.ACCEPTED_SHARED": "You have successfully accepted the invitation. The project has been shared with you.",
+  "PEOPLE_INVITATION_RESULT.ACTIVATE": "Activate",
+  "PEOPLE_INVITATION_RESULT.CONFIRMATION_ERROR": "An error occurred during invitation confirmation.",
+  "PEOPLE_INVITATION_RESULT.FAILED": "Failed",
+  "PEOPLE_INVITATION_RESULT.GO_BACK": "Go back",
+  "PEOPLE_INVITATION_RESULT.GO_TO_CONSOLE": "Go to Console",
+  "PEOPLE_INVITATION_RESULT.INVITATION_ACCEPTED": "Invitation Accepted!",
+  "PEOPLE_INVITATION_RESULT.LINK_EXPIRED": "The invitation link has expired.",
+  "PEOPLE_INVITE_CONFIRMATION.ACCEPT": "Accept",
+  "PEOPLE_INVITE_CONFIRMATION.ACCEPT_INVITATION": "Accept Invitation",
+  "PEOPLE_INVITE_CONFIRMATION.GO_BACK": "Go back",
+  "PEOPLE_INVITE_CONFIRMATION.YOU_HAVE_BEEN_INVITED": "You have been invited to join a project. Click the button below to accept the invitation."
+}

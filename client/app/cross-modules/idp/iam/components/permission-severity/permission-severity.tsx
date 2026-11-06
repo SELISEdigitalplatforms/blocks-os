@@ -6,11 +6,13 @@ import {
   PERMISSION_SEVERITY_OPTIONS,
 } from "@blocks-idp/iam/models/permission";
 import { useMemo } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 type PermissionSeverityProps = {
   data: IGetPermissionsSeverityResponse;
   isLoading: boolean;
 };
 export const PermissionSeverity = ({ data, isLoading }: PermissionSeverityProps) => {
+  const { t } = useT("os.idp.iam-ui");
   const severityData = useMemo(() => {
     if (!data) return [];
     return PERMISSION_SEVERITY_OPTIONS.map((option) => {
@@ -24,7 +26,7 @@ export const PermissionSeverity = ({ data, isLoading }: PermissionSeverityProps)
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Permission Severity Overview</CardTitle>
+        <CardTitle>{t("PERMISSION_SEVERITY.TITLE")}</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
@@ -35,7 +37,9 @@ export const PermissionSeverity = ({ data, isLoading }: PermissionSeverityProps)
             >
               <div className={cn(item.barClassName, "absolute left-0 top-0 h-full w-1.5")} />
               <div className="min-w-0 pl-2">
-                <p className="truncate text-xs font-semibold uppercase">{item.label} Risk</p>
+                <p className="truncate text-xs font-semibold uppercase">
+                  {t("PERMISSION_SEVERITY.RISK", { level: item.label })}
+                </p>
                 {isLoading ? (
                   <Skeleton className="mt-2 h-6 w-[100px]" />
                 ) : (
@@ -44,7 +48,7 @@ export const PermissionSeverity = ({ data, isLoading }: PermissionSeverityProps)
                       {String(item.count).padStart(2, "0")}
                     </span>
                     <span className="truncate pb-0.5 text-xs font-medium text-foreground">
-                      Permissions
+                      {t("PERMISSION_SEVERITY.PERMISSIONS")}
                     </span>
                   </div>
                 )}

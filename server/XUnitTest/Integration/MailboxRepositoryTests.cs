@@ -1,11 +1,16 @@
 using System;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading.Tasks;
-using Configuration.DomainService.Mail.Entities;
-using Configuration.DomainService.Mail.Enums;
+using Blocks.Genesis;
 using Configuration.DomainService.Mail.Mailbox;
 using Configuration.DomainService.Mail.Mailbox.Services;
 using FluentAssertions;
+using Blocks.Genesis.Entities.Logic;
+using MongoDB.Bson;
+using MongoDB.Driver;
+using MongoDB.Driver.Core.Events;
+using Moq;
 
 namespace XUnitTest.Integration
 {
@@ -187,6 +192,149 @@ namespace XUnitTest.Integration
             var result = await NewRepository().GetMailBoxMailAsync("nope-" + Guid.NewGuid().ToString("N"));
 
             result.Should().BeNull();
+        }
+
+        private const int PreviewCap = 8_388_608;
+
+        private static MailBoxEntity Inbound(string messageId, DateTime date, string rawMime)
+        {
+            var row = Mail(messageId, "Subj", MailStatus.Received, date, inbound: true);
+            row.RawMime = rawMime;
+            return row;
+        }
+
+        // A stored MIME of exactly `length` chars.
+        private static string RawOfLength(int length)
+        {
+            const string head = "Subject: big\r\nContent-Type: text/plain\r\n\r\n";
+            return head + new string('a', length - head.Length);
+        }
+
+        [Fact]
+        public async Task GetMailBoxMailAsync_DoesNotReadTheStoredMime()
+        {
+            // H8/C6: the metadata read leaves RawMime in MongoDB.
+            var messageId = "meta-" + Guid.NewGuid().ToString("N");
+            await SeedAsync(Inbound(messageId, DateTime.UtcNow, "Subject: hi\r\n\r\nHello"));
+
+            var result = await NewRepository().GetMailBoxMailAsync(messageId);
+
+            result!.MessageId.Should().Be(messageId);
+            result.RawMime.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task GetRawMimeAsync_ReturnsTheStoredMimeAndItsLength()
+        {
+            var messageId = "raw-" + Guid.NewGuid().ToString("N");
+            const string raw = "Subject: hi\r\nContent-Type: text/plain\r\n\r\nGr\u00fc\u00dfe";
+            await SeedAsync(Inbound(messageId, DateTime.UtcNow, raw));
+
+            var result = await NewRepository().GetRawMimeAsync(messageId, null);
+
+            // $strLenCP counts code points, so Latin-1 chars above 0x7F count once, like their byte.
+            result!.Length.Should().Be(raw.Length);
+            result.RawMime.Should().Be(raw);
+        }
+
+        [Fact]
+        public async Task GetRawMimeAsync_NoRowWithStoredMime_ReturnsNull()
+        {
+            // Outbound rows store "" (and older rows may hold null); an unknown message has no rows.
+            var messageId = "out-" + Guid.NewGuid().ToString("N");
+            var withNull = Mail(messageId, "Subj", MailStatus.Delivered, DateTime.UtcNow);
+            withNull.RawMime = null!;
+            await SeedAsync(Mail(messageId, "Subj", MailStatus.Sent, DateTime.UtcNow.AddMinutes(-1)), withNull);
+
+            var repository = NewRepository();
+
+            (await repository.GetRawMimeAsync(messageId, null)).Should().BeNull();
+            (await repository.GetRawMimeAsync(messageId, PreviewCap)).Should().BeNull();
+            (await repository.GetRawMimeAsync("nope-" + Guid.NewGuid().ToString("N"), null)).Should().BeNull();
+        }
+
+        [Fact]
+        public async Task GetRawMimeAsync_AtTheCap_ReturnsTheMime_AndAboveIt_OnlyTheLength()
+        {
+            // C4/H8/E3/E4.
+            var atCap = "cap-" + Guid.NewGuid().ToString("N");
+            var aboveCap = "over-" + Guid.NewGuid().ToString("N");
+            await SeedAsync(
+                Inbound(atCap, DateTime.UtcNow, RawOfLength(PreviewCap)),
+                Inbound(aboveCap, DateTime.UtcNow, RawOfLength(PreviewCap + 1)));
+
+            var repository = NewRepository();
+            var at = await repository.GetRawMimeAsync(atCap, PreviewCap);
+            var above = await repository.GetRawMimeAsync(aboveCap, PreviewCap);
+            var uncapped = await repository.GetRawMimeAsync(aboveCap, null);
+
+            at!.Length.Should().Be(PreviewCap);
+            at.RawMime.Should().HaveLength(PreviewCap);
+            above!.Length.Should().Be(PreviewCap + 1);
+            above.RawMime.Should().BeNull();
+            uncapped!.RawMime.Should().HaveLength(PreviewCap + 1);
+        }
+
+        [Fact]
+        public async Task GetRawMimeAsync_DuplicateInboundRows_ReturnsTheNewest()
+        {
+            var messageId = "dup-" + Guid.NewGuid().ToString("N");
+            var now = DateTime.UtcNow;
+            await SeedAsync(
+                Inbound(messageId, now.AddMinutes(-5), "Subject: old\r\n\r\nold"),
+                Inbound(messageId, now, "Subject: new\r\n\r\nnew"),
+                // A newer row without MIME does not hide the stored one.
+                Mail(messageId, "Subj", MailStatus.Delivered, now.AddMinutes(1)));
+
+            var result = await NewRepository().GetRawMimeAsync(messageId, null);
+
+            result!.RawMime.Should().Be("Subject: new\r\n\r\nnew");
+        }
+
+        [Fact]
+        public async Task DetailsReads_ManyRows_ReadTheMimeOnceWithLimitOneAndProjectItOutOfTheFind()
+        {
+            // C6: command monitoring on a client built from the fixture's connection string.
+            var messageId = "mon-" + Guid.NewGuid().ToString("N");
+            var now = DateTime.UtcNow;
+            var rows = Enumerable.Range(0, 50)
+                .Select(i => Mail(messageId, "Subj", MailStatus.Delivered, now.AddSeconds(-i)))
+                .Append(Inbound(messageId, now.AddMinutes(-1), "Subject: a\r\n\r\na"))
+                .Append(Inbound(messageId, now.AddMinutes(-2), "Subject: b\r\n\r\nb"))
+                .ToArray();
+            await SeedAsync(rows);
+
+            var commands = new ConcurrentQueue<(string Name, BsonDocument Command)>();
+            var settings = MongoClientSettings.FromConnectionString(MongoIntegrationFixture.ConnectionString);
+            settings.ClusterConfigurator = cluster => cluster.Subscribe<CommandStartedEvent>(e =>
+            {
+                if (e.CommandName is "find" or "aggregate"
+                    && e.DatabaseNamespace.DatabaseName == _fixture.DatabaseName
+                    && e.Command.GetValue(e.CommandName, BsonNull.Value) == CollectionName)
+                {
+                    commands.Enqueue((e.CommandName, e.Command.DeepClone().AsBsonDocument));
+                }
+            });
+            using var client = new MongoClient(settings);
+            var provider = new Mock<IDbContextProvider>();
+            provider.Setup(p => p.GetDatabase()).Returns(client.GetDatabase(_fixture.DatabaseName));
+            var repository = new MailboxRepository(provider.Object);
+
+            var mail = await repository.GetMailBoxMailAsync(messageId);
+            var raw = await repository.GetRawMimeAsync(messageId, PreviewCap);
+
+            mail!.RawMime.Should().BeNull();
+            raw!.RawMime.Should().Be("Subject: a\r\n\r\na");
+
+            var aggregates = commands.Where(c => c.Name == "aggregate").ToList();
+            aggregates.Should().ContainSingle();
+            aggregates[0].Command["pipeline"].AsBsonArray
+                .Should().ContainSingle(stage => stage.AsBsonDocument.Contains("$limit"))
+                .Which.AsBsonDocument["$limit"].ToInt32().Should().Be(1);
+
+            var finds = commands.Where(c => c.Name == "find").ToList();
+            finds.Should().ContainSingle();
+            finds[0].Command["projection"].AsBsonDocument[nameof(MailBoxEntity.RawMime)].ToInt32().Should().Be(0);
         }
     }
 }

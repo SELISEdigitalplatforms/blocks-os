@@ -14,29 +14,39 @@ import {
   OidcBrandingHeaderProvider,
   useOidcBrandingHeaderOptional,
 } from "@blocks-idp/authentication/contexts/oidc-branding-header-context";
-import { useProjectStore } from "@seliseblocks/genesis-os";
-import { Plus, Loader2, Notebook, LayoutTemplate } from "lucide-react";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
+import { Plus, Loader2, Notebook, LayoutTemplate, Smartphone } from "lucide-react";
 import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
+import { useNotificationNavigation } from "@/cross-modules/communication/notification/hooks/use-notification-navigation";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
+import { EmailOrganizationPicker } from "@blocks-communication/mail/components/email-service/email-organization-picker/email-organization-picker";
+import { ADD_WEBHOOK_QUERY_KEY } from "@/cross-modules/webhooks/constants/webhooks.constant";
+
+const KEY_ADD_CONFIGURATION = "SECRET_MANAGEMENT.ADD_CONFIGURATION";
 
 function SecretManagementHeaderActions({
   isOidcBranding,
   currentPath,
   setIsAddIdpOpen,
   setIsEmailConfigOpen,
-  setIsNotificationConfigOpen,
+  openNotificationNew,
+  openNotificationPush,
   setIsManagedServicesGuideOpen,
   setIsClientCredentialOpen,
-}: {
+  setIsAddWebhookOpen,
+}: Readonly<{
   isOidcBranding: boolean;
   currentPath: string;
   setIsAddIdpOpen: (value: boolean) => void;
   setIsEmailConfigOpen: (value: boolean) => void;
-  setIsNotificationConfigOpen: (value: boolean) => void;
+  openNotificationNew: () => void;
+  openNotificationPush: () => void;
   setIsManagedServicesGuideOpen: (value: boolean) => void;
   setIsClientCredentialOpen: (value: boolean) => void;
-}) {
+  setIsAddWebhookOpen: (value: boolean) => void;
+}>) {
+  const { t } = useT("os.secret-management");
   const brandingHeader = useOidcBrandingHeaderOptional();
   const navigate = useNavigate();
   const scoped = useScopedPath();
@@ -52,16 +62,16 @@ function SecretManagementHeaderActions({
           onClick={onUndo}
           disabled={isBusy || !isDirty}
         >
-          Undo
+          {t("SECRET_MANAGEMENT.UNDO")}
         </Button>
         <Button type="button" size="sm" onClick={onSave} disabled={isBusy || !isDirty || !isValid}>
           {isBusy ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving…
+              {t("SECRET_MANAGEMENT.SAVING")}
             </>
           ) : (
-            "Save"
+            t("common:SAVE")
           )}
         </Button>
       </>
@@ -79,7 +89,7 @@ function SecretManagementHeaderActions({
             onClick={() => navigate(scoped("secret-management/oidc/branding"))}
           >
             <LayoutTemplate className="h-4 w-4" />
-            <span className="ml-2">Manage Template</span>
+            <span className="ml-2">{t("SECRET_MANAGEMENT.MANAGE_TEMPLATE")}</span>
           </Button>
           <CreateOIDC />
         </>
@@ -88,7 +98,7 @@ function SecretManagementHeaderActions({
         <Button size="sm" onClick={() => setIsClientCredentialOpen(true)}>
           <Plus className="h-5 w-5" />
           <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
-            Add
+            {t("common:ADD")}
           </span>
         </Button>
       )}
@@ -96,7 +106,7 @@ function SecretManagementHeaderActions({
         <Button size="sm" onClick={() => setIsAddIdpOpen(true)}>
           <Plus className="h-5 w-5" />
           <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
-            Add
+            {t("common:ADD")}
           </span>
         </Button>
       )}
@@ -106,7 +116,7 @@ function SecretManagementHeaderActions({
             <Button size="sm">
               <Plus className="h-5 w-5" />
               <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
-                Add Configuration
+                {t(KEY_ADD_CONFIGURATION)}
               </span>
             </Button>
           </DialogTrigger>
@@ -118,7 +128,7 @@ function SecretManagementHeaderActions({
             <Button size="sm">
               <Plus className="h-5 w-5" />
               <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
-                Add Configuration
+                {t(KEY_ADD_CONFIGURATION)}
               </span>
             </Button>
           </DialogTrigger>
@@ -129,25 +139,45 @@ function SecretManagementHeaderActions({
           <Button variant="outline" size="sm" onClick={() => setIsManagedServicesGuideOpen(true)}>
             <Notebook className="aspect-square w-4" />
             <span className="sr-only sm:not-sr-only sm:ml-2 sm:text-sm sm:whitespace-nowrap">
-              Setup Guide
+              {t("SECRET_MANAGEMENT.SETUP_GUIDE")}
             </span>
           </Button>
           <AddService />
         </>
       )}
       {currentPath === "email" && (
-        <Button size="sm" onClick={() => setIsEmailConfigOpen(true)}>
-          <Plus className="h-5 w-5" />
-          <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
-            Add Configuration
-          </span>
-        </Button>
+        <>
+          {/* Multi-org projects only; the page lists the picked organization's configurations. */}
+          <EmailOrganizationPicker />
+          <Button size="sm" onClick={() => setIsEmailConfigOpen(true)}>
+            <Plus className="h-5 w-5" />
+            <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
+              {t(KEY_ADD_CONFIGURATION)}
+            </span>
+          </Button>
+        </>
       )}
       {currentPath === "notification" && (
-        <Button size="sm" onClick={() => setIsNotificationConfigOpen(true)}>
+        <>
+          <Button variant="outline" size="sm" onClick={openNotificationPush}>
+            <Smartphone className="h-4 w-4" />
+            <span className="sr-only sm:not-sr-only sm:ml-2 sm:text-sm sm:whitespace-nowrap">
+              {t("SECRET_MANAGEMENT.PUSH")}
+            </span>
+          </Button>
+          <Button size="sm" onClick={openNotificationNew}>
+            <Plus className="h-5 w-5" />
+            <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
+              {t("SECRET_MANAGEMENT.ADD_NOTIFICATION")}
+            </span>
+          </Button>
+        </>
+      )}
+      {currentPath === "webhooks" && (
+        <Button size="sm" onClick={() => setIsAddWebhookOpen(true)}>
           <Plus className="h-5 w-5" />
           <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
-            Add Configuration
+            {t("SECRET_MANAGEMENT.ADD_WEBHOOK")}
           </span>
         </Button>
       )}
@@ -159,7 +189,9 @@ function SecretManagementHeaderActions({
 export default function SecretManagementLayout() {
   const { pathname } = useLocation();
   const scoped = useScopedPath();
-  const currentPath = pathname.split("/").pop() ?? "secret";
+  // /secret-management/notification/<new|push|id> still belongs to the notification page.
+  const notificationMatch = /\/secret-management\/notification(?:\/([^/]+))?\/?$/.exec(pathname);
+  const currentPath = notificationMatch ? "notification" : (pathname.split("/").pop() ?? "secret");
   const oidcBrandingMatch = pathname.match(/\/oidc\/branding$/);
   const isOidcBranding = Boolean(oidcBrandingMatch);
   const secretManagementBase = scoped("secret-management");
@@ -175,10 +207,13 @@ export default function SecretManagementLayout() {
   // Shared via URL so child routes can read/close the same modal
   const [, setIsAddIdpOpen] = useQueryState("addIdp", parseAsBoolean.withDefault(false));
   const [, setIsEmailConfigOpen] = useQueryState("emailConfig", parseAsBoolean.withDefault(false));
-  const [, setIsNotificationConfigOpen] = useQueryState(
-    "notificationConfig",
+  const [, setIsAddWebhookOpen] = useQueryState(
+    ADD_WEBHOOK_QUERY_KEY,
     parseAsBoolean.withDefault(false),
   );
+  const notificationNav = useNotificationNavigation();
+  // The notification form and the push page show their own title, so the list header steps aside.
+  const isNotificationPageOpen = Boolean(notificationMatch?.[1]);
   const [, setIsManagedServicesGuideOpen] = useQueryState(
     "guideOpen",
     parseAsBoolean.withDefault(false),
@@ -195,15 +230,17 @@ export default function SecretManagementLayout() {
   const breadcrumbTitles = isOidcBranding
     ? {
         [`${secretManagementBase}/oidc`]: "OIDC",
-        [`${secretManagementBase}/oidc/branding`]: "Template",
+        // null hides the segment, so the trail ends at "OIDC".
+        [`${secretManagementBase}/oidc/branding`]: null,
       }
     : undefined;
 
-  const currentItem = isOidcBranding
-    ? null
-    : SECRET_MANAGEMENT_NAV_GROUPS.flatMap((g) => g.items).find(
-        (item) => item.value === currentPath,
-      );
+  const currentItem =
+    isOidcBranding || isNotificationPageOpen
+      ? null
+      : SECRET_MANAGEMENT_NAV_GROUPS.flatMap((g) => g.items).find(
+          (item) => item.value === currentPath,
+        );
 
   const headerActions = (
     <SecretManagementHeaderActions
@@ -211,9 +248,11 @@ export default function SecretManagementLayout() {
       currentPath={currentPath}
       setIsAddIdpOpen={setIsAddIdpOpen}
       setIsEmailConfigOpen={setIsEmailConfigOpen}
-      setIsNotificationConfigOpen={setIsNotificationConfigOpen}
+      openNotificationNew={notificationNav.openNew}
+      openNotificationPush={notificationNav.openPush}
       setIsManagedServicesGuideOpen={setIsManagedServicesGuideOpen}
       setIsClientCredentialOpen={setIsClientCredentialOpen}
+      setIsAddWebhookOpen={setIsAddWebhookOpen}
     />
   );
 

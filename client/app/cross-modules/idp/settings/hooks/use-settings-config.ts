@@ -54,6 +54,10 @@ export const useSaveSettingsOrganizationConfig = () => {
       void queryClient.invalidateQueries({
         queryKey: ["settings", "organization-config", tenantId],
       });
+      // The organization screens read the same config under their own key, and their list and
+      // detail queries cache the multi_org_disabled error, so toggling multi-org here must reach them.
+      void queryClient.invalidateQueries({ queryKey: ["organization"] });
+      void queryClient.invalidateQueries({ queryKey: ["organizations"] });
     },
   });
 };

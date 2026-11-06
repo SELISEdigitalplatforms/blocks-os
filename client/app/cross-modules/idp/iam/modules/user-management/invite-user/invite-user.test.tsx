@@ -3,7 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createWrapper } from "@/test-utils/test-providers/query-client";
 
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 
@@ -26,6 +27,7 @@ vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
 }));
 vi.mock("@blocks-idp/iam/hooks/use-organization", () => ({
   useGetOrganizations: () => h.orgs,
+  useGetOrganizationById: () => ({ data: undefined }),
   useGetOrganizationConfig: () => h.config,
 }));
 vi.mock("@/store/useProjectStore", () => ({

@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => import("@/test-utils/__mocks__/grant-scope.mock"));
 
 // Tooltip re-exports blocks-kit (process.env at load); passthrough keeps it renderable.
 vi.mock("@/components/ui-kits/tooltip/tooltip", () => ({
@@ -8,7 +9,8 @@ vi.mock("@/components/ui-kits/tooltip/tooltip", () => ({
   TooltipContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 
@@ -22,7 +24,7 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("@blocks-idp/iam/hooks/use-roles", () => ({
-  useGetRoles: () => h.rolesResult,
+  useGetAssignableRoles: () => h.rolesResult,
 }));
 vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
   useUserRoles: () => ({ isPending: h.isPending, addRoles: h.addRoles, slugs: h.slugs }),

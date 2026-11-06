@@ -1,10 +1,6 @@
 import { useState } from "react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui-kits/sheet/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui-kits/sheet/sheet";
+import { DisabledReason } from "@blocks-idp/iam/components/disabled-reason";
 import { Button } from "@/components/ui-kits/button/button";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import {
@@ -24,12 +20,15 @@ import type {
   ISessionDetailsViewModel,
   ITimelineEventViewModel,
 } from "../view-models/session.view-model";
+import { useT } from "@seliseblocks/genesis-os";
 
 type SessionDetailsDrawerProps = {
   sessionId: string | null;
   onOpenChange: (open: boolean) => void;
   onRevoked?: () => void;
   userId?: string;
+  /** When set, signing the device out is off, for this reason. */
+  readOnlyReason?: string;
 };
 
 const InfoItem = ({
@@ -62,7 +61,9 @@ export const SessionDetailsDrawer = ({
   onOpenChange,
   onRevoked,
   userId,
+  readOnlyReason,
 }: SessionDetailsDrawerProps) => {
+  const { t } = useT("os.idp.security");
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const { data, isLoading, isError, error } = useSessionDetails(sessionId ?? "", userId, {
     enabled: !!sessionId,
@@ -74,7 +75,7 @@ export const SessionDetailsDrawer = ({
     if (!sessionId) return;
     try {
       await mutateAsync({ sessionId });
-      showSuccessToast({ description: "Device signed out successfully" });
+      showSuccessToast({ description: t("SESSION_DETAILS_DRAWER.SIGN_OUT_SUCCESS") });
       setIsConfirmOpen(false);
       onRevoked?.();
       onOpenChange(false);
@@ -83,41 +84,55 @@ export const SessionDetailsDrawer = ({
         errors:
           typeof err === "object" && err !== null && "errors" in err
             ? (err as { errors: unknown }).errors
-            : "Something went wrong",
+            : t("SESSION_DETAILS_DRAWER.GENERIC_ERROR"),
       });
     }
   };
 
+  let view: "loading" | "error" | "notFound" | "details" = "details";
+  if (isLoading) view = "loading";
+  else if (isError) view = "error";
+  else if (!vm) view = "notFound";
+
   return (
     <Sheet open={!!sessionId} onOpenChange={onOpenChange}>
       <SheetContent className="flex w-full flex-col overflow-hidden p-0 sm:max-w-md">
-        {isLoading ? (
+        {view === "loading" && (
           <div className="space-y-4 p-6">
             <Skeleton className="h-10 w-10 rounded-lg" />
             <Skeleton className="h-6 w-40" />
             <Skeleton className="h-24 w-full" />
           </div>
-        ) : isError ? (
+        )}
+        {view === "error" && (
           <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center">
-            <p className="text-sm font-medium text-high-emphasis">Unable to load session</p>
+            <p className="text-sm font-medium text-high-emphasis">
+              {t("SESSION_DETAILS_DRAWER.LOAD_FAILED_TITLE")}
+            </p>
             <p className="text-xs text-muted-foreground">
-              {error instanceof Error ? error.message : "An unexpected error occurred."}
+              {error instanceof Error
+                ? error.message
+                : t("SESSION_DETAILS_DRAWER.UNEXPECTED_ERROR")}
             </p>
             <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
-              Close
+              {t("common:CLOSE")}
             </Button>
           </div>
-        ) : !vm ? (
+        )}
+        {view === "notFound" && (
           <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center">
-            <p className="text-sm font-medium text-high-emphasis">Session not found</p>
+            <p className="text-sm font-medium text-high-emphasis">
+              {t("SESSION_DETAILS_DRAWER.NOT_FOUND_TITLE")}
+            </p>
             <p className="text-xs text-muted-foreground">
-              This session may have expired or already been signed out.
+              {t("SESSION_DETAILS_DRAWER.NOT_FOUND_BODY")}
             </p>
             <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
-              Close
+              {t("common:CLOSE")}
             </Button>
           </div>
-        ) : (
+        )}
+        {view === "details" && vm && (
           <>
             <SheetHeader className="shrink-0 border-b px-6 py-4">
               <div className="flex items-center gap-3">
@@ -131,7 +146,7 @@ export const SessionDetailsDrawer = ({
                   <SheetTitle className="truncate">{vm.overview.deviceName}</SheetTitle>
                   {vm.overview.isCurrent ? (
                     <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700">
-                      This device
+                      {t("SESSION_DETAILS_DRAWER.THIS_DEVICE")}
                     </span>
                   ) : null}
                 </div>
@@ -146,30 +161,33 @@ export const SessionDetailsDrawer = ({
                   </span>
                   {!vm.overview.isCurrent && (
                     <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-                      <Button
-                        variant="destructive-outline"
-                        size="sm"
-                        onClick={() => setIsConfirmOpen(true)}
-                      >
-                        Sign out of this device
-                      </Button>
+                      <DisabledReason reason={readOnlyReason}>
+                        <Button
+                          variant="destructive-outline"
+                          size="sm"
+                          disabled={Boolean(readOnlyReason)}
+                          onClick={() => setIsConfirmOpen(true)}
+                        >
+                          {t("SESSION_DETAILS_DRAWER.SIGN_OUT_BUTTON")}
+                        </Button>
+                      </DisabledReason>
                       <DialogContent className="sm:max-w-[400px]">
                         <DialogHeader>
-                          <DialogTitle>Sign out of this device?</DialogTitle>
+                          <DialogTitle>{t("SESSION_DETAILS_DRAWER.CONFIRM_TITLE")}</DialogTitle>
                           <DialogDescription>
-                            This will immediately end the session on {vm.overview.deviceName}.
+                            {t("SESSION_DETAILS_DRAWER.CONFIRM_DESCRIPTION", {
+                              device: vm.overview.deviceName,
+                            })}
                           </DialogDescription>
                         </DialogHeader>
                         <DialogFooter>
                           <Button variant="outline" onClick={() => setIsConfirmOpen(false)}>
-                            Cancel
+                            {t("common:CANCEL")}
                           </Button>
-                          <Button
-                            variant="destructive"
-                            onClick={handleRevoke}
-                            disabled={isPending}
-                          >
-                            {isPending ? "Signing out..." : "Sign out"}
+                          <Button variant="destructive" onClick={handleRevoke} disabled={isPending}>
+                            {isPending
+                              ? t("SESSION_DETAILS_DRAWER.SIGNING_OUT")
+                              : t("SESSION_DETAILS_DRAWER.SIGN_OUT")}
                           </Button>
                         </DialogFooter>
                       </DialogContent>
@@ -178,28 +196,32 @@ export const SessionDetailsDrawer = ({
                 </div>
 
                 <p className="break-all text-xs text-muted-foreground">
-                  Session ID: <span className="font-mono">{vm.overview.sessionId}</span>
+                  {t("SESSION_DETAILS_DRAWER.SESSION_ID")}{" "}
+                  <span className="font-mono">{vm.overview.sessionId}</span>
                 </p>
 
                 <div className="grid grid-cols-2 gap-4">
                   <InfoItem
                     icon={<Globe className="h-3.5 w-3.5" />}
-                    label="IP Address"
+                    label={t("SESSION_DETAILS_DRAWER.IP_ADDRESS")}
                     value={vm.overview.ipAddress}
                   />
                   <InfoItem
                     icon={<Calendar className="h-3.5 w-3.5" />}
-                    label="Started"
+                    label={t("SESSION_DETAILS_DRAWER.STARTED")}
                     value={vm.overview.startedAtDisplay}
                   />
                   <InfoItem
                     icon={<Monitor className="h-3.5 w-3.5" />}
-                    label="Browser / OS"
-                    value={`${vm.overview.browser} on ${vm.overview.operatingSystem}`}
+                    label={t("SESSION_DETAILS_DRAWER.BROWSER_OS")}
+                    value={t("SESSION_DETAILS_DRAWER.BROWSER_ON_OS", {
+                      browser: vm.overview.browser,
+                      os: vm.overview.operatingSystem,
+                    })}
                   />
                   <InfoItem
                     icon={<Calendar className="h-3.5 w-3.5" />}
-                    label="Expires"
+                    label={t("SESSION_DETAILS_DRAWER.EXPIRES")}
                     value={vm.overview.absoluteExpiryDisplay}
                   />
                 </div>
@@ -207,7 +229,7 @@ export const SessionDetailsDrawer = ({
                 {vm.applications.length > 0 && (
                   <div className="space-y-2">
                     <h4 className="text-sm font-semibold text-high-emphasis">
-                      Signed-in applications
+                      {t("SESSION_DETAILS_DRAWER.SIGNED_IN_APPLICATIONS")}
                     </h4>
                     <ul className="space-y-1.5">
                       {vm.applications.map((app) => (
@@ -216,11 +238,11 @@ export const SessionDetailsDrawer = ({
                           className="flex items-center justify-between gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm"
                         >
                           <span className="truncate">
-                            <span className="font-medium text-high-emphasis">
-                              {app.clientName}
-                            </span>
+                            <span className="font-medium text-high-emphasis">{app.clientName}</span>
                             <span className="ml-2 text-xs text-muted-foreground">
-                              {app.rotationCountLabel} rotations
+                              {t("SESSION_DETAILS_DRAWER.ROTATIONS", {
+                                count: Number(app.rotationCountLabel),
+                              })}
                             </span>
                           </span>
                           <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
@@ -234,10 +256,12 @@ export const SessionDetailsDrawer = ({
 
                 <div className="space-y-3">
                   <h4 className="text-sm font-semibold text-high-emphasis">
-                    Activity timeline
+                    {t("SESSION_DETAILS_DRAWER.ACTIVITY_TIMELINE")}
                   </h4>
                   {vm.timeline.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No activity yet.</p>
+                    <p className="text-sm text-muted-foreground">
+                      {t("SESSION_DETAILS_DRAWER.NO_ACTIVITY")}
+                    </p>
                   ) : (
                     <ul className="space-y-3 border-l pl-4">
                       {vm.timeline.map((event) => (

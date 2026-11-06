@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => import("@/test-utils/__mocks__/grant-scope.mock"));
 
 const h = vi.hoisted(() => ({
   navigate: vi.fn(),
@@ -56,9 +57,12 @@ vi.mock("../permission-form", () => ({
 }));
 
 import { AddPermission } from "./add-permission";
+import { grant, resetGrant } from "@/test-utils/__mocks__/grant-scope.mock";
+
 
 describe("AddPermission", () => {
   beforeEach(() => {
+    resetGrant();
     vi.clearAllMocks();
     h.isPending = false;
     h.mutateAsync.mockResolvedValue({ isSuccess: true });
@@ -98,5 +102,18 @@ describe("AddPermission", () => {
     fireEvent.click(screen.getByText("save-valid"));
     await waitFor(() => expect(h.showErrorToast).toHaveBeenCalled());
     expect(h.navigate).not.toHaveBeenCalled();
+  });
+
+  it("is read-only for a caller who is not the system user, and never saves", () => {
+    grant.systemOnlyReason = "Only the system user can change this.";
+    render(<AddPermission />);
+    expect(h.formProps?.readOnlyReason).toBe("Only the system user can change this.");
+    fireEvent.click(screen.getByText("save-valid"));
+    expect(h.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("leaves the form editable for the system user", () => {
+    render(<AddPermission />);
+    expect(h.formProps?.readOnlyReason).toBeUndefined();
   });
 });

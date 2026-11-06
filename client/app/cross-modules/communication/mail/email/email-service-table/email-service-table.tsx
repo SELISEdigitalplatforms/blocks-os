@@ -12,16 +12,24 @@ import {
 } from "@/components/ui-kits/select/select";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
-import { EMAIL_TABS, type EmailTabKey } from "@blocks-communication/mail/constants/email-tabs";
+import { EMAIL_TAB_KEYS, type EmailTabKey } from "@blocks-communication/mail/constants/email-tabs";
 import { EmailTemplateList } from "@blocks-communication/mail/email/email-service-table/email-template-list";
 import { EmailUsageList } from "@blocks-communication/mail/email/email-usage/email-usage-list";
-import { useGetEmailConfigs } from "@blocks-communication/mail/hooks/use-email-config";
+import { useGetEmailSecretConfigs } from "@blocks-communication/mail/hooks/use-email-config";
+import {
+  EMAIL_ORGANIZATION_PARAM,
+  useEmailOrganization,
+  useOrganizationName,
+} from "@blocks-communication/mail/hooks/use-email-organization";
+import { EmailOrganizationPicker } from "@blocks-communication/mail/components/email-service/email-organization-picker/email-organization-picker";
+import { DEFAULT_ORGANIZATION_ID } from "@blocks-communication/mail/constants/organization";
 import { useGetEmailTemplates } from "@blocks-communication/mail/hooks/use-email-template";
 import { useGetLanguages } from "@blocks-localization/hooks/use-language-manager";
 import { CirclePlus } from "lucide-react";
 import { useNavigate } from "react-router";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
+import { useT } from "@seliseblocks/genesis-os";
 import { useEmailUsageFilterQueryParams } from "../email-usage/email-usage-filter-toolbar";
 import { useQueryState } from "nuqs";
 import {
@@ -30,32 +38,10 @@ import {
   useTemplatesSortQueryParams,
 } from "./template-filter-toolbar";
 
-const EMAIL_MANAGEMENT_TABS: { value: EmailTabKey; label: string }[] = [
-  { value: "Emailstemplates", label: EMAIL_TABS.Emailstemplates.label },
-  { value: "Inbox", label: EMAIL_TABS.Inbox.label },
-  { value: "Outgoingmails", label: EMAIL_TABS.Outgoingmails.label },
-];
-
-const EMAIL_MANAGEMENT_TAB_META: Record<EmailTabKey, { title: string; description: string }> = {
-  Emailstemplates: {
-    title: "Email Templates",
-    description:
-      "Create, review, and manage reusable email templates for application communication.",
-  },
-  Inbox: {
-    title: "Incoming Mails",
-    description: "Review received email activity, delivery details, and message history.",
-  },
-  Outgoingmails: {
-    title: "Outgoing Mails",
-    description: "Monitor sent email activity, delivery status, and failure details.",
-  },
-};
-
 const DEFAULT_EMAIL_TAB: EmailTabKey = "Emailstemplates";
 
 const isEmailTabKey = (value: string | null): value is EmailTabKey =>
-  EMAIL_MANAGEMENT_TABS.some((tab) => tab.value === value);
+  value !== null && (EMAIL_TAB_KEYS as readonly string[]).includes(value);
 
 const LoadingSkelton = () => {
   return (
@@ -66,22 +52,206 @@ const LoadingSkelton = () => {
     </div>
   );
 };
+/** Whether the list is narrowed, in which case an empty result is not "no templates yet". */
+const hasFilters = (params: { search?: string; language?: string; mailConfigurationId?: string }) =>
+  !!(params.search || params.language || params.mailConfigurationId);
+type Translate = ReturnType<typeof useT>["t"];
+
+/** Each tab's label, and the page title and description it shows. */
+const tabTexts = (t: Translate) => {
+  const tabLabels: Record<EmailTabKey, string> = {
+    Emailstemplates: t("EMAIL_SERVICE_TABLE.TAB_TEMPLATES"),
+    Inbox: t("EMAIL_SERVICE_TABLE.TAB_INCOMING_MAILS"),
+    Outgoingmails: t("EMAIL_SERVICE_TABLE.TAB_OUTGOING_MAILS"),
+  };
+  const tabMeta: Record<EmailTabKey, { title: string; description: string }> = {
+    Emailstemplates: {
+      title: t("EMAIL_SERVICE_TABLE.TITLE_TEMPLATES"),
+      description: t("EMAIL_SERVICE_TABLE.DESCRIPTION_TEMPLATES"),
+    },
+    Inbox: {
+      title: t("EMAIL_SERVICE_TABLE.TAB_INCOMING_MAILS"),
+      description: t("EMAIL_SERVICE_TABLE.DESCRIPTION_INCOMING_MAILS"),
+    },
+    Outgoingmails: {
+      title: t("EMAIL_SERVICE_TABLE.TAB_OUTGOING_MAILS"),
+      description: t("EMAIL_SERVICE_TABLE.DESCRIPTION_OUTGOING_MAILS"),
+    },
+  };
+  const tabs = EMAIL_TAB_KEYS.map((value) => ({ value, label: tabLabels[value] }));
+  return { tabs, tabMeta };
+};
+
+/** The tab switcher (a select on small screens) and, on the Templates tab, the page's actions. */
+function EmailTabsBar({
+  tabs,
+  activeTab,
+  showOrganizationPicker,
+  onTabChange,
+  onAddTemplate,
+}: Readonly<{
+  tabs: { value: EmailTabKey; label: string }[];
+  activeTab: EmailTabKey;
+  showOrganizationPicker: boolean;
+  onTabChange: (value: string) => void;
+  onAddTemplate: () => void;
+}>) {
+  const { t } = useT("os.communication.mail");
+  return (
+    <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-4 sm:gap-y-3">
+      <div className="flex min-w-0 items-center gap-4">
+        <div className="md:hidden">
+          <Select value={activeTab} onValueChange={(value) => onTabChange(value as EmailTabKey)}>
+            <SelectTrigger
+              className="w-56"
+              aria-label={t("EMAIL_SERVICE_TABLE.SECTION_ARIA_LABEL")}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {tabs.map(({ value, label }) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="hidden items-center md:flex">
+          <TabsList className="h-[42px] bg-blocks-primary-shades-300">
+            {tabs.map(({ value, label }) => (
+              <TabsTrigger key={value} value={value} className="h-8 px-4 text-sm">
+                {label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
+      </div>
+
+      {activeTab === "Emailstemplates" ? (
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          {showOrganizationPicker ? <EmailOrganizationPicker /> : null}
+          <Button
+            size="default"
+            variant="default"
+            className="bg-primary text-primary-foreground shadow-none"
+            onClick={onAddTemplate}
+          >
+            <CirclePlus className="h-5 w-5 lg:mr-2" />
+            <span className="sr-only lg:not-sr-only">{t("EMAIL_SERVICE_TABLE.ADD_TEMPLATE")}</span>
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** What the Templates list area shows: loading, the error with retry, the empty state, or the list. */
+function TemplatesListBody({
+  isLoading,
+  isError,
+  isEmpty,
+  organizationName,
+  onRetry,
+  onAddTemplate,
+  children,
+}: Readonly<{
+  isLoading: boolean;
+  isError: boolean;
+  isEmpty: boolean;
+  organizationName: string;
+  onRetry: () => void;
+  onAddTemplate: () => void;
+  children: ReactNode;
+}>) {
+  const { t } = useT("os.communication.mail");
+  if (isLoading) {
+    return <LoadingSkelton />;
+  }
+  if (isError) {
+    return (
+      <div role="alert" className="flex flex-col items-center gap-3 py-10">
+        <p className="text-sm text-high-emphasis">
+          {t("EMAIL_SERVICE_TABLE.TEMPLATES_LOAD_FAILED")}
+        </p>
+        <Button variant="outline" onClick={onRetry}>
+          {t("EMAIL_SERVICE_TABLE.RETRY")}
+        </Button>
+      </div>
+    );
+  }
+  if (isEmpty) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-10">
+        <p className="text-sm text-high-emphasis">
+          {t("EMAIL_SERVICE_TABLE.ORGANIZATION_EMPTY", { organization: organizationName })}
+        </p>
+        <Button onClick={onAddTemplate}>
+          <CirclePlus className="mr-2 h-5 w-5" />
+          {t("EMAIL_SERVICE_TABLE.ADD_TEMPLATE")}
+        </Button>
+      </div>
+    );
+  }
+  return <>{children}</>;
+}
+
+/** The organization's template count, and the fallback hint for a non-Default organization. */
+function TemplatesSummary({
+  countLabel,
+  showFallbackHint,
+  organizationName,
+}: Readonly<{ countLabel: string; showFallbackHint: boolean; organizationName: string }>) {
+  const { t } = useT("os.communication.mail");
+  return (
+    <div className="mb-3 flex flex-col gap-1">
+      <p className="text-xs font-semibold uppercase tracking-wide text-low-emphasis">
+        {countLabel}
+      </p>
+      {showFallbackHint ? (
+        <p className="text-sm text-low-emphasis">
+          {t("EMAIL_SERVICE_TABLE.ORGANIZATION_FALLBACK_HINT", { organization: organizationName })}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 interface EmailServiceTableProps {
   onRowClick?: (id: string | number) => void;
 }
-export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
+export function EmailServiceTable({ onRowClick }: Readonly<EmailServiceTableProps> = {}) {
+  const { t } = useT("os.communication.mail");
+  const { tabs, tabMeta } = tabTexts(t);
   const { queryParams, setQueryParams } = useTemplatesFilterQueryParams();
   const { sortQueryParams } = useTemplatesSortQueryParams();
-  const { isLoading, data } = useGetEmailTemplates(
-    queryParams.pageNumber ?? 0,
-    queryParams.pageSize ?? 10,
-    queryParams.search ?? "",
-    sortQueryParams.property ?? "Name",
-    sortQueryParams.isDescending ?? false,
-    queryParams.language ?? "",
-    queryParams.mailConfigurationId ?? "",
-  );
-  const { isLoading: isConfigsLoading, data: emailConfigsData } = useGetEmailConfigs(0, 100);
+  const organization = useEmailOrganization();
+  const organizationId = organization.selectedOrganizationId;
+  // Another organization has its own pages and configurations: start it on page 1 with no
+  // configuration filter, so a page or filter of the previous one never empties the list.
+  const shownOrganizationId = useRef(organizationId);
+  useEffect(() => {
+    if (shownOrganizationId.current === organizationId) return;
+    shownOrganizationId.current = organizationId;
+    setQueryParams((prev) => ({ ...prev, pageNumber: 0, mailConfigurationId: "" }));
+  }, [organizationId, setQueryParams]);
+  const organizationName = useOrganizationName(organizationId);
+  const { isLoading, isError, refetch, data } = useGetEmailTemplates({
+    pageNumber: queryParams.pageNumber ?? 0,
+    pageSize: queryParams.pageSize ?? 10,
+    searchKey: queryParams.search ?? "",
+    sortProperty: sortQueryParams.property ?? "Name",
+    isDescending: sortQueryParams.isDescending ?? false,
+    language: queryParams.language ?? "",
+    mailConfigurationId: queryParams.mailConfigurationId ?? "",
+    organizationId,
+  });
+  // The organization's configurations and the Default organization's: the filter, the
+  // Configuration column and its "via" line all read this one list.
+  const { isLoading: isConfigsLoading, data: configsResponse } =
+    useGetEmailSecretConfigs(organizationId);
+  const emailConfigsData = configsResponse?.configurations;
   const { isLoading: isLanguageListLoading, data: languageListData } = useGetLanguages();
   const navigate = useNavigate();
   const scoped = useScopedPath();
@@ -90,7 +260,7 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
     defaultValue: DEFAULT_EMAIL_TAB,
   });
   const activeTab: EmailTabKey = isEmailTabKey(emailTab) ? emailTab : DEFAULT_EMAIL_TAB;
-  const activeTabMeta = EMAIL_MANAGEMENT_TAB_META[activeTab];
+  const activeTabMeta = tabMeta[activeTab];
 
   const handleTabChange = (value: string) => {
     void setEmailTab(value);
@@ -104,6 +274,40 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
       pageNumber,
     }));
   };
+  const onPageSizeChangeHandler = (pageSize: number) => {
+    setQueryParams((prev) => ({
+      ...prev,
+      pageSize,
+      pageNumber: 0,
+    }));
+  };
+  // New Template opens in the page's organization (the same URL parameter as the picker).
+  const newTemplatePath = () => {
+    const path = scoped("email-management/new-communication");
+    return organization.isMultiOrgEnabled && organizationId !== DEFAULT_ORGANIZATION_ID
+      ? `${path}?${EMAIL_ORGANIZATION_PARAM}=${encodeURIComponent(organizationId)}`
+      : path;
+  };
+  const totalCount = data?.totalCount ?? 0;
+  const pageSize = queryParams.pageSize ?? 10;
+  const pageNumber = queryParams.pageNumber ?? 0;
+  const pageFrom = totalCount === 0 ? 0 : pageNumber * pageSize + 1;
+  const pageTo = Math.min(totalCount, (pageNumber + 1) * pageSize);
+  const showFallbackHint =
+    organization.isMultiOrgEnabled && organizationId !== DEFAULT_ORGANIZATION_ID;
+  const countLabel = organization.isMultiOrgEnabled
+    ? t("EMAIL_SERVICE_TABLE.ORGANIZATION_TEMPLATE_COUNT", {
+        organization: organizationName,
+        count: totalCount,
+      })
+    : t("EMAIL_SERVICE_TABLE.TEMPLATE_COUNT", { count: totalCount });
+  const isEmpty =
+    !isLoading &&
+    !isError &&
+    !!data &&
+    totalCount === 0 &&
+    !data.templates?.length &&
+    !hasFilters(queryParams);
   const handleRowClick = (emailId: number | string) => {
     if (onRowClick) {
       onRowClick(emailId);
@@ -115,92 +319,75 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
     if (!data?.templates) return [];
     return data.templates;
   }, [data]);
+  const configs = Array.isArray(emailConfigsData) ? emailConfigsData : [];
+  const languages = Array.isArray(languageListData) ? languageListData : [];
   return (
     <main className="flex flex-col">
       <div className="flex w-full flex-col">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="flex w-full flex-col">
           <PageHeader title={activeTabMeta.title} description={activeTabMeta.description} />
 
-          <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-4 sm:gap-y-3">
-            <div className="flex min-w-0 items-center gap-4">
-              <div className="md:hidden">
-                <Select
-                  value={activeTab}
-                  onValueChange={(value) => handleTabChange(value as EmailTabKey)}
-                >
-                  <SelectTrigger className="w-56" aria-label="Email management section">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {EMAIL_MANAGEMENT_TABS.map(({ value, label }) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="hidden items-center md:flex">
-                <TabsList className="h-[42px] bg-blocks-primary-shades-300">
-                  {EMAIL_MANAGEMENT_TABS.map(({ value, label }) => (
-                    <TabsTrigger key={value} value={value} className="h-8 px-4 text-sm">
-                      {label}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </div>
-            </div>
-
-            {activeTab === "Emailstemplates" ? (
-              <div className="ml-auto flex items-center gap-2">
-                <Button
-                  size="default"
-                  variant="default"
-                  className="bg-primary text-primary-foreground shadow-none"
-                  onClick={() => navigate(scoped("email-management/new-communication"))}
-                >
-                  <CirclePlus className="h-5 w-5 lg:mr-2" />
-                  <span className="sr-only lg:not-sr-only">Add Template</span>
-                </Button>
-              </div>
-            ) : null}
-          </div>
+          <EmailTabsBar
+            tabs={tabs}
+            activeTab={activeTab}
+            showOrganizationPicker={organization.isMultiOrgEnabled}
+            onTabChange={handleTabChange}
+            onAddTemplate={() => navigate(newTemplatePath())}
+          />
           <TabsContent value="Emailstemplates">
             <Card className="rounded shadow-none">
               <CardContent className="mb-4">
                 {isConfigsLoading || isLanguageListLoading ? (
                   <Skeleton className="h-12 w-full rounded" />
                 ) : (
-                  <TemplateFilterToolbar
-                    emailConfigsData={Array.isArray(emailConfigsData) ? emailConfigsData : []}
-                    languageListData={Array.isArray(languageListData) ? languageListData : []}
-                  />
+                  <TemplateFilterToolbar emailConfigsData={configs} languageListData={languages} />
                 )}
               </CardContent>
               <CardContent>
+                {!isLoading && !isError && data ? (
+                  <TemplatesSummary
+                    countLabel={countLabel}
+                    showFallbackHint={showFallbackHint}
+                    organizationName={organizationName}
+                  />
+                ) : null}
                 <ScrollArea className="w-full">
-                  {isLoading || isConfigsLoading ? (
-                    <LoadingSkelton />
-                  ) : (
+                  <TemplatesListBody
+                    isLoading={isLoading || isConfigsLoading || organization.isLoading}
+                    isError={isError}
+                    isEmpty={isEmpty}
+                    organizationName={organizationName}
+                    onRetry={() => void refetch()}
+                    onAddTemplate={() => navigate(newTemplatePath())}
+                  >
                     <EmailTemplateList
                       templates={tableData}
                       isLoading={isLoading}
-                      emailConfigsData={Array.isArray(emailConfigsData) ? emailConfigsData : []}
+                      emailConfigsData={configs}
+                      languages={languages}
+                      organizationName={organizationName}
+                      isMultiOrgEnabled={organization.isMultiOrgEnabled}
                       onRowClick={handleRowClick}
                     />
-                  )}
+                  </TemplatesListBody>
                   <ScrollBar orientation="horizontal" />
                 </ScrollArea>
               </CardContent>
-              {!isLoading && data && data.totalCount > queryParams.pageSize && (
-                <div className="mt-5 flex items-center md:justify-end">
+              {!isLoading && !isError && totalCount > 0 && (
+                <div className="mt-5 flex flex-col items-start gap-2 px-6 pb-4 md:flex-row md:items-center md:justify-end md:gap-6">
+                  <p className="text-sm text-medium-emphasis">
+                    {t("EMAIL_SERVICE_TABLE.PAGE_RANGE", {
+                      from: pageFrom,
+                      to: pageTo,
+                      total: totalCount,
+                    })}
+                  </p>
                   <Pagination
-                    page={queryParams.pageNumber}
-                    pageSize={queryParams.pageSize}
-                    totalCount={data?.totalCount || 0}
-                    pageSizeOptions={[10]}
+                    page={pageNumber}
+                    pageSize={pageSize}
+                    totalCount={totalCount}
                     onChange={onPageChangeHandler}
+                    onPageSizeChange={onPageSizeChangeHandler}
                   />
                 </div>
               )}

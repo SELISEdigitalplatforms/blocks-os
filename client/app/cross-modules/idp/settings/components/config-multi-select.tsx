@@ -3,6 +3,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { Input } from "@/components/ui-kits/input/input";
 import { cn } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 import { Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -25,11 +26,15 @@ export const ConfigMultiSelect = ({
   options,
   selected,
   onChange,
-  placeholder = "Select items",
-  emptyMessage = "No items available",
+  placeholder,
+  emptyMessage,
   disabled = false,
   isLoading = false,
 }: ConfigMultiSelectProps) => {
+  const { t, language } = useT("os.idp.settings");
+  const label = placeholder ?? t("CONFIG_MULTI_SELECT.SELECT_ITEMS");
+  // English lowercases the label mid-sentence; other languages keep it as translated.
+  const searchTarget = language === "en" ? label.toLowerCase() : label;
   const [search, setSearch] = useState("");
 
   const filteredOptions = useMemo(() => {
@@ -53,11 +58,15 @@ export const ConfigMultiSelect = ({
   };
 
   if (isLoading) {
-    return <div className="text-sm text-muted-foreground">Loading...</div>;
+    return <div className="text-sm text-muted-foreground">{t("common:LOADING")}</div>;
   }
 
   if (options.length === 0) {
-    return <div className="text-sm text-muted-foreground">{emptyMessage}</div>;
+    return (
+      <div className="text-sm text-muted-foreground">
+        {emptyMessage ?? t("CONFIG_MULTI_SELECT.NO_ITEMS")}
+      </div>
+    );
   }
 
   return (
@@ -72,7 +81,9 @@ export const ConfigMultiSelect = ({
                 <button
                   type="button"
                   className="rounded-sm p-0.5 hover:bg-muted"
-                  aria-label={`Remove ${option?.label ?? value}`}
+                  aria-label={t("CONFIG_MULTI_SELECT.REMOVE_ITEM", {
+                    name: option?.label ?? value,
+                  })}
                   onClick={() => handleToggle(value)}
                   disabled={disabled}
                 >
@@ -89,7 +100,7 @@ export const ConfigMultiSelect = ({
             onClick={handleClear}
             disabled={disabled}
           >
-            Clear all
+            {t("CONFIG_MULTI_SELECT.CLEAR_ALL")}
           </Button>
         </div>
       )}
@@ -99,24 +110,26 @@ export const ConfigMultiSelect = ({
         <Input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder={`Search ${placeholder.toLowerCase()}...`}
+          placeholder={t("CONFIG_MULTI_SELECT.SEARCH_PLACEHOLDER", { what: searchTarget })}
           className="pl-9"
           disabled={disabled}
-          aria-label={`Search ${placeholder.toLowerCase()}`}
+          aria-label={t("CONFIG_MULTI_SELECT.SEARCH_LABEL", { what: searchTarget })}
         />
       </div>
 
-      <div
+      <div // NOSONAR: checkbox list exposed as a multi-select listbox; a native <select multiple> can't show descriptions
         className={cn(
           "max-h-44 overflow-y-auto rounded-md border bg-muted/20 sm:max-h-52",
           disabled && "pointer-events-none opacity-60",
         )}
         role="listbox"
-        aria-label={placeholder}
+        aria-label={label}
         aria-multiselectable="true"
       >
         {filteredOptions.length === 0 ? (
-          <p className="px-3 py-6 text-center text-sm text-muted-foreground">No results found.</p>
+          <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+            {t("CONFIG_MULTI_SELECT.NO_RESULTS")}
+          </p>
         ) : (
           <ul className="divide-y divide-border/60">
             {filteredOptions.map((option) => {
@@ -150,7 +163,10 @@ export const ConfigMultiSelect = ({
       </div>
 
       <p className="text-xs text-muted-foreground">
-        {selected.length} selected · {options.length} available
+        {t("CONFIG_MULTI_SELECT.SELECTED_COUNT", {
+          selected: selected.length,
+          available: options.length,
+        })}
       </p>
     </div>
   );

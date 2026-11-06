@@ -1,12 +1,17 @@
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
-import { getLogFormatTimestamp, getLogLevelBadgeVariant, getLogLevelLabel } from "@blocks-lmt/utils";
+import {
+  getLogFormatTimestamp,
+  getLogLevelBadgeVariant,
+  getLogLevelLabel,
+} from "@blocks-lmt/utils";
 import { useContext, useMemo } from "react";
 import { Link, useSearchParams } from "react-router";
 import { LogsViewerContext } from "../logs-viewer/logs-viewer";
 import { LogStackTrace } from "../log-stack-trace";
 import { ILog } from "../../models/log.model";
+import { useT } from "@seliseblocks/genesis-os";
 
 /** Joins the parts that are actually present, so neither a stray "?" nor "&&" reaches the URL. */
 const buildQuery = (parts: string[]) => {
@@ -15,6 +20,7 @@ const buildQuery = (parts: string[]) => {
 };
 
 export const LogItem = ({ log }: { log: ILog }) => {
+  const { t } = useT("os.lmt");
   const {
     logsRouteServiceName,
     selectedService,
@@ -28,9 +34,7 @@ export const LogItem = ({ log }: { log: ILog }) => {
   const LMT_BASE_PATH = useLmtBasePath();
   // A restored row's trace lives only inside its own restore, so the link has to name the
   // request. Looked up without it, a month-old trace id finds nothing in hot storage.
-  const restoreQuery = restoreRequestId
-    ? `requestId=${encodeURIComponent(restoreRequestId)}`
-    : "";
+  const restoreQuery = restoreRequestId ? `requestId=${encodeURIComponent(restoreRequestId)}` : "";
   const traceHref = log.traceId
     ? useGenericTraceLinks
       ? `${LMT_BASE_PATH}/tracing/${log.traceId}${restoreQuery ? `?${restoreQuery}` : ""}`
@@ -84,7 +88,7 @@ export const LogItem = ({ log }: { log: ILog }) => {
               <Link
                 to={traceHref}
                 className="truncate text-xs text-primary hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label={`View trace details for ${log.traceId}`}
+                aria-label={t("LOG_ITEM.VIEW_TRACE_DETAILS_FOR", { traceId: log.traceId })}
               >
                 {log.traceId}
               </Link>

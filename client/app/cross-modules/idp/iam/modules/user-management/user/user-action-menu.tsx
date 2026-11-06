@@ -5,11 +5,18 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
+import { useT } from "@seliseblocks/genesis-os";
 import { RotateCcw, Send } from "lucide-react";
 import { useState } from "react";
 import { UserResetPassword } from "./user-reset-password";
 import { UserResendActivationMail } from "./user-resend-activation/user-resend-activation";
+import { DisabledReason } from "@blocks-idp/iam/components/disabled-reason";
+import { useUserManageability } from "@blocks-idp/iam/hooks/use-user-manageability";
+import { getCannotManageUserTooltip } from "@blocks-idp/iam/utils/grant-scope";
 import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
+
+const KEY_RESEND_ACTIVATION = "USER_ACTION_MENU.RESEND_ACTIVATION";
+const KEY_RESET_CREDENTIAL = "USER_ACTION_MENU.RESET_PASSWORD";
 
 type UserActionMenuProps = {
   id: string;
@@ -17,11 +24,24 @@ type UserActionMenuProps = {
 };
 
 export const UserActionMenu = ({ id, projectKey }: UserActionMenuProps) => {
+  const { t } = useT("os.idp.users");
   const { data } = useGetUserById({ id, projectKey });
   const [isResendActivationModalOpen, setIsResendActivationModalOpen] = useState<boolean>(false);
   const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState<boolean>(false);
 
+  const { canManage } = useUserManageability();
+  const blockedReason = canManage(data?.data) ? null : getCannotManageUserTooltip();
   const isActive = data?.data?.active === true;
+
+  if (blockedReason) {
+    return (
+      <DisabledReason reason={blockedReason}>
+        <Button variant="outline" size="sm" className="gap-1.5" disabled>
+          {isActive ? t(KEY_RESET_CREDENTIAL) : t(KEY_RESEND_ACTIVATION)}
+        </Button>
+      </DisabledReason>
+    );
+  }
 
   return (
     <>
@@ -35,12 +55,12 @@ export const UserActionMenu = ({ id, projectKey }: UserActionMenuProps) => {
                   size="icon"
                   className="lg:hidden"
                   onClick={() => setIsResetPasswordModalOpen(true)}
-                  aria-label="Reset Password"
+                  aria-label={t(KEY_RESET_CREDENTIAL)}
                 >
                   <RotateCcw className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom">Reset Password</TooltipContent>
+              <TooltipContent side="bottom">{t(KEY_RESET_CREDENTIAL)}</TooltipContent>
             </Tooltip>
           </TooltipProvider>
         ) : (
@@ -52,12 +72,12 @@ export const UserActionMenu = ({ id, projectKey }: UserActionMenuProps) => {
                   size="icon"
                   className="lg:hidden"
                   onClick={() => setIsResendActivationModalOpen(true)}
-                  aria-label="Resend Activation"
+                  aria-label={t(KEY_RESEND_ACTIVATION)}
                 >
                   <Send className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom">Resend Activation</TooltipContent>
+              <TooltipContent side="bottom">{t(KEY_RESEND_ACTIVATION)}</TooltipContent>
             </Tooltip>
           </TooltipProvider>
         )}
@@ -69,7 +89,7 @@ export const UserActionMenu = ({ id, projectKey }: UserActionMenuProps) => {
             onClick={() => setIsResetPasswordModalOpen(true)}
           >
             <RotateCcw className="h-4 w-4" />
-            Reset Password
+            {t(KEY_RESET_CREDENTIAL)}
           </Button>
         ) : (
           <Button
@@ -79,7 +99,7 @@ export const UserActionMenu = ({ id, projectKey }: UserActionMenuProps) => {
             onClick={() => setIsResendActivationModalOpen(true)}
           >
             <Send className="h-4 w-4" />
-            Resend Activation
+            {t(KEY_RESEND_ACTIVATION)}
           </Button>
         )}
       </div>
@@ -89,7 +109,6 @@ export const UserActionMenu = ({ id, projectKey }: UserActionMenuProps) => {
         userId={id}
       />
       <UserResetPassword
-        projectKey={projectKey}
         userId={id}
         open={isResetPasswordModalOpen}
         setOpen={setIsResetPasswordModalOpen}

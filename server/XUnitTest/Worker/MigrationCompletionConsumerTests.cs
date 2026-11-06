@@ -1,11 +1,11 @@
 using DomainService.Dtos;
 using DomainService.Migration;
-using DomainService.Migration.Entities;
 using DomainService.Migration.Services;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using MigrationCompletionConsumer = global::Worker.Consumers.Migration.MigrationCompletionConsumer;
+using Blocks.Genesis.Entities.Os;
 
 namespace XUnitTest.Migrations
 {

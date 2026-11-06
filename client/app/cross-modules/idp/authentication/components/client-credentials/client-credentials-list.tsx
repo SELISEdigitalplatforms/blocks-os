@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ChevronRight, KeyRound, Pencil, Power, PowerOff, Trash2 } from "lucide-react";
+import { ChevronRight, KeyRound, Pencil, Power, PowerOff, RotateCw, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
@@ -22,7 +22,7 @@ import {
   TableRow,
 } from "@/components/ui-kits/table/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
-import { MaskedText } from "@/components/masked-text/masked-text";
+import { maskId } from "../../utils/mask-id.util";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { cn } from "@/lib/utils";
@@ -32,11 +32,16 @@ import {
 } from "@blocks-idp/authentication/models/auth.oidc.model";
 import {
   useDeleteAuthClient,
+  useRotateAuthClientSecret,
   useSaveAuthClient,
 } from "@blocks-idp/authentication/hooks/use-auth-clients";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { format } from "date-fns";
 import { KVDetailItem } from "../kv-detail-item";
+import { OneTimeSecret, OneTimeSecretDialog } from "../one-time-secret-dialog";
+
+const KEY_ERROR_GENERIC = "CLIENT_CREDENTIALS_LIST.ERROR_GENERIC";
+const KEY_COMMON_CANCEL = "common:CANCEL";
 
 const SKELETON_ROWS = 3;
 
@@ -87,19 +92,143 @@ interface ClientCredentialRowProps {
   onEdit?: (client: IClientCredentialsConfig) => void;
 }
 
+type CredentialDetail = {
+  key: string;
+  label: string;
+  value: string;
+  copyable?: boolean;
+  sensitive?: boolean;
+  masked?: boolean;
+};
+
+const credentialDetails = (
+  item: ClientCredentialRowProps["item"],
+  t: (key: string) => string,
+): CredentialDetail[] =>
+  [
+    {
+      key: "clientId",
+      label: t("CLIENT_CREDENTIALS_LIST.CLIENT_ID"),
+      value: item.itemId ?? "",
+      copyable: true,
+      masked: true,
+    },
+    // Shown even when it is the tenant-wide "default", because that is the most privileged
+    // scope a credential can have and is worth seeing rather than inferring from an absence.
+    {
+      key: "organization",
+      label: t("CLIENT_CREDENTIALS_LIST.ORGANIZATION"),
+      value:
+        item.organizationId === "default"
+          ? t("CLIENT_CREDENTIALS_LIST.ORGANIZATION_DEFAULT")
+          : (item.organizationId ?? ""),
+    },
+    {
+      key: "tokenLifetime",
+      label: t("CLIENT_CREDENTIALS_LIST.TOKEN_LIFETIME"),
+      value: formatLifetime(item.accessTokenValidForNumberMinutes),
+    },
+    {
+      key: "roles",
+      label: t("CLIENT_CREDENTIALS_LIST.ROLES"),
+      value: item.roles?.length ? item.roles.join(", ") : "",
+    },
+    {
+      key: "permissions",
+      label: t("CLIENT_CREDENTIALS_LIST.PERMISSIONS"),
+      value: item.permissions?.length ? item.permissions.join(", ") : "",
+    },
+    {
+      key: "updatedOn",
+      label: t("CLIENT_CREDENTIALS_LIST.UPDATED_ON"),
+      value: formatDateTime(item.lastUpdatedDate),
+    },
+  ].filter((pair) => pair.value);
+
+// A thrown request error: its own messages when it carries them, otherwise the fallback.
+const showRequestError = (err: unknown, fallback: string) =>
+  showErrorToast({ errors: isErrorWithErrors(err) ? err.errors : fallback });
+
+const statusActionKey = (busy: boolean, flag?: boolean) => {
+  if (busy) return flag ? "CLIENT_CREDENTIALS_LIST.ENABLING" : "CLIENT_CREDENTIALS_LIST.DISABLING";
+  return flag ? "CLIENT_CREDENTIALS_LIST.ENABLE" : "CLIENT_CREDENTIALS_LIST.DISABLE";
+};
+
+type StatusChangeDialogProps = Readonly<{
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  name: string;
+  willEnable: boolean;
+  isUpdating: boolean;
+  onConfirm: () => void;
+}>;
+
+const StatusChangeDialog = ({
+  open,
+  onOpenChange,
+  name,
+  willEnable,
+  isUpdating,
+  onConfirm,
+}: StatusChangeDialogProps) => {
+  const { t } = useT("os.idp.client-credentials");
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {willEnable
+              ? t("CLIENT_CREDENTIALS_LIST.ENABLE_TITLE")
+              : t("CLIENT_CREDENTIALS_LIST.DISABLE_TITLE")}
+          </DialogTitle>
+          <DialogDescription>
+            {willEnable
+              ? t("CLIENT_CREDENTIALS_LIST.ENABLE_DESCRIPTION", { name })
+              : t("CLIENT_CREDENTIALS_LIST.DISABLE_DESCRIPTION", { name })}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onOpenChange(false)}
+            disabled={isUpdating}
+          >
+            {t(KEY_COMMON_CANCEL)}
+          </Button>
+          <Button
+            variant={willEnable ? "default" : "destructive"}
+            size="sm"
+            onClick={onConfirm}
+            disabled={isUpdating}
+          >
+            {t(statusActionKey(isUpdating, willEnable))}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const ClientCredentialRow = ({
   item,
   defaultExpanded = false,
   onEdit,
 }: ClientCredentialRowProps) => {
+  const { t } = useT("os.idp.client-credentials");
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showRotateDialog, setShowRotateDialog] = useState(false);
+  const [rotatedSecret, setRotatedSecret] = useState<OneTimeSecret | null>(null);
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync: saveClient, isPending: isUpdating } = useSaveAuthClient({
     projectKey: tenantId,
   });
   const { mutateAsync: deleteClient, isPending: isDeleting } = useDeleteAuthClient({
+    projectKey: tenantId,
+  });
+  const { mutateAsync: rotateSecret, isPending: isRotating } = useRotateAuthClientSecret({
     projectKey: tenantId,
   });
 
@@ -121,15 +250,40 @@ const ClientCredentialRow = ({
       const res = await saveClient(payload);
       if (!res?.isSuccess) {
         const apiErrors = getBackendErrorMap(res);
-        return showErrorToast({ errors: apiErrors ?? "Failed to update client credential." });
+        return showErrorToast({ errors: apiErrors ?? t("CLIENT_CREDENTIALS_LIST.UPDATE_FAILED") });
       }
       showSuccessToast({
-        description: `Client credential ${item.isActive ? "disabled" : "enabled"} successfully`,
+        description: item.isActive
+          ? t("CLIENT_CREDENTIALS_LIST.DISABLED_SUCCESS")
+          : t("CLIENT_CREDENTIALS_LIST.ENABLED_SUCCESS"),
       });
       setShowStatusDialog(false);
     } catch (err) {
-      if (isErrorWithErrors(err)) return showErrorToast({ errors: err.errors });
-      showErrorToast({ errors: "Something went wrong" });
+      showRequestError(err, t(KEY_ERROR_GENERIC));
+    }
+  };
+
+  const handleConfirmRotate = async () => {
+    try {
+      const res = await rotateSecret({ itemId: item.itemId });
+      if (res?.isSuccess && res.clientSecret) {
+        setShowRotateDialog(false);
+        setRotatedSecret({
+          label: item.name,
+          clientId: item.itemId,
+          clientSecret: res.clientSecret,
+          reason: "rotated",
+        });
+        showSuccessToast({ description: t("CLIENT_CREDENTIALS_LIST.ROTATED_SUCCESS") });
+      } else {
+        showErrorToast({
+          errors: getBackendErrorMap(res) ?? t("CLIENT_CREDENTIALS_LIST.ROTATE_FAILED"),
+        });
+      }
+    } catch (err) {
+      showErrorToast({
+        errors: isErrorWithErrors(err) ? err.errors : t(KEY_ERROR_GENERIC),
+      });
     }
   };
 
@@ -138,35 +292,16 @@ const ClientCredentialRow = ({
       const res = await deleteClient({ itemId: item.itemId });
       if (!res?.isSuccess) {
         const apiErrors = getBackendErrorMap(res);
-        return showErrorToast({ errors: apiErrors ?? "Failed to delete client credential." });
+        return showErrorToast({ errors: apiErrors ?? t("CLIENT_CREDENTIALS_LIST.DELETE_FAILED") });
       }
-      showSuccessToast({ description: "Client credential deleted successfully" });
+      showSuccessToast({ description: t("CLIENT_CREDENTIALS_LIST.DELETED_SUCCESS") });
       setShowDeleteDialog(false);
     } catch (err) {
-      if (isErrorWithErrors(err)) return showErrorToast({ errors: err.errors });
-      showErrorToast({ errors: "Something went wrong" });
+      showRequestError(err, t(KEY_ERROR_GENERIC));
     }
   };
 
-  const kvPairs: {
-    key: string;
-    value: string;
-    copyable?: boolean;
-    sensitive?: boolean;
-  }[] = [
-    { key: "Client Id", value: item.itemId ?? "", copyable: true },
-    { key: "Client Secret", value: item.clientSecret ?? "", sensitive: true },
-    // Shown even when it is the tenant-wide "default", because that is the most privileged
-    // scope a credential can have and is worth seeing rather than inferring from an absence.
-    {
-      key: "Organization",
-      value: item.organizationId === "default" ? "Default (tenant-wide)" : (item.organizationId ?? ""),
-    },
-    { key: "Token Lifetime", value: formatLifetime(item.accessTokenValidForNumberMinutes) },
-    { key: "Role(s)", value: item.roles?.length ? item.roles.join(", ") : "" },
-    { key: "Permission(s)", value: item.permissions?.length ? item.permissions.join(", ") : "" },
-    { key: "Updated on", value: formatDateTime(item.lastUpdatedDate) },
-  ].filter((pair) => pair.value);
+  const kvPairs = credentialDetails(item, t);
 
   return (
     <>
@@ -176,7 +311,8 @@ const ClientCredentialRow = ({
           expanded ? "border-b-0" : "border-b-2 border-border",
           !isActive && "opacity-75",
         )}
-        onClick={() => setExpanded((e) => !e)}>
+        onClick={() => setExpanded((e) => !e)}
+      >
         <TableCell className="w-8 py-3.5 pl-4">
           <ChevronRight
             className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
@@ -196,23 +332,26 @@ const ClientCredentialRow = ({
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">{item.name}</p>
-              <div className="truncate font-mono text-xs text-muted-foreground">
-                <MaskedText text={item.itemId ?? ""} length={20} showFirstN={4} showLastN={4} />
-              </div>
+              <p className="truncate font-mono text-xs text-muted-foreground">
+                {maskId(item.itemId)}
+              </p>
             </div>
           </div>
         </TableCell>
         <TableCell className="hidden py-3.5 sm:table-cell">
           <Badge
             variant="outline"
-            className="w-fit gap-1.5 border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis">
+            className="w-fit gap-1.5 border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis"
+          >
             <span
               className={cn(
                 "h-1.5 w-1.5 shrink-0 rounded-full",
                 isActive ? "bg-emerald-500" : "bg-muted-foreground/40",
               )}
             />
-            {isActive ? "Active" : "Inactive"}
+            {isActive
+              ? t("CLIENT_CREDENTIALS_LIST.STATUS_ACTIVE")
+              : t("CLIENT_CREDENTIALS_LIST.STATUS_INACTIVE")}
           </Badge>
         </TableCell>
         <TableCell className="hidden py-3.5 text-sm text-muted-foreground md:table-cell">
@@ -227,14 +366,30 @@ const ClientCredentialRow = ({
                     variant="ghost"
                     size="sm"
                     className="h-7 w-7 p-0"
-                    aria-label="Edit client credential"
-                    onClick={() => onEdit(item)}>
+                    aria-label={t("CLIENT_CREDENTIALS_LIST.EDIT")}
+                    onClick={() => onEdit(item)}
+                  >
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Edit</TooltipContent>
+                <TooltipContent>{t("common:EDIT")}</TooltipContent>
               </Tooltip>
             )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
+                  aria-label={t("CLIENT_CREDENTIALS_LIST.ROTATE_SECRET_LABEL")}
+                  onClick={() => setShowRotateDialog(true)}
+                  disabled={isRotating}
+                >
+                  <RotateCw className={cn("h-3.5 w-3.5", isRotating && "animate-spin")} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t("CLIENT_CREDENTIALS_LIST.ROTATE_SECRET")}</TooltipContent>
+            </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -246,9 +401,14 @@ const ClientCredentialRow = ({
                       ? "text-emerald-600 hover:text-destructive"
                       : "text-muted-foreground hover:text-emerald-600",
                   )}
-                  aria-label={isActive ? "Disable client credential" : "Enable client credential"}
+                  aria-label={
+                    isActive
+                      ? t("CLIENT_CREDENTIALS_LIST.DISABLE_LABEL")
+                      : t("CLIENT_CREDENTIALS_LIST.ENABLE_LABEL")
+                  }
                   onClick={() => setShowStatusDialog(true)}
-                  disabled={isUpdating}>
+                  disabled={isUpdating}
+                >
                   {isActive ? (
                     <Power className="h-3.5 w-3.5" />
                   ) : (
@@ -256,7 +416,11 @@ const ClientCredentialRow = ({
                   )}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>{isActive ? "Disable" : "Enable"}</TooltipContent>
+              <TooltipContent>
+                {isActive
+                  ? t("CLIENT_CREDENTIALS_LIST.DISABLE")
+                  : t("CLIENT_CREDENTIALS_LIST.ENABLE")}
+              </TooltipContent>
             </Tooltip>
             <span className="mx-0.5 h-4 w-px shrink-0 bg-border" aria-hidden />
             <Tooltip>
@@ -265,13 +429,14 @@ const ClientCredentialRow = ({
                   variant="ghost"
                   size="sm"
                   className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                  aria-label="Delete client credential"
+                  aria-label={t("CLIENT_CREDENTIALS_LIST.DELETE_LABEL")}
                   onClick={() => setShowDeleteDialog(true)}
-                  disabled={isDeleting}>
+                  disabled={isDeleting}
+                >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Delete</TooltipContent>
+              <TooltipContent>{t("common:DELETE")}</TooltipContent>
             </Tooltip>
           </div>
         </TableCell>
@@ -284,13 +449,14 @@ const ClientCredentialRow = ({
             className="max-w-0 bg-muted/20 px-3 py-3 pl-8 sm:px-6 sm:py-4 sm:pl-12"
           >
             <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
-              {kvPairs.map(({ key, value, copyable, sensitive }) => (
+              {kvPairs.map(({ key, label, value, copyable, sensitive, masked }) => (
                 <KVDetailItem
                   key={key}
-                  label={key}
+                  label={label}
                   value={value}
                   copyable={copyable}
                   sensitive={sensitive}
+                  masked={masked}
                 />
               ))}
             </div>
@@ -298,58 +464,49 @@ const ClientCredentialRow = ({
         </TableRow>
       )}
 
-      <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
+      <StatusChangeDialog
+        open={showStatusDialog}
+        onOpenChange={setShowStatusDialog}
+        name={item.name}
+        willEnable={willEnable}
+        isUpdating={isUpdating}
+        onConfirm={handleConfirmStatusChange}
+      />
+
+      <Dialog open={showRotateDialog} onOpenChange={setShowRotateDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {willEnable ? "Enable client credential" : "Disable client credential"}
-            </DialogTitle>
+            <DialogTitle>{t("CLIENT_CREDENTIALS_LIST.ROTATE_TITLE")}</DialogTitle>
             <DialogDescription>
-              {willEnable ? (
-                <>
-                  <strong>{item.name}</strong> will be able to obtain new tokens again. Are you
-                  sure you want to enable it?
-                </>
-              ) : (
-                <>
-                  <strong>{item.name}</strong> will no longer be able to obtain new tokens. Are
-                  you sure you want to disable it?
-                </>
-              )}
+              {t("CLIENT_CREDENTIALS_LIST.ROTATE_DESCRIPTION", { name: item.name })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setShowStatusDialog(false)}
-              disabled={isUpdating}>
-              Cancel
+              onClick={() => setShowRotateDialog(false)}
+              disabled={isRotating}
+            >
+              {t(KEY_COMMON_CANCEL)}
             </Button>
-            <Button
-              variant={willEnable ? "default" : "destructive"}
-              size="sm"
-              onClick={handleConfirmStatusChange}
-              disabled={isUpdating}>
-              {isUpdating
-                ? willEnable
-                  ? "Enabling…"
-                  : "Disabling…"
-                : willEnable
-                  ? "Enable"
-                  : "Disable"}
+            <Button size="sm" onClick={handleConfirmRotate} disabled={isRotating}>
+              {isRotating
+                ? t("CLIENT_CREDENTIALS_LIST.ROTATING")
+                : t("CLIENT_CREDENTIALS_LIST.ROTATE_SECRET")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      <OneTimeSecretDialog secret={rotatedSecret} onClose={() => setRotatedSecret(null)} />
+
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete client credential</DialogTitle>
+            <DialogTitle>{t("CLIENT_CREDENTIALS_LIST.DELETE_TITLE")}</DialogTitle>
             <DialogDescription>
-              <strong>{item.name}</strong> and its configuration will be permanently removed. This
-              cannot be undone.
+              {t("CLIENT_CREDENTIALS_LIST.DELETE_DESCRIPTION", { name: item.name })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2">
@@ -357,15 +514,17 @@ const ClientCredentialRow = ({
               variant="outline"
               size="sm"
               onClick={() => setShowDeleteDialog(false)}
-              disabled={isDeleting}>
-              Cancel
+              disabled={isDeleting}
+            >
+              {t(KEY_COMMON_CANCEL)}
             </Button>
             <Button
               variant="destructive"
               size="sm"
               onClick={handleConfirmDelete}
-              disabled={isDeleting}>
-              {isDeleting ? "Deleting…" : "Delete"}
+              disabled={isDeleting}
+            >
+              {isDeleting ? t("CLIENT_CREDENTIALS_LIST.DELETING") : t("common:DELETE")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -413,6 +572,7 @@ type ClientCredentialListProps = {
 };
 
 export const ClientCredentialList = ({ data, isLoading, onEdit }: ClientCredentialListProps) => {
+  const { t } = useT("os.idp.client-credentials");
   const sortedClientsData = useMemo(() => {
     if (!data || data.length === 0) return [];
     return [...data].sort((a, b) => {
@@ -428,8 +588,8 @@ export const ClientCredentialList = ({ data, isLoading, onEdit }: ClientCredenti
     return (
       <EmptyState
         icon={KeyRound}
-        title="No client credentials yet"
-        description="Create one to issue OAuth client credentials for service-to-service access."
+        title={t("CLIENT_CREDENTIALS_LIST.EMPTY_TITLE")}
+        description={t("CLIENT_CREDENTIALS_LIST.EMPTY_DESCRIPTION")}
       />
     );
   }
@@ -442,15 +602,15 @@ export const ClientCredentialList = ({ data, isLoading, onEdit }: ClientCredenti
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-8 pl-4" />
               <TableHead className="text-xs font-semibold uppercase tracking-wide text-high-emphasis sm:w-64">
-                Client
+                {t("CLIENT_CREDENTIALS_LIST.COLUMN_CLIENT")}
               </TableHead>
               <TableHead className="hidden w-32 text-xs font-semibold uppercase tracking-wide text-high-emphasis sm:table-cell">
-                Status
+                {t("common:STATUS")}
               </TableHead>
               <TableHead className="hidden w-40 text-xs font-semibold uppercase tracking-wide text-high-emphasis md:table-cell">
-                Created On
+                {t("CLIENT_CREDENTIALS_LIST.COLUMN_CREATED_ON")}
               </TableHead>
-              <TableHead className="w-28" />
+              <TableHead className="w-36" />
             </TableRow>
           </TableHeader>
           <TableBody className="[&_tr:last-child]:border-b">

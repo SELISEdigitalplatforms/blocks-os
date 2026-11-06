@@ -3,11 +3,12 @@ import { ConfigsTableShell } from "@/components/configs-table-shell/configs-tabl
 import { EmptyState } from "@/components/ui-kits/empty-state";
 import { useMagicUrlsFilterQueryParams, MagicUrlsFilterToolBar } from "./magic-urls-filter-toolbar";
 import { MagicUrlsList } from "./magic-urls-list";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { useGetMagicUrlConfigs } from "@blocks-utilities/hooks/use-magic-url-config";
 import { Link2 } from "lucide-react";
 
 export const MagicUrls = () => {
+  const { t } = useT("os.utilities");
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const { queryParams, setQueryParams } = useMagicUrlsFilterQueryParams();
 
@@ -30,8 +31,8 @@ export const MagicUrls = () => {
     return (
       <EmptyState
         icon={Link2}
-        title="No configurations found"
-        description="Use Add Configuration to create one."
+        title={t("MAGIC_URLS.NO_CONFIGURATIONS_FOUND")}
+        description={t("MAGIC_URLS.USE_ADD_CONFIGURATION_TO_CREATE")}
       />
     );
   }
@@ -43,7 +44,6 @@ export const MagicUrls = () => {
         <Pagination
           page={queryParams.page}
           pageSize={queryParams.pageSize}
-          pageSizeOptions={[queryParams.pageSize]}
           onChange={handlePageChange}
           totalCount={data?.totalCount ?? 0}
         />

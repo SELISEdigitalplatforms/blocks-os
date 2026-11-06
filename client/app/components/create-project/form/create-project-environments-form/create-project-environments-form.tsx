@@ -21,10 +21,10 @@ import {
   meterRows,
   previewOrder,
 } from "../../wizard-model";
-import { environmentOptions } from "./utils";
+import { getEnvironmentOptions } from "./utils";
 
 /** A one-line description per environment. The catalogue has none, so the static list supplies it. */
-const blurbFor = (env: string) => environmentOptions.find((o) => o.value === env)?.subtext ?? "";
+const blurbFor = (env: string) => getEnvironmentOptions().find((o) => o.value === env)?.subtext ?? "";
 
 const HARD_STOP_NOTE = {
   title: "Every limit is a hard stop",

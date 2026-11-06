@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -21,6 +21,7 @@ import {
 } from "@/components/ui-kits/form/form";
 import { showErrorToast, toast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
+import { useT } from "@seliseblocks/genesis-os";
 import { IEmailConfig } from "../../../../models/email";
 import { useSaveEmailConfig } from "../../../../hooks/use-email-config";
 
@@ -29,15 +30,18 @@ interface EditDefaultSenderNameProps {
   onClose: () => void;
 }
 
-const schema = z.object({
-  senderName: z
-    .string()
-    .trim()
-    .min(3, { message: "Sender name must be between 3 and 100 characters" })
-    .max(100, { message: "Sender name must be between 3 and 100 characters" }),
-});
+type TranslateFn = ReturnType<typeof useT>["t"];
 
-type FormValues = z.infer<typeof schema>;
+const createSchema = (t: TranslateFn) =>
+  z.object({
+    senderName: z
+      .string()
+      .trim()
+      .min(3, { message: t("EDIT_DEFAULT_SENDER_NAME.ERROR_SENDER_NAME_LENGTH") })
+      .max(100, { message: t("EDIT_DEFAULT_SENDER_NAME.ERROR_SENDER_NAME_LENGTH") }),
+  });
+
+type FormValues = z.infer<ReturnType<typeof createSchema>>;
 
 /**
  * The default configuration is platform-provisioned: its credentials never reach the browser,
@@ -45,6 +49,8 @@ type FormValues = z.infer<typeof schema>;
  * may change, and the server ignores everything else on a default record.
  */
 const EditDefaultSenderName: React.FC<EditDefaultSenderNameProps> = ({ config, onClose }) => {
+  const { t } = useT("os.communication.mail");
+  const schema = useMemo(() => createSchema(t), [t]);
   const { isPending, mutateAsync } = useSaveEmailConfig();
   const form = useForm<FormValues>({
     defaultValues: { senderName: config.senderName ?? "" },
@@ -71,14 +77,14 @@ const EditDefaultSenderName: React.FC<EditDefaultSenderNameProps> = ({ config, o
       if (res?.isSuccess) {
         toast({
           variant: "success",
-          title: "Success",
-          description: "Sender name updated successfully.",
+          title: t("common:SUCCESS"),
+          description: t("EDIT_DEFAULT_SENDER_NAME.UPDATED_SUCCESS"),
         });
         onClose();
       } else {
         toast({
           variant: "destructive",
-          title: "Error",
+          title: t("common:ERROR"),
           description: JSON.stringify(res?.errors),
         });
       }
@@ -94,9 +100,11 @@ const EditDefaultSenderName: React.FC<EditDefaultSenderNameProps> = ({ config, o
       <Form {...form}>
         <form onSubmit={form.handleSubmit(formSubmitHandler)}>
           <DialogHeader>
-            <DialogTitle className="mb-2 text-left">Edit Sender Name</DialogTitle>
+            <DialogTitle className="mb-2 text-left">
+              {t("EDIT_DEFAULT_SENDER_NAME.TITLE")}
+            </DialogTitle>
             <DialogDescription className="text-left">
-              Only the sender name of the default configuration can be changed.
+              {t("EDIT_DEFAULT_SENDER_NAME.DESCRIPTION")}
             </DialogDescription>
           </DialogHeader>
           <div className="pb-4 pt-4">
@@ -106,11 +114,12 @@ const EditDefaultSenderName: React.FC<EditDefaultSenderNameProps> = ({ config, o
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-left font-medium text-high-emphasis">
-                    Sender Name <span className="text-destructive">*</span>
+                    {t("EDIT_DEFAULT_SENDER_NAME.SENDER_NAME")}{" "}
+                    <span className="text-destructive">*</span>
                   </FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Enter sender name"
+                      placeholder={t("EDIT_DEFAULT_SENDER_NAME.PLACEHOLDER_SENDER_NAME")}
                       className="border-default mt-1 border shadow-none"
                       {...field}
                     />
@@ -123,7 +132,7 @@ const EditDefaultSenderName: React.FC<EditDefaultSenderNameProps> = ({ config, o
           <div className="flex flex-row justify-end gap-2">
             <DialogTrigger asChild>
               <Button type="button" variant="outline" size="default" disabled={isPending}>
-                Cancel
+                {t("common:CANCEL")}
               </Button>
             </DialogTrigger>
             <Button
@@ -131,7 +140,9 @@ const EditDefaultSenderName: React.FC<EditDefaultSenderNameProps> = ({ config, o
               size="default"
               disabled={isPending || !form.formState.isValid || !form.formState.isDirty}
             >
-              {isPending ? "Updating..." : "Update Changes"}
+              {isPending
+                ? t("EDIT_DEFAULT_SENDER_NAME.UPDATING")
+                : t("EDIT_DEFAULT_SENDER_NAME.UPDATE_CHANGES")}
             </Button>
           </div>
         </form>

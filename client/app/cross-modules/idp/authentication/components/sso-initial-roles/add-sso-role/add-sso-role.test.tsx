@@ -1,6 +1,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => import("@/test-utils/__mocks__/grant-scope.mock"));
 import type { IRole } from "@blocks-idp/iam/models/role";
 
 // blocks-kit's theme store reads matchMedia at import time, which jsdom does not provide.
@@ -38,12 +39,13 @@ if (!Element.prototype.scrollIntoView) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let rolesResult: any = { data: undefined, isLoading: false };
 
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 
 vi.mock("@blocks-idp/iam/hooks/use-roles", () => ({
-  useGetRoles: () => rolesResult,
+  useGetAssignableRoles: () => rolesResult,
 }));
 
 vi.mock("@/components/filter-toolbar", () => ({

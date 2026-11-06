@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { AccordionContent, AccordionItem } from "@/components/ui-kits/accordion/accordion";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import {
@@ -16,11 +17,21 @@ type PermissionGroupSectionProps = {
   onTrigger: () => void;
 };
 export const PermissionGroupSection = ({ group, onTrigger }: PermissionGroupSectionProps) => {
+  const { t } = useT("os.idp.roles");
   const changePermissionGroupSelection = useRoleDetailsStore(
     (state) => state.changePermissionGroupSelection,
   );
   const permissionMap = useRoleDetailsStore((state) => state.permissionMap);
   const isEditMode = useRoleDetailsStore((state) => state.isEditMode);
+  const grantableResources = useRoleDetailsStore((state) => state.grantableResources);
+  // The group box only touches what the caller may change; with nothing changeable it is inert.
+  const grantable = useMemo(
+    () =>
+      grantableResources
+        ? group.permissions.filter((perm) => grantableResources.has(perm.resource))
+        : group.permissions,
+    [group.permissions, grantableResources],
+  );
   const checkedPermissions = useMemo(() => {
     return group.permissions.filter((perm) => isChecked(perm.resource, permissionMap));
   }, [group.permissions, permissionMap]);
@@ -53,12 +64,10 @@ export const PermissionGroupSection = ({ group, onTrigger }: PermissionGroupSect
             <Checkbox
               id={`group-${group.name}`}
               checked={checked}
-              onCheckedChange={(checked) =>
-                changePermissionGroupSelection(group.permissions, !!checked)
-              }
+              onCheckedChange={(checked) => changePermissionGroupSelection(grantable, !!checked)}
               onClick={(e) => e.stopPropagation()}
               className="mt-0.5"
-              disabled={!isEditMode}
+              disabled={!isEditMode || grantable.length === 0}
             />
             <div className="text-left">
               <div className="flex items-center gap-1">
@@ -71,18 +80,18 @@ export const PermissionGroupSection = ({ group, onTrigger }: PermissionGroupSect
                       </TooltipTrigger>
                     )}
                     <TooltipContent side="right">
-                      One or more permissions have missing dependencies
+                      {t("PERMISSION_GROUP_SECTION.MISSING_DEPENDENCIES")}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
               <span className="text-xs text-foreground/60">
-                {group.permissions.length} total permissions
+                {t("PERMISSION_GROUP_SECTION.TOTAL", { count: group.permissions.length })}
               </span>
             </div>
           </div>
           <span className="rounded-full bg-primary/20 px-2.5 py-1 text-[10px] font-medium uppercase text-foreground">
-            {checkedPermissions.length} selected
+            {t("PERMISSION_GROUP_SECTION.SELECTED", { count: checkedPermissions.length })}
           </span>
         </div>
       </div>

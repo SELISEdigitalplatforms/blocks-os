@@ -12,7 +12,10 @@ import {
   useRepoAndGitBranchMatch,
 } from "./github-info";
 
-vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
+  ...mockProjectStoreFactory(),
+}));
 vi.mock("../services/github-info.service", () => ({
   githubInfoService: {
     verifyAuthorization: vi.fn(),

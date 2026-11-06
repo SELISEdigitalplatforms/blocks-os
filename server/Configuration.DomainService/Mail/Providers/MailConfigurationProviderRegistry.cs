@@ -1,4 +1,4 @@
-using Configuration.DomainService.Shared.Enums;
+using Blocks.Genesis.Entities.Os;
 
 namespace Configuration.DomainService.Mail.Providers
 {

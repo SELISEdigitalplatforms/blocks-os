@@ -1,6 +1,7 @@
 import { Check, GitBranch } from "lucide-react";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
-import { environmentOptions } from "./create-project-environments-form/utils";
+import { getEnvironmentOptions } from "./create-project-environments-form/utils";
+import { useT } from "@seliseblocks/genesis-os";
 
 export type ProjectEnvironmentOption = {
   label: string;
@@ -20,16 +21,20 @@ export const ProjectEnvironmentCheckboxes = ({
   onToggle,
   disabled = false,
   variant = "default",
-  options = environmentOptions,
+  options = getEnvironmentOptions(),
 }: {
   selected: string[];
   onToggle: (environment: string, checked: boolean) => void;
   disabled?: boolean;
   variant?: "default" | "compact";
   options?: ProjectEnvironmentOption[];
-}) =>
-  variant === "compact" ? (
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" aria-label="Environments">
+}) => {
+  const { t } = useT("os.create-project");
+  return variant === "compact" ? (
+    <div
+      className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+      aria-label={t("PROJECT_ENVIRONMENT_CHECKBOXES.ENVIRONMENTS")}
+    >
       {options.map((option) => {
         const checked = selected.includes(option.value);
         return (
@@ -37,7 +42,10 @@ export const ProjectEnvironmentCheckboxes = ({
             key={option.value}
             type="button"
             aria-pressed={checked}
-            aria-label={`${option.label}, branch ${option.value === "prod" ? "main" : option.value}`}
+            aria-label={t("PROJECT_ENVIRONMENT_CHECKBOXES.BRANCH", {
+              label: option.label,
+              value2: option.value === "prod" ? "main" : option.value,
+            })}
             disabled={disabled}
             onClick={() => onToggle(option.value, !checked)}
             className={`flex min-h-12 items-center gap-2.5 rounded-md border px-3 py-2 text-left text-sm transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 ${
@@ -65,10 +73,7 @@ export const ProjectEnvironmentCheckboxes = ({
   ) : (
     <div>
       <div className="mt-2 flex min-h-10 w-fit flex-row items-center gap-1 rounded border border-base-warning bg-warning-100 p-3 text-sm text-warning-800">
-        <span>
-          Please ensure that the branch name in your Git repository matches the environment&apos;s
-          label exactly — for example, use &apos;dev&apos; for the Development environment.
-        </span>
+        <span>{t("PROJECT_ENVIRONMENT_CHECKBOXES.PLEASE_ENSURE_THAT_THE_BRANCH")}</span>
       </div>
       <div className="mt-8 text-sm">
         {options.map((option) => (
@@ -82,19 +87,18 @@ export const ProjectEnvironmentCheckboxes = ({
                 aria-label={option.label}
                 id={`project-environment-${option.value}`}
               />
-              <label className="text-lg font-bold" htmlFor={`project-environment-${option.value}`}>
-                <div className="flex flex-row items-center gap-2">
-                  <span>{option.label}</span>
-                  <div className="flex flex-row items-center">
-                    <GitBranch className="h-3 w-3 text-gray-400" />
-                    <span className="text-sm text-gray-400">
-                      {option.value === "prod" ? "main" : option.value}
-                    </span>
-                  </div>
-                  {option.priceLabel && (
-                    <span className="text-sm font-medium text-gray-500">{option.priceLabel}</span>
-                  )}
-                </div>
+              <label
+                className="flex flex-row items-center gap-2 text-lg font-bold"
+                htmlFor={`project-environment-${option.value}`}
+              >
+                <span>{option.label}</span>
+                <GitBranch className="h-3 w-3 text-gray-400" />
+                <span className="-ml-2 text-sm text-gray-400">
+                  {option.value === "prod" ? "main" : option.value}
+                </span>
+                {option.priceLabel && (
+                  <span className="text-sm font-medium text-gray-500">{option.priceLabel}</span>
+                )}
               </label>
             </div>
             <div className="ml-7 text-base font-normal">{option.subtext}</div>
@@ -106,11 +110,12 @@ export const ProjectEnvironmentCheckboxes = ({
       </div>
     </div>
   );
+};
 
 /** Sorts selected environment values into the wizard's canonical order. */
 export const sortEnvironments = (values: string[]): string[] =>
   [...values].sort(
     (a, b) =>
-      (environmentOptions.find((opt) => opt.value === a)?.index ?? 0) -
-      (environmentOptions.find((opt) => opt.value === b)?.index ?? 0),
+      (getEnvironmentOptions().find((opt) => opt.value === a)?.index ?? 0) -
+      (getEnvironmentOptions().find((opt) => opt.value === b)?.index ?? 0),
   );

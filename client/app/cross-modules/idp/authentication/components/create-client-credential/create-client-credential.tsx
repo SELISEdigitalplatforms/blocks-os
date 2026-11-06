@@ -21,10 +21,10 @@ import { Input } from "@/components/ui-kits/input/input";
 import { Switch } from "@/components/ui-kits/switch/switch";
 import { Plus } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useEffect, useMemo, useState } from "react";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { useSaveAuthClient } from "@blocks-idp/authentication/hooks/use-auth-clients";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import {
   IClientCredentialsConfig,
@@ -40,6 +40,7 @@ import { ClientCredentialRolesSection } from "./client-credential-roles-section"
 import { ClientCredentialPermissionsSection } from "./client-credential-permissions-section";
 import { useGetOrganizationConfig } from "@blocks-idp/iam/hooks/use-organization";
 import { OrganizationCombobox } from "@blocks-idp/iam/components/organization-combobox";
+import { OneTimeSecret, OneTimeSecretDialog } from "../one-time-secret-dialog";
 
 const MAX_PERMISSIONS = 10;
 
@@ -69,13 +70,20 @@ type CreateClientCredentialProps = {
   hideTrigger?: boolean;
 };
 
+const submitLabelKey = (busy: boolean, flag?: boolean) => {
+  if (busy) return flag ? "CREATE_CLIENT_CREDENTIAL.UPDATING" : "CREATE_CLIENT_CREDENTIAL.SAVING";
+  return flag ? "CREATE_CLIENT_CREDENTIAL.UPDATE_CHANGES" : "common:ADD";
+};
+
 export const CreateClientCredential = ({
   editClient,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
   hideTrigger = false,
 }: CreateClientCredentialProps) => {
+  const { t } = useT("os.idp.client-credentials");
   const [internalOpen, setInternalOpen] = useState<boolean>(false);
+  const [createdSecret, setCreatedSecret] = useState<OneTimeSecret | null>(null);
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
   const setOpen = (v: boolean) => {
@@ -99,16 +107,25 @@ export const CreateClientCredential = ({
   // authenticates a client id and secret with no caller context that could re-scope it.
   const showOrganizationPicker = isMultiOrgEnabled && !isEdit;
 
+  const schema = useMemo(
+    () => buildCreateClientSchema(isMultiOrgEnabled, isEdit, t),
+    [isMultiOrgEnabled, isEdit, t],
+  );
   const form = useForm<CreateClientModalFormValues>({
-    resolver: zodResolver(buildCreateClientSchema(isMultiOrgEnabled, isEdit)),
+    resolver: zodResolver(schema),
     defaultValues: CreateClientModalFormDefaultValues,
     mode: "onChange",
   });
   const {
-    formState: { isDirty, isValid },
+    formState: { isDirty },
     reset,
-    trigger,
   } = form;
+
+  // Errors appear only on fields the user has touched, as in the OIDC dialog. Submit readiness
+  // is read from the values instead of `formState.isValid`, which `reset` leaves stale; forcing
+  // it with `trigger()` would paint every empty required field red the moment the dialog opens.
+  const values = useWatch({ control: form.control });
+  const isValid = schema.safeParse(values).success;
 
   useEffect(() => {
     if (!open) return;
@@ -125,11 +142,7 @@ export const CreateClientCredential = ({
     } else {
       reset(CreateClientModalFormDefaultValues);
     }
-    // `reset` alone leaves `formState.isValid` stale (it only recomputes on the next
-    // field-level change), so the submit button stays disabled until the user touches
-    // an unrelated field. Force a validation pass against the just-reset values.
-    void trigger();
-  }, [editClient, open, reset, trigger]);
+  }, [editClient, open, reset]);
 
   const handleDialogOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
@@ -158,41 +171,56 @@ export const CreateClientCredential = ({
       if (!res?.isSuccess) {
         const apiErrors = getBackendErrorMap(res);
         return showErrorToast({
-          errors: apiErrors ?? "Failed to save client credential.",
+          errors: apiErrors ?? t("CREATE_CLIENT_CREDENTIAL.SAVE_FAILED"),
         });
       }
       showSuccessToast({
         description: isEdit
-          ? "Client credential updated successfully"
-          : "Client credential created successfully",
+          ? t("CREATE_CLIENT_CREDENTIAL.UPDATED_SUCCESS")
+          : t("CREATE_CLIENT_CREDENTIAL.CREATED_SUCCESS"),
       });
+      // Create is the only time the API returns the secret; the list never does.
+      if (!isEdit && res.clientSecret) {
+        setCreatedSecret({
+          label: data.clientNameService,
+          clientId: res.itemId,
+          clientSecret: res.clientSecret,
+          reason: "created",
+        });
+      }
       reset();
       setOpen(false);
     } catch (error) {
       if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
-      return showErrorToast({ errors: "Something went wrong" });
+      return showErrorToast({ errors: t("CREATE_CLIENT_CREDENTIAL.ERROR_GENERIC") });
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
+      {/* Its own dialog: it stays open after this form closes. */}
+      <OneTimeSecretDialog secret={createdSecret} onClose={() => setCreatedSecret(null)} />
       {!hideTrigger && (
         <DialogTrigger asChild>
           <Button size="sm">
             <Plus className="h-5 w-5" />
             <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
-              {isEdit ? "Edit Client Credential" : "Add"}
+              {isEdit ? t("CREATE_CLIENT_CREDENTIAL.EDIT_TITLE") : t("common:ADD")}
             </span>
           </Button>
         </DialogTrigger>
       )}
       <DialogContent className="max-w-2xl flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0">
         <DialogHeader className="shrink-0 px-6 pb-4 pt-6 pr-12">
-          <DialogTitle>{isEdit ? "Edit Client Credential" : "Add Client Credential"}</DialogTitle>
+          <DialogTitle>
+            {isEdit
+              ? t("CREATE_CLIENT_CREDENTIAL.EDIT_TITLE")
+              : t("CREATE_CLIENT_CREDENTIAL.ADD_TITLE")}
+          </DialogTitle>
           <DialogDescription>
             {isEdit
-              ? "Update the credential name, lifetime, roles, and permissions."
-              : "Create a credential and choose the roles and permissions it should grant."}
+              ? t("CREATE_CLIENT_CREDENTIAL.EDIT_DESCRIPTION")
+              : t("CREATE_CLIENT_CREDENTIAL.ADD_DESCRIPTION")}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -202,17 +230,20 @@ export const CreateClientCredential = ({
           >
             <div className="min-h-0 w-full min-w-0 flex-1 space-y-8 overflow-y-auto px-6 py-4">
               <section className="space-y-4">
-              
                 <FormField
                   control={form.control}
                   name="clientNameService"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        Client Name <span className="text-destructive">*</span>
+                        {t("CREATE_CLIENT_CREDENTIAL.CLIENT_NAME")}{" "}
+                        <span className="text-destructive">*</span>
                       </FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter client name" {...field} />
+                        <Input
+                          placeholder={t("CREATE_CLIENT_CREDENTIAL.CLIENT_NAME_PLACEHOLDER")}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -224,7 +255,7 @@ export const CreateClientCredential = ({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        Access Token Lifetime (minutes){" "}
+                        {t("CREATE_CLIENT_CREDENTIAL.LIFETIME_LABEL")}{" "}
                         <span className="text-xs font-normal text-muted-foreground">(5–120)</span>
                       </FormLabel>
                       <FormControl>
@@ -236,7 +267,7 @@ export const CreateClientCredential = ({
                           max={120}
                           step={1}
                           placeholder="15"
-                          aria-label="Access Token Lifetime in minutes"
+                          aria-label={t("CREATE_CLIENT_CREDENTIAL.LIFETIME_ARIA")}
                           value={
                             !Number.isFinite(field.value) || field.value === 0
                               ? ""
@@ -265,7 +296,8 @@ export const CreateClientCredential = ({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          Organization <span className="text-destructive">*</span>
+                          {t("CREATE_CLIENT_CREDENTIAL.ORGANIZATION")}{" "}
+                          <span className="text-destructive">*</span>
                         </FormLabel>
                         <OrganizationCombobox
                           projectKey={tenantId}
@@ -278,8 +310,7 @@ export const CreateClientCredential = ({
                           }
                         />
                         <p className="text-xs text-muted-foreground">
-                          Tokens issued for this credential are scoped to this organization. It
-                          cannot be changed later.
+                          {t("CREATE_CLIENT_CREDENTIAL.ORGANIZATION_HINT")}
                         </p>
                         <FormMessage />
                       </FormItem>
@@ -293,9 +324,9 @@ export const CreateClientCredential = ({
                     <FormItem>
                       <div className="flex items-center justify-between rounded-sm border p-3">
                         <div className="space-y-0.5">
-                          <FormLabel className="text-sm">Status</FormLabel>
+                          <FormLabel className="text-sm">{t("common:STATUS")}</FormLabel>
                           <p className="text-xs text-muted-foreground">
-                            Inactive credentials cannot be used to obtain new tokens.
+                            {t("CREATE_CLIENT_CREDENTIAL.STATUS_HINT")}
                           </p>
                         </div>
                         <FormControl>
@@ -347,17 +378,11 @@ export const CreateClientCredential = ({
             <DialogFooter className="shrink-0 px-6 py-4">
               <DialogClose asChild>
                 <Button type="button" variant="outline">
-                  Cancel
+                  {t("common:CANCEL")}
                 </Button>
               </DialogClose>
               <Button disabled={isPending || isConfigLoading || !isDirty || !isValid} type="submit">
-                {isPending
-                  ? isEdit
-                    ? "Updating..."
-                    : "Saving..."
-                  : isEdit
-                    ? "Update Changes"
-                    : "Add"}
+                {t(submitLabelKey(isPending, isEdit))}
               </Button>
             </DialogFooter>
           </form>

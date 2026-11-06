@@ -1,16 +1,21 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock(
+  "@blocks-idp/iam/hooks/use-grant-scope",
+  () => import("@/test-utils/__mocks__/grant-scope.mock"),
+);
 
 const h = vi.hoisted(() => ({
   data: undefined as unknown,
   isLoading: false,
 }));
 
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 vi.mock("@blocks-idp/iam/hooks/use-permission", () => ({
-  useGetPermissions: () => ({ data: h.data, isLoading: h.isLoading }),
+  useGetGrantablePermissions: () => ({ data: h.data, isLoading: h.isLoading }),
 }));
 
 import { AssignSignupPermissionsDialog } from "./assign-signup-permissions-dialog";
@@ -68,9 +73,9 @@ describe("AssignSignupPermissionsDialog", () => {
     openDialog(vi.fn(), [makePerm(1), makePerm(2), makePerm(3), makePerm(4), makePerm(5)]);
     expect(screen.getByText(/\(5\/5\)/)).toBeTruthy();
     // The sixth, unselected permission cannot be checked at the limit.
-    expect(
-      (screen.getByLabelText("Assign permission Perm 6") as HTMLButtonElement).disabled,
-    ).toBe(true);
+    expect((screen.getByLabelText("Assign permission Perm 6") as HTMLButtonElement).disabled).toBe(
+      true,
+    );
   });
 
   it("passes the current selection back through onAssign when Set is clicked", () => {

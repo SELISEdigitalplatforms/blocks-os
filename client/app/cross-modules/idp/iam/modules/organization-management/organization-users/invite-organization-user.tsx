@@ -31,13 +31,15 @@ import {
   useGetOrganizations,
 } from "@blocks-idp/iam/hooks/use-organization";
 import { z } from "zod";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { tStatic, useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { Check, CircleCheck, Loader, Plus } from "lucide-react";
 import { isErrorWithErrors } from "@/lib/error";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { OrganizationCombobox } from "@blocks-idp/iam/components/organization-combobox";
 import { NotifyUserCheckbox } from "@blocks-idp/iam/components/notify-user-checkbox";
+
+const I18N_MODULE = "os.idp.organizations";
 
 const DEFAULT_ORGANIZATION_ID = "default";
 
@@ -49,8 +51,14 @@ const inviteOrganizationUserFormSchema = z.object({
   email: z
     .string()
     .trim()
-    .min(1, "Email is required")
-    .email({ message: "Please enter a valid email address" }),
+    .min(1, {
+      error: () => tStatic(I18N_MODULE, "INVITE_ORGANIZATION_USER.EMAIL_REQUIRED"),
+    })
+    .check(
+      z.email({
+        error: () => tStatic(I18N_MODULE, "INVITE_ORGANIZATION_USER.EMAIL_INVALID"),
+      }),
+    ),
 });
 
 type InviteFormValues = z.infer<typeof inviteOrganizationUserFormSchema>;
@@ -75,6 +83,7 @@ export const InviteOrganizationUser = ({
   organizationId,
   organizationName,
 }: InviteOrganizationUserProps) => {
+  const { t } = useT(I18N_MODULE);
   const { isPending: isCreatingUser, mutateAsync: createUser } = useAddUser();
   const queryClient = useQueryClient();
 
@@ -180,7 +189,7 @@ export const InviteOrganizationUser = ({
       if (exists) {
         if (!existingUserId) {
           showErrorToast({
-            errors: "Could not find this user's account. Please try again.",
+            errors: t("INVITE_ORGANIZATION_USER.USER_NOT_FOUND"),
           });
           return;
         }
@@ -192,11 +201,14 @@ export const InviteOrganizationUser = ({
         });
         if (!res.isSuccess) {
           showErrorToast({
-            errors: extractFirstErrorMessage(res.errors, "Failed to grant access"),
+            errors: extractFirstErrorMessage(
+              res.errors,
+              t("INVITE_ORGANIZATION_USER.GRANT_FAILED"),
+            ),
           });
           return;
         }
-        showSuccessToast({ description: "User granted access to the organization" });
+        showSuccessToast({ description: t("INVITE_ORGANIZATION_USER.GRANTED") });
         queryClient.invalidateQueries({ queryKey: ["organizations"] });
         queryClient.invalidateQueries({ queryKey: ["organization"] });
         form.reset();
@@ -217,11 +229,11 @@ export const InviteOrganizationUser = ({
       });
       if (!res.isSuccess) {
         showErrorToast({
-          errors: extractFirstErrorMessage(res.errors, "Failed to invite member"),
+          errors: extractFirstErrorMessage(res.errors, t("INVITE_ORGANIZATION_USER.INVITE_FAILED")),
         });
         return;
       }
-      showSuccessToast({ description: "Invitation is sent" });
+      showSuccessToast({ description: t("INVITE_ORGANIZATION_USER.INVITE_SENT") });
       queryClient.invalidateQueries({ queryKey: ["organizations"] });
       queryClient.invalidateQueries({ queryKey: ["organization"] });
       form.reset();
@@ -230,7 +242,7 @@ export const InviteOrganizationUser = ({
       if (isErrorWithErrors(error)) {
         showErrorToast({ errors: error.errors });
       } else {
-        showErrorToast({ errors: "Something went wrong" });
+        showErrorToast({ errors: t("INVITE_ORGANIZATION_USER.SOMETHING_WENT_WRONG") });
       }
     }
   };
@@ -240,14 +252,14 @@ export const InviteOrganizationUser = ({
       <DialogTrigger asChild>
         <Button size="sm" variant="ghost" className="h-10 text-sm text-primary">
           <Plus className="h-5 w-5 md:mr-2.5" />
-          <span className="sr-only sm:not-sr-only">Invite Member</span>
+          <span className="sr-only sm:not-sr-only">{t("INVITE_ORGANIZATION_USER.TRIGGER")}</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="flex max-h-[90vh] flex-col sm:max-w-[480px]">
         <DialogHeader className="shrink-0">
-          <DialogTitle>Invite Member</DialogTitle>
+          <DialogTitle>{t("INVITE_ORGANIZATION_USER.TITLE")}</DialogTitle>
           <DialogDescription className="mt-2! text-sm text-medium-emphasis">
-            Add a member to this organization.
+            {t("INVITE_ORGANIZATION_USER.DESCRIPTION")}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -261,12 +273,12 @@ export const InviteOrganizationUser = ({
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>{t("common:EMAIL")}</FormLabel>
                     <div className="relative">
                       <FormControl>
                         <Input
                           type="email"
-                          placeholder="name@company.com"
+                          placeholder={t("INVITE_ORGANIZATION_USER.EMAIL_PLACEHOLDER")}
                           autoComplete="off"
                           className={cn(
                             isValidEmailFormat && (isCheckingUserExists || exists) && "pr-9",
@@ -292,7 +304,9 @@ export const InviteOrganizationUser = ({
 
               {isValidEmailFormat && !isConfigLoading && isMultiOrgEnabled && (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Organization</label>
+                  <label className="text-sm font-medium">
+                    {t("INVITE_ORGANIZATION_USER.ORGANIZATION_LABEL")}
+                  </label>
                   <OrganizationCombobox
                     projectKey={tenantId}
                     value={selectedOrgId}
@@ -301,8 +315,8 @@ export const InviteOrganizationUser = ({
                     initialSelectedName={organizationName}
                     emptyMessage={
                       exists
-                        ? "This user is already a member of all organizations"
-                        : "No organizations available"
+                        ? t("INVITE_ORGANIZATION_USER.EMPTY_ALL_MEMBER")
+                        : t("INVITE_ORGANIZATION_USER.EMPTY_NONE")
                     }
                   />
                   {selectedOrganizationAlreadyAssigned && (
@@ -311,7 +325,7 @@ export const InviteOrganizationUser = ({
                       className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400"
                     >
                       <CircleCheck className="h-3.5 w-3.5 shrink-0" />
-                      This user already has access to the selected organization.
+                      {t("INVITE_ORGANIZATION_USER.ALREADY_ACCESS")}
                     </p>
                   )}
                 </div>
@@ -324,7 +338,7 @@ export const InviteOrganizationUser = ({
                   checked={notifyUser}
                   onCheckedChange={setNotifyUser}
                   disabled={isPending}
-                  description="Send them an email saying they were added to this organization."
+                  description={t("INVITE_ORGANIZATION_USER.NOTIFY_DESCRIPTION")}
                 />
               )}
             </div>
@@ -338,22 +352,24 @@ export const InviteOrganizationUser = ({
                   setOpen(false);
                 }}
               >
-                Cancel
+                {t("common:CANCEL")}
               </Button>
               <Button
                 type="submit"
                 disabled={isPending || isFormInvalid || selectedOrganizationAlreadyAssigned}
               >
-                {isPending ? (
+                {isPending && (
                   <>
                     <Loader className="mr-2 h-4 w-4 animate-spin" />
-                    {exists ? "Granting access..." : "Sending..."}
+                    {exists
+                      ? t("INVITE_ORGANIZATION_USER.GRANTING")
+                      : t("INVITE_ORGANIZATION_USER.SENDING")}
                   </>
-                ) : exists ? (
-                  "Grant access"
-                ) : (
-                  "Send invite"
                 )}
+                {!isPending &&
+                  (exists
+                    ? t("INVITE_ORGANIZATION_USER.GRANT_ACCESS")
+                    : t("INVITE_ORGANIZATION_USER.SEND_INVITE"))}
               </Button>
             </DialogFooter>
           </form>

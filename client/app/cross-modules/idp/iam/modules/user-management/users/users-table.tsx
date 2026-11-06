@@ -2,7 +2,10 @@ import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { User } from "@blocks-idp/iam/models/user";
+import { useUserManageability } from "@blocks-idp/iam/hooks/use-user-manageability";
+import { getCannotManageUserTooltip, getOwnRolesTooltip } from "@blocks-idp/iam/utils/grant-scope";
 import { useNavigate } from "react-router";
+import { useT } from "@seliseblocks/genesis-os";
 import { useUsersSortQueryParams } from "./users-filter-toolbar";
 import { FilterControls } from "@/components/filter-toolbar";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
@@ -33,8 +36,7 @@ type UserTableProps = {
 // name column, email was the only flexible one and a wide screen opened a large empty
 // gap between the address and Status. Email gets the larger share since addresses run
 // longer than names.
-const GRID_COLUMNS =
-  "md:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)_110px_150px_150px]";
+const GRID_COLUMNS = "md:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)_110px_150px_150px]";
 const GRID_COLUMNS_SELECTING =
   "md:grid-cols-[32px_minmax(0,1fr)_minmax(0,1.25fr)_110px_150px_150px]";
 
@@ -43,6 +45,11 @@ const GRID_COLUMNS_SELECTING =
 // and replaced with a dash drawn on the box itself, so no new primitive is needed.
 const INDETERMINATE_BOX =
   "relative data-[state=indeterminate]:border-blocks-primary-500 data-[state=indeterminate]:bg-blocks-primary-500 data-[state=indeterminate]:text-primary-foreground [&[data-state=indeterminate]_svg]:hidden after:absolute after:left-1/2 after:top-1/2 after:hidden after:h-[2px] after:w-2 after:-translate-x-1/2 after:-translate-y-1/2 after:rounded-full after:bg-current data-[state=indeterminate]:after:block";
+
+const getSelectionBlockedReason = (isSelf: boolean, canManage: boolean): string | undefined => {
+  if (isSelf) return getOwnRolesTooltip();
+  return canManage ? undefined : getCannotManageUserTooltip();
+};
 
 const LoadingSkelton = () => (
   <div className="flex flex-col gap-3">
@@ -60,9 +67,11 @@ export const UsersTable = ({
   onToggleUser,
   onToggleAllOnPage,
 }: UserTableProps) => {
+  const { t } = useT("os.idp.users");
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const { sortQueryParams, setSortQueryParams } = useUsersSortQueryParams();
+  const { isSelf, canManage } = useUserManageability();
 
   const handleRowClick = (itemId: string) => {
     // Navigating mid-selection would throw away what the operator has ticked, so
@@ -87,7 +96,7 @@ export const UsersTable = ({
     return (
       <div className="flex min-h-[420px] flex-col items-center justify-center gap-3 rounded-xl  py-16 text-center text-sm text-muted-foreground">
         <UsersIcon className="h-6 w-6" />
-        No users found.
+        {t("USERS_TABLE.NO_USERS_FOUND")}
       </div>
     );
   }
@@ -104,7 +113,7 @@ export const UsersTable = ({
           {selectionMode && (
             <div className="shrink-0">
               <Checkbox
-                aria-label="Select all users on this page"
+                aria-label={t("USERS_TABLE.SELECT_ALL_ON_PAGE")}
                 data-testid="users-select-all-on-page"
                 className={INDETERMINATE_BOX}
                 checked={headerChecked}
@@ -115,7 +124,7 @@ export const UsersTable = ({
           <div className="min-w-0">
             <FilterControls.SortHeader
               id="FirstName"
-              label="Name"
+              label={t("USERS_TABLE.COLUMN_NAME")}
               value={sortQueryParams}
               onChange={setSortQueryParams}
             />
@@ -123,7 +132,7 @@ export const UsersTable = ({
           <div className="min-w-0">
             <FilterControls.SortHeader
               id="Email"
-              label="Email"
+              label={t("USERS_TABLE.COLUMN_EMAIL")}
               value={sortQueryParams}
               onChange={setSortQueryParams}
             />
@@ -131,7 +140,7 @@ export const UsersTable = ({
           <div className="shrink-0">
             <FilterControls.SortHeader
               id="Active"
-              label="Status"
+              label={t("USERS_TABLE.COLUMN_STATUS")}
               value={sortQueryParams}
               onChange={setSortQueryParams}
             />
@@ -139,7 +148,7 @@ export const UsersTable = ({
           <div className="shrink-0">
             <FilterControls.SortHeader
               id="CreatedDate"
-              label="Created on"
+              label={t("USERS_TABLE.COLUMN_CREATED_ON")}
               value={sortQueryParams}
               onChange={setSortQueryParams}
             />
@@ -147,7 +156,7 @@ export const UsersTable = ({
           <div className="shrink-0">
             <FilterControls.SortHeader
               id="LastLoggedInTime"
-              label="Last login"
+              label={t("USERS_TABLE.COLUMN_LAST_LOGIN")}
               value={sortQueryParams}
               onChange={setSortQueryParams}
             />
@@ -183,9 +192,11 @@ export const UsersTable = ({
                   role="presentation"
                 >
                   <Checkbox
-                    aria-label={`Select ${fullName}`}
+                    aria-label={t("USERS_TABLE.SELECT_USER", { name: fullName })}
                     data-testid={`users-select-${user.itemId}`}
                     checked={selectedUserIds?.has(user.itemId) ?? false}
+                    disabled={isSelf(user.itemId) || !canManage(user)}
+                    title={getSelectionBlockedReason(isSelf(user.itemId), canManage(user))}
                     onCheckedChange={(value) => onToggleUser?.(user.itemId, value === true)}
                   />
                 </div>
@@ -231,21 +242,25 @@ export const UsersTable = ({
                   </Badge>
                   {user.isLockedOut === true && (
                     <Badge variant="error" className="w-fit">
-                      Locked out
+                      {t("USERS_TABLE.LOCKED_OUT")}
                     </Badge>
                   )}
                 </div>
 
                 <div className="text-right md:shrink-0 md:text-left md:text-sm md:text-muted-foreground">
-                  <span className="block text-xs text-muted-foreground md:hidden">Created on</span>
+                  <span className="block text-xs text-muted-foreground md:hidden">
+                    {t("USERS_TABLE.COLUMN_CREATED_ON")}
+                  </span>
                   {hasCreated ? formatDate(parseDateString(user.createdDate)) : "-"}
                 </div>
 
                 <div className="text-right md:shrink-0 md:text-left md:text-sm md:text-muted-foreground">
-                  <span className="block text-xs text-muted-foreground md:hidden">Last login</span>
+                  <span className="block text-xs text-muted-foreground md:hidden">
+                    {t("USERS_TABLE.COLUMN_LAST_LOGIN")}
+                  </span>
                   {hasLastLogin
                     ? formatDate(parseDateString(user.lastLoggedInTime))
-                    : "Never logged in"}
+                    : t("USERS_TABLE.NEVER_LOGGED_IN")}
                 </div>
               </div>
             </div>

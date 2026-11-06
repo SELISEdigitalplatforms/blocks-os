@@ -13,7 +13,10 @@ import { lmtService } from "../services/lmt.service";
 import { useGetTraces, useGetTraceById, useGetBlocksServices } from "./use-trace";
 
 vi.mock("@blocks-lmt/services/lmt.service", () => mockLmtServiceFactory());
-vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
+  ...mockProjectStoreFactory(),
+}));
 
 describe("use-trace hooks", () => {
   beforeEach(() => {

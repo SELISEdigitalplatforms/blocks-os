@@ -1,5 +1,5 @@
+using Blocks.Genesis.Entities.Os;
 using Configuration.DomainService.Mail.RequestModel;
-using Configuration.DomainService.Shared.Enums;
 using Configuration.DomainService.Shared.Services;
 using FluentValidation;
 

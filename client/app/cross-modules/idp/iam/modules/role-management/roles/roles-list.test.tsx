@@ -1,6 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+const grant = vi.hoisted(() => ({
+  scope: undefined as { isSystemUser: boolean } | undefined,
+  block: undefined as string | undefined,
+}));
+vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => ({
+  useGrantScope: () => ({ scope: grant.scope, roleEditBlock: () => grant.block }),
+}));
 
 // See the mock for why the tooltip barrel cannot be imported under jsdom.
 vi.mock(
@@ -120,9 +127,44 @@ const role = {
   tags: [],
 } as IRole;
 
+const MANAGED_BY = "Managed by";
+const EDIT_ADMIN = "Edit role Administrator";
+
 describe("RolesList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    grant.scope = undefined;
+    grant.block = undefined;
+  });
+
+  describe("Managed by column", () => {
+    const child = { ...role, itemId: "role-child", name: "Member", slug: "member", parentRoleSlug: "administrator" } as IRole;
+
+    it("is left out while the grant scope is not loaded and no role has a parent", () => {
+      render(<RolesList roles={[role]} isLoading={false} />);
+      expect(screen.queryByText(MANAGED_BY)).toBeNull();
+    });
+
+    it("appears once a role has a parent, naming it", () => {
+      render(<RolesList roles={[role, child]} isLoading={false} />);
+      expect(screen.getAllByText(MANAGED_BY).length).toBeGreaterThan(0);
+      const cells = screen.getAllByTestId("managed-by-cell").map((cell) => cell.textContent);
+      expect(cells).toEqual(["-", "Administrator"]);
+    });
+
+    it.each([
+      ["the system user", true],
+      ["a limited caller", false],
+    ])("always appears for %s", (_who, isSystemUser) => {
+      grant.scope = { isSystemUser };
+      render(<RolesList roles={[role]} isLoading={false} />);
+      expect(screen.getAllByText(MANAGED_BY).length).toBeGreaterThan(0);
+    });
+
+    it("falls back to the slug when the parent is not on this page", () => {
+      render(<RolesList roles={[child]} isLoading={false} />);
+      expect(screen.getByTestId("managed-by-cell").textContent).toBe("administrator");
+    });
   });
 
   describe("default-origin badge", () => {
@@ -180,7 +222,7 @@ describe("RolesList", () => {
     render(<RolesList roles={[role]} isLoading={false} />);
     expect(screen.getByText("Administrator")).toBeTruthy();
     expect(screen.getByText("administrator")).toBeTruthy();
-    expect(screen.getByText("7")).toBeTruthy();
+    expect(screen.getByText("7 permissions")).toBeTruthy();
     expect(screen.getByText("Full access role")).toBeTruthy();
   });
 
@@ -213,7 +255,7 @@ describe("RolesList", () => {
     expect(screen.queryByTestId("update-role-dialog")).toBeNull();
     // There are two actions per row now, so select the edit button by its accessible name
     // rather than by being the only button.
-    await user.click(screen.getByRole("button", { name: "Edit role Administrator" }));
+    await user.click(screen.getByRole("button", { name: EDIT_ADMIN }));
     expect(screen.getByTestId("update-role-dialog")).toBeTruthy();
     expect(screen.getByText("Editing Administrator")).toBeTruthy();
     // Editing must not trigger row navigation.
@@ -231,6 +273,16 @@ describe("RolesList archive action", () => {
     archivePending.value = false;
     archivePending.perCall = [];
     archiveRole.mockResolvedValue({ isSuccess: true });
+  });
+
+  it("locks edit and hides archive with the reason when the caller may not change the role", () => {
+    grant.block = "This role is not below your role.";
+    renderList([role]);
+
+    expect(screen.getByRole("button", { name: EDIT_ADMIN })).toHaveProperty("disabled", true);
+    expect(screen.queryByRole("button", { name: "Archive role Administrator" })).toBeNull();
+    expect(screen.getAllByText("This role is not below your role.").length).toBeGreaterThan(0);
+    grant.block = undefined;
   });
 
   it("renders an archive action for a normal role", () => {
@@ -436,7 +488,7 @@ describe("RolesList archive action", () => {
     unmount();
 
     renderList([role]);
-    await user.click(screen.getByRole("button", { name: "Edit role Administrator" }));
+    await user.click(screen.getByRole("button", { name: EDIT_ADMIN }));
     expect(screen.getByTestId("update-role-dialog")).toBeTruthy();
     expect(screen.queryByText("Archive this role?")).toBeNull();
   });

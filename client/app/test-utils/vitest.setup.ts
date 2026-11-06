@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 /**
  * Global vitest setup for the jsdom environment.
  *
@@ -168,4 +169,25 @@ if (typeof document !== "undefined") {
 if (typeof window !== "undefined") {
   const browserWindow = window as Window & { __BLOCKS_ENV__?: Record<string, string | undefined> };
   browserWindow.__BLOCKS_ENV__ = { ...process.env, ...browserWindow.__BLOCKS_ENV__ };
+}
+
+// Genesis creates its Rollbar client while loading; under jsdom the server build of Rollbar needs
+// parts of Node's `process` that genesis replaces. Tests never report, so use a no-op client.
+vi.mock("rollbar", () => ({
+  // Called with `new`; returning an object from a constructor function hands back that object.
+  default: function Rollbar() {
+    return new Proxy({}, { get: () => () => undefined });
+  },
+}));
+
+const realProcess = globalThis.process;
+
+// Dynamic, after the polyfills above: a static import is hoisted above them and the genesis store
+// needs `matchMedia` while it loads.
+await import("@/i18n");
+
+// Genesis replaced `process` by `{ env }` while loading. Let it fall back to Node's real one, so
+// libraries that read `process.stderr` or `process.listeners` (debug, micromark) keep working.
+if (globalThis.window !== undefined && globalThis.process !== realProcess) {
+  Object.setPrototypeOf(globalThis.process, realProcess);
 }

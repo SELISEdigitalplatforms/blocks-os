@@ -34,14 +34,12 @@ public class CaptchaConfigController : ControllerBase
     }
 
     [HttpPost("save")]
-    [Authorize]
-    //[ProtectedEndPoint("blocks-os::secret-config::save")]
+    [ProtectedEndPoint("blocks-os::secret-config::save")]
     public Task<CaptchaConfigResult> Save([FromBody] SaveCaptchaConfigRequest request, CancellationToken cancellationToken) =>
         _service.SaveAsync(request, cancellationToken);
 
     [HttpGet("get/{id}")]
-    [Authorize]
-    //[ProtectedEndPoint("blocks-os::secret-config::get")]
+    [ProtectedEndPoint("blocks-os::secret-config::get")]
  public async Task<ActionResult<CaptchaConfigResult>> Get(string id, CancellationToken cancellationToken)
     {
         var result = await _service.GetAsync(id, cancellationToken);
@@ -49,14 +47,12 @@ public class CaptchaConfigController : ControllerBase
     }
 
     [HttpGet("list")]
-    [Authorize]
-    //[ProtectedEndPoint("blocks-os::secret-config::get")]
+    [ProtectedEndPoint("blocks-os::secret-config::get")]
     public Task<IReadOnlyList<CaptchaConfigResult>> List(CancellationToken cancellationToken) =>
         _service.GetListAsync(cancellationToken);
 
     [HttpDelete("delete/{id}")]
-    [Authorize]
-    //[ProtectedEndPoint("blocks-os::secret-config::delete")]
+    [ProtectedEndPoint("blocks-os::secret-config::delete")]
  public async Task<BaseResponse> Delete(string id, CancellationToken cancellationToken)
     {
         await _service.DeleteAsync(id, cancellationToken);

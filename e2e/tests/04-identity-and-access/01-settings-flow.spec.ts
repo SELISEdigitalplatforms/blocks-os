@@ -12,6 +12,7 @@ import {
   cancelMultiOrgConfirmationFlow,
   confirmMultiOrgFlow,
   mobileTabsSwitchFlow,
+  signupAutoJoinFlow,
 } from "../../pages/identity-and-access/settings";
 
 // Settings flow: the default Auth tab, strict numeric validation, a valid
@@ -72,6 +73,10 @@ test.describe("flows", () => {
 
     await test.step("Confirming enables multi-org and reveals the Creation Workflows card", async () => {
       await confirmMultiOrgFlow(page);
+    });
+
+    await test.step("Auto-join card: picker, Default warning and save payload (#658)", async () => {
+      await signupAutoJoinFlow(page);
     });
 
     await test.step("Switch tabs via the mobile Select dropdown", async () => {

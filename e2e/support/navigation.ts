@@ -54,11 +54,16 @@ const SHELL_PAINT_TIMEOUT_MS = 15_000
  * blank white until a much later, unrelated assertion times out. The Logo
  * image is present on every page state this app renders (login, marketing,
  * authenticated console/app), so its visibility is a cheap "shell painted"
- * signal independent of which page we ended up on.
+ * signal independent of which page we ended up on — except with the left
+ * sidebar collapsed: genesis-os then renders a plain icon (no alt="Logo")
+ * inside the same console link. The collapsed state is saved in localStorage
+ * ("layout-settings") and so in the shared session file once any test runs at
+ * a narrow viewport, after which every navigation waited the full 15 s here
+ * and then navigated a second time. Accept the collapsed icon too.
  */
 async function waitForAppShell(page: Page, timeout: number): Promise<boolean> {
   return page
-    .locator('img[alt="Logo"]')
+    .locator('img[alt="Logo"], a[href$="/console"] :is(img, svg)')
     .first()
     .waitFor({ state: "visible", timeout })
     .then(() => true)

@@ -1,18 +1,21 @@
+import { tStatic } from "@seliseblocks/genesis-os";
 import { z } from "zod";
 import { MAX_REDEMPTIONS_LIMIT } from "./max-redemptions";
+
+const I18N_MODULE = "os.idp.signup-links";
+
+const ts = (key: string) => ({ error: () => tStatic(I18N_MODULE, key) });
+const lifetimeRange = ts("CONFIGURATION_FORM_SCHEMA.LIFETIME_RANGE");
 
 const relativePath = z
   .string()
   .optional()
-  .refine(
-    (value) => {
-      if (!value) return true;
-      if (!value.startsWith("/") || value.startsWith("//")) return false;
-      const beforeSlash = value.slice(1).split("/")[0] ?? "";
-      return !beforeSlash.includes(":");
-    },
-    { message: "Forwarded path must be a relative path starting with /" },
-  );
+  .refine((value) => {
+    if (!value) return true;
+    if (!value.startsWith("/") || value.startsWith("//")) return false;
+    const beforeSlash = value.slice(1).split("/")[0] ?? "";
+    return !beforeSlash.includes(":");
+  }, ts("CONFIGURATION_FORM_SCHEMA.FORWARDED_PATH_RELATIVE"));
 
 const isAbsoluteHttpUrl = (value: string) => {
   try {
@@ -42,15 +45,18 @@ export const signupLinkConfigurationFormSchema = z
     name: z
       .string()
       .trim()
-      .min(1, "Name is required")
-      .max(100, "Name must be 100 characters or fewer"),
+      .min(1, ts("CONFIGURATION_FORM_SCHEMA.NAME_REQUIRED"))
+      .max(100, ts("CONFIGURATION_FORM_SCHEMA.NAME_MAX")),
     description: z
       .string()
-      .max(500, "Description must be 500 characters or fewer")
+      .max(500, ts("CONFIGURATION_FORM_SCHEMA.DESCRIPTION_MAX"))
       .optional()
       .or(z.literal("")),
     mode: z.enum(["Oidc", "Embedded"], {
-      required_error: "Mode is required",
+      error: (issue) =>
+        issue.input === undefined
+          ? tStatic(I18N_MODULE, "CONFIGURATION_FORM_SCHEMA.MODE_REQUIRED")
+          : undefined,
     }),
     // Required in OIDC mode only — enforced in superRefine, because a field that is
     // mandatory in one mode and forbidden in the other cannot be expressed per-field.
@@ -59,53 +65,61 @@ export const signupLinkConfigurationFormSchema = z
     joinUrl: z.string().trim().optional().or(z.literal("")),
     defaultForwardedTo: relativePath,
     credentialMode: z.enum(["Passwordless", "PasswordRequired"], {
-      required_error: "Credential mode is required",
+      error: (issue) =>
+        issue.input === undefined
+          ? tStatic(I18N_MODULE, "CONFIGURATION_FORM_SCHEMA.CREDENTIAL_MODE_REQUIRED")
+          : undefined,
     }),
     // Defaulted rather than required: it is a preference, not an answer the author
     // has to give, and an omitted one should mean the recommended ending.
     signInAfterActivation: z.boolean().default(true),
+    // Number.isInteger, not .int(): zod 4's .int() also rejects unsafe integers and skips the
+    // superRefine below; zod 3's did neither.
     defaultLifetimeMinutes: z.coerce
-      .number({ invalid_type_error: "Must be between 5 and 10080" })
-      .int("Must be between 5 and 10080")
-      .min(5, "Must be between 5 and 10080")
-      .max(10080, "Must be between 5 and 10080"),
+      .number<number>(lifetimeRange)
+      .refine(Number.isInteger, lifetimeRange)
+      .min(5, lifetimeRange)
+      .max(10080, lifetimeRange),
     // A string, not z.coerce.number(): Number("") is 0, which IAM reads as unlimited.
     // The regex rejects signs, decimals, letters and exponent notation.
     defaultMaxRedemptions: z
       .string()
       .trim()
-      .regex(/^\d*$/, "Enter 0 or a whole number")
+      .regex(/^\d*$/, ts("CONFIGURATION_FORM_SCHEMA.MAX_REDEMPTIONS_FORMAT"))
       // Size is judged only for well-formed digits; anything else already has the message above.
-      .refine((value) => !/^\d+$/.test(value) || Number(value) <= MAX_REDEMPTIONS_LIMIT, {
-        message: "Enter a smaller number",
-      })
+      .refine(
+        (value) => !/^\d+$/.test(value) || Number(value) <= MAX_REDEMPTIONS_LIMIT,
+        ts("CONFIGURATION_FORM_SCHEMA.MAX_REDEMPTIONS_SIZE"),
+      )
       .default(""),
     // Secure by default: on for new configurations and for legacy ones without a value.
     requireExistingUserPassword: z.boolean().default(true),
     defaultRoles: z.array(z.string()),
-    defaultPermissions: z.array(z.string()).max(50, "At most 50 permissions"),
+    defaultPermissions: z
+      .array(z.string())
+      .max(50, ts("CONFIGURATION_FORM_SCHEMA.PERMISSIONS_MAX")),
   })
   .superRefine((values, ctx) => {
     if (values.mode === "Oidc") {
       if (!values.clientId) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           path: ["clientId"],
-          message: "Client is required",
+          message: tStatic(I18N_MODULE, "CONFIGURATION_FORM_SCHEMA.CLIENT_REQUIRED"),
         });
       }
 
       if (!values.redirectUri) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           path: ["redirectUri"],
-          message: "Redirect URI is required",
+          message: tStatic(I18N_MODULE, "CONFIGURATION_FORM_SCHEMA.REDIRECT_URI_REQUIRED"),
         });
       } else if (!isAbsoluteHttpUrl(values.redirectUri)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           path: ["redirectUri"],
-          message: "Redirect URI must be an absolute URL",
+          message: tStatic(I18N_MODULE, "CONFIGURATION_FORM_SCHEMA.REDIRECT_URI_ABSOLUTE"),
         });
       }
 
@@ -116,9 +130,9 @@ export const signupLinkConfigurationFormSchema = z
     // able to send one — the fields are hidden, and this catches a stale value behind them.
     if (values.joinUrl && !isValidJoinUrl(values.joinUrl)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["joinUrl"],
-        message: "Join URL must be an absolute https URL with no query or fragment",
+        message: tStatic(I18N_MODULE, "CONFIGURATION_FORM_SCHEMA.JOIN_URL_INVALID"),
       });
     }
   });

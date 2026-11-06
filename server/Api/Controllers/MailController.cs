@@ -6,27 +6,31 @@ using Configuration.DomainService.Mail.Services;
 using Configuration.DomainService.Mail.Template;
 using Configuration.DomainService.Mail.Template.Services;
 using Configuration.DomainService.Shared.Services;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics.CodeAnalysis;
 
 namespace BlocksOs.Api.Controllers
 {
     [ApiController]
     [Route("[controller]/[action]")]
+    [SuppressMessage("Major Code Smell", "S6960:Controllers should not have mixed responsibilities", Justification = "Splitting would change controller names, Swagger grouping and operation ids that clients rely on.")]
     public class MailController : ControllerBase
     {
         private readonly IMailConfigurationService _mailConfigurationService;
         private readonly IMailTemplateService? _mailTemplateService;
         private readonly IMailboxService? _mailboxService;
+        private readonly IMailTemplateCopyService? _mailTemplateCopyService;
 
         public MailController(
             IMailConfigurationService mailConfigurationService,
             IMailTemplateService? mailTemplateService = null,
-            IMailboxService? mailboxService = null)
+            IMailboxService? mailboxService = null,
+            IMailTemplateCopyService? mailTemplateCopyService = null)
         {
             _mailConfigurationService = mailConfigurationService;
             _mailTemplateService = mailTemplateService;
             _mailboxService = mailboxService;
+            _mailTemplateCopyService = mailTemplateCopyService;
         }
 
         [HttpPost]
@@ -65,7 +69,7 @@ namespace BlocksOs.Api.Controllers
         [ProtectedEndPoint("blocks-os::mail::gets")]
         public async Task<IActionResult> Gets([FromQuery] GetAllMailConfigurationsRequest request)
         {
-            var result = await _mailConfigurationService.GetAllAsync();
+            var result = await _mailConfigurationService.GetAllAsync(request);
             return Ok(result);
         }
 
@@ -129,8 +133,7 @@ namespace BlocksOs.Api.Controllers
             };
 
         [HttpPost]
-        // [ProtectedEndPoint("blocks-os::mail-template::save")]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::mail-template::save")]
         public async Task<IActionResult> SaveTemplate([FromBody] SaveMailTemplateRequest request)
         {
             var result = await _mailTemplateService!.SaveTemplateAsync(request);
@@ -138,8 +141,7 @@ namespace BlocksOs.Api.Controllers
         }
 
         [HttpGet]
-        // [ProtectedEndPoint("blocks-os::mail-template::gets")]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::mail-template::gets")]
         public async Task<IActionResult> GetTemplate([FromQuery] GetMailTemplateRequest request)
         {
             var result = await _mailTemplateService!.GetAsync(request);
@@ -159,16 +161,14 @@ namespace BlocksOs.Api.Controllers
         }
 
         [HttpGet]
-        // [ProtectedEndPoint("blocks-os::mail-template::gets")]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::mail-template::gets")]
         public async Task<GetAllMailTemplatesResponse> GetTemplates([FromQuery] GetAllMailTemplatesRequest request)
         {
             return await _mailTemplateService!.GetAllTemplatesAsync(request);
         }
 
         [HttpPost]
-        // [ProtectedEndPoint("blocks-os::mail-template::save")]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::mail-template::save")]
         public async Task<IActionResult> CloneTemplate([FromBody] CloneMailTemplateRequest request)
         {
             var result = await _mailTemplateService!.CloneTemplateAsync(request);
@@ -176,8 +176,7 @@ namespace BlocksOs.Api.Controllers
         }
 
         [HttpDelete]
-        // [ProtectedEndPoint("blocks-os::mail-template::delete")]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::mail-template::delete")]
         public async Task<IActionResult> DeleteTemplate([FromQuery] DeleteMailTemplateRequest request)
         {
             if (request == null || string.IsNullOrWhiteSpace(request.ItemId))
@@ -196,29 +195,54 @@ namespace BlocksOs.Api.Controllers
             return result.IsSuccess ? Ok(result) : BadRequest(result);
         }
 
-        [HttpGet]
-        // [ProtectedEndPoint("blocks-os::mail-template::gets")]
-        [Authorize]
-        public async Task<IActionResult> LoadTemplatePluginToken(
-            [FromQuery] string provider,
-            [FromQuery] string uId)
+        /// <summary>
+        /// Points many templates of a configuration's organization at that configuration in one update.
+        /// A field error is HTTP 400 with <c>{ isSuccess:false, errors }</c>, as the other template endpoints.
+        /// </summary>
+        [HttpPost]
+        [ProtectedEndPoint("blocks-os::mail-template::save")]
+        public async Task<IActionResult> AssignTemplates([FromBody] AssignTemplatesRequest request)
         {
-            var result = await _mailTemplateService!.GetTemplatePluginTokenAsync(provider, uId);
+            var result = await _mailTemplateService!.AssignTemplatesAsync(request);
+            return result.IsSuccess ? Ok(result) : BadRequest(result);
+        }
 
-            if (result is null)
-            {
-                return BadRequest(new
-                {
-                    message = "Unable to load the template plugin token."
-                });
-            }
+        /// <summary>
+        /// Deletes a Default organization template now and queues the deletion of the organizations' own copies (same
+        /// Name + Language) in all or the selected organizations; the OS Worker deletes them and the requester gets a
+        /// bell notification. Returns the job id. "Only the Default organization's template" uses DeleteTemplate.
+        /// </summary>
+        [HttpPost]
+        [ProtectedEndPoint("blocks-os::mail-template::delete")]
+        public async Task<IActionResult> DeleteTemplateAcrossOrganizations([FromBody] DeleteTemplateAcrossOrganizationsRequest request)
+        {
+            var result = await _mailTemplateService!.DeleteAcrossOrganizationsAsync(request);
+            return result.IsSuccess ? Ok(result) : BadRequest(result);
+        }
 
-            return Ok(result);
+        /// <summary>
+        /// Queues a copy of a Default organization template to all or selected organizations; the OS Worker makes the
+        /// copies and the requester gets a bell notification. Returns the job id.
+        /// </summary>
+        [HttpPost]
+        [ProtectedEndPoint("blocks-os::mail-template::save")]
+        public async Task<IActionResult> CopyTemplateToOrganizations([FromBody] CopyTemplateToOrganizationsRequest request)
+        {
+            var result = await _mailTemplateCopyService!.CopyToOrganizationsAsync(request);
+            return result.IsSuccess ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>Which of up to 25 organizations already have their own template with the same Name + Language.</summary>
+        [HttpGet]
+        [ProtectedEndPoint("blocks-os::mail-template::gets")]
+        public async Task<IActionResult> GetTemplateOrganizationCopies([FromQuery] GetTemplateOrganizationCopiesRequest request)
+        {
+            var result = await _mailTemplateCopyService!.GetOrganizationCopiesAsync(request);
+            return result.IsSuccess ? Ok(result) : BadRequest(result);
         }
 
         [HttpGet]
-        // [ProtectedEndPoint("blocks-os::mailbox::gets")]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::mailbox::gets")]
         public async Task<IActionResult> GetMailBoxMails([FromQuery] GetMailBoxMailsRequest request)
         {
             var result = await _mailboxService!.GetMailBoxMailsAsync(request);
@@ -226,21 +250,65 @@ namespace BlocksOs.Api.Controllers
         }
 
         [HttpGet]
-        // [ProtectedEndPoint("blocks-os::mailbox::gets")]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::mailbox::gets")]
         public async Task<IActionResult> GetMailBoxMail([FromQuery] GetMailBoxMailRequest request)
         {
             var result = await _mailboxService!.GetMailBoxMailAsync(request);
             return result.IsSuccess ? Ok(result) : NotFound(result);
         }
 
+        /// <summary>The stored message as an <c>.eml</c> download.</summary>
         [HttpGet]
-        // [ProtectedEndPoint("blocks-os::mailbox::gets")]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::mailbox::gets")]
+        public async Task<IActionResult> GetMailBoxMailSource([FromQuery] GetMailBoxMailRequest request)
+        {
+            var result = await _mailboxService!.GetMailBoxMailSourceAsync(request).ConfigureAwait(false);
+            if (!result.IsSuccess || result.Content is null)
+            {
+                return NotFound(new BaseResponse { IsSuccess = false, Errors = result.Errors });
+            }
+
+            return FileDownload(result.Content, "message.eml");
+        }
+
+        /// <summary>One attachment of the stored message as a download, streamed from the message.</summary>
+        [HttpGet]
+        [ProtectedEndPoint("blocks-os::mailbox::gets")]
+        public async Task<IActionResult> GetMailBoxMailAttachmentFile([FromQuery] GetMailBoxMailAttachmentFileRequest request)
+        {
+            var result = await _mailboxService!.GetMailBoxMailAttachmentFileAsync(request).ConfigureAwait(false);
+            if (!result.IsSuccess || result.Content is null)
+            {
+                return NotFound(new BaseResponse { IsSuccess = false, Errors = result.Errors });
+            }
+
+            return FileDownload(result.Content, result.FileName);
+        }
+
+        [Obsolete("Use GetMailBoxMailAttachmentFile.")]
+        [SuppressMessage("Info Code Smell", "S1133:Deprecated code should be removed", Justification = "CONTRIBUTING: an old route stays, marked [Obsolete]; routes are never deleted.")]
+        [HttpGet]
+        [ProtectedEndPoint("blocks-os::mailbox::gets")]
         public async Task<IActionResult> GetMailBoxMailAttachment([FromQuery] GetMailBoxMailAttachmentRequest request)
         {
             var result = await _mailboxService!.GetMailBoxMailAttachmentAsync(request);
             return result.IsSuccess ? Ok(result) : NotFound(result);
+        }
+
+        // Mail content is untrusted and may be of any type (an HTML attachment, say), so it is always
+        // served as an opaque download: octet-stream, attachment disposition and nosniff (set globally
+        // too, and here so the guarantee does not depend on the middleware). The client names and
+        // types the saved file itself.
+        private FileContentResult FileDownload(byte[] content, string fileName)
+        {
+            Response.Headers.XContentTypeOptions = "nosniff";
+            return File(content, "application/octet-stream", fileName);
+        }
+
+        private FileStreamResult FileDownload(Stream content, string fileName)
+        {
+            Response.Headers.XContentTypeOptions = "nosniff";
+            return File(content, "application/octet-stream", fileName);
         }
     }
 }

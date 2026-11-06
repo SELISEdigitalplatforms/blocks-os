@@ -49,7 +49,6 @@ export const Roles = () => {
               page={queryParams.page}
               onChange={onPageChangeHandler}
               totalCount={totalCount}
-              pageSizeOptions={[queryParams.pageSize]}
               pageSize={queryParams.pageSize}
             />
           </div>

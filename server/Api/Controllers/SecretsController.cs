@@ -75,7 +75,6 @@ public class SecretsController : ControllerBase
     /// from another tenant, answers an empty list rather than 404 so existence is not revealed.
     /// </remarks>
     [HttpGet("dependents")]
-    [Authorize]
     [ProtectedEndPoint("blocks-os::secret::gets")]
     public Task<SecretDependentsResult> Dependents(
         [FromQuery] string? secretId,
@@ -229,6 +228,7 @@ public class SecretsController : ControllerBase
         _secretService.GetAuditLogsAsync(filter, cancellationToken);
 
     private static BaseResponse Success() => new() { IsSuccess = true };
+
 
     /// <summary>
     /// Re-raises a value read on an archived secret as a validation error, which the existing

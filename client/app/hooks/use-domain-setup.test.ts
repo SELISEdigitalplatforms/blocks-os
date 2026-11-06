@@ -4,7 +4,8 @@ import { createWrapper } from "@/test-utils/test-providers/query-client";
 import { projectService as crossProjectService } from "@blocks-identifier/services/project.service";
 import { useDomainSetupGuide, useDomainSetupStream } from "./use-domain-setup";
 
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useImpersonateStore: vi.fn(() => ({
     isInitialized: true,
     isImpersonated: false,

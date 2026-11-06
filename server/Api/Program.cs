@@ -1,6 +1,6 @@
 ﻿using Blocks.Extensions.DependencyInjection;
 using Blocks.Genesis;
-using DomainService.Billing.Services;
+using Blocks.Genesis.Notifications;
 using Blocks.Secrets;
 using BlocksOs.Api;
 using BlocksOs.Api.Middleware;
@@ -9,6 +9,7 @@ using Cloud.DomainService.Utilities;
 using Cloud.LmtService.Utilities;
 using Configuration.DomainService.Shared.Utilities;
 using DomainService.Access;
+using DomainService.Billing.Services;
 using DomainService.Shared;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
@@ -51,6 +52,9 @@ builder.Services.Configure<MvcOptions>(options =>
     // Blocks.Secrets so the package stays usable from workers with no HTTP pipeline.
     options.Filters.Add<SecretExceptionFilter>();
 
+    // A system schema's validation rules refusing a save: 400 with the failed properties.
+    options.Filters.Add<BlocksOs.Api.Middleware.DataValidationExceptionFilter>();
+
     // Project access grants. An action filter, so it always runs after the authorization
     // middleware has applied [Authorize]/[ProtectedEndPoint] — owner passes, contributor is
     // checked against what the owner granted them. An endpoint without [ProjectPolicy] is
@@ -75,6 +79,8 @@ services.AddBlocksBillingWorkers();
 services.AddCloudDomainServices();
 services.AddCloudLmtServices();
 services.AddConfigurationServices();
+// Built-in notifications (os-*) go through the Genesis publisher.
+services.AddBlocksNotifications();
 
 // Scoped internally: these read the request-scoped BlocksContext, so the old singleton
 // registration would have served the first caller's tenant to everyone afterwards.

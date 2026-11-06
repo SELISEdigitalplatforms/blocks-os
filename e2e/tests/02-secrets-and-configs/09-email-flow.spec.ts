@@ -12,6 +12,9 @@ import {
   verifyInboundProviderAndFieldsFlow,
   verifyOutboundProvidersOfferedFlow,
   verifySaveDisabledFlow,
+  verifyConfigMenuFlow,
+  verifyConfigUsageFlow,
+  verifyOrganizationUiFlow,
 } from "../../pages/secrets-and-configs/email";
 import {
   editOffice365KeepingSecretFlow,
@@ -33,11 +36,15 @@ test.describe("flows", () => {
       await navigateToEmailFlow(page);
     });
 
+    await test.step("The organization UI follows the project's multi-org setting (blocks-os#732 H7/H12)", async () => {
+      await verifyOrganizationUiFlow(page);
+    });
+
     await test.step("Empty state shows if no configuration exists yet", async () => {
       await verifyEmptyEmailStateFlow(page);
     });
 
-    await test.step("The pre-existing Default configuration hides its Edit/Delete actions", async () => {
+    await test.step("The seeded Default configuration offers Assign templates and Edit in its ⋮ menu (blocks-os#732 H10, #734 H6)", async () => {
       await verifyDefaultConfigLockedFlow(page);
     });
 
@@ -67,15 +74,23 @@ test.describe("flows", () => {
       await expandConfigRowAndVerifyFlow(page, configName);
     });
 
+    await test.step("Its ⋮ menu offers Assign templates, Edit and Delete (blocks-os#732 H10, #734 H6)", async () => {
+      await verifyConfigMenuFlow(page, configName);
+    });
+
+    await test.step("The expanded card says no template uses it yet (blocks-os#732 H11)", async () => {
+      await verifyConfigUsageFlow(page, configName, 0);
+    });
+
     await test.step("Reopen the configuration for editing and close without changes", async () => {
       await openEditEmailAndCloseFlow(page, configName);
     });
 
-    await test.step("Edit the configuration and actually save the change", async () => {
+    await test.step("Edit the configuration (Organization absent, or read-only with multi-org) and save", async () => {
       await editEmailConfigAndSaveFlow(page, configName, "Flow Sender Updated");
     });
 
-    await test.step("Delete the configuration via its confirmation dialog", async () => {
+    await test.step("Delete it from the ⋮ menu; the dialog shows its usage (blocks-os#732 C9)", async () => {
       await deleteEmailConfigFlow(page, configName);
     });
   });

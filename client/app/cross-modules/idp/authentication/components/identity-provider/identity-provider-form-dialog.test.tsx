@@ -1,9 +1,11 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@blocks-idp/iam/hooks/use-grant-scope", () => import("@/test-utils/__mocks__/grant-scope.mock"));
 
 const h = vi.hoisted(() => ({
   useGetIdentityProviderById: vi.fn(),
+  useGetIdentityProviders: vi.fn(),
   create: vi.fn(),
   update: vi.fn(),
   isCreating: false,
@@ -12,8 +14,12 @@ const h = vi.hoisted(() => ({
   showSuccessToast: vi.fn(),
 }));
 
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
+}));
+vi.mock("@blocks-idp/settings/utils/auth-config-form", () => ({
+  getBlocksIamBaseUrl: () => "https://iam.test",
 }));
 vi.mock("@/hooks/use-toast", () => ({
   showErrorToast: h.showErrorToast,
@@ -22,6 +28,7 @@ vi.mock("@/hooks/use-toast", () => ({
 vi.mock("@blocks-idp/authentication/hooks/use-identity-provider", () => ({
   useGetIdentityProviderById: (id: string, enabled: boolean) =>
     h.useGetIdentityProviderById(id, enabled),
+  useGetIdentityProviders: () => h.useGetIdentityProviders(),
   useCreateIdentityProvider: () => ({ mutateAsync: h.create, isPending: h.isCreating }),
   useUpdateIdentityProvider: () => ({ mutateAsync: h.update, isPending: h.isUpdating }),
 }));
@@ -70,6 +77,7 @@ describe("IdentityProviderFormDialog", () => {
     h.isCreating = false;
     h.isUpdating = false;
     h.useGetIdentityProviderById.mockReturnValue(idleState);
+    h.useGetIdentityProviders.mockReturnValue({ data: undefined });
     h.create.mockResolvedValue({ isSuccess: true });
     h.update.mockResolvedValue({ isSuccess: true });
   });
@@ -296,6 +304,35 @@ describe("IdentityProviderFormDialog", () => {
     expect(screen.getAllByText("Google").length).toBeGreaterThan(0);
   });
 
+  it("shows the IAM login redirect URI for a social provider and adds it to the list", async () => {
+    const user = userEvent.setup();
+    render(
+      <IdentityProviderFormDialog
+        open
+        onOpenChange={vi.fn()}
+        presetProviderType="social"
+        presetProvider="google"
+      />,
+    );
+    const expected = "https://iam.test/oidc/google/callback/tenant-1";
+    const panel = screen.getByTestId("login-redirect-uri");
+    const shown = screen.getByLabelText("Redirect URI for the IAM login page") as HTMLInputElement;
+    expect(shown.value).toBe(expected);
+    expect(panel.textContent).toContain("Not in the list yet.");
+
+    await user.click(screen.getByRole("button", { name: "Add to list" }));
+
+    const rows = screen.getAllByPlaceholderText("https://your-app.com/callback") as HTMLInputElement[];
+    expect(rows).toHaveLength(1);
+    expect(rows[0].value).toBe(expected);
+    expect(panel.textContent).not.toContain("Not in the list yet.");
+  });
+
+  it("does not show the IAM login redirect URI for a non-social provider type", () => {
+    render(<IdentityProviderFormDialog open onOpenChange={vi.fn()} presetProviderType="blocks-oidc" />);
+    expect(screen.queryByTestId("login-redirect-uri")).toBeNull();
+  });
+
   it("preselects Blocks OIDC via presetProviderType and reveals its Well Known URL", () => {
     render(
       <IdentityProviderFormDialog open onOpenChange={vi.fn()} presetProviderType="blocks-oidc" />,
@@ -431,5 +468,141 @@ describe("IdentityProviderFormDialog", () => {
     rerender(<IdentityProviderFormDialog open onOpenChange={vi.fn()} presetProviderType="byos" />);
 
     expect(await screen.findByRole("button", { name: "Change" })).toBeTruthy();
+  });
+
+  describe("several Google or Microsoft entries", () => {
+    const TENANT_URL =
+      "https://login.microsoftonline.com/contoso.onmicrosoft.com/v2.0/.well-known/openid-configuration";
+    const COMMON_URL =
+      "https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration";
+
+    const socialEntry = (itemId: string, provider: string, displayName: string) => ({
+      itemId,
+      provider,
+      providerType: "social",
+      displayName,
+      clientId: `${itemId}-client`,
+      isActive: true,
+    });
+    const mockEntries = (entries: unknown[]) =>
+      h.useGetIdentityProviders.mockReturnValue({ data: { isSuccess: true, data: entries } });
+    const displayName = () => screen.getByLabelText(/Display Name/) as HTMLInputElement;
+    const addButton = () => screen.getByRole("button", { name: "Add Provider" }) as HTMLButtonElement;
+    const fillCredentials = async (user: ReturnType<typeof userEvent.setup>) => {
+      await user.type(screen.getByPlaceholderText("Enter client ID"), "client-abc");
+      await user.type(screen.getByPlaceholderText("Enter client secret"), "secret-xyz");
+      await user.type(
+        screen.getByPlaceholderText("https://your-app.com/callback"),
+        "https://app.example.com/cb",
+      );
+    };
+    const openPreset = (provider: "google" | "microsoft") =>
+      render(
+        <IdentityProviderFormDialog
+          open
+          onOpenChange={vi.fn()}
+          presetProviderType="social"
+          presetProvider={provider}
+        />,
+      );
+
+    it("names a new Google entry after Google and sends that name", async () => {
+      const user = userEvent.setup();
+      openPreset("google");
+      await waitFor(() => expect(displayName().value).toBe("Google"));
+      await fillCredentials(user);
+      await waitFor(() => expect(addButton().disabled).toBe(false));
+      await user.click(addButton());
+
+      await waitFor(() => expect(h.create).toHaveBeenCalledTimes(1));
+      expect(h.create.mock.calls[0][0].displayName).toBe("Google");
+      expect(h.create.mock.calls[0][0].provider).toBe("google");
+      expect(screen.queryByLabelText("Microsoft Tenant")).toBeNull();
+    });
+
+    it("asks for a name of its own when another Google entry already has the provider's", async () => {
+      mockEntries([socialEntry("g1", "google", "Google")]);
+      const user = userEvent.setup();
+      openPreset("google");
+      await fillCredentials(user);
+      expect(displayName().value).toBe("");
+      await waitFor(() => expect(addButton().disabled).toBe(true));
+
+      await user.type(displayName(), "google ");
+      expect(await screen.findByText("Another Google entry already uses this name.")).toBeTruthy();
+      expect(addButton().disabled).toBe(true);
+
+      await user.clear(displayName());
+      await user.type(displayName(), "Customer accounts");
+      await waitFor(() => expect(addButton().disabled).toBe(false));
+      await user.click(addButton());
+      await waitFor(() => expect(h.create).toHaveBeenCalledTimes(1));
+      expect(h.create.mock.calls[0][0].displayName).toBe("Customer accounts");
+    });
+
+    it("sends a Microsoft tenant as that tenant's discovery URL", async () => {
+      const user = userEvent.setup();
+      openPreset("microsoft");
+      await user.type(screen.getByLabelText("Microsoft Tenant"), "contoso.onmicrosoft.com");
+      await fillCredentials(user);
+      await waitFor(() => expect(addButton().disabled).toBe(false));
+      await user.click(addButton());
+
+      await waitFor(() => expect(h.create).toHaveBeenCalledTimes(1));
+      expect(h.create.mock.calls[0][0].wellKnownUrl).toBe(TENANT_URL);
+      expect(h.create.mock.calls[0][0].displayName).toBe("Microsoft");
+    });
+
+    it("leaves a new Microsoft entry without a tenant on the common endpoint", async () => {
+      const user = userEvent.setup();
+      openPreset("microsoft");
+      await fillCredentials(user);
+      await waitFor(() => expect(addButton().disabled).toBe(false));
+      await user.click(addButton());
+
+      await waitFor(() => expect(h.create).toHaveBeenCalledTimes(1));
+      expect(h.create.mock.calls[0][0].wellKnownUrl).toBe("");
+    });
+
+    it("refuses a tenant with characters a directory id or domain cannot have", async () => {
+      const user = userEvent.setup();
+      openPreset("microsoft");
+      await user.type(screen.getByLabelText("Microsoft Tenant"), "contoso/evil");
+      expect(
+        await screen.findByText(
+          "Use a directory ID or a domain: letters, digits, dots and hyphens only.",
+        ),
+      ).toBeTruthy();
+    });
+
+    it("loads a Microsoft entry's tenant, and clearing it moves the entry back to common", async () => {
+      h.useGetIdentityProviderById.mockReturnValue({
+        ...idleState,
+        data: {
+          isSuccess: true,
+          data: {
+            ...existingProvider,
+            itemId: "idp-ms",
+            providerType: "social",
+            provider: "microsoft",
+            displayName: "Contoso staff",
+            wellKnownUrl: TENANT_URL,
+          },
+        },
+      });
+      const user = userEvent.setup();
+      render(<IdentityProviderFormDialog open onOpenChange={vi.fn()} editId="idp-ms" />);
+
+      const tenant = (await screen.findByLabelText("Microsoft Tenant")) as HTMLInputElement;
+      await waitFor(() => expect(tenant.value).toBe("contoso.onmicrosoft.com"));
+      await user.clear(tenant);
+      const save = screen.getByRole("button", { name: "Save Changes" }) as HTMLButtonElement;
+      await waitFor(() => expect(save.disabled).toBe(false));
+      await user.click(save);
+
+      await waitFor(() => expect(h.update).toHaveBeenCalledTimes(1));
+      expect(h.update.mock.calls[0][0].provider.wellKnownUrl).toBe(COMMON_URL);
+      expect(h.update.mock.calls[0][0].provider.displayName).toBe("Contoso staff");
+    });
   });
 });

@@ -107,4 +107,23 @@ describe("normalize-tenant-config", () => {
       }).isSignUpEnable,
     ).toBe(true);
   });
+
+  it("maps auto-join fields from either casing and defaults when missing", () => {
+    expect(
+      mapOrganizationConfigFromApi({
+        IsSignupAutoJoinEnabled: true,
+        SignupAutoJoinOrganizationId: "org-sales",
+      }),
+    ).toMatchObject({ isSignupAutoJoinEnabled: true, signupAutoJoinOrganizationId: "org-sales" });
+    expect(
+      mapOrganizationConfigFromApi({
+        isSignupAutoJoinEnabled: true,
+        signupAutoJoinOrganizationId: "default",
+      }),
+    ).toMatchObject({ isSignupAutoJoinEnabled: true, signupAutoJoinOrganizationId: "default" });
+    expect(mapOrganizationConfigFromApi({})).toMatchObject({
+      isSignupAutoJoinEnabled: false,
+      signupAutoJoinOrganizationId: null,
+    });
+  });
 });

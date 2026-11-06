@@ -1,10 +1,10 @@
-using Configuration.DomainService.Integration.Entities;
 using Configuration.DomainService.Integration.RequestModel;
 using Configuration.DomainService.Integration.Services;
 using Configuration.DomainService.Integration.Validators;
 using FluentAssertions;
 using Moq;
 using XUnitTest.TestSupport;
+using Blocks.Genesis.Entities.Os;
 
 namespace XUnitTest.Services
 {

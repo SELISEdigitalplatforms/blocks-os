@@ -16,7 +16,8 @@ vi.mock("@/components/ui-kits/tooltip/tooltip", () => ({
   TooltipContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 vi.mock("@blocks-idp/iam/hooks/use-organization", () => ({

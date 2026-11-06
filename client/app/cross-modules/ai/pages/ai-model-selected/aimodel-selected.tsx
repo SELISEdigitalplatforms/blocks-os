@@ -19,7 +19,7 @@ import {
   useSeedModelsByProvider,
   useSeedProviders,
 } from "@blocks-ai/hooks/use-aimodel";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { Plus, ArrowLeft } from "lucide-react";
@@ -37,6 +37,7 @@ type AIModelSelectedPageProps = {
   provider: string;
 };
 export const AIModelSelectedPage = ({ provider }: AIModelSelectedPageProps) => {
+  const { t } = useT("os.ai");
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
@@ -89,7 +90,7 @@ export const AIModelSelectedPage = ({ provider }: AIModelSelectedPageProps) => {
           className="gap-1 pl-0"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back
+          {t("common:BACK")}
         </Button>
       </div>
       <div className="my-4 flex flex-row">
@@ -111,7 +112,7 @@ export const AIModelSelectedPage = ({ provider }: AIModelSelectedPageProps) => {
         <Card className="flex w-full flex-col gap-5 p-5">
           <CardHeader className="mb-0 flex w-full flex-row justify-between p-0">
             <CardTitle className="text-lg font-semibold text-high-emphasis">
-              Self-owned model
+              {t("AIMODEL_SELECTED.SELF_OWNED_MODEL")}
             </CardTitle>
             <Button
               variant="outline"
@@ -121,7 +122,7 @@ export const AIModelSelectedPage = ({ provider }: AIModelSelectedPageProps) => {
               }}
             >
               <Plus className="mr-2 h-4 w-4" />
-              Add Model
+              {t("AIMODEL_SELECTED.ADD_MODEL")}
             </Button>
           </CardHeader>
           <CardContent className="p-0">
@@ -138,7 +139,6 @@ export const AIModelSelectedPage = ({ provider }: AIModelSelectedPageProps) => {
                 <Pagination
                   page={currentPage - 1}
                   pageSize={pageSize}
-                  pageSizeOptions={[pageSize]}
                   totalCount={totalCount}
                   onChange={(nextPageZeroBased) =>
                     setQueryParams((prev) => ({

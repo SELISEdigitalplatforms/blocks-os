@@ -1,11 +1,12 @@
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
-import { LOG_SERVICES, LOG_SERVICE_ICONS } from "@/cross-modules/lmt/constants/logs.constant";
+import { getLogServices, LOG_SERVICE_ICONS } from "@/cross-modules/lmt/constants/logs.constant";
 import type { LogServiceRow } from "@blocks-lmt/models/log-entry.model";
 import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
 import { ArrowRight, Shield } from "lucide-react";
 import { type KeyboardEvent } from "react";
 import { useNavigate } from "react-router";
+import { useT } from "@seliseblocks/genesis-os";
 
 const LogServiceCard = ({
   service,
@@ -14,6 +15,7 @@ const LogServiceCard = ({
   service: LogServiceRow;
   onSelect: (routeSlug: string) => void;
 }) => {
+  const { t } = useT("os.lmt");
   const Icon = LOG_SERVICE_ICONS[service.icon] ?? Shield;
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -27,7 +29,7 @@ const LogServiceCard = ({
     <Card
       role="button"
       tabIndex={0}
-      aria-label={`View logs for ${service.name}`}
+      aria-label={t("LOGS_OVERVIEW.VIEW_LOGS_FOR", { name: service.name })}
       className="group flex h-full cursor-pointer flex-col rounded-lg border border-border bg-card shadow-none transition-shadow duration-200 hover:shadow-md focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
       onClick={() => onSelect(service.routeSlug)}
       onKeyDown={handleKeyDown}
@@ -54,7 +56,7 @@ const LogServiceCard = ({
             onSelect(service.routeSlug);
           }}
         >
-          View Logs
+          {t("LOGS_OVERVIEW.VIEW_LOGS")}
           <ArrowRight className="h-4 w-4" aria-hidden />
         </Button>
       </CardContent>
@@ -72,7 +74,7 @@ export const LogsOverview = () => {
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-      {LOG_SERVICES.map((service) => (
+      {getLogServices().map((service) => (
         <LogServiceCard key={service.id} service={service} onSelect={handleSelect} />
       ))}
     </div>

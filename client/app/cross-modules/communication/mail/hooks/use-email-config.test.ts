@@ -14,7 +14,10 @@ import { emailService } from "@blocks-communication/mail/services/email.services
 import { useGetEmailConfigs, useSaveEmailConfig, useDeleteEmailConfig } from "./use-email-config";
 
 vi.mock("@blocks-communication/mail/services/email.services", () => mockEmailServiceFactory());
-vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
+  ...mockProjectStoreFactory(),
+}));
 
 describe("Email Config Hooks", () => {
   beforeEach(() => {

@@ -22,9 +22,9 @@ namespace Configuration.DomainService.Mail.Mailbox.Services
 
             try
             {
-                using var stream = new MemoryStream(Encoding.UTF8.GetBytes(rawMime));
-                var message = MimeMessage.Load(stream);
+                using var message = Load(rawMime);
 
+                // Every field is read before the message (and the source it parses from) is disposed.
                 return new MailBoxMailContent
                 {
                     HtmlBody = message.HtmlBody,
@@ -50,9 +50,11 @@ namespace Configuration.DomainService.Mail.Mailbox.Services
 
         /// <summary>
         /// The decoded content of the attachment at <paramref name="index"/>, in the same order
-        /// <see cref="Parse"/> lists them. Null when the message or the index does not resolve.
+        /// <see cref="Parse"/> lists them, as a stream read straight from the stored message. Null
+        /// when the message cannot be parsed or the index does not resolve to a file part or an
+        /// attached message.
         /// </summary>
-        public static MailBoxMailAttachmentContent? ExtractAttachment(string? rawMime, int index)
+        public static MailBoxMailAttachmentFile? OpenAttachment(string? rawMime, int index)
         {
             if (string.IsNullOrWhiteSpace(rawMime) || index < 0)
             {
@@ -61,32 +63,36 @@ namespace Configuration.DomainService.Mail.Mailbox.Services
 
             try
             {
-                using var stream = new MemoryStream(Encoding.UTF8.GetBytes(rawMime));
-                var message = MimeMessage.Load(stream);
+                // Not disposed here: a part's content stream reads from the message's source until
+                // the caller has copied it out. Both are in memory, so the GC reclaims them.
+                var message = Load(rawMime);
                 var entity = message.Attachments.ElementAtOrDefault(index);
                 if (entity is null)
                 {
                     return null;
                 }
 
-                using var content = new MemoryStream();
+                Stream content;
                 switch (entity)
                 {
                     case MimePart part:
-                        part.Content.DecodeTo(content);
+                        content = part.Content.Open();
                         break;
                     case MessagePart attached:
-                        attached.Message.WriteTo(content);
+                        var written = new MemoryStream();
+                        attached.Message.WriteTo(written);
+                        written.Position = 0;
+                        content = written;
                         break;
                     default:
                         return null;
                 }
 
-                return new MailBoxMailAttachmentContent
+                return new MailBoxMailAttachmentFile
                 {
                     FileName = FileNameOf(entity),
                     ContentType = entity.ContentType.MimeType,
-                    ContentBase64 = Convert.ToBase64String(content.ToArray())
+                    Content = content
                 };
             }
             catch (FormatException)
@@ -94,6 +100,44 @@ namespace Configuration.DomainService.Mail.Mailbox.Services
                 return null;
             }
         }
+
+        /// <summary>
+        /// <see cref="OpenAttachment"/> as Base64, for the obsolete JSON attachment route.
+        /// </summary>
+        public static MailBoxMailAttachmentContent? ExtractAttachment(string? rawMime, int index)
+        {
+            var attachment = OpenAttachment(rawMime, index);
+            if (attachment is null)
+            {
+                return null;
+            }
+
+            using var content = new MemoryStream();
+            using (attachment.Content)
+            {
+                attachment.Content.CopyTo(content);
+            }
+
+            return new MailBoxMailAttachmentContent
+            {
+                FileName = attachment.FileName,
+                ContentType = attachment.ContentType,
+                ContentBase64 = Convert.ToBase64String(content.GetBuffer(), 0, (int)content.Length)
+            };
+        }
+
+        /// <summary>
+        /// Loads a stored message. It was stored with <c>MimeMessage.ToString()</c>, which decodes
+        /// the message bytes as Latin-1, one char per byte, so Latin-1 restores the exact bytes and
+        /// 8-bit content decodes as sent. The persistent load keeps part content as ranges of this
+        /// one buffer instead of copying it. A char above U+00FF, which that writer never produces,
+        /// becomes '?'.
+        /// </summary>
+        private static MimeMessage Load(string rawMime) =>
+            MimeMessage.Load(
+                new ParserOptions(),
+                new MemoryStream(Encoding.Latin1.GetBytes(rawMime), writable: false),
+                persistent: true);
 
         private static string FileNameOf(MimeEntity entity) =>
             entity switch

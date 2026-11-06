@@ -17,7 +17,10 @@ const hoisted = vi.hoisted(() => ({
   lastRolesPayload: undefined as unknown,
 }));
 
-vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
+  ...mockProjectStoreFactory(),
+}));
 vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
   useGetUsers: (payload: unknown) => {
     hoisted.lastUsersPayload = payload;

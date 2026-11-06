@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { getUserDisplayName } from "@blocks-idp/iam/utils/user-display-name";
 import { formatFullDate } from "@/lib/utils";
 import { Activity, Calendar, Shield } from "lucide-react";
+import { useT } from "@seliseblocks/genesis-os";
 
 type UserProfileSidebarProps = {
   id: string;
@@ -33,10 +34,11 @@ const InfoRow = ({ icon, label, value }: InfoRowProps) => (
   </div>
 );
 
-const formatLastLogin = (value?: string) => {
-  if (!value) return "Never";
+const formatLastLogin = (t: TFn, value?: string) => {
+  if (!value) return t("USER_PROFILE_SIDEBAR.NEVER");
   const date = new Date(value);
-  if (Number.isNaN(date.getTime()) || date.getFullYear() <= 1) return "Never";
+  if (Number.isNaN(date.getTime()) || date.getFullYear() <= 1)
+    return t("USER_PROFILE_SIDEBAR.NEVER");
   return date.toLocaleString(undefined, {
     month: "short",
     day: "numeric",
@@ -46,6 +48,8 @@ const formatLastLogin = (value?: string) => {
   });
 };
 
+type TFn = ReturnType<typeof useT>["t"];
+
 const formatUtcLockoutTime = (value: string): string | null => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
@@ -53,6 +57,7 @@ const formatUtcLockoutTime = (value: string): string | null => {
 };
 
 export const UserProfileSidebar = ({ id, projectKey }: UserProfileSidebarProps) => {
+  const { t } = useT("os.idp.iam-ui");
   const { data, isLoading } = useGetUserById({ id, projectKey });
   const user = data?.data;
   const formattedLockoutTime = user?.lockoutUntilUtc
@@ -100,10 +105,12 @@ export const UserProfileSidebar = ({ id, projectKey }: UserProfileSidebarProps) 
 
       {/* Account details */}
       <CardContent className="mt-4 w-full rounded-sm border bg-card p-5 shadow-xs md:flex-1 md:overflow-y-auto">
-        <h3 className="mb-3 text-base font-semibold text-high-emphasis">Account details</h3>
+        <h3 className="mb-3 text-base font-semibold text-high-emphasis">
+          {t("USER_PROFILE_SIDEBAR.ACCOUNT_DETAILS")}
+        </h3>
         <InfoRow
           icon={<Shield className="h-4 w-4 text-muted-foreground" />}
-          label="Status"
+          label={t("common:STATUS")}
           value={
             <div className="flex flex-col items-start gap-1.5">
               <div className="flex flex-wrap items-center gap-1.5">
@@ -119,13 +126,17 @@ export const UserProfileSidebar = ({ id, projectKey }: UserProfileSidebarProps) 
                       user?.active ? "bg-emerald-500" : "bg-red-500"
                     }`}
                   />
-                  {user?.active ? "Active" : "Inactive"}
+                  {user?.active
+                    ? t("USER_PROFILE_SIDEBAR.ACTIVE")
+                    : t("USER_PROFILE_SIDEBAR.INACTIVE")}
                 </span>
-                {user?.isLockedOut === true && <Badge variant="error">Locked out</Badge>}
+                {user?.isLockedOut === true && (
+                  <Badge variant="error">{t("USER_PROFILE_SIDEBAR.LOCKED_OUT")}</Badge>
+                )}
               </div>
               {user?.isLockedOut === true && formattedLockoutTime && (
                 <span className="text-xs font-normal text-muted-foreground">
-                  Locked out until {formattedLockoutTime}
+                  {t("USER_PROFILE_SIDEBAR.LOCKED_OUT_UNTIL", { time: formattedLockoutTime })}
                 </span>
               )}
             </div>
@@ -133,13 +144,13 @@ export const UserProfileSidebar = ({ id, projectKey }: UserProfileSidebarProps) 
         />
         <InfoRow
           icon={<Activity className="h-4 w-4 text-muted-foreground" />}
-          label="Total logins"
+          label={t("USER_PROFILE_SIDEBAR.TOTAL_LOGINS")}
           value={user?.logInCount ?? 0}
         />
         <InfoRow
           icon={<Calendar className="h-4 w-4 text-muted-foreground" />}
-          label="Last login"
-          value={formatLastLogin(user?.lastLoggedInTime)}
+          label={t("USER_PROFILE_SIDEBAR.LAST_LOGIN")}
+          value={formatLastLogin(t, user?.lastLoggedInTime)}
         />
       </CardContent>
     </Card>

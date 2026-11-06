@@ -8,6 +8,7 @@ import { StorageFiltersToolbar } from "./components/storage-filters-toolbar";
 import { IStorageConfiguration } from "@blocks-storage/models/storage.model";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { StorageDetailsDrawer } from "./components/storage-details-drawer";
+import { useT } from "@seliseblocks/genesis-os";
 type FilterValues = {
   search: string;
   providers: string[];
@@ -29,6 +30,7 @@ const mapConfigurationToCardData = (config: IStorageConfiguration): StorageCardD
           : "SFTP",
 });
 export function StorageContents() {
+  const { t } = useT("os.storage");
   const [open, setOpen] = useState<boolean>(false);
   const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
   const [selectedStorage, setSelectedStorage] = useState<IStorageConfiguration | null>(null);
@@ -95,7 +97,7 @@ export function StorageContents() {
             setOpen(true);
           }}
         />
-        {loading ? (
+        {loading && (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {[...Array(4)].map((_, index) => (
               <div
@@ -113,22 +115,26 @@ export function StorageContents() {
               </div>
             ))}
           </div>
-        ) : filteredData.length > 0 ? (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filteredData.map((storage) => (
-              <StorageCard
-                key={storage.id}
-                data={storage}
-                onViewDetails={handleViewDetails}
-                onEdit={handleEdit}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="flex h-64 items-center justify-center">
-            <p className="text-muted-foreground">No storage configurations found.</p>
-          </div>
         )}
+        {!loading &&
+          (filteredData.length > 0 ? (
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {filteredData.map((storage) => (
+                <StorageCard
+                  key={storage.id}
+                  data={storage}
+                  onViewDetails={handleViewDetails}
+                  onEdit={handleEdit}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="flex h-64 items-center justify-center">
+              <p className="text-muted-foreground">
+                {t("STORAGE_CONTENTS.NO_STORAGE_CONFIGURATIONS_FOUND")}
+              </p>
+            </div>
+          ))}
       </div>
       <Dialog
         open={open}
@@ -137,10 +143,7 @@ export function StorageContents() {
           if (!nextOpen) setEditingStorage(null);
         }}
       >
-        <SaveStorageConfiguration
-          configuration={editingStorage ?? undefined}
-          onClose={setOpen}
-        />
+        <SaveStorageConfiguration configuration={editingStorage ?? undefined} onClose={setOpen} />
       </Dialog>
       <StorageDetailsDrawer
         open={detailsOpen}

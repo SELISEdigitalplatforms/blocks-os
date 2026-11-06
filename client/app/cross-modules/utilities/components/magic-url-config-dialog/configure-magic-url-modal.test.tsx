@@ -11,7 +11,8 @@ const h = vi.hoisted(() => ({
   showSuccessToast: vi.fn(),
 }));
 
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: h.tenantId } }),
 }));
 vi.mock("@blocks-utilities/hooks/use-magic-url-config", () => ({

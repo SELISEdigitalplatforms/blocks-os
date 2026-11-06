@@ -1,4 +1,10 @@
-import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import {
+  CellContext,
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
 import {
   Table,
   TableBody,
@@ -21,19 +27,45 @@ import {
 } from "@/components/ui-kits/dropdown-menu/dropdown-menu";
 import { Button } from "@/components/ui-kits/button/button";
 import { AlignLeft, Copy, MoreVertical, Trash } from "lucide-react";
-import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
-import { toast } from "@/hooks/use-toast";
-import {
-  useCloneTemplate,
-  useDeleteEmailTemplate,
-} from "@blocks-communication/mail/hooks/use-email-template";
+import { CloneTemplateDialog } from "@blocks-communication/mail/components/email-service/modals/clone-template/clone-template";
+import { DeleteTemplateDialog } from "@blocks-communication/mail/components/email-service/modals/delete-template/delete-template";
+import { TemplateConfigurationName } from "@blocks-communication/mail/email/email-service-table/template-configuration-name";
+import { languageNameOf } from "@blocks-communication/mail/constants/template-organization";
 import { useNavigate } from "react-router";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
+import { useT } from "@seliseblocks/genesis-os";
+
+type ProjectLanguage = { languageCode: string; languageName: string };
+
+/** The Language column: the language's name in the project, or its code. */
+function TemplateLanguageCell({
+  template,
+  languages,
+}: Readonly<{ template: IEmailTemplate; languages?: ProjectLanguage[] }>) {
+  return <div className="truncate">{languageNameOf(template.language, languages)}</div>;
+}
+
+/** The table's meta: the project's languages, read by the Language cell. */
+type TemplateTableMeta = { languages?: ProjectLanguage[] };
+
+const languageCell = ({ row, table }: CellContext<IEmailTemplate, unknown>) => (
+  <TemplateLanguageCell
+    template={row.original}
+    languages={(table.options.meta as TemplateTableMeta | undefined)?.languages}
+  />
+);
+
 type EmailTemplateListProps = {
   templates: IEmailTemplate[];
   isLoading: boolean;
+  /** The listed organization's configurations and the Default organization's. */
   emailConfigsData: IEmailConfig[];
+  /** The project's languages, for the Language column. */
+  languages?: Array<{ languageCode: string; languageName: string }>;
+  /** The listed organization's name. */
+  organizationName?: string;
+  isMultiOrgEnabled?: boolean;
   onRowClick: (emailId: number | string) => void;
 };
 const LoadingSkeleton = () => (
@@ -47,13 +79,15 @@ export const EmailTemplateList = ({
   templates,
   isLoading,
   emailConfigsData,
+  languages,
+  organizationName = "",
+  isMultiOrgEnabled = false,
   onRowClick,
 }: EmailTemplateListProps) => {
+  const { t } = useT("os.communication.mail");
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const { sortQueryParams, setSortQueryParams } = useTemplatesSortQueryParams();
-  const { isPending: isClonePending, mutateAsync: cloneMailTemplate } = useCloneTemplate();
-  const { isPending: isDeletePending, mutateAsync: deleteMailTemplate } = useDeleteEmailTemplate();
   const [isCloneDialogOpen, setIsCloneDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedTemplateData, setSelectedTemplateData] = useState<IEmailTemplate | null>(null);
@@ -65,70 +99,13 @@ export const EmailTemplateList = ({
     setSelectedTemplateData(rowData);
     setIsDeleteDialogOpen(true);
   };
-  const onConfirmDeleteTemplate = async () => {
-    try {
-      const payload = {
-        itemId: selectedTemplateData?.itemId ?? "",
-      };
-      const res = await deleteMailTemplate(payload);
-      if (res?.isSuccess) {
-        toast({
-          variant: "success",
-          title: "Success",
-          description: "Deleted template successfully",
-        });
-        setIsDeleteDialogOpen(false);
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: JSON.stringify(res?.errors),
-        });
-      }
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: JSON.stringify(error),
-      });
-    }
-  };
-  const onConfirmCloneTemplate = async () => {
-    try {
-      const payload = {
-        itemId: selectedTemplateData?.itemId ?? "",
-      };
-      const res = await cloneMailTemplate(payload);
-      if (res?.isSuccess) {
-        toast({
-          variant: "success",
-          title: "Success",
-          description: "Cloned template successfully",
-        });
-        setIsCloneDialogOpen(false);
-        navigate(scoped(`email-management/communications/${res?.itemId}`));
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: JSON.stringify(res?.errors),
-        });
-      }
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: JSON.stringify(error),
-      });
-    }
-  };
   const columns = useMemo<ColumnDef<IEmailTemplate>[]>(
     () => [
       {
         accessorKey: "name",
         header: () => (
           <FilterControls.SortHeader
-            label="Name"
+            label={t("common:NAME")}
             id="Name"
             value={sortQueryParams}
             onChange={setSortQueryParams}
@@ -137,22 +114,22 @@ export const EmailTemplateList = ({
         cell: ({ row }) => <div className="truncate">{row.getValue("name")}</div>,
       },
       {
+        accessorKey: "language",
+        header: t("EMAIL_TEMPLATE_LIST.COLUMN_LANGUAGE"),
+        cell: languageCell,
+      },
+      {
         accessorKey: "MailConfigurationId",
-        header: "Configuration",
+        header: t("EMAIL_TEMPLATE_LIST.COLUMN_CONFIGURATION"),
         cell: ({ row }) => (
-          <div className="truncate">
-            {
-              emailConfigsData?.find((config) => config.itemId === row.original.mailConfigurationId)
-                ?.name
-            }
-          </div>
+          <TemplateConfigurationName template={row.original} configs={emailConfigsData} />
         ),
       },
       {
         accessorKey: "templateSubject",
         header: () => (
           <FilterControls.SortHeader
-            label="Subject"
+            label={t("EMAIL_TEMPLATE_LIST.COLUMN_SUBJECT")}
             id="TemplateSubject"
             value={sortQueryParams}
             onChange={setSortQueryParams}
@@ -164,7 +141,7 @@ export const EmailTemplateList = ({
         accessorKey: "lastUpdatedDate",
         header: () => (
           <FilterControls.SortHeader
-            label="Last Modified"
+            label={t("EMAIL_TEMPLATE_LIST.COLUMN_LAST_MODIFIED")}
             id="LastUpdatedDate"
             value={sortQueryParams}
             onChange={setSortQueryParams}
@@ -184,7 +161,7 @@ export const EmailTemplateList = ({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-8 w-8 p-0">
-                  <span className="sr-only">Open menu</span>
+                  <span className="sr-only">{t("EMAIL_TEMPLATE_LIST.OPEN_MENU")}</span>
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -194,7 +171,7 @@ export const EmailTemplateList = ({
                   onClick={() => onRowClick(row.original.itemId)}
                 >
                   <AlignLeft className="mr-2 h-4 w-4" />
-                  <span>View details</span>
+                  <span>{t("EMAIL_TEMPLATE_LIST.VIEW_DETAILS")}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="cursor-pointer hover:no-underline"
@@ -204,7 +181,7 @@ export const EmailTemplateList = ({
                   }}
                 >
                   <Copy className="mr-2 h-4 w-4" />
-                  <span>Clone Template</span>
+                  <span>{t("EMAIL_TEMPLATE_LIST.CLONE_TEMPLATE")}</span>
                 </DropdownMenuItem>
                 {row.original.generatedBy !== "Tenant" && (
                   <DropdownMenuItem
@@ -215,28 +192,22 @@ export const EmailTemplateList = ({
                     }}
                   >
                     <Trash className="mr-2 h-4 w-4" />
-                    <span>Delete</span>
+                    <span>{t("common:DELETE")}</span>
                   </DropdownMenuItem>
                 )}
-                {/* <DropdownMenuItem className="cursor-pointer text-error" onClick={(e) => {
-                      e.stopPropagation();
-                      DeleteEmailTemplate(row.original);
-                    }}>
-                      <Trash className="mr-2 h-4 w-4" />
-                      <span>Delete</span>
-                    </DropdownMenuItem> */}
               </DropdownMenuContent>
             </DropdownMenu>
           );
         },
       },
     ],
-    [sortQueryParams, setSortQueryParams, emailConfigsData, onRowClick],
+    [sortQueryParams, setSortQueryParams, emailConfigsData, onRowClick, t],
   );
   const table = useReactTable({
     data: templates,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    meta: { languages } satisfies TemplateTableMeta,
   });
   if (isLoading) return <LoadingSkeleton />;
   return (
@@ -276,36 +247,36 @@ export const EmailTemplateList = ({
         ) : (
           <TableRow>
             <TableCell colSpan={columns.length} className="text-center">
-              No templates found.
+              {t("EMAIL_TEMPLATE_LIST.NO_TEMPLATES")}
             </TableCell>
           </TableRow>
         )}
       </TableBody>
       <Dialog open={isCloneDialogOpen} onOpenChange={setIsCloneDialogOpen}>
-        {!isLoading && selectedTemplateData && (
-          <ConfirmationModal
-            onCancel={() => {}}
-            onConfirm={() => onConfirmCloneTemplate()}
-            data={{
-              dialogTitle: "Confirmation",
-              dialogSubtitle: `Are you sure you want to clone the ${selectedTemplateData?.name} template?`,
+        {!isLoading && selectedTemplateData && isCloneDialogOpen ? (
+          <CloneTemplateDialog
+            template={selectedTemplateData}
+            organizationName={organizationName}
+            showOrganization={isMultiOrgEnabled}
+            onClose={() => setIsCloneDialogOpen(false)}
+            onCloned={(itemId) => {
+              setIsCloneDialogOpen(false);
+              navigate(scoped(`email-management/communications/${itemId}`));
             }}
-            buttonState={{ confirm: { disable: isClonePending } }}
           />
-        )}
+        ) : null}
       </Dialog>
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        {!isLoading && selectedTemplateData && (
-          <ConfirmationModal
-            onCancel={() => {}}
-            onConfirm={() => onConfirmDeleteTemplate()}
-            data={{
-              dialogTitle: "Confirmation",
-              dialogSubtitle: `Are you sure you want to delete the ${selectedTemplateData?.name} template?`,
-            }}
-            buttonState={{ confirm: { disable: isDeletePending } }}
+        {!isLoading && selectedTemplateData && isDeleteDialogOpen ? (
+          <DeleteTemplateDialog
+            template={selectedTemplateData}
+            languageName={languageNameOf(selectedTemplateData.language, languages)}
+            organizationName={organizationName}
+            isMultiOrgEnabled={isMultiOrgEnabled}
+            onClose={() => setIsDeleteDialogOpen(false)}
+            onDeleted={() => setIsDeleteDialogOpen(false)}
           />
-        )}
+        ) : null}
       </Dialog>
     </Table>
   );

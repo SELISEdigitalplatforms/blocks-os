@@ -23,6 +23,7 @@ describe("navigationMenus Identity & Access section", () => {
       "Organizations",
       "Roles",
       "Permissions",
+      "Data Access",
       "One-Click Signup",
     ]);
   });
@@ -61,6 +62,7 @@ describe("navigationMenus Identity & Access section", () => {
     expect(paths.Organizations).toBe("/app/iam/organization");
     expect(paths.Roles).toBe("/app/iam/role");
     expect(paths.Permissions).toBe("/app/iam/permission");
+    expect(paths["Data Access"]).toBe("/app/iam/data-access");
   });
 
   it("keeps every authored menu path outside the retired /app/idp prefix", () => {

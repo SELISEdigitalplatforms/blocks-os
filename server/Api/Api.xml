@@ -4,6 +4,12 @@
         <name>Api</name>
     </assembly>
     <members>
+        <member name="T:BlocksOs.Api.Controllers.ActionsController">
+            <summary>The project's actions (Config → Actions). Routing only; rules are in <see cref="T:Configuration.DomainService.Actions.IActionsService"/>.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.ActionsController.Update(Configuration.DomainService.Actions.UpdateActionRequest,System.Threading.CancellationToken)">
+            <summary>One flag of one action. 400 <c>ACTION_NOT_FOUND</c>, <c>ACTIONS_NOT_SEEDED</c> or <c>INVALID_TARGET</c>.</summary>
+        </member>
         <member name="T:BlocksOs.Api.Controllers.AdyenWebhookController">
             <summary>
             Where Adyen tells us what actually happened.
@@ -26,18 +32,6 @@
         </member>
         <member name="F:BlocksOs.Api.Controllers.AdyenWebhookController.Accepted">
             <summary>The only body Adyen accepts as an acknowledgement.</summary>
-        </member>
-        <member name="M:BlocksOs.Api.Controllers.ArchiveController.EnqueueCleanup">
-            <summary>
-            Drives the expired-data sweep on demand. The scheduler normally publishes this daily; the
-            endpoint exists so the job can be exercised before that cron entry is in place.
-            </summary>
-        </member>
-        <member name="M:BlocksOs.Api.Controllers.ArchiveController.EnqueueHydrationCheck">
-            <summary>
-            Drives a rehydration poll on demand. The scheduler should publish this every 15-30 minutes:
-            this poll is what turns a finished rehydration into restored rows.
-            </summary>
         </member>
         <member name="T:BlocksOs.Api.Controllers.BillingController">
             <summary>
@@ -289,12 +283,21 @@
             answers. One request, not a poll.
             </remarks>
         </member>
+        <member name="M:BlocksOs.Api.Controllers.DataGatewayController.SaveConfig(Configuration.DomainService.DataGateway.RequestModel.SaveDataGatewayConfigurationRequest)">
+            <summary>A refused save (invalid input, unknown ItemId) answers 400 with the errors; ItemId not found answers 404.</summary>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.DomainController.ConfigureStream(DomainService.Shared.ConfigureDomainRequest)">
             <summary>
             Configures a domain like <see cref="M:BlocksOs.Api.Controllers.DomainController.Configure(DomainService.Shared.ConfigureDomainRequest)"/>, streaming each step as a server-sent
             event: "step" events (<see cref="T:DomainService.Shared.DomainSetupProgress"/>) while it runs, then one "result"
             event (<see cref="T:Blocks.Genesis.BaseResponse"/>). The run does not depend on the connection: a browser
             that goes away mid-run leaves it to finish, and the domain's status shows the outcome.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.DomainController.NotifyDomainStatusAsync(System.String,Blocks.Genesis.BaseResponse)">
+            <summary>
+            Tells the caller how the custom domain setup ended. Only the final result is sent, not each step,
+            and no error text: the domain's status shows the details.
             </summary>
         </member>
         <member name="T:BlocksOs.Api.Controllers.IntegrationClientIp">
@@ -405,6 +408,20 @@
             far, freeing the user to request a different range straight away.
             </summary>
         </member>
+        <member name="T:BlocksOs.Api.Controllers.MailConfigurationUsageController">
+            <summary>
+            <c>GET Mail/GetConfigurationUsage</c>: how many templates name a mail configuration, so the
+            console can say what a delete affects.
+            </summary>
+            <remarks>
+            Served under the Mail route like the other mail configuration actions, but kept out of
+            <see cref="T:BlocksOs.Api.Controllers.MailController"/>, which already carries three responsibilities (configurations,
+            templates, mailbox) and is flagged for it.
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.MailConfigurationUsageController.GetConfigurationUsage(Configuration.DomainService.Mail.RequestModel.GetMailConfigurationUsageRequest)">
+            <summary>Unknown id: HTTP 400 with <c>errors.ConfigurationId</c>, like the other mail field errors.</summary>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.MailController.ToActionResult(Configuration.DomainService.Mail.Services.MailConfigurationMutationResult)">
             <summary>
             Turns a mail configuration outcome into a status code.
@@ -416,6 +433,34 @@
             them all into an availability error would tell an operator to retry something that
             will never succeed.
             </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.MailController.AssignTemplates(Configuration.DomainService.Mail.Template.AssignTemplatesRequest)">
+            <summary>
+            Points many templates of a configuration's organization at that configuration in one update.
+            A field error is HTTP 400 with <c>{ isSuccess:false, errors }</c>, as the other template endpoints.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.MailController.DeleteTemplateAcrossOrganizations(Configuration.DomainService.Mail.Template.DeleteTemplateAcrossOrganizationsRequest)">
+            <summary>
+            Deletes a Default organization template now and queues the deletion of the organizations' own copies (same
+            Name + Language) in all or the selected organizations; the OS Worker deletes them and the requester gets a
+            bell notification. Returns the job id. "Only the Default organization's template" uses DeleteTemplate.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.MailController.CopyTemplateToOrganizations(Configuration.DomainService.Mail.Template.CopyTemplateToOrganizationsRequest)">
+            <summary>
+            Queues a copy of a Default organization template to all or selected organizations; the OS Worker makes the
+            copies and the requester gets a bell notification. Returns the job id.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.MailController.GetTemplateOrganizationCopies(Configuration.DomainService.Mail.Template.GetTemplateOrganizationCopiesRequest)">
+            <summary>Which of up to 25 organizations already have their own template with the same Name + Language.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.MailController.GetMailBoxMailSource(Configuration.DomainService.Mail.Mailbox.GetMailBoxMailRequest)">
+            <summary>The stored message as an <c>.eml</c> download.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.MailController.GetMailBoxMailAttachmentFile(Configuration.DomainService.Mail.Mailbox.GetMailBoxMailAttachmentFileRequest)">
+            <summary>One attachment of the stored message as a download, streamed from the message.</summary>
         </member>
         <member name="M:BlocksOs.Api.Controllers.MigrationController.#ctor(DomainService.Migration.IMigrationService,DomainService.Migration.Services.IMigrationRepository,Blocks.Genesis.IMessageClient)">
             <summary>
@@ -459,6 +504,38 @@
         <member name="M:BlocksOs.Api.Controllers.PeopleController.SaveAccessPolicy(DomainService.Access.SaveAccessPolicyRequest)">
             <summary>Owner-only, always — a grant must never be able to widen itself.</summary>
         </member>
+        <member name="T:BlocksOs.Api.Controllers.PlatformDataAccessController">
+            <summary>The Data Access page for platform (system) schemas. The work is in <see cref="T:Configuration.DomainService.DataGateway.Services.IPlatformDataAccessService"/>.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.#ctor(Configuration.DomainService.DataGateway.Services.IPlatformDataAccessService)">
+            <summary>The Data Access page for platform (system) schemas. The work is in <see cref="T:Configuration.DomainService.DataGateway.Services.IPlatformDataAccessService"/>.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.Validation(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>The field's validation rules; null when it has none.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.SaveValidation(Configuration.DomainService.DataGateway.RequestModel.SavePlatformValidationRequest,System.Threading.CancellationToken)">
+            <summary>
+            Replaces the field's validation rules; an empty list removes them. Only properties the Genesis allow-list
+            opens; Reference rules point at system Entity schemas; every rule is saved as version 1.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.BulkValidation(Configuration.DomainService.DataGateway.RequestModel.BulkPlatformValidationRequest,System.Threading.CancellationToken)">
+            <summary>
+            The same validation rules on several default properties (the base entity's own: Language, Tags, Read.Roles, …)
+            of several system schemas. <c>Replace</c> gives each property exactly these rules (an empty list removes
+            them); otherwise they are added after the ones it has. Every pair is checked first, as a single save would
+            be; if any is refused nothing is written, and each refusal is named by Schema.Property.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.FieldDefault(Configuration.DomainService.DataGateway.RequestModel.SetPlatformFieldDefaultRequest,System.Threading.CancellationToken)">
+            <summary>Sets or (null) clears the field's default value. Only properties the Genesis allow-list opens.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PlatformDataAccessController.BulkFieldDefault(Configuration.DomainService.DataGateway.RequestModel.BulkPlatformFieldDefaultRequest,System.Threading.CancellationToken)">
+            <summary>
+            Sets or (null) clears the same default value on several default properties of several system schemas.
+            Every pair is checked first; if any is refused nothing is written, and each refusal is named by Schema.Property.
+            </summary>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.ProjectController.GetRepositoryDeployments(DomainService.Projects.GetRepositoryDeploymentsRequest)">
             <summary>
             Which repository deploys to which environment, with each environment's repo limit.
@@ -491,6 +568,12 @@
             <summary>
             Turns third-party token trust on or off for the tenant. Off means such tokens are not
             accepted at all.
+            </summary>
+        </member>
+        <member name="T:BlocksOs.Api.Controllers.PushSettingsController">
+            <summary>
+            Mobile push (Firebase) settings of the project. Routing only; every rule is in <see cref="T:Configuration.DomainService.Notification.Push.IPushSettingsService"/>.
+            No action ever returns a Firebase value.
             </summary>
         </member>
         <member name="T:BlocksOs.Api.Controllers.ReleaseController">
@@ -573,6 +656,9 @@
             the read has already been audited by the service, so the audit trail is unchanged.
             </remarks>
         </member>
+        <member name="T:BlocksOs.Api.Controllers.ServiceOutcomeResults">
+            <summary>Maps a <see cref="T:Configuration.DomainService.Shared.Services.ServiceOutcome`1"/> to HTTP: 200 with the value, or 400/404/409 with <c>Errors.code</c>.</summary>
+        </member>
         <member name="T:BlocksOs.Api.Controllers.UsageController">
             <summary>
             What a project is using, and the sync that gives an environment rows for anything new in the
@@ -605,6 +691,24 @@
         <member name="P:BlocksOs.Api.Controllers.SyncUsageRequest.TenantId">
             <summary>Which environment of that project. Checked against the group's own tenants.</summary>
         </member>
+        <member name="T:BlocksOs.Api.Controllers.UserPreferenceController">
+            <summary>
+            The signed-in user's own settings, by key (<see cref="T:DomainService.Preference.UserPreferenceKeys"/>), such as the
+            console sidebar's favourites and app order, so they follow the user across browsers.
+            </summary>
+            <remarks>
+            Deliberately <c>[Authorize]</c> only, with no resource name and no project policy, like
+            <see cref="M:BlocksOs.Api.Controllers.PeopleController.GetMyAccess(DomainService.Access.GetMyAccessRequest)"/>: every action reads or writes the caller's own
+            rows and no one else's, so there is nothing a grant could add. Routing and response mapping
+            only; the rules live in <see cref="T:DomainService.Preference.Services.IUserPreferenceService"/>.
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.UserPreferenceController.Get(DomainService.Preference.GetUserPreferenceRequest,System.Threading.CancellationToken)">
+            <summary>The caller's value for a key; <c>value</c> is null when never saved.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.UserPreferenceController.Save(DomainService.Preference.SaveUserPreferenceRequest,System.Threading.CancellationToken)">
+            <summary>Sets the caller's value for a key, replacing any earlier one.</summary>
+        </member>
         <member name="T:BlocksOs.Api.Controllers.VersionController">
             <summary>
             Reports the running API assembly version. Public by design (no auth) so health/deploy
@@ -612,11 +716,35 @@
             <see cref="T:BlocksOs.Api.GlobalApiRoutePrefixConvention"/> "api" prefix.
             </summary>
         </member>
+        <member name="T:BlocksOs.Api.Controllers.WebhookHistoryController">
+            <summary><c>Webhooks/Deliveries</c> and <c>Webhooks/Resend</c>. Rules are in <see cref="T:Configuration.DomainService.Webhooks.IWebhookHistoryService"/>.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.WebhookHistoryController.Deliveries(Configuration.DomainService.Webhooks.WebhookDeliveriesQuery,System.Threading.CancellationToken)">
+            <summary>History of one webhook, newest first.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.WebhookHistoryController.Resend(Configuration.DomainService.Webhooks.ResendWebhookDeliveryRequest,System.Threading.CancellationToken)">
+            <summary>Resends a Delivered or Failed row; 409 while a send of that row is in flight.</summary>
+        </member>
+        <member name="T:BlocksOs.Api.Controllers.WebhooksController">
+            <summary>
+            The project's webhooks (Config → Webhooks). Routing only; rules are in <see cref="T:Configuration.DomainService.Webhooks.IWebhookService"/>.
+            No action ever returns a secret value.
+            </summary>
+        </member>
+        <member name="T:BlocksOs.Api.Controllers.WebhookTestController">
+            <summary><c>Webhooks/Test</c>: one signed sample event now; returns the HTTP status and duration. Not stored.</summary>
+        </member>
         <member name="T:BlocksOs.Api.GlobalApiRoutePrefixConvention">
             <summary>Prepends a segment (e.g. <c>api</c>) to every controller’s attribute route template.</summary>
         </member>
         <member name="M:BlocksOs.Api.GlobalApiRoutePrefixConvention.#ctor(System.String)">
             <summary>Prepends a segment (e.g. <c>api</c>) to every controller’s attribute route template.</summary>
+        </member>
+        <member name="T:BlocksOs.Api.Middleware.DataValidationExceptionFilter">
+            <summary>
+            A save refused by a system schema's validation rules (Os.DataAccess PrepareWriteAsync / CheckUpdateAsync)
+            is the caller's mistake, not a server error: 400 with one message per property, the field's path as key.
+            </summary>
         </member>
         <member name="T:BlocksOs.Api.Middleware.HostAccessCookieBearerMiddleware">
             <summary>

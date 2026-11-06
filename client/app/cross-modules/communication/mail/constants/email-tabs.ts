@@ -1,7 +1,3 @@
-export const EMAIL_TABS = {
-  Emailstemplates: { label: "Templates" },
-  Inbox: { label: "Incoming Mails" },
-  Outgoingmails: { label: "Outgoing Mails" },
-} as const;
+export const EMAIL_TAB_KEYS = ["Emailstemplates", "Inbox", "Outgoingmails"] as const;
 
-export type EmailTabKey = keyof typeof EMAIL_TABS;
+export type EmailTabKey = (typeof EMAIL_TAB_KEYS)[number];

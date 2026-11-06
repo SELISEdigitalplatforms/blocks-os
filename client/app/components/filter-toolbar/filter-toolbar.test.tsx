@@ -121,7 +121,7 @@ describe("FilterToolbar", () => {
     );
 
     expect(screen.queryByPlaceholderText("Search here")).toBeNull();
-    expect(screen.getByLabelText("1 active filters")).toBeTruthy();
+    expect(screen.getByLabelText("1 active filter")).toBeTruthy();
 
     const trigger = screen.getByRole("button", { name: "Filters" });
     expect(trigger.className).toContain("border-dashed");

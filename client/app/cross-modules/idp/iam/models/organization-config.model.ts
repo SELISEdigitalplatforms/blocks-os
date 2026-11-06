@@ -19,6 +19,8 @@ export interface IOrganizationConfigResponse {
   keepOrgRolesSameAsDefaultRoles: boolean;
   keepOrgPermissionsSameAsDefaultPermissions: boolean;
   consentForMultiOrgEnable: boolean;
+  isSignupAutoJoinEnabled: boolean;
+  signupAutoJoinOrganizationId: string | null;
 }
 
 export interface IOrganizationConfigSaveApiPayload {
@@ -32,6 +34,8 @@ export interface IOrganizationConfigSaveApiPayload {
   defaultPermissionsOnOrgCreation: string[];
   keepOrgRolesSameAsDefaultRoles: boolean;
   keepOrgPermissionsSameAsDefaultPermissions: boolean;
+  isSignupAutoJoinEnabled?: boolean;
+  signupAutoJoinOrganizationId?: string | null;
 }
 
 /** @deprecated Use IOrganizationConfigSaveApiPayload — kept for IAM module callers during migration */

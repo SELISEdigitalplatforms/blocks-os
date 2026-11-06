@@ -1,9 +1,11 @@
 using Blocks.Genesis;
-using DomainService.Migration.Entities;
 using DomainService.People;
 using DomainService.Shared;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using Blocks.Genesis.Entities.Iam;
+using Blocks.Genesis.Entities.Os;
+using Os.DataAccess;
 
 namespace DomainService.Migration.Services
 {
@@ -18,15 +20,21 @@ namespace DomainService.Migration.Services
         private IMongoCollection<User> UserCollection => _dbContextProvider.GetCollection<User>("Users");
         private readonly IDbContextProvider _dbContextProvider;
         private readonly IBlocksSecret _blocksSecret;
+        private readonly IOsDataAccess _dataAccess;
 
-        public MigrationRepository(IDbContextProvider dbContextProvider, IBlocksSecret blocksSecret)
+        public MigrationRepository(IDbContextProvider dbContextProvider, IBlocksSecret blocksSecret, IOsDataAccess dataAccess)
         {
             _dbContextProvider = dbContextProvider;
             _blocksSecret = blocksSecret;
+            _dataAccess = dataAccess;
         }
 
         public async Task<string> CreateMigrationTrackerAsync(MigrationTracker migrationTracker)
         {
+            if (!await _dataAccess.InsertAllowedAsync(OsSchemas.MigrationTracker, "MigrationRepository.CreateMigrationTrackerAsync"))
+                throw new UnauthorizedAccessException("Access to the migration tracker was denied by the data access policy.");
+
+            await _dataAccess.PrepareWriteAsync(OsSchemas.MigrationTracker, migrationTracker, isInsert: true, "MigrationRepository.CreateMigrationTrackerAsync");
             await Collection.InsertOneAsync(migrationTracker);
             return migrationTracker.ItemId;
         }
@@ -34,7 +42,8 @@ namespace DomainService.Migration.Services
         public async Task<MigrationTracker?> GetMigrationTrackerAsync(string trackerId)
         {
             var filter = Builders<MigrationTracker>.Filter.Eq(m => m.ItemId, trackerId);
-            return await Collection.Find(filter).FirstOrDefaultAsync();
+            var scope = await _dataAccess.ReadAsync(OsSchemas.MigrationTracker, filter, "MigrationRepository.GetMigrationTrackerAsync");
+            return scope.Granted ? await scope.Apply(Collection).FirstOrDefaultAsync() : null;
         }
 
         public async Task<bool> UpdateServiceStatusAsync(string trackerId, MigrationServiceNames serviceName, bool isCompleted, string? errorMessage = null)
@@ -45,10 +54,16 @@ namespace DomainService.Migration.Services
             var update = Builders<MigrationTracker>.Update
                 .Set($"{propertyName}.IsCompleted", isCompleted)
                 .Set($"{propertyName}.CompletedAt", isCompleted ? DateTime.UtcNow : (DateTime?)null)
-                .Set($"{propertyName}.ErrorMessage", errorMessage)
+                .Set($"{propertyName}.ErrorMessage", FinalErrorMessage(isCompleted, errorMessage))
                 .Set(m => m.LastUpdatedDate, DateTime.UtcNow);
 
-            var result = await Collection.UpdateOneAsync(filter, update);
+            var editFilter = await _dataAccess.EditFilterAsync(OsSchemas.MigrationTracker, filter, "MigrationRepository.UpdateServiceStatusAsync");
+            if (editFilter is null)
+            {
+                return false;
+            }
+
+            var result = await Collection.UpdateOneAsync(editFilter, update);
             return result.ModifiedCount > 0;
         }
 
@@ -71,13 +86,33 @@ namespace DomainService.Migration.Services
         {
             var filter = Builders<MigrationTracker>.Filter.Eq(m => m.TenantGroupId, tenantGroupId);
 
-            var trackers = await Collection.Find(filter)
+            var scope = await _dataAccess.ReadAsync(OsSchemas.MigrationTracker, filter, "MigrationRepository.GetMigrationsByTenantGroupIdAsync");
+            if (!scope.Granted)
+            {
+                return new List<MigrationTracker>();
+            }
+
+            var trackers = await scope.Apply(Collection)
                 .SortByDescending(m => m.CreatedDate)
                 .ToListAsync();
 
             // Filter to only include trackers with at least one incomplete service
-            return trackers.Where(HasIncompleteServices).ToList();
+            // The API lists these: View column (property) rules clear what the caller may not see.
+            return scope.ForView(trackers.Where(HasIncompleteServices).ToList());
         }
+
+        /// <summary>
+        /// A failed service is told apart from a running one only by its error message
+        /// (IsCompleted is false for both). A failure reported without a message would look
+        /// "in progress" forever, so it gets a default one. Success clears the message.
+        /// </summary>
+        public static string? FinalErrorMessage(bool isCompleted, string? errorMessage)
+        {
+            if (isCompleted) return null;
+            return string.IsNullOrWhiteSpace(errorMessage) ? DefaultFailureMessage : errorMessage;
+        }
+
+        public const string DefaultFailureMessage = "Migration failed";
 
         private static string GetServicePropertyName(MigrationServiceNames serviceName)
         {

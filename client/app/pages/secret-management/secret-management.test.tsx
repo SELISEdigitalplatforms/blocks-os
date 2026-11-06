@@ -9,14 +9,16 @@ const h = vi.hoisted(() => ({
   navigate: vi.fn(),
   breadcrumbProps: undefined as unknown,
   toast: vi.fn(),
+  query: {} as Record<string, unknown>,
 }));
 
 vi.mock("react-router", () => ({
-  useLocation: () => ({ pathname: h.pathname }),
+  useLocation: () => ({ pathname: h.pathname, search: "" }),
   useNavigate: () => h.navigate,
   Outlet: () => <div data-testid="outlet" />,
 }));
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 vi.mock("@seliseblocks/genesis-os/hooks", () => ({
@@ -31,8 +33,8 @@ vi.mock("nuqs", () => {
   return {
     parseAsBoolean: parser,
     parseAsString: parser,
-    useQueryState: (_k: string, opts: { defaultValue: unknown }) =>
-      React.useState(opts.defaultValue),
+    useQueryState: (k: string, opts: { defaultValue: unknown }) =>
+      React.useState(h.query[k] ?? opts.defaultValue),
   };
 });
 vi.mock("@blocks-idp/authentication/contexts/oidc-branding-header-context", () => ({
@@ -47,6 +49,10 @@ vi.mock(
   () => ({
     CreateClientCredential: () => <div data-testid="create-client-credential" />,
   }),
+);
+vi.mock(
+  "@blocks-communication/mail/components/email-service/email-organization-picker/email-organization-picker",
+  () => ({ EmailOrganizationPicker: () => <div data-testid="email-organization-picker" /> }),
 );
 vi.mock("@blocks-identifier/components/add-service/add-service", () => ({
   AddService: () => <div data-testid="add-service" />,
@@ -82,6 +88,9 @@ vi.mock("@/components/ui-kits/dialog/dialog", () => ({
 
 import SecretManagementLayout from "./secret-management";
 
+const ADD_CONFIGURATION = "Add Configuration";
+const ADD_NOTIFICATION = "Add notification";
+
 describe("SecretManagementLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -89,6 +98,7 @@ describe("SecretManagementLayout", () => {
     h.clientsData = [];
     h.brandingActions = undefined;
     h.breadcrumbProps = undefined;
+    h.query = {};
   });
 
   it("renders the page header and outlet for a known nav item", () => {
@@ -97,6 +107,53 @@ describe("SecretManagementLayout", () => {
     expect(screen.getByTestId("outlet")).toBeTruthy();
     // The secret page shows the create-secret action.
     expect(screen.getByTestId("create-secret-button")).toBeTruthy();
+  });
+
+  it("shows the list header with Push and Add notification on the notification list", () => {
+    h.pathname = "/app/proj/secret-management/notification";
+    render(<SecretManagementLayout />);
+    expect(screen.getByRole("heading", { level: 1 })).toBeTruthy();
+    expect(screen.getByText("Push")).toBeTruthy();
+    expect(screen.getByText(ADD_NOTIFICATION)).toBeTruthy();
+  });
+
+  it("shows Add webhook on the webhook list, and no header on one webhook's page", () => {
+    h.pathname = "/app/proj/secret-management/webhooks";
+    const { unmount } = render(<SecretManagementLayout />);
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Webhooks");
+    expect(screen.getByText("Add webhook")).toBeTruthy();
+    unmount();
+
+    h.pathname = "/app/proj/secret-management/webhooks/wh-1";
+    render(<SecretManagementLayout />);
+    expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
+    expect(screen.queryByText("Add webhook")).toBeNull();
+  });
+
+  it.each(["new", "item-1", "push"])(
+    "hides the list header while the notification page at /notification/%s is shown",
+    (segment) => {
+      h.pathname = `/app/proj/secret-management/notification/${segment}`;
+      render(<SecretManagementLayout />);
+      expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
+      expect(screen.queryByText(ADD_NOTIFICATION)).toBeNull();
+      expect(screen.getByTestId("outlet")).toBeTruthy();
+    },
+  );
+
+  it("opens Push and Add notification by path, not by query parameter", () => {
+    h.pathname = "/app/proj/secret-management/notification";
+    render(<SecretManagementLayout />);
+    screen.getByText("Push").click();
+    expect(h.navigate).toHaveBeenLastCalledWith(
+      { pathname: "/app/proj/secret-management/notification/push", search: "" },
+      { replace: false },
+    );
+    screen.getByText(ADD_NOTIFICATION).click();
+    expect(h.navigate).toHaveBeenLastCalledWith(
+      { pathname: "/app/proj/secret-management/notification/new", search: "" },
+      { replace: false },
+    );
   });
 
   it("shows Manage Template immediately before Create on the OIDC page", () => {
@@ -137,10 +194,24 @@ describe("SecretManagementLayout", () => {
     expect(screen.queryByText("Map JWT Claim")).toBeNull();
   });
 
+  it("puts the organization picker before Add Configuration on the email page only (blocks-os#732 H7)", () => {
+    h.pathname = "/app/proj/secret-management/email";
+    render(<SecretManagementLayout />);
+    const picker = screen.getByTestId("email-organization-picker");
+    const add = screen.getByText(ADD_CONFIGURATION);
+    expect(picker.compareDocumentPosition(add) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("has no organization picker outside the email page", () => {
+    h.pathname = "/app/proj/secret-management/captcha";
+    render(<SecretManagementLayout />);
+    expect(screen.queryByTestId("email-organization-picker")).toBeNull();
+  });
+
   it("always shows the Add Configuration action on the captcha page, since a tenant may configure more than one", () => {
     h.pathname = "/app/proj/secret-management/captcha";
     render(<SecretManagementLayout />);
-    expect(screen.getByText("Add Configuration")).toBeTruthy();
+    expect(screen.getByText(ADD_CONFIGURATION)).toBeTruthy();
   });
 
   it("renders the branding save/undo actions in branding mode", () => {
@@ -160,7 +231,7 @@ describe("SecretManagementLayout", () => {
         breadcrumbIndex: 3,
         customTitles: {
           "/app/proj/secret-management/oidc": "OIDC",
-          "/app/proj/secret-management/oidc/branding": "Template",
+          "/app/proj/secret-management/oidc/branding": null,
         },
       }),
     );

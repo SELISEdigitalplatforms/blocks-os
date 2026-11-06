@@ -3,11 +3,13 @@ import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import { X } from "lucide-react";
 import { useState } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 type DeleteUserPermissionProps = {
   permission: IPermission;
   onDelete: (data: IPermission) => void;
 };
 export const DeleteSSOPermission = ({ permission, onDelete }: DeleteUserPermissionProps) => {
+  const { t } = useT("os.idp.auth");
   const [open, setOpen] = useState<boolean>(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -16,8 +18,8 @@ export const DeleteSSOPermission = ({ permission, onDelete }: DeleteUserPermissi
       </DialogTrigger>
       <ConfirmationModal
         data={{
-          dialogTitle: "Remove Permission",
-          dialogSubtitle: "Are you sure you want to remove the permission?",
+          dialogTitle: t("DELETE_SSO_PERMISSION.TITLE"),
+          dialogSubtitle: t("DELETE_SSO_PERMISSION.SUBTITLE"),
         }}
         onConfirm={() => onDelete(permission)}
         onCancel={() => setOpen(false)}

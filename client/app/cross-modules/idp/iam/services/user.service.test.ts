@@ -20,7 +20,6 @@ import {
   mockSaveRolesAndPermissionsPayload,
   mockGetSessionsPayload,
   mockGetHistoriesPayload,
-  mockGeneratePATPayload,
   mockGetUserRolesPayload,
   mockGetUserPermissionsPayload,
   mockResendActivationPayload,
@@ -123,6 +122,18 @@ describe("UserService", () => {
   });
 
   // ─── addUser ──────────────────────────────────────────────────────────────
+  describe("isUserExist", () => {
+    it("should POST the address in the body, never in the URL", async () => {
+      vi.mocked(http.post).mockResolvedValue({ userId: "u1", organizationIds: ["org-a"] });
+
+      const result = await service.isUserExist("a+b@test.com");
+
+      expect(http.post).toHaveBeenCalledWith(USER_ENDPOINTS.EXISTS, { email: "a+b@test.com" }, undefined, { absoluteUrl: true });
+      expect(http.get).not.toHaveBeenCalled();
+      expect(result).toEqual({ userId: "u1", organizationIds: ["org-a"] });
+    });
+  });
+
   describe("addUser", () => {
     it("should POST to the correct endpoint with payload", async () => {
       vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
@@ -333,50 +344,6 @@ describe("UserService", () => {
     });
   });
 
-  // ─── getPats ──────────────────────────────────────────────────────────────
-  describe("getPats", () => {
-    it("should GET from the correct endpoint", async () => {
-      const mockResponse = { data: [], errors: null };
-      vi.mocked(http.get).mockResolvedValue(mockResponse);
-
-      const result = await service.getPats();
-
-      expect(http.get).toHaveBeenCalledWith(USER_ENDPOINTS.GET_USER_CODES, undefined, {
-        absoluteUrl: true,
-      });
-      expect(result).toEqual(mockResponse);
-    });
-
-    it("should throw when the API call fails", async () => {
-      vi.mocked(http.get).mockRejectedValue(new Error("Network error"));
-
-      await expect(service.getPats()).rejects.toThrow("Network error");
-    });
-  });
-
-  // ─── generatePats ─────────────────────────────────────────────────────────
-  describe("generatePats", () => {
-    it("should POST to the correct endpoint with payload", async () => {
-      vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
-
-      const result = await service.generatePats(mockGeneratePATPayload);
-
-      expect(http.post).toHaveBeenCalledWith(
-        USER_ENDPOINTS.GENERATE_USER_CODE,
-        mockGeneratePATPayload,
-        undefined,
-        { absoluteUrl: true },
-      );
-      expect(result).toEqual(mockSuccessResponse);
-    });
-
-    it("should throw when the API call fails", async () => {
-      vi.mocked(http.post).mockRejectedValue(new Error("Network error"));
-
-      await expect(service.generatePats(mockGeneratePATPayload)).rejects.toThrow("Network error");
-    });
-  });
-
   // ─── getUserRoles ─────────────────────────────────────────────────────────
   describe("getUserRoles", () => {
     it("should resolve the user's role slugs through the role list endpoint", async () => {
@@ -462,6 +429,25 @@ describe("UserService", () => {
       await expect(service.getUserPermissions(mockGetUserPermissionsPayload)).rejects.toThrow(
         "Network error",
       );
+    });
+  });
+
+  // ─── adminResetPassword ───────────────────────────────────────────────────
+  describe("adminResetPassword", () => {
+    // Must hit the protected admin endpoint, not the public auth/recover (which asks a captcha).
+    it("should POST the user id to the admin reset endpoint", async () => {
+      vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
+
+      const result = await service.adminResetPassword({ userId: "u1" });
+
+      expect(http.post).toHaveBeenCalledWith(
+        USER_ENDPOINTS.RESET_PASSWORD,
+        { userId: "u1" },
+        undefined,
+        { absoluteUrl: true },
+      );
+      expect(USER_ENDPOINTS.RESET_PASSWORD).toMatch(/\/iam\/users\/reset-password$/);
+      expect(result).toEqual(mockSuccessResponse);
     });
   });
 

@@ -9,6 +9,7 @@ import {
 } from "@/components/ui-kits/table/table";
 import { useMemo } from "react";
 import { DeleteOrganizationPermission } from "./delete-organization-permission";
+import { useT } from "@seliseblocks/genesis-os";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 
 interface OrganizationPermissionsListProps {
@@ -22,6 +23,7 @@ export const OrganizationPermissionsList = ({
   onDelete,
   onSave,
 }: OrganizationPermissionsListProps) => {
+  const { t } = useT("os.idp.users");
   const columns = useMemo<ColumnDef<IPermission>[]>(
     () => [
       {
@@ -29,7 +31,9 @@ export const OrganizationPermissionsList = ({
         accessorFn: (row) => `${row.name}`.trim(),
         header: () => (
           <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">Name</span>
+            <span className="font-bold text-medium-emphasis">
+              {t("ORGANIZATION_PERMISSIONS_LIST.COLUMN_NAME")}
+            </span>
           </div>
         ),
         cell: ({ row }) => (
@@ -43,7 +47,9 @@ export const OrganizationPermissionsList = ({
         accessorFn: (row) => `${row.resource}`.trim(),
         header: () => (
           <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">Resource</span>
+            <span className="font-bold text-medium-emphasis">
+              {t("ORGANIZATION_PERMISSIONS_LIST.COLUMN_RESOURCE")}
+            </span>
           </div>
         ),
         cell: ({ row }) => (
@@ -71,7 +77,7 @@ export const OrganizationPermissionsList = ({
         ),
       },
     ],
-    [onDelete, onSave],
+    [onDelete, onSave, t],
   );
 
   const table = useReactTable({
@@ -81,44 +87,39 @@ export const OrganizationPermissionsList = ({
   });
 
   return (
-    <>
-      <Table className="text-sm">
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="px-4 py-3 hover:bg-transparent">
-              {headerGroup.headers.map((header) => (
-                <TableHead key={header.id} className="px-4 py-3 font-bold text-medium-emphasis">
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(header.column.columnDef.header, header.getContext())}
-                </TableHead>
+    <Table className="text-sm">
+      <TableHeader>
+        {table.getHeaderGroups().map((headerGroup) => (
+          <TableRow key={headerGroup.id} className="px-4 py-3 hover:bg-transparent">
+            {headerGroup.headers.map((header) => (
+              <TableHead key={header.id} className="px-4 py-3 font-bold text-medium-emphasis">
+                {header.isPlaceholder
+                  ? null
+                  : flexRender(header.column.columnDef.header, header.getContext())}
+              </TableHead>
+            ))}
+          </TableRow>
+        ))}
+      </TableHeader>
+      <TableBody>
+        {table.getRowModel().rows.length ? (
+          table.getRowModel().rows.map((row) => (
+            <TableRow key={row.id}>
+              {row.getVisibleCells().map((cell) => (
+                <TableCell key={cell.id} className="px-4 py-3">
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </TableCell>
               ))}
             </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows.length ? (
-            table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id}>
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className="px-4 py-3">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell
-                colSpan={columns.length}
-                className="h-24 text-center text-muted-foreground"
-              >
-                No permissions found
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </>
+          ))
+        ) : (
+          <TableRow>
+            <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+              {t("ORGANIZATION_PERMISSIONS_LIST.NO_PERMISSIONS_FOUND")}
+            </TableCell>
+          </TableRow>
+        )}
+      </TableBody>
+    </Table>
   );
 };

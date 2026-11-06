@@ -11,6 +11,7 @@ import type { IDomain } from "@/models/project.model";
 import { showErrorToast, showSuccessToast } from "@seliseblocks/genesis-os/utils";
 import { useMemo } from "react";
 import { SetCustomDomainForm } from "./form";
+import { useT } from "@seliseblocks/genesis-os";
 
 interface SetCustomDomainDialogProps {
   open: boolean;
@@ -38,6 +39,7 @@ export const SetCustomDomainDialog = ({
   projectKey,
   projectEnv,
 }: SetCustomDomainDialogProps) => {
+  const { t } = useT("os.dashboard");
   const { mutateAsync, isPending } = useUpdateRepositories();
 
   // Only verified domains are assignable. Dedupe because applications can
@@ -71,7 +73,7 @@ export const SetCustomDomainDialog = ({
         ],
       });
       if (res.isSuccess) {
-        showSuccessToast({ description: "Custom domain updated successfully" });
+        showSuccessToast({ description: t("DIALOG.CUSTOM_DOMAIN_UPDATED_SUCCESSFULLY") });
         onOpenChange(false);
       } else {
         showErrorToast({ errors: res.errors });
@@ -87,10 +89,9 @@ export const SetCustomDomainDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Set custom domain</DialogTitle>
+          <DialogTitle>{t("DIALOG.SET_CUSTOM_DOMAIN")}</DialogTitle>
           <DialogDescription>
-            Choose a verified domain to assign to{" "}
-            <span className="font-medium">{repo?.repoName}</span>
+            {t("DIALOG.CHOOSE_A_VERIFIED_DOMAIN_TO", { span: `${repo?.repoName}` })}
           </DialogDescription>
         </DialogHeader>
 

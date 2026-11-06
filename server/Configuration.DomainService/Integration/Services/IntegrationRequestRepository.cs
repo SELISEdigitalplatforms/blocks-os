@@ -1,5 +1,5 @@
 using Blocks.Genesis;
-using Configuration.DomainService.Integration.Entities;
+using Blocks.Genesis.Entities.Os;
 using MongoDB.Driver;
 
 namespace Configuration.DomainService.Integration.Services;

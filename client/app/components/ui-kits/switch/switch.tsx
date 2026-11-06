@@ -3,7 +3,7 @@ import * as SwitchPrimitive from "@radix-ui/react-switch";
 import { cn } from "@/lib/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 const switchVariants = cva(
-  "relative cursor-pointer rounded-full border border-solid transition-colors duration-200",
+  "relative shrink-0 cursor-pointer rounded-full border border-solid transition-colors duration-200",
   {
     variants: {
       size: {
@@ -53,7 +53,8 @@ const Switch = React.forwardRef<
       className={cn(
         switchThumbVariants({ size }),
         "bg-white shadow-xs",
-        "group-data-disabled:bg-neutral-50 group-data-disabled:shadow-none",
+        // A ring rather than a lighter fill: on the pale disabled track a near-white thumb vanished.
+        "group-data-disabled:shadow-none group-data-disabled:ring-1 group-data-disabled:ring-neutral-300",
       )}
     />
   </SwitchPrimitive.Root>

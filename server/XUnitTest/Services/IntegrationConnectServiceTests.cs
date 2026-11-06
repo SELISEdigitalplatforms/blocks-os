@@ -1,5 +1,6 @@
 using Blocks.Genesis;
-using Configuration.DomainService.Integration.Entities;
+using Blocks.Genesis.DataAccess.Rules;
+using Blocks.Genesis.Entities.Os;
 using Configuration.DomainService.Integration.RequestModel;
 using Configuration.DomainService.Integration.Services;
 using FluentAssertions;
@@ -396,6 +397,39 @@ public class IntegrationConnectServiceTests : IDisposable
 
         response.Should().BeNull();
         errors.Should().ContainKey("permissions_missing");
+        _requests.Verify(r => r.TryCompleteApprovalAsync(It.IsAny<IntegrationRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Approve_SetupRefusedByAValidationRule_ReturnsItsFieldMessage_AndReleasesTheRequest()
+    {
+        using var _ = new BlocksTestContext(userId: "u1", impersonated: true);
+        Approvable(out IntegrationRequest _);
+        var refused = new DataValidationResult();
+        refused.AddError("ConnectionName", "ConnectionName must be at most 10 characters", "MaxLength");
+        _integration.Setup(i => i.RunSetupAsync(It.IsAny<RunIntegrationSetupRequest>())).ThrowsAsync(new DataValidationException(refused));
+
+        var (response, errors) = await _service.ApproveRequestAsync(new ApproveIntegrationRequest { RequestId = "req-1", TemplateKey = "localization-read" });
+
+        response.Should().BeNull();
+        errors.Should().Equal(new Dictionary<string, string> { ["ConnectionName"] = "ConnectionName must be at most 10 characters" });
+        _requests.Verify(r => r.ResetApprovalToPendingAsync("req-1", It.IsAny<CancellationToken>()), Times.Once);
+        _requests.Verify(r => r.TryCompleteApprovalAsync(It.IsAny<IntegrationRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Approve_SetupDeniedByTheAccessPolicy_ReturnsTheDenial_AndReleasesTheRequest()
+    {
+        using var _ = new BlocksTestContext(userId: "u1", impersonated: true);
+        Approvable(out IntegrationRequest _);
+        _integration.Setup(i => i.RunSetupAsync(It.IsAny<RunIntegrationSetupRequest>()))
+            .ThrowsAsync(new UnauthorizedAccessException("Access to the integration connection was denied by the data access policy."));
+
+        var (response, errors) = await _service.ApproveRequestAsync(new ApproveIntegrationRequest { RequestId = "req-1", TemplateKey = "localization-read" });
+
+        response.Should().BeNull();
+        errors.Should().Equal(new Dictionary<string, string> { ["approve_failed"] = "Access to the integration connection was denied by the data access policy." });
+        _requests.Verify(r => r.ResetApprovalToPendingAsync("req-1", It.IsAny<CancellationToken>()), Times.Once);
         _requests.Verify(r => r.TryCompleteApprovalAsync(It.IsAny<IntegrationRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 

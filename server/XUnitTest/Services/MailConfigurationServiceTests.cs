@@ -4,12 +4,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Blocks.Secrets;
-using Configuration.DomainService.Mail.Entities;
 using Configuration.DomainService.Mail.Providers;
 using Configuration.DomainService.Mail.RequestModel;
 using Configuration.DomainService.Mail.Services;
+using Configuration.DomainService.Mail.Template.Services;
+using Configuration.DomainService.Organizations;
 using Configuration.DomainService.Mail.Validators;
-using Configuration.DomainService.Shared.Enums;
 using Configuration.DomainService.Shared.Secrets;
 using Configuration.DomainService.Shared.Services;
 using FluentAssertions;
@@ -18,6 +18,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using XUnitTest.TestSupport;
+using Blocks.Genesis.Entities.Os;
 
 namespace XUnitTest.Services
 {
@@ -32,6 +33,8 @@ namespace XUnitTest.Services
         private readonly Mock<IConfigurationRepository> _repo = new();
         private readonly Mock<ISecretService> _secrets = new();
         private readonly RecordingLogger<Office365SmtpMailConfigurationProvider> _providerLogger = new();
+        private readonly Mock<IOrganizationReader> _organizations = new();
+        private readonly Mock<IMailTemplateRepository> _templates = new();
 
         public MailConfigurationServiceTests()
         {
@@ -62,8 +65,8 @@ namespace XUnitTest.Services
 
             var registry = new MailConfigurationProviderRegistry(new IMailConfigurationProvider[]
             {
-                new AmazonSesMailConfigurationProvider(),
-                new ZohoMailConfigurationProvider(),
+                new AmazonSesMailConfigurationProvider(_secrets.Object, NullLogger<AmazonSesMailConfigurationProvider>.Instance),
+                new ZohoMailConfigurationProvider(_secrets.Object, NullLogger<ZohoMailConfigurationProvider>.Instance),
                 new Office365SmtpMailConfigurationProvider(_secrets.Object, _providerLogger)
             });
 
@@ -71,7 +74,9 @@ namespace XUnitTest.Services
                 _repo.Object,
                 registry,
                 validator,
-                NullLogger<MailConfigurationService>.Instance);
+                NullLogger<MailConfigurationService>.Instance,
+                _organizations.Object,
+                _templates.Object);
         }
 
         private static MailConfiguration Office365Request() => new()
@@ -158,7 +163,7 @@ namespace XUnitTest.Services
         }
 
         [Fact]
-        public async Task Save_NewLegacyConfiguration_CreatesNoSecret()
+        public async Task Save_NewZohoConfiguration_StoresThePasswordAsASecretAndOnlyItsReference()
         {
             using var _ = new BlocksTestContext();
 
@@ -177,11 +182,16 @@ namespace XUnitTest.Services
             });
 
             result.Outcome.Should().Be(MailConfigurationOutcome.Success);
-            _secrets.Verify(s => s.SetAsync(It.IsAny<SetSecretRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+            _secrets.Verify(
+                s => s.SetAsync(
+                    It.Is<SetSecretRequest>(r => r.Name == "mail-password" && r.Type == SecretTypes.Service && r.Value == "password1"),
+                    It.IsAny<CancellationToken>()),
+                Times.Once);
             _repo.Verify(
                 r => r.SaveMailConfigurationAsync(It.Is<MailServerConfiguration>(m =>
-                    m.AccountPassword == "password1" && m.EnableSSL && m.ClientSecretReference == null)),
+                    m.AccountPassword == "" && m.AccountPasswordReference == "secret-1" && m.EnableSSL && m.ClientSecretReference == null)),
                 Times.Once);
+            _secrets.VerifyNoOtherCalls();
         }
 
         // ---------- H4: edit ----------
@@ -405,7 +415,7 @@ namespace XUnitTest.Services
         }
 
         [Fact]
-        public async Task Save_Office365OutboundWithPassword_StoresThePasswordAndNoSecret()
+        public async Task Save_Office365OutboundWithPassword_StoresThePasswordAsASecretAndNoClientSecret()
         {
             using var _ = new BlocksTestContext();
             MailServerConfiguration? saved = null;
@@ -436,8 +446,14 @@ namespace XUnitTest.Services
             saved.SecurityMode.Should().Be(MailSecurityMode.StartTls);
             saved.AuthenticationType.Should().Be(MailAuthenticationType.Password);
             saved.SenderUserName.Should().Be("support@contoso.com");
-            saved.AccountPassword.Should().Be("password1");
+            saved.AccountPassword.Should().BeEmpty();
+            saved.AccountPasswordReference.Should().Be("secret-1");
             saved.ClientSecretReference.Should().BeNull();
+            _secrets.Verify(
+                s => s.SetAsync(
+                    It.Is<SetSecretRequest>(r => r.Name == "mail-password" && r.Type == SecretTypes.Service && r.Value == "password1"),
+                    It.IsAny<CancellationToken>()),
+                Times.Once);
             _secrets.VerifyNoOtherCalls();
         }
 
@@ -578,7 +594,7 @@ namespace XUnitTest.Services
 
             result.Outcome.Should().Be(MailConfigurationOutcome.SecretStoreUnavailable);
             result.Response.Errors.Should().Contain(new KeyValuePair<string, string>(
-                "ClientSecret", "The client secret could not be stored. Try again."));
+                "ClientSecret", "The secret store is unavailable. Try again later."));
             _repo.Verify(r => r.SaveMailConfigurationAsync(It.IsAny<MailServerConfiguration>()), Times.Never);
         }
 
@@ -629,10 +645,10 @@ namespace XUnitTest.Services
         [Fact]
         public async Task GetAll_Office365_ExposesNonSecretFieldsAndTheConfiguredFlagOnly()
         {
-            _repo.Setup(r => r.GetAllMailConfigurationsAsync())
+            _repo.Setup(r => r.GetAllMailConfigurationsAsync(It.IsAny<string?>()))
                  .ReturnsAsync(new List<MailServerConfiguration> { StoredOffice365() });
 
-            var responses = await Service().GetAllAsync();
+            var responses = await Service().GetAllAsync(new GetAllMailConfigurationsRequest());
 
             var response = responses.Single();
             response.Provider.Should().Be(MailServiceProvider.Office365Smtp);
@@ -651,13 +667,13 @@ namespace XUnitTest.Services
         [Fact]
         public async Task GetAll_LegacyRecord_KeepsTheExistingMask()
         {
-            _repo.Setup(r => r.GetAllMailConfigurationsAsync())
+            _repo.Setup(r => r.GetAllMailConfigurationsAsync(It.IsAny<string?>()))
                  .ReturnsAsync(new List<MailServerConfiguration>
                  {
                      new() { Provider = MailServiceProvider.Zoho, AccountPassword = "actual", EnableSSL = true }
                  });
 
-            var response = (await Service().GetAllAsync()).Single();
+            var response = (await Service().GetAllAsync(new GetAllMailConfigurationsRequest())).Single();
 
             response.AccountPassword.Should().Be("********");
             response.IsClientSecretConfigured.Should().BeFalse();
@@ -668,13 +684,13 @@ namespace XUnitTest.Services
         public async Task GetAll_PreChangeRecordWithoutNewFields_DeserializesOntoTheLegacyPath()
         {
             // What an old BSON document yields: the additive fields absent, so the zero values.
-            _repo.Setup(r => r.GetAllMailConfigurationsAsync())
+            _repo.Setup(r => r.GetAllMailConfigurationsAsync(It.IsAny<string?>()))
                  .ReturnsAsync(new List<MailServerConfiguration>
                  {
                      new() { Provider = MailServiceProvider.Zoho, Name = "Legacy", AccountPassword = "p", EnableSSL = true }
                  });
 
-            var response = (await Service().GetAllAsync()).Single();
+            var response = (await Service().GetAllAsync(new GetAllMailConfigurationsRequest())).Single();
 
             response.AuthenticationType.Should().Be(MailAuthenticationType.Password);
             response.SecurityMode.Should().Be(MailSecurityMode.Legacy);
@@ -684,7 +700,7 @@ namespace XUnitTest.Services
         [Fact]
         public async Task Get_ByName_ReadsTheStoredRecord()
         {
-            _repo.Setup(r => r.GetMailConfigurationByNameAsync("Microsoft 365 Primary")).ReturnsAsync(StoredOffice365());
+            _repo.Setup(r => r.GetMailConfigurationByNameForViewAsync("Microsoft 365 Primary")).ReturnsAsync(StoredOffice365());
 
             var response = await Service().GetAsync(new GetMailConfigurationRequest { ConfigurationName = "Microsoft 365 Primary" });
 
@@ -711,13 +727,7 @@ namespace XUnitTest.Services
         public async Task Duplicate_Office365WithASecret_CreatesAnIndependentNonDefaultCopy()
         {
             using var _ = new BlocksTestContext();
-            _repo.Setup(r => r.GetMailConfigurationByIdAsync("cfg-1"))
-                 .ReturnsAsync(() =>
-                 {
-                     var source = StoredOffice365();
-                     source.IsDefault = true;
-                     return source;
-                 });
+            _repo.Setup(r => r.GetMailConfigurationByIdAsync("cfg-1")).ReturnsAsync(StoredOffice365());
             _secrets.Setup(s => s.SetAsync(It.IsAny<SetSecretRequest>(), It.IsAny<CancellationToken>()))
                     .ReturnsAsync("secret-2");
 
@@ -741,7 +751,7 @@ namespace XUnitTest.Services
         }
 
         [Fact]
-        public async Task Duplicate_LegacyRecord_KeepsItsExistingBehaviour()
+        public async Task Duplicate_LegacyRecord_GivesTheCopyItsOwnSecretFromTheDocumentPassword()
         {
             using var _ = new BlocksTestContext();
             _repo.Setup(r => r.GetMailConfigurationByIdAsync("c-1"))
@@ -751,8 +761,7 @@ namespace XUnitTest.Services
                      Name = "Primary",
                      Host = "smtp.zoho.com",
                      Provider = MailServiceProvider.Zoho,
-                     AccountPassword = "password1",
-                     IsDefault = true
+                     AccountPassword = "password1"
                  });
 
             MailServerConfiguration? saved = null;
@@ -764,9 +773,15 @@ namespace XUnitTest.Services
 
             result.Outcome.Should().Be(MailConfigurationOutcome.Success);
             saved!.Name.Should().Be("Primary - Copy");
-            saved.AccountPassword.Should().Be("password1");
-            saved.IsDefault.Should().BeTrue();
-            _secrets.Verify(s => s.SetAsync(It.IsAny<SetSecretRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+            saved.AccountPassword.Should().BeEmpty();
+            saved.AccountPasswordReference.Should().Be("secret-1");
+            saved.IsDefault.Should().BeFalse();
+
+            // The source still holds its password in the document, so there is no value to read.
+            _secrets.Verify(
+                s => s.SetAsync(It.Is<SetSecretRequest>(r => r.Name == "mail-password" && r.Value == "password1"), It.IsAny<CancellationToken>()),
+                Times.Once);
+            _secrets.VerifyNoOtherCalls();
         }
 
         [Fact]
@@ -835,10 +850,10 @@ namespace XUnitTest.Services
         public async Task GetAll_Office365_ReportsTheLinkedSecretStatus(string? secretStatus, string expected, bool configured)
         {
             GivenSecretStatus(secretStatus);
-            _repo.Setup(r => r.GetAllMailConfigurationsAsync())
+            _repo.Setup(r => r.GetAllMailConfigurationsAsync(It.IsAny<string?>()))
                  .ReturnsAsync(new List<MailServerConfiguration> { StoredOffice365() });
 
-            var response = (await Service().GetAllAsync()).Single();
+            var response = (await Service().GetAllAsync(new GetAllMailConfigurationsRequest())).Single();
 
             response.ClientSecretStatus.Should().Be(expected);
             response.IsClientSecretConfigured.Should().Be(configured);
@@ -849,9 +864,9 @@ namespace XUnitTest.Services
         {
             var stored = StoredOffice365();
             stored.ClientSecretReference = null;
-            _repo.Setup(r => r.GetAllMailConfigurationsAsync()).ReturnsAsync(new List<MailServerConfiguration> { stored });
+            _repo.Setup(r => r.GetAllMailConfigurationsAsync(It.IsAny<string?>())).ReturnsAsync(new List<MailServerConfiguration> { stored });
 
-            var response = (await Service().GetAllAsync()).Single();
+            var response = (await Service().GetAllAsync(new GetAllMailConfigurationsRequest())).Single();
 
             response.ClientSecretStatus.Should().Be(LinkedSecretStatus.None);
             response.IsClientSecretConfigured.Should().BeFalse();
@@ -864,12 +879,12 @@ namespace XUnitTest.Services
             var healthy = StoredOffice365("cfg-1");
             var unreadable = StoredOffice365("cfg-2");
             unreadable.ClientSecretReference = "secret-down";
-            _repo.Setup(r => r.GetAllMailConfigurationsAsync())
+            _repo.Setup(r => r.GetAllMailConfigurationsAsync(It.IsAny<string?>()))
                  .ReturnsAsync(new List<MailServerConfiguration> { healthy, unreadable });
             _secrets.Setup(s => s.GetAsync("secret-down", It.IsAny<CancellationToken>()))
                     .ThrowsAsync(new SecretVaultException("down", "get", "secret-down"));
 
-            var responses = await Service().GetAllAsync();
+            var responses = await Service().GetAllAsync(new GetAllMailConfigurationsRequest());
 
             responses.Select(r => (r.ItemId, r.ClientSecretStatus, r.IsClientSecretConfigured)).Should().Equal(
                 ("cfg-1", LinkedSecretStatus.Active, true),
@@ -888,14 +903,14 @@ namespace XUnitTest.Services
             var office365Password = StoredOffice365("cfg-pw");
             office365Password.AuthenticationType = MailAuthenticationType.Password;
             office365Password.ClientSecretReference = null;
-            _repo.Setup(r => r.GetAllMailConfigurationsAsync())
+            _repo.Setup(r => r.GetAllMailConfigurationsAsync(It.IsAny<string?>()))
                  .ReturnsAsync(new List<MailServerConfiguration>
                  {
                      new() { ItemId = "zoho", Provider = MailServiceProvider.Zoho, AccountPassword = "p" },
                      office365Password
                  });
 
-            var responses = await Service().GetAllAsync();
+            var responses = await Service().GetAllAsync(new GetAllMailConfigurationsRequest());
 
             responses.Should().OnlyContain(r => r.ClientSecretStatus == null);
             _secrets.Verify(s => s.GetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -905,7 +920,7 @@ namespace XUnitTest.Services
         public async Task Get_ByName_ReportsTheLinkedSecretStatus()
         {
             GivenSecretStatus(SecretStatuses.Deleted);
-            _repo.Setup(r => r.GetMailConfigurationByNameAsync("Microsoft 365 Primary")).ReturnsAsync(StoredOffice365());
+            _repo.Setup(r => r.GetMailConfigurationByNameForViewAsync("Microsoft 365 Primary")).ReturnsAsync(StoredOffice365());
 
             var response = await Service().GetAsync(new GetMailConfigurationRequest { ConfigurationName = "Microsoft 365 Primary" });
 
@@ -917,20 +932,24 @@ namespace XUnitTest.Services
         public async Task GetAll_SerializedResponse_CarriesTheStatusButNeverTheReference()
         {
             GivenSecretStatus(null);
-            _repo.Setup(r => r.GetAllMailConfigurationsAsync())
+            _repo.Setup(r => r.GetAllMailConfigurationsAsync(It.IsAny<string?>()))
                  .ReturnsAsync(new List<MailServerConfiguration>
                  {
                      StoredOffice365(),
-                     new() { ItemId = "zoho", Provider = MailServiceProvider.Zoho, AccountPassword = "p" }
+                     new() { ItemId = "zoho", Provider = MailServiceProvider.Zoho, AccountPassword = "p" },
+                     new() { ItemId = "zoho-ref", Provider = MailServiceProvider.Zoho, AccountPassword = "", AccountPasswordReference = "password-ref-1" }
                  });
 
-            var responses = await Service().GetAllAsync();
+            var responses = await Service().GetAllAsync(new GetAllMailConfigurationsRequest());
             var json = System.Text.Json.JsonSerializer.Serialize(
                 responses,
                 new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
 
             json.Should().NotContain("secret-1");
             json.Should().NotContain("clientSecretReference", "the reference has no field to travel in");
+            json.Should().NotContain("password-ref-1");
+            json.Should().NotContain("accountPasswordReference", "the password reference has no field to travel in either");
+            responses.Where(r => r.Provider == MailServiceProvider.Zoho).Should().OnlyContain(r => r.AccountPassword == "********");
             json.Should().Contain("\"clientSecretStatus\":\"missing\"");
 
             // Omitted, not null, for a provider that owns no linked secret.
@@ -940,15 +959,40 @@ namespace XUnitTest.Services
         [Fact]
         public async Task ReadsAndSaves_NeverReadASecretValue()
         {
+            // Only a duplicate reads a value (the source password, to copy it). Listing and saving
+            // a configuration of either kind, linked or not, never does.
             using var _ = new BlocksTestContext();
-            _repo.Setup(r => r.GetAllMailConfigurationsAsync()).ReturnsAsync(new List<MailServerConfiguration> { StoredOffice365() });
+            var zoho = new MailServerConfiguration
+            {
+                ItemId = "zoho-1",
+                Name = "Zoho Primary",
+                Provider = MailServiceProvider.Zoho,
+                Host = "smtp.zoho.com",
+                Port = 465,
+                AccountPassword = "",
+                AccountPasswordReference = "password-ref-1"
+            };
+            _repo.Setup(r => r.GetAllMailConfigurationsAsync(It.IsAny<string?>())).ReturnsAsync(new List<MailServerConfiguration> { StoredOffice365(), zoho });
             _repo.Setup(r => r.GetMailConfigurationByIdAsync("cfg-1")).ReturnsAsync(StoredOffice365());
+            _repo.Setup(r => r.GetMailConfigurationByIdAsync("zoho-1")).ReturnsAsync(zoho);
             var request = Office365Request();
             request.ConfigurationId = "cfg-1";
             request.ClientSecret = "";
 
-            await Service().GetAllAsync();
+            await Service().GetAllAsync(new GetAllMailConfigurationsRequest());
             await Service().SaveAsync(request);
+            (await Service().SaveAsync(new MailConfiguration
+            {
+                ConfigurationId = "zoho-1",
+                ConfigurationName = "Zoho Primary",
+                Provider = MailServiceProvider.Zoho,
+                Host = "smtp.zoho.com",
+                Port = 465,
+                SenderName = "Contoso",
+                SenderAddress = "noreply@contoso.com",
+                SenderUserName = "zohouser",
+                AccountPassword = "password2"
+            })).Outcome.Should().Be(MailConfigurationOutcome.Success);
 
             _secrets.Verify(s => s.GetValueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
             _secrets.Verify(s => s.GetValuesAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -1016,7 +1060,10 @@ namespace XUnitTest.Services
         {
             using var _ = new BlocksTestContext();
             GivenSecretStatus(SecretStatuses.Deleted);
-            _repo.Setup(r => r.GetMailConfigurationByIdAsync("cfg-1")).ReturnsAsync(StoredOffice365());
+
+            // A fresh document per read, as the database returns: the read-back after the failed
+            // write must see the stored record, not the instance the service updated in memory.
+            _repo.Setup(r => r.GetMailConfigurationByIdAsync("cfg-1")).ReturnsAsync(() => StoredOffice365());
             _repo.Setup(r => r.SaveMailConfigurationAsync(It.IsAny<MailServerConfiguration>()))
                  .ThrowsAsync(new InvalidOperationException("mongo down"));
             _secrets.Setup(s => s.SetAsync(It.IsAny<SetSecretRequest>(), It.IsAny<CancellationToken>()))

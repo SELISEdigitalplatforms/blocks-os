@@ -8,23 +8,25 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui-kits/form/form";
-import { createProjectNamingFormDefaultValue, createProjectNamingFormSchema } from "./utils";
+import { createProjectNamingFormDefaultValue, createCreateProjectNamingFormSchema } from "./utils";
 import { ProjectTermsCheckboxes } from "../project-terms-checkboxes";
 import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
 import { useStepper } from "@/components/stepper/stepper-provider";
 import { useCreateProjectFormState } from "../../utils";
+import { useT } from "@seliseblocks/genesis-os";
 import { WIZARD_EXIT, WizardFooter, WizardShell } from "../../wizard-shell";
 import { projectSlug } from "../../wizard-model";
 
 export const CreateProjectNamingForm = () => {
+  const { t } = useT("os.create-project");
   const { naming, setNaming, resetFormData } = useCreateProjectFormState();
   const { nextStep } = useStepper();
   const form = useForm({
     values: naming,
     mode: "onChange",
-    resolver: zodResolver(createProjectNamingFormSchema),
+    resolver: zodResolver(createCreateProjectNamingFormSchema()),
   });
   const onSubmitHandler = (values: typeof createProjectNamingFormDefaultValue) => {
     setNaming({ ...values, name: values.name.trim(), description: values.description.trim() });
@@ -48,7 +50,7 @@ export const CreateProjectNamingForm = () => {
         >
           <div>
             <h1 className="mb-1.5 text-[28px] font-bold tracking-tight text-high-emphasis">
-              Name your project
+              {t("CREATE_PROJECT_NAMING_FORM.NAME_YOUR_PROJECT")}
             </h1>
             <p className="text-[13.5px] text-medium-emphasis">
               This is what your team will see. You can rename it later; the identifier stays put.
@@ -68,7 +70,7 @@ export const CreateProjectNamingForm = () => {
                       type="text"
                       autoComplete="off"
                       className="h-auto px-3 py-2.5 text-sm"
-                      placeholder="Northwind Portal"
+                      placeholder={t("CREATE_PROJECT_NAMING_FORM.ENTER_YOUR_PROJECT_NAME")}
                     />
                   </FormControl>
                   <div className="flex items-center gap-2 text-[11.5px] text-low-emphasis">
@@ -132,7 +134,7 @@ export const CreateProjectNamingForm = () => {
             back={{ label: "Cancel", to: WIZARD_EXIT, onClick: resetFormData }}
             primary={
               <Button type="submit" disabled={!isValid}>
-                Continue
+                {t("common:CONTINUE")}
               </Button>
             }
           />

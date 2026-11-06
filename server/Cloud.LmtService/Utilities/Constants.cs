@@ -9,6 +9,9 @@ namespace Cloud.LmtService.Utilities
         public const string ColdRestoreQueue = "blocks-cold-restore-queue";
         public const string ArchiveRestoreQueue = "blocks-archive-restore-queue";
 
+        /// <summary>Queue of the blocks-logic mail listener. os only sends to it; never subscribe an os consumer to it.</summary>
+        public const string MailQueue = "blocks_email_listener";
+
         /// <summary>Expired-data cleanup. Scheduled separately from the backup so a cleanup failure cannot force a whole backup retry.</summary>
         public const string LmtCleanupQueue = "lmt-cleanup-queue";
 

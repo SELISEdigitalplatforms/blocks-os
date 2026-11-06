@@ -16,7 +16,9 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
-vi.mock("@seliseblocks/genesis-os/hooks", () => ({ useScopedPath: () => (p: string) => `/s/${p}` }));
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
+  useScopedPath: () => (p: string) => `/s/${p}`,
+}));
 vi.mock("nuqs", async () => {
   const React = await import("react");
   return {
@@ -42,7 +44,17 @@ vi.mock("@blocks-communication/mail/hooks/use-email-template", () => ({
   useGetEmailTemplates: () => h.templates,
 }));
 vi.mock("@blocks-communication/mail/hooks/use-email-config", () => ({
-  useGetEmailConfigs: () => h.configs,
+  useGetEmailSecretConfigs: () => ({ ...h.configs, data: { configurations: h.configs.data } }),
+}));
+// A single-org project (C13): no picker, the Default organization's templates.
+vi.mock("@blocks-communication/mail/hooks/use-email-organization", () => ({
+  EMAIL_ORGANIZATION_PARAM: "emailOrg",
+  useEmailOrganization: () => ({
+    isMultiOrgEnabled: false,
+    isLoading: false,
+    selectedOrganizationId: "default",
+  }),
+  useOrganizationName: () => "Default organization",
 }));
 vi.mock("@blocks-localization/hooks/use-language-manager", () => ({
   useGetLanguages: () => h.languages,

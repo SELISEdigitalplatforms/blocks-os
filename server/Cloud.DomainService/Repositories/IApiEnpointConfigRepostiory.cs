@@ -1,4 +1,3 @@
-using Cloud.DomainService.Models;
 using Cloud.DomainService.Requests;
 using Cloud.DomainService.Responses;
 

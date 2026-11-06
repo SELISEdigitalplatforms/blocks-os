@@ -1,4 +1,7 @@
 import type { LinkedSecretStatus } from "@/cross-modules/secrets/models/secret.model";
+import { tStatic } from "@seliseblocks/genesis-os";
+
+const I18N_MODULE = "os.communication.mail";
 
 export interface IEmailServiceData {
   id: string;
@@ -18,13 +21,92 @@ export interface IEmailLogs {
   type: "divider" | "message" | "empty";
 }
 
+/**
+ * `POST Mail/AssignTemplates`: the configuration, and either the chosen template ids or, with
+ * `allMatching`, every template of its organization matching `searchKey` and `language`.
+ */
+export interface IAssignTemplatesRequest {
+  configurationId: string;
+  allMatching: boolean;
+  templateIds?: string[];
+  searchKey?: string;
+  language?: string;
+}
+
+/** SPEC33 §6.1: copy a Default organization template to organizations, in the Worker. */
+export interface ICopyTemplateToOrganizationsRequest {
+  templateId: string;
+  allOrganizations: boolean;
+  organizationIds?: string[];
+  existing: "keep" | "replace";
+}
+
+export interface ICopyTemplateToOrganizationsResponse {
+  isSuccess: boolean;
+  /** The queued job's id. */
+  itemId?: string | null;
+  errors?: unknown;
+}
+
+/** SPEC34 §6.1: delete a Default template now and its organizations' copies in the background. */
+export interface IDeleteTemplateAcrossOrganizationsRequest {
+  templateId: string;
+  allOrganizations: boolean;
+  /** Sent only when not all organizations; 1 to 1000. */
+  organizationIds?: string[];
+}
+
+export interface IDeleteTemplateAcrossOrganizationsResponse {
+  isSuccess: boolean;
+  /** The queued job's id. */
+  itemId?: string | null;
+  errors?: unknown;
+}
+
+/** SPEC33 §6.2: an organization that already has its own template with the same name and language. */
+export interface ITemplateOrganizationCopy {
+  organizationId: string;
+  templateId: string;
+  lastUpdatedDate?: string;
+}
+
+export interface ITemplateOrganizationCopiesResponse {
+  isSuccess: boolean;
+  copies?: ITemplateOrganizationCopy[];
+  errors?: unknown;
+}
+
+export interface IAssignTemplatesResponse {
+  isSuccess: boolean;
+  /** Templates that switched; ones already on the configuration don't count. */
+  updatedCount?: number;
+  errors?: Record<string, string> | null;
+}
+
+/** One page of the email template list (GetTemplates). Without an organization the server lists the Default organization's templates. */
+export interface EmailTemplateListQuery {
+  pageNumber: number;
+  pageSize: number;
+  searchKey: string;
+  sortProperty?: string;
+  isDescending?: boolean;
+  language: string;
+  mailConfigurationId: string;
+  organizationId?: string;
+}
+
 export interface IEmailTemplate {
   itemId: string;
   createdDate?: string;
   lastUpdatedDate?: string;
   createdBy?: string;
   lastUpdatedBy?: string;
-  organizationIds?: string[];
+  /**
+   * The organization the template belongs to; "default" for the Default organization. The API
+   * always returns it; it is optional only because the console builds partial templates (a new
+   * step-1 draft, a body-only save) that must not send one.
+   */
+  organizationId?: string;
   tags?: string[];
   mailConfigurationId?: string;
   templateBody?: string;
@@ -183,10 +265,10 @@ export const MAIL_PROVIDERS: readonly IMailProviderCapability[] = [
   },
 ] as const;
 
-export const MAIL_AUTHENTICATION_LABELS: Record<MailAuthenticationType, string> = {
-  [MailAuthenticationType.OAuthClientCredentials]: "OAuth (Client credentials)",
-  [MailAuthenticationType.Password]: "Username & Password",
-};
+export const getMailAuthenticationLabel = (type: MailAuthenticationType): string =>
+  type === MailAuthenticationType.OAuthClientCredentials
+    ? tStatic(I18N_MODULE, "EMAIL_MODEL.AUTH_OAUTH_CLIENT_CREDENTIALS")
+    : tStatic(I18N_MODULE, "EMAIL_MODEL.AUTH_USERNAME_PASSWORD");
 
 export const getMailProvider = (
   provider: MailServiceProvider,
@@ -217,7 +299,8 @@ export const getFixedTransport = (
  * should not render a blank.
  */
 export const getMailProviderLabel = (provider: MailServiceProvider): string =>
-  getMailProvider(provider)?.label ?? `Provider ${provider}`;
+  getMailProvider(provider)?.label ??
+  tStatic(I18N_MODULE, "EMAIL_MODEL.UNKNOWN_PROVIDER", { provider });
 
 export const getMailProvidersFor = (isInbound: boolean): IMailProviderCapability[] =>
   MAIL_PROVIDERS.filter((p) => (isInbound ? p.supportsInbound : p.supportsOutbound));
@@ -272,6 +355,10 @@ export interface IEmailConfig {
    * Office 365 OAuth configurations.
    */
   clientSecretStatus?: LinkedSecretStatus;
+  /** The organization the configuration belongs to; `"default"` for the Default organization. */
+  organizationId?: string;
+  /** Whether it is its organization's default. */
+  isOrganizationDefault?: boolean;
 }
 
 /**
@@ -304,7 +391,10 @@ export interface IEmailUsage {
   status: string;
   error: string;
   date: string;
-  /** Only on the details read; list rows omit it. */
+  /**
+   * No longer read by the client: the details read returns `null` and the stored message is
+   * fetched on demand from `GetMailBoxMailSource` (see `IMailBoxMailContent.rawMimeLength`).
+   */
   rawMime?: string | null;
   isInbound?: boolean;
   /** The inbound configuration that read the mail. Empty for outbound mail. */
@@ -325,17 +415,15 @@ export interface IMailBoxMailContent {
   cc?: string | null;
   replyTo?: string | null;
   attachments: IMailBoxMailAttachment[];
+  /** Length of the stored message source; above 0 the `.eml` and the Original view are offered. */
+  rawMimeLength?: number;
+  /** The message is too large to parse: no bodies or attachments, only the `.eml`. */
+  previewTooLarge?: boolean;
 }
 
 export interface IEmailUsageResponse {
   totalCount: number;
   mails: IEmailUsage[];
-  errors: Record<string, unknown> | null;
-  isSuccess: boolean;
-}
-
-export interface IGetMailBoxMailAttachmentResponse {
-  attachment?: { fileName: string; contentType: string; contentBase64: string } | null;
   errors: Record<string, unknown> | null;
   isSuccess: boolean;
 }

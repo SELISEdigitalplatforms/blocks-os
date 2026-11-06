@@ -2,7 +2,7 @@ import { FilterToolbar, useSortQueryParams } from "@/components/filter-toolbar";
 import { useGetRoleFilterOptions } from "@blocks-idp/iam/hooks/use-roles";
 import { Mail, User } from "lucide-react";
 import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 
 type OrganizationUsersFilter = {
   search: { selected: string; value: string };
@@ -12,7 +12,7 @@ type OrganizationUsersFilter = {
 export const useOrganizationUsersFilterQueryParams = () => {
   const [queryParams, setQueryParams] = useQueryStates({
     page: parseAsInteger.withDefault(0),
-    pageSize: parseAsInteger.withDefault(5),
+    pageSize: parseAsInteger.withDefault(10),
     "selected-filter": parseAsString.withDefault("name"),
     name: parseAsString.withDefault(""),
     email: parseAsString.withDefault(""),
@@ -27,6 +27,7 @@ export const useOrganizationUsersSortQueryParams = () =>
   });
 
 export const OrganizationUsersFilterToolbar = ({ organizationId }: { organizationId: string }) => {
+  const { t } = useT("os.idp.organizations");
   const { queryParams, setQueryParams } = useOrganizationUsersFilterQueryParams();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const selectedRoles = queryParams.roles ?? [];
@@ -65,7 +66,7 @@ export const OrganizationUsersFilterToolbar = ({ organizationId }: { organizatio
           type: "DropdownSearchInput",
           label: "",
           props: {
-            placeholder: "Minimum 3 characters…",
+            placeholder: t("ORGANIZATION_USERS_FILTER_TOOLBAR.SEARCH_PLACEHOLDER"),
             // The OS DropdownSearchInput exposes selectContent/SelectItem/input only,
             // so the iam-only selectTrigger and wrapper overrides are dropped here.
             className: {
@@ -81,7 +82,7 @@ export const OrganizationUsersFilterToolbar = ({ organizationId }: { organizatio
         {
           key: "roles",
           type: "MultiSelect",
-          label: "Roles",
+          label: t("ORGANIZATION_USERS_FILTER_TOOLBAR.ROLES"),
           props: {
             options: roleOptions,
             disabled: isRolesLoading,

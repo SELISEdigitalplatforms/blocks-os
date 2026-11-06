@@ -16,6 +16,9 @@ const IDP_HEADER = "x-blocks-idp";
 export const maskKey = (key: string): string =>
   key.length <= 6 ? "*".repeat(key.length) : `${key.slice(0, 3)}***${key.slice(-3)}`;
 
+/** The provider `fillProviderFormFlow` picks. Toasts name the provider, since the key is masked. */
+const E2E_PROVIDER_NAME = "Keycloak";
+
 export async function navigateToExternalIdpFlow(page: Page) {
   await openSecretManagement(page, "external-idp", "External IdP");
 }
@@ -169,7 +172,7 @@ export async function fillProviderFormFlow(
   provider: { key: string; issuer: string; audience: string },
 ) {
   const form = dialog(page);
-  await selectOption(page, "Provider", "Keycloak");
+  await selectOption(page, "Provider", E2E_PROVIDER_NAME);
   await form.getByLabel("Key").fill(provider.key);
   await form.getByLabel("Issuer").fill(provider.issuer);
   await form.getByLabel("Audiences").fill(provider.audience);
@@ -260,7 +263,9 @@ export async function openEditProviderAndCloseFlow(page: Page, key: string) {
 
 export async function deleteProviderFlow(page: Page, key: string) {
   await page.getByRole("button", { name: `Delete ${maskKey(key)}` }).click();
-  await expect(page.getByText(`Removed ${maskKey(key)}`, { exact: true })).toBeVisible({ timeout: 20000 });
+  await expect(
+    page.getByText(`${E2E_PROVIDER_NAME} provider removed`, { exact: true }).first(),
+  ).toBeVisible({ timeout: 20000 });
   await expect(page.getByRole("button", { name: `Delete ${maskKey(key)}` })).toBeHidden({
     timeout: 15000,
   });
@@ -289,7 +294,7 @@ export async function mapClaimsFromTokenFlow(page: Page, key: string, token: str
   await page.getByRole("option", { name: "preferred_username", exact: true }).click();
 
   await panel.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByText(`Claim mapping saved for ${maskKey(key)}`, { exact: true })).toBeVisible({
+  await expect(page.getByText(`Claim mapping saved for ${E2E_PROVIDER_NAME}`, { exact: true })).toBeVisible({
     timeout: 20000,
   });
 }
@@ -336,11 +341,15 @@ export async function toggleProviderFromListFlow(page: Page, key: string) {
     timeout: 15000,
   });
   await page.getByRole("button", { name: "Disable", exact: true }).click();
-  await expect(page.getByText(`${masked} disabled`, { exact: true })).toBeVisible({ timeout: 20000 });
+  await expect(
+    page.getByText(`${E2E_PROVIDER_NAME} provider disabled`, { exact: true }),
+  ).toBeVisible({ timeout: 20000 });
   await expect(page.getByText("Inactive")).toBeVisible({ timeout: 15000 });
 
   await page.getByRole("button", { name: `Enable ${masked}` }).click();
   await expect(page.getByRole("heading", { name: "Enable provider" })).toBeVisible();
   await page.getByRole("button", { name: "Enable", exact: true }).click();
-  await expect(page.getByText(`${masked} enabled`, { exact: true })).toBeVisible({ timeout: 20000 });
+  await expect(
+    page.getByText(`${E2E_PROVIDER_NAME} provider enabled`, { exact: true }),
+  ).toBeVisible({ timeout: 20000 });
 }

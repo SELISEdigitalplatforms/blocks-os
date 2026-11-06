@@ -1,9 +1,8 @@
 using Blocks.Genesis;
-using Configuration.DomainService.Mail.Entities;
-using Configuration.DomainService.Mail.Enums;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using System.Globalization;
+using Blocks.Genesis.Entities.Logic;
 
 namespace Configuration.DomainService.Mail.Mailbox.Services
 {
@@ -165,7 +164,12 @@ namespace Configuration.DomainService.Mail.Mailbox.Services
             var dbContext = _dbContextProvider.GetDatabase();
             var collection = dbContext.GetCollection<MailBoxEntity>($"{nameof(MailBoxEntity)}s");
             var filter = Builders<MailBoxEntity>.Filter.Eq(x => x.MessageId, messageId);
-            var entities = await collection.Find(filter).ToListAsync();
+            // Every status row of the mail, but never its stored MIME: that is read once, from one
+            // row, by GetRawMimeAsync.
+            var entities = await collection.Find(filter)
+                .Project<MailBoxEntity>(Builders<MailBoxEntity>.Projection.Exclude(x => x.RawMime))
+                .ToListAsync()
+                .ConfigureAwait(false);
 
             if (entities.Count == 0)
             {
@@ -187,6 +191,48 @@ namespace Configuration.DomainService.Mail.Mailbox.Services
             }
 
             return latestEntity;
+        }
+
+        public async Task<MailBoxRawMime?> GetRawMimeAsync(string messageId, int? maxLength)
+        {
+            var dbContext = _dbContextProvider.GetDatabase()
+                ?? throw new InvalidOperationException("No tenant database in the request context.");
+            var collection = dbContext.GetCollection<MailBoxEntity>($"{nameof(MailBoxEntity)}s");
+            var rawMime = $"${nameof(MailBoxEntity.RawMime)}";
+            var length = new BsonDocument("$strLenCP", rawMime);
+
+            // Above the cap the string stays in MongoDB: only its length reaches the API.
+            BsonValue projectedRawMime = maxLength is null
+                ? rawMime
+                : new BsonDocument("$cond", new BsonArray
+                {
+                    new BsonDocument("$lte", new BsonArray { length, maxLength.Value }),
+                    rawMime,
+                    BsonNull.Value
+                });
+
+            var stages = new[]
+            {
+                new BsonDocument("$match", new BsonDocument
+                {
+                    { nameof(MailBoxEntity.MessageId), messageId },
+                    { nameof(MailBoxEntity.RawMime), new BsonDocument { { "$type", "string" }, { "$ne", string.Empty } } }
+                }),
+                // Newest first; _id breaks a tie between duplicate inbound rows deterministically.
+                new BsonDocument("$sort", new BsonDocument { { nameof(MailBoxEntity.Date), -1 }, { "_id", 1 } }),
+                new BsonDocument("$limit", 1),
+                new BsonDocument("$project", new BsonDocument
+                {
+                    { "_id", 0 },
+                    { nameof(MailBoxRawMime.Length), length },
+                    { nameof(MailBoxRawMime.RawMime), projectedRawMime }
+                })
+            };
+
+            using var cursor = await collection
+                .AggregateAsync(PipelineDefinition<MailBoxEntity, MailBoxRawMime>.Create(stages))
+                .ConfigureAwait(false);
+            return await cursor.FirstOrDefaultAsync().ConfigureAwait(false);
         }
     }
 }

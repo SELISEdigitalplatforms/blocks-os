@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ShieldCheck, User, X } from "lucide-react";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
 import { Label } from "@/components/ui-kits/label/label";
@@ -34,29 +34,32 @@ const AccessChips = ({
   onRemove: (id: string) => void;
   disabled?: boolean;
   icon: typeof User;
-}) => (
-  <div className="flex flex-wrap gap-1.5">
-    {ids.map((id) => (
-      <Badge key={id} variant="secondary" className="gap-1 py-0.5 pl-2 pr-1 font-normal">
-        <Icon className="h-3 w-3 shrink-0 text-muted-foreground" />
-        <span className="max-w-[180px] truncate" title={labels[id] ?? id}>
-          {labels[id] ?? id}
-        </span>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-4 w-4 p-0 hover:bg-transparent"
-          onClick={() => onRemove(id)}
-          disabled={disabled}
-          aria-label={`Remove ${labels[id] ?? id}`}
-        >
-          <X className="h-3 w-3" />
-        </Button>
-      </Badge>
-    ))}
-  </div>
-);
+}) => {
+  const { t } = useT("os.secrets");
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {ids.map((id) => (
+        <Badge key={id} variant="secondary" className="gap-1 py-0.5 pl-2 pr-1 font-normal">
+          <Icon className="h-3 w-3 shrink-0 text-muted-foreground" />
+          <span className="max-w-[180px] truncate" title={labels[id] ?? id}>
+            {labels[id] ?? id}
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-4 w-4 p-0 hover:bg-transparent"
+            onClick={() => onRemove(id)}
+            disabled={disabled}
+            aria-label={t("USER_ROLE_PICKER.REMOVE", { value1: labels[id] ?? id })}
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        </Badge>
+      ))}
+    </div>
+  );
+};
 
 /** One bordered box per access kind, so users and roles never read as a single blurred list. */
 const AccessBox = ({
@@ -99,6 +102,7 @@ const AccessBox = ({
  * matches nobody and a secret that is silently unreadable with no error anywhere.
  */
 export function UserRolePicker({ value, onChange, disabled }: UserRolePickerProps) {
+  const { t } = useT("os.secrets");
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
 
   const [usersOpen, setUsersOpen] = useState(false);
@@ -155,16 +159,16 @@ export function UserRolePicker({ value, onChange, disabled }: UserRolePickerProp
   return (
     <div className="space-y-3">
       <AccessBox
-        title="People"
-        hint="No one added yet."
+        title={t("USER_ROLE_PICKER.PEOPLE")}
+        hint={t("USER_ROLE_PICKER.NO_ONE_ADDED_YET")}
         count={value.userIds.length}
         action={
           <AccessPickerDialog
-            title="Add people"
-            description="Pick the people who may read this secret's value."
+            title={t("USER_ROLE_PICKER.ADD_PEOPLE")}
+            description={t("USER_ROLE_PICKER.PICK_THE_PEOPLE_WHO_MAY")}
             triggerLabel="Add"
-            searchPlaceholder="Search by email"
-            emptyLabel="No users found"
+            searchPlaceholder={t("USER_ROLE_PICKER.SEARCH_BY_EMAIL")}
+            emptyLabel={t("USER_ROLE_PICKER.NO_USERS_FOUND")}
             selected={value.userIds}
             items={userItems}
             totalCount={usersData?.totalCount ?? 0}
@@ -197,16 +201,16 @@ export function UserRolePicker({ value, onChange, disabled }: UserRolePickerProp
       </AccessBox>
 
       <AccessBox
-        title="Roles"
-        hint="No roles added yet."
+        title={t("USER_ROLE_PICKER.ROLES")}
+        hint={t("USER_ROLE_PICKER.NO_ROLES_ADDED_YET")}
         count={value.roles.length}
         action={
           <AccessPickerDialog
-            title="Add roles"
-            description="Anyone holding one of these roles may read this secret's value."
+            title={t("USER_ROLE_PICKER.ADD_ROLES")}
+            description={t("USER_ROLE_PICKER.ANYONE_HOLDING_ONE_OF_THESE")}
             triggerLabel="Add"
-            searchPlaceholder="Search by role name"
-            emptyLabel="No roles found"
+            searchPlaceholder={t("USER_ROLE_PICKER.SEARCH_BY_ROLE_NAME")}
+            emptyLabel={t("USER_ROLE_PICKER.NO_ROLES_FOUND")}
             selected={value.roles}
             items={roleItems}
             totalCount={rolesData?.totalCount ?? 0}
@@ -241,7 +245,7 @@ export function UserRolePicker({ value, onChange, disabled }: UserRolePickerProp
         // Backend semantics: an empty access list is not "everyone", it is the creator plus
         // root. Saying so inline is cheaper than a validation rule that forbids a legal state.
         <p className="text-xs text-muted-foreground">
-          Leave both empty and only you and platform administrators will be able to read this.
+          {t("USER_ROLE_PICKER.LEAVE_BOTH_EMPTY_AND_ONLY")}
         </p>
       )}
     </div>

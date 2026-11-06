@@ -1,4 +1,5 @@
 using Blocks.Genesis;
+using Blocks.Genesis.Entities.Os;
 using DomainService.Catalogue.Models;
 using DomainService.Entities;
 using Microsoft.Extensions.Logging;

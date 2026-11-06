@@ -1,4 +1,6 @@
+using Blocks.Secrets;
 using Blocks.Genesis;
+using Blocks.Genesis.Notifications;
 using DomainService.Dtos;
 using DomainService.Projects;
 using DomainService.Shared;
@@ -10,7 +12,16 @@ using Worker.Configuration;
 using DomainService.Billing.Services;
 using Worker.Consumers.Billing;
 using Worker.Consumers.Identifier;
+using Worker.Consumers.Mail;
 using Worker.Consumers.Migration;
+using Worker.Consumers.Notification;
+using Worker.Consumers.Webhooks;
+using Configuration.DomainService.Webhooks;
+using Configuration.DomainService.Notification.Propagation;
+using Configuration.DomainService.Mail.Template;
+using Configuration.DomainService.Mail.Template.Services;
+using Configuration.DomainService.Shared.Utilities;
+using ConfigurationConstants = Configuration.DomainService.Shared.Utilities.Constants;
 
 const string _serviceName = "blocks-os-worker";
 
@@ -42,18 +53,42 @@ IHostBuilder CreateHostBuilder(string[] args) =>
           //  services.AddHostedService<RestoreUnfinishedProjectBackgroundService>();
 
             #region Identifier Service Consumers
-            services.AddApplicationServices(
-                isProduction: context.HostingEnvironment.IsProduction(),
-                logicBaseUrl: context.Configuration["Blocks:LogicBaseUrl"]);
-            // A paid order, waiting for its environments to be built.
-            services.AddSingleton<IConsumer<ProvisionOrderCommand>, ProvisionOrderConsumer>();
+            services.AddApplicationServices();
+            // The migration-failed notification goes through the Genesis publisher.
+            services.AddBlocksNotifications();
+            // Project create makes the default data-source secret (Identifier DataGatewayRootProvisioner).
+            services.AddBlocksSecrets();
             services.AddSingleton<IConsumer<Tenant>, ConfigureProjectConsumer>();
             services.AddSingleton<IConsumer<DisableDomainBindingRequest>, DisableDomainBindingConsumer>();
             services.AddSingleton<IConsumer<RestoreProjectRequest>, RestoreProjectConsumer>();
             services.AddSingleton<IConsumer<ConfigureDomainRequest>, DomainConfigureConsumer>();
             services.AddSingleton<IConsumer<CreateUserByEmailPostEvent>, CreateUserByEmailPostConsumer>();
             services.AddSingleton<IConsumer<MigrationCompletionEvent>, MigrationCompletionConsumer>();
-         ApplicationConfigurations.ConfigureWorker(services, IdentifierConstants.GetMessageConfiguration(secret.MessageConnectionString));
+            #endregion
+
+            #region Configuration Service Consumers
+            // Root built-in notification config changes, copied to the seed database and every other tenant.
+            services.AddSingleton<INotificationConfigurationPropagator, NotificationConfigurationPropagator>();
+            services.AddSingleton<IConsumer<BuiltInNotificationConfigurationChangedEvent>, BuiltInNotificationConfigurationConsumer>();
+            // A Default organization template copied to organizations (SPEC33), queued by the Mail API.
+            services.AddEmailTemplateCopyJob();
+            services.AddSingleton<IConsumer<EmailTemplateCopyCommand>, EmailTemplateCopyConsumer>();
+            // The organizations' copies of a deleted Default template (SPEC34), on the same queue. The repository and
+            // organization reader come from AddEmailTemplateCopyJob.
+            services.AddSingleton<IEmailTemplateDeleteJob, EmailTemplateDeleteJob>();
+            services.AddSingleton<IConsumer<EmailTemplateDeleteCommand>, EmailTemplateDeleteConsumer>();
+            #endregion
+
+            #region Webhook Consumers
+            // Actions with the webhook target on, fanned out to the tenant's webhooks, then one job per delivery attempt.
+            services.AddActionsAndWebhooks();
+            services.AddSingleton<IConsumer<BlocksAction>, WebhookActionConsumer>();
+            services.AddSingleton<IConsumer<WebhookFanOutRetry>, WebhookFanOutRetryConsumer>();
+            services.AddSingleton<IConsumer<WebhookDeliveryJob>, WebhookDeliveryJobConsumer>();
+         ApplicationConfigurations.ConfigureWorker(services, ConfigurationConstants.WithEmailTemplateQueue(
+             ConfigurationConstants.WithWebhookQueues(
+                 ConfigurationConstants.WithNotificationConfigurationQueue(
+                     IdentifierConstants.GetMessageConfiguration(secret.MessageConnectionString)))));
             #endregion
         });
 

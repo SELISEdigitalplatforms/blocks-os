@@ -21,6 +21,7 @@ import {
   useTracesFilterQueryParams,
 } from "./traces-filter-toolbar";
 import { TracesList } from "./traces-list";
+import { useT } from "@seliseblocks/genesis-os";
 type TracesOverviewProps = {
   projectKey: string;
 };
@@ -31,6 +32,7 @@ type TracesOverviewProps = {
  * collection has nothing to trace and is left out.
  */
 export function TracesOverview({ projectKey }: TracesOverviewProps) {
+  const { t } = useT("os.lmt");
   const isMobile = useIsMobile();
   const { queryParams, setQueryParams } = useTracesFilterQueryParams();
   const { sortQueryParams } = useTraceSortQueryParams();
@@ -120,20 +122,20 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
         onValueChange={(value: string) => tabChangedHandler(value as keyof typeof TRACE_PROVIDERS)}
       >
         <PageHeader
-          title="Tracing"
-          description="Trace requests across services"
+          title={t("TRACES_OVERVIEW.TRACING")}
+          description={t("TRACES_OVERVIEW.TRACE_REQUESTS_ACROSS_SERVICES")}
           actions={
             <>
               <Button onClick={() => setOpen((current) => !current)} variant="outline" size="sm">
                 <BookOpenText className="aspect-square w-4" />
-                <span className="sr-only sm:not-sr-only sm:ml-2">Guide</span>
+                <span className="sr-only sm:not-sr-only sm:ml-2">{t("TRACES_OVERVIEW.GUIDE")}</span>
               </Button>
               <LMTQueryAgentSheet
-                description="Hello! I can help you search and analyze your logs, metrics, and tracing data."
+                description={t("TRACES_OVERVIEW.HELLO_I_CAN_HELP_YOU")}
                 questions={[
-                  "Show me traces for the last 1 hour",
-                  "Which services are generating the most traces",
-                  "Which traces had high latency today",
+                  t("TRACES_OVERVIEW.QUESTION_LAST_HOUR"),
+                  t("TRACES_OVERVIEW.QUESTION_TOP_SERVICES"),
+                  t("TRACES_OVERVIEW.QUESTION_HIGH_LATENCY"),
                 ]}
               />
             </>
@@ -144,9 +146,9 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
             value={tabId}
             onChange={(tier) => tabChangedHandler(tier as keyof typeof TRACE_PROVIDERS)}
             descriptions={{
-              [TRACE_PROVIDERS.hot]: "Live and recent traces for active debugging.",
-              [TRACE_PROVIDERS.cold]: "Longer-term stored traces for later investigation.",
-              [TRACE_PROVIDERS.archive]: "Deep history retained for audit and export use cases.",
+              [TRACE_PROVIDERS.hot]: t("TRACES_OVERVIEW.TIER_HOT"),
+              [TRACE_PROVIDERS.cold]: t("TRACES_OVERVIEW.TIER_COLD"),
+              [TRACE_PROVIDERS.archive]: t("TRACES_OVERVIEW.TIER_ARCHIVE"),
             }}
           />
         </div>
@@ -171,7 +173,6 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
                   <Pagination
                     page={queryParams.page}
                     pageSize={queryParams.pageSize}
-                    pageSizeOptions={[10, 20, 50]}
                     onChange={pageChangeHandler}
                     onPageSizeChange={pageSizeChangeHandler}
                     totalCount={data.totalCount || 0}

@@ -12,11 +12,12 @@ import { mockHttpClientFactory } from "@/test-utils/__mocks__";
 // is undefined for an externalised dependency under vitest.
 const h = vi.hoisted(() => ({ tenant: "tenant-1" }));
 
-vi.mock("@seliseblocks/genesis-os", () => {
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => {
   // The app's own ui-kits/tooltip re-exports these straight from the package barrel, so
   // stubbing the barrel means stubbing them too.
   const Passthrough = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
   return {
+    ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
     useImpersonateStore: () => ({
       isInitialized: true,
       isImpersonated: false,

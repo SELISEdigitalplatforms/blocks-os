@@ -120,6 +120,7 @@ namespace Cloud.LmtService.Services.ColdRestore
                     Payload = message
                 });
 
+
             return new StartArchiveRestoreResponse
             {
                 RequestId = requestId,

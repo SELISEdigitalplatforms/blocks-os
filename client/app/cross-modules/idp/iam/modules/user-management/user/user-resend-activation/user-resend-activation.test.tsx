@@ -34,6 +34,16 @@ describe("UserResendActivationMail", () => {
     expect(setOpen).toHaveBeenCalledWith(false);
   });
 
+  it("shows an error toast, not a success one, when the server answers isSuccess false", async () => {
+    h.mutateAsync.mockResolvedValue({ isSuccess: false, errors: { user: "inactive" } });
+    render(<UserResendActivationMail userId="u1" open={true} setOpen={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Resend" }));
+    await waitFor(() =>
+      expect(h.toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "destructive" })),
+    );
+    expect(h.toast).not.toHaveBeenCalledWith(expect.objectContaining({ variant: "success" }));
+  });
+
   it("shows an error toast when the mutation throws", async () => {
     h.mutateAsync.mockRejectedValue(new Error("boom"));
     render(<UserResendActivationMail userId="u1" open={true} setOpen={vi.fn()} />);

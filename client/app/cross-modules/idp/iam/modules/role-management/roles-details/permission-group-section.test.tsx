@@ -6,6 +6,7 @@ const h = vi.hoisted(() => ({
   changePermissionGroupSelection: vi.fn(),
   permissionMap: new Map<string, unknown>(),
   isEditMode: true,
+  grantable: null as Set<string> | null,
 }));
 
 vi.mock("./role-details-state", () => ({
@@ -14,6 +15,7 @@ vi.mock("./role-details-state", () => ({
       changePermissionGroupSelection: h.changePermissionGroupSelection,
       permissionMap: h.permissionMap,
       isEditMode: h.isEditMode,
+      grantableResources: h.grantable,
     }),
 }));
 vi.mock("@/components/ui-kits/tooltip/tooltip", () => ({
@@ -57,6 +59,7 @@ describe("PermissionGroupSection", () => {
     vi.clearAllMocks();
     h.isEditMode = true;
     h.permissionMap = new Map();
+    h.grantable = null;
   });
 
   it("renders the group name, total count and its permission rows", () => {
@@ -93,6 +96,19 @@ describe("PermissionGroupSection", () => {
 
   it("disables the group checkbox when not in edit mode", () => {
     h.isEditMode = false;
+    renderSection();
+    expect((screen.getByRole("checkbox") as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("toggles only the permissions the caller may grant", () => {
+    h.grantable = new Set(["res-2"]);
+    renderSection();
+    fireEvent.click(screen.getByRole("checkbox"));
+    expect(h.changePermissionGroupSelection).toHaveBeenCalledWith([group.permissions[1]], true);
+  });
+
+  it("turns the group checkbox off when the caller may grant none of it", () => {
+    h.grantable = new Set();
     renderSection();
     expect((screen.getByRole("checkbox") as HTMLButtonElement).disabled).toBe(true);
   });

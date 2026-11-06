@@ -22,11 +22,13 @@ import { Captcha } from "@/components/captcha";
 import { useCaptcha } from "@blocks-idp/captcha/hooks/use-captcha";
 import { PasswordStrengthChecker } from "../../components/password-strength-checker/password-strength-checker";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useT } from "@seliseblocks/genesis-os";
 type ActivationFormProps = {
   code: string;
 };
 const xBlocksKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
 export const ActivationForm = ({ code }: ActivationFormProps) => {
+  const { t } = useT("os.idp.auth");
   const navigate = useNavigate();
   const form = useForm({
     defaultValues: activationFormDefaultValue,
@@ -53,9 +55,7 @@ export const ActivationForm = ({ code }: ActivationFormProps) => {
       navigate("/login");
     }
   }, [code, navigate]);
-  const onSubmitHandler = async (
-    values: z.infer<typeof activationFormSchema>,
-  ) => {
+  const onSubmitHandler = async (values: z.infer<typeof activationFormSchema>) => {
     try {
       // console.log("captchaCode", captchaCode);
       // return;
@@ -68,18 +68,19 @@ export const ActivationForm = ({ code }: ActivationFormProps) => {
         lastname: values.lastname,
         captchaCode,
       });
-      if (!res.isSuccess) {
+      if (res.isSuccess) {
+        navigate("/activate-success");
+      } else {
         resetCaptcha();
-        return showErrorToast({ errors: res.errors });
+        showErrorToast({ errors: res.errors });
       }
-      return navigate("/activate-success");
     } catch (error: unknown) {
       resetCaptcha();
       if (isErrorWithErrors(error)) {
         window.location.reload();
         showErrorToast({ errors: error.errors });
       } else {
-        showErrorToast({ errors: "Something went wrong" });
+        showErrorToast({ errors: t("ACTIVATION_FORM.ERROR_GENERIC") });
       }
     }
   };
@@ -88,15 +89,13 @@ export const ActivationForm = ({ code }: ActivationFormProps) => {
   const { isValid } = form.formState;
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmitHandler)}
-        className="flex flex-col gap-4">
+      <form onSubmit={form.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4">
         <FormField
           control={form.control}
           name="firstname"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>First Name</FormLabel>
+              <FormLabel>{t("ACTIVATION_FORM.FIRST_NAME")}</FormLabel>
               <FormControl>
                 <Input {...field} />
               </FormControl>
@@ -109,7 +108,7 @@ export const ActivationForm = ({ code }: ActivationFormProps) => {
           name="lastname"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Last Name</FormLabel>
+              <FormLabel>{t("ACTIVATION_FORM.LAST_NAME")}</FormLabel>
               <FormControl>
                 <Input {...field} />
               </FormControl>
@@ -122,7 +121,7 @@ export const ActivationForm = ({ code }: ActivationFormProps) => {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>{t("ACTIVATION_FORM.PASSWORD")}</FormLabel>
               <FormControl>
                 <PasswordInput {...field} />
               </FormControl>
@@ -135,7 +134,7 @@ export const ActivationForm = ({ code }: ActivationFormProps) => {
           name="confirmPassword"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Confirm Password</FormLabel>
+              <FormLabel>{t("ACTIVATION_FORM.CONFIRM_PASSWORD")}</FormLabel>
               <FormControl>
                 <PasswordInput {...field} />
               </FormControl>
@@ -152,8 +151,9 @@ export const ActivationForm = ({ code }: ActivationFormProps) => {
         <Button
           type="submit"
           className="w-full"
-          disabled={isPending || !captchaCode || !requirementsMet || !isValid}>
-          Activate
+          disabled={isPending || !captchaCode || !requirementsMet || !isValid}
+        >
+          {t("ACTIVATION_FORM.ACTIVATE")}
         </Button>
       </form>
     </Form>

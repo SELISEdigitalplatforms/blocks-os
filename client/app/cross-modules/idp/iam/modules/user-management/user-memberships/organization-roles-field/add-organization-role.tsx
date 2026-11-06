@@ -21,11 +21,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
-import { useProjectStore } from "@seliseblocks/genesis-os";
-import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
+import { useGetAssignableRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { Info, Plus, ShieldCheck } from "lucide-react";
-import { MINIMUM_ROLE_MESSAGE } from "./role-assignment.constants";
+import { getMinimumRoleMessage } from "./role-assignment.constants";
+import { GrantHint } from "@blocks-idp/iam/components/grant-hint";
 
 type AddOrganizationRoleProps = {
   roles: IRole[];
@@ -48,6 +49,7 @@ export const AddOrganizationRole = ({
   onSave,
   organizationId,
 }: AddOrganizationRoleProps) => {
+  const { t } = useT("os.idp.users");
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   // An explicit `organizationId` always wins. Sending the tenant id to
   // `/api/iam/roles` would either be wrong (different scope) or duplicate
@@ -60,7 +62,7 @@ export const AddOrganizationRole = ({
   const [selectedRoles, setSelectedRoles] = useState<IRole[]>([]);
   const [filter, setFilter] = useState({ page: 0, pageSize: 10, search: "" });
 
-  const { data, isLoading } = useGetRoles(
+  const { data, isLoading } = useGetAssignableRoles(
     {
       page: filter.page,
       pageSize: filter.pageSize,
@@ -80,10 +82,7 @@ export const AddOrganizationRole = ({
     { enabled: open && !!scopeKey },
   );
 
-  const rolesSlug = useMemo(
-    () => roles.map((item) => item.slug) || [],
-    [roles],
-  );
+  const rolesSlug = useMemo(() => roles.map((item) => item.slug) || [], [roles]);
 
   const selectedRolesSlug = useMemo(
     () => selectedRoles.map((item) => item.slug) || [],
@@ -93,8 +92,7 @@ export const AddOrganizationRole = ({
   const totalRoleCount = selectedRoles.length;
   const isAtMaxRoles = totalRoleCount >= MAX_ROLES_PER_USER;
 
-  const isRoleSelectedInModal = (slug: string) =>
-    selectedRolesSlug.includes(slug);
+  const isRoleSelectedInModal = (slug: string) => selectedRolesSlug.includes(slug);
 
   const hasSelectionChanged =
     selectedRolesSlug.length !== rolesSlug.length ||
@@ -112,16 +110,13 @@ export const AddOrganizationRole = ({
       );
     }
     if (selectedRoles.length === 1 && selectedRolesSlug.includes(role.slug)) {
-      showErrorToast({ errors: MINIMUM_ROLE_MESSAGE });
+      showErrorToast({ errors: getMinimumRoleMessage() });
       return;
     }
-    setSelectedRoles((currentRoles) =>
-      currentRoles.filter((item) => item.slug !== role.slug),
-    );
+    setSelectedRoles((currentRoles) => currentRoles.filter((item) => item.slug !== role.slug));
   };
 
-  const pageChangeHandler = (page: number) =>
-    setFilter((prev) => ({ ...prev, page }));
+  const pageChangeHandler = (page: number) => setFilter((prev) => ({ ...prev, page }));
 
   const reset = () => {
     setSelectedRoles([]);
@@ -151,37 +146,32 @@ export const AddOrganizationRole = ({
           onClick={(e) => e.stopPropagation()}
         >
           <Plus className="h-4 w-4 md:mr-1.5" />
-          <span className="sr-only sm:not-sr-only">Manage Roles</span>
+          <span className="sr-only sm:not-sr-only">{t("ADD_ORGANIZATION_ROLE.MANAGE_ROLES")}</span>
         </Button>
       </DialogTrigger>
       <DialogContent
         ref={dialogContentRef}
         onOpenAutoFocus={(event) => {
           event.preventDefault();
-          dialogContentRef.current
-            ?.querySelector<HTMLInputElement>("input")
-            ?.focus();
+          dialogContentRef.current?.querySelector<HTMLInputElement>("input")?.focus();
         }}
       >
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <DialogTitle className="text-left">Manage roles</DialogTitle>
+            <DialogTitle className="text-left">{t("ADD_ORGANIZATION_ROLE.TITLE")}</DialogTitle>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    aria-label="Role assignment requirement"
+                    aria-label={t("ADD_ORGANIZATION_ROLE.ROLE_ASSIGNMENT_REQUIREMENT")}
                     className="inline-flex items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus:outline-hidden"
                   >
                     <Info className="h-4 w-4" aria-hidden />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent
-                  side="top"
-                  className="max-w-[240px] whitespace-normal text-center"
-                >
-                  {MINIMUM_ROLE_MESSAGE}
+                <TooltipContent side="top" className="max-w-[240px] whitespace-normal text-center">
+                  {getMinimumRoleMessage()}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -189,80 +179,84 @@ export const AddOrganizationRole = ({
               variant="success"
               className="font-normal"
               aria-live="polite"
-              aria-label={`${totalRoleCount} out of ${MAX_ROLES_PER_USER} roles selected`}
+              aria-label={t("ADD_ORGANIZATION_ROLE.SELECTED_ARIA_LABEL", {
+                count: totalRoleCount,
+                max: MAX_ROLES_PER_USER,
+              })}
             >
-              {totalRoleCount}/{MAX_ROLES_PER_USER} selected
+              {t("ADD_ORGANIZATION_ROLE.SELECTED_BADGE", {
+                count: totalRoleCount,
+                max: MAX_ROLES_PER_USER,
+              })}
             </Badge>
           </div>
           <DialogDescription className="text-left">
-            You can assign a maximum of {MAX_ROLES_PER_USER} roles per user.
+            {t("ADD_ORGANIZATION_ROLE.MAX_ROLES_DESCRIPTION", { max: MAX_ROLES_PER_USER })}
           </DialogDescription>
         </DialogHeader>
+        <GrantHint kind="roles" />
         <div>
           <FilterControls.SearchInput
             value={filter.search}
-            onChange={(value) =>
-              setFilter((prev) => ({ ...prev, search: value, page: 0 }))
-            }
+            onChange={(value) => setFilter((prev) => ({ ...prev, search: value, page: 0 }))}
             className="h-fit w-full py-3"
-            placeholder="Search by role name"
+            placeholder={t("ADD_ORGANIZATION_ROLE.SEARCH_PLACEHOLDER")}
           />
         </div>
-        {isLoading ? (
+        {isLoading && (
           <div className="grid grid-cols-2">
-            {Array.from({ length: filter.pageSize }).map((_, idx) => (
-              <div
-                key={idx}
-                className="flex animate-pulse items-center space-x-2 py-2"
-              >
+            {Array.from({ length: filter.pageSize }, (_, idx) => `skeleton-${idx}`).map((id) => (
+              <div key={id} className="flex animate-pulse items-center space-x-2 py-2">
                 <div className="h-4 w-4 rounded bg-gray-200" />
                 <div className="h-4 w-24 rounded bg-gray-200" />
                 <div className="h-4 w-20 rounded bg-gray-200" />
               </div>
             ))}
           </div>
-        ) : data && data.data && data.data.length > 0 ? (
-          <div className="grid grid-cols-2">
-            {data.data.map((item) => (
-              <div
-                key={item.itemId}
-                className="col-span-1 flex items-center py-2"
-              >
-                <Checkbox
-                  checked={isRoleSelectedInModal(item.slug)}
-                  disabled={!isRoleSelectedInModal(item.slug) && isAtMaxRoles}
-                  aria-label={`${isRoleSelectedInModal(item.slug) ? "Deselect" : "Select"} ${item.name}`}
-                  onCheckedChange={(value) =>
-                    onCheckedChangeHandler(!!value, item)
-                  }
-                />
-                <div className="ml-2 flex flex-col">
-                  <div className="max-w-[150px] truncate" title={item.name}>
-                    {item.name}
-                  </div>
-                  <div
-                    className="max-w-[150px] truncate text-sm text-muted-foreground"
-                    title={item.slug}
-                  >
-                    {item.slug}
+        )}
+        {!isLoading &&
+          (data?.data?.length ? (
+            <div className="grid grid-cols-2">
+              {data.data.map((item) => (
+                <div key={item.itemId} className="col-span-1 flex items-center py-2">
+                  <Checkbox
+                    checked={isRoleSelectedInModal(item.slug)}
+                    disabled={!isRoleSelectedInModal(item.slug) && isAtMaxRoles}
+                    aria-label={t(
+                      isRoleSelectedInModal(item.slug)
+                        ? "ADD_ORGANIZATION_ROLE.DESELECT_ROLE"
+                        : "ADD_ORGANIZATION_ROLE.SELECT_ROLE",
+                      { name: item.name },
+                    )}
+                    onCheckedChange={(value) => onCheckedChangeHandler(!!value, item)}
+                  />
+                  <div className="ml-2 flex flex-col">
+                    <div className="max-w-[150px] truncate" title={item.name}>
+                      {item.name}
+                    </div>
+                    <div
+                      className="max-w-[150px] truncate text-sm text-muted-foreground"
+                      title={item.slug}
+                    >
+                      {item.slug}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed bg-muted/20 px-6 py-10 text-center">
-            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-              <ShieldCheck className="h-5 w-5 text-primary" />
+              ))}
             </div>
-            <p className="mt-3 text-sm font-medium text-foreground">
-              No roles added
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Add at least one role for this user
-            </p>
-          </div>
-        )}
+          ) : (
+            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed bg-muted/20 px-6 py-10 text-center">
+              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <ShieldCheck className="h-5 w-5 text-primary" />
+              </div>
+              <p className="mt-3 text-sm font-medium text-foreground">
+                {t("ADD_ORGANIZATION_ROLE.NO_ROLES_ADDED")}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t("ADD_ORGANIZATION_ROLE.ADD_AT_LEAST_ONE_ROLE")}
+              </p>
+            </div>
+          ))}
         <div>
           {!isLoading && data && data.totalCount > filter.pageSize && (
             <div className="flex items-center md:justify-end">
@@ -278,7 +272,7 @@ export const AddOrganizationRole = ({
         <DialogFooter>
           <DialogClose asChild>
             <Button variant="outline" size="default">
-              Cancel
+              {t("common:CANCEL")}
             </Button>
           </DialogClose>
           <Button
@@ -295,7 +289,7 @@ export const AddOrganizationRole = ({
               setTimeout(() => onSave?.(), 0);
             }}
           >
-            Add
+            {t("common:ADD")}
           </Button>
         </DialogFooter>
       </DialogContent>

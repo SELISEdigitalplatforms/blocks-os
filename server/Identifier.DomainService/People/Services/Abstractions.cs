@@ -1,6 +1,7 @@
 using Blocks.Genesis;
 using DomainService.Dtos;
 using DomainService.Entities;
+using Blocks.Genesis.Entities.Iam;
 
 namespace DomainService.People
 {

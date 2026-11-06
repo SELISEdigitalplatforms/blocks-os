@@ -1,49 +1,93 @@
 ﻿using Blocks.Genesis;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using System.Linq.Expressions;
-using Configuration.DomainService.Notification.Entities;
 using Configuration.DomainService.Notification.ResponseModel;
 using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Storage.Entities;
-using Configuration.DomainService.Mail.Entities;
 using Configuration.DomainService.Mail.RequestModel;
-using Configuration.DomainService.DataGateway.Entities;
+using Blocks.Genesis.Entities.Data;
+using Blocks.Genesis.Entities.Os;
+using Os.DataAccess;
+using Configuration.DomainService.Organizations;
 
 namespace Configuration.DomainService.Shared.Services
 {
     public class ConfigurationRepository : IConfigurationRepository
     {
         private readonly IDbContextProvider _dbContextProvider;
+        private readonly IKeyValueStore _keyValueStore;
+        private readonly IOsDataAccess _dataAccess;
 
+        private const string NotificationKeyPrefix = "notification-config:";
         private const string _notificatonConfigurationCollectionName = "NotificationConfigurations";
-        private const string _storageCollectionName = "StorageConfigurations";
         private const string _mailConfigurationCollectionName = "MailServerConfigurations";
-        // Matches blocks-data's own DataServiceConfiguration collection name exactly (its DbRepository
-        // derives it as $"{typeof(T).Name}s") - both sides read/write the same document per tenant.
-        private const string _dataGatewayCollectionName = "DataServiceConfigurations";
 
-        public ConfigurationRepository(IDbContextProvider dbContextProvider)
+        public ConfigurationRepository(
+            IDbContextProvider dbContextProvider,
+            IKeyValueStore keyValueStore,
+            IOsDataAccess dataAccess)
         {
             _dbContextProvider = dbContextProvider;
+            _keyValueStore = keyValueStore;
+            _dataAccess = dataAccess;
         }
 
         #region Notification
 
+        // Notification configs now live in Genesis KeyValueStores (same tenant DB, impersonated: true).
+        // While the old collection still exists (before the migration `cleanup`), blocks-logic still reads and
+        // writes it, so reads run today's code unchanged and writes go to the old collection first, then to KV.
+        // After `cleanup` the old collection is gone and KV is the only store.
+        private static string NotificationKey(string name) => NotificationKeyPrefix + (name ?? string.Empty).Trim();
+
+        private bool LegacyExists()
+        {
+            var database = _dbContextProvider.GetDatabase();
+            if (database == null)
+            {
+                return false;
+            }
+
+            return database
+                .ListCollectionNames(new ListCollectionNamesOptions
+                {
+                    Filter = new BsonDocument("name", _notificatonConfigurationCollectionName)
+                })
+                .Any();
+        }
+
+        private async Task<List<NotificationConfiguration>> GetAllNotificationsFromKvAsync()
+        {
+            var all = await _keyValueStore.GetByPrefixAsync<NotificationConfiguration>(NotificationKeyPrefix);
+            return all?.Where(c => c != null).ToList() ?? new List<NotificationConfiguration>();
+        }
+
         public async Task SaveNotificationConfigurationAsync(NotificationConfiguration configuration)
         {
-            var collection = _dbContextProvider.GetCollection<NotificationConfiguration>(_notificatonConfigurationCollectionName);
+            if (LegacyExists())
+            {
+                var collection = _dbContextProvider.GetCollection<NotificationConfiguration>(_notificatonConfigurationCollectionName);
 
-            var filter = Builders<NotificationConfiguration>.Filter.Eq(mc => mc.ItemId, configuration.ItemId);
+                var filter = Builders<NotificationConfiguration>.Filter.Eq(mc => mc.ItemId, configuration.ItemId);
 
-            await collection.ReplaceOneAsync(
-                filter,
-                configuration,
-                new ReplaceOptions { IsUpsert = true }
-            );
+                await collection.ReplaceOneAsync(
+                    filter,
+                    configuration,
+                    new ReplaceOptions { IsUpsert = true }
+                );
+            }
+
+            await _keyValueStore.SetAsync(NotificationKey(configuration.Name), configuration);
         }
 
         public async Task<NotificationConfiguration> GetNotificationConfigurationByIdAsync(string id)
         {
+            if (!LegacyExists())
+            {
+                return (await GetAllNotificationsFromKvAsync()).FirstOrDefault(c => c.ItemId == id)!;
+            }
+
             var collection = _dbContextProvider.GetCollection<NotificationConfiguration>(_notificatonConfigurationCollectionName);
 
             var filter = Builders<NotificationConfiguration>.Filter.Eq(mc => mc.ItemId, id);
@@ -52,6 +96,23 @@ namespace Configuration.DomainService.Shared.Services
 
         public async Task<GetNotificationConfigurationsResponse> GetNotificationConfigurationsAsync(GetNotificationConfigurationsRequest request)
         {
+            if (!LegacyExists())
+            {
+                var all = await GetAllNotificationsFromKvAsync();
+                var sorted = all
+                    .OrderByDescending(n => n.CreatedDate)
+                    .Skip(request.PageSize * request.Page);
+                // Mongo Limit = 0 means "no limit" today; keep that answer for PageSize <= 0.
+                var page = (request.PageSize > 0 ? sorted.Take(request.PageSize) : sorted).ToList();
+
+                return new GetNotificationConfigurationsResponse
+                {
+                    Configurations = page,
+                    TotalCount = all.Count,
+                    IsSuccess = true
+                };
+            }
+
             var collection = _dbContextProvider.GetCollection<NotificationConfiguration>(_notificatonConfigurationCollectionName);
             var filter = FilterDefinition<NotificationConfiguration>.Empty;
 
@@ -75,6 +136,11 @@ namespace Configuration.DomainService.Shared.Services
 
         public async Task<NotificationConfiguration> GetNotificationConfigurationByNameAsync(string name)
         {
+            if (!LegacyExists())
+            {
+                return (await _keyValueStore.GetAsync<NotificationConfiguration>(NotificationKey(name)))!;
+            }
+
             var collection = _dbContextProvider.GetCollection<NotificationConfiguration>(_notificatonConfigurationCollectionName);
 
             var filter = Builders<NotificationConfiguration>.Filter.Eq(mc => mc.Name, name);
@@ -83,73 +149,20 @@ namespace Configuration.DomainService.Shared.Services
 
         public async Task<BaseResponse> DeleteNotificationConfigurationAsync(DeleteNotificationConfigurationRequest request)
         {
-            var collection = _dbContextProvider.GetCollection<NotificationConfiguration>(_notificatonConfigurationCollectionName);
-            var filter = Builders<NotificationConfiguration>.Filter.Eq(mc => mc.ItemId, request.ItemId);
-            await collection.DeleteOneAsync(filter);
+            if (LegacyExists())
+            {
+                var collection = _dbContextProvider.GetCollection<NotificationConfiguration>(_notificatonConfigurationCollectionName);
+                var filter = Builders<NotificationConfiguration>.Filter.Eq(mc => mc.ItemId, request.ItemId);
+                await collection.DeleteOneAsync(filter);
+            }
+
+            var existing = (await GetAllNotificationsFromKvAsync()).FirstOrDefault(c => c.ItemId == request.ItemId);
+            if (existing != null)
+            {
+                await _keyValueStore.DeleteAsync(NotificationKey(existing.Name));
+            }
 
             return new BaseResponse { IsSuccess = true };
-        }
-
-        #endregion
-
-        #region Storage
-
-        public async Task SaveStorageConfigurationAsync(StorageConfiguration configuration)
-        {
-            var collection = _dbContextProvider.GetCollection<StorageConfiguration>(_storageCollectionName);
-
-            var filter = Builders<StorageConfiguration>.Filter.Eq(mc => mc.ItemId, configuration.ItemId);
-
-            await collection.ReplaceOneAsync(
-                filter,
-                configuration,
-                new ReplaceOptions { IsUpsert = true }
-            );
-        }
-
-        public async Task<StorageConfiguration> GetStorageConfigurationByNameAsync(string configurationName)
-        {
-            var collection = _dbContextProvider.GetCollection<StorageConfiguration>(_storageCollectionName);
-
-            var filter = Builders<StorageConfiguration>.Filter.Eq(mc => mc.Name, configurationName);
-            return await collection.Find(filter).FirstOrDefaultAsync();
-        }
-
-        public async Task<List<StorageConfiguration>> GetAllStorageConfigurationsByDateAsync()
-        {
-            var collection = _dbContextProvider.GetCollection<StorageConfiguration>(_storageCollectionName);
-            var filter = Builders<StorageConfiguration>.Filter.Where(_ => true);
-
-            using var cursor = await collection.FindAsync(filter, new FindOptions<StorageConfiguration>
-            {
-                Sort = Builders<StorageConfiguration>.Sort.Ascending(doc => doc.LastUpdatedDate)
-            });
-
-            return await cursor.ToListAsync();
-        }
-
-        public async Task DeleteStorageConfigurationByNameAsync(string configurationName)
-        {
-            var collection = _dbContextProvider.GetCollection<StorageConfiguration>(_storageCollectionName);
-            var filter = Builders<StorageConfiguration>.Filter.Eq(mc => mc.Name, configurationName);
-
-            await collection.DeleteOneAsync(filter);
-        }
-
-        public async Task<StorageConfiguration> GetStorageConfigurationByIdAsync(string itemId)
-        {
-            var collection = _dbContextProvider.GetCollection<StorageConfiguration>(_storageCollectionName);
-
-            var filter = Builders<StorageConfiguration>.Filter.Eq(mc => mc.ItemId, itemId);
-            return await collection.Find(filter).FirstOrDefaultAsync();
-        }
-
-        public async Task<StorageConfiguration?> GetStorageConfigurationStrategyAsync(string storageStrategy)
-        {
-            var collection = _dbContextProvider.GetCollection<StorageConfiguration>(_storageCollectionName);
-
-            var filter = Builders<StorageConfiguration>.Filter.Eq(mc => mc.StorageStrategy, storageStrategy);
-            return await collection.Find(filter).FirstOrDefaultAsync();
         }
 
         #endregion
@@ -162,7 +175,13 @@ namespace Configuration.DomainService.Shared.Services
 
             var filter = Builders<MailServerConfiguration>.Filter.Eq(mc => mc.ItemId, configuration.ItemId);
 
-            await collection.ReplaceOneAsync(filter, configuration, new ReplaceOptions { IsUpsert = true });
+            // Upsert = update or insert: both gates apply. Denied is an error, not a silent no-op.
+            var editFilter = await _dataAccess.EditFilterAsync(OsSchemas.MailServerConfiguration, filter, "ConfigurationRepository.SaveMailConfigurationAsync");
+            if (editFilter is null || !await _dataAccess.InsertAllowedAsync(OsSchemas.MailServerConfiguration, "ConfigurationRepository.SaveMailConfigurationAsync"))
+                throw new UnauthorizedAccessException("Access to the mail configuration was denied by the data access policy.");
+
+            configuration = await _dataAccess.PrepareUpsertAsync(OsSchemas.MailServerConfiguration, configuration, collection, editFilter, "ConfigurationRepository.SaveMailConfigurationAsync");
+            await collection.ReplaceOneAsync(editFilter, configuration, new ReplaceOptions { IsUpsert = true });
         }
 
         public async Task UpdateMailSenderNameAsync(string configurationId, string senderName, DateTime lastUpdatedDate, string lastUpdatedBy)
@@ -173,9 +192,19 @@ namespace Configuration.DomainService.Shared.Services
             var update = Builders<MailServerConfiguration>.Update
                 .Set(mc => mc.SenderName, senderName)
                 .Set(mc => mc.LastUpdatedDate, lastUpdatedDate)
-                .Set(mc => mc.LastUpdatedBy, lastUpdatedBy);
+                .Set(mc => mc.LastUpdatedBy, lastUpdatedBy)
+                // The project default belongs to the Default organization; a document stored before
+                // organizations has no element, and saving it writes one.
+                .Set(mc => mc.OrganizationId, OrganizationIds.Default);
 
-            await collection.UpdateOneAsync(filter, update);
+            var editFilter = await _dataAccess.EditFilterAsync(OsSchemas.MailServerConfiguration, filter, "ConfigurationRepository.UpdateMailSenderNameAsync");
+            if (editFilter is null)
+            {
+                return;
+            }
+
+            await _dataAccess.CheckUpdateAsync(OsSchemas.MailServerConfiguration, update, "ConfigurationRepository.UpdateMailSenderNameAsync");
+            await collection.UpdateOneAsync(editFilter, update);
         }
 
         public async Task<MailServerConfiguration> GetMailConfigurationByIdAsync(string configurationId)
@@ -183,7 +212,9 @@ namespace Configuration.DomainService.Shared.Services
             var collection = _dbContextProvider.GetCollection<MailServerConfiguration>(_mailConfigurationCollectionName);
             var filter = Builders<MailServerConfiguration>.Filter.Eq(mc => mc.ItemId, configurationId);
 
-            return await collection.Find(filter).FirstOrDefaultAsync();
+            // No projection: the result can be saved back as a whole document.
+            var scope = await _dataAccess.ReadAsync(OsSchemas.MailServerConfiguration, filter, "ConfigurationRepository.GetMailConfigurationByIdAsync", useProjection: false);
+            return scope.Granted ? await scope.Apply(collection).FirstOrDefaultAsync() : default!;
         }
 
         /// <summary>
@@ -200,20 +231,130 @@ namespace Configuration.DomainService.Shared.Services
             var collection = _dbContextProvider.GetCollection<MailServerConfiguration>(_mailConfigurationCollectionName);
             var filter = Builders<MailServerConfiguration>.Filter.Eq(mc => mc.Name, configurationName);
 
-            return await collection.Find(filter).FirstOrDefaultAsync();
+            var scope = await _dataAccess.ReadAsync(OsSchemas.MailServerConfiguration, filter, "ConfigurationRepository.GetMailConfigurationByNameAsync", useProjection: false);
+            return scope.Granted ? await scope.Apply(collection).FirstOrDefaultAsync() : default!;
         }
 
-        public async Task<List<MailServerConfiguration>> GetAllMailConfigurationsAsync()
+        public async Task<MailServerConfiguration> GetMailConfigurationByNameForViewAsync(string configurationName)
         {
             var collection = _dbContextProvider.GetCollection<MailServerConfiguration>(_mailConfigurationCollectionName);
-            var document = collection.Find(_ => true).SortByDescending(doc => doc.IsDefault);
+            var filter = Builders<MailServerConfiguration>.Filter.Eq(mc => mc.Name, configurationName);
 
-            return await document.ToListAsync();
+            // Masked: View column (property) rules clear what the caller may not see.
+            var scope = await _dataAccess.ReadAsync(OsSchemas.MailServerConfiguration, filter, "ConfigurationRepository.GetMailConfigurationByNameForViewAsync");
+            return scope.Granted ? scope.ForView(await scope.Apply(collection).FirstOrDefaultAsync()) : default!;
         }
 
-        public async Task<List<MailServerConfiguration>> GetMailConfigurationsByClientSecretReferenceAsync(string clientSecretReference)
+        public async Task ClearOtherOrganizationDefaultsAsync(string organizationId, string keepConfigurationId, DateTime savedAt)
         {
-            if (string.IsNullOrWhiteSpace(clientSecretReference))
+            var collection = _dbContextProvider.GetCollection<MailServerConfiguration>(_mailConfigurationCollectionName);
+            var builder = Builders<MailServerConfiguration>.Filter;
+
+            // MongoDB keeps milliseconds, so compare at that precision or a tie never matches.
+            savedAt = new DateTime(savedAt.Ticks - (savedAt.Ticks % TimeSpan.TicksPerMillisecond), savedAt.Kind);
+            var marked = builder.And(OfOrganization(organizationId), builder.Eq(mc => mc.IsOrganizationDefault, true));
+            var update = Builders<MailServerConfiguration>.Update.Set(mc => mc.IsOrganizationDefault, false);
+
+            // One update for the whole organization. Saves are ordered by (LastUpdatedDate, ItemId), so
+            // of two saves racing to be the default the later one wins, and a tie still has a winner.
+            if (!await ClearDefaultsAsync(collection, builder.And(marked, OrderedBefore(keepConfigurationId, savedAt)), update))
+            {
+                return;
+            }
+
+            // A slower save stamped earlier can land after this one's clear. Whoever finishes last
+            // sees both marks here and clears every mark ordered before the latest one; a save landing
+            // meanwhile that is later still is left alone and settles the organization itself.
+            var scope = await _dataAccess.ReadAsync(OsSchemas.MailServerConfiguration, marked, "ConfigurationRepository.ClearOtherOrganizationDefaultsAsync", useProjection: false);
+            if (!scope.Granted)
+            {
+                return;
+            }
+
+            var defaults = await scope.Apply(collection).ToListAsync();
+            if (defaults.Count > 1)
+            {
+                var latest = defaults
+                    .OrderByDescending(mc => mc.LastUpdatedDate)
+                    .ThenByDescending(mc => mc.ItemId, StringComparer.Ordinal)
+                    .First();
+                await ClearDefaultsAsync(collection, builder.And(marked, OrderedBefore(latest.ItemId, latest.LastUpdatedDate)), update);
+            }
+        }
+
+        /// <summary>Configurations saved before the given one: earlier, or at the same millisecond with a smaller id.</summary>
+        private static FilterDefinition<MailServerConfiguration> OrderedBefore(string itemId, DateTime savedAt)
+        {
+            var builder = Builders<MailServerConfiguration>.Filter;
+            return builder.And(
+                builder.Ne(mc => mc.ItemId, itemId),
+                builder.Or(
+                    builder.Lt(mc => mc.LastUpdatedDate, savedAt),
+                    builder.And(builder.Eq(mc => mc.LastUpdatedDate, savedAt), builder.Lt(mc => mc.ItemId, itemId))));
+        }
+
+        private async Task<bool> ClearDefaultsAsync(
+            IMongoCollection<MailServerConfiguration> collection,
+            FilterDefinition<MailServerConfiguration> filter,
+            UpdateDefinition<MailServerConfiguration> update)
+        {
+            var editFilter = await _dataAccess.EditFilterAsync(OsSchemas.MailServerConfiguration, filter, "ConfigurationRepository.ClearOtherOrganizationDefaultsAsync");
+            if (editFilter is null)
+            {
+                return false;
+            }
+
+            await _dataAccess.CheckUpdateAsync(OsSchemas.MailServerConfiguration, update, "ConfigurationRepository.ClearOtherOrganizationDefaultsAsync");
+            await collection.UpdateManyAsync(editFilter, update);
+            return true;
+        }
+
+        /// <summary>
+        /// The organization's configurations. For the Default organization that includes documents
+        /// stored without an organization: a missing element matches <c>null</c>.
+        /// </summary>
+        private static FilterDefinition<MailServerConfiguration> OfOrganization(string organizationId) =>
+            OrganizationIds.Normalize(organizationId) == OrganizationIds.Default
+                ? Builders<MailServerConfiguration>.Filter.In(mc => mc.OrganizationId, OrganizationIds.StoredDefaultValues)
+                : Builders<MailServerConfiguration>.Filter.Eq(mc => mc.OrganizationId, organizationId);
+
+        public async Task<List<MailServerConfiguration>> GetAllMailConfigurationsAsync(string? organizationId)
+        {
+            var collection = _dbContextProvider.GetCollection<MailServerConfiguration>(_mailConfigurationCollectionName);
+
+            // One query for the organization and the Default organization together, which every
+            // organization shares.
+            FilterDefinition<MailServerConfiguration> filter;
+            if (organizationId is null)
+            {
+                filter = FilterDefinition<MailServerConfiguration>.Empty;
+            }
+            else if (OrganizationIds.Normalize(organizationId) == OrganizationIds.Default)
+            {
+                filter = OfOrganization(OrganizationIds.Default);
+            }
+            else
+            {
+                filter = Builders<MailServerConfiguration>.Filter.Or(OfOrganization(organizationId), OfOrganization(OrganizationIds.Default));
+            }
+
+            // Unprojected: the projection lists the fields of the project's stored schema document,
+            // and documents created before IsOrganizationDefault existed don't list it, which would
+            // load every configuration as not the default. ForView below still clears what a column
+            // rule hides from the caller.
+            var scope = await _dataAccess.ReadAsync(OsSchemas.MailServerConfiguration, filter, "ConfigurationRepository.GetAllMailConfigurationsAsync", useProjection: false);
+            if (!scope.Granted)
+            {
+                return new List<MailServerConfiguration>();
+            }
+
+            // Only the API lists these: View column (property) rules clear what the caller may not see.
+            return scope.ForView(await scope.Apply(collection).SortByDescending(doc => doc.IsDefault).ToListAsync());
+        }
+
+        public async Task<List<MailServerConfiguration>> GetMailConfigurationsBySecretReferenceAsync(string secretReference)
+        {
+            if (string.IsNullOrWhiteSpace(secretReference))
             {
                 // An empty reference is what every configuration without a secret carries, so
                 // matching on it would report unrelated configurations as dependents.
@@ -221,9 +362,13 @@ namespace Configuration.DomainService.Shared.Services
             }
 
             var collection = _dbContextProvider.GetCollection<MailServerConfiguration>(_mailConfigurationCollectionName);
-            var filter = Builders<MailServerConfiguration>.Filter.Eq(mc => mc.ClientSecretReference, clientSecretReference);
+            // Either reference field: an Office 365 OAuth client secret or a mailbox password.
+            var filter = Builders<MailServerConfiguration>.Filter.Or(
+                Builders<MailServerConfiguration>.Filter.Eq(mc => mc.ClientSecretReference, secretReference),
+                Builders<MailServerConfiguration>.Filter.Eq(mc => mc.AccountPasswordReference, secretReference));
 
-            return await collection.Find(filter).ToListAsync();
+            var scope = await _dataAccess.ReadAsync(OsSchemas.MailServerConfiguration, filter, "ConfigurationRepository.GetMailConfigurationsBySecretReferenceAsync");
+            return scope.Granted ? await scope.Apply(collection).ToListAsync() : new List<MailServerConfiguration>();
         }
 
         public async Task DeleteMailConfigurationAsync(string configurationId)
@@ -231,43 +376,13 @@ namespace Configuration.DomainService.Shared.Services
             var collection = _dbContextProvider.GetCollection<MailServerConfiguration>(_mailConfigurationCollectionName);
             var filter = Builders<MailServerConfiguration>.Filter.Eq(mc => mc.ItemId, configurationId);
 
-            await collection.DeleteOneAsync(filter);
-        }
+            var deleteFilter = await _dataAccess.DeleteFilterAsync(OsSchemas.MailServerConfiguration, filter, "ConfigurationRepository.DeleteMailConfigurationAsync");
+            if (deleteFilter is null)
+            {
+                return;
+            }
 
-        #endregion
-
-        #region DataGateway
-
-        public async Task SaveDataGatewayConfigurationAsync(DataGatewayConfiguration configuration)
-        {
-            var collection = _dbContextProvider.GetCollection<DataGatewayConfiguration>(_dataGatewayCollectionName);
-
-            var filter = Builders<DataGatewayConfiguration>.Filter.Eq(mc => mc.ItemId, configuration.ItemId);
-
-            await collection.ReplaceOneAsync(
-                filter,
-                configuration,
-                new ReplaceOptions { IsUpsert = true }
-            );
-        }
-
-        // There is at most one DataGateway configuration - mirrors blocks-data's own
-        // DataGatewayConfigurationService.GetConfiguration, which likewise takes no key and just
-        // filters on IsDeleted.
-        public async Task<DataGatewayConfiguration> GetDataGatewayConfigurationAsync()
-        {
-            var collection = _dbContextProvider.GetCollection<DataGatewayConfiguration>(_dataGatewayCollectionName);
-
-            var filter = Builders<DataGatewayConfiguration>.Filter.Eq(mc => mc.IsDeleted, false);
-            return await collection.Find(filter).FirstOrDefaultAsync();
-        }
-
-        public async Task<DataGatewayConfiguration> GetDataGatewayConfigurationByIdAsync(string itemId)
-        {
-            var collection = _dbContextProvider.GetCollection<DataGatewayConfiguration>(_dataGatewayCollectionName);
-
-            var filter = Builders<DataGatewayConfiguration>.Filter.Eq(mc => mc.ItemId, itemId);
-            return await collection.Find(filter).FirstOrDefaultAsync();
+            await collection.DeleteOneAsync(deleteFilter);
         }
 
         #endregion

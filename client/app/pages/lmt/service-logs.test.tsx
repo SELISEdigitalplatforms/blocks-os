@@ -7,14 +7,14 @@ vi.mock("@/components/breadcrumb/breadcrumb", () => ({ default: () => <div data-
 vi.mock("@/hooks/use-lmt-base-path", () => ({ useLmtBasePath: () => "/app/lmt" }));
 vi.mock("react-router", () => ({ useParams: () => ({ serviceName: h.serviceName }) }));
 vi.mock("@blocks-lmt/constants/services.constant", () => ({
-  SERVICES: [{ name: "iam", serviceName: "blocks-iam", label: "IAM", showInLogs: true }],
+  getServices: () => [{ name: "iam", serviceName: "blocks-iam", label: "IAM", showInLogs: true }],
 }));
 vi.mock("@blocks-lmt/constants/logs-service-names.constant", () => ({
   getLmtLogCollections: (name: string) => ({ api: `${name}-api`, worker: `${name}-worker` }),
 }));
 vi.mock("@blocks-lmt/constants/logs-service-meta.constant", () => ({
   LOG_SERVICE_AI_QUERIES: { iam: ["q1"] },
-  LOG_SERVICE_AI_DESCRIPTION: "desc",
+  getLogServiceAiDescription: () => "desc",
 }));
 vi.mock("@blocks-lmt/components", () => ({
   LogsViewer: (props: Record<string, unknown>) => {

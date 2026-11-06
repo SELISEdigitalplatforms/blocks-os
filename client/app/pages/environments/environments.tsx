@@ -10,29 +10,20 @@ import {
   TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
 import { useNotificationListener } from "@/cross-modules/communication/hooks/use-notification-listener";
+import { useGetMigrationStatus, useGetProjects } from "@/hooks/use-project";
+import { showErrorToast } from "@/hooks/use-toast";
 import {
-  MIGRATION_ONGOING_WINDOW_MS,
-  useGetMigrationStatus,
-  useGetProjects,
-} from "@/hooks/use-project";
+  getMigrationNotificationOutcome,
+  getMigrationStateForTarget,
+} from "@/utils/migration-status";
 import { useProjectPermissions } from "@/hooks/use-project-access";
-import type { IMigrationStatusResponse } from "@blocks-identifier/models/project.model";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { ArrowRightLeft, Plus } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { PlanPanel } from "@blocks-identifier/components/plan/plan-panel";
 import { Navigate, useNavigate } from "react-router";
 
-const isRecentMigrationForTarget = (
-  data: IMigrationStatusResponse[number],
-  tenantId: string,
-): boolean => {
-  if (data.targetedProjectKey !== tenantId || !data.createdDate) {
-    return false;
-  }
-  const createdDate = new Date(data.createdDate);
-  return createdDate.getTime() > Date.now() - MIGRATION_ONGOING_WINDOW_MS;
-};
+const KEY_START_MIGRATION = "ENVIRONMENTS.START_MIGRATION";
 
 const ProjectGroupLoading = () => (
   <main className="flex flex-1 flex-col gap-4 p-4 sm:mx-10 md:gap-6">
@@ -55,6 +46,7 @@ const ProjectGroupLoading = () => (
   </main>
 );
 export const EnvironmentsPage = () => {
+  const { t } = useT("os.environments");
   const groupId = useProjectStore().selectedTenantGroup;
   const {
     data: environmentList,
@@ -74,10 +66,16 @@ export const EnvironmentsPage = () => {
     groupId as string,
   );
   const handleMigrationNotification = useCallback(
-    (_: unknown) => {
+    (detail: unknown) => {
+      // A push means the tracker changed, so re-read it. The spinner follows the tracker, and
+      // a failed run also gets a toast, since nothing else tells the user it ended badly.
       void refetchMigrationStatus();
+      const outcome = getMigrationNotificationOutcome(detail);
+      if (outcome && !outcome.isSuccess) {
+        showErrorToast({ errors: outcome.description ?? t("ENVIRONMENTS.MIGRATION_FAILED") });
+      }
     },
-    [refetchMigrationStatus],
+    [refetchMigrationStatus, t],
   );
   useNotificationListener("EnvironmentDataMigration", handleMigrationNotification);
   if (isLoading || isFetching || !environmentList || !environmentList[0]?.projects[0]) {
@@ -97,12 +95,11 @@ export const EnvironmentsPage = () => {
       <div>
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h4 className="text-lg font-semibold md:text-xl">Environments</h4>
+            <h4 className="text-lg font-semibold md:text-xl">{t("ENVIRONMENTS.TITLE")}</h4>
             {/* The eight-environment cap is already enforced by hiding New Environment;
                 saying so up front beats the button quietly disappearing. */}
             <p className="mt-0.5 text-sm text-medium-emphasis">
-              {environmentList[0]?.projects?.length ?? 0}{" "}
-              {(environmentList[0]?.projects?.length ?? 0) === 1 ? "environment" : "environments"}
+              {t("ENVIRONMENTS.USED_OF_MAX", { used: environmentList[0]?.projects?.length ?? 0 })}
             </p>
           </div>
           <div className="flex gap-2 sm:gap-4">
@@ -110,12 +107,12 @@ export const EnvironmentsPage = () => {
               <Button
                 variant="outline"
                 size="sm"
-                aria-label="Start Migration"
+                aria-label={t(KEY_START_MIGRATION)}
                 onClick={() => navigate("/app/data-migration")}
                 className="h-10 whitespace-nowrap text-sm"
               >
                 <ArrowRightLeft className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Start Migration</span>
+                <span className="hidden sm:inline">{t(KEY_START_MIGRATION)}</span>
               </Button>
             )}
             {canMigrate && !canStartMigration && (
@@ -132,17 +129,17 @@ export const EnvironmentsPage = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        aria-label="Start Migration"
+                        aria-label={t(KEY_START_MIGRATION)}
                         disabled
                         className="h-10 whitespace-nowrap text-sm"
                       >
                         <ArrowRightLeft className="mr-2 h-4 w-4" />
-                        <span className="hidden sm:inline">Start Migration</span>
+                        <span className="hidden sm:inline">{t(KEY_START_MIGRATION)}</span>
                       </Button>
                     </span>
                   </TooltipTrigger>
                   <TooltipContent className="border-none bg-neutral-500 text-white shadow-none">
-                    Add another environment to start a migration.
+                    {t("ENVIRONMENTS.ADD_ANOTHER_TO_MIGRATE")}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -158,14 +155,16 @@ export const EnvironmentsPage = () => {
                 className="h-10 whitespace-nowrap text-sm"
               >
                 <Plus className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">New Environment</span>
+                <span className="hidden sm:inline">{t("ENVIRONMENTS.NEW_ENVIRONMENT")}</span>
               </Button>
             )}
           </div>
         </div>
         {environmentList[0]?.isShared && (
           <div className="mb-4 mt-6 border-b-2 border-border pb-2">
-            <h5 className="text-sm font-medium text-muted-foreground">Shared with you</h5>
+            <h5 className="text-sm font-medium text-muted-foreground">
+              {t("ENVIRONMENTS.SHARED_WITH_YOU")}
+            </h5>
           </div>
         )}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -174,8 +173,10 @@ export const EnvironmentsPage = () => {
               key={`shared-${project.itemId}`}
               project={project}
               isMigrationOngoing={
-                Array.isArray(migrationStatus) &&
-                migrationStatus.some((data) => isRecentMigrationForTarget(data, project.tenantId))
+                getMigrationStateForTarget(migrationStatus, project.tenantId) === "in-progress"
+              }
+              isMigrationFailed={
+                getMigrationStateForTarget(migrationStatus, project.tenantId) === "failed"
               }
             />
           ))}
@@ -183,7 +184,9 @@ export const EnvironmentsPage = () => {
         {environmentList[0]?.isShared && environmentList[0]?.nonSharedProject?.length > 0 && (
           <>
             <div className="mb-4 mt-8 border-b-2 border-border pb-2">
-              <h5 className="text-sm font-medium text-muted-foreground">Others</h5>
+              <h5 className="text-sm font-medium text-muted-foreground">
+                {t("ENVIRONMENTS.OTHERS")}
+              </h5>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {environmentList[0]?.nonSharedProject?.map((project) => (
@@ -192,10 +195,11 @@ export const EnvironmentsPage = () => {
                     key={`others-${project.itemId}`}
                     project={project}
                     isMigrationOngoing={
-                      Array.isArray(migrationStatus) &&
-                      migrationStatus.some((data) =>
-                        isRecentMigrationForTarget(data, project.tenantId),
-                      )
+                      getMigrationStateForTarget(migrationStatus, project.tenantId) ===
+                      "in-progress"
+                    }
+                    isMigrationFailed={
+                      getMigrationStateForTarget(migrationStatus, project.tenantId) === "failed"
                     }
                     className="bg-muted"
                   />

@@ -18,6 +18,7 @@ using DomainService.Storage;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using XUnitTest.TestSupport;
+using Blocks.Genesis.Entities.Os;
 
 namespace XUnitTest.Services
 {
@@ -493,6 +494,57 @@ namespace XUnitTest.Services
 
             response.IsSuccess.Should().BeTrue();
             tenant.Applications[0].Domain.Should().Be("https://new.example.com");
+        }
+
+        [Theory]
+        [InlineData(ApplicationAction.Add, null)]
+        [InlineData(ApplicationAction.Edit, "https://old.example.com")]
+        public async Task UpdateProjectAsync_DomainOfAnotherProject_IsRefused_AndNothingIsSaved(ApplicationAction action, string? currentDomain)
+        {
+            using var _ = new BlocksTestContext();
+            var tenant = new Tenant
+            { DbConnectionString = "mongodb://x", JwtTokenParameters = new JwtTokenParameters { IssueDate = System.DateTime.UtcNow, PrivateCertificatePassword = "pwd" },
+                TenantId = "t1",
+                Applications = new List<Applications> { new() { Domain = "https://old.example.com" } }
+            };
+            _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
+            _repo.Setup(r => r.IsDomainUsedByAnotherProjectAsync("taken.example.com", "t1")).ReturnsAsync(true);
+
+            var response = await Service().UpdateProjectAsync(new UpdateProjectRequest
+            {
+                Action = action,
+                ApplicationDomain = currentDomain,
+                Application = new Application { Domain = "https://Taken.example.com/", CookieDomain = "example.com" }
+            });
+
+            response.IsSuccess.Should().BeFalse();
+            response.Errors.Should().ContainKey("domain_in_use");
+            tenant.Applications.Should().ContainSingle().Which.Domain.Should().Be("https://old.example.com");
+            _repo.Verify(r => r.UpdateProjectAsync(It.IsAny<Tenant>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task UpdateProjectAsync_EditKeepingTheSameDomain_DoesNotCheckOtherProjects()
+        {
+            using var _ = new BlocksTestContext();
+            var tenant = new Tenant
+            { DbConnectionString = "mongodb://x", JwtTokenParameters = new JwtTokenParameters { IssueDate = System.DateTime.UtcNow, PrivateCertificatePassword = "pwd" },
+                TenantId = "t1",
+                Applications = new List<Applications> { new() { Domain = "https://shared.example.com" } }
+            };
+            _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
+            _repo.Setup(r => r.IsDomainUsedByAnotherProjectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+
+            var response = await Service().UpdateProjectAsync(new UpdateProjectRequest
+            {
+                Action = ApplicationAction.Edit,
+                ApplicationDomain = "https://shared.example.com",
+                Application = new Application { Domain = "https://shared.example.com", CookieDomain = "new.example.com" }
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            _repo.Verify(r => r.IsDomainUsedByAnotherProjectAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         }
 
         [Fact]
@@ -1326,6 +1378,8 @@ namespace XUnitTest.Services
         public async Task SaveThirdPartyJWTClaimsAsync_New_SavesAndReturnsItemId()
         {
             using var _ = new BlocksTestContext();
+            _repo.Setup(r => r.SaveJWTClaimsAsync(It.IsAny<ThirdPartyJWTClaims>()))
+                 .ReturnsAsync(new BaseResponse { IsSuccess = true });
 
             var response = await Service().SaveThirdPartyJWTClaimsAsync(new SaveThirdPartyJWTClaimsRequest
             {
@@ -1343,6 +1397,8 @@ namespace XUnitTest.Services
         public async Task SaveThirdPartyJWTClaimsAsync_Existing_LoadsThenSaves()
         {
             using var _ = new BlocksTestContext();
+            _repo.Setup(r => r.SaveJWTClaimsAsync(It.IsAny<ThirdPartyJWTClaims>()))
+                 .ReturnsAsync(new BaseResponse { IsSuccess = true });
             _repo.Setup(r => r.GetThirdPartyJWTClaimsAsync("c-1"))
                  .ReturnsAsync(new ThirdPartyJWTClaims { ItemId = "c-1" });
 
@@ -1360,7 +1416,7 @@ namespace XUnitTest.Services
         public async Task GetThirdPartyJWTClaimsAsync_DelegatesToRepository()
         {
             var claims = new ThirdPartyJWTClaims { ItemId = "c-1" };
-            _repo.Setup(r => r.GetThirdPartyJWTClaimsAsync(string.Empty)).ReturnsAsync(claims);
+            _repo.Setup(r => r.GetThirdPartyJWTClaimsForViewAsync()).ReturnsAsync(claims);
 
             var result = await Service().GetThirdPartyJWTClaimsAsync();
 
@@ -1393,7 +1449,8 @@ namespace XUnitTest.Services
             _repo.Verify(r => r.InsertPeopleAsync(It.IsAny<ProjectPeople>()), Times.Once);
             _certManager.Verify(c => c.UploadPrivateCertificateAsync(
                 CertificateStorageType.Filefilesystem, It.IsAny<X509Certificate2>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once);
-            _repo.Verify(r => r.UpdateProjectAsync(project), Times.Once);
+            _repo.Verify(r => r.SetPublicCertificatePathAsync("item-1", "https://download/cert"), Times.Once);
+            _repo.Verify(r => r.UpdateProjectAsync(It.IsAny<Tenant>()), Times.Never);
             _repo.Verify(r => r.CreateDefaultConfigurationAsync(It.IsAny<ProjectStatusTracer>(), project), Times.Once);
             // Public certificate download URL should be persisted on the project.
             project.JwtTokenParameters.PublicCertificatePath.Should().Be("https://download/cert");
@@ -1421,6 +1478,7 @@ namespace XUnitTest.Services
         {
             using var _ = new BlocksTestContext();
             SetupCertificatePipeline();
+            _repo.Setup(r => r.GetByIdAsync("item-1")).ReturnsAsync(StoredTenantForConfigure());
 
             var project = NewTenantForConfigure();
 
@@ -1436,16 +1494,34 @@ namespace XUnitTest.Services
         }
 
         [Fact]
+        public async Task ConfigureProjectAsync_AnnouncesTheStoredTenant_NotTheCopyItWasHanded()
+        {
+            // A repository added while provisioning ran registered its host on the stored row and
+            // broadcast it. Announcing the creation-time copy afterwards put every cache back to
+            // the host list from before, and the setup guide lost the repository's host.
+            using var _ = new BlocksTestContext();
+            SetupCertificatePipeline();
+            var stored = StoredTenantForConfigure();
+            stored.Applications.Add(new Applications { Domain = "https://sbpqto-ehxqx.dev.slsblx.com" });
+            _repo.Setup(r => r.GetByIdAsync("item-1")).ReturnsAsync(stored);
+
+            await Service().ConfigureProjectAsync(NewTenantForConfigure());
+
+            _tenants.Verify(t => t.UpdateTenantVersionAsync(It.Is<TenantCacheUpdateMessage>(m => m.Tenant == stored)), Times.Once);
+        }
+
+        [Fact]
         public async Task ConfigureProjectAsync_DoesNotAnnounce_WhenResumedRunHasNoCertificatePath()
         {
             using var _ = new BlocksTestContext();
             SetupCertificatePipeline();
+            _repo.Setup(r => r.GetByIdAsync("item-1")).ReturnsAsync(NewTenantForConfigure());
 
             var project = NewTenantForConfigure();
 
             // A resumed run: the certificates are already marked uploaded, so the upload step
-            // short-circuits and never re-assigns the path. Broadcasting the blank project here
-            // would replace good cached copies with a useless one.
+            // short-circuits and never re-assigns the path, and the earlier run never saved it.
+            // Broadcasting that tenant would replace good cached copies with a useless one.
             var tracer = new ProjectStatusTracer
             {
                 ProjectId = project.ItemId,
@@ -1539,7 +1615,7 @@ namespace XUnitTest.Services
                     .ReturnsAsync(new CompleteUploadResponse
                     {
                         IsSuccess = true,
-                        VerificationStatus = Storage.DomainService.Enums.FileVerificationStatus.Verified,
+                        VerificationStatus = Blocks.Genesis.Entities.Data.FileVerificationStatus.Verified,
                     });
             _storage.Setup(s => s.GetUrlForDownloadFileAsync(It.IsAny<GetFileRequest>()))
                     .ReturnsAsync(new FileResponse { IsSuccess = true, Url = "https://download/cert" });
@@ -1565,7 +1641,7 @@ namespace XUnitTest.Services
                     .ReturnsAsync(new CompleteUploadResponse
                     {
                         IsSuccess = true,
-                        VerificationStatus = Storage.DomainService.Enums.FileVerificationStatus.Rejected,
+                        VerificationStatus = Blocks.Genesis.Entities.Data.FileVerificationStatus.Rejected,
                         RejectionReason = "real_file_type_mismatch",
                     });
 
@@ -1606,6 +1682,14 @@ namespace XUnitTest.Services
                 CertificateStorageType = CertificateStorageType.Filefilesystem
             }
         };
+
+        // The row as provisioning leaves it in the database: the certificate path saved.
+        private static Tenant StoredTenantForConfigure()
+        {
+            var stored = NewTenantForConfigure();
+            stored.JwtTokenParameters.PublicCertificatePath = "https://download/cert";
+            return stored;
+        }
 
         // ---- Domain typing -------------------------------------------------------------
         //

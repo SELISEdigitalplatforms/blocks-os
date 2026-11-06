@@ -1,5 +1,20 @@
+import { tStatic } from "@seliseblocks/genesis-os";
 import { IPermission } from "./permission";
 import { IRole } from "./role";
+
+const I18N_MODULE = "os.idp.iam";
+
+/** An org's access attributes: attribute name to its values (`Auth.Attributes.<name>` in policies). */
+export type AccessAttributes = Record<string, string[]>;
+
+/**
+ * Free-form user attributes. Only `access` is read by the console: organization id, then
+ * attribute name, then values. Other keys belong to other features and are carried untouched.
+ */
+export interface UserAttributes {
+  access?: Record<string, AccessAttributes>;
+  [key: string]: unknown;
+}
 
 export interface User {
   itemId: string;
@@ -47,6 +62,7 @@ export interface User {
   organizations: IMembership[];
   OrganizationsRoles?: Record<string, string[]>;
   OrganizationsPermissions?: Record<string, string[]>;
+  attributes?: UserAttributes;
 }
 
 export interface IMembership {
@@ -177,6 +193,8 @@ export interface IUpdateUserPayload {
   organizations?: string[] | IMembership[];
   profileImageId?: string | null;
   profileImageUrl?: string | null;
+  /** The whole attributes object: the update replaces it, so keep the keys you did not change. */
+  attributes?: UserAttributes;
 }
 
 export interface IUpdateUserResponse {
@@ -231,12 +249,6 @@ export interface IGetHistoriesPayload {
   pageSize: number;
   filter: { UserId: string };
   projectKey: string;
-}
-
-export interface IGeneratePATPayload {
-  note?: string;
-  codeTtlInMinute: number;
-  clientId: string;
 }
 
 export interface IGetUserRolesPayload {
@@ -334,33 +346,24 @@ export interface IDeviceSessionResponse {
   errors: unknown;
 }
 
-export interface IPATResponse {
-  note: string;
-  itemId: string;
-  createdDate: Date;
-  expiryDate: Date;
-  createdBy: string;
-  language: string;
-  lastUpdatedBy: string;
-  organizationIds: string[];
-  tags: string[];
-  code: string;
-  userId: string;
-  clientId: string;
-}
-
 export const status = [
   {
     value: "Active",
-    label: "Active",
+    get label() {
+      return tStatic(I18N_MODULE, "USER.STATUS_ACTIVE");
+    },
   },
   {
     value: "Inactive",
-    label: "Inactive",
+    get label() {
+      return tStatic(I18N_MODULE, "USER.STATUS_INACTIVE");
+    },
   },
   {
     value: "Verified",
-    label: "Verified",
+    get label() {
+      return tStatic(I18N_MODULE, "USER.STATUS_VERIFIED");
+    },
   },
 ];
 
@@ -389,6 +392,9 @@ export interface IAccountResendActivationPayload {
 export interface IAccountResendActivationResponse {
   errors: unknown | null;
   isSuccess: boolean;
+}
+export interface IAdminResetPasswordPayload {
+  userId: string;
 }
 export interface IAccountRecoverPayload {
   email: string;
