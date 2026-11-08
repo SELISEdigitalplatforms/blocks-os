@@ -70,6 +70,60 @@ namespace XUnitTest.Integration
         }
 
         [Fact]
+        public async Task EncodeToBase26Async_RepositoryIdsWithSamePrefix_GetDistinctStableDomains()
+        {
+            // These real repository IDs encoded to esbolgs and esboltz, which
+            // both became esbol after the old uniqueness check had completed.
+            var service = NewService();
+            var group = "prefix-collision-" + Guid.NewGuid().ToString("N");
+            var one = await service.EncodeToBase26Async("1450238522", group, 5);
+            var crm = await service.EncodeToBase26Async("1450239237", group, 5);
+            var sales = await service.EncodeToBase26Async("1450238867", group, 5);
+
+            new[] { one, crm, sales }.Should().OnlyHaveUniqueItems();
+            foreach (var encoded in new[] { one, crm, sales })
+            {
+                encoded.Should().MatchRegex("^[a-z]{1,5}$");
+            }
+
+            (await service.EncodeToBase26Async("1450238522", group, 5)).Should().Be(one);
+            (await service.EncodeToBase26Async("1450238867", group, 5)).Should().Be(sales);
+            var stored = await _fixture.Collection<BlocksGuid>("BlocksGuids")
+                .Find(x => x.OriginalValue == "1450238867").SingleAsync();
+            stored.EncodedValue.Should().Be(sales);
+        }
+
+        [Fact]
+        public async Task EncodeToBase26Async_GuidsWithSamePrefix_GetDistinctDomains()
+        {
+            var service = NewService();
+            var first = await service.EncodeToBase26Async("80000000-0000-0000-0000-000000000000", "guid-prefix", 5);
+            var second = await service.EncodeToBase26Async("80000001-0000-0000-0000-000000000000", "guid-prefix", 5);
+
+            first.Should().NotBe(second);
+        }
+
+        [Fact]
+        public async Task EncodeToBase26Async_ZeroDoesNotReuseAnOccupiedEncoding()
+        {
+            var service = NewService();
+            var guidEncoding = await service.EncodeToBase26Async(Guid.Empty.ToString(), "zero-collision", 5);
+            var numberEncoding = await service.EncodeToBase26Async("0", "zero-collision", 5);
+
+            numberEncoding.Should().NotBe(guidEncoding);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        public async Task EncodeToBase26Async_InvalidLengthIsRejected(int length)
+        {
+            var action = () => NewService().EncodeToBase26Async("123", "invalid-length", length);
+
+            await action.Should().ThrowAsync<ArgumentOutOfRangeException>();
+        }
+
+        [Fact]
         public async Task EncodeToBase26Async_GuidInput_Encodes()
         {
             var input = Guid.NewGuid().ToString();
