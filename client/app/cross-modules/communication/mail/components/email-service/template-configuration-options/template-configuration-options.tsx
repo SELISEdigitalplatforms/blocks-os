@@ -1,11 +1,14 @@
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { SelectItem } from "@/components/ui-kits/select/select";
+import { cn } from "@/lib/utils";
 import { useT } from "@seliseblocks/genesis-os";
 import type { IEmailConfig } from "@blocks-communication/mail/models/email";
 import {
   ORGANIZATION_DEFAULT_CONFIGURATION,
   outboundConfigurationGroups,
 } from "@blocks-communication/mail/constants/template-organization";
+
+const CHIP_CLASS = "shrink-0 px-1.5 py-0 text-[10px]";
 
 interface TemplateConfigurationOptionsProps {
   configs: IEmailConfig[];
@@ -30,15 +33,23 @@ export function TemplateConfigurationOptions({
   const { t } = useT("os.communication.mail");
   const { own, shared } = outboundConfigurationGroups(configs, organizationId);
 
-  const chipFor = (config: IEmailConfig, owner: string) => {
+  // Small tinted pills, as the Disabled badge on the Organizations list.
+  const chipFor = (config: IEmailConfig, owner: "own" | "default") => {
     if (!showOrganization) return undefined;
-    return config.isDefault ? (
-      <Badge variant="secondary" className="py-0.5">
-        {t("EMAIL_CONFIGURE.PROJECT_DEFAULT")}
+    if (config.isDefault) {
+      return (
+        <Badge variant="secondary" className={CHIP_CLASS}>
+          {t("EMAIL_CONFIGURE.PROJECT_DEFAULT")}
+        </Badge>
+      );
+    }
+    return owner === "own" ? (
+      <Badge variant="success" className={cn(CHIP_CLASS, "max-w-40")} title={organizationName}>
+        <span className="truncate">{organizationName}</span>
       </Badge>
     ) : (
-      <Badge variant="outline" className="py-0.5 font-medium text-low-emphasis">
-        {owner}
+      <Badge variant="info" className={CHIP_CLASS}>
+        {t("TEMPLATE_ORGANIZATION.DEFAULT_CHIP")}
       </Badge>
     );
   };
@@ -52,7 +63,7 @@ export function TemplateConfigurationOptions({
         <SelectItem
           key={config.itemId}
           value={config.itemId}
-          trailing={chipFor(config, organizationName)}
+          trailing={chipFor(config, "own")}
         >
           {config.name}
         </SelectItem>
@@ -61,7 +72,7 @@ export function TemplateConfigurationOptions({
         <SelectItem
           key={config.itemId}
           value={config.itemId}
-          trailing={chipFor(config, t("EMAIL_CONFIGURE.DEFAULT_ORGANIZATION"))}
+          trailing={chipFor(config, "default")}
         >
           {config.name}
         </SelectItem>

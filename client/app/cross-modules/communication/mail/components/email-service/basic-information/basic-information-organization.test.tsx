@@ -78,7 +78,8 @@ describe("BasicInformation per organization (H1, H8, D9)", () => {
     const acmeSmtp = within(listbox).getByRole("option", { name: "Acme SMTP" });
     expect(within(acmeSmtp).getByText("Acme Corp")).toBeTruthy();
     const gmail = within(listbox).getByRole("option", { name: "Gmail Test" });
-    expect(within(gmail).getByText("Default organization")).toBeTruthy();
+    expect(within(gmail).getByText("Default")).toBeTruthy();
+    expect(within(gmail).queryByText("Default organization")).toBeNull();
     const projectDefault = within(listbox).getByRole("option", { name: "Default" });
     expect(within(projectDefault).getByText("PROJECT DEFAULT")).toBeTruthy();
     expect(within(listbox).queryByRole("option", { name: "Acme Inbox" })).toBeNull();
@@ -95,8 +96,8 @@ describe("BasicInformation per organization (H1, H8, D9)", () => {
     render(<BasicInformation templateData={blank} />);
     await user.click(screen.getByRole("combobox", { name: /email configuration/i }));
     const listbox = await screen.findByRole("listbox");
-    expect(within(listbox).getByRole("option", { name: "Gmail Test" })).toBeTruthy();
-    expect(within(listbox).queryByText("Default organization")).toBeNull();
+    const gmail = within(listbox).getByRole("option", { name: "Gmail Test" });
+    expect(within(gmail).queryByText("Default")).toBeNull();
     expect(within(listbox).queryByText("PROJECT DEFAULT")).toBeNull();
   });
 
