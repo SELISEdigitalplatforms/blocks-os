@@ -79,7 +79,7 @@ namespace XUnitTest.Notifications
         [Fact]
         public async Task Every_send_carries_the_organization_of_the_callers_token()
         {
-            using var _ = new BlocksTestContext(tenantId: "project-1");
+            using var _ = new BlocksTestContext(tenantId: "project-1", organizationId: "org-1");
 
             await Sender().SendAsync(Notification(tenantId: null));
 

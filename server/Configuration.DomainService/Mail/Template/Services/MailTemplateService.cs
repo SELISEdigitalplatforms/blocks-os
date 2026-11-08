@@ -38,6 +38,11 @@ namespace Configuration.DomainService.Mail.Template.Services
 
         public async Task<BaseMutationResponse> SaveTemplateAsync(SaveMailTemplateRequest template)
         {
+            ArgumentNullException.ThrowIfNull(template);
+            // Before validation, whose Name + Language check reads the request's organization: a confined caller's
+            // template is its own organization's, and naming another one is refused.
+            template.OrganizationId = CallerOrganization.Scope(template.OrganizationId);
+
             var validationResult = await _validator.ValidateAsync(template);
 
             if (!validationResult.IsValid)
@@ -52,6 +57,10 @@ namespace Configuration.DomainService.Mail.Template.Services
             var stored = string.IsNullOrWhiteSpace(template.ItemId)
                 ? null
                 : await _templateRepository.GetByIdAsync(template.ItemId);
+            if (stored != null)
+            {
+                CallerOrganization.EnsureMayAccess(stored.OrganizationId);
+            }
 
             // An unknown id is saved as a new template with that id, as before organizations.
             var mapped = stored == null
@@ -86,12 +95,21 @@ namespace Configuration.DomainService.Mail.Template.Services
 
         public async Task<GetAllMailTemplatesResponse> GetAllTemplatesAsync(GetAllMailTemplatesRequest request)
         {
+            ArgumentNullException.ThrowIfNull(request);
+            // A confined caller lists its own organization's templates; no organization named means that one too.
+            request.OrganizationId = CallerOrganization.Scope(request.OrganizationId);
             return await _templateRepository.GetsAsync(request);
         }
 
         public async Task<EmailTemplate?> GetAsync(GetMailTemplateRequest request)
         {
-            return await _templateRepository.GetForViewAsync(request.ItemId);
+            var template = await _templateRepository.GetForViewAsync(request.ItemId);
+            if (template != null)
+            {
+                CallerOrganization.EnsureMayAccess(template.OrganizationId);
+            }
+
+            return template;
         }
 
         public async Task<BaseMutationResponse> CloneTemplateAsync(CloneMailTemplateRequest request)
@@ -101,6 +119,9 @@ namespace Configuration.DomainService.Mail.Template.Services
             {
                 return Failure("Template", "Template not found");
             }
+
+            // The clone stays in the source's organization, so the source must be the caller's to read.
+            CallerOrganization.EnsureMayAccess(repoTemplate.OrganizationId);
 
             // A clone is the same template in another language: same name, same organization.
             if (!string.IsNullOrWhiteSpace(request.Name) && request.Name != repoTemplate.Name)
@@ -179,6 +200,8 @@ namespace Configuration.DomainService.Mail.Template.Services
         public async Task<BaseMutationResponse> DeleteAcrossOrganizationsAsync(DeleteTemplateAcrossOrganizationsRequest request)
         {
             ArgumentNullException.ThrowIfNull(request);
+            // It deletes the Default template and copies in other organizations: never for a confined caller.
+            CallerOrganization.EnsureUnconfined();
 
             var template = string.IsNullOrWhiteSpace(request.TemplateId) ? null : await _templateRepository.GetByIdAsync(request.TemplateId);
             if (template is null)
@@ -251,6 +274,8 @@ namespace Configuration.DomainService.Mail.Template.Services
             {
                 return Failure("ItemId", "ItemId not found");
             }
+
+            CallerOrganization.EnsureMayAccess(template.OrganizationId);
 
             await _templateRepository.DeleteAsync(request.ItemId);
 
@@ -367,6 +392,9 @@ namespace Configuration.DomainService.Mail.Template.Services
             {
                 return AssignFailure(nameof(AssignTemplatesRequest.ConfigurationId), "Configuration not found");
             }
+
+            // The templates changed are the configuration's organization's, so that must be the caller's.
+            CallerOrganization.EnsureMayAccess(configuration.OrganizationId);
 
             if (configuration.IsInbound)
             {

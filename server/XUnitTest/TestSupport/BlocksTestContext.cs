@@ -16,15 +16,17 @@ namespace XUnitTest.TestSupport
             string userId = "user-1",
             string userName = "user@blocks.com",
             bool impersonated = false,
-            string? originalTenantId = null)
+            string? originalTenantId = null,
+            string organizationId = "default")
         {
+            // The Default organization, as the console's token: it may act for every organization.
             var context = BlocksContext.Create(
                 tenantId: tenantId,
                 roles: new List<string>(),
                 userId: userId,
                 isAuthenticated: true,
                 requestUri: "https://console.blocks.com/test",
-                organizationId: "org-1",
+                organizationId: organizationId,
                 expireOn: DateTime.UtcNow.AddHours(1),
                 email: userName,
                 permissions: new List<string>(),

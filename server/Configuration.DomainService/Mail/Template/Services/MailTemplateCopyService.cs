@@ -28,6 +28,8 @@ namespace Configuration.DomainService.Mail.Template.Services
         public async Task<BaseMutationResponse> CopyToOrganizationsAsync(CopyTemplateToOrganizationsRequest request)
         {
             ArgumentNullException.ThrowIfNull(request);
+            // It reads a Default template and writes to other organizations: never for a confined caller.
+            CallerOrganization.EnsureUnconfined();
 
             var template = string.IsNullOrWhiteSpace(request.TemplateId) ? null : await _templateRepository.GetByIdAsync(request.TemplateId);
             if (template is null)
@@ -92,6 +94,8 @@ namespace Configuration.DomainService.Mail.Template.Services
         public async Task<GetTemplateOrganizationCopiesResponse> GetOrganizationCopiesAsync(GetTemplateOrganizationCopiesRequest request)
         {
             ArgumentNullException.ThrowIfNull(request);
+            // It tells which other organizations have their own copy: never for a confined caller.
+            CallerOrganization.EnsureUnconfined();
 
             var template = string.IsNullOrWhiteSpace(request.TemplateId) ? null : await _templateRepository.GetByIdAsync(request.TemplateId);
             if (template is null)

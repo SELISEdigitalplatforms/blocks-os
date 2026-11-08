@@ -494,6 +494,15 @@
         <member name="M:BlocksOs.Api.Middleware.HostAccessCookieBearerMiddleware.PromoteHostAccessCookie(Microsoft.AspNetCore.Http.HttpContext)">
             <summary>Promote host-named IAM access cookie to Authorization when missing.</summary>
         </member>
+        <member name="T:BlocksOs.Api.Middleware.OrganizationAccessDeniedExceptionFilter">
+            <summary>
+            A caller confined to its token's organization reached for another organization's records: 403 with the envelope
+            the rest of the API uses, so a client reads the reason from <c>errors</c> as it does for a 400.
+            </summary>
+        </member>
+        <member name="F:BlocksOs.Api.Middleware.OrganizationAccessDeniedExceptionFilter.ErrorKey">
+            <summary>The <c>errors</c> key of the refusal, named like the project access filter's <c>own_project</c>.</summary>
+        </member>
         <member name="T:BlocksOs.Api.Middleware.SpaFallbackGuard">
             <summary>
             Paths that must not be served by the SPA <c>index.html</c> fallback.

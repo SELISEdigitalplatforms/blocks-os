@@ -54,6 +54,9 @@ builder.Services.Configure<MvcOptions>(options =>
     // A system schema's validation rules refusing a save: 400 with the failed properties.
     options.Filters.Add<BlocksOs.Api.Middleware.DataValidationExceptionFilter>();
 
+    // A token confined to its own organization reaching for another organization's records: 403.
+    options.Filters.Add<OrganizationAccessDeniedExceptionFilter>();
+
     // Project access grants. An action filter, so it always runs after the authorization
     // middleware has applied [Authorize]/[ProtectedEndPoint] — owner passes, contributor is
     // checked against what the owner granted them. An endpoint without [ProjectPolicy] is
