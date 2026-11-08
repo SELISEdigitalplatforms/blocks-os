@@ -26,6 +26,7 @@ import {
   toAuthSettingsFormValues,
   type AuthSettingsFormValues,
 } from "@blocks-idp/settings/utils/auth-config-form";
+import { useT } from "@seliseblocks/genesis-os";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useMemo } from "react";
 import { useForm, useFormState } from "react-hook-form";
@@ -41,29 +42,33 @@ type MinutesInputProps = {
   name: string;
 };
 
-const MinutesInput = ({ value, onChange, onBlur, name }: MinutesInputProps) => (
-  <div className="relative w-full">
-    <Input
-      type="number"
-      min={0}
-      name={name}
-      value={value}
-      onBlur={onBlur}
-      onChange={(event) => onChange(Number(event.target.value))}
-      className={SETTINGS_FORM_LAYOUT.inputWithSuffix}
-    />
-    <span
-      className={cn(
-        "pointer-events-none absolute inset-y-0 right-3 flex items-center",
-        SETTINGS_FORM_LAYOUT.inputSuffix,
-      )}
-    >
-      Minutes
-    </span>
-  </div>
-);
+const MinutesInput = ({ value, onChange, onBlur, name }: MinutesInputProps) => {
+  const { t } = useT("os.idp.settings");
+  return (
+    <div className="relative w-full">
+      <Input
+        type="number"
+        min={0}
+        name={name}
+        value={value}
+        onBlur={onBlur}
+        onChange={(event) => onChange(Number(event.target.value))}
+        className={SETTINGS_FORM_LAYOUT.inputWithSuffix}
+      />
+      <span
+        className={cn(
+          "pointer-events-none absolute inset-y-0 right-3 flex items-center",
+          SETTINGS_FORM_LAYOUT.inputSuffix,
+        )}
+      >
+        {t("AUTH_SETTINGS_FORM.MINUTES")}
+      </span>
+    </div>
+  );
+};
 
 export const AuthSettingsForm = ({ config }: AuthSettingsFormProps) => {
+  const { t } = useT("os.idp.settings");
   const { mutateAsync, isPending } = useSaveSettingsAuthConfig();
 
   const formValues = useMemo(() => toAuthSettingsFormValues(config), [config]);
@@ -88,13 +93,13 @@ export const AuthSettingsForm = ({ config }: AuthSettingsFormProps) => {
         });
         const res = await mutateAsync(payload);
         if (!res.isSuccess) return showErrorToast({ errors: res.errors });
-        showSuccessToast({ description: "Authentication settings updated successfully" });
+        showSuccessToast({ description: t("AUTH_SETTINGS_FORM.UPDATED") });
       } catch (error) {
         if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
-        showErrorToast({ errors: "Something went wrong" });
+        showErrorToast({ errors: t("AUTH_SETTINGS_FORM.SOMETHING_WENT_WRONG") });
       }
     },
-    [config, mutateAsync],
+    [config, mutateAsync, t],
   );
 
   const tabActions = useMemo(
@@ -114,14 +119,14 @@ export const AuthSettingsForm = ({ config }: AuthSettingsFormProps) => {
       <Form {...form}>
         <SettingsTabActions tabId="auth-config">{tabActions}</SettingsTabActions>
         <form className={SETTINGS_FORM_LAYOUT.formStack} onSubmit={form.handleSubmit(handleSubmit)}>
-          <SettingsFormSection title="Token Configurations">
+          <SettingsFormSection title={t("AUTH_SETTINGS_FORM.TOKEN_CONFIGURATIONS")}>
             <SettingsFieldGrid>
               <FormField
                 name="accessTokenValidForNumberMinutes"
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Access Token Validity</FormLabel>
+                    <FormLabel>{t("AUTH_SETTINGS_FORM.ACCESS_TOKEN_VALIDITY")}</FormLabel>
                     <FormControl>
                       <MinutesInput
                         name={field.name}
@@ -139,7 +144,7 @@ export const AuthSettingsForm = ({ config }: AuthSettingsFormProps) => {
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Refresh Token Validity</FormLabel>
+                    <FormLabel>{t("AUTH_SETTINGS_FORM.REFRESH_TOKEN_VALIDITY")}</FormLabel>
                     <FormControl>
                       <MinutesInput
                         name={field.name}
@@ -157,7 +162,7 @@ export const AuthSettingsForm = ({ config }: AuthSettingsFormProps) => {
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Absolute Refresh Token Validity</FormLabel>
+                    <FormLabel>{t("AUTH_SETTINGS_FORM.ABSOLUTE_REFRESH_TOKEN_VALIDITY")}</FormLabel>
                     <FormControl>
                       <MinutesInput
                         name={field.name}
@@ -175,7 +180,9 @@ export const AuthSettingsForm = ({ config }: AuthSettingsFormProps) => {
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>&quot;Remember Me&quot; Refresh Token Validity</FormLabel>
+                    <FormLabel>
+                      {t("AUTH_SETTINGS_FORM.REMEMBER_ME_REFRESH_TOKEN_VALIDITY")}
+                    </FormLabel>
                     <FormControl>
                       <MinutesInput
                         name={field.name}
@@ -191,14 +198,14 @@ export const AuthSettingsForm = ({ config }: AuthSettingsFormProps) => {
             </SettingsFieldGrid>
           </SettingsFormSection>
 
-          <SettingsFormSection title="Security & Lockout">
+          <SettingsFormSection title={t("AUTH_SETTINGS_FORM.SECURITY_LOCKOUT")}>
             <SettingsFieldGrid>
               <FormField
                 name="getNumberOfWrongAttemptsToLockTheAccount"
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Maximum Failed Login Attempts</FormLabel>
+                    <FormLabel>{t("AUTH_SETTINGS_FORM.MAX_FAILED_ATTEMPTS")}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -216,7 +223,7 @@ export const AuthSettingsForm = ({ config }: AuthSettingsFormProps) => {
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Account Lock Duration</FormLabel>
+                    <FormLabel>{t("AUTH_SETTINGS_FORM.ACCOUNT_LOCK_DURATION")}</FormLabel>
                     <FormControl>
                       <MinutesInput
                         name={field.name}
@@ -232,7 +239,7 @@ export const AuthSettingsForm = ({ config }: AuthSettingsFormProps) => {
             </SettingsFieldGrid>
           </SettingsFormSection>
 
-          <SettingsFormSection title="Infrastructure">
+          <SettingsFormSection title={t("AUTH_SETTINGS_FORM.INFRASTRUCTURE")}>
             <FormField
               name="publicCertificatePath"
               control={form.control}

@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { IOrganization } from "@blocks-idp/iam/models/organization";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { Calendar, Clock, ExternalLink, Globe, Mail, Phone, Power, SquarePen } from "lucide-react";
@@ -37,22 +38,27 @@ const formatDateTime = (value?: string) => {
 };
 
 export const OrganizationDetailsTab = ({ organization }: { organization: IOrganization }) => {
+  const { t } = useT("os.idp.organizations");
   return (
     <Card className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
       <CardContent className="min-h-0 flex-1 overflow-y-auto">
         <DetailRow
           icon={<SquarePen className="h-4 w-4" />}
-          label="Description"
+          label={t("common:DESCRIPTION")}
           value={organization.description}
         />
         <DetailRow
           icon={<Power className="h-4 w-4" />}
-          label="Status"
-          value={organization.isDisabled ? "Disabled" : "Active"}
+          label={t("common:STATUS")}
+          value={
+            organization.isDisabled
+              ? t("common:DISABLED")
+              : t("ORGANIZATION_DETAILS_TAB.STATUS_ACTIVE")
+          }
         />
         <DetailRow
           icon={<Globe className="h-4 w-4" />}
-          label="Website"
+          label={t("ORGANIZATION_DETAILS_TAB.WEBSITE")}
           value={
             organization.websiteUrl && (
               <a
@@ -67,20 +73,24 @@ export const OrganizationDetailsTab = ({ organization }: { organization: IOrgani
             )
           }
         />
-        <DetailRow icon={<Mail className="h-4 w-4" />} label="Email" value={organization.email} />
+        <DetailRow
+          icon={<Mail className="h-4 w-4" />}
+          label={t("common:EMAIL")}
+          value={organization.email}
+        />
         <DetailRow
           icon={<Phone className="h-4 w-4" />}
-          label="Phone"
+          label={t("ORGANIZATION_DETAILS_TAB.PHONE")}
           value={organization.phoneNumber}
         />
         <DetailRow
           icon={<Calendar className="h-4 w-4" />}
-          label="Created"
+          label={t("ORGANIZATION_DETAILS_TAB.CREATED")}
           value={formatDateTime(organization.createdDate)}
         />
         <DetailRow
           icon={<Clock className="h-4 w-4" />}
-          label="Last updated"
+          label={t("ORGANIZATION_DETAILS_TAB.LAST_UPDATED")}
           value={formatDateTime(organization.lastUpdatedDate)}
         />
       </CardContent>

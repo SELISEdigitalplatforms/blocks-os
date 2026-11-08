@@ -9,6 +9,7 @@ import {
 } from "@/components/ui-kits/select/select";
 import { Button } from "@/components/ui-kits/button/button";
 import { cn } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 /** Rows-per-page choices every table offers, so tables do not each pick their own. */
 export const DEFAULT_PAGE_SIZE_OPTIONS = [10, 25, 50];
 
@@ -45,6 +46,7 @@ export function Pagination({
   onPageSizeChange,
   compact,
 }: Readonly<PaginationProps>) {
+  const { t } = useT("os.shared");
   const pageChangeHandler = (page: number) => {
     onChange(page);
   };
@@ -64,7 +66,9 @@ export function Pagination({
     >
       {onPageSizeChange && sizeChoices.length > 1 ? (
         <div className={cn("flex items-center space-x-2", compact && "shrink-0 space-x-1.5")}>
-          <p className={cn("text-sm font-medium", compact && "hidden md:block")}>Rows per page</p>
+          <p className={cn("text-sm font-medium", compact && "hidden md:block")}>
+            {t("PAGINATION.ROWS_PER_PAGE")}
+          </p>
           <Select value={`${pageSize}`} onValueChange={onPageSizeChangeHandler}>
             <SelectTrigger
               className={cn(
@@ -93,11 +97,11 @@ export function Pagination({
             compact && "text-xs md:text-sm",
           )}
         >
-          Page {page + 1} of {totalPage}
+          {t("PAGINATION.PAGE_OF", { page: page + 1, total: totalPage })}
         </div>
         <div className={cn("flex items-center gap-1", compact && "gap-0.5")}>
           <Button
-            aria-label="Go to first page"
+            aria-label={t("PAGINATION.GO_TO_FIRST_PAGE")}
             variant="outline"
             className={cn(
               "flex h-8 w-8 p-0 disabled:cursor-not-allowed",
@@ -111,7 +115,7 @@ export function Pagination({
             <ChevronsLeft className="h-4 w-4" />
           </Button>
           <Button
-            aria-label="Go to previous page"
+            aria-label={t("PAGINATION.GO_TO_PREVIOUS_PAGE")}
             variant="outline"
             className={cn("h-8 w-8 p-0", compact && COMPACT_BUTTON)}
             onClick={() => {
@@ -122,7 +126,7 @@ export function Pagination({
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <Button
-            aria-label="Go to next page"
+            aria-label={t("PAGINATION.GO_TO_NEXT_PAGE")}
             variant="outline"
             className={cn("h-8 w-8 p-0", compact && COMPACT_BUTTON)}
             onClick={() => {
@@ -133,7 +137,7 @@ export function Pagination({
             <ChevronRight className="h-4 w-4" />
           </Button>
           <Button
-            aria-label="Go to last page"
+            aria-label={t("PAGINATION.GO_TO_LAST_PAGE")}
             variant="outline"
             className={cn("flex h-8 w-8 p-0", compact && COMPACT_BUTTON)}
             onClick={() => {

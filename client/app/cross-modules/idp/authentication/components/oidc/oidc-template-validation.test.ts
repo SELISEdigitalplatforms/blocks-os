@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_OIDC_UI_TEMPLATE } from "./oidc-template-defaults";
 import {
-  HEX_COLOR_MESSAGE,
-  HEX_OR_RGBA_COLOR_MESSAGE,
-  PAGE_FIELDS,
-  PAGE_OPTIONS,
-  TEXT_MESSAGE,
-  THEME_FIELDS,
-  URL_MESSAGE,
+  getHexColorMessage,
+  getHexOrRgbaColorMessage,
+  getPageFields,
+  getPageOptions,
+  getTextMessage,
+  getThemeFields,
+  getUrlMessage,
   isRgbaColor,
   validateOidcUiTemplate,
 } from "./oidc-template-validation";
@@ -22,11 +22,11 @@ describe("validateOidcUiTemplate", () => {
   it.each(["light", "dark"] as const)(
     "requires and validates every color in the %s palette independently",
     (mode) => {
-      for (const { key, acceptsRgba } of THEME_FIELDS) {
+      for (const { key, acceptsRgba } of getThemeFields()) {
         const draft = template();
         draft.theme[mode][key] = "";
         expect(validateOidcUiTemplate(draft)[`theme.${mode}.${key}`]).toBe(
-          acceptsRgba ? HEX_OR_RGBA_COLOR_MESSAGE : HEX_COLOR_MESSAGE,
+          acceptsRgba ? getHexOrRgbaColorMessage() : getHexColorMessage(),
         );
       }
     },
@@ -41,7 +41,7 @@ describe("validateOidcUiTemplate", () => {
 
     const draft = template();
     draft.theme.light.primary = "rgba(0, 0, 0, 1)";
-    expect(validateOidcUiTemplate(draft)["theme.light.primary"]).toBe(HEX_COLOR_MESSAGE);
+    expect(validateOidcUiTemplate(draft)["theme.light.primary"]).toBe(getHexColorMessage());
   });
 
   it.each([
@@ -57,7 +57,7 @@ describe("validateOidcUiTemplate", () => {
 
   it("treats the SSO separator as optional on both pages that offer SSO", () => {
     for (const pageKey of ["login", "signup"] as const) {
-      const field = PAGE_FIELDS[pageKey].find(({ key }) => key === "ssoSeparatorText");
+      const field = getPageFields()[pageKey].find(({ key }) => key === "ssoSeparatorText");
       expect(field?.optional).toBe(true);
       expect(field?.placeholder).toBe("or");
       expect(DEFAULT_OIDC_UI_TEMPLATE.pages[pageKey].ssoSeparatorText).toBe("or");
@@ -96,25 +96,25 @@ describe("validateOidcUiTemplate", () => {
     draft.pages.signup.termsLinkUrl = "/legal/terms";
     draft.pages.signup.privacyLinkUrl = "javascript:alert(1)";
     expect(validateOidcUiTemplate(draft)).toMatchObject({
-      "pages.signup.termsLinkUrl": URL_MESSAGE,
-      "pages.signup.privacyLinkUrl": URL_MESSAGE,
+      "pages.signup.termsLinkUrl": getUrlMessage(),
+      "pages.signup.privacyLinkUrl": getUrlMessage(),
     });
   });
 
   it("requires every page field except the nullable copy fields", () => {
-    for (const { key: pageKey } of PAGE_OPTIONS) {
-      for (const { key, optional } of PAGE_FIELDS[pageKey]) {
+    for (const { key: pageKey } of getPageOptions()) {
+      for (const { key, optional } of getPageFields()[pageKey]) {
         const draft = template();
         const page = draft.pages[pageKey] as unknown as Record<string, string | null>;
         page[key] = optional ? null : "";
         const error = validateOidcUiTemplate(draft)[`pages.${pageKey}.${key}`];
-        expect(error).toBe(optional ? undefined : TEXT_MESSAGE);
+        expect(error).toBe(optional ? undefined : getTextMessage());
       }
     }
   });
 
   it("orders signup consent fields before the submit-button field", () => {
-    const keys = PAGE_FIELDS.signup.map(({ key }) => key);
+    const keys = getPageFields().signup.map(({ key }) => key);
     expect(keys.indexOf("termsPrefix")).toBeLessThan(keys.indexOf("submitButton"));
     expect(keys.indexOf("privacyLinkText")).toBeLessThan(keys.indexOf("submitButton"));
   });
@@ -124,8 +124,8 @@ describe("validateOidcUiTemplate", () => {
     draft.pages.signup.heading = "x".repeat(201);
     draft.pages.shared.footerText = "x".repeat(201);
     const errors = validateOidcUiTemplate(draft);
-    expect(errors["pages.signup.heading"]).toBe(TEXT_MESSAGE);
-    expect(errors["pages.shared.footerText"]).toBe(TEXT_MESSAGE);
+    expect(errors["pages.signup.heading"]).toBe(getTextMessage());
+    expect(errors["pages.shared.footerText"]).toBe(getTextMessage());
   });
 
   it("enforces brand-name and optional-logo rules for both light and dark independently", () => {

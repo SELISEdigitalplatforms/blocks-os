@@ -80,7 +80,9 @@ function collectNodeFilesUnderApp(): string[] {
   return acc;
 }
 
-const NODE_FILES = collectNodeFilesUnderApp();
+// i18n: code outside React reads text through genesis `tStatic`, and importing genesis needs a
+// DOM (`window`), so no suite runs on `node` any more. The list is kept so the split can come back.
+const NODE_FILES: string[] = collectNodeFilesUnderApp().filter(() => false);
 
 const shared = {
   globals: true,
@@ -96,16 +98,6 @@ export default defineConfig({
   resolve: { alias },
   test: {
     projects: [
-      {
-        plugins: [react()],
-        resolve: { alias },
-        test: {
-          ...shared,
-          name: "node",
-          environment: "node",
-          include: NODE_FILES,
-        },
-      },
       {
         plugins: [react()],
         resolve: { alias },

@@ -1,5 +1,6 @@
 import { PUSH_PLATFORMS, type IPushSettings, type PushPlatform } from "../../models/push.model";
 import { PLATFORM_LABEL, PUSH_FORM_TEXT } from "../../constants/push-ui.constant";
+import { useNotificationT } from "../../i18n";
 import { CheckRow, HelpText } from "./form-row";
 
 interface PushPlatformsFieldProps {
@@ -15,6 +16,7 @@ export function PushPlatformsField({
   settings,
   onChange,
 }: Readonly<PushPlatformsFieldProps>) {
+  const { t } = useNotificationT();
   const toggle = (platform: PushPlatform, checked: boolean) =>
     onChange(PUSH_PLATFORMS.filter((p) => (p === platform ? checked : selected.includes(p))));
   return (
@@ -27,7 +29,7 @@ export function PushPlatformsField({
             <CheckRow
               key={platform}
               id={`push-platform-${platform}`}
-              label={off ? `${label} (${PUSH_FORM_TEXT.offInSettings})` : label}
+              label={off ? t("PUSH_PLATFORMS_FIELD.OFF_IN_SETTINGS", { platform: label }) : label}
               checked={selected.includes(platform)}
               onChange={(checked) => toggle(platform, checked)}
             />

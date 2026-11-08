@@ -1,6 +1,13 @@
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button/copy-to-clipboard-button";
-import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerTitle } from "@/components/ui-kits/drawer/drawer";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerTitle,
+} from "@/components/ui-kits/drawer/drawer";
 import { ScrollArea } from "@/components/ui-kits/scroll-area/scroll-area";
+import { useT } from "@seliseblocks/genesis-os";
 import { Eye, X } from "lucide-react";
 import { useMemo } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -9,7 +16,13 @@ import prism from "react-syntax-highlighter/dist/esm/styles/prism/prism";
 import type { PlatformSchemaField } from "../data-access.service";
 import { buildStructurePreview } from "./explorer-utils";
 
-const HIGHLIGHTER_STYLE = { margin: 0, background: "transparent", padding: 0, fontSize: "0.75rem", lineHeight: 1.6 };
+const HIGHLIGHTER_STYLE = {
+  margin: 0,
+  background: "transparent",
+  padding: 0,
+  fontSize: "0.75rem",
+  lineHeight: 1.6,
+};
 
 /**
  * The Data Gateway's preview drawer, Schema Structure only: the entity's shape
@@ -26,7 +39,11 @@ export function SchemaPreviewDrawer({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }>) {
-  const formattedJson = useMemo(() => JSON.stringify(buildStructurePreview(fields), null, 2), [fields]);
+  const { t } = useT("os.idp.explorer");
+  const formattedJson = useMemo(
+    () => JSON.stringify(buildStructurePreview(fields), null, 2),
+    [fields],
+  );
 
   return (
     <Drawer direction="right" handleOnly open={open} onOpenChange={onOpenChange}>
@@ -39,14 +56,16 @@ export function SchemaPreviewDrawer({
           <div className="relative flex shrink-0 items-center justify-between gap-4 border-b border-border/40 px-6 py-4">
             <DrawerTitle className="flex items-center gap-2 text-sm font-semibold text-foreground">
               <Eye className="h-4 w-4 text-indigo-400" />
-              {schemaName} preview
+              {t("SCHEMA_PREVIEW_DRAWER.TITLE", { schema: schemaName })}
             </DrawerTitle>
-            <DrawerDescription className="sr-only">Preview of the schema structure.</DrawerDescription>
+            <DrawerDescription className="sr-only">
+              {t("SCHEMA_PREVIEW_DRAWER.DESCRIPTION")}
+            </DrawerDescription>
             <DrawerClose asChild>
               <button
                 type="button"
                 className="inline-flex h-7 w-7 items-center justify-center rounded-md text-foreground/80 transition-colors hover:bg-muted/60 hover:text-foreground"
-                aria-label="Close"
+                aria-label={t("common:CLOSE")}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -59,12 +78,22 @@ export function SchemaPreviewDrawer({
               </div>
               <ScrollArea className="h-full rounded-sm border border-border/60 bg-muted/30 pr-4">
                 <div className="block p-5 pr-20 dark:hidden">
-                  <SyntaxHighlighter language="json" style={prism} customStyle={HIGHLIGHTER_STYLE} wrapLongLines>
+                  <SyntaxHighlighter
+                    language="json"
+                    style={prism}
+                    customStyle={HIGHLIGHTER_STYLE}
+                    wrapLongLines
+                  >
                     {formattedJson}
                   </SyntaxHighlighter>
                 </div>
                 <div className="hidden p-5 pr-20 dark:block">
-                  <SyntaxHighlighter language="json" style={atomDark} customStyle={HIGHLIGHTER_STYLE} wrapLongLines>
+                  <SyntaxHighlighter
+                    language="json"
+                    style={atomDark}
+                    customStyle={HIGHLIGHTER_STYLE}
+                    wrapLongLines
+                  >
                     {formattedJson}
                   </SyntaxHighlighter>
                 </div>

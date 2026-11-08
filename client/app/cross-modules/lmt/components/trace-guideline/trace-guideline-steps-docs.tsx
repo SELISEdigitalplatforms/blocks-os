@@ -1,33 +1,27 @@
 import { ReactNode } from "react";
+import type { TFunction } from "@seliseblocks/genesis-os";
 import { TRACE_PROVIDERS } from "../../constants/trace.constant";
 export type Step = {
   id: string;
   description: ReactNode;
 };
-export const TraceGuideSteps: Record<TRACE_PROVIDERS, Step[]> = {
+export const getTraceGuideSteps = (t: TFunction): Record<TRACE_PROVIDERS, Step[]> => ({
   hot: [
     {
       id: "0",
       description: (
         <div>
-          <h4 className="text-lg text-high-emphasis">Hot Tier (Real‑Time)</h4>
-          <p>
-            Hot traces are stored in MongoDB Time Series collections for low‑latency, ad‑hoc
-            querying.
-          </p>
+          <h4 className="text-lg text-high-emphasis">
+            {t("TRACE_GUIDELINE_STEPS_DOCS.HOT_TIER_REAL_TIME")}
+          </h4>
+          <p>{t("TRACE_GUIDELINE_STEPS_DOCS.HOT_TRACES_ARE_STORED_IN")}</p>
           <ul className="mt-2 list-inside list-disc text-sm">
-            <li>Optimized for write throughput + real‑time dashboards.</li>
-            <li>
-              Retention target: first 60 days are fully indexed; total hot window 90–120 days.
-            </li>
-            <li>
-              Automatic roll‑off begins after day 60 (older documents gradually marked for cold
-              export).
-            </li>
+            <li>{t("TRACE_GUIDELINE_STEPS_DOCS.OPTIMIZED_FOR_WRITE_THROUGHPUT")}</li>
+            <li>{t("TRACE_GUIDELINE_STEPS_DOCS.RETENTION_TARGET_FIRST_60_DAYS")}</li>
+            <li>{t("TRACE_GUIDELINE_STEPS_DOCS.AUTOMATIC_ROLL_OFF_BEGINS_AFTER")}</li>
           </ul>
           <p className="mt-2 text-sm text-muted-foreground">
-            You can browse {"&"} filter these traces directly in the list view. No admin action
-            required.
+            {t("TRACE_GUIDELINE_STEPS_DOCS.YOU_CAN_BROWSE_FILTER_THESE")}
           </p>
         </div>
       ),
@@ -36,16 +30,17 @@ export const TraceGuideSteps: Record<TRACE_PROVIDERS, Step[]> = {
       id: "1",
       description: (
         <div>
-          <h4 className="text-lg text-high-emphasis">What Happens After 60 Days?</h4>
+          <h4 className="text-lg text-high-emphasis">
+            {t("TRACE_GUIDELINE_STEPS_DOCS.WHAT_HAPPENS_AFTER_60_DAYS")}
+          </h4>
           <p className="text-sm">
-            A background process batches older hot traces and stages them for cold export (Parquet).
-            During staging you still see them as normal until the export job confirms completion.
+            {t("TRACE_GUIDELINE_STEPS_DOCS.A_BACKGROUND_PROCESS_BATCHES_OLDER")}
           </p>
           <ul className="mt-2 list-inside list-disc text-sm">
-            <li>Export cadence: every 6 hours (configurable).</li>
-            <li>Compression: Snappy (Parquet) in Azure Blob Storage.</li>
+            <li>{t("TRACE_GUIDELINE_STEPS_DOCS.EXPORT_CADENCE_EVERY_6_HOURS")}</li>
+            <li>{t("TRACE_GUIDELINE_STEPS_DOCS.COMPRESSION_SNAPPY_PARQUET_IN")}</li>
             <li>
-              Partitioning: /year=YYYY/month=MM/day=DD/hour=HH/service=<code>name</code>
+              {t("TRACE_GUIDELINE_STEPS_DOCS.PARTITIONING_YEAR_YYYY_MONTH_MM", { code: "name" })}
             </li>
           </ul>
         </div>
@@ -55,11 +50,13 @@ export const TraceGuideSteps: Record<TRACE_PROVIDERS, Step[]> = {
       id: "2",
       description: (
         <div>
-          <h4 className="text-lg text-high-emphasis">Query Tips</h4>
+          <h4 className="text-lg text-high-emphasis">
+            {t("TRACE_GUIDELINE_STEPS_DOCS.QUERY_TIPS")}
+          </h4>
           <ul className="list-inside list-disc text-sm">
-            <li>Use time range filters to leverage time‑series bucketing efficiently.</li>
-            <li>Avoid regex on high‑cardinality fields; index service, traceId, spanId, status.</li>
-            <li>Prefer aggregations with $match (time window) then $group.</li>
+            <li>{t("TRACE_GUIDELINE_STEPS_DOCS.USE_TIME_RANGE_FILTERS_TO")}</li>
+            <li>{t("TRACE_GUIDELINE_STEPS_DOCS.AVOID_REGEX_ON_HIGH_CARDINALITY")}</li>
+            <li>{t("TRACE_GUIDELINE_STEPS_DOCS.PREFER_AGGREGATIONS_WITH_MATCH")}</li>
           </ul>
         </div>
       ),
@@ -70,17 +67,14 @@ export const TraceGuideSteps: Record<TRACE_PROVIDERS, Step[]> = {
       id: "0",
       description: (
         <div>
-          <h4 className="text-lg text-high-emphasis">Cold Tier (Parquet)</h4>
-          <p>
-            Cold traces (approx. 4–12 months old) live in Azure Blob Storage as partitioned Parquet
-            files.
-          </p>
+          <h4 className="text-lg text-high-emphasis">
+            {t("TRACE_GUIDELINE_STEPS_DOCS.COLD_TIER_PARQUET")}
+          </h4>
+          <p>{t("TRACE_GUIDELINE_STEPS_DOCS.COLD_TRACES_APPROX_4_12")}</p>
           <ul className="mt-2 list-inside list-disc text-sm">
-            <li>Optimized for cost {"&"} analytical scans, not millisecond lookups.</li>
-            <li>
-              Accessible via on‑demand query adapters (Spark / DuckDB / Azure Data Lake query).
-            </li>
-            <li>Schema evolution handled via additive columns; breaking changes versioned.</li>
+            <li>{t("TRACE_GUIDELINE_STEPS_DOCS.OPTIMIZED_FOR_COST_ANALYTICAL")}</li>
+            <li>{t("TRACE_GUIDELINE_STEPS_DOCS.ACCESSIBLE_VIA_ON_DEMAND_QUERY")}</li>
+            <li>{t("TRACE_GUIDELINE_STEPS_DOCS.SCHEMA_EVOLUTION_HANDLED_VIA")}</li>
           </ul>
         </div>
       ),
@@ -89,15 +83,13 @@ export const TraceGuideSteps: Record<TRACE_PROVIDERS, Step[]> = {
       id: "1",
       description: (
         <div>
-          <h4 className="text-lg text-high-emphasis">Accessing Cold Data</h4>
-          <p className="text-sm">
-            You can run batch queries from the UI by choosing a date range outside the hot window.
-          </p>
+          <h4 className="text-lg text-high-emphasis">
+            {t("TRACE_GUIDELINE_STEPS_DOCS.ACCESSING_COLD_DATA")}
+          </h4>
+          <p className="text-sm">{t("TRACE_GUIDELINE_STEPS_DOCS.YOU_CAN_RUN_BATCH_QUERIES")}</p>
           <ul className="mt-2 list-inside list-disc text-sm">
-            <li>Expect higher latency (seconds) for large scans.</li>
-            <li>
-              Filters push down on partition columns (year, month, day, service) for efficiency.
-            </li>
+            <li>{t("TRACE_GUIDELINE_STEPS_DOCS.EXPECT_HIGHER_LATENCY_SECONDS_FOR")}</li>
+            <li>{t("TRACE_GUIDELINE_STEPS_DOCS.FILTERS_PUSH_DOWN_ON_PARTITION")}</li>
           </ul>
         </div>
       ),
@@ -106,11 +98,13 @@ export const TraceGuideSteps: Record<TRACE_PROVIDERS, Step[]> = {
       id: "2",
       description: (
         <div>
-          <h4 className="text-lg text-high-emphasis">Lifecycle</h4>
+          <h4 className="text-lg text-high-emphasis">
+            {t("TRACE_GUIDELINE_STEPS_DOCS.LIFECYCLE")}
+          </h4>
           <ul className="list-inside list-disc text-sm">
-            <li>Files sealed after 24h ingestion window completes.</li>
-            <li>Compaction groups small hourly files into daily sets for faster scans.</li>
-            <li>After 12 months, segments transition to Archive tier.</li>
+            <li>{t("TRACE_GUIDELINE_STEPS_DOCS.FILES_SEALED_AFTER_24H_INGESTION")}</li>
+            <li>{t("TRACE_GUIDELINE_STEPS_DOCS.COMPACTION_GROUPS_SMALL_HOURLY")}</li>
+            <li>{t("TRACE_GUIDELINE_STEPS_DOCS.AFTER_12_MONTHS_SEGMENTS")}</li>
           </ul>
         </div>
       ),
@@ -121,14 +115,13 @@ export const TraceGuideSteps: Record<TRACE_PROVIDERS, Step[]> = {
       id: "0",
       description: (
         <div>
-          <h4 className="text-lg text-high-emphasis">Archive Tier (Compliance)</h4>
-          <p>
-            Archive spans (~1–3 years) are stored as deep‑compressed Parquet (larger row groups,
-            higher compression) in a lower‑cost storage tier.
-          </p>
+          <h4 className="text-lg text-high-emphasis">
+            {t("TRACE_GUIDELINE_STEPS_DOCS.ARCHIVE_TIER_COMPLIANCE")}
+          </h4>
+          <p>{t("TRACE_GUIDELINE_STEPS_DOCS.ARCHIVE_SPANS_1_3_YEARS")}</p>
           <ul className="mt-2 list-inside list-disc text-sm">
-            <li>Not directly queryable from the UI.</li>
-            <li>Intended for audits, incident forensics, legal hold.</li>
+            <li>{t("TRACE_GUIDELINE_STEPS_DOCS.NOT_DIRECTLY_QUERYABLE_FROM_THE")}</li>
+            <li>{t("TRACE_GUIDELINE_STEPS_DOCS.INTENDED_FOR_AUDITS_INCIDENT")}</li>
           </ul>
         </div>
       ),
@@ -137,18 +130,18 @@ export const TraceGuideSteps: Record<TRACE_PROVIDERS, Step[]> = {
       id: "1",
       description: (
         <div>
-          <h4 className="text-lg text-high-emphasis">How to Request Archive Data</h4>
+          <h4 className="text-lg text-high-emphasis">
+            {t("TRACE_GUIDELINE_STEPS_DOCS.HOW_TO_REQUEST_ARCHIVE_DATA")}
+          </h4>
           <ol className="mt-2 list-inside list-decimal text-sm">
-            <li>Open an admin request ticket specifying: time range, services, trace filters.</li>
-            <li>Admin validates purpose (compliance / security / incident).</li>
-            <li>
-              On approval, data is temporarily rehydrated to a secure cold workspace (time‑boxed).
-            </li>
-            <li>You receive a signed URL or a temporary query workspace link.</li>
-            <li>After expiry, the rehydrated dataset is purged.</li>
+            <li>{t("TRACE_GUIDELINE_STEPS_DOCS.OPEN_AN_ADMIN_REQUEST_TICKET")}</li>
+            <li>{t("TRACE_GUIDELINE_STEPS_DOCS.ADMIN_VALIDATES_PURPOSE_COMPLIANCE")}</li>
+            <li>{t("TRACE_GUIDELINE_STEPS_DOCS.ON_APPROVAL_DATA_IS_TEMPORARILY")}</li>
+            <li>{t("TRACE_GUIDELINE_STEPS_DOCS.YOU_RECEIVE_A_SIGNED_URL")}</li>
+            <li>{t("TRACE_GUIDELINE_STEPS_DOCS.AFTER_EXPIRY_THE_REHYDRATED")}</li>
           </ol>
           <p className="mt-2 text-xs text-muted-foreground">
-            Contact your platform administrator to begin this process.
+            {t("TRACE_GUIDELINE_STEPS_DOCS.CONTACT_YOUR_PLATFORM")}
           </p>
         </div>
       ),
@@ -167,4 +160,4 @@ export const TraceGuideSteps: Record<TRACE_PROVIDERS, Step[]> = {
     //   ),
     // },
   ],
-};
+});

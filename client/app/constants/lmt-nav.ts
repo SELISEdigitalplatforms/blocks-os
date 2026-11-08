@@ -1,3 +1,4 @@
+import { navText } from "@/constants/nav-text";
 import { NavGroup, NavItem } from "@/constants/secret-management-nav";
 import { BarChart3, GitBranch, ScrollText } from "lucide-react";
 
@@ -8,33 +9,49 @@ export type { NavGroup, NavItem };
 
 export const LMT_NAV_GROUPS: NavGroup[] = [
   {
-    label: "Usage",
+    get label() {
+      return navText("LMT_NAV.USAGE");
+    },
     items: [
       {
         id: "usage",
-        label: "Usage",
+        get label() {
+          return navText("LMT_NAV.USAGE");
+        },
         value: "usage",
         icon: BarChart3,
-        desc: "Monitor API call metrics and performance",
+        get desc() {
+          return navText("LMT_NAV.MONITOR_API_CALL_METRICS");
+        },
       },
     ],
   },
   {
-    label: "Logs & Traces",
+    get label() {
+      return navText("LMT_NAV.LOGS_TRACES");
+    },
     items: [
       {
         id: "tracing",
-        label: "Tracing",
+        get label() {
+          return navText("LMT_NAV.TRACING");
+        },
         value: "tracing",
         icon: GitBranch,
-        desc: "Trace requests across services",
+        get desc() {
+          return navText("LMT_NAV.TRACE_REQUESTS_ACROSS_SERVICES");
+        },
       },
       {
         id: "logs",
-        label: "Logs",
+        get label() {
+          return navText("LMT_NAV.LOGS");
+        },
         value: "logs",
         icon: ScrollText,
-        desc: "Search and view application logs across your services",
+        get desc() {
+          return navText("LMT_NAV.SEARCH_AND_VIEW_APPLICATION_LOGS");
+        },
       },
     ],
   },

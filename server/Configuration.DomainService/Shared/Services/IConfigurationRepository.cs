@@ -28,14 +28,30 @@ namespace Configuration.DomainService.Shared.Services
 
         /// <summary>
         /// Sets the sender name and audit fields of one configuration in place, leaving every other
-        /// field of the stored document untouched — including any the entity does not map.
+        /// field of the stored document untouched — including any the entity does not map. Also writes
+        /// the Default organization, which the project default record belongs to, so a record stored
+        /// before organizations gets the element on its first save.
         /// </summary>
         Task UpdateMailSenderNameAsync(string configurationId, string senderName, DateTime lastUpdatedDate, string lastUpdatedBy);
         Task<MailServerConfiguration> GetMailConfigurationByIdAsync(string configurationId);
         Task<MailServerConfiguration> GetMailConfigurationByNameAsync(string configurationName);
         /// <summary>The configuration as the caller may see it: properties a column rule hides are left out. Never save it back.</summary>
         Task<MailServerConfiguration> GetMailConfigurationByNameForViewAsync(string configurationName);
-        Task<List<MailServerConfiguration>> GetAllMailConfigurationsAsync();
+        /// <summary>
+        /// The configurations the API lists, in one query: all of them for a null
+        /// <paramref name="organizationId"/>, the Default organization's for <c>"default"</c>, and
+        /// that organization's plus the Default organization's for any other id. A document without
+        /// an organization counts as the Default organization's.
+        /// </summary>
+        Task<List<MailServerConfiguration>> GetAllMailConfigurationsAsync(string? organizationId);
+
+        /// <summary>
+        /// Clears <see cref="MailServerConfiguration.IsOrganizationDefault"/>, in one update, on the
+        /// organization's configurations saved before <paramref name="keepConfigurationId"/> (by
+        /// <paramref name="savedAt"/>, then id). Racing saves can still leave several marked; then every
+        /// mark ordered before the latest one is cleared, which can include the kept configuration's own.
+        /// </summary>
+        Task ClearOtherOrganizationDefaultsAsync(string organizationId, string keepConfigurationId, DateTime savedAt);
 
         /// <summary>
         /// The configurations whose <see cref="MailServerConfiguration.ClientSecretReference"/> or

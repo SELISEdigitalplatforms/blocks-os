@@ -4,6 +4,7 @@ import { SettingsAssignmentChip } from "@blocks-idp/settings/components/settings
 import { SettingsUnsavedBadge } from "@blocks-idp/settings/components/settings-unsaved-badge";
 import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout";
 import type { IPermission } from "@blocks-idp/iam/models/permission";
+import { useT } from "@seliseblocks/genesis-os";
 import { useMemo } from "react";
 
 type SignupPermissionsSectionProps = {
@@ -22,6 +23,7 @@ export const SignupPermissionsSection = ({
   savedResources,
   onChange,
 }: SignupPermissionsSectionProps) => {
+  const { t } = useT("os.idp.settings");
   const savedResourceSet = useMemo(() => new Set(savedResources), [savedResources]);
 
   const hasUnsavedChanges =
@@ -32,7 +34,9 @@ export const SignupPermissionsSection = ({
     <Card>
       <CardHeader className="mb-4 flex flex-row items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
-          <CardTitle className={SETTINGS_FORM_LAYOUT.sectionTitle}>Permissions</CardTitle>
+          <CardTitle className={SETTINGS_FORM_LAYOUT.sectionTitle}>
+            {t("SIGNUP_PERMISSIONS_SECTION.TITLE")}
+          </CardTitle>
           {hasUnsavedChanges ? <SettingsUnsavedBadge /> : null}
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -41,12 +45,11 @@ export const SignupPermissionsSection = ({
       </CardHeader>
       <CardContent>
         {permissions.length === 0 && removedPermissions.length === 0 ? (
-          <p className={SETTINGS_FORM_LAYOUT.emptyState}>No permissions found</p>
+          <p className={SETTINGS_FORM_LAYOUT.emptyState}>{t("SIGNUP_PERMISSIONS_SECTION.EMPTY")}</p>
         ) : (
-          <div
+          <ul
             className="flex flex-col gap-2 sm:flex-row sm:flex-wrap"
-            role="list"
-            aria-label="Assigned permissions"
+            aria-label={t("SIGNUP_PERMISSIONS_SECTION.ASSIGNED_PERMISSIONS")}
           >
             {permissions.map((permission) => (
               <SettingsAssignmentChip
@@ -66,7 +69,7 @@ export const SignupPermissionsSection = ({
                 className="sm:max-w-[320px]"
               />
             ))}
-          </div>
+          </ul>
         )}
       </CardContent>
     </Card>

@@ -472,7 +472,7 @@ namespace XUnitTest.Integration
         [InlineData(NotificationScope.Both, false, false)]
         [InlineData(NotificationScope.Console, true, false)]
         [InlineData(NotificationScope.Console, false, true)]
-        public async Task ConsoleScope_KeepsATenantCopyTheProjectChoseToKeep(NotificationScope ownScope, bool disabled, bool hasAudience)
+        public async Task ConsoleScope_DeletesATenantCopyTheProjectChanged(NotificationScope ownScope, bool disabled, bool hasAudience)
         {
             await SeedRegistryAsync();
             var root = BuiltIn("v2");
@@ -486,14 +486,12 @@ namespace XUnitTest.Integration
 
             var summary = await Propagator().PropagateAsync(Event());
 
-            summary.Results.Single(r => r.TargetId == "A").Outcome.Should().Be(NotificationPropagationOutcome.Kept);
-            var kept = (await GetKvAsync(TenantA))!;
-            kept.Scope.Should().Be(ownScope);
-            kept.Description.Should().Be("v1", "a kept copy is left as the project has it");
+            summary.Results.Single(r => r.TargetId == "A").Outcome.Should().Be(NotificationPropagationOutcome.Deleted);
+            (await GetKvAsync(TenantA)).Should().BeNull("only root keeps Console built-ins, whatever the project changed");
         }
 
         [Fact]
-        public async Task ConsoleScope_RemovesAnOldCollectionConsoleCopy_AndKeepsAnAppOne()
+        public async Task ConsoleScope_RemovesEveryOldCollectionCopy()
         {
             await SeedRegistryAsync();
             var root = BuiltIn();
@@ -507,9 +505,9 @@ namespace XUnitTest.Integration
             var summary = await Propagator().PropagateAsync(Event());
 
             summary.Results.Single(r => r.TargetId == "A").Outcome.Should().Be(NotificationPropagationOutcome.Deleted);
-            summary.Results.Single(r => r.TargetId == "OFF").Outcome.Should().Be(NotificationPropagationOutcome.Kept);
+            summary.Results.Single(r => r.TargetId == "OFF").Outcome.Should().Be(NotificationPropagationOutcome.Deleted);
             (await TenantA.GetCollection<NotificationConfiguration>("NotificationConfigurations").CountDocumentsAsync(FilterDefinition<NotificationConfiguration>.Empty)).Should().Be(0);
-            (await TenantDisabled.GetCollection<NotificationConfiguration>("NotificationConfigurations").CountDocumentsAsync(FilterDefinition<NotificationConfiguration>.Empty)).Should().Be(1);
+            (await TenantDisabled.GetCollection<NotificationConfiguration>("NotificationConfigurations").CountDocumentsAsync(FilterDefinition<NotificationConfiguration>.Empty)).Should().Be(0);
         }
 
         [Fact]

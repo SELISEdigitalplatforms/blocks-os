@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 import { ChevronRight } from "lucide-react";
 import type { CSSProperties } from "react";
 import type { PlatformSchemaField } from "../data-access.service";
@@ -35,8 +36,16 @@ export function TreeGuides({ guides }: Readonly<{ guides: TreeGuide[] }>) {
         return (
           // Guides are positional and never reorder; the index is their identity.
           <span key={`${index}-${guide}`} aria-hidden>
-            <span className={cn(LINE_CLASS, "top-0 w-px", guide === "end" ? "h-1/2" : "-bottom-px")} style={{ left: x }} />
-            {guide !== "through" && <span className={cn(LINE_CLASS, "top-1/2 h-px")} style={{ left: x, width: STEP / 2 + 0.5 }} />}
+            <span
+              className={cn(LINE_CLASS, "top-0 w-px", guide === "end" ? "h-1/2" : "-bottom-px")}
+              style={{ left: x }}
+            />
+            {guide !== "through" && (
+              <span
+                className={cn(LINE_CLASS, "top-1/2 h-px")}
+                style={{ left: x, width: STEP / 2 + 0.5 }}
+              />
+            )}
           </span>
         );
       })}
@@ -46,11 +55,21 @@ export function TreeGuides({ guides }: Readonly<{ guides: TreeGuide[] }>) {
 
 /** The line that drops from an open row's chevron to its first child. */
 export function TreeStem({ depth }: Readonly<{ depth: number }>) {
-  return <span aria-hidden className={cn(LINE_CLASS, "-bottom-px w-px")} style={{ left: lineX(depth), top: "calc(50% + 10px)" }} />;
+  return (
+    <span
+      aria-hidden
+      className={cn(LINE_CLASS, "-bottom-px w-px")}
+      style={{ left: lineX(depth), top: "calc(50% + 10px)" }}
+    />
+  );
 }
 
 /** The chevron that opens an object property. */
-export function TreeToggle({ expanded, label, onToggle }: Readonly<{ expanded: boolean; label: string; onToggle: () => void }>) {
+export function TreeToggle({
+  expanded,
+  label,
+  onToggle,
+}: Readonly<{ expanded: boolean; label: string; onToggle: () => void }>) {
   return (
     <button
       type="button"
@@ -59,20 +78,26 @@ export function TreeToggle({ expanded, label, onToggle }: Readonly<{ expanded: b
       aria-label={label}
       className={cn(
         "flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40",
-        expanded ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-primary/10 hover:text-primary",
+        expanded
+          ? "bg-primary/10 text-primary"
+          : "text-muted-foreground hover:bg-primary/10 hover:text-primary",
       )}
     >
-      <ChevronRight className={cn("h-3.5 w-3.5 transition-transform duration-150", expanded && "rotate-90")} strokeWidth={2.4} />
+      <ChevronRight
+        className={cn("h-3.5 w-3.5 transition-transform duration-150", expanded && "rotate-90")}
+        strokeWidth={2.4}
+      />
     </button>
   );
 }
 
 /** "3 fields" beside an object property's name. */
 export function FieldCount({ count }: Readonly<{ count: number | undefined }>) {
+  const { t } = useT("os.idp.explorer");
   if (!count) return null;
   return (
     <span className="shrink-0 rounded-full border border-border/60 px-1.5 text-[10.5px] leading-4 text-muted-foreground">
-      {count} {count === 1 ? "field" : "fields"}
+      {t("PROPERTY_TREE.FIELD_COUNT", { count })}
     </span>
   );
 }
@@ -129,7 +154,15 @@ export function nestedRows(
     const isLast = index === fields.length - 1;
     const path = `${parent.path}.${field.name}`;
     const isExpanded = hasNestedFields(field) && isPathExpanded(expansion, path);
-    const row: NestedTreeRow = { path, depth, field, guides: guidesFor(depth, isLast, lastAt), isExpanded };
-    return isExpanded ? [row, ...nestedRows({ path, field }, expansion, depth + 1, [...lastAt, isLast])] : [row];
+    const row: NestedTreeRow = {
+      path,
+      depth,
+      field,
+      guides: guidesFor(depth, isLast, lastAt),
+      isExpanded,
+    };
+    return isExpanded
+      ? [row, ...nestedRows({ path, field }, expansion, depth + 1, [...lastAt, isLast])]
+      : [row];
   });
 }

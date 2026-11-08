@@ -3,6 +3,7 @@ import {
   FilterToolbar,
   useSortQueryParams,
 } from "@/components/filter-toolbar";
+import { useT } from "@seliseblocks/genesis-os";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 export const useTemplatesFilterQueryParams = () => {
   const [queryParams, setQueryParams] = useQueryStates({
@@ -28,6 +29,7 @@ export function TemplateFilterToolbar({
     isDefault?: boolean;
   }>;
 }) {
+  const { t } = useT("os.communication.mail");
   const { queryParams, setQueryParams } = useTemplatesFilterQueryParams();
   const onChange: FilterChangeHandler<{
     search: string;
@@ -46,11 +48,11 @@ export function TemplateFilterToolbar({
   return (
     <FilterToolbar
       filters={[
-        { key: "search", type: "SearchInput", label: "label" },
+        { key: "search", type: "SearchInput", label: t("TEMPLATE_FILTER_TOOLBAR.SEARCH") },
         {
           key: "mailConfigurationId",
           type: "Radio",
-          label: "Mail Configuration",
+          label: t("TEMPLATE_FILTER_TOOLBAR.MAIL_CONFIGURATION"),
           props: {
             options: emailConfigsData.map((config) => ({
               label: config.name,
@@ -61,7 +63,7 @@ export function TemplateFilterToolbar({
         {
           key: "language",
           type: "Radio",
-          label: "Language",
+          label: t("TEMPLATE_FILTER_TOOLBAR.LANGUAGE"),
           props: {
             options: languageListData.map((lang) => ({
               label: lang.languageName,

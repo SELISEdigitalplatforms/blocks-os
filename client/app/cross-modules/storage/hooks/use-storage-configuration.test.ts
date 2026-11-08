@@ -18,7 +18,10 @@ import {
 } from "./use-storage-configuration";
 
 vi.mock("@blocks-storage/services/storage.service", () => mockStorageServiceFactory());
-vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
+  ...mockProjectStoreFactory(),
+}));
 
 describe("Storage Configuration Hooks", () => {
   beforeEach(() => {

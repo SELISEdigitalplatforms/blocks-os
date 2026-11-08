@@ -20,13 +20,4 @@ public static class SecretCollections
     public const string Secrets = "Secrets";
 
     public const string AuditLogs = "SecretAuditLogs";
-
-    /// <summary>
-    /// Secret values, when the database value store is in use instead of Key Vault.
-    /// </summary>
-    /// <remarks>
-    /// A collection of its own rather than a field on a secret, so a metadata read can never
-    /// carry a value out with it. Unused when values live in the vault.
-    /// </remarks>
-    public const string SecretValues = "SecretValues";
 }

@@ -9,6 +9,7 @@ import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import type { INotificationSubscriptionFilter } from "../../models/notification-config.model";
 import { LIMITS, NOTIFICATION_TEXT } from "../../constants/notification-ui.constant";
+import { useNotificationT } from "../../i18n";
 import { HelpText } from "./form-row";
 
 interface SubscriptionFiltersProps {
@@ -26,6 +27,7 @@ const EMPTY_FILTER: INotificationSubscriptionFilter = { context: "", actionName:
 
 /** Folded rows that narrow the receivers to users subscribed to a matching context. */
 export function SubscriptionFilters({ filters, onChange }: Readonly<SubscriptionFiltersProps>) {
+  useNotificationT();
   // Rows have no id of their own, so each gets a local one to keep its input focused while editing.
   const [rowIds, setRowIds] = useState<number[]>(() => filters.map(newRowId));
   const update = (index: number, patch: Partial<INotificationSubscriptionFilter>) =>

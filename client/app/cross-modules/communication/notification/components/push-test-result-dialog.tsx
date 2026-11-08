@@ -10,11 +10,13 @@ import {
 } from "@/components/ui-kits/dialog/dialog";
 import type { IPushTestDevice, IPushTestResult } from "../models/push.model";
 import { PLATFORM_LABEL, TEST_DIALOG_TEXT } from "../constants/push-ui.constant";
+import { useNotificationT } from "../i18n";
 import { deviceCountText, formatDateTime, lastSeenText } from "../utils/push-format";
 import { keyedDevices, resultFix } from "../utils/push-results";
 import { ResultBadge } from "./push-result-badge";
 
 function DeviceRow({ device }: Readonly<{ device: IPushTestDevice }>) {
+  const { t } = useNotificationT();
   const fix = device.result === "delivered" ? null : resultFix(device.result);
   const seen = lastSeenText(device.lastSeenAt);
   return (
@@ -22,8 +24,12 @@ function DeviceRow({ device }: Readonly<{ device: IPushTestDevice }>) {
       <span className="font-semibold">{PLATFORM_LABEL[device.platform]}</span>
       <div className="flex min-w-0 flex-col gap-1">
         <span>
-          {device.name || TEST_DIALOG_TEXT.noName}
-          {seen && ` · ${TEST_DIALOG_TEXT.lastSeen} ${seen}`}
+          {seen
+            ? t("PUSH_TEST_RESULT_DIALOG.DEVICE_LAST_SEEN", {
+                name: device.name || TEST_DIALOG_TEXT.noName,
+                seen,
+              })
+            : device.name || TEST_DIALOG_TEXT.noName}
         </span>
         {fix && <span className="text-xs text-warning-700">{fix}</span>}
       </div>
@@ -47,6 +53,7 @@ export function PushTestResultDialog({
   onSendAgain,
   onClose,
 }: Readonly<PushTestResultDialogProps>) {
+  const { t } = useNotificationT();
   const devices = result?.devices ?? [];
   return (
     <Dialog open={!!result} onOpenChange={(open) => !open && onClose()}>
@@ -54,15 +61,18 @@ export function PushTestResultDialog({
         <DialogHeader>
           <DialogTitle>{TEST_DIALOG_TEXT.title}</DialogTitle>
           <DialogDescription>
-            Sent to your {deviceCountText(devices.length)} · {formatDateTime(result?.sentAt)}
+            {t("PUSH_TEST_RESULT_DIALOG.SENT_TO", {
+              devices: deviceCountText(devices.length),
+              date: formatDateTime(result?.sentAt),
+            })}
           </DialogDescription>
         </DialogHeader>
         <div className="flex gap-2">
           <Badge variant="success" className="font-normal">
-            {result?.delivered ?? 0} delivered
+            {t("PUSH_TEST_RESULT_DIALOG.DELIVERED_COUNT", { count: result?.delivered ?? 0 })}
           </Badge>
           <Badge variant="error" className="font-normal">
-            {result?.failed ?? 0} failed
+            {t("PUSH_TEST_RESULT_DIALOG.FAILED_COUNT", { count: result?.failed ?? 0 })}
           </Badge>
         </div>
         <ul className="flex flex-col">

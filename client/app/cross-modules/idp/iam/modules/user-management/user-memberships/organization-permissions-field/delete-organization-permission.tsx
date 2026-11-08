@@ -2,6 +2,7 @@ import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-
 import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import { X } from "lucide-react";
+import { useT } from "@seliseblocks/genesis-os";
 import { useState } from "react";
 
 type DeleteOrganizationPermissionProps = {
@@ -15,6 +16,7 @@ export const DeleteOrganizationPermission = ({
   onDelete,
   onSave,
 }: DeleteOrganizationPermissionProps) => {
+  const { t } = useT("os.idp.users");
   const [open, setOpen] = useState<boolean>(false);
 
   return (
@@ -24,8 +26,8 @@ export const DeleteOrganizationPermission = ({
       </DialogTrigger>
       <ConfirmationModal
         data={{
-          dialogTitle: "Remove Permission",
-          dialogSubtitle: "Are you sure you want to remove this permission?",
+          dialogTitle: t("DELETE_ORGANIZATION_PERMISSION.TITLE"),
+          dialogSubtitle: t("DELETE_ORGANIZATION_PERMISSION.DESCRIPTION"),
         }}
         onConfirm={() => {
           onDelete(permission);

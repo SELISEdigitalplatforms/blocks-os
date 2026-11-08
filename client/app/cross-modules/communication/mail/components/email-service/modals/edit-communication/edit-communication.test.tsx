@@ -16,7 +16,11 @@ vi.mock("@/hooks/use-toast", () => ({
   showErrorToast: (...a: unknown[]) => h.showErrorToast(...a),
 }));
 vi.mock("@blocks-communication/mail/hooks/use-email-config", () => ({
-  useGetEmailConfigs: () => h.configs,
+  useGetEmailSecretConfigs: () => ({ ...h.configs, data: { configurations: h.configs.data } }),
+}));
+vi.mock("@blocks-communication/mail/hooks/use-email-organization", () => ({
+  useEmailOrganization: () => ({ isMultiOrgEnabled: false }),
+  useOrganizationName: () => "Default organization",
 }));
 vi.mock("@blocks-localization/hooks/use-language-manager", () => ({
   useGetLanguages: () => h.languages,
@@ -58,9 +62,7 @@ describe("EditCommunication", () => {
     expect((screen.getByPlaceholderText("Enter subject") as HTMLInputElement).value).toBe(
       "Hi there",
     );
-    expect((screen.getByPlaceholderText("Enter Template name") as HTMLInputElement).value).toBe(
-      "Welcome",
-    );
+    expect((screen.getByLabelText("Template name") as HTMLInputElement).value).toBe("Welcome");
   });
 
   it("does not render the form while configs are loading", () => {
@@ -85,7 +87,9 @@ describe("EditCommunication", () => {
     renderModal();
     await userEvent.setup().click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() =>
-      expect(h.showErrorToast).toHaveBeenCalledWith({ errors: { general: "bad" } }),
+      expect(h.showErrorToast).toHaveBeenCalledWith(
+        expect.objectContaining({ errors: { general: "bad" } }),
+      ),
     );
   });
 
@@ -94,7 +98,9 @@ describe("EditCommunication", () => {
     renderModal();
     await userEvent.setup().click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() =>
-      expect(h.showErrorToast).toHaveBeenCalledWith({ errors: { name: "taken" } }),
+      expect(h.showErrorToast).toHaveBeenCalledWith(
+        expect.objectContaining({ errors: { name: "taken" } }),
+      ),
     );
   });
 
@@ -107,10 +113,8 @@ describe("EditCommunication", () => {
     );
   });
 
-  it("disables the template name field for tenant-generated templates", () => {
+  it("keeps the name read-only for every template, built-in or not (H9)", () => {
     renderModal(vi.fn(), { ...templateData, generatedBy: "Tenant" } as never);
-    expect((screen.getByPlaceholderText("Enter Template name") as HTMLInputElement).disabled).toBe(
-      true,
-    );
+    expect((screen.getByLabelText("Template name") as HTMLInputElement).readOnly).toBe(true);
   });
 });

@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { FormControl, FormDescription, FormItem, FormLabel } from "@/components/ui-kits/form/form";
 import {
   Select,
@@ -40,6 +41,7 @@ export const ManagedBySelect = ({
   excludeSlug,
   disabled,
 }: Readonly<ManagedBySelectProps>) => {
+  const { t } = useT("os.idp.roles");
   const { scope, isDescendant, managedByCandidates } = useGrantScope();
   const seesEveryRole = scope !== undefined && !isDescendant;
   const descendantCandidates = useMemo(
@@ -81,7 +83,7 @@ export const ManagedBySelect = ({
 
   return (
     <FormItem>
-      <FormLabel>Managed by</FormLabel>
+      <FormLabel>{t("MANAGED_BY_SELECT.LABEL")}</FormLabel>
       <Select
         value={current || NO_PARENT}
         onValueChange={(next) => onChange(next === NO_PARENT ? "" : next)}
@@ -89,11 +91,13 @@ export const ManagedBySelect = ({
       >
         <FormControl>
           <SelectTrigger data-testid="managed-by-select">
-            <SelectValue placeholder="No one" />
+            <SelectValue placeholder={t("MANAGED_BY_SELECT.NO_ONE")} />
           </SelectTrigger>
         </FormControl>
         <SelectContent>
-          {!isDescendant && <SelectItem value={NO_PARENT}>No one</SelectItem>}
+          {!isDescendant && (
+            <SelectItem value={NO_PARENT}>{t("MANAGED_BY_SELECT.NO_ONE")}</SelectItem>
+          )}
           {options.map((slug) => (
             <SelectItem key={slug} value={slug}>
               {nameBySlug.get(slug) ?? slug}
@@ -102,9 +106,7 @@ export const ManagedBySelect = ({
         </SelectContent>
       </Select>
       <FormDescription>
-        {isDescendant
-          ? "Required. The role sits below your role, so you can manage it."
-          : "Holders of the chosen role can manage this role. No one = standalone."}
+        {isDescendant ? t("MANAGED_BY_SELECT.HINT_REQUIRED") : t("MANAGED_BY_SELECT.HINT_OPTIONAL")}
       </FormDescription>
     </FormItem>
   );

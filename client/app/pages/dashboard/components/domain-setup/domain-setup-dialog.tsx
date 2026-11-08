@@ -16,6 +16,7 @@ import { ConnectAppStep } from "./connect-app-step";
 import { DnsRecordsStep } from "./dns-records-step";
 import { SetupProgressStep } from "./setup-progress-step";
 import { SetupStepper } from "./setup-stepper";
+import { useT } from "@seliseblocks/genesis-os";
 
 const stripProtocol = (domain: string) => domain.replace(/^https?:\/\//, "");
 
@@ -40,6 +41,7 @@ export const DomainSetupDialog = ({
   guide,
   isGuideLoading,
 }: DomainSetupDialogProps) => {
+  const { t } = useT("os.dashboard");
   const { phase, steps, error, start, reset } = useDomainSetupStream();
   const isRunning = phase === "running";
 
@@ -87,7 +89,9 @@ export const DomainSetupDialog = ({
           type="button"
           variant="ghost"
           size="icon"
-          aria-label={isRunning ? "Close (disabled while setup is running)" : "Close"}
+          aria-label={
+            isRunning ? t("DOMAIN_SETUP_DIALOG.CLOSE_DISABLED_WHILE_SETUP_IS") : t("common:CLOSE")
+          }
           disabled={isRunning}
           onClick={() => handleOpenChange(false)}
           className="absolute right-3 top-3 h-9 w-9 text-muted-foreground"
@@ -97,12 +101,16 @@ export const DomainSetupDialog = ({
 
         <DialogHeader className="pr-8 text-left">
           <DialogTitle>
-            {view === "connect" ? "Connect your app" : "Set up custom domain"}
+            {view === "connect"
+              ? t("DOMAIN_SETUP_DIALOG.CONNECT_YOUR_APP")
+              : t("DOMAIN_SETUP_DIALOG.SET_UP_CUSTOM_DOMAIN")}
           </DialogTitle>
           <DialogDescription>
             <span className="font-medium text-high-emphasis">{host}</span>
             {" · "}
-            {isPlatform ? "Default domain" : `Cookie domain ${domain.cookieDomain}`}
+            {isPlatform
+              ? t("DOMAIN_SETUP_DIALOG.DEFAULT_DOMAIN")
+              : t("DOMAIN_SETUP_DIALOG.COOKIE_DOMAIN", { cookieDomain: domain.cookieDomain })}
           </DialogDescription>
         </DialogHeader>
 
@@ -125,10 +133,10 @@ export const DomainSetupDialog = ({
           {view === "records" && (
             <>
               <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
-                I’ll do it later
+                {t("DOMAIN_SETUP_DIALOG.I_LL_DO_IT_LATER")}
               </Button>
               <Button type="button" onClick={handleStart} disabled={!guide?.records.length}>
-                I’ve added the records — Verify
+                {t("DOMAIN_SETUP_DIALOG.I_VE_ADDED_THE_RECORDS")}
               </Button>
             </>
           )}
@@ -137,10 +145,10 @@ export const DomainSetupDialog = ({
             <>
               <span className="mr-auto flex items-center gap-2 text-sm text-muted-foreground">
                 <Lock className="h-4 w-4" aria-hidden="true" />
-                Please keep this window open until setup finishes.
+                {t("DOMAIN_SETUP_DIALOG.PLEASE_KEEP_THIS_WINDOW_OPEN")}
               </span>
               <LoadingButton type="button" isLoading disabled>
-                Setting up…
+                {t("DOMAIN_SETUP_DIALOG.SETTING_UP")}
               </LoadingButton>
             </>
           )}
@@ -148,20 +156,20 @@ export const DomainSetupDialog = ({
           {view === "progress" && !isRunning && (
             <>
               <Button type="button" variant="link" className="mr-auto px-0" onClick={reset}>
-                ← Back to records
+                {t("DOMAIN_SETUP_DIALOG.BACK_TO_RECORDS")}
               </Button>
               <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
-                Close
+                {t("common:CLOSE")}
               </Button>
               <Button type="button" onClick={handleStart}>
-                Try again
+                {t("DOMAIN_SETUP_DIALOG.TRY_AGAIN")}
               </Button>
             </>
           )}
 
           {view === "connect" && (
             <Button type="button" onClick={() => handleOpenChange(false)}>
-              Done
+              {t("common:DONE")}
             </Button>
           )}
         </div>

@@ -17,6 +17,7 @@ import {
 } from "@/components/ui-kits/command/command";
 import { ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 
 interface MultiSelectOption {
   label: string;
@@ -45,6 +46,7 @@ export function MultiSelect({
   onLoadMore,
   portalled = true,
 }: MultiSelectProps) {
+  const { t } = useT("os.shared");
   const [buttonRef, popoverWidth] = usePopoverWidth();
   const [expanded, setExpanded] = useState<string | null>(null);
   const onSelectHandler = (value: string) => {
@@ -85,7 +87,7 @@ export function MultiSelect({
                 <div className="flex space-x-1">
                   {selectedValues.length > 2 ? (
                     <Badge variant="secondary" className="rounded-sm px-1 font-normal">
-                      {selectedValues.length} selected
+                      {t("MULTI_SELECT.SELECTED_COUNT", { count: selectedValues.length })}
                     </Badge>
                   ) : (
                     flatOptions
@@ -122,7 +124,7 @@ export function MultiSelect({
               if (isNearBottom && hasMore && !isLoadingMore) onLoadMore?.();
             }}
           >
-            <CommandEmpty>No results found.</CommandEmpty>
+            <CommandEmpty>{t("MULTI_SELECT.NO_RESULTS_FOUND")}</CommandEmpty>
             <CommandGroup>
               {options.map((option) => {
                 const isSelected = selectedValues.includes(option.value);
@@ -199,7 +201,7 @@ export function MultiSelect({
             </CommandGroup>
             {isLoadingMore && (
               <div className="py-2 text-center text-xs text-muted-foreground" role="status">
-                Loading more…
+                {t("MULTI_SELECT.LOADING_MORE")}
               </div>
             )}
             {selectedValues.length > 0 && (
@@ -210,7 +212,7 @@ export function MultiSelect({
                     onSelect={() => onResetHandler()}
                     className="justify-center text-center"
                   >
-                    Clear
+                    {t("common:CLEAR")}
                   </CommandItem>
                 </CommandGroup>
               </>

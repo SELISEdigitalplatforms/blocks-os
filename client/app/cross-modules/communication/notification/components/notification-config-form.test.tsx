@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   NOTIFICATION_CONFIG_ERROR_MESSAGES,
-  PROPAGATION_WARNING_MESSAGE,
+  propagationWarningMessage,
 } from "../constants/notification.constant";
 import { NOTIFICATION_TEXT } from "../constants/notification-ui.constant";
 import type { INotificationConfigRow } from "../models/notification-config.model";
@@ -16,7 +16,8 @@ const h = vi.hoisted(() => ({
   rootTenantId: "root-tenant",
 }));
 
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 vi.mock("@/lib/runtime-env", () => ({ getRuntimeEnv: () => h.rootTenantId }));
@@ -237,7 +238,7 @@ describe("NotificationConfigForm", () => {
     await user.click(screen.getByRole("button", SAVE));
     await waitFor(() =>
       expect(h.toast).toHaveBeenCalledWith(
-        expect.objectContaining({ variant: "warning", description: PROPAGATION_WARNING_MESSAGE }),
+        expect.objectContaining({ variant: "warning", description: propagationWarningMessage() }),
       ),
     );
     expect(onClose).toHaveBeenCalled();

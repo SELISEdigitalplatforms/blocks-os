@@ -1,3 +1,6 @@
+import { tStatic } from "@seliseblocks/genesis-os";
+
+const I18N_MODULE = "os.idp.iam";
 /**
  * Human-readable copy for every rejection the two IAM archive endpoints can return.
  *
@@ -12,28 +15,44 @@
  */
 export const ARCHIVE_ERROR_MESSAGES: Record<string, string> = {
   // DELETE /iam/permissions/{id}
-  Not_Allowed_To_Archive_Permission_Outside_Default_Organization:
-    "Permissions can only be archived from the default organization.",
-  Permission_Not_Found: "This permission no longer exists. Refresh the list and try again.",
-  Permission_Not_A_Default_Organization_Record:
-    "This is another organization's copy of the permission. Archive the default-organization record instead.",
-  Permission_Already_Archived: "This permission is already archived.",
-  Only_Root_Tenant_Can_Archive_Built_In_Permission:
-    "Built-in permissions can only be archived by a root-tenant administrator.",
+  get Not_Allowed_To_Archive_Permission_Outside_Default_Organization() {
+    return tStatic(I18N_MODULE, "ARCHIVE_ERROR_MESSAGES.PERMISSION_OUTSIDE_DEFAULT_ORGANIZATION");
+  },
+  get Permission_Not_Found() {
+    return tStatic(I18N_MODULE, "ARCHIVE_ERROR_MESSAGES.PERMISSION_NOT_FOUND");
+  },
+  get Permission_Not_A_Default_Organization_Record() {
+    return tStatic(I18N_MODULE, "ARCHIVE_ERROR_MESSAGES.PERMISSION_NOT_DEFAULT_RECORD");
+  },
+  get Permission_Already_Archived() {
+    return tStatic(I18N_MODULE, "ARCHIVE_ERROR_MESSAGES.PERMISSION_ALREADY_ARCHIVED");
+  },
+  get Only_Root_Tenant_Can_Archive_Built_In_Permission() {
+    return tStatic(I18N_MODULE, "ARCHIVE_ERROR_MESSAGES.BUILT_IN_PERMISSION_ROOT_ONLY");
+  },
 
   // DELETE /iam/roles/{id}
-  Role_Not_Found: "This role no longer exists. Refresh the list and try again.",
-  Can_Not_Archive_Default_Copied_Role:
-    "This role was copied from the default organization and cannot be archived here.",
-  Not_Allowed_To_Archive_Role_From_Another_Organization:
-    "This role belongs to another organization.",
-  Role_Already_Archived: "This role is already archived.",
-  Role_Has_Child_Roles: "Archive or reassign this role's child roles first.",
+  get Role_Not_Found() {
+    return tStatic(I18N_MODULE, "ARCHIVE_ERROR_MESSAGES.ROLE_NOT_FOUND");
+  },
+  get Can_Not_Archive_Default_Copied_Role() {
+    return tStatic(I18N_MODULE, "ARCHIVE_ERROR_MESSAGES.ROLE_DEFAULT_COPY");
+  },
+  get Not_Allowed_To_Archive_Role_From_Another_Organization() {
+    return tStatic(I18N_MODULE, "ARCHIVE_ERROR_MESSAGES.ROLE_OTHER_ORGANIZATION");
+  },
+  get Role_Already_Archived() {
+    return tStatic(I18N_MODULE, "ARCHIVE_ERROR_MESSAGES.ROLE_ALREADY_ARCHIVED");
+  },
+  get Role_Has_Child_Roles() {
+    return tStatic(I18N_MODULE, "ARCHIVE_ERROR_MESSAGES.ROLE_HAS_CHILD_ROLES");
+  },
   // No longer a dead end: the archive dialog can now show who is affected and take explicit
   // consent. This copy only surfaces when the confirmation was sent without that consent -- for
   // example when the impact preview failed to load -- so it points back at the dialog.
-  Role_Has_Active_User_Assignments:
-    "This role is still assigned to active users. Reopen the archive dialog to see who is affected and confirm the removal.",
+  get Role_Has_Active_User_Assignments() {
+    return tStatic(I18N_MODULE, "ARCHIVE_ERROR_MESSAGES.ROLE_HAS_ACTIVE_USERS");
+  },
 };
 
 /**

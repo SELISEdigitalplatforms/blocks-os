@@ -5,7 +5,10 @@ import { mockProjectStoreFactory } from "@/test-utils/__mocks__";
 import type { PresetRuleSet } from "@blocks-idp/data-access/gateway/utils/access-presets";
 import type { RuleRowValues } from "@blocks-idp/data-access/gateway/utils/schema-access-control.utils";
 
-vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
+  ...mockProjectStoreFactory(),
+}));
 
 import { RuleSetForm } from "./rule-set-form";
 

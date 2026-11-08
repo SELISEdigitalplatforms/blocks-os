@@ -13,11 +13,12 @@ import { useIsRootProject } from "../hooks/use-is-root-project";
 import {
   NOTIFICATION_CONFIG_ERROR_MESSAGES,
   NOTIFICATION_PROPAGATION_NOT_QUEUED,
-  PROPAGATION_WARNING_MESSAGE,
-  WAITED_ON_OFF_WARNING,
   isWaitedOnByPage,
+  propagationWarningMessage,
+  waitedOnOffWarning,
 } from "../constants/notification.constant";
-import { LIMITS, NOTIFICATION_TEXT, OWNER_ONLY_LABEL } from "../constants/notification-ui.constant";
+import { LIMITS, NOTIFICATION_TEXT, ownerOnlyLabel } from "../constants/notification-ui.constant";
+import { useNotificationT } from "../i18n";
 import {
   buildSavePayload,
   toFormValues,
@@ -57,6 +58,7 @@ function EventRow({
   waitedOn: boolean;
   onPatch: (patch: Partial<NotificationFormValues>) => void;
 }>) {
+  useNotificationT();
   const isCustom = !isEdit || !values.isBuiltIn;
   return (
     <FormRow label={NOTIFICATION_TEXT.eventLabel}>
@@ -81,7 +83,7 @@ function EventRow({
       </div>
       {waitedOn && !values.isEnabled && (
         <p className="text-xs text-warning-700" role="alert">
-          {WAITED_ON_OFF_WARNING}
+          {waitedOnOffWarning()}
         </p>
       )}
       {isCustom && !locked && (
@@ -106,10 +108,11 @@ function SendToRow({
   locked: boolean;
   onPatch: (patch: Partial<NotificationFormValues>) => void;
 }>) {
+  useNotificationT();
   if (locked) {
     return (
       <FormRow label={NOTIFICATION_TEXT.sendToLabel}>
-        <div className="rounded-sm border bg-muted/40 px-3 py-2 text-sm">{OWNER_ONLY_LABEL}</div>
+        <div className="rounded-sm border bg-muted/40 px-3 py-2 text-sm">{ownerOnlyLabel()}</div>
         <HelpText>{NOTIFICATION_TEXT.personalHelp}</HelpText>
       </FormRow>
     );
@@ -141,6 +144,7 @@ export function NotificationConfigForm({
   onClose,
   onSetUpPush,
 }: Readonly<NotificationConfigFormProps>) {
+  const { t } = useNotificationT();
   const isEdit = !!previous;
   const locked = isEdit && !!previous?.audienceLocked;
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
@@ -165,12 +169,16 @@ export function NotificationConfigForm({
 
   const handleResult = (res: { isSuccess?: boolean; errors?: unknown }) => {
     if (res.isSuccess && isPropagationPending(res)) {
-      toast({ variant: "warning", title: "Warning", description: PROPAGATION_WARNING_MESSAGE });
+      toast({
+        variant: "warning",
+        title: t("NOTIFICATION_CONFIG_FORM.WARNING"),
+        description: propagationWarningMessage(),
+      });
       onClose();
     } else if (res.isSuccess) {
       toast({
         variant: "success",
-        title: "Success",
+        title: t("common:SUCCESS"),
         description: isEdit ? NOTIFICATION_TEXT.toastSaved : NOTIFICATION_TEXT.toastCreated,
       });
       onClose();
@@ -190,7 +198,7 @@ export function NotificationConfigForm({
           customMessages: NOTIFICATION_CONFIG_ERROR_MESSAGES,
         });
       } else {
-        showErrorToast({ errors: "Something went wrong" });
+        showErrorToast({ errors: t("NOTIFICATION_CONFIG_FORM.GENERIC_ERROR") });
       }
     }
   };

@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
+import { useT } from "@seliseblocks/genesis-os";
 import type { IBulkRolePreviewResponse } from "@blocks-idp/iam/models/user";
 import type { BulkRolesMode } from "./bulk-roles-dialog";
 
@@ -43,6 +44,7 @@ export const BulkRoleReviewDialog = ({
   onOpenChange,
   onSubmit,
 }: BulkRoleReviewDialogProps) => {
+  const { t } = useT("os.idp.users");
   const affectedCount = preview?.affectedCount ?? 0;
   const matchedCount = preview?.matchedCount ?? 0;
   const unchangedCount = preview?.unchangedCount ?? 0;
@@ -53,9 +55,9 @@ export const BulkRoleReviewDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle className="text-left">Review before applying</DialogTitle>
+          <DialogTitle className="text-left">{t("BULK_ROLE_REVIEW_DIALOG.TITLE")}</DialogTitle>
           <DialogDescription className="text-left">
-            Nothing is submitted yet. These numbers came back from the server just now.
+            {t("BULK_ROLE_REVIEW_DIALOG.DESCRIPTION")}
           </DialogDescription>
         </DialogHeader>
 
@@ -66,13 +68,17 @@ export const BulkRoleReviewDialog = ({
           <p data-testid="bulk-review-headline" className="text-2xl font-bold text-high-emphasis">
             {affectedCount}{" "}
             <span className="text-base font-medium text-muted-foreground">
-              users will be updated
+              {t("BULK_ROLE_REVIEW_DIALOG.USERS_WILL_BE_UPDATED", { count: affectedCount })}
             </span>
           </p>
-          <p className="mt-1 wrap-break-word text-sm text-muted-foreground">in {organizationLabel}</p>
+          <p className="mt-1 wrap-break-word text-sm text-muted-foreground">
+            {t("BULK_ROLE_REVIEW_DIALOG.IN_ORGANIZATION", { organization: organizationLabel })}
+          </p>
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <span className="text-sm font-medium text-high-emphasis">
-              {isRemove ? "Removing" : "Adding"}
+              {isRemove
+                ? t("BULK_ROLE_REVIEW_DIALOG.REMOVING")
+                : t("BULK_ROLE_REVIEW_DIALOG.ADDING")}
             </span>
             {roleSlugs.map((slug) => (
               <Badge
@@ -85,7 +91,7 @@ export const BulkRoleReviewDialog = ({
             ))}
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            Every other role each user holds is kept.
+            {t("BULK_ROLE_REVIEW_DIALOG.OTHER_ROLES_KEPT")}
           </p>
         </div>
 
@@ -95,20 +101,22 @@ export const BulkRoleReviewDialog = ({
             dialog's edge instead of wrapping inside it. */}
         <div className="min-w-0 rounded-lg border px-4 py-3">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Who was matched
+            {t("BULK_ROLE_REVIEW_DIALOG.WHO_WAS_MATCHED")}
           </p>
           <dl className="mt-2 space-y-1 text-sm">
             <div className="flex items-start justify-between gap-4">
-              <dt className="shrink-0 text-muted-foreground">Matched</dt>
+              <dt className="shrink-0 text-muted-foreground">
+                {t("BULK_ROLE_REVIEW_DIALOG.MATCHED")}
+              </dt>
               <dd
                 data-testid="bulk-review-matched"
                 className="min-w-0 text-right font-medium text-high-emphasis"
               >
-                {matchedCount} users
+                {t("BULK_ROLE_REVIEW_DIALOG.MATCHED_COUNT", { count: matchedCount })}
               </dd>
             </div>
             <div className="flex items-start justify-between gap-4">
-              <dt className="shrink-0 text-muted-foreground">By</dt>
+              <dt className="shrink-0 text-muted-foreground">{t("BULK_ROLE_REVIEW_DIALOG.BY")}</dt>
               {/* Wrapped, not truncated: this line is the whole point of the
                   summary -- it says which filter produced the number above, so
                   clipping it to "Asif ..." hides the thing being reconciled. */}
@@ -122,22 +130,24 @@ export const BulkRoleReviewDialog = ({
           </dl>
           {unchangedCount > 0 && (
             <p className="mt-2 text-xs text-muted-foreground">
-              {unchangedCount} of the {matchedCount} matched users already{" "}
-              {isRemove ? "do not have these roles" : "hold these roles"} and are left alone. There
-              is no per-user role limit, so nobody is skipped for holding too many.
+              {t(
+                isRemove
+                  ? "BULK_ROLE_REVIEW_DIALOG.UNCHANGED_REMOVE"
+                  : "BULK_ROLE_REVIEW_DIALOG.UNCHANGED_ADD",
+                { unchanged: unchangedCount, matched: matchedCount },
+              )}
             </p>
           )}
         </div>
 
         {nothingToDo && (
           <p data-testid="bulk-review-no-change" className="text-sm text-muted-foreground">
-            No user would change, so there is nothing to submit. Adjust the roles or the filter and
-            try again.
+            {t("BULK_ROLE_REVIEW_DIALOG.NO_CHANGE")}
           </p>
         )}
 
         <p className="text-xs text-muted-foreground">
-          Runs on IAM&rsquo;s background worker. You get a confirmation toast, not a progress bar.
+          {t("BULK_ROLE_REVIEW_DIALOG.BACKGROUND_WORKER")}
         </p>
 
         <DialogFooter>
@@ -148,7 +158,7 @@ export const BulkRoleReviewDialog = ({
             disabled={isSubmitting}
             onClick={() => onOpenChange(false)}
           >
-            Back
+            {t("common:BACK")}
           </Button>
           <Button
             type="button"
@@ -158,7 +168,9 @@ export const BulkRoleReviewDialog = ({
             disabled={isSubmitting || nothingToDo}
             onClick={onSubmit}
           >
-            {isSubmitting ? "Submitting…" : `Submit for ${affectedCount} users`}
+            {isSubmitting
+              ? t("BULK_ROLE_REVIEW_DIALOG.SUBMITTING")
+              : t("BULK_ROLE_REVIEW_DIALOG.SUBMIT_FOR", { count: affectedCount })}
           </Button>
         </DialogFooter>
       </DialogContent>

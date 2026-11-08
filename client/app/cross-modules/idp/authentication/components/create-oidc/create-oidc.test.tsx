@@ -15,9 +15,10 @@ const h = vi.hoisted(() => ({
   showSuccessToast: vi.fn(),
 }));
 
-vi.mock("@seliseblocks/genesis-os", () => {
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => {
   const Passthrough = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
   return {
+    ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
     useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
     Tooltip: Passthrough,
     TooltipTrigger: Passthrough,
@@ -43,8 +44,14 @@ vi.mock("@/hooks/use-toast", () => ({
   showErrorToast: h.showErrorToast,
   showSuccessToast: h.showSuccessToast,
 }));
+vi.mock("@seliseblocks/genesis-os/hooks", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os/hooks")>()),
+  useScopedPath: () => (path: string) => `/app/${path}`,
+}));
 
+import { MemoryRouter, Route, Routes } from "react-router";
 import { CreateOIDC } from "./create-oidc";
+import { OidcClientEditor } from "../oidc-client-page/oidc-client-page";
 
 const WEB_HELPER = "For browser-based apps.";
 const MOBILE_HELPER =
@@ -84,9 +91,22 @@ const openCreate = async (user: User) => {
   await screen.findByRole("heading", { name: "New OIDC Client" });
 };
 
-const openEdit = async (user: User) => {
-  render(<CreateOIDC itemId="oidc-1" />);
-  await user.click(screen.getByRole("button", { name: "Edit" }));
+/** An existing client is edited on its own page; a successful save goes back to the list. */
+const renderEditPage = () =>
+  render(
+    <MemoryRouter initialEntries={["/app/secret-management/oidc/clients/oidc-1"]}>
+      <Routes>
+        <Route
+          path="/app/secret-management/oidc/clients/:clientId"
+          element={<OidcClientEditor clientId="oidc-1" />}
+        />
+        <Route path="/app/secret-management/oidc" element={<p>OIDC client list</p>} />
+      </Routes>
+    </MemoryRouter>,
+  );
+
+const openEdit = async (_user?: User) => {
+  renderEditPage();
   await waitFor(() => expect(screen.getByDisplayValue("Existing")).toBeTruthy());
 };
 
@@ -236,9 +256,8 @@ describe("CreateOIDC", () => {
       },
       isLoading: false,
     });
-    render(<CreateOIDC itemId="oidc-1" />);
-    await user.click(screen.getByRole("button", { name: "Edit" }));
-    expect(await screen.findByRole("heading", { name: "Edit OIDC Client" })).toBeTruthy();
+    renderEditPage();
+    expect(await screen.findByRole("heading", { level: 1, name: "Existing OIDC" })).toBeTruthy();
     await waitFor(() => expect(screen.getByDisplayValue("Existing OIDC")).toBeTruthy());
     expect(screen.queryByDisplayValue("https://existing.example.com/cb")).toBeNull();
     expect(
@@ -259,6 +278,7 @@ describe("CreateOIDC", () => {
     expect(h.showSuccessToast).toHaveBeenCalledWith({
       description: "OIDC Client updated successfully",
     });
+    expect(await screen.findByText("OIDC client list")).toBeTruthy();
   });
 
   it("surfaces a server error when the save is not successful", async () => {
@@ -420,7 +440,7 @@ describe("CreateOIDC", () => {
       mockCredential(stored);
       await openEdit(user);
       expect(isChecked(radio("Web application"))).toBe(true);
-      expect(screen.getByText("Identity Provider")).toBeTruthy();
+      expect(screen.getByLabelText("Register as a Blocks OIDC identity provider")).toBeTruthy();
     });
 
     it.each([
@@ -579,12 +599,11 @@ describe("CreateOIDC", () => {
     it("H11: edit loads through one stable GET query and each save posts once", async () => {
       const user = userEvent.setup();
       mockCredential();
-      render(<CreateOIDC itemId="oidc-1" />);
-      expect(h.useGetAuthOidcCredential.mock.calls.every(([, enabled]) => enabled === false)).toBe(
+      renderEditPage();
+      await waitFor(() => expect(screen.getByDisplayValue("Existing")).toBeTruthy());
+      expect(h.useGetAuthOidcCredential.mock.calls.every(([, enabled]) => enabled === true)).toBe(
         true,
       );
-      await user.click(screen.getByRole("button", { name: "Edit" }));
-      await waitFor(() => expect(screen.getByDisplayValue("Existing")).toBeTruthy());
       const enabledCalls = h.useGetAuthOidcCredential.mock.calls.filter(([, enabled]) => enabled);
       expect(enabledCalls.length).toBeGreaterThan(0);
       enabledCalls.forEach(([args]) =>
@@ -760,7 +779,7 @@ describe("CreateOIDC", () => {
       const source = readFileSync(
         resolve(
           process.cwd(),
-          "app/cross-modules/idp/authentication/components/create-oidc/create-oidc.tsx",
+          "app/cross-modules/idp/authentication/components/create-oidc/oidc-client-fields.tsx",
         ),
         "utf8",
       );
@@ -1120,18 +1139,22 @@ describe("CreateOIDC", () => {
       const source = readFileSync(
         resolve(
           process.cwd(),
-          "app/cross-modules/idp/authentication/components/create-oidc/create-oidc.tsx",
+          "app/cross-modules/idp/authentication/components/create-oidc/oidc-client-fields.tsx",
         ),
         "utf8",
       );
       expect(source).toContain('import { Input } from "@/components/ui-kits/input/input";');
-      expect(source).toContain('placeholder="Project setting"');
-      expect(source).toContain("Custom for this client");
+      expect(source).toContain("CREATE_OIDC.PLACEHOLDER_PROJECT_SETTING");
+      expect(source).toContain("CREATE_OIDC.MODE_CUSTOM");
       expect(source).not.toContain("Leave a field empty to use the project setting.");
     });
   });
   describe("sign-in policy", () => {
-    const provider = (itemId: string, displayName: string, extra: Record<string, unknown> = {}) => ({
+    const provider = (
+      itemId: string,
+      displayName: string,
+      extra: Record<string, unknown> = {},
+    ) => ({
       itemId,
       displayName,
       provider: displayName.toLowerCase(),
@@ -1157,14 +1180,17 @@ describe("CreateOIDC", () => {
         },
       });
 
-    const methodRadio = (name: "Default" | "Password" | "Social") =>
+    const methodRadioNames = { Default: /Default/, Password: /Password/, Social: /Social/ };
+    const providersRadioNames = { Default: /Default/, Selected: /Selected/ };
+    const methodRadio = (name: keyof typeof methodRadioNames) =>
       within(screen.getByRole("radiogroup", { name: "Sign-in method" })).getByRole("radio", {
-        name: new RegExp(name),
+        name: methodRadioNames[name],
       });
-    const providersRadio = (name: "Default" | "Selected") =>
+    const providersRadio = (name: keyof typeof providersRadioNames) =>
       within(screen.getByRole("radiogroup", { name: "Social providers" })).getByRole("radio", {
-        name: new RegExp(name),
+        name: providersRadioNames[name],
       });
+    const entryRadio = (name: RegExp) => screen.getByRole("radio", { name }) as HTMLButtonElement;
     const fillValidCreate = async (user: User) => {
       await user.type(screen.getByPlaceholderText("Enter client name"), "My App");
       await user.type(uriInput(), "https://app.example.com/callback");
@@ -1212,12 +1238,14 @@ describe("CreateOIDC", () => {
       await openCreate(user);
       await fillValidCreate(user);
       await user.click(providersRadio("Selected"));
-      expect(await screen.findByText("Select at least one provider, or choose Default.")).toBeTruthy();
+      expect(
+        await screen.findByText("Select at least one provider, or choose Default."),
+      ).toBeTruthy();
       await waitFor(() => expect(submitButton().disabled).toBe(true));
       expect(h.saveOidc).not.toHaveBeenCalled();
     });
 
-    it("lists only enabled social providers and sends the checked ones", async () => {
+    it("lists social providers only, switched-off entries unpickable, and sends the picked one", async () => {
       mockProviders([
         provider("p1", "Google"),
         provider("p2", "GitHub", { isActive: false }),
@@ -1227,9 +1255,10 @@ describe("CreateOIDC", () => {
       await openCreate(user);
       await fillValidCreate(user);
       await user.click(providersRadio("Selected"));
-      expect(screen.queryByLabelText(/GitHub/)).toBeNull();
-      expect(screen.queryByLabelText(/Corp SSO/)).toBeNull();
-      await user.click(screen.getByLabelText(/Google/));
+      expect(entryRadio(/^GitHub/).disabled).toBe(true);
+      expect(screen.getByText("Turned off")).toBeTruthy();
+      expect(screen.queryByRole("radio", { name: /Corp SSO/ })).toBeNull();
+      await user.click(entryRadio(/^Google/));
       await waitFor(() => expect(submitButton().disabled).toBe(false));
       await user.click(submitButton());
       await waitFor(() => expect(h.saveOidc).toHaveBeenCalledTimes(1));
@@ -1238,6 +1267,44 @@ describe("CreateOIDC", () => {
         providers: "selected",
         selectedProviderIds: ["p1"],
       });
+    });
+
+    it("keeps at most one entry per provider, and Don't offer removes it", async () => {
+      mockProviders([
+        provider("g1", "Staff", { provider: "google" }),
+        provider("g2", "Customers", { provider: "google" }),
+        provider("m1", "Contoso", { provider: "microsoft" }),
+      ]);
+      const user = userEvent.setup();
+      await openCreate(user);
+      await fillValidCreate(user);
+      await user.click(providersRadio("Selected"));
+      const google = within(screen.getByRole("radiogroup", { name: "Google" }));
+      const microsoft = within(screen.getByRole("radiogroup", { name: "Microsoft" }));
+
+      await user.click(google.getByRole("radio", { name: /^Staff/ }));
+      await user.click(microsoft.getByRole("radio", { name: /^Contoso/ }));
+      await user.click(google.getByRole("radio", { name: /^Customers/ }));
+      expect(isChecked(google.getByRole("radio", { name: /^Staff/ }))).toBe(false);
+      await user.click(microsoft.getByRole("radio", { name: /^Don't offer Microsoft/ }));
+
+      await waitFor(() => expect(submitButton().disabled).toBe(false));
+      await user.click(submitButton());
+      await waitFor(() => expect(h.saveOidc).toHaveBeenCalledTimes(1));
+      expect(lastPayload().loginPolicy.selectedProviderIds).toEqual(["g2"]);
+    });
+
+    it("says on Default when a provider has several active entries", async () => {
+      mockProviders([
+        provider("g1", "Staff", { provider: "google" }),
+        provider("g2", "Customers", { provider: "google" }),
+        provider("g3", "Old", { provider: "google", isActive: false }),
+        provider("m1", "Contoso", { provider: "microsoft" }),
+      ]);
+      const user = userEvent.setup();
+      await openCreate(user);
+      expect(screen.getByText(/^Google has 2 active entries\./)).toBeTruthy();
+      expect(screen.queryByText(/^Microsoft has/)).toBeNull();
     });
 
     it("hides the provider choice for Password only and sends no providers", async () => {
@@ -1281,7 +1348,7 @@ describe("CreateOIDC", () => {
       await openEdit(user);
       expect(isChecked(methodRadio("Social"))).toBe(true);
       expect(isChecked(providersRadio("Selected"))).toBe(true);
-      expect(screen.getByLabelText(/GitHub/).getAttribute("aria-checked")).toBe("true");
+      expect(entryRadio(/^GitHub/).getAttribute("aria-checked")).toBe("true");
       await user.click(submitButton("Update"));
       await waitFor(() => expect(h.saveOidc).toHaveBeenCalledTimes(1));
       expect(lastPayload().loginPolicy).toEqual({
@@ -1315,7 +1382,9 @@ describe("CreateOIDC", () => {
       });
       const user = userEvent.setup();
       await openEdit(user);
-      expect(await screen.findByText("Select at least one provider, or choose Default.")).toBeTruthy();
+      expect(
+        await screen.findByText("Select at least one provider, or choose Default."),
+      ).toBeTruthy();
       expect(submitButton("Update").disabled).toBe(true);
     });
   });

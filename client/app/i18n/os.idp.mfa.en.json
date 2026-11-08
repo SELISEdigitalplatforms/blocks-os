@@ -1,0 +1,23 @@
+{
+  "CHOOSE_EMAIL_TEMPLATE.CHOOSE": "Choose",
+  "CHOOSE_EMAIL_TEMPLATE.DEFAULT_TEMPLATE": "Default",
+  "CHOOSE_EMAIL_TEMPLATE.ERROR_WITH_DETAILS": "Something went wrong | {{details}}",
+  "CHOOSE_EMAIL_TEMPLATE.GENERIC_ERROR": "Something went wrong",
+  "CHOOSE_EMAIL_TEMPLATE.TEMPLATE_ALT": "Email template",
+  "CHOOSE_EMAIL_TEMPLATE.TEMPLATE_SELECTED": "Template successfully selected",
+  "CHOOSE_EMAIL_TEMPLATE.TITLE": "Choose a template",
+  "CONFIGURE_MFA.ACTION_DISABLE": "Disable",
+  "CONFIGURE_MFA.ACTION_ENABLE": "Enable",
+  "CONFIGURE_MFA.COLUMN_PROVIDER": "Provider",
+  "CONFIGURE_MFA.CONFIRM_DISABLE": "Are you sure you want to disable {{name}} MFA?",
+  "CONFIGURE_MFA.CONFIRM_ENABLE": "Are you sure you want to enable {{name}} MFA?",
+  "CONFIGURE_MFA.CONFIRM_TITLE": "Confirmation",
+  "CONFIGURE_MFA.EMPTY_DESCRIPTION": "MFA is not yet configured for this project.",
+  "CONFIGURE_MFA.EMPTY_TITLE": "No configurations found",
+  "CONFIGURE_MFA.MFA_DISABLED": "{{name}} MFA disabled successfully",
+  "CONFIGURE_MFA.MFA_ENABLED": "{{name}} MFA enabled successfully",
+  "MFA_CONFIG.AUTHENTICATOR_APP_DESCRIPTION": "Use an authentication app or browser extension to get two-factor authentication codes when prompted.",
+  "MFA_CONFIG.AUTHENTICATOR_APP_LABEL": "Authenticator app",
+  "MFA_CONFIG.EMAIL_DESCRIPTION": "Receive a verification code in your registered email to complete sign-in.",
+  "MFA_CONFIG.EMAIL_LABEL": "Email"
+}

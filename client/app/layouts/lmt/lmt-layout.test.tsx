@@ -15,11 +15,16 @@ vi.mock("react-router", () => ({
   Outlet: () => <div data-testid="outlet" />,
 }));
 vi.mock("@/hooks/use-lmt-base-path", () => ({ useLmtBasePath: () => h.basePath }));
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 vi.mock("@blocks-lmt/hooks/use-usage", () => ({
-  useUsagesMetrics: () => ({ isLoading: h.isLoading, isFetching: h.isFetching, refetch: h.refetch }),
+  useUsagesMetrics: () => ({
+    isLoading: h.isLoading,
+    isFetching: h.isFetching,
+    refetch: h.refetch,
+  }),
 }));
 vi.mock("nuqs", () => ({
   parseAsString: { withDefault: (d: unknown) => ({ defaultValue: d }) },

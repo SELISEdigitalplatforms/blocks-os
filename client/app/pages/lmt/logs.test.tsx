@@ -37,7 +37,8 @@ vi.mock("@blocks-lmt/components", () => ({
 vi.mock("@blocks-ai/components/lmt-query-agent/lmt-query-agent-sheet", () => ({
   LMTQueryAgentSheet: () => <button type="button">Blocks Agent</button>,
 }));
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 vi.mock("nuqs", () => ({

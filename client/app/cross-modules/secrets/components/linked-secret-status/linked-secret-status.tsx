@@ -5,28 +5,33 @@ import {
   LINKED_SECRET_STATUS,
   type LinkedSecretStatus,
 } from "@/cross-modules/secrets/models/secret.model";
+import { tStatic, useT } from "@seliseblocks/genesis-os";
 
-const BROKEN_COPY = {
+const I18N_MODULE = "os.secrets";
+
+const getBrokenCopy = () => ({
   [LINKED_SECRET_STATUS.Archived]: {
-    label: "Archived",
-    help: "The linked secret was archived. Edit this configuration and enter a new secret to repair it.",
+    label: tStatic(I18N_MODULE, "LINKED_SECRET_STATUS.LABEL_ARCHIVED"),
+    help: tStatic(I18N_MODULE, "LINKED_SECRET_STATUS.HELP_ARCHIVED"),
   },
   [LINKED_SECRET_STATUS.Missing]: {
-    label: "Missing",
-    help: "The linked secret no longer exists. Edit this configuration and enter a new secret to repair it.",
+    label: tStatic(I18N_MODULE, "LINKED_SECRET_STATUS.LABEL_MISSING"),
+    help: tStatic(I18N_MODULE, "LINKED_SECRET_STATUS.HELP_MISSING"),
   },
-} as const;
+});
 
-/** Copy for the repair notice in an edit form, by broken status. */
+/** Copy for the repair notice in an edit form, by broken status (read when shown). */
 export const LINKED_SECRET_REPAIR_NOTICE = {
-  [LINKED_SECRET_STATUS.Archived]:
-    "The linked secret was archived. Enter a new value to repair this configuration.",
-  [LINKED_SECRET_STATUS.Missing]:
-    "The linked secret was removed. Enter a new value to repair this configuration.",
-} as const;
+  get [LINKED_SECRET_STATUS.Archived]() {
+    return tStatic(I18N_MODULE, "LINKED_SECRET_STATUS.REPAIR_ARCHIVED");
+  },
+  get [LINKED_SECRET_STATUS.Missing]() {
+    return tStatic(I18N_MODULE, "LINKED_SECRET_STATUS.REPAIR_MISSING");
+  },
+};
 
-export const LINKED_SECRET_REPAIR_REQUIRED_MESSAGE =
-  "A new secret is required to repair this configuration.";
+export const linkedSecretRepairRequiredMessage = () =>
+  tStatic(I18N_MODULE, "LINKED_SECRET_STATUS.REPAIR_REQUIRED");
 
 interface LinkedSecretStatusValueProps {
   status?: LinkedSecretStatus | null;
@@ -44,8 +49,9 @@ interface LinkedSecretStatusValueProps {
  * checked, and the screen's own text otherwise.
  */
 export function LinkedSecretStatusValue({ status, fallback }: LinkedSecretStatusValueProps) {
+  const { t } = useT(I18N_MODULE);
   if (status === LINKED_SECRET_STATUS.Archived || status === LINKED_SECRET_STATUS.Missing) {
-    const copy = BROKEN_COPY[status];
+    const copy = getBrokenCopy()[status];
     return (
       <div className="flex flex-col items-start gap-1">
         <Badge variant="warning">{copy.label}</Badge>
@@ -60,10 +66,10 @@ export function LinkedSecretStatusValue({ status, fallback }: LinkedSecretStatus
         <TooltipTrigger asChild>
           {/* Focusable so keyboard users can reach the explanation too. */}
           <span tabIndex={0} className="text-muted-foreground">
-            Status unavailable
+            {t("LINKED_SECRET_STATUS.STATUS_UNAVAILABLE")}
           </span>
         </TooltipTrigger>
-        <TooltipContent>Couldn&apos;t check the linked secret right now.</TooltipContent>
+        <TooltipContent>{t("LINKED_SECRET_STATUS.COULDN_T_CHECK_THE_LINKED")}</TooltipContent>
       </Tooltip>
     );
   }

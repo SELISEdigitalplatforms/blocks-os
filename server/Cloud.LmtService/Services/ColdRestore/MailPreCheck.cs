@@ -8,7 +8,8 @@ namespace Cloud.LmtService.Services.ColdRestore
 {
     /// <summary>
     /// Runs, before a mail is queued, the same checks the retired mail driver (4.0.0) ran in the request on the context
-    /// tenant DB: a template for purpose + language, the mail server configuration of that template, and (only for
+    /// tenant DB: the Default organization's template for purpose + language, a mail server configuration it can send
+    /// through (its own, the Default organization's default or the project default), and (only for
     /// mail to registered users) at least one recipient that is a registered user.
     /// </summary>
     public static class MailPreCheck
@@ -80,40 +81,52 @@ namespace Cloud.LmtService.Services.ColdRestore
             return null;
         }
 
+        // Stored values that mean the Default organization: "default", empty, null or no element at all
+        // (an $in on null also matches a missing element). Configuration.DomainService's OrganizationIds
+        // holds the same rule; this project doesn't reference it.
+        private static readonly BsonArray DefaultOrganizationValues = new() { "default", "", BsonNull.Value };
+
+        private static FilterDefinition<BsonDocument> OfDefaultOrganization =>
+            new BsonDocument("OrganizationId", new BsonDocument("$in", DefaultOrganizationValues));
+
+        /// <summary>
+        /// The Default organization's template for purpose + language, as blocks-logic's queue picks it: of several,
+        /// the lowest id. Organizations' own templates are only used by logic's org-aware send, not here.
+        /// </summary>
         private static async Task<BsonDocument?> FindTemplateAsync(IDbContextProvider dbContextProvider, IOsDataAccess dataAccess, string purpose, string language)
         {
             var templates = dbContextProvider.GetCollection<BsonDocument>("EmailTemplates");
-            // Like the driver: a template for the caller's organization first, then any with purpose + language.
-            var nameAndLanguage = Builders<BsonDocument>.Filter.Eq("Name", purpose) & Builders<BsonDocument>.Filter.Eq("Language", language);
-            BsonDocument? template = null;
-            var organizationId = BlocksContext.GetContext()?.OrganizationId;
-            if (!string.IsNullOrWhiteSpace(organizationId))
-            {
-                var orgScope = await dataAccess.ReadAsync(OsSchemas.EmailTemplate,
-                    nameAndLanguage & Builders<BsonDocument>.Filter.In("OrganizationIds", new[] { organizationId }), "MailPreCheck.FindTemplateAsync(org)");
-                template = orgScope.Granted ? await orgScope.Apply(templates).Limit(1).FirstOrDefaultAsync() : null;
-            }
-
-            if (template == null)
-            {
-                var scope = await dataAccess.ReadAsync(OsSchemas.EmailTemplate, nameAndLanguage, "MailPreCheck.FindTemplateAsync");
-                template = scope.Granted ? await scope.Apply(templates).Limit(1).FirstOrDefaultAsync() : null;
-            }
-
-            return template;
+            var filter = Builders<BsonDocument>.Filter.Eq("Name", purpose)
+                         & Builders<BsonDocument>.Filter.Eq("Language", language)
+                         & OfDefaultOrganization;
+            var scope = await dataAccess.ReadAsync(OsSchemas.EmailTemplate, filter, "MailPreCheck.FindTemplateAsync");
+            return scope.Granted
+                ? await scope.Apply(templates).Sort(Builders<BsonDocument>.Sort.Ascending("_id")).Limit(1).FirstOrDefaultAsync()
+                : null;
         }
 
+        /// <summary>
+        /// Whether logic would find a configuration for the template: the template's own, else the Default
+        /// organization's default configuration (IsOrganizationDefault), else the project default. Inbound configurations never send.
+        /// </summary>
         private static async Task<bool> HasMailServerConfigurationAsync(IDbContextProvider dbContextProvider, IOsDataAccess dataAccess, BsonDocument template)
         {
             var configId = template.TryGetValue("MailConfigurationId", out var idValue) && idValue.IsString ? idValue.AsString : null;
-            if (string.IsNullOrEmpty(configId))
+            var builder = Builders<BsonDocument>.Filter;
+            var candidates = new List<FilterDefinition<BsonDocument>>
             {
-                return false;
+                builder.Eq("IsOrganizationDefault", true) & OfDefaultOrganization,
+                builder.Eq("IsDefault", true)
+            };
+            if (!string.IsNullOrEmpty(configId))
+            {
+                candidates.Add(builder.Eq("_id", configId));
             }
 
             var configs = dbContextProvider.GetCollection<BsonDocument>("MailServerConfigurations");
+            // One read for the whole chain. No projection: the system schema may not list IsOrganizationDefault.
             var scope = await dataAccess.ReadAsync(OsSchemas.MailServerConfiguration,
-                Builders<BsonDocument>.Filter.Eq("_id", configId), "MailPreCheck.HasMailServerConfigurationAsync");
+                builder.Ne("IsInbound", true) & builder.Or(candidates), "MailPreCheck.HasMailServerConfigurationAsync", useProjection: false);
             if (!scope.Granted)
             {
                 return false;

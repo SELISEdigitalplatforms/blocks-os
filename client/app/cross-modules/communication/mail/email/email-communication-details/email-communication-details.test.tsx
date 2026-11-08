@@ -29,11 +29,17 @@ vi.mock("@blocks-communication/mail/hooks/use-email-template", () => ({
   useSaveMailTemplate: () => ({ isPending: false, mutateAsync: vi.fn() }),
 }));
 vi.mock("@blocks-communication/mail/hooks/use-email-config", () => ({
-  useGetEmailConfigs: () => ({
+  useGetEmailSecretConfigs: () => ({
     isLoading: h.isConfigsLoading,
     isFetching: h.isConfigsFetching,
-    data: h.configs,
+    data: { configurations: h.configs },
   }),
+}));
+// A single-org project (C13): no Organization field.
+vi.mock("@blocks-communication/mail/hooks/use-email-organization", () => ({
+  EMAIL_ORGANIZATION_PARAM: "emailOrg",
+  useEmailOrganization: () => ({ isMultiOrgEnabled: false }),
+  useOrganizationName: () => "Default organization",
 }));
 vi.mock("@seliseblocks/genesis-os/store", () => ({
   useUserStore: (selector?: (state: { userDetails: { email: string } | null }) => unknown) => {
@@ -68,7 +74,7 @@ const template = (over: Partial<IEmailTemplate> = {}): IEmailTemplate =>
     lastUpdatedDate: "2024-02-01T10:00:00Z",
     createdBy: "",
     lastUpdatedBy: "",
-    organizationIds: [],
+    organizationId: "default",
     tags: [],
     mailConfigurationId: "conf-1",
     templateBody: "<p>Hello</p>",
@@ -162,6 +168,7 @@ describe("EmailCommunicationDetails", () => {
         to: "me@acme.io",
         purpose: "Welcome Email",
         language: "en-US",
+        templateId: "tpl-1",
       }),
     );
     expect(h.toast).toHaveBeenCalledWith(
@@ -178,9 +185,7 @@ describe("EmailCommunicationDetails", () => {
     const dialog = await screen.findByRole("dialog");
     await user.click(within(dialog).getByRole("button", { name: "Send" }));
 
-    await waitFor(() =>
-      expect(h.toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "destructive" })),
-    );
+    await waitFor(() => expect(h.showErrorToast).toHaveBeenCalled());
   });
 
   it("shows an error toast when the send throws", async () => {
@@ -192,8 +197,6 @@ describe("EmailCommunicationDetails", () => {
     const dialog = await screen.findByRole("dialog");
     await user.click(within(dialog).getByRole("button", { name: "Send" }));
 
-    await waitFor(() =>
-      expect(h.toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "destructive" })),
-    );
+    await waitFor(() => expect(h.showErrorToast).toHaveBeenCalled());
   });
 });

@@ -8,8 +8,10 @@ import { useNavigate } from "react-router";
 import { showErrorToast, showSuccessToast } from "@seliseblocks/genesis-os/utils";
 import { Button } from "@/components/ui-kits/button/button";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
+import { useT } from "@seliseblocks/genesis-os";
 
 export const ArchiveProject = () => {
+  const { t } = useT("os.dashboard");
   const navigate = useNavigate();
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useDisableProject({ projectKey });
@@ -18,8 +20,8 @@ export const ArchiveProject = () => {
       const res = await mutateAsync();
       if (res.isSuccess) {
         showSuccessToast({
-          title: "Environment deleted",
-          description: "Environment deleted successfully.",
+          title: t("ARCHIVE.ENVIRONMENT_DELETED"),
+          description: t("ARCHIVE.ENVIRONMENT_DELETED_SUCCESSFULLY"),
         });
         navigate("/app/console");
       } else {
@@ -37,24 +39,21 @@ export const ArchiveProject = () => {
       <DialogTrigger asChild>
         <Button variant="destructive" size="sm" className="flex items-center gap-2">
           <Archive className="h-4 w-4" />
-          <span className="sr-only sm:not-sr-only">Delete</span>
+          <span className="sr-only sm:not-sr-only">{t("common:DELETE")}</span>
         </Button>
       </DialogTrigger>
       <ConfirmationModal
         onCancel={() => setOpen(false)}
         onConfirm={onClickHandler}
         data={{
-          dialogTitle: "Delete this environment?",
+          dialogTitle: t("ARCHIVE.DELETE_THIS_ENVIRONMENT"),
           dialogSubtitle: (
             <>
-              <p>Are you sure you want to delete this environment?</p>
-              <p>
-                This will permanently delete the environment and you&apos;ll need to contact support
-                to recover it.
-              </p>
+              <p>{t("ARCHIVE.ARE_YOU_SURE_YOU_WANT")}</p>
+              <p>{t("ARCHIVE.THIS_WILL_PERMANENTLY_DELETE_THE")}</p>
             </>
           ),
-          confirmButton: "Delete",
+          confirmButton: t("common:DELETE"),
         }}
         buttonState={{ confirm: { disable: isPending } }}
       />

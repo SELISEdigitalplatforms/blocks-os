@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui-kits/dropdown-menu/dropdown-menu";
 import type { INotificationConfigRow } from "../models/notification-config.model";
+import { tn, useNotificationT } from "../i18n";
 import { NOTIFICATION_TEXT } from "../constants/notification-ui.constant";
 import { notificationImportances } from "../constants/notification.constant";
 import {
@@ -34,6 +35,7 @@ const IMPORTANCE_VARIANT: Record<number, "secondary" | "info" | "warning"> = {
 };
 
 function ImportanceBadge({ importance }: Readonly<{ importance?: number }>) {
+  useNotificationT();
   const item = importanceOf(importance);
   if (!item) return <span className="text-low-emphasis">{EMPTY}</span>;
   return (
@@ -43,7 +45,7 @@ function ImportanceBadge({ importance }: Readonly<{ importance?: number }>) {
   );
 }
 
-const CHANNEL_ICONS: { key: "inApp" | "push" | "inbox"; label: string; icon: LucideIcon }[] = [
+const channelIcons = (): { key: "inApp" | "push" | "inbox"; label: string; icon: LucideIcon }[] => [
   { key: "inApp", label: NOTIFICATION_TEXT.columns.inApp, icon: Bell },
   { key: "push", label: NOTIFICATION_TEXT.columns.push, icon: Smartphone },
   { key: "inbox", label: NOTIFICATION_TEXT.columns.inbox, icon: Inbox },
@@ -53,11 +55,15 @@ const CHANNEL_ICONS: { key: "inApp" | "push" | "inbox"; label: string; icon: Luc
 function DeliveryChannels({
   channels,
 }: Readonly<{ channels: Record<"inApp" | "push" | "inbox", boolean> }>) {
+  useNotificationT();
   return (
     <div className="flex items-center gap-1.5">
-      {CHANNEL_ICONS.map(({ key, label, icon: Icon }) => {
+      {channelIcons().map(({ key, label, icon: Icon }) => {
         const on = channels[key];
-        const text = `${label}: ${on ? NOTIFICATION_TEXT.channelOn : NOTIFICATION_TEXT.channelOff}`;
+        const text = tn(
+          on ? "NOTIFICATION_CONFIG_ROW.CHANNEL_ON" : "NOTIFICATION_CONFIG_ROW.CHANNEL_OFF",
+          { label },
+        );
         return (
           <span
             key={key}
@@ -88,6 +94,7 @@ export function NotificationConfigRow({
   onEdit,
   onDelete,
 }: Readonly<NotificationConfigRowProps>) {
+  const { t } = useNotificationT();
   const channels = channelFlags(config);
   return (
     <TableRow
@@ -102,7 +109,10 @@ export function NotificationConfigRow({
         <div className="flex items-center gap-2">
           <span className="break-all font-mono text-sm font-medium">{config.name}</span>
           {config.audienceLocked && (
-            <Lock className="h-3.5 w-3.5 shrink-0" aria-label="Personal notice" />
+            <Lock
+              className="h-3.5 w-3.5 shrink-0"
+              aria-label={t("NOTIFICATION_CONFIG_ROW.PERSONAL_NOTICE")}
+            />
           )}
           <Badge
             variant={config.isBuiltIn ? "secondary" : "info"}
@@ -142,7 +152,7 @@ export function NotificationConfigRow({
             <Button
               variant="ghost"
               className="h-5 w-5 p-0"
-              aria-label={`Actions for ${config.name}`}
+              aria-label={t("NOTIFICATION_CONFIG_ROW.ACTIONS_FOR", { name: config.name })}
             >
               <EllipsisVertical width={20} height={20} />
             </Button>
@@ -150,14 +160,14 @@ export function NotificationConfigRow({
           <DropdownMenuContent align="end">
             <DropdownMenuItem className="cursor-pointer" onClick={() => onEdit(config)}>
               <Pencil className="mr-2 h-4 w-4" />
-              <span>Edit</span>
+              <span>{t("common:EDIT")}</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               className="cursor-pointer text-error"
               onClick={() => onDelete(config)}
             >
               <Trash className="mr-2 h-4 w-4" />
-              <span>Delete</span>
+              <span>{t("common:DELETE")}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

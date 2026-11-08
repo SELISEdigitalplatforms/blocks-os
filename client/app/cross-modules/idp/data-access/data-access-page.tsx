@@ -1,13 +1,31 @@
 import { PageHeader } from "@/components/page-header/page-header";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
-import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui-kits/sheet/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+} from "@/components/ui-kits/sheet/sheet";
 import { cn } from "@/lib/utils";
+import { tStatic, useT } from "@seliseblocks/genesis-os";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui-kits/button/button";
 import { ArrowLeft, Layers } from "lucide-react";
-import { useCallback, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from "react";
-import { platformDataAccessService, type PlatformSchema, type PlatformSchemaField } from "./data-access.service";
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+  type RefObject,
+} from "react";
+import {
+  platformDataAccessService,
+  type PlatformSchema,
+  type PlatformSchemaField,
+} from "./data-access.service";
 import {
   AccessInspector,
   UnsavedAccessChangesDialog,
@@ -15,42 +33,68 @@ import {
   type AccessInspectorTarget,
   type AccessTab,
 } from "./explorer/access-inspector";
-import { useDataAccessSearchParams, useIsLargeScreen, useLingeringValue } from "./explorer/explorer-hooks";
+import {
+  useDataAccessSearchParams,
+  useIsLargeScreen,
+  useLingeringValue,
+} from "./explorer/explorer-hooks";
 import { MOTION, SHELL } from "./explorer/explorer-utils";
 import { SchemaExplorer, SchemaRail, filterSchemas } from "./explorer/schema-explorer";
 import type { OnOpenFieldRules } from "./explorer/field-rules-buttons";
-import { SchemaFieldsTable, SchemaFieldsTableSkeleton, type OnOpenFieldAccess } from "./explorer/schema-fields-table";
+import {
+  SchemaFieldsTable,
+  SchemaFieldsTableSkeleton,
+  type OnOpenFieldAccess,
+} from "./explorer/schema-fields-table";
 import { SchemaHeader, SchemaHeaderSkeleton } from "./explorer/schema-header";
 import { SchemaPreviewDrawer } from "./explorer/schema-preview-drawer";
 import { BulkRulesDialog } from "./rules/bulk-rules-dialog";
-import { RulesInspector, rulesInspectorKey, type RulesInspectorTarget } from "./rules/rules-inspector";
+import {
+  RulesInspector,
+  rulesInspectorKey,
+  type RulesInspectorTarget,
+} from "./rules/rules-inspector";
 import { variableFieldsOf } from "./rules/variable-syntax";
+
+const I18N_MODULE = "os.idp.data-access";
 
 /** The docked slot holds a property's access, or its validations or default value. */
 type InspectorTarget = AccessInspectorTarget | RulesInspectorTarget;
 
-const isRulesTarget = (target: InspectorTarget): target is RulesInspectorTarget => "panel" in target;
+const isRulesTarget = (target: InspectorTarget): target is RulesInspectorTarget =>
+  "panel" in target;
 
-const accessInspectorKey = (target: AccessInspectorTarget) => `${target.schemaId}:${target.level}:${target.fieldNames.join(",")}`;
-const inspectorKey = (target: InspectorTarget) => (isRulesTarget(target) ? rulesInspectorKey(target) : accessInspectorKey(target));
+const accessInspectorKey = (target: AccessInspectorTarget) =>
+  `${target.schemaId}:${target.level}:${target.fieldNames.join(",")}`;
+const inspectorKey = (target: InspectorTarget) =>
+  isRulesTarget(target) ? rulesInspectorKey(target) : accessInspectorKey(target);
 
 /** The access inspector (with its unsaved-changes handle), or the rules inspector. */
 function Inspector({
   target,
   inspectorRef,
   onClose,
-}: Readonly<{ target: InspectorTarget; inspectorRef: RefObject<AccessInspectorHandle | null>; onClose: () => void }>) {
+}: Readonly<{
+  target: InspectorTarget;
+  inspectorRef: RefObject<AccessInspectorHandle | null>;
+  onClose: () => void;
+}>) {
   return isRulesTarget(target) ? (
     <RulesInspector key={inspectorKey(target)} target={target} onClose={onClose} />
   ) : (
-    <AccessInspector key={inspectorKey(target)} ref={inspectorRef} target={target} onClose={onClose} />
+    <AccessInspector
+      key={inspectorKey(target)}
+      ref={inspectorRef}
+      target={target}
+      onClose={onClose}
+    />
   );
 }
 
 /** Inspector subject for the schema itself (row access), opened on `tab`. */
 const schemaAccessTarget = (schema: PlatformSchema, tab?: AccessTab): AccessInspectorTarget => ({
   subject: schema.schemaName,
-  context: "Schema access",
+  context: tStatic(I18N_MODULE, "DATA_ACCESS_PAGE.CONTEXT_SCHEMA_ACCESS"),
   schemaId: schema.id,
   schemaName: schema.schemaName,
   fields: schema.fields,
@@ -64,9 +108,13 @@ const schemaAccessTarget = (schema: PlatformSchema, tab?: AccessTab): AccessInsp
 });
 
 /** Inspector subject for one property (column access), addressed by its dotted path. */
-const fieldAccessTarget = (schema: PlatformSchema, path: string, field: PlatformSchemaField): AccessInspectorTarget => ({
+const fieldAccessTarget = (
+  schema: PlatformSchema,
+  path: string,
+  field: PlatformSchemaField,
+): AccessInspectorTarget => ({
   subject: path,
-  context: `Field on ${schema.schemaName}`,
+  context: tStatic(I18N_MODULE, "DATA_ACCESS_PAGE.CONTEXT_FIELD_ON", { schema: schema.schemaName }),
   schemaId: schema.id,
   schemaName: schema.schemaName,
   fields: schema.fields,
@@ -119,6 +167,7 @@ function SchemaPanel({
   onOpenFieldAccess: OnOpenFieldAccess;
   onOpenFieldRules: OnOpenFieldRules;
 }>) {
+  const { t } = useT(I18N_MODULE);
   if (isLoading) {
     return (
       <>
@@ -131,15 +180,20 @@ function SchemaPanel({
     return (
       <Card className="w-full">
         <CardContent className="p-4">
-          <h4 className="text-lg font-semibold">Schema</h4>
-          <p className="text-sm text-muted-foreground">Select a schema from the list to view its properties and access.</p>
+          <h4 className="text-lg font-semibold">{t("SCHEMA_PANEL.TITLE")}</h4>
+          <p className="text-sm text-muted-foreground">{t("SCHEMA_PANEL.SELECT_HINT")}</p>
         </CardContent>
       </Card>
     );
   }
   return (
     <>
-      <SchemaHeader schema={schema} isAccessPanelOpen={isAccessPanelOpen} onOpenPreview={onOpenPreview} onOpenSchemaAccess={onOpenSchemaAccess} />
+      <SchemaHeader
+        schema={schema}
+        isAccessPanelOpen={isAccessPanelOpen}
+        onOpenPreview={onOpenPreview}
+        onOpenSchemaAccess={onOpenSchemaAccess}
+      />
       <SchemaFieldsTable
         schemaName={schema.schemaName}
         fields={schema.fields}
@@ -156,9 +210,18 @@ function SchemaPanel({
  * One layer of a column that cross-fades with another in the same slot; the hidden
  * layer is inert so it cannot take focus or clicks.
  */
-function FadeLayer({ visible, className, children }: Readonly<{ visible: boolean; className: string; children: ReactNode }>) {
+function FadeLayer({
+  visible,
+  className,
+  children,
+}: Readonly<{ visible: boolean; className: string; children: ReactNode }>) {
   return (
-    <div aria-hidden={!visible} inert={!visible} style={{ opacity: visible ? 1 : 0 }} className={cn("dg-fade-layer", !visible && "pointer-events-none", className)}>
+    <div
+      aria-hidden={!visible}
+      inert={!visible}
+      style={{ opacity: visible ? 1 : 0 }}
+      className={cn("dg-fade-layer", !visible && "pointer-events-none", className)}
+    >
       {children}
     </div>
   );
@@ -194,10 +257,16 @@ function InspectorColumn({
       data-open={isOpen ? "true" : "false"}
       aria-hidden={!isOpen}
       style={style}
-      className={cn("dg-panel-collapse relative hidden min-h-0 shrink-0 overflow-hidden lg:block lg:w-(--dg-inspector-w)", !isOpen && "pointer-events-none")}
+      className={cn(
+        "dg-panel-collapse relative hidden min-h-0 shrink-0 overflow-hidden lg:block lg:w-(--dg-inspector-w)",
+        !isOpen && "pointer-events-none",
+      )}
     >
       {lingeringInspector && (
-        <FadeLayer visible={Boolean(inspector)} className="absolute inset-y-0 right-0 flex min-h-0 w-(--dg-inspector-panel-w)">
+        <FadeLayer
+          visible={Boolean(inspector)}
+          className="absolute inset-y-0 right-0 flex min-h-0 w-(--dg-inspector-panel-w)"
+        >
           <Inspector target={lingeringInspector} inspectorRef={inspectorRef} onClose={onClose} />
         </FadeLayer>
       )}
@@ -212,7 +281,11 @@ function InspectorColumn({
  * folds to a rail while the inspector is open.
  */
 export function DataAccessPage() {
-  const schemasQuery = useQuery({ queryKey: ["platform-data-access-schemas"], queryFn: platformDataAccessService.getSchemas });
+  const { t } = useT(I18N_MODULE);
+  const schemasQuery = useQuery({
+    queryKey: ["platform-data-access-schemas"],
+    queryFn: platformDataAccessService.getSchemas,
+  });
   const schemas = useMemo(() => schemasQuery.data?.data ?? [], [schemasQuery.data?.data]);
 
   const [queryParams, setQueryParams] = useDataAccessSearchParams();
@@ -245,10 +318,14 @@ export function DataAccessPage() {
   }, []);
 
   const closeInspector = useCallback(() => guarded(() => setInspector(null)), [guarded]);
-  const openInspector = useCallback((target: InspectorTarget) => guarded(() => setInspector(target)), [guarded]);
+  const openInspector = useCallback(
+    (target: InspectorTarget) => guarded(() => setInspector(target)),
+    [guarded],
+  );
 
   const selectSchema = useCallback(
-    (schemaId: string | null) => guarded(() => void setQueryParams({ schemaId }, { history: "push" })),
+    (schemaId: string | null) =>
+      guarded(() => void setQueryParams({ schemaId }, { history: "push" })),
     [guarded, setQueryParams],
   );
 
@@ -283,13 +360,19 @@ export function DataAccessPage() {
   return (
     <div className="flex flex-col lg:h-[calc(100vh-8rem)] lg:min-h-0">
       <PageHeader
-        title="Data Access"
-        description="Platform collections of IAM, OS, Logic, Release and Monitor, and who may view, create, edit and delete them."
+        title={t("DATA_ACCESS_PAGE.TITLE")}
+        description={t("DATA_ACCESS_PAGE.DESCRIPTION")}
         actions={
           rulesEnabled ? (
-            <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => setIsBulkOpen(true)}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => setIsBulkOpen(true)}
+            >
               <Layers className="h-4 w-4" />
-              Bulk rules
+              {t("DATA_ACCESS_PAGE.BULK_RULES")}
             </Button>
           ) : undefined
         }
@@ -304,9 +387,15 @@ export function DataAccessPage() {
           data-testid="explorer-column"
           data-collapsed={isRightPanelOpen ? "true" : "false"}
           style={explorerStyle}
-          className={cn("dg-panel-collapse relative shrink-0 overflow-hidden lg:w-(--dg-explorer-w)", selectedSchemaId ? "hidden lg:block" : "block")}
+          className={cn(
+            "dg-panel-collapse relative shrink-0 overflow-hidden lg:w-(--dg-explorer-w)",
+            selectedSchemaId ? "hidden lg:block" : "block",
+          )}
         >
-          <FadeLayer visible={!isRightPanelOpen} className="h-full w-full lg:w-(--dg-explorer-open-w)">
+          <FadeLayer
+            visible={!isRightPanelOpen}
+            className="h-full w-full lg:w-(--dg-explorer-open-w)"
+          >
             <SchemaExplorer
               schemas={schemas}
               isLoading={schemasQuery.isLoading}
@@ -318,7 +407,10 @@ export function DataAccessPage() {
               onSelectSchema={selectSchema}
             />
           </FadeLayer>
-          <FadeLayer visible={isRightPanelOpen} className="absolute inset-y-0 left-0 hidden w-(--dg-rail-w) lg:block">
+          <FadeLayer
+            visible={isRightPanelOpen}
+            className="absolute inset-y-0 left-0 hidden w-(--dg-rail-w) lg:block"
+          >
             <SchemaRail
               schemas={filterSchemas(schemas, queryParams.service, search)}
               selectedSchemaId={selectedSchemaId}
@@ -329,9 +421,18 @@ export function DataAccessPage() {
         </div>
 
         {/* Main content */}
-        <div className={cn("flex w-full min-w-0 flex-col lg:h-full lg:flex-1 lg:overflow-hidden", selectedSchemaId ? "flex" : "hidden lg:flex")}>
+        <div
+          className={cn(
+            "flex w-full min-w-0 flex-col lg:h-full lg:flex-1 lg:overflow-hidden",
+            selectedSchemaId ? "flex" : "hidden lg:flex",
+          )}
+        >
           <div className="flex min-w-0 items-center gap-2 pb-2 lg:hidden">
-            <button type="button" aria-label="Back to schema list" onClick={() => selectSchema(null)}>
+            <button
+              type="button"
+              aria-label={t("DATA_ACCESS_PAGE.BACK_TO_LIST")}
+              onClick={() => selectSchema(null)}
+            >
               <ArrowLeft className="h-5 w-5" />
             </button>
             <h2 className="min-w-0 truncate text-lg font-semibold">{selectedSchema?.schemaName}</h2>
@@ -343,10 +444,15 @@ export function DataAccessPage() {
               rulesEnabled={rulesEnabled}
               isAccessPanelOpen={isRightPanelOpen}
               onOpenPreview={() => setIsPreviewOpen(true)}
-              onOpenSchemaAccess={(tab) => selectedSchema && openInspector(schemaAccessTarget(selectedSchema, tab))}
-              onOpenFieldAccess={({ path, field }) => selectedSchema && openInspector(fieldAccessTarget(selectedSchema, path, field))}
+              onOpenSchemaAccess={(tab) =>
+                selectedSchema && openInspector(schemaAccessTarget(selectedSchema, tab))
+              }
+              onOpenFieldAccess={({ path, field }) =>
+                selectedSchema && openInspector(fieldAccessTarget(selectedSchema, path, field))
+              }
               onOpenFieldRules={({ path, field, panel }) => {
-                const target = selectedSchema && fieldRulesTarget(selectedSchema, path, field, panel);
+                const target =
+                  selectedSchema && fieldRulesTarget(selectedSchema, path, field, panel);
                 if (target) openInspector(target);
               }}
             />
@@ -366,20 +472,35 @@ export function DataAccessPage() {
 
       {!isLargeScreen && (
         <Sheet open={Boolean(inspector)} onOpenChange={(open) => !open && closeInspector()}>
-          <SheetContent side="right" hideClose className="flex w-full flex-col p-0 sm:max-w-[540px]">
-            <SheetTitle className="sr-only">{inspector && isRulesTarget(inspector) ? "Rules" : "Access"}</SheetTitle>
+          <SheetContent
+            side="right"
+            hideClose
+            className="flex w-full flex-col p-0 sm:max-w-[540px]"
+          >
+            <SheetTitle className="sr-only">
+              {inspector && isRulesTarget(inspector)
+                ? t("DATA_ACCESS_PAGE.SHEET_TITLE_RULES")
+                : t("DATA_ACCESS_PAGE.SHEET_TITLE_ACCESS")}
+            </SheetTitle>
             <SheetDescription className="sr-only">
               {inspector && isRulesTarget(inspector)
-                ? "Validation rules or the default value of this property."
-                : "Who may view, create, edit or delete this schema or property."}
+                ? t("DATA_ACCESS_PAGE.SHEET_DESCRIPTION_RULES")
+                : t("DATA_ACCESS_PAGE.SHEET_DESCRIPTION_ACCESS")}
             </SheetDescription>
-            {inspector && <Inspector target={inspector} inspectorRef={inspectorRef} onClose={closeInspector} />}
+            {inspector && (
+              <Inspector target={inspector} inspectorRef={inspectorRef} onClose={closeInspector} />
+            )}
           </SheetContent>
         </Sheet>
       )}
 
       {selectedSchema && (
-        <SchemaPreviewDrawer schemaName={selectedSchema.schemaName} fields={selectedSchema.fields} open={isPreviewOpen} onOpenChange={setIsPreviewOpen} />
+        <SchemaPreviewDrawer
+          schemaName={selectedSchema.schemaName}
+          fields={selectedSchema.fields}
+          open={isPreviewOpen}
+          onOpenChange={setIsPreviewOpen}
+        />
       )}
 
       <Dialog
@@ -389,7 +510,11 @@ export function DataAccessPage() {
         }}
       >
         {pendingAction && (
-          <UnsavedAccessChangesDialog onSave={() => void handleSaveUnsaved()} onDiscard={handleDiscardUnsaved} isSaving={isResolvingUnsaved} />
+          <UnsavedAccessChangesDialog
+            onSave={() => void handleSaveUnsaved()}
+            onDiscard={handleDiscardUnsaved}
+            isSaving={isResolvingUnsaved}
+          />
         )}
       </Dialog>
     </div>

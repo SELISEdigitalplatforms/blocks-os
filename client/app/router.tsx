@@ -1,8 +1,9 @@
 import { AuthResolver, ProtectedGuard, PublicGuard } from "@seliseblocks/genesis-os/guards";
-import { ConsoleLayout, DashboardRoute } from "@seliseblocks/genesis-os/layouts";
+import { ConsoleLayout } from "@seliseblocks/genesis-os/layouts";
 import { CallbackPage, ConsolePage, LoginPage, ProfilePage } from "@seliseblocks/genesis-os/pages";
 import { createBrowserRouter, matchRoutes, Navigate, Outlet, useLocation } from "react-router";
 import { navigationMenus } from "@/constants/navigation-menus";
+import { ScopedDashboardRoute } from "@/routes/scoped-dashboard-route";
 import { DeepLinkRedirect } from "@/components/deep-link-redirect/deep-link-redirect";
 import { PendingConnectRedirect } from "@/components/pending-connect-redirect/pending-connect-redirect";
 // Temporarily disabled
@@ -13,6 +14,9 @@ import { DataGatewayContents } from "@/cross-modules/data-gateway/pages/data-gat
 import { AiCreditsPage } from "@/cross-modules/ai-credits/pages/ai-credits/ai-credits-page";
 import { SecretList } from "@/cross-modules/secrets/components/secret-list/secret-list";
 import { StorageContents } from "@/cross-modules/storage/pages/storage/storage-contents";
+import { ActionsPage } from "@/cross-modules/actions/pages/actions/actions-page";
+import { WebhooksPage } from "@/cross-modules/webhooks/pages/webhooks/webhooks-page";
+import { WebhookDetailsPage } from "@/cross-modules/webhooks/pages/webhook-details/webhook-details-page";
 // Temporarily disabled
 // import { MagicUrls } from "@/cross-modules/utilities/pages/magic-urls/magic-urls";
 import ActivatePage from "@/pages/auth/activate-page";
@@ -70,6 +74,10 @@ import OidcBrandingPage from "@/pages/auth/oidc/oidc-branding";
 import SecretManagementLayout from "@/pages/secret-management/secret-management";
 import { ProjectOverviewRoute } from "@/routes/project-overview/project-overview-route";
 import { OIDC_BRANDING_ROUTE_PATH } from "@/routes/oidc-branding-route";
+import {
+  OIDC_CLIENT_ROUTE_PATH,
+  OidcClientPage,
+} from "@blocks-idp/authentication/components/oidc-client-page";
 import { IdentityProviderPage } from "@blocks-idp/authentication/components/identity-provider/identity-provider";
 import { EmailPage } from "@/pages/email-management/email";
 import { EmailCommunicationDetailsPage } from "@/pages/email-management/email-communication-details";
@@ -223,7 +231,7 @@ export const router = createBrowserRouter([
               {
                 path: ":itemId",
                 element: (
-                  <DashboardRoute redirectPaths={redirectPaths} navigationMenus={navigationMenus} />
+                  <ScopedDashboardRoute redirectPaths={redirectPaths} navigationMenus={navigationMenus} />
                 ),
                 children: [
                   {
@@ -271,6 +279,10 @@ export const router = createBrowserRouter([
                             path: OIDC_BRANDING_ROUTE_PATH,
                             element: <OidcBrandingPage />,
                           },
+                          {
+                            path: OIDC_CLIENT_ROUTE_PATH,
+                            element: <OidcClientPage />,
+                          },
                         ],
                       },
                       {
@@ -315,6 +327,23 @@ export const router = createBrowserRouter([
                       {
                         path: "data-gateway",
                         element: <DataGatewayContents />,
+                      },
+                      {
+                        path: "actions",
+                        element: <ActionsPage />,
+                      },
+                      {
+                        path: "webhooks",
+                        children: [
+                          {
+                            index: true,
+                            element: <WebhooksPage />,
+                          },
+                          {
+                            path: ":id",
+                            element: <WebhookDetailsPage />,
+                          },
+                        ],
                       },
                       {
                         path: "email",

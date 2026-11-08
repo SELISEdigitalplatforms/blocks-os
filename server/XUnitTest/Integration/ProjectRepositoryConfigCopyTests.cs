@@ -397,26 +397,33 @@ namespace XUnitTest.Integration
         }
 
         [Fact]
-        public async Task KeyValueSeedCopier_CopiesTheBlocksEventTriggerCatalog_WithItsEventsUnchanged()
+        public async Task KeyValueSeedCopier_NeverCopiesTheActionsList_OrTheWebhooks()
         {
             var suffix = Guid.NewGuid().ToString("N");
             var seed = _fixture.DbContextProvider.GetDatabase("", "kvseed-" + suffix[..8]);
             var projectDb = _fixture.DbContextProvider.GetDatabase("", "kvproj-" + suffix[..8]);
-            var events = new BsonArray
+            var actions = new BsonArray
             {
-                new BsonDocument { { "EventName", "UserMutationEvent" }, { "IsValidForWorkflow", false }, { "IsValidForFunction", false } },
+                new BsonDocument
+                {
+                    { "Name", "iam.user.created" }, { "Label", "User created" }, { "Service", "iam" },
+                    { "Payload", new BsonDocument("userId", "string") },
+                    { "Workflow", true }, { "Function", true }, { "Webhook", true }
+                },
             };
-            await seed.GetCollection<BsonDocument>(KeyValueSeedCopier.CollectionName).InsertOneAsync(new BsonDocument
-            {
-                { "_id", Guid.NewGuid().ToString("N") }, { "Key", KeyValueSeedCopier.BlocksEventTriggersKey }, { "Value", events }, { "Tags", new BsonArray() },
-            });
+            var collection = seed.GetCollection<BsonDocument>(KeyValueSeedCopier.CollectionName);
+            await collection.InsertOneAsync(KeyValueArrayRow(ActionConstants.ActionsKey, actions));
+            await collection.InsertOneAsync(KeyValueArrayRow(ActionConstants.WebhooksKey, new BsonArray { new BsonDocument("Id", "w1") }));
 
             var inserted = await KeyValueSeedCopier.CopyAsync(seed, projectDb, "creator");
 
-            inserted.Should().Be(1);
-            var row = await projectDb.GetCollection<BsonDocument>(KeyValueSeedCopier.CollectionName)
-                .Find(Builders<BsonDocument>.Filter.Eq("Key", KeyValueSeedCopier.BlocksEventTriggersKey)).SingleAsync();
-            row["Value"].Should().Be(events);
+            inserted.Should().Be(0);
+            (await projectDb.GetCollection<BsonDocument>(KeyValueSeedCopier.CollectionName).CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(0);
         }
+
+        private static BsonDocument KeyValueArrayRow(string key, BsonArray value) => new()
+        {
+            { "_id", Guid.NewGuid().ToString("N") }, { "Key", key }, { "Value", value }, { "Tags", new BsonArray() },
+        };
     }
 }

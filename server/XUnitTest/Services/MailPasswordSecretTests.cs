@@ -8,6 +8,8 @@ using Blocks.Secrets;
 using Configuration.DomainService.Mail.Providers;
 using Configuration.DomainService.Mail.RequestModel;
 using Configuration.DomainService.Mail.Services;
+using Configuration.DomainService.Mail.Template.Services;
+using Configuration.DomainService.Organizations;
 using Configuration.DomainService.Mail.Validators;
 using Configuration.DomainService.Shared.Secrets;
 using Configuration.DomainService.Shared.Services;
@@ -70,7 +72,8 @@ namespace XUnitTest.Services
                 new Office365SmtpMailConfigurationProvider(_secrets.Object, _office365Logger)
             });
 
-            return new MailConfigurationService(_repo.Object, registry, validator, _serviceLogger);
+            return new MailConfigurationService(
+                _repo.Object, registry, validator, _serviceLogger, Mock.Of<IOrganizationReader>(), Mock.Of<IMailTemplateRepository>());
         }
 
         // ---------- secret store setups ----------
@@ -1276,7 +1279,7 @@ namespace XUnitTest.Services
             var gmail = StoredZoho("pw-gmail");
             gmail.ItemId = "gmail-1";
             gmail.Provider = MailServiceProvider.Gmail;
-            _repo.Setup(r => r.GetAllMailConfigurationsAsync())
+            _repo.Setup(r => r.GetAllMailConfigurationsAsync(It.IsAny<string?>()))
                  .ReturnsAsync(new List<MailServerConfiguration>
                  {
                      StoredZoho(reference: null, password: "legacy-plaintext"),
@@ -1287,7 +1290,7 @@ namespace XUnitTest.Services
                      oauth
                  });
 
-            var responses = await Service().GetAllAsync();
+            var responses = await Service().GetAllAsync(new GetAllMailConfigurationsRequest());
 
             responses.Should().HaveCount(6);
             responses.Take(5).Should().OnlyContain(r => r.AccountPassword == "********" && r.ClientSecretStatus == null);

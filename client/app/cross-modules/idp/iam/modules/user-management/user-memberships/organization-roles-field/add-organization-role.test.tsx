@@ -13,7 +13,8 @@ vi.mock("@/components/ui-kits/tooltip/tooltip", () => ({
   ),
   TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 

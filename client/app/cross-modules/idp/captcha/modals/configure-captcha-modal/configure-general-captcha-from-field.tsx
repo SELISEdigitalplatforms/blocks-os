@@ -11,6 +11,7 @@ import { ConfigureCaptchaFormValues } from "./utils";
 import { Banner } from "@/components/ui-kits/banner/banner";
 import type { BrokenLinkedSecretStatus } from "@/cross-modules/secrets/models/secret.model";
 import { LINKED_SECRET_REPAIR_NOTICE } from "@/cross-modules/secrets/components/linked-secret-status/linked-secret-status";
+import { useT } from "@seliseblocks/genesis-os";
 type ConfigureGeneralCaptchaFormProps = {
   form: UseFormReturn<ConfigureCaptchaFormValues>;
   /** When true, the secret field is optional: leaving it blank keeps the existing secret. */
@@ -26,13 +27,15 @@ export const ConfigureGeneralCaptchaFormField = ({
   isEditing,
   brokenStatus = null,
 }: ConfigureGeneralCaptchaFormProps) => {
+  const { t } = useT("os.idp.captcha");
   const needsNewSecret = !!brokenStatus;
   const isRequired = !isEditing || needsNewSecret;
-  const placeholder = needsNewSecret
-    ? "Enter a new secret key"
-    : isEditing
-      ? "Leave blank to keep the current secret"
-      : "Enter secret key";
+  let placeholder = t("CONFIGURE_GENERAL_CAPTCHA_FORM_FIELD.PLACEHOLDER_SECRET");
+  if (needsNewSecret) {
+    placeholder = t("CONFIGURE_GENERAL_CAPTCHA_FORM_FIELD.PLACEHOLDER_NEW_SECRET");
+  } else if (isEditing) {
+    placeholder = t("CONFIGURE_GENERAL_CAPTCHA_FORM_FIELD.PLACEHOLDER_KEEP_SECRET");
+  }
   return (
     <>
       <FormField
@@ -41,10 +44,14 @@ export const ConfigureGeneralCaptchaFormField = ({
         render={({ field }) => (
           <FormItem>
             <FormLabel>
-              Site key <span className="text-destructive">*</span>
+              {t("CONFIGURE_GENERAL_CAPTCHA_FORM_FIELD.SITE_KEY")}{" "}
+              <span className="text-destructive">*</span>
             </FormLabel>
             <FormControl>
-              <Input placeholder="Enter site key" {...field} />
+              <Input
+                placeholder={t("CONFIGURE_GENERAL_CAPTCHA_FORM_FIELD.PLACEHOLDER_SITE_KEY")}
+                {...field}
+              />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -61,7 +68,8 @@ export const ConfigureGeneralCaptchaFormField = ({
         render={({ field }) => (
           <FormItem>
             <FormLabel>
-              Secret key {isRequired && <span className="text-destructive">*</span>}
+              {t("CONFIGURE_GENERAL_CAPTCHA_FORM_FIELD.SECRET_KEY")}{" "}
+              {isRequired && <span className="text-destructive">*</span>}
             </FormLabel>
             <FormControl>
               <Input placeholder={placeholder} {...field} />

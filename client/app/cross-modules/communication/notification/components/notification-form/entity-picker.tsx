@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from "react";
 import { X } from "lucide-react";
 import { Input } from "@/components/ui-kits/input/input";
 import { NOTIFICATION_TEXT } from "../../constants/notification-ui.constant";
+import { useNotificationT } from "../../i18n";
 
 export interface PickerOption {
   value: string;
@@ -46,6 +47,7 @@ export function EntityPicker({
   useSearch,
   labelOf = (value) => value,
 }: Readonly<EntityPickerProps>) {
+  const { t } = useNotificationT();
   const listId = useId();
   const [term, setTerm] = useState("");
   const [open, setOpen] = useState(false);
@@ -70,7 +72,7 @@ export function EntityPicker({
           <span className="break-all">{labelOf(value)}</span>
           <button
             type="button"
-            aria-label={`Remove ${labelOf(value)}`}
+            aria-label={t("ENTITY_PICKER.REMOVE_ITEM", { name: labelOf(value) })}
             onClick={() => onChange(values.filter((v) => v !== value))}
           >
             <X className="h-3.5 w-3.5" />

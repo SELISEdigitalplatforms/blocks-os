@@ -16,9 +16,10 @@ vi.mock("@/hooks/use-project", () => ({
   }),
 }));
 
-vi.mock("@seliseblocks/genesis-os", () => {
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => {
   const Passthrough = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
   return {
+    ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
     Tooltip: Passthrough,
     TooltipTrigger: Passthrough,
     TooltipContent: Passthrough,

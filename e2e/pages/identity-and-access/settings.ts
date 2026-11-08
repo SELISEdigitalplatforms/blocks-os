@@ -1,6 +1,11 @@
 import { expect, type Page } from "@playwright/test";
 import { openIam } from "../../support/os-helpers";
 
+// The tab's Reset and Save sit together in the page header. Since 6e4164cf the Signup tab also
+// holds the Sign-in methods card with its own Save, so the header Save is found next to Reset.
+const tabHeaderSaveButton = (page: Page) =>
+  page.getByRole("button", { name: "Reset" }).locator("..").getByRole("button", { name: "Save" });
+
 export async function navigateToSettingsFlow(page: Page) {
   await openIam(page, "settings", "Auth Configuration");
   await expect(page.getByRole("heading", { name: "Auth Configuration" })).toBeVisible({
@@ -176,7 +181,7 @@ export async function enableSignupAndAssignRolesFlow(page: Page) {
     await page.getByRole("button", { name: "Set", exact: true }).click();
   }
 
-  const saveButton = page.getByRole("button", { name: "Save" });
+  const saveButton = tabHeaderSaveButton(page);
   // Strict: the Save button MUST become enabled once the form is dirty.
   await expect(saveButton).toBeEnabled({ timeout: 10_000 });
   await saveButton.click();

@@ -5,6 +5,7 @@ import { isErrorWithErrors } from "@/lib/error";
 import type { IPushTestResult } from "../../models/push.model";
 import { PUSH_FORM_TEXT } from "../../constants/push-ui.constant";
 import { useSendNotificationTest } from "../../hooks/use-push-runtime";
+import { useNotificationT } from "../../i18n";
 import type { NotificationFormValues } from "../../utils/notification-form";
 import { buildNotificationTestRequest } from "../../utils/push-options";
 import { PushTestResultDialog } from "../push-test-result-dialog";
@@ -12,6 +13,7 @@ import { HelpText } from "./form-row";
 
 /** "Send test to my devices": sends the unsaved draft with sample data and shows the result dialog. */
 export function PushTestRow({ values }: Readonly<{ values: NotificationFormValues }>) {
+  const { t } = useNotificationT();
   const test = useSendNotificationTest();
   const [result, setResult] = useState<IPushTestResult | null>(null);
   const missingKeys = !values.titleKey || !values.bodyKey;
@@ -22,7 +24,9 @@ export function PushTestRow({ values }: Readonly<{ values: NotificationFormValue
       if (res.isSuccess === false) showErrorToast({ errors: res.errors });
       else setResult(res);
     } catch (error) {
-      showErrorToast({ errors: isErrorWithErrors(error) ? error.errors : "Something went wrong" });
+      showErrorToast({
+        errors: isErrorWithErrors(error) ? error.errors : t("PUSH_TEST_ROW.GENERIC_ERROR"),
+      });
     }
   };
 

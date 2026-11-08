@@ -9,6 +9,9 @@ namespace Configuration.DomainService.Mail.Template
         public bool IsDescending { get; set; }
         public string? MailConfigurationId { get; set; }
         public string? Language { get; set; }
+
+        /// <summary>Only this organization's templates; missing or blank means the Default organization.</summary>
+        public string? OrganizationId { get; set; }
     }
 }
 

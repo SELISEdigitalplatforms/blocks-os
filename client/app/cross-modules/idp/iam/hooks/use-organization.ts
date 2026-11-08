@@ -1,3 +1,4 @@
+import { tStatic } from "@seliseblocks/genesis-os";
 import {
   keepPreviousData,
   useInfiniteQuery,
@@ -15,7 +16,6 @@ import { IOrganizationConfigPayload } from "@blocks-idp/iam/models/organization-
 import { iamService } from "@blocks-idp/iam/services/iam.service";
 
 const DEFAULT_ORGANIZATION_ID = "default";
-const DEFAULT_ORGANIZATION_NAME = "Default";
 const ORGANIZATION_OPTIONS_PAGE_SIZE = 100;
 const ORGANIZATION_FILTER_PAGE_SIZE = 25;
 
@@ -31,7 +31,7 @@ export const useGetOrganizations = (options: IOrganizationFilter) => {
         searchText: options.search,
       }),
     placeholderData: keepPreviousData,
-    enabled: options.enabled !== undefined ? options.enabled : !!options.projectKey,
+    enabled: options.enabled ?? !!options.projectKey,
   });
 };
 
@@ -74,7 +74,7 @@ export const getEnabledOrganizationsFromPages = (
   if (organizationById.size > 0 && !organizationById.has(DEFAULT_ORGANIZATION_ID)) {
     organizationById.set(DEFAULT_ORGANIZATION_ID, {
       itemId: DEFAULT_ORGANIZATION_ID,
-      name: DEFAULT_ORGANIZATION_NAME,
+      name: tStatic("os.idp.iam", "USE_ORGANIZATION.DEFAULT_ORGANIZATION_NAME"),
       isEnable: true,
       isDisabled: false,
       createdDate: "",

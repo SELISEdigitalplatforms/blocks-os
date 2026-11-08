@@ -3,29 +3,39 @@ import { getRuntimeEnv } from "@/lib/runtime-env";
 import { BookOpenText } from "lucide-react";
 // import { BookOpenText, Component } from "lucide-react";
 import { Link } from "react-router";
+import { useT } from "@seliseblocks/genesis-os";
+
+const KEY_LOGO_ALT = "BLOCKS_INFO.LOGO_ALT";
 export const BlockInfo = () => {
+  const { t } = useT("os.idp.auth");
   return (
     <div className="mt-[24px] w-full p-4 shadow-none md:p-0 lg:mt-0 lg:max-w-md">
       <div className="mb-[36px] flex items-center gap-4">
         <Link to="https://docs.seliseblocks.com/" target="_blank" className="w-full">
           <Button variant="outline" className="w-full">
             <BookOpenText className="mr-3 h-4 w-4" />
-            See Docs
+            {t("BLOCKS_INFO.SEE_DOCS")}
           </Button>
         </Link>
       </div>
       <div className="mb-[36px] flex flex-col gap-4">
-        <h2 className="text-xl font-semibold">Frontend</h2>
+        <h2 className="text-xl font-semibold">{t("BLOCKS_INFO.FRONTEND")}</h2>
         <div className="flex items-center gap-4">
           <div className="flex w-[50%] flex-col gap-2">
             <Button variant="outline" className="w-full">
-              <img src="/assets/images/react-icon.png" width={20} height={20} alt="Reactjs Logo" />
+              <img
+                src="/assets/images/react-icon.png"
+                width={20}
+                height={20}
+                alt={t(KEY_LOGO_ALT, { name: "React" })}
+              />
             </Button>
             <div className="flex items-center gap-2 text-blue-700 md:justify-between">
               <Link
                 to="https://www.npmjs.com/package/@seliseblocks/cli-os"
                 className="text-primary"
                 target="_blank"
+                // eslint-disable-next-line no-restricted-syntax -- package registry name (npm)
               >
                 Npm
               </Link>
@@ -34,6 +44,7 @@ export const BlockInfo = () => {
                 to="https://github.com/SELISEdigitalplatforms/l3-react-blocks-construct"
                 className="text-primary"
                 target="_blank"
+                // eslint-disable-next-line no-restricted-syntax -- product name
               >
                 GitHub
               </Link>
@@ -43,7 +54,7 @@ export const BlockInfo = () => {
                 className="text-primary"
                 target="_blank"
               >
-                Demo
+                {t("BLOCKS_INFO.DEMO")}
               </Link>
             </div>
           </div>
@@ -53,25 +64,31 @@ export const BlockInfo = () => {
                 src="/assets/images/angular-icon.png"
                 width={20}
                 height={20}
-                alt="Angular Logo"
+                alt={t(KEY_LOGO_ALT, { name: "Angular" })}
               />
             </Button>
-            <p className="text-medium-emphasis">Coming soon</p>
+            <p className="text-medium-emphasis">{t("BLOCKS_INFO.COMING_SOON")}</p>
           </div>
         </div>
       </div>
       <div className="mb-[36px] flex flex-col gap-4">
-        <h2 className="text-xl font-semibold">Backend</h2>
+        <h2 className="text-xl font-semibold">{t("BLOCKS_INFO.BACKEND")}</h2>
         <div className="flex items-center gap-4">
           <div className="flex w-[50%] flex-col gap-2">
             <Button variant="outline" className="w-full">
-              <img src="/assets/images/dotnet-icon.png" width={20} height={20} alt="DotNet Logo" />
+              <img
+                src="/assets/images/dotnet-icon.png"
+                width={20}
+                height={20}
+                alt={t(KEY_LOGO_ALT, { name: ".NET" })}
+              />
             </Button>
             <div className="flex items-center gap-1 text-blue-700 md:justify-between">
               <Link
                 to="https://www.nuget.org/profiles/SELISE"
                 className="text-primary"
                 target="_blank"
+                // eslint-disable-next-line no-restricted-syntax -- package registry name (NuGet)
               >
                 NuGet
               </Link>
@@ -80,6 +97,7 @@ export const BlockInfo = () => {
                 to="https://github.com/SELISEdigitalplatforms/l0-net-blocks-construct"
                 className="text-primary"
                 target="_blank"
+                // eslint-disable-next-line no-restricted-syntax -- product name
               >
                 GitHub
               </Link>
@@ -104,14 +122,19 @@ export const BlockInfo = () => {
           </div>
           <div className="flex w-[50%] flex-col gap-2">
             <Button variant="outline" className="w-full" disabled>
-              <img src="/assets/images/ruby-icon.png" width={20} height={20} alt="RUby Logo" />
+              <img
+                src="/assets/images/ruby-icon.png"
+                width={20}
+                height={20}
+                alt={t(KEY_LOGO_ALT, { name: "Ruby" })}
+              />
             </Button>
-            <p className="text-medium-emphasis">Coming soon</p>
+            <p className="text-medium-emphasis">{t("BLOCKS_INFO.COMING_SOON")}</p>
           </div>
         </div>
       </div>
       <div className="flex flex-col gap-4">
-        <p className="text-center">Fully open source.</p>
+        <p className="text-center">{t("BLOCKS_INFO.OPEN_SOURCE")}</p>
         <Link to="https://github.com/SELISEdigitalplatforms" target="_blank">
           <Button variant="outline" className="w-full">
             <img
@@ -119,9 +142,9 @@ export const BlockInfo = () => {
               width={20}
               height={20}
               className="mr-3"
-              alt="github Logo"
+              alt={t(KEY_LOGO_ALT, { name: "GitHub" })}
             />
-            Open in GitHub
+            {t("BLOCKS_INFO.OPEN_IN_GITHUB")}
           </Button>
         </Link>
       </div>

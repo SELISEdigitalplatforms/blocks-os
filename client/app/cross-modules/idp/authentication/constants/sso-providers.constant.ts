@@ -9,10 +9,15 @@ const Microsoft = "/assets/images/social-media-ms.png";
 // const Selise = "/assets/images/selise-globe-logo.png";
 // const XDark = "/assets/images/twitter-x-dark-mode-logo.png";
 // const X = "/assets/images/twitter-x-light-mode-logo.png";
+import { tStatic } from "@seliseblocks/genesis-os";
 import {
   ISsoProviderConfigurationWithMeta,
   ISsoProviderFrontendMeta,
 } from "@blocks-idp/authentication/models/sso.model";
+
+const KEY_HELP_TITLE = "SSO_PROVIDERS_CONSTANT.HELP_TITLE";
+
+const I18N_MODULE = "os.idp.auth";
 
 /**
  * Identifiers for the single sign-on providers supported by the platform.
@@ -74,7 +79,12 @@ function createProviderConfig(
   provider: SSO_PROVIDERS,
   meta: ISsoProviderFrontendMeta,
 ): ISsoProviderConfigurationWithMeta {
-  return { ...PROVIDER_DEFAULTS, provider, ...meta };
+  // Copy property descriptors, not values: the copy, help and label fields are getters that
+  // translate when read, so a spread would freeze them at import time.
+  return Object.defineProperties(
+    { ...PROVIDER_DEFAULTS, provider } as ISsoProviderConfigurationWithMeta,
+    Object.getOwnPropertyDescriptors(meta),
+  );
 }
 
 export const SOCIAL_AUTH_PROVIDERS_CONFIG: Partial<
@@ -90,23 +100,33 @@ export const SOCIAL_AUTH_PROVIDERS_CONFIG: Partial<
   // }),
   google: createProviderConfig(SSO_PROVIDERS.google, {
     label: "Google",
-    description: "Allow your users to seamlessly log in with their trusted Google Account.",
+    get description() {
+      return tStatic(I18N_MODULE, "SSO_PROVIDERS_CONSTANT.GOOGLE_DESCRIPTION");
+    },
     imageSrc: Google,
     isAvailable: true,
     isConfigured: false,
-    helpTitle: "Where do I find these?",
-    helpBody:
-      "Google Cloud Console → APIs & Services → Credentials → OAuth 2.0 Client IDs. Add the redirect URI below to the client's authorised redirect URIs.",
+    get helpTitle() {
+      return tStatic(I18N_MODULE, KEY_HELP_TITLE);
+    },
+    get helpBody() {
+      return tStatic(I18N_MODULE, "SSO_PROVIDERS_CONSTANT.GOOGLE_HELP_BODY");
+    },
   }),
   microsoft: createProviderConfig(SSO_PROVIDERS.microsoft, {
     label: "Microsoft",
-    description: "Enable your users to securely sign in through their trusted Microsoft Account.",
+    get description() {
+      return tStatic(I18N_MODULE, "SSO_PROVIDERS_CONSTANT.MICROSOFT_DESCRIPTION");
+    },
     imageSrc: Microsoft,
     isAvailable: true,
     isConfigured: false,
-    helpTitle: "Where do I find these?",
-    helpBody:
-      "Entra ID admin centre → App registrations → your app → Certificates & secrets. Register the redirect URI below under Authentication.",
+    get helpTitle() {
+      return tStatic(I18N_MODULE, KEY_HELP_TITLE);
+    },
+    get helpBody() {
+      return tStatic(I18N_MODULE, "SSO_PROVIDERS_CONSTANT.MICROSOFT_HELP_BODY");
+    },
   }),
   // linkedin: createProviderConfig(SSO_PROVIDERS.linkedin, {
   //   label: "LinkedIn",
@@ -140,8 +160,12 @@ export const SOCIAL_AUTH_PROVIDERS_CONFIG: Partial<
   //   isConfigured: false,
   // }),
   ownsso: createProviderConfig(SSO_PROVIDERS.ownsso, {
-    label: "Bring your own SSO",
-    description: "Bring your own SSO provider",
+    get label() {
+      return tStatic(I18N_MODULE, "SSO_PROVIDERS_CONSTANT.OWNSSO_LABEL");
+    },
+    get description() {
+      return tStatic(I18N_MODULE, "SSO_PROVIDERS_CONSTANT.OWNSSO_DESCRIPTION");
+    },
     imageSrc: "",
     isAvailable: false,
     isConfigured: false,
@@ -154,11 +178,19 @@ export const SOCIAL_AUTH_PROVIDERS_CONFIG: Partial<
  * rather than in `SOCIAL_AUTH_PROVIDERS_CONFIG`.
  */
 export const BLOCKS_OIDC_HELP: { title: string; body: string } = {
-  title: "Where do I find these?",
-  body: "This connects to another Blocks project's OIDC issuer. The discovery (well-known) URL below is generated for you — add the Client ID and Client Secret from that project's OIDC client registration, and the redirect URI your app should receive the callback on.",
+  get title() {
+    return tStatic(I18N_MODULE, KEY_HELP_TITLE);
+  },
+  get body() {
+    return tStatic(I18N_MODULE, "SSO_PROVIDERS_CONSTANT.BLOCKS_OIDC_HELP_BODY");
+  },
 };
 
 export const BYOS_HELP: { title: string; body: string } = {
-  title: "Where do I find these?",
-  body: "Works with any OpenID Connect–compliant provider — Okta, Auth0, Keycloak, or your own identity gateway. You'll need that provider's Client ID and Client Secret, plus either its well-known discovery URL or its Authorization/Token/User Info endpoints.",
+  get title() {
+    return tStatic(I18N_MODULE, KEY_HELP_TITLE);
+  },
+  get body() {
+    return tStatic(I18N_MODULE, "SSO_PROVIDERS_CONSTANT.BYOS_HELP_BODY");
+  },
 };

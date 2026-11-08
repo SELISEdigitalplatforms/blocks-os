@@ -1,82 +1,132 @@
-import { Activity, Building2, FileCode, ShieldCheck, Lock, SlidersHorizontal, Ticket, Users } from "lucide-react";
+import { navText } from "@/constants/nav-text";
+import {
+  Activity,
+  Building2,
+  FileCode,
+  ShieldCheck,
+  Lock,
+  SlidersHorizontal,
+  Ticket,
+  Users,
+} from "lucide-react";
 import { NavItem, NavGroup } from "@/constants/secret-management-nav";
 
 export type { NavItem, NavGroup };
 
 export const AUTHENTICATION_NAV_GROUPS: NavGroup[] = [
   {
-    label: "Configuration",
+    get label() {
+      return navText("AUTHENTICATION_NAV.CONFIGURATION");
+    },
     items: [
       {
         id: "config",
-        label: "Settings",
+        get label() {
+          return navText("common:SETTINGS");
+        },
         value: "config",
         icon: SlidersHorizontal,
-        desc: "Tenant IAM, auth, organization, and signup configuration",
+        get desc() {
+          return navText("AUTHENTICATION_NAV.TENANT_IAM_AUTH_ORGANIZATION");
+        },
       },
     ],
   },
   {
-    label: "Templates",
+    get label() {
+      return navText("AUTHENTICATION_NAV.TEMPLATES");
+    },
     items: [
       {
         id: "oidc-template",
-        label: "OIDC Template",
+        get label() {
+          return navText("AUTHENTICATION_NAV.OIDC_TEMPLATE");
+        },
         value: "oidc-template",
         icon: FileCode,
-        desc: "Configure OIDC template",
+        get desc() {
+          return navText("AUTHENTICATION_NAV.CONFIGURE_OIDC_TEMPLATE");
+        },
       },
     ],
   },
   {
-    label: "Access Control",
+    get label() {
+      return navText("AUTHENTICATION_NAV.ACCESS_CONTROL");
+    },
     items: [
       {
         id: "users",
-        label: "Users",
+        get label() {
+          return navText("AUTHENTICATION_NAV.USERS");
+        },
         value: "users",
         icon: Users,
-        desc: "Invite, manage, and organize people across your workspace",
+        get desc() {
+          return navText("AUTHENTICATION_NAV.INVITE_MANAGE_AND_ORGANIZE_PEOPLE");
+        },
       },
       {
         id: "organizations",
-        label: "Organizations",
+        get label() {
+          return navText("AUTHENTICATION_NAV.ORGANIZATIONS");
+        },
         value: "organizations",
         icon: Building2,
-        desc: "Manage and organize access across your workspace",
+        get desc() {
+          return navText("AUTHENTICATION_NAV.MANAGE_AND_ORGANIZE_ACCESS_ACROSS");
+        },
       },
       {
         id: "roles",
-        label: "Roles",
+        get label() {
+          return navText("AUTHENTICATION_NAV.ROLES");
+        },
         value: "roles",
         icon: ShieldCheck,
-        desc: "Create and manage roles that group permissions for users",
+        get desc() {
+          return navText("AUTHENTICATION_NAV.CREATE_AND_MANAGE_ROLES");
+        },
       },
       {
         id: "permissions",
-        label: "Permissions",
+        get label() {
+          return navText("AUTHENTICATION_NAV.PERMISSIONS");
+        },
         value: "permissions",
         icon: Lock,
-        desc: "Define and manage granular permissions for access control",
+        get desc() {
+          return navText("AUTHENTICATION_NAV.DEFINE_AND_MANAGE_GRANULAR_PERMISSIONS");
+        },
       },
     ],
   },
   {
-    label: "One-Click Signup",
+    get label() {
+      return navText("AUTHENTICATION_NAV.ONE_CLICK_SIGNUP");
+    },
     items: [
       {
         id: "signup-link-configurations",
-        label: "One-Click Signup",
+        get label() {
+          return navText("AUTHENTICATION_NAV.ONE_CLICK_SIGNUP");
+        },
         value: "signup-link-configurations",
         icon: Ticket,
-        desc: "Create and manage configurations that one-click signup links are generated from",
+        get desc() {
+          return navText("AUTHENTICATION_NAV.CREATE_AND_MANAGE_CONFIGURATIONS");
+        },
       },
       {
         id: "signup-link-activity",
-        label: "Signup Link Activity",
+        get label() {
+          return navText("AUTHENTICATION_NAV.SIGNUP_LINK_ACTIVITY");
+        },
         value: "signup-link-activity",
         icon: Activity,
-        desc: "Review per-configuration signup link activity counts without exposing live links",
+        get desc() {
+          return navText("AUTHENTICATION_NAV.REVIEW_PER_CONFIGURATION_SIGNUP_LINK");
+        },
       },
     ],
   },

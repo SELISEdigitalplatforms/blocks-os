@@ -1,10 +1,9 @@
+import { tStatic } from "@seliseblocks/genesis-os";
 import { z } from "zod";
 import type {
   ISettingsOrganizationConfig,
   ISettingsSaveOrganizationConfigPayload,
 } from "@blocks-idp/settings/models/settings.model";
-
-export const SIGNUP_AUTO_JOIN_REQUIRED_MESSAGE = "Choose the organization new sign-ups join.";
 
 export const organizationConfigFormSchema = z
   .object({
@@ -25,7 +24,7 @@ export const organizationConfigFormSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["signupAutoJoinOrganizationId"],
-        message: SIGNUP_AUTO_JOIN_REQUIRED_MESSAGE,
+        message: tStatic("os.idp.settings", "ORGANIZATION_CONFIG_FORM.AUTO_JOIN_REQUIRED"),
       });
     }
   });

@@ -2,56 +2,81 @@ import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
 import { Step, Stepper, useStepper, type StepItem } from "@/components/ui-kits/stepper";
-import { toast } from "@/hooks/use-toast";
+import { showErrorToast, toast } from "@/hooks/use-toast";
+import { isErrorWithErrors } from "@/lib/error";
 import BasicInformation from "@blocks-communication/mail/components/email-service/basic-information/basic-information";
 import MailcraftEditor, {
   IMailcraftEditorRef,
 } from "@blocks-communication/mail/components/mailcraft-editor/mailcraft-editor";
 import { useSaveMailTemplate } from "@blocks-communication/mail/hooks/use-email-template";
+import { useCopyTemplateToOrganizations } from "@blocks-communication/mail/hooks/use-template-copy";
+import {
+  NO_SHARE,
+  isShareReady,
+  joinNames,
+  toCopyRequest,
+  type ShareChoice,
+} from "@blocks-communication/mail/constants/share-organizations";
+import { templateErrorMessages } from "@blocks-communication/mail/constants/template-errors";
+import { DEFAULT_ORGANIZATION_ID } from "@blocks-communication/mail/constants/organization";
+import { useEmailOrganization } from "@blocks-communication/mail/hooks/use-email-organization";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
-import { FileText, LayoutTemplate } from "lucide-react";
+import { Copy, FileText, LayoutTemplate } from "lucide-react";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
 
+const I18N_MODULE = "os.communication.mail";
+
 const EMAIL_TEMPLATE_STEPS: StepItem[] = [{ id: "basic-information" }, { id: "template" }];
 
-const basicInformationLabel = (
-  <span className="flex flex-wrap items-center gap-2">
-    Basic information
-    <Badge
-      variant="secondary"
-      className="px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide"
-    >
-      Required
-    </Badge>
-  </span>
-);
+const BasicInformationLabel = () => {
+  const { t } = useT(I18N_MODULE);
+  return (
+    <span className="flex flex-wrap items-center gap-2">
+      {t("NEW_COMMUNICATION.BASIC_INFORMATION")}
+      <Badge
+        variant="secondary"
+        className="px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide"
+      >
+        {t("NEW_COMMUNICATION.REQUIRED")}
+      </Badge>
+    </span>
+  );
+};
 
-const templateLabel = (
-  <span className="flex flex-wrap items-center gap-2">
-    Template
-    <Badge
-      variant="outline"
-      className="px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide"
-    >
-      Design
-    </Badge>
-  </span>
-);
+const TemplateLabel = () => {
+  const { t } = useT(I18N_MODULE);
+  return (
+    <span className="flex flex-wrap items-center gap-2">
+      {t("NEW_COMMUNICATION.TEMPLATE")}
+      <Badge
+        variant="outline"
+        className="px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide"
+      >
+        {t("NEW_COMMUNICATION.DESIGN")}
+      </Badge>
+    </span>
+  );
+};
 
 type BasicInformationStepProps = {
   templateData: IEmailTemplate;
   setTemplateData: (data: IEmailTemplate) => void;
   onStepComplete: () => void;
+  shareChoice: ShareChoice;
+  onShareChoiceChange: (choice: ShareChoice) => void;
 };
 
 const BasicInformationStep = ({
   templateData,
   setTemplateData,
   onStepComplete,
+  shareChoice,
+  onShareChoiceChange,
 }: BasicInformationStepProps) => {
+  const { t } = useT(I18N_MODULE);
   const { nextStep } = useStepper();
   const ref = useRef<{ submit: () => void; isValid: boolean } | undefined>(undefined);
   const [isFormValid, setIsFormValid] = useState(false);
@@ -70,6 +95,8 @@ const BasicInformationStep = ({
         templateData={templateData}
         onValidityChange={setIsFormValid}
         onPendingChange={setIsSaving}
+        shareChoice={shareChoice}
+        onShareChoiceChange={onShareChoiceChange}
         ref={ref}
         actions={
           <Button
@@ -77,9 +104,10 @@ const BasicInformationStep = ({
             size="default"
             className="w-full sm:w-auto"
             onClick={() => ref?.current?.submit()}
-            disabled={isSaving || !isFormValid}
+            // A copy to selected organizations needs at least one of them (SPEC33 C8).
+            disabled={isSaving || !isFormValid || !isShareReady(shareChoice)}
           >
-            Save &amp; continue
+            {t("NEW_COMMUNICATION.SAVE_AND_CONTINUE")}
           </Button>
         }
       />
@@ -90,15 +118,69 @@ const BasicInformationStep = ({
 type TemplateDesignStepProps = {
   templateData: IEmailTemplate;
   setTemplateData: (data: IEmailTemplate) => void;
+  shareChoice: ShareChoice;
 };
 
-const TemplateDesignStep = ({ templateData, setTemplateData }: TemplateDesignStepProps) => {
+/** SPEC33 §4 TemplateFormDesign: which organizations also get the template when it is saved. */
+const ShareStrip = ({ shareChoice }: Readonly<{ shareChoice: ShareChoice }>) => {
+  const { t } = useT(I18N_MODULE);
+  const { prevStep } = useStepper();
+  const names = [...shareChoice.selected.values()];
+  return (
+    <output
+      aria-live="polite"
+      className="flex flex-wrap items-center gap-3 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-blue-800"
+    >
+      <Copy className="h-5 w-5 shrink-0" aria-hidden="true" />
+      <span className="min-w-0 flex-1 text-sm leading-relaxed">
+        {shareChoice.allOrganizations
+          ? t("SHARE_WITH_ORGANIZATIONS.STRIP_ALL")
+          : t("SHARE_WITH_ORGANIZATIONS.STRIP", {
+              count: names.length,
+              names: joinNames(names, t),
+            })}
+      </span>
+      {/* Back to step 1, where the share choice is kept (Q4: A). */}
+      <Button type="button" variant="outline" size="sm" onClick={prevStep}>
+        {t("SHARE_WITH_ORGANIZATIONS.CHANGE")}
+      </Button>
+    </output>
+  );
+};
+
+const TemplateDesignStep = ({
+  templateData,
+  setTemplateData,
+  shareChoice,
+}: TemplateDesignStepProps) => {
+  const { t } = useT(I18N_MODULE);
   const { isPending, mutateAsync: saveTemplate } = useSaveMailTemplate();
+  const { mutateAsync: copyTemplate } = useCopyTemplateToOrganizations();
   const editorRef = useRef<IMailcraftEditorRef | null>(null);
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const emailBasePath = scoped("email-management");
+
+  // The template is saved either way; a copy that can't start only says so.
+  const startCopy = async (templateId: string) => {
+    const showFailure = (errors: unknown) =>
+      showErrorToast({ errors, customMessages: templateErrorMessages(t) });
+    try {
+      const res = await copyTemplate(toCopyRequest(templateId, shareChoice));
+      if (res?.isSuccess) {
+        toast({
+          variant: "success",
+          title: t("common:SUCCESS"),
+          description: t("COPY_TO_ORGANIZATIONS.STARTED"),
+        });
+        return;
+      }
+      showFailure(res?.errors);
+    } catch (error) {
+      showFailure(isErrorWithErrors(error) ? error.errors : undefined);
+    }
+  };
 
   const handleEditorSave = async (data: { htmlFile: string }) => {
     const currentData: IEmailTemplate = {
@@ -114,21 +196,25 @@ const TemplateDesignStep = ({ templateData, setTemplateData }: TemplateDesignSte
       const res = await saveTemplate(payload);
       setTemplateData(currentData);
       if (res.isSuccess) {
+        // The copies are made only now, from the finished email (SPEC33 H7, C10).
+        if (shareChoice.copy) {
+          await startCopy(res.itemId);
+        }
         navigate(`${emailBasePath}/communications/${res.itemId}`);
         return;
       }
 
       toast({
         variant: "destructive",
-        title: "Error",
+        title: t("common:ERROR"),
         description: JSON.stringify(res.errors),
       });
       navigate(emailBasePath);
     } catch {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Something went wrong",
+        title: t("common:ERROR"),
+        description: t("NEW_COMMUNICATION.SOMETHING_WENT_WRONG"),
       });
       navigate(emailBasePath);
     }
@@ -136,11 +222,14 @@ const TemplateDesignStep = ({ templateData, setTemplateData }: TemplateDesignSte
 
   return (
     <div className="mt-6 flex w-full flex-col gap-4">
+      {shareChoice.copy ? <ShareStrip shareChoice={shareChoice} /> : null}
       <div className="flex flex-col gap-3 rounded-sm border border-border bg-card px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <h2 className="text-lg font-semibold text-high-emphasis">Template design</h2>
+          <h2 className="text-lg font-semibold text-high-emphasis">
+            {t("NEW_COMMUNICATION.TEMPLATE_DESIGN")}
+          </h2>
           <p className="text-sm text-low-emphasis">
-            Build and preview the email body for this template.
+            {t("NEW_COMMUNICATION.TEMPLATE_DESIGN_DESCRIPTION")}
           </p>
         </div>
         <div className="flex shrink-0 flex-col-reverse gap-2 sm:flex-row sm:items-center">
@@ -151,7 +240,7 @@ const TemplateDesignStep = ({ templateData, setTemplateData }: TemplateDesignSte
             disabled={isPending}
             onClick={() => editorRef?.current?.submit()}
           >
-            Save template
+            {t("NEW_COMMUNICATION.SAVE_TEMPLATE")}
           </Button>
         </div>
       </div>
@@ -163,10 +252,23 @@ const TemplateDesignStep = ({ templateData, setTemplateData }: TemplateDesignSte
 };
 
 function EmailTemplateStepper() {
+  const { t } = useT(I18N_MODULE);
   const completedStepRef = useRef(0);
   const [templateData, setTemplateData] = useState<IEmailTemplate>({
     itemId: "",
   });
+  // Kept here so it survives the move between the two steps (SPEC33 §6.4).
+  const [shareChoice, setShareChoice] = useState<ShareChoice>(NO_SHARE);
+  // The share block exists only for the Default organization's page with multi-org on (C13). If it
+  // stops applying, the choice is dropped, so no strip shows and no copy is requested.
+  const organization = useEmailOrganization();
+  const shareApplies =
+    organization.isMultiOrgEnabled &&
+    organization.selectedOrganizationId === DEFAULT_ORGANIZATION_ID;
+  if (!shareApplies && shareChoice !== NO_SHARE) {
+    setShareChoice(NO_SHARE);
+  }
+  const activeShareChoice = shareApplies ? shareChoice : NO_SHARE;
   const { isPending } = useSaveMailTemplate();
 
   const handleClickStep = (step: number, setStep: (step: number) => void) => {
@@ -199,43 +301,46 @@ function EmailTemplateStepper() {
     >
       <Step
         icon={FileText}
-        label={basicInformationLabel}
-        description="Name, mail configuration, and subject line"
+        label={<BasicInformationLabel />}
+        description={t("NEW_COMMUNICATION.BASIC_INFORMATION_DESCRIPTION")}
       >
         <BasicInformationStep
           templateData={templateData}
           setTemplateData={setTemplateData}
           onStepComplete={handleStepComplete}
+          shareChoice={activeShareChoice}
+          onShareChoiceChange={setShareChoice}
         />
       </Step>
 
       <Step
         icon={LayoutTemplate}
-        label={templateLabel}
-        description="Build and preview your email body"
+        label={<TemplateLabel />}
+        description={t("NEW_COMMUNICATION.TEMPLATE_STEP_DESCRIPTION")}
       >
-        <TemplateDesignStep templateData={templateData} setTemplateData={setTemplateData} />
+        <TemplateDesignStep
+          templateData={templateData}
+          setTemplateData={setTemplateData}
+          shareChoice={activeShareChoice}
+        />
       </Step>
     </Stepper>
   );
 }
 
 export default function NewCommunication() {
+  const { t } = useT(I18N_MODULE);
   const scoped = useScopedPath();
   const emailBasePath = scoped("email-management");
   const breadcrumbTitles = {
-    [emailBasePath]: "Email Management",
-    [`${emailBasePath}/new-communication`]: "New Template",
+    [emailBasePath]: t("NEW_COMMUNICATION.BREADCRUMB_EMAIL_MANAGEMENT"),
+    [`${emailBasePath}/new-communication`]: t("NEW_COMMUNICATION.BREADCRUMB_NEW_TEMPLATE"),
   };
 
   return (
     <main className="flex min-h-0 w-full flex-1 flex-col gap-4 p-4 sm:gap-6 sm:p-6">
       <header className="w-full space-y-4">
-        <PageBreadcrumb
-          breadcrumbIndex={3}
-          className="flex"
-          customTitles={breadcrumbTitles}
-        />
+        <PageBreadcrumb breadcrumbIndex={3} className="flex" customTitles={breadcrumbTitles} />
       </header>
 
       <div className="w-full flex-1">

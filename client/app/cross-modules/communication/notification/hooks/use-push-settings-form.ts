@@ -8,12 +8,13 @@ import type {
   PushPlatform,
 } from "../models/push.model";
 import { PUSH_TEXT } from "../constants/notification-ui.constant";
+import { tn } from "../i18n";
 import { usePushKeyDraft } from "./use-push-key-draft";
 import { usePushWebDraft } from "./use-push-web-draft";
 import { usePushStatus, useSendTestPush } from "./use-push-runtime";
 import { isPushReady, useSavePushSettings } from "./use-push-settings";
 
-const SOMETHING_WRONG = "Something went wrong";
+const somethingWrong = () => tn("USE_PUSH_SETTINGS_FORM.GENERIC_ERROR");
 
 /**
  * State and actions of the Push settings page: the three switches, the key and web config drafts, one save
@@ -56,12 +57,12 @@ export const usePushSettingsForm = (settings: IPushSettings) => {
         webConfig: web.status === "config" ? web.config : undefined,
       });
       if (res.isSuccess) {
-        toast({ variant: "success", title: "Success", description: PUSH_TEXT.saved });
+        toast({ variant: "success", title: tn("common:SUCCESS"), description: PUSH_TEXT.saved });
       } else {
         showErrorToast({ errors: res.errors });
       }
     } catch (error) {
-      showErrorToast({ errors: isErrorWithErrors(error) ? error.errors : SOMETHING_WRONG });
+      showErrorToast({ errors: isErrorWithErrors(error) ? error.errors : somethingWrong() });
     } finally {
       keyDraft.clear();
       webDraft.clear();
@@ -75,7 +76,7 @@ export const usePushSettingsForm = (settings: IPushSettings) => {
       if (res.isSuccess === false) showErrorToast({ errors: res.errors });
       else setTestResult(res);
     } catch (error) {
-      showErrorToast({ errors: isErrorWithErrors(error) ? error.errors : SOMETHING_WRONG });
+      showErrorToast({ errors: isErrorWithErrors(error) ? error.errors : somethingWrong() });
     }
   };
 

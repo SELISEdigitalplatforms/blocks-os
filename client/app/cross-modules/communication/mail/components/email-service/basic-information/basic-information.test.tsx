@@ -13,7 +13,19 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("@blocks-communication/mail/hooks/use-email-config", () => ({
-  useGetEmailConfigs: () => h.configs,
+  useGetEmailSecretConfigs: () => ({
+    ...h.configs,
+    data: h.configs.data ? { configurations: h.configs.data } : undefined,
+  }),
+}));
+// A single-org project (C13): the Default organization, no Organization field.
+vi.mock("@blocks-communication/mail/hooks/use-email-organization", () => ({
+  useEmailOrganization: () => ({
+    isMultiOrgEnabled: false,
+    isLoading: false,
+    selectedOrganizationId: "default",
+  }),
+  useOrganizationName: () => "Default organization",
 }));
 vi.mock("@blocks-localization/hooks/use-language-manager", () => ({
   useGetLanguages: () => h.languages,
@@ -21,7 +33,8 @@ vi.mock("@blocks-localization/hooks/use-language-manager", () => ({
 vi.mock("@blocks-communication/mail/hooks/use-email-template", () => ({
   useSaveMailTemplate: () => ({ isPending: h.isPending, mutateAsync: h.saveTemplate }),
 }));
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 vi.mock("@/hooks/use-toast", () => ({
@@ -77,18 +90,14 @@ describe("BasicInformation", () => {
 
   it("reports validity to the parent for a valid template", async () => {
     const onValidityChange = vi.fn();
-    render(
-      <BasicInformation templateData={template()} onValidityChange={onValidityChange} />,
-    );
+    render(<BasicInformation templateData={template()} onValidityChange={onValidityChange} />);
     await waitFor(() => expect(onValidityChange).toHaveBeenCalledWith(true));
   });
 
   it("saves the template and calls onSaveSuccess when the API succeeds", async () => {
     const onSaveSuccess = vi.fn();
     const ref = createRef<ImperativeRef>();
-    render(
-      <BasicInformation ref={ref} onSaveSuccess={onSaveSuccess} templateData={template()} />,
-    );
+    render(<BasicInformation ref={ref} onSaveSuccess={onSaveSuccess} templateData={template()} />);
 
     await waitFor(() => expect(ref.current?.isValid).toBe(true));
     await act(async () => {
@@ -110,18 +119,18 @@ describe("BasicInformation", () => {
     });
     const onSaveSuccess = vi.fn();
     const ref = createRef<ImperativeRef>();
-    render(
-      <BasicInformation ref={ref} onSaveSuccess={onSaveSuccess} templateData={template()} />,
-    );
+    render(<BasicInformation ref={ref} onSaveSuccess={onSaveSuccess} templateData={template()} />);
 
     await waitFor(() => expect(ref.current?.isValid).toBe(true));
     await act(async () => {
       ref.current?.submit();
     });
     await waitFor(() => expect(h.showErrorToast).toHaveBeenCalledTimes(1));
-    expect(h.showErrorToast).toHaveBeenCalledWith({
-      errors: { "": "Template with the same Name and Language already exists" },
-    });
+    expect(h.showErrorToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        errors: { "": "Template with the same Name and Language already exists" },
+      }),
+    );
     expect(onSaveSuccess).not.toHaveBeenCalled();
   });
 
@@ -157,7 +166,8 @@ describe("BasicInformation", () => {
     };
 
     const user = userEvent.setup();
-    render(<BasicInformation templateData={template({ language: "en-US" })} />);
+    // A new template (no id yet): the language can still be chosen (SPEC31 C3).
+    render(<BasicInformation templateData={template({ itemId: "", language: "en-US" })} />);
 
     await waitFor(() => expect(screen.getByText("About the Template")).toBeTruthy());
     await user.click(screen.getByRole("combobox", { name: /language/i }));

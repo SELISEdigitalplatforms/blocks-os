@@ -1,11 +1,14 @@
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { cn } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 import { Database, PanelLeftOpen, Search } from "lucide-react";
 import { PLATFORM_SERVICES, type PlatformSchema } from "../data-access.service";
 import { AccessTierDot } from "../gateway/components/primitives";
 import { schemaExposure } from "./explorer-utils";
 
-const SERVICE_FILTERS = [{ value: "all", label: "All" }, ...PLATFORM_SERVICES.map((service) => ({ value: service, label: service }))];
+const I18N_MODULE = "os.idp.explorer";
+
+const SERVICE_FILTERS = ["all", ...PLATFORM_SERVICES];
 
 /** Schemas the explorer lists: the service filter, then a name search. */
 export function filterSchemas(schemas: PlatformSchema[], service: string, search: string) {
@@ -13,7 +16,9 @@ export function filterSchemas(schemas: PlatformSchema[], service: string, search
   return schemas.filter(
     (schema) =>
       (service === "all" || schema.service === service) &&
-      (!keyword || schema.schemaName.toLowerCase().includes(keyword) || schema.collectionName.toLowerCase().includes(keyword)),
+      (!keyword ||
+        schema.schemaName.toLowerCase().includes(keyword) ||
+        schema.collectionName.toLowerCase().includes(keyword)),
   );
 }
 
@@ -41,13 +46,31 @@ function SchemaRow({
       title={`${schema.schemaName} · ${schema.collectionName}`}
       className={cn(
         "dg-interactive relative flex h-[34px] w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-left focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40",
-        isSelected ? "bg-primary/10 text-primary" : "text-foreground/80 hover:bg-muted/40 hover:text-foreground",
+        isSelected
+          ? "bg-primary/10 text-primary"
+          : "text-foreground/80 hover:bg-muted/40 hover:text-foreground",
       )}
     >
-      {isSelected && <span className="absolute inset-y-2 left-0 w-[2.5px] rounded-r-sm bg-primary" />}
-      <span className={cn("min-w-0 flex-1 truncate text-[13px]", isSelected ? "font-semibold" : "font-normal")}>{schema.schemaName}</span>
+      {isSelected && (
+        <span className="absolute inset-y-2 left-0 w-[2.5px] rounded-r-sm bg-primary" />
+      )}
+      <span
+        className={cn(
+          "min-w-0 flex-1 truncate text-[13px]",
+          isSelected ? "font-semibold" : "font-normal",
+        )}
+      >
+        {schema.schemaName}
+      </span>
       {exposure && <AccessTierDot tier={exposure.tier} title={exposure.reason} />}
-      <span className={cn("shrink-0 text-[11px]", isSelected ? "text-primary/60" : "text-muted-foreground/70")}>{schema.service}</span>
+      <span
+        className={cn(
+          "shrink-0 text-[11px]",
+          isSelected ? "text-primary/60" : "text-muted-foreground/70",
+        )}
+      >
+        {schema.service}
+      </span>
     </button>
   );
 }
@@ -66,18 +89,28 @@ function SchemaList({
   selectedSchemaId?: string | null;
   onSelectSchema: (id: string) => void;
 }>) {
+  const { t } = useT(I18N_MODULE);
   if (isLoading) return <SchemaListSkeleton />;
   if (schemas.length > 0) {
     return (
       <>
         {schemas.map((schema) => (
-          <SchemaRow key={schema.id} schema={schema} isSelected={schema.id === selectedSchemaId} onSelect={onSelectSchema} />
+          <SchemaRow
+            key={schema.id}
+            schema={schema}
+            isSelected={schema.id === selectedSchemaId}
+            onSelect={onSelectSchema}
+          />
         ))}
       </>
     );
   }
   if (isFilteredOrSearched) {
-    return <div className="flex h-full items-center justify-center py-8 text-sm text-muted-foreground/60">No schemas found</div>;
+    return (
+      <div className="flex h-full items-center justify-center py-8 text-sm text-muted-foreground/60">
+        {t("SCHEMA_EXPLORER.NO_SCHEMAS_FOUND")}
+      </div>
+    );
   }
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 px-6 py-8 text-center">
@@ -85,9 +118,9 @@ function SchemaList({
         <Database className="h-[19px] w-[19px]" aria-hidden />
       </div>
       <p className="text-[12.5px] leading-relaxed text-muted-foreground/70">
-        No platform schemas yet.
+        {t("SCHEMA_EXPLORER.NO_PLATFORM_SCHEMAS")}
         <br />
-        They will be listed here once seeded.
+        {t("SCHEMA_EXPLORER.NO_PLATFORM_SCHEMAS_HINT")}
       </p>
     </div>
   );
@@ -117,15 +150,21 @@ export function SchemaExplorer({
   onSearchChange: (search: string) => void;
   onSelectSchema: (id: string) => void;
 }>) {
+  const { t } = useT(I18N_MODULE);
   const visible = filterSchemas(schemas, service, search);
   const isFilteredOrSearched = service !== "all" || search.trim().length > 0;
 
   return (
     <div className="relative flex h-full w-full min-w-0 flex-col overflow-hidden rounded-sm border border-border/40 bg-card">
       <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border/40 pl-4 pr-2">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-foreground">Schemas</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-foreground">
+          {t("SCHEMA_EXPLORER.TITLE")}
+        </h2>
         {!isLoading && (
-          <span className="text-[11px] text-muted-foreground" aria-label={`${visible.length} schemas`}>
+          <span
+            className="text-[11px] text-muted-foreground"
+            aria-label={t("SCHEMA_EXPLORER.SCHEMA_COUNT", { count: visible.length })}
+          >
             {visible.length}
           </span>
         )}
@@ -138,15 +177,15 @@ export function SchemaExplorer({
             type="text"
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
-            placeholder="Search schemas…"
-            aria-label="Search schemas"
+            placeholder={t("SCHEMA_EXPLORER.SEARCH_PLACEHOLDER")}
+            aria-label={t("SCHEMA_EXPLORER.SEARCH_LABEL")}
             className="min-w-0 flex-1 bg-transparent text-xs text-foreground outline-hidden placeholder:text-muted-foreground/60"
           />
         </div>
       </div>
 
       <div className="flex shrink-0 flex-wrap gap-1.5 border-b border-border/40 px-2.5 py-2">
-        {SERVICE_FILTERS.map(({ value, label }) => {
+        {SERVICE_FILTERS.map((value) => {
           const active = service === value;
           return (
             <button
@@ -161,7 +200,7 @@ export function SchemaExplorer({
                   : "border-border/40 font-medium text-muted-foreground hover:text-foreground",
               )}
             >
-              {label}
+              {value === "all" ? t("common:ALL") : value}
             </button>
           );
         })}
@@ -192,13 +231,14 @@ export function SchemaRail({
   onSelectSchema: (id: string) => void;
   onExpand: () => void;
 }>) {
+  const { t } = useT(I18N_MODULE);
   return (
     <div className="flex h-full w-full shrink-0 flex-col items-center overflow-hidden rounded-sm border border-border/40 bg-card">
       <div className="flex h-11 w-full shrink-0 items-center justify-center border-b border-border/40">
         <button
           type="button"
           onClick={onExpand}
-          aria-label="Show the schema list"
+          aria-label={t("SCHEMA_RAIL.SHOW_LIST")}
           className="dg-interactive flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40"
         >
           <PanelLeftOpen className="h-4 w-4" aria-hidden />
@@ -217,10 +257,14 @@ export function SchemaRail({
               onClick={() => onSelectSchema(schema.id)}
               className={cn(
                 "dg-interactive relative flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md text-[12px] font-semibold focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40",
-                isSelected ? "bg-primary/10 text-primary" : "text-muted-foreground/70 hover:bg-muted/40 hover:text-foreground",
+                isSelected
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground/70 hover:bg-muted/40 hover:text-foreground",
               )}
             >
-              {isSelected && <span className="absolute inset-y-2 left-[-9px] w-[2.5px] rounded-r-sm bg-primary" />}
+              {isSelected && (
+                <span className="absolute inset-y-2 left-[-9px] w-[2.5px] rounded-r-sm bg-primary" />
+              )}
               {schema.schemaName.charAt(0).toUpperCase()}
             </button>
           );

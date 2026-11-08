@@ -2,8 +2,15 @@
 
 import { Button } from "@/components/ui-kits/button/button";
 import { ScrollArea } from "@/components/ui-kits/scroll-area/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui-kits/select/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui-kits/select/select";
 import { cn } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 import { useRef, useState } from "react";
 import { StatusSnackbar } from "../gateway/components/primitives";
 import { useSetPlatformFieldDefault } from "../gateway/hooks/use-configuration";
@@ -21,7 +28,15 @@ import {
   type DefaultDraft,
 } from "./default-value.util";
 import { AUTH_NAMES } from "./variable-syntax";
-import { ItemsEditor, KindPicker, LABEL_CLASS, OffsetInputs, itemsHeading, templateVariables, type DraftItem } from "./default-value-fields";
+import {
+  ItemsEditor,
+  KindPicker,
+  LABEL_CLASS,
+  OffsetInputs,
+  itemsHeading,
+  templateVariables,
+  type DraftItem,
+} from "./default-value-fields";
 
 export interface DefaultValuePanelProps {
   /** The property; a nested one by its full dotted path, e.g. Read.Roles. */
@@ -40,17 +55,21 @@ export interface DefaultValuePanelProps {
   savedLabel?: string;
 }
 
-const KIND_HINTS: Record<DefaultValueKind, string> = {
-  Static: "Stored as typed when the service creates a record with this property empty (null). Date-times are UTC.",
-  Template: "Text built from other properties of the same record and the signed-in user. Missing values become empty text.",
-  Now: "The time the record is created (UTC), optionally shifted.",
+const KIND_HINT_KEYS: Record<DefaultValueKind, string> = {
+  Static: "DEFAULT_VALUE_PANEL.HINT_STATIC",
+  Template: "DEFAULT_VALUE_PANEL.HINT_TEMPLATE",
+  Now: "DEFAULT_VALUE_PANEL.HINT_NOW",
 };
 
 /**
  * The draft and the stable keys of its items (rows are added and removed, so their position is no key),
  * with the edits the panel makes. Every edit marks the draft touched and drops a server refusal.
  */
-function useDefaultDraft(initialDefault: IFieldDefaultValue | null, kinds: DefaultValueKind[], onEdit: () => void) {
+function useDefaultDraft(
+  initialDefault: IFieldDefaultValue | null,
+  kinds: DefaultValueKind[],
+  onEdit: () => void,
+) {
   const counter = useRef(0);
   const newKey = () => `item-${counter.current++}`;
   const [draft, setDraft] = useState<DefaultDraft>(() => {
@@ -75,12 +94,16 @@ function useDefaultDraft(initialDefault: IFieldDefaultValue | null, kinds: Defau
     },
     setKind: (kind: DefaultValueKind) => edit(emptyDefaultDraft(kind), [newKey()]),
     setOffset: (offset: DefaultDraft["offset"]) => edit({ ...draft, offset }),
-    setItem: (index: number, text: string) => edit({ ...draft, items: draft.items.map((item, i) => (i === index ? text : item)) }),
+    setItem: (index: number, text: string) =>
+      edit({ ...draft, items: draft.items.map((item, i) => (i === index ? text : item)) }),
     addItem: () => edit({ ...draft, items: [...draft.items, ""] }, [...keys, newKey()]),
     removeItem: (index: number) => {
       const items = draft.items.filter((_, i) => i !== index);
       const rest = keys.filter((_, i) => i !== index);
-      edit({ ...draft, items: items.length > 0 ? items : [""] }, rest.length > 0 ? rest : [newKey()]);
+      edit(
+        { ...draft, items: items.length > 0 ? items : [""] },
+        rest.length > 0 ? rest : [newKey()],
+      );
     },
   };
 }
@@ -105,8 +128,9 @@ export function DefaultValuePanel({
   enumValues = [],
   initialDefault = null,
   onSave,
-  savedLabel = "Current default",
+  savedLabel,
 }: Readonly<DefaultValuePanelProps>) {
+  const { t } = useT("os.idp.rules");
   const kinds = allowedDefaultKinds(fieldType, isArray);
   // What's stored now: the schema response's value, then whatever this panel last saved.
   const [saved, setSaved] = useState<IFieldDefaultValue | null>(initialDefault);
@@ -125,9 +149,16 @@ export function DefaultValuePanel({
   });
   const { draft } = editor;
 
-  const target = { fieldType, isArray, enumValues, schemaName: variables.schemaName, fields: variables.fields };
+  const target = {
+    fieldType,
+    isArray,
+    enumValues,
+    schemaName: variables.schemaName,
+    fields: variables.fields,
+  };
   // Template references need the schema's fields; until they load only the syntax is checked server-side.
-  const draftError = draft.kind === "Template" && !variables.schemaName ? null : checkDefaultDraft(draft, target);
+  const draftError =
+    draft.kind === "Template" && !variables.schemaName ? null : checkDefaultDraft(draft, target);
   const shownError = serverError ?? (touched ? draftError : null);
   const payload = draftError ? null : defaultFromDraft(draft, target);
   const isDirty = JSON.stringify(payload) !== JSON.stringify(saved);
@@ -142,14 +173,18 @@ export function DefaultValuePanel({
   const save = async (value: IFieldDefaultValue | null) => {
     setIsApplying(true);
     try {
-      await (onSave ? onSave(value) : setFieldDefault({ schemaId, fieldName, defaultValue: value }));
+      await (onSave
+        ? onSave(value)
+        : setFieldDefault({ schemaId, fieldName, defaultValue: value }));
       setSaved(value);
       setServerError(null);
       if (value === null) {
         editor.reset(kinds[0]);
         setTouched(false);
       }
-      setSuccess(value === null ? "Default value cleared" : "Default value saved");
+      setSuccess(
+        value === null ? t("DEFAULT_VALUE_PANEL.CLEARED") : t("DEFAULT_VALUE_PANEL.SAVED"),
+      );
     } catch (error) {
       if (isRefusal(error)) setServerError(serverMessage(error));
       else setError(serverMessage(error));
@@ -169,14 +204,24 @@ export function DefaultValuePanel({
       <ScrollArea className="relative flex-1 overflow-auto">
         <div className="flex flex-col gap-5 p-6">
           <div className="flex flex-col gap-1.5">
-            <p className={LABEL_CLASS}>{savedLabel}</p>
-            <p className={cn("break-all text-sm", saved ? "font-mono text-foreground" : "text-muted-foreground")}>
-              {saved ? formatDefaultSummary(saved) : "None"}
+            <p className={LABEL_CLASS}>{savedLabel ?? t("DEFAULT_VALUE_PANEL.CURRENT_DEFAULT")}</p>
+            <p
+              className={cn(
+                "break-all text-sm",
+                saved ? "font-mono text-foreground" : "text-muted-foreground",
+              )}
+            >
+              {saved ? formatDefaultSummary(saved) : t("DEFAULT_VALUE_PANEL.NONE")}
             </p>
           </div>
 
           <div className="flex flex-col gap-4 rounded-sm border border-border/40 bg-card p-4">
-            <KindPicker kinds={kinds} value={draft.kind} hint={KIND_HINTS[draft.kind]} onChange={editor.setKind} />
+            <KindPicker
+              kinds={kinds}
+              value={draft.kind}
+              hint={t(KIND_HINT_KEYS[draft.kind])}
+              onChange={editor.setKind}
+            />
 
             {draft.kind === "Now" ? (
               <OffsetInputs
@@ -194,7 +239,9 @@ export function DefaultValuePanel({
                   isArray={isArray}
                   fieldType={fieldType}
                   enumValues={enumValues}
-                  placeholder={`e.g. {{${variables.schemaName || "Schema"}.FirstName}}`}
+                  placeholder={t("DEFAULT_VALUE_PANEL.TEMPLATE_PLACEHOLDER", {
+                    example: `{{${variables.schemaName || "Schema"}.FirstName}}`,
+                  })}
                   invalid={Boolean(shownError)}
                   onChange={editor.setItem}
                   onFocusItem={setActiveItem}
@@ -210,11 +257,19 @@ export function DefaultValuePanel({
 
                 {draft.kind === "Template" && (
                   <Select value="" onValueChange={insertVariable}>
-                    <SelectTrigger className="h-9 w-full" aria-label="Insert variable">
-                      <SelectValue placeholder="Insert variable…" />
+                    <SelectTrigger
+                      className="h-9 w-full"
+                      aria-label={t("DEFAULT_VALUE_PANEL.INSERT_VARIABLE_LABEL")}
+                    >
+                      <SelectValue placeholder={t("DEFAULT_VALUE_PANEL.INSERT_VARIABLE")} />
                     </SelectTrigger>
                     <SelectContent>
-                      {templateVariables(variables.schemaName, variables.fields, AUTH_NAMES, isArray).map((variable) => (
+                      {templateVariables(
+                        variables.schemaName,
+                        variables.fields,
+                        AUTH_NAMES,
+                        isArray,
+                      ).map((variable) => (
                         <SelectItem key={variable} value={variable} className="font-mono text-xs">
                           {variable}
                         </SelectItem>
@@ -237,14 +292,27 @@ export function DefaultValuePanel({
       <div className="flex shrink-0 flex-col gap-2 border-t border-border/40 bg-card px-6 py-3">
         <StatusSnackbar status={status} />
         <div className="flex items-center gap-2">
-          <span className="flex-1 text-xs text-muted-foreground">Applies to records the service creates from now on</span>
+          <span className="flex-1 text-xs text-muted-foreground">
+            {t("DEFAULT_VALUE_PANEL.APPLIES_FROM_NOW")}
+          </span>
           {saved && (
-            <Button type="button" size="sm" variant="outline" disabled={isPending} onClick={() => void save(null)}>
-              Clear
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={isPending}
+              onClick={() => void save(null)}
+            >
+              {t("common:CLEAR")}
             </Button>
           )}
-          <Button type="button" size="sm" disabled={isPending || Boolean(draftError && touched) || !isDirty} onClick={handleSave}>
-            {isPending ? "Saving…" : "Save"}
+          <Button
+            type="button"
+            size="sm"
+            disabled={isPending || Boolean(draftError && touched) || !isDirty}
+            onClick={handleSave}
+          >
+            {isPending ? t("DEFAULT_VALUE_PANEL.SAVING") : t("common:SAVE")}
           </Button>
         </div>
       </div>

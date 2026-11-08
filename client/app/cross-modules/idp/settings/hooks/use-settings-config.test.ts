@@ -14,7 +14,10 @@ import {
   useSaveSettingsSignUpSetting,
 } from "./use-settings-config";
 
-vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
+  ...mockProjectStoreFactory(),
+}));
 vi.mock("@blocks-idp/settings/services/settings-config.service", () => ({
   settingsConfigService: {
     getAuthConfig: vi.fn(),

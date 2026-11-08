@@ -9,9 +9,11 @@ namespace DomainService.Projects
     /// <summary>
     /// Gives a new project the seed's (<c>BlocksConfiguration</c>) key-value rows that every project needs:
     /// the built-in notification configs for project users (scope App or Both; Console-only ones and dropped
-    /// names stay in the root tenant), the MFA config, and the Blocks Event Trigger catalog (every event off until
-    /// the project enables it). Other keys are never copied: storage configs have
-    /// their own copier (new secrets per project), and the OIDC UI template would carry the seed's branding.
+    /// names stay in the root tenant), and the MFA config. Actions are never copied: the root catalog
+    /// (<see cref="ActionConstants.ActionsKey"/>) stays in the root database, and a project has no action entry
+    /// (<see cref="ActionConstants.ActionKey"/>) until an admin switches an action on. Other keys are never copied: storage configs have
+    /// their own copier (new secrets per project), the OIDC UI template would carry the seed's branding, and
+    /// webhooks belong to the project that made them.
     /// Insert-only: a key the project already has keeps its value, so a retry makes no duplicate.
     /// </summary>
     public static class KeyValueSeedCopier
@@ -22,9 +24,7 @@ namespace DomainService.Projects
 
         public static readonly IReadOnlyList<string> CopiedKeyPrefixes = [NotificationKeyPrefix];
 
-        public const string BlocksEventTriggersKey = "blocks-event-triggers";
-
-        public static readonly IReadOnlyList<string> CopiedKeys = ["mfa-config", BlocksEventTriggersKey];
+        public static readonly IReadOnlyList<string> CopiedKeys = ["mfa-config"];
 
         public static Task<int> CopyAsync(IMongoDatabase seedDb, IMongoDatabase projectDb, string? createdBy, CancellationToken cancellationToken = default)
         {

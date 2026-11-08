@@ -10,11 +10,26 @@ export const useGetEmailConfigs = (pageNumber: number, pageSize: number) => {
   });
 };
 
-export const useGetEmailSecretConfigs = () => {
+/**
+ * The configurations the Email page lists: all of them without an organization, or one
+ * organization's plus the Default organization's.
+ */
+export const useGetEmailSecretConfigs = (organizationId?: string, enabled = true) => {
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   return useQuery({
-    queryKey: ["email-configs", tenantId],
-    queryFn: () => emailService.getEmailSecretConfigs(),
+    queryKey: ["email-configs", tenantId, organizationId ?? "all"],
+    queryFn: () => emailService.getEmailSecretConfigs(0, 10, organizationId),
+    enabled,
+  });
+};
+
+/** How many templates use a configuration; fetched only while a card is expanded or a delete is confirmed. */
+export const useGetEmailConfigUsage = (configurationId: string, enabled = true) => {
+  const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
+  return useQuery({
+    queryKey: ["email-config-usage", tenantId, configurationId],
+    queryFn: () => emailService.getConfigurationUsage(configurationId),
+    enabled: enabled && !!configurationId,
   });
 };
 

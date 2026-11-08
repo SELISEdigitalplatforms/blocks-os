@@ -1,9 +1,22 @@
+import { tStatic } from "@seliseblocks/genesis-os";
+
+const MODULE = "os.idp.auth";
+
+/** Read-time translated labels (getters), so existing callers keep indexing by number. */
 export const UserCreationType: Record<number, string> = {
-  0: "None",
-  1: "Portal",
+  get 0() {
+    return tStatic(MODULE, "AUTHENTICATION_CONSTANT.USER_CREATION_NONE");
+  },
+  get 1() {
+    return tStatic(MODULE, "AUTHENTICATION_CONSTANT.USER_CREATION_PORTAL");
+  },
   2: "API",
-  3: "Service",
-  4: "Social",
+  get 3() {
+    return tStatic(MODULE, "AUTHENTICATION_CONSTANT.USER_CREATION_SERVICE");
+  },
+  get 4() {
+    return tStatic(MODULE, "AUTHENTICATION_CONSTANT.USER_CREATION_SOCIAL");
+  },
 };
 
 /**
@@ -24,12 +37,16 @@ export enum GRANT_TYPES {
 export const GRANT_TYPES_OPTIONS: { id: GRANT_TYPES; label: string; value: string }[] = [
   {
     id: GRANT_TYPES.authorizationCode,
-    label: "Authorization Code",
+    get label() {
+      return tStatic(MODULE, "AUTHENTICATION_CONSTANT.GRANT_AUTHORIZATION_CODE");
+    },
     value: GRANT_TYPES.authorizationCode,
   },
   {
     id: GRANT_TYPES.clientCredential,
-    label: "Client Credential",
+    get label() {
+      return tStatic(MODULE, "AUTHENTICATION_CONSTANT.GRANT_CLIENT_CREDENTIAL");
+    },
     value: GRANT_TYPES.clientCredential,
   },
 ];

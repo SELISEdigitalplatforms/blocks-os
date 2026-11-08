@@ -4,6 +4,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui-ki
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { cn, formatDate } from "@/lib/utils";
 import { StorageSecretStatusList } from "./storage-secret-status";
+import { useT } from "@seliseblocks/genesis-os";
 interface StorageDetailsDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -30,6 +31,7 @@ const getProviderLabel = (provider: StorageStrategyType): string => {
   }
 };
 export function StorageDetailsDrawer({ open, onOpenChange, storage }: StorageDetailsDrawerProps) {
+  const { t } = useT("os.storage");
   if (!storage) return null;
   const providerLabel = getProviderLabel(storage.storageStrategy);
   const providerColorClass = providerColors[storage.storageStrategy];
@@ -39,27 +41,31 @@ export function StorageDetailsDrawer({ open, onOpenChange, storage }: StorageDet
         <div className="flex h-full flex-col">
           <SheetHeader className="border-b border-border px-6 py-4">
             <div className="flex items-center justify-between">
-              <SheetTitle className="text-lg font-semibold">Details</SheetTitle>
+              <SheetTitle className="text-lg font-semibold">{t("common:DETAILS")}</SheetTitle>
               <button
                 onClick={() => onOpenChange(false)}
                 className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2"
               >
                 <X className="h-4 w-4" />
-                <span className="sr-only">Close</span>
+                <span className="sr-only">{t("common:CLOSE")}</span>
               </button>
             </div>
           </SheetHeader>
           <div className="flex-1 overflow-y-auto px-6 py-6">
             <div className="space-y-6">
               <div>
-                <h3 className="mb-4 text-sm font-medium text-muted-foreground">Properties</h3>
+                <h3 className="mb-4 text-sm font-medium text-muted-foreground">
+                  {t("STORAGE_DETAILS_DRAWER.PROPERTIES")}
+                </h3>
                 <div className="space-y-4">
                   <div>
-                    <div className="mb-1 text-xs text-muted-foreground">Name</div>
+                    <div className="mb-1 text-xs text-muted-foreground">{t("common:NAME")}</div>
                     <div className="text-sm font-medium">{storage.name}</div>
                   </div>
                   <div>
-                    <div className="mb-2 text-xs text-muted-foreground">Storage provider</div>
+                    <div className="mb-2 text-xs text-muted-foreground">
+                      {t("STORAGE_DETAILS_DRAWER.STORAGE_PROVIDER")}
+                    </div>
                     <div className="flex items-center gap-2">
                       <div
                         className={cn(
@@ -78,7 +84,7 @@ export function StorageDetailsDrawer({ open, onOpenChange, storage }: StorageDet
                         {storage.storageStrategy === "Azure" && (
                           <img
                             src="/assets/images/azure.png"
-                            alt="Azure"
+                            alt={t("STORAGE_DETAILS_DRAWER.AZURE")}
                             className="h-4 w-4 object-contain"
                           />
                         )}
@@ -91,23 +97,31 @@ export function StorageDetailsDrawer({ open, onOpenChange, storage }: StorageDet
                   </div>
                   <StorageSecretStatusList storage={storage} />
                   <div>
-                    <div className="mb-1 text-xs text-muted-foreground">Owner</div>
-                    <div className="text-sm font-medium">{storage.createdBy || "Me"}</div>
+                    <div className="mb-1 text-xs text-muted-foreground">
+                      {t("STORAGE_DETAILS_DRAWER.OWNER")}
+                    </div>
+                    <div className="text-sm font-medium">
+                      {storage.createdBy || t("STORAGE_DETAILS_DRAWER.ME")}
+                    </div>
                   </div>
                   <div>
-                    <div className="mb-2 text-xs text-muted-foreground">Type</div>
+                    <div className="mb-2 text-xs text-muted-foreground">{t("common:TYPE")}</div>
                     <Badge variant="secondary" className="h-6 w-fit text-xs font-medium">
-                      Configured
+                      {t("STORAGE_DETAILS_DRAWER.CONFIGURED")}
                     </Badge>
                   </div>
                   <div>
-                    <div className="mb-1 text-xs text-muted-foreground">Last modified</div>
+                    <div className="mb-1 text-xs text-muted-foreground">
+                      {t("STORAGE_DETAILS_DRAWER.LAST_MODIFIED")}
+                    </div>
                     <div className="text-sm font-medium">
                       {formatDate(new Date(storage.lastUpdatedDate))}
                     </div>
                   </div>
                   <div>
-                    <div className="mb-1 text-xs text-muted-foreground">Date created</div>
+                    <div className="mb-1 text-xs text-muted-foreground">
+                      {t("STORAGE_DETAILS_DRAWER.DATE_CREATED")}
+                    </div>
                     <div className="text-sm font-medium">
                       {formatDate(new Date(storage.createdDate))}
                     </div>

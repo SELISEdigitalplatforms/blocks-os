@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
-  OpenAIModelSchema,
+  createOpenAIModelSchema,
   OpenAIModelDefaults,
-  OfficialApiModelSchema,
-  OpenDeploymentModelSchema,
+  createOfficialApiModelSchema,
+  createOpenDeploymentModelSchema,
   OpenDeploymentDefaults,
   transformToUniversal,
   resolveModelConfig,
@@ -14,20 +14,20 @@ describe("aimodel-form.utils", () => {
   describe("schemas", () => {
     it("OpenAIModelSchema requires model, url and apiKey", () => {
       expect(
-        OpenAIModelSchema.safeParse({
+        createOpenAIModelSchema().safeParse({
           model: "gpt-4",
           url: "https://api.openai.com",
           apiKey: "sk-x",
         }).success,
       ).toBe(true);
-      expect(OpenAIModelSchema.safeParse({ model: "", url: "bad", apiKey: "" }).success).toBe(
+      expect(createOpenAIModelSchema().safeParse({ model: "", url: "bad", apiKey: "" }).success).toBe(
         false,
       );
     });
 
     it("OfficialApiModelSchema validates url format", () => {
       expect(
-        OfficialApiModelSchema.safeParse({
+        createOfficialApiModelSchema().safeParse({
           model: "m",
           url: "not-a-url",
           apiKey: "k",
@@ -36,7 +36,7 @@ describe("aimodel-form.utils", () => {
     });
 
     it("OpenDeploymentModelSchema requires a deployment name", () => {
-      const result = OpenDeploymentModelSchema.safeParse({
+      const result = createOpenDeploymentModelSchema().safeParse({
         model: "m",
         url: "https://x.com",
         deploymentName: "",
@@ -102,20 +102,20 @@ describe("aimodel-form.utils", () => {
 
     it("returns the OpenAI config for the openai provider", () => {
       const config = resolveModelConfig("openai", ServicePlatform.OFFICIAL_API, options);
-      expect(config.schema).toBe(OpenAIModelSchema);
+      expect(Object.keys(config.schema.shape)).toEqual(Object.keys(createOpenAIModelSchema().shape));
       expect(config.fields).toContain("organizationId");
       expect(config.defaultValues.model).toBe("gpt-4");
     });
 
     it("returns the open-deployment config for open platforms", () => {
       const config = resolveModelConfig("azure", ServicePlatform.OPEN_DEPLOYMENT, options);
-      expect(config.schema).toBe(OpenDeploymentModelSchema);
+      expect(Object.keys(config.schema.shape)).toEqual(Object.keys(createOpenDeploymentModelSchema().shape));
       expect(config.fields).toContain("deploymentName");
     });
 
     it("returns the official-api config as the default", () => {
       const config = resolveModelConfig("anthropic", ServicePlatform.OFFICIAL_API, options);
-      expect(config.schema).toBe(OfficialApiModelSchema);
+      expect(Object.keys(config.schema.shape)).toEqual(Object.keys(createOfficialApiModelSchema().shape));
       expect(config.fields).toEqual(["model", "url", "apiKey"]);
     });
 

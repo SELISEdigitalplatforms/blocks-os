@@ -25,6 +25,7 @@ import {
   NOTIFICATION_TEXT,
 } from "../../constants/notification-ui.constant";
 import { PUSH_FORM_TEXT } from "../../constants/push-ui.constant";
+import { useNotificationT } from "../../i18n";
 import { HelpText } from "./form-row";
 
 interface PushMessageFieldProps {
@@ -66,6 +67,7 @@ interface KeyInputProps {
  * itself as the text when there is no such key.
  */
 function KeyInput({ label, placeholder, value, names, onChange }: Readonly<KeyInputProps>) {
+  useNotificationT();
   const listId = useId();
   return (
     <div className="grid grid-cols-1 items-center gap-1.5 sm:grid-cols-[110px_minmax(0,1fr)]">
@@ -97,6 +99,7 @@ export function PushMessageField({
   pushReady,
   onSetUpPush,
 }: Readonly<PushMessageFieldProps>) {
+  const { t } = useNotificationT();
   const { keys, languages, isError } = usePushMessageKeys(true);
   const [pickedLanguage, setPickedLanguage] = useState("");
   const fallback = defaultCulture(languages);
@@ -182,7 +185,11 @@ export function PushMessageField({
           </div>
           <HelpText>{NOTIFICATION_TEXT.localizationHelp}</HelpText>
           {fields.length > 0 && (
-            <HelpText>Fields: {fields.map((field) => `{{${field}}}`).join(" ")}</HelpText>
+            <HelpText>
+              {t("PUSH_MESSAGE_FIELD.FIELDS", {
+                fields: fields.map((field) => `{{${field}}}`).join(" "),
+              })}
+            </HelpText>
           )}
           {isError && <HelpText>{NOTIFICATION_TEXT.keysLoadFailed}</HelpText>}
           {manageUrl && (

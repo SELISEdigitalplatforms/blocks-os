@@ -1,3 +1,6 @@
+import { tStatic } from "@seliseblocks/genesis-os";
+
+const I18N_MODULE = "os.idp.iam";
 /**
  * Severity classification for a permission entry. Higher severity grants
  * access to more sensitive operations and warrants stricter review.
@@ -28,7 +31,9 @@ type PermissionSeverityOption = {
 export const PERMISSION_SEVERITY_OPTIONS: PermissionSeverityOption[] = [
   {
     id: "Critical",
-    label: "Critical",
+    get label() {
+      return tStatic(I18N_MODULE, "PERMISSION.SEVERITY_CRITICAL");
+    },
     value: PermissionSeverityLevel.Critical,
     variant: "error",
     className: "text-red-800",
@@ -37,7 +42,9 @@ export const PERMISSION_SEVERITY_OPTIONS: PermissionSeverityOption[] = [
   },
   {
     id: "High",
-    label: "High",
+    get label() {
+      return tStatic(I18N_MODULE, "PERMISSION.SEVERITY_HIGH");
+    },
     value: PermissionSeverityLevel.High,
     variant: "destructive",
     className: "text-rose-800",
@@ -46,7 +53,9 @@ export const PERMISSION_SEVERITY_OPTIONS: PermissionSeverityOption[] = [
   },
   {
     id: "Medium",
-    label: "Medium",
+    get label() {
+      return tStatic(I18N_MODULE, "PERMISSION.SEVERITY_MEDIUM");
+    },
     value: PermissionSeverityLevel.Medium,
     variant: "info",
     className: "text-yellow-500",
@@ -55,7 +64,9 @@ export const PERMISSION_SEVERITY_OPTIONS: PermissionSeverityOption[] = [
   },
   {
     id: "Low",
-    label: "Low",
+    get label() {
+      return tStatic(I18N_MODULE, "PERMISSION.SEVERITY_LOW");
+    },
     value: PermissionSeverityLevel.Low,
     variant: "success",
     className: "text-blue-500",
@@ -64,7 +75,9 @@ export const PERMISSION_SEVERITY_OPTIONS: PermissionSeverityOption[] = [
   },
   {
     id: "None",
-    label: "None",
+    get label() {
+      return tStatic(I18N_MODULE, "PERMISSION.SEVERITY_NONE");
+    },
     value: PermissionSeverityLevel.None,
     variant: "secondary",
     className: "text-gray-600",
@@ -200,11 +213,15 @@ export enum ResourceType {
 export const RESOURCE_TYPE = [
   {
     value: "1",
-    label: "Endpoint",
+    get label() {
+      return tStatic(I18N_MODULE, "PERMISSION.RESOURCE_TYPE_ENDPOINT");
+    },
   },
   {
     value: "2",
-    label: "FE action",
+    get label() {
+      return tStatic(I18N_MODULE, "PERMISSION.RESOURCE_TYPE_FE_ACTION");
+    },
   },
 ];
 

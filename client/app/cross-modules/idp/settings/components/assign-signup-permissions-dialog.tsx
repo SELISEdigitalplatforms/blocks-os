@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui-kits/table/table";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { useGetGrantablePermissions } from "@blocks-idp/iam/hooks/use-permission";
 import { IPermission, RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
 import { CirclePlus } from "lucide-react";
@@ -40,6 +40,7 @@ export const AssignSignupPermissionsDialog = ({
   permissions,
   onAssign,
 }: AssignSignupPermissionsDialogProps) => {
+  const { t } = useT("os.idp.settings");
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const [open, setOpen] = useState(false);
   const [selectedPermissions, setSelectedPermissions] = useState<IPermission[]>([]);
@@ -59,9 +60,9 @@ export const AssignSignupPermissionsDialog = ({
     { enabled: open && Boolean(tenantId) },
   );
 
-  const [prevSync, setPrevSync] = useState<{ open: boolean; permissions: typeof permissions } | undefined>(
-    undefined,
-  );
+  const [prevSync, setPrevSync] = useState<
+    { open: boolean; permissions: typeof permissions } | undefined
+  >(undefined);
   if (!prevSync || prevSync.open !== open || prevSync.permissions !== permissions) {
     setPrevSync({ open, permissions });
     if (open) {
@@ -121,27 +122,32 @@ export const AssignSignupPermissionsDialog = ({
       <DialogTrigger asChild>
         <Button size="sm" variant="default" className="h-7 bg-primary px-2.5 text-xs" type="button">
           <CirclePlus className="h-3.5 w-3.5 md:mr-1.5" />
-          <span className="sr-only sm:not-sr-only">Manage Permissions</span>
+          <span className="sr-only sm:not-sr-only">
+            {t("ASSIGN_SIGNUP_PERMISSIONS_DIALOG.MANAGE_PERMISSIONS")}
+          </span>
         </Button>
       </DialogTrigger>
       <DialogContent className="flex max-h-[min(92vh,720px)] w-[calc(100vw-1.5rem)] max-w-2xl flex-col overflow-hidden sm:w-full">
         <DialogHeader>
-          <DialogTitle className="text-left">Assign Permissions</DialogTitle>
+          <DialogTitle className="text-left">
+            {t("ASSIGN_SIGNUP_PERMISSIONS_DIALOG.TITLE")}
+          </DialogTitle>
           <DialogDescription className="text-left">
-            Select up to {MAX_SIGNUP_PERMISSIONS} permissions for new sign-up users. Set adds them
-            to the list, then use Save on the page to persist them.
+            {t("ASSIGN_SIGNUP_PERMISSIONS_DIALOG.DESCRIPTION", { max: MAX_SIGNUP_PERMISSIONS })}
           </DialogDescription>
         </DialogHeader>
         <GrantHint kind="permissions" />
         <FilterControls.SearchInput
-          placeholder="Search by permission name"
+          placeholder={t("ASSIGN_SIGNUP_PERMISSIONS_DIALOG.SEARCH_PLACEHOLDER")}
           onChange={(search) => setFilter((current) => ({ ...current, search, page: 0 }))}
           value={filter.search}
           className="h-fit w-full py-3"
         />
         <p className="text-sm font-semibold">
-          You can select up to {MAX_SIGNUP_PERMISSIONS} permissions. ({selectedPermissions.length}/
-          {MAX_SIGNUP_PERMISSIONS})
+          {t("ASSIGN_SIGNUP_PERMISSIONS_DIALOG.LIMIT_NOTE", {
+            max: MAX_SIGNUP_PERMISSIONS,
+            selected: selectedPermissions.length,
+          })}
         </p>
         <Card className="min-h-0 flex-1 overflow-hidden">
           <CardContent className="max-h-[min(50vh,360px)] overflow-x-auto overflow-y-auto">
@@ -149,8 +155,8 @@ export const AssignSignupPermissionsDialog = ({
               <TableHeader>
                 <TableRow>
                   <TableHead />
-                  <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
+                  <TableHead>{t("common:NAME")}</TableHead>
+                  <TableHead>{t("common:TYPE")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -169,7 +175,9 @@ export const AssignSignupPermissionsDialog = ({
                             onCheckedChange={(checked) =>
                               handleCheckedChange(checked as boolean, item)
                             }
-                            aria-label={`Assign permission ${item.name}`}
+                            aria-label={t("ASSIGN_SIGNUP_PERMISSIONS_DIALOG.ASSIGN_PERMISSION", {
+                              name: item.name,
+                            })}
                           />
                         </TableCell>
                         <TableCell>
@@ -193,7 +201,9 @@ export const AssignSignupPermissionsDialog = ({
                       colSpan={3}
                       className="h-24 text-center text-sm text-muted-foreground"
                     >
-                      {isLoading ? "Loading..." : "No permissions found"}
+                      {isLoading
+                        ? t("common:LOADING")
+                        : t("ASSIGN_SIGNUP_PERMISSIONS_DIALOG.NO_PERMISSIONS")}
                     </TableCell>
                   </TableRow>
                 )}
@@ -214,11 +224,11 @@ export const AssignSignupPermissionsDialog = ({
         <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
           <DialogClose asChild>
             <Button variant="outline" size="default" type="button">
-              Cancel
+              {t("common:CANCEL")}
             </Button>
           </DialogClose>
           <Button type="button" size="default" onClick={handleSet}>
-            Set
+            {t("ASSIGN_SIGNUP_PERMISSIONS_DIALOG.SET")}
           </Button>
         </DialogFooter>
       </DialogContent>

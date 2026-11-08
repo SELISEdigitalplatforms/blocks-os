@@ -1,4 +1,5 @@
 import type { Asset, StorageProvider } from "@seliseblocks/mailcraft";
+import { tStatic } from "@seliseblocks/genesis-os";
 import { ModuleName } from "@/constants/modules.constants";
 import { storageService } from "@blocks-storage/services/storage.service";
 
@@ -19,7 +20,11 @@ function readFileIds(projectKey: string): string[] {
     const value: unknown = JSON.parse(localStorage.getItem(fileIdsStorageKey(projectKey)) ?? "[]");
     if (!Array.isArray(value)) return [];
 
-    return [...new Set(value.filter((fileId): fileId is string => typeof fileId === "string" && !!fileId))];
+    return [
+      ...new Set(
+        value.filter((fileId): fileId is string => typeof fileId === "string" && !!fileId),
+      ),
+    ];
   } catch {
     return [];
   }
@@ -115,7 +120,7 @@ export function createMailcraftStorageProvider(
         moduleName: ModuleName.IAMCloud,
       });
       if (!presigned?.isSuccess) {
-        throw new Error("Could not get an upload URL for the image.");
+        throw new Error(tStatic("os.communication.mail", "MAILCRAFT_STORAGE.UPLOAD_URL_FAILED"));
       }
 
       await storageService.uploadFile({ url: presigned.uploadUrl, file });
@@ -126,7 +131,10 @@ export function createMailcraftStorageProvider(
           fileVersionId: presigned.fileVersionId ?? "",
         });
         if (completion.verificationStatus !== "Verified") {
-          throw new Error(completion.rejectionReason ?? "The image failed verification.");
+          throw new Error(
+            completion.rejectionReason ??
+              tStatic("os.communication.mail", "MAILCRAFT_STORAGE.VERIFICATION_FAILED"),
+          );
         }
       }
 

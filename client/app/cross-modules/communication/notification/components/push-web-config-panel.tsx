@@ -4,6 +4,7 @@ import { Input } from "@/components/ui-kits/input/input";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
 import type { IPushSettings } from "../models/push.model";
 import { PUSH_TEXT } from "../constants/notification-ui.constant";
+import { lazyOption, tn, useNotificationT } from "../i18n";
 import { WEB_PROBLEM_TEXT, WEB_TEXT } from "../constants/push-ui.constant";
 import { WEB_SOURCE, type PushWebDraft } from "../hooks/use-push-web-draft";
 import { formatDate } from "../utils/push-format";
@@ -11,16 +12,18 @@ import { HelpText } from "./notification-form/form-row";
 import { SegmentedControl } from "./notification-form/segmented-control";
 
 const SOURCE_OPTIONS = [
-  { value: WEB_SOURCE.Paste, label: WEB_TEXT.upload },
-  { value: WEB_SOURCE.Fields, label: WEB_TEXT.fields },
+  lazyOption(WEB_SOURCE.Paste, "PUSH_UI.WEB_UPLOAD"),
+  lazyOption(WEB_SOURCE.Fields, "PUSH_UI.WEB_FIELDS"),
 ] as const;
 
 const storedText = (settings: IPushSettings): string => {
   if (!settings.hasWebConfig) return WEB_TEXT.notStored;
-  const parts: string[] = [WEB_TEXT.stored];
-  if (settings.webConfigUploadedAt) parts.push("on", formatDate(settings.webConfigUploadedAt));
-  if (settings.webConfigUploadedBy) parts.push("by", settings.webConfigUploadedBy);
-  return parts.join(" ");
+  const date = settings.webConfigUploadedAt ? formatDate(settings.webConfigUploadedAt) : "";
+  const user = settings.webConfigUploadedBy ?? "";
+  if (date && user) return tn("PUSH_UI.WEB_STORED_ON_BY", { date, user });
+  if (date) return tn("PUSH_UI.WEB_STORED_ON", { date });
+  if (user) return tn("PUSH_UI.WEB_STORED_BY", { user });
+  return WEB_TEXT.stored;
 };
 
 function MaskedField({
@@ -32,6 +35,7 @@ function MaskedField({
   bind: (element: HTMLInputElement | null) => void;
   onChange: () => void;
 }>) {
+  useNotificationT();
   const id = useId();
   return (
     <div className="flex flex-col gap-1.5">
@@ -53,6 +57,7 @@ function MaskedField({
 }
 
 function Checks({ draft }: Readonly<{ draft: PushWebDraft }>) {
+  useNotificationT();
   const { summary } = draft;
   return (
     <ul className="flex flex-col gap-1 text-xs text-success">
@@ -64,6 +69,7 @@ function Checks({ draft }: Readonly<{ draft: PushWebDraft }>) {
 }
 
 function PasteConfig({ draft }: Readonly<{ draft: PushWebDraft }>) {
+  useNotificationT();
   const {
     summary,
     bindFile,
@@ -130,6 +136,7 @@ function PasteConfig({ draft }: Readonly<{ draft: PushWebDraft }>) {
 }
 
 function TypedFields({ draft }: Readonly<{ draft: PushWebDraft }>) {
+  useNotificationT();
   const { bindApiKey, bindAppId, bindSenderId, bindVapid, refresh, summary } = draft;
   return (
     <div className="flex flex-col gap-2">
@@ -156,6 +163,7 @@ export function PushWebConfigPanel({
   settings,
   onOpenGuide,
 }: Readonly<PushWebConfigPanelProps>) {
+  useNotificationT();
   const paste = draft.source === WEB_SOURCE.Paste;
   const blocked = draft.summary.sameProject === false;
   return (

@@ -31,6 +31,9 @@ import {
   type SecretAuditLogResult,
   type SecretResult,
 } from "@/cross-modules/secrets/models/secret.model";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
+
+const I18N_MODULE = "os.secrets";
 
 const PAGE_SIZE = 10;
 
@@ -46,43 +49,50 @@ const formatWhen = (value: string): string => {
   return Number.isNaN(date.getTime()) ? value : format(date, "dd MMM yyyy, HH:mm:ss");
 };
 
-const AuditRow = ({ log }: { log: SecretAuditLogResult }) => (
-  <TableRow>
-    <TableCell className="whitespace-nowrap py-2.5 text-sm text-muted-foreground">
-      {formatWhen(log.createdDate)}
-    </TableCell>
-    <TableCell className="py-2.5 text-sm font-medium">
-      {secretAuditActionLabel(log.action)}
-    </TableCell>
-    <TableCell className="py-2.5 text-sm">
-      <div className="flex items-center gap-1.5">
-        <span className="max-w-[160px] truncate font-mono text-xs" title={log.actorUserId}>
-          {log.actorUserId || "—"}
-        </span>
-        {log.isRootOverride && (
-          // Surfaces that the access list was bypassed by a platform administrator.
-          <Badge variant="info" className="gap-1 px-1.5 py-0 text-[10px]" title="Root override">
-            <ShieldCheck className="h-3 w-3" />
-            Admin
-          </Badge>
-        )}
-        {log.impersonated && (
-          <Badge variant="warning" className="px-1.5 py-0 text-[10px]">
-            Impersonated
-          </Badge>
-        )}
-      </div>
-    </TableCell>
-    <TableCell className="py-2.5">
-      <Badge variant={OUTCOME_VARIANT[log.outcome] ?? "secondary"} className="font-normal">
-        {log.outcome}
-      </Badge>
-    </TableCell>
-    <TableCell className="py-2.5 text-sm text-muted-foreground">
-      {log.reason ? (SECRET_AUDIT_REASON_LABEL[log.reason] ?? log.reason) : "—"}
-    </TableCell>
-  </TableRow>
-);
+const AuditRow = ({ log }: { log: SecretAuditLogResult }) => {
+  const { t } = useT(I18N_MODULE);
+  return (
+    <TableRow>
+      <TableCell className="whitespace-nowrap py-2.5 text-sm text-muted-foreground">
+        {formatWhen(log.createdDate)}
+      </TableCell>
+      <TableCell className="py-2.5 text-sm font-medium">
+        {secretAuditActionLabel(log.action)}
+      </TableCell>
+      <TableCell className="py-2.5 text-sm">
+        <div className="flex items-center gap-1.5">
+          <span className="max-w-[160px] truncate font-mono text-xs" title={log.actorUserId}>
+            {log.actorUserId || "—"}
+          </span>
+          {log.isRootOverride && (
+            // Surfaces that the access list was bypassed by a platform administrator.
+            <Badge
+              variant="info"
+              className="gap-1 px-1.5 py-0 text-[10px]"
+              title={t("SECRET_AUDIT_MODAL.ROOT_OVERRIDE")}
+            >
+              <ShieldCheck className="h-3 w-3" />
+              {t("SECRET_AUDIT_MODAL.ADMIN")}
+            </Badge>
+          )}
+          {log.impersonated && (
+            <Badge variant="warning" className="px-1.5 py-0 text-[10px]">
+              {t("SECRET_AUDIT_MODAL.IMPERSONATED")}
+            </Badge>
+          )}
+        </div>
+      </TableCell>
+      <TableCell className="py-2.5">
+        <Badge variant={OUTCOME_VARIANT[log.outcome] ?? "secondary"} className="font-normal">
+          {log.outcome}
+        </Badge>
+      </TableCell>
+      <TableCell className="py-2.5 text-sm text-muted-foreground">
+        {log.reason ? (SECRET_AUDIT_REASON_LABEL[log.reason] ?? log.reason) : "—"}
+      </TableCell>
+    </TableRow>
+  );
+};
 
 interface SecretAuditModalProps {
   open: boolean;
@@ -99,6 +109,7 @@ interface SecretAuditModalProps {
  * Mount this only while it is open; a fresh mount is what returns it to page one.
  */
 export function SecretAuditModal({ open, onOpenChange, secret }: SecretAuditModalProps) {
+  const { t } = useT(I18N_MODULE);
   const [page, setPage] = useState(0);
 
   const { data, isLoading, isFetching, error } = useSecretAuditLogs(
@@ -114,15 +125,22 @@ export function SecretAuditModal({ open, onOpenChange, secret }: SecretAuditModa
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[min(90vh,760px)] w-[calc(100vw-1.5rem)] max-w-3xl flex-col overflow-hidden sm:w-full">
         <DialogHeader>
-          <DialogTitle className="text-left">Audit log — {secret.name}</DialogTitle>
+          <DialogTitle className="text-left">
+            {t("SECRET_AUDIT_MODAL.AUDIT_LOG", { name: secret.name })}
+          </DialogTitle>
           <DialogDescription className="text-left">
-            Every operation on this secret, including denied attempts.
+            {t("SECRET_AUDIT_MODAL.EVERY_OPERATION_ON_THIS_SECRET")}
           </DialogDescription>
         </DialogHeader>
 
         {error && (
           <Banner variant="destructive">
-            {describeSecretError(error, "Could not load the audit log.").message}
+            {
+              describeSecretError(
+                error,
+                tStatic(I18N_MODULE, "SECRET_AUDIT_MODAL.COULD_NOT_LOAD_THE_AUDIT"),
+              ).message
+            }
           </Banner>
         )}
 
@@ -130,23 +148,25 @@ export function SecretAuditModal({ open, onOpenChange, secret }: SecretAuditModa
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="text-xs font-semibold uppercase tracking-wide">When</TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wide">
-                  Action
+                  {t("SECRET_AUDIT_MODAL.WHEN")}
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wide">
-                  Actor
+                  {t("SECRET_AUDIT_MODAL.ACTION")}
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wide">
-                  Outcome
+                  {t("SECRET_AUDIT_MODAL.ACTOR")}
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wide">
-                  Reason
+                  {t("SECRET_AUDIT_MODAL.OUTCOME")}
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide">
+                  {t("SECRET_AUDIT_MODAL.REASON")}
                 </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isBusy ? (
+              {isBusy &&
                 Array.from({ length: 4 }).map((_, index) => (
                   <TableRow key={index}>
                     {Array.from({ length: 5 }).map((_column, cellIndex) => (
@@ -155,16 +175,19 @@ export function SecretAuditModal({ open, onOpenChange, secret }: SecretAuditModa
                       </TableCell>
                     ))}
                   </TableRow>
-                ))
-              ) : logs.length ? (
-                logs.map((log) => <AuditRow key={log.auditId} log={log} />)
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                    {error ? "The audit log could not be loaded." : "No audit entries yet."}
-                  </TableCell>
-                </TableRow>
-              )}
+                ))}
+              {!isBusy &&
+                (logs.length ? (
+                  logs.map((log) => <AuditRow key={log.auditId} log={log} />)
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                      {error
+                        ? t("SECRET_AUDIT_MODAL.THE_AUDIT_LOG_COULD_NOT")
+                        : t("SECRET_AUDIT_MODAL.NO_AUDIT_ENTRIES_YET")}
+                    </TableCell>
+                  </TableRow>
+                ))}
             </TableBody>
           </Table>
         </div>
@@ -183,7 +206,7 @@ export function SecretAuditModal({ open, onOpenChange, secret }: SecretAuditModa
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Close
+            {t("common:CLOSE")}
           </Button>
         </DialogFooter>
       </DialogContent>

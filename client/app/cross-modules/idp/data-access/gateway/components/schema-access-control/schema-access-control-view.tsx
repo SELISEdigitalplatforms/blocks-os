@@ -33,8 +33,13 @@ import {
   useSetRowColumnPermission,
   useUpdatePolicy,
 } from "@blocks-idp/data-access/gateway/hooks/use-configuration";
-import { useProjectStore } from "@seliseblocks/genesis-os";
-import { accessEffect, verbPhrase } from "@blocks-idp/data-access/gateway/utils/access-phrase";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
+import {
+  accessEffect,
+  asOperationTab,
+  type OperationTab,
+} from "@blocks-idp/data-access/gateway/utils/access-phrase";
+import { gt } from "@blocks-idp/data-access/gateway/utils/gateway-i18n";
 import {
   accessPresets,
   type AccessPreset,
@@ -51,6 +56,8 @@ import { useNarrowContainer } from "@blocks-idp/data-access/gateway/hooks/use-na
 import { useTransientStatus } from "@blocks-idp/data-access/gateway/hooks/use-transient-status";
 import { AccessEffectLine } from "./access-effect-line";
 import { AccessPresetList } from "./access-preset-list";
+
+const I18N_MODULE = "os.idp.gateway";
 
 /** What the rule editor's own Save/Update hands back to be sent to the API. */
 interface RuleSetSubmission {
@@ -74,10 +81,18 @@ export interface SchemaAccessControlViewHandle {
  * from at row level).
  */
 const ACCESS_TIER_TILES = [
-  { type: ACCESS_TYPES.INHERITED, label: "Inherited" },
-  { type: ACCESS_TYPES.LOGGED_IN, label: "Requester" },
-  { type: ACCESS_TYPES.CUSTOM, label: "Custom" },
+  { type: ACCESS_TYPES.INHERITED, labelKey: "ACCESS_VIEW.TIER_INHERITED" },
+  { type: ACCESS_TYPES.LOGGED_IN, labelKey: "ACCESS_VIEW.TIER_REQUESTER" },
+  { type: ACCESS_TYPES.CUSTOM, labelKey: "ACCESS_VIEW.TIER_CUSTOM" },
 ];
+
+/** Translation keys of the empty-Custom confirmation title, one sentence per operation. */
+const NOBODY_TITLE_KEYS: Record<OperationTab, string> = {
+  view: "ACCESS_VIEW.NOBODY_TITLE_VIEW",
+  create: "ACCESS_VIEW.NOBODY_TITLE_CREATE",
+  edit: "ACCESS_VIEW.NOBODY_TITLE_EDIT",
+  delete: "ACCESS_VIEW.NOBODY_TITLE_DELETE",
+};
 
 /** Below this width the three property tiles stack instead of sharing a row. */
 const NARROW_TILES_WIDTH = 420;
@@ -118,10 +133,10 @@ const AccessTierTiles = ({
   disabled,
   onPick,
 }: Readonly<AccessTierTilesProps>) => {
+  const { t } = useT(I18N_MODULE);
   const groupName = useId();
-  const { ref: tilesRef, isNarrow: tilesNarrow } = useNarrowContainer<HTMLDivElement>(
-    NARROW_TILES_WIDTH,
-  );
+  const { ref: tilesRef, isNarrow: tilesNarrow } =
+    useNarrowContainer<HTMLDivElement>(NARROW_TILES_WIDTH);
   const visibleTiers =
     level === "column"
       ? ACCESS_TIER_TILES
@@ -132,9 +147,10 @@ const AccessTierTiles = ({
       ref={tilesRef}
       className={cn("grid gap-2", tileColumns(isRowLevel, tilesNarrow))}
       role="radiogroup"
-      aria-label="Who is allowed"
+      aria-label={t("ACCESS_VIEW.WHO_IS_ALLOWED")}
     >
-      {visibleTiers.map(({ type, label }) => {
+      {visibleTiers.map(({ type, labelKey }) => {
+        const label = t(labelKey);
         const tier = tierFromType(type);
         const isSelected = type === selectedType;
         const Icon = TIER_ICON[tier];
@@ -183,30 +199,34 @@ const AccessTierTiles = ({
  * them, so e.g. a Custom View on Role or User with nothing in it breaks sign-in.
  */
 const EmptyCustomConfirmDialog = ({
-  verb,
+  tab,
   subject,
   onAnswer,
-}: Readonly<{ verb: string; subject: string; onAnswer: (confirmed: boolean) => void }>) => (
-  <Dialog open onOpenChange={(open) => !open && onAnswer(false)}>
-    <DialogContent className="mr-4 w-full max-w-[440px] rounded-md">
-      <DialogHeader>
-        <DialogTitle className="text-left text-lg font-semibold leading-7">Nobody will be able to {verb} {subject}</DialogTitle>
-        <DialogDescription className="mt-2 wrap-break-word text-left text-sm font-normal leading-5">
-          Custom with no rule sets allows nobody. Every requester in this project, and the platform services
-          acting for them, will be refused until you add a rule set. Features that depend on {subject} can stop working.
-        </DialogDescription>
-      </DialogHeader>
-      <DialogFooter className="mt-4 flex flex-row justify-end gap-2">
-        <Button type="button" variant="outline" size="sm" onClick={() => onAnswer(false)}>
-          Cancel
-        </Button>
-        <Button type="button" variant="destructive" size="sm" onClick={() => onAnswer(true)}>
-          Save anyway
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
-);
+}: Readonly<{ tab: OperationTab; subject: string; onAnswer: (confirmed: boolean) => void }>) => {
+  const { t } = useT(I18N_MODULE);
+  return (
+    <Dialog open onOpenChange={(open) => !open && onAnswer(false)}>
+      <DialogContent className="mr-4 w-full max-w-[440px] rounded-md">
+        <DialogHeader>
+          <DialogTitle className="text-left text-lg font-semibold leading-7">
+            {gt(NOBODY_TITLE_KEYS[tab], { subject })}
+          </DialogTitle>
+          <DialogDescription className="mt-2 wrap-break-word text-left text-sm font-normal leading-5">
+            {t("ACCESS_VIEW.NOBODY_DESCRIPTION", { subject })}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="mt-4 flex flex-row justify-end gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={() => onAnswer(false)}>
+            {t("common:CANCEL")}
+          </Button>
+          <Button type="button" variant="destructive" size="sm" onClick={() => onAnswer(true)}>
+            {t("ACCESS_VIEW.SAVE_ANYWAY")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 /** A yes/no question asked from async code: `ask()` resolves with whatever is passed to `answer`. */
 function useAsyncConfirm() {
@@ -241,6 +261,7 @@ const PolicyListPane = ({
   onDeleteSuccess,
   onDeleteError,
 }: Readonly<PolicyListPaneProps>) => {
+  const { t } = useT(I18N_MODULE);
   if (isLoading) {
     return (
       <output
@@ -249,7 +270,7 @@ const PolicyListPane = ({
         aria-busy="true"
       >
         <Loader className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden />
-        <span className="text-sm text-muted-foreground">Loading access rules…</span>
+        <span className="text-sm text-muted-foreground">{t("ACCESS_VIEW.LOADING_RULES")}</span>
       </output>
     );
   }
@@ -289,6 +310,7 @@ export const SchemaAccessControlView = forwardRef<
   },
   ref,
 ) {
+  const { t } = useT(I18N_MODULE);
   const [showRuleSetForm, setShowRuleSetForm] = useState(false);
 
   // The inspector widens for the rule editor; it needs to
@@ -429,7 +451,7 @@ export const SchemaAccessControlView = forwardRef<
         return; // leave the form open with its values so the user can retry
       }
 
-      setSuccess("Rule set saved successfully");
+      setSuccess(t("ACCESS_VIEW.RULE_SET_SAVED"));
       refetch();
       advanceAfterRuleSetSaved();
     } catch (error) {
@@ -474,7 +496,7 @@ export const SchemaAccessControlView = forwardRef<
       });
 
       if (res?.isSuccess) {
-        setSuccess("Access level updated successfully");
+        setSuccess(t("ACCESS_VIEW.ACCESS_LEVEL_UPDATED"));
         setLastSavedAccessType(selectedAccessType);
         return true;
       }
@@ -498,7 +520,11 @@ export const SchemaAccessControlView = forwardRef<
    *  here. */
   const handleFinalSave = async (): Promise<boolean> => {
     if (!isAccessTypeDirty) return true;
-    if (selectedAccessType === ACCESS_TYPES.CUSTOM && policies.length === 0 && !(await emptyCustomConfirm.ask())) {
+    if (
+      selectedAccessType === ACCESS_TYPES.CUSTOM &&
+      policies.length === 0 &&
+      !(await emptyCustomConfirm.ask())
+    ) {
       return false;
     }
     return handleSaveAccessType();
@@ -552,34 +578,38 @@ export const SchemaAccessControlView = forwardRef<
     >
       {systemOnlyReason && (
         <p className="text-xs text-muted-foreground" data-testid="data-access-read-only">
-          Read-only. {systemOnlyReason}
+          {t("ACCESS_VIEW.READ_ONLY", { reason: systemOnlyReason })}
         </p>
       )}
       {emptyCustomConfirm.isAsking && (
-        <EmptyCustomConfirmDialog verb={verbPhrase(tabForOperation)} subject={effectSubject} onAnswer={emptyCustomConfirm.answer} />
+        <EmptyCustomConfirmDialog
+          tab={asOperationTab(tabForOperation)}
+          subject={effectSubject}
+          onAnswer={emptyCustomConfirm.answer}
+        />
       )}
       {/* Hidden while a rule set is being added or edited: the form is a
           focused sub-flow with its own header and Back button, and the tier
           picker above it is disabled then anyway. */}
       {!showRuleSetForm && (
-      <div className="flex shrink-0 flex-col gap-3">
-        <div>
-          <div className="mb-2">
-            <p className="text-sm font-semibold text-foreground">Who can access this?</p>
-            <p className="text-xs text-muted-foreground">
-              Choose the access level for this operation.
-            </p>
+        <div className="flex shrink-0 flex-col gap-3">
+          <div>
+            <div className="mb-2">
+              <p className="text-sm font-semibold text-foreground">
+                {t("ACCESS_VIEW.WHO_CAN_ACCESS")}
+              </p>
+              <p className="text-xs text-muted-foreground">{t("ACCESS_VIEW.CHOOSE_LEVEL")}</p>
+            </div>
+            <AccessTierTiles
+              level={level}
+              isRowLevel={isRowLevel}
+              selectedType={selectedAccessType}
+              disabled={showRuleSetForm}
+              onPick={handleTierPick}
+            />
           </div>
-          <AccessTierTiles
-            level={level}
-            isRowLevel={isRowLevel}
-            selectedType={selectedAccessType}
-            disabled={showRuleSetForm}
-            onPick={handleTierPick}
-          />
+          <AccessEffectLine effect={effect} />
         </div>
-        <AccessEffectLine effect={effect} />
-      </div>
       )}
 
       {/* Always the flex-1 element, even when it renders nothing (any tier
@@ -596,57 +626,57 @@ export const SchemaAccessControlView = forwardRef<
       <div className="flex min-h-0 flex-1 flex-col">
         {currentAccessType === ACCESS_TYPES.CUSTOM &&
           (showRuleSetForm ? (
-          // The form used to snap in the instant a preset/Add was clicked; a
-          // short fade + rise reads as it opening rather than a jump cut.
-          // `dg-rise-in` is the shared one-shot from globals.css.
-          //
-          // Unlike the other branches, this isn't `overflow-y-auto`: the form
-          // scrolls its own content internally and keeps its Cancel/Save
-          // footer outside that scroll region, so the footer needs a bounded
-          // flex height here to pin to, not a scrolling ancestor to hide in.
-          <div key="rule-set-form" className="dg-rise-in flex min-h-0 flex-1 flex-col">
-            <RuleSetForm
-              onCancel={() => {
-                setSeedRuleSet(undefined);
-                setQueuedRuleSet(undefined);
-                setEditingPolicy(undefined);
-                setShowRuleSetForm(false);
-              }}
-              schemaFields={schemaFields}
-              schemaName={schemaName}
-              schemaId={schemaId}
-              operation={operation}
-              fieldNames={fieldNames}
-              editingPolicy={editingPolicy}
-              level={level}
-              seed={seedRuleSet}
-              onStage={handleRuleSetSubmit}
-              isSubmitting={isSavingRuleSet}
-              status={status}
-            />
-          </div>
-        ) : (
-          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
-            <PolicyListPane
-              isLoading={isPolicyListLoading}
-              policies={policies}
-              schemaFields={schemaFields}
-              onApplyPreset={applyPreset}
-              onAddRuleSet={openBlankRuleSetForm}
-              onEditPolicy={(policy) => {
-                setSeedRuleSet(undefined);
-                setQueuedRuleSet(undefined);
-                setEditingPolicy(policy);
-                setShowRuleSetForm(true);
-              }}
-              onDeleteSuccess={() => {
-                setSuccess("Rule set deleted successfully");
-                refetch();
-              }}
-              onDeleteError={setError}
-            />
-          </div>
-        ))}
+            // The form used to snap in the instant a preset/Add was clicked; a
+            // short fade + rise reads as it opening rather than a jump cut.
+            // `dg-rise-in` is the shared one-shot from globals.css.
+            //
+            // Unlike the other branches, this isn't `overflow-y-auto`: the form
+            // scrolls its own content internally and keeps its Cancel/Save
+            // footer outside that scroll region, so the footer needs a bounded
+            // flex height here to pin to, not a scrolling ancestor to hide in.
+            <div key="rule-set-form" className="dg-rise-in flex min-h-0 flex-1 flex-col">
+              <RuleSetForm
+                onCancel={() => {
+                  setSeedRuleSet(undefined);
+                  setQueuedRuleSet(undefined);
+                  setEditingPolicy(undefined);
+                  setShowRuleSetForm(false);
+                }}
+                schemaFields={schemaFields}
+                schemaName={schemaName}
+                schemaId={schemaId}
+                operation={operation}
+                fieldNames={fieldNames}
+                editingPolicy={editingPolicy}
+                level={level}
+                seed={seedRuleSet}
+                onStage={handleRuleSetSubmit}
+                isSubmitting={isSavingRuleSet}
+                status={status}
+              />
+            </div>
+          ) : (
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
+              <PolicyListPane
+                isLoading={isPolicyListLoading}
+                policies={policies}
+                schemaFields={schemaFields}
+                onApplyPreset={applyPreset}
+                onAddRuleSet={openBlankRuleSetForm}
+                onEditPolicy={(policy) => {
+                  setSeedRuleSet(undefined);
+                  setQueuedRuleSet(undefined);
+                  setEditingPolicy(policy);
+                  setShowRuleSetForm(true);
+                }}
+                onDeleteSuccess={() => {
+                  setSuccess(t("ACCESS_VIEW.RULE_SET_DELETED"));
+                  refetch();
+                }}
+                onDeleteError={setError}
+              />
+            </div>
+          ))}
       </div>
 
       {!showRuleSetForm && (
@@ -654,7 +684,7 @@ export const SchemaAccessControlView = forwardRef<
           <StatusSnackbar status={status} />
           <div className="flex items-center gap-2">
             <span className="flex-1 min-w-0 text-xs text-muted-foreground">
-              {hasUnsavedChanges ? "Unsaved changes" : "No changes"}
+              {hasUnsavedChanges ? t("ACCESS_VIEW.UNSAVED_CHANGES") : t("ACCESS_VIEW.NO_CHANGES")}
             </span>
             <Button
               type="button"
@@ -663,7 +693,7 @@ export const SchemaAccessControlView = forwardRef<
               disabled={!hasUnsavedChanges || isUpdating || isSavingRuleSet}
               onClick={handleCancelAccessType}
             >
-              Cancel
+              {t("common:CANCEL")}
             </Button>
             <Button
               type="button"
@@ -671,7 +701,7 @@ export const SchemaAccessControlView = forwardRef<
               disabled={!hasUnsavedChanges || isUpdating || isSavingRuleSet}
               onClick={() => void handleFinalSave()}
             >
-              Save
+              {t("common:SAVE")}
             </Button>
           </div>
         </div>
@@ -679,4 +709,3 @@ export const SchemaAccessControlView = forwardRef<
     </fieldset>
   );
 });
-

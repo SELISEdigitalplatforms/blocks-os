@@ -38,6 +38,77 @@ export type IdentityProviderFormValues = {
   clientSecret: string;
   wellKnownUrl?: string;
   audience?: string;
+  /** A Microsoft entry's Entra tenant: a directory id or verified domain. Empty means "common". */
+  tenant?: string;
+};
+
+const MICROSOFT_AUTHORITY = "https://login.microsoftonline.com/";
+const MICROSOFT_DISCOVERY_PATH = "/v2.0/.well-known/openid-configuration";
+const MICROSOFT_DEFAULT_TENANT = "common";
+
+export const isMicrosoftSocial = (providerType?: string, provider?: string): boolean =>
+  providerType === "social" && provider === "microsoft";
+
+/** The discovery URL IAM reads a Microsoft entry's Entra tenant from. */
+export const microsoftDiscoveryUrl = (tenant: string): string =>
+  `${MICROSOFT_AUTHORITY}${tenant}${MICROSOFT_DISCOVERY_PATH}`;
+
+/** The tenant a stored Microsoft discovery URL names; empty for "common" or any other URL. */
+export const microsoftTenantOf = (wellKnownUrl?: string | null): string => {
+  if (!wellKnownUrl?.startsWith(MICROSOFT_AUTHORITY) || !wellKnownUrl.endsWith(MICROSOFT_DISCOVERY_PATH)) {
+    return "";
+  }
+  const tenant = wellKnownUrl.slice(MICROSOFT_AUTHORITY.length, -MICROSOFT_DISCOVERY_PATH.length);
+  return tenant.includes("/") || tenant.toLowerCase() === MICROSOFT_DEFAULT_TENANT ? "" : tenant;
+};
+
+/** A directory id or domain: letters, digits, dots and hyphens. Empty is allowed. */
+export const isValidMicrosoftTenant = (tenant: string): boolean => /^[A-Za-z0-9.-]*$/.test(tenant.trim());
+
+/** True when another entry of the same provider already uses this display name. */
+export const isDisplayNameTaken = (
+  providers: IdentityProvider[],
+  provider: string,
+  displayName: string,
+  editId?: string,
+): boolean => {
+  const name = displayName.trim().toLowerCase();
+  return (
+    !!name &&
+    providers.some(
+      (entry) =>
+        entry.itemId !== editId &&
+        entry.provider === provider &&
+        (entry.displayName ?? "").trim().toLowerCase() === name,
+    )
+  );
+};
+
+/** The provider's own name as a first display name, unless another entry of it already has it. */
+export const suggestDisplayName = (
+  providers: IdentityProvider[],
+  provider: string,
+  label: string | undefined,
+): string => (label && !isDisplayNameTaken(providers, provider, label) ? label : "");
+
+const resolveWellKnownUrl = (
+  providerType: string,
+  provider: string,
+  values: IdentityProviderFormValues,
+  blocksOidcWellKnownUrl: string,
+  editedProvider: IdentityProvider | undefined,
+  isEditing: boolean,
+): string => {
+  if (providerType === "blocks-oidc") {
+    return blocksOidcWellKnownUrl || values.wellKnownUrl || editedProvider?.wellKnownUrl || "";
+  }
+  if (isMicrosoftSocial(providerType, provider)) {
+    const tenant = values.tenant?.trim() ?? "";
+    if (tenant) return microsoftDiscoveryUrl(tenant);
+    // Clearing the tenant moves a saved entry back to "common"; a new entry starts there anyway.
+    return isEditing ? microsoftDiscoveryUrl(MICROSOFT_DEFAULT_TENANT) : "";
+  }
+  return values.wellKnownUrl || editedProvider?.wellKnownUrl || "";
 };
 
 export const deriveProtocol = (
@@ -80,13 +151,17 @@ export const buildIdentityProviderPayload = ({
   const provider = values.provider || editedProvider?.provider || "";
   const clientId = values.clientId || editedProvider?.clientId || "";
   const protocol = deriveProtocol(providerType, editedProvider?.protocol);
-  const wellKnownUrl =
-    providerType === "blocks-oidc"
-      ? blocksOidcWellKnownUrl || values.wellKnownUrl || editedProvider?.wellKnownUrl || ""
-      : values.wellKnownUrl || editedProvider?.wellKnownUrl || "";
+  const wellKnownUrl = resolveWellKnownUrl(
+    providerType,
+    provider,
+    values,
+    blocksOidcWellKnownUrl,
+    editedProvider,
+    isEditing,
+  );
 
   const sharedFields = {
-    displayName: values.displayName || editedProvider?.displayName || provider,
+    displayName: values.displayName.trim() || editedProvider?.displayName || provider,
     providerType,
     provider,
     protocol,

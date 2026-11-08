@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
+import { useT } from "@seliseblocks/genesis-os";
 
 export type OneTimeSecret = {
   /** Name shown in the description, e.g. the client's display name. */
@@ -31,6 +32,7 @@ type OneTimeSecretDialogProps = {
  * Clicking outside or pressing Escape does not close it; only Done does.
  */
 export function OneTimeSecretDialog({ secret, onClose }: Readonly<OneTimeSecretDialogProps>) {
+  const { t } = useT("os.idp.auth");
   return (
     <Dialog open={!!secret} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
@@ -40,44 +42,41 @@ export function OneTimeSecretDialog({ secret, onClose }: Readonly<OneTimeSecretD
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle>Copy your client secret now</DialogTitle>
+          <DialogTitle>{t("ONE_TIME_SECRET_DIALOG.TITLE")}</DialogTitle>
           <DialogDescription>
-            {secret?.reason === "rotated" ? (
-              <>
-                The secret for <strong>{secret.label}</strong> was rotated. The old secret no longer
-                works.{" "}
-              </>
-            ) : (
-              <>
-                <strong>{secret?.label}</strong> was created.{" "}
-              </>
-            )}
-            You will not see this secret again. Copy it and store it somewhere safe before you close
-            this dialog. If you lose it, rotate the secret to get a new one.
+            {secret?.reason === "rotated"
+              ? t("ONE_TIME_SECRET_DIALOG.ROTATED_DESCRIPTION", { name: secret.label })
+              : t("ONE_TIME_SECRET_DIALOG.CREATED_DESCRIPTION", { name: secret?.label ?? "" })}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1">
-            <span className="text-sm font-medium">Client ID</span>
+            <span className="text-sm font-medium">{t("ONE_TIME_SECRET_DIALOG.CLIENT_ID")}</span>
             <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
               <code className="min-w-0 flex-1 break-all font-mono text-sm">
                 {maskId(secret?.clientId)}
               </code>
               {secret?.clientId && (
-                <CopyToClipboardButton textToCopy={secret.clientId} label="Copy client ID">
+                <CopyToClipboardButton
+                  textToCopy={secret.clientId}
+                  label={t("ONE_TIME_SECRET_DIALOG.COPY_CLIENT_ID")}
+                >
                   {null}
                 </CopyToClipboardButton>
               )}
             </div>
           </div>
           <div className="space-y-1">
-            <span className="text-sm font-medium">Client Secret</span>
+            <span className="text-sm font-medium">{t("ONE_TIME_SECRET_DIALOG.CLIENT_SECRET")}</span>
             <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
               <code className="min-w-0 flex-1 break-all font-mono text-sm">
                 {secret?.clientSecret}
               </code>
               {secret?.clientSecret && (
-                <CopyToClipboardButton textToCopy={secret.clientSecret} label="Copy client secret">
+                <CopyToClipboardButton
+                  textToCopy={secret.clientSecret}
+                  label={t("ONE_TIME_SECRET_DIALOG.COPY_CLIENT_SECRET")}
+                >
                   {null}
                 </CopyToClipboardButton>
               )}
@@ -86,7 +85,7 @@ export function OneTimeSecretDialog({ secret, onClose }: Readonly<OneTimeSecretD
         </div>
         <DialogFooter>
           <Button type="button" size="sm" onClick={onClose}>
-            I copied it, close
+            {t("ONE_TIME_SECRET_DIALOG.CLOSE")}
           </Button>
         </DialogFooter>
       </DialogContent>

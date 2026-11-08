@@ -39,7 +39,8 @@ if (!Element.prototype.scrollIntoView) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let rolesResult: any = { data: undefined, isLoading: false };
 
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 

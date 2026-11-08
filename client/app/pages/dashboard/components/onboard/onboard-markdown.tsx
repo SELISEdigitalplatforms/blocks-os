@@ -1,27 +1,40 @@
 import { cn } from "@/lib/utils";
+import type { ReactNode } from "react";
 import type { Components } from "react-markdown";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { CopyButton } from "./copy-button";
+import { useT } from "@seliseblocks/genesis-os";
+
+// The text of a fenced block's children: react-markdown passes a string, or an array of them.
+const textOf = (node: ReactNode): string => {
+  if (typeof node === "string") return node;
+  if (typeof node === "number") return node.toString();
+  if (Array.isArray(node)) return node.map(textOf).join("");
+  return "";
+};
 
 type GuideCodeBlockProps = {
   language: string;
   code: string;
 };
 
-const GuideCodeBlock = ({ language, code }: GuideCodeBlockProps) => (
-  <div className="my-3 overflow-hidden rounded-md border border-border-default">
-    <div className="flex items-center justify-between gap-2 border-b border-border-default bg-muted px-3 py-1">
-      <span className="font-mono text-xs uppercase tracking-wide text-medium-emphasis">
-        {language}
-      </span>
-      <CopyButton text={code} label={`Copy ${language} command`} />
+const GuideCodeBlock = ({ language, code }: GuideCodeBlockProps) => {
+  const { t } = useT("os.dashboard");
+  return (
+    <div className="my-3 overflow-hidden rounded-md border border-border-default">
+      <div className="flex items-center justify-between gap-2 border-b border-border-default bg-muted px-3 py-1">
+        <span className="font-mono text-xs uppercase tracking-wide text-medium-emphasis">
+          {language}
+        </span>
+        <CopyButton text={code} label={t("ONBOARD_MARKDOWN.COPY_COMMAND", { language })} />
+      </div>
+      <pre className="overflow-x-auto bg-surface-app p-3">
+        <code className="font-mono text-[13px] leading-6 text-high-emphasis">{code}</code>
+      </pre>
     </div>
-    <pre className="overflow-x-auto bg-surface-app p-3">
-      <code className="font-mono text-[13px] leading-6 text-high-emphasis">{code}</code>
-    </pre>
-  </div>
-);
+  );
+};
 
 /**
  * Markdown styling for the onboarding brief. The shared `MarkdownRenderer` leans
@@ -77,9 +90,7 @@ const createGuideComponents = (): Components => ({
         </code>
       );
     }
-    return (
-      <GuideCodeBlock language={language} code={String(children).replace(/\n$/, "")} />
-    );
+    return <GuideCodeBlock language={language} code={textOf(children).replace(/\n$/, "")} />;
   },
 });
 

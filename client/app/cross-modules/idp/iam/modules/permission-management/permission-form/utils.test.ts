@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BUILTIN_PERMISSION_READONLY_MESSAGE, isPermissionFormReadOnly } from "./utils";
+import { getBuiltinPermissionReadonlyMessage, isPermissionFormReadOnly } from "./utils";
 
 describe("isPermissionFormReadOnly", () => {
   it("returns true when permission is built-in", () => {
@@ -11,9 +11,9 @@ describe("isPermissionFormReadOnly", () => {
   });
 });
 
-describe("BUILTIN_PERMISSION_READONLY_MESSAGE", () => {
+describe("getBuiltinPermissionReadonlyMessage", () => {
   it("explains built-in permissions cannot be modified", () => {
-    expect(BUILTIN_PERMISSION_READONLY_MESSAGE).toContain("Built-in");
-    expect(BUILTIN_PERMISSION_READONLY_MESSAGE).toContain("cannot be modified");
+    expect(getBuiltinPermissionReadonlyMessage()).toContain("Built-in");
+    expect(getBuiltinPermissionReadonlyMessage()).toContain("cannot be modified");
   });
 });

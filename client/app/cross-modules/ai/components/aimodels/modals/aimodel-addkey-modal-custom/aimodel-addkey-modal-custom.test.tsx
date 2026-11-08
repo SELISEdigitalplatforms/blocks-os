@@ -9,9 +9,10 @@ const h = vi.hoisted(() => ({
   showSuccessToast: vi.fn(),
 }));
 
-vi.mock("@seliseblocks/genesis-os", () => {
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => {
   const Passthrough = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
   return {
+    ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
     useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
     Tooltip: Passthrough,
     TooltipTrigger: Passthrough,

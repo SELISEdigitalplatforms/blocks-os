@@ -24,11 +24,12 @@ vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useIsMobile: () => h.isMobile,
   usePathSegments: () => [],
 }));
-vi.mock("@seliseblocks/genesis-os", async () => {
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => {
   const React = await import("react");
   const Pass = ({ children }: { children?: React.ReactNode }) =>
     React.createElement(React.Fragment, null, children);
   return {
+    ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
     useProjectStore: () => ({ selectedProject: { tenantId: h.tenantId } }),
     Tooltip: Pass,
     TooltipTrigger: Pass,

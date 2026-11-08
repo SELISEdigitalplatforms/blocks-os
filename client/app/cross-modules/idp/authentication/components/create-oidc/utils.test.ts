@@ -10,12 +10,12 @@ import {
   formatMinutes,
   getRedirectUriError,
   getRedirectUriSchema,
-  HTTPS_REDIRECT_URI_MESSAGE,
+  getHttpsRedirectUriMessage,
   isAppSchemeRedirectUri,
   knownMinutes,
-  MOBILE_INVALID_REDIRECT_URI_MESSAGE,
-  WEB_APP_SCHEME_REDIRECT_URI_MESSAGE,
-  TOKEN_LIFETIME_MESSAGES,
+  getMobileInvalidRedirectUriMessage,
+  getWebAppSchemeRedirectUriMessage,
+  getTokenLifetimeMessages,
   type TokenLifetimeFormValues,
   tokenLifetimesToForm,
 } from "./utils";
@@ -151,9 +151,9 @@ describe("isAppSchemeRedirectUri (blocks-iam SPEC29 6.1)", () => {
 describe("getRedirectUriError (spec 6.3 table)", () => {
   it("C1 / Example 3: Web refuses an app-scheme entry with the Mobile type message", () => {
     expect(getRedirectUriError("com.klaxai.app://login/callback", "web")).toBe(
-      WEB_APP_SCHEME_REDIRECT_URI_MESSAGE,
+      getWebAppSchemeRedirectUriMessage(),
     );
-    expect(WEB_APP_SCHEME_REDIRECT_URI_MESSAGE).toBe(
+    expect(getWebAppSchemeRedirectUriMessage()).toBe(
       "Mobile app redirect URIs need the Mobile app application type.",
     );
   });
@@ -161,7 +161,7 @@ describe("getRedirectUriError (spec 6.3 table)", () => {
   it("Web keeps the existing https rule for other entries", () => {
     expect(getRedirectUriError("https://portal.example.com/callback", "web")).toBeNull();
     expect(getRedirectUriError("http://localhost:3000/cb", "web")).toBeNull();
-    expect(getRedirectUriError("myapp://callback", "web")).toBe(HTTPS_REDIRECT_URI_MESSAGE);
+    expect(getRedirectUriError("myapp://callback", "web")).toBe(getHttpsRedirectUriMessage());
   });
 
   it("C5: Web shows the existing HTTPS message for http on a non-localhost host", () => {
@@ -190,18 +190,18 @@ describe("getRedirectUriError (spec 6.3 table)", () => {
     "blob:https://example.com/abc",
     "about:blank",
   ])("C3: Mobile refuses %s", (value) => {
-    expect(getRedirectUriError(value, "mobile")).toBe(MOBILE_INVALID_REDIRECT_URI_MESSAGE);
+    expect(getRedirectUriError(value, "mobile")).toBe(getMobileInvalidRedirectUriMessage());
   });
 
   it("C4: Mobile refuses an app-scheme entry with a fragment", () => {
     expect(getRedirectUriError("com.blocks.e2e.app://cb#x", "mobile")).toBe(
-      MOBILE_INVALID_REDIRECT_URI_MESSAGE,
+      getMobileInvalidRedirectUriMessage(),
     );
   });
 
   it("Mobile refuses http on a non-localhost host", () => {
     expect(getRedirectUriError("http://portal.example.com/cb", "mobile")).toBe(
-      MOBILE_INVALID_REDIRECT_URI_MESSAGE,
+      getMobileInvalidRedirectUriMessage(),
     );
   });
 });
@@ -225,7 +225,7 @@ describe("getRedirectUriSchema", () => {
     if (!result.success) {
       expect(result.error.issues).toHaveLength(1);
       expect(result.error.issues[0].path).toEqual([1, "value"]);
-      expect(result.error.issues[0].message).toBe(WEB_APP_SCHEME_REDIRECT_URI_MESSAGE);
+      expect(result.error.issues[0].message).toBe(getWebAppSchemeRedirectUriMessage());
     }
   });
 
@@ -234,7 +234,7 @@ describe("getRedirectUriSchema", () => {
       { value: "com.klaxai.app://login/callback" },
     ]);
     expect(result.success).toBe(false);
-    if (!result.success) expect(result.error.issues[0].message).toBe(HTTPS_REDIRECT_URI_MESSAGE);
+    if (!result.success) expect(result.error.issues[0].message).toBe(getHttpsRedirectUriMessage());
   });
 });
 
@@ -257,7 +257,7 @@ describe("createOidcSchema application type", () => {
     expect(web.success).toBe(false);
     if (!web.success) {
       expect(web.error.issues[0].path).toEqual(["redirectUris", 0, "value"]);
-      expect(web.error.issues[0].message).toBe(WEB_APP_SCHEME_REDIRECT_URI_MESSAGE);
+      expect(web.error.issues[0].message).toBe(getWebAppSchemeRedirectUriMessage());
     }
   });
 
@@ -333,16 +333,16 @@ describe("token lifetime rules", () => {
 
   it.each(["0", "1441", "99999"])("rejects access %s with the server message", (value) => {
     expect(lifetimeErrors({ accessTokenLifetime: value })).toEqual([
-      { path: "accessTokenLifetime", message: TOKEN_LIFETIME_MESSAGES.access },
+      { path: "accessTokenLifetime", message: getTokenLifetimeMessages().access },
     ]);
   });
 
   it.each(["0", "525601"])("rejects idle and maximum %s", (value) => {
     expect(lifetimeErrors({ refreshTokenLifetime: value })).toEqual([
-      { path: "refreshTokenLifetime", message: TOKEN_LIFETIME_MESSAGES.refresh },
+      { path: "refreshTokenLifetime", message: getTokenLifetimeMessages().refresh },
     ]);
     expect(lifetimeErrors({ absoluteRefreshTokenLifetime: value })).toEqual([
-      { path: "absoluteRefreshTokenLifetime", message: TOKEN_LIFETIME_MESSAGES.absolute },
+      { path: "absoluteRefreshTokenLifetime", message: getTokenLifetimeMessages().absolute },
     ]);
   });
 
@@ -352,14 +352,14 @@ describe("token lifetime rules", () => {
     ).toEqual([
       {
         path: "absoluteRefreshTokenLifetime",
-        message: TOKEN_LIFETIME_MESSAGES.absoluteBelowRefresh,
+        message: getTokenLifetimeMessages().absoluteBelowRefresh,
       },
     ]);
   });
 
   it.each(["1.5", "-3", "abc", "1e3"])("rejects %s as not a whole number", (value) => {
     expect(lifetimeErrors({ accessTokenLifetime: value })).toEqual([
-      { path: "accessTokenLifetime", message: TOKEN_LIFETIME_MESSAGES.wholeNumber },
+      { path: "accessTokenLifetime", message: getTokenLifetimeMessages().wholeNumber },
     ]);
   });
 
@@ -369,7 +369,7 @@ describe("token lifetime rules", () => {
         { accessTokenLifetime: "0" },
         { ...createOIDCFormDefaultValue, clientDisplayName: "Cli", isDeviceFlowClient: true },
       ),
-    ).toEqual([{ path: "accessTokenLifetime", message: TOKEN_LIFETIME_MESSAGES.access }]);
+    ).toEqual([{ path: "accessTokenLifetime", message: getTokenLifetimeMessages().access }]);
   });
 });
 

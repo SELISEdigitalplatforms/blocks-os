@@ -1,4 +1,5 @@
 using Configuration.DomainService.Mail.Template.Services;
+using Configuration.DomainService.Organizations;
 using FluentValidation;
 
 namespace Configuration.DomainService.Mail.Template.Validators
@@ -26,15 +27,20 @@ namespace Configuration.DomainService.Mail.Template.Validators
                 });
         }
 
+        // Checked here for a create only: an edit's organization is the stored one, which the service reads,
+        // and an edit can't change the name or language anyway.
         private async Task<bool> HaveUniqueNameAndLanguageAsync(SaveMailTemplateRequest template, CancellationToken cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(template.Name) || string.IsNullOrWhiteSpace(template.Language))
+            if (!string.IsNullOrWhiteSpace(template.ItemId)
+                || string.IsNullOrWhiteSpace(template.Name)
+                || string.IsNullOrWhiteSpace(template.Language))
             {
                 return true;
             }
 
-            var existingTemplate = await _templateRepository.GetByNameAndLanguageAsync(template.Name, template.Language);
-            return existingTemplate == null || existingTemplate.ItemId == template.ItemId;
+            var existingTemplate = await _templateRepository.GetByNameAndLanguageAsync(
+                template.Name, template.Language, OrganizationIds.Normalize(template.OrganizationId));
+            return existingTemplate == null;
         }
     }
 }

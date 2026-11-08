@@ -6,6 +6,11 @@ import {
   deriveProtocol,
   getSocialLoginRedirectUri,
   hasRedirectUri,
+  isDisplayNameTaken,
+  isValidMicrosoftTenant,
+  microsoftDiscoveryUrl,
+  microsoftTenantOf,
+  suggestDisplayName,
 } from "./identity-provider-form.util";
 import { IdentityProvider } from "@blocks-idp/authentication/models/identity-provider.model";
 
@@ -134,5 +139,86 @@ describe("social login redirect URI helpers", () => {
     expect(addRedirectUriToList(["https://x", ""], "https://a")).toEqual(["https://x", "https://a"]);
     expect(addRedirectUriToList(["https://x"], "https://a")).toEqual(["https://x", "https://a"]);
     expect(addRedirectUriToList(["https://a"], "https://a")).toEqual(["https://a"]);
+  });
+});
+
+describe("Microsoft tenant", () => {
+  const TENANT_URL =
+    "https://login.microsoftonline.com/contoso.onmicrosoft.com/v2.0/.well-known/openid-configuration";
+  const COMMON_URL = "https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration";
+
+  it("builds and reads back a tenant discovery URL", () => {
+    expect(microsoftDiscoveryUrl("contoso.onmicrosoft.com")).toBe(TENANT_URL);
+    expect(microsoftTenantOf(TENANT_URL)).toBe("contoso.onmicrosoft.com");
+  });
+
+  it("reads no tenant from common or from any other URL", () => {
+    expect(microsoftTenantOf(COMMON_URL)).toBe("");
+    expect(microsoftTenantOf("https://accounts.google.com/.well-known/openid-configuration")).toBe("");
+    expect(microsoftTenantOf(undefined)).toBe("");
+  });
+
+  it("accepts a directory id or a domain and nothing else", () => {
+    expect(isValidMicrosoftTenant("8b1d2c3e-0000-4e72-9a7f-000000000001")).toBe(true);
+    expect(isValidMicrosoftTenant("contoso.onmicrosoft.com")).toBe(true);
+    expect(isValidMicrosoftTenant("")).toBe(true);
+    expect(isValidMicrosoftTenant("contoso/evil")).toBe(false);
+    expect(isValidMicrosoftTenant("con toso")).toBe(false);
+  });
+
+  const microsoftValues = {
+    displayName: "Contoso staff",
+    providerType: "social",
+    provider: "microsoft",
+    clientId: "ms-client",
+    clientSecret: "secret",
+  };
+  const build = (tenant: string, isEditing: boolean) =>
+    buildIdentityProviderPayload({
+      values: { ...microsoftValues, tenant },
+      cleanedUris: ["https://app.example.com/cb"],
+      selectedRoles: [],
+      selectedPermissions: [],
+      scopes: ["openid"],
+      requirePkce: false,
+      blocksOidcWellKnownUrl: "",
+      editedProvider: isEditing
+        ? { ...editedProvider, providerType: "social", provider: "microsoft", wellKnownUrl: TENANT_URL }
+        : undefined,
+      editId: isEditing ? editedProvider.itemId : undefined,
+      isEditing,
+    });
+
+  it("sends the tenant as its discovery URL", () => {
+    expect(build("contoso.onmicrosoft.com", false).wellKnownUrl).toBe(TENANT_URL);
+  });
+
+  it("sends nothing for a new entry without a tenant, and common when a saved one is cleared", () => {
+    expect(build("", false).wellKnownUrl).toBe("");
+    expect(build("", true).wellKnownUrl).toBe(COMMON_URL);
+  });
+});
+
+describe("display names of several entries", () => {
+  const entries = [
+    { ...editedProvider, itemId: "g1", provider: "google", providerType: "social", displayName: "Google" },
+    { ...editedProvider, itemId: "g2", provider: "google", providerType: "social", displayName: "Staff" },
+    { ...editedProvider, itemId: "m1", provider: "microsoft", providerType: "social", displayName: "Staff" },
+  ];
+
+  it("treats a name as taken only within the same provider, ignoring case and spaces", () => {
+    expect(isDisplayNameTaken(entries, "google", " staff ")).toBe(true);
+    expect(isDisplayNameTaken(entries, "microsoft", "Google")).toBe(false);
+    expect(isDisplayNameTaken(entries, "google", "Customers")).toBe(false);
+  });
+
+  it("does not count the entry being edited", () => {
+    expect(isDisplayNameTaken(entries, "google", "Staff", "g2")).toBe(false);
+  });
+
+  it("suggests the provider's own name only while it is free", () => {
+    expect(suggestDisplayName(entries, "microsoft", "Microsoft")).toBe("Microsoft");
+    expect(suggestDisplayName(entries, "google", "Google")).toBe("");
+    expect(suggestDisplayName(entries, "google", undefined)).toBe("");
   });
 });

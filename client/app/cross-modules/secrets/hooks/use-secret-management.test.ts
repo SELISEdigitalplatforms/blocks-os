@@ -30,7 +30,10 @@ import {
   useUpdateSecretAccess,
 } from "./use-secret-management";
 
-vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
+  ...mockProjectStoreFactory(),
+}));
 vi.mock("@/cross-modules/secrets/services/secret-management.service", () => ({
   secretManagementService: {
     find: vi.fn(),

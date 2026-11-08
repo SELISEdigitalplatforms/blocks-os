@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, tStatic } from "@seliseblocks/genesis-os";
 import { IRunIntegrationSetupPayload } from "@/cross-modules/integration/models/integration.model";
 import { integrationService } from "@/cross-modules/integration/services/integration.service";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
@@ -47,16 +47,33 @@ export const useRunIntegrationSetup = () => {
     mutationKey: integrationRunSetupMutationKey(tenantId),
     mutationFn: (payload: IRunIntegrationSetupPayload) => integrationService.runSetup(payload),
     onSuccess: () => {
-      showSuccessToast({ description: "Integration is set up." });
+      showSuccessToast({
+        description: tStatic("os.integration", "USE_INTEGRATION.INTEGRATION_IS_SET_UP"),
+      });
       queryClient.invalidateQueries({ queryKey: ["integration"] });
     },
     onError: (error) => {
-      showErrorToast({ title: "Setup failed", errors: error instanceof Error ? error.message : error });
+      showErrorToast({
+        title: tStatic("os.integration", "USE_INTEGRATION.SETUP_FAILED"),
+        errors: error instanceof Error ? error.message : error,
+      });
       // Steps before the failure may have succeeded; refresh so the page reflects them.
       queryClient.invalidateQueries({ queryKey: ["integration"] });
     },
   });
 };
 
-export const useDisconnect = () => { const queryClient = useQueryClient(); return useMutation({ mutationFn: integrationService.disconnect, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["integration"] }) }); };
-export const useRegenerateSecret = () => { const queryClient = useQueryClient(); return useMutation({ mutationFn: integrationService.regenerateSecret, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["integration"] }) }); };
+export const useDisconnect = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: integrationService.disconnect,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["integration"] }),
+  });
+};
+export const useRegenerateSecret = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: integrationService.regenerateSecret,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["integration"] }),
+  });
+};

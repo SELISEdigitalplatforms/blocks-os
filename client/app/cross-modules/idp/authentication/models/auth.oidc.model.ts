@@ -251,6 +251,10 @@ export interface IOidcUiTemplate {
       supportLinkText: string;
     };
   };
+  layout: {
+    /** Whether IAM's sign-in pages show the right-column animation panel beside the form. */
+    showAnimationPanel: boolean;
+  };
 }
 
 export interface IGetOidcUiTemplateResponse {

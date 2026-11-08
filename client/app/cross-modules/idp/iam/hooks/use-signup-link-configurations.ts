@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { tStatic, useProjectStore } from "@seliseblocks/genesis-os";
 import { signupLinkConfigurationService } from "../services/signup-link-configuration.service";
 import {
   ISignupLinkConfigurationCreatePayload,
@@ -62,10 +62,15 @@ export const useArchiveSignupLinkConfiguration = () => {
     mutationFn: async (id: string) => {
       const response = await signupLinkConfigurationService.archive(id);
       if (response?.isSuccess === false) {
-        throw Object.assign(new Error("Archive failed"), {
-          errors: response.errors ?? { general: "Archive failed" },
-          status: 400,
-        });
+        throw Object.assign(
+          new Error(tStatic("os.idp.iam", "USE_SIGNUP_LINK_CONFIGURATIONS.ARCHIVE_FAILED")),
+          {
+            errors: response.errors ?? {
+              general: tStatic("os.idp.iam", "USE_SIGNUP_LINK_CONFIGURATIONS.ARCHIVE_FAILED"),
+            },
+            status: 400,
+          },
+        );
       }
       return response;
     },

@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui-kits/table/table";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
 import { RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
 import { useRef, useState } from "react";
@@ -37,6 +37,7 @@ export const AddDependentPermission = ({
   onChange,
   permissionsResource,
 }: AddDependentPermissionProps) => {
+  const { t } = useT("os.idp.permissions");
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const [open, setOpen] = useState(false);
   const [workingSet, setWorkingSet] = useState<string[]>([]);
@@ -118,25 +119,31 @@ export const AddDependentPermission = ({
           }}
           className="h-[34px]"
         >
-          Add
+          {t("common:ADD")}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <div className="flex items-center justify-between gap-2 pr-6">
-            <DialogTitle className="text-left">Assign Permissions</DialogTitle>
+            <DialogTitle className="text-left">{t("ADD_DEPENDENT_PERMISSION.TITLE")}</DialogTitle>
             <Badge
               variant="secondary"
-              aria-label={`${workingSet.length} of ${MAX_DEPENDENT_PERMISSIONS} permissions selected`}
+              aria-label={t("ADD_DEPENDENT_PERMISSION.SELECTED_ARIA", {
+                selected: workingSet.length,
+                max: MAX_DEPENDENT_PERMISSIONS,
+              })}
             >
-              {workingSet.length}/{MAX_DEPENDENT_PERMISSIONS} selected
+              {t("ADD_DEPENDENT_PERMISSION.SELECTED_BADGE", {
+                selected: workingSet.length,
+                max: MAX_DEPENDENT_PERMISSIONS,
+              })}
             </Badge>
           </div>
           <DialogDescription></DialogDescription>
         </DialogHeader>
         <div>
           <FilterControls.SearchInput
-            placeholder="Search by permission name"
+            placeholder={t("ADD_DEPENDENT_PERMISSION.SEARCH_PLACEHOLDER")}
             onChange={(search) => setFilter((prev) => ({ ...prev, search, page: 0 }))}
             value={filter.search}
             className="h-fit w-full py-3"
@@ -148,8 +155,8 @@ export const AddDependentPermission = ({
               <TableHeader>
                 <TableRow>
                   <TableHead></TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
+                  <TableHead>{t("common:NAME")}</TableHead>
+                  <TableHead>{t("common:TYPE")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -161,7 +168,7 @@ export const AddDependentPermission = ({
                         onCheckedChange={(checked) => {
                           handleCheckedChange(checked as boolean, item.resource);
                         }}
-                        aria-label={`Select ${item.name}`}
+                        aria-label={t("ADD_DEPENDENT_PERMISSION.SELECT_ARIA", { name: item.name })}
                       />
                     </TableCell>
                     <TableCell className="w-full">
@@ -193,10 +200,10 @@ export const AddDependentPermission = ({
         </div>
         <DialogFooter>
           <Button variant="outline" size="default" onClick={handleCancel}>
-            Cancel
+            {t("common:CANCEL")}
           </Button>
           <Button size="default" onClick={handleAdd}>
-            Add
+            {t("common:ADD")}
           </Button>
         </DialogFooter>
       </DialogContent>

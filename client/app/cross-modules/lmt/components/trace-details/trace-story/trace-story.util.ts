@@ -1,5 +1,8 @@
 import type { FlowStep, TraceFlow } from "@blocks-lmt/utils/trace-flow.util";
 import { formatDurationMs } from "@blocks-lmt/utils";
+import { tStatic } from "@seliseblocks/genesis-os";
+
+const I18N_MODULE = "os.lmt";
 
 /**
  * Pure helpers behind the story waterfall: where each bar sits on the time axis, which step
@@ -23,7 +26,14 @@ export interface TraceTimeline {
   timings: StepTiming[];
 }
 
-export const plural = (count: number, noun: string) => `${count} ${noun}${count === 1 ? "" : "s"}`;
+const PLURAL_KEYS = {
+  step: "TRACE_STORY_UTIL.COUNT_STEP",
+  service: "TRACE_STORY_UTIL.COUNT_SERVICE",
+  "other step": "TRACE_STORY_UTIL.COUNT_OTHER_STEP",
+} as const;
+
+export const plural = (count: number, noun: keyof typeof PLURAL_KEYS) =>
+  tStatic(I18N_MODULE, PLURAL_KEYS[noun], { count });
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
@@ -150,7 +160,7 @@ export const buildServiceLevels = (flow: TraceFlow, parents: number[]): ServiceL
     const callerStart = parent >= 0 ? parseTime(flow.steps[parent].startTime) : null;
     const level: ServiceLevel = {
       id: levels.length,
-      service: services[i] || "Unknown service",
+      service: services[i] || tStatic(I18N_MODULE, "TRACE_FLOW_UTIL.UNKNOWN_SERVICE"),
       rootIndex: i,
       parentLevel: parent >= 0 ? levelOf[parent] : -1,
       enteredFrom: parent,
@@ -236,26 +246,49 @@ export const buildPlotLine = (flow: TraceFlow, labelOf: (id: string) => string):
   if (origin) {
     const where =
       origin.fromId === origin.toId
-        ? `${labelOf(origin.toId)} failed while running ${origin.tag}`
-        : `${labelOf(origin.fromId)} could not complete ${origin.tag} on ${labelOf(origin.toId)}`;
+        ? tStatic(I18N_MODULE, "TRACE_STORY_UTIL.FAILED_WHILE_RUNNING", {
+            service: labelOf(origin.toId),
+            tag: origin.tag,
+          })
+        : tStatic(I18N_MODULE, "TRACE_STORY_UTIL.COULD_NOT_COMPLETE", {
+            from: labelOf(origin.fromId),
+            tag: origin.tag,
+            to: labelOf(origin.toId),
+          });
     const reason = origin.errorMessage ? `: ${origin.errorMessage}` : "";
     const others = flow.errorCount - 1;
-    const spread = others > 0 ? ` ${plural(others, "other step")} failed because of it.` : "";
+    const spread =
+      others > 0
+        ? ` ${tStatic(I18N_MODULE, "TRACE_STORY_UTIL.OTHERS_FAILED_BECAUSE", { steps: plural(others, "other step") })}`
+        : "";
     return {
       tone: "error",
-      headline: `Error started in ${origin.serviceName || labelOf(origin.fromId)}:`,
+      headline: tStatic(I18N_MODULE, "TRACE_STORY_UTIL.ERROR_STARTED_IN", {
+        service: origin.serviceName || labelOf(origin.fromId),
+      }),
       detail: `${where}${reason}.${spread}`,
     };
   }
   const slowest = getSlowestStep(flow);
   const totalMs = flow.steps[0]?.durationMs ?? 0;
-  if (!slowest) return { tone: "ok", headline: "", detail: "Only one step was recorded." };
+  if (!slowest)
+    return {
+      tone: "ok",
+      headline: "",
+      detail: tStatic(I18N_MODULE, "TRACE_STORY_UTIL.ONLY_ONE_STEP_WAS_RECORDED"),
+    };
   const share =
-    totalMs > 0 ? ` · ${Math.round((slowest.durationMs / totalMs) * 100)}% of the request` : "";
+    totalMs > 0
+      ? ` · ${tStatic(I18N_MODULE, "TRACE_STORY_UTIL.PERCENT_OF_REQUEST", { percent: Math.round((slowest.durationMs / totalMs) * 100) })}`
+      : "";
   return {
     tone: "ok",
-    headline: "Slowest step:",
-    detail: `${slowest.tag} in ${slowest.serviceName || labelOf(slowest.fromId)} (${formatDurationMs(slowest.durationMs)}${share}).`,
+    headline: tStatic(I18N_MODULE, "TRACE_STORY_UTIL.SLOWEST_STEP"),
+    detail: tStatic(I18N_MODULE, "TRACE_STORY_UTIL.SLOWEST_STEP_DETAIL", {
+      tag: slowest.tag,
+      service: slowest.serviceName || labelOf(slowest.fromId),
+      duration: `${formatDurationMs(slowest.durationMs)}${share}`,
+    }),
   };
 };
 
