@@ -1,4 +1,7 @@
+import { tStatic } from "@seliseblocks/genesis-os";
 import { z } from "zod";
+
+const I18N_MODULE = "os.idp.permissions";
 
 export const addPermissionFormDefaultValue = {
   name: "",
@@ -14,19 +17,37 @@ export const addPermissionFormSchema = z
   .object({
     name: z
       .string()
-      .min(1, "Name is required")
-      .max(50, "Name must be at most 50 characters")
+      .min(1, { error: () => tStatic(I18N_MODULE, "ADD_PERMISSION_SCHEMA.NAME_REQUIRED") })
+      .max(50, { error: () => tStatic(I18N_MODULE, "ADD_PERMISSION_SCHEMA.NAME_MAX_50") })
       .trim(),
-    type: z.string().min(1, "Type is required"),
+    type: z.string().min(1, {
+      error: () => tStatic(I18N_MODULE, "ADD_PERMISSION_SCHEMA.TYPE_REQUIRED"),
+    }),
     resource: z
       .string()
-      .min(1, "Resource is required")
-      .max(50, "Resource must be at most 50 characters")
+      .min(1, {
+        error: () => tStatic(I18N_MODULE, "ADD_PERMISSION_SCHEMA.RESOURCE_REQUIRED"),
+      })
+      .max(50, {
+        error: () => tStatic(I18N_MODULE, "ADD_PERMISSION_SCHEMA.RESOURCE_MAX_50"),
+      })
       .trim()
-      .refine((s) => !s.includes(" "), "Resource can't contain spaces"),
-    resourceGroup: z.string().nonempty("Group is required").trim(),
+      .refine((s) => !s.includes(" "), {
+        error: () => tStatic(I18N_MODULE, "ADD_PERMISSION_SCHEMA.RESOURCE_NO_SPACES"),
+      }),
+    resourceGroup: z
+      .string()
+      .nonempty({
+        error: () => tStatic(I18N_MODULE, "ADD_PERMISSION_SCHEMA.GROUP_REQUIRED"),
+      })
+      .trim(),
     tags: z.string().array(),
-    description: z.string().max(150, "Description must be at most 150 characters").optional(),
+    description: z
+      .string()
+      .max(150, {
+        error: () => tStatic(I18N_MODULE, "ADD_PERMISSION_SCHEMA.DESCRIPTION_MAX_150"),
+      })
+      .optional(),
     dependentPermissions: z.array(z.string()),
   })
   .refine(
@@ -38,7 +59,7 @@ export const addPermissionFormSchema = z
       return true;
     },
     {
-      message: "Resource format should be service :: controller :: name",
+      error: () => tStatic(I18N_MODULE, "ADD_PERMISSION_SCHEMA.RESOURCE_FORMAT"),
       path: ["resource"],
     },
   );

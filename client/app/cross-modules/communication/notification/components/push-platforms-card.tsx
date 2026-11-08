@@ -14,6 +14,7 @@ import { APNS_HINT, PLATFORM_LABEL, PLATFORMS_TEXT } from "../constants/push-ui.
 import { deviceCountText, timeAgo } from "../utils/push-format";
 import { isApnsFailure, resultLabel } from "../utils/push-results";
 import { isPushReady } from "../hooks/use-push-settings";
+import { useNotificationT } from "../i18n";
 
 const ROW_GRID =
   "grid grid-cols-[110px_60px_90px_minmax(0,1fr)_auto] items-center gap-3 px-5 text-sm";
@@ -25,6 +26,7 @@ interface LastTestPillProps {
 }
 
 function LastTestPill({ platform, status, webReady }: Readonly<LastTestPillProps>) {
+  const { t } = useNotificationT();
   if (platform === "web" && !webReady) {
     return (
       <Badge variant="secondary" className="w-fit font-normal">
@@ -41,16 +43,17 @@ function LastTestPill({ platform, status, webReady }: Readonly<LastTestPillProps
     );
   }
   if (last.failed > 0) {
-    const reason = last.reason ? ` · ${resultLabel(last.reason)}` : "";
     return (
       <Badge variant="error" className="w-fit font-normal">
-        Failed{reason}
+        {last.reason
+          ? t("PUSH_PLATFORMS_CARD.LAST_TEST_FAILED_REASON", { reason: resultLabel(last.reason) })
+          : t("PUSH_PLATFORMS_CARD.LAST_TEST_FAILED")}
       </Badge>
     );
   }
   return (
     <Badge variant="success" className="w-fit font-normal">
-      Delivered · {timeAgo(last.at)}
+      {t("PUSH_PLATFORMS_CARD.LAST_TEST_DELIVERED", { time: timeAgo(last.at) })}
     </Badge>
   );
 }
@@ -80,6 +83,7 @@ function PlatformRow({
   onTest,
   children,
 }: Readonly<PlatformRowProps>) {
+  const { t } = useNotificationT();
   const label = PLATFORM_LABEL[platform];
   const reason = status?.[platform].lastTest?.reason;
   const failed = (status?.[platform].lastTest?.failed ?? 0) > 0;
@@ -91,7 +95,7 @@ function PlatformRow({
         <span className="font-semibold">{label}</span>
         <Switch
           size="sm"
-          aria-label={`${label} sending`}
+          aria-label={t("PUSH_PLATFORMS_CARD.SENDING_ARIA", { platform: label })}
           checked={checked}
           disabled={switchDisabled}
           onCheckedChange={onCheckedChange}
@@ -105,7 +109,7 @@ function PlatformRow({
           variant="outline"
           size="xs"
           disabled={testDisabled}
-          aria-label={`${PLATFORMS_TEXT.sendTest} ${label}`}
+          aria-label={t("PUSH_PLATFORMS_CARD.SEND_TEST_ARIA", { platform: label })}
           onClick={onTest}
         >
           {PLATFORMS_TEXT.sendTest}
@@ -150,6 +154,7 @@ export function PushPlatformsCard({
   onViewDevices,
   webPanel,
 }: Readonly<PushPlatformsCardProps>) {
+  const { t } = useNotificationT();
   const total = PUSH_PLATFORMS.reduce(
     (sum, platform) => sum + (status?.[platform].devices ?? 0),
     0,
@@ -169,7 +174,7 @@ export function PushPlatformsCard({
         </div>
         <div className="flex gap-2">
           <Button type="button" variant="outline" size="xs" onClick={onViewDevices}>
-            {PLATFORMS_TEXT.viewDevices} ({total})
+            {t("PUSH_PLATFORMS_CARD.VIEW_DEVICES_COUNT", { count: total })}
           </Button>
           <Button
             type="button"

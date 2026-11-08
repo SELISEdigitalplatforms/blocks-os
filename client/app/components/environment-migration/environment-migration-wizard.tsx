@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT, tStatic } from "@seliseblocks/genesis-os";
 import { X } from "lucide-react";
 import StepVerticalTrackBar from "@/components/stepper/vertical-track-bar";
 import StepHorizontalTrackBar from "@/components/stepper/horizontal-track-bar";
@@ -9,18 +9,21 @@ import { EnvironmentServiceSelectionForm } from "./environment-service-selection
 import { ReviewConfirmForm } from "./review-confirm-form";
 import { useDataMigrationFormState } from "./migration-form-state";
 
-const stepData: Steps = [
-  { id: 1, title: "Environments & services" },
-  { id: 2, title: "Review & confirm" },
+const I18N_MODULE = "os.environments";
+
+const getStepData = (): Steps => [
+  { id: 1, title: tStatic(I18N_MODULE, "ENVIRONMENT_MIGRATION_WIZARD.ENVIRONMENTS_SERVICES") },
+  { id: 2, title: tStatic(I18N_MODULE, "ENVIRONMENT_MIGRATION_WIZARD.REVIEW_CONFIRM") },
 ];
 
 export const EnvironmentMigrationWizard = () => (
-  <StepperProvider steps={stepData}>
+  <StepperProvider steps={getStepData()}>
     <EnvironmentMigrationWizardContent />
   </StepperProvider>
 );
 
 const EnvironmentMigrationWizardContent = () => {
+  const { t } = useT(I18N_MODULE);
   const { resetFormData } = useDataMigrationFormState();
   const { currentStep } = useStepper();
   const { selectedTenantGroup } = useProjectStore();
@@ -34,13 +37,19 @@ const EnvironmentMigrationWizardContent = () => {
         <div className="mt-16 flex-1 p-5">
           <div className="flex flex-col items-center justify-center md:hidden">
             <div className="flex gap-2">
-              <Link to={environmentsPath} onClick={resetFormData} aria-label="Close migration">
+              <Link
+                to={environmentsPath}
+                onClick={resetFormData}
+                aria-label={t("ENVIRONMENT_MIGRATION_WIZARD.CLOSE_MIGRATION")}
+              >
                 <X size={32} strokeWidth={1} />
               </Link>
-              <p className="mt-[2px] text-lg font-semibold">Environment migration</p>
+              <p className="mt-[2px] text-lg font-semibold">
+                {t("ENVIRONMENT_MIGRATION_WIZARD.ENVIRONMENT_MIGRATION")}
+              </p>
             </div>
             <p className="mb-7 mt-2 text-sm font-normal text-medium-emphasis">
-              Configure your source, target, and services to migrate.
+              {t("ENVIRONMENT_MIGRATION_WIZARD.CONFIGURE_YOUR_SOURCE_TARGET_AND")}
             </p>
             <StepHorizontalTrackBar />
           </div>
@@ -55,13 +64,19 @@ const EnvironmentMigrationWizardContent = () => {
         <div className="min-h-screen max-w-80 gap-5 bg-background p-5 pt-24 dark:bg-gray-900">
           <div className="mx-2 my-3">
             <div className="flex gap-2">
-              <Link to={environmentsPath} onClick={resetFormData} aria-label="Close migration">
+              <Link
+                to={environmentsPath}
+                onClick={resetFormData}
+                aria-label={t("ENVIRONMENT_MIGRATION_WIZARD.CLOSE_MIGRATION")}
+              >
                 <X size={32} strokeWidth={1} />
               </Link>
-              <p className="mt-[2px] text-lg font-semibold">Environment migration</p>
+              <p className="mt-[2px] text-lg font-semibold">
+                {t("ENVIRONMENT_MIGRATION_WIZARD.ENVIRONMENT_MIGRATION")}
+              </p>
             </div>
             <p className="mb-7 mt-2 text-sm font-normal text-medium-emphasis">
-              Configure your source, target, and services to migrate.
+              {t("ENVIRONMENT_MIGRATION_WIZARD.CONFIGURE_YOUR_SOURCE_TARGET_AND")}
             </p>
           </div>
           <StepVerticalTrackBar />

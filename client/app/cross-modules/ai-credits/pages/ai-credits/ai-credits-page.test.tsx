@@ -28,7 +28,7 @@ describe("AiCreditsPage", () => {
     expect(screen.getByText("Agents can run")).toBeTruthy();
     expect(screen.getByText("Free credits")).toBeTruthy();
     expect(screen.getByText("Voucher credits")).toBeTruthy();
-    expect(screen.getByText("2,300")).toBeTruthy();
+    expect(screen.getAllByText(/2,300/).length).toBeGreaterThan(0);
     expect(screen.getByText("11 Oct 2026 · 2,500 credits")).toBeTruthy();
   });
 

@@ -69,12 +69,14 @@ public class OsRepositoryDenialTests
         var repo = new MailTemplateRepository(StrictCollections(), Deny);
 
         (await repo.GetByIdAsync("1")).Should().BeNull();
-        (await repo.GetByNameAndLanguageAsync("n", "en")).Should().BeNull();
+        (await repo.GetByNameAndLanguageAsync("n", "en", "default")).Should().BeNull();
         var list = await repo.GetsAsync(new GetAllMailTemplatesRequest());
         list.TotalCount.Should().Be(0);
         list.Templates.Should().BeEmpty();
         await repo.DeleteAsync("1");
         await FluentActions.Invoking(() => repo.SaveAsync(new EmailTemplate { ItemId = "1" })).Should().ThrowAsync<UnauthorizedAccessException>();
+        await FluentActions.Invoking(() => repo.CountOutsideOrganizationAsync(new[] { "1" }, "default")).Should().ThrowAsync<UnauthorizedAccessException>();
+        await FluentActions.Invoking(() => repo.AssignConfigurationAsync("cfg", "default", new[] { "1" }, null, null)).Should().ThrowAsync<UnauthorizedAccessException>();
     }
 
     [Fact]
@@ -84,7 +86,7 @@ public class OsRepositoryDenialTests
 
         (await repo.GetMailConfigurationByIdAsync("1")).Should().BeNull();
         (await repo.GetMailConfigurationByNameAsync("n")).Should().BeNull();
-        (await repo.GetAllMailConfigurationsAsync()).Should().BeEmpty();
+        (await repo.GetAllMailConfigurationsAsync(null)).Should().BeEmpty();
         (await repo.GetMailConfigurationsBySecretReferenceAsync("ref")).Should().BeEmpty();
         await repo.UpdateMailSenderNameAsync("1", "s", DateTime.UtcNow, "u");
         await repo.DeleteMailConfigurationAsync("1");

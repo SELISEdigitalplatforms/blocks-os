@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { tStatic } from "@seliseblocks/genesis-os";
+
+const I18N_MODULE = "os.environments";
 
 export type MigrationServiceOption = {
   name: string;
@@ -7,53 +10,94 @@ export type MigrationServiceOption = {
   overrideData: boolean;
 };
 
-export const environmentServiceSelectionFormDefaultValue = {
+export const getEnvironmentServiceSelectionFormDefaultValue = () => ({
   sourceEnvironment: "",
   sourceEnvironmentName: "",
   targetEnvironment: "",
   targetEnvironmentName: "",
   services: [
-    { name: "Authentication", label: "Authentication", selected: false, overrideData: false },
+    {
+      name: "Authentication",
+      label: tStatic(I18N_MODULE, "MIGRATION_FORM_SCHEMA.AUTHENTICATION"),
+      selected: false,
+      overrideData: false,
+    },
     { name: "IAM", label: "IAM", selected: false, overrideData: false },
     { name: "MFA", label: "MFA", selected: false, overrideData: false },
-    { name: "CAPTCHA", label: "CAPTCHA", selected: false, overrideData: false },
-    { name: "Email", label: "Email", selected: false, overrideData: false },
-    { name: "DataGateway", label: "Data Gateway", selected: false, overrideData: false },
-    { name: "Notifications", label: "Notifications", selected: false, overrideData: false },
-    { name: "Storage", label: "Storage", selected: false, overrideData: false },
-    { name: "Language", label: "Localization", selected: false, overrideData: false },
+    {
+      name: "CAPTCHA",
+      label: tStatic(I18N_MODULE, "MIGRATION_FORM_SCHEMA.CAPTCHA"),
+      selected: false,
+      overrideData: false,
+    },
+    {
+      name: "Email",
+      label: tStatic(I18N_MODULE, "common:EMAIL"),
+      selected: false,
+      overrideData: false,
+    },
+    {
+      name: "DataGateway",
+      label: tStatic(I18N_MODULE, "MIGRATION_FORM_SCHEMA.DATA_GATEWAY"),
+      selected: false,
+      overrideData: false,
+    },
+    {
+      name: "Notifications",
+      label: tStatic(I18N_MODULE, "MIGRATION_FORM_SCHEMA.NOTIFICATIONS"),
+      selected: false,
+      overrideData: false,
+    },
+    {
+      name: "Storage",
+      label: tStatic(I18N_MODULE, "MIGRATION_FORM_SCHEMA.STORAGE"),
+      selected: false,
+      overrideData: false,
+    },
+    {
+      name: "Language",
+      label: tStatic(I18N_MODULE, "MIGRATION_FORM_SCHEMA.LOCALIZATION"),
+      selected: false,
+      overrideData: false,
+    },
   ] as MigrationServiceOption[],
-};
+});
 
 export const reviewConfirmFormDefaultValue = {
   confirmed: false,
 };
 
-export const environmentServiceSelectionFormSchema = z.object({
-  sourceEnvironment: z.string().min(1, "Source environment is required"),
-  sourceEnvironmentName: z.string(),
-  targetEnvironment: z.string().min(1, "Target environment is required"),
-  targetEnvironmentName: z.string(),
-  services: z
-    .array(
-      z.object({
-        name: z.string(),
-        label: z.string(),
-        selected: z.boolean(),
-        overrideData: z.boolean(),
+export const createEnvironmentServiceSelectionFormSchema = () =>
+  z.object({
+    sourceEnvironment: z
+      .string()
+      .min(1, tStatic(I18N_MODULE, "MIGRATION_FORM_SCHEMA.SOURCE_ENVIRONMENT_IS_REQUIRED")),
+    sourceEnvironmentName: z.string(),
+    targetEnvironment: z
+      .string()
+      .min(1, tStatic(I18N_MODULE, "MIGRATION_FORM_SCHEMA.TARGET_ENVIRONMENT_IS_REQUIRED")),
+    targetEnvironmentName: z.string(),
+    services: z
+      .array(
+        z.object({
+          name: z.string(),
+          label: z.string(),
+          selected: z.boolean(),
+          overrideData: z.boolean(),
+        }),
+      )
+      .refine((services) => services.some((service) => service.selected), {
+        message: tStatic(I18N_MODULE, "MIGRATION_FORM_SCHEMA.AT_LEAST_ONE_SERVICE_MUST"),
       }),
-    )
-    .refine((services) => services.some((service) => service.selected), {
-      message: "At least one service must be selected",
-    }),
-});
+  });
 
-export const migrationVerificationSchema = z.object({
-  verificationCode: z
-    .string()
-    .min(5, "Verification code must be 5 digits")
-    .max(5, "Verification code must be 5 digits"),
-});
+export const createMigrationVerificationSchema = () =>
+  z.object({
+    verificationCode: z
+      .string()
+      .min(5, tStatic(I18N_MODULE, "MIGRATION_FORM_SCHEMA.VERIFICATION_CODE_MUST_BE_5"))
+      .max(5, tStatic(I18N_MODULE, "MIGRATION_FORM_SCHEMA.VERIFICATION_CODE_MUST_BE_5")),
+  });
 
 export const MIGRATION_SERVICE_NAME_TO_ID: Record<string, number> = {
   Authentication: 0,

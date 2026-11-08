@@ -11,7 +11,7 @@ import {
 } from "@blocks-idp/iam/utils/user-account-state";
 import { Mail, User } from "lucide-react";
 import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { useMemo } from "react";
 
 const DEFAULT_ORGANIZATION_ID = "default";
@@ -70,6 +70,7 @@ const isoToRange = (fromStr: string, toStr: string): DateRange => ({
 });
 
 export const UsersSearchFilter = () => {
+  const { t } = useT("os.idp.users");
   const { queryParams, setQueryParams } = useUsersFilterQueryParams();
 
   const changeHandler = (key: string, value: unknown) => {
@@ -102,7 +103,7 @@ export const UsersSearchFilter = () => {
           type: "DropdownSearchInput",
           label: "",
           props: {
-            placeholder: "Minimum 3 characters…",
+            placeholder: t("USERS_FILTER_TOOLBAR.SEARCH_PLACEHOLDER"),
             className: {
               selectContent: "min-w-fit",
               SelectItem: "[&>*:first-child]:hidden flex justify-center px-2",
@@ -130,6 +131,7 @@ export const UsersSearchFilter = () => {
 };
 
 export const UsersDateFilters = () => {
+  const { t } = useT("os.idp.users");
   const { queryParams, setQueryParams } = useUsersFilterQueryParams();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data: orgConfig } = useGetOrganizationConfig(tenantId);
@@ -243,7 +245,7 @@ export const UsersDateFilters = () => {
               {
                 key: "organizationIds" as const,
                 type: "MultiSelect" as const,
-                label: "Organizations",
+                label: t("USERS_FILTER_TOOLBAR.FILTER_ORGANIZATIONS"),
                 props: {
                   options: organizationOptions,
                   disabled: isOrganizationsLoading,
@@ -260,7 +262,7 @@ export const UsersDateFilters = () => {
               {
                 key: "roles" as const,
                 type: "MultiSelect" as const,
-                label: "Roles",
+                label: t("USERS_FILTER_TOOLBAR.FILTER_ROLES"),
                 props: {
                   options: roleOptions,
                   disabled: isRoleSelectionWaitingForOrganizations || isRolesLoading,
@@ -271,25 +273,25 @@ export const UsersDateFilters = () => {
         {
           key: "accountStates",
           type: "MultiSelect",
-          label: "Status",
+          label: t("USERS_FILTER_TOOLBAR.FILTER_STATUS"),
           props: { options: USER_ACCOUNT_STATE_FILTER_OPTIONS },
         },
         {
           key: "joinedOn",
           type: "DateRange",
-          label: "Created On",
+          label: t("USERS_FILTER_TOOLBAR.FILTER_CREATED_ON"),
           props: { numberOfMonths: 1 },
         },
         {
           key: "lastLogin",
           type: "DateRange",
-          label: "Last login",
+          label: t("USERS_FILTER_TOOLBAR.FILTER_LAST_LOGIN"),
           props: { numberOfMonths: 1 },
         },
         {
           key: "lastUpdatedDate",
           type: "DateRange",
-          label: "Last updated",
+          label: t("USERS_FILTER_TOOLBAR.FILTER_LAST_UPDATED"),
           props: { numberOfMonths: 1 },
         },
       ]}
@@ -315,7 +317,7 @@ export const UsersDateFilters = () => {
       onChange={changeHandler}
       onReset={resetHandler}
       displayMode="sheet"
-      sheetTriggerLabel="Filters"
+      sheetTriggerLabel={t("USERS_FILTER_TOOLBAR.FILTERS")}
     />
   );
 };

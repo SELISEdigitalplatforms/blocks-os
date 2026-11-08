@@ -11,7 +11,10 @@ const h = vi.hoisted(() => ({
   configure: vi.fn(),
 }));
 
-vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
+  ...mockProjectStoreFactory(),
+}));
 vi.mock("@/components/ui-kits/tooltip/tooltip", () => import("@/test-utils/__mocks__/tooltip.mock"));
 vi.mock("@blocks-idp/data-access/gateway/hooks/use-configuration", () => ({
   useGetPolicyData: () => ({

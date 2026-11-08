@@ -3,10 +3,11 @@ import {
   AUDIENCE_LEVEL,
   NOTIFICATION_SCOPE,
   NOTIFICATION_TEXT,
-  OWNER_ONLY_LABEL,
+  ownerOnlyLabel,
   RECEIVER_OPTIONS,
   SEND_TO_LABELS,
 } from "../constants/notification-ui.constant";
+import { tn } from "../i18n";
 import { effectiveAudience } from "./notification-form";
 
 /** "blocks-iam" reads as "iam": every built-in service carries the same prefix. */
@@ -21,7 +22,7 @@ export const sendToLabel = (row: INotificationConfigRow): string =>
 
 /** "Targeted: owner + done by + 4 picked" — the two ticks and the users, roles and permissions picked. */
 export const receiversLabel = (row: INotificationConfigRow): string => {
-  if (row.audienceLocked) return OWNER_ONLY_LABEL;
+  if (row.audienceLocked) return ownerOnlyLabel();
   const audience = effectiveAudience(row);
   const level = audience?.level ?? AUDIENCE_LEVEL.AffectedOnly;
   if (level === AUDIENCE_LEVEL.AllUsers) return RECEIVER_OPTIONS[0].label;
@@ -35,10 +36,10 @@ export const receiversLabel = (row: INotificationConfigRow): string => {
   const parts = [
     owner ? NOTIFICATION_TEXT.eventOwner : "",
     level === AUDIENCE_LEVEL.Selected && audience?.alsoDoneBy ? NOTIFICATION_TEXT.doneByShort : "",
-    count > 0 ? `${count} ${NOTIFICATION_TEXT.picked}` : "",
+    count > 0 ? tn("NOTIFICATION_LABELS.PICKED", { count }) : "",
   ].filter(Boolean);
   return parts.length > 0
-    ? `${NOTIFICATION_TEXT.targeted}: ${parts.join(" + ")}`
+    ? tn("NOTIFICATION_LABELS.TARGETED_WITH", { parts: parts.join(" + ") })
     : NOTIFICATION_TEXT.targeted;
 };
 

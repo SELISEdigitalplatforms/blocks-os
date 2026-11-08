@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui-kits/button/button";
+import { useT } from "@seliseblocks/genesis-os";
 import { ChevronRight } from "lucide-react";
 
 import type { AccessPreset } from "../../utils/access-presets";
@@ -19,10 +20,12 @@ export function AccessPresetList({
   onApply: (preset: AccessPreset) => void;
   onStartBlank: () => void;
 }>) {
+  const { t } = useT("os.idp.gateway");
+
   return (
     <div className="space-y-2">
       <p className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground/70">
-        Sample rule set
+        {t("ACCESS_PRESET_LIST.SAMPLE_RULE_SET")}
       </p>
       {presets.map((preset) => (
         <button
@@ -32,12 +35,8 @@ export function AccessPresetList({
           className="flex w-full items-center gap-3 rounded-md border border-border/50 px-3 py-2.5 text-left transition-colors hover:border-primary/40 hover:bg-accent/40"
         >
           <span className="min-w-0 flex-1">
-            <span className="block text-xs font-semibold text-foreground">
-              {preset.title}
-            </span>
-            <span className="mt-0.5 block text-[11px] text-muted-foreground">
-              {preset.hint}
-            </span>
+            <span className="block text-xs font-semibold text-foreground">{preset.title}</span>
+            <span className="mt-0.5 block text-[11px] text-muted-foreground">{preset.hint}</span>
           </span>
           <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
         </button>
@@ -50,9 +49,8 @@ export function AccessPresetList({
         className="h-8 w-full text-xs text-muted-foreground"
         onClick={onStartBlank}
       >
-        Start from an empty rule set
+        {t("ACCESS_PRESET_LIST.START_EMPTY")}
       </Button>
     </div>
   );
 }
-

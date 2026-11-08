@@ -7,7 +7,7 @@ import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-
 import { IProject } from "@/models/project.model";
 import { useGetProjectStatus, useRestoreProject } from "@/hooks/use-project";
 import { useProjectPermissions } from "@/hooks/use-project-access";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { useStartImpersonation } from "@seliseblocks/genesis-os/hooks";
 import {
   Tooltip,
@@ -15,7 +15,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
-import { isErrorWithErrors, showErrorToast, showSuccessToast } from "@seliseblocks/genesis-os/utils";
+import {
+  isErrorWithErrors,
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/genesis-os/utils";
 import { environmentOptions } from "@/constants/environment-options";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { MaskedText } from "@/components/masked-text";
@@ -33,6 +37,7 @@ export const EnvironmentCard = ({
   isMigrationFailed,
   className,
 }: EnvironmentCardProps) => {
+  const { t } = useT("os.environments");
   const navigate = useNavigate();
   const { setSelectedProject } = useProjectStore();
   const { mutateAsync: startImpersonation } = useStartImpersonation();
@@ -101,8 +106,8 @@ export const EnvironmentCard = ({
       const res = await restoreProject({ itemId: project.itemId });
       if (res.isSuccess) {
         showSuccessToast({
-          title: "Environment repair",
-          description: "Setup has been re-triggered for this environment.",
+          title: t("ENVIRONMENT_CARD.ENVIRONMENT_REPAIR"),
+          description: t("ENVIRONMENT_CARD.SETUP_HAS_BEEN_RE_TRIGGERED"),
         });
         setIsRestoreOpen(false);
       } else {
@@ -135,11 +140,11 @@ export const EnvironmentCard = ({
                     <TooltipTrigger asChild>
                       <AlertTriangle
                         className="h-4 w-4 cursor-pointer text-icon-warning"
-                        aria-label="Migration failed"
+                        aria-label={t("ENVIRONMENT_CARD.MIGRATION_FAILED")}
                       />
                     </TooltipTrigger>
                     <TooltipContent className="border-none bg-neutral-500 text-white shadow-none">
-                      Migration failed
+                      {t("ENVIRONMENT_CARD.MIGRATION_FAILED")}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -151,7 +156,7 @@ export const EnvironmentCard = ({
                       <Hourglass className="h-4 w-4 cursor-pointer text-icon-warning" />
                     </TooltipTrigger>
                     <TooltipContent className="border-none bg-neutral-500 text-white shadow-none">
-                      Migration in progress
+                      {t("ENVIRONMENT_CARD.MIGRATION_IN_PROGRESS")}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -160,15 +165,19 @@ export const EnvironmentCard = ({
           </CardTitle>
           <div className="flex items-center gap-1">
             {setupPending && (
-              <Badge variant="warning" className="gap-1" aria-label="Setup pending">
+              <Badge
+                variant="warning"
+                className="gap-1"
+                aria-label={t("ENVIRONMENT_CARD.SETUP_PENDING")}
+              >
                 <AlertTriangle className="h-3 w-3" />
-                Setup not finished
+                {t("ENVIRONMENT_CARD.SETUP_NOT_FINISHED")}
               </Badge>
             )}
             {statusChecking && (
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                 <Loader2 className="h-3 w-3 animate-spin" />
-                Checking setup…
+                {t("ENVIRONMENT_CARD.CHECKING_SETUP")}
               </span>
             )}
             {setupComplete && (
@@ -180,7 +189,7 @@ export const EnvironmentCard = ({
             the card does not have, and contributors got no button at all. Say it on the card. */}
         {statusFailed && (
           <div className="mt-3 flex items-center justify-between gap-2 rounded-sm border border-warning-200 bg-warning-50 p-3 text-xs text-warning-900">
-            <p>Couldn&apos;t check the setup status of this environment.</p>
+            <p>{t("ENVIRONMENT_CARD.COULDN_T_CHECK_THE_SETUP")}</p>
             <button
               type="button"
               onClick={(e) => {
@@ -191,13 +200,13 @@ export const EnvironmentCard = ({
               className="inline-flex h-6 shrink-0 items-center gap-1 rounded-full bg-secondary px-2 text-xs font-medium text-secondary-foreground transition-colors hover:bg-secondary/80 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {isStatusFetching && <Loader2 className="h-3 w-3 animate-spin" />}
-              Retry
+              {t("common:RETRY")}
             </button>
           </div>
         )}
         {setupPending && (
           <div className="mt-3 flex flex-col gap-2 rounded-sm border border-warning-200 bg-warning-50 p-3 text-xs text-warning-900">
-            <p>Setup of this environment did not finish, so it can&apos;t be opened yet.</p>
+            <p>{t("ENVIRONMENT_CARD.SETUP_OF_THIS_ENVIRONMENT_DID")}</p>
             {canRepair ? (
               <Dialog open={isRestoreOpen} onOpenChange={setIsRestoreOpen}>
                 <DialogTrigger asChild>
@@ -206,14 +215,16 @@ export const EnvironmentCard = ({
                     onClick={(e) => e.stopPropagation()}
                     disabled={isRestoring}
                     className="inline-flex h-6 items-center gap-1 rounded-full bg-secondary px-2 text-xs font-medium text-secondary-foreground transition-colors hover:bg-secondary/80 disabled:cursor-not-allowed disabled:opacity-70"
-                    aria-label="Repair environment"
+                    aria-label={t("ENVIRONMENT_CARD.REPAIR_ENVIRONMENT")}
                   >
                     {isRestoring ? (
                       <Loader2 className="h-3 w-3 animate-spin" />
                     ) : (
                       <Wrench className="h-3 w-3" />
                     )}
-                    <span>{isRestoring ? "Repairing…" : "Repair"}</span>
+                    <span>
+                      {isRestoring ? t("ENVIRONMENT_CARD.REPAIRING") : t("ENVIRONMENT_CARD.REPAIR")}
+                    </span>
                     {isRestoring && (
                       <span
                         className="ml-0.5 h-1 w-8 overflow-hidden rounded-full bg-secondary-foreground/20"
@@ -228,20 +239,20 @@ export const EnvironmentCard = ({
                   onCancel={() => setIsRestoreOpen(false)}
                   onConfirm={handleRestoreConfirm}
                   data={{
-                    dialogTitle: "Repair this environment?",
+                    dialogTitle: t("ENVIRONMENT_CARD.REPAIR_THIS_ENVIRONMENT"),
                     dialogSubtitle: (
                       <>
-                        <p>Setup hasn&apos;t completed for this environment.</p>
-                        <p>This will re-run the setup for this environment.</p>
+                        <p>{t("ENVIRONMENT_CARD.SETUP_HASN_T_COMPLETED_FOR")}</p>
+                        <p>{t("ENVIRONMENT_CARD.THIS_WILL_RE_RUN_THE")}</p>
                       </>
                     ),
-                    confirmButton: "Repair",
+                    confirmButton: t("ENVIRONMENT_CARD.REPAIR"),
                   }}
                   buttonState={{ confirm: { disable: isRestoring } }}
                 />
               </Dialog>
             ) : (
-              <p className="text-warning-700">Ask the project owner to run Repair.</p>
+              <p className="text-warning-700">{t("ENVIRONMENT_CARD.ASK_THE_PROJECT_OWNER_TO")}</p>
             )}
           </div>
         )}
@@ -252,7 +263,9 @@ export const EnvironmentCard = ({
         <dl className="mt-3 flex flex-col gap-1.5 text-xs">
           {primaryDomain && (
             <div className="flex items-center gap-2">
-              <dt className="w-[86px] shrink-0 text-muted-foreground">Domain</dt>
+              <dt className="w-[86px] shrink-0 text-muted-foreground">
+                {t("ENVIRONMENT_CARD.DOMAIN")}
+              </dt>
               <dd className="flex min-w-0 items-center gap-1.5">
                 <span className="truncate">{primaryDomain}</span>
                 {extraDomains > 0 && (
@@ -264,7 +277,9 @@ export const EnvironmentCard = ({
             </div>
           )}
           <div className="flex items-center gap-2">
-            <dt className="w-[86px] shrink-0 text-muted-foreground">X-Blocks-Key</dt>
+            <dt className="w-[86px] shrink-0 text-muted-foreground">
+              {t("ENVIRONMENT_CARD.X_BLOCKS_KEY")}
+            </dt>
             <dd
               className="flex min-w-0 items-center gap-1 font-mono text-muted-foreground"
               onClick={(event) => event.stopPropagation()}
@@ -276,8 +291,12 @@ export const EnvironmentCard = ({
           </div>
           {project.createdDate && (
             <div className="flex items-center gap-2">
-              <dt className="w-[86px] shrink-0 text-muted-foreground">Created</dt>
-              <dd className="truncate text-muted-foreground">{formatDate(new Date(project.createdDate))}</dd>
+              <dt className="w-[86px] shrink-0 text-muted-foreground">
+                {t("ENVIRONMENT_CARD.CREATED")}
+              </dt>
+              <dd className="truncate text-muted-foreground">
+                {formatDate(new Date(project.createdDate))}
+              </dd>
             </div>
           )}
         </dl>
@@ -287,11 +306,10 @@ export const EnvironmentCard = ({
           onCancel={() => setIsConfirmationOpen(false)}
           onConfirm={handleConfirm}
           data={{
-            dialogTitle: "Environment Migration in Progress",
-            dialogSubtitle:
-              "This environment is currently migrating. Any changes now may cause incomplete data or service interruptions. Proceed only if necessary.",
-            confirmButton: "Continue Anyway",
-            cancelButton: "Cancel",
+            dialogTitle: t("ENVIRONMENT_CARD.ENVIRONMENT_MIGRATION_IN_PROGRESS"),
+            dialogSubtitle: t("ENVIRONMENT_CARD.THIS_ENVIRONMENT_IS_CURRENTLY"),
+            confirmButton: t("ENVIRONMENT_CARD.CONTINUE_ANYWAY"),
+            cancelButton: t("common:CANCEL"),
           }}
         />
       )}

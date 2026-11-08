@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { IGetMailBoxMailResponse, IMailBoxMailContent } from "./email";
 import {
   getAuthenticationOptions,
   getFixedTransport,
@@ -138,5 +139,45 @@ describe("MailStatus enum", () => {
 
   it("contains exactly the six known statuses", () => {
     expect(Object.values(MailStatus)).toHaveLength(6);
+  });
+});
+
+describe("mailbox details contract", () => {
+  it("carries the source length and the too-large flag instead of the raw MIME", () => {
+    const content: IMailBoxMailContent = {
+      htmlBody: null,
+      textBody: null,
+      cc: null,
+      replyTo: null,
+      attachments: [],
+      rawMimeLength: 8_388_609,
+      previewTooLarge: true,
+    };
+    const response: IGetMailBoxMailResponse = {
+      mail: {
+        itemId: "row-1",
+        messageId: "m-1",
+        subject: "big",
+        from: "a@example.com",
+        to: "b@example.com",
+        body: "",
+        status: "Received",
+        error: "",
+        date: "2026-11-03T00:00:00Z",
+        rawMime: null,
+      },
+      content,
+      errors: null,
+      isSuccess: true,
+    };
+    expect(response.content?.rawMimeLength).toBe(8_388_609);
+    expect(response.content?.previewTooLarge).toBe(true);
+    expect(response.mail.rawMime).toBeNull();
+  });
+
+  it("keeps the fields optional for an API that does not send them", () => {
+    const content: IMailBoxMailContent = { attachments: [] };
+    expect(content.rawMimeLength).toBeUndefined();
+    expect(content.previewTooLarge).toBeUndefined();
   });
 });

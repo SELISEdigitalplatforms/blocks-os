@@ -3,6 +3,7 @@ import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
+import { useT } from "@seliseblocks/genesis-os";
 import { useAdminResetPassword } from "@blocks-idp/iam/hooks/use-account";
 
 type UserResetPasswordProps = {
@@ -12,11 +13,8 @@ type UserResetPasswordProps = {
 };
 
 // Uses the protected admin reset (no captcha), not the public forgot-password flow.
-export const UserResetPassword = ({
-  userId,
-  open,
-  setOpen,
-}: Readonly<UserResetPasswordProps>) => {
+export const UserResetPassword = ({ userId, open, setOpen }: Readonly<UserResetPasswordProps>) => {
+  const { t } = useT("os.idp.users");
   const { mutateAsync, isPending } = useAdminResetPassword();
 
   const onClickHandler = async () => {
@@ -24,8 +22,7 @@ export const UserResetPassword = ({
       const res = await mutateAsync({ userId });
       if (res.isSuccess) {
         showSuccessToast({
-          description:
-            "Password reset email has been sent. Please check your email",
+          description: t("USER_RESET_PASSWORD.SUCCESS"),
         });
         setOpen(false);
       } else {
@@ -35,7 +32,7 @@ export const UserResetPassword = ({
       if (isErrorWithErrors(error)) {
         showErrorToast({ errors: error.errors });
       } else {
-        showErrorToast({ errors: "Something went wrong" });
+        showErrorToast({ errors: t("USER_RESET_PASSWORD.SOMETHING_WENT_WRONG") });
       }
     }
   };
@@ -46,10 +43,9 @@ export const UserResetPassword = ({
         onCancel={() => setOpen(false)}
         onConfirm={onClickHandler}
         data={{
-          dialogTitle: "Reset password",
-          dialogSubtitle:
-            "Are you sure you want to reset the password for this user?",
-          confirmButton: "Reset",
+          dialogTitle: t("USER_RESET_PASSWORD.DIALOG_TITLE"),
+          dialogSubtitle: t("USER_RESET_PASSWORD.DIALOG_SUBTITLE"),
+          confirmButton: t("USER_RESET_PASSWORD.CONFIRM"),
         }}
         buttonState={{
           confirm: { disable: isPending },

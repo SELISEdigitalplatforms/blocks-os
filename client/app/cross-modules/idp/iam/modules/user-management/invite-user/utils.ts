@@ -1,4 +1,7 @@
+import { tStatic } from "@seliseblocks/genesis-os";
 import { z } from "zod";
+
+const tr = (key: string) => tStatic("os.idp.users", key);
 
 export const inviteUserFormDefaultValue = {
   email: "",
@@ -12,16 +15,18 @@ export const buildInviteUserFormSchema = (isMultiOrgEnabled: boolean) =>
     email: z
       .string()
       .trim()
-      .min(1, "Email is required")
-      .check(z.email("Please enter a valid email address")),
+      .min(1, tr("INVITE_USER_UTILS.EMAIL_REQUIRED"))
+      .check(z.email(tr("INVITE_USER_UTILS.EMAIL_INVALID"))),
     organizationIds: isMultiOrgEnabled
       ? z
           // zod 3's default message, kept so the form reads the same after the zod 4 upgrade.
-          .array(z.string().min(1, "String must contain at least 1 character(s)"))
-          .min(1, "Please select an organization")
+          .array(z.string().min(1, tr("INVITE_USER_UTILS.ORGANIZATION_ID_MIN_LENGTH")))
+          .min(1, tr("INVITE_USER_UTILS.ORGANIZATION_REQUIRED"))
       : z.array(z.string()).optional(),
     roles: z.array(z.object({ slug: z.string() })),
     permissions: z.array(z.object({ resource: z.string() })),
   });
 
+// Used for the form value type and tests; the form itself calls the builder at render time
+// so messages follow the current language.
 export const inviteUserFormSchema = buildInviteUserFormSchema(true);

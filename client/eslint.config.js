@@ -5,6 +5,7 @@ import prettier from "eslint-config-prettier";
 import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
 import globals from "globals";
+import { hardcodedTextExemptFiles, noHardcodedTextRule } from "@seliseblocks/genesis-os/eslint";
 
 export default [
   { ignores: ["node_modules/**", "dist/**", "coverage/**"] },
@@ -104,6 +105,21 @@ export default [
           format: null,
         },
       ],
+
+      // No hard-coded user-facing text: visible JSX text and the placeholder/title/alt/aria-label
+      // attributes must come from an i18n key (useT/tStatic) in the owning module's .en.json, so the
+      // localization service can serve every language the project enables. The shared rule from
+      // @seliseblocks/genesis-os/eslint flags only text with at least two lowercase letters, which
+      // leaves acronyms and symbols alone. A genuinely non-translatable token (product name, code
+      // identifier) takes an eslint-disable comment with a reason.
+      "no-restricted-syntax": noHardcodedTextRule,
+    },
+  },
+  {
+    // Tests, stories and test helpers render fixture text, not product UI.
+    files: [...hardcodedTextExemptFiles],
+    rules: {
+      "no-restricted-syntax": "off",
     },
   },
   prettier,

@@ -28,7 +28,7 @@ test.describe("flows", () => {
       await verifyEmptyStateFlow(page);
     });
 
-    await test.step("Add Configuration opens the New notification form", async () => {
+    await test.step("Add notification opens the New notification form", async () => {
       await openAddNotificationDialogFlow(page);
     });
 
@@ -36,13 +36,13 @@ test.describe("flows", () => {
       await verifySaveDisabledFlow(page);
     });
 
-    await test.step("Strict validation: event name length, Send to, channels and rate limit", async () => {
+    await test.step("Strict validation: event name length, Audience, channels and rate limit", async () => {
       await verifyNameAndNotifyMethodValidationFlow(page);
     });
 
     const configName = `Flow Notif ${Date.now()}`;
 
-    await test.step("Fill a valid event name, All users, in-app + inbox, then save", async () => {
+    await test.step("Fill a valid event name, All users, in-app + offline, then save", async () => {
       await fillAndSaveNotificationConfigFlow(page, configName);
     });
 

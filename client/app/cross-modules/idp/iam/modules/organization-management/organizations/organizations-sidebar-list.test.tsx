@@ -380,7 +380,7 @@ describe("OrganizationsSidebarList", () => {
     );
 
     await user.click(screen.getByLabelText("Filter organizations"));
-    const activeCheckbox = (await screen.findByText("active"))
+    const activeCheckbox = (await screen.findByText("Active"))
       .previousElementSibling as HTMLElement;
     await user.click(activeCheckbox);
 

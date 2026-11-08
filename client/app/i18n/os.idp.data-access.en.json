@@ -1,0 +1,14 @@
+{
+  "DATA_ACCESS_PAGE.BACK_TO_LIST": "Back to schema list",
+  "DATA_ACCESS_PAGE.BULK_RULES": "Bulk rules",
+  "DATA_ACCESS_PAGE.CONTEXT_FIELD_ON": "Field on {{schema}}",
+  "DATA_ACCESS_PAGE.CONTEXT_SCHEMA_ACCESS": "Schema access",
+  "DATA_ACCESS_PAGE.DESCRIPTION": "Platform collections of IAM, OS, Logic, Release and Monitor, and who may view, create, edit and delete them.",
+  "DATA_ACCESS_PAGE.SHEET_DESCRIPTION_ACCESS": "Who may view, create, edit or delete this schema or property.",
+  "DATA_ACCESS_PAGE.SHEET_DESCRIPTION_RULES": "Validation rules or the default value of this property.",
+  "DATA_ACCESS_PAGE.SHEET_TITLE_ACCESS": "Access",
+  "DATA_ACCESS_PAGE.SHEET_TITLE_RULES": "Rules",
+  "DATA_ACCESS_PAGE.TITLE": "Data Access",
+  "SCHEMA_PANEL.SELECT_HINT": "Select a schema from the list to view its properties and access.",
+  "SCHEMA_PANEL.TITLE": "Schema"
+}

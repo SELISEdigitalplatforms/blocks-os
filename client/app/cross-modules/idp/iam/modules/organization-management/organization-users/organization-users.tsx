@@ -2,7 +2,7 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui-kits/
 import { OrganizationUsersTable } from "./organization-users-table";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { useGetUsers } from "@blocks-idp/iam/hooks/use-user";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import {
   OrganizationUsersFilterToolbar,
   useOrganizationUsersFilterQueryParams,
@@ -22,6 +22,7 @@ export const OrganizationUsers = ({
   description,
   action,
 }: OrganizationUsersProps) => {
+  const { t } = useT("os.idp.organizations");
   const { queryParams, setQueryParams } = useOrganizationUsersFilterQueryParams();
   const { sortQueryParams } = useOrganizationUsersSortQueryParams();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
@@ -82,7 +83,7 @@ export const OrganizationUsers = ({
               const size = queryParams.pageSize;
               const start = total === 0 ? 0 : queryParams.page * size + 1;
               const end = Math.min(total, (queryParams.page + 1) * size);
-              return `Showing ${start}–${end} of ${total} members`;
+              return t("ORGANIZATION_USERS.SHOWING", { start, end, total });
             })()}
           </span>
           <Pagination

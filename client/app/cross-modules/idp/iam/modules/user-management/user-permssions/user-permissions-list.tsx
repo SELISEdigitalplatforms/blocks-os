@@ -1,6 +1,7 @@
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import { X } from "lucide-react";
+import { useT } from "@seliseblocks/genesis-os";
 
 interface UserPermissionsListProps {
   permissions: IPermission[];
@@ -32,6 +33,8 @@ export const UserPermissionsList = ({
   isLoading,
   onRemovePermission,
 }: UserPermissionsListProps) => {
+  const { t } = useT("os.idp.users");
+
   if (isLoading) {
     return <LoadingSkelton />;
   }
@@ -59,7 +62,7 @@ export const UserPermissionsList = ({
                     type="button"
                     className="flex h-7 w-7 items-center justify-center rounded-md bg-secondary transition-colors hover:bg-secondary/80"
                     onClick={() => onRemovePermission(item.resource)}
-                    aria-label="Remove role"
+                    aria-label={t("USER_PERMISSIONS_LIST.REMOVE_ROLE")}
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -70,7 +73,7 @@ export const UserPermissionsList = ({
         </div>
       ) : (
         <div className="flex h-24 items-center justify-center text-muted-foreground">
-          No permission found
+          {t("USER_PERMISSIONS_LIST.NO_PERMISSION_FOUND")}
         </div>
       )}
     </>

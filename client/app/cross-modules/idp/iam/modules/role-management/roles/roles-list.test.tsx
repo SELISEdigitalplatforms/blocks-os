@@ -222,7 +222,7 @@ describe("RolesList", () => {
     render(<RolesList roles={[role]} isLoading={false} />);
     expect(screen.getByText("Administrator")).toBeTruthy();
     expect(screen.getByText("administrator")).toBeTruthy();
-    expect(screen.getByText("7")).toBeTruthy();
+    expect(screen.getByText("7 permissions")).toBeTruthy();
     expect(screen.getByText("Full access role")).toBeTruthy();
   });
 

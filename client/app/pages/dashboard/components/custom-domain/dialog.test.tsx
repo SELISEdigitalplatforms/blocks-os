@@ -80,7 +80,7 @@ describe("SetCustomDomainDialog", () => {
     expect(screen.getByTestId("verified-count").textContent).toBe("2");
     // Matches despite protocol/case/trailing-slash differences.
     expect(screen.getByTestId("default-domain").textContent).toBe("app.example.com");
-    expect(screen.getByText("web")).toBeTruthy();
+    expect(screen.getByText(/Choose a verified domain to assign to web/)).toBeTruthy();
   });
 
   it("submits the chosen domain and reports success then closes", async () => {

@@ -264,7 +264,7 @@ namespace XUnitTest.Integration
             await repo.SaveMailConfigurationAsync(config);
 
             (await repo.GetMailConfigurationByIdAsync("m-" + tag))!.Name.Should().Be("mail-" + tag);
-            (await repo.GetAllMailConfigurationsAsync()).Should().Contain(c => c.ItemId == "m-" + tag);
+            (await repo.GetAllMailConfigurationsAsync(null)).Should().Contain(c => c.ItemId == "m-" + tag);
 
             await repo.DeleteMailConfigurationAsync("m-" + tag);
             (await repo.GetMailConfigurationByIdAsync("m-" + tag)).Should().BeNull();

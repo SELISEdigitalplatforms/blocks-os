@@ -11,6 +11,7 @@ import {
 } from "@/components/ui-kits/dialog/dialog";
 import { TRACE_REQUEST_SOURCE_TYPE } from "@blocks-lmt/constants/trace.constant";
 import { Loader2 } from "lucide-react";
+import { useT } from "@seliseblocks/genesis-os";
 
 interface CancelRestoreDialogProps {
   open: boolean;
@@ -31,33 +32,35 @@ export function CancelRestoreDialog({
   isPending,
   onConfirm,
 }: CancelRestoreDialogProps) {
+  const { t } = useT("os.lmt");
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[460px]">
         <DialogHeader>
-          <DialogTitle>Cancel {sourceType.toLowerCase()} trace request?</DialogTitle>
+          <DialogTitle>
+            {t("CANCEL_RESTORE_DIALOG.CANCEL_TRACE_REQUEST", { value1: sourceType.toLowerCase() })}
+          </DialogTitle>
           <DialogDescription>
-            This stops the retrieval that is currently running.
+            {t("CANCEL_RESTORE_DIALOG.THIS_STOPS_THE_RETRIEVAL_THAT")}
           </DialogDescription>
         </DialogHeader>
 
-        <Banner variant="warning" title="This cannot be undone">
-          Any traces and logs restored so far will be discarded. You can submit a new request
-          straight away.
+        <Banner variant="warning" title={t("CANCEL_RESTORE_DIALOG.THIS_CANNOT_BE_UNDONE")}>
+          {t("CANCEL_RESTORE_DIALOG.ANY_TRACES_AND_LOGS_RESTORED")}
         </Banner>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
-            Keep Running
+            {t("CANCEL_RESTORE_DIALOG.KEEP_RUNNING")}
           </Button>
           <Button variant="destructive" onClick={() => void onConfirm()} disabled={isPending}>
             {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Cancelling
+                {t("CANCEL_RESTORE_DIALOG.CANCELLING")}
               </>
             ) : (
-              "Cancel Request"
+              t("CANCEL_RESTORE_DIALOG.CANCEL_REQUEST")
             )}
           </Button>
         </DialogFooter>

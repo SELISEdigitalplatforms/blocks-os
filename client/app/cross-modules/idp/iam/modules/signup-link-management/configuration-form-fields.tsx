@@ -22,7 +22,7 @@ import { ClientCredentialPermissionsSection } from "@blocks-idp/authentication/c
 import { ClientCredentialRolesSection } from "@blocks-idp/authentication/components/create-client-credential/client-credential-roles-section";
 import { useGetAuthOidcCredentials } from "@blocks-idp/authentication/hooks/use-auth-oidc";
 import { IOidcConfig } from "@blocks-idp/authentication/models/auth.oidc.model";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { useEffect, useMemo } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { SignupLinkConfigurationFormValues } from "./configuration-form-schema";
@@ -37,8 +37,6 @@ type Props = {
 /** The red marker the rest of the console uses on mandatory fields. */
 const Required = () => <span className="text-destructive"> *</span>;
 
-const UNREGISTERED_CLIENT_HINT = "Register as a Blocks OIDC identity provider first";
-
 /**
  * A link finishes at /idp/callback through the identity provider that "Register as a Blocks OIDC
  * identity provider" creates for the client, so a client without it is shown but cannot be
@@ -47,6 +45,7 @@ const UNREGISTERED_CLIENT_HINT = "Register as a Blocks OIDC identity provider fi
 const isRegisteredProvider = (client: IOidcConfig) => client.registerAsIdentityProvider === true;
 
 export const ConfigurationFormFields = ({ form, formLevelError, isPending = false }: Props) => {
+  const { t } = useT("os.idp.signup-links");
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const mode = form.watch("mode");
   const selectedClientId = form.watch("clientId");
@@ -62,7 +61,9 @@ export const ConfigurationFormFields = ({ form, formLevelError, isPending = fals
   // leaving them out means the rejection never has to happen.
   const clients = useMemo(() => {
     const raw = oidcData?.oIDCClientCredentials;
-    const list = Array.isArray(raw) ? raw : raw ? [raw] : [];
+    let list: IOidcConfig[] = [];
+    if (Array.isArray(raw)) list = raw;
+    else if (raw) list = [raw];
     return list.filter((client) => client.isActive && !client.isDeviceFlowClient);
   }, [oidcData?.oIDCClientCredentials]);
 
@@ -75,11 +76,9 @@ export const ConfigurationFormFields = ({ form, formLevelError, isPending = fals
   // produces "RedirectUri is not registered for this client" after a round trip.
   const redirectOptions = useMemo(() => {
     if (!selectedClient) return [];
-    const uris = selectedClient.redirectUris?.length
-      ? selectedClient.redirectUris
-      : selectedClient.redirectUri
-        ? [selectedClient.redirectUri]
-        : [];
+    let uris: string[] = [];
+    if (selectedClient.redirectUris?.length) uris = selectedClient.redirectUris;
+    else if (selectedClient.redirectUri) uris = [selectedClient.redirectUri];
     return [...new Set(uris.filter(Boolean))];
   }, [selectedClient]);
 
@@ -110,11 +109,11 @@ export const ConfigurationFormFields = ({ form, formLevelError, isPending = fals
         render={({ field }) => (
           <FormItem>
             <FormLabel>
-              Name
+              {t("common:NAME")}
               <Required />
             </FormLabel>
             <FormControl>
-              <Input {...field} placeholder="Partner onboarding" />
+              <Input {...field} placeholder={t("CONFIGURATION_FORM_FIELDS.NAME_PLACEHOLDER")} />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -126,9 +125,12 @@ export const ConfigurationFormFields = ({ form, formLevelError, isPending = fals
         control={form.control}
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Description</FormLabel>
+            <FormLabel>{t("common:DESCRIPTION")}</FormLabel>
             <FormControl>
-              <Textarea {...field} placeholder="Optional description" />
+              <Textarea
+                {...field}
+                placeholder={t("CONFIGURATION_FORM_FIELDS.DESCRIPTION_PLACEHOLDER")}
+              />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -141,13 +143,13 @@ export const ConfigurationFormFields = ({ form, formLevelError, isPending = fals
         render={({ field }) => (
           <FormItem>
             <FormLabel>
-              Mode
+              {t("CONFIGURATION_FORM_FIELDS.MODE_LABEL")}
               <Required />
             </FormLabel>
             <Select onValueChange={field.onChange} value={field.value}>
               <FormControl>
                 <SelectTrigger data-testid="mode-select">
-                  <SelectValue placeholder="Select mode" />
+                  <SelectValue placeholder={t("CONFIGURATION_FORM_FIELDS.MODE_PLACEHOLDER")} />
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
@@ -156,14 +158,16 @@ export const ConfigurationFormFields = ({ form, formLevelError, isPending = fals
                     that registration is exactly what this mode depends on. "Construct" is
                     left out of both labels: whoever is authoring an invitation is thinking
                     about their app, not about what the platform calls it. */}
-                <SelectItem value="Oidc">Blocks OIDC</SelectItem>
-                <SelectItem value="Embedded">Embedded</SelectItem>
+                <SelectItem value="Oidc">{t("CONFIGURATION_FORM_FIELDS.MODE_OIDC")}</SelectItem>
+                <SelectItem value="Embedded">
+                  {t("CONFIGURATION_FORM_FIELDS.MODE_EMBEDDED")}
+                </SelectItem>
               </SelectContent>
             </Select>
             <FormDescription>
               {field.value === "Embedded"
-                ? "Your app hosts the join page and receives the session directly. No OIDC client needed."
-                : "The invitee signs in through the application you pick below. Choose this if your app uses Blocks-hosted sign-in."}
+                ? t("CONFIGURATION_FORM_FIELDS.MODE_DESCRIPTION_EMBEDDED")
+                : t("CONFIGURATION_FORM_FIELDS.MODE_DESCRIPTION_OIDC")}
             </FormDescription>
             <FormMessage />
           </FormItem>
@@ -178,14 +182,18 @@ export const ConfigurationFormFields = ({ form, formLevelError, isPending = fals
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  Client
+                  {t("CONFIGURATION_FORM_FIELDS.CLIENT_LABEL")}
                   <Required />
                 </FormLabel>
                 <Select onValueChange={field.onChange} value={field.value || ""}>
                   <FormControl>
                     <SelectTrigger data-testid="client-select">
                       <SelectValue
-                        placeholder={clientsLoading ? "Loading clients…" : "Select an OIDC client"}
+                        placeholder={
+                          clientsLoading
+                            ? t("CONFIGURATION_FORM_FIELDS.CLIENTS_LOADING")
+                            : t("CONFIGURATION_FORM_FIELDS.CLIENT_PLACEHOLDER")
+                        }
                       />
                     </SelectTrigger>
                   </FormControl>
@@ -204,7 +212,7 @@ export const ConfigurationFormFields = ({ form, formLevelError, isPending = fals
                           {!registered && (
                             <span className="text-muted-foreground">
                               {" "}
-                              — {UNREGISTERED_CLIENT_HINT}
+                              — {t("CONFIGURATION_FORM_FIELDS.UNREGISTERED_CLIENT_HINT")}
                             </span>
                           )}
                         </SelectItem>
@@ -215,13 +223,15 @@ export const ConfigurationFormFields = ({ form, formLevelError, isPending = fals
                     {field.value &&
                       !clients.some((c) => c.itemId === field.value && isRegisteredProvider(c)) && (
                         <SelectItem value={field.value}>
-                          {selectedClient?.clientDisplayName || field.value} (unavailable)
+                          {t("CONFIGURATION_FORM_FIELDS.CLIENT_UNAVAILABLE", {
+                            name: selectedClient?.clientDisplayName || field.value,
+                          })}
                         </SelectItem>
                       )}
                   </SelectContent>
                 </Select>
                 <FormDescription>
-                  The application the invitee is signed in to when they open the link.
+                  {t("CONFIGURATION_FORM_FIELDS.CLIENT_DESCRIPTION")}
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -234,14 +244,16 @@ export const ConfigurationFormFields = ({ form, formLevelError, isPending = fals
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  Redirect URI
+                  {t("CONFIGURATION_FORM_FIELDS.REDIRECT_URI_LABEL")}
                   <Required />
                 </FormLabel>
                 {redirectOptions.length > 0 ? (
                   <Select onValueChange={field.onChange} value={field.value || ""}>
                     <FormControl>
                       <SelectTrigger data-testid="redirect-select">
-                        <SelectValue placeholder="Select a registered redirect URI" />
+                        <SelectValue
+                          placeholder={t("CONFIGURATION_FORM_FIELDS.REDIRECT_URI_PLACEHOLDER")}
+                        />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -251,19 +263,24 @@ export const ConfigurationFormFields = ({ form, formLevelError, isPending = fals
                         </SelectItem>
                       ))}
                       {field.value && !redirectOptions.includes(field.value) && (
-                        <SelectItem value={field.value}>{field.value} (unregistered)</SelectItem>
+                        <SelectItem value={field.value}>
+                          {t("CONFIGURATION_FORM_FIELDS.REDIRECT_URI_UNREGISTERED", {
+                            uri: field.value,
+                          })}
+                        </SelectItem>
                       )}
                     </SelectContent>
                   </Select>
                 ) : (
                   <FormControl>
+                    {/* eslint-disable-next-line no-restricted-syntax -- example callback URL */}
                     <Input {...field} placeholder="https://example.com/callback" />
                   </FormControl>
                 )}
                 <FormDescription>
                   {selectedClient
-                    ? "Must be one of this client's registered redirect URIs."
-                    : "Choose a client first to list its registered redirect URIs."}
+                    ? t("CONFIGURATION_FORM_FIELDS.REDIRECT_URI_DESCRIPTION")
+                    : t("CONFIGURATION_FORM_FIELDS.REDIRECT_URI_CHOOSE_CLIENT")}
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -278,13 +295,15 @@ export const ConfigurationFormFields = ({ form, formLevelError, isPending = fals
           control={form.control}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Join URL</FormLabel>
+              <FormLabel>{t("CONFIGURATION_FORM_FIELDS.JOIN_URL_LABEL")}</FormLabel>
               <FormControl>
-                <Input {...field} placeholder="https://app.example.com/join (optional)" />
+                <Input
+                  {...field}
+                  placeholder={t("CONFIGURATION_FORM_FIELDS.JOIN_URL_PLACEHOLDER")}
+                />
               </FormControl>
               <FormDescription>
-                Where your construct hosts its join screen. Used only to build the link handed back
-                at generation — leave it empty to compose the link yourself.
+                {t("CONFIGURATION_FORM_FIELDS.JOIN_URL_DESCRIPTION")}
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -297,11 +316,16 @@ export const ConfigurationFormFields = ({ form, formLevelError, isPending = fals
         control={form.control}
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Forwarded path</FormLabel>
+            <FormLabel>{t("CONFIGURATION_FORM_FIELDS.FORWARDED_PATH_LABEL")}</FormLabel>
             <FormControl>
-              <Input {...field} placeholder="/welcome (optional)" />
+              <Input
+                {...field}
+                placeholder={t("CONFIGURATION_FORM_FIELDS.FORWARDED_PATH_PLACEHOLDER")}
+              />
             </FormControl>
-            <FormDescription>Where inside the application the invitee lands.</FormDescription>
+            <FormDescription>
+              {t("CONFIGURATION_FORM_FIELDS.FORWARDED_PATH_DESCRIPTION")}
+            </FormDescription>
             <FormMessage />
           </FormItem>
         )}
@@ -313,18 +337,24 @@ export const ConfigurationFormFields = ({ form, formLevelError, isPending = fals
         render={({ field }) => (
           <FormItem>
             <FormLabel>
-              Credential mode
+              {t("CONFIGURATION_FORM_FIELDS.CREDENTIAL_MODE_LABEL")}
               <Required />
             </FormLabel>
             <Select onValueChange={field.onChange} value={field.value}>
               <FormControl>
                 <SelectTrigger data-testid="credential-mode-select">
-                  <SelectValue placeholder="Select credential mode" />
+                  <SelectValue
+                    placeholder={t("CONFIGURATION_FORM_FIELDS.CREDENTIAL_MODE_PLACEHOLDER")}
+                  />
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
-                <SelectItem value="Passwordless">Passwordless</SelectItem>
-                <SelectItem value="PasswordRequired">Password required</SelectItem>
+                <SelectItem value="Passwordless">
+                  {t("CONFIGURATION_FORM_FIELDS.CREDENTIAL_MODE_PASSWORDLESS")}
+                </SelectItem>
+                <SelectItem value="PasswordRequired">
+                  {t("CONFIGURATION_FORM_FIELDS.CREDENTIAL_MODE_PASSWORD_REQUIRED")}
+                </SelectItem>
               </SelectContent>
             </Select>
             <FormMessage />
@@ -338,7 +368,7 @@ export const ConfigurationFormFields = ({ form, formLevelError, isPending = fals
           control={form.control}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>After activation</FormLabel>
+              <FormLabel>{t("CONFIGURATION_FORM_FIELDS.AFTER_ACTIVATION_LABEL")}</FormLabel>
               <div className="flex items-start gap-2">
                 <FormControl>
                   <Checkbox
@@ -353,11 +383,11 @@ export const ConfigurationFormFields = ({ form, formLevelError, isPending = fals
                   htmlFor="signInAfterActivation"
                   className="cursor-pointer text-sm text-high-emphasis"
                 >
-                  Sign the invitee in once they set their password
+                  {t("CONFIGURATION_FORM_FIELDS.AFTER_ACTIVATION_CHECKBOX")}
                 </label>
               </div>
               <FormDescription>
-                Otherwise they finish on the sign-in screen and type the password they just chose.
+                {t("CONFIGURATION_FORM_FIELDS.AFTER_ACTIVATION_DESCRIPTION")}
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -378,11 +408,10 @@ export const ConfigurationFormFields = ({ form, formLevelError, isPending = fals
             <div className="flex items-center justify-between gap-4 rounded-sm border p-3">
               <div className="space-y-0.5">
                 <FormLabel className="text-sm">
-                  Existing users must confirm their password
+                  {t("CONFIGURATION_FORM_FIELDS.EXISTING_PASSWORD_LABEL")}
                 </FormLabel>
                 <FormDescription className="text-xs">
-                  When on, someone who already has an account must enter their password before an
-                  invitation link signs them in.
+                  {t("CONFIGURATION_FORM_FIELDS.EXISTING_PASSWORD_DESCRIPTION")}
                 </FormDescription>
               </div>
               <FormControl>
@@ -407,10 +436,9 @@ export const ConfigurationFormFields = ({ form, formLevelError, isPending = fals
           variant="warning"
           className="mb-0"
           compact={false}
-          title="Existing users won't be asked for a password"
+          title={t("CONFIGURATION_FORM_FIELDS.EXISTING_PASSWORD_WARNING_TITLE")}
         >
-          Anyone who can generate links from this configuration will be able to sign in as an
-          existing user without their password.
+          {t("CONFIGURATION_FORM_FIELDS.EXISTING_PASSWORD_WARNING_BODY")}
         </Banner>
       )}
 
@@ -420,7 +448,7 @@ export const ConfigurationFormFields = ({ form, formLevelError, isPending = fals
         render={({ field }) => (
           <FormItem>
             <FormLabel>
-              Lifetime (minutes)
+              {t("CONFIGURATION_FORM_FIELDS.LIFETIME_LABEL")}
               <Required />
             </FormLabel>
             <FormControl>
@@ -439,7 +467,7 @@ export const ConfigurationFormFields = ({ form, formLevelError, isPending = fals
                 }}
               />
             </FormControl>
-            <FormDescription>Between 5 and 10080 (7 days).</FormDescription>
+            <FormDescription>{t("CONFIGURATION_FORM_FIELDS.LIFETIME_DESCRIPTION")}</FormDescription>
             <FormMessage />
           </FormItem>
         )}
@@ -450,20 +478,20 @@ export const ConfigurationFormFields = ({ form, formLevelError, isPending = fals
         control={form.control}
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Max redemptions</FormLabel>
+            <FormLabel>{t("CONFIGURATION_FORM_FIELDS.MAX_REDEMPTIONS_LABEL")}</FormLabel>
             <FormControl>
               <Input
                 type="text"
                 inputMode="numeric"
                 data-testid="default-max-redemptions"
-                placeholder="1 (single use)"
+                placeholder={t("CONFIGURATION_FORM_FIELDS.MAX_REDEMPTIONS_PLACEHOLDER")}
                 {...field}
                 value={field.value ?? ""}
                 disabled={isPending}
               />
             </FormControl>
             <FormDescription>
-              Leave empty for single use. 0 = unlimited until the link expires.
+              {t("CONFIGURATION_FORM_FIELDS.MAX_REDEMPTIONS_DESCRIPTION")}
             </FormDescription>
             <FormMessage />
           </FormItem>
@@ -478,13 +506,13 @@ export const ConfigurationFormFields = ({ form, formLevelError, isPending = fals
             <ClientCredentialRolesSection
               selectedSlugs={field.value}
               onChange={field.onChange}
-              label="Default roles"
+              label={t("CONFIGURATION_FORM_FIELDS.DEFAULT_ROLES_LABEL")}
               // Not marked required: a configuration may grant no roles by default and rely
               // on the generating service to supply them per link.
               required={false}
-              description="Granted to the invitee unless the service generating the link sends its own."
-              emptyTitle="No default roles"
-              emptyHint="Links from this configuration will grant only what the caller sends"
+              description={t("CONFIGURATION_FORM_FIELDS.DEFAULT_ROLES_DESCRIPTION")}
+              emptyTitle={t("CONFIGURATION_FORM_FIELDS.DEFAULT_ROLES_EMPTY_TITLE")}
+              emptyHint={t("CONFIGURATION_FORM_FIELDS.DEFAULT_ROLES_EMPTY_HINT")}
             />
             <FormMessage />
           </FormItem>
@@ -500,8 +528,8 @@ export const ConfigurationFormFields = ({ form, formLevelError, isPending = fals
               selectedResources={field.value}
               onChange={field.onChange}
               maxPermissions={50}
-              label="Default permissions"
-              description="Granted alongside the roles above unless the caller sends its own."
+              label={t("CONFIGURATION_FORM_FIELDS.DEFAULT_PERMISSIONS_LABEL")}
+              description={t("CONFIGURATION_FORM_FIELDS.DEFAULT_PERMISSIONS_DESCRIPTION")}
             />
             <FormMessage />
           </FormItem>

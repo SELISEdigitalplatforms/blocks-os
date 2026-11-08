@@ -10,9 +10,10 @@ const h = vi.hoisted(() => ({
   showSuccessToast: vi.fn(),
 }));
 
-vi.mock("@seliseblocks/genesis-os", () => {
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => {
   const Passthrough = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
   return {
+    ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
     useProjectStore: () => ({ selectedProject: { tenantId: "t1" } }),
     // the ui-kit tooltip re-exports these from blocks-kit
     Tooltip: Passthrough,
@@ -30,8 +31,8 @@ vi.mock("@/hooks/use-toast", () => ({
   showErrorToast: h.showErrorToast,
   showSuccessToast: h.showSuccessToast,
 }));
-vi.mock("../create-oidc/create-oidc", () => ({
-  CreateOIDC: () => <button type="button">edit-oidc</button>,
+vi.mock("../oidc-client-page/oidc-client-edit-link", () => ({
+  OidcClientEditLink: () => <button type="button">edit-oidc</button>,
 }));
 
 import { OIDCCard } from "./oidc-card";

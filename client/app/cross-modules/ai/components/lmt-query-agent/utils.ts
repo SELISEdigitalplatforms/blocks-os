@@ -1,16 +1,18 @@
 import { z } from "zod";
 import { parseSSEEvent, parseSSEBuffer } from "@blocks-ai/shared/utils/parse-sse";
+import { tStatic } from "@seliseblocks/genesis-os";
 
 export { parseSSEEvent, parseSSEBuffer };
 
-export const lmtQueryAgentSchema = z.object({
-  query: z
-    .string()
-    .trim()
-    .nonempty({ message: "Query is required" })
-    .max(500, { message: "Query must not exceed 500 characters" }),
-});
-export type LmtQueryAgentForm = z.infer<typeof lmtQueryAgentSchema>;
+export const createLmtQueryAgentSchema = () =>
+  z.object({
+    query: z
+      .string()
+      .trim()
+      .nonempty({ message: tStatic("os.ai", "UTILS.QUERY_IS_REQUIRED") })
+      .max(500, { message: tStatic("os.ai", "UTILS.QUERY_MUST_NOT_EXCEED_500") }),
+  });
+export type LmtQueryAgentForm = z.infer<ReturnType<typeof createLmtQueryAgentSchema>>;
 
 export const lmtQueryAgentFormDefaultValue: LmtQueryAgentForm = {
   query: "",

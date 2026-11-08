@@ -6,6 +6,7 @@ import { formatDate } from "@/lib/utils";
 import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
 import { Separator } from "@/components/ui-kits/separator/separator";
 import { MouseEvent, useState } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 type DateRangeType = { from?: Date; to?: Date } | null;
 interface DateRangeFilterProps {
   label: string;
@@ -14,6 +15,7 @@ interface DateRangeFilterProps {
   numberOfMonths?: number;
 }
 export function DateRange({ label, value, onChange, numberOfMonths }: DateRangeFilterProps) {
+  const { t } = useT("os.shared");
   const isMobile = useIsMobile();
   const [open, setOpen] = useState<boolean>(false);
   const [date, setDate] = useState<DateRangeType>(value);
@@ -72,10 +74,10 @@ export function DateRange({ label, value, onChange, numberOfMonths }: DateRangeF
         />
         <div className="flex items-center gap-4 px-3 pb-4">
           <Button type="button" variant="outline" className="w-full" onClick={resetBtnHandler}>
-            Reset
+            {t("common:RESET")}
           </Button>
           <Button type="button" className="w-full" onClick={applyBtnHandler}>
-            Apply
+            {t("common:APPLY")}
           </Button>
         </div>
       </PopoverContent>

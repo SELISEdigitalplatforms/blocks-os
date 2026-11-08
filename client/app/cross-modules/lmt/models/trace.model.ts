@@ -1,3 +1,5 @@
+import { tStatic } from "@seliseblocks/genesis-os";
+
 export interface IIssue {
   icon: string;
   description: string;
@@ -40,11 +42,11 @@ export const getTraceStatus = (trace: { attributes?: IAttributes; status?: strin
 
   switch (trace.status) {
     case "Error":
-      return { label: "Error", variant: "error" as const };
+      return { label: tStatic("os.lmt", "common:ERROR"), variant: "error" as const };
     case "Ok":
       return { label: "OK", variant: "success" as const };
     default:
-      return { label: "Unknown", variant: "secondary" as const };
+      return { label: tStatic("os.lmt", "TRACE_MODEL.UNKNOWN"), variant: "secondary" as const };
   }
 };
 

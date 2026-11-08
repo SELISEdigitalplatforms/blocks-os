@@ -9,6 +9,7 @@ using Configuration.DomainService.Mail.RequestModel;
 using Blocks.Genesis.Entities.Data;
 using Blocks.Genesis.Entities.Os;
 using Os.DataAccess;
+using Configuration.DomainService.Organizations;
 
 namespace Configuration.DomainService.Shared.Services
 {
@@ -191,7 +192,10 @@ namespace Configuration.DomainService.Shared.Services
             var update = Builders<MailServerConfiguration>.Update
                 .Set(mc => mc.SenderName, senderName)
                 .Set(mc => mc.LastUpdatedDate, lastUpdatedDate)
-                .Set(mc => mc.LastUpdatedBy, lastUpdatedBy);
+                .Set(mc => mc.LastUpdatedBy, lastUpdatedBy)
+                // The project default belongs to the Default organization; a document stored before
+                // organizations has no element, and saving it writes one.
+                .Set(mc => mc.OrganizationId, OrganizationIds.Default);
 
             var editFilter = await _dataAccess.EditFilterAsync(OsSchemas.MailServerConfiguration, filter, "ConfigurationRepository.UpdateMailSenderNameAsync");
             if (editFilter is null)
@@ -241,10 +245,104 @@ namespace Configuration.DomainService.Shared.Services
             return scope.Granted ? scope.ForView(await scope.Apply(collection).FirstOrDefaultAsync()) : default!;
         }
 
-        public async Task<List<MailServerConfiguration>> GetAllMailConfigurationsAsync()
+        public async Task ClearOtherOrganizationDefaultsAsync(string organizationId, string keepConfigurationId, DateTime savedAt)
         {
             var collection = _dbContextProvider.GetCollection<MailServerConfiguration>(_mailConfigurationCollectionName);
-            var scope = await _dataAccess.ReadAsync(OsSchemas.MailServerConfiguration, FilterDefinition<MailServerConfiguration>.Empty, "ConfigurationRepository.GetAllMailConfigurationsAsync");
+            var builder = Builders<MailServerConfiguration>.Filter;
+
+            // MongoDB keeps milliseconds, so compare at that precision or a tie never matches.
+            savedAt = new DateTime(savedAt.Ticks - (savedAt.Ticks % TimeSpan.TicksPerMillisecond), savedAt.Kind);
+            var marked = builder.And(OfOrganization(organizationId), builder.Eq(mc => mc.IsOrganizationDefault, true));
+            var update = Builders<MailServerConfiguration>.Update.Set(mc => mc.IsOrganizationDefault, false);
+
+            // One update for the whole organization. Saves are ordered by (LastUpdatedDate, ItemId), so
+            // of two saves racing to be the default the later one wins, and a tie still has a winner.
+            if (!await ClearDefaultsAsync(collection, builder.And(marked, OrderedBefore(keepConfigurationId, savedAt)), update))
+            {
+                return;
+            }
+
+            // A slower save stamped earlier can land after this one's clear. Whoever finishes last
+            // sees both marks here and clears every mark ordered before the latest one; a save landing
+            // meanwhile that is later still is left alone and settles the organization itself.
+            var scope = await _dataAccess.ReadAsync(OsSchemas.MailServerConfiguration, marked, "ConfigurationRepository.ClearOtherOrganizationDefaultsAsync", useProjection: false);
+            if (!scope.Granted)
+            {
+                return;
+            }
+
+            var defaults = await scope.Apply(collection).ToListAsync();
+            if (defaults.Count > 1)
+            {
+                var latest = defaults
+                    .OrderByDescending(mc => mc.LastUpdatedDate)
+                    .ThenByDescending(mc => mc.ItemId, StringComparer.Ordinal)
+                    .First();
+                await ClearDefaultsAsync(collection, builder.And(marked, OrderedBefore(latest.ItemId, latest.LastUpdatedDate)), update);
+            }
+        }
+
+        /// <summary>Configurations saved before the given one: earlier, or at the same millisecond with a smaller id.</summary>
+        private static FilterDefinition<MailServerConfiguration> OrderedBefore(string itemId, DateTime savedAt)
+        {
+            var builder = Builders<MailServerConfiguration>.Filter;
+            return builder.And(
+                builder.Ne(mc => mc.ItemId, itemId),
+                builder.Or(
+                    builder.Lt(mc => mc.LastUpdatedDate, savedAt),
+                    builder.And(builder.Eq(mc => mc.LastUpdatedDate, savedAt), builder.Lt(mc => mc.ItemId, itemId))));
+        }
+
+        private async Task<bool> ClearDefaultsAsync(
+            IMongoCollection<MailServerConfiguration> collection,
+            FilterDefinition<MailServerConfiguration> filter,
+            UpdateDefinition<MailServerConfiguration> update)
+        {
+            var editFilter = await _dataAccess.EditFilterAsync(OsSchemas.MailServerConfiguration, filter, "ConfigurationRepository.ClearOtherOrganizationDefaultsAsync");
+            if (editFilter is null)
+            {
+                return false;
+            }
+
+            await _dataAccess.CheckUpdateAsync(OsSchemas.MailServerConfiguration, update, "ConfigurationRepository.ClearOtherOrganizationDefaultsAsync");
+            await collection.UpdateManyAsync(editFilter, update);
+            return true;
+        }
+
+        /// <summary>
+        /// The organization's configurations. For the Default organization that includes documents
+        /// stored without an organization: a missing element matches <c>null</c>.
+        /// </summary>
+        private static FilterDefinition<MailServerConfiguration> OfOrganization(string organizationId) =>
+            OrganizationIds.Normalize(organizationId) == OrganizationIds.Default
+                ? Builders<MailServerConfiguration>.Filter.In(mc => mc.OrganizationId, OrganizationIds.StoredDefaultValues)
+                : Builders<MailServerConfiguration>.Filter.Eq(mc => mc.OrganizationId, organizationId);
+
+        public async Task<List<MailServerConfiguration>> GetAllMailConfigurationsAsync(string? organizationId)
+        {
+            var collection = _dbContextProvider.GetCollection<MailServerConfiguration>(_mailConfigurationCollectionName);
+
+            // One query for the organization and the Default organization together, which every
+            // organization shares.
+            FilterDefinition<MailServerConfiguration> filter;
+            if (organizationId is null)
+            {
+                filter = FilterDefinition<MailServerConfiguration>.Empty;
+            }
+            else if (OrganizationIds.Normalize(organizationId) == OrganizationIds.Default)
+            {
+                filter = OfOrganization(OrganizationIds.Default);
+            }
+            else
+            {
+                filter = Builders<MailServerConfiguration>.Filter.Or(OfOrganization(organizationId), OfOrganization(OrganizationIds.Default));
+            }
+
+            // Unprojected: the projection lists the fields of the project's stored schema document,
+            // and documents created before IsOrganizationDefault existed don't list it, which would
+            // load every configuration as not the default. ForView below still clears what a column
+            // rule hides from the caller.
+            var scope = await _dataAccess.ReadAsync(OsSchemas.MailServerConfiguration, filter, "ConfigurationRepository.GetAllMailConfigurationsAsync", useProjection: false);
             if (!scope.Granted)
             {
                 return new List<MailServerConfiguration>();

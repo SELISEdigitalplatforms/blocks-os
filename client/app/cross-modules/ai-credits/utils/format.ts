@@ -1,4 +1,8 @@
 import { ILastTopUp } from "../models/ai-credits.model";
+import { tStatic } from "@seliseblocks/genesis-os";
+import { uiDateLocale } from "@/lib/ui-locale";
+
+const I18N_MODULE = "os.ai-credits";
 
 const creditFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 
@@ -8,26 +12,45 @@ export const formatCredits = (value: number): string => creditFormat.format(valu
 export const percentOf = (part: number, whole: number): number =>
   whole > 0 ? Math.min(100, Math.max(0, (part / whole) * 100)) : 0;
 
+/** Date format follows the chosen UI language (English keeps the day-month order used so far). */
+const dateLocale = () => uiDateLocale();
+
 export const formatShortDate = (iso: string): string =>
-  new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  new Date(iso).toLocaleDateString(dateLocale(), { day: "numeric", month: "short" });
 
 export const formatLongDate = (iso: string): string =>
-  new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  new Date(iso).toLocaleDateString(dateLocale(), {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 
 const STATE_LABELS: Record<ILastTopUp["state"], string> = {
-  Created: "Waiting for payment",
-  CheckoutOpen: "Waiting for payment",
-  Paid: "Paid",
-  Failed: "Failed",
-  Cancelled: "Cancelled",
-  Expired: "Expired",
+  get Created() {
+    return tStatic(I18N_MODULE, "FORMAT.WAITING_FOR_PAYMENT");
+  },
+  get CheckoutOpen() {
+    return tStatic(I18N_MODULE, "FORMAT.WAITING_FOR_PAYMENT");
+  },
+  get Paid() {
+    return tStatic(I18N_MODULE, "FORMAT.PAID");
+  },
+  get Failed() {
+    return tStatic(I18N_MODULE, "FORMAT.FAILED");
+  },
+  get Cancelled() {
+    return tStatic(I18N_MODULE, "FORMAT.CANCELLED");
+  },
+  get Expired() {
+    return tStatic(I18N_MODULE, "FORMAT.EXPIRED");
+  },
 };
 
 export const describeLastTopUp = (lastTopUp: ILastTopUp | null): string => {
-  if (!lastTopUp) return "None yet";
+  if (!lastTopUp) return tStatic(I18N_MODULE, "FORMAT.NONE_YET");
   const when = lastTopUp.createdDate ? `${formatLongDate(lastTopUp.createdDate)} · ` : "";
   if (lastTopUp.state === "Paid" && lastTopUp.creditsGranted != null)
-    return `${when}${formatCredits(lastTopUp.creditsGranted)} credits`;
+    return `${when}${tStatic(I18N_MODULE, "FORMAT.CREDITS_AMOUNT", { amount: formatCredits(lastTopUp.creditsGranted) })}`;
   return `${when}${STATE_LABELS[lastTopUp.state] ?? lastTopUp.state}`;
 };
 

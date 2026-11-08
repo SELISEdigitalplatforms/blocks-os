@@ -85,6 +85,12 @@ export const OS_FEATURES = [
     spec: "tests/02-secrets-and-configs/09-email-flow.spec.ts",
   },
   {
+    id: "email-assign-templates",
+    name: "Secrets & Configs — Email, assign templates (#734)",
+    enabled: true,
+    spec: "tests/02-secrets-and-configs/15-assign-templates-734.spec.ts",
+  },
+  {
     id: "notification",
     name: "Secrets & Configs — Notification",
     enabled: true,
@@ -102,6 +108,24 @@ export const OS_FEATURES = [
     name: "Email Management",
     enabled: true,
     spec: "tests/03-email-management/email-management-flow.spec.ts",
+  },
+  {
+    id: "mail-template-subject",
+    name: "Email Management — template subject required (#726)",
+    enabled: true,
+    spec: "tests/03-email-management/mail-template-subject-726.spec.ts",
+  },
+  {
+    id: "email-template-copy",
+    name: "Email Management — copy a Default template to organizations (#735)",
+    enabled: true,
+    spec: "tests/03-email-management/copy-to-organizations-735.spec.ts",
+  },
+  {
+    id: "email-template-delete-across",
+    name: "Email Management — delete a Default template across organizations (#736)",
+    enabled: true,
+    spec: "tests/03-email-management/delete-across-organizations-736.spec.ts",
   },
 
   // Identity & Access (sidebar submenu order)

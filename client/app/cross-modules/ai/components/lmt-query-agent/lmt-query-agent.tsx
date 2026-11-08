@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   lmtQueryAgentFormDefaultValue,
   LmtQueryAgentForm,
-  lmtQueryAgentSchema,
+  createLmtQueryAgentSchema,
   parseSSEBuffer,
   generateMessageId,
   getTimestampOrNow,
@@ -19,6 +19,7 @@ import { LMTQueryAgentChatInput } from "./lmt-query-agent-chat-input";
 import { EmptyConversations } from "@blocks-ai/shared/components/chat/empty-conversation/empty-conversation";
 import { ChatItemSuggestions } from "@blocks-ai/shared/components/chat/chat-item-suggestions/chat-item-suggestions";
 import { AnimatedDots, ChatEventMessage } from "@blocks-ai/shared/utils/chat-event-messages";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
 interface ConversationMessage {
   type: "bot" | "human";
   message: string;
@@ -37,6 +38,7 @@ export const LMTQueryAgent: React.FC<LMTQueryAgentProps> = ({
   questions,
   description,
 }) => {
+  const { t } = useT("os.ai");
   const [session, setSession] = useState<string | null>(null);
   const [isThinking, setIsThinking] = useState<boolean>(false);
   const [conversations, setConversations] = useState<ConversationMessage[]>([]);
@@ -47,7 +49,7 @@ export const LMTQueryAgent: React.FC<LMTQueryAgentProps> = ({
   const { streamQuery } = useLMTQueryAgentSSE();
   const form = useForm<LmtQueryAgentForm>({
     defaultValues: lmtQueryAgentFormDefaultValue,
-    resolver: zodResolver(lmtQueryAgentSchema),
+    resolver: zodResolver(createLmtQueryAgentSchema()),
   });
   const addMessage = useCallback(
     (type: ConversationMessage["type"], message: string, time?: string) => {
@@ -78,7 +80,7 @@ export const LMTQueryAgent: React.FC<LMTQueryAgentProps> = ({
           showError: (error) => {
             addMessage(
               "bot",
-              error || "Something went wrong. Please try again later.",
+              error || tStatic("os.ai", "LMT_QUERY_AGENT.SOMETHING_WENT_WRONG_PLEASE_TRY"),
               getTimestampOrNow(eventData.timestamp),
             );
             setCurrentEvent(null);
@@ -100,7 +102,7 @@ export const LMTQueryAgent: React.FC<LMTQueryAgentProps> = ({
         addMessage("human", formData.query);
         form.reset();
         setIsThinking(true);
-        setCurrentEvent({ message: "Sending..." });
+        setCurrentEvent({ message: t("LMT_QUERY_AGENT.SENDING") });
         setSuggestions([]);
         const stream = await streamQuery({
           query: formData.query,
@@ -125,7 +127,7 @@ export const LMTQueryAgent: React.FC<LMTQueryAgentProps> = ({
           });
         }
       } catch {
-        addMessage("bot", "Something went wrong. Please try again later.");
+        addMessage("bot", t("LMT_QUERY_AGENT.SOMETHING_WENT_WRONG_PLEASE_TRY"));
         setIsThinking(false);
       } finally {
         setTimeout(() => {
@@ -133,7 +135,7 @@ export const LMTQueryAgent: React.FC<LMTQueryAgentProps> = ({
         }, 0);
       }
     },
-    [addMessage, form, handleStreamEvent, session, streamQuery],
+    [addMessage, form, handleStreamEvent, session, streamQuery, t],
   );
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

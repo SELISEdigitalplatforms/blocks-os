@@ -10,7 +10,7 @@ import {
 } from "@blocks-idp/api-settings/hooks/use-api-settings";
 import { IApiEndpoint } from "@blocks-idp/api-settings/models/api-endpoint.model";
 import { getServiceSwaggerUrl } from "@blocks-idp/api-settings/utils/service-swagger";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { BookOpen, ExternalLink } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 /** ─── Loading skeleton ──────────────────────────────────────────────────────── */
@@ -30,6 +30,7 @@ const ServiceGroupSkeleton = () => (
 );
 /** ─── Page component ────────────────────────────────────────────────────────── */
 export default function ApiSettingsPage() {
+  const { t } = useT("os.api-settings");
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage } =
     useGetApiEndpointsInfinite({ projectKey: tenantId });
@@ -129,18 +130,24 @@ export default function ApiSettingsPage() {
           captchaProvider: ep.captchaProvider,
         });
         if (!result.isSuccess) {
-          throw new Error(result.errors?.join(", ") || "Failed to update MFA setting");
+          throw new Error(
+            result.errors?.join(", ") || t("API_SETTINGS.FAILED_TO_UPDATE_MFA_SETTING"),
+          );
         }
         showSuccessToast({
-          description: `MFA ${value ? "enabled" : "disabled"} for /${ep.controller}/${ep.method.charAt(0).toUpperCase() + ep.method.slice(1)}`,
+          description: t(value ? "API_SETTINGS.MFA_FOR_ENABLED" : "API_SETTINGS.MFA_FOR_DISABLED", {
+            controller: ep.controller,
+            method: ep.method.charAt(0).toUpperCase() + ep.method.slice(1),
+          }),
         });
       } catch (error) {
         showErrorToast({
-          errors: error instanceof Error ? error.message : "Failed to update MFA setting",
+          errors:
+            error instanceof Error ? error.message : t("API_SETTINGS.FAILED_TO_UPDATE_MFA_SETTING"),
         });
       }
     },
-    [updateEndpoint],
+    [updateEndpoint, t],
   );
   const handleToggleCaptcha = useCallback(
     async (ep: IApiEndpoint, value: boolean) => {
@@ -157,18 +164,29 @@ export default function ApiSettingsPage() {
           mfaType: ep.mfaType,
         });
         if (!result.isSuccess) {
-          throw new Error(result.errors?.join(", ") || "Failed to update Captcha setting");
+          throw new Error(
+            result.errors?.join(", ") || t("API_SETTINGS.FAILED_TO_UPDATE_CAPTCHA_SETTING"),
+          );
         }
         showSuccessToast({
-          description: `Captcha ${value ? "enabled" : "disabled"} for /${ep.controller}/${ep.method.charAt(0).toUpperCase() + ep.method.slice(1)}`,
+          description: t(
+            value ? "API_SETTINGS.CAPTCHA_FOR_ENABLED" : "API_SETTINGS.CAPTCHA_FOR_DISABLED",
+            {
+              controller: ep.controller,
+              method: ep.method.charAt(0).toUpperCase() + ep.method.slice(1),
+            },
+          ),
         });
       } catch (error) {
         showErrorToast({
-          errors: error instanceof Error ? error.message : "Failed to update Captcha setting",
+          errors:
+            error instanceof Error
+              ? error.message
+              : t("API_SETTINGS.FAILED_TO_UPDATE_CAPTCHA_SETTING"),
         });
       }
     },
-    [updateEndpoint],
+    [updateEndpoint, t],
   );
   // ── Bulk handlers (group presets) ─────────────────────────────────────────
   const handleBulkGroupMfa = useCallback(
@@ -191,18 +209,24 @@ export default function ApiSettingsPage() {
           disableAll: false,
         });
         if (!result.isSuccess) {
-          throw new Error(result.errors?.join(", ") || "Failed to bulk update MFA");
+          throw new Error(result.errors?.join(", ") || t("API_SETTINGS.FAILED_TO_BULK_UPDATE_MFA"));
         }
         showSuccessToast({
-          description: `MFA ${value ? "enabled" : "disabled"} for ${ids.length} endpoints`,
+          description: t(
+            value
+              ? "API_SETTINGS.MFA_FOR_ENDPOINTS_ENABLED"
+              : "API_SETTINGS.MFA_FOR_ENDPOINTS_DISABLED",
+            { count: ids.length },
+          ),
         });
       } catch (error) {
         showErrorToast({
-          errors: error instanceof Error ? error.message : "Failed to bulk update MFA",
+          errors:
+            error instanceof Error ? error.message : t("API_SETTINGS.FAILED_TO_BULK_UPDATE_MFA"),
         });
       }
     },
-    [endpoints, bulkUpdate],
+    [endpoints, bulkUpdate, t],
   );
   const handleBulkGroupCaptcha = useCallback(
     async (ids: string[], value: boolean) => {
@@ -224,18 +248,28 @@ export default function ApiSettingsPage() {
           disableAll: false,
         });
         if (!result.isSuccess) {
-          throw new Error(result.errors?.join(", ") || "Failed to bulk update Captcha");
+          throw new Error(
+            result.errors?.join(", ") || t("API_SETTINGS.FAILED_TO_BULK_UPDATE_CAPTCHA"),
+          );
         }
         showSuccessToast({
-          description: `Captcha ${value ? "enabled" : "disabled"} for ${ids.length} endpoints`,
+          description: t(
+            value
+              ? "API_SETTINGS.CAPTCHA_FOR_ENDPOINTS_ENABLED"
+              : "API_SETTINGS.CAPTCHA_FOR_ENDPOINTS_DISABLED",
+            { count: ids.length },
+          ),
         });
       } catch (error) {
         showErrorToast({
-          errors: error instanceof Error ? error.message : "Failed to bulk update Captcha",
+          errors:
+            error instanceof Error
+              ? error.message
+              : t("API_SETTINGS.FAILED_TO_BULK_UPDATE_CAPTCHA"),
         });
       }
     },
-    [endpoints, bulkUpdate],
+    [endpoints, bulkUpdate, t],
   );
 
   // ── Bulk bar actions ───────────────────────────────────────────────────────
@@ -259,18 +293,18 @@ export default function ApiSettingsPage() {
         disableAll: false,
       });
       if (!result.isSuccess) {
-        throw new Error(result.errors?.join(", ") || "Failed to enable MFA");
+        throw new Error(result.errors?.join(", ") || t("API_SETTINGS.FAILED_TO_ENABLE_MFA"));
       }
       showSuccessToast({
-        description: `MFA enabled for ${selectedArray.length} endpoints`,
+        description: t("API_SETTINGS.MFA_ENABLED_FOR_ENDPOINTS", { count: selectedArray.length }),
       });
       clearSelection();
     } catch (error) {
       showErrorToast({
-        errors: error instanceof Error ? error.message : "Failed to enable MFA",
+        errors: error instanceof Error ? error.message : t("API_SETTINGS.FAILED_TO_ENABLE_MFA"),
       });
     }
-  }, [endpoints, selectedArray, bulkUpdate, clearSelection]);
+  }, [endpoints, selectedArray, bulkUpdate, clearSelection, t]);
   const handleBulkCaptcha = useCallback(async () => {
     try {
       // Preserve current MFA state when enabling Captcha
@@ -290,86 +324,91 @@ export default function ApiSettingsPage() {
         disableAll: false,
       });
       if (!result.isSuccess) {
-        throw new Error(result.errors?.join(", ") || "Failed to enable Captcha");
+        throw new Error(result.errors?.join(", ") || t("API_SETTINGS.FAILED_TO_ENABLE_CAPTCHA"));
       }
       showSuccessToast({
-        description: `Captcha enabled for ${selectedArray.length} endpoints`,
+        description: t("API_SETTINGS.CAPTCHA_ENABLED_FOR_ENDPOINTS", {
+          count: selectedArray.length,
+        }),
       });
       clearSelection();
     } catch (error) {
       showErrorToast({
-        errors: error instanceof Error ? error.message : "Failed to enable Captcha",
+        errors: error instanceof Error ? error.message : t("API_SETTINGS.FAILED_TO_ENABLE_CAPTCHA"),
       });
     }
-  }, [endpoints, selectedArray, bulkUpdate, clearSelection]);
+  }, [endpoints, selectedArray, bulkUpdate, clearSelection, t]);
   return (
     <main className="flex flex-col gap-4 p-4 pb-24 sm:gap-6 sm:p-6">
       <div>
-        <h1 className="text-lg font-semibold sm:text-xl md:text-2xl">API Settings</h1>
+        <h1 className="text-lg font-semibold sm:text-xl md:text-2xl">
+          {t("API_SETTINGS.API_SETTINGS")}
+        </h1>
         <p className="text-sm text-muted-foreground">
-          Configure security policies for your API endpoints — enable MFA, Captcha, and manage
-          access controls.
+          {t("API_SETTINGS.CONFIGURE_SECURITY_POLICIES_FOR")}
         </p>
       </div>
-      {isLoading ? (
+      {isLoading && (
         <div className="flex flex-col gap-4">
           {Array.from({ length: 3 }).map((_, i) => (
             <ServiceGroupSkeleton key={i} />
           ))}
         </div>
-      ) : serviceGroups.length === 0 ? (
-        <div className="flex h-40 items-center justify-center rounded-lg border border-dashed bg-card text-muted-foreground">
-          No API endpoints configured.
-        </div>
-      ) : (
-        <div className="flex flex-col gap-8">
-          {serviceGroups.map(({ service, swaggerUrl, controllers }) => (
-            <div key={service} className="flex flex-col gap-3">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-base font-bold capitalize sm:text-lg">{service}</h2>
+      )}
+      {!isLoading &&
+        (serviceGroups.length === 0 ? (
+          <div className="flex h-40 items-center justify-center rounded-lg border border-dashed bg-card text-muted-foreground">
+            {t("API_SETTINGS.NO_API_ENDPOINTS_CONFIGURED")}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-8">
+            {serviceGroups.map(({ service, swaggerUrl, controllers }) => (
+              <div key={service} className="flex flex-col gap-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-base font-bold capitalize sm:text-lg">{service}</h2>
+                    {swaggerUrl && (
+                      <a
+                        href={swaggerUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hidden items-center gap-1 text-[11px] text-muted-foreground transition-colors hover:text-primary hover:underline sm:inline-flex"
+                        title={swaggerUrl}
+                      >
+                        <span className="truncate">{swaggerUrl}</span>
+                        <ExternalLink className="h-3 w-3 shrink-0" />
+                      </a>
+                    )}
+                  </div>
                   {swaggerUrl && (
-                    <a
-                      href={swaggerUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="hidden items-center gap-1 text-[11px] text-muted-foreground transition-colors hover:text-primary hover:underline sm:inline-flex"
-                      title={swaggerUrl}
-                    >
-                      <span className="truncate">{swaggerUrl}</span>
-                      <ExternalLink className="h-3 w-3 shrink-0" />
-                    </a>
+                    <Button size="sm" variant="outline" asChild className="w-fit shrink-0 gap-1.5">
+                      <a href={swaggerUrl} target="_blank" rel="noreferrer">
+                        <BookOpen className="h-3.5 w-3.5" />
+                        <span>{t("API_SETTINGS.API_DOCS")}</span>
+                      </a>
+                    </Button>
                   )}
                 </div>
-                {swaggerUrl && (
-                  <Button size="sm" variant="outline" asChild className="w-fit shrink-0 gap-1.5">
-                    <a href={swaggerUrl} target="_blank" rel="noreferrer">
-                      <BookOpen className="h-3.5 w-3.5" />
-                      <span>API Docs</span>
-                    </a>
-                  </Button>
-                )}
+                <div className="flex flex-col gap-3">
+                  {controllers.map(([controller, eps]) => (
+                    <ServiceGroupCard
+                      key={controller}
+                      controller={controller}
+                      endpoints={eps}
+                      selectedIds={selectedIds}
+                      onSelectEndpoint={handleSelectEndpoint}
+                      onSelectGroup={handleSelectGroup}
+                      onToggleMfa={handleToggleMfa}
+                      onToggleCaptcha={handleToggleCaptcha}
+                      onBulkGroupMfa={handleBulkGroupMfa}
+                      onBulkGroupCaptcha={handleBulkGroupCaptcha}
+                    />
+                  ))}
+                </div>
               </div>
-              <div className="flex flex-col gap-3">
-                {controllers.map(([controller, eps]) => (
-                  <ServiceGroupCard
-                    key={controller}
-                    controller={controller}
-                    endpoints={eps}
-                    selectedIds={selectedIds}
-                    onSelectEndpoint={handleSelectEndpoint}
-                    onSelectGroup={handleSelectGroup}
-                    onToggleMfa={handleToggleMfa}
-                    onToggleCaptcha={handleToggleCaptcha}
-                    onBulkGroupMfa={handleBulkGroupMfa}
-                    onBulkGroupCaptcha={handleBulkGroupCaptcha}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        ))}
       {isFetchingNextPage && (
         <div className="flex flex-col gap-4">
           {Array.from({ length: 2 }).map((_, i) => (

@@ -4,6 +4,7 @@ import { CornerDownRight, Globe, Settings2, User, type LucideIcon } from "lucide
 import { cn } from "@/lib/utils";
 
 import { ACCESS_LEVEL_TO_TYPE, ACCESS_TYPES } from "../../constants/schema-access-control";
+import { gt, lazyLabels } from "../../utils/gateway-i18n";
 
 /**
  * Single source of truth for how an access tier looks.
@@ -55,12 +56,12 @@ const TYPE_TO_TIER: Record<string, AccessTier> = {
   [ACCESS_TYPES.INHERITED]: "inherited",
 };
 
-export const ACCESS_TIER_LABELS: Record<AccessTier, string> = {
-  public: "Public",
-  user: "Requester",
-  custom: "Custom",
-  inherited: "Inherited",
-};
+export const ACCESS_TIER_LABELS: Record<AccessTier, string> = lazyLabels({
+  public: "ACCESS_TIER_BADGE.TIER_PUBLIC",
+  user: "ACCESS_TIER_BADGE.TIER_REQUESTER",
+  custom: "ACCESS_TIER_BADGE.TIER_CUSTOM",
+  inherited: "ACCESS_TIER_BADGE.TIER_INHERITED",
+});
 
 /** Tier's icon, for compact chips/tiles where the label text is dropped. */
 export const TIER_ICON: Record<AccessTier, LucideIcon> = {
@@ -103,7 +104,8 @@ export function AccessTierBadge({
   className,
   title,
 }: Readonly<AccessTierBadgeProps>) {
-  const resolved = level === undefined || level === null ? (tier ?? "inherited") : tierFromLevel(level);
+  const resolved =
+    level === undefined || level === null ? (tier ?? "inherited") : tierFromLevel(level);
 
   return (
     <span
@@ -165,7 +167,8 @@ export function AccessVerbPill({
   className?: string;
   compact?: boolean;
 }>) {
-  const resolved = level === undefined || level === null ? (tier ?? "inherited") : tierFromLevel(level);
+  const resolved =
+    level === undefined || level === null ? (tier ?? "inherited") : tierFromLevel(level);
   const Icon = TIER_ICON[resolved];
 
   return (
@@ -176,7 +179,10 @@ export function AccessVerbPill({
       // word ("CreateCustom") to a screen reader; say it properly instead.
       // The full tier name stays here even when its text is visually
       // dropped, so the accessible name never shrinks along with the chip.
-      aria-label={`${verb} ${ACCESS_TIER_LABELS[resolved]}`}
+      aria-label={gt("ACCESS_TIER_BADGE.VERB_PILL_LABEL", {
+        verb,
+        tier: ACCESS_TIER_LABELS[resolved],
+      })}
       title={ACCESS_TIER_LABELS[resolved]}
       className={cn(
         // Hover was `opacity-80`, which fades the label along with the chip and
@@ -207,13 +213,17 @@ export function AccessTierDot({
   className,
   title,
 }: Readonly<Pick<AccessTierBadgeProps, "level" | "tier" | "className" | "title">>) {
-  const resolved = level === undefined || level === null ? (tier ?? "inherited") : tierFromLevel(level);
+  const resolved =
+    level === undefined || level === null ? (tier ?? "inherited") : tierFromLevel(level);
 
   return (
     <span
-      className={cn("inline-block h-1.5 w-1.5 shrink-0 rounded-full", TIER_DOT_CLASS[resolved], className)}
+      className={cn(
+        "inline-block h-1.5 w-1.5 shrink-0 rounded-full",
+        TIER_DOT_CLASS[resolved],
+        className,
+      )}
       title={title ?? ACCESS_TIER_LABELS[resolved]}
     />
   );
 }
-

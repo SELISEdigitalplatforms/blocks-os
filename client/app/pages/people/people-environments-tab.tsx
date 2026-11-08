@@ -11,7 +11,7 @@ import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-
 import { PeopleGroupedByEnvironments } from "@/models/people";
 import { IProjectGroup } from "@/models/project.model";
 import { environmentOptions } from "@/constants/environment-options";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT, tStatic } from "@seliseblocks/genesis-os";
 import { buildInvitePeoplePayload } from "./invite-people-utils";
 
 interface PeopleEnvironmentsTabProps {
@@ -41,19 +41,18 @@ export const PeopleEnvironmentsTab = ({
   canRemove = false,
   canInvite = false,
 }: PeopleEnvironmentsTabProps) => {
+  const { t } = useT("os.people");
   // Prefer the row selected by the parent. Falling back to a user-id match keeps this component
   // safe for its existing callers without accidentally using the first row of a broad search.
   const userEnvironmentData =
     person ??
     peopleData?.find(
-      (candidate) =>
-        candidate.peopleDetails?.userId?.toLowerCase() === user?.itemId?.toLowerCase(),
+      (candidate) => candidate.peopleDetails?.userId?.toLowerCase() === user?.itemId?.toLowerCase(),
     ) ??
     peopleData?.find(
       (candidate) =>
         !!user?.email &&
-        candidate.peopleDetails?.email?.trim().toLowerCase() ===
-          user.email.trim().toLowerCase(),
+        candidate.peopleDetails?.email?.trim().toLowerCase() === user.email.trim().toLowerCase(),
     ) ??
     (peopleData?.length === 1 ? peopleData[0] : undefined);
   const sharedEnvironments = useMemo(
@@ -134,10 +133,16 @@ export const PeopleEnvironmentsTab = ({
           buildInvitePeoplePayload({ [user.email]: [projectId] }, groupId),
         );
         if (!res?.isSuccess) {
-          throw new Error(`Failed to grant access to ${getEnvironmentLabel(envValue)}`);
+          throw new Error(
+            t("PEOPLE_ENVIRONMENTS_TAB.FAILED_TO_GRANT_ACCESS_TO", {
+              envValue: getEnvironmentLabel(envValue),
+            }),
+          );
         }
         showSuccessToast({
-          description: `Access granted to ${getEnvironmentLabel(envValue)}`,
+          description: t("PEOPLE_ENVIRONMENTS_TAB.ACCESS_GRANTED_TO", {
+            envValue: getEnvironmentLabel(envValue),
+          }),
         });
       } else {
         if (!user.email || !projectId) return;
@@ -147,14 +152,23 @@ export const PeopleEnvironmentsTab = ({
           groupId,
         });
         if (!res?.isSuccess) {
-          throw new Error(`Failed to remove access from ${getEnvironmentLabel(envValue)}`);
+          throw new Error(
+            t("PEOPLE_ENVIRONMENTS_TAB.FAILED_TO_REMOVE_ACCESS_FROM", {
+              envValue: getEnvironmentLabel(envValue),
+            }),
+          );
         }
         showSuccessToast({
-          description: `Access removed from ${getEnvironmentLabel(envValue)}`,
+          description: t("PEOPLE_ENVIRONMENTS_TAB.ACCESS_REMOVED_FROM", {
+            envValue: getEnvironmentLabel(envValue),
+          }),
         });
       }
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Failed to update access";
+      const message =
+        error instanceof Error
+          ? error.message
+          : tStatic("os.people", "PEOPLE_ENVIRONMENTS_TAB.FAILED_TO_UPDATE_ACCESS");
       showErrorToast({ errors: message });
     } finally {
       handleCloseDialog();
@@ -167,13 +181,16 @@ export const PeopleEnvironmentsTab = ({
     removeEnvAsync,
     handleCloseDialog,
     getProjectIdForEnvironment,
+    t,
   ]);
 
   if (!user) {
     return (
       <Card>
         <CardContent className="py-8">
-          <div className="text-center text-muted-foreground">User data not available</div>
+          <div className="text-center text-muted-foreground">
+            {t("PEOPLE_ENVIRONMENTS_TAB.USER_DATA_NOT_AVAILABLE")}
+          </div>
         </CardContent>
       </Card>
     );
@@ -185,51 +202,57 @@ export const PeopleEnvironmentsTab = ({
     <>
       <Card className="overflow-hidden p-0">
         <CardHeader className="mb-0 flex flex-row items-center justify-between border-b px-5 py-4 sm:px-6">
-          <CardTitle>Environment Access</CardTitle>
+          <CardTitle>{t("PEOPLE_ENVIRONMENTS_TAB.ENVIRONMENT_ACCESS")}</CardTitle>
         </CardHeader>
         <CardContent className="px-5 py-5 sm:px-6">
           {isInactive && (
             <p className="mb-4 text-sm text-muted-foreground">
-              This account is inactive, so its environment access cannot be changed.
+              {t("PEOPLE_ENVIRONMENTS_TAB.THIS_ACCOUNT_IS_INACTIVE_SO")}
             </p>
           )}
           <div className="grid grid-cols-1 gap-7 lg:grid-cols-2 lg:gap-10">
             <section className="min-w-0 space-y-4 lg:border-r lg:pr-10">
-              <h3 className="text-sm font-semibold text-foreground">With access to</h3>
+              <h3 className="text-sm font-semibold text-foreground">
+                {t("PEOPLE_ENVIRONMENTS_TAB.WITH_ACCESS_TO")}
+              </h3>
               <div className="flex flex-wrap gap-2.5">
-              {currentAvailableEnvironments.length > 0 ? (
-                currentAvailableEnvironments.map((envValue) => (
-                  <div
-                    key={envValue}
-                    className="flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 shadow-xs transition-colors hover:bg-muted/50"
-                  >
-                    <span className="text-sm font-medium">{getEnvironmentLabel(envValue)}</span>
-                    {canRemove && canChangeAccess && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPendingAction({ type: "remove", envValue });
-                          setIsConfirmDialogOpen(true);
-                        }}
-                        disabled={isProcessing}
-                        className="ml-2 cursor-pointer p-1 text-destructive transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
-                        title="Remove access"
-                        aria-label={`Remove access from ${getEnvironmentLabel(envValue)}`}
-                      >
-                        <CircleMinus className="h-4 w-4" />
-                      </button>
-                    )}
+                {currentAvailableEnvironments.length > 0 ? (
+                  currentAvailableEnvironments.map((envValue) => (
+                    <div
+                      key={envValue}
+                      className="flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 shadow-xs transition-colors hover:bg-muted/50"
+                    >
+                      <span className="text-sm font-medium">{getEnvironmentLabel(envValue)}</span>
+                      {canRemove && canChangeAccess && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPendingAction({ type: "remove", envValue });
+                            setIsConfirmDialogOpen(true);
+                          }}
+                          disabled={isProcessing}
+                          className="ml-2 cursor-pointer p-1 text-destructive transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+                          title={t("PEOPLE_ENVIRONMENTS_TAB.REMOVE_ACCESS")}
+                          aria-label={t("PEOPLE_ENVIRONMENTS_TAB.REMOVE_ACCESS_FROM", {
+                            envValue: getEnvironmentLabel(envValue),
+                          })}
+                        >
+                          <CircleMinus className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-2 text-sm italic text-muted-foreground">
+                    {t("PEOPLE_ENVIRONMENTS_TAB.NO_ENVIRONMENTS_WITH_ACCESS_YET")}
                   </div>
-                ))
-              ) : (
-                <div className="py-2 text-sm italic text-muted-foreground">
-                  No environments with access yet
-                </div>
-              )}
+                )}
               </div>
             </section>
             <section className="min-w-0 space-y-4">
-              <h3 className="text-sm font-semibold text-foreground">Without access to</h3>
+              <h3 className="text-sm font-semibold text-foreground">
+                {t("PEOPLE_ENVIRONMENTS_TAB.WITHOUT_ACCESS_TO")}
+              </h3>
               <div className="flex flex-wrap gap-2.5">
                 {withoutAccessEnvironments.length > 0 ? (
                   withoutAccessEnvironments.map((envValue) => (
@@ -247,8 +270,10 @@ export const PeopleEnvironmentsTab = ({
                           }}
                           disabled={isProcessing}
                           className="ml-2 cursor-pointer p-1 text-primary transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
-                          title="Grant access"
-                          aria-label={`Grant access to ${getEnvironmentLabel(envValue)}`}
+                          title={t("PEOPLE_ENVIRONMENTS_TAB.GRANT_ACCESS")}
+                          aria-label={t("PEOPLE_ENVIRONMENTS_TAB.GRANT_ACCESS_TO", {
+                            envValue: getEnvironmentLabel(envValue),
+                          })}
                         >
                           <Plus className="h-4 w-4" />
                         </button>
@@ -257,7 +282,7 @@ export const PeopleEnvironmentsTab = ({
                   ))
                 ) : (
                   <div className="py-2 text-sm italic text-muted-foreground">
-                    Has access to all environments
+                    {t("PEOPLE_ENVIRONMENTS_TAB.HAS_ACCESS_TO_ALL_ENVIRONMENTS")}
                   </div>
                 )}
               </div>
@@ -272,13 +297,25 @@ export const PeopleEnvironmentsTab = ({
             onConfirm={handleConfirm}
             buttonState={{ confirm: { disable: isProcessing } }}
             data={{
-              dialogTitle: pendingAction.type === "add" ? "Grant Access" : "Remove Access",
+              dialogTitle:
+                pendingAction.type === "add"
+                  ? t("PEOPLE_ENVIRONMENTS_TAB.GRANT_ACCESS_2")
+                  : t("PEOPLE_ENVIRONMENTS_TAB.REMOVE_ACCESS_2"),
               dialogSubtitle:
                 pendingAction.type === "add"
-                  ? `Are you sure you want to grant ${user.email} access to ${pendingEnvLabel}?`
-                  : `Are you sure you want to remove ${user.email}'s access from ${pendingEnvLabel}?`,
-              confirmButton: pendingAction.type === "add" ? "Grant" : "Remove",
-              cancelButton: "Cancel",
+                  ? t("PEOPLE_ENVIRONMENTS_TAB.ARE_YOU_SURE_YOU_WANT", {
+                      email: user.email,
+                      pendingEnvLabel,
+                    })
+                  : t("PEOPLE_ENVIRONMENTS_TAB.ARE_YOU_SURE_YOU_WANT_2", {
+                      email: user.email,
+                      pendingEnvLabel,
+                    }),
+              confirmButton:
+                pendingAction.type === "add"
+                  ? t("PEOPLE_ENVIRONMENTS_TAB.GRANT")
+                  : t("common:REMOVE"),
+              cancelButton: t("common:CANCEL"),
             }}
           />
         )}

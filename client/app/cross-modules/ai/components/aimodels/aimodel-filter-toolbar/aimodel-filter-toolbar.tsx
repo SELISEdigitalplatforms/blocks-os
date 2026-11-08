@@ -1,6 +1,8 @@
 import { FilterToolbar } from "@/components/filter-toolbar";
 import { useAIModelsQueryParams } from "@blocks-ai/hooks/use-aimodel";
+import { useT } from "@seliseblocks/genesis-os";
 export function AIModelsFilterToolbar() {
+  const { t } = useT("os.ai");
   const { queryParams, setQueryParams } = useAIModelsQueryParams();
   const changeHandler = (key: string, value: unknown) => {
     setQueryParams((prev) => ({
@@ -16,11 +18,11 @@ export function AIModelsFilterToolbar() {
         {
           key: "types",
           type: "MultiSelect",
-          label: "Type",
+          label: t("common:TYPE"),
           props: {
             options: [
-              { label: "Official API", value: "official" },
-              { label: "Open Deployment", value: "open" },
+              { label: t("AIMODEL_FILTER_TOOLBAR.OFFICIAL_API"), value: "official" },
+              { label: t("AIMODEL_FILTER_TOOLBAR.OPEN_DEPLOYMENT"), value: "open" },
             ],
           },
         },

@@ -24,7 +24,7 @@ import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
 import { useGetUserById, useUpdateUserAccessControl } from "@blocks-idp/iam/hooks/use-user";
 import { createRoleStub } from "@blocks-idp/iam/utils/role-stub";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { OrganizationRolesField } from "./organization-roles-field";
 import { OrganizationPermissionsField } from "./organization-permissions-field";
 
@@ -48,13 +48,17 @@ export const ManageOrganizationDialog = ({
   isOrgsLoading = false,
   initialOrganizationId,
 }: ManageOrganizationDialogProps) => {
+  const { t } = useT("os.idp.users");
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const [selectedOrgId, setSelectedOrgId] = useState<string>("");
   const [selectedRoles, setSelectedRoles] = useState<IRole[]>([]);
   const [selectedPermissions, setSelectedPermissions] = useState<IPermission[]>([]);
   const hydratedKeyRef = useRef("");
 
-  const { data: userData } = useGetUserById({ id: userId, projectKey: tenantId }, { enabled: open });
+  const { data: userData } = useGetUserById(
+    { id: userId, projectKey: tenantId },
+    { enabled: open },
+  );
   // Scoped to the organization being edited, not the tenant: what is picked here is
   // written into that organization's key, so listing another organization's roles
   // would let the operator assign something that does not exist there. Before an
@@ -104,17 +108,22 @@ export const ManageOrganizationDialog = ({
       return filtered;
     }
     return [
-      { itemId: DEFAULT_ORGANIZATION_ID, name: "Default", isDisabled: false } as IOrganization,
+      {
+        itemId: DEFAULT_ORGANIZATION_ID,
+        name: t("MANAGE_ORGANIZATION_DIALOG.DEFAULT_ORGANIZATION"),
+        isDisabled: false,
+      } as IOrganization,
       ...filtered,
     ];
-  }, [organizations]);
+  }, [organizations, t]);
 
   const roleBySlug = useMemo(
     () => new Map((rolesData?.data || []).map((role) => [role.slug, role])),
     [rolesData?.data],
   );
   const permissionByResource = useMemo(
-    () => new Map((permissionsData?.data || []).map((permission) => [permission.resource, permission])),
+    () =>
+      new Map((permissionsData?.data || []).map((permission) => [permission.resource, permission])),
     [permissionsData?.data],
   );
 
@@ -124,18 +133,16 @@ export const ManageOrganizationDialog = ({
 
     const membership = user.organizations?.find((item) => item.organizationId === orgId);
     if (membership) {
-      return { roleSlugs: membership.roles ?? [], permissionResources: membership.permissions ?? [] };
+      return {
+        roleSlugs: membership.roles ?? [],
+        permissionResources: membership.permissions ?? [],
+      };
     }
 
     return {
-      roleSlugs:
-        user.OrganizationsRoles?.[orgId] ??
-        user.roles?.[orgId] ??
-        [],
+      roleSlugs: user.OrganizationsRoles?.[orgId] ?? user.roles?.[orgId] ?? [],
       permissionResources:
-        user.OrganizationsPermissions?.[orgId] ??
-        user.permissions?.[orgId] ??
-        [],
+        user.OrganizationsPermissions?.[orgId] ?? user.permissions?.[orgId] ?? [],
     };
   };
 
@@ -143,9 +150,7 @@ export const ManageOrganizationDialog = ({
     setSelectedOrgId(orgId);
 
     const { roleSlugs, permissionResources } = getExistingSelection(orgId);
-    setSelectedRoles(
-      roleSlugs.map((slug) => roleBySlug.get(slug) ?? createRoleStub({ slug })),
-    );
+    setSelectedRoles(roleSlugs.map((slug) => roleBySlug.get(slug) ?? createRoleStub({ slug })));
     setSelectedPermissions(
       permissionResources.map(
         (resource) =>
@@ -162,7 +167,9 @@ export const ManageOrganizationDialog = ({
     }
     const preselectedOrgId =
       initialOrganizationId ||
-      (orgOptions.some((org) => org.itemId === DEFAULT_ORGANIZATION_ID) ? DEFAULT_ORGANIZATION_ID : "");
+      (orgOptions.some((org) => org.itemId === DEFAULT_ORGANIZATION_ID)
+        ? DEFAULT_ORGANIZATION_ID
+        : "");
     if (!preselectedOrgId || !userData?.data) return;
 
     const hydrationKey = `${preselectedOrgId}:${rolesData?.data?.length ?? 0}:${permissionsData?.data?.length ?? 0}`;
@@ -174,7 +181,7 @@ export const ManageOrganizationDialog = ({
 
   const onConfirm = async () => {
     if (!selectedOrgId || selectedRoles.length === 0) {
-      showErrorToast({ errors: "Please select an organization and at least one role" });
+      showErrorToast({ errors: t("MANAGE_ORGANIZATION_DIALOG.SELECT_ORGANIZATION_AND_ROLE") });
       return;
     }
 
@@ -187,14 +194,15 @@ export const ManageOrganizationDialog = ({
       if (!res.isSuccess) {
         const errorMsg =
           res.errors && typeof res.errors === "object"
-            ? Object.values(res.errors as Record<string, string>)[0] ?? "Failed to update organization"
-            : (res.errors as string) || "Failed to update organization";
+            ? (Object.values(res.errors as Record<string, string>)[0] ??
+              t("MANAGE_ORGANIZATION_DIALOG.FAILED_TO_UPDATE"))
+            : (res.errors as string) || t("MANAGE_ORGANIZATION_DIALOG.FAILED_TO_UPDATE");
         showErrorToast({ errors: errorMsg });
         return;
       }
 
       showSuccessToast({
-        description: "Organization managed successfully",
+        description: t("MANAGE_ORGANIZATION_DIALOG.MANAGED"),
       });
       reset();
       onOpenChange(false);
@@ -203,7 +211,7 @@ export const ManageOrganizationDialog = ({
         errors:
           typeof error === "object" && error !== null && "errors" in error
             ? (error as { errors: unknown }).errors
-            : "Something went wrong",
+            : t("MANAGE_ORGANIZATION_DIALOG.SOMETHING_WENT_WRONG"),
       });
     }
   };
@@ -224,37 +232,39 @@ export const ManageOrganizationDialog = ({
     >
       <DialogContent className="flex max-h-[85vh] flex-col overflow-hidden sm:max-w-[560px]">
         <DialogHeader className="shrink-0">
-          <DialogTitle>Manage organization</DialogTitle>
-          <DialogDescription>
-            Choose an organization and the roles and permissions this user should have in it.
-          </DialogDescription>
+          <DialogTitle>{t("MANAGE_ORGANIZATION_DIALOG.TITLE")}</DialogTitle>
+          <DialogDescription>{t("MANAGE_ORGANIZATION_DIALOG.DESCRIPTION")}</DialogDescription>
         </DialogHeader>
 
         <div className="-mx-1 flex-1 space-y-5 overflow-y-auto px-1 py-2">
           <div className="space-y-2">
             <label htmlFor="assign-org-select" className="text-sm font-medium">
-              Organization
+              {t("MANAGE_ORGANIZATION_DIALOG.ORGANIZATION")}
             </label>
             <Select value={selectedOrgId} onValueChange={handleOrgChange}>
               <SelectTrigger id="assign-org-select">
-                <SelectValue placeholder="Select organization" />
+                <SelectValue
+                  placeholder={t("MANAGE_ORGANIZATION_DIALOG.SELECT_ORGANIZATION_PLACEHOLDER")}
+                />
               </SelectTrigger>
               <SelectContent>
-                {isOrgsLoading ? (
+                {isOrgsLoading && (
                   <SelectItem value="loading" disabled>
-                    Loading...
+                    {t("common:LOADING")}
                   </SelectItem>
-                ) : orgOptions.length === 0 ? (
-                  <SelectItem value="none" disabled>
-                    No organizations found
-                  </SelectItem>
-                ) : (
-                  orgOptions.map((org) => (
-                    <SelectItem key={org.itemId} value={org.itemId}>
-                      {org.name}
-                    </SelectItem>
-                  ))
                 )}
+                {!isOrgsLoading &&
+                  (orgOptions.length === 0 ? (
+                    <SelectItem value="none" disabled>
+                      {t("MANAGE_ORGANIZATION_DIALOG.NO_ORGANIZATIONS_FOUND")}
+                    </SelectItem>
+                  ) : (
+                    orgOptions.map((org) => (
+                      <SelectItem key={org.itemId} value={org.itemId}>
+                        {org.name}
+                      </SelectItem>
+                    ))
+                  ))}
               </SelectContent>
             </Select>
           </div>
@@ -268,7 +278,7 @@ export const ManageOrganizationDialog = ({
             <div className="overflow-hidden">
               {!selectedOrgId ? (
                 <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                  Select an organization first to choose roles and permissions.
+                  {t("MANAGE_ORGANIZATION_DIALOG.SELECT_ORGANIZATION_FIRST")}
                 </p>
               ) : (
                 <div className="animate-in fade-in-0 slide-in-from-top-1 flex flex-col gap-5 pt-0.5 duration-300">
@@ -296,17 +306,16 @@ export const ManageOrganizationDialog = ({
               onOpenChange(false);
             }}
           >
-            Cancel
+            {t("common:CANCEL")}
           </Button>
           <Button
             onClick={onConfirm}
             disabled={isPending || !selectedOrgId || selectedRoles.length === 0}
           >
-            {isPending ? "Saving..." : "Confirm"}
+            {isPending ? t("MANAGE_ORGANIZATION_DIALOG.SAVING") : t("common:CONFIRM")}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 };
- 

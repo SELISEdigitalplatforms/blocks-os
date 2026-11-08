@@ -8,7 +8,7 @@ import {
 } from "@/models/project.model";
 import { projectService } from "@/services/project.service";
 import { projectService as crossProjectService } from "@blocks-identifier/services/project.service";
-import { useImpersonateStore, useProjectStore } from "@seliseblocks/genesis-os";
+import { useImpersonateStore, useProjectStore, tStatic } from "@seliseblocks/genesis-os";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useNavigate } from "react-router";
@@ -292,7 +292,9 @@ export const useProjectForm = () => {
         }),
       );
       if (response?.isSuccess) {
-        showSuccessToast({ description: "Your project has been created." });
+        showSuccessToast({
+          description: tStatic("os.shared", "USE_PROJECT.YOUR_PROJECT_HAS_BEEN_CREATED"),
+        });
         setTenantGroup(response.tenantGroupId);
 
         try {

@@ -6,7 +6,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
 import { cn } from "@/lib/utils";
-import { STORAGE_TIERS, type StorageTier } from "./storage-tier-cards";
+import { getStorageTiers, type StorageTier } from "./storage-tier-cards";
+import { useT } from "@seliseblocks/genesis-os";
 
 interface StorageTierSwitcherProps {
   value: StorageTier;
@@ -27,6 +28,7 @@ export function StorageTierSwitcher({
   descriptions,
   className,
 }: StorageTierSwitcherProps) {
+  const { t } = useT("os.lmt");
   // Re-picking the current tier is not a change: it would otherwise reset the page and paging
   // of a list the reader is already reading.
   const pick = (tier: StorageTier) => {
@@ -40,8 +42,11 @@ export function StorageTierSwitcher({
         onValueChange={(next: string) => pick(next as StorageTier)}
         className={className}
       >
-        <TabsList aria-label="Storage tier" className="h-[42px] bg-blocks-primary-shades-300">
-          {STORAGE_TIERS.map(({ value: tier, title, description, Icon }) => (
+        <TabsList
+          aria-label={t("STORAGE_TIER_SWITCHER.STORAGE_TIER")}
+          className="h-[42px] bg-blocks-primary-shades-300"
+        >
+          {getStorageTiers().map(({ value: tier, title, description, Icon }) => (
             <Tooltip key={tier}>
               <TooltipTrigger asChild>
                 {/* asChild keeps the trigger the tab button itself, so the tabs stay direct

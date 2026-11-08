@@ -1,7 +1,6 @@
 ﻿using Configuration.DomainService.Notification.Services;
 using FluentValidation;
 using Os.DataAccess;
-using Os.DataAccess;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Protocols;
@@ -27,11 +26,13 @@ using Configuration.DomainService.Captcha.Services;
 using Configuration.DomainService.Captcha.Validators;
 using Configuration.DomainService.Mail.Providers;
 using Configuration.DomainService.Mail.Services;
+using Configuration.DomainService.Organizations;
 using Configuration.DomainService.Integration.RequestModel;
 using Configuration.DomainService.Integration.Services;
 using Configuration.DomainService.Integration.Validators;
 using Configuration.DomainService.Shared.Secrets;
 using Configuration.DomainService.Notification.Push;
+using Configuration.DomainService.Webhooks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Configuration.DomainService.Shared.Utilities
@@ -45,6 +46,7 @@ namespace Configuration.DomainService.Shared.Utilities
             serviceCollection.AddSingleton<IConfigurationRepository, ConfigurationRepository>();
             serviceCollection.AddSingleton<IMailTemplateService, MailTemplateService>();
             serviceCollection.AddSingleton<IMailTemplateRepository, MailTemplateRepository>();
+            serviceCollection.AddSingleton<IMailTemplateCopyService, MailTemplateCopyService>();
             serviceCollection.AddSingleton<IMailboxService, MailboxService>();
             serviceCollection.AddSingleton<IMailboxRepository, MailboxRepository>();
             serviceCollection.AddSingleton<IIntegrationService, IntegrationService>();
@@ -84,6 +86,10 @@ namespace Configuration.DomainService.Shared.Utilities
             serviceCollection.AddScoped<IMailConfigurationProvider, GmailMailConfigurationProvider>();
             serviceCollection.AddScoped<IMailConfigurationProviderRegistry, MailConfigurationProviderRegistry>();
             serviceCollection.AddScoped<IMailConfigurationService, MailConfigurationService>();
+            serviceCollection.AddSingleton<IOrganizationReader, OrganizationReader>();
+
+            // Actions and Webhooks pages (Config): KV lists, webhook secrets in Blocks Secrets, delivery history.
+            serviceCollection.AddActionsAndWebhooks();
 
             // Data-source page: scoped (the connection string goes through ISecretService); the root store is a singleton.
             serviceCollection.AddSingleton<IDataGatewayRootStore, DataGatewayRootStore>();
@@ -104,6 +110,21 @@ namespace Configuration.DomainService.Shared.Utilities
             serviceCollection.AddSingleton<IValidator<SaveMailTemplateRequest>, MailTemplateValidator>();
             serviceCollection.AddSingleton<IValidator<SaveCaptchaConfigRequest>, CaptchaConfigValidator>();
             serviceCollection.AddSingleton<IValidator<RunIntegrationSetupRequest>, RunIntegrationSetupRequestValidator>();
+        }
+
+        /// <summary>
+        /// What blocks-os-worker needs to run organization copy jobs (SPEC33): the template repository, the organization
+        /// reader and the job. Only these, not <see cref="AddConfigurationServices"/>, whose API services (IAM client,
+        /// integrations) don't belong in the Worker. Data access and the built-in notification sender come from
+        /// <c>AddOsDataAccess</c>, which the Worker already registers.
+        /// </summary>
+        public static IServiceCollection AddEmailTemplateCopyJob(this IServiceCollection serviceCollection)
+        {
+            serviceCollection.AddOsDataAccess();
+            serviceCollection.TryAddSingleton<IMailTemplateRepository, MailTemplateRepository>();
+            serviceCollection.TryAddSingleton<IOrganizationReader, OrganizationReader>();
+            serviceCollection.TryAddSingleton<IEmailTemplateCopyJob, EmailTemplateCopyJob>();
+            return serviceCollection;
         }
     }
 }

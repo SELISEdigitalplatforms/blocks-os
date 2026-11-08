@@ -1,5 +1,8 @@
+import { tStatic } from "@seliseblocks/genesis-os";
 import { IPermission } from "./permission";
 import { IRole } from "./role";
+
+const I18N_MODULE = "os.idp.iam";
 
 /** An org's access attributes: attribute name to its values (`Auth.Attributes.<name>` in policies). */
 export type AccessAttributes = Record<string, string[]>;
@@ -346,15 +349,21 @@ export interface IDeviceSessionResponse {
 export const status = [
   {
     value: "Active",
-    label: "Active",
+    get label() {
+      return tStatic(I18N_MODULE, "USER.STATUS_ACTIVE");
+    },
   },
   {
     value: "Inactive",
-    label: "Inactive",
+    get label() {
+      return tStatic(I18N_MODULE, "USER.STATUS_INACTIVE");
+    },
   },
   {
     value: "Verified",
-    label: "Verified",
+    get label() {
+      return tStatic(I18N_MODULE, "USER.STATUS_VERIFIED");
+    },
   },
 ];
 

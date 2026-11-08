@@ -13,6 +13,7 @@ import { Button } from "../ui-kits/button/button";
 import { Filter } from "lucide-react";
 import { Badge } from "../ui-kits/badge/badge";
 import { deepEqual } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 export type FilterItem<T extends Record<string, unknown>> = {
   [K in keyof typeof FilterControls]: {
     key: keyof T;
@@ -69,8 +70,10 @@ export const FilterToolBarMobileView = ({
   showFirstFilterOnMobile = true,
   alwaysVisible = false,
   activeFiltersCount = 0,
-  triggerLabel = "Filters",
+  triggerLabel: triggerLabelProp,
 }: ViewType) => {
+  const { t } = useT("os.shared");
+  const triggerLabel = triggerLabelProp ?? t("FILTER_TOOLBAR.FILTERS");
   const inlineComponents = showFirstFilterOnMobile ? Components.slice(0, 1) : [];
   const sheetComponents = showFirstFilterOnMobile ? Components.slice(1) : Components;
 
@@ -107,7 +110,7 @@ export const FilterToolBarMobileView = ({
                       ? "absolute -right-2 -top-2 h-4 min-w-4 px-1 text-[10px] sm:static sm:h-5 sm:min-w-5 sm:text-xs"
                       : "absolute -right-2 -top-2 h-4 min-w-4 px-1 text-[10px]"
                   }
-                  aria-label={`${activeFiltersCount} active filters`}
+                  aria-label={t("FILTER_TOOLBAR.ACTIVE_FILTERS", { count: activeFiltersCount })}
                 >
                   {activeFiltersCount}
                 </Badge>
@@ -125,13 +128,13 @@ export const FilterToolBarMobileView = ({
             aria-describedby="filter-description"
           >
             <SheetTitle className={alwaysVisible ? undefined : "mb-4"}>
-              {alwaysVisible ? triggerLabel : "Filter"}
+              {alwaysVisible ? triggerLabel : t("common:FILTER")}
             </SheetTitle>
             <SheetDescription
               id="filter-description"
               className={alwaysVisible ? "mb-2" : undefined}
             >
-              {alwaysVisible ? "Refine the results using one or more filters." : ""}
+              {alwaysVisible ? t("FILTER_TOOLBAR.REFINE_THE_RESULTS") : ""}
             </SheetDescription>
             {alwaysVisible ? (
               <>
@@ -148,7 +151,7 @@ export const FilterToolBarMobileView = ({
                   )}
                   <SheetClose asChild>
                     <Button size="sm" className="h-8">
-                      Show Results
+                      {t("FILTER_TOOLBAR.SHOW_RESULTS")}
                     </Button>
                   </SheetClose>
                 </div>
@@ -158,7 +161,7 @@ export const FilterToolBarMobileView = ({
                 {sheetComponents.map((item) => item)}
                 <SheetClose asChild>
                   <Button className="mt-4" size="sm">
-                    Show Results
+                    {t("FILTER_TOOLBAR.SHOW_RESULTS")}
                   </Button>
                 </SheetClose>
                 {showReset && (
@@ -185,8 +188,9 @@ export const FilterToolbar = <T extends Record<string, unknown>>({
   hideGlobalResetButton = false,
   showFirstFilterOnMobile = true,
   displayMode = "responsive",
-  sheetTriggerLabel = "Filters",
+  sheetTriggerLabel,
 }: FilterToolbarProps<T>) => {
+  const { t } = useT("os.shared");
   // Frozen snapshot of the first render's defaults. useState (not useRef) so it can be read
   // during render; both keep only the initial value, so behaviour is unchanged.
   const [initialValues] = useState(defaultValues);
@@ -223,7 +227,7 @@ export const FilterToolbar = <T extends Record<string, unknown>>({
         showFirstFilterOnMobile={false}
         alwaysVisible
         activeFiltersCount={activeFiltersCount}
-        triggerLabel={sheetTriggerLabel}
+        triggerLabel={sheetTriggerLabel ?? t("FILTER_TOOLBAR.FILTERS")}
       />
     );
   }

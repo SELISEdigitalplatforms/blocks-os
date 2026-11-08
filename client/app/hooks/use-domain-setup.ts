@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useImpersonateStore } from "@seliseblocks/genesis-os";
+import { useImpersonateStore, tStatic } from "@seliseblocks/genesis-os";
 import { projectService as crossProjectService } from "@blocks-identifier/services/project.service";
 import { parseSSEBuffer } from "@blocks-ai/shared/utils/parse-sse";
 import type {
@@ -42,11 +42,10 @@ const initialSteps = (): DomainSetupSteps => ({
   ssl: { status: "pending" },
 });
 
-const CONNECTION_LOST_MESSAGE =
-  "We lost the connection to the server. Setup may still finish on its own, so check the domain's status in a moment.";
+const connectionLostMessage = () => tStatic("os.shared", "USE_DOMAIN_SETUP.CONNECTION_LOST");
 
 const firstErrorMessage = (errors?: Record<string, string> | null) =>
-  (errors && Object.values(errors)[0]) || "Domain setup failed. Please try again.";
+  (errors && Object.values(errors)[0]) || tStatic("os.shared", "USE_DOMAIN_SETUP.SETUP_FAILED");
 
 /**
  * Runs `Domain/ConfigureStream` and follows its progress. The run itself belongs to the
@@ -118,7 +117,7 @@ export const useDomainSetupStream = () => {
         return;
       }
 
-      setError(result ? firstErrorMessage(result.errors) : CONNECTION_LOST_MESSAGE);
+      setError(result ? firstErrorMessage(result.errors) : connectionLostMessage());
       setPhase("failed");
     },
     [queryClient],

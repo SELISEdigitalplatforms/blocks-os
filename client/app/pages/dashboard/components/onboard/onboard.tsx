@@ -3,6 +3,7 @@ import { useGetProject } from "@/hooks/use-project";
 import { Rocket } from "lucide-react";
 import { useState } from "react";
 import { OnboardDialog } from "./onboard-dialog";
+import { useT } from "@seliseblocks/genesis-os";
 
 /**
  * Opens the ready-to-paste onboarding brief for the selected project. Reads the
@@ -10,6 +11,7 @@ import { OnboardDialog } from "./onboard-dialog";
  * extra request and needs no props threaded through `ProjectActions`.
  */
 export const OnboardProject = () => {
+  const { t } = useT("os.dashboard");
   const [open, setOpen] = useState(false);
   const { data } = useGetProject();
 
@@ -22,7 +24,7 @@ export const OnboardProject = () => {
         onClick={() => setOpen(true)}
       >
         <Rocket className="h-4 w-4" />
-        <span className="sr-only sm:not-sr-only">Bootstrap</span>
+        <span className="sr-only sm:not-sr-only">{t("ONBOARD.BOOTSTRAP")}</span>
       </Button>
       <OnboardDialog open={open} onOpenChange={setOpen} project={data?.data} />
     </>

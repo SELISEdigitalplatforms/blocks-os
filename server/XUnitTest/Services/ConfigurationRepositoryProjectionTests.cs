@@ -25,9 +25,11 @@ public class ConfigurationRepositoryProjectionTests
     private sealed class RecordingDataAccess : IOsDataAccess
     {
         public Dictionary<string, bool> UseProjectionByCallSite { get; } = new();
+        public int Reads { get; private set; }
 
         public Task<ReadScope<T>> ReadAsync<T>(string schema, FilterDefinition<T> filter, string callSite, string? tenantId = null, bool useProjection = true)
         {
+            Reads++;
             UseProjectionByCallSite[callSite] = useProjection;
             return Task.FromResult(new ReadScope<T>(false, filter, null));
         }
@@ -80,12 +82,32 @@ public class ConfigurationRepositoryProjectionTests
         var repository = Repository();
 
         await repository.GetMailConfigurationByNameForViewAsync("Primary");
-        await repository.GetAllMailConfigurationsAsync();
 
         _dataAccess.UseProjectionByCallSite.Should().Contain(new Dictionary<string, bool>
         {
-            ["ConfigurationRepository.GetMailConfigurationByNameForViewAsync"] = true,
-            ["ConfigurationRepository.GetAllMailConfigurationsAsync"] = true
+            ["ConfigurationRepository.GetMailConfigurationByNameForViewAsync"] = true
         });
+    }
+
+    /// <summary>
+    /// blocks-os#732 Q4 (answer A): the list read is unprojected, because the projection is built
+    /// from each project's stored schema document, and those predate <c>IsOrganizationDefault</c>.
+    /// It is still one read, and its result still goes through the column mask (ForView).
+    /// </summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("default")]
+    [InlineData("acme")]
+    public async Task ListRead_IsOneUnprojectedRead(string? organizationId)
+    {
+        var repository = Repository();
+
+        await repository.GetAllMailConfigurationsAsync(organizationId);
+
+        _dataAccess.UseProjectionByCallSite.Should().Equal(new Dictionary<string, bool>
+        {
+            ["ConfigurationRepository.GetAllMailConfigurationsAsync"] = false
+        });
+        _dataAccess.Reads.Should().Be(1);
     }
 }

@@ -20,6 +20,17 @@ vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 
 const ABSOLUTE_OPTIONS = undefined;
 const ABSOLUTE_FLAGS = { absoluteUrl: true };
+const mockSaveConfigPayloadForOrg = {
+  configurationName: "Acme SMTP",
+  configurationId: "",
+  host: "smtp.example.com",
+  port: 587,
+  enableSSL: true,
+  senderName: "Acme",
+  senderAddress: "orders@acme.example",
+  isInbound: false,
+  provider: 1,
+};
 
 describe("EmailService", () => {
   let service: EmailService;
@@ -123,15 +134,15 @@ describe("EmailService", () => {
     it("should call correct endpoint with all parameters", async () => {
       vi.mocked(http.get).mockResolvedValue(mockEmailTemplatesResponse);
 
-      const result = await service.fetchEmailTemplates(
-        1,
-        10,
-        "welcome",
-        "Name",
-        false,
-        "en",
-        "config-1",
-      );
+      const result = await service.fetchEmailTemplates({
+        pageNumber: 1,
+        pageSize: 10,
+        searchKey: "welcome",
+        sortProperty: "Name",
+        isDescending: false,
+        language: "en",
+        mailConfigurationId: "config-1",
+      });
 
       expect(http.get).toHaveBeenCalledWith(
         `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATES}?pageNumber=1&pageSize=10&searchKey=welcome&sortProperty=Name&isDescending=false&language=en&mailConfigurationId=config-1`,
@@ -144,7 +155,15 @@ describe("EmailService", () => {
     it("should use default sort property and direction", async () => {
       vi.mocked(http.get).mockResolvedValue(mockEmailTemplatesResponse);
 
-      await service.fetchEmailTemplates(0, 10, "", "Name", false, "", "");
+      await service.fetchEmailTemplates({
+        pageNumber: 0,
+        pageSize: 10,
+        searchKey: "",
+        sortProperty: "Name",
+        isDescending: false,
+        language: "",
+        mailConfigurationId: "",
+      });
 
       expect(http.get).toHaveBeenCalledWith(
         `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATES}?pageNumber=0&pageSize=10&searchKey=&sortProperty=Name&isDescending=false&language=&mailConfigurationId=`,
@@ -156,7 +175,15 @@ describe("EmailService", () => {
     it("should handle descending sort", async () => {
       vi.mocked(http.get).mockResolvedValue(mockEmailTemplatesResponse);
 
-      await service.fetchEmailTemplates(0, 10, "", "CreatedDate", true, "en", "");
+      await service.fetchEmailTemplates({
+        pageNumber: 0,
+        pageSize: 10,
+        searchKey: "",
+        sortProperty: "CreatedDate",
+        isDescending: true,
+        language: "en",
+        mailConfigurationId: "",
+      });
 
       expect(http.get).toHaveBeenCalledWith(
         `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATES}?pageNumber=0&pageSize=10&searchKey=&sortProperty=CreatedDate&isDescending=true&language=en&mailConfigurationId=`,
@@ -169,9 +196,17 @@ describe("EmailService", () => {
       const error = new Error("Failed to fetch templates");
       vi.mocked(http.get).mockRejectedValue(error);
 
-      await expect(service.fetchEmailTemplates(0, 10, "", "Name", false, "", "")).rejects.toThrow(
-        "Failed to fetch templates",
-      );
+      await expect(
+        service.fetchEmailTemplates({
+          pageNumber: 0,
+          pageSize: 10,
+          searchKey: "",
+          sortProperty: "Name",
+          isDescending: false,
+          language: "",
+          mailConfigurationId: "",
+        }),
+      ).rejects.toThrow("Failed to fetch templates");
     });
   });
 
@@ -253,7 +288,16 @@ describe("EmailService", () => {
     it("should include optional mail server configuration parameter", async () => {
       vi.mocked(http.get).mockResolvedValue(mockEmailUsageResponse);
 
-      await service.getMailBoxMails(0, 10, true, undefined, undefined, undefined, undefined, "cfg-1");
+      await service.getMailBoxMails(
+        0,
+        10,
+        true,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        "cfg-1",
+      );
 
       expect(http.get).toHaveBeenCalledWith(
         expect.stringContaining("MailServerConfigurationId=cfg-1"),
@@ -319,6 +363,76 @@ describe("EmailService", () => {
       vi.mocked(http.get).mockRejectedValue(error);
 
       await expect(service.getMailBoxMail("invalid-id")).rejects.toThrow("Email not found");
+    });
+  });
+
+  describe("getMailBoxMailSource", () => {
+    it("requests the stored message by its encoded ItemId and returns the file", async () => {
+      const file = new Blob(["Subject: hi"], { type: "application/octet-stream" });
+      vi.mocked(http.get).mockResolvedValue(file);
+
+      const result = await service.getMailBoxMailSource("row 1/&x");
+
+      expect(http.get).toHaveBeenCalledWith(
+        `${MAIL_ENDPOINTS.GET_MAILBOX_MAIL_SOURCE}?ItemId=row%201%2F%26x`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
+      expect(MAIL_ENDPOINTS.GET_MAILBOX_MAIL_SOURCE).toMatch(/\/api\/Mail\/GetMailBoxMailSource$/);
+      expect(result).toBe(file);
+    });
+
+    it.each([
+      ["JSON", { isSuccess: false, errors: {} }],
+      ["text", "Subject: hi"],
+      ["nothing", undefined],
+    ])("throws when an older API answers with %s instead of a file", async (_, answer) => {
+      vi.mocked(http.get).mockResolvedValue(answer);
+
+      await expect(service.getMailBoxMailSource("row-1")).rejects.toThrow(
+        "Unexpected message source response",
+      );
+    });
+
+    it("passes HTTP errors through", async () => {
+      vi.mocked(http.get).mockRejectedValue(new Error("Mail not found"));
+
+      await expect(service.getMailBoxMailSource("nope")).rejects.toThrow("Mail not found");
+    });
+  });
+
+  describe("getMailBoxMailAttachmentFile", () => {
+    it("requests the attachment by ItemId and Index and returns the file", async () => {
+      const file = new Blob(["pdf"], { type: "application/octet-stream" });
+      vi.mocked(http.get).mockResolvedValue(file);
+
+      const result = await service.getMailBoxMailAttachmentFile("row 1/&x", 2);
+
+      expect(http.get).toHaveBeenCalledWith(
+        `${MAIL_ENDPOINTS.GET_MAILBOX_MAIL_ATTACHMENT_FILE}?ItemId=row+1%2F%26x&Index=2`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
+      expect(MAIL_ENDPOINTS.GET_MAILBOX_MAIL_ATTACHMENT_FILE).toMatch(
+        /\/api\/Mail\/GetMailBoxMailAttachmentFile$/,
+      );
+      expect(result).toBe(file);
+    });
+
+    it("throws when the answer is not a file", async () => {
+      vi.mocked(http.get).mockResolvedValue({ attachment: null, isSuccess: true, errors: null });
+
+      await expect(service.getMailBoxMailAttachmentFile("row-1", 0)).rejects.toThrow(
+        "Unexpected attachment response",
+      );
+    });
+
+    it("passes HTTP errors through", async () => {
+      vi.mocked(http.get).mockRejectedValue(new Error("Attachment not found"));
+
+      await expect(service.getMailBoxMailAttachmentFile("row-1", 5)).rejects.toThrow(
+        "Attachment not found",
+      );
     });
   });
 
@@ -591,6 +705,69 @@ describe("EmailService", () => {
       };
 
       await expect(service.deleteMailConfig(payload)).rejects.toThrow("Failed to delete config");
+    });
+  });
+  describe("organizations (blocks-os#732)", () => {
+    it("asks Mail/Gets for one organization when given one (H4)", async () => {
+      vi.mocked(http.get).mockResolvedValue([]);
+
+      await service.getEmailSecretConfigs(0, 10, "acme corp");
+
+      expect(http.get).toHaveBeenCalledWith(
+        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}?pageNumber=1&pageSize=10&organizationId=acme%20corp`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
+    });
+
+    it("keeps the unfiltered Mail/Gets call without one (H5)", async () => {
+      vi.mocked(http.get).mockResolvedValue([]);
+
+      await service.getEmailSecretConfigs(0, 10, undefined);
+
+      expect(http.get).toHaveBeenCalledWith(
+        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}?pageNumber=1&pageSize=10`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
+    });
+
+    it("returns a configuration's template count (H6)", async () => {
+      vi.mocked(http.get).mockResolvedValue({ isSuccess: true, templateCount: 6 });
+
+      await expect(service.getConfigurationUsage("acme smtp")).resolves.toBe(6);
+
+      expect(http.get).toHaveBeenCalledWith(
+        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIG_USAGE}?configurationId=acme%20smtp`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
+    });
+
+    it("fails the usage read when the server reports a failure (C8)", async () => {
+      vi.mocked(http.get).mockResolvedValue({
+        isSuccess: false,
+        errors: { ConfigurationId: "Configuration not found" },
+      });
+
+      await expect(service.getConfigurationUsage("missing")).rejects.toThrow();
+    });
+
+    it("sends the organization fields on save", async () => {
+      vi.mocked(http.post).mockResolvedValue({ isSuccess: true, itemId: "cfg-9" });
+
+      await service.saveMailConfig({
+        ...mockSaveConfigPayloadForOrg,
+        organizationId: "acme",
+        isOrganizationDefault: true,
+      });
+
+      expect(http.post).toHaveBeenCalledWith(
+        MAIL_CONFIG_ENDPOINTS.SAVE_CONFIG,
+        expect.objectContaining({ organizationId: "acme", isOrganizationDefault: true }),
+        undefined,
+        ABSOLUTE_FLAGS,
+      );
     });
   });
 });

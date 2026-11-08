@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { History } from "lucide-react";
 import { toActivityRowViewModel } from "../mappers/activity.mapper";
 import type { IActivityRowViewModel } from "../view-models/activity.view-model";
+import { useT } from "@seliseblocks/genesis-os";
 
 type ActivityListProps = {
   isLoading: boolean;
@@ -31,21 +32,23 @@ const LoadingSkeleton = () => (
   </div>
 );
 
-const EmptyState = () => (
-  <div className="flex h-full min-h-0 flex-col items-center justify-center gap-3 py-10 text-center">
-    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-      <History className="h-7 w-7 text-muted-foreground" />
+const EmptyState = () => {
+  const { t } = useT("os.idp.security");
+  return (
+    <div className="flex h-full min-h-0 flex-col items-center justify-center gap-3 py-10 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+        <History className="h-7 w-7 text-muted-foreground" />
+      </div>
+      <div>
+        <p className="text-base font-semibold text-foreground">{t("ACTIVITY_LIST.EMPTY_TITLE")}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{t("ACTIVITY_LIST.EMPTY_BODY")}</p>
+      </div>
     </div>
-    <div>
-      <p className="text-base font-semibold text-foreground">No activity yet</p>
-      <p className="mt-1 text-sm text-muted-foreground">
-        We&apos;ll show your account activity here.
-      </p>
-    </div>
-  </div>
-);
+  );
+};
 
 export const ActivityList = ({ isLoading, rows }: ActivityListProps) => {
+  const { t } = useT("os.idp.security");
   if (isLoading) return <LoadingSkeleton />;
   if (rows.length === 0) return <EmptyState />;
 
@@ -53,10 +56,10 @@ export const ActivityList = ({ isLoading, rows }: ActivityListProps) => {
     <Table className="text-sm">
       <TableHeader>
         <TableRow className="hover:bg-transparent">
-          <TableHead>Event</TableHead>
-          <TableHead>Device</TableHead>
-          <TableHead>IP Address</TableHead>
-          <TableHead>Time</TableHead>
+          <TableHead>{t("ACTIVITY_LIST.COLUMN_EVENT")}</TableHead>
+          <TableHead>{t("ACTIVITY_LIST.COLUMN_DEVICE")}</TableHead>
+          <TableHead>{t("ACTIVITY_LIST.COLUMN_IP_ADDRESS")}</TableHead>
+          <TableHead>{t("ACTIVITY_LIST.COLUMN_TIME")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>

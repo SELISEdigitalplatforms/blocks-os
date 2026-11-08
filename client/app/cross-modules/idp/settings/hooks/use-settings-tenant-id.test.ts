@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useSettingsTenantId } from "./use-settings-tenant-id";
 
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: vi.fn(),
 }));
 

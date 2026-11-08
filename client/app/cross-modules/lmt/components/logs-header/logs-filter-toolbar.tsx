@@ -10,6 +10,7 @@ import {
   serviceKeyToTreeValues,
 } from "../../utils";
 import { restoreWindowBounds } from "../../utils/restore-window";
+import { useT } from "@seliseblocks/genesis-os";
 
 type LogsFilterValues = {
   search?: string;
@@ -19,6 +20,7 @@ type LogsFilterValues = {
 };
 
 export const LogsFilterToolbar = () => {
+  const { t } = useT("os.lmt");
   const {
     services,
     serviceFilterValue,
@@ -157,7 +159,7 @@ export const LogsFilterToolbar = () => {
     {
       key: "timeRange",
       type: "TimeRange",
-      label: "Time range",
+      label: t("LOGS_FILTER_TOOLBAR.TIME_RANGE"),
       // Log rows are rendered in UTC, so the window has to be written in UTC to match them.
       props: {
         defaultRange,
@@ -169,7 +171,7 @@ export const LogsFilterToolbar = () => {
     {
       key: "service",
       type: "Radio",
-      label: "Service",
+      label: t("LOGS_FILTER_TOOLBAR.SERVICE"),
       props: { options: serviceOptions },
     },
   ];
@@ -177,7 +179,7 @@ export const LogsFilterToolbar = () => {
   filters.push({
     key: "level",
     type: "Radio",
-    label: "Type",
+    label: t("common:TYPE"),
     props: { options: levels },
   });
   return (

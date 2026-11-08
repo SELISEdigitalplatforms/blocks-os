@@ -3,7 +3,7 @@ import type { IDataGatewayConfiguration } from "@/cross-modules/data-gateway/mod
 import {
   DEFAULT_DATA_SOURCE_VALUE,
   dataGatewayConfigurationFormDefaultValue,
-  dataGatewayConfigurationFormSchema,
+  createDataGatewayConfigurationFormSchema,
   canOmitConnectionString,
   isCustomConnection,
   toConnectionStringPayload,
@@ -132,7 +132,7 @@ describe("toDataGatewayConfigurationFormValues", () => {
 
 describe("dataGatewayConfigurationFormSchema", () => {
   it("requires a collection name pattern", () => {
-    const result = dataGatewayConfigurationFormSchema.safeParse({
+    const result = createDataGatewayConfigurationFormSchema().safeParse({
       ...dataGatewayConfigurationFormDefaultValue,
       collectionNamePattern: "",
     });
@@ -140,7 +140,7 @@ describe("dataGatewayConfigurationFormSchema", () => {
   });
 
   it("accepts blank connection string/database name (the Blocks-managed case)", () => {
-    const result = dataGatewayConfigurationFormSchema.safeParse(
+    const result = createDataGatewayConfigurationFormSchema().safeParse(
       dataGatewayConfigurationFormDefaultValue,
     );
     expect(result.success).toBe(true);

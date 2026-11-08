@@ -6,8 +6,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui-kits/table/table";
-import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import {
+  CellContext,
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
 import { useCallback, useMemo } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { DeleteOrganizationRole } from "./delete-organization-role";
@@ -18,10 +25,18 @@ type OrganizationRolesListProps = {
   onSave?: () => void;
 };
 
+const NameCell = ({ row }: CellContext<IRole, unknown>) => (
+  <div className="w-[130px] truncate">{row.original.name}</div>
+);
+
 export const OrganizationRolesList = ({ roles, onDelete, onSave }: OrganizationRolesListProps) => {
-  const handleDelete = useCallback((role: IRole) => {
-    return onDelete(role);
-  }, [onDelete]);
+  const { t } = useT("os.idp.users");
+  const handleDelete = useCallback(
+    (role: IRole) => {
+      return onDelete(role);
+    },
+    [onDelete],
+  );
 
   const columns = useMemo<ColumnDef<IRole>[]>(
     () => [
@@ -30,19 +45,21 @@ export const OrganizationRolesList = ({ roles, onDelete, onSave }: OrganizationR
         accessorFn: (row) => `${row.name}`.trim(),
         header: () => (
           <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">Roles</span>
+            <span className="font-bold text-medium-emphasis">
+              {t("ORGANIZATION_ROLES_LIST.COLUMN_ROLES")}
+            </span>
           </div>
         ),
-        cell: ({ row }) => (
-          <div className="w-[130px] truncate">{row.original.name}</div>
-        ),
+        cell: NameCell,
       },
       {
         id: "slug",
         accessorFn: (row) => `${row.slug}`.trim(),
         header: () => (
           <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">Slug</span>
+            <span className="font-bold text-medium-emphasis">
+              {t("ORGANIZATION_ROLES_LIST.COLUMN_SLUG")}
+            </span>
           </div>
         ),
         cell: ({ row }) => (
@@ -66,7 +83,7 @@ export const OrganizationRolesList = ({ roles, onDelete, onSave }: OrganizationR
         ),
       },
     ],
-    [handleDelete, onSave],
+    [handleDelete, onSave, t],
   );
 
   const table = useReactTable({
@@ -76,46 +93,39 @@ export const OrganizationRolesList = ({ roles, onDelete, onSave }: OrganizationR
   });
 
   return (
-    <>
-      <Table>
-        <TableHeader>
-          <TableRow className="px-4 py-3 hover:bg-transparent">
-            {table
-              .getHeaderGroups()
-              .map((headerGroup) =>
-                headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} className="px-4 py-3">
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                )),
-              )}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {!roles.length ? (
-            <TableRow>
-              <TableCell
-                colSpan={columns.length}
-                className="h-24 text-center text-muted-foreground"
-              >
-                No roles found
-              </TableCell>
-            </TableRow>
-          ) : (
-            table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id}>
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className="px-4 py-3">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
+    <Table>
+      <TableHeader>
+        <TableRow className="px-4 py-3 hover:bg-transparent">
+          {table.getHeaderGroups().map((headerGroup) =>
+            headerGroup.headers.map((header) => (
+              <TableHead key={header.id} className="px-4 py-3">
+                {header.isPlaceholder
+                  ? null
+                  : flexRender(header.column.columnDef.header, header.getContext())}
+              </TableHead>
+            )),
           )}
-        </TableBody>
-      </Table>
-    </>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {!roles.length ? (
+          <TableRow>
+            <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+              {t("ORGANIZATION_ROLES_LIST.NO_ROLES_FOUND")}
+            </TableCell>
+          </TableRow>
+        ) : (
+          table.getRowModel().rows.map((row) => (
+            <TableRow key={row.id}>
+              {row.getVisibleCells().map((cell) => (
+                <TableCell key={cell.id} className="px-4 py-3">
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </TableCell>
+              ))}
+            </TableRow>
+          ))
+        )}
+      </TableBody>
+    </Table>
   );
 };

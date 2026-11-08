@@ -10,20 +10,10 @@ import { OrganizationCombobox } from "@blocks-idp/iam/components/organization-co
 import { SettingsToggleCard } from "@blocks-idp/settings/components/settings-toggle-card";
 import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout";
 import type { OrganizationConfigFormValues } from "@blocks-idp/settings/utils/organization-config-form";
+import { useT } from "@seliseblocks/genesis-os";
 import type { Control } from "react-hook-form";
 
 export const DEFAULT_SIGNUP_ORGANIZATION_ID = "default";
-
-export const SIGNUP_AUTO_JOIN_COPY = {
-  title: "Add new sign-ups to an organization",
-  description: "New users who sign up join the organization you choose.",
-  disabledTooltip: "Turn on multi-organization first.",
-  pickerLabel: "Organization for new sign-ups",
-  helper: "Sign-ups fail if this organization is deleted or disabled.",
-  warningTitle: "New users get tenant-wide access",
-  warningBody:
-    "Users who join Default can act across the whole project. Choose a specific organization to limit access.",
-} as const;
 
 type SignupAutoJoinCardProps = {
   control: Control<OrganizationConfigFormValues>;
@@ -46,17 +36,20 @@ export const SignupAutoJoinCard = ({
   onEnabledChange,
   onOrganizationChange,
 }: SignupAutoJoinCardProps) => {
+  const { t } = useT("os.idp.settings");
   const showPicker = isMultiOrgEnabled && isEnabled;
 
   return (
     <div className="flex flex-col gap-4" data-testid="signup-auto-join-card">
       <SettingsToggleCard
-        label={SIGNUP_AUTO_JOIN_COPY.title}
-        description={SIGNUP_AUTO_JOIN_COPY.description}
+        label={t("SIGNUP_AUTO_JOIN_CARD.TITLE")}
+        description={t("SIGNUP_AUTO_JOIN_CARD.DESCRIPTION")}
         checked={isEnabled}
         onCheckedChange={onEnabledChange}
         disabled={!isMultiOrgEnabled || disabled}
-        disabledTooltip={isMultiOrgEnabled ? undefined : SIGNUP_AUTO_JOIN_COPY.disabledTooltip}
+        disabledTooltip={
+          isMultiOrgEnabled ? undefined : t("SIGNUP_AUTO_JOIN_CARD.DISABLED_TOOLTIP")
+        }
       />
 
       {showPicker ? (
@@ -66,7 +59,7 @@ export const SignupAutoJoinCard = ({
           render={() => (
             <FormItem className="w-full min-w-0">
               <FormLabel className={SETTINGS_FORM_LAYOUT.fieldLabel}>
-                {SIGNUP_AUTO_JOIN_COPY.pickerLabel}
+                {t("SIGNUP_AUTO_JOIN_CARD.PICKER_LABEL")}
               </FormLabel>
               <FormControl>
                 <OrganizationCombobox
@@ -78,7 +71,7 @@ export const SignupAutoJoinCard = ({
                 />
               </FormControl>
               <p className={SETTINGS_FORM_LAYOUT.fieldDescription}>
-                {SIGNUP_AUTO_JOIN_COPY.helper}
+                {t("SIGNUP_AUTO_JOIN_CARD.HELPER")}
               </p>
               <FormMessage />
             </FormItem>
@@ -91,9 +84,9 @@ export const SignupAutoJoinCard = ({
           variant="warning"
           className="mb-0"
           compact={false}
-          title={SIGNUP_AUTO_JOIN_COPY.warningTitle}
+          title={t("SIGNUP_AUTO_JOIN_CARD.WARNING_TITLE")}
         >
-          {SIGNUP_AUTO_JOIN_COPY.warningBody}
+          {t("SIGNUP_AUTO_JOIN_CARD.WARNING_BODY")}
         </Banner>
       ) : null}
     </div>

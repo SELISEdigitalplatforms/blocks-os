@@ -4,6 +4,12 @@
         <name>Api</name>
     </assembly>
     <members>
+        <member name="T:BlocksOs.Api.Controllers.ActionsController">
+            <summary>The project's actions (Config → Actions). Routing only; rules are in <see cref="T:Configuration.DomainService.Actions.IActionsService"/>.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.ActionsController.Update(Configuration.DomainService.Actions.UpdateActionRequest,System.Threading.CancellationToken)">
+            <summary>One flag of one action. 400 <c>ACTION_NOT_FOUND</c>, <c>ACTIONS_NOT_SEEDED</c> or <c>INVALID_TARGET</c>.</summary>
+        </member>
         <member name="T:BlocksOs.Api.Controllers.CaptchaConfigController">
             <summary>
             Captcha configuration endpoints.
@@ -163,6 +169,20 @@
             far, freeing the user to request a different range straight away.
             </summary>
         </member>
+        <member name="T:BlocksOs.Api.Controllers.MailConfigurationUsageController">
+            <summary>
+            <c>GET Mail/GetConfigurationUsage</c>: how many templates name a mail configuration, so the
+            console can say what a delete affects.
+            </summary>
+            <remarks>
+            Served under the Mail route like the other mail configuration actions, but kept out of
+            <see cref="T:BlocksOs.Api.Controllers.MailController"/>, which already carries three responsibilities (configurations,
+            templates, mailbox) and is flagged for it.
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.MailConfigurationUsageController.GetConfigurationUsage(Configuration.DomainService.Mail.RequestModel.GetMailConfigurationUsageRequest)">
+            <summary>Unknown id: HTTP 400 with <c>errors.ConfigurationId</c>, like the other mail field errors.</summary>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.MailController.ToActionResult(Configuration.DomainService.Mail.Services.MailConfigurationMutationResult)">
             <summary>
             Turns a mail configuration outcome into a status code.
@@ -174,6 +194,34 @@
             them all into an availability error would tell an operator to retry something that
             will never succeed.
             </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.MailController.AssignTemplates(Configuration.DomainService.Mail.Template.AssignTemplatesRequest)">
+            <summary>
+            Points many templates of a configuration's organization at that configuration in one update.
+            A field error is HTTP 400 with <c>{ isSuccess:false, errors }</c>, as the other template endpoints.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.MailController.DeleteTemplateAcrossOrganizations(Configuration.DomainService.Mail.Template.DeleteTemplateAcrossOrganizationsRequest)">
+            <summary>
+            Deletes a Default organization template now and queues the deletion of the organizations' own copies (same
+            Name + Language) in all or the selected organizations; the OS Worker deletes them and the requester gets a
+            bell notification. Returns the job id. "Only the Default organization's template" uses DeleteTemplate.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.MailController.CopyTemplateToOrganizations(Configuration.DomainService.Mail.Template.CopyTemplateToOrganizationsRequest)">
+            <summary>
+            Queues a copy of a Default organization template to all or selected organizations; the OS Worker makes the
+            copies and the requester gets a bell notification. Returns the job id.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.MailController.GetTemplateOrganizationCopies(Configuration.DomainService.Mail.Template.GetTemplateOrganizationCopiesRequest)">
+            <summary>Which of up to 25 organizations already have their own template with the same Name + Language.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.MailController.GetMailBoxMailSource(Configuration.DomainService.Mail.Mailbox.GetMailBoxMailRequest)">
+            <summary>The stored message as an <c>.eml</c> download.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.MailController.GetMailBoxMailAttachmentFile(Configuration.DomainService.Mail.Mailbox.GetMailBoxMailAttachmentFileRequest)">
+            <summary>One attachment of the stored message as a download, streamed from the message.</summary>
         </member>
         <member name="M:BlocksOs.Api.Controllers.MigrationController.#ctor(DomainService.Migration.IMigrationService,DomainService.Migration.Services.IMigrationRepository,Blocks.Genesis.IMessageClient)">
             <summary>
@@ -358,6 +406,9 @@
             the read has already been audited by the service, so the audit trail is unchanged.
             </remarks>
         </member>
+        <member name="T:BlocksOs.Api.Controllers.ServiceOutcomeResults">
+            <summary>Maps a <see cref="T:Configuration.DomainService.Shared.Services.ServiceOutcome`1"/> to HTTP: 200 with the value, or 400/404/409 with <c>Errors.code</c>.</summary>
+        </member>
         <member name="T:BlocksOs.Api.Controllers.UserPreferenceController">
             <summary>
             The signed-in user's own settings, by key (<see cref="T:DomainService.Preference.UserPreferenceKeys"/>), such as the
@@ -382,6 +433,24 @@
             tooling can read it without a token. Route is <c>GET /api/version</c> via the global
             <see cref="T:BlocksOs.Api.GlobalApiRoutePrefixConvention"/> "api" prefix.
             </summary>
+        </member>
+        <member name="T:BlocksOs.Api.Controllers.WebhookHistoryController">
+            <summary><c>Webhooks/Deliveries</c> and <c>Webhooks/Resend</c>. Rules are in <see cref="T:Configuration.DomainService.Webhooks.IWebhookHistoryService"/>.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.WebhookHistoryController.Deliveries(Configuration.DomainService.Webhooks.WebhookDeliveriesQuery,System.Threading.CancellationToken)">
+            <summary>History of one webhook, newest first.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.WebhookHistoryController.Resend(Configuration.DomainService.Webhooks.ResendWebhookDeliveryRequest,System.Threading.CancellationToken)">
+            <summary>Resends a Delivered or Failed row; 409 while a send of that row is in flight.</summary>
+        </member>
+        <member name="T:BlocksOs.Api.Controllers.WebhooksController">
+            <summary>
+            The project's webhooks (Config → Webhooks). Routing only; rules are in <see cref="T:Configuration.DomainService.Webhooks.IWebhookService"/>.
+            No action ever returns a secret value.
+            </summary>
+        </member>
+        <member name="T:BlocksOs.Api.Controllers.WebhookTestController">
+            <summary><c>Webhooks/Test</c>: one signed sample event now; returns the HTTP status and duration. Not stored.</summary>
         </member>
         <member name="T:BlocksOs.Api.GlobalApiRoutePrefixConvention">
             <summary>Prepends a segment (e.g. <c>api</c>) to every controller’s attribute route template.</summary>
@@ -424,6 +493,15 @@
         </member>
         <member name="M:BlocksOs.Api.Middleware.HostAccessCookieBearerMiddleware.PromoteHostAccessCookie(Microsoft.AspNetCore.Http.HttpContext)">
             <summary>Promote host-named IAM access cookie to Authorization when missing.</summary>
+        </member>
+        <member name="T:BlocksOs.Api.Middleware.OrganizationAccessDeniedExceptionFilter">
+            <summary>
+            A caller confined to its token's organization reached for another organization's records: 403 with the envelope
+            the rest of the API uses, so a client reads the reason from <c>errors</c> as it does for a 400.
+            </summary>
+        </member>
+        <member name="F:BlocksOs.Api.Middleware.OrganizationAccessDeniedExceptionFilter.ErrorKey">
+            <summary>The <c>errors</c> key of the refusal, named like the project access filter's <c>own_project</c>.</summary>
         </member>
         <member name="T:BlocksOs.Api.Middleware.SpaFallbackGuard">
             <summary>

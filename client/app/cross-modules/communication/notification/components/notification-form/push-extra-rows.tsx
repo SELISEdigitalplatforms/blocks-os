@@ -1,6 +1,7 @@
 import type { IPushSettings } from "../../models/push.model";
 import { PUSH_FORM_TEXT } from "../../constants/push-ui.constant";
 import type { NotificationFormValues } from "../../utils/notification-form";
+import { useNotificationT } from "../../i18n";
 import { FormRow } from "./form-row";
 import { PushOptionsField } from "./push-options-field";
 import { PushPlatformsField } from "./push-platforms-field";
@@ -17,6 +18,7 @@ export function PushPlatformsRow({
   onPatch,
   settings,
 }: Readonly<RowsProps & { settings?: IPushSettings }>) {
+  useNotificationT();
   return (
     <FormRow label={PUSH_FORM_TEXT.platforms}>
       <PushPlatformsField
@@ -30,6 +32,7 @@ export function PushPlatformsRow({
 
 /** Platform options and the test send, below the message rows. */
 export function PushOptionsRows({ values, onPatch }: Readonly<RowsProps>) {
+  useNotificationT();
   return (
     <>
       <FormRow label={PUSH_FORM_TEXT.options}>

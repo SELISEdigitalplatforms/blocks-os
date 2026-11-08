@@ -11,7 +11,8 @@ const MAIL_SUBPATH = "Mail";
 export const MAIL_ENDPOINTS = {
   GET_MAILBOX_MAILS: `${MAIL_BASE}/${MAIL_SUBPATH}/GetMailBoxMails`,
   GET_MAILBOX_MAIL: `${MAIL_BASE}/${MAIL_SUBPATH}/GetMailBoxMail`,
-  GET_MAILBOX_MAIL_ATTACHMENT: `${MAIL_BASE}/${MAIL_SUBPATH}/GetMailBoxMailAttachment`,
+  GET_MAILBOX_MAIL_SOURCE: `${MAIL_BASE}/${MAIL_SUBPATH}/GetMailBoxMailSource`,
+  GET_MAILBOX_MAIL_ATTACHMENT_FILE: `${MAIL_BASE}/${MAIL_SUBPATH}/GetMailBoxMailAttachmentFile`,
   SEND_TO_ANY: `${LOGIC_MAIL_BASE}/${MAIL_SUBPATH}/SendToAny`,
 } as const;
 
@@ -22,6 +23,10 @@ export const EMAIL_TEMPLATE_ENDPOINTS = {
   SAVE_TEMPLATE: `${MAIL_BASE}/${MAIL_SUBPATH}/SaveTemplate`,
   CLONE_TEMPLATE: `${MAIL_BASE}/${MAIL_SUBPATH}/CloneTemplate`,
   DELETE_TEMPLATE: `${MAIL_BASE}/${MAIL_SUBPATH}/DeleteTemplate`,
+  ASSIGN_TEMPLATES: `${MAIL_BASE}/${MAIL_SUBPATH}/AssignTemplates`,
+  COPY_TEMPLATE_TO_ORGANIZATIONS: `${MAIL_BASE}/${MAIL_SUBPATH}/CopyTemplateToOrganizations`,
+  GET_TEMPLATE_ORGANIZATION_COPIES: `${MAIL_BASE}/${MAIL_SUBPATH}/GetTemplateOrganizationCopies`,
+  DELETE_TEMPLATE_ACROSS_ORGANIZATIONS: `${MAIL_BASE}/${MAIL_SUBPATH}/DeleteTemplateAcrossOrganizations`,
 } as const;
 
 // Mail Configuration endpoints
@@ -29,4 +34,5 @@ export const MAIL_CONFIG_ENDPOINTS = {
   GET_CONFIGS: `${MAIL_BASE}/${MAIL_SUBPATH}/Gets`,
   SAVE_CONFIG: `${MAIL_BASE}/${MAIL_SUBPATH}/Save`,
   DELETE_CONFIG: `${MAIL_BASE}/${MAIL_SUBPATH}/Delete`,
+  GET_CONFIG_USAGE: `${MAIL_BASE}/${MAIL_SUBPATH}/GetConfigurationUsage`,
 } as const;

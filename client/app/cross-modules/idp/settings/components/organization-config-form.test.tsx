@@ -15,7 +15,8 @@ const h = vi.hoisted(() => ({
 vi.mock("@blocks-idp/settings/hooks/use-settings-config", () => ({
   useSaveSettingsOrganizationConfig: () => ({ mutateAsync: h.mutateAsync, isPending: h.isPending }),
 }));
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 vi.mock("@blocks-idp/iam/components/organization-combobox", () => ({

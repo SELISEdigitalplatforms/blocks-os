@@ -6,6 +6,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Calendar } from "@/components/ui-kits/calendar/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui-kits/popover/popover";
 import { cn } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 
 interface DateRangePickerProps {
   className?: string;
@@ -26,6 +27,7 @@ export function DateRangePicker({
   defaultMonth,
   disabled,
 }: DateRangePickerProps) {
+  const { t } = useT("os.lmt");
   return (
     <div className={cn("grid gap-2", className)}>
       <Popover>
@@ -49,7 +51,7 @@ export function DateRangePicker({
                 format(value.from, "LLL dd, y")
               )
             ) : (
-              <span>Pick a date range</span>
+              <span>{t("DATE_RANGE_PICKER.PICK_A_DATE_RANGE")}</span>
             )}
           </Button>
         </PopoverTrigger>

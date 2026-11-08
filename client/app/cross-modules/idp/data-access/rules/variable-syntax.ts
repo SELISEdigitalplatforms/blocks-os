@@ -1,4 +1,7 @@
+import { tStatic } from "@seliseblocks/genesis-os";
 import type { IRuleField as IField } from "./rules.types";
+
+const I18N_MODULE = "os.idp.rules";
 
 /**
  * The variable grammar of default values and validation rules: the client copy of Genesis
@@ -36,7 +39,17 @@ export const AUTH_NAMES = ["UserId", "Email", "Roles", "Permissions", "Organizat
 const AUTH_LIST_NAMES = new Set(["roles", "permissions"]);
 /** `Auth.Attributes.<name>`: an org-scoped access attribute, a list of strings like Roles. */
 const ATTRIBUTE_PATH_PATTERN = /^attributes\.[a-z_]\w*$/i;
-const SCALAR_TYPES = new Set(["String", "Int", "Float", "Boolean", "DateTime", "ID", "GeoJson", "Enum", "Json"]);
+const SCALAR_TYPES = new Set([
+  "String",
+  "Int",
+  "Float",
+  "Boolean",
+  "DateTime",
+  "ID",
+  "GeoJson",
+  "Enum",
+  "Json",
+]);
 const NAME_PATTERN = /^[A-Za-z_]\w*(\.[A-Za-z_]\w*)+$/;
 const SEGMENT_PATTERN = /^[A-Za-z_]\w*$/;
 
@@ -45,15 +58,24 @@ const isAuth = (part: VariablePart) => part.prefix?.toLowerCase() === AUTH_PREFI
 const nameOf = (part: VariablePart) => `${part.prefix}.${part.path}`;
 
 const invalidName = (name: string, position: number): VariableError => ({
-  message: `Invalid name "${name}" at position ${position}: use letters, digits, "_" and "." between parts`,
+  message: tStatic(I18N_MODULE, "VARIABLE_SYNTAX.INVALID_NAME", { name, position }),
   position,
 });
 
-function checkNameShape(name: string, position: number, mode: VariableMode, schema: string): VariableError | null {
+function checkNameShape(
+  name: string,
+  position: number,
+  mode: VariableMode,
+  schema: string,
+): VariableError | null {
   if (!name.includes(".")) {
     if (!SEGMENT_PATTERN.test(name)) return invalidName(name, position);
-    const target = mode === "template" ? `{{${schema}.${name}}} or {{Auth.…}}` : `{{${schema}.${name}}}`;
-    return { message: `Missing prefix at position ${position}: write ${target}`, position };
+    const target =
+      mode === "template" ? `{{${schema}.${name}}} or {{Auth.…}}` : `{{${schema}.${name}}}`;
+    return {
+      message: tStatic(I18N_MODULE, "VARIABLE_SYNTAX.MISSING_PREFIX", { position, target }),
+      position,
+    };
   }
   return NAME_PATTERN.test(name) ? null : invalidName(name, position);
 }
@@ -62,9 +84,15 @@ const at = (message: string, position: number): VariableError => ({ message, pos
 
 /** A "{" that doesn't start "{{", with the variable it most likely meant. */
 function singleOpenBrace(text: string, i: number, schema: string): VariableError {
-  const inner = text.slice(i + 1).split("}")[0].trim();
+  const inner = text
+    .slice(i + 1)
+    .split("}")[0]
+    .trim();
   const example = inner.length > 0 ? `{{${inner}}}` : `{{${schema}.Property}}`;
-  return at(`Single "{" at position ${i + 1}: variables are written ${example}`, i + 1);
+  return at(
+    tStatic(I18N_MODULE, "VARIABLE_SYNTAX.SINGLE_OPEN_BRACE", { position: i + 1, example }),
+    i + 1,
+  );
 }
 
 /** The variable starting at <paramref name="i"/> ("{{"): its part and where the text continues, or the error. */
@@ -77,25 +105,36 @@ function readVariable(
   const position = i + 1;
   const close = text.indexOf("}}", i + 2);
   const nextOpen = text.indexOf("{{", i + 2);
-  const unclosed = { error: at(`Unclosed variable at position ${position}: expected "}}"`, position) };
+  const unclosed = {
+    error: at(tStatic(I18N_MODULE, "VARIABLE_SYNTAX.UNCLOSED", { position }), position),
+  };
   if (close < 0 || (nextOpen >= 0 && nextOpen < close)) return unclosed;
 
   const name = text.slice(i + 2, close).trim();
-  if (name.length === 0) return { error: at(`Empty variable at position ${position}`, position) };
+  if (name.length === 0)
+    return { error: at(tStatic(I18N_MODULE, "VARIABLE_SYNTAX.EMPTY", { position }), position) };
   if (name.includes("{") || name.includes("}")) return unclosed;
 
   const shapeError = checkNameShape(name, position, mode, schema);
   if (shapeError) return { error: shapeError };
 
   const dot = name.indexOf(".");
-  return { part: { prefix: name.slice(0, dot), path: name.slice(dot + 1), position }, next: close + 2 };
+  return {
+    part: { prefix: name.slice(0, dot), path: name.slice(dot + 1), position },
+    next: close + 2,
+  };
 }
 
 /** In single-variable mode the whole value is one variable, with no text around it. */
 function checkSingle(parts: VariablePart[]): VariableError | null {
   const variable = parts.find(isVariable);
   if (!variable || parts.length === 1) return null;
-  return at(`A validation value is either a fixed value or one variable, e.g. {{${nameOf(variable)}}}`, 1);
+  return at(
+    tStatic(I18N_MODULE, "VARIABLE_SYNTAX.SINGLE_VARIABLE_ONLY", {
+      example: `{{${nameOf(variable)}}}`,
+    }),
+    1,
+  );
 }
 
 /** At a "{" or "}": the variable that starts there, or the syntax error. */
@@ -106,7 +145,10 @@ function readBrace(
   schema: string,
 ): { part: VariablePart; next: number } | { error: VariableError } {
   if (text[i] === "}") {
-    const message = text.startsWith("}}", i) ? `Unexpected "}}" at position ${i + 1}` : `Single "}" at position ${i + 1}`;
+    const key = text.startsWith("}}", i)
+      ? "VARIABLE_SYNTAX.UNEXPECTED_CLOSE_PAIR"
+      : "VARIABLE_SYNTAX.SINGLE_CLOSE_BRACE";
+    const message = tStatic(I18N_MODULE, key, { position: i + 1 });
     return { error: at(message, i + 1) };
   }
   if (text[i + 1] !== "{") return { error: singleOpenBrace(text, i, schema) };
@@ -146,39 +188,89 @@ export function parseVariables(
 const AUTH_CHOICES = AUTH_NAMES.map((n) => `Auth.${n}`).join(", ");
 
 /** An {{Auth.X}} variable: allowed in templates only, a known name, a list only in a list property. */
-function checkAuthPart(part: VariablePart, mode: VariableMode, targetIsList: boolean): VariableError | null {
+function checkAuthPart(
+  part: VariablePart,
+  mode: VariableMode,
+  targetIsList: boolean,
+): VariableError | null {
   const { position } = part;
-  if (mode === "single") return at(`Auth values aren't available in validation rules at position ${position}: use an access policy`, position);
+  if (mode === "single")
+    return at(tStatic(I18N_MODULE, "VARIABLE_SYNTAX.AUTH_NOT_AVAILABLE", { position }), position);
   if (ATTRIBUTE_PATH_PATTERN.test(String(part.path))) {
     return targetIsList
       ? null
-      : at(`Auth.${part.path} is a list at position ${position}: use it in a list property`, position);
+      : at(
+          tStatic(I18N_MODULE, "VARIABLE_SYNTAX.AUTH_IS_LIST", {
+            name: `Auth.${part.path}`,
+            position,
+          }),
+          position,
+        );
   }
   const authName = AUTH_NAMES.find((n) => n.toLowerCase() === part.path?.toLowerCase());
-  if (!authName) return at(`Unknown value "${nameOf(part)}" at position ${position}: use ${AUTH_CHOICES}`, position);
+  if (!authName)
+    return at(
+      tStatic(I18N_MODULE, "VARIABLE_SYNTAX.UNKNOWN_VALUE", {
+        name: nameOf(part),
+        position,
+        choices: AUTH_CHOICES,
+      }),
+      position,
+    );
   if (AUTH_LIST_NAMES.has(authName.toLowerCase()) && !targetIsList) {
-    return at(`Auth.${authName} is a list at position ${position}: use it in a list property`, position);
+    return at(
+      tStatic(I18N_MODULE, "VARIABLE_SYNTAX.AUTH_IS_LIST", { name: `Auth.${authName}`, position }),
+      position,
+    );
   }
   return null;
 }
 
 /** A {{Schema.Path}} variable: the schema's own prefix, an existing property, a single value. */
-function checkFieldPart(part: VariablePart, mode: VariableMode, schemaName: string, fields: Record<string, VariableField>): VariableError | null {
+function checkFieldPart(
+  part: VariablePart,
+  mode: VariableMode,
+  schemaName: string,
+  fields: Record<string, VariableField>,
+): VariableError | null {
   const { position } = part;
   if (part.prefix !== schemaName) {
-    const allowed = mode === "template" ? `${schemaName} or Auth` : schemaName;
-    return at(`Unknown prefix "${part.prefix}" at position ${position}: use ${allowed}`, position);
+    const key =
+      mode === "template"
+        ? "VARIABLE_SYNTAX.UNKNOWN_PREFIX_TEMPLATE"
+        : "VARIABLE_SYNTAX.UNKNOWN_PREFIX_SINGLE";
+    return at(
+      tStatic(I18N_MODULE, key, { prefix: String(part.prefix), position, schema: schemaName }),
+      position,
+    );
   }
   const field = fields[part.path!];
   if (!field) {
-    const guess = closestName(part.path!, Object.keys(fields).filter((k) => !fields[k].isObject));
-    const hint = guess ? ` (did you mean ${schemaName}.${guess}?)` : "";
-    return at(`Unknown property "${nameOf(part)}" at position ${position}${hint}`, position);
+    const guess = closestName(
+      part.path!,
+      Object.keys(fields).filter((k) => !fields[k].isObject),
+    );
+    const key = guess
+      ? "VARIABLE_SYNTAX.UNKNOWN_PROPERTY_HINT"
+      : "VARIABLE_SYNTAX.UNKNOWN_PROPERTY";
+    return at(
+      tStatic(I18N_MODULE, key, { name: nameOf(part), position, guess: `${schemaName}.${guess}` }),
+      position,
+    );
   }
   if (field.isObject) {
-    const child = Object.keys(fields).find((k) => k.startsWith(`${part.path}.`) && !fields[k].isObject);
-    const example = child ? `, e.g. {{${schemaName}.${child}}}` : "";
-    return at(`"${nameOf(part)}" holds an object at position ${position}: use one of its properties${example}`, position);
+    const child = Object.keys(fields).find(
+      (k) => k.startsWith(`${part.path}.`) && !fields[k].isObject,
+    );
+    const key = child ? "VARIABLE_SYNTAX.HOLDS_OBJECT_EXAMPLE" : "VARIABLE_SYNTAX.HOLDS_OBJECT";
+    return at(
+      tStatic(I18N_MODULE, key, {
+        name: nameOf(part),
+        position,
+        example: `{{${schemaName}.${child}}}`,
+      }),
+      position,
+    );
   }
   return null;
 }
@@ -192,7 +284,9 @@ export function checkVariableReferences(
   targetIsList: boolean,
 ): VariableError | null {
   for (const part of parts.filter(isVariable)) {
-    const problem = isAuth(part) ? checkAuthPart(part, mode, targetIsList) : checkFieldPart(part, mode, schemaName, fields);
+    const problem = isAuth(part)
+      ? checkAuthPart(part, mode, targetIsList)
+      : checkFieldPart(part, mode, schemaName, fields);
     if (problem) return problem;
   }
   return null;
@@ -217,7 +311,8 @@ export function variableFieldsOf(fields: IField[], prefix = ""): Record<string, 
     const path = `${prefix}${field.name}`;
     const isObject = !SCALAR_TYPES.has(field.type);
     result[path] = { type: field.type, isArray: field.isArray, isObject };
-    if (isObject && field.fields?.length) Object.assign(result, variableFieldsOf(field.fields, `${path}.`));
+    if (isObject && field.fields?.length)
+      Object.assign(result, variableFieldsOf(field.fields, `${path}.`));
   }
   return result;
 }

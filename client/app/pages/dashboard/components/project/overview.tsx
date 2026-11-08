@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { CopyToClipboardButton, MaskedText } from "@seliseblocks/genesis-os/components";
+import { useT } from "@seliseblocks/genesis-os";
 
 type ProjectOverviewProps = {
   name: string;
@@ -15,19 +16,20 @@ export const ProjectOverview: React.FC<ProjectOverviewProps> = ({
   tenantId,
   isFetching = false,
 }) => {
+  const { t } = useT("os.dashboard");
   if (isFetching) {
     return <ProjectOverviewSkeleton />;
   }
   return (
     <div className="flex min-w-0 flex-col gap-2">
-     <div className="flex items-start gap-1.5">
-       <h1 className="min-w-0 wrap-break-word text-lg font-bold md:text-2xl">{name}</h1>
-       <Badge className="-mt-2 shrink-0 self-start rounded-lg text-xs px-1 py-0.5 hover:bg-primary">
-         {environment}
-       </Badge>
-     </div>
+      <div className="flex items-start gap-1.5">
+        <h1 className="min-w-0 wrap-break-word text-lg font-bold md:text-2xl">{name}</h1>
+        <Badge className="-mt-2 shrink-0 self-start rounded-lg text-xs px-1 py-0.5 hover:bg-primary">
+          {environment}
+        </Badge>
+      </div>
       <div className="flex flex-wrap items-center gap-2 font-mono text-sm">
-        <p className="font-semibold text-high-emphasis">{"X-Blocks-Key:"}</p>
+        <p className="font-semibold text-high-emphasis">{t("OVERVIEW.X_BLOCKS_KEY")}</p>
         <CopyToClipboardButton
           className="text-high-emphasis rounded-lg items-center"
           textToCopy={tenantId || ""}

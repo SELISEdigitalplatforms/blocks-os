@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { Check, Copy } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { copyText } from "./copy-text";
+import { useT } from "@seliseblocks/genesis-os";
 
 type CopyButtonProps = {
   text: string;
@@ -23,6 +24,7 @@ export const CopyButton = ({
   className,
   onCopied,
 }: CopyButtonProps) => {
+  const { t } = useT("os.dashboard");
   const [isCopied, setIsCopied] = useState(false);
   const resetTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -51,7 +53,7 @@ export const CopyButton = ({
       ) : (
         <Copy className="h-4 w-4" aria-hidden="true" />
       )}
-      {showLabel ? <span>{isCopied ? "Copied" : label}</span> : null}
+      {showLabel ? <span>{isCopied ? t("common:COPIED") : label}</span> : null}
     </Button>
   );
 };

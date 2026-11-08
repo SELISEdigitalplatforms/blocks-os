@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import {
   MAX_PERMISSIONS_PER_USER,
-  PERMISSION_LIMIT_MESSAGE,
+  getPermissionLimitMessage,
   getNewlySelectedPermissions,
   getTotalPermissionCount,
   isAtMaxPermissions,
@@ -70,7 +70,7 @@ describe("Permission selection utils", () => {
     });
 
     it("TC-04: limit message matches product copy", () => {
-      expect(PERMISSION_LIMIT_MESSAGE).toBe("You can select up to 5 permissions.");
+      expect(getPermissionLimitMessage()).toBe("You can select up to 5 permissions.");
     });
 
     it("TC-05: deselecting a selected permission decreases the count", () => {

@@ -22,6 +22,9 @@ import {
   type SecretResult,
 } from "@/cross-modules/secrets/models/secret.model";
 import { useSecretTags } from "@/cross-modules/secrets/hooks/use-secret-management";
+import { useT } from "@seliseblocks/genesis-os";
+
+const KEY_NONE = "SECRET_DETAIL.NONE";
 
 /**
  * Actor ids are deliberately not rendered.
@@ -87,6 +90,7 @@ const ChipList = ({
  * design rather than merely absent.
  */
 export function SecretDetail({ secret }: { secret: SecretResult }) {
+  const { t } = useT("os.secrets");
   const access = secret.access ?? { userIds: [], roles: [] };
   const isApi = secret.type === SECRET_TYPE.Api;
 
@@ -103,42 +107,44 @@ export function SecretDetail({ secret }: { secret: SecretResult }) {
     // No border or fill: the panel reads as part of its row rather than as a nested card.
     <div className="px-4 py-3">
       <div className="grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Stat icon={Fingerprint} label="Secret ID">
+        <Stat icon={Fingerprint} label={t("SECRET_DETAIL.SECRET_ID")}>
           <CopyToClipboardButton textToCopy={secret.secretId}>
             <span className="break-all font-mono text-xs">{secret.secretId}</span>
           </CopyToClipboardButton>
         </Stat>
 
-        <Stat icon={PenLine} label="Description">
-          {secret.description || <span className="italic text-muted-foreground">None</span>}
+        <Stat icon={PenLine} label={t("common:DESCRIPTION")}>
+          {secret.description || (
+            <span className="italic text-muted-foreground">{t(KEY_NONE)}</span>
+          )}
         </Stat>
 
-        <Stat icon={Clock} label="Created">
+        <Stat icon={Clock} label={t("SECRET_DETAIL.CREATED")}>
           {formatMoment(secret.createdDate)}
         </Stat>
 
-        <Stat icon={Clock} label="Last updated">
+        <Stat icon={Clock} label={t("SECRET_DETAIL.LAST_UPDATED")}>
           {formatMoment(secret.lastUpdatedDate)}
         </Stat>
 
         {secret.rotationCount > 0 && (
-          <Stat icon={RefreshCw} label="Rotations">
+          <Stat icon={RefreshCw} label={t("SECRET_DETAIL.ROTATIONS")}>
             <span>
               {secret.rotationCount}
               <span className="ml-1.5 text-xs text-muted-foreground">
-                last {formatMoment(secret.lastRotatedDate)}
+                {t("SECRET_DETAIL.LAST", { lastRotatedDate: formatMoment(secret.lastRotatedDate) })}
               </span>
             </span>
           </Stat>
         )}
 
         {secret.deletedDate && (
-          <Stat icon={Archive} label="Archived">
+          <Stat icon={Archive} label={t("SECRET_DETAIL.ARCHIVED")}>
             {formatMoment(secret.deletedDate)}
           </Stat>
         )}
 
-        <Stat icon={Tag} label="Tags">
+        <Stat icon={Tag} label={t("SECRET_DETAIL.TAGS")}>
           {tags.length ? (
             <div className="flex flex-wrap gap-1.5">
               {tags.map((key) => (
@@ -151,31 +157,31 @@ export function SecretDetail({ secret }: { secret: SecretResult }) {
               ))}
             </div>
           ) : (
-            <span className="italic text-muted-foreground">None</span>
+            <span className="italic text-muted-foreground">{t(KEY_NONE)}</span>
           )}
         </Stat>
       </div>
 
       {isApi && (
         <div className="mt-4 grid gap-x-8 gap-y-4 sm:grid-cols-2">
-          <Stat icon={User} label="Allowed users">
+          <Stat icon={User} label={t("SECRET_DETAIL.ALLOWED_USERS")}>
             {access.userIds.length ? (
               <ChipList ids={access.userIds} labels={userNames} icon={User} />
             ) : (
-              <span className="italic text-muted-foreground">None</span>
+              <span className="italic text-muted-foreground">{t(KEY_NONE)}</span>
             )}
           </Stat>
-          <Stat icon={ShieldCheck} label="Allowed roles">
+          <Stat icon={ShieldCheck} label={t("SECRET_DETAIL.ALLOWED_ROLES")}>
             {access.roles.length ? (
               <ChipList ids={access.roles} labels={roleNames} icon={ShieldCheck} />
             ) : (
-              <span className="italic text-muted-foreground">None</span>
+              <span className="italic text-muted-foreground">{t(KEY_NONE)}</span>
             )}
           </Stat>
           {!hasAccessEntries && (
             // An empty access list is not "everyone" — it is the creator plus root.
             <p className="text-xs text-muted-foreground sm:col-span-2">
-              Only the creator and platform administrators can read this secret.
+              {t("SECRET_DETAIL.ONLY_THE_CREATOR_AND_PLATFORM")}
             </p>
           )}
         </div>

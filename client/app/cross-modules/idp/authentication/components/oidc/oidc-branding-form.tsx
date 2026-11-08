@@ -6,6 +6,7 @@ import {
   Loader2,
   Moon,
   Palette,
+  PanelRight,
   Sun,
   Trash2,
   Upload,
@@ -17,6 +18,7 @@ import { Input } from "@/components/ui-kits/input/input";
 import { Label } from "@/components/ui-kits/label/label";
 import { ScrollArea } from "@/components/ui-kits/scroll-area/scroll-area";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
+import { Switch } from "@/components/ui-kits/switch/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
 import { ModuleName } from "@/constants/modules.constants";
@@ -39,78 +41,96 @@ import {
   useUploadFile,
 } from "@blocks-storage/hooks/use-storage-file";
 import { storageService } from "@blocks-storage/services/storage.service";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { tStatic, useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { OidcTemplatePreview } from "./oidc-template-preview";
 import { DEFAULT_OIDC_UI_TEMPLATE, normalizeOidcUiTemplate } from "./oidc-template-defaults";
 import {
-  PAGE_FIELDS,
-  PAGE_OPTIONS,
-  THEME_FIELDS,
+  getPageFields,
+  getPageOptions,
+  getThemeFields,
   type OidcPageKey,
   validateOidcUiTemplate,
 } from "./oidc-template-validation";
 import type { OidcPreviewTheme, OidcPreviewThemeMode } from "./oidc-preview-shared";
 
+const KEY_FIELD_ERROR = "OIDC_BRANDING_FORM.FIELD_ERROR";
+
+const I18N_MODULE = "os.idp.oidc";
+
 const DEFAULT_COLOR = "#0066b2";
 const MAX_LOGO_SIZE_MB = 2;
 const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/svg+xml", "image/webp"];
 
-type EditorTab = "branding" | "theme" | "pages";
+type EditorTab = "branding" | "theme" | "pages" | "layout";
 
-const EDITOR_TABS: Array<{
+const getEditorTabs = (): Array<{
   value: EditorTab;
   label: string;
   Icon: typeof Brush;
-}> = [
-  { value: "branding", label: "Branding", Icon: Brush },
-  { value: "theme", label: "Theme", Icon: Palette },
-  { value: "pages", label: "Pages", Icon: FileText },
+}> => [
+  {
+    value: "branding",
+    label: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.TAB_BRANDING"),
+    Icon: Brush,
+  },
+  { value: "theme", label: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.TAB_THEME"), Icon: Palette },
+  { value: "pages", label: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.TAB_PAGES"), Icon: FileText },
+  {
+    value: "layout",
+    label: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.TAB_LAYOUT"),
+    Icon: PanelRight,
+  },
 ];
 
-const EDITOR_TAB_VALUES = ["branding", "theme", "pages"] as const;
+const EDITOR_TAB_VALUES = ["branding", "theme", "pages", "layout"] as const;
 const PREVIEW_MODE_VALUES = ["system", "light", "dark"] as const;
 
-const THEME_GROUPS: Array<{
+const getThemeGroups = (): Array<{
+  id: string;
   label: string;
   description: string;
   fields: Array<keyof IOidcUiThemePalette>;
-}> = [
+}> => [
   {
-    label: "Brand colors",
-    description: "Core actions and subtle highlights.",
+    id: "brand",
+    label: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.GROUP_BRAND_COLORS"),
+    description: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.GROUP_BRAND_COLORS_DESC"),
     fields: ["primary", "secondary", "accentSoft"],
   },
   {
-    label: "Surfaces",
-    description: "Canvas, cards, and structural borders.",
+    id: "surfaces",
+    label: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.GROUP_SURFACES"),
+    description: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.GROUP_SURFACES_DESC"),
     fields: ["background", "surface", "border", "borderStrong"],
   },
   {
-    label: "Content & status",
-    description: "Typography and semantic feedback.",
+    id: "content",
+    label: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.GROUP_CONTENT_STATUS"),
+    description: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.GROUP_CONTENT_STATUS_DESC"),
     fields: ["text", "mutedText", "success", "danger"],
   },
   {
-    label: "Buttons",
-    description: "Text color on the primary sign-in button.",
+    id: "buttons",
+    label: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.GROUP_BUTTONS"),
+    description: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.GROUP_BUTTONS_DESC"),
     fields: ["buttonText"],
   },
 ];
 
-const THEME_FIELD_DESCRIPTIONS: Record<keyof IOidcUiThemePalette, string> = {
-  primary: "Primary actions",
-  secondary: "Secondary accents",
-  background: "Page canvas",
-  surface: "Cards and panels",
-  text: "Main content",
-  mutedText: "Supporting content",
-  success: "Success feedback",
-  danger: "Errors and warnings",
-  border: "Subtle dividers",
-  borderStrong: "Emphasized outlines",
-  accentSoft: "Tinted highlights",
-  buttonText: "Primary button text",
-};
+const getThemeFieldDescriptions = (): Record<keyof IOidcUiThemePalette, string> => ({
+  primary: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.THEME_DESC_PRIMARY"),
+  secondary: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.THEME_DESC_SECONDARY"),
+  background: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.THEME_DESC_BACKGROUND"),
+  surface: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.THEME_DESC_SURFACE"),
+  text: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.THEME_DESC_TEXT"),
+  mutedText: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.THEME_DESC_MUTED_TEXT"),
+  success: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.THEME_DESC_SUCCESS"),
+  danger: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.THEME_DESC_DANGER"),
+  border: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.THEME_DESC_BORDER"),
+  borderStrong: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.THEME_DESC_BORDER_STRONG"),
+  accentSoft: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.THEME_DESC_ACCENT_SOFT"),
+  buttonText: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.THEME_DESC_BUTTON_TEXT"),
+});
 
 const normalizeField = (value: string) => value.toLowerCase().replace(/[^a-z]/g, "");
 
@@ -143,7 +163,7 @@ const TemplateSkeleton = () => (
       <div className="grid min-h-136 min-w-0 grid-cols-1 xl:h-[calc(100dvh-10rem)] xl:max-h-184 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <section className="flex border-b xl:border-b-0 xl:border-r">
           <div className="hidden w-22 shrink-0 space-y-2 border-r bg-muted/20 p-2 xl:block">
-            {[0, 1, 2].map((item) => (
+            {[0, 1, 2, 3].map((item) => (
               <Skeleton key={item} className="h-17 w-full rounded-lg" />
             ))}
           </div>
@@ -179,8 +199,10 @@ const ColorInput = ({
   error: string | null;
   onChange: (value: string) => void;
 }) => {
+  const { t } = useT(I18N_MODULE);
   const id = `theme-${palette}-${field}`;
-  const paletteLabel = palette === "light" ? "Light" : "Dark";
+  const paletteLabel =
+    palette === "light" ? t("OIDC_BRANDING_FORM.LIGHT") : t("OIDC_BRANDING_FORM.DARK");
   return (
     <div className="space-y-1">
       <div
@@ -196,7 +218,10 @@ const ColorInput = ({
           <input
             id={`${id}-picker`}
             type="color"
-            aria-label={`${paletteLabel} ${label} color picker`}
+            aria-label={t("OIDC_BRANDING_FORM.COLOR_PICKER_LABEL", {
+              palette: paletteLabel,
+              label,
+            })}
             value={colorPickerValue(value)}
             onChange={(event) => onChange(event.target.value)}
             className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
@@ -221,7 +246,7 @@ const ColorInput = ({
       </div>
       {error && (
         <p id={`${id}-error`} className="text-xs text-destructive" role="alert">
-          {paletteLabel} {label} {error}
+          {t("OIDC_BRANDING_FORM.COLOR_ERROR", { palette: paletteLabel, label, error })}
         </p>
       )}
     </div>
@@ -255,94 +280,104 @@ const LogoUploadField = ({
   onDragOverChange: (isDragOver: boolean) => void;
   onFile: (file: File) => void;
   onRemove: () => void;
-}) => (
-  <div className="space-y-2">
-    <Label htmlFor={inputId}>{label}</Label>
-    <div
-      className={cn(
-        "group rounded-xl border border-dashed p-4 transition-colors",
-        isDragOver
-          ? "border-primary bg-primary/5"
-          : "border-border bg-muted/20 hover:border-primary/50 hover:bg-muted/30",
-      )}
-      onDragOver={(event) => {
-        event.preventDefault();
-        onDragOverChange(true);
-      }}
-      onDragLeave={() => onDragOverChange(false)}
-      onDrop={(event) => {
-        event.preventDefault();
-        onDragOverChange(false);
-        const file = event.dataTransfer.files?.[0];
-        if (file) onFile(file);
-      }}
-    >
-      <div className="flex flex-col items-center gap-3">
-        <div className="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-background shadow-xs">
-          {previewUrl ? (
-            <img
-              src={previewUrl}
-              alt="Logo preview"
-              className="max-h-full max-w-full object-contain p-2"
+}) => {
+  const { t } = useT(I18N_MODULE);
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={inputId}>{label}</Label>
+      <div
+        className={cn(
+          "group rounded-xl border border-dashed p-4 transition-colors",
+          isDragOver
+            ? "border-primary bg-primary/5"
+            : "border-border bg-muted/20 hover:border-primary/50 hover:bg-muted/30",
+        )}
+        onDragOver={(event) => {
+          event.preventDefault();
+          onDragOverChange(true);
+        }}
+        onDragLeave={() => onDragOverChange(false)}
+        onDrop={(event) => {
+          event.preventDefault();
+          onDragOverChange(false);
+          const file = event.dataTransfer.files?.[0];
+          if (file) onFile(file);
+        }}
+      >
+        <div className="flex flex-col items-center gap-3">
+          <div className="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-background shadow-xs">
+            {previewUrl ? (
+              <img
+                src={previewUrl}
+                alt={t("OIDC_BRANDING_FORM.LOGO_PREVIEW_ALT")}
+                className="max-h-full max-w-full object-contain p-2"
+              />
+            ) : (
+              <ImagePlus className="h-6 w-6 text-muted-foreground" />
+            )}
+          </div>
+          <div className="min-w-0 text-center">
+            <p className="text-xs font-medium text-high-emphasis">
+              {previewUrl
+                ? t("OIDC_BRANDING_FORM.LOGO_REPLACE_HINT")
+                : t("OIDC_BRANDING_FORM.LOGO_DROP_HINT")}
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              {t("OIDC_BRANDING_FORM.LOGO_FORMATS", { size: MAX_LOGO_SIZE_MB })}
+            </p>
+            <input
+              id={inputId}
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+              className="sr-only"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (file) onFile(file);
+              }}
             />
-          ) : (
-            <ImagePlus className="h-6 w-6 text-muted-foreground" />
-          )}
-        </div>
-        <div className="min-w-0 text-center">
-          <p className="text-xs font-medium text-high-emphasis">
-            {previewUrl ? "Replace your logo" : "Drop your logo here"}
-          </p>
-          <p className="mt-1 text-[11px] text-muted-foreground">PNG, JPG, SVG, or WebP · max 2MB</p>
-          <input
-            id={inputId}
-            ref={fileInputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
-            className="sr-only"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              event.target.value = "";
-              if (file) onFile(file);
-            }}
-          />
-          <div className="mt-2.5 flex flex-wrap justify-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="xs"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isBusy}
-              className="gap-1.5 shadow-none"
-            >
-              <Upload className="h-3.5 w-3.5" />
-              {previewUrl ? "Replace" : "Browse files"}
-            </Button>
-            {previewUrl && (
+            <div className="mt-2.5 flex flex-wrap justify-center gap-2">
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 size="xs"
-                onClick={onRemove}
+                onClick={() => fileInputRef.current?.click()}
                 disabled={isBusy}
-                className="gap-1.5 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                className="gap-1.5 shadow-none"
               >
-                <Trash2 className="h-3.5 w-3.5" /> Remove logo
+                <Upload className="h-3.5 w-3.5" />
+                {previewUrl
+                  ? t("OIDC_BRANDING_FORM.LOGO_REPLACE")
+                  : t("OIDC_BRANDING_FORM.LOGO_BROWSE")}
               </Button>
-            )}
+              {previewUrl && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  onClick={onRemove}
+                  disabled={isBusy}
+                  className="gap-1.5 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> {t("OIDC_BRANDING_FORM.LOGO_REMOVE")}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
+      {error && (
+        <p className="text-xs text-destructive" role="alert">
+          {t(KEY_FIELD_ERROR, { label, error })}
+        </p>
+      )}
     </div>
-    {error && (
-      <p className="text-xs text-destructive" role="alert">
-        {label} {error}
-      </p>
-    )}
-  </div>
-);
+  );
+};
 
 export const OidcBrandingForm = () => {
+  const { t, language } = useT(I18N_MODULE);
   const fileInputRefLight = useRef<HTMLInputElement>(null);
   const fileInputRefDark = useRef<HTMLInputElement>(null);
   const { setActions } = useOidcBrandingHeader();
@@ -366,7 +401,7 @@ export const OidcBrandingForm = () => {
   ] = useQueryStates(
     {
       section: parseAsStringLiteral(EDITOR_TAB_VALUES).withDefault("branding"),
-      page: parseAsStringEnum<OidcPageKey>(PAGE_OPTIONS.map(({ key }) => key)).withDefault(
+      page: parseAsStringEnum<OidcPageKey>(getPageOptions().map(({ key }) => key)).withDefault(
         "signup",
       ),
       palette: parseAsStringLiteral(["light", "dark"] as const).withDefault("light"),
@@ -398,7 +433,7 @@ export const OidcBrandingForm = () => {
   const [previousTemplate, setPreviousTemplate] = useState(sourceTemplate);
   if (sourceTemplate !== previousTemplate) {
     setPreviousTemplate(sourceTemplate);
-    const next = sourceTemplate ? normalizeOidcUiTemplate(sourceTemplate) : null;
+    const next = normalizedTemplate;
     setSavedTemplate(next);
     setDraft(next);
     setPreviewLogoUrls({
@@ -434,6 +469,11 @@ export const OidcBrandingForm = () => {
       current ? { ...current, branding: { ...current.branding, [field]: value } } : current,
     );
     clearServerFieldError(`branding.${field}`);
+  };
+
+  const updateLayout = (showAnimationPanel: boolean) => {
+    setDraft((current) => (current ? { ...current, layout: { showAnimationPanel } } : current));
+    clearServerFieldError("layout.showAnimationPanel");
   };
 
   /** Each preview mode's logo lives under its own field name on `branding`. */
@@ -476,11 +516,13 @@ export const OidcBrandingForm = () => {
 
   const applyLogoFile = (mode: OidcPreviewTheme, file: File) => {
     if (!ALLOWED_LOGO_TYPES.includes(file.type)) {
-      showErrorToast({ errors: "Only PNG, JPG, SVG, and WebP images are allowed" });
+      showErrorToast({ errors: t("OIDC_BRANDING_FORM.ERROR_LOGO_TYPE") });
       return;
     }
     if (file.size > MAX_LOGO_SIZE_MB * 1024 * 1024) {
-      showErrorToast({ errors: `Logo must be smaller than ${MAX_LOGO_SIZE_MB}MB` });
+      showErrorToast({
+        errors: t("OIDC_BRANDING_FORM.ERROR_LOGO_SIZE", { size: MAX_LOGO_SIZE_MB }),
+      });
       return;
     }
     setPreviewLogoUrls((current) => {
@@ -523,7 +565,10 @@ export const OidcBrandingForm = () => {
           fileVersionId: response.fileVersionId ?? "",
         });
         if (completion.verificationStatus !== "Verified") {
-          throw new Error(completion.rejectionReason ?? "Logo failed verification");
+          throw new Error(
+            completion.rejectionReason ??
+              tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.LOGO_FAILED_VERIFICATION"),
+          );
         }
       }
       const fileRecord = await storageService.file.getFileByFileId({
@@ -535,7 +580,12 @@ export const OidcBrandingForm = () => {
     [completeUpload, getPresignedUrl, tenantId, uploadFile],
   );
 
-  const validationErrors = useMemo(() => (draft ? validateOidcUiTemplate(draft) : {}), [draft]);
+  // `language` is a dependency so the messages are rebuilt when the language changes.
+  const validationErrors = useMemo(
+    () => (draft ? validateOidcUiTemplate(draft) : {}),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [draft, language],
+  );
   const fieldError = (field: string) =>
     validationErrors[field] ?? getServerFieldError(serverErrors, field);
   const isValid =
@@ -594,13 +644,13 @@ export const OidcBrandingForm = () => {
 
       const response = await saveTemplate(payload);
       if (!response.isSuccess) {
-        const errors = response.errors ?? { Template: "Failed to save template" };
+        const errors = response.errors ?? { Template: t("OIDC_BRANDING_FORM.ERROR_SAVE_TEMPLATE") };
         setServerErrors(errors);
         showErrorToast({ errors });
         return;
       }
 
-      showSuccessToast({ description: "Template saved successfully" });
+      showSuccessToast({ description: t("OIDC_BRANDING_FORM.TOAST_TEMPLATE_SAVED") });
       setSavedTemplate(payload);
       setDraft(payload);
       setPendingLogoFiles({ light: null, dark: null });
@@ -621,12 +671,12 @@ export const OidcBrandingForm = () => {
         setServerErrors(errors);
         showErrorToast({ errors: error.errors });
       } else {
-        showErrorToast({ errors: "Failed to save template" });
+        showErrorToast({ errors: t("OIDC_BRANDING_FORM.ERROR_SAVE_TEMPLATE") });
       }
     } finally {
       setIsUploading(false);
     }
-  }, [draft, isValid, pendingLogoFiles, saveTemplate, uploadLogoToStorage]);
+  }, [draft, isValid, pendingLogoFiles, saveTemplate, t, uploadLogoToStorage]);
 
   /**
    * Saves exactly one page (plus the shared footer fields shown alongside every page)
@@ -655,14 +705,18 @@ export const OidcBrandingForm = () => {
       try {
         const response = await saveTemplate(payload);
         if (!response.isSuccess) {
-          const errors = response.errors ?? { Template: "Failed to save page" };
+          const errors = response.errors ?? { Template: t("OIDC_BRANDING_FORM.ERROR_SAVE_PAGE") };
           setServerErrors((current) => ({ ...current, ...errors }));
           showErrorToast({ errors });
           return;
         }
 
-        const pageLabel = PAGE_OPTIONS.find(({ key }) => key === pageKey)?.label ?? "Page";
-        showSuccessToast({ description: `${pageLabel} page saved successfully` });
+        const pageLabel =
+          getPageOptions().find(({ key }) => key === pageKey)?.label ??
+          t("OIDC_BRANDING_FORM.PAGE_FALLBACK");
+        showSuccessToast({
+          description: t("OIDC_BRANDING_FORM.TOAST_PAGE_SAVED", { page: pageLabel }),
+        });
         setSavedTemplate(payload);
       } catch (error) {
         if (isErrorWithErrors(error)) {
@@ -675,13 +729,13 @@ export const OidcBrandingForm = () => {
           setServerErrors((current) => ({ ...current, ...errors }));
           showErrorToast({ errors: error.errors });
         } else {
-          showErrorToast({ errors: "Failed to save page" });
+          showErrorToast({ errors: t("OIDC_BRANDING_FORM.ERROR_SAVE_PAGE") });
         }
       } finally {
         setSavingPageKey(null);
       }
     },
-    [draft, savedTemplate, saveTemplate],
+    [draft, savedTemplate, saveTemplate, t],
   );
 
   useEffect(() => {
@@ -704,7 +758,7 @@ export const OidcBrandingForm = () => {
     return (
       <Card>
         <CardContent className="py-12 text-center text-sm text-destructive" role="alert">
-          Unable to load the OIDC template. Check that the IAM API is available and try again.
+          {t("OIDC_BRANDING_FORM.LOAD_ERROR")}
         </CardContent>
       </Card>
     );
@@ -718,7 +772,8 @@ export const OidcBrandingForm = () => {
       logoUrlDark: previewLogoUrls.dark,
     },
   };
-  const selectedPageFields = PAGE_FIELDS[selectedPage];
+  const pageOptions = getPageOptions();
+  const selectedPageFields = getPageFields()[selectedPage];
   const selectedPageValues = draft.pages[selectedPage] as unknown as Record<string, string | null>;
   // Scoped to just this page (+ the shared footer fields shown alongside it), so an
   // unrelated draft problem elsewhere never blocks or falsely flags this page's own
@@ -751,7 +806,33 @@ export const OidcBrandingForm = () => {
     });
   };
 
-  const selectedPageLabel = PAGE_OPTIONS.find(({ key }) => key === selectedPage)?.label ?? "Signup";
+  const selectedPageLabel =
+    pageOptions.find(({ key }) => key === selectedPage)?.label ??
+    t("OIDC_BRANDING_FORM.PAGE_SIGNUP_FALLBACK");
+  const editorTabs = getEditorTabs();
+  const themeGroups = getThemeGroups();
+  const themeFieldDescriptions = getThemeFieldDescriptions();
+  const themeFields = getThemeFields();
+  const renderPaletteField = (mode: OidcPreviewTheme, key: keyof IOidcUiThemePalette) => {
+    const field = themeFields.find((item) => item.key === key);
+    if (!field) return null;
+    return (
+      <ColorInput
+        key={key}
+        palette={mode}
+        field={key}
+        label={field.label}
+        description={themeFieldDescriptions[key]}
+        value={draft.theme[mode][key]}
+        error={fieldError(`theme.${mode}.${key}`)}
+        onChange={(value) => updatePalette(mode, key, value)}
+      />
+    );
+  };
+  const sharedFields = [
+    { key: "helpPrompt", label: t("OIDC_BRANDING_FORM.SHARED_HELP_PROMPT") },
+    { key: "supportLinkText", label: t("OIDC_BRANDING_FORM.SHARED_SUPPORT_LINK_TEXT") },
+  ];
 
   return (
     <Card className="overflow-hidden rounded-xl bg-card p-0 shadow-xs">
@@ -764,10 +845,10 @@ export const OidcBrandingForm = () => {
           <section className="flex min-h-0 min-w-0 flex-col border-b border-border bg-card xl:flex-row xl:border-b-0 xl:border-r">
             <div className="shrink-0 border-b border-border bg-muted/20 p-2 xl:w-22 xl:border-b-0 xl:border-r">
               <TabsList
-                className="grid h-auto w-full grid-cols-3 gap-1 rounded-lg bg-transparent p-0 xl:flex xl:h-full xl:flex-col xl:justify-start xl:gap-2"
-                aria-label="Template sections"
+                className="grid h-auto w-full grid-cols-4 gap-1 rounded-lg bg-transparent p-0 xl:flex xl:h-full xl:flex-col xl:justify-start xl:gap-2"
+                aria-label={t("OIDC_BRANDING_FORM.SECTIONS_LABEL")}
               >
-                {EDITOR_TABS.map(({ value, label, Icon }) => (
+                {editorTabs.map(({ value, label, Icon }) => (
                   <TabsTrigger
                     key={value}
                     value={value}
@@ -788,16 +869,19 @@ export const OidcBrandingForm = () => {
                       <Brush className="h-4 w-4" aria-hidden />
                     </div>
                     <div>
-                      <h2 className="text-base font-semibold">Brand identity</h2>
+                      <h2 className="text-base font-semibold">
+                        {t("OIDC_BRANDING_FORM.BRAND_IDENTITY_TITLE")}
+                      </h2>
                       <p className="mt-0.5 text-sm text-muted-foreground">
-                        Add the name and logo users will recognize.
+                        {t("OIDC_BRANDING_FORM.BRAND_IDENTITY_DESC")}
                       </p>
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="brand-name">
-                      Brand name <span className="text-destructive">*</span>
+                      {t("OIDC_BRANDING_FORM.BRAND_NAME")}{" "}
+                      <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="brand-name"
@@ -810,11 +894,13 @@ export const OidcBrandingForm = () => {
                     <div className="flex items-start justify-between gap-3">
                       {fieldError("branding.brandName") ? (
                         <p className="text-xs text-destructive" role="alert">
-                          Brand name {fieldError("branding.brandName")}
+                          {t("OIDC_BRANDING_FORM.BRAND_NAME_ERROR", {
+                            error: fieldError("branding.brandName"),
+                          })}
                         </p>
                       ) : (
                         <p className="text-xs text-muted-foreground">
-                          Displayed beside your logo on authentication pages.
+                          {t("OIDC_BRANDING_FORM.BRAND_NAME_HINT")}
                         </p>
                       )}
                       <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
@@ -825,16 +911,15 @@ export const OidcBrandingForm = () => {
 
                   <div className="space-y-3">
                     <div>
-                      <Label>Brand logos</Label>
+                      <Label>{t("OIDC_BRANDING_FORM.BRAND_LOGOS")}</Label>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Use a transparent, horizontal logo for the best result. If you only upload
-                        one, it&apos;s used for both light and dark mode.
+                        {t("OIDC_BRANDING_FORM.BRAND_LOGOS_HINT")}
                       </p>
                     </div>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <LogoUploadField
                         inputId="client-logo-upload-light"
-                        label="Light mode logo"
+                        label={t("OIDC_BRANDING_FORM.LOGO_LIGHT")}
                         previewUrl={previewLogoUrls.light}
                         isDragOver={isDragOver.light}
                         isBusy={isBusy}
@@ -848,7 +933,7 @@ export const OidcBrandingForm = () => {
                       />
                       <LogoUploadField
                         inputId="client-logo-upload-dark"
-                        label="Dark mode logo"
+                        label={t("OIDC_BRANDING_FORM.LOGO_DARK")}
                         previewUrl={previewLogoUrls.dark}
                         isDragOver={isDragOver.dark}
                         isBusy={isBusy}
@@ -870,34 +955,36 @@ export const OidcBrandingForm = () => {
                       <Palette className="h-4 w-4" aria-hidden />
                     </div>
                     <div>
-                      <h2 className="text-base font-semibold">Color system</h2>
+                      <h2 className="text-base font-semibold">
+                        {t("OIDC_BRANDING_FORM.COLOR_SYSTEM_TITLE")}
+                      </h2>
                       <p className="mt-0.5 text-sm text-muted-foreground">
-                        Fine-tune accessible colors for both appearances.
+                        {t("OIDC_BRANDING_FORM.COLOR_SYSTEM_DESC")}
                       </p>
                     </div>
                   </div>
                   <Tabs value={paletteMode} onValueChange={handlePaletteChange}>
                     <TabsList
                       className="grid h-11 w-full grid-cols-2 gap-1 rounded-lg bg-muted/40 p-1"
-                      aria-label="Theme palette"
+                      aria-label={t("OIDC_BRANDING_FORM.PALETTE_LABEL")}
                     >
                       <TabsTrigger
                         value="light"
                         className="h-9 gap-2 rounded-md text-xs shadow-none data-[state=active]:shadow-xs sm:text-sm"
                       >
-                        <Sun className="h-4 w-4" aria-hidden /> Light
+                        <Sun className="h-4 w-4" aria-hidden /> {t("OIDC_BRANDING_FORM.LIGHT")}
                       </TabsTrigger>
                       <TabsTrigger
                         value="dark"
                         className="h-9 gap-2 rounded-md text-xs shadow-none data-[state=active]:shadow-xs sm:text-sm"
                       >
-                        <Moon className="h-4 w-4" aria-hidden /> Dark
+                        <Moon className="h-4 w-4" aria-hidden /> {t("OIDC_BRANDING_FORM.DARK")}
                       </TabsTrigger>
                     </TabsList>
                     {(["light", "dark"] as const).map((mode) => (
                       <TabsContent key={mode} value={mode} className="mt-5 space-y-5">
-                        {THEME_GROUPS.map((group) => (
-                          <section key={group.label}>
+                        {themeGroups.map((group) => (
+                          <section key={group.id}>
                             <div className="mb-2 flex items-end justify-between gap-3">
                               <div>
                                 <h3 className="text-xs font-semibold uppercase tracking-wide text-high-emphasis">
@@ -908,26 +995,13 @@ export const OidcBrandingForm = () => {
                                 </p>
                               </div>
                               <span className="shrink-0 text-[11px] text-muted-foreground">
-                                {group.fields.length} tokens
+                                {t("OIDC_BRANDING_FORM.TOKEN_COUNT", {
+                                  count: group.fields.length,
+                                })}
                               </span>
                             </div>
                             <div className="space-y-2">
-                              {group.fields.map((key) => {
-                                const field = THEME_FIELDS.find((item) => item.key === key);
-                                if (!field) return null;
-                                return (
-                                  <ColorInput
-                                    key={key}
-                                    palette={mode}
-                                    field={key}
-                                    label={field.label}
-                                    description={THEME_FIELD_DESCRIPTIONS[key]}
-                                    value={draft.theme[mode][key]}
-                                    error={fieldError(`theme.${mode}.${key}`)}
-                                    onChange={(value) => updatePalette(mode, key, value)}
-                                  />
-                                );
-                              })}
+                              {group.fields.map((key) => renderPaletteField(mode, key))}
                             </div>
                           </section>
                         ))}
@@ -942,19 +1016,21 @@ export const OidcBrandingForm = () => {
                       <FileText className="h-4 w-4" aria-hidden />
                     </div>
                     <div>
-                      <h2 className="text-base font-semibold">Page content</h2>
+                      <h2 className="text-base font-semibold">
+                        {t("OIDC_BRANDING_FORM.PAGE_CONTENT_TITLE")}
+                      </h2>
                       <p className="mt-0.5 text-sm text-muted-foreground">
-                        Customize labels and messages for each step.
+                        {t("OIDC_BRANDING_FORM.PAGE_CONTENT_DESC")}
                       </p>
                     </div>
                   </div>
                   <div className="w-full overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden">
                     <div
                       role="tablist"
-                      aria-label="OIDC page"
+                      aria-label={t("OIDC_BRANDING_FORM.PAGE_TABS_LABEL")}
                       className="flex w-max gap-1 rounded-lg bg-muted/50 p-1"
                     >
-                      {PAGE_OPTIONS.map(({ key, label }) => (
+                      {pageOptions.map(({ key, label }) => (
                         <button
                           key={key}
                           type="button"
@@ -977,7 +1053,7 @@ export const OidcBrandingForm = () => {
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-high-emphasis">{selectedPageLabel}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
-                        {selectedPageFields.length} editable fields
+                        {t("OIDC_BRANDING_FORM.FIELD_COUNT", { count: selectedPageFields.length })}
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-3">
@@ -994,7 +1070,9 @@ export const OidcBrandingForm = () => {
                           )}
                           aria-hidden
                         />
-                        {isSelectedPageDirty ? "Unsaved changes" : "Saved"}
+                        {isSelectedPageDirty
+                          ? t("OIDC_BRANDING_FORM.UNSAVED_CHANGES")
+                          : t("OIDC_BRANDING_FORM.SAVED")}
                       </span>
                       <Button
                         type="button"
@@ -1008,7 +1086,9 @@ export const OidcBrandingForm = () => {
                          * whole-template Save stays the screen's single primary action and
                          * the two don't read as rival buttons.
                          */
-                        aria-label={`Save ${selectedPageLabel} page`}
+                        aria-label={t("OIDC_BRANDING_FORM.SAVE_PAGE_LABEL", {
+                          page: selectedPageLabel,
+                        })}
                         aria-busy={isSavingSelectedPage}
                         onClick={() => void handleSavePage(selectedPage)}
                         disabled={
@@ -1019,7 +1099,9 @@ export const OidcBrandingForm = () => {
                         {isSavingSelectedPage && (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
                         )}
-                        {isSavingSelectedPage ? "Saving…" : "Save changes"}
+                        {isSavingSelectedPage
+                          ? t("OIDC_BRANDING_FORM.SAVING")
+                          : t("common:SAVE_CHANGES")}
                       </Button>
                     </div>
                   </div>
@@ -1053,7 +1135,7 @@ export const OidcBrandingForm = () => {
                           )}
                           {error && (
                             <p className="text-xs text-destructive" role="alert">
-                              {label} {error}
+                              {t(KEY_FIELD_ERROR, { label, error })}
                             </p>
                           )}
                         </div>
@@ -1063,7 +1145,7 @@ export const OidcBrandingForm = () => {
                   <div className="space-y-4 rounded-lg border border-border bg-muted/20 p-3">
                     <div className="space-y-1.5">
                       <Label htmlFor="page-shared-footerText" className="text-xs">
-                        Footer <span className="text-destructive">*</span>
+                        {t("OIDC_BRANDING_FORM.FOOTER")} <span className="text-destructive">*</span>
                       </Label>
                       <Input
                         id="page-shared-footerText"
@@ -1090,18 +1172,17 @@ export const OidcBrandingForm = () => {
                         className="bg-background shadow-none"
                       />
                       <p className="text-xs text-muted-foreground">
-                        Shared by every page. Use {"{year}"} for the current year.
+                        {t("OIDC_BRANDING_FORM.FOOTER_HINT")}
                       </p>
                       {fieldError("pages.shared.footerText") && (
                         <p className="text-xs text-destructive" role="alert">
-                          Footer {fieldError("pages.shared.footerText")}
+                          {t("OIDC_BRANDING_FORM.FOOTER_ERROR", {
+                            error: fieldError("pages.shared.footerText"),
+                          })}
                         </p>
                       )}
                     </div>
-                    {[
-                      { key: "helpPrompt", label: "Help prompt" },
-                      { key: "supportLinkText", label: "Support link text" },
-                    ].map(({ key, label }) => (
+                    {sharedFields.map(({ key, label }) => (
                       <div key={key} className="space-y-1.5">
                         <Label htmlFor={`page-shared-${key}`} className="text-xs">
                           {label} <span className="text-destructive">*</span>
@@ -1132,11 +1213,51 @@ export const OidcBrandingForm = () => {
                         />
                         {fieldError(`pages.shared.${key}`) && (
                           <p className="text-xs text-destructive" role="alert">
-                            {label} {fieldError(`pages.shared.${key}`)}
+                            {t(KEY_FIELD_ERROR, {
+                              label,
+                              error: fieldError(`pages.shared.${key}`),
+                            })}
                           </p>
                         )}
                       </div>
                     ))}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="layout" className="m-0 space-y-6">
+                  <div className="flex gap-3">
+                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/30 text-muted-foreground">
+                      <PanelRight className="h-4 w-4" aria-hidden />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-semibold">
+                        {t("OIDC_BRANDING_FORM.LAYOUT_TITLE")}
+                      </h2>
+                      <p className="mt-0.5 text-sm text-muted-foreground">
+                        {t("OIDC_BRANDING_FORM.LAYOUT_HINT")}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-3">
+                    <div className="min-w-0 space-y-0.5">
+                      <Label htmlFor="oidc-show-animation-panel" className="text-sm">
+                        {t("OIDC_BRANDING_FORM.SHOW_ANIMATION_PANEL")}
+                      </Label>
+                      <p
+                        id="oidc-show-animation-panel-hint"
+                        className="text-xs text-muted-foreground"
+                      >
+                        {t("OIDC_BRANDING_FORM.SHOW_ANIMATION_PANEL_HINT")}
+                      </p>
+                    </div>
+                    <Switch
+                      id="oidc-show-animation-panel"
+                      size="md"
+                      checked={draft.layout.showAnimationPanel}
+                      onCheckedChange={updateLayout}
+                      disabled={isBusy}
+                      aria-describedby="oidc-show-animation-panel-hint"
+                    />
                   </div>
                 </TabsContent>
               </div>
@@ -1146,9 +1267,11 @@ export const OidcBrandingForm = () => {
           <section className="flex min-h-0 min-w-0 flex-col bg-muted/20">
             <div className="flex min-h-14 items-center justify-between gap-3 border-b border-border bg-card/80 px-4 py-3 sm:px-5">
               <div>
-                <h2 className="text-sm font-semibold text-high-emphasis">Live preview</h2>
+                <h2 className="text-sm font-semibold text-high-emphasis">
+                  {t("OIDC_BRANDING_FORM.LIVE_PREVIEW")}
+                </h2>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {selectedPageLabel} page · updates instantly
+                  {t("OIDC_BRANDING_FORM.PREVIEW_SUBTITLE", { page: selectedPageLabel })}
                 </p>
               </div>
               <div
@@ -1166,7 +1289,7 @@ export const OidcBrandingForm = () => {
                   )}
                   aria-hidden
                 />
-                {isDirty ? "Unsaved" : "Saved"}
+                {isDirty ? t("OIDC_BRANDING_FORM.UNSAVED") : t("OIDC_BRANDING_FORM.SAVED")}
               </div>
             </div>
             <div className="flex min-h-[500px] flex-1 items-center justify-center p-3 sm:min-h-[560px] sm:p-4 lg:min-h-[620px] xl:min-h-0 xl:p-3">

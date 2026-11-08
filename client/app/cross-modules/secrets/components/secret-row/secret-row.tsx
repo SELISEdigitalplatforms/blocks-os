@@ -43,7 +43,10 @@ import {
   type SecretResult,
   type SecretStatus,
 } from "@/cross-modules/secrets/models/secret.model";
-import { useRevealSecret, useSecretTags } from "@/cross-modules/secrets/hooks/use-secret-management";
+import {
+  useRevealSecret,
+  useSecretTags,
+} from "@/cross-modules/secrets/hooks/use-secret-management";
 import { describeSecretError } from "@/cross-modules/secrets/utils/secret-error";
 import { SecretDetail } from "../secret-detail/secret-detail";
 import { RevealSecretModal } from "../reveal-secret-modal/reveal-secret-modal";
@@ -54,6 +57,9 @@ import {
   SecretActionDialog,
   type SecretLifecycleAction,
 } from "../secret-action-dialog/secret-action-dialog";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
+
+const I18N_MODULE = "os.secrets";
 
 const STATUS_VARIANT: Record<SecretStatus, "success" | "warning" | "secondary"> = {
   active: "success",
@@ -61,7 +67,7 @@ const STATUS_VARIANT: Record<SecretStatus, "success" | "warning" | "secondary"> 
   deleted: "secondary",
 };
 
-const NO_READ_PERMISSION = "You do not have permission to read this value";
+const noReadPermission = () => tStatic(I18N_MODULE, "SECRET_ROW.YOU_DO_NOT_HAVE_PERMISSION");
 
 const formatCreated = (value?: string | null): string => {
   if (!value) return "—";
@@ -137,6 +143,7 @@ interface SecretRowProps {
  * root override are all already folded into it, so nothing here re-derives the rule.
  */
 export function SecretRow({ secret }: SecretRowProps) {
+  const { t } = useT(I18N_MODULE);
   const [expanded, setExpanded] = useState(false);
   const [revealOpen, setRevealOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -165,9 +172,14 @@ export function SecretRow({ secret }: SecretRowProps) {
     try {
       const { value } = await readValue(secret.secretId);
       await navigator.clipboard.writeText(value);
-      showSuccessToast({ description: "Secret value copied to the clipboard." });
+      showSuccessToast({ description: t("SECRET_ROW.SECRET_VALUE_COPIED_TO_THE") });
     } catch (error) {
-      showErrorToast({ errors: describeSecretError(error, "Could not copy the value.").message });
+      showErrorToast({
+        errors: describeSecretError(
+          error,
+          tStatic(I18N_MODULE, "SECRET_ROW.COULD_NOT_COPY_THE_VALUE"),
+        ).message,
+      });
     }
   };
 
@@ -233,7 +245,10 @@ export function SecretRow({ secret }: SecretRowProps) {
         ) : (
           <>
             <TableCell className="py-3.5">
-              <Badge variant={STATUS_VARIANT[secret.status]} className="w-fit whitespace-nowrap font-normal">
+              <Badge
+                variant={STATUS_VARIANT[secret.status]}
+                className="w-fit whitespace-nowrap font-normal"
+              >
                 {SECRET_STATUS_LABEL[secret.status]}
               </Badge>
             </TableCell>
@@ -257,7 +272,7 @@ export function SecretRow({ secret }: SecretRowProps) {
                   onClick={() => setLifecycleAction("restore")}
                 >
                   <RotateCcw className="h-3.5 w-3.5" aria-hidden />
-                  Restore
+                  {t("SECRET_ROW.RESTORE")}
                 </Button>
                 <Button
                   type="button"
@@ -267,7 +282,7 @@ export function SecretRow({ secret }: SecretRowProps) {
                   onClick={() => setLifecycleAction("purge")}
                 >
                   <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                  Purge
+                  {t("SECRET_ROW.PURGE")}
                 </Button>
               </div>
             )}
@@ -275,16 +290,16 @@ export function SecretRow({ secret }: SecretRowProps) {
             {showValueActions && !isLocked && (
               <>
                 <ExplainedButton
-                  label="Reveal value"
-                  reason={NO_READ_PERMISSION}
+                  label={t("SECRET_ROW.REVEAL_VALUE")}
+                  reason={noReadPermission()}
                   unavailable={!canRead}
                   onClick={() => setRevealOpen(true)}
                 >
                   <Eye className="h-3.5 w-3.5" />
                 </ExplainedButton>
                 <ExplainedButton
-                  label="Copy value"
-                  reason={NO_READ_PERMISSION}
+                  label={t("SECRET_ROW.COPY_VALUE")}
+                  reason={noReadPermission()}
                   unavailable={!canRead}
                   busy={isCopying}
                   onClick={copyValue}
@@ -301,7 +316,7 @@ export function SecretRow({ secret }: SecretRowProps) {
                   variant="ghost"
                   size="sm"
                   className="h-7 w-7 p-0"
-                  aria-label={`Actions for ${secret.name}`}
+                  aria-label={t("SECRET_ROW.ACTIONS_FOR", { name: secret.name })}
                 >
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
@@ -313,33 +328,33 @@ export function SecretRow({ secret }: SecretRowProps) {
                   <>
                     <DropdownMenuItem onClick={() => setEditOpen(true)}>
                       <Pencil className="mr-2 h-4 w-4" />
-                      Edit
+                      {t("common:EDIT")}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setRotateOpen(true)}>
                       <RefreshCw className="mr-2 h-4 w-4" />
-                      Rotate
+                      {t("SECRET_ROW.ROTATE")}
                     </DropdownMenuItem>
                     {isLocked ? (
                       <DropdownMenuItem onClick={() => setLifecycleAction("unlock")}>
                         <Unlock className="mr-2 h-4 w-4" />
-                        Unlock
+                        {t("SECRET_ROW.UNLOCK")}
                       </DropdownMenuItem>
                     ) : (
                       <DropdownMenuItem onClick={() => setLifecycleAction("lock")}>
                         <Lock className="mr-2 h-4 w-4" />
-                        Lock
+                        {t("SECRET_ROW.LOCK")}
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem onClick={() => setLifecycleAction("delete")}>
                       <Archive className="mr-2 h-4 w-4" />
-                      Archive
+                      {t("SECRET_ROW.ARCHIVE")}
                     </DropdownMenuItem>
                   </>
                 )}
                 {!isDeleted && <DropdownMenuSeparator />}
                 <DropdownMenuItem onClick={() => setAuditOpen(true)}>
                   <History className="mr-2 h-4 w-4" />
-                  Audit
+                  {t("SECRET_ROW.AUDIT")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -358,9 +373,7 @@ export function SecretRow({ secret }: SecretRowProps) {
       {revealOpen && (
         <RevealSecretModal open={revealOpen} onOpenChange={setRevealOpen} secret={secret} />
       )}
-      {editOpen && (
-        <SecretFormModal open={editOpen} onOpenChange={setEditOpen} secret={secret} />
-      )}
+      {editOpen && <SecretFormModal open={editOpen} onOpenChange={setEditOpen} secret={secret} />}
       {rotateOpen && (
         <RotateSecretModal open={rotateOpen} onOpenChange={setRotateOpen} secret={secret} />
       )}

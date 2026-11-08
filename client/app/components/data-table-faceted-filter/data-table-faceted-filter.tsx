@@ -17,6 +17,7 @@ import { Separator } from "../ui-kits/separator/separator";
 import { Badge } from "../ui-kits/badge/badge";
 import { usePopoverWidth } from "@seliseblocks/genesis-os/hooks";
 import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
+import { useT } from "@seliseblocks/genesis-os";
 interface DataTableFacetedFilterProps<TData, TValue> {
   column?: Column<TData, TValue>;
   title?: string;
@@ -30,6 +31,7 @@ export function DataTableFacetedFilter<TData, TValue>({
   title,
   options,
 }: DataTableFacetedFilterProps<TData, TValue>) {
+  const { t } = useT("os.shared");
   const facets = column?.getFacetedUniqueValues();
   const columnFilterValue = column?.getFilterValue() as { types?: string[] } | undefined;
   const selectedValues = new Set(columnFilterValue?.types || []);
@@ -51,7 +53,9 @@ export function DataTableFacetedFilter<TData, TValue>({
                 <div className="flex space-x-1">
                   {selectedValues.size > 2 ? (
                     <Badge variant="secondary" className="rounded-sm px-1 font-normal">
-                      {selectedValues.size} selected
+                      {t("DATA_TABLE_FACETED_FILTER.SELECTED_COUNT", {
+                        count: selectedValues.size,
+                      })}
                     </Badge>
                   ) : (
                     options
@@ -80,7 +84,7 @@ export function DataTableFacetedFilter<TData, TValue>({
         <Command>
           <CommandInput placeholder={title} />
           <CommandList>
-            <CommandEmpty>No results found.</CommandEmpty>
+            <CommandEmpty>{t("DATA_TABLE_FACETED_FILTER.NO_RESULTS_FOUND")}</CommandEmpty>
             <CommandGroup>
               {options.map((option) => {
                 const isSelected = selectedValues.has(option.value);
@@ -129,7 +133,7 @@ export function DataTableFacetedFilter<TData, TValue>({
                     onSelect={() => column?.setFilterValue(undefined)}
                     className="justify-center text-center"
                   >
-                    Clear
+                    {t("common:CLEAR")}
                   </CommandItem>
                 </CommandGroup>
               </>

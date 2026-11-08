@@ -12,6 +12,7 @@ import {
 } from "@/components/ui-kits/select/select";
 import { useGetSignupLinkConfigurations } from "@blocks-idp/iam/hooks/use-signup-link-configurations";
 import { ISignupLinkConfiguration } from "@blocks-idp/iam/models/signup-link-configuration";
+import { useT } from "@seliseblocks/genesis-os";
 import { CalendarIcon } from "lucide-react";
 import { parseAsString, useQueryStates } from "nuqs";
 import { useMemo, useState } from "react";
@@ -67,12 +68,7 @@ type ActivityFilterToolbarProps = {
   fieldErrors?: Record<string, string>;
 };
 
-const RANGE_OPTIONS: { value: ActivityRange; label: string }[] = [
-  { value: "7d", label: "Last 7 days" },
-  { value: "30d", label: "Last 30 days" },
-  { value: "90d", label: "Last 90 days" },
-  { value: "custom", label: "Custom range" },
-];
+const RANGE_OPTION_VALUES: ActivityRange[] = ["7d", "30d", "90d", "custom"];
 
 const firstErrorText = (value: string | string[] | undefined): string | undefined => {
   if (!value) return undefined;
@@ -84,8 +80,7 @@ export const resolveFilterFieldErrors = (
 ): Record<string, string> => {
   if (!errors) return {};
   const out: Record<string, string> = {};
-  const config =
-    firstErrorText(errors.ConfigurationId) ?? firstErrorText(errors.configurationId);
+  const config = firstErrorText(errors.ConfigurationId) ?? firstErrorText(errors.configurationId);
   const range =
     firstErrorText(errors.Range) ??
     firstErrorText(errors.range) ??
@@ -99,6 +94,13 @@ export const resolveFilterFieldErrors = (
 };
 
 export const ActivityFilterToolbar = ({ fieldErrors = {} }: ActivityFilterToolbarProps) => {
+  const { t } = useT("os.idp.signup-links");
+  const rangeLabels: Record<ActivityRange, string> = {
+    "7d": t("ACTIVITY_FILTER_TOOLBAR.RANGE_7D"),
+    "30d": t("ACTIVITY_FILTER_TOOLBAR.RANGE_30D"),
+    "90d": t("ACTIVITY_FILTER_TOOLBAR.RANGE_90D"),
+    custom: t("ACTIVITY_FILTER_TOOLBAR.RANGE_CUSTOM"),
+  };
   const { queryParams, setQueryParams } = useSignupLinkActivityQueryParams();
   const { data, isLoading } = useGetSignupLinkConfigurations({
     page: 0,
@@ -115,14 +117,14 @@ export const ActivityFilterToolbar = ({ fieldErrors = {} }: ActivityFilterToolba
   );
 
   const customLabel = useMemo(() => {
-    if (!queryParams.fromUtc && !queryParams.toUtc) return "Pick dates";
+    if (!queryParams.fromUtc && !queryParams.toUtc) return t("ACTIVITY_FILTER_TOOLBAR.PICK_DATES");
     const from = queryParams.fromUtc ? new Date(queryParams.fromUtc) : undefined;
     const to = queryParams.toUtc ? new Date(queryParams.toUtc) : undefined;
     if (from && to) return `${formatDate(from, true)} – ${formatDate(to, true)}`;
-    if (from) return `From ${formatDate(from, true)}`;
-    if (to) return `Until ${formatDate(to, true)}`;
-    return "Pick dates";
-  }, [queryParams.fromUtc, queryParams.toUtc]);
+    if (from) return t("ACTIVITY_FILTER_TOOLBAR.FROM_DATE", { date: formatDate(from, true) });
+    if (to) return t("ACTIVITY_FILTER_TOOLBAR.UNTIL_DATE", { date: formatDate(to, true) });
+    return t("ACTIVITY_FILTER_TOOLBAR.PICK_DATES");
+  }, [queryParams.fromUtc, queryParams.toUtc, t]);
 
   return (
     <div
@@ -131,7 +133,7 @@ export const ActivityFilterToolbar = ({ fieldErrors = {} }: ActivityFilterToolba
     >
       <div className="flex min-w-[220px] flex-1 flex-col gap-1">
         <Label htmlFor="activity-configuration" className="text-sm font-normal">
-          Configuration
+          {t("ACTIVITY_FILTER_TOOLBAR.CONFIGURATION_LABEL")}
         </Label>
         <Select
           value={queryParams.configurationId || undefined}
@@ -146,7 +148,7 @@ export const ActivityFilterToolbar = ({ fieldErrors = {} }: ActivityFilterToolba
             data-testid="activity-configuration-select"
             aria-invalid={Boolean(fieldErrors.configurationId)}
           >
-            <SelectValue placeholder="Choose a configuration" />
+            <SelectValue placeholder={t("ACTIVITY_FILTER_TOOLBAR.CONFIGURATION_PLACEHOLDER")} />
           </SelectTrigger>
           <SelectContent>
             {configurations.map((config: ISignupLinkConfiguration) => (
@@ -155,7 +157,7 @@ export const ActivityFilterToolbar = ({ fieldErrors = {} }: ActivityFilterToolba
                   <span>{config.name}</span>
                   {!config.isActive && (
                     <Badge variant="secondary" className="font-normal">
-                      Archived
+                      {t("ACTIVITY_FILTER_TOOLBAR.ARCHIVED")}
                     </Badge>
                   )}
                 </span>
@@ -164,7 +166,7 @@ export const ActivityFilterToolbar = ({ fieldErrors = {} }: ActivityFilterToolba
           </SelectContent>
         </Select>
         {selectedConfig && !selectedConfig.isActive && (
-          <span className="sr-only">Selected configuration is archived</span>
+          <span className="sr-only">{t("ACTIVITY_FILTER_TOOLBAR.SELECTED_ARCHIVED")}</span>
         )}
         {fieldErrors.configurationId && (
           <p className="text-xs text-destructive" data-testid="activity-configuration-error">
@@ -175,7 +177,7 @@ export const ActivityFilterToolbar = ({ fieldErrors = {} }: ActivityFilterToolba
 
       <div className="flex min-w-[180px] flex-col gap-1">
         <Label htmlFor="activity-range" className="text-sm font-normal">
-          Date range
+          {t("ACTIVITY_FILTER_TOOLBAR.DATE_RANGE_LABEL")}
         </Label>
         <Select
           value={(queryParams.range as ActivityRange) || "30d"}
@@ -198,9 +200,9 @@ export const ActivityFilterToolbar = ({ fieldErrors = {} }: ActivityFilterToolba
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {RANGE_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
+            {RANGE_OPTION_VALUES.map((value) => (
+              <SelectItem key={value} value={value}>
+                {rangeLabels[value]}
               </SelectItem>
             ))}
           </SelectContent>
@@ -265,7 +267,7 @@ export const ActivityFilterToolbar = ({ fieldErrors = {} }: ActivityFilterToolba
                     setDateOpen(false);
                   }}
                 >
-                  Reset
+                  {t("common:RESET")}
                 </Button>
                 <Button
                   type="button"
@@ -279,7 +281,7 @@ export const ActivityFilterToolbar = ({ fieldErrors = {} }: ActivityFilterToolba
                     setDateOpen(false);
                   }}
                 >
-                  Apply
+                  {t("common:APPLY")}
                 </Button>
               </div>
             </PopoverContent>

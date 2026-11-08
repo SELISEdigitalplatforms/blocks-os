@@ -8,9 +8,6 @@ namespace Configuration.DomainService.Notification.Propagation
         NotPresent,
         Conflict,
         Failed,
-
-        /// <summary>Root made the built-in Console-only, but the project chose to keep its copy (own Scope, disabled or Audience).</summary>
-        Kept,
     }
 
     public class NotificationPropagationResult

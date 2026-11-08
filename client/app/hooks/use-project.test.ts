@@ -31,7 +31,8 @@ const impersonateState = {
   impersonatedTenantId: "tenant-impersonated",
   originalTenantId: "tenant-root",
 };
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: vi.fn(() => ({
     setProjects,
     selectedProject: { itemId: "p-selected" },
@@ -280,7 +281,9 @@ describe("use-project hooks", () => {
     it("useCreateProject refetches the project list once more after provisioning had time", async () => {
       vi.useFakeTimers();
       try {
-        vi.mocked(crossProjectService.createProject).mockResolvedValue({ isSuccess: true } as never);
+        vi.mocked(crossProjectService.createProject).mockResolvedValue({
+          isSuccess: true,
+        } as never);
         const { spy, wrapper } = setup();
         const { result } = renderHook(() => useCreateProject(), { wrapper });
         await act(async () => {

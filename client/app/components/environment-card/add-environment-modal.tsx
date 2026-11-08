@@ -4,6 +4,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { useCreateProject } from "@/hooks/use-project";
 import { environmentOptions } from "@/constants/environment-options";
 import { isErrorWithErrors, showErrorToast } from "@seliseblocks/genesis-os/utils";
+import { useT } from "@seliseblocks/genesis-os";
 function shortGuidGenerator(length: number): string {
   const letters = "abcdefghijklmnopqrstuvwxyz";
   const bytes = crypto.getRandomValues(new Uint8Array(length));
@@ -21,6 +22,7 @@ export const AddEnvironmentModal = ({
   tenantGroupId,
   projectName,
 }: AddEnvironmentModalProps) => {
+  const { t } = useT("os.environments");
   const { isPending, mutateAsync } = useCreateProject();
   const [selected, setSelected] = useState<string[]>([]);
   const availableOptions = environmentOptions.filter(
@@ -60,7 +62,9 @@ export const AddEnvironmentModal = ({
         }
       } catch (error) {
         showErrorToast({
-          errors: isErrorWithErrors(error) ? error.errors : "Could not add the environment.",
+          errors: isErrorWithErrors(error)
+            ? error.errors
+            : t("ADD_ENVIRONMENT_MODAL.COULD_NOT_ADD_THE_ENVIRONMENT"),
         });
       }
     }
@@ -103,14 +107,14 @@ export const AddEnvironmentModal = ({
           disabled={isPending}
           onClick={() => onClose && onClose([])}
         >
-          Cancel
+          {t("common:CANCEL")}
         </Button>
         <Button
           type="button"
           disabled={isPending || selected.length === 0}
           onClick={() => onSaveClick()}
         >
-          Add
+          {t("common:ADD")}
         </Button>
       </div>
     </div>

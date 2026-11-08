@@ -2,6 +2,7 @@ import { IPermission } from "@blocks-idp/iam/models/permission";
 import { AddSSOPermission } from "./add-sso-permission";
 import { SSOPermissionsList } from "./sso-permissions-list";
 import { Label } from "@/components/ui-kits/label/label";
+import { useT } from "@seliseblocks/genesis-os";
 
 type SSOInitialPermissionsProps = {
   permissions: IPermission[];
@@ -9,6 +10,7 @@ type SSOInitialPermissionsProps = {
 };
 
 export function SSOInitialPermissions({ permissions, onChange }: SSOInitialPermissionsProps) {
+  const { t } = useT("os.idp.auth");
   const onAddHandler = (newPermissions: IPermission[]) => {
     onChange([...permissions, ...newPermissions]);
   };
@@ -20,7 +22,7 @@ export function SSOInitialPermissions({ permissions, onChange }: SSOInitialPermi
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex-1 space-y-1">
           <div className="flex items-center gap-2">
-            <Label className="text-base font-medium">Permissions</Label>
+            <Label className="text-base font-medium">{t("SSO_INITIAL_PERMISSIONS.TITLE")}</Label>
             {permissions.length > 0 && (
               <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                 {permissions.length}
@@ -28,7 +30,7 @@ export function SSOInitialPermissions({ permissions, onChange }: SSOInitialPermi
             )}
           </div>
           <p className="text-sm text-muted-foreground">
-            Define default permissions automatically assigned to users upon SSO authentication
+            {t("SSO_INITIAL_PERMISSIONS.DESCRIPTION")}
           </p>
         </div>
         <div className="shrink-0">
@@ -53,8 +55,12 @@ export function SSOInitialPermissions({ permissions, onChange }: SSOInitialPermi
               />
             </svg>
           </div>
-          <p className="mt-3 text-sm font-medium text-foreground">No permissions added</p>
-          <p className="mt-1 text-xs text-muted-foreground">Add permissions for SSO users</p>
+          <p className="mt-3 text-sm font-medium text-foreground">
+            {t("SSO_INITIAL_PERMISSIONS.EMPTY_TITLE")}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {t("SSO_INITIAL_PERMISSIONS.EMPTY_HINT")}
+          </p>
         </div>
       ) : (
         <div className="overflow-hidden rounded-lg border">

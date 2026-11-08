@@ -25,7 +25,8 @@ vi.mock("@/hooks/use-toast", () => ({
   showSuccessToast: (...args: unknown[]) => showSuccessToast(...args),
 }));
 
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/genesis-os", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@seliseblocks/genesis-os")>()),
   useProjectStore: Object.assign(
     () => ({ selectedTenantGroup: "group-1" }),
     { getState: () => ({ selectedTenantGroup: "group-1" }) },

@@ -9,17 +9,20 @@ import {
 } from "@blocks-idp/data-access/gateway/utils/schema-access-control.utils";
 import { cn } from "@/lib/utils";
 import { Plus, SquarePlus, X } from "lucide-react";
+import { useT, type TFunction } from "@seliseblocks/genesis-os";
 import { Fragment } from "react";
 import { useFieldArray, useFormContext } from "react-hook-form";
 import { RuleConditionRow, useFocusNewRow, type RuleBuilderContext } from "./rule-condition-row";
+
+const I18N_MODULE = "os.idp.gateway";
 
 /** `nestedGroups.1` + `rules` → `nestedGroups.1.rules`; the root's path is empty. */
 const joinPath = (path: string, key: string) => (path ? `${path}.${key}` : key);
 
 /** What a rule does to the one before it: "When" for the first, then "And" / "Or". */
-const ruleLead = (position: number, operator: string): string => {
-  if (position === 0) return "When";
-  return operator === "OR" ? "Or" : "And";
+const ruleLead = (position: number, operator: string, t: TFunction): string => {
+  if (position === 0) return t("RULE_GROUP_EDITOR.LEAD_WHEN");
+  return operator === "OR" ? t("RULE_GROUP_EDITOR.LEAD_OR") : t("RULE_GROUP_EDITOR.LEAD_AND");
 };
 
 /**
@@ -27,7 +30,9 @@ const ruleLead = (position: number, operator: string): string => {
  * a centred rule at the top level, a small label inside a nested group.
  */
 const GroupJoiner = ({ operator, centered }: { operator: string; centered: boolean }) => {
-  const word = operator === "OR" ? "OR" : "AND";
+  const { t } = useT(I18N_MODULE);
+  const word =
+    operator === "OR" ? t("RULE_GROUP_EDITOR.JOINER_OR") : t("RULE_GROUP_EDITOR.JOINER_AND");
   if (centered) {
     return (
       <div className="flex items-center gap-2" aria-hidden="true">
@@ -81,6 +86,7 @@ export const RuleGroupChildren = ({
   onRemoveGroup,
   labelPrefix = "",
 }: RuleGroupChildrenProps) => {
+  const { t } = useT(I18N_MODULE);
   const form = useFormContext<RuleSetFormValues>();
   const operator = form.watch(joinPath(path, "logicalOperator") as "logicalOperator");
 
@@ -100,8 +106,11 @@ export const RuleGroupChildren = ({
             <RuleConditionRow
               basePath={joinPath(path, `rules.${child.index}`)}
               ruleId={child.id}
-              conditionLabel={`${labelPrefix}Condition ${child.index + 1}`}
-              lead={ruleLead(position, operator)}
+              conditionLabel={t("RULE_GROUP_EDITOR.CONDITION_LABEL", {
+                prefix: labelPrefix,
+                number: child.index + 1,
+              })}
+              lead={ruleLead(position, operator, t)}
               ctx={ctx}
               onRemove={() => onRemoveRule(child.index)}
             />
@@ -110,7 +119,9 @@ export const RuleGroupChildren = ({
               path={joinPath(path, `nestedGroups.${child.index}`)}
               depth={depth + 1}
               ctx={ctx}
-              labelPrefix={`${labelPrefix}Group ${child.index + 1} `}
+              labelPrefix={`${labelPrefix}${t("RULE_GROUP_EDITOR.GROUP_PREFIX", {
+                number: child.index + 1,
+              })} `}
               onRemove={() => onRemoveGroup(child.index)}
             />
           )}
@@ -131,11 +142,6 @@ interface RuleGroupEditorProps {
   onRemove: () => void;
 }
 
-const MATCH_OPTIONS = [
-  { value: "AND", label: "Match all", ariaLabel: "Group match all" },
-  { value: "OR", label: "Match any", ariaLabel: "Group match any" },
-] as const;
-
 /**
  * One nested group of a rule set: its own Match all / Match any, its own
  * rules, and — until the depth cap — its own groups. Recurses through
@@ -148,7 +154,20 @@ export const RuleGroupEditor = ({
   labelPrefix,
   onRemove,
 }: RuleGroupEditorProps) => {
+  const { t } = useT(I18N_MODULE);
   const form = useFormContext<RuleSetFormValues>();
+  const matchOptions = [
+    {
+      value: "AND",
+      label: t("RULE_GROUP_EDITOR.MATCH_ALL"),
+      ariaLabel: t("RULE_GROUP_EDITOR.MATCH_ALL_ARIA"),
+    },
+    {
+      value: "OR",
+      label: t("RULE_GROUP_EDITOR.MATCH_ANY"),
+      ariaLabel: t("RULE_GROUP_EDITOR.MATCH_ANY_ARIA"),
+    },
+  ] as const;
   const {
     fields: ruleFields,
     append: appendRule,
@@ -167,7 +186,7 @@ export const RuleGroupEditor = ({
 
   return (
     <section
-      aria-label={`${labelPrefix}group`.trim()}
+      aria-label={t("RULE_GROUP_EDITOR.GROUP_ARIA", { prefix: labelPrefix }).trim()}
       className={cn(
         "rounded-lg border p-2.5",
         depth > 2 ? "border-border/70 bg-muted/25" : "border-border/50 bg-muted/10",
@@ -175,14 +194,14 @@ export const RuleGroupEditor = ({
     >
       <div className="mb-2.5 flex flex-wrap items-center gap-2">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Group
+          {t("RULE_GROUP_EDITOR.GROUP")}
         </span>
         <div
           role="radiogroup"
-          aria-label={`${labelPrefix}group match`}
+          aria-label={t("RULE_GROUP_EDITOR.GROUP_MATCH_ARIA", { prefix: labelPrefix })}
           className="flex items-center gap-1 rounded-md border border-border/40 bg-background p-0.5"
         >
-          {MATCH_OPTIONS.map((option) => {
+          {matchOptions.map((option) => {
             const isSelected = operator === option.value;
             return (
               <label
@@ -217,31 +236,31 @@ export const RuleGroupEditor = ({
           type="button"
           variant="ghost"
           size="sm"
-          aria-label="Add rule to group"
+          aria-label={t("RULE_GROUP_EDITOR.ADD_RULE_ARIA")}
           className="h-6 gap-1 px-1.5 text-[11px] font-semibold text-primary hover:text-primary"
           onClick={() => appendRule(createBlankRule())}
         >
           <Plus className="h-3 w-3" />
-          Rule
+          {t("RULE_GROUP_EDITOR.RULE")}
         </Button>
         {canNest && (
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            aria-label="Add group inside group"
+            aria-label={t("RULE_GROUP_EDITOR.ADD_GROUP_ARIA")}
             className="h-6 gap-1 px-1.5 text-[11px] font-semibold text-primary hover:text-primary"
             onClick={() => appendGroup(createBlankGroup())}
           >
             <SquarePlus className="h-3 w-3" />
-            Group
+            {t("RULE_GROUP_EDITOR.GROUP")}
           </Button>
         )}
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          aria-label="Remove group"
+          aria-label={t("RULE_GROUP_EDITOR.REMOVE_GROUP_ARIA")}
           className="h-6 w-6 shrink-0 rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
           onClick={onRemove}
         >
@@ -254,7 +273,7 @@ export const RuleGroupEditor = ({
           role="alert"
           className="rounded-md border border-dashed border-destructive/40 px-3 py-2 text-[11px] text-destructive"
         >
-          Empty group: add a rule, or remove the group. An empty group never matches.
+          {t("RULE_GROUP_EDITOR.EMPTY_GROUP")}
         </p>
       ) : (
         <RuleGroupChildren
@@ -271,4 +290,3 @@ export const RuleGroupEditor = ({
     </section>
   );
 };
-

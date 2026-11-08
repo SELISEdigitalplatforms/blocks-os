@@ -22,7 +22,10 @@ namespace Configuration.DomainService.Mail.Services
 
         Task<MailConfigurationResponse?> GetAsync(GetMailConfigurationRequest request, CancellationToken cancellationToken = default);
 
-        Task<List<MailConfigurationResponse>> GetAllAsync(CancellationToken cancellationToken = default);
+        Task<List<MailConfigurationResponse>> GetAllAsync(GetAllMailConfigurationsRequest request, CancellationToken cancellationToken = default);
+
+        /// <summary>How many templates name the configuration; "Configuration not found" for an unknown id.</summary>
+        Task<MailConfigurationUsageResponse> GetUsageAsync(GetMailConfigurationUsageRequest request, CancellationToken cancellationToken = default);
 
         Task<MailConfigurationMutationResult> DeleteAsync(DeleteMailConfigurationRequest request, CancellationToken cancellationToken = default);
 

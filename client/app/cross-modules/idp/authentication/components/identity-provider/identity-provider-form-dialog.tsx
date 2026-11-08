@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { AlertTriangle, Eye, EyeOff, Info, Plus, X } from "lucide-react";
 import {
@@ -24,6 +24,7 @@ import { IdentityProvider } from "@blocks-idp/authentication/models/identity-pro
 import {
   useCreateIdentityProvider,
   useGetIdentityProviderById,
+  useGetIdentityProviders,
   useUpdateIdentityProvider,
 } from "@blocks-idp/authentication/hooks/use-identity-provider";
 import {
@@ -45,22 +46,22 @@ import {
   getSocialLoginRedirectUri,
   hasRedirectUri,
   addRedirectUriToList,
+  isDisplayNameTaken,
+  isMicrosoftSocial,
+  isValidMicrosoftTenant,
+  microsoftTenantOf,
+  suggestDisplayName,
 } from "./identity-provider-form.util";
 import { getBlocksIamBaseUrl } from "@blocks-idp/settings/utils/auth-config-form";
-import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useProjectStore, useT } from "@seliseblocks/genesis-os";
 import { getBlocksOidcWellKnownUrl } from "@/lib/get-api-path";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 
-const PROVIDER_OPTIONS: { value: string; label: string }[] = [
-  { value: "social", label: "Social" },
-  { value: "blocks-oidc", label: "Blocks OIDC" },
-  { value: "byos", label: "Bring your own SSO (BYOS)" },
-  // { value: "google", label: "Google" },
-  // { value: "microsoft", label: "Microsoft" },
-  // { value: "linkedin", label: "LinkedIn" },
-  // { value: "github", label: "GitHub" },
-];
+const PROVIDER_SOCIAL = "social";
+const PROVIDER_BLOCKS_OIDC = "blocks-oidc";
+const PROVIDER_BYOS = "byos";
+const PROVIDER_TYPE_VALUES = new Set([PROVIDER_SOCIAL, PROVIDER_BLOCKS_OIDC, PROVIDER_BYOS]);
 
 type FormValues = {
   displayName: string;
@@ -70,6 +71,7 @@ type FormValues = {
   clientSecret: string;
   wellKnownUrl?: string;
   audience?: string;
+  tenant: string;
 };
 
 type Props = {
@@ -84,13 +86,21 @@ type Props = {
 
 const BLANK_FORM: FormValues = {
   displayName: "",
-  providerType: "social",
+  providerType: PROVIDER_SOCIAL,
   provider: "",
   clientId: "",
   clientSecret: "",
   wellKnownUrl: "",
   audience: "",
+  tenant: "",
 };
+
+const socialLabel = (provider?: string) =>
+  SOCIAL_AUTH_PROVIDERS_CONFIG[provider as SSO_PROVIDERS]?.label;
+
+const SOCIAL_PROVIDER_LABELS = new Set(
+  Object.values(SOCIAL_AUTH_PROVIDERS_CONFIG).map((config) => config?.label ?? ""),
+);
 
 const parseScopes = (scope?: string): string[] => {
   const scopes = (scope ?? "").split(/[\s,]+/).filter(Boolean);
@@ -111,17 +121,94 @@ const parseRedirectUris = (provider: IdentityProvider): string[] => {
 };
 
 const toFormValues = (provider: IdentityProvider): FormValues => {
-  const matched = PROVIDER_OPTIONS.some((t) => t.value === provider.providerType);
+  const matched = PROVIDER_TYPE_VALUES.has(provider.providerType);
   return {
-    displayName: provider.displayName,
-    providerType: matched ? provider.providerType : "social",
+    displayName: provider.displayName ?? "",
+    providerType: matched ? provider.providerType : PROVIDER_SOCIAL,
     provider: provider.provider,
     clientId: provider.clientId,
     clientSecret: "",
     wellKnownUrl: provider.wellKnownUrl ?? "",
     audience: provider.audience ?? "",
+    tenant: isMicrosoftSocial(provider.providerType, provider.provider)
+      ? microsoftTenantOf(provider.wellKnownUrl)
+      : "",
   };
 };
+
+const submitLabelKey = (isPending: boolean, isEditing: boolean) => {
+  if (isPending) return "IDENTITY_PROVIDER_FORM_DIALOG.SAVING";
+  return isEditing
+    ? "IDENTITY_PROVIDER_FORM_DIALOG.SAVE_CHANGES"
+    : "IDENTITY_PROVIDER_FORM_DIALOG.ADD_PROVIDER";
+};
+
+// Shows or hides a masked field's value.
+function RevealToggle({ shown, onToggle }: Readonly<{ shown: boolean; onToggle: () => void }>) {
+  return (
+    <button
+      type="button"
+      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+      onClick={onToggle}
+    >
+      {shown ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+    </button>
+  );
+}
+
+// Pre-fill confirmation banner: what was picked from the gallery (social provider or enterprise
+// type), with a way back to the gallery.
+function PresetBanner({
+  presetProvider,
+  presetProviderType,
+  onChange,
+}: Readonly<{ presetProvider?: string; presetProviderType?: string; onChange: () => void }>) {
+  const { t } = useT("os.idp.identity-provider");
+  const pickedSocialMeta = presetProvider
+    ? SOCIAL_AUTH_PROVIDERS_CONFIG[presetProvider as SSO_PROVIDERS]
+    : undefined;
+  const pickedEnterpriseMeta =
+    presetProviderType === PROVIDER_BLOCKS_OIDC || presetProviderType === PROVIDER_BYOS
+      ? ENTERPRISE_CARD_INFO[presetProviderType]
+      : undefined;
+  let icon: ReactNode = null;
+  if (pickedSocialMeta) {
+    icon = (
+      <img
+        src={pickedSocialMeta.imageSrc}
+        alt={pickedSocialMeta.label}
+        className="h-[22px] w-[22px] object-contain"
+      />
+    );
+  } else if (pickedEnterpriseMeta && presetProviderType) {
+    const Icon = PROVIDER_CONFIG[presetProviderType]?.Icon;
+    icon = Icon ? <Icon className="h-[18px] w-[18px] text-primary" /> : null;
+  }
+  return (
+    <div className="flex items-center gap-3.5 rounded-lg border border-primary/25 bg-primary/4 p-3.5">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border bg-background">
+        {icon}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-primary">
+          {pickedSocialMeta?.label ?? pickedEnterpriseMeta?.label}
+        </p>
+        <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+          {pickedSocialMeta?.description ?? pickedEnterpriseMeta?.description}
+        </p>
+      </div>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="h-7 shrink-0 border-primary/40 px-3 text-xs font-semibold text-primary hover:bg-primary/5 hover:text-primary"
+        onClick={onChange}
+      >
+        {t("IDENTITY_PROVIDER_FORM_DIALOG.CHANGE")}
+      </Button>
+    </div>
+  );
+}
 
 export function IdentityProviderFormDialog({
   open,
@@ -130,8 +217,20 @@ export function IdentityProviderFormDialog({
   presetProviderType,
   presetProvider,
 }: Props) {
+  const { t } = useT("os.idp.identity-provider");
   const isEditing = !!editId;
-  const tenantId = useProjectStore().selectedProject?.tenantId || "";
+  const providerOptions: { value: string; label: string }[] = [
+    { value: PROVIDER_SOCIAL, label: t("IDENTITY_PROVIDER_FORM_DIALOG.TYPE_SOCIAL") },
+    { value: PROVIDER_BLOCKS_OIDC, label: "Blocks OIDC" },
+    { value: PROVIDER_BYOS, label: t("IDENTITY_PROVIDER_FORM_DIALOG.TYPE_BYOS") },
+  ];
+  const selectedProject = useProjectStore().selectedProject;
+  const tenantId = selectedProject?.tenantId || "";
+  const { data: providerList } = useGetIdentityProviders({
+    projectId: selectedProject?.itemId || "",
+  });
+  // Several Google or Microsoft entries are told apart by display name.
+  const existingProviders = useMemo(() => providerList?.data ?? [], [providerList]);
 
   const {
     data: providerResponse,
@@ -168,6 +267,8 @@ export function IdentityProviderFormDialog({
     reset,
     watch,
     setValue,
+    getValues,
+    trigger,
     formState: { errors, isValid },
   } = useForm<FormValues>({
     mode: "onChange",
@@ -175,6 +276,9 @@ export function IdentityProviderFormDialog({
   });
 
   const providerType = watch("providerType");
+  const providerName = watch("provider");
+  const isSocialType = providerType === PROVIDER_SOCIAL;
+  const showTenant = isMicrosoftSocial(providerType, providerName);
   const blocksOidcWellKnownUrl = tenantId ? getBlocksOidcWellKnownUrl(tenantId) : "";
   const selectedSocialProvider = SOCIAL_AUTH_PROVIDERS_CONFIG[watch("provider") as SSO_PROVIDERS];
   const loginRedirectUri = getSocialLoginRedirectUri(
@@ -192,7 +296,7 @@ export function IdentityProviderFormDialog({
   );
 
   useEffect(() => {
-    if (providerType === "blocks-oidc" && blocksOidcWellKnownUrl) {
+    if (providerType === PROVIDER_BLOCKS_OIDC && blocksOidcWellKnownUrl) {
       setValue("wellKnownUrl", blocksOidcWellKnownUrl, { shouldValidate: true });
     }
   }, [providerType, blocksOidcWellKnownUrl, setValue]);
@@ -227,7 +331,9 @@ export function IdentityProviderFormDialog({
 
     if (!providerResponse?.isSuccess || !editedProvider) {
       showErrorToast({
-        errors: providerResponse?.errors ?? { not_found: "Provider not found." },
+        errors: providerResponse?.errors ?? {
+          not_found: t("IDENTITY_PROVIDER_FORM_DIALOG.PROVIDER_NOT_FOUND"),
+        },
       });
       onOpenChange(false);
       return;
@@ -251,6 +357,7 @@ export function IdentityProviderFormDialog({
     onOpenChange,
     presetProviderType,
     presetProvider,
+    t,
   ]);
 
   useEffect(() => {
@@ -258,41 +365,81 @@ export function IdentityProviderFormDialog({
     if (isErrorWithErrors(providerFetchError)) {
       showErrorToast({ errors: providerFetchError.errors });
     } else {
-      showErrorToast({ errors: { not_found: "Provider not found." } });
+      showErrorToast({
+        errors: { not_found: t("IDENTITY_PROVIDER_FORM_DIALOG.PROVIDER_NOT_FOUND") },
+      });
     }
     onOpenChange(false);
-  }, [open, isEditing, isProviderFetchError, providerFetchError, onOpenChange]);
+  }, [open, isEditing, isProviderFetchError, providerFetchError, onOpenChange, t]);
+
+  // A new Google or Microsoft entry starts named after its provider, unless another entry of it
+  // already has that name. Only a name filled in this way is replaced when the provider changes.
+  useEffect(() => {
+    if (!open || isEditing || !isFormReady || !isSocialType) return;
+    const current = (getValues("displayName") ?? "").trim();
+    if (current && !SOCIAL_PROVIDER_LABELS.has(current)) return;
+    const suggestion = suggestDisplayName(
+      existingProviders,
+      providerName,
+      socialLabel(providerName),
+    );
+    if (suggestion !== current) setValue("displayName", suggestion, { shouldValidate: true });
+  }, [
+    open,
+    isEditing,
+    isFormReady,
+    isSocialType,
+    providerName,
+    existingProviders,
+    getValues,
+    setValue,
+  ]);
+
+  // The list can arrive after the name was typed: check the name against it again.
+  useEffect(() => {
+    if (open && isFormReady && (getValues("displayName") ?? "").trim()) void trigger("displayName");
+  }, [open, isFormReady, existingProviders, getValues, trigger]);
+
+  const validateDisplayName = (value: string) => {
+    const name = (value ?? "").trim();
+    if (!name) {
+      return isSocialType ? t("IDENTITY_PROVIDER_FORM_DIALOG.DISPLAY_NAME_REQUIRED") : true;
+    }
+    return isDisplayNameTaken(existingProviders, providerName, name, editId)
+      ? t("IDENTITY_PROVIDER_FORM_DIALOG.DISPLAY_NAME_TAKEN", {
+          provider: socialLabel(providerName) ?? providerName,
+        })
+      : true;
+  };
 
   // The pre-fill banner reflects what was picked from the gallery (the original preset
   // props), not the live form value - it stays put even if the admin starts tweaking the
   // dropdowns, and only "Change" (below) clears it.
   const hasPreset = !isEditing && (!!presetProviderType || !!presetProvider);
   const showBanner = hasPreset && !bannerDismissed;
-  const pickedSocialMeta = presetProvider
-    ? SOCIAL_AUTH_PROVIDERS_CONFIG[presetProvider as SSO_PROVIDERS]
-    : undefined;
-  const pickedEnterpriseMeta =
-    presetProviderType === "blocks-oidc" || presetProviderType === "byos"
-      ? ENTERPRISE_CARD_INFO[presetProviderType]
-      : undefined;
+  const clientIdInputType = showClientId ? "text" : "password";
+  const clientSecretInputType = showClientSecret ? "text" : "password";
+  const clientSecretPlaceholder = isEditing
+    ? "••••••••••••"
+    : t("IDENTITY_PROVIDER_FORM_DIALOG.CLIENT_SECRET_PLACEHOLDER");
+  const clientSecretRequired = isEditing
+    ? false
+    : t("IDENTITY_PROVIDER_FORM_DIALOG.CLIENT_SECRET_REQUIRED");
 
   // The help box, by contrast, tracks the live selection - it shows for a manual pick too
   // (H3), not just a gallery pre-fill, and disappears again in edit mode. Defensive per C6:
   // never render a box with a missing/empty title or body.
   const helpContent = ((): { title: string; body: string } | undefined => {
     if (isEditing) return undefined;
-    if (providerType === "social") {
+    if (providerType === PROVIDER_SOCIAL) {
       const meta = SOCIAL_AUTH_PROVIDERS_CONFIG[watch("provider") as SSO_PROVIDERS];
       return meta?.helpTitle && meta?.helpBody
         ? { title: meta.helpTitle, body: meta.helpBody }
         : undefined;
     }
-    const staticHelp =
-      providerType === "blocks-oidc"
-        ? BLOCKS_OIDC_HELP
-        : providerType === "byos"
-          ? BYOS_HELP
-          : undefined;
+    let staticHelp: typeof BLOCKS_OIDC_HELP | typeof BYOS_HELP | undefined;
+    if (providerType === PROVIDER_BLOCKS_OIDC) staticHelp = BLOCKS_OIDC_HELP;
+    else if (providerType === PROVIDER_BYOS) staticHelp = BYOS_HELP;
     return staticHelp?.title && staticHelp?.body ? staticHelp : undefined;
   })();
 
@@ -307,11 +454,12 @@ export function IdentityProviderFormDialog({
   const { mutateAsync: create, isPending: isCreating } = useCreateIdentityProvider();
   const { mutateAsync: update, isPending: isUpdating } = useUpdateIdentityProvider();
   const isPending = isCreating || isUpdating;
+  const submitLabel = t(submitLabelKey(isPending, isEditing));
 
   const onSubmit = async (values: FormValues) => {
     const cleanedUris = redirectUris.map((u) => u.trim()).filter(Boolean);
     if (cleanedUris.length === 0) {
-      setRedirectUrisError("At least one redirect URI is required");
+      setRedirectUrisError(t("IDENTITY_PROVIDER_FORM_DIALOG.REDIRECT_URI_REQUIRED"));
       return;
     }
     setRedirectUrisError(null);
@@ -337,13 +485,13 @@ export function IdentityProviderFormDialog({
 
       showSuccessToast({
         description: isEditing
-          ? "Identity provider updated successfully"
-          : "Identity provider created successfully",
+          ? t("IDENTITY_PROVIDER_FORM_DIALOG.UPDATED_SUCCESS")
+          : t("IDENTITY_PROVIDER_FORM_DIALOG.CREATED_SUCCESS"),
       });
       onOpenChange(false);
     } catch (err) {
       if (isErrorWithErrors(err)) return showErrorToast({ errors: err.errors });
-      showErrorToast({ errors: "Something went wrong" });
+      showErrorToast({ errors: t("IDENTITY_PROVIDER_FORM_DIALOG.ERROR_GENERIC") });
     }
   };
 
@@ -361,12 +509,18 @@ export function IdentityProviderFormDialog({
         <div className="flex-1 space-y-4 overflow-y-auto px-6 py-6">
           <DialogHeader>
             <DialogTitle>
-              {isEditing ? "Edit Identity Provider" : "Add Identity Provider"}
+              {isEditing
+                ? t("IDENTITY_PROVIDER_FORM_DIALOG.EDIT_TITLE")
+                : t("IDENTITY_PROVIDER_FORM_DIALOG.ADD_TITLE")}
             </DialogTitle>
           </DialogHeader>
 
           {isFormLoading ? (
-            <div className="space-y-4" aria-busy="true" aria-label="Loading provider">
+            <div
+              className="space-y-4"
+              aria-busy="true"
+              aria-label={t("IDENTITY_PROVIDER_FORM_DIALOG.LOADING_PROVIDER")}
+            >
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="space-y-1.5">
                   <Skeleton className="h-4 w-24" />
@@ -378,45 +532,18 @@ export function IdentityProviderFormDialog({
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               {/* Pre-fill confirmation banner - add mode + picked from the gallery only */}
               {showBanner && (
-                <div className="flex items-center gap-3.5 rounded-lg border border-primary/25 bg-primary/4 p-3.5">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border bg-background">
-                    {pickedSocialMeta ? (
-                      <img
-                        src={pickedSocialMeta.imageSrc}
-                        alt={pickedSocialMeta.label}
-                        className="h-[22px] w-[22px] object-contain"
-                      />
-                    ) : pickedEnterpriseMeta && presetProviderType ? (
-                      (() => {
-                        const Icon = PROVIDER_CONFIG[presetProviderType]?.Icon;
-                        return Icon ? <Icon className="h-[18px] w-[18px] text-primary" /> : null;
-                      })()
-                    ) : null}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-primary">
-                      {pickedSocialMeta?.label ?? pickedEnterpriseMeta?.label}
-                    </p>
-                    <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                      {pickedSocialMeta?.description ?? pickedEnterpriseMeta?.description}
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 shrink-0 border-primary/40 px-3 text-xs font-semibold text-primary hover:bg-primary/5 hover:text-primary"
-                    onClick={handleChangeProvider}
-                  >
-                    Change
-                  </Button>
-                </div>
+                <PresetBanner
+                  presetProvider={presetProvider}
+                  presetProviderType={presetProviderType}
+                  onChange={handleChangeProvider}
+                />
               )}
 
               {/* Select Provider */}
               <div className="space-y-1.5">
                 <Label htmlFor="providerType">
-                  Select Provider <span className="text-destructive">*</span>
+                  {t("IDENTITY_PROVIDER_FORM_DIALOG.SELECT_PROVIDER")}{" "}
+                  <span className="text-destructive">*</span>
                 </Label>
                 <Select
                   value={providerType}
@@ -424,12 +551,12 @@ export function IdentityProviderFormDialog({
                   onValueChange={(v) => setValue("providerType", v, { shouldValidate: true })}
                 >
                   <SelectTrigger id="providerType">
-                    <SelectValue placeholder="Select Provider" />
+                    <SelectValue placeholder={t("IDENTITY_PROVIDER_FORM_DIALOG.SELECT_PROVIDER")} />
                   </SelectTrigger>
                   <SelectContent>
-                    {PROVIDER_OPTIONS.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
-                        {t.label}
+                    {providerOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -439,9 +566,10 @@ export function IdentityProviderFormDialog({
               {/* Provider Name */}
               <div className="space-y-1.5">
                 <Label htmlFor="provider">
-                  Provider Name <span className="text-destructive">*</span>
+                  {t("IDENTITY_PROVIDER_FORM_DIALOG.PROVIDER_NAME")}{" "}
+                  <span className="text-destructive">*</span>
                 </Label>
-                {providerType === "social" ? (
+                {providerType === PROVIDER_SOCIAL ? (
                   <Select
                     value={watch("provider")}
                     onValueChange={(v) => setValue("provider", v, { shouldValidate: true })}
@@ -452,7 +580,9 @@ export function IdentityProviderFormDialog({
                           (e.g. via `reset()` when editing) before the user opens it - so the
                           trigger renders blank the first time. Passing the label in ourselves
                           sidesteps that. */}
-                      <SelectValue placeholder="Select a provider">
+                      <SelectValue
+                        placeholder={t("IDENTITY_PROVIDER_FORM_DIALOG.SELECT_A_PROVIDER")}
+                      >
                         {selectedSocialProvider && (
                           <div className="flex items-center gap-3">
                             <img
@@ -483,9 +613,11 @@ export function IdentityProviderFormDialog({
                 ) : (
                   <Input
                     id="provider"
-                    placeholder="my-identity-provider"
+                    placeholder={t("IDENTITY_PROVIDER_FORM_DIALOG.PROVIDER_PLACEHOLDER")}
                     disabled={isEditing}
-                    {...register("provider", { required: "Provider name is required" })}
+                    {...register("provider", {
+                      required: t("IDENTITY_PROVIDER_FORM_DIALOG.PROVIDER_REQUIRED"),
+                    })}
                   />
                 )}
                 {errors.provider && (
@@ -493,33 +625,81 @@ export function IdentityProviderFormDialog({
                 )}
               </div>
 
+              {/* Display name: what tells several Google or Microsoft entries apart */}
+              <div className="space-y-1.5">
+                <Label htmlFor="displayName">
+                  {t("IDENTITY_PROVIDER_FORM_DIALOG.DISPLAY_NAME")}
+                  {isSocialType && (
+                    <>
+                      {" "}
+                      <span className="text-destructive">*</span>
+                    </>
+                  )}
+                </Label>
+                <Input
+                  id="displayName"
+                  placeholder={t("IDENTITY_PROVIDER_FORM_DIALOG.DISPLAY_NAME_PLACEHOLDER")}
+                  {...register("displayName", { validate: validateDisplayName })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t("IDENTITY_PROVIDER_FORM_DIALOG.DISPLAY_NAME_HINT")}
+                </p>
+                {errors.displayName && (
+                  <p className="text-xs text-destructive">{errors.displayName.message}</p>
+                )}
+              </div>
+
+              {/* Microsoft Entra tenant: sent as that tenant's discovery URL */}
+              {showTenant && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="tenant">
+                    {t("IDENTITY_PROVIDER_FORM_DIALOG.MICROSOFT_TENANT")}
+                  </Label>
+                  <Input
+                    id="tenant"
+                    placeholder={t("IDENTITY_PROVIDER_FORM_DIALOG.MICROSOFT_TENANT_PLACEHOLDER")}
+                    {...register("tenant", {
+                      validate: (value) =>
+                        isValidMicrosoftTenant(value ?? "") ||
+                        t("IDENTITY_PROVIDER_FORM_DIALOG.MICROSOFT_TENANT_INVALID"),
+                    })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t("IDENTITY_PROVIDER_FORM_DIALOG.MICROSOFT_TENANT_HINT")}
+                  </p>
+                  {errors.tenant && (
+                    <p className="text-xs text-destructive">{errors.tenant.message}</p>
+                  )}
+                </div>
+              )}
+
               {/* Client ID + Client Secret */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="clientId">
-                    Client ID <span className="text-destructive">*</span>
+                    {t("IDENTITY_PROVIDER_FORM_DIALOG.CLIENT_ID")}{" "}
+                    <span className="text-destructive">*</span>
                     {isEditing && (
                       <span className="ml-1 text-xs font-normal text-muted-foreground">
-                        (Cannot be changed)
+                        {t("IDENTITY_PROVIDER_FORM_DIALOG.CLIENT_ID_LOCKED")}
                       </span>
                     )}
                   </Label>
                   <div className="relative">
                     <Input
                       id="clientId"
-                      type={showClientId ? "text" : "password"}
-                      placeholder="Enter client ID"
+                      type={clientIdInputType}
+                      placeholder={t("IDENTITY_PROVIDER_FORM_DIALOG.CLIENT_ID_PLACEHOLDER")}
                       className="pr-10"
                       disabled={isEditing}
-                      {...register("clientId", { required: "Client ID is required" })}
+                      {...register("clientId", {
+                        required: t("IDENTITY_PROVIDER_FORM_DIALOG.CLIENT_ID_REQUIRED"),
+                      })}
                     />
-                    <button
-                      type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      onClick={() => setShowClientId(!showClientId)}
-                    >
-                      {showClientId ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
+                    <RevealToggle
+                      shown={showClientId}
+                      onToggle={() => setShowClientId(!showClientId)}
+                    />
                   </div>
                   {errors.clientId && (
                     <p className="text-xs text-destructive">{errors.clientId.message}</p>
@@ -527,34 +707,28 @@ export function IdentityProviderFormDialog({
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="clientSecret">
-                    Client Secret <span className="text-destructive">*</span>
+                    {t("IDENTITY_PROVIDER_FORM_DIALOG.CLIENT_SECRET")}{" "}
+                    <span className="text-destructive">*</span>
                     {isEditing && (
                       <span className="ml-1 text-xs font-normal text-muted-foreground">
-                        (hidden; leave blank to keep it, or enter a new one to replace it)
+                        {t("IDENTITY_PROVIDER_FORM_DIALOG.CLIENT_SECRET_HIDDEN")}
                       </span>
                     )}
                   </Label>
                   <div className="relative">
                     <Input
                       id="clientSecret"
-                      type={showClientSecret ? "text" : "password"}
-                      placeholder={isEditing ? "••••••••••••" : "Enter client secret"}
+                      type={clientSecretInputType}
+                      placeholder={clientSecretPlaceholder}
                       className="pr-10"
                       {...register("clientSecret", {
-                        required: isEditing ? false : "Client secret is required",
+                        required: clientSecretRequired,
                       })}
                     />
-                    <button
-                      type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      onClick={() => setShowClientSecret(!showClientSecret)}
-                    >
-                      {showClientSecret ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
+                    <RevealToggle
+                      shown={showClientSecret}
+                      onToggle={() => setShowClientSecret(!showClientSecret)}
+                    />
                   </div>
                   {errors.clientSecret && (
                     <p className="text-xs text-destructive">{errors.clientSecret.message}</p>
@@ -586,9 +760,11 @@ export function IdentityProviderFormDialog({
               )}
 
               {/* Well Known URL (auto-generated) - shown only for Blocks OIDC */}
-              {providerType === "blocks-oidc" && (
+              {providerType === PROVIDER_BLOCKS_OIDC && (
                 <div className="space-y-1.5">
-                  <Label htmlFor="generatedWellKnownUrl">Well Known URL</Label>
+                  <Label htmlFor="generatedWellKnownUrl">
+                    {t("IDENTITY_PROVIDER_FORM_DIALOG.WELL_KNOWN_URL")}
+                  </Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="generatedWellKnownUrl"
@@ -603,7 +779,7 @@ export function IdentityProviderFormDialog({
                     </CopyToClipboardButton>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Auto-generated discovery URL for this Blocks OIDC provider.
+                    {t("IDENTITY_PROVIDER_FORM_DIALOG.WELL_KNOWN_HINT")}
                   </p>
                 </div>
               )}
@@ -632,7 +808,8 @@ export function IdentityProviderFormDialog({
               {/* Redirect URIs */}
               <div className="space-y-2">
                 <Label>
-                  Redirect URI(s) <span className="text-destructive">*</span>
+                  {t("IDENTITY_PROVIDER_FORM_DIALOG.REDIRECT_URIS")}{" "}
+                  <span className="text-destructive">*</span>
                 </Label>
                 {loginRedirectUri && (
                   <div
@@ -640,11 +817,11 @@ export function IdentityProviderFormDialog({
                     data-testid="login-redirect-uri"
                   >
                     <p className="text-xs font-semibold text-high-emphasis">
-                      Redirect URI for the IAM login page
+                      {t("IDENTITY_PROVIDER_FORM_DIALOG.LOGIN_REDIRECT_TITLE")}
                     </p>
                     <div className="flex items-center gap-2">
                       <Input
-                        aria-label="Redirect URI for the IAM login page"
+                        aria-label={t("IDENTITY_PROVIDER_FORM_DIALOG.LOGIN_REDIRECT_TITLE")}
                         readOnly
                         aria-readonly="true"
                         tabIndex={-1}
@@ -656,15 +833,13 @@ export function IdentityProviderFormDialog({
                       </CopyToClipboardButton>
                     </div>
                     <p className="text-xs leading-relaxed text-muted-foreground">
-                      Social sign-in works only when this exact URI is in the list below and is
-                      also registered at the provider (for example, in the Google or Microsoft
-                      console). Case and a trailing &quot;/&quot; count.
+                      {t("IDENTITY_PROVIDER_FORM_DIALOG.LOGIN_REDIRECT_HINT")}
                     </p>
                     {!loginRedirectUriListed && (
                       <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-warning-200 bg-warning-50 px-2.5 py-1.5">
                         <p className="flex items-center gap-1.5 text-xs text-warning-800">
                           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                          Not in the list yet.
+                          {t("IDENTITY_PROVIDER_FORM_DIALOG.NOT_IN_LIST")}
                         </p>
                         <Button
                           type="button"
@@ -673,7 +848,7 @@ export function IdentityProviderFormDialog({
                           className="h-7 px-2 text-xs"
                           onClick={addLoginRedirectUri}
                         >
-                          Add to list
+                          {t("IDENTITY_PROVIDER_FORM_DIALOG.ADD_TO_LIST")}
                         </Button>
                       </div>
                     )}
@@ -684,7 +859,7 @@ export function IdentityProviderFormDialog({
                     <Input
                       value={uri}
                       onChange={(e) => updateRedirectUri(idx, e.target.value)}
-                      placeholder="https://your-app.com/callback"
+                      placeholder={t("IDENTITY_PROVIDER_FORM_DIALOG.REDIRECT_PLACEHOLDER")}
                     />
                     {redirectUris.length > 1 && (
                       <Button
@@ -710,7 +885,7 @@ export function IdentityProviderFormDialog({
                   onClick={addRedirectUri}
                 >
                   <Plus className="h-3 w-3" />
-                  Add Redirect URI
+                  {t("IDENTITY_PROVIDER_FORM_DIALOG.ADD_REDIRECT_URI")}
                 </Button>
               </div>
 
@@ -725,7 +900,7 @@ export function IdentityProviderFormDialog({
 
               {/* Scope(s) + PKCE */}
               <div className="space-y-1.5">
-                <Label>Scope(s)</Label>
+                <Label>{t("IDENTITY_PROVIDER_FORM_DIALOG.SCOPES")}</Label>
                 <ScopeMultiSelect value={scopes} onChange={setScopes} />
                 {/* <div className="flex items-center gap-2">
               <Checkbox
@@ -741,10 +916,10 @@ export function IdentityProviderFormDialog({
 
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                  Cancel
+                  {t("common:CANCEL")}
                 </Button>
                 <Button type="submit" disabled={isPending || !isValid || isFormLoading}>
-                  {isPending ? "Saving…" : isEditing ? "Save Changes" : "Add Provider"}
+                  {submitLabel}
                 </Button>
               </DialogFooter>
             </form>

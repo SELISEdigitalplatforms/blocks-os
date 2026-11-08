@@ -7,6 +7,7 @@ import type { IPushSettings } from "../models/push.model";
 import { usePushSettings } from "../hooks/use-push-settings";
 import { usePushSettingsForm } from "../hooks/use-push-settings-form";
 import { NOTIFICATION_TEXT, PUSH_TEXT } from "../constants/notification-ui.constant";
+import { useNotificationT } from "../i18n";
 import { NOT_SET_UP } from "../services/push-settings.service";
 import { FormRow } from "./notification-form/form-row";
 import { NotificationPageHeader } from "./notification-page-header";
@@ -23,6 +24,7 @@ interface PushSettingsFormProps {
 }
 
 function PushSettingsForm({ settings, onClose, onViewDevices }: Readonly<PushSettingsFormProps>) {
+  useNotificationT();
   const form = usePushSettingsForm(settings);
   const { keyDraft, webDraft } = form;
   const openGuide = () => form.setGuideOpen(true);
@@ -117,6 +119,7 @@ interface PushSettingsPageProps {
 
 /** Push settings: service account key, platform switches with web config, tests and one Save. */
 export function PushSettingsPage({ onClose, onViewDevices }: Readonly<PushSettingsPageProps>) {
+  useNotificationT();
   const { data, isLoading } = usePushSettings();
   if (isLoading) return <Skeleton className="h-64 w-full max-w-[880px] rounded" />;
   // A failed read shows the page as "Not set up" so the user can still enter the settings.

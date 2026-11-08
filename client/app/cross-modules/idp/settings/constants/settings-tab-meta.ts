@@ -1,26 +1,26 @@
 import type { SettingsTabValue } from "@blocks-idp/settings/models/settings.model";
 
+/** Translation keys (module os.idp.settings) of a tab's page title and description. */
 export type SettingsTabMeta = {
-  title: string;
-  description: string;
+  titleKey: string;
+  descriptionKey: string;
 };
 
 export const SETTINGS_TAB_META: Record<SettingsTabValue, SettingsTabMeta> = {
   "auth-config": {
-    title: "Auth Configuration",
-    description:
-      "Configure authentication policies, token validity, account lockout rules, and certificate settings.",
+    titleKey: "SETTINGS_TAB_META.AUTH_CONFIG_TITLE",
+    descriptionKey: "SETTINGS_TAB_META.AUTH_CONFIG_DESCRIPTION",
   },
   "iam-config": {
-    title: "IAM Configuration",
-    description: "Manage identity protocols, activation flows, and account security parameters.",
+    titleKey: "SETTINGS_TAB_META.IAM_CONFIG_TITLE",
+    descriptionKey: "SETTINGS_TAB_META.IAM_CONFIG_DESCRIPTION",
   },
   "signup-settings": {
-    title: "Signup Configuration",
-    description: "Configure self-service signup and default roles and permissions for new users.",
+    titleKey: "SETTINGS_TAB_META.SIGNUP_SETTINGS_TITLE",
+    descriptionKey: "SETTINGS_TAB_META.SIGNUP_SETTINGS_DESCRIPTION",
   },
   "organization-config": {
-    title: "Organization Configuration",
-    description: "Manage multi-organization mode and organization creation sources.",
+    titleKey: "SETTINGS_TAB_META.ORGANIZATION_CONFIG_TITLE",
+    descriptionKey: "SETTINGS_TAB_META.ORGANIZATION_CONFIG_DESCRIPTION",
   },
 };

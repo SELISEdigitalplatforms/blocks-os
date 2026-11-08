@@ -1,9 +1,11 @@
 import { Button } from "@/components/ui-kits/button/button";
 import { useQueryClient } from "@tanstack/react-query";
+import { useT } from "@seliseblocks/genesis-os";
 import { RefreshCw } from "lucide-react";
 import { useState } from "react";
 
 export const ActivityRefreshHeader = () => {
+  const { t } = useT("os.idp.signup-links");
   const queryClient = useQueryClient();
   const [spinning, setSpinning] = useState(false);
 
@@ -21,7 +23,7 @@ export const ActivityRefreshHeader = () => {
       }}
     >
       <RefreshCw className={`h-4 w-4 ${spinning ? "animate-spin" : ""}`} />
-      <span className="sr-only sm:not-sr-only">Refresh</span>
+      <span className="sr-only sm:not-sr-only">{t("common:REFRESH")}</span>
     </Button>
   );
 };

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  lmtQueryAgentSchema,
+  createLmtQueryAgentSchema,
   lmtQueryAgentFormDefaultValue,
   generateMessageId,
   getTimestampOrNow,
@@ -11,16 +11,16 @@ import {
 
 describe("lmtQueryAgentSchema", () => {
   it("accepts a non-empty query within the length limit", () => {
-    expect(lmtQueryAgentSchema.safeParse({ query: "hello" }).success).toBe(true);
+    expect(createLmtQueryAgentSchema().safeParse({ query: "hello" }).success).toBe(true);
   });
 
   it("rejects an empty query", () => {
-    const result = lmtQueryAgentSchema.safeParse({ query: "" });
+    const result = createLmtQueryAgentSchema().safeParse({ query: "" });
     expect(result.success).toBe(false);
   });
 
   it("rejects a query over 500 characters", () => {
-    expect(lmtQueryAgentSchema.safeParse({ query: "a".repeat(501) }).success).toBe(false);
+    expect(createLmtQueryAgentSchema().safeParse({ query: "a".repeat(501) }).success).toBe(false);
   });
 
   it("exposes an empty default value", () => {

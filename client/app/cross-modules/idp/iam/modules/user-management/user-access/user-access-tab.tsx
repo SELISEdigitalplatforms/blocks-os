@@ -1,10 +1,7 @@
 import { useGetOrganizationConfig } from "@blocks-idp/iam/hooks/use-organization";
 import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
 import { useUserManageability } from "@blocks-idp/iam/hooks/use-user-manageability";
-import {
-  CANNOT_MANAGE_USER_TOOLTIP,
-  OWN_ROLES_TOOLTIP,
-} from "@blocks-idp/iam/utils/grant-scope";
+import { getCannotManageUserTooltip, getOwnRolesTooltip } from "@blocks-idp/iam/utils/grant-scope";
 import {
   Tooltip,
   TooltipContent,
@@ -16,8 +13,8 @@ import { SingleOrgAccess } from "./single-org-access";
 import { MultiOrgAccess } from "./multi-org-access";
 
 const getAccessLockedReason = (isSelf: boolean, canManage: boolean): string | null => {
-  if (isSelf) return OWN_ROLES_TOOLTIP;
-  return canManage ? null : CANNOT_MANAGE_USER_TOOLTIP;
+  if (isSelf) return getOwnRolesTooltip();
+  return canManage ? null : getCannotManageUserTooltip();
 };
 
 type UserAccessTabProps = {

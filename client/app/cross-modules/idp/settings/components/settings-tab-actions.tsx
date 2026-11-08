@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui-kits/button/button";
+import { useT } from "@seliseblocks/genesis-os";
 import type { SettingsTabValue } from "@blocks-idp/settings/models/settings.model";
 import {
   createContext,
@@ -22,23 +23,26 @@ export const SettingsFormTabButtons = ({
   onSave,
   resetDisabled = false,
   saveDisabled = false,
-}: SettingsFormTabButtonsProps) => (
-  <>
-    <Button
-      type="button"
-      size="sm"
-      variant="outline"
-      className="w-20"
-      disabled={resetDisabled}
-      onClick={onReset}
-    >
-      Reset
-    </Button>
-    <Button size="sm" type="button" className="w-20" disabled={saveDisabled} onClick={onSave}>
-      Save
-    </Button>
-  </>
-);
+}: SettingsFormTabButtonsProps) => {
+  const { t } = useT("os.idp.settings");
+  return (
+    <>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="w-20"
+        disabled={resetDisabled}
+        onClick={onReset}
+      >
+        {t("common:RESET")}
+      </Button>
+      <Button size="sm" type="button" className="w-20" disabled={saveDisabled} onClick={onSave}>
+        {t("common:SAVE")}
+      </Button>
+    </>
+  );
+};
 
 type SettingsTabActionsContextValue = {
   actionsByTab: Partial<Record<SettingsTabValue, ReactNode>>;

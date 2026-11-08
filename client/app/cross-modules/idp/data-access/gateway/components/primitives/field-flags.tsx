@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import type { IField } from "../../models/data-service";
 import type { IFieldDefaultValue } from "../../../rules/rules.types";
 import { formatDefaultSummary } from "../../../rules/default-value.util";
+import { gt, lazyLabels } from "../../utils/gateway-i18n";
 
 /**
  * The three genuine booleans on a property, as one compact strip.
@@ -17,12 +18,12 @@ import { formatDefaultSummary } from "../../../rules/default-value.util";
  */
 export type FieldFlag = "ARR" | "PII" | "UQ" | "DEF";
 
-const FLAG_TITLES: Record<FieldFlag, string> = {
-  ARR: "Array",
-  PII: "Personally identifiable data",
-  UQ: "Unique",
-  DEF: "Default value",
-};
+const FLAG_TITLES: Record<FieldFlag, string> = lazyLabels({
+  ARR: "FIELD_FLAGS.FLAG_ARRAY",
+  PII: "FIELD_FLAGS.FLAG_PII",
+  UQ: "FIELD_FLAGS.FLAG_UNIQUE",
+  DEF: "FIELD_FLAGS.FLAG_DEFAULT",
+});
 
 /**
  * One tint for every flag, taken from the app's primary blue as translucent
@@ -32,7 +33,9 @@ const FLAG_TITLES: Record<FieldFlag, string> = {
 const FLAG_TINT = { bg: "bg-primary/5", fg: "text-primary/85", border: "border-primary/25" };
 
 export function flagsFromField(
-  field: Pick<IField, "isArray" | "isPIIData" | "isUniqueData"> & { defaultValue?: IFieldDefaultValue | null },
+  field: Pick<IField, "isArray" | "isPIIData" | "isUniqueData"> & {
+    defaultValue?: IFieldDefaultValue | null;
+  },
 ) {
   const flags: FieldFlag[] = [];
   if (field.isArray) flags.push("ARR");
@@ -43,11 +46,23 @@ export function flagsFromField(
 }
 
 /** Hover text per flag; DEF shows what the default is, e.g. "Default value: Now + 365 days". */
-export function flagTitlesFromField(field: { defaultValue?: IFieldDefaultValue | null }): Partial<Record<FieldFlag, string>> {
-  return field.defaultValue ? { DEF: `Default value: ${formatDefaultSummary(field.defaultValue)}` } : {};
+export function flagTitlesFromField(field: {
+  defaultValue?: IFieldDefaultValue | null;
+}): Partial<Record<FieldFlag, string>> {
+  return field.defaultValue
+    ? {
+        DEF: gt("FIELD_FLAGS.DEFAULT_VALUE_SUMMARY", {
+          summary: formatDefaultSummary(field.defaultValue),
+        }),
+      }
+    : {};
 }
 
-export function FieldFlagChip({ flag, title, className }: Readonly<{ flag: FieldFlag; title?: string; className?: string }>) {
+export function FieldFlagChip({
+  flag,
+  title,
+  className,
+}: Readonly<{ flag: FieldFlag; title?: string; className?: string }>) {
   return (
     <span
       title={title ?? FLAG_TITLES[flag]}
@@ -68,7 +83,11 @@ export function FieldFlags({
   flags,
   titles,
   className,
-}: Readonly<{ flags: FieldFlag[]; titles?: Partial<Record<FieldFlag, string>>; className?: string }>) {
+}: Readonly<{
+  flags: FieldFlag[];
+  titles?: Partial<Record<FieldFlag, string>>;
+  className?: string;
+}>) {
   if (flags.length === 0) return null;
 
   return (
@@ -127,4 +146,3 @@ export function FlagToggleChip({
     </button>
   );
 }
-

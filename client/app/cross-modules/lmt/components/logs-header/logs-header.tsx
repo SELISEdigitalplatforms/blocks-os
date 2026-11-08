@@ -6,15 +6,25 @@ import { useContext } from "react";
 import type { StorageTier } from "../storage-tier-cards/storage-tier-cards";
 import { StorageTierSwitcher } from "../storage-tier-cards/storage-tier-switcher";
 import { LogsViewerContext } from "../logs-viewer/logs-viewer";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
+
+const I18N_MODULE = "os.lmt";
 
 /** What each tier holds, in the words of this page: logs rather than telemetry in general. */
 const LOG_TIER_DESCRIPTIONS: Partial<Record<StorageTier, string>> = {
-  [TRACE_PROVIDERS.hot]: "Live and recent logs for active debugging.",
-  [TRACE_PROVIDERS.cold]: "Longer-term stored logs for later investigation.",
-  [TRACE_PROVIDERS.archive]: "Deep history retained for audit and export use cases.",
+  get [TRACE_PROVIDERS.hot]() {
+    return tStatic(I18N_MODULE, "LOGS_HEADER.LIVE_AND_RECENT_LOGS");
+  },
+  get [TRACE_PROVIDERS.cold]() {
+    return tStatic(I18N_MODULE, "LOGS_HEADER.LONGER_TERM_STORED_LOGS");
+  },
+  get [TRACE_PROVIDERS.archive]() {
+    return tStatic(I18N_MODULE, "LOGS_HEADER.DEEP_HISTORY_RETAINED_FOR_AUDIT");
+  },
 };
 
 export const LogsListHeader = () => {
+  const { t } = useT(I18N_MODULE);
   const {
     predefinedQueries,
     agentName,
@@ -38,10 +48,10 @@ export const LogsListHeader = () => {
       <Tabs value={source} onValueChange={setSource}>
         <TabsList className="h-[42px] bg-blocks-primary-shades-300">
           <TabsTrigger value="blocks" className="h-8 w-fit">
-            Managed Service
+            {t("LOGS_HEADER.MANAGED_SERVICE")}
           </TabsTrigger>
           <TabsTrigger value="managed" className="h-8 w-fit">
-            My Service
+            {t("LOGS_HEADER.MY_SERVICE")}
           </TabsTrigger>
         </TabsList>
       </Tabs>

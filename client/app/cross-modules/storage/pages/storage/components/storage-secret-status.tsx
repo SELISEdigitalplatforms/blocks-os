@@ -5,27 +5,43 @@ import {
 } from "@/cross-modules/secrets/models/secret.model";
 import {
   IStorageConfiguration,
-  STORAGE_SECRET_FIELDS,
+  getStorageSecretFields,
 } from "@blocks-storage/models/storage.model";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
+
+const I18N_MODULE = "os.storage";
 
 const STATUS_LABEL: Record<LinkedSecretStatus, string> = {
-  none: "Not set",
-  active: "Set",
-  locked: "Set",
-  archived: "Archived",
-  missing: "Missing",
-  unavailable: "Status unavailable",
+  get none() {
+    return tStatic(I18N_MODULE, "STORAGE_SECRET_STATUS.NOT_SET");
+  },
+  get active() {
+    return tStatic(I18N_MODULE, "STORAGE_SECRET_STATUS.SET");
+  },
+  get locked() {
+    return tStatic(I18N_MODULE, "STORAGE_SECRET_STATUS.SET");
+  },
+  get archived() {
+    return tStatic(I18N_MODULE, "STORAGE_SECRET_STATUS.ARCHIVED");
+  },
+  get missing() {
+    return tStatic(I18N_MODULE, "STORAGE_SECRET_STATUS.MISSING");
+  },
+  get unavailable() {
+    return tStatic(I18N_MODULE, "STORAGE_SECRET_STATUS.STATUS_UNAVAILABLE");
+  },
 };
 
 /** Secrets can't be replaced on an update, so a broken one needs the configuration added again. */
-const REPAIR_HINT = "Delete this configuration and add it again with a new secret.";
+const REPAIR_HINT = () =>
+  tStatic(I18N_MODULE, "STORAGE_SECRET_STATUS.DELETE_THIS_CONFIGURATION_AND_ADD");
 
 function SecretStatusValue({ status }: Readonly<{ status?: LinkedSecretStatus }>) {
   if (isBrokenLinkedSecretStatus(status)) {
     return (
       <div className="flex flex-col items-end gap-1">
         <Badge variant="warning">{STATUS_LABEL[status]}</Badge>
-        <p className="text-right text-xs text-muted-foreground">{REPAIR_HINT}</p>
+        <p className="text-right text-xs text-muted-foreground">{REPAIR_HINT()}</p>
       </div>
     );
   }
@@ -35,12 +51,13 @@ function SecretStatusValue({ status }: Readonly<{ status?: LinkedSecretStatus }>
 
 /** The provider's secrets with their status only: the server never returns a secret value. */
 export function StorageSecretStatusList({ storage }: Readonly<{ storage: IStorageConfiguration }>) {
-  const fields = STORAGE_SECRET_FIELDS[storage.storageStrategy] ?? [];
+  const { t } = useT(I18N_MODULE);
+  const fields = getStorageSecretFields()[storage.storageStrategy] ?? [];
   if (fields.length === 0) return null;
 
   return (
     <div>
-      <div className="mb-2 text-xs text-muted-foreground">Secrets</div>
+      <div className="mb-2 text-xs text-muted-foreground">{t("STORAGE_SECRET_STATUS.SECRETS")}</div>
       <ul className="space-y-2">
         {fields.map(({ key, label }) => (
           <li key={key} className="flex items-start justify-between gap-4">

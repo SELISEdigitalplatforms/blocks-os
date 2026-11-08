@@ -13,11 +13,13 @@ import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { DeleteSSORole } from "./delete-sso-role";
+import { useT } from "@seliseblocks/genesis-os";
 type SSORolesListProps = {
   roles: IRole[];
   onDelete: (role: IRole) => void;
 };
 export const SSORolesList = ({ roles, onDelete }: SSORolesListProps) => {
+  const { t } = useT("os.idp.auth");
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const columns = useMemo<ColumnDef<IRole>[]>(
@@ -27,7 +29,9 @@ export const SSORolesList = ({ roles, onDelete }: SSORolesListProps) => {
         accessorFn: (row) => `${row.name}`.trim(),
         header: () => (
           <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">Roles</span>
+            <span className="font-bold text-medium-emphasis">
+              {t("SSO_ROLES_LIST.COLUMN_ROLES")}
+            </span>
           </div>
         ),
         cell: (roles) => <div className="w-[130px] truncate">{roles.row.original.name}</div>,
@@ -37,7 +41,9 @@ export const SSORolesList = ({ roles, onDelete }: SSORolesListProps) => {
         accessorFn: (row) => `${row.slug}`.trim(),
         header: () => (
           <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">Slug</span>
+            <span className="font-bold text-medium-emphasis">
+              {t("SSO_ROLES_LIST.COLUMN_SLUG")}
+            </span>
           </div>
         ),
         cell: ({ row }) => (
@@ -61,7 +67,7 @@ export const SSORolesList = ({ roles, onDelete }: SSORolesListProps) => {
         ),
       },
     ],
-    [onDelete],
+    [onDelete, t],
   );
   const table = useReactTable({
     data: roles,
@@ -72,48 +78,43 @@ export const SSORolesList = ({ roles, onDelete }: SSORolesListProps) => {
     navigate(scoped(`iam/role-detail/${itemId}`));
   };
   return (
-    <>
-      <Table>
-        <TableHeader>
-          <TableRow className="hover:bg-transparent">
-            {table.getHeaderGroups().map((headerGroup) =>
-              headerGroup.headers.map((header) => (
-                <TableHead key={header.id} className="px-4 py-3">
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(header.column.columnDef.header, header.getContext())}
-                </TableHead>
-              )),
-            )}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {!roles.length ? (
-            <TableRow>
-              <TableCell
-                colSpan={columns.length}
-                className="h-24 text-center text-muted-foreground"
-              >
-                No roles found
-              </TableCell>
-            </TableRow>
-          ) : (
-            table.getRowModel().rows.map((row) => (
-              <TableRow
-                key={row.id}
-                className="cursor-pointer"
-                onClick={() => onRowClickHandler(row.original.itemId)}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className="px-4 py-3">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
+    <Table>
+      <TableHeader>
+        <TableRow className="hover:bg-transparent">
+          {table.getHeaderGroups().map((headerGroup) =>
+            headerGroup.headers.map((header) => (
+              <TableHead key={header.id} className="px-4 py-3">
+                {header.isPlaceholder
+                  ? null
+                  : flexRender(header.column.columnDef.header, header.getContext())}
+              </TableHead>
+            )),
           )}
-        </TableBody>
-      </Table>
-    </>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {!roles.length ? (
+          <TableRow>
+            <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+              {t("SSO_ROLES_LIST.EMPTY")}
+            </TableCell>
+          </TableRow>
+        ) : (
+          table.getRowModel().rows.map((row) => (
+            <TableRow
+              key={row.id}
+              className="cursor-pointer"
+              onClick={() => onRowClickHandler(row.original.itemId)}
+            >
+              {row.getVisibleCells().map((cell) => (
+                <TableCell key={cell.id} className="px-4 py-3">
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </TableCell>
+              ))}
+            </TableRow>
+          ))
+        )}
+      </TableBody>
+    </Table>
   );
 };
