@@ -64,7 +64,7 @@ describe("BasicInformation per organization (H1, H8, D9)", () => {
     h.saveTemplate.mockResolvedValue({ isSuccess: true, itemId: "t-new" });
   });
 
-  it("shows the page's organization read-only and lists Organization default and outbound configurations by organization", async () => {
+  it("shows the page's organization read-only and lists Organization default and outbound configurations, each with a chip for its organization", async () => {
     const user = userEvent.setup();
     render(<BasicInformation templateData={blank} />);
     const organization = screen.getByLabelText("Organization") as HTMLInputElement;
@@ -75,11 +75,29 @@ describe("BasicInformation per organization (H1, H8, D9)", () => {
     await user.click(screen.getByRole("combobox", { name: /email configuration/i }));
     const listbox = await screen.findByRole("listbox");
     expect(within(listbox).getByRole("option", { name: /Organization default/ })).toBeTruthy();
-    expect(within(listbox).getByRole("option", { name: "Acme SMTP" })).toBeTruthy();
-    expect(within(listbox).getByText("DEFAULT ORGANIZATION")).toBeTruthy();
-    expect(within(listbox).getByRole("option", { name: "Gmail Test" })).toBeTruthy();
+    const acmeSmtp = within(listbox).getByRole("option", { name: "Acme SMTP" });
+    expect(within(acmeSmtp).getByText("Acme Corp")).toBeTruthy();
+    const gmail = within(listbox).getByRole("option", { name: "Gmail Test" });
+    expect(within(gmail).getByText("Default organization")).toBeTruthy();
+    const projectDefault = within(listbox).getByRole("option", { name: "Default" });
+    expect(within(projectDefault).getByText("PROJECT DEFAULT")).toBeTruthy();
     expect(within(listbox).queryByRole("option", { name: "Acme Inbox" })).toBeNull();
     expect(within(listbox).queryByRole("option", { name: "Inbox" })).toBeNull();
+  });
+
+  it("shows no organization chips with multi-org off", async () => {
+    h.organization = {
+      isMultiOrgEnabled: false,
+      isLoading: false,
+      selectedOrganizationId: "default",
+    };
+    const user = userEvent.setup();
+    render(<BasicInformation templateData={blank} />);
+    await user.click(screen.getByRole("combobox", { name: /email configuration/i }));
+    const listbox = await screen.findByRole("listbox");
+    expect(within(listbox).getByRole("option", { name: "Gmail Test" })).toBeTruthy();
+    expect(within(listbox).queryByText("Default organization")).toBeNull();
+    expect(within(listbox).queryByText("PROJECT DEFAULT")).toBeNull();
   });
 
   it("saves in the page's organization, with Organization default as an empty configuration (D9)", async () => {

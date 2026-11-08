@@ -312,6 +312,7 @@ const BasicInformation = forwardRef(function Inner(
                           configs={data}
                           organizationId={organizationId}
                           organizationName={organizationName}
+                          showOrganization={organization.isMultiOrgEnabled}
                         />
                       </SelectContent>
                     </Select>

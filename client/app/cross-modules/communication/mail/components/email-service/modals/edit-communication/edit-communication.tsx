@@ -192,6 +192,7 @@ const EditCommunication = (props: EditCommunicationProps) => {
                           configs={configs}
                           organizationId={organizationId}
                           organizationName={organizationName}
+                          showOrganization={isMultiOrgEnabled}
                         />
                       </SelectContent>
                     </Select>

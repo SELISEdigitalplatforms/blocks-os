@@ -1,4 +1,5 @@
-import { SelectGroup, SelectItem, SelectLabel } from "@/components/ui-kits/select/select";
+import { Badge } from "@/components/ui-kits/badge/badge";
+import { SelectItem } from "@/components/ui-kits/select/select";
 import { useT } from "@seliseblocks/genesis-os";
 import type { IEmailConfig } from "@blocks-communication/mail/models/email";
 import {
@@ -11,6 +12,8 @@ interface TemplateConfigurationOptionsProps {
   /** The template's organization. */
   organizationId: string;
   organizationName: string;
+  /** Multi-org on: each configuration carries a chip saying whose it is. */
+  showOrganization: boolean;
 }
 
 /**
@@ -22,34 +25,47 @@ export function TemplateConfigurationOptions({
   configs,
   organizationId,
   organizationName,
+  showOrganization,
 }: Readonly<TemplateConfigurationOptionsProps>) {
   const { t } = useT("os.communication.mail");
   const { own, shared } = outboundConfigurationGroups(configs, organizationId);
+
+  const chipFor = (config: IEmailConfig, owner: string) => {
+    if (!showOrganization) return undefined;
+    return config.isDefault ? (
+      <Badge variant="secondary" className="py-0.5">
+        {t("EMAIL_CONFIGURE.PROJECT_DEFAULT")}
+      </Badge>
+    ) : (
+      <Badge variant="outline" className="py-0.5 font-medium text-low-emphasis">
+        {owner}
+      </Badge>
+    );
+  };
+
   return (
     <>
       <SelectItem value={ORGANIZATION_DEFAULT_CONFIGURATION}>
         {t("TEMPLATE_ORGANIZATION.ORGANIZATION_DEFAULT")}
       </SelectItem>
-      {own.length > 0 ? (
-        <SelectGroup>
-          <SelectLabel>{organizationName}</SelectLabel>
-          {own.map((config) => (
-            <SelectItem key={config.itemId} value={config.itemId}>
-              {config.name}
-            </SelectItem>
-          ))}
-        </SelectGroup>
-      ) : null}
-      {shared.length > 0 ? (
-        <SelectGroup>
-          <SelectLabel>{t("TEMPLATE_ORGANIZATION.DEFAULT_ORGANIZATION_SECTION")}</SelectLabel>
-          {shared.map((config) => (
-            <SelectItem key={config.itemId} value={config.itemId}>
-              {config.name}
-            </SelectItem>
-          ))}
-        </SelectGroup>
-      ) : null}
+      {own.map((config) => (
+        <SelectItem
+          key={config.itemId}
+          value={config.itemId}
+          trailing={chipFor(config, organizationName)}
+        >
+          {config.name}
+        </SelectItem>
+      ))}
+      {shared.map((config) => (
+        <SelectItem
+          key={config.itemId}
+          value={config.itemId}
+          trailing={chipFor(config, t("EMAIL_CONFIGURE.DEFAULT_ORGANIZATION"))}
+        >
+          {config.name}
+        </SelectItem>
+      ))}
     </>
   );
 }

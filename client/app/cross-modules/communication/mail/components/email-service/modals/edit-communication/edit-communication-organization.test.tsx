@@ -83,15 +83,16 @@ describe("EditCommunication per organization (H9, C2, C3, D2)", () => {
     expect(h.configsArgs[0]).toBe("acme");
   });
 
-  it("lists outbound configurations only, grouped by organization", async () => {
+  it("lists outbound configurations only, each with a chip for its organization", async () => {
     const user = userEvent.setup();
     renderEdit();
     await user.click(screen.getByRole("combobox", { name: /email configuration/i }));
     const listbox = await screen.findByRole("listbox");
     expect(within(listbox).getByRole("option", { name: /Organization default/ })).toBeTruthy();
-    expect(within(listbox).getByText("Acme Corp")).toBeTruthy();
-    expect(within(listbox).getByRole("option", { name: "Acme SMTP" })).toBeTruthy();
-    expect(within(listbox).getByText("DEFAULT ORGANIZATION")).toBeTruthy();
+    const acmeSmtp = within(listbox).getByRole("option", { name: "Acme SMTP" });
+    expect(within(acmeSmtp).getByText("Acme Corp")).toBeTruthy();
+    const projectDefault = within(listbox).getByRole("option", { name: "Default" });
+    expect(within(projectDefault).getByText("PROJECT DEFAULT")).toBeTruthy();
     expect(within(listbox).queryByRole("option", { name: "Inbox" })).toBeNull();
     expect(
       screen.getByText("Outbound configurations only. Inbound ones can't send mail."),
