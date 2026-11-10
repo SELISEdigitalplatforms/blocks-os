@@ -13,6 +13,28 @@ import {
   useSaveEmailTemplate,
 } from "@blocks-communication/mail/hooks/use-email-template";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
+import { showErrorToast } from "@/hooks/use-toast";
+import { isErrorWithErrors } from "@/lib/error";
+import { templateErrorMessages } from "@blocks-communication/mail/constants/template-errors";
+
+const hasText = (value: unknown): boolean => typeof value === "string" && value.trim().length > 0;
+
+/**
+ * True for a refusal worth showing as is: an HTTP status below 500 whose field map holds at least
+ * one non-blank message, such as the mail template HTML policy's 400 `TemplateBody` problem.
+ * A 5xx, a transport failure (the HTTP client reports it as a 500), or an empty or blank map has
+ * nothing the user can act on, so the caller shows the generic text instead.
+ */
+const isShowableRefusal = (
+  error: unknown,
+): error is { status: number; errors: Record<string, string | string[]> } => {
+  if (!isErrorWithErrors(error)) return false;
+  const { status } = error as { status?: unknown };
+  if (typeof status !== "number" || status >= 500) return false;
+  return Object.values(error.errors).some((value) =>
+    Array.isArray(value) ? value.some(hasText) : hasText(value),
+  );
+};
 
 export function EditEmailTemplate({ params }: { params: { id: string } }) {
   const { t } = useT("os.communication.mail");
@@ -65,7 +87,19 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
       itemId: emailDetails?.itemId || "",
       templateBody: data.htmlFile,
     };
-    await saveEmailTemplate(currentData);
+    try {
+      await saveEmailTemplate(currentData);
+    } catch (error) {
+      // The editor's submit() doesn't await this handler, so a rethrow would surface as an
+      // unhandled rejection. Stay on the page without resetting, so the user's edits are kept.
+      const title = t("EMAIL_TEMPLATE_EDIT.SAVE_FAILED_TITLE");
+      if (isShowableRefusal(error)) {
+        showErrorToast({ title, errors: error.errors, customMessages: templateErrorMessages(t) });
+      } else {
+        showErrorToast({ title, errors: t("EMAIL_TEMPLATE_EDIT.SAVE_FAILED_DESCRIPTION") });
+      }
+      return;
+    }
     setTemplateData(currentData);
     navigate(scoped(`email-management/communications/${emailDetails.itemId}`));
   };
