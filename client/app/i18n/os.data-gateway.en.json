@@ -28,6 +28,7 @@
   "DATA_GATEWAY_CONTENTS.NOT_SET": "Not set",
   "DATA_GATEWAY_CONTENTS.NOT_SET_ANALYTICS_UNAVAILABLE": "Not set (analytics unavailable)",
   "DATA_GATEWAY_CONTENTS.PATTERN_FOR_GENERATING_COLLECTION": "Pattern for generating collection names. The {{span}} placeholder cannot be modified or removed.",
+  "DATA_GATEWAY_CONTENTS.PATTERN_MUST_CONTAIN_SCHEMA_NAME": "Pattern must contain {SchemaName}",
   "DATA_GATEWAY_CONTENTS.POSTFIX": "postfix",
   "DATA_GATEWAY_CONTENTS.PREFIX": "prefix",
   "DATA_GATEWAY_CONTENTS.SAVED_ENTER_A_NEW_VALUE": "Saved — enter a new value to replace it",

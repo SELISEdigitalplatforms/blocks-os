@@ -257,7 +257,10 @@ export const getSpanOutcome = (span: TraceTree) => {
 
   return {
     state,
-    statusLabel: state === "error" && status.variant !== "error" ? "Error" : status.label,
+    statusLabel:
+      state === "error" && status.variant !== "error"
+        ? tStatic(I18N_MODULE, "TRACE_FLOW_UTIL.ERROR")
+        : status.label,
     errorMessage,
   };
 };
