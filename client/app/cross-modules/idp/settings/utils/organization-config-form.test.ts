@@ -20,6 +20,7 @@ const baseConfig: ISettingsOrganizationConfig = {
   keepOrgPermissionsSameAsDefaultPermissions: false,
   isSignupAutoJoinEnabled: false,
   signupAutoJoinOrganizationId: null,
+  allowNoOrgSignInForDisabledOrganizations: false,
 };
 
 describe("organization-config-form", () => {
@@ -32,6 +33,7 @@ describe("organization-config-form", () => {
       isMultiOrgEnabled: false,
       isSignupAutoJoinEnabled: false,
       signupAutoJoinOrganizationId: "",
+      allowNoOrgSignInForDisabledOrganizations: false,
     });
   });
 
@@ -53,6 +55,7 @@ describe("organization-config-form", () => {
       keepOrgRolesSameAsDefaultRoles: true,
       keepOrgPermissionsSameAsDefaultPermissions: false,
       isSignupAutoJoinEnabled: false,
+      allowNoOrgSignInForDisabledOrganizations: false,
     });
   });
 
@@ -142,5 +145,53 @@ describe("organization-config-form", () => {
       organizationConfigFormSchema.safeParse({ ...values, signupAutoJoinOrganizationId: "default" })
         .success,
     ).toBe(true);
+  });
+
+  it("maps the stored disabled-organization sign-in flag into the form (H2)", () => {
+    expect(
+      toOrganizationConfigFormValues({
+        ...baseConfig,
+        allowNoOrgSignInForDisabledOrganizations: true,
+      }).allowNoOrgSignInForDisabledOrganizations,
+    ).toBe(true);
+  });
+
+  it("sends the toggle's value while multi-org is on (H4)", () => {
+    const config = { ...baseConfig, isMultiOrgEnabled: true, consentForMultiOrgEnable: true };
+    const on = {
+      ...toOrganizationConfigFormValues(config),
+      allowNoOrgSignInForDisabledOrganizations: true,
+    };
+    expect(
+      buildOrganizationConfigSavePayload(config, on).allowNoOrgSignInForDisabledOrganizations,
+    ).toBe(true);
+
+    const stored = { ...config, allowNoOrgSignInForDisabledOrganizations: true };
+    const off = {
+      ...toOrganizationConfigFormValues(stored),
+      allowNoOrgSignInForDisabledOrganizations: false,
+    };
+    expect(
+      buildOrganizationConfigSavePayload(stored, off).allowNoOrgSignInForDisabledOrganizations,
+    ).toBe(false);
+  });
+
+  it("sends the stored value back while multi-org is off (C1)", () => {
+    const stored = { ...baseConfig, allowNoOrgSignInForDisabledOrganizations: true };
+    const values = {
+      ...toOrganizationConfigFormValues(stored),
+      allowNoOrgSignInForDisabledOrganizations: false,
+    };
+    expect(
+      buildOrganizationConfigSavePayload(stored, values).allowNoOrgSignInForDisabledOrganizations,
+    ).toBe(true);
+  });
+
+  it("rejects a non-boolean disabled-organization sign-in flag", () => {
+    const result = organizationConfigFormSchema.safeParse({
+      ...toOrganizationConfigFormValues(baseConfig),
+      allowNoOrgSignInForDisabledOrganizations: "yes",
+    });
+    expect(result.success).toBe(false);
   });
 });

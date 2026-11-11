@@ -16,6 +16,7 @@ import { useSaveSettingsOrganizationConfig } from "@blocks-idp/settings/hooks/us
 import type { ISettingsOrganizationConfig } from "@blocks-idp/settings/models/settings.model";
 import {
   buildOrganizationConfigSavePayload,
+  getEffectiveDisabledOrgSignIn,
   organizationConfigFormSchema,
   toOrganizationConfigFormValues,
   type OrganizationConfigFormValues,
@@ -131,6 +132,12 @@ export const OrganizationConfigForm = ({ config }: OrganizationConfigFormProps) 
   const isMultiOrgLocked = config.isMultiOrgEnabled;
   const isSignupAutoJoinEnabled = form.watch("isSignupAutoJoinEnabled");
   const signupAutoJoinOrganizationId = form.watch("signupAutoJoinOrganizationId");
+  const isDisabledOrgSignInAllowed = getEffectiveDisabledOrgSignIn(config, {
+    isMultiOrgEnabled,
+    allowNoOrgSignInForDisabledOrganizations: form.watch(
+      "allowNoOrgSignInForDisabledOrganizations",
+    ),
+  });
 
   const handleReset = useCallback(() => {
     form.reset(toOrganizationConfigFormValues(config));
@@ -197,6 +204,13 @@ export const OrganizationConfigForm = ({ config }: OrganizationConfigFormProps) 
     [form],
   );
 
+  const handleDisabledOrgSignInToggle = useCallback(
+    (checked: boolean) => {
+      form.setValue("allowNoOrgSignInForDisabledOrganizations", checked, { shouldDirty: true });
+    },
+    [form],
+  );
+
   const tabActions = useMemo(
     () => (
       <SettingsFormTabButtons
@@ -232,6 +246,17 @@ export const OrganizationConfigForm = ({ config }: OrganizationConfigFormProps) 
             disabled={isPending}
             onEnabledChange={handleSignupAutoJoinToggle}
             onOrganizationChange={handleSignupAutoJoinOrganizationChange}
+          />
+
+          <SettingsToggleCard
+            label={t("ORGANIZATION_CONFIG_FORM.DISABLED_ORG_SIGN_IN_LABEL")}
+            description={t("ORGANIZATION_CONFIG_FORM.DISABLED_ORG_SIGN_IN_DESCRIPTION")}
+            checked={isDisabledOrgSignInAllowed}
+            onCheckedChange={handleDisabledOrgSignInToggle}
+            disabled={!isMultiOrgEnabled || isPending}
+            disabledTooltip={
+              isMultiOrgEnabled ? undefined : t("SIGNUP_AUTO_JOIN_CARD.DISABLED_TOOLTIP")
+            }
           />
 
           {isMultiOrgEnabled ? (

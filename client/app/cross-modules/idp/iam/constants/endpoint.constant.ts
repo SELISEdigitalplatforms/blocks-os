@@ -57,6 +57,14 @@ export const ACCOUNT_ENDPOINTS = {
   VALIDATE_ACTIVATION_CODE: `${API_BASES.IAM}/auth/validate-activation`,
 } as const;
 
+// ─── Session endpoints ──────────────────────────────────────────────────────
+
+export const AUTH_ENDPOINTS = {
+  // The signed-in user's claims from the HttpOnly session token; carries `org_status` when every
+  // organization of the user is disabled.
+  ME: `${API_BASES.IAM}/auth/me`,
+} as const;
+
 // ─── Role endpoints (role.service) ──────────────────────────────────────────
 
 export const ROLE_ENDPOINTS = {

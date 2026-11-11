@@ -64,6 +64,7 @@ const baseConfig: ISettingsOrganizationConfig = {
   keepOrgPermissionsSameAsDefaultPermissions: true,
   isSignupAutoJoinEnabled: false,
   signupAutoJoinOrganizationId: null,
+  allowNoOrgSignInForDisabledOrganizations: false,
 };
 
 const renderForm = (config: ISettingsOrganizationConfig = baseConfig) =>
@@ -299,6 +300,115 @@ describe("OrganizationConfigForm", () => {
       await user.click(saveButton());
       await waitFor(() => expect(h.showErrorToast).toHaveBeenCalledTimes(1));
       expect(h.showErrorToast.mock.calls[0][0].customMessages).toBeDefined();
+    });
+  });
+
+  describe("disabled-organization sign-in", () => {
+    const LABEL = "Allow sign-in when all of a user's organizations are disabled";
+    const multiOrg = { ...baseConfig, isMultiOrgEnabled: true, consentForMultiOrgEnable: true };
+    const toggle = () => screen.getByRole("switch", { name: LABEL }) as HTMLButtonElement;
+
+    it("renders the toggle directly below the sign-up auto-join card (H1)", () => {
+      renderForm(multiOrg);
+      const card = screen.getByTestId("signup-auto-join-card");
+      const switches = screen.getAllByRole("switch").map((s) => s.getAttribute("aria-label"));
+      expect(switches.slice(0, 3)).toEqual([
+        "Multi-Organization Environment",
+        "Add new sign-ups to an organization",
+        LABEL,
+      ]);
+      expect(
+        card.compareDocumentPosition(toggle()) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(card.contains(toggle())).toBe(false);
+      expect(
+        screen.getByText(
+          "Users whose organizations are all disabled can still sign in without an organization and see a message that their organization is disabled.",
+        ),
+      ).toBeTruthy();
+    });
+
+    it("shows the stored state (H2)", () => {
+      renderForm({ ...multiOrg, allowNoOrgSignInForDisabledOrganizations: true });
+      expect(toggle().getAttribute("aria-checked")).toBe("true");
+      expect(toggle().disabled).toBe(false);
+    });
+
+    it("marks the form dirty and saves the toggle's value with the success toast (H3, H4)", async () => {
+      const user = userEvent.setup();
+      renderForm(multiOrg);
+      expect(saveButton().disabled).toBe(true);
+
+      await user.click(toggle());
+      expect(toggle().getAttribute("aria-checked")).toBe("true");
+      expect(saveButton().disabled).toBe(false);
+
+      await user.click(saveButton());
+      await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+      expect(h.mutateAsync.mock.calls[0][0].allowNoOrgSignInForDisabledOrganizations).toBe(true);
+      expect(h.showSuccessToast).toHaveBeenCalledWith({
+        description: "Organization configuration updated successfully",
+      });
+    });
+
+    it("is disabled with the multi-org tooltip and sends the stored value while multi-org is off (C1)", async () => {
+      const user = userEvent.setup();
+      renderForm({ ...baseConfig, allowNoOrgSignInForDisabledOrganizations: true });
+
+      expect(toggle().disabled).toBe(true);
+      expect(toggle().getAttribute("aria-checked")).toBe("true");
+      await user.hover(toggle().closest("span") as HTMLElement);
+      expect(
+        (await screen.findAllByText("Turn on multi-organization first.")).length,
+      ).toBeGreaterThan(0);
+
+      // Flip it while multi-org is on (unsaved), then turn multi-org back off: the disabled
+      // toggle shows the stored value again and the save sends it back unchanged.
+      await user.click(multiOrgToggle());
+      await user.click(await screen.findByRole("button", { name: "Enable" }));
+      await waitFor(() => expect(toggle().disabled).toBe(false));
+      await user.click(toggle());
+      expect(toggle().getAttribute("aria-checked")).toBe("false");
+      await user.click(multiOrgToggle());
+      expect(toggle().disabled).toBe(true);
+      expect(toggle().getAttribute("aria-checked")).toBe("true");
+      await user.click(saveButton());
+      await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+      expect(h.mutateAsync.mock.calls[0][0].isMultiOrgEnabled).toBe(false);
+      expect(h.mutateAsync.mock.calls[0][0].allowNoOrgSignInForDisabledOrganizations).toBe(true);
+    });
+
+    it("treats a config without the field as off and still saves (C2)", async () => {
+      const user = userEvent.setup();
+      const { allowNoOrgSignInForDisabledOrganizations: _omitted, ...withoutField } = multiOrg;
+      renderForm(withoutField as ISettingsOrganizationConfig);
+      expect(toggle().getAttribute("aria-checked")).toBe("false");
+
+      await user.click(screen.getByRole("switch", { name: "Allow Creation from OS" }));
+      await user.click(saveButton());
+      await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+      expect(h.mutateAsync.mock.calls[0][0].allowNoOrgSignInForDisabledOrganizations).toBe(false);
+    });
+
+    it("is disabled while saving", () => {
+      h.isPending = true;
+      renderForm(multiOrg);
+      expect(toggle().disabled).toBe(true);
+    });
+
+    it("shows the error toast and keeps the toggle's value when the save fails (C3)", async () => {
+      const user = userEvent.setup();
+      h.mutateAsync.mockRejectedValue(new Error("boom"));
+      renderForm(multiOrg);
+
+      await user.click(toggle());
+      await user.click(saveButton());
+
+      await waitFor(() =>
+        expect(h.showErrorToast).toHaveBeenCalledWith({ errors: "Something went wrong" }),
+      );
+      expect(toggle().getAttribute("aria-checked")).toBe("true");
+      expect(saveButton().disabled).toBe(false);
     });
   });
 });

@@ -167,7 +167,10 @@
   "SETUP_PROGRESS_STEP.WAIT_A_FEW_MINUTES_AND": "{{strong}} Wait a few minutes and try again. It can take up to 48 hours.",
   "SETUP_PROGRESS_STEP.WE_COULDN_T_FIND_RECORD": "We couldn’t find Record {{value1}} yet",
   "SETUP_PROGRESS_STEP.WE_COULDN_T_SECURE_YOUR": "We couldn’t secure your domain",
+  "SETUP_STEPPER.ADD_DNS_RECORDS": "Add DNS records",
+  "SETUP_STEPPER.CONNECT_YOUR_APP": "Connect your app",
   "SETUP_STEPPER.SETUP_STEPS": "Setup steps",
+  "SETUP_STEPPER.VERIFY_AND_SECURE": "Verify & secure",
   "VALIDATOR_PROJECT.CNAME_IS_VALIDATED_SUCCESSFULLY": "CName is validated successfully",
   "VALIDATOR_PROJECT.CNAME_LOOKUP": "CNAME Lookup",
   "VALIDATOR_PROJECT.COULD_NOT_VERIFY_THE_DOMAIN": "Could not verify the domain. Please make sure it is valid and try again."
