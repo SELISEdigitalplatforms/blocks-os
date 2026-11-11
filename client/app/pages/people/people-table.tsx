@@ -249,7 +249,7 @@ export const PeopleTable = ({
           return (
             <div className="ml-2 sm:ml-0">
               <PeopleStatusBadge
-                status={isOwner ? "Owner" : "Contributor"}
+                status={isOwner ? t("PEOPLE_TABLE.OWNER") : t("PEOPLE_TABLE.CONTRIBUTOR")}
                 className={
                   isOwner
                     ? "w-fit bg-primary/10 px-2 py-0.5 text-xs font-normal text-primary"

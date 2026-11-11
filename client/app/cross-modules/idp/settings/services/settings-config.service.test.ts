@@ -146,6 +146,37 @@ describe("SettingsConfigService", () => {
       expect(result.consentForMultiOrgEnable).toBe(false);
       expect(result.defaultRolesOnOrgCreation).toEqual([]);
       expect(result.keepOrgPermissionsSameAsDefaultPermissions).toBe(true);
+      // An older IAM response without the field (C2).
+      expect(result.allowNoOrgSignInForDisabledOrganizations).toBe(false);
+    });
+
+    it("maps the stored disabled-organization sign-in flag (H2, H5)", async () => {
+      vi.mocked(organizationService.getOrganizationConfig).mockResolvedValue({
+        itemId: "org-1",
+        createdDate: "",
+        lastUpdatedDate: "",
+        createdBy: "",
+        language: "",
+        lastUpdatedBy: "",
+        organizationIds: [],
+        tags: [],
+        allowCreationFromCloud: false,
+        allowCreationFromConstruct: false,
+        isMultiOrgEnabled: true,
+        allowOrgCreationFromSignup: false,
+        allowOrgCreationFromPortal: false,
+        consentForMultiOrgEnable: true,
+        defaultRoleOnOrgCreation: [],
+        defaultPermissionOnOrgCreation: [],
+        keepOrgRolesSameAsDefaultRoles: true,
+        keepOrgPermissionsSameAsDefaultPermissions: true,
+        isSignupAutoJoinEnabled: false,
+        signupAutoJoinOrganizationId: null,
+        allowNoOrgSignInForDisabledOrganizations: true,
+      });
+
+      const result = await settingsConfigService.getOrganizationConfig();
+      expect(result.allowNoOrgSignInForDisabledOrganizations).toBe(true);
     });
 
     it("throws when organization config is missing", async () => {

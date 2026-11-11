@@ -24,7 +24,9 @@ export const PeopleDetailsTab = ({
               {user?.profileImageUrl ? (
                 <img
                   src={user.profileImageUrl}
-                  alt={t("PEOPLE_DETAILS_TAB.PROFILE", { fullName: fullName || "Member" })}
+                  alt={t("PEOPLE_DETAILS_TAB.PROFILE", {
+                    fullName: fullName || t("PEOPLE_DETAILS_TAB.MEMBER"),
+                  })}
                   className="h-full w-full object-cover"
                 />
               ) : (
@@ -48,7 +50,9 @@ export const PeopleDetailsTab = ({
               <p className="mt-1 text-sm text-medium-emphasis">
                 <span className="mr-1.5">{t("PEOPLE_DETAILS_TAB.ROLE")}</span>
                 <span className="font-medium text-high-emphasis">
-                  {projectRole ?? t("PEOPLE_DETAILS_TAB.CONTRIBUTOR")}
+                  {projectRole === "Owner"
+                    ? t("PEOPLE_DETAILS_TAB.OWNER")
+                    : t("PEOPLE_DETAILS_TAB.CONTRIBUTOR")}
                 </span>
               </p>
             </div>

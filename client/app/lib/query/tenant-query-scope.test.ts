@@ -112,4 +112,17 @@ describe("tenant query scope", () => {
     expect(foreign).toHaveLength(1);
     expect(foreign[0].queryHash).toContain("tenant-a");
   });
+
+  // OrganizationDisabledGate: one auth/me request per app load, whatever project is open.
+  it("leaves the auth/me key unscoped, so a project switch does not refetch it", () => {
+    const key = ["auth-me"];
+    expect(isTenantAgnosticQueryKey(key)).toBe(true);
+
+    impersonate("tenant-a");
+    const a = tenantScopedQueryKeyHashFn(key);
+    impersonate("tenant-b");
+
+    expect(tenantScopedQueryKeyHashFn(key)).toBe(a);
+    expect(a).toBe(hashKey(key));
+  });
 });
