@@ -20,10 +20,18 @@ import { templateErrorMessages } from "@blocks-communication/mail/constants/temp
 const hasText = (value: unknown): boolean => typeof value === "string" && value.trim().length > 0;
 
 /**
+ * True when the map is a problem body (title plus status, type or traceId) rather than a field
+ * map: for a body without an `errors` member the HTTP client passes the whole body on as the map.
+ */
+const isProblemBody = (map: Record<string, unknown>): boolean =>
+  typeof map.title === "string" &&
+  (typeof map.status === "number" || typeof map.type === "string" || "traceId" in map);
+
+/**
  * True for a refusal worth showing as is: an HTTP status below 500 whose field map holds at least
  * one non-blank message, such as the mail template HTML policy's 400 `TemplateBody` problem.
- * A 5xx, a transport failure (the HTTP client reports it as a 500), or an empty or blank map has
- * nothing the user can act on, so the caller shows the generic text instead.
+ * A 5xx, a transport failure (the HTTP client reports it as a 500), a problem body, or an empty or
+ * blank map has nothing the user can act on, so the caller shows the generic text instead.
  */
 const isShowableRefusal = (
   error: unknown,
@@ -31,6 +39,7 @@ const isShowableRefusal = (
   if (!isErrorWithErrors(error)) return false;
   const { status } = error as { status?: unknown };
   if (typeof status !== "number" || status >= 500) return false;
+  if (isProblemBody(error.errors)) return false;
   return Object.values(error.errors).some((value) =>
     Array.isArray(value) ? value.some(hasText) : hasText(value),
   );

@@ -182,6 +182,16 @@ describe("EditEmailTemplate", () => {
   it.each([
     ["a 400 without a field map", httpError(400, {})],
     ["a 400 whose messages are blank", httpError(400, { TemplateBody: " ", Other: [""] })],
+    // A problem body without an `errors` member: the HTTP client takes the whole body as the map.
+    [
+      "a 400 problem body without a field map",
+      httpError(400, {
+        type: "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+        title: "Bad Request",
+        status: 400,
+        traceId: "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-00",
+      }),
+    ],
     ["an error without a status", Object.assign(new Error("x"), { errors: { a: "b" } })],
     ["a plain Error", new Error("Unexpected token < in JSON")],
   ])("shows the generic message for %s (C2)", async (_case, error) => {
@@ -193,9 +203,12 @@ describe("EditEmailTemplate", () => {
   });
 
   it.each([
-    ["a network failure", httpError(500, { errors: new TypeError("Failed to fetch") })],
+    // The HTTP client reports a transport failure as a 500 whose `errors` is the thrown error.
+    ["a network failure", httpError(500, new TypeError("Failed to fetch"))],
     ["a 503 with a field map", httpError(503, { general: "Service Unavailable" })],
-  ])("shows the generic message for %s and does not navigate (C3, C4)", async (_case, error) => {
+  ])("shows the generic message for %s and does not navigate (C3)", async (_case, error) => {
+    // C4 (isPending reset on failure) is the hook's own behavior and is covered by its test (D1);
+    // the mocked hook keeps isPending false, so the Save check below only shows nothing disables it.
     h.saveEmailTemplate.mockRejectedValueOnce(error);
     render(<EditEmailTemplate params={{ id: "t1" }} />);
     await saveFromPage();
