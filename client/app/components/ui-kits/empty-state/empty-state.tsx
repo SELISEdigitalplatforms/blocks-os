@@ -21,7 +21,7 @@ export function EmptyState({
   className,
   action,
   descriptionRole,
-}: EmptyStateProps) {
+}: Readonly<EmptyStateProps>) {
   return (
     <Card className={className}>
       <CardContent className="flex flex-col items-center justify-center py-16">

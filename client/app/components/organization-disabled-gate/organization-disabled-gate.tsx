@@ -55,7 +55,7 @@ const OrganizationDisabledMessage = () => {
  * holds no roles or permissions. The content renders while `auth/me` loads and when it fails, so
  * the request never delays or blocks the console.
  */
-export const OrganizationDisabledGate = ({ children }: { children: ReactNode }) => {
+export const OrganizationDisabledGate = ({ children }: Readonly<{ children: ReactNode }>) => {
   const { data } = useQuery({
     queryKey: AUTH_ME_QUERY_KEY,
     queryFn: getAuthMe,
