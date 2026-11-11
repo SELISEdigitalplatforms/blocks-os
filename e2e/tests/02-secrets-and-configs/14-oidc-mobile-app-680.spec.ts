@@ -8,6 +8,7 @@ import {
   OIDC_WEB_HTTPS_INVALID,
   type OidcClientsApi,
   applicationTypeRadio,
+  closeOidcClientPageFlow,
   closeOidcDialogFlow,
   closeOneTimeSecretDialogFlow,
   countOidcRequests,
@@ -115,7 +116,7 @@ test.describe("OIDC client application type (#680)", () => {
         await page.waitForTimeout(1_500);
         expect(counter.getsById(), "edit open makes exactly one GET oidc-clients/{id}").toBe(1);
         counter.stop();
-        await closeOidcDialogFlow(page);
+        await closeOidcClientPageFlow(page);
 
         const id = await api!.idByName(clientName);
         expect(id).toBeTruthy();
@@ -558,7 +559,7 @@ test.describe("OIDC client application type (#680)", () => {
               await expectApplicationTypeFlow(page, "mobile");
               await expect(oidcRedirectUriInputs(page).first()).toHaveValue(MOBILE_URI);
               await shot(testInfo, `680-edit-mobile-${tag}`);
-              await closeOidcDialogFlow(page);
+              await closeOidcClientPageFlow(page);
             });
           }
         });
