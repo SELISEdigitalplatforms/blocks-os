@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import type { AriaRole, ReactNode } from "react";
 
 interface EmptyStateProps {
   icon: LucideIcon;
@@ -10,6 +10,8 @@ interface EmptyStateProps {
   className?: string;
   /** Call to action rendered under the description, e.g. the button that creates the first item. */
   action?: ReactNode;
+  /** ARIA role for the description, e.g. "alert" so screen readers announce it on its own. */
+  descriptionRole?: AriaRole;
 }
 
 export function EmptyState({
@@ -18,6 +20,7 @@ export function EmptyState({
   description,
   className,
   action,
+  descriptionRole,
 }: EmptyStateProps) {
   return (
     <Card className={className}>
@@ -26,7 +29,9 @@ export function EmptyState({
           <Icon className="h-7 w-7 text-muted-foreground" />
         </div>
         <p className="text-base font-medium text-high-emphasis">{title}</p>
-        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+        <p role={descriptionRole} className="mt-1 text-sm text-muted-foreground">
+          {description}
+        </p>
         {action && <div className="mt-6">{action}</div>}
       </CardContent>
     </Card>

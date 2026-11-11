@@ -20,4 +20,10 @@ export const toOrganizationConfigSaveApiPayload = (
   ...(payload.isSignupAutoJoinEnabled === true
     ? { signupAutoJoinOrganizationId: payload.signupAutoJoinOrganizationId ?? null }
     : {}),
+  // Omitted unless the caller sets it, so IAM keeps the stored value.
+  ...(typeof payload.allowNoOrgSignInForDisabledOrganizations === "boolean"
+    ? {
+        allowNoOrgSignInForDisabledOrganizations: payload.allowNoOrgSignInForDisabledOrganizations,
+      }
+    : {}),
 });
