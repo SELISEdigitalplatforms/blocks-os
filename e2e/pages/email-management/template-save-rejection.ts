@@ -16,6 +16,15 @@ const SAVE_TEMPLATE_URL = /\/api\/Mail\/SaveTemplate\/?(\?.*)?$/i;
 
 const mailcraft = (page: Page): Locator => page.locator("mailcraft-editor");
 
+/**
+ * A toHaveURL predicate for a URL ending in `suffix` (the same check as an end-anchored regex,
+ * without building a RegExp from the template id).
+ */
+export const urlEndsWith =
+  (suffix: string) =>
+  (url: URL): boolean =>
+    url.href.endsWith(suffix);
+
 /** The edit page's own Save button (MailCraft has none of that name). */
 export const editPageSaveButton = (page: Page): Locator =>
   page.getByRole("button", { name: "Save", exact: true });
@@ -27,7 +36,7 @@ export async function openTemplateEditPage(page: Page, itemId: string) {
     .filter({ hasText: "Template preview" })
     .getByRole("button", { name: "Edit", exact: true })
     .click();
-  await expect(page).toHaveURL(new RegExp(`/email-management/communications/${itemId}/edit$`), {
+  await expect(page).toHaveURL(urlEndsWith(`/email-management/communications/${itemId}/edit`), {
     timeout: 15_000,
   });
   await expect(codeButton(page)).toBeVisible({ timeout: 30_000 });

@@ -15,6 +15,7 @@ import {
   openTemplateEditPage,
   readEditorSource,
   saveFromEditPage,
+  urlEndsWith,
   watchEditPage,
 } from "../../pages/email-management/template-save-rejection";
 
@@ -46,7 +47,7 @@ test.describe("Mail template save rejections (#724)", () => {
       if (!api) throw new Error("The console's SaveTemplate request was not captured");
       const mail = api;
       const itemId = mail.created.itemId;
-      const editUrl = new RegExp(`/email-management/communications/${itemId}/edit$`);
+      const editUrl = urlEndsWith(`/email-management/communications/${itemId}/edit`);
       const watch = watchEditPage(page);
 
       await test.step("H2 / §4: saving http://{{HostName}} shows one toast with the server's TemplateBody text", async () => {
@@ -83,7 +84,7 @@ test.describe("Mail template save rejections (#724)", () => {
         await applyEditorSource(page, fixed);
         const response = await saveFromEditPage(page);
         expect(response.status(), "the server accepts the https address").toBe(200);
-        await expect(page).toHaveURL(new RegExp(`/email-management/communications/${itemId}$`), {
+        await expect(page).toHaveURL(urlEndsWith(`/email-management/communications/${itemId}`), {
           timeout: 15_000,
         });
         expect(watch.saves, "§5: one SaveTemplate request per Save").toHaveLength(2);
