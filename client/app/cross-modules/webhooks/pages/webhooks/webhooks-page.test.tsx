@@ -120,6 +120,23 @@ describe("WebhooksPage", () => {
     expect(screen.getByText("Off")).toBeTruthy();
   });
 
+  it("shows the turn-off reason, not the failure count, for a webhook the system turned off", async () => {
+    vi.mocked(http.get).mockResolvedValue([
+      makeWebhook({
+        id: "b",
+        name: "Stopped",
+        isActive: false,
+        disabledReason: "too_many_failures",
+        consecutiveFailures: 10,
+      }),
+    ]);
+    renderPage();
+
+    expect(await screen.findByText("Turned off after errors")).toBeTruthy();
+    expect(screen.queryByText("10 failed")).toBeNull();
+    expect(screen.getByText("Off")).toBeTruthy();
+  });
+
   it("opens the details of a webhook when its row is clicked", async () => {
     vi.mocked(http.get).mockResolvedValue([makeWebhook({ id: "wh 1" })]);
     renderPage();

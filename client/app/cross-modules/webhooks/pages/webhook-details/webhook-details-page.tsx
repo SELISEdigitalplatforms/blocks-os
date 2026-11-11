@@ -1,15 +1,20 @@
 import { useState } from "react";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { Webhook } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useT } from "@seliseblocks/genesis-os";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
+import { Card } from "@/components/ui-kits/card/card";
+import { EmptyState } from "@/components/ui-kits/empty-state/empty-state";
 import { ConfirmDialog } from "@/components/confirm-dialog/confirm-dialog";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import { SectionCardHeader } from "../../components/section-card-header";
+import { WebhookDetailsNav, WEBHOOKS_LIST_PATH } from "../../components/webhook-details-nav";
+import { WebhookDetailsSkeleton } from "../../components/webhook-details-skeleton";
 import { WebhookFormDialog } from "../../components/webhook-form-dialog";
+import { WebhookHeaderCard } from "../../components/webhook-header-card";
 import { WebhookHistory } from "../../components/webhook-history";
-import { WebhookInfoCards } from "../../components/webhook-info-cards";
 import { WEBHOOK_ERROR_CODES, WEBHOOKS_I18N_MODULE } from "../../constants/webhooks.constant";
 import {
   useDeleteWebhook,
@@ -20,7 +25,7 @@ import {
 import type { IWebhook } from "../../models/webhook.model";
 import { getErrorCode, webhookErrorMessages } from "../../utils/webhook-errors";
 
-const LIST_PATH = "secret-management/webhooks";
+const ACTIONS_PATH = "secret-management/actions";
 
 export function WebhookDetailsPage() {
   const { t } = useT(WEBHOOKS_I18N_MODULE);
@@ -34,16 +39,6 @@ export function WebhookDetailsPage() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
-  const backLink = (
-    <Link
-      to={scoped(LIST_PATH)}
-      className="inline-flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-high-emphasis"
-    >
-      <ArrowLeft className="h-4 w-4" />
-      <span>{t("DETAILS.BACK")}</span>
-    </Link>
-  );
-
   const reportError = (title: string, caught: unknown) => {
     const code = getErrorCode(caught);
     showErrorToast({
@@ -56,7 +51,8 @@ export function WebhookDetailsPage() {
   const handleTest = async () => {
     try {
       const result = await testWebhook(id);
-      const status = result.httpStatus === null ? "-" : `HTTP ${result.httpStatus}`;
+      const status =
+        result.httpStatus === null ? "-" : t("HISTORY.HTTP_STATUS", { status: result.httpStatus });
       if (result.delivered) {
         showSuccessToast({
           title: t("DETAILS.TEST_DELIVERED"),
@@ -100,7 +96,7 @@ export function WebhookDetailsPage() {
     try {
       await deleteWebhook(current.id);
       showSuccessToast({ description: t("DETAILS.DELETED", { name: current.name }) });
-      navigate(scoped(LIST_PATH));
+      navigate(scoped(WEBHOOKS_LIST_PATH));
     } catch (error_) {
       setIsDeleteOpen(false);
       reportError(t("DETAILS.COULD_NOT_DELETE"), error_);
@@ -108,25 +104,36 @@ export function WebhookDetailsPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/40" />
-      </div>
-    );
+    return <WebhookDetailsSkeleton />;
   }
 
   if (!webhook) {
     const isMissing = getErrorCode(error) === WEBHOOK_ERROR_CODES.WebhookNotFound;
     return (
-      <div className="flex flex-col gap-4">
-        {backLink}
-        <p className="text-sm text-muted-foreground">
-          {t(isMissing ? "DETAILS.NOT_FOUND" : "DETAILS.LOAD_FAILED")}
-        </p>
-        {!isMissing && (
-          <Button className="w-fit" variant="outline" onClick={() => refetch()}>
-            {t("common:RETRY")}
-          </Button>
+      <div className="flex flex-col gap-6">
+        <WebhookDetailsNav />
+        {isMissing ? (
+          <EmptyState
+            icon={Webhook}
+            title={t("DETAILS.NOT_FOUND")}
+            description={t("DETAILS.NOT_FOUND_DESCRIPTION")}
+            action={
+              <Button variant="outline" onClick={() => navigate(scoped(WEBHOOKS_LIST_PATH))}>
+                {t("DETAILS.BACK_TO_LIST")}
+              </Button>
+            }
+          />
+        ) : (
+          <EmptyState
+            icon={Webhook}
+            title={t("DETAILS.LOAD_FAILED")}
+            description={t("LIST.LOAD_FAILED_DESCRIPTION")}
+            action={
+              <Button variant="outline" onClick={() => refetch()}>
+                {t("common:RETRY")}
+              </Button>
+            }
+          />
         )}
       </div>
     );
@@ -134,49 +141,41 @@ export function WebhookDetailsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {backLink}
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight">{webhook.name}</h1>
-          <code className="break-all text-sm text-muted-foreground">{webhook.url}</code>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" disabled={isTesting} onClick={handleTest}>
-            {isTesting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            <span>{t("DETAILS.SEND_TEST")}</span>
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setIsEditOpen(true)}>
-            {t("common:EDIT")}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={isSaving}
-            onClick={() => handleToggleActive(webhook)}
+      <WebhookDetailsNav name={webhook.name} />
+
+      <WebhookHeaderCard
+        webhook={webhook}
+        isTesting={isTesting}
+        isSaving={isSaving}
+        onTest={handleTest}
+        onEdit={() => setIsEditOpen(true)}
+        onToggleActive={() => handleToggleActive(webhook)}
+        onDelete={() => setIsDeleteOpen(true)}
+      />
+
+      <section aria-label={t("DETAILS.ACTIONS_IT_RECEIVES")}>
+        <Card className="overflow-hidden p-0">
+          <SectionCardHeader
+            title={t("DETAILS.ACTIONS_IT_RECEIVES")}
+            count={webhook.actions.length}
           >
-            {webhook.isActive ? t("DETAILS.TURN_OFF") : t("DETAILS.TURN_ON")}
-          </Button>
-          <Button variant="destructive-outline" size="sm" onClick={() => setIsDeleteOpen(true)}>
-            {t("common:DELETE")}
-          </Button>
-        </div>
-      </header>
-
-      <WebhookInfoCards webhook={webhook} />
-
-      <section className="flex flex-col gap-2" aria-label={t("DETAILS.ACTIONS_IT_RECEIVES")}>
-        <h2 className="text-base font-semibold text-high-emphasis">
-          {t("DETAILS.ACTIONS_IT_RECEIVES")}
-        </h2>
-        <ul className="flex flex-wrap gap-2">
-          {webhook.actions.map((name) => (
-            <li key={name}>
-              <Badge variant="outline" className="font-mono font-normal">
-                {name}
-              </Badge>
-            </li>
-          ))}
-        </ul>
+            <Link
+              to={scoped(ACTIONS_PATH)}
+              className="rounded-sm text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {t("DETAILS.MANAGE_ACTIONS")}
+            </Link>
+          </SectionCardHeader>
+          <ul className="flex flex-wrap gap-2 px-5 py-4">
+            {webhook.actions.map((name) => (
+              <li key={name}>
+                <Badge variant="outline" className="font-mono font-normal">
+                  {name}
+                </Badge>
+              </li>
+            ))}
+          </ul>
+        </Card>
       </section>
 
       <WebhookHistory webhookId={webhook.id} actions={webhook.actions} />
