@@ -12,6 +12,7 @@ using Cloud.LmtService.Services.ColdRestore;
 using Cloud.LmtService.Services.Logs;
 using Cloud.LmtService.Services.Trace;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -33,6 +34,8 @@ namespace Cloud.LmtService.Utilities
             services.AddSingleton<IBlobStorage, BlobStorage>();
             services.AddSingleton<IArchiveRepository, ArchiveRepository>();
             services.AddSingleton<ILogTraceBackupRepository, LogTraceBackupRepository>();
+            // The backup reads "today" and its time budget from the clock; tests substitute it.
+            services.TryAddSingleton(TimeProvider.System);
             services.AddSingleton<IArchiveService, ArchiveService>();
             services.AddSingleton<ILogTraceRestoreRepository, LogTraceRestoreRepository>();
             services.AddSingleton<ILogTraceRestoreResultRepository, LogTraceRestoreResultRepository>();

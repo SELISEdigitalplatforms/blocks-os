@@ -53,6 +53,31 @@ namespace Cloud.LmtService.Utilities
         /// </summary>
         public static readonly TimeSpan BackupStaleRunThreshold = TimeSpan.FromHours(3);
 
+        // ── Nightly backup bounds ────────────────────────────────────────────────
+        // Sized for a 1 GiB worker: at most BackupMaxConcurrency units of one phase are in flight,
+        // each holding one batch, so the backup keeps roughly 4 x 1,000 documents in memory.
+
+        /// <summary>Documents the backup reads per batch from a source or archive collection.</summary>
+        public const int BackupBatchSize = 1000;
+
+        /// <summary>Tenants, services or archive collections a backup phase processes at once.</summary>
+        public const int BackupMaxConcurrency = 4;
+
+        /// <summary>Failed or abandoned jobs after which a day is marked Skipped instead of retried.</summary>
+        public const int BackupMaxFailedAttemptsPerDay = 3;
+
+        /// <summary>A run starts no further day once the elapsed time plus its longest day would pass this.</summary>
+        public static readonly TimeSpan BackupRunTimeBudget = TimeSpan.FromHours(3);
+
+        /// <summary>
+        /// How far back missed days are caught up: the 90-day TTL the Genesis exporters put on hot
+        /// logs and traces. Anything older has already expired from MongoDB.
+        /// </summary>
+        public const int BackupCatchUpHorizonDays = 90;
+
+        public static readonly string BackupSkippedReason =
+            $"Skipped after {BackupMaxFailedAttemptsPerDay} failed attempts";
+
         public static readonly string[] IgnoredTenants = ["miscellaneous"];
         public static readonly string[] IgnoredServices = ["blocks-lmt-worker"];
 
