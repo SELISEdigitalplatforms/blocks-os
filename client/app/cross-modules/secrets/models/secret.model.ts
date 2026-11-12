@@ -1,5 +1,7 @@
 import { tStatic } from "@seliseblocks/genesis-os";
 
+const I18N_MODULE = "os.secrets";
+
 /**
  * Client-side contract for the secret store (`/api/secrets`).
  *
@@ -34,18 +36,29 @@ export type SecretStatus = (typeof SECRET_STATUS)[keyof typeof SECRET_STATUS];
  * The wire values stay `api` / `service` — the backend compares them ordinally — but "API" and
  * "Service" say nothing about which one you want, so nothing user-facing shows them.
  */
+// The labels below are getters so they are translated when read (at render), not at load.
 export const SECRET_TYPE_LABEL: Record<SecretType, string> = {
-  api: "Application",
-  service: "Platform service",
-  both: "Both",
+  get api() {
+    return tStatic(I18N_MODULE, "SECRET_MODEL.TYPE_APPLICATION");
+  },
+  get service() {
+    return tStatic(I18N_MODULE, "SECRET_MODEL.TYPE_PLATFORM_SERVICE");
+  },
+  get both() {
+    return tStatic(I18N_MODULE, "SECRET_MODEL.TYPE_BOTH");
+  },
 };
 
 export const SECRET_TYPE_DESCRIPTION: Record<SecretType, string> = {
-  api: "A key or credential your team uses. You choose exactly who can read it.",
-  service: "A credential consumed by backend services. It has no per-person access list.",
-  both:
-    "A backend credential your team also manages here. Anyone in this environment can read " +
-    "and rotate it, so it has no per-person access list.",
+  get api() {
+    return tStatic(I18N_MODULE, "SECRET_MODEL.TYPE_DESCRIPTION_APPLICATION");
+  },
+  get service() {
+    return tStatic(I18N_MODULE, "SECRET_MODEL.TYPE_DESCRIPTION_PLATFORM_SERVICE");
+  },
+  get both() {
+    return tStatic(I18N_MODULE, "SECRET_MODEL.TYPE_DESCRIPTION_BOTH");
+  },
 };
 
 /**
@@ -53,9 +66,15 @@ export const SECRET_TYPE_DESCRIPTION: Record<SecretType, string> = {
  * restore, and "Purge" is the one that removes it for good. The wire value stays `deleted`.
  */
 export const SECRET_STATUS_LABEL: Record<SecretStatus, string> = {
-  active: "Active",
-  locked: "Locked",
-  deleted: "Archived",
+  get active() {
+    return tStatic(I18N_MODULE, "SECRET_MODEL.STATUS_ACTIVE");
+  },
+  get locked() {
+    return tStatic(I18N_MODULE, "SECRET_MODEL.STATUS_LOCKED");
+  },
+  get deleted() {
+    return tStatic(I18N_MODULE, "SECRET_MODEL.STATUS_ARCHIVED");
+  },
 };
 
 /** Toolbar options. `""` is "All" — an empty filter value is omitted from the query. */
@@ -250,9 +269,15 @@ export const SECRET_AUDIT_OUTCOME = {
  * to the raw value, so a new backend action still shows up.
  */
 export const SECRET_AUDIT_ACTION_LABEL: Record<string, string> = {
-  Delete: "Archive",
-  Restore: "Restore",
-  Purge: "Purge",
+  get Delete() {
+    return tStatic(I18N_MODULE, "SECRET_MODEL.AUDIT_ACTION_ARCHIVE");
+  },
+  get Restore() {
+    return tStatic(I18N_MODULE, "SECRET_MODEL.AUDIT_ACTION_RESTORE");
+  },
+  get Purge() {
+    return tStatic(I18N_MODULE, "SECRET_MODEL.AUDIT_ACTION_PURGE");
+  },
 };
 
 export const secretAuditActionLabel = (action: string): string =>
@@ -261,20 +286,47 @@ export const secretAuditActionLabel = (action: string): string =>
 export type SecretAuditOutcome = (typeof SECRET_AUDIT_OUTCOME)[keyof typeof SECRET_AUDIT_OUTCOME];
 
 /** Human-readable labels for the reason codes the API returns in audit rows and errors. */
+/** Unknown codes still read as `undefined`, so callers can fall back to the raw code. */
 export const SECRET_AUDIT_REASON_LABEL: Record<string, string> = {
-  NO_CONTEXT: "No authenticated context",
-  INVALID_CONTEXT: "Invalid context",
-  NOT_IN_ACCESS_LIST: "Not in the access list",
-  STATUS_LOCKED: "Secret is locked",
-  STATUS_DELETED: "Secret is archived",
-  VALUE_MISSING: "Value missing from the store",
-  VAULT_FAILURE: "Secret store failure",
-  METADATA_WRITE_FAILED: "Metadata write failed",
-  CLEANUP_FAILED: "Cleanup failed",
-  VAULT_PURGE_FAILED: "Removed, but the vault kept a recoverable copy until its retention ends",
-  ACCESS_NOT_APPLICABLE: "Access list not applicable",
-  TAG_INVALID: "Invalid tag",
-  TOO_MANY_TAGS: "Too many tags",
+  get NO_CONTEXT() {
+    return tStatic(I18N_MODULE, "SECRET_MODEL.AUDIT_REASON_NO_CONTEXT");
+  },
+  get INVALID_CONTEXT() {
+    return tStatic(I18N_MODULE, "SECRET_MODEL.AUDIT_REASON_INVALID_CONTEXT");
+  },
+  get NOT_IN_ACCESS_LIST() {
+    return tStatic(I18N_MODULE, "SECRET_MODEL.AUDIT_REASON_NOT_IN_ACCESS_LIST");
+  },
+  get STATUS_LOCKED() {
+    return tStatic(I18N_MODULE, "SECRET_MODEL.AUDIT_REASON_STATUS_LOCKED");
+  },
+  get STATUS_DELETED() {
+    return tStatic(I18N_MODULE, "SECRET_MODEL.AUDIT_REASON_STATUS_DELETED");
+  },
+  get VALUE_MISSING() {
+    return tStatic(I18N_MODULE, "SECRET_MODEL.AUDIT_REASON_VALUE_MISSING");
+  },
+  get VAULT_FAILURE() {
+    return tStatic(I18N_MODULE, "SECRET_MODEL.AUDIT_REASON_VAULT_FAILURE");
+  },
+  get METADATA_WRITE_FAILED() {
+    return tStatic(I18N_MODULE, "SECRET_MODEL.AUDIT_REASON_METADATA_WRITE_FAILED");
+  },
+  get CLEANUP_FAILED() {
+    return tStatic(I18N_MODULE, "SECRET_MODEL.AUDIT_REASON_CLEANUP_FAILED");
+  },
+  get VAULT_PURGE_FAILED() {
+    return tStatic(I18N_MODULE, "SECRET_MODEL.AUDIT_REASON_VAULT_PURGE_FAILED");
+  },
+  get ACCESS_NOT_APPLICABLE() {
+    return tStatic(I18N_MODULE, "SECRET_MODEL.AUDIT_REASON_ACCESS_NOT_APPLICABLE");
+  },
+  get TAG_INVALID() {
+    return tStatic(I18N_MODULE, "SECRET_MODEL.AUDIT_REASON_TAG_INVALID");
+  },
+  get TOO_MANY_TAGS() {
+    return tStatic(I18N_MODULE, "SECRET_MODEL.AUDIT_REASON_TOO_MANY_TAGS");
+  },
 };
 
 // ─── Validation, mirrored from the backend ────────────────────────────────────

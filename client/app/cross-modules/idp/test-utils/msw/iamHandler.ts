@@ -38,6 +38,8 @@ const SAVE_ROLES_AND_PERMISSIONS_PATTERN = new RegExp(USER_ENDPOINTS.SAVE_ROLES_
 const GET_SESSIONS_PATTERN = new RegExp(`${USER_ENDPOINTS.GET_SESSIONS}\\?`);
 const GET_HISTORIES_PATTERN = new RegExp(`${USER_ENDPOINTS.GET_HISTORIES}\\?`);
 const DEACTIVATE_PATTERN = new RegExp(USER_ENDPOINTS.DEACTIVATE);
+// The admin reinstatement (users/activate), not ACTIVATE_PATTERN below (the user's own auth/activate).
+const ADMIN_ACTIVATE_PATTERN = new RegExp(`${USER_ENDPOINTS.ACTIVATE}$`);
 
 // Account
 const ACTIVATE_PATTERN = new RegExp(ACCOUNT_ENDPOINTS.ACTIVATE);
@@ -99,6 +101,7 @@ export const iamHandlers = [
     HttpResponse.json({ data: [], totalCount: 0, errors: null }),
   ),
   http.post(DEACTIVATE_PATTERN, () => HttpResponse.json(mockSuccessResponse)),
+  http.post(ADMIN_ACTIVATE_PATTERN, () => HttpResponse.json(mockSuccessResponseWithItemId)),
 
   // Account
   http.post(ACTIVATE_PATTERN, () => HttpResponse.json(mockSuccessResponse)),
@@ -173,6 +176,9 @@ export const saveSignUpSettingHandler = (response: JsonBodyType = mockSuccessRes
 
 export const deactivateHandler = (response: JsonBodyType = mockSuccessResponse) =>
   http.post(DEACTIVATE_PATTERN, () => HttpResponse.json(response));
+
+export const adminActivateHandler = (response: JsonBodyType = mockSuccessResponseWithItemId) =>
+  http.post(ADMIN_ACTIVATE_PATTERN, () => HttpResponse.json(response));
 
 // Account
 export const accountActivationHandler = (response: JsonBodyType = mockSuccessResponse) =>

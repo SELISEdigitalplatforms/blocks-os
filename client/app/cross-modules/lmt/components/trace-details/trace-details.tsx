@@ -143,7 +143,7 @@ export const TraceDetails = ({
   const traceLabel = getTraceBreadcrumbLabel(id, hasTrace, entryPoint, true);
   const resolvedBreadcrumbTitles: BreadcrumbTitles = {
     ...breadcrumbTitles,
-    [`${lmtBase}/tracing`]: "Tracing",
+    [`${lmtBase}/tracing`]: t("TRACES_OVERVIEW.TRACING"),
     ...(id ? { [`${lmtBase}/tracing/${id}`]: traceLabel } : {}),
     ...(logsTraceBreadcrumbHref ? { [logsTraceBreadcrumbHref]: traceLabel } : {}),
   };

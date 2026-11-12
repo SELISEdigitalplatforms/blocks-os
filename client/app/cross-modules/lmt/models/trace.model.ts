@@ -44,7 +44,7 @@ export const getTraceStatus = (trace: { attributes?: IAttributes; status?: strin
     case "Error":
       return { label: tStatic("os.lmt", "common:ERROR"), variant: "error" as const };
     case "Ok":
-      return { label: "OK", variant: "success" as const };
+      return { label: tStatic("os.lmt", "TRACE_MODEL.OK"), variant: "success" as const };
     default:
       return { label: tStatic("os.lmt", "TRACE_MODEL.UNKNOWN"), variant: "secondary" as const };
   }

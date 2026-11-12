@@ -296,7 +296,7 @@ export default function ConnectPage() {
           <p className="text-sm text-high-emphasis">{t("CONNECT.YOUR_SITE_IS_CONNECTED_TO")}</p>
           <p className="text-sm text-medium-emphasis">
             {t("CONNECT.REDIRECTING_YOU_TO", {
-              value1: request?.siteName || request?.redirectHost || "your site",
+              value1: request?.siteName || request?.redirectHost || t("CONNECT.YOUR_SITE"),
             })}
           </p>
         </div>

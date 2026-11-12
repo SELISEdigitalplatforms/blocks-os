@@ -135,7 +135,7 @@ const clientComponent = (span: TraceTree, op: string): Component => {
       label: tStatic(I18N_MODULE, "TRACE_FLOW_UTIL.GRPC_SERVICE"),
       kind: "external",
       traffic: "http",
-      tag: "gRPC call",
+      tag: tStatic(I18N_MODULE, "TRACE_FLOW_UTIL.GRPC_CALL"),
     };
   }
 

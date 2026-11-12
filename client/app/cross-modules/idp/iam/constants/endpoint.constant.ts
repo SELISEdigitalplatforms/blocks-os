@@ -32,6 +32,9 @@ export const USER_ENDPOINTS = {
   // and PERMISSION_ENDPOINTS.GET_PERMISSIONS; there is no /user/* lookup.
   GET_USER_TIMELINES: `${API_BASES.IAM}${IAM_SUBPATH}/user/timelines`,
   DEACTIVATE: `${API_BASES.IAM}${IAM_SUBPATH}/users/deactivate`,
+  // Admin reinstatement of a deactivated or suspended account; the reason goes to the user's activity
+  // log. Not ACCOUNT_ENDPOINTS.ACTIVATE, which is the user's own code-based activation.
+  ACTIVATE: `${API_BASES.IAM}${IAM_SUBPATH}/users/activate`,
   // Admin reset: protected, no captcha (the public auth/recover asks one when the project has it).
   RESET_PASSWORD: `${API_BASES.IAM}${IAM_SUBPATH}/users/reset-password`,
   UPDATE_ACCOUNT: `${API_BASES.IAM}${IAM_SUBPATH}/account/update`,
