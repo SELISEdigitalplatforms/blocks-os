@@ -20,6 +20,7 @@ export const useChipsContext = () => {
 };
 export const ChipsInputList = () => {
   const { value, handleRemoveChip } = useChipsContext();
+  const { t } = useT("os.shared");
   return (
     <>
       {value.map((item, index) => (
@@ -31,7 +32,7 @@ export const ChipsInputList = () => {
           <span
             className="cursor-pointer"
             onClick={() => handleRemoveChip(item)}
-            aria-label={`Remove ${item}`}
+            aria-label={t("CHIPS_INPUT.REMOVE", { item })}
           >
             <X className="h-3.5 w-3.5" />
           </span>

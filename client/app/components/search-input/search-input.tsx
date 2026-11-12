@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from "react";
 import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
+import { useT } from "@seliseblocks/genesis-os";
 interface SearchInputProps {
    
   onSearch: (value: string) => void;
@@ -15,13 +16,14 @@ interface SearchInputProps {
 }
 export const SearchInput: React.FC<SearchInputProps> = ({
   onSearch,
-  placeholder = "Search...",
+  placeholder,
   value,
   className = "",
   toggleable = false,
   isVisible,
   setIsVisible,
 }) => {
+  const { t } = useT("os.shared");
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (isVisible && inputRef.current) {
@@ -51,7 +53,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
     <div className="relative">
       <Input
         ref={inputRef}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t("SEARCH_INPUT.PLACEHOLDER")}
         value={value}
         onChange={handleChange}
         className={`pr-8 ${className}`}
