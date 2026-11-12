@@ -34,12 +34,14 @@ public class EncodingService : IEncodingService
         if (existing is not null)
             return Truncate(existing.EncodedValue, length);
 
-        // Generate new encoding
-        string encodedValue = long.TryParse(input, out var number)
-            ? await EncodeUniqueBase26FromNumber(number, length)
-            : Guid.TryParse(input, out var guid)
-                ? await EncodeUniqueBase26FromGuid(guid, length)
-                : await EncodeUniqueBase26FromGuid(Guid.NewGuid(), length);
+        // Generate new encoding: repository ids are numbers, group ids are GUIDs.
+        string encodedValue;
+        if (long.TryParse(input, out var number))
+            encodedValue = await EncodeUniqueBase26FromNumber(number, length);
+        else if (Guid.TryParse(input, out var guid))
+            encodedValue = await EncodeUniqueBase26FromGuid(guid, length);
+        else
+            encodedValue = await EncodeUniqueBase26FromGuid(Guid.NewGuid(), length);
 
         // Store in DB
         await _blocksGuidsCollection.InsertOneAsync(new BlocksGuid
