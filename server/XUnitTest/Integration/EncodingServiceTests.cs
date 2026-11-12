@@ -70,6 +70,123 @@ namespace XUnitTest.Integration
         }
 
         [Fact]
+        public async Task EncodeToBase26Async_RepositoryIdsWithSamePrefix_GetDistinctStableDomains()
+        {
+            // These real repository IDs encoded to esbolgs and esboltz, which
+            // both became esbol after the old uniqueness check had completed.
+            var service = NewService();
+            var group = "prefix-collision-" + Guid.NewGuid().ToString("N");
+            var one = await service.EncodeToBase26Async("1450238522", group, 5);
+            var crm = await service.EncodeToBase26Async("1450239237", group, 5);
+            var sales = await service.EncodeToBase26Async("1450238867", group, 5);
+
+            new[] { one, crm, sales }.Should().OnlyHaveUniqueItems();
+            foreach (var encoded in new[] { one, crm, sales })
+            {
+                encoded.Should().MatchRegex("^[a-z]{1,5}$");
+            }
+
+            (await service.EncodeToBase26Async("1450238522", group, 5)).Should().Be(one);
+            (await service.EncodeToBase26Async("1450238867", group, 5)).Should().Be(sales);
+            var stored = await _fixture.Collection<BlocksGuid>("BlocksGuids")
+                .Find(x => x.OriginalValue == "1450238867").SingleAsync();
+            stored.EncodedValue.Should().Be(sales);
+        }
+
+        // Two repositories of one production project, ids 357 apart, encode to eohrboy and
+        // eohrbbf. Both were stored as eohrb and shared one deployment url.
+        [Fact]
+        public async Task EncodeToBase26Async_NeighbouringRepositoryIds_FirstKeepsItsCodeSecondGetsAnother()
+        {
+            var service = NewService();
+            var group = "geo-" + Guid.NewGuid().ToString("N");
+
+            var frontend = await service.EncodeToBase26Async("1405501056", group, 5);
+            var backend = await service.EncodeToBase26Async("1405500699", group, 5);
+
+            frontend.Should().Be("eohrb", "the first repository keeps the code its id encodes to");
+            backend.Should().NotBe(frontend).And.MatchRegex("^[a-z]{5}$");
+        }
+
+        // Group codes and repository codes share one namespace in BlocksGuids, so a repository
+        // whose id shortens to a code a group already holds has to take another.
+        [Fact]
+        public async Task EncodeToBase26Async_RepositoryDoesNotTakeACodeAGroupHolds()
+        {
+            var groupId = Guid.NewGuid().ToString("N");
+            await _fixture.Collection<BlocksGuid>("BlocksGuids").InsertOneAsync(new BlocksGuid
+            {
+                ItemId = Guid.NewGuid().ToString(),
+                OriginalValue = groupId,
+                EncodedValue = "efkum", // repository id 1300000000 encodes to efkumya
+                TenantGroupId = groupId
+            });
+
+            var repository = await NewService().EncodeToBase26Async("1300000000", groupId, 5);
+
+            repository.Should().NotBe("efkum").And.MatchRegex("^[a-z]{5}$");
+        }
+
+        // A stored code is what a live deployment url is built from, so the encoder returns it as
+        // it is, even where codes stored before this check are duplicated. Those are repaired by hand.
+        [Fact]
+        public async Task EncodeToBase26Async_ReturnsStoredCodesUnchangedEvenWhenDuplicated()
+        {
+            var group = "legacy-" + Guid.NewGuid().ToString("N");
+            var first = "legacy-a-" + Guid.NewGuid().ToString("N");
+            var second = "legacy-b-" + Guid.NewGuid().ToString("N");
+            await _fixture.Collection<BlocksGuid>("BlocksGuids").InsertManyAsync(new[]
+            {
+                new BlocksGuid { ItemId = Guid.NewGuid().ToString(), OriginalValue = first, EncodedValue = "qqlgc", TenantGroupId = group },
+                new BlocksGuid { ItemId = Guid.NewGuid().ToString(), OriginalValue = second, EncodedValue = "qqlgc", TenantGroupId = group }
+            });
+            var service = NewService();
+
+            (await service.EncodeToBase26Async(first, group, 5)).Should().Be("qqlgc");
+            (await service.EncodeToBase26Async(second, group, 5)).Should().Be("qqlgc");
+        }
+
+        // Negating long.MinValue overflows back to long.MinValue, which used to encode to an
+        // empty code and be stored as one.
+        [Fact]
+        public async Task EncodeToBase26Async_LongMinValue_EncodesToLetters()
+        {
+            var result = await NewService().EncodeToBase26Async("-9223372036854775808", "min-value", 5);
+
+            result.Should().MatchRegex("^[a-z]{5}$");
+        }
+
+        [Fact]
+        public async Task EncodeToBase26Async_GuidsWithSamePrefix_GetDistinctDomains()
+        {
+            var service = NewService();
+            var first = await service.EncodeToBase26Async("80000000-0000-0000-0000-000000000000", "guid-prefix", 5);
+            var second = await service.EncodeToBase26Async("80000001-0000-0000-0000-000000000000", "guid-prefix", 5);
+
+            first.Should().NotBe(second);
+        }
+
+        [Fact]
+        public async Task EncodeToBase26Async_ZeroDoesNotReuseAnOccupiedEncoding()
+        {
+            var service = NewService();
+            var guidEncoding = await service.EncodeToBase26Async(Guid.Empty.ToString(), "zero-collision", 5);
+            var numberEncoding = await service.EncodeToBase26Async("0", "zero-collision", 5);
+
+            numberEncoding.Should().NotBe(guidEncoding);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        public async Task EncodeToBase26Async_InvalidLengthIsRejected(int length)
+        {
+            var action = () => NewService().EncodeToBase26Async("123", "invalid-length", length);
+
+            await action.Should().ThrowAsync<ArgumentOutOfRangeException>();
+        }
+
+        [Fact]
         public async Task EncodeToBase26Async_GuidInput_Encodes()
         {
             var input = Guid.NewGuid().ToString();
