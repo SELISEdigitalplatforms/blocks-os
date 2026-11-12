@@ -49,7 +49,9 @@ describe("UserResetPassword", () => {
   });
 
   it("shows the server reason when the reset is refused", async () => {
-    const errors = { ResetMail: "A reset mail was sent to this user less than a minute ago. Try again later" };
+    const errors = {
+      ResetMail: "A reset mail was sent to this user less than a minute ago. Try again later",
+    };
     h.mutateAsync.mockResolvedValue({ isSuccess: false, errors });
     renderReset();
 
@@ -63,7 +65,9 @@ describe("UserResetPassword", () => {
 
     confirm();
     await waitFor(() =>
-      expect(h.showErrorToast).toHaveBeenCalledWith({ errors: { UserId: "No user found with this id" } }),
+      expect(h.showErrorToast).toHaveBeenCalledWith({
+        errors: { UserId: "No user found with this id" },
+      }),
     );
   });
 });

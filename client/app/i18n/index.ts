@@ -35,7 +35,7 @@
  * - `os.idp.security` (53 keys): idp/iam/security
  * - `os.idp.settings` (192 keys): idp/settings
  * - `os.idp.signup-links` (136 keys): idp/iam/modules/signup-link-management
- * - `os.idp.users` (316 keys): cross-modules/idp/iam/modules/user-management
+ * - `os.idp.users` (329 keys): cross-modules/idp/iam/modules/user-management
  * - `os.integration` (61 keys): cross-modules/integration
  * - `os.integration-page` (8 keys): pages/integration
  * - `os.invitation` (16 keys): pages/invitation
@@ -50,7 +50,7 @@
  * - `os.subscription-usage` (41 keys): pages/subscription-usage
  * - `os.utilities` (58 keys): cross-modules/utilities
  * - `os.webhooks` (104 keys): cross-modules/webhooks
- * Total: 5256 keys.
+ * Total: 5269 keys.
  */
 import { registerTranslations } from "@seliseblocks/genesis-os";
 import osActions from "./os.actions.en.json";

@@ -1,4 +1,6 @@
+import { createElement, ReactNode } from "react";
 import { renderHook, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createWrapper } from "@/test-utils/test-providers/query-client";
 import {
@@ -15,6 +17,7 @@ import {
   useAccountActivation,
   useAccountResendActivation,
   useAccountDeactivate,
+  useAccountActivateByAdmin,
   useAccountRecover,
   useAccountResetPassword,
   useAccountActivationCodeExpiration,
@@ -61,18 +64,89 @@ describe("use-account hooks", () => {
     });
   });
 
+  // Both status changes re-read only the user acted on (and mark the Users list stale), on success
+  // and on failure alike; the operator's own ["user"] record is never refetched (spec P3).
+  const seedQueries = (client: QueryClient) => {
+    const keys = [
+      ["user-by-id", { id: "user-123", projectKey: "tenant-1" }],
+      ["user-by-id", { id: "other-user", projectKey: "tenant-1" }],
+      ["users", "tenant-1", {}],
+      ["user"],
+    ];
+    keys.forEach((key) => client.setQueryData(key, { data: {} }));
+    return (key: unknown[]) => client.getQueryState(key)?.isInvalidated;
+  };
+
+  const renderWithClient = <T>(hook: () => T) => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const isInvalidated = seedQueries(client);
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client }, children);
+    return { ...renderHook(hook, { wrapper }), isInvalidated };
+  };
+
+  const expectOnlyChangedUserRefreshed = (
+    isInvalidated: (key: unknown[]) => boolean | undefined,
+  ) => {
+    expect(isInvalidated(["user-by-id", { id: "user-123", projectKey: "tenant-1" }])).toBe(true);
+    expect(isInvalidated(["users", "tenant-1", {}])).toBe(true);
+    expect(isInvalidated(["user-by-id", { id: "other-user", projectKey: "tenant-1" }])).toBe(false);
+    expect(isInvalidated(["user"])).toBe(false);
+  };
+
   describe("useAccountDeactivate", () => {
-    it("should deactivate account successfully", async () => {
-      vi.mocked(userService.accountDeactivate).mockResolvedValue(undefined as never);
+    it("sends the user id and refreshes only that user after success", async () => {
+      vi.mocked(userService.accountDeactivate).mockResolvedValue({ isSuccess: true });
+      const { result, isInvalidated } = renderWithClient(() => useAccountDeactivate());
 
-      const { result } = renderHook(() => useAccountDeactivate(), {
-        wrapper: createWrapper(),
-      });
-
-      const payload = { userId: "user-123", projectKey: "test-key" };
-      result.current.mutate(payload);
+      result.current.mutate({ userId: "user-123" });
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(userService.accountDeactivate).toHaveBeenCalledWith(payload, expect.anything());
+      expect(userService.accountDeactivate).toHaveBeenCalledWith(
+        { userId: "user-123" },
+        expect.anything(),
+      );
+      expectOnlyChangedUserRefreshed(isInvalidated);
+    });
+
+    it("refreshes only that user after a failure too", async () => {
+      vi.mocked(userService.accountDeactivate).mockRejectedValue({ status: 403, errors: {} });
+      const { result, isInvalidated } = renderWithClient(() => useAccountDeactivate());
+
+      result.current.mutate({ userId: "user-123" });
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expectOnlyChangedUserRefreshed(isInvalidated);
+    });
+  });
+
+  describe("useAccountActivateByAdmin", () => {
+    it("sends the user id and reason and refreshes only that user after success", async () => {
+      vi.mocked(userService.accountActivateByAdmin).mockResolvedValue({
+        isSuccess: true,
+        itemId: "user-123",
+      });
+      const { result, isInvalidated } = renderWithClient(() => useAccountActivateByAdmin());
+
+      result.current.mutate({ userId: "user-123", reason: "Rejoined the team" });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(userService.accountActivateByAdmin).toHaveBeenCalledWith(
+        { userId: "user-123", reason: "Rejoined the team" },
+        expect.anything(),
+      );
+      expectOnlyChangedUserRefreshed(isInvalidated);
+    });
+
+    it("refreshes only that user after a failure too", async () => {
+      vi.mocked(userService.accountActivateByAdmin).mockRejectedValue({
+        status: 400,
+        errors: { UserId: "User is already active" },
+      });
+      const { result, isInvalidated } = renderWithClient(() => useAccountActivateByAdmin());
+
+      result.current.mutate({ userId: "user-123", reason: "Back from leave" });
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expectOnlyChangedUserRefreshed(isInvalidated);
     });
   });
 

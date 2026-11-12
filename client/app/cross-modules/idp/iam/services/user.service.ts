@@ -2,9 +2,10 @@ import { http } from "@/lib/http/http-client";
 import { parseMongoDBString } from "@/lib/utils";
 import {
   IAccountRecoverResponse,
-  IAccountResendActivationPayload,
-  IAccountResendActivationResponse,
+  IActivateUserByAdminPayload,
   IAdminResetPasswordPayload,
+  IDeactivateUserPayload,
+  IUserStatusChangeResponse,
   ICreateUserPayload,
   ICreateUserResponse,
   IDeviceSessionResponse,
@@ -255,10 +256,14 @@ export class UserService {
     );
   }
 
-  accountDeactivate(
-    payload: IAccountResendActivationPayload,
-  ): Promise<IAccountResendActivationResponse> {
+  accountDeactivate(payload: IDeactivateUserPayload): Promise<IUserStatusChangeResponse> {
     return http.post(USER_ENDPOINTS.DEACTIVATE, payload, undefined, {
+      absoluteUrl: true,
+    });
+  }
+
+  accountActivateByAdmin(payload: IActivateUserByAdminPayload): Promise<IUserStatusChangeResponse> {
+    return http.post(USER_ENDPOINTS.ACTIVATE, payload, undefined, {
       absoluteUrl: true,
     });
   }
