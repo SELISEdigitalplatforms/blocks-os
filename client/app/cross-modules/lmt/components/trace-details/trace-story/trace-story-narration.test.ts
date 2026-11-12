@@ -58,6 +58,38 @@ describe("describeTransfer", () => {
     ).toBe("api asks MongoDB to run drop.");
   });
 
+  it("narrates reads and each kind of write without a collection", () => {
+    const narrate = (operationName: string) =>
+      describeTransfer(step({ operationName }), "api", "MongoDB").description;
+    expect(narrate("MongoDb::find")).toBe("api looks up data using MongoDB.");
+    expect(narrate("MongoDb::insert")).toBe("api asks MongoDB to add data.");
+    expect(narrate("MongoDb::delete")).toBe("api asks MongoDB to remove data.");
+    expect(narrate("MongoDb::update")).toBe("api asks MongoDB to update data.");
+  });
+
+  it("writes the full cache sentences, outcomes and error suffixes", () => {
+    const cache = (operationName: string, attributes: FlowStep["span"]["attributes"]) =>
+      describeTransfer(
+        step({ traffic: "cache", operationName, toId: "cache:redis" }, attributes),
+        "api",
+        "Redis",
+      );
+    expect(cache("Redis::Get", { "cache.hit": 1 as unknown as string }).description).toBe(
+      "api looks for cached data in Redis. The trace records a cache hit.",
+    );
+    expect(cache("Redis::Set", { "cache.hit": "false" })).toMatchObject({
+      description: "api sends an update in Redis. The trace records a cache miss.",
+      facts: [{ label: "Cache", value: "Miss" }],
+    });
+    expect(cache("Redis::Set", {}).description).toBe("api sends an update in Redis.");
+    expect(
+      describeTransfer(step({ state: "error", isErrorOrigin: true }), "api", "MongoDB").description,
+    ).toBe("api looks up data using MongoDB. This span records an error.");
+    expect(describeTransfer(step({ state: "error" }), "api", "MongoDB").description).toBe(
+      "api looks up data using MongoDB. This span also reports a failure.",
+    );
+  });
+
   it("reports a cache hit or miss only when it was recorded", () => {
     const cache = (hit?: unknown, operationName = "Redis::Get") =>
       describeTransfer(

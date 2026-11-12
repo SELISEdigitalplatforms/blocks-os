@@ -54,6 +54,17 @@ describe("ChipsInput", () => {
     expect(screen.getByText("two")).toBeTruthy();
   });
 
+  it("removes a chip from the keyboard with its non-submitting X button", async () => {
+    const user = userEvent.setup();
+    render(<Harness initial={["one", "two"]} />);
+    const remove = screen.getByRole("button", { name: "Remove one" });
+    expect(remove.getAttribute("type")).toBe("button");
+    remove.focus();
+    await user.keyboard("{Enter}");
+    expect(screen.queryByText("one")).toBeNull();
+    expect(screen.getByText("two")).toBeTruthy();
+  });
+
   it("does not add a chip when the input is only whitespace", async () => {
     const user = userEvent.setup();
     render(<Harness />);

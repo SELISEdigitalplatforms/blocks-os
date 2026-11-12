@@ -1,9 +1,17 @@
-import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
-import { Dialog } from "@/components/ui-kits/dialog/dialog";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import { useRef } from "react";
+import { ConfirmDialog } from "@/components/confirm-dialog/confirm-dialog";
 import { useAccountDeactivate } from "@blocks-idp/iam/hooks/use-account";
-import { isErrorWithErrors } from "@/lib/error";
 import { useT } from "@seliseblocks/genesis-os";
+import {
+  showStatusChangeError,
+  showStatusChangeResult,
+  StatusChangeKeys,
+} from "./user-status-change-feedback";
+
+const DEACTIVATE_KEYS: StatusChangeKeys = {
+  success: "USER_DEACTIVATE.SUCCESS",
+  somethingWentWrong: "USER_DEACTIVATE.SOMETHING_WENT_WRONG",
+};
 
 type UserDeactivateProps = {
   userId: string;
@@ -11,44 +19,40 @@ type UserDeactivateProps = {
   setOpen: (open: boolean) => void;
 };
 
-export const UserDeactivate = ({ userId, open, setOpen }: UserDeactivateProps) => {
+/**
+ * Deactivates the account: IAM ends every session at once. The dialog closes once the request
+ * settles, whatever the outcome; the status shown afterwards always comes from re-reading the user.
+ */
+export const UserDeactivate = ({ userId, open, setOpen }: Readonly<UserDeactivateProps>) => {
   const { t } = useT("os.idp.users");
   const { mutateAsync, isPending } = useAccountDeactivate();
-  const onClickHandler = async () => {
+  // Guards the click that lands before the pending state has re-rendered the disabled button.
+  const inFlight = useRef(false);
+
+  const deactivate = async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     try {
-      const res = await mutateAsync({ userId });
-      if (res.isSuccess) {
-        showSuccessToast({
-          description: t("USER_DEACTIVATE.SUCCESS"),
-        });
-      } else {
-        showErrorToast({ errors: res.errors });
-      }
+      showStatusChangeResult(await mutateAsync({ userId }), t, DEACTIVATE_KEYS);
     } catch (error) {
-      if (isErrorWithErrors(error)) {
-        showErrorToast({ errors: error.errors });
-      } else {
-        showErrorToast({ errors: t("USER_DEACTIVATE.SOMETHING_WENT_WRONG") });
-      }
+      showStatusChangeError(error, t, DEACTIVATE_KEYS);
     } finally {
+      inFlight.current = false;
       setOpen(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <ConfirmationModal
-        onCancel={() => setOpen(false)}
-        onConfirm={onClickHandler}
-        data={{
-          dialogTitle: t("USER_DEACTIVATE.DIALOG_TITLE"),
-          dialogSubtitle: t("USER_DEACTIVATE.DIALOG_SUBTITLE"),
-          confirmButton: t("USER_DEACTIVATE.CONFIRM"),
-        }}
-        buttonState={{
-          confirm: { disable: isPending },
-        }}
-      />
-    </Dialog>
+    <ConfirmDialog
+      open={open}
+      onOpenChange={setOpen}
+      title={t("USER_DEACTIVATE.DIALOG_TITLE")}
+      description={t("USER_DEACTIVATE.DIALOG_SUBTITLE")}
+      confirmLabel={t("USER_DEACTIVATE.CONFIRM")}
+      cancelLabel={t("common:CANCEL")}
+      onConfirm={() => void deactivate()}
+      isPending={isPending}
+      destructive
+    />
   );
 };

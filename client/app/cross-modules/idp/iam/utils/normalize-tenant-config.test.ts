@@ -126,4 +126,17 @@ describe("normalize-tenant-config", () => {
       signupAutoJoinOrganizationId: null,
     });
   });
+
+  it("maps the disabled-organization sign-in flag from either casing and defaults to false", () => {
+    expect(
+      mapOrganizationConfigFromApi({ AllowNoOrgSignInForDisabledOrganizations: true }),
+    ).toMatchObject({ allowNoOrgSignInForDisabledOrganizations: true });
+    expect(
+      mapOrganizationConfigFromApi({ allowNoOrgSignInForDisabledOrganizations: true }),
+    ).toMatchObject({ allowNoOrgSignInForDisabledOrganizations: true });
+    // An older IAM omits the key (C2).
+    expect(mapOrganizationConfigFromApi({})).toMatchObject({
+      allowNoOrgSignInForDisabledOrganizations: false,
+    });
+  });
 });

@@ -67,7 +67,7 @@ export const ProviderNameMap: Record<string, string> = {
 };
 
 export const getProviderDisplayName = (provider: string | undefined): string => {
-  if (!provider) return "Provider";
+  if (!provider) return tStatic(I18N_MODULE, "AIMODEL_PROVIDER_UTILS.PROVIDER");
   const mapped = ProviderNameMap[provider.toLowerCase()];
   if (mapped) return mapped;
   return provider.charAt(0).toUpperCase() + provider.slice(1);

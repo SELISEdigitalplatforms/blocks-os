@@ -200,7 +200,7 @@ export function MagicUrlsList({ configurations, isLoading }: MagicUrlsListProps)
           data={{
             dialogTitle: t("MAGIC_URLS_LIST.DELETE_MAGIC_URL_CONFIGURATION"),
             dialogSubtitle: t("MAGIC_URLS_LIST.ARE_YOU_SURE_YOU_WANT", {
-              contextName: itemToDelete?.contextName ?? "this configuration",
+              contextName: itemToDelete?.contextName ?? t("MAGIC_URLS_LIST.THIS_CONFIGURATION"),
             }),
             confirmButton: t("common:DELETE"),
             cancelButton: t("common:CANCEL"),

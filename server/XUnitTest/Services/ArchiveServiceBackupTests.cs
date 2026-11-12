@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Cloud.LmtService.Models.ArchiveAndDelete;
+using Cloud.LmtService.Models.LogTraceBackup;
 using Cloud.LmtService.Models.Shared;
 using Cloud.LmtService.Repositories.LogTraceBackup;
 using Cloud.LmtService.Repositories.Logs;
@@ -15,6 +16,7 @@ using Cloud.LmtService.Utilities;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using XUnitTest.TestSupport;
 
 namespace XUnitTest.Services
 {
@@ -34,6 +36,9 @@ namespace XUnitTest.Services
         /// <summary>Every repository call the service makes, in the order it made them.</summary>
         private readonly List<string> _calls = [];
 
+        /// <summary>2026-11-12 with 30 days of hot retention: 2026-10-12 is the latest day a run may back up.</summary>
+        private readonly ManualTimeProvider _clock = new(new DateTimeOffset(2026, 11, 12, 1, 0, 0, TimeSpan.Zero));
+
         public ArchiveServiceBackupTests()
         {
             _configRepository.Setup(r => r.GetLmtArchiveRestoreConfigurationsAsync())
@@ -46,6 +51,13 @@ namespace XUnitTest.Services
             _backupRepository.Setup(r => r.GetStaleRunningJobIdsAsync(It.IsAny<TimeSpan>()))
                 .ReturnsAsync([]);
 
+            // Every earlier day of the catch-up window is already backed up, so each run below
+            // processes exactly one day, 2026-10-12, as a run did before catch-up existed.
+            _backupRepository.Setup(r => r.GetJobsForDaysAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+                .ReturnsAsync((DateTime first, DateTime last) => Enumerable.Range(0, (int)(last - first).TotalDays)
+                    .Select(i => new LogTraceBackupJob { DataDateFrom = first.AddDays(i), Status = LogTraceBackupJobStatus.Completed })
+                    .ToList());
+
             // Nothing to enumerate unless a test says otherwise.
             _traceRepository.Setup(r => r.GetDistinctTracesCollectionNamesAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                 .ReturnsAsync([]);
@@ -55,6 +67,8 @@ namespace XUnitTest.Services
             _logRepository.Setup(r => r.GetDistinctManagedServiceNamesAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                 .ReturnsAsync([]);
             _logRepository.Setup(r => r.GetArchiveCollectionsAsync()).ReturnsAsync([]);
+            _logRepository.Setup(r => r.GetArchivedServiceNamesAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync([]);
         }
 
         private ArchiveService Service() => new(
@@ -63,7 +77,8 @@ namespace XUnitTest.Services
             _traceRepository.Object,
             _backupRepository.Object,
             _blobStorage.Object,
-            _configRepository.Object);
+            _configRepository.Object,
+            _clock);
 
         private static async IAsyncEnumerable<List<T>> Batches<T>(params List<T>[] batches)
         {

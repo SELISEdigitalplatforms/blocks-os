@@ -7,6 +7,9 @@ namespace Cloud.LmtService.Models.LogTraceBackup
         public const string CompletedWithErrors = "CompletedWithErrors";
         public const string Failed = "Failed";
         public const string Abandoned = "Abandoned";
+
+        /// <summary>The day failed too often (Constants.BackupMaxFailedAttemptsPerDay) and is no longer retried.</summary>
+        public const string Skipped = "Skipped";
     }
 
     public static class BackupPhase

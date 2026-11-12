@@ -68,12 +68,17 @@ export function RequestTracesModal({
   // offer a range made entirely of archive-tier dates, which the cold tier cannot serve.
   const boundsReady = Boolean(maxDate) && (!isCold || Boolean(minDate));
 
-  let helperText = "Loading the available range…";
+  let helperText = t("REQUEST_TRACES_MODAL.LOADING_THE_AVAILABLE_RANGE");
   if (maxDate && minDate) {
-    helperText = `Allowed range: ${format(minDate, "MMM d, yyyy")} to ${format(maxDate, "MMM d, yyyy")}.`;
+    helperText = t("REQUEST_TRACES_MODAL.ALLOWED_RANGE_FROM_TO", {
+      from: format(minDate, "MMM d, yyyy"),
+      to: format(maxDate, "MMM d, yyyy"),
+    });
   } else if (maxDate) {
     // "before" would exclude this date, but it is selectable — cold picks up the day after it.
-    helperText = `Allowed range: on or before ${format(maxDate, "MMM d, yyyy")}.`;
+    helperText = t("REQUEST_TRACES_MODAL.ALLOWED_RANGE_ON_OR_BEFORE", {
+      to: format(maxDate, "MMM d, yyyy"),
+    });
   }
 
   // Nothing to disable while the bounds are unknown; the picker itself is disabled until then.

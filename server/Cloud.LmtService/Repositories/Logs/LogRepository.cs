@@ -444,6 +444,46 @@ namespace Cloud.LmtService.Repositories.Logs
             }
         }
 
+        /// <summary>
+        /// Lists which services wrote rows into a tenant's log archive collection, so the backup's
+        /// leftover check can judge each service's rows against its own source collection. Read
+        /// failures propagate: the caller then leaves the collection as it is.
+        /// </summary>
+        public async Task<List<string>> GetArchivedServiceNamesAsync(string collectionName, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(collectionName))
+                return [];
+
+            using var cursor = await _archiveDatabase.GetCollection<StoredLog>(collectionName)
+                .DistinctAsync(log => log.ServiceName, FilterDefinition<StoredLog>.Empty, cancellationToken: ct);
+
+            return await cursor.ToListAsync(ct);
+        }
+
+        /// <summary>
+        /// Tells the backup's leftover check whether a service still holds the tenant's source logs
+        /// for a window. Read failures propagate, as for <see cref="GetArchivedServiceNamesAsync"/>.
+        /// </summary>
+        public async Task<bool> HasServiceLogsInWindowAsync(
+            string serviceName, string tenantId, DateTime startDate, DateTime endDate, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(serviceName) || string.IsNullOrWhiteSpace(tenantId))
+                return false;
+
+            var query = new TenantLogsRequest
+            {
+                ProjectKey = tenantId,
+                Filter = new TenantLogsRequestByFilter { StartDate = startDate, EndDate = endDate }
+            };
+
+            var filter = Builders<BsonDocument>.Filter.Eq(TenantIdField, tenantId) & BuildDateFilter(query);
+
+            return await _database.GetCollection<BsonDocument>(serviceName)
+                .Find(filter)
+                .Limit(1)
+                .AnyAsync(ct);
+        }
+
         public async Task DeleteArchiveCollectionAsync(string collectionName)
         {
             try

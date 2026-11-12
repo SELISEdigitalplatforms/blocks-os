@@ -151,7 +151,19 @@ describe("OrganizationService", () => {
         keepOrgPermissionsSameAsDefaultPermissions: true,
         isSignupAutoJoinEnabled: false,
         signupAutoJoinOrganizationId: null,
+        allowNoOrgSignInForDisabledOrganizations: false,
       });
+    });
+
+    it("should read the disabled-organization sign-in flag from the admin config", async () => {
+      vi.mocked(http.get).mockResolvedValue({
+        isMultiOrgEnabled: true,
+        allowNoOrgSignInForDisabledOrganizations: true,
+      });
+
+      const result = await service.getOrganizationConfig(TEST_PROJECT_KEY);
+
+      expect(result?.allowNoOrgSignInForDisabledOrganizations).toBe(true);
     });
 
     it("should throw when the API call fails", async () => {
@@ -211,6 +223,31 @@ describe("OrganizationService", () => {
       });
       expect(vi.mocked(http.post).mock.calls[1][1]).not.toHaveProperty(
         "signupAutoJoinOrganizationId",
+      );
+    });
+
+    it("should send the disabled-organization sign-in flag only when it is set", async () => {
+      vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
+
+      await service.saveOrganizationConfig({
+        ...mockSaveOrganizationConfigPayload,
+        allowNoOrgSignInForDisabledOrganizations: true,
+      });
+      expect(vi.mocked(http.post).mock.calls[0][1]).toMatchObject({
+        allowNoOrgSignInForDisabledOrganizations: true,
+      });
+
+      await service.saveOrganizationConfig({
+        ...mockSaveOrganizationConfigPayload,
+        allowNoOrgSignInForDisabledOrganizations: false,
+      });
+      expect(vi.mocked(http.post).mock.calls[1][1]).toMatchObject({
+        allowNoOrgSignInForDisabledOrganizations: false,
+      });
+
+      await service.saveOrganizationConfig(mockSaveOrganizationConfigPayload);
+      expect(vi.mocked(http.post).mock.calls[2][1]).not.toHaveProperty(
+        "allowNoOrgSignInForDisabledOrganizations",
       );
     });
 

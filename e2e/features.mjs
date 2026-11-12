@@ -127,6 +127,12 @@ export const OS_FEATURES = [
     enabled: true,
     spec: "tests/03-email-management/delete-across-organizations-736.spec.ts",
   },
+  {
+    id: "email-template-save-rejection",
+    name: "Email Management — template save rejections on the edit page (#724)",
+    enabled: true,
+    spec: "tests/03-email-management/template-save-rejection-724.spec.ts",
+  },
 
   // Identity & Access (sidebar submenu order)
   {

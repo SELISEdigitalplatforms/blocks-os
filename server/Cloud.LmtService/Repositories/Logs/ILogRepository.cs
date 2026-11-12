@@ -21,6 +21,12 @@ namespace Cloud.LmtService.Repositories.Logs
         Task<List<string>> GetArchiveCollectionsAsync();
         IAsyncEnumerable<List<StoredLog>> StreamLogsFromArchiveCollectionAsync(string collectionName, int batchSize, CancellationToken ct = default);
         Task DeleteArchivedLogsByServiceAsync(string collectionName, string serviceName);
+
+        /// <summary>The distinct ServiceName values in a log archive collection.</summary>
+        Task<List<string>> GetArchivedServiceNamesAsync(string collectionName, CancellationToken ct = default);
+
+        /// <summary>True when the service's collection still holds a log of the tenant in the window (same bounds as the archive read).</summary>
+        Task<bool> HasServiceLogsInWindowAsync(string serviceName, string tenantId, DateTime startDate, DateTime endDate, CancellationToken ct = default);
         Task DeleteArchiveCollectionAsync(string collectionName);
         Task DeleteMiscellaneousLogsCollectionAsync(string collectionName);
         Task SaveFailedArchiveLogsAsync(string serviceName, List<StoredLog> logs, string failureReason, DateTime processStartDate, DateTime processEndDate);

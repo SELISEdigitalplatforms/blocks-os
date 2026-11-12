@@ -115,6 +115,11 @@ export const mapOrganizationConfigFromApi = (
     "SignupAutoJoinOrganizationId",
     "signupAutoJoinOrganizationId",
   ),
+  allowNoOrgSignInForDisabledOrganizations: readBool(
+    raw,
+    "AllowNoOrgSignInForDisabledOrganizations",
+    "allowNoOrgSignInForDisabledOrganizations",
+  ),
 });
 
 export const mapSignUpSettingFromApi = (raw: TenantConfigApiDict): IGetSignUpSettingResponse => {
