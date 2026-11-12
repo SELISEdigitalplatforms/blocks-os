@@ -275,5 +275,70 @@ namespace XUnitTest.Integration
             log.RequestPath.Should().Be("/x");
             log.ParentSpanId.Should().Be("ps1");
         }
+
+        // ── Leftover reconciliation reads ────────────────────────────────────────
+
+        [Fact]
+        public async Task HasTracesInWindow_UsesTheSameBoundsAsTheArchiveRead()
+        {
+            var tenant = "rt" + Guid.NewGuid().ToString("N")[..10];
+            var day = new DateTime(2026, 10, 12, 0, 0, 0, DateTimeKind.Utc);
+            var repository = NewTraceRepository();
+
+            (await repository.HasTracesInWindowAsync(tenant, day, day.AddDays(1))).Should().BeFalse("the collection does not exist yet");
+
+            // The archive read takes (start, end]: a trace stamped exactly at the start belongs to the day before.
+            await SeedTraceAsync(tenant, "at-start", day);
+            (await repository.HasTracesInWindowAsync(tenant, day, day.AddDays(1))).Should().BeFalse();
+            (await repository.HasTracesInWindowAsync(tenant, day.AddDays(-1), day)).Should().BeTrue();
+
+            await SeedTraceAsync(tenant, "midday", day.AddHours(12));
+            (await repository.HasTracesInWindowAsync(tenant, day, day.AddDays(1))).Should().BeTrue();
+            (await repository.HasTracesInWindowAsync(tenant, day.AddDays(1), day.AddDays(2))).Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task HasTracesInWindow_WhenTheDatabaseIsUnreachable_Throws()
+        {
+            // "No" would make a partial archive look like the only copy and keep it.
+            var now = DateTime.UtcNow;
+            var act = async () => await UnreachableRepositories().Traces.HasTracesInWindowAsync("t1", now.AddDays(-1), now);
+
+            await act.Should().ThrowAsync<TimeoutException>();
+        }
+
+        [Fact]
+        public async Task HasServiceLogsInWindow_IsScopedToTheTenantAndTheWindow()
+        {
+            var service = "blocks-" + Guid.NewGuid().ToString("N")[..10];
+            var day = new DateTime(2026, 10, 12, 0, 0, 0, DateTimeKind.Utc);
+            var repository = NewLogRepository();
+
+            await SeedLogAsync(service, "tenant-1", "m", day.AddHours(6));
+
+            (await repository.HasServiceLogsInWindowAsync(service, "tenant-1", day, day.AddDays(1))).Should().BeTrue();
+            (await repository.HasServiceLogsInWindowAsync(service, "tenant-2", day, day.AddDays(1))).Should().BeFalse();
+            (await repository.HasServiceLogsInWindowAsync(service, "tenant-1", day.AddDays(1), day.AddDays(2))).Should().BeFalse();
+            (await repository.HasServiceLogsInWindowAsync("blocks-missing", "tenant-1", day, day.AddDays(1))).Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task GetArchivedServiceNames_ListsEachServiceOnce()
+        {
+            var collection = ArchiveCollectionNaming.Build("ra" + Guid.NewGuid().ToString("N")[..8],
+                new DateTime(2026, 10, 12), new DateTime(2026, 10, 13));
+            var archive = _fixture.DbContextProvider.GetDatabase(MongoIntegrationFixture.ConnectionString, "LogsArchive")
+                .GetCollection<StoredLog>(collection);
+            await archive.InsertManyAsync(
+            [
+                new StoredLog { ServiceName = "blocks-a", Message = "1" },
+                new StoredLog { ServiceName = "blocks-a", Message = "2" },
+                new StoredLog { ServiceName = "SB-b", Message = "3" }
+            ]);
+
+            var names = await NewLogRepository().GetArchivedServiceNamesAsync(collection);
+
+            names.Should().BeEquivalentTo(["blocks-a", "SB-b"]);
+        }
     }
 }

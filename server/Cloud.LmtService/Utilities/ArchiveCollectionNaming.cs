@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 
 namespace Cloud.LmtService.Utilities
 {
@@ -39,5 +40,24 @@ namespace Cloud.LmtService.Utilities
 
             return !string.IsNullOrWhiteSpace(tenantId);
         }
+
+        /// <summary>
+        /// Like <see cref="TryParse(string, out string, out string, out string)"/>, but also reads
+        /// the window the collection was archived for, as UTC midnights. Fails for a name whose
+        /// trailing segments are not dates, so such a collection is never mistaken for a backup.
+        /// </summary>
+        public static bool TryParseWindow(
+            string collectionName, out string tenantId, out DateTime startDate, out DateTime endDate)
+        {
+            startDate = endDate = default;
+
+            return TryParse(collectionName, out tenantId, out var startDateText, out var endDateText)
+                && TryParseDate(startDateText, out startDate)
+                && TryParseDate(endDateText, out endDate);
+        }
+
+        private static bool TryParseDate(string text, out DateTime date) =>
+            DateTime.TryParseExact(text, DateFormat, CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out date);
     }
 }

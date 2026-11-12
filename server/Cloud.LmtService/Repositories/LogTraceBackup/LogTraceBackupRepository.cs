@@ -170,6 +170,45 @@ namespace Cloud.LmtService.Repositories.LogTraceBackup
             }
         }
 
+        // Not caught: an unreadable history must stop the run. Read as "no jobs", it would make
+        // every day in the window look pending and start re-processing days already backed up.
+        public async Task<List<LogTraceBackupJob>> GetJobsForDaysAsync(DateTime firstDay, DateTime lastDay)
+        {
+            var filter = Builders<LogTraceBackupJob>.Filter.And(
+                Builders<LogTraceBackupJob>.Filter.Gte(x => x.DataDateFrom, firstDay),
+                Builders<LogTraceBackupJob>.Filter.Lt(x => x.DataDateFrom, lastDay.AddDays(1)));
+
+            var projection = Builders<LogTraceBackupJob>.Projection
+                .Include(x => x.DataDateFrom)
+                .Include(x => x.Status);
+
+            return await _rootDatabase.GetCollection<LogTraceBackupJob>(JobsCollection)
+                .Find(filter)
+                .Project<LogTraceBackupJob>(projection)
+                .ToListAsync();
+        }
+
+        // Not caught, like CreateJobAsync: the caller's run stops and the consumer logs it.
+        public async Task CreateSkippedJobAsync(DateTime dataDateFrom, DateTime dataDateTo, string reason)
+        {
+            var now = DateTime.UtcNow;
+            var job = new LogTraceBackupJob
+            {
+                RunId = Guid.NewGuid().ToString(),
+                Status = LogTraceBackupJobStatus.Skipped,
+                CurrentPhase = BackupPhase.Finalizing,
+                StartTime = now,
+                EndTime = now,
+                LastHeartbeatAt = now,
+                DataDateFrom = dataDateFrom,
+                DataDateTo = dataDateTo,
+                ErrorReason = reason
+            };
+
+            await _rootDatabase.GetCollection<LogTraceBackupJob>(JobsCollection)
+                .InsertOneAsync(job);
+        }
+
         // ── Blocks service log archiving — Phase 1 ───────────────────────────────
 
         public async Task CreateLogFileProgressAsync(string runId, string tenantId, string serviceName, string? traceId = null)

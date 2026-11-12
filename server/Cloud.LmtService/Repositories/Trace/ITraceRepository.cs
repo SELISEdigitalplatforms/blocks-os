@@ -19,6 +19,9 @@ namespace Cloud.LmtService.Repositories.Trace
         Task<long> DeleteTracesByCollectionAsync(TenantLogsRequest query, CancellationToken ct = default);
         Task ArchiveTracesAsync(List<StoredTrace> traces, TenantLogsRequest query);
 
+        /// <summary>True when the tenant's trace collection still holds a trace in the window (same bounds as the archive read).</summary>
+        Task<bool> HasTracesInWindowAsync(string tenantId, DateTime startDate, DateTime endDate, CancellationToken ct = default);
+
         // Archive DB methods
         Task<List<string>> GetArchiveCollectionsAsync();
         IAsyncEnumerable<List<StoredTrace>> StreamTracesFromArchiveCollectionAsync(string collectionName, int batchSize, CancellationToken ct = default);

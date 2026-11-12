@@ -456,6 +456,28 @@ namespace Cloud.LmtService.Repositories.Trace
         }
 
         /// <summary>
+        /// Tells the backup's leftover check whether a tenant's source window is still intact. Read
+        /// failures propagate: answering "no" would make a partial archive look like the only copy.
+        /// </summary>
+        public async Task<bool> HasTracesInWindowAsync(
+            string tenantId, DateTime startDate, DateTime endDate, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(tenantId))
+                return false;
+
+            var query = new TenantLogsRequest
+            {
+                ProjectKey = tenantId,
+                Filter = new TenantLogsRequestByFilter { StartDate = startDate, EndDate = endDate }
+            };
+
+            return await _database.GetCollection<BsonDocument>(tenantId)
+                .Find(BuildDateFilter(query))
+                .Limit(1)
+                .AnyAsync(ct);
+        }
+
+        /// <summary>
         /// Lists the archive collections awaiting upload.
         /// <para>
         /// Failures are not swallowed. This list drives the whole blob-upload phase, including the
