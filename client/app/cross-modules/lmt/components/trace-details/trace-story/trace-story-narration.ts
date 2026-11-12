@@ -5,6 +5,7 @@ const I18N_MODULE = "os.lmt";
 
 type Narration = { title: string; description: string };
 type Attributes = FlowStep["span"]["attributes"];
+type AttributeValue = string | number | undefined;
 
 type CacheOutcome = "hit" | "miss";
 
@@ -43,7 +44,7 @@ const WRITE_KEYS: Record<WriteAction, { plain: string; inCollection: string }> =
   },
 };
 
-const describeRead = (from: string, to: string, collection: unknown) =>
+const describeRead = (from: string, to: string, collection: AttributeValue) =>
   collection
     ? tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.LOOKS_UP_DATA_IN_COLLECTION_USING", {
         from,
@@ -56,7 +57,7 @@ const describeRead = (from: string, to: string, collection: unknown) =>
         to,
       });
 
-const describeWrite = (action: WriteAction, from: string, to: string, collection: unknown) =>
+const describeWrite = (action: WriteAction, from: string, to: string, collection: AttributeValue) =>
   collection
     ? tStatic(I18N_MODULE, WRITE_KEYS[action].inCollection, {
         from,
@@ -65,7 +66,7 @@ const describeWrite = (action: WriteAction, from: string, to: string, collection
       })
     : tStatic(I18N_MODULE, WRITE_KEYS[action].plain, { from, to });
 
-const describeRun = (operation: string, from: string, to: string, collection: unknown) =>
+const describeRun = (operation: string, from: string, to: string, collection: AttributeValue) =>
   collection
     ? tStatic(I18N_MODULE, "TRACE_STORY_NARRATION.ASKS_TO_RUN_ON_COLLECTION", {
         from,
