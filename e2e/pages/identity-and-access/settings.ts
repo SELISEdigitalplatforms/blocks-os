@@ -1,5 +1,5 @@
-import { expect, type Page } from "@playwright/test";
-import { openIam } from "../../support/os-helpers";
+import { expect, test, type Page } from "@playwright/test";
+import { openIam, openOsConsole } from "../../support/os-helpers";
 
 // The tab's Reset and Save sit together in the page header. Since 6e4164cf the Signup tab also
 // holds the Sign-in methods card with its own Save, so the header Save is found next to Reset.
@@ -334,4 +334,76 @@ export async function mobileTabsSwitchFlow(page: Page) {
       await page.setViewportSize(originalViewport);
     }
   }
+}
+
+// Ticket #749 (spec §10.1): the disabled-organization sign-in toggle sits directly below the
+// auto-join card (H1). With multi-org off it is disabled and its tooltip says why (C1). The
+// spec's runner assumes multi-org off; when the shared project already has multi-org on, the
+// enabled branch checks H3 (a change marks the form dirty) and H4 (the save body carries the
+// value) with the save answered in the browser, so IAM state never changes.
+export async function disabledOrgSignInToggleFlow(page: Page) {
+  const label = "Allow sign-in when all of a user's organizations are disabled";
+  const multiOrgSwitch = page.getByLabel("Multi-Organization Environment");
+  const toggle = page.getByRole("switch", { name: label });
+  await expect(toggle).toBeVisible({ timeout: 10_000 });
+
+  // H1: multi-org, then auto-join, then this toggle.
+  const switchLabels = await page
+    .getByRole("switch")
+    .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("aria-label")));
+  const autoJoinIndex = switchLabels.indexOf("Add new sign-ups to an organization");
+  expect(autoJoinIndex).toBeGreaterThan(switchLabels.indexOf("Multi-Organization Environment"));
+  expect(switchLabels[autoJoinIndex + 1]).toBe(label);
+
+  const multiOrgOn = await multiOrgSwitch.isChecked();
+  test.info().annotations.push({
+    type: "749-disabled-org-toggle",
+    description: multiOrgOn
+      ? "multi-org on: H3, H4 (save answered in the browser)"
+      : "multi-org off: C1",
+  });
+  if (!multiOrgOn) {
+    // C1: disabled, with the reason on hover.
+    await expect(toggle).toBeDisabled();
+    await toggle.locator("xpath=..").hover();
+    await expect(page.getByRole("tooltip")).toHaveText("Turn on multi-organization first.", {
+      timeout: 5_000,
+    });
+    return;
+  }
+
+  // Multi-org is on for this project: H3 and H4 with a browser-answered save.
+  await expect(toggle).toBeEnabled();
+  const wasChecked = await toggle.isChecked();
+  await toggle.click();
+  await expect(toggle).toBeChecked({ checked: !wasChecked });
+  const saveButton = tabHeaderSaveButton(page);
+  await expect(saveButton).toBeEnabled({ timeout: 10_000 });
+
+  let savedBody: Record<string, unknown> | undefined;
+  await page.route("**/organizations/config", async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    savedBody = route.request().postDataJSON() as Record<string, unknown>;
+    await route.fulfill({ status: 200, json: { isSuccess: true, errors: null } });
+  });
+  try {
+    await saveButton.click();
+    await expect(
+      page.getByText("Organization configuration updated successfully", { exact: true }),
+    ).toBeVisible({ timeout: 15_000 });
+    expect(savedBody).toMatchObject({ allowNoOrgSignInForDisabledOrganizations: !wasChecked });
+  } finally {
+    await page.unroute("**/organizations/config");
+  }
+}
+
+// Ticket #749 (spec §10.1 step 4): after login the console still renders, without the
+// disabled-organization message (H9, C6).
+export async function consoleWithoutDisabledOrgMessageFlow(page: Page) {
+  await page.goto(`${new URL(page.url()).origin}/app/console`);
+  await openOsConsole(page);
+  await expect(page.getByText("Organization disabled", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByText("Your organization is disabled. Please contact your administrator or support."),
+  ).toHaveCount(0);
 }
