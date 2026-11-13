@@ -122,8 +122,9 @@ export const isResendRequest = (request: Request) =>
   request.method() === "POST" && WEBHOOK_RESEND.test(request.url());
 
 export const WEBHOOKS_LIST_PATH = /\/secret-management\/webhooks\/?$/;
-export const webhookDetailPath = (id: string) =>
-  new RegExp(`/secret-management/webhooks/${encodeURIComponent(id)}/?$`);
+/** URL predicate for a webhook's detail page (no RegExp built from the id). */
+export const webhookDetailPath = (id: string) => (url: URL) =>
+  url.pathname.replace(/\/$/, "").endsWith(`/secret-management/webhooks/${encodeURIComponent(id)}`);
 
 // ---------------------------------------------------------------- real API helper
 
@@ -347,9 +348,7 @@ export const toast = (page: Page, text: string) => page.getByText(text, { exact:
 
 /** A fact cell's value, found by its label in the header card's facts strip. */
 export const factLabel = (page: Page, label: string) =>
-  headerCard(page)
-    .locator("p")
-    .filter({ hasText: new RegExp(`^${label}$`) });
+  headerCard(page).locator(`p:text-is(${JSON.stringify(label)})`);
 export const factValue = (page: Page, label: string) =>
   factLabel(page, label).locator("xpath=following-sibling::div[1]");
 
