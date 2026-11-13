@@ -70,7 +70,8 @@ namespace Cloud.LmtService.Repositories.Trace
 
             if (!string.IsNullOrWhiteSpace(query.Search))
             {
-                var regex = new BsonRegularExpression(query.Search, "i");
+                // Plain-text match, as in LogRepository (ZAP 40018, weekend run 2026-11-13).
+                var regex = new BsonRegularExpression(System.Text.RegularExpressions.Regex.Escape(query.Search), "i");
 
                 filter &= Builders<BsonDocument>.Filter.Or(
                           Builders<BsonDocument>.Filter.Regex(OperationNameField, regex),
@@ -172,7 +173,8 @@ namespace Cloud.LmtService.Repositories.Trace
 
             if (!string.IsNullOrWhiteSpace(operationSearch))
             {
-                var regex = new BsonRegularExpression(operationSearch, "i");
+                // Plain-text match, as in LogRepository (ZAP 40018, weekend run 2026-11-13).
+                var regex = new BsonRegularExpression(System.Text.RegularExpressions.Regex.Escape(operationSearch), "i");
                 filter &= Builders<BsonDocument>.Filter.Regex(OperationNameField, regex);
             }
 
