@@ -102,6 +102,12 @@ export const OS_FEATURES = [
     enabled: true,
     spec: "tests/02-secrets-and-configs/11-storage-flow.spec.ts",
   },
+  {
+    id: "webhook-details",
+    name: "Secrets & Configs — Webhook detail page (#748)",
+    enabled: true,
+    spec: "tests/02-secrets-and-configs/16-webhook-details-748.spec.ts",
+  },
 
   {
     id: "email-management",
@@ -146,6 +152,12 @@ export const OS_FEATURES = [
     name: "Identity & Access — Users & Organizations",
     enabled: true,
     spec: "tests/04-identity-and-access/02-users-flow.spec.ts",
+  },
+  {
+    id: "user-status",
+    name: "Identity & Access — User ⋮ menu: deactivate and reactivate (#760)",
+    enabled: true,
+    spec: "tests/04-identity-and-access/09-user-status-actions.spec.ts",
   },
   {
     id: "organizations",
