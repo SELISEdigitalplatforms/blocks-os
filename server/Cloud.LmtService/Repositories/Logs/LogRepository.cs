@@ -110,7 +110,9 @@ namespace Cloud.LmtService.Repositories.Logs
 
             if (!string.IsNullOrWhiteSpace(query.Search))
             {
-                var regex = new BsonRegularExpression(query.Search, "i");
+                // Plain-text match: the raw search as a pattern let "(" fail the query with a 500 and
+                // allowed regex injection (ZAP 40018, weekend run 2026-11-13).
+                var regex = new BsonRegularExpression(System.Text.RegularExpressions.Regex.Escape(query.Search), "i");
                 filter &= Builders<BsonDocument>.Filter.Regex("Message", regex);
             }
 
@@ -155,7 +157,9 @@ namespace Cloud.LmtService.Repositories.Logs
 
             if (!string.IsNullOrWhiteSpace(request.Search))
             {
-                var regex = new BsonRegularExpression(request.Search, "i");
+                // Plain-text match: the raw search as a pattern let "(" fail the query with a 500 and
+                // allowed regex injection (ZAP 40018, weekend run 2026-11-13).
+                var regex = new BsonRegularExpression(System.Text.RegularExpressions.Regex.Escape(request.Search), "i");
                 filter &= Builders<BsonDocument>.Filter.Regex("Message", regex);
             }
 
