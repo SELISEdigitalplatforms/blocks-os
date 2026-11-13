@@ -13,6 +13,8 @@ import {
   confirmMultiOrgFlow,
   mobileTabsSwitchFlow,
   signupAutoJoinFlow,
+  disabledOrgSignInToggleFlow,
+  consoleWithoutDisabledOrgMessageFlow,
 } from "../../pages/identity-and-access/settings";
 
 // Settings flow: the default Auth tab, strict numeric validation, a valid
@@ -71,6 +73,10 @@ test.describe("flows", () => {
       await cancelMultiOrgConfirmationFlow(page);
     });
 
+    await test.step("Disabled-organization sign-in toggle (#749 H1, C1; H3, H4 when multi-org is on)", async () => {
+      await disabledOrgSignInToggleFlow(page);
+    });
+
     await test.step("Confirming enables multi-org and reveals the Creation Workflows card", async () => {
       await confirmMultiOrgFlow(page);
     });
@@ -81,6 +87,10 @@ test.describe("flows", () => {
 
     await test.step("Switch tabs via the mobile Select dropdown", async () => {
       await mobileTabsSwitchFlow(page);
+    });
+
+    await test.step("Console renders after login without the disabled-organization message (#749 H9, C6)", async () => {
+      await consoleWithoutDisabledOrgMessageFlow(page);
     });
   });
 });
