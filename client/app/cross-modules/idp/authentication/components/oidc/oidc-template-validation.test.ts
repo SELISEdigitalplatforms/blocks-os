@@ -9,6 +9,8 @@ import {
   getThemeFields,
   getUrlMessage,
   isRgbaColor,
+  labelOidcTemplateErrors,
+  normalizeTemplateErrorKey,
   validateOidcUiTemplate,
 } from "./oidc-template-validation";
 
@@ -55,29 +57,36 @@ describe("validateOidcUiTemplate", () => {
     expect(isRgbaColor(value)).toBe(false);
   });
 
-  it("treats the SSO separator as optional on both pages that offer SSO", () => {
+  it("requires the SSO separator on both pages that offer SSO, as blocks-iam does", () => {
     for (const pageKey of ["login", "signup"] as const) {
       const field = getPageFields()[pageKey].find(({ key }) => key === "ssoSeparatorText");
-      expect(field?.optional).toBe(true);
-      expect(field?.placeholder).toBe("or");
+      expect(field?.optional).toBeUndefined();
+      // No grey "or" hint: on an empty required field it read as a filled-in value.
+      expect(field?.placeholder).toBeUndefined();
       expect(DEFAULT_OIDC_UI_TEMPLATE.pages[pageKey].ssoSeparatorText).toBe("or");
-
-      const draft = template();
-      draft.pages[pageKey].ssoSeparatorText = null;
-      expect(validateOidcUiTemplate(draft)[`pages.${pageKey}.ssoSeparatorText`]).toBeUndefined();
     }
   });
 
-  it.each([" ", "", "  ", "or", "x".repeat(300)])(
-    "accepts %j as an SSO separator - any divider the tenant wants is legitimate",
+  it.each([null, "", " ", "  ", "x".repeat(201)])(
+    "rejects %j as an SSO separator - blocks-iam would refuse the save",
     (value) => {
       for (const pageKey of ["login", "signup"] as const) {
         const draft = template();
         draft.pages[pageKey].ssoSeparatorText = value;
-        expect(validateOidcUiTemplate(draft)[`pages.${pageKey}.ssoSeparatorText`]).toBeUndefined();
+        expect(validateOidcUiTemplate(draft)[`pages.${pageKey}.ssoSeparatorText`]).toBe(
+          getTextMessage(),
+        );
       }
     },
   );
+
+  it.each(["or", "OR", "x".repeat(200)])("accepts %j as an SSO separator", (value) => {
+    for (const pageKey of ["login", "signup"] as const) {
+      const draft = template();
+      draft.pages[pageKey].ssoSeparatorText = value;
+      expect(validateOidcUiTemplate(draft)).toEqual({});
+    }
+  });
 
   it("lets a tenant point the consent links at its own terms and privacy pages", () => {
     const draft = template();
@@ -156,5 +165,74 @@ describe("validateOidcUiTemplate", () => {
     const errors = validateOidcUiTemplate(draft);
     expect(errors["branding.logoUrlLight"]).toBeUndefined();
     expect(errors["branding.logoUrlDark"]).toBe("must be an absolute http or https URL");
+  });
+});
+
+describe("labelOidcTemplateErrors", () => {
+  it("names the page and field in front of each blocks-iam error, keyed as IAM sends them", () => {
+    expect(
+      labelOidcTemplateErrors({
+        "Pages.Signup.EmailSentSubtitle": "must be between 1 and 500 characters",
+        "Pages.Login.SsoSeparatorText": "must be between 1 and 200 characters",
+        "Pages.Shared.HelpPrompt": "must be between 1 and 200 characters",
+        "Branding.BrandName": "must be between 1 and 80 characters",
+        "Theme.Dark.BorderStrong": "must be a valid hex color",
+        "Pages.Activation": "is required",
+      }),
+    ).toEqual({
+      "Pages.Signup.EmailSentSubtitle":
+        "Signup · Email sent subtitle: must be between 1 and 500 characters",
+      "Pages.Login.SsoSeparatorText": "Login · SSO separator: must be between 1 and 200 characters",
+      "Pages.Shared.HelpPrompt": "Help prompt: must be between 1 and 200 characters",
+      "Branding.BrandName": "Brand name: must be between 1 and 80 characters",
+      "Theme.Dark.BorderStrong": "Dark · Strong border: must be a valid hex color",
+      "Pages.Activation": "Activation: is required",
+    });
+  });
+
+  it("joins a field's message list and leaves keys it cannot place untouched", () => {
+    expect(
+      labelOidcTemplateErrors({
+        "pages.mfa.heading": ["first", "second"],
+        Template: "Failed to save OIDC UI template.",
+        Reasons: ["CODE_A", "CODE_B"],
+      }),
+    ).toEqual({
+      "pages.mfa.heading": "MFA · Heading: first, second",
+      Template: "Failed to save OIDC UI template.",
+      Reasons: ["CODE_A", "CODE_B"],
+    });
+  });
+
+  it("labels every field the editor validates", () => {
+    const draft = template();
+    for (const { key: pageKey } of getPageOptions()) {
+      const page = draft.pages[pageKey] as unknown as Record<string, string | null>;
+      for (const { key } of getPageFields()[pageKey]) page[key] = "x".repeat(501);
+    }
+    for (const mode of ["light", "dark"] as const) {
+      for (const { key } of getThemeFields()) draft.theme[mode][key] = "nope";
+    }
+    draft.pages.shared.footerText = "";
+    draft.pages.shared.helpPrompt = "";
+    draft.pages.shared.supportLinkText = "";
+    draft.branding.brandName = "";
+    draft.branding.logoUrlLight = "/relative.png";
+    draft.branding.logoUrlDark = "/relative.png";
+
+    const errors = validateOidcUiTemplate(draft);
+    const labelled = labelOidcTemplateErrors(errors);
+    expect(Object.keys(errors).length).toBeGreaterThan(100);
+    for (const [key, message] of Object.entries(errors)) {
+      const text = String(labelled[key]);
+      expect(text, key).not.toBe(message);
+      expect(text.endsWith(`: ${message}`), key).toBe(true);
+    }
+  });
+
+  it("matches keys on their letters only, whatever the casing or separators", () => {
+    expect(normalizeTemplateErrorKey("Pages.Signup.EmailSentSubtitle")).toBe(
+      normalizeTemplateErrorKey("pages.signup.emailSentSubtitle"),
+    );
   });
 });
