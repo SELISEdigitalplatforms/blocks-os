@@ -1,9 +1,90 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_OIDC_UI_TEMPLATE,
+  NULLABLE_PAGE_FIELD_PATHS,
   normalizeOidcUiTemplate,
   resolveOidcLogoUrl,
 } from "./oidc-template-defaults";
+import { getPageFields, validateOidcUiTemplate } from "./oidc-template-validation";
+
+/**
+ * A template saved before blocks-iam's 2026-09-10 schema change, as the management GET
+ * serves it today: every field added since comes back as null (IAM serializes unset
+ * string? properties), while the fields the admin did save keep their values.
+ */
+const preSeptemberTemplate = () => {
+  const template = structuredClone(DEFAULT_OIDC_UI_TEMPLATE) as unknown as {
+    branding: Record<string, unknown>;
+    theme: Record<string, unknown>;
+    pages: Record<string, Record<string, unknown>>;
+  };
+  template.branding.brandName = "Acme";
+  template.pages.login.heading = "Welcome to Acme";
+  template.pages.login.ssoSeparatorText = null;
+  const addedLater: Record<string, string[]> = {
+    signup: [
+      "organizationNameLabel",
+      "creatingButton",
+      "termsConjunction",
+      "ssoSeparatorText",
+      "emailSentTitle",
+      "emailSentSubtitle",
+      "resendPromptTitle",
+      "resendPromptSubtitle",
+      "resendButton",
+      "loginSentPrompt",
+      "loginSentLink",
+    ],
+    forgotPassword: [
+      "introText",
+      "backToLoginButton",
+      "successTitle",
+      "successSubtitle",
+      "resendPromptTitle",
+      "resendPromptSubtitle",
+      "resendButton",
+      "loginPrompt",
+      "loginLink",
+    ],
+    resetPassword: [
+      "resettingButton",
+      "missingCodeMessage",
+      "requestNewLinkButton",
+      "backToLoginButton",
+      "readyTitle",
+      "readySubtitle",
+      "loginButton",
+    ],
+    activation: [
+      "firstNameLabel",
+      "lastNameLabel",
+      "activatingButton",
+      "invalidHeading",
+      "invalidMessage",
+      "expiredHeading",
+      "expiredMessage",
+      "alreadyActiveHeading",
+      "alreadyActiveMessage",
+      "resendButton",
+      "resendSuccessMessage",
+      "resendFailureMessage",
+      "autoConfirmCaptchaText",
+      "autoConfirmProgressText",
+      "autoActivatingLabel",
+      "readyTitle",
+      "readyWithPasswordSubtitle",
+      "readySubtitle",
+      "loginButton",
+      "backToLoginButton",
+    ],
+    accountSelector: ["bodyText"],
+    shared: ["helpPrompt", "supportLinkText"],
+  };
+  for (const [page, fields] of Object.entries(addedLater)) {
+    for (const field of fields) template.pages[page][field] = null;
+  }
+  return template;
+};
 
 describe("resolveOidcLogoUrl", () => {
   it("H3: falls back to the dark logo when only dark has been set and the mode is light", () => {
@@ -115,17 +196,78 @@ describe("normalizeOidcUiTemplate", () => {
       }
     });
 
-    it("C3: leaves other fields' stored nulls untouched", () => {
+    it("C3: keeps a stored null in the optional fields an admin can clear", () => {
       const template = structuredClone(DEFAULT_OIDC_UI_TEMPLATE);
       template.pages.accountSelector.subheading = null;
       template.pages.mfa.resendButton = null;
-      template.pages.signup.ssoSeparatorText = null;
+      template.pages.signup.termsLinkUrl = null;
+      template.pages.signup.privacyLinkUrl = null;
 
       const normalized = normalizeOidcUiTemplate(template);
 
       expect(normalized.pages.accountSelector.subheading).toBeNull();
       expect(normalized.pages.mfa.resendButton).toBeNull();
-      expect(normalized.pages.signup.ssoSeparatorText).toBeNull();
+      expect(normalized.pages.signup.termsLinkUrl).toBeNull();
+      expect(normalized.pages.signup.privacyLinkUrl).toBeNull();
     });
+  });
+
+  describe("templates saved before blocks-iam added fields", () => {
+    it("fills every field the stored template predates and passes the save validation", () => {
+      const legacy = preSeptemberTemplate();
+      expect(validateOidcUiTemplate(legacy as never)).not.toEqual({});
+
+      const normalized = normalizeOidcUiTemplate(legacy as never);
+
+      expect(validateOidcUiTemplate(normalized)).toEqual({});
+      expect(normalized.pages.login.ssoSeparatorText).toBe("or");
+      expect(normalized.pages.signup.emailSentSubtitle).toBe(
+        DEFAULT_OIDC_UI_TEMPLATE.pages.signup.emailSentSubtitle,
+      );
+      expect(normalized.pages.activation.autoConfirmCaptchaText).toBe(
+        DEFAULT_OIDC_UI_TEMPLATE.pages.activation.autoConfirmCaptchaText,
+      );
+      expect(normalized.pages.shared.helpPrompt).toBe(
+        DEFAULT_OIDC_UI_TEMPLATE.pages.shared.helpPrompt,
+      );
+    });
+
+    it("keeps everything the admin did save", () => {
+      const normalized = normalizeOidcUiTemplate(preSeptemberTemplate() as never);
+
+      expect(normalized.branding.brandName).toBe("Acme");
+      expect(normalized.pages.login.heading).toBe("Welcome to Acme");
+    });
+
+    it("fills a whole section that is null, such as a palette from before the light/dark split", () => {
+      const legacy = structuredClone(DEFAULT_OIDC_UI_TEMPLATE) as unknown as {
+        theme: Record<string, unknown>;
+        pages: Record<string, unknown>;
+      };
+      legacy.theme.light = null;
+      legacy.pages.activation = null;
+
+      const normalized = normalizeOidcUiTemplate(legacy as never);
+
+      expect(normalized.theme.light).toEqual(DEFAULT_OIDC_UI_TEMPLATE.theme.light);
+      expect(normalized.pages.activation).toEqual(DEFAULT_OIDC_UI_TEMPLATE.pages.activation);
+      expect(validateOidcUiTemplate(normalized)).toEqual({});
+    });
+
+    it("never fills a stored blank string - only a missing or null field is a gap", () => {
+      const template = structuredClone(DEFAULT_OIDC_UI_TEMPLATE);
+      template.pages.login.heading = "";
+
+      expect(normalizeOidcUiTemplate(template).pages.login.heading).toBe("");
+    });
+  });
+
+  it("keeps nulls for exactly the page fields the editor treats as optional", () => {
+    const optional = Object.entries(getPageFields()).flatMap(([page, fields]) =>
+      fields.filter((field) => field.optional).map(({ key }) => `pages.${page}.${key}`),
+    );
+
+    const byName = (a: string, b: string) => a.localeCompare(b);
+    expect([...NULLABLE_PAGE_FIELD_PATHS].sort(byName)).toEqual(optional.sort(byName));
   });
 });

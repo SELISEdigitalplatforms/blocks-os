@@ -82,6 +82,7 @@ vi.mock("./oidc-template-preview", () => ({
 
 import { OidcBrandingForm } from "./oidc-branding-form";
 import { DEFAULT_OIDC_UI_TEMPLATE } from "./oidc-template-defaults";
+import { validateOidcUiTemplate } from "./oidc-template-validation";
 
 type HeaderActions = {
   onSave: () => Promise<void>;
@@ -426,28 +427,34 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
     expect(payload.pages.accountSelector.subheading).toBeNull();
   });
 
-  it('lets a tenant without SSO clear the separator, keeping Save available with an "or" hint', async () => {
+  it("requires the SSO separator, so the editor never sends a save blocks-iam would refuse", async () => {
     const user = userEvent.setup();
     await renderForm();
     await user.click(screen.getByRole("tab", { name: "Pages" }));
 
-    const separator = screen.getByLabelText("SSO separator");
-    expect(separator.getAttribute("placeholder")).toBe("or");
-    // Optional fields carry no required marker on their label.
-    expect(separator.closest("div")?.textContent).not.toContain("*");
+    const separator = screen.getByLabelText(/SSO separator/);
+    // No grey "or" hint: on an empty required field it read as a filled-in value.
+    expect(separator.getAttribute("placeholder")).toBeNull();
+    expect(separator.closest("div")?.textContent).toContain("*");
 
     await user.clear(separator);
-    expect(latestActions().isValid).toBe(true);
-    expect(screen.queryByText(/SSO separator must be between/)).toBeNull();
-
-    // A lone space is a real choice - a divider with no word in it - not an error.
-    await user.type(separator, " ");
-    expect(latestActions().isValid).toBe(true);
-    expect(screen.queryByText(/SSO separator must be between/)).toBeNull();
-
-    await user.clear(separator);
+    expect(screen.getByText("SSO separator must be between 1 and 200 characters")).toBeTruthy();
+    expect(latestActions().isValid).toBe(false);
+    expect(screen.getByRole("button", { name: "Save Signup page" })).toHaveProperty(
+      "disabled",
+      true,
+    );
     await act(async () => latestActions().onSave());
-    expect(h.saveTemplate.mock.calls[0][0].pages.signup.ssoSeparatorText).toBeNull();
+    expect(h.saveTemplate).not.toHaveBeenCalled();
+
+    await user.type(separator, " ");
+    expect(latestActions().isValid).toBe(false);
+
+    await user.clear(separator);
+    await user.type(separator, "or");
+    expect(latestActions().isValid).toBe(true);
+    await act(async () => latestActions().onSave());
+    expect(h.saveTemplate.mock.calls[0][0].pages.signup.ssoSeparatorText).toBe("or");
   });
 
   describe("per-page Save", () => {
@@ -566,6 +573,86 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
       expect(screen.getByLabelText(/Heading/)).toHaveProperty(
         "value",
         `${DEFAULT_OIDC_UI_TEMPLATE.pages.signup.heading} updated`,
+      );
+    });
+
+    it("names the page and field of every server error in the toast, not just the message", async () => {
+      h.saveTemplate.mockResolvedValue({
+        isSuccess: false,
+        errors: {
+          "Pages.Activation.InvalidMessage": "must be between 1 and 500 characters",
+          "Pages.Signup.Heading": "server signup error",
+        },
+      });
+      const user = userEvent.setup();
+      await renderForm();
+      await user.click(screen.getByRole("tab", { name: "Pages" }));
+      await user.type(screen.getByLabelText(/Heading/), " updated");
+      await user.click(screen.getByRole("button", { name: "Save Signup page" }));
+
+      await waitFor(() =>
+        expect(h.showErrorToast).toHaveBeenCalledWith({
+          errors: {
+            "Pages.Activation.InvalidMessage":
+              "Activation · Invalid link message: must be between 1 and 500 characters",
+            "Pages.Signup.Heading": "Signup · Heading: server signup error",
+          },
+        }),
+      );
+      // The error beside the field keeps its short, in-place form.
+      expect(screen.getByText("Heading server signup error")).toBeTruthy();
+    });
+  });
+
+  describe("a template saved before blocks-iam added its newer fields", () => {
+    // What the management GET serves for one today: every later field arrives as null.
+    const legacyTemplate = () => {
+      const template = structuredClone(DEFAULT_OIDC_UI_TEMPLATE) as unknown as {
+        pages: Record<string, Record<string, unknown>>;
+      };
+      template.pages.login.ssoSeparatorText = null;
+      template.pages.signup.ssoSeparatorText = null;
+      template.pages.signup.emailSentSubtitle = null;
+      template.pages.forgotPassword.introText = null;
+      template.pages.resetPassword.missingCodeMessage = null;
+      template.pages.activation.invalidMessage = null;
+      template.pages.accountSelector.bodyText = null;
+      template.pages.shared.helpPrompt = null;
+      template.pages.shared.supportLinkText = null;
+      return template;
+    };
+
+    beforeEach(() => {
+      h.useGetOidcTemplate.mockReturnValue({
+        data: legacyTemplate(),
+        isLoading: false,
+        isError: false,
+      });
+    });
+
+    it("loads complete and valid, with nothing marked unsaved", async () => {
+      await renderForm();
+      expect(latestActions().isValid).toBe(true);
+      expect(latestActions().isDirty).toBe(false);
+    });
+
+    it("saves a single page with a complete template, leaving blocks-iam nothing to reject", async () => {
+      const user = userEvent.setup();
+      await renderForm();
+      await user.click(screen.getByRole("tab", { name: "Pages" }));
+      await user.click(screen.getByRole("tab", { name: "Login" }));
+      await user.type(screen.getByLabelText(/Heading/), " today");
+      await user.click(screen.getByRole("button", { name: "Save Login page" }));
+
+      await waitFor(() => expect(h.saveTemplate).toHaveBeenCalledTimes(1));
+      const payload = h.saveTemplate.mock.calls[0][0];
+      expect(validateOidcUiTemplate(payload)).toEqual({});
+      expect(payload.pages.login.ssoSeparatorText).toBe("or");
+      expect(payload.pages.signup.emailSentSubtitle).toBe(
+        DEFAULT_OIDC_UI_TEMPLATE.pages.signup.emailSentSubtitle,
+      );
+      expect(payload.pages.shared.helpPrompt).toBe(
+        DEFAULT_OIDC_UI_TEMPLATE.pages.shared.helpPrompt,
       );
     });
   });
@@ -1048,7 +1135,7 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
       await act(async () => latestActions().onSave());
 
       expect(h.showErrorToast).toHaveBeenCalledWith({
-        errors: { "Branding.BrandName": "server brand error" },
+        errors: { "Branding.BrandName": "Brand name: server brand error" },
       });
       expect(animationSwitch().getAttribute("aria-checked")).toBe("false");
       expect(latestActions().isDirty).toBe(true);

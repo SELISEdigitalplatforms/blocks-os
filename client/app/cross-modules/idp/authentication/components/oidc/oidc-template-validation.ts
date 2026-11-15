@@ -9,6 +9,7 @@ const KEY_FIELD_EMAIL_LABEL = "OIDC_TEMPLATE_VALIDATION.FIELD_EMAIL_LABEL";
 const KEY_FIELD_HEADING = "OIDC_TEMPLATE_VALIDATION.FIELD_HEADING";
 const KEY_FIELD_CREDENTIAL_LABEL = "OIDC_TEMPLATE_VALIDATION.FIELD_PASSWORD_LABEL";
 const KEY_FIELD_RESEND_BUTTON = "OIDC_TEMPLATE_VALIDATION.FIELD_RESEND_BUTTON";
+const KEY_FIELD_SSO_SEPARATOR = "OIDC_TEMPLATE_VALIDATION.FIELD_SSO_SEPARATOR";
 const KEY_FIELD_SUBMIT_BUTTON = "OIDC_TEMPLATE_VALIDATION.FIELD_SUBMIT_BUTTON";
 const KEY_FIELD_SUCCESS_SUBTITLE = "OIDC_TEMPLATE_VALIDATION.FIELD_SUCCESS_SUBTITLE";
 const KEY_FIELD_SUCCESS_TITLE = "OIDC_TEMPLATE_VALIDATION.FIELD_SUCCESS_TITLE";
@@ -136,12 +137,8 @@ type PageField = {
   optional?: boolean;
   multiline?: boolean;
   placeholder?: string;
-  /**
-   * "url" swaps the 1-200 character rule for an absolute http/https URL check.
-   * "free" skips validation entirely - for copy where any value is legitimate,
-   * a single space included (a blank-looking divider is a real choice).
-   */
-  type?: "url" | "free";
+  /** "url" swaps the 1-200 character rule for an absolute http/https URL check. */
+  type?: "url";
 };
 
 export const getPageFields = (): Record<OidcPageKey, PageField[]> => ({
@@ -171,13 +168,8 @@ export const getPageFields = (): Record<OidcPageKey, PageField[]> => ({
       key: "signupLink",
       label: tStatic(I18N_MODULE, "OIDC_TEMPLATE_VALIDATION.FIELD_SIGNUP_LINK"),
     },
-    {
-      key: "ssoSeparatorText",
-      label: tStatic(I18N_MODULE, "OIDC_TEMPLATE_VALIDATION.FIELD_SSO_SEPARATOR"),
-      optional: true,
-      type: "free",
-      placeholder: tStatic(I18N_MODULE, "OIDC_TEMPLATE_VALIDATION.PLACEHOLDER_OR"),
-    },
+    // Required: blocks-iam rejects a blank separator, so the editor must not accept one.
+    { key: "ssoSeparatorText", label: tStatic(I18N_MODULE, KEY_FIELD_SSO_SEPARATOR) },
     {
       key: "activationErrorTitle",
       label: tStatic(I18N_MODULE, "OIDC_TEMPLATE_VALIDATION.FIELD_ACTIVATION_ERROR_TITLE"),
@@ -260,13 +252,7 @@ export const getPageFields = (): Record<OidcPageKey, PageField[]> => ({
       key: "loginLink",
       label: tStatic(I18N_MODULE, "OIDC_TEMPLATE_VALIDATION.FIELD_LOGIN_LINK"),
     },
-    {
-      key: "ssoSeparatorText",
-      label: tStatic(I18N_MODULE, "OIDC_TEMPLATE_VALIDATION.FIELD_SSO_SEPARATOR"),
-      optional: true,
-      type: "free",
-      placeholder: tStatic(I18N_MODULE, "OIDC_TEMPLATE_VALIDATION.PLACEHOLDER_OR"),
-    },
+    { key: "ssoSeparatorText", label: tStatic(I18N_MODULE, KEY_FIELD_SSO_SEPARATOR) },
     {
       key: "successTitle",
       label: tStatic(I18N_MODULE, KEY_FIELD_SUCCESS_TITLE),
@@ -589,7 +575,6 @@ export const validateOidcUiTemplate = (template: IOidcUiTemplate) => {
   getPageOptions().forEach(({ key: pageKey }) => {
     const page = template.pages[pageKey] as unknown as Record<string, string | null>;
     getPageFields()[pageKey].forEach(({ key, optional, type }) => {
-      if (type === "free") return;
       const value = page[key];
       if (type === "url") {
         if (optional && value === null) return;
@@ -605,4 +590,67 @@ export const validateOidcUiTemplate = (template: IOidcUiTemplate) => {
     if (!validText(template.pages.shared[key])) errors[`pages.shared.${key}`] = getTextMessage();
   });
   return errors;
+};
+
+/** Compares an error key by its letters only, so "Pages.Signup.Heading" matches "pages.signup.heading". */
+export const normalizeTemplateErrorKey = (key: string) => key.toLowerCase().replace(/[^a-z]/g, "");
+
+const inSection = (section: string, field: string) =>
+  tStatic(I18N_MODULE, "OIDC_TEMPLATE_VALIDATION.ERROR_FIELD_IN_SECTION", { section, field });
+
+const getTemplateErrorLabels = (): Map<string, string> => {
+  const labels = new Map<string, string>();
+  const add = (path: string, label: string) => labels.set(normalizeTemplateErrorKey(path), label);
+
+  add("branding.brandName", tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.BRAND_NAME"));
+  add("branding.logoUrlLight", tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.LOGO_LIGHT"));
+  add("branding.logoUrlDark", tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.LOGO_DARK"));
+
+  const modes = [
+    ["light", tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.LIGHT")],
+    ["dark", tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.DARK")],
+  ] as const;
+  const themeFields = getThemeFields();
+  modes.forEach(([mode, modeLabel]) => {
+    add(`theme.${mode}`, modeLabel);
+    themeFields.forEach(({ key, label }) =>
+      add(`theme.${mode}.${key}`, inSection(modeLabel, label)),
+    );
+  });
+
+  const pageFields = getPageFields();
+  getPageOptions().forEach(({ key: pageKey, label: pageLabel }) => {
+    add(`pages.${pageKey}`, pageLabel);
+    pageFields[pageKey].forEach(({ key, label }) =>
+      add(`pages.${pageKey}.${key}`, inSection(pageLabel, label)),
+    );
+  });
+
+  add("pages.shared.footerText", tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.FOOTER"));
+  add("pages.shared.helpPrompt", tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.SHARED_HELP_PROMPT"));
+  add(
+    "pages.shared.supportLinkText",
+    tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.SHARED_SUPPORT_LINK_TEXT"),
+  );
+  return labels;
+};
+
+/**
+ * Names the field in front of each blocks-iam save error. IAM keys its errors by property
+ * path ("Pages.Signup.EmailSentSubtitle") and its messages carry no field name, so without
+ * this a rejected template reads as a list of identical "must be between..." lines. A key
+ * with no known field (e.g. "Template") keeps its value untouched.
+ */
+export const labelOidcTemplateErrors = (
+  errors: Record<string, string | string[]>,
+): Record<string, string | string[]> => {
+  const labels = getTemplateErrorLabels();
+  return Object.fromEntries(
+    Object.entries(errors).map(([key, value]) => {
+      const field = labels.get(normalizeTemplateErrorKey(key));
+      if (!field) return [key, value];
+      const error = Array.isArray(value) ? value.join(", ") : value;
+      return [key, tStatic(I18N_MODULE, "OIDC_TEMPLATE_VALIDATION.SERVER_ERROR", { field, error })];
+    }),
+  );
 };

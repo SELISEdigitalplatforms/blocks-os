@@ -48,6 +48,8 @@ import {
   getPageFields,
   getPageOptions,
   getThemeFields,
+  labelOidcTemplateErrors,
+  normalizeTemplateErrorKey as normalizeField,
   type OidcPageKey,
   validateOidcUiTemplate,
 } from "./oidc-template-validation";
@@ -131,8 +133,6 @@ const getThemeFieldDescriptions = (): Record<keyof IOidcUiThemePalette, string> 
   accentSoft: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.THEME_DESC_ACCENT_SOFT"),
   buttonText: tStatic(I18N_MODULE, "OIDC_BRANDING_FORM.THEME_DESC_BUTTON_TEXT"),
 });
-
-const normalizeField = (value: string) => value.toLowerCase().replace(/[^a-z]/g, "");
 
 const getServerFieldError = (errors: Record<string, string>, field: string) => {
   const entry = Object.entries(errors).find(
@@ -646,7 +646,7 @@ export const OidcBrandingForm = () => {
       if (!response.isSuccess) {
         const errors = response.errors ?? { Template: t("OIDC_BRANDING_FORM.ERROR_SAVE_TEMPLATE") };
         setServerErrors(errors);
-        showErrorToast({ errors });
+        showErrorToast({ errors: labelOidcTemplateErrors(errors) });
         return;
       }
 
@@ -669,7 +669,7 @@ export const OidcBrandingForm = () => {
           ]),
         );
         setServerErrors(errors);
-        showErrorToast({ errors: error.errors });
+        showErrorToast({ errors: labelOidcTemplateErrors(error.errors) });
       } else {
         showErrorToast({ errors: t("OIDC_BRANDING_FORM.ERROR_SAVE_TEMPLATE") });
       }
@@ -707,7 +707,7 @@ export const OidcBrandingForm = () => {
         if (!response.isSuccess) {
           const errors = response.errors ?? { Template: t("OIDC_BRANDING_FORM.ERROR_SAVE_PAGE") };
           setServerErrors((current) => ({ ...current, ...errors }));
-          showErrorToast({ errors });
+          showErrorToast({ errors: labelOidcTemplateErrors(errors) });
           return;
         }
 
@@ -727,7 +727,7 @@ export const OidcBrandingForm = () => {
             ]),
           );
           setServerErrors((current) => ({ ...current, ...errors }));
-          showErrorToast({ errors: error.errors });
+          showErrorToast({ errors: labelOidcTemplateErrors(error.errors) });
         } else {
           showErrorToast({ errors: t("OIDC_BRANDING_FORM.ERROR_SAVE_PAGE") });
         }
