@@ -593,7 +593,7 @@ export const validateOidcUiTemplate = (template: IOidcUiTemplate) => {
 };
 
 /** Compares an error key by its letters only, so "Pages.Signup.Heading" matches "pages.signup.heading". */
-export const normalizeTemplateErrorKey = (key: string) => key.toLowerCase().replace(/[^a-z]/g, "");
+export const normalizeTemplateErrorKey = (key: string) => key.toLowerCase().replaceAll(/[^a-z]/g, "");
 
 const inSection = (section: string, field: string) =>
   tStatic(I18N_MODULE, "OIDC_TEMPLATE_VALIDATION.ERROR_FIELD_IN_SECTION", { section, field });
