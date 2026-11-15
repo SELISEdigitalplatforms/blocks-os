@@ -296,6 +296,86 @@ namespace XUnitTest.Services
             _repo.Verify(r => r.InsertPeopleAsync(It.IsAny<ProjectPeople>()), Times.Never);
         }
 
+        // The console's Restore runs setup on an authenticated request. Setup stores the project's secrets inside
+        // ExecuteInContext(project tenant); without a pinned context Genesis kept the request's (root) identity there,
+        // and the secrets landed in the root SecretStore. Test mode stays off on purpose: it hides the request from
+        // GetContext, which is how this went unnoticed.
+        [Fact]
+        public async Task RestoreProjectAsync_OnAuthenticatedRequest_SetupSwitchesToTheProjectTenant()
+        {
+            using var request = new AuthenticatedRequestScope(tenantId: "root-tenant", userId: "console-user");
+            SetupCertificatePipeline();
+            _repo.Setup(r => r.GetByIdAsync("p1")).ReturnsAsync(NewTenantForConfigure());
+            _repo.Setup(r => r.GetUnfinishedProjectByIdAsync("p1")).ReturnsAsync((ProjectStatusTracer?)null);
+            string? callerInSetup = null;
+            string? tenantInSwitch = null;
+            _repo.Setup(r => r.CreateDefaultConfigurationAsync(It.IsAny<ProjectStatusTracer>(), It.IsAny<Tenant>()))
+                 .Returns(() =>
+                 {
+                     callerInSetup = BlocksContext.GetContext()?.UserId;
+                     tenantInSwitch = BlocksContext.ExecuteInContext(ServiceContextOf("t1"), () => BlocksContext.GetContext()?.TenantId);
+                     return Task.CompletedTask;
+                 });
+
+            var response = await Service().RestoreProjectAsync(new RestoreProjectRequest { ItemId = "p1" });
+
+            response.IsSuccess.Should().BeTrue();
+            tenantInSwitch.Should().Be("t1");
+            callerInSetup.Should().Be("console-user", "outside a switch setup still runs as the caller");
+        }
+
+        private static BlocksContext ServiceContextOf(string tenantId) => BlocksContext.Create(
+            tenantId: tenantId,
+            roles: new List<string>(),
+            userId: "service",
+            isAuthenticated: true,
+            requestUri: string.Empty,
+            organizationId: "default",
+            expireOn: System.DateTime.UtcNow.AddMinutes(5),
+            email: string.Empty,
+            permissions: new List<string>(),
+            userName: "service",
+            phoneNumber: string.Empty,
+            displayName: "service",
+            oauthToken: string.Empty,
+            originalTenantId: tenantId);
+
+        /// <summary>
+        /// An authenticated console request as Genesis sees it: test mode off, an HttpContext with the caller's claims.
+        /// The accessor keeps the HttpContext in an AsyncLocal, so only this test's flow sees the request.
+        /// </summary>
+        private sealed class AuthenticatedRequestScope : System.IDisposable
+        {
+            private readonly Microsoft.AspNetCore.Http.IHttpContextAccessor? _previousAccessor;
+            private readonly Microsoft.AspNetCore.Http.HttpContextAccessor _accessor;
+
+            public AuthenticatedRequestScope(string tenantId, string userId)
+            {
+                BlocksContext.IsTestMode = false;
+                BlocksContext.SetContext(null);
+                var identity = new System.Security.Claims.ClaimsIdentity(
+                    new[]
+                    {
+                        new System.Security.Claims.Claim(BlocksContext.TENANT_ID_CLAIM, tenantId),
+                        new System.Security.Claims.Claim(BlocksContext.USER_ID_CLAIM, userId)
+                    },
+                    authenticationType: "Bearer");
+                var httpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext { User = new System.Security.Claims.ClaimsPrincipal(identity) };
+                httpContext.Request.Headers[BlocksConstants.BlocksKey] = tenantId;
+
+                _previousAccessor = BlocksHttpContextAccessor.Instance;
+                _accessor = new Microsoft.AspNetCore.Http.HttpContextAccessor { HttpContext = httpContext };
+                BlocksHttpContextAccessor.Instance = _accessor;
+            }
+
+            public void Dispose()
+            {
+                _accessor.HttpContext = null;
+                BlocksHttpContextAccessor.Instance = _previousAccessor;
+                BlocksContext.SetContext(null);
+            }
+        }
+
         [Fact]
         public async Task GetAsync_WithBlocksGuid_BuildsTenantSlug()
         {

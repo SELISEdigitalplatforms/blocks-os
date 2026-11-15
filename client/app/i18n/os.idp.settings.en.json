@@ -90,6 +90,8 @@
   "IAM_SETTINGS_FORM.USE_BASE_URL_AS_DEFAULT": "Use account action base URL as default",
   "ORGANIZATION_CONFIG_FORM.AUTO_JOIN_REQUIRED": "Choose the organization new sign-ups join.",
   "ORGANIZATION_CONFIG_FORM.CREATION_WORKFLOWS": "Organization Creation Workflows",
+  "ORGANIZATION_CONFIG_FORM.DISABLED_ORG_SIGN_IN_DESCRIPTION": "Users whose organizations are all disabled can still sign in without an organization and see a message that their organization is disabled.",
+  "ORGANIZATION_CONFIG_FORM.DISABLED_ORG_SIGN_IN_LABEL": "Allow sign-in when all of a user's organizations are disabled",
   "ORGANIZATION_CONFIG_FORM.MULTI_ORG_DESCRIPTION": "Manage multiple organizations from one workspace. Keep resources organized with a clear hierarchy.",
   "ORGANIZATION_CONFIG_FORM.MULTI_ORG_LABEL": "Multi-Organization Environment",
   "ORGANIZATION_CONFIG_FORM.MULTI_ORG_LOCKED": "Multi-organization environment cannot be disabled once it has been enabled",

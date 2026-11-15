@@ -38,6 +38,12 @@ describe("UserBasicInformation", () => {
     expect(container.textContent).toBe("");
   });
 
+  it("renders nothing for a user IAM does not have (data null), like a failed lookup", () => {
+    h.byId = { isLoading: false, data: { data: null, errors: null } };
+    const { container } = render(<UserBasicInformation id="u1" projectKey="pk" />);
+    expect(container.textContent).toBe("");
+  });
+
   it("renders the by-id user details when not viewing own profile", () => {
     h.byId = { isLoading: false, data: userData() };
     render(<UserBasicInformation id="u1" projectKey="pk" />);

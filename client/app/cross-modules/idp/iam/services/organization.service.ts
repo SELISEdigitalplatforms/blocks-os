@@ -38,6 +38,12 @@ const toSaveApiPayload = (
   ...(payload.isSignupAutoJoinEnabled
     ? { signupAutoJoinOrganizationId: payload.signupAutoJoinOrganizationId ?? null }
     : {}),
+  // Passed through only when the caller sets it; IAM keeps the stored value otherwise.
+  ...(typeof payload.allowNoOrgSignInForDisabledOrganizations === "boolean"
+    ? {
+        allowNoOrgSignInForDisabledOrganizations: payload.allowNoOrgSignInForDisabledOrganizations,
+      }
+    : {}),
 });
 
 export class OrganizationService {

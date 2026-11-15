@@ -23,10 +23,10 @@ export const TRAFFIC_BAR: Record<FlowStep["traffic"], string> = {
 };
 
 export const getTrafficLabel = (): Record<FlowStep["traffic"], string> => ({
-  http: "Request",
-  call: "Call",
-  data: "Database",
-  cache: "Cache",
+  http: tStatic(I18N_MODULE, "TRACE_STORY_ROW.REQUEST"),
+  call: tStatic(I18N_MODULE, "TRACE_STORY_ROW.CALL"),
+  data: tStatic(I18N_MODULE, "TRACE_STORY_ROW.DATABASE"),
+  cache: tStatic(I18N_MODULE, "TRACE_STORY_ROW.CACHE"),
   message: tStatic(I18N_MODULE, "TRACE_STORY_ROW.MESSAGE"),
 });
 

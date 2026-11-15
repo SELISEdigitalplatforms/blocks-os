@@ -86,4 +86,26 @@ describe("organization-config-payload", () => {
       toOrganizationConfigSaveApiPayload({ ...base, isSignupAutoJoinEnabled: true }),
     ).toMatchObject({ signupAutoJoinOrganizationId: null });
   });
+
+  it("sends the disabled-organization sign-in flag when the caller sets it", () => {
+    expect(
+      toOrganizationConfigSaveApiPayload({
+        ...base,
+        allowNoOrgSignInForDisabledOrganizations: true,
+      }),
+    ).toMatchObject({ allowNoOrgSignInForDisabledOrganizations: true });
+    expect(
+      toOrganizationConfigSaveApiPayload({
+        ...base,
+        allowNoOrgSignInForDisabledOrganizations: false,
+      }),
+    ).toMatchObject({ allowNoOrgSignInForDisabledOrganizations: false });
+  });
+
+  // C9: a caller that does not set it leaves it out, so IAM keeps the stored value.
+  it("omits the disabled-organization sign-in flag when the caller leaves it unset", () => {
+    expect(toOrganizationConfigSaveApiPayload(base)).not.toHaveProperty(
+      "allowNoOrgSignInForDisabledOrganizations",
+    );
+  });
 });

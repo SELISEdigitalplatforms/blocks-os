@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Blocks.Genesis;
 using Cloud.LmtService.Models.ArchiveAndDelete;
+using Cloud.LmtService.Models.LogTraceBackup;
 using Cloud.LmtService.Models.Shared;
 using Cloud.LmtService.Repositories.LogTraceBackup;
 using Cloud.LmtService.Repositories.Logs;
@@ -35,7 +36,7 @@ namespace XUnitTest.Integration
         private readonly Mock<ILogTraceBackupRepository> _backupRepository = new();
         private readonly Mock<IBlobStorage> _blobStorage = new();
         private readonly Mock<ILmtArchiveRestoreConfigurationRepository> _configRepository = new();
-        // The upload phase runs several collections at once (bounded by MongoQueryMaxConcurrency),
+        // The upload phase runs several collections at once (bounded by BackupMaxConcurrency),
         // so SaveAsync is called concurrently. A plain Dictionary can silently drop one of two
         // concurrent inserts, which made the two-tenant test miss a file that was uploaded.
         private readonly ConcurrentDictionary<string, byte[]> _uploads = new();
@@ -51,6 +52,13 @@ namespace XUnitTest.Integration
             _backupRepository.Setup(r => r.HasActiveRunAsync()).ReturnsAsync(false);
             _backupRepository.Setup(r => r.GetStaleRunningJobIdsAsync(It.IsAny<TimeSpan>())).ReturnsAsync([]);
 
+            // Every earlier day of the catch-up window is already backed up, so each run covers
+            // only yesterday, the window these tests seed.
+            _backupRepository.Setup(r => r.GetJobsForDaysAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+                .ReturnsAsync((DateTime first, DateTime last) => Enumerable.Range(0, (int)(last - first).TotalDays)
+                    .Select(i => new LogTraceBackupJob { DataDateFrom = first.AddDays(i), Status = LogTraceBackupJobStatus.Completed })
+                    .ToList());
+
             _blobStorage.Setup(b => b.SaveAsync(It.IsAny<UploadLogToStorageRequest>()))
                 .ReturnsAsync((UploadLogToStorageRequest request) =>
                 {
@@ -61,13 +69,26 @@ namespace XUnitTest.Integration
                 });
         }
 
+        // Traces and logs live in separate databases, as in production. Sharing one database made
+        // the trace phase, which runs before the log phases, read the log collections as tenants.
+        private const string TracesDatabase = "Traces";
+        private const string LogsDatabase = "Logs";
+
+        private IMongoCollection<BsonDocument> TraceCollection(string tenant) =>
+            _fixture.DbContextProvider.GetDatabase(MongoIntegrationFixture.ConnectionString, TracesDatabase)
+                .GetCollection<BsonDocument>(tenant);
+
+        private IMongoCollection<BsonDocument> LogCollection(string service) =>
+            _fixture.DbContextProvider.GetDatabase(MongoIntegrationFixture.ConnectionString, LogsDatabase)
+                .GetCollection<BsonDocument>(service);
+
         private ArchiveService Service()
         {
             var secret = new Mock<IBlocksSecret>();
             secret.SetupGet(s => s.TraceConnectionString).Returns("mongodb://localhost:27017");
-            secret.SetupGet(s => s.TraceDatabaseName).Returns(_fixture.DatabaseName);
+            secret.SetupGet(s => s.TraceDatabaseName).Returns(TracesDatabase);
             secret.SetupGet(s => s.LogConnectionString).Returns("mongodb://localhost:27017");
-            secret.SetupGet(s => s.LogDatabaseName).Returns(_fixture.DatabaseName);
+            secret.SetupGet(s => s.LogDatabaseName).Returns(LogsDatabase);
 
             var config = new ConfigurationBuilder().Build();
 
@@ -109,7 +130,7 @@ namespace XUnitTest.Integration
                 { "Duration", 1.0 }
             }).ToList();
 
-            await _fixture.Collection<BsonDocument>(tenant).InsertManyAsync(traces);
+            await TraceCollection(tenant).InsertManyAsync(traces);
 
             await Service().StartBackupAsync();
 
@@ -117,7 +138,7 @@ namespace XUnitTest.Integration
             RowCountOf(upload.Value).Should().Be(Constants.TracesBatchSize + 250,
                 "every trace in the window must reach the Parquet file, not only the first batch");
 
-            var remaining = await _fixture.Collection<BsonDocument>(tenant)
+            var remaining = await TraceCollection(tenant)
                 .CountDocumentsAsync(Builders<BsonDocument>.Filter.Empty);
             remaining.Should().Be(0, "the window is deleted only once all of it is archived");
         }
@@ -133,7 +154,7 @@ namespace XUnitTest.Integration
             var logs = new List<BsonDocument>();
             logs.AddRange(Enumerable.Range(0, 6).Select(i => LogDoc(tenantA, service, $"a{i}", timestamp)));
             logs.AddRange(Enumerable.Range(0, 4).Select(i => LogDoc(tenantB, service, $"b{i}", timestamp)));
-            await _fixture.Collection<BsonDocument>(service).InsertManyAsync(logs);
+            await LogCollection(service).InsertManyAsync(logs);
 
             await Service().StartBackupAsync();
 
@@ -143,7 +164,7 @@ namespace XUnitTest.Integration
             RowCountOf(uploadA.Value).Should().Be(6);
             RowCountOf(uploadB.Value).Should().Be(4, "tenant B's logs must not be filed under tenant A");
 
-            var remaining = await _fixture.Collection<BsonDocument>(service)
+            var remaining = await LogCollection(service)
                 .CountDocumentsAsync(Builders<BsonDocument>.Filter.Empty);
             remaining.Should().Be(0);
         }
@@ -154,7 +175,7 @@ namespace XUnitTest.Integration
             var tenant = "ef" + Guid.NewGuid().ToString("N")[..10];
             var timestamp = InWindow();
 
-            await _fixture.Collection<BsonDocument>(tenant).InsertOneAsync(new BsonDocument
+            await TraceCollection(tenant).InsertOneAsync(new BsonDocument
             {
                 { "TraceId", "t1" }, { "ParentId", "" }, { "OperationName", "op" },
                 { "ServiceName", "svc" }, { Constants.Timestamp, timestamp }, { "Duration", 1.0 }

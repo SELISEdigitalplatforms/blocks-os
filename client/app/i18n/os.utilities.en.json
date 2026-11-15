@@ -22,6 +22,7 @@
   "MAGIC_URLS_LIST.FAILED_TO_DELETE_CONFIGURATION": "Failed to delete configuration",
   "MAGIC_URLS_LIST.LAST_UPDATED": "Last Updated",
   "MAGIC_URLS_LIST.SHORT_URL_BASE": "Short URL Base",
+  "MAGIC_URLS_LIST.THIS_CONFIGURATION": "this configuration",
   "MAGIC_URL_DIALOG.ACTION": "Action",
   "MAGIC_URL_DIALOG.CLIENT_CREDENTIAL": "Client Credential",
   "MAGIC_URL_DIALOG.CREATE_A_NEW_MAGIC_URL": "Create a new Magic URL with custom configurations.",

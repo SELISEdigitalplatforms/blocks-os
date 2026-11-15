@@ -177,6 +177,36 @@ namespace XUnitTest.Integration
             traces.Single().TraceId.Should().Be("t-match");
         }
 
+        // Weekend run 2026-11-13 (ZAP 40018 on the LMT search): operation-name search is plain text.
+        [Theory]
+        [InlineData("a(b")]
+        [InlineData("'(")]
+        [InlineData(".*")]
+        public async Task GetTraces_List_MatchesSearchAsPlainText(string search)
+        {
+            var tenant = MongoIntegrationFixture.NewTenantId();
+            var now = DateTime.UtcNow;
+            await SeedAsync(tenant,
+                Trace("t-literal", $"GET /x/{search}", "svc", now, parentId: ""),
+                Trace("t-plain", "GET /plain", "svc", now, parentId: ""));
+
+            using var _ = new IntegrationContext(tenant);
+            var (traces, count) = await NewRepository().GetTraces(new GetTracesRequest
+            {
+                Page = 0,
+                PageSize = 10,
+                Search = search,
+                Filter = new GetTracesRequestFilter
+                {
+                    StartDate = now.AddMinutes(-5),
+                    EndDate = now.AddMinutes(5)
+                }
+            });
+
+            count.Should().Be(1);
+            traces.Single().TraceId.Should().Be("t-literal");
+        }
+
         [Fact]
         public async Task GetTraces_List_TreatsUnmarkedFilterDatesAsUtcNotServerLocal()
         {
@@ -260,6 +290,26 @@ namespace XUnitTest.Integration
             var row = rows.Single();
             Convert.ToInt32(row["TotalRequests"]).Should().Be(2);
             Convert.ToInt32(row["Status5xx"]).Should().Be(1);
+        }
+
+        [Theory]
+        [InlineData("a(b")]
+        [InlineData(".*")]
+        public async Task GetOperationalAnalytics_MatchesOperationSearchAsPlainText(string search)
+        {
+            var tenant = MongoIntegrationFixture.NewTenantId();
+            var now = DateTime.UtcNow;
+            await SeedAsync(tenant,
+                Trace("a", $"op {search}", "ops-svc", now, statusCode: 200),
+                Trace("b", "other-op", "ops-svc", now, statusCode: 200));
+
+            using var _ = new IntegrationContext(tenant);
+            var result = await NewRepository().GetOperationalAnalytics(
+                now.AddMinutes(-5), now.AddMinutes(5), "ops-svc", search);
+
+            var rows = result.Should().BeAssignableTo<List<Dictionary<string, object>>>().Subject;
+            rows.Should().ContainSingle();
+            Convert.ToInt32(rows.Single()["TotalRequests"]).Should().Be(1);
         }
     }
 }

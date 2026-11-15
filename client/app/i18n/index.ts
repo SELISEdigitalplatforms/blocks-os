@@ -3,12 +3,12 @@
  * localization service.
  *
  * - `os.actions` (25 keys): cross-modules/actions
- * - `os.ai` (114 keys): cross-modules/ai
+ * - `os.ai` (115 keys): cross-modules/ai
  * - `os.ai-credits` (46 keys): cross-modules/ai-credits
  * - `os.api-settings` (24 keys): pages/api-settings
  * - `os.communication.mail` (330 keys): cross-modules/communication/mail
  * - `os.communication.notification` (372 keys): cross-modules/communication/notification
- * - `os.connect` (63 keys): pages/connect
+ * - `os.connect` (64 keys): pages/connect
  * - `os.create-project` (63 keys): pages/create-project, components/create-project, components/project-card, components/repository-selection-modal
  * - `os.dashboard` (172 keys): pages/dashboard
  * - `os.data-gateway` (40 keys): cross-modules/data-gateway
@@ -35,22 +35,22 @@
  * - `os.idp.security` (53 keys): idp/iam/security
  * - `os.idp.settings` (192 keys): idp/settings
  * - `os.idp.signup-links` (136 keys): idp/iam/modules/signup-link-management
- * - `os.idp.users` (316 keys): cross-modules/idp/iam/modules/user-management
- * - `os.integration` (60 keys): cross-modules/integration
+ * - `os.idp.users` (329 keys): cross-modules/idp/iam/modules/user-management
+ * - `os.integration` (61 keys): cross-modules/integration
  * - `os.integration-page` (8 keys): pages/integration
  * - `os.invitation` (16 keys): pages/invitation
- * - `os.lmt` (377 keys): cross-modules/lmt, pages/lmt
+ * - `os.lmt` (403 keys): cross-modules/lmt, pages/lmt
  * - `os.people` (111 keys): pages/people, components/people
  * - `os.repositories` (26 keys): pages/repositories
  * - `os.secret-management` (8 keys): pages/secret-management
- * - `os.secrets` (178 keys): cross-modules/secrets
+ * - `os.secrets` (203 keys): cross-modules/secrets
  * - `os.settings` (24 keys): pages/settings
- * - `os.shared` (217 keys): components (except those listed under feature modules), hooks, layouts, lib, routes, constants (navigation, breadcrumb, environment options, lmt/secret/auth nav)
+ * - `os.shared` (219 keys): components (except those listed under feature modules), hooks, layouts, lib, routes, constants (navigation, breadcrumb, environment options, lmt/secret/auth nav)
  * - `os.storage` (84 keys): cross-modules/storage
  * - `os.subscription-usage` (41 keys): pages/subscription-usage
- * - `os.utilities` (57 keys): cross-modules/utilities
+ * - `os.utilities` (58 keys): cross-modules/utilities
  * - `os.webhooks` (104 keys): cross-modules/webhooks
- * Total: 5199 keys.
+ * Total: 5269 keys.
  */
 import { registerTranslations } from "@seliseblocks/genesis-os";
 import osActions from "./os.actions.en.json";

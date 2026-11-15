@@ -25,7 +25,13 @@ namespace XUnitTest.TestSupport
             EventId eventId,
             TState state,
             Exception? exception,
-            Func<TState, Exception?, string> formatter) =>
-            Entries.Add((logLevel, formatter(state, exception), exception));
+            Func<TState, Exception?, string> formatter)
+        {
+            // Code under test may log from several tasks at once.
+            lock (Entries)
+            {
+                Entries.Add((logLevel, formatter(state, exception), exception));
+            }
+        }
     }
 }

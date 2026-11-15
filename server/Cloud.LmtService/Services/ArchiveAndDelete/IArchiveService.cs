@@ -4,8 +4,8 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
     {
         /// <summary>
         /// Entry point for the scheduled backup job.
-        /// Runs Phase 1 (hot DB → archive MongoDB) then Phase 2 (archive MongoDB → blob storage)
-        /// directly in-process — no internal message queues.
+        /// For each pending day, oldest first, runs Phase 1 (hot DB → archive MongoDB) then Phase 2
+        /// (archive MongoDB → blob storage) directly in-process — no internal message queues.
         /// </summary>
         Task StartBackupAsync();
 

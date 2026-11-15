@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  SECRET_AUDIT_REASON_LABEL,
   SECRET_STATUS,
   SECRET_STATUS_LABEL,
   SECRET_TYPE,
@@ -64,6 +65,15 @@ describe("secret model", () => {
 
     it("falls back to the raw action for anything it does not know", () => {
       expect(secretAuditActionLabel("Rotate")).toBe("Rotate");
+    });
+
+    it("labels known audit reasons and leaves unknown ones undefined", () => {
+      expect(SECRET_AUDIT_REASON_LABEL.STATUS_DELETED).toBe("Secret is archived");
+      expect(SECRET_AUDIT_REASON_LABEL["SOMETHING_NEW"]).toBeUndefined();
+      expect(SECRET_TYPE_DESCRIPTION.both).toBe(
+        "A backend credential your team also manages here. Anyone in this environment can read " +
+          "and rotate it, so it has no per-person access list.",
+      );
     });
   });
 

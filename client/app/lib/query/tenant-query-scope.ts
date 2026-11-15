@@ -29,9 +29,16 @@ import { useImpersonateStore } from "@seliseblocks/genesis-os/store";
  * in a different entry than the checker reads.
  *
  * This is a self-reference exemption, not a convenience allowlist. Nothing belongs here unless the
- * query participates in resolving which tenant we are in.
+ * query participates in resolving which tenant we are in, with one exception:
+ *
+ * `["auth-me"]` is the signed-in user's organization status (`OrganizationDisabledGate`). It is read
+ * once per app load whatever the tenant: the answer comes from the user's own sign-in token, and
+ * impersonation tokens never carry it, so a refetch per tenant would only repeat the request.
  */
-export const TENANT_AGNOSTIC_KEY_PREFIXES: readonly string[] = ["blocks-kit-impersonation"];
+export const TENANT_AGNOSTIC_KEY_PREFIXES: readonly string[] = [
+  "blocks-kit-impersonation",
+  "auth-me",
+];
 
 /**
  * The tenant our requests actually run under.

@@ -260,6 +260,8 @@
   "EMAIL_TEMPLATES.TAB_PRE_DESIGNED": "Pre-designed",
   "EMAIL_TEMPLATES.TITLE": "Email Templates",
   "EMAIL_TEMPLATE_EDIT.BREADCRUMB_EMAIL_MANAGEMENT": "Email Management",
+  "EMAIL_TEMPLATE_EDIT.SAVE_FAILED_DESCRIPTION": "Could not save the template. Try again.",
+  "EMAIL_TEMPLATE_EDIT.SAVE_FAILED_TITLE": "Template not saved",
   "EMAIL_TEMPLATE_LIST.CLONED_SUCCESS": "Cloned template successfully",
   "EMAIL_TEMPLATE_LIST.CLONE_CONFIRM": "Are you sure you want to clone the {{name}} template?",
   "EMAIL_TEMPLATE_LIST.CLONE_TEMPLATE": "Clone Template",

@@ -54,6 +54,7 @@
   "CONNECT.TRY_THE_READINESS_CHECK_AGAIN": "Try the readiness check again.",
   "CONNECT.WE_COULD_NOT_READ_THIS": "We could not read this connection request. Go back to your site and click Connect again.",
   "CONNECT.WE_COULD_NOT_START_THE": "We could not start the connection request. Go back to your site and click Connect again.",
+  "CONNECT.YOUR_SITE": "your site",
   "CONNECT.YOUR_SITE_IS_CONNECTED_TO": "Your site is connected to Blocks OS.",
   "CONNECT.YOU_DON_T_HAVE_A": "You don't have a project yet",
   "CONNECT.YOU_DON_T_HAVE_PERMISSION": "You don't have permission to set up integrations in this environment. Choose another environment or ask an administrator for access.",

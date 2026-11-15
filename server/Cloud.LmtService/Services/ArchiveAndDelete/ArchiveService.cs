@@ -19,6 +19,8 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
         private readonly ILogTraceBackupRepository _backupRepository;
         private readonly IBlobStorage _blobStorage;
         private readonly ILmtArchiveRestoreConfigurationRepository _lmtArchiveRestoreConfigurationRepository;
+        private readonly TimeProvider _timeProvider;
+        private readonly BackupLeftoverReconciler _leftoverReconciler;
 
         public ArchiveService(
             ILogger<ArchiveService> logger,
@@ -26,7 +28,8 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
             ITraceRepository traceRepository,
             ILogTraceBackupRepository backupRepository,
             IBlobStorage blobStorage,
-            ILmtArchiveRestoreConfigurationRepository lmtArchiveRestoreConfigurationRepository)
+            ILmtArchiveRestoreConfigurationRepository lmtArchiveRestoreConfigurationRepository,
+            TimeProvider? timeProvider = null)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _logRepository = logRepository;
@@ -34,12 +37,25 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
             _backupRepository = backupRepository;
             _blobStorage = blobStorage;
             _lmtArchiveRestoreConfigurationRepository = lmtArchiveRestoreConfigurationRepository;
+            _timeProvider = timeProvider ?? TimeProvider.System;
+            _leftoverReconciler = new BackupLeftoverReconciler(_logger, traceRepository, logRepository);
         }
 
         // ── Public entry points ──────────────────────────────────────────────────
 
+        /// <summary>
+        /// Backs up every day still owed, oldest first, one day and one phase at a time.
+        /// <para>
+        /// Each day gets its own job. A day that has failed or been abandoned too often is marked
+        /// Skipped instead, so it cannot hold back the days after it. The run starts no further day
+        /// once the time spent plus its longest day so far would pass the run's time budget; the
+        /// days left over stay pending for the next run.
+        /// </para>
+        /// </summary>
         public async Task StartBackupAsync()
         {
+            var runStartedAt = _timeProvider.GetUtcNow();
+
             // A run that died without completing would otherwise hold the lock below forever, so
             // stale rows are released first.
             await ReleaseStaleRunsAsync();
@@ -54,39 +70,141 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
                 return;
             }
 
-            var (startDate, endDate) = await ComputeBackupDateRangeAsync();
-            var runId = await _backupRepository.CreateJobAsync(startDate, endDate);
+            var pendingDays = await GetPendingDaysAsync();
 
-            _logger.LogInformation("StartBackupAsync - Backup job {RunId} started. Date range: {Start:yyyy-MM-dd} → {End:yyyy-MM-dd}",
-                runId, startDate, endDate);
+            if (pendingDays.Count == 0)
+            {
+                _logger.LogInformation("StartBackupAsync - There are no pending backup days.");
+                return;
+            }
+
+            _logger.LogInformation("StartBackupAsync - {Count} pending backup day(s), from {First:yyyy-MM-dd} to {Last:yyyy-MM-dd}.",
+                pendingDays.Count, pendingDays[0].Start, pendingDays[^1].Start);
+
+            await ProcessPendingDaysAsync(pendingDays, runStartedAt);
+        }
+
+        private async Task<List<PendingBackupDay>> GetPendingDaysAsync()
+        {
+            var config = await _lmtArchiveRestoreConfigurationRepository.GetLmtArchiveRestoreConfigurationsAsync();
+            var today = _timeProvider.GetUtcNow().UtcDateTime.Date;
+
+            var (firstDay, lastDay) = BackupDayPlan.Window(today, config.HotDataRetentionPeriodInDays);
+            if (lastDay < firstDay)
+                return [];
+
+            var jobs = await _backupRepository.GetJobsForDaysAsync(firstDay, lastDay);
+            return BackupDayPlan.PendingDays(today, config.HotDataRetentionPeriodInDays, jobs);
+        }
+
+        private async Task ProcessPendingDaysAsync(List<PendingBackupDay> pendingDays, DateTimeOffset runStartedAt)
+        {
+            // The job of the day just processed stays Running until the next day's job exists, so
+            // a Running job - the run lock - is there for as long as this run is alive.
+            string? unfinishedRunId = null;
+            var longestDay = TimeSpan.Zero;
+            var reconciled = false;
 
             try
             {
-                await _backupRepository.UpdateJobPhaseAsync(runId, BackupPhase.Archiving);
+                foreach (var day in pendingDays)
+                {
+                    if (day.FailedAttempts >= Constants.BackupMaxFailedAttemptsPerDay)
+                    {
+                        _logger.LogWarning("StartBackupAsync - Skipping {Day:yyyy-MM-dd} after {Attempts} failed attempt(s).",
+                            day.Start, day.FailedAttempts);
+                        await _backupRepository.CreateSkippedJobAsync(day.Start, day.End, Constants.BackupSkippedReason);
+                        continue;
+                    }
 
-                await Task.WhenAll(
-                    ProcessAllTracesBackupAsync(runId, startDate, endDate),
-                    ProcessAllBlocksServiceLogsBackupAsync(runId, startDate, endDate),
-                    ProcessAllManagedServiceLogsBackupAsync(runId, startDate, endDate));
-                await _backupRepository.UpdateJobPhaseAsync(runId, BackupPhase.BlobUploading);
+                    var dayStartedAt = _timeProvider.GetUtcNow();
+                    if (dayStartedAt - runStartedAt + longestDay > Constants.BackupRunTimeBudget)
+                    {
+                        _logger.LogInformation("StartBackupAsync - Time budget reached; {Day:yyyy-MM-dd} and later days stay pending.",
+                            day.Start);
+                        break;
+                    }
 
-                await Task.WhenAll(
-                    ProcessArchiveLogsToBlobAsync(runId),
-                    ProcessArchiveTracesToBlobAsync(runId));
+                    var runId = await _backupRepository.CreateJobAsync(day.Start, day.End);
 
-                await _backupRepository.CompleteJobAsync(runId);
+                    if (!reconciled)
+                    {
+                        // Only once this run holds the lock (a Running job exists): a second trigger
+                        // reconciling meanwhile could drop a collection this run is still writing.
+                        await _leftoverReconciler.ReconcileAsync(DaysThisRunMayArchive(pendingDays));
+                        reconciled = true;
+                    }
 
-                _logger.LogInformation("StartBackupAsync - Backup job {RunId} completed.", runId);
+                    if (unfinishedRunId != null)
+                    {
+                        await _backupRepository.CompleteJobAsync(unfinishedRunId);
+                        unfinishedRunId = null;
+                    }
+
+                    await RunDayAsync(runId, day.Start, day.End);
+                    unfinishedRunId = runId;
+
+                    var dayDuration = _timeProvider.GetUtcNow() - dayStartedAt;
+                    if (dayDuration > longestDay)
+                        longestDay = dayDuration;
+                }
+            }
+            finally
+            {
+                if (unfinishedRunId != null)
+                    await _backupRepository.CompleteJobAsync(unfinishedRunId);
+            }
+        }
+
+        /// <summary>
+        /// The days whose leftovers may be reconciled: pending and not about to be skipped. A copy
+        /// for any other day is kept for the upload phase, because that day is not archived again.
+        /// </summary>
+        private static HashSet<DateTime> DaysThisRunMayArchive(List<PendingBackupDay> pendingDays) =>
+            pendingDays
+                .Where(day => day.FailedAttempts < Constants.BackupMaxFailedAttemptsPerDay)
+                .Select(day => day.Start)
+                .ToHashSet();
+
+        /// <summary>
+        /// Runs one day's phases strictly one after another, so at most one phase's batches are in
+        /// memory at a time. They used to run three, then two, at once.
+        /// </summary>
+        private async Task RunDayAsync(string runId, DateTime startDate, DateTime endDate)
+        {
+            _logger.LogInformation("StartBackupAsync - Backup job {RunId} started for {Start:yyyy-MM-dd} → {End:yyyy-MM-dd}",
+                runId, startDate, endDate);
+
+            var phases = new (string JobPhase, Func<Task> RunAsync)[]
+            {
+                (BackupPhase.Archiving, () => ProcessAllTracesBackupAsync(runId, startDate, endDate)),
+                (BackupPhase.Archiving, () => ProcessAllBlocksServiceLogsBackupAsync(runId, startDate, endDate)),
+                (BackupPhase.Archiving, () => ProcessAllManagedServiceLogsBackupAsync(runId, startDate, endDate)),
+                (BackupPhase.BlobUploading, () => ProcessArchiveLogsToBlobAsync(runId)),
+                (BackupPhase.BlobUploading, () => ProcessArchiveTracesToBlobAsync(runId))
+            };
+
+            try
+            {
+                foreach (var (jobPhase, runAsync) in phases)
+                {
+                    // Also the heartbeat for the phase change.
+                    await _backupRepository.UpdateJobPhaseAsync(runId, jobPhase);
+                    await runAsync();
+                }
+
+                _logger.LogInformation("StartBackupAsync - Backup job {RunId} finished its phases.", runId);
             }
             catch (Exception ex)
             {
                 // Not logged here: StartBackupConsumer logs the exception once it propagates, and
-                // the job document records it against this run id. The original type is rethrown
-                // unchanged because callers and tests depend on it.
+                // the job document records it against this day's run id. The original type is
+                // rethrown unchanged because callers and tests depend on it.
                 await TrySilentAsync(() => _backupRepository.FailJobAsync(runId, ex.ToString()));
                 throw;
             }
         }
+
         /// <summary>
         /// Marks runs that stopped sending heartbeats as abandoned. Without this a crashed worker
         /// leaves a Running row behind and every later trigger is refused as "already active".
@@ -132,7 +250,7 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
 
             _logger.LogInformation("ProcessAllTracesBackupAsync - Processing {Count} tenant(s).", tenantIds.Count);
 
-            using var semaphore = new SemaphoreSlim(Constants.MongoQueryMaxConcurrency);
+            using var semaphore = new SemaphoreSlim(Constants.BackupMaxConcurrency);
             var tasks = tenantIds.Select(tenantId => ProcessSingleTenantTracesAsync(runId, tenantId, startDate, endDate, semaphore));
             await Task.WhenAll(tasks);
         }
@@ -161,7 +279,7 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
                 // been archived. Deleting per batch - as this used to - destroyed every trace past
                 // the first batch, because the delete was never scoped to the batch just written.
                 await foreach (var batch in _traceRepository.StreamTracesByCollectionAsync(
-                    tenantId, query, Constants.TracesBatchSize))
+                    tenantId, query, Constants.BackupBatchSize))
                 {
                     await _traceRepository.ArchiveTracesAsync(batch, query);
                     totalRecords += batch.Count;
@@ -210,7 +328,7 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
 
             _logger.LogInformation("ProcessAllBlocksServiceLogsBackupAsync - Processing {Count} service(s).", serviceNames.Count);
 
-            using var semaphore = new SemaphoreSlim(Constants.MongoQueryMaxConcurrency);
+            using var semaphore = new SemaphoreSlim(Constants.BackupMaxConcurrency);
             var tasks = serviceNames.Select(svc => ProcessSingleBlocksServiceLogAsync(runId, svc, startDate, endDate, semaphore));
             await Task.WhenAll(tasks);
         }
@@ -230,7 +348,7 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
 
                 var archived = await ArchiveServiceLogsByTenantAsync(
                     runId, serviceName, startDate, endDate,
-                    _logRepository.StreamBlocksServiceLogsAsync(serviceName, query, Constants.LogsBatchSize),
+                    _logRepository.StreamBlocksServiceLogsAsync(serviceName, query, Constants.BackupBatchSize),
                     (tenantId, traceId) => _backupRepository.CreateLogFileProgressAsync(runId, tenantId, serviceName, traceId),
                     (tenantId, error) => _backupRepository.MarkLogArchiveFailedAsync(runId, tenantId, serviceName, error));
 
@@ -381,7 +499,7 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
 
             _logger.LogInformation("ProcessAllManagedServiceLogsBackupAsync - Processing {Count} service(s).", serviceNames.Count);
 
-            using var semaphore = new SemaphoreSlim(Constants.MongoQueryMaxConcurrency);
+            using var semaphore = new SemaphoreSlim(Constants.BackupMaxConcurrency);
             var tasks = serviceNames.Select(svc => ProcessSingleManagedServiceLogAsync(runId, svc, startDate, endDate, semaphore));
             await Task.WhenAll(tasks);
         }
@@ -418,7 +536,7 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
                 // into that tenant's blob folder - while leaving their source logs undeleted.
                 var archived = await ArchiveServiceLogsByTenantAsync(
                     runId, serviceName, startDate, endDate,
-                    _logRepository.StreamManagedServiceLogsAsync(serviceName, query, Constants.LogsBatchSize),
+                    _logRepository.StreamManagedServiceLogsAsync(serviceName, query, Constants.BackupBatchSize),
                     async (tenantId, traceId) =>
                     {
                         await EnsureServiceProgressAsync(traceId);
@@ -465,10 +583,10 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
 
             _logger.LogInformation("ProcessArchiveLogsToBlobAsync - Uploading {Count} collection(s) to blob.", collections.Count);
 
-            // Bounded concurrency, matching the archiving phase. Each upload now streams one batch
-            // at a time, so running several at once costs a bounded amount of memory rather than
-            // one tenant-day per upload.
-            using var semaphore = new SemaphoreSlim(Constants.MongoQueryMaxConcurrency);
+            // Bounded concurrency, matching the archiving phases. Each upload streams one batch at a
+            // time, so running several at once costs a bounded amount of memory rather than one
+            // tenant-day per upload.
+            using var semaphore = new SemaphoreSlim(Constants.BackupMaxConcurrency);
             await Task.WhenAll(collections.Select(collectionName =>
                 RunWithSemaphoreAsync(semaphore, () => ProcessSingleLogCollectionAsync(runId, collectionName))));
         }
@@ -491,7 +609,7 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
 
                 // A read failure throws out of here instead of arriving as an empty result, so the
                 // collection is only ever dropped once its contents are safely in blob storage.
-                var (url, rowCount, error) = await StoreArchivedLogFileAsync(fileName, collectionName, tenantId);
+                var (url, rowCount, error) = await StoreArchivedLogFileAsync(runId, fileName, collectionName, tenantId);
 
                 if (rowCount == 0)
                 {
@@ -531,7 +649,7 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
 
             _logger.LogInformation("ProcessArchiveTracesToBlobAsync - Uploading {Count} collection(s) to blob.", collections.Count);
 
-            using var semaphore = new SemaphoreSlim(Constants.MongoQueryMaxConcurrency);
+            using var semaphore = new SemaphoreSlim(Constants.BackupMaxConcurrency);
             await Task.WhenAll(collections.Select(collectionName =>
                 RunWithSemaphoreAsync(semaphore, () => ProcessSingleTraceCollectionAsync(runId, collectionName))));
         }
@@ -567,7 +685,7 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
                 var isCarryover = !await _backupRepository.TraceProgressExistsAsync(runId, tenantId);
                 await _backupRepository.MarkTraceUploadingAsync(runId, tenantId, collectionName, blobPath, isCarryover);
 
-                var (url, rowCount, error) = await StoreArchivedTraceFileAsync(fileName, collectionName, tenantId);
+                var (url, rowCount, error) = await StoreArchivedTraceFileAsync(runId, fileName, collectionName, tenantId);
 
                 if (rowCount == 0)
                 {
@@ -607,15 +725,15 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
         /// </para>
         /// </summary>
         private async Task<(string Url, long RowCount, string? ErrorMessage)> StoreArchivedLogFileAsync(
-            string fileName, string collectionName, string tenantId, CancellationToken ct = default)
+            string runId, string fileName, string collectionName, string tenantId, CancellationToken ct = default)
         {
             string filePath = string.Empty;
             try
             {
                 var uniqueLocalFileName = $"{Path.GetFileNameWithoutExtension(fileName)}_{Guid.NewGuid():N}.parquet";
 
-                var batches = _logRepository
-                    .StreamLogsFromArchiveCollectionAsync(collectionName, Constants.LogsBatchSize, ct)
+                var batches = WithHeartbeatAsync(runId, _logRepository
+                    .StreamLogsFromArchiveCollectionAsync(collectionName, Constants.BackupBatchSize, ct))
                     .Select(batch => batch.ConvertAll(StoredLogForParquet.FromStoredLog));
 
                 long rowCount;
@@ -639,15 +757,15 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
 
         /// <inheritdoc cref="StoreArchivedLogFileAsync"/>
         private async Task<(string Url, long RowCount, string? ErrorMessage)> StoreArchivedTraceFileAsync(
-            string fileName, string collectionName, string tenantId, CancellationToken ct = default)
+            string runId, string fileName, string collectionName, string tenantId, CancellationToken ct = default)
         {
             string filePath = string.Empty;
             try
             {
                 var uniqueLocalFileName = $"{Path.GetFileNameWithoutExtension(fileName)}_{Guid.NewGuid():N}.parquet";
 
-                var batches = _traceRepository
-                    .StreamTracesFromArchiveCollectionAsync(collectionName, Constants.TracesBatchSize, ct)
+                var batches = WithHeartbeatAsync(runId, _traceRepository
+                    .StreamTracesFromArchiveCollectionAsync(collectionName, Constants.BackupBatchSize, ct))
                     .Select(batch => batch.ConvertAll(StoredTraceForParquet.FromStoredTrace));
 
                 long rowCount;
@@ -723,13 +841,17 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
 
         // ── Utilities ────────────────────────────────────────────────────────────
 
-        private async Task<(DateTime StartDate, DateTime EndDate)> ComputeBackupDateRangeAsync()
+        /// <summary>
+        /// Passes the batches through, sending the job's heartbeat once each batch has been written,
+        /// so a long upload keeps the run from being taken for dead.
+        /// </summary>
+        private async IAsyncEnumerable<List<T>> WithHeartbeatAsync<T>(string runId, IAsyncEnumerable<List<T>> batches)
         {
-            var config = await _lmtArchiveRestoreConfigurationRepository.GetLmtArchiveRestoreConfigurationsAsync();
-            var today = DateTime.UtcNow.Date;
-            var endDate = today.AddDays(-config.HotDataRetentionPeriodInDays);
-            var startDate = endDate.AddDays(-1);
-            return (startDate, endDate);
+            await foreach (var batch in batches)
+            {
+                yield return batch;
+                await TrySilentAsync(() => _backupRepository.UpdateJobHeartbeatAsync(runId));
+            }
         }
 
         /// <summary>Awaits a monitoring call without propagating exceptions — monitoring must never crash the backup pipeline.</summary>

@@ -164,7 +164,9 @@ export const LogsFilterToolbar = () => {
       props: {
         defaultRange,
         timeZone: "utc",
-        openEndHint: isRestored ? "the end of the window" : "now — keeps streaming",
+        openEndHint: isRestored
+          ? t("LOGS_FILTER_TOOLBAR.THE_END_OF_THE_WINDOW")
+          : t("LOGS_FILTER_TOOLBAR.NOW_KEEPS_STREAMING"),
         bounds,
       },
     },

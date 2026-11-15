@@ -146,7 +146,7 @@ export interface IGetUserByIdPayload {
   projectKey: string;
 }
 export interface IGetUserByIdResponse {
-  data: User;
+  data: User | null;
   errors: unknown;
 }
 
@@ -395,6 +395,20 @@ export interface IAccountResendActivationResponse {
 }
 export interface IAdminResetPasswordPayload {
   userId: string;
+}
+export interface IDeactivateUserPayload {
+  userId: string;
+}
+export interface IActivateUserByAdminPayload {
+  userId: string;
+  /** Trimmed, 3 to 500 characters. IAM stores it with the activity event. */
+  reason: string;
+}
+/** IAM's answer to deactivate and activate. */
+export interface IUserStatusChangeResponse {
+  isSuccess: boolean;
+  errors?: Record<string, string> | null;
+  itemId?: string | null;
 }
 export interface IAccountRecoverPayload {
   email: string;

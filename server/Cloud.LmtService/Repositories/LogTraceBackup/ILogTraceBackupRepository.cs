@@ -1,3 +1,5 @@
+using Cloud.LmtService.Models.LogTraceBackup;
+
 namespace Cloud.LmtService.Repositories.LogTraceBackup
 {
     public interface ILogTraceBackupRepository
@@ -18,6 +20,15 @@ namespace Cloud.LmtService.Repositories.LogTraceBackup
 
         /// <summary>Returns RunIds of jobs stuck as Running with LastHeartbeatAt older than the threshold.</summary>
         Task<List<string>> GetStaleRunningJobIdsAsync(TimeSpan staleThreshold);
+
+        /// <summary>
+        /// Returns the jobs whose DataDateFrom falls on a day from <paramref name="firstDay"/> to
+        /// <paramref name="lastDay"/> (both inclusive), with only DataDateFrom and Status read.
+        /// </summary>
+        Task<List<LogTraceBackupJob>> GetJobsForDaysAsync(DateTime firstDay, DateTime lastDay);
+
+        /// <summary>Records a day that is no longer retried: a finished job with Status=Skipped and the reason.</summary>
+        Task CreateSkippedJobAsync(DateTime dataDateFrom, DateTime dataDateTo, string reason);
 
         // ── Blocks service log archiving — Phase 1 ───────────────────────────────
 

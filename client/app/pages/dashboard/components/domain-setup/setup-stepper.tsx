@@ -2,7 +2,11 @@ import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@seliseblocks/genesis-os";
 
-const STEP_TITLES = ["Add DNS records", "Verify & secure", "Connect your app"] as const;
+const STEP_TITLE_KEYS = [
+  "SETUP_STEPPER.ADD_DNS_RECORDS",
+  "SETUP_STEPPER.VERIFY_AND_SECURE",
+  "SETUP_STEPPER.CONNECT_YOUR_APP",
+] as const;
 
 export type SetupStepIndex = 0 | 1 | 2;
 
@@ -30,14 +34,14 @@ export const SetupStepper = ({ current, failed = false }: SetupStepperProps) => 
   const { t } = useT("os.dashboard");
   return (
     <ol className="flex items-center gap-3" aria-label={t("SETUP_STEPPER.SETUP_STEPS")}>
-      {STEP_TITLES.map((title, index) => {
+      {STEP_TITLE_KEYS.map((titleKey, index) => {
         const isDone = index < current;
         const isCurrent = index === current;
-        const isLast = index === STEP_TITLES.length - 1;
+        const isLast = index === STEP_TITLE_KEYS.length - 1;
 
         return (
           <li
-            key={title}
+            key={titleKey}
             className={cn("flex items-center gap-3", !isLast && "flex-1")}
             aria-current={isCurrent ? "step" : undefined}
           >
@@ -59,7 +63,7 @@ export const SetupStepper = ({ current, failed = false }: SetupStepperProps) => 
                   isCurrent ? "font-semibold text-high-emphasis" : "text-muted-foreground",
                 )}
               >
-                {title}
+                {t(titleKey)}
               </span>
             </span>
             {!isLast && (

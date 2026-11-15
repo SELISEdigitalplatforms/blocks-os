@@ -1,4 +1,4 @@
-﻿using Blocks.Genesis;
+using Blocks.Genesis;
 using DomainService.Shared.Services;
 using MongoDB.Driver;
 using System.Numerics;
@@ -24,6 +24,8 @@ public class EncodingService : IEncodingService
         if (string.IsNullOrWhiteSpace(input))
             return string.Empty;
 
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(length);
+
         // Return existing encoding if already stored
         var existingCursor = await _blocksGuidsCollection
             .FindAsync(x => x.OriginalValue == input);
@@ -32,50 +34,44 @@ public class EncodingService : IEncodingService
         if (existing is not null)
             return Truncate(existing.EncodedValue, length);
 
-        // Generate new encoding
-        string encodedValue = long.TryParse(input, out var number)
-            ? await EncodeUniqueBase26FromNumber(number)
-            : Guid.TryParse(input, out var guid)
-                ? await EncodeUniqueBase26FromGuid(guid)
-                : await EncodeUniqueBase26FromGuid(Guid.NewGuid());
+        // Generate new encoding: repository ids are numbers, group ids are GUIDs.
+        string encodedValue;
+        if (long.TryParse(input, out var number))
+            encodedValue = await EncodeUniqueBase26FromNumber(number, length);
+        else if (Guid.TryParse(input, out var guid))
+            encodedValue = await EncodeUniqueBase26FromGuid(guid, length);
+        else
+            encodedValue = await EncodeUniqueBase26FromGuid(Guid.NewGuid(), length);
 
         // Store in DB
         await _blocksGuidsCollection.InsertOneAsync(new BlocksGuid
         {
             ItemId = Guid.NewGuid().ToString(),
             OriginalValue = input,
-            EncodedValue = Truncate(encodedValue, length),
+            EncodedValue = encodedValue,
             TenantGroupId = tenantGroupId
         });
 
-        return Truncate(encodedValue, length);
+        return encodedValue;
     }
 
-    private async Task<string> EncodeUniqueBase26FromNumber(long number)
+    private async Task<string> EncodeUniqueBase26FromNumber(long number, int length)
     {
-        if (number < 0)
-            number = -number;
-
-        if (number == 0)
-            return "a";
-
-        string result;
-        do
-        {
-            result = ConvertToBase26(number);
-            number++;
-        }
-        while (await ExistsInDb(result));
-
-        return result;
+        var result = Truncate(ConvertToBase26(number), length);
+        // Compare exactly the value that will be persisted and used in the URL.
+        // Nearby numeric IDs often share a prefix, so incrementing the number
+        // would repeat hundreds of queries against the same shortened value.
+        return await ExistsInDb(result)
+            ? await EncodeUniqueBase26FromGuid(Guid.NewGuid(), length)
+            : result;
     }
 
-    private async Task<string> EncodeUniqueBase26FromGuid(Guid guid)
+    private async Task<string> EncodeUniqueBase26FromGuid(Guid guid, int length)
     {
         string result;
         do
         {
-            result = ConvertToBase26(guid);
+            result = Truncate(ConvertToBase26(guid), length);
             guid = Guid.NewGuid();
         }
         while (await ExistsInDb(result));
@@ -86,7 +82,9 @@ public class EncodingService : IEncodingService
     private static string ConvertToBase26(long number)
     {
         var sb = new StringBuilder();
-        var value = new BigInteger(number);
+        var value = BigInteger.Abs(new BigInteger(number));
+        if (value.IsZero)
+            return "a";
 
         while (value > 0)
         {

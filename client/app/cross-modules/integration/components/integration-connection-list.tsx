@@ -31,7 +31,7 @@ const accessLevelLabel = (connection: IIntegrationConnection): string => {
 const sourceLabel = (connection: IIntegrationConnection): string =>
   connection.source === "connect"
     ? tStatic(I18N_MODULE, "INTEGRATION_CONNECTION_LIST.CONNECT_FLOW")
-    : "Manual";
+    : tStatic(I18N_MODULE, "INTEGRATION_CONNECTION_LIST.MANUAL");
 
 /** Saved connections contain metadata, not the one-time client secret. */
 export const toConnectionJson = (connection: IIntegrationConnection): string =>

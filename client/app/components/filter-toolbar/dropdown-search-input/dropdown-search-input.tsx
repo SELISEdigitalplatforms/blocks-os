@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
 import { cn, debounce } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 import {
   Select,
   SelectContent,
@@ -30,7 +31,7 @@ interface DropdownSearchInputProps {
 }
 export const DropdownSearchInput: React.FC<DropdownSearchInputProps> = ({
   onChange,
-  placeholder = "Search...",
+  placeholder,
   value,
   className = {},
   options = [],
@@ -38,6 +39,7 @@ export const DropdownSearchInput: React.FC<DropdownSearchInputProps> = ({
   minSearchLength = 0,
   keepValueOnTypeChange = false,
 }) => {
+  const { t } = useT("os.shared");
   const [state, setState] = useState<ValueType>(value);
   const [prevValue, setPrevValue] = useState<ValueType>(value);
   if (prevValue !== value) {
@@ -98,7 +100,7 @@ export const DropdownSearchInput: React.FC<DropdownSearchInputProps> = ({
       </Select>
       <Input
         ref={inputRef}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t("SEARCH_INPUT.PLACEHOLDER")}
         value={state.value}
         onChange={handleChange}
         className={cn(

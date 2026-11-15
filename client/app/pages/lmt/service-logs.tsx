@@ -46,7 +46,7 @@ export function LmtServiceLogsRoute() {
   }, [service, t]);
 
   const breadcrumbTitles = {
-    [`${LMT_BASE_PATH}/logs`]: "Logs",
+    [`${LMT_BASE_PATH}/logs`]: t("LOGS.LOGS"),
     ...(serviceName
       ? { [`${LMT_BASE_PATH}/logs/${serviceName}`]: service?.label ?? serviceName }
       : {}),

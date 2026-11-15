@@ -21,6 +21,8 @@ export interface IOrganizationConfigResponse {
   consentForMultiOrgEnable: boolean;
   isSignupAutoJoinEnabled: boolean;
   signupAutoJoinOrganizationId: string | null;
+  /** Lets users whose organizations are all disabled sign in without one. Absent on an older IAM. */
+  allowNoOrgSignInForDisabledOrganizations?: boolean;
 }
 
 export interface IOrganizationConfigSaveApiPayload {
@@ -36,6 +38,8 @@ export interface IOrganizationConfigSaveApiPayload {
   keepOrgPermissionsSameAsDefaultPermissions: boolean;
   isSignupAutoJoinEnabled?: boolean;
   signupAutoJoinOrganizationId?: string | null;
+  /** Left out unless the caller sets it, so IAM keeps the stored value. */
+  allowNoOrgSignInForDisabledOrganizations?: boolean;
 }
 
 /** @deprecated Use IOrganizationConfigSaveApiPayload — kept for IAM module callers during migration */
