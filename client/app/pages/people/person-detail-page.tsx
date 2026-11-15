@@ -65,7 +65,8 @@ export const PersonDetailPage = () => {
     id,
     projectKey: "",
   });
-  const user = userResponse?.data;
+  // IAM answers an unknown id with no user (`null`); the page treats that like a failed load.
+  const user = userResponse?.data ?? undefined;
   const fullName = user ? getUserDisplayName(user) : "";
 
   // People/Gets is the only source for this person's row, and its server-side email search

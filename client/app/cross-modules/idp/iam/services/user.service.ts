@@ -122,7 +122,10 @@ export class UserService {
       })
       .then((response) => ({
         ...response,
-        data: normalizeUserFromApi(response.data as ApiUser),
+        // IAM answers 200 with an empty `data` for an id it has no user for, such as a deleted
+        // user whose id is still stored in a secret's access list. That is a final "no user",
+        // not an error, so it is returned as `null` instead of reaching the normalizer.
+        data: response.data == null ? null : normalizeUserFromApi(response.data as ApiUser),
       }));
   }
 
@@ -141,6 +144,9 @@ export class UserService {
 
   async updateUser(payload: IUpdateUserPayload): Promise<IUpdateUserResponse> {
     const current = await this.getUserById({ id: payload.itemId, projectKey: "" });
+    // The body below is a full record replacement, so posting one built without a current
+    // record could create a partial user. Callers show their own generic failure message.
+    if (!current.data) throw new Error("User not found");
     const flattened = flattenRolesAndPermissions(current.data, payload);
     // The /users/{id} endpoint treats the body as a full record replacement,
     // omitting a field on the request wipes it on the server. Fetch the

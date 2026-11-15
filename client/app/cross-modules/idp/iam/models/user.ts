@@ -146,7 +146,7 @@ export interface IGetUserByIdPayload {
   projectKey: string;
 }
 export interface IGetUserByIdResponse {
-  data: User;
+  data: User | null;
   errors: unknown;
 }
 

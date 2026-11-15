@@ -118,6 +118,43 @@ describe("UserService", () => {
         service.getUserById({ id: MOCK_USER_ITEM_ID, projectKey: TEST_PROJECT_KEY }),
       ).rejects.toThrow("Network error");
     });
+
+    // IAM answers 200 with an empty `data` for an id it has no user for.
+    it("should resolve with data null when IAM returns data null", async () => {
+      vi.mocked(http.get).mockResolvedValue({ data: null, errors: null });
+
+      const result = await service.getUserById({
+        id: MOCK_USER_ITEM_ID,
+        projectKey: TEST_PROJECT_KEY,
+      });
+
+      expect(result).toEqual({ data: null, errors: null });
+    });
+
+    it("should resolve with data null when IAM returns no data field", async () => {
+      vi.mocked(http.get).mockResolvedValue({});
+
+      const result = await service.getUserById({
+        id: MOCK_USER_ITEM_ID,
+        projectKey: TEST_PROJECT_KEY,
+      });
+
+      expect(result).toEqual({ data: null });
+    });
+
+    it("should still read the legacy OrganizationIds field for an existing user", async () => {
+      vi.mocked(http.get).mockResolvedValue({
+        data: { ...mockUser, organizationIds: [], OrganizationIds: ["org-1"], roles: ["admin"] },
+      });
+
+      const result = await service.getUserById({
+        id: MOCK_USER_ITEM_ID,
+        projectKey: TEST_PROJECT_KEY,
+      });
+
+      expect(result.data?.organizationIds).toEqual(["org-1"]);
+      expect(result.data?.roles).toEqual({ "org-1": ["admin"] });
+    });
   });
 
   // ─── addUser ──────────────────────────────────────────────────────────────
@@ -183,6 +220,13 @@ describe("UserService", () => {
         { absoluteUrl: true },
       );
       expect(result).toEqual(mockSuccessResponse);
+    });
+
+    it("should reject before posting when the user does not exist", async () => {
+      vi.mocked(http.get).mockResolvedValue({ data: null, errors: null });
+
+      await expect(service.updateUser(mockUpdateUserPayload)).rejects.toThrow("User not found");
+      expect(http.post).not.toHaveBeenCalled();
     });
 
     it("should throw when the API call fails", async () => {
@@ -382,6 +426,15 @@ describe("UserService", () => {
       expect(result).toEqual({ data: [], totalCount: 0, errors: null });
     });
 
+    it("should return an empty list when the user does not exist", async () => {
+      vi.mocked(http.get).mockResolvedValue({ data: null, errors: null });
+
+      const result = await service.getUserRoles(mockGetUserRolesPayload);
+
+      expect(http.post).not.toHaveBeenCalled();
+      expect(result).toEqual({ data: [], totalCount: 0, errors: null });
+    });
+
     it("should throw when the API call fails", async () => {
       vi.mocked(http.get).mockRejectedValue(new Error("Network error"));
 
@@ -415,6 +468,15 @@ describe("UserService", () => {
         data: { ...mockUser, organizationIds: [], permissions: [] },
         errors: null,
       });
+
+      const result = await service.getUserPermissions(mockGetUserPermissionsPayload);
+
+      expect(http.post).not.toHaveBeenCalled();
+      expect(result).toEqual({ data: [], totalCount: 0, errors: null });
+    });
+
+    it("should return an empty list when the user does not exist", async () => {
+      vi.mocked(http.get).mockResolvedValue({});
 
       const result = await service.getUserPermissions(mockGetUserPermissionsPayload);
 
