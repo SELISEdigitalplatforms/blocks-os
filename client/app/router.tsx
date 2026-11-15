@@ -6,6 +6,7 @@ import { navigationMenus } from "@/constants/navigation-menus";
 import { ScopedDashboardRoute } from "@/routes/scoped-dashboard-route";
 import { DeepLinkRedirect } from "@/components/deep-link-redirect/deep-link-redirect";
 import { PendingConnectRedirect } from "@/components/pending-connect-redirect/pending-connect-redirect";
+import { OrganizationDisabledGate } from "@/components/organization-disabled-gate";
 // Temporarily disabled
 // import { AIModels } from "./cross-modules/ai/pages/ai-models";
 import { EmailConfigurationPage, NewCommunication } from "@/cross-modules/communication/mail";
@@ -152,7 +153,10 @@ export const router = createBrowserRouter([
                 {/* After login (direct or activation → login), a pending /connect request
                     resumes from here; no-op without one. */}
                 <PendingConnectRedirect />
-                <Outlet />
+                {/* A user whose organizations are all disabled sees a message instead. */}
+                <OrganizationDisabledGate>
+                  <Outlet />
+                </OrganizationDisabledGate>
               </ProtectedGuard>
             ),
             children: [

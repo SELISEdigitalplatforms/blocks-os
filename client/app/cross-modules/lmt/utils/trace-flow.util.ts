@@ -135,7 +135,7 @@ const clientComponent = (span: TraceTree, op: string): Component => {
       label: tStatic(I18N_MODULE, "TRACE_FLOW_UTIL.GRPC_SERVICE"),
       kind: "external",
       traffic: "http",
-      tag: "gRPC call",
+      tag: tStatic(I18N_MODULE, "TRACE_FLOW_UTIL.GRPC_CALL"),
     };
   }
 
@@ -257,7 +257,10 @@ export const getSpanOutcome = (span: TraceTree) => {
 
   return {
     state,
-    statusLabel: state === "error" && status.variant !== "error" ? "Error" : status.label,
+    statusLabel:
+      state === "error" && status.variant !== "error"
+        ? tStatic(I18N_MODULE, "TRACE_FLOW_UTIL.ERROR")
+        : status.label,
     errorMessage,
   };
 };

@@ -30,6 +30,8 @@ const mapOrganizationConfig = (
   keepOrgPermissionsSameAsDefaultPermissions: response.keepOrgPermissionsSameAsDefaultPermissions,
   isSignupAutoJoinEnabled: response.isSignupAutoJoinEnabled ?? false,
   signupAutoJoinOrganizationId: response.signupAutoJoinOrganizationId ?? null,
+  allowNoOrgSignInForDisabledOrganizations:
+    response.allowNoOrgSignInForDisabledOrganizations ?? false,
 });
 
 const mapSignupConfig = (response: IGetSignUpSettingResponse): ISettingsSignupConfig => ({

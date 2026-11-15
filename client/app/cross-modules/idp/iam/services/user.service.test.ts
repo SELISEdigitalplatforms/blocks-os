@@ -22,7 +22,6 @@ import {
   mockGetHistoriesPayload,
   mockGetUserRolesPayload,
   mockGetUserPermissionsPayload,
-  mockResendActivationPayload,
   mockSuccessResponse,
   MOCK_USER_ITEM_ID,
 } from "../../test-utils/__mocks__";
@@ -119,6 +118,43 @@ describe("UserService", () => {
         service.getUserById({ id: MOCK_USER_ITEM_ID, projectKey: TEST_PROJECT_KEY }),
       ).rejects.toThrow("Network error");
     });
+
+    // IAM answers 200 with an empty `data` for an id it has no user for.
+    it("should resolve with data null when IAM returns data null", async () => {
+      vi.mocked(http.get).mockResolvedValue({ data: null, errors: null });
+
+      const result = await service.getUserById({
+        id: MOCK_USER_ITEM_ID,
+        projectKey: TEST_PROJECT_KEY,
+      });
+
+      expect(result).toEqual({ data: null, errors: null });
+    });
+
+    it("should resolve with data null when IAM returns no data field", async () => {
+      vi.mocked(http.get).mockResolvedValue({});
+
+      const result = await service.getUserById({
+        id: MOCK_USER_ITEM_ID,
+        projectKey: TEST_PROJECT_KEY,
+      });
+
+      expect(result).toEqual({ data: null });
+    });
+
+    it("should still read the legacy OrganizationIds field for an existing user", async () => {
+      vi.mocked(http.get).mockResolvedValue({
+        data: { ...mockUser, organizationIds: [], OrganizationIds: ["org-1"], roles: ["admin"] },
+      });
+
+      const result = await service.getUserById({
+        id: MOCK_USER_ITEM_ID,
+        projectKey: TEST_PROJECT_KEY,
+      });
+
+      expect(result.data?.organizationIds).toEqual(["org-1"]);
+      expect(result.data?.roles).toEqual({ "org-1": ["admin"] });
+    });
   });
 
   // ─── addUser ──────────────────────────────────────────────────────────────
@@ -184,6 +220,13 @@ describe("UserService", () => {
         { absoluteUrl: true },
       );
       expect(result).toEqual(mockSuccessResponse);
+    });
+
+    it("should reject before posting when the user does not exist", async () => {
+      vi.mocked(http.get).mockResolvedValue({ data: null, errors: null });
+
+      await expect(service.updateUser(mockUpdateUserPayload)).rejects.toThrow("User not found");
+      expect(http.post).not.toHaveBeenCalled();
     });
 
     it("should throw when the API call fails", async () => {
@@ -383,6 +426,15 @@ describe("UserService", () => {
       expect(result).toEqual({ data: [], totalCount: 0, errors: null });
     });
 
+    it("should return an empty list when the user does not exist", async () => {
+      vi.mocked(http.get).mockResolvedValue({ data: null, errors: null });
+
+      const result = await service.getUserRoles(mockGetUserRolesPayload);
+
+      expect(http.post).not.toHaveBeenCalled();
+      expect(result).toEqual({ data: [], totalCount: 0, errors: null });
+    });
+
     it("should throw when the API call fails", async () => {
       vi.mocked(http.get).mockRejectedValue(new Error("Network error"));
 
@@ -423,6 +475,15 @@ describe("UserService", () => {
       expect(result).toEqual({ data: [], totalCount: 0, errors: null });
     });
 
+    it("should return an empty list when the user does not exist", async () => {
+      vi.mocked(http.get).mockResolvedValue({});
+
+      const result = await service.getUserPermissions(mockGetUserPermissionsPayload);
+
+      expect(http.post).not.toHaveBeenCalled();
+      expect(result).toEqual({ data: [], totalCount: 0, errors: null });
+    });
+
     it("should throw when the API call fails", async () => {
       vi.mocked(http.get).mockRejectedValue(new Error("Network error"));
 
@@ -453,26 +514,54 @@ describe("UserService", () => {
 
   // ─── accountDeactivate ────────────────────────────────────────────────────
   describe("accountDeactivate", () => {
-    it("should POST to the correct endpoint with payload", async () => {
+    // IAM's deactivate takes only the user id; the tenant comes from the impersonated token.
+    it("should POST exactly the user id to users/deactivate", async () => {
       vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
 
-      const result = await service.accountDeactivate(mockResendActivationPayload);
+      const result = await service.accountDeactivate({ userId: "u1" });
 
       expect(http.post).toHaveBeenCalledWith(
         USER_ENDPOINTS.DEACTIVATE,
-        mockResendActivationPayload,
+        { userId: "u1" },
         undefined,
         { absoluteUrl: true },
       );
+      expect(USER_ENDPOINTS.DEACTIVATE).toMatch(/\/iam\/users\/deactivate$/);
       expect(result).toEqual(mockSuccessResponse);
     });
 
     it("should throw when the API call fails", async () => {
       vi.mocked(http.post).mockRejectedValue(new Error("Network error"));
 
-      await expect(service.accountDeactivate(mockResendActivationPayload)).rejects.toThrow(
-        "Network error",
+      await expect(service.accountDeactivate({ userId: "u1" })).rejects.toThrow("Network error");
+    });
+  });
+
+  // ─── accountActivateByAdmin ───────────────────────────────────────────────
+  describe("accountActivateByAdmin", () => {
+    // The admin reinstatement, not the user's own code-based auth/activate.
+    it("should POST the user id and reason to users/activate", async () => {
+      const response = { isSuccess: true, itemId: "u1", errors: null };
+      vi.mocked(http.post).mockResolvedValue(response);
+
+      const result = await service.accountActivateByAdmin({ userId: "u1", reason: "Rejoined" });
+
+      expect(http.post).toHaveBeenCalledWith(
+        USER_ENDPOINTS.ACTIVATE,
+        { userId: "u1", reason: "Rejoined" },
+        undefined,
+        { absoluteUrl: true },
       );
+      expect(USER_ENDPOINTS.ACTIVATE).toMatch(/\/iam\/users\/activate$/);
+      expect(result).toEqual(response);
+    });
+
+    it("should throw when the API call fails", async () => {
+      vi.mocked(http.post).mockRejectedValue(new Error("Network error"));
+
+      await expect(
+        service.accountActivateByAdmin({ userId: "u1", reason: "Rejoined" }),
+      ).rejects.toThrow("Network error");
     });
   });
 });

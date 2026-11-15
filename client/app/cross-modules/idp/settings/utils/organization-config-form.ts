@@ -14,6 +14,7 @@ export const organizationConfigFormSchema = z
     isMultiOrgEnabled: z.boolean(),
     isSignupAutoJoinEnabled: z.boolean(),
     signupAutoJoinOrganizationId: z.string(),
+    allowNoOrgSignInForDisabledOrganizations: z.boolean(),
   })
   .superRefine((values, ctx) => {
     if (
@@ -41,7 +42,24 @@ export const toOrganizationConfigFormValues = (
   isMultiOrgEnabled: config.isMultiOrgEnabled,
   isSignupAutoJoinEnabled: config.isSignupAutoJoinEnabled ?? false,
   signupAutoJoinOrganizationId: config.signupAutoJoinOrganizationId ?? "",
+  allowNoOrgSignInForDisabledOrganizations:
+    config.allowNoOrgSignInForDisabledOrganizations ?? false,
 });
+
+/**
+ * The disabled-organization sign-in setting only takes effect with multi-org on. While multi-org is
+ * off its toggle is disabled, so the stored value is what is shown and what is saved.
+ */
+export const getEffectiveDisabledOrgSignIn = (
+  config: ISettingsOrganizationConfig,
+  values: Pick<
+    OrganizationConfigFormValues,
+    "isMultiOrgEnabled" | "allowNoOrgSignInForDisabledOrganizations"
+  >,
+): boolean =>
+  values.isMultiOrgEnabled
+    ? values.allowNoOrgSignInForDisabledOrganizations
+    : config.allowNoOrgSignInForDisabledOrganizations;
 
 export const buildOrganizationConfigSavePayload = (
   config: ISettingsOrganizationConfig,
@@ -63,4 +81,5 @@ export const buildOrganizationConfigSavePayload = (
   ...(values.isSignupAutoJoinEnabled
     ? { signupAutoJoinOrganizationId: values.signupAutoJoinOrganizationId }
     : {}),
+  allowNoOrgSignInForDisabledOrganizations: getEffectiveDisabledOrgSignIn(config, values),
 });

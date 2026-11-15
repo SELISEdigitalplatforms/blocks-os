@@ -153,20 +153,36 @@ export const DEFAULT_OIDC_UI_TEMPLATE: IOidcUiTemplate = {
   layout: { showAnimationPanel: true },
 };
 
-const mergeDefaults = (defaults: unknown, value: unknown): unknown => {
+/**
+ * The optional page fields: the editor saves a cleared one as null, so a stored null
+ * there is the admin's choice and survives a load. Mirrors the `optional` flags in
+ * `getPageFields()`; a test keeps the two in step.
+ */
+export const NULLABLE_PAGE_FIELD_PATHS: ReadonlySet<string> = new Set([
+  "pages.signup.termsLinkUrl",
+  "pages.signup.privacyLinkUrl",
+  "pages.mfa.resendButton",
+  "pages.accountSelector.subheading",
+]);
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+
+/**
+ * Fills the stored template's gaps from the defaults. A null is a gap as much as a
+ * missing key: blocks-iam sends a field the stored template predates as null (it adds
+ * required fields without rewriting saved templates), and its own login pages already
+ * show the default for one. Leaving those nulls in place made every save - and every
+ * per-page save, which sends the stored copy of the other pages - fail server-side.
+ */
+const mergeDefaults = (defaults: unknown, value: unknown, path: string): unknown => {
   if (value === undefined) return structuredClone(defaults);
-  if (
-    defaults !== null &&
-    value !== null &&
-    typeof defaults === "object" &&
-    typeof value === "object" &&
-    !Array.isArray(defaults) &&
-    !Array.isArray(value)
-  ) {
+  if (value === null) return NULLABLE_PAGE_FIELD_PATHS.has(path) ? null : structuredClone(defaults);
+  if (isPlainObject(defaults) && isPlainObject(value)) {
     return Object.fromEntries(
       Object.entries(defaults).map(([key, defaultValue]) => [
         key,
-        mergeDefaults(defaultValue, (value as Record<string, unknown>)[key]),
+        mergeDefaults(defaultValue, value[key], path ? `${path}.${key}` : key),
       ]),
     );
   }
@@ -174,16 +190,16 @@ const mergeDefaults = (defaults: unknown, value: unknown): unknown => {
 };
 
 /**
- * `layout` is coerced on its own rather than through `mergeDefaults`, which keeps a
- * stored `null`: anything but a literal `false` shows the animation panel, so a
- * missing, `null`, or malformed value can never hide it by accident.
+ * `layout` is coerced on its own rather than through `mergeDefaults`: anything but a
+ * literal `false` shows the animation panel, so a missing, `null`, or malformed value
+ * can never hide it by accident.
  */
 export const normalizeOidcUiTemplate = (
   template: Omit<IOidcUiTemplate, "layout"> & {
     layout?: { showAnimationPanel?: boolean | null } | null;
   },
 ): IOidcUiTemplate => ({
-  ...(mergeDefaults(DEFAULT_OIDC_UI_TEMPLATE, template) as IOidcUiTemplate),
+  ...(mergeDefaults(DEFAULT_OIDC_UI_TEMPLATE, template, "") as IOidcUiTemplate),
   layout: { showAnimationPanel: template.layout?.showAnimationPanel !== false },
 });
 

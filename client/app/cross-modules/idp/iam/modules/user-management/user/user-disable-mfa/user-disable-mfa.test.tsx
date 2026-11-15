@@ -51,6 +51,8 @@ describe("UserDisableMFA", () => {
   it("shows the processing label while the mutation is pending", () => {
     h.isPending = true;
     render(<UserDisableMFA userId="u1" open={true} setOpen={vi.fn()} />);
-    expect((screen.getByRole("button", { name: "Processing" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "Processing" }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
   });
 });

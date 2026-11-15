@@ -70,7 +70,8 @@ namespace Cloud.LmtService.Repositories.Trace
 
             if (!string.IsNullOrWhiteSpace(query.Search))
             {
-                var regex = new BsonRegularExpression(query.Search, "i");
+                // Plain-text match, as in LogRepository (ZAP 40018, weekend run 2026-11-13).
+                var regex = new BsonRegularExpression(System.Text.RegularExpressions.Regex.Escape(query.Search), "i");
 
                 filter &= Builders<BsonDocument>.Filter.Or(
                           Builders<BsonDocument>.Filter.Regex(OperationNameField, regex),
@@ -172,7 +173,8 @@ namespace Cloud.LmtService.Repositories.Trace
 
             if (!string.IsNullOrWhiteSpace(operationSearch))
             {
-                var regex = new BsonRegularExpression(operationSearch, "i");
+                // Plain-text match, as in LogRepository (ZAP 40018, weekend run 2026-11-13).
+                var regex = new BsonRegularExpression(System.Text.RegularExpressions.Regex.Escape(operationSearch), "i");
                 filter &= Builders<BsonDocument>.Filter.Regex(OperationNameField, regex);
             }
 
@@ -453,6 +455,28 @@ namespace Cloud.LmtService.Repositories.Trace
                     $"Failed to archive traces for tenant {query.ProjectKey} to collection {collectionName}",
                     ex);
             }
+        }
+
+        /// <summary>
+        /// Tells the backup's leftover check whether a tenant's source window is still intact. Read
+        /// failures propagate: answering "no" would make a partial archive look like the only copy.
+        /// </summary>
+        public async Task<bool> HasTracesInWindowAsync(
+            string tenantId, DateTime startDate, DateTime endDate, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(tenantId))
+                return false;
+
+            var query = new TenantLogsRequest
+            {
+                ProjectKey = tenantId,
+                Filter = new TenantLogsRequestByFilter { StartDate = startDate, EndDate = endDate }
+            };
+
+            return await _database.GetCollection<BsonDocument>(tenantId)
+                .Find(BuildDateFilter(query))
+                .Limit(1)
+                .AnyAsync(ct);
         }
 
         /// <summary>

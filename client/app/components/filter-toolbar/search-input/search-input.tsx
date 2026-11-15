@@ -3,6 +3,7 @@ import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
 import { cn, debounce } from "@/lib/utils";
+import { useT } from "@seliseblocks/genesis-os";
 interface SearchInputProps {
   onChange: (value: string) => void;
   placeholder?: string;
@@ -11,10 +12,11 @@ interface SearchInputProps {
 }
 export const SearchInput: React.FC<SearchInputProps> = ({
   onChange,
-  placeholder = "Search...",
+  placeholder,
   value,
   className = "",
 }) => {
+  const { t } = useT("os.shared");
   const [state, setState] = useState(value);
   const [prevValue, setPrevValue] = useState(value);
   if (prevValue !== value) {
@@ -49,7 +51,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
       <Search className="mr-2 h-4 w-4 text-muted-foreground" />
       <Input
         ref={inputRef}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t("SEARCH_INPUT.PLACEHOLDER")}
         value={state}
         onChange={handleChange}
         className={cn(

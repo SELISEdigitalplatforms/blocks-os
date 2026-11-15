@@ -368,7 +368,11 @@ export function DataGatewayContents() {
                       "DATA_GATEWAY_CONTENTS.COLLECTION_NAME_PATTERN_IS_REQUIRED",
                     ),
                     validate: (value) =>
-                      value.includes("{SchemaName}") || "Pattern must contain {SchemaName}",
+                      value.includes("{SchemaName}") ||
+                      tStatic(
+                        I18N_MODULE,
+                        "DATA_GATEWAY_CONTENTS.PATTERN_MUST_CONTAIN_SCHEMA_NAME",
+                      ),
                   }}
                   render={({ field }) => {
                     const SCHEMA_NAME_PLACEHOLDER = "{SchemaName}";

@@ -31,7 +31,7 @@ namespace XUnitTest.Integration
 
         private ProjectRepository NewRepository() => NewRepository(_fixture.DbContextProvider);
 
-        private ProjectRepository NewRepository(IDbContextProvider provider)
+        private ProjectRepository NewRepository(IDbContextProvider provider, IEncodingService? encodingService = null)
         {
             var secret = new Mock<IBlocksSecret>();
             secret.SetupGet(s => s.DatabaseConnectionString).Returns("mongodb://localhost:27017");
@@ -42,7 +42,16 @@ namespace XUnitTest.Integration
             var encoding = new Mock<IEncodingService>();
             encoding.Setup(e => e.EncodeToBase26Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>()))
                     .ReturnsAsync("abcde");
-            return new ProjectRepository(provider, config, secret.Object, encoding.Object, Mock.Of<IDataGatewayRootProvisioner>(), new XUnitTest.TestHelpers.PassThroughOsDataAccess(), Mock.Of<IStorageConfigurationSeedCopier>(), Mock.Of<IMailConfigurationSeedCopier>());
+            return new ProjectRepository(provider, config, secret.Object, encodingService ?? encoding.Object, Mock.Of<IDataGatewayRootProvisioner>(), new XUnitTest.TestHelpers.PassThroughOsDataAccess(), Mock.Of<IStorageConfigurationSeedCopier>(), Mock.Of<IMailConfigurationSeedCopier>());
+        }
+
+        // The real encoder over the same throwaway database, for tests about the urls it produces.
+        private DomainService.Shared.Utilities.EncodingService RealEncoding()
+        {
+            var secret = new Mock<IBlocksSecret>();
+            secret.SetupGet(s => s.DatabaseConnectionString).Returns("mongodb://localhost:27017");
+            secret.SetupGet(s => s.RootDatabaseName).Returns("BlocksRootDb");
+            return new DomainService.Shared.Utilities.EncodingService(_fixture.DbContextProvider, secret.Object);
         }
 
         private static string UserOf(string tenant) => "user-" + tenant;
@@ -753,6 +762,29 @@ namespace XUnitTest.Integration
             await repo.UpdateRepoResourceAsync(AddRepository(group, "r-" + tenant));
 
             (await ProjectsHoldingAsync("r-" + tenant)).Should().BeEquivalentTo(new[] { "DEV" + tenant, "PROD" + tenant });
+        }
+
+        // Repositories created close together get GitHub ids whose first five base-26 letters
+        // match (1350000000 and 1350000300 both start ejqfh). The deployment url is built from
+        // those letters, so both repositories of the project used to get the same one.
+        [Fact]
+        public async Task UpdateRepoResourceAsync_RepositoriesWithNeighbouringIds_GetDistinctDeploymentUrls()
+        {
+            var tenant = MongoIntegrationFixture.NewTenantId();
+            var group = "grp-" + tenant;
+            using var _ = new IntegrationContext(tenant);
+            var repo = NewRepository(_fixture.DbContextProvider, RealEncoding());
+            await InsertTenantsAsync(NewTenant("dev-" + tenant, group, UserOf(tenant), tenantId: "DEV" + tenant));
+
+            await repo.UpdateRepoResourceAsync(AddRepository(group, "1350000000"));
+            await repo.UpdateRepoResourceAsync(AddRepository(group, "1350000300"));
+
+            var copies = await _fixture.Collection<BsonDocument>("Repos")
+                .Find(Builders<BsonDocument>.Filter.Eq("ProjectId", "DEV" + tenant)).ToListAsync();
+            var urls = copies.Select(d => d["DefaultDeploymentUrl"].AsString).ToList();
+            urls.Should().HaveCount(2).And.OnlyHaveUniqueItems();
+            urls.Should().ContainSingle(u => u.EndsWith("-ejqfh.blocks.dev", StringComparison.Ordinal),
+                "the repository added first keeps the code its id encodes to");
         }
 
         [Fact]

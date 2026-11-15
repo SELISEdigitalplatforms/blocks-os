@@ -781,9 +781,9 @@ namespace DomainService.Projects
            if (project is not null && !projectStatusTracer.IsProjectCreationSuccess)
            {
               projectStatusTracer.ErrorMessage = string.Empty;
-              await ConfigureProjectAsync(project, projectStatusTracer);        
+              await ConfigureProjectAsCallerAsync(project, projectStatusTracer);
            }
-           
+
 
            if (string.IsNullOrWhiteSpace(projectStatusTracer.ErrorMessage))
            {
@@ -793,6 +793,28 @@ namespace DomainService.Projects
 
             return new RestoreProjectResponse { IsSuccess = true };
          }
+
+        /// <summary>
+        /// Project setup on the console's Restore request, run the way the worker runs it: with the caller's context
+        /// pinned in <see cref="BlocksContext"/>.
+        /// </summary>
+        /// <remarks>
+        /// Setup writes the project's own secrets (mail seed copy, storage seed copy, data-source default) inside
+        /// <c>BlocksContext.ExecuteInContext</c> with the project's tenant. On an authenticated HTTP request Genesis
+        /// prefers the request's identity over that switch unless a context is pinned, so on this path the secrets
+        /// went to the caller's tenant (the root SecretStore) and the project could not read them. The worker pins the
+        /// message's context, which is why Create was never affected. Every <c>GetContext()</c> outside a switch still
+        /// returns the same caller. The pin is local to this async method: the request is back to its own context
+        /// once it returns.
+        /// </remarks>
+        private async Task ConfigureProjectAsCallerAsync(Tenant project, ProjectStatusTracer projectStatusTracer)
+        {
+            var caller = BlocksContext.GetContext();
+            if (caller is not null)
+                BlocksContext.SetContext(caller);
+
+            await ConfigureProjectAsync(project, projectStatusTracer);
+        }
 
         public async Task<bool> GetProjectStatusAsync(string itemId)
         {

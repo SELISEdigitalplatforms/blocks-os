@@ -4,7 +4,9 @@ using MongoDB.Bson.Serialization.Attributes;
 namespace Cloud.LmtService.Models.LogTraceBackup
 {
     /// <summary>
-    /// One document per scheduler run. Stored in collection "LogTraceBackupJobs" (Root DB).
+    /// One document per backed-up day (DataDateFrom/DataDateTo are that day's UTC midnight bounds);
+    /// a run that catches up several days writes one per day. Stored in collection
+    /// "LogTraceBackupJobs" (Root DB).
     /// Counters are updated atomically throughout the run — query at any point for live status.
     /// </summary>
     public class LogTraceBackupJob
@@ -16,7 +18,7 @@ namespace Cloud.LmtService.Models.LogTraceBackup
         /// <summary>Unique identifier for this run (Guid string). Used as a foreign key in all tracker collections.</summary>
         public string RunId { get; set; } = string.Empty;
 
-        /// <summary>Running | Completed | CompletedWithErrors | Failed | Abandoned</summary>
+        /// <summary>Running | Completed | CompletedWithErrors | Failed | Abandoned | Skipped</summary>
         public string Status { get; set; } = LogTraceBackupJobStatus.Running;
 
         /// <summary>Archiving | BlobUploading | Finalizing</summary>
@@ -28,7 +30,7 @@ namespace Cloud.LmtService.Models.LogTraceBackup
         /// <summary>Updated periodically during the run. Used to detect abandoned (crashed) jobs on startup.</summary>
         public DateTime LastHeartbeatAt { get; set; }
 
-        /// <summary>The date range of hot data being archived in this run.</summary>
+        /// <summary>The day of hot data this job archives, as [DataDateFrom, DataDateTo).</summary>
         public DateTime DataDateFrom { get; set; }
         public DateTime DataDateTo { get; set; }
 
@@ -44,7 +46,10 @@ namespace Cloud.LmtService.Models.LogTraceBackup
         /// <summary>Grand total failures across all types and phases.</summary>
         public int TotalFailed { get; set; }
 
-        /// <summary>Populated only when Status = Failed (unhandled orchestrator-level crash).</summary>
+        /// <summary>
+        /// Populated when Status = Failed (unhandled orchestrator-level crash) or Skipped (the day
+        /// reached the failed-attempt limit).
+        /// </summary>
         public string? ErrorReason { get; set; }
     }
 }

@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => ({
   isOwner: true,
   accessTabProps: {} as { isTargetOwner?: boolean },
-  detailsTabProps: {} as { projectRole?: "Owner" | "Contributor" },
+  detailsTabProps: {} as { projectRole?: "Owner" | "Contributor"; user?: unknown },
   navigate: vi.fn(),
   params: { id: "user-1", tenantGroupId: "tg-1" } as Record<string, string>,
   userResponse: undefined as unknown,
@@ -49,7 +49,7 @@ vi.mock("@/hooks/use-project", () => ({
   useGetProjects: () => ({ data: h.projects, isLoading: h.isProjectLoading }),
 }));
 vi.mock("./people-details-tab", () => ({
-  PeopleDetailsTab: (props: { projectRole?: "Owner" | "Contributor" }) => {
+  PeopleDetailsTab: (props: { projectRole?: "Owner" | "Contributor"; user?: unknown }) => {
     h.detailsTabProps = props;
     return <div data-testid="details-tab" />;
   },
@@ -126,6 +126,14 @@ describe("PersonDetailPage", () => {
     };
     renderPage();
     expect(screen.getByText("Pending Invite")).toBeTruthy();
+  });
+
+  it("treats a user IAM does not have (data null) like a failed lookup", () => {
+    h.userResponse = { data: null, errors: null };
+    renderPage();
+    expect(screen.getByTestId("details-tab")).toBeTruthy();
+    expect(h.detailsTabProps.user).toBeUndefined();
+    expect(screen.queryByText("Inactive")).toBeNull();
   });
 
   it("shows the inactive badge for an inactive user", () => {

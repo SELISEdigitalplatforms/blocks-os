@@ -27,7 +27,8 @@ type SecretFilterValues = {
   tags: string[];
 };
 
-const TYPE_OPTIONS = [
+// Built when rendered so the labels are translated at read time, not when this file loads.
+const getTypeOptions = () => [
   { value: SECRET_TYPE.Api, label: SECRET_TYPE_LABEL.api },
   { value: SECRET_TYPE.Service, label: SECRET_TYPE_LABEL.service },
   { value: SECRET_TYPE.Both, label: SECRET_TYPE_LABEL.both },
@@ -35,7 +36,7 @@ const TYPE_OPTIONS = [
 
 // Archived is its own on/off filter beside these rather than a status option: it is where
 // restore and purge live, and a choice buried in the Status popover is easy to miss.
-const STATUS_OPTIONS = [
+const getStatusOptions = () => [
   { value: SECRET_STATUS.Active, label: SECRET_STATUS_LABEL.active },
   { value: SECRET_STATUS.Locked, label: SECRET_STATUS_LABEL.locked },
 ];
@@ -179,7 +180,7 @@ export function SecretToolbar() {
               key: "type",
               type: "Radio",
               label: t("common:TYPE"),
-              props: { options: TYPE_OPTIONS },
+              props: { options: getTypeOptions() },
             },
             ...(isArchived
               ? []
@@ -188,7 +189,7 @@ export function SecretToolbar() {
                     key: "status" as const,
                     type: "Radio" as const,
                     label: t("common:STATUS"),
-                    props: { options: STATUS_OPTIONS },
+                    props: { options: getStatusOptions() },
                   },
                 ]),
             {

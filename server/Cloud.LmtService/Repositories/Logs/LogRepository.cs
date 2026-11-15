@@ -110,7 +110,9 @@ namespace Cloud.LmtService.Repositories.Logs
 
             if (!string.IsNullOrWhiteSpace(query.Search))
             {
-                var regex = new BsonRegularExpression(query.Search, "i");
+                // Plain-text match: the raw search as a pattern let "(" fail the query with a 500 and
+                // allowed regex injection (ZAP 40018, weekend run 2026-11-13).
+                var regex = new BsonRegularExpression(System.Text.RegularExpressions.Regex.Escape(query.Search), "i");
                 filter &= Builders<BsonDocument>.Filter.Regex("Message", regex);
             }
 
@@ -155,7 +157,9 @@ namespace Cloud.LmtService.Repositories.Logs
 
             if (!string.IsNullOrWhiteSpace(request.Search))
             {
-                var regex = new BsonRegularExpression(request.Search, "i");
+                // Plain-text match: the raw search as a pattern let "(" fail the query with a 500 and
+                // allowed regex injection (ZAP 40018, weekend run 2026-11-13).
+                var regex = new BsonRegularExpression(System.Text.RegularExpressions.Regex.Escape(request.Search), "i");
                 filter &= Builders<BsonDocument>.Filter.Regex("Message", regex);
             }
 
@@ -442,6 +446,46 @@ namespace Cloud.LmtService.Repositories.Logs
                 _logger.LogError(ex, "Failed to discard partial archive for service {ServiceName} in {CollectionName}",
                     serviceName, collectionName);
             }
+        }
+
+        /// <summary>
+        /// Lists which services wrote rows into a tenant's log archive collection, so the backup's
+        /// leftover check can judge each service's rows against its own source collection. Read
+        /// failures propagate: the caller then leaves the collection as it is.
+        /// </summary>
+        public async Task<List<string>> GetArchivedServiceNamesAsync(string collectionName, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(collectionName))
+                return [];
+
+            using var cursor = await _archiveDatabase.GetCollection<StoredLog>(collectionName)
+                .DistinctAsync(log => log.ServiceName, FilterDefinition<StoredLog>.Empty, cancellationToken: ct);
+
+            return await cursor.ToListAsync(ct);
+        }
+
+        /// <summary>
+        /// Tells the backup's leftover check whether a service still holds the tenant's source logs
+        /// for a window. Read failures propagate, as for <see cref="GetArchivedServiceNamesAsync"/>.
+        /// </summary>
+        public async Task<bool> HasServiceLogsInWindowAsync(
+            string serviceName, string tenantId, DateTime startDate, DateTime endDate, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(serviceName) || string.IsNullOrWhiteSpace(tenantId))
+                return false;
+
+            var query = new TenantLogsRequest
+            {
+                ProjectKey = tenantId,
+                Filter = new TenantLogsRequestByFilter { StartDate = startDate, EndDate = endDate }
+            };
+
+            var filter = Builders<BsonDocument>.Filter.Eq(TenantIdField, tenantId) & BuildDateFilter(query);
+
+            return await _database.GetCollection<BsonDocument>(serviceName)
+                .Find(filter)
+                .Limit(1)
+                .AnyAsync(ct);
         }
 
         public async Task DeleteArchiveCollectionAsync(string collectionName)

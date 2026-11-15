@@ -32,7 +32,8 @@ export const UserBasicInformation = ({
   const profileQuery = useGetProfileUserById({ id, projectKey, enabled: own });
   const byIdQuery = useGetUserById({ id, projectKey, enabled: !own });
   const { isLoading, data } = own ? profileQuery : byIdQuery;
-  if (!isLoading && !data) return null;
+  // A missing user (`data: null`) hides the card the same way a failed lookup does.
+  if (!isLoading && !data?.data) return null;
   const { data: user } = data || { user: {} };
   return (
     <Card>

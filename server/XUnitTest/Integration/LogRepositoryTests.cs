@@ -99,6 +99,35 @@ namespace XUnitTest.Integration
             logs.Should().OnlyContain(l => l.Level == "Error");
         }
 
+        // Weekend run 2026-11-13, ZAP 40018 on POST Log/GetLogsByDate (search "'(" -> 500): the search
+        // is matched as plain text, so regex syntax neither fails the query nor widens the match.
+        [Theory]
+        [InlineData("a(b")]
+        [InlineData("'(")]
+        [InlineData(".*")]
+        [InlineData("[x")]
+        public async Task GetLogs_GetLogsRequest_MatchesSearchAsPlainText(string search)
+        {
+            var tenant = MongoIntegrationFixture.NewTenantId();
+            var svc = "svc-" + tenant;
+            var now = DateTime.UtcNow;
+            await SeedAsync(svc,
+                Log(tenant, now.AddMinutes(-1), $"call {search} failed"),
+                Log(tenant, now.AddMinutes(-2), "plain message"));
+
+            using var _ = new IntegrationContext(tenant);
+            var (logs, count) = await NewRepository().GetLogs(new GetLogsRequest
+            {
+                ServiceName = svc,
+                Search = search,
+                Page = 0,
+                PageSize = 10
+            });
+
+            count.Should().Be(1);
+            logs.Single().Message.Should().Be($"call {search} failed");
+        }
+
         [Fact]
         public async Task GetLogs_GetLogsRequest_FiltersByTraceAndSpanAndDateRange()
         {
@@ -158,6 +187,33 @@ namespace XUnitTest.Integration
             count.Should().Be(3);
             logs.Should().HaveCount(2);
             logs.Should().OnlyContain(l => l.Level == "Warning");
+        }
+
+        [Theory]
+        [InlineData("a(b")]
+        [InlineData("'(")]
+        [InlineData(".*")]
+        public async Task GetLogs_LogsByDateRequest_MatchesSearchAsPlainText(string search)
+        {
+            var tenant = MongoIntegrationFixture.NewTenantId();
+            var svc = "svc-" + tenant;
+            var now = DateTime.UtcNow;
+            await SeedAsync(svc,
+                Log(tenant, now.AddMinutes(-1), $"call {search} failed"),
+                Log(tenant, now.AddMinutes(-2), "plain message"));
+
+            using var _ = new IntegrationContext(tenant);
+            var (logs, count) = await NewRepository().GetLogs(new LogsByDateRequest
+            {
+                ServiceName = svc,
+                Search = search,
+                Page = 0,
+                PageSize = 10,
+                Filter = new LogsByLastDateRequestFilter { StartDate = now.AddMinutes(-10), EndDate = now }
+            });
+
+            count.Should().Be(1);
+            logs.Single().Message.Should().Be($"call {search} failed");
         }
 
         [Fact]

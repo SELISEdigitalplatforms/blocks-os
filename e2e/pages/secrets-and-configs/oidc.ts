@@ -572,19 +572,34 @@ export async function expectMobileLockedStateFlow(page: Page) {
   await expect(page.getByPlaceholder(OIDC_REDIRECT_PLACEHOLDER.mobile).first()).toBeVisible();
 }
 
+/**
+ * Drift (dev 50a4bc37): Edit is a link to the client's own page,
+ * /secret-management/oidc/clients/:clientId, instead of a row button opening a dialog. The page
+ * has the same form fields and its Update button, and goes back to the list after a save.
+ */
 export async function openEditOidcClientFlow(page: Page, clientName: string) {
   await waitForOidcListSettledFlow(page);
   const row = oidcClientRow(page, clientName);
   await expect(row).toBeVisible({ timeout: 15_000 });
-  await row.getByRole("button", { name: "Edit" }).click();
-  await expect(page.getByRole("heading", { name: "Edit OIDC Client" })).toBeVisible();
-  // The dialog opens with the create defaults and resets the form once GET oidc-clients/{id}
-  // returns. Wait for the client's own name, or a field typed before that reset is overwritten
-  // (H8 typed the new name, the reset put the old one back, and the save sent the old name).
+  await row.getByRole("link", { name: "Edit" }).click();
+  await expect(page).toHaveURL(/\/secret-management\/oidc\/clients\/[^/?#]+$/, { timeout: 15_000 });
+  await expect(page.getByRole("heading", { level: 1, name: clientName })).toBeVisible({
+    timeout: 15_000,
+  });
+  // Wait for the client's own name in the form before typing, or a field typed before the form
+  // takes the loaded client is overwritten (H8 typed the new name, the load put the old one
+  // back, and the save sent the old name).
   await expect(page.getByPlaceholder("Enter client name")).toHaveValue(clientName, {
     timeout: 15_000,
   });
   return row;
+}
+
+/** Leaves the client's edit page through its Cancel link, back to the settled list. */
+export async function closeOidcClientPageFlow(page: Page) {
+  await page.getByRole("link", { name: "Cancel", exact: true }).click();
+  await expect(page).toHaveURL(/\/secret-management\/oidc\/?$/, { timeout: 15_000 });
+  await waitForOidcListSettledFlow(page);
 }
 
 export async function closeOidcDialogFlow(page: Page) {
