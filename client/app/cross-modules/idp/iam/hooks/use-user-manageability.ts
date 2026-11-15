@@ -22,7 +22,7 @@ export const useUserManageability = () => {
       isRestricted,
       isSelf: (userId: string) => isRestricted && callerId !== undefined && callerId === userId,
       /** May the caller act on this user at all (profile, activation, sessions, access)? */
-      canManage: (user: TargetUser | undefined) => {
+      canManage: (user: TargetUser | null | undefined) => {
         if (!isRestricted || !user) return true;
         // Self is judged separately (`isSelf`): the caller may still edit their own profile fields.
         return canManageUserAccess(scope, {
