@@ -47,8 +47,8 @@ namespace DomainService.Projects
         Task<(TenantAsset assets, long totalCount)> GetTenantAssetAsync(GetAssetRequest request);
         Task<TenantAsset?> GetTenantAssetByGroupIdAsync(string tenantGroupId);
         Task SaveTenantAssetAsync(TenantAsset asset);
-        Task UpdateRepoResourceAsync(AddAssetRequest request);
-        Task UpdateRepoResourceInfoAsync(AddAssetRequest request);
+        /// <summary>Gives every live environment of the group a row for the repository, inserting where one is missing and refreshing the rest. Safe to repeat. Returns the rows inserted or changed.</summary>
+        Task<long> SyncRepoResourceAsync(AddAssetRequest request);
         Task ArchiveRepoResourceAsync(DeleteAssetRequest request);
         Task SaveRepoInfoAsync(Tenant project, List<Resource>? resources);
         Task<BlocksGuid> GetBlocksGuidAsync(string tenantGroupId);

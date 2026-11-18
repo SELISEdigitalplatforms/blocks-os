@@ -177,7 +177,7 @@ namespace XUnitTest.Integration
         }
 
         [Fact]
-        public async Task UpdateRepoResourceAsync_InsertsRepoForEachProjectInGroup()
+        public async Task SyncRepoResourceAsync_InsertsRepoForEachProjectInGroup()
         {
             var suffix = Guid.NewGuid().ToString("N");
             using var _ = new IntegrationContext(suffix);
@@ -185,7 +185,7 @@ namespace XUnitTest.Integration
             var project = NewProject(suffix);
             await repo.InsertProjectAsync(project);
 
-            await repo.UpdateRepoResourceAsync(new AddAssetRequest
+            await repo.SyncRepoResourceAsync(new AddAssetRequest
             {
                 TenantGroupId = project.TenantGroupId,
                 Resource = new Resource { ResourceId = "r1", Name = "Svc", Link = "https://git/svc" }

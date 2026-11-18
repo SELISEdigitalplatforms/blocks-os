@@ -929,8 +929,7 @@ namespace XUnitTest.Services
             response.Status.Should().Be(AssetMutationStatus.Added);
             asset.Resources.Should().ContainSingle(r => r.ResourceId == "r1");
             _repo.Verify(r => r.SaveTenantAssetAsync(asset), Times.Once);
-            _repo.Verify(r => r.UpdateRepoResourceAsync(It.IsAny<AddAssetRequest>()), Times.Once);
-            _repo.Verify(r => r.UpdateRepoResourceInfoAsync(It.IsAny<AddAssetRequest>()), Times.Never);
+            _repo.Verify(r => r.SyncRepoResourceAsync(It.IsAny<AddAssetRequest>()), Times.Once);
         }
 
         [Fact]
@@ -988,9 +987,8 @@ namespace XUnitTest.Services
             asset.Resources[0].IsArchived.Should().BeFalse();
             asset.Resources[0].CreatedDate.Should().Be(created);
             _repo.Verify(r => r.SaveTenantAssetAsync(asset), Times.Once);
-            // The per-tenant Repos rows were never removed, so restoring must not insert more.
-            _repo.Verify(r => r.UpdateRepoResourceAsync(It.IsAny<AddAssetRequest>()), Times.Never);
-            _repo.Verify(r => r.UpdateRepoResourceInfoAsync(It.IsAny<AddAssetRequest>()), Times.Once);
+            // The sync revives the rows that survived the delete and inserts only where one is missing.
+            _repo.Verify(r => r.SyncRepoResourceAsync(It.IsAny<AddAssetRequest>()), Times.Once);
         }
 
         [Fact]
@@ -1246,12 +1244,11 @@ namespace XUnitTest.Services
             asset.Resources[0].Name.Should().Be("owner/new-name");
             asset.Resources[0].Link.Should().Be("https://github.com/owner/new-name");
             _repo.Verify(r => r.SaveTenantAssetAsync(asset), Times.Once);
-            _repo.Verify(r => r.UpdateRepoResourceInfoAsync(It.IsAny<AddAssetRequest>()), Times.Once);
-            _repo.Verify(r => r.UpdateRepoResourceAsync(It.IsAny<AddAssetRequest>()), Times.Never);
+            _repo.Verify(r => r.SyncRepoResourceAsync(It.IsAny<AddAssetRequest>()), Times.Once);
         }
 
         [Fact]
-        public async Task AddAssetAsync_UnchangedResource_DoesNotWrite()
+        public async Task AddAssetAsync_UnchangedResource_DoesNotSaveTheGroupAsset()
         {
             using var _ = new BlocksTestContext();
             var asset = new TenantAsset
@@ -1260,6 +1257,7 @@ namespace XUnitTest.Services
                 Resources = new List<Resource> { new() { ResourceId = "r1", Name = "repo", Link = "link" } }
             };
             _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("g")).ReturnsAsync(asset);
+            _repo.Setup(r => r.SyncRepoResourceAsync(It.IsAny<AddAssetRequest>())).ReturnsAsync(0L);
 
             var response = await Service().AddAssetAsync(new AddAssetRequest
             {
@@ -1271,7 +1269,55 @@ namespace XUnitTest.Services
             response.Status.Should().Be(AssetMutationStatus.Unchanged);
             asset.Resources.Should().HaveCount(1);
             _repo.Verify(r => r.SaveTenantAssetAsync(It.IsAny<TenantAsset>()), Times.Never);
-            _repo.Verify(r => r.UpdateRepoResourceInfoAsync(It.IsAny<AddAssetRequest>()), Times.Never);
+        }
+
+        // Prod, group 6ca5156e…: the repository had been deleted, stg and prod were created while
+        // it was gone (a new environment inherits only live repositories), and adding it back
+        // revived dev's row alone. Every environment is synced even when the group's entry is
+        // already right, so adding the repository again fills in the environments that lack it.
+        [Fact]
+        public async Task AddAssetAsync_UnchangedResourceMissingFromAnEnvironment_SyncsAndReportsUpdated()
+        {
+            using var _ = new BlocksTestContext();
+            var asset = new TenantAsset
+            {
+                TenantGroupId = "g",
+                Resources = new List<Resource> { new() { ResourceId = "r1", Name = "repo", Link = "link" } }
+            };
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("g")).ReturnsAsync(asset);
+            _repo.Setup(r => r.SyncRepoResourceAsync(It.Is<AddAssetRequest>(a => a.TenantGroupId == "g" && a.Resource.ResourceId == "r1")))
+                 .ReturnsAsync(2L);
+
+            var response = await Service().AddAssetAsync(new AddAssetRequest
+            {
+                TenantGroupId = "g",
+                Resource = new Resource { ResourceId = "r1", Name = "repo", Link = "link" }
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            response.Status.Should().Be(AssetMutationStatus.Updated);
+            _repo.Verify(r => r.SyncRepoResourceAsync(It.IsAny<AddAssetRequest>()), Times.Once);
+            _repo.Verify(r => r.SaveTenantAssetAsync(It.IsAny<TenantAsset>()), Times.Never);
+        }
+
+        // An environment that could not be written must not be reported as done: the caller sees
+        // the failure and adding the repository again retries it.
+        [Fact]
+        public async Task AddAssetAsync_EnvironmentWriteFails_Throws()
+        {
+            using var _ = new BlocksTestContext();
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("g"))
+                 .ReturnsAsync(new TenantAsset { TenantGroupId = "g", Resources = new List<Resource>() });
+            _repo.Setup(r => r.SyncRepoResourceAsync(It.IsAny<AddAssetRequest>()))
+                 .ThrowsAsync(new AggregateException(new InvalidOperationException("stg")));
+
+            var act = () => Service().AddAssetAsync(new AddAssetRequest
+            {
+                TenantGroupId = "g",
+                Resource = new Resource { ResourceId = "r1", Name = "repo", Link = "link" }
+            });
+
+            await act.Should().ThrowAsync<AggregateException>();
         }
 
         // The paged read truncates Resources to a single page, so saving its result back would
@@ -2154,7 +2200,7 @@ namespace XUnitTest.Services
 
             _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("group-1")).ReturnsAsync((TenantAsset?)null);
             _repo.Setup(r => r.SaveTenantAssetAsync(It.IsAny<TenantAsset>())).Returns(Task.CompletedTask);
-            _repo.Setup(r => r.UpdateRepoResourceAsync(It.IsAny<AddAssetRequest>())).Returns(Task.CompletedTask);
+            _repo.Setup(r => r.SyncRepoResourceAsync(It.IsAny<AddAssetRequest>())).ReturnsAsync(2L);
             _repo.Setup(r => r.GetByGroupIdAsync("group-1")).ReturnsAsync(new List<Tenant> { dev, prod });
             _repo.Setup(r => r.UpdateProjectAsync(It.IsAny<Tenant>())).Returns(Task.CompletedTask);
 
@@ -2212,7 +2258,7 @@ namespace XUnitTest.Services
 
             _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("group-1")).ReturnsAsync(asset);
             _repo.Setup(r => r.SaveTenantAssetAsync(It.IsAny<TenantAsset>())).Returns(Task.CompletedTask);
-            _repo.Setup(r => r.UpdateRepoResourceInfoAsync(It.IsAny<AddAssetRequest>())).Returns(Task.CompletedTask);
+            _repo.Setup(r => r.SyncRepoResourceAsync(It.IsAny<AddAssetRequest>())).ReturnsAsync(1L);
             _repo.Setup(r => r.GetByGroupIdAsync("group-1")).ReturnsAsync(new List<Tenant> { dev });
             _repo.Setup(r => r.UpdateProjectAsync(It.IsAny<Tenant>())).Returns(Task.CompletedTask);
             _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
@@ -2234,6 +2280,15 @@ namespace XUnitTest.Services
             // The generated host is derived from the resource id, not the name, so a rename
             // cannot produce a new one -- and must not write to every tenant in the group.
             using var _ = new BlocksTestContext();
+            EncodeSlugsPerInput(("repo-1", "aaaaa"), ("group-1", "ggggg"));
+
+            var dev = TenantWith(new Applications
+            {
+                Domain = "https://dggggg-aaaaa.blocks.dev",
+                DomainType = DomainType.PlatformSubdomain
+            });
+            dev.TenantId = "dev-1";
+            dev.Environment = "dev";
 
             var asset = new TenantAsset
             {
@@ -2246,7 +2301,8 @@ namespace XUnitTest.Services
 
             _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("group-1")).ReturnsAsync(asset);
             _repo.Setup(r => r.SaveTenantAssetAsync(It.IsAny<TenantAsset>())).Returns(Task.CompletedTask);
-            _repo.Setup(r => r.UpdateRepoResourceInfoAsync(It.IsAny<AddAssetRequest>())).Returns(Task.CompletedTask);
+            _repo.Setup(r => r.SyncRepoResourceAsync(It.IsAny<AddAssetRequest>())).ReturnsAsync(1L);
+            _repo.Setup(r => r.GetByGroupIdAsync("group-1")).ReturnsAsync(new List<Tenant> { dev });
 
             var response = await Service().AddAssetAsync(new AddAssetRequest
             {
@@ -2255,7 +2311,8 @@ namespace XUnitTest.Services
             });
 
             response.Status.Should().Be(AssetMutationStatus.Updated);
-            _repo.Verify(r => r.GetByGroupIdAsync(It.IsAny<string>()), Times.Never);
+            _repo.Verify(r => r.UpdateProjectAsync(It.IsAny<Tenant>()), Times.Never);
+            _tenants.Verify(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>()), Times.Never);
         }
 
         [Fact]
