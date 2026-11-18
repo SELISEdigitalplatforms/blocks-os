@@ -534,7 +534,7 @@ namespace XUnitTest.Integration
         }
 
         [Fact]
-        public async Task UpdateRepoResourceInfoAsync_RewritesNameAndLinkForEveryTenantInTheGroup()
+        public async Task SyncRepoResourceAsync_RewritesNameAndLinkForEveryTenantInTheGroup()
         {
             var tenant = MongoIntegrationFixture.NewTenantId();
             var group = "grp-" + tenant;
@@ -576,7 +576,7 @@ namespace XUnitTest.Integration
                 }
             });
 
-            await repo.UpdateRepoResourceInfoAsync(new AddAssetRequest
+            await repo.SyncRepoResourceAsync(new AddAssetRequest
             {
                 TenantGroupId = group,
                 Resource = new Resource
@@ -670,7 +670,7 @@ namespace XUnitTest.Integration
             other["IsArchived"].AsBoolean.Should().BeFalse();
 
             // Re-adding the repository puts the tenant copies back in play.
-            await repo.UpdateRepoResourceInfoAsync(new AddAssetRequest
+            await repo.SyncRepoResourceAsync(new AddAssetRequest
             {
                 TenantGroupId = group,
                 Resource = new Resource
@@ -684,6 +684,97 @@ namespace XUnitTest.Integration
             var restored = await repos
                 .Find(Builders<BsonDocument>.Filter.Eq("SourceRepoId", "1210631964")).ToListAsync();
             restored.Should().OnlyContain(d => !d["IsArchived"].AsBoolean);
+        }
+
+        // Prod, group 6ca5156e…: the repository was deleted while the group had only dev, stg and
+        // prod were created afterwards (a new environment inherits only live repositories), and
+        // adding the repository back revived dev's row and gave stg and prod nothing.
+        [Fact]
+        public async Task SyncRepoResourceAsync_RestoreInsertsIntoEnvironmentsCreatedWhileTheRepositoryWasDeleted()
+        {
+            var tenant = MongoIntegrationFixture.NewTenantId();
+            var group = "grp-" + tenant;
+            using var _ = new IntegrationContext(tenant);
+            var repo = NewRepository();
+            await InsertTenantsAsync(
+                NewTenant("dev-" + tenant, group, UserOf(tenant), tenantId: "DEV" + tenant),
+                NewTenant("stg-" + tenant, group, UserOf(tenant), tenantId: "STG" + tenant),
+                NewTenant("prod-" + tenant, group, UserOf(tenant), tenantId: "PROD" + tenant));
+
+            var resourceId = "r-" + tenant;
+            await _fixture.Collection<BsonDocument>("Repos").InsertOneAsync(new BsonDocument
+            {
+                ["_id"] = "kept-dev-" + tenant,
+                ["SourceRepoId"] = resourceId,
+                ["RepoName"] = "owner/repo",
+                ["RepoUrl"] = "https://github.com/owner/repo",
+                ["IsArchived"] = true,
+                ["ProjectId"] = "DEV" + tenant
+            });
+
+            var written = await repo.SyncRepoResourceAsync(AddRepository(group, resourceId));
+
+            written.Should().Be(3, "dev's row is revived and stg and prod each get one");
+            (await ProjectsHoldingAsync(resourceId)).Should().BeEquivalentTo(new[] { "DEV" + tenant, "STG" + tenant, "PROD" + tenant });
+            var copies = await _fixture.Collection<BsonDocument>("Repos")
+                .Find(Builders<BsonDocument>.Filter.Eq("SourceRepoId", resourceId)).ToListAsync();
+            copies.Should().OnlyContain(d => !d["IsArchived"].AsBoolean);
+            // blocks-release keys builds and deployments on the row id, so dev keeps its own.
+            copies.Single(d => d["ProjectId"].AsString == "DEV" + tenant)["_id"].AsString.Should().Be("kept-dev-" + tenant);
+        }
+
+        [Fact]
+        public async Task SyncRepoResourceAsync_RepeatedCall_WritesNothing()
+        {
+            var tenant = MongoIntegrationFixture.NewTenantId();
+            var group = "grp-" + tenant;
+            using var _ = new IntegrationContext(tenant);
+            var repo = NewRepository();
+            await InsertTenantsAsync(
+                NewTenant("dev-" + tenant, group, UserOf(tenant), tenantId: "DEV" + tenant),
+                NewTenant("prod-" + tenant, group, UserOf(tenant), tenantId: "PROD" + tenant));
+
+            var first = await repo.SyncRepoResourceAsync(AddRepository(group, "r-" + tenant));
+            var second = await repo.SyncRepoResourceAsync(AddRepository(group, "r-" + tenant));
+
+            first.Should().Be(2);
+            second.Should().Be(0);
+            (await ProjectsHoldingAsync("r-" + tenant)).Should().BeEquivalentTo(new[] { "DEV" + tenant, "PROD" + tenant });
+        }
+
+        // One environment whose database cannot be reached must not keep the repository from the
+        // environments after it, and adding the repository again has to fill in the one it missed.
+        [Fact]
+        public async Task SyncRepoResourceAsync_AnEnvironmentThatFails_DoesNotStopTheOthersAndARetryFillsIt()
+        {
+            var tenant = MongoIntegrationFixture.NewTenantId();
+            var group = "grp-" + tenant;
+            using var _ = new IntegrationContext(tenant);
+            var stgDown = true;
+            var provider = new Mock<IDbContextProvider>();
+            provider.Setup(p => p.GetDatabase(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+                    .Returns((string connection, string name, bool refreshed) => _fixture.DbContextProvider.GetDatabase(connection, name, refreshed));
+            provider.Setup(p => p.GetDatabase(It.IsAny<string>()))
+                    .Returns((string tenantId) => stgDown && tenantId == "STG" + tenant
+                        ? throw new InvalidOperationException($"Could not initialize database for tenant '{tenantId}'")
+                        : _fixture.DbContextProvider.GetDatabase(tenantId));
+            var repo = NewRepository(provider.Object);
+            await InsertTenantsAsync(
+                NewTenant("dev-" + tenant, group, UserOf(tenant), tenantId: "DEV" + tenant),
+                NewTenant("stg-" + tenant, group, UserOf(tenant), tenantId: "STG" + tenant),
+                NewTenant("prod-" + tenant, group, UserOf(tenant), tenantId: "PROD" + tenant));
+
+            var firstAttempt = () => repo.SyncRepoResourceAsync(AddRepository(group, "r-" + tenant));
+
+            (await firstAttempt.Should().ThrowAsync<AggregateException>())
+                .Which.InnerExceptions.Should().ContainSingle(e => e.Message.Contains("STG" + tenant));
+            (await ProjectsHoldingAsync("r-" + tenant)).Should().BeEquivalentTo(new[] { "DEV" + tenant, "PROD" + tenant });
+
+            stgDown = false;
+            var retried = await repo.SyncRepoResourceAsync(AddRepository(group, "r-" + tenant));
+
+            retried.Should().Be(1);
+            (await ProjectsHoldingAsync("r-" + tenant)).Should().BeEquivalentTo(new[] { "DEV" + tenant, "STG" + tenant, "PROD" + tenant });
         }
 
         private static AddAssetRequest AddRepository(string group, string resourceId) => new()
@@ -702,7 +793,7 @@ namespace XUnitTest.Integration
         // Prod was deleted and added back, leaving a disabled and a live row under one TenantId.
         // Adding a repository then wrote two copies into prod.
         [Fact]
-        public async Task UpdateRepoResourceAsync_WritesOneCopyWhenADeletedEnvironmentWasAddedBack()
+        public async Task SyncRepoResourceAsync_WritesOneCopyWhenADeletedEnvironmentWasAddedBack()
         {
             var tenant = MongoIntegrationFixture.NewTenantId();
             var group = "grp-" + tenant;
@@ -715,13 +806,13 @@ namespace XUnitTest.Integration
                 deletedProd,
                 NewTenant("prod-new-" + tenant, group, UserOf(tenant), tenantId: "PROD" + tenant));
 
-            await repo.UpdateRepoResourceAsync(AddRepository(group, "r-" + tenant));
+            await repo.SyncRepoResourceAsync(AddRepository(group, "r-" + tenant));
 
             (await ProjectsHoldingAsync("r-" + tenant)).Should().BeEquivalentTo(new[] { "DEV" + tenant, "PROD" + tenant });
         }
 
         [Fact]
-        public async Task UpdateRepoResourceAsync_WritesOneCopyWhenAnEnvironmentIsRegisteredTwice()
+        public async Task SyncRepoResourceAsync_WritesOneCopyWhenAnEnvironmentIsRegisteredTwice()
         {
             var tenant = MongoIntegrationFixture.NewTenantId();
             var group = "grp-" + tenant;
@@ -731,7 +822,7 @@ namespace XUnitTest.Integration
                 NewTenant("test-1-" + tenant, group, UserOf(tenant), tenantId: "TEST" + tenant),
                 NewTenant("test-2-" + tenant, group, UserOf(tenant), tenantId: "TEST" + tenant));
 
-            await repo.UpdateRepoResourceAsync(AddRepository(group, "r-" + tenant));
+            await repo.SyncRepoResourceAsync(AddRepository(group, "r-" + tenant));
 
             (await ProjectsHoldingAsync("r-" + tenant)).Should().Equal("TEST" + tenant);
         }
@@ -739,7 +830,7 @@ namespace XUnitTest.Integration
         // Genesis refuses a disabled tenant, so reaching for a deleted environment's database threw
         // and every environment after it in the loop went without the repository.
         [Fact]
-        public async Task UpdateRepoResourceAsync_SkipsADeletedEnvironmentAndReachesTheOnesAfterIt()
+        public async Task SyncRepoResourceAsync_SkipsADeletedEnvironmentAndReachesTheOnesAfterIt()
         {
             var tenant = MongoIntegrationFixture.NewTenantId();
             var group = "grp-" + tenant;
@@ -759,7 +850,7 @@ namespace XUnitTest.Integration
                 deletedStg,
                 NewTenant("prod-" + tenant, group, UserOf(tenant), tenantId: "PROD" + tenant));
 
-            await repo.UpdateRepoResourceAsync(AddRepository(group, "r-" + tenant));
+            await repo.SyncRepoResourceAsync(AddRepository(group, "r-" + tenant));
 
             (await ProjectsHoldingAsync("r-" + tenant)).Should().BeEquivalentTo(new[] { "DEV" + tenant, "PROD" + tenant });
         }
@@ -768,7 +859,7 @@ namespace XUnitTest.Integration
         // match (1350000000 and 1350000300 both start ejqfh). The deployment url is built from
         // those letters, so both repositories of the project used to get the same one.
         [Fact]
-        public async Task UpdateRepoResourceAsync_RepositoriesWithNeighbouringIds_GetDistinctDeploymentUrls()
+        public async Task SyncRepoResourceAsync_RepositoriesWithNeighbouringIds_GetDistinctDeploymentUrls()
         {
             var tenant = MongoIntegrationFixture.NewTenantId();
             var group = "grp-" + tenant;
@@ -776,8 +867,8 @@ namespace XUnitTest.Integration
             var repo = NewRepository(_fixture.DbContextProvider, RealEncoding());
             await InsertTenantsAsync(NewTenant("dev-" + tenant, group, UserOf(tenant), tenantId: "DEV" + tenant));
 
-            await repo.UpdateRepoResourceAsync(AddRepository(group, "1350000000"));
-            await repo.UpdateRepoResourceAsync(AddRepository(group, "1350000300"));
+            await repo.SyncRepoResourceAsync(AddRepository(group, "1350000000"));
+            await repo.SyncRepoResourceAsync(AddRepository(group, "1350000300"));
 
             var copies = await _fixture.Collection<BsonDocument>("Repos")
                 .Find(Builders<BsonDocument>.Filter.Eq("ProjectId", "DEV" + tenant)).ToListAsync();

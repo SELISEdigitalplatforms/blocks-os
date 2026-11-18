@@ -706,42 +706,86 @@ namespace DomainService.Projects
             }
         }
 
-        public async Task UpdateRepoResourceAsync(AddAssetRequest request)
+        // Brings every live environment of the group in line with the group's entry for a
+        // repository: an environment with no row for it gets one, and rows that are there get the
+        // current name and link and are un-archived. A restore cannot assume a row exists to revive:
+        // a new environment inherits only the repositories that are live, so one created while the
+        // repository was deleted never got a row. Safe to repeat — a second call writes nothing, and
+        // one that follows a partial failure fills the gap. Every environment is attempted even when
+        // one fails; the failures are thrown together at the end. Returns the rows inserted or changed.
+        public async Task<long> SyncRepoResourceAsync(AddAssetRequest request)
         {
+            var resource = request.Resource;
             var projects = await GetByGroupIdAsync(request.TenantGroupId);
-            var repoSlug = await _urlEncodingService.EncodeToBase26Async(request.Resource.ResourceId, request.TenantGroupId, 5);
+            var tenantSlug = await _urlEncodingService.EncodeToBase26Async(request.TenantGroupId, request.TenantGroupId, 5);
+            var repoSlug = await _urlEncodingService.EncodeToBase26Async(resource.ResourceId, request.TenantGroupId, 5);
 
-            // One copy per tenant database. GetDatabase resolves by TenantId, so two live rows under
-            // one TenantId (an environment registered twice) would each insert into the same database.
+            long written = 0;
+            var failures = new List<Exception>();
+
+            // One pass per tenant database. GetDatabase resolves by TenantId, so two live rows under
+            // one TenantId (an environment registered twice) share a database and must not insert twice.
             foreach (var project in projects.DistinctBy(p => p.TenantId))
             {
-                var tenantSlug = await _urlEncodingService.EncodeToBase26Async(project.TenantGroupId, request.TenantGroupId, 5);
-                var targetedDb = _dbContextProvider.GetDatabase(project.TenantId);
-                var reposCollection = targetedDb.GetCollection<BsonDocument>("Repos");
-                await reposCollection.InsertOneAsync(GetRepoObject(request.Resource, project, tenantSlug, repoSlug));
+                try
+                {
+                    written += await SyncProjectRepoAsync(project, resource, tenantSlug, repoSlug);
+                }
+                catch (Exception ex)
+                {
+                    failures.Add(new InvalidOperationException(
+                        $"Repository {resource.ResourceId} could not be written to the {project.Environment} environment ({project.TenantId}).", ex));
+                }
             }
+
+            if (failures.Count > 0)
+            {
+                throw new AggregateException(
+                    $"Repository {resource.ResourceId} is missing from {failures.Count} environment(s) of group {request.TenantGroupId}; adding it again retries them.",
+                    failures);
+            }
+
+            return written;
         }
 
-        // A repository keeps its ResourceId across a rename, so the copy held by every tenant in
-        // the group is refreshed in place. UpdateMany because a group can hold more than one row
-        // per SourceRepoId. The deployment url is derived from the id, not the name, so it stands.
-        // IsArchived is cleared here because every caller means "this repository is present and
-        // this is what it looks like now" — a rename leaves it false, a restore flips it back.
-        public async Task UpdateRepoResourceInfoAsync(AddAssetRequest request)
+        private async Task<long> SyncProjectRepoAsync(Tenant project, Resource resource, string tenantSlug, string repoSlug)
         {
+            var repos = _dbContextProvider.GetDatabase(project.TenantId).GetCollection<BsonDocument>("Repos");
+            var sameRepository = Builders<BsonDocument>.Filter.Eq("SourceRepoId", resource.ResourceId);
+
+            // blocks-release reads an environment's repositories by ProjectId, so only a row under
+            // this environment's TenantId counts as the environment having the repository.
+            var hasRow = await repos
+                .Find(sameRepository & Builders<BsonDocument>.Filter.Eq("ProjectId", project.TenantId))
+                .AnyAsync();
+
+            if (!hasRow)
+            {
+                await repos.InsertOneAsync(GetRepoObject(resource, project, tenantSlug, repoSlug));
+                return 1;
+            }
+
+            // Only rows that differ, so a repeat call leaves them — and their LastUpdatedDate — alone.
+            // UpdateMany because a database can hold more than one row per SourceRepoId. The
+            // deployment url is derived from the id, not the name, so a rename leaves it standing.
+            var stale = sameRepository & Builders<BsonDocument>.Filter.Or(
+                Builders<BsonDocument>.Filter.Ne("RepoName", resource.Name),
+                Builders<BsonDocument>.Filter.Ne("RepoUrl", resource.Link),
+                Builders<BsonDocument>.Filter.Ne("IsArchived", false));
             var update = Builders<BsonDocument>.Update
-                .Set("RepoName", request.Resource.Name)
-                .Set("RepoUrl", request.Resource.Link)
+                .Set("RepoName", resource.Name)
+                .Set("RepoUrl", resource.Link)
                 .Set("IsArchived", false)
                 .Set(LastUpdatedDateField, DateTime.UtcNow)
                 .Set("LastUpdatedBy", BlocksContext.GetContext()?.UserId ?? string.Empty);
 
-            await UpdateGroupReposAsync(request.TenantGroupId, request.Resource.ResourceId, update);
+            var result = await repos.UpdateManyAsync(stale, update);
+            return result.ModifiedCount;
         }
 
         // Deleting a repository archives it rather than dropping the row, so the tenant copies are
         // flagged the same way the group's asset entry is. Restoring goes back through
-        // UpdateRepoResourceInfoAsync, which clears the flag again.
+        // SyncRepoResourceAsync, which clears the flag again.
         public async Task ArchiveRepoResourceAsync(DeleteAssetRequest request)
         {
             var update = Builders<BsonDocument>.Update

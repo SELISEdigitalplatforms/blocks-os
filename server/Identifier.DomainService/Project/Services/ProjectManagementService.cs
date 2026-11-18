@@ -1219,58 +1219,70 @@ namespace DomainService.Projects
 
             tenantAsset.Resources ??= [];
 
-            // A renamed repository comes back with the same ResourceId and a new name and link,
-            // so an id that is already known is an update, not a duplicate to discard.
-            var existingResource = tenantAsset.Resources.FirstOrDefault(r => r.ResourceId == asset.Resource.ResourceId);
+            var status = ApplyToGroupAsset(tenantAsset, asset.Resource);
+            var saveGroupAsset = Task.CompletedTask;
 
-            if (existingResource == null)
+            if (status != AssetMutationStatus.Unchanged)
             {
-                // The timestamps and the archive flag belong to the server, never to the request.
-                asset.Resource.CreatedDate = DateTime.UtcNow;
-                asset.Resource.LastUpdatedDate = DateTime.UtcNow;
-                asset.Resource.IsArchived = false;
-
-                tenantAsset.Resources.Add(asset.Resource);
                 StampTenantAsset(tenantAsset);
-                await Task.WhenAll(_projectRepository.SaveTenantAssetAsync(tenantAsset),
-                               _projectRepository.UpdateRepoResourceAsync(asset));
-
-                await RegisterRepositoryDomainsAsync(asset.TenantGroupId, asset.Resource);
-
-                return AssetResponse(AssetMutationStatus.Added);
+                saveGroupAsset = _projectRepository.SaveTenantAssetAsync(tenantAsset);
             }
 
-            // A deleted repository is archived, not removed, so adding it again revives that row
-            // instead of creating a second entry for the same id.
-            var wasArchived = existingResource.IsArchived;
-            var hasNewDetails = existingResource.Name != asset.Resource.Name
-                             || existingResource.Link != asset.Resource.Link;
+            // Every live environment is brought in line even when the group's entry is unchanged.
+            // An environment created while the repository was deleted never got a row (a new
+            // environment inherits only live repositories), and a write that failed part way left
+            // later environments without one. Both are filled in here, so adding the repository
+            // again is how either is repaired.
+            var syncEnvironments = _projectRepository.SyncRepoResourceAsync(asset);
+            await Task.WhenAll(saveGroupAsset, syncEnvironments);
+            var rowsWritten = await syncEnvironments;
+
+            // Safe to repeat: an environment that already lists the host is skipped. Run on every
+            // call for the same reason as the sync above — a restore or a retried add has to put
+            // back a host that an earlier, interrupted call never registered.
+            await RegisterRepositoryDomainsAsync(asset.TenantGroupId, asset.Resource);
+
+            // The group already had the repository as asked, but an environment was missing it.
+            if (status == AssetMutationStatus.Unchanged && rowsWritten > 0)
+            {
+                status = AssetMutationStatus.Updated;
+            }
+
+            return AssetResponse(status);
+        }
+
+        // Applies the request to the group's entry and says what that amounted to.
+        private static AssetMutationStatus ApplyToGroupAsset(TenantAsset tenantAsset, Resource requested)
+        {
+            // A renamed repository comes back with the same ResourceId and a new name and link,
+            // so an id that is already known is an update, not a duplicate to discard.
+            var existing = tenantAsset.Resources.FirstOrDefault(r => r.ResourceId == requested.ResourceId);
+
+            if (existing == null)
+            {
+                // The timestamps and the archive flag belong to the server, never to the request.
+                requested.CreatedDate = DateTime.UtcNow;
+                requested.LastUpdatedDate = DateTime.UtcNow;
+                requested.IsArchived = false;
+                tenantAsset.Resources.Add(requested);
+                return AssetMutationStatus.Added;
+            }
+
+            // A deleted repository is archived, not removed, so adding it again revives that entry
+            // instead of creating a second one for the same id.
+            var wasArchived = existing.IsArchived;
+            var hasNewDetails = existing.Name != requested.Name || existing.Link != requested.Link;
 
             if (!wasArchived && !hasNewDetails)
             {
-                return AssetResponse(AssetMutationStatus.Unchanged);
+                return AssetMutationStatus.Unchanged;
             }
 
-            existingResource.Name = asset.Resource.Name;
-            existingResource.Link = asset.Resource.Link;
-            existingResource.IsArchived = false;
-            existingResource.LastUpdatedDate = DateTime.UtcNow;
-            StampTenantAsset(tenantAsset);
-            // The per-tenant Repos rows survive a delete, so this refreshes them; it never inserts.
-            await Task.WhenAll(_projectRepository.SaveTenantAssetAsync(tenantAsset),
-                           _projectRepository.UpdateRepoResourceInfoAsync(asset));
-
-            // A restore brings a repository's deployments back, so its hosts have to be
-            // registered again. They are normally still there — deleting a repository archives
-            // it and leaves Applications alone — but a repository that predates this, or one
-            // whose entry was removed by hand, is put right here. A rename changes neither the
-            // resource id nor the domain, so an Updated has nothing to register.
-            if (wasArchived)
-            {
-                await RegisterRepositoryDomainsAsync(asset.TenantGroupId, asset.Resource);
-            }
-
-            return AssetResponse(wasArchived ? AssetMutationStatus.Restored : AssetMutationStatus.Updated);
+            existing.Name = requested.Name;
+            existing.Link = requested.Link;
+            existing.IsArchived = false;
+            existing.LastUpdatedDate = DateTime.UtcNow;
+            return wasArchived ? AssetMutationStatus.Restored : AssetMutationStatus.Updated;
         }
 
         // One generated host per environment, because the environment letter is the only part of
