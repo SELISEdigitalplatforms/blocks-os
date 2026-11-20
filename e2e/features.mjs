@@ -108,6 +108,12 @@ export const OS_FEATURES = [
     enabled: true,
     spec: "tests/02-secrets-and-configs/16-webhook-details-748.spec.ts",
   },
+  {
+    id: "missing-user-lookup",
+    name: "Secrets & Configs — Secret access list with a missing user (#765)",
+    enabled: true,
+    spec: "tests/02-secrets-and-configs/17-missing-user-lookup-765.spec.ts",
+  },
 
   {
     id: "email-management",
