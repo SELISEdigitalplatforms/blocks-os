@@ -29,6 +29,8 @@ interface ImportMetaEnv {
   readonly BLOCKS_RELEASE_CALLBACK_URL: string;
   readonly BLOCKS_STUDIO_BASE_URL: string;
   readonly BLOCKS_STUDIO_CALLBACK_URL: string;
+  readonly BLOCKS_FEATURE_AGENTS: string;
+  readonly BLOCKS_FEATURE_STUDIO: string;
   readonly BLOCKS_CLOUD_DASHBOARD_URL: string;
 }
 

@@ -1,5 +1,6 @@
 import { navText } from "@/constants/nav-text";
 import { Menu } from "@/models/menu-models";
+import { isAgentsEnabled } from "@/lib/features";
 import {
   // Activity,  // restore with the signup-link-activity entry below
   BarChart3,
@@ -35,7 +36,7 @@ import {
   Zap,
 } from "lucide-react";
 
-export const navigationMenus: Menu[] = [
+const allNavigationMenus: Menu[] = [
   {
     id: "overview-project",
     type: "menu",
@@ -543,3 +544,10 @@ export const navigationMenus: Menu[] = [
     },
   },
 ];
+
+/** Top-level entries served by the agents service: shown only when BLOCKS_FEATURE_AGENTS is on. */
+export const AGENTS_MENU_IDS: readonly string[] = ["separator-ai-credits", "ai-credits"];
+
+export const navigationMenus: Menu[] = isAgentsEnabled()
+  ? allNavigationMenus
+  : allNavigationMenus.filter((menu) => !AGENTS_MENU_IDS.includes(menu.id));

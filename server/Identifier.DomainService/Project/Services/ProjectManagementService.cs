@@ -515,8 +515,9 @@ namespace DomainService.Projects
         // be able to sign in against the new tenant. Studio's host is not an appsettings value:
         // it is deployed into the "FrontendRuntime" section from the Mongo secrets document
         // (see ApplyFrontendRuntimeSettings), so it is read from the same key the
-        // frontend is served with. A deployment without that secret simply leaves
-        // Studio out instead of writing an empty domain.
+        // frontend is served with. A deployment without that secret, or with
+        // BLOCKS_FEATURE_STUDIO not "true", simply leaves Studio out instead of writing a domain
+        // nobody serves.
         //
         // The repository hosts are PlatformSubdomain and the two platform apps are
         // PlatformDefault: the former are unique to this tenant, while IAM and Studio are the
@@ -551,7 +552,11 @@ namespace DomainService.Projects
                 DomainType = DomainType.PlatformDefault
             });
 
-            var studioDomain = ResolveFrontendRuntimeValue("BLOCKS_STUDIO_BASE_URL");
+            // Studio is a service not every installation runs: its domain is added only when
+            // BLOCKS_FEATURE_STUDIO is "true", the same setting that shows Studio in the console.
+            var studioDomain = IsFrontendFeatureEnabled("BLOCKS_FEATURE_STUDIO")
+                ? ResolveFrontendRuntimeValue("BLOCKS_STUDIO_BASE_URL")
+                : null;
 
             if (!string.IsNullOrWhiteSpace(studioDomain))
             {
@@ -592,6 +597,12 @@ namespace DomainService.Projects
             }
 
             return _configuration[$"FrontendRuntime:{key}"];
+        }
+
+        // A feature that needs an optional service is on only when its setting is "true".
+        private bool IsFrontendFeatureEnabled(string key)
+        {
+            return string.Equals(ResolveFrontendRuntimeValue(key)?.Trim(), "true", StringComparison.OrdinalIgnoreCase);
         }
 
         private string ResolveIamBaseUrl()

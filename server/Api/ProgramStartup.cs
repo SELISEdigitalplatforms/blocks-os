@@ -173,6 +173,8 @@ internal static class ProgramStartup
             ["__BLOCKS_STUDIO_CLIENT_ID__"] = Resolve("BLOCKS_STUDIO_CLIENT_ID"),
             ["__BLOCKS_CNAME_BASE_URL__"] = Resolve("BLOCKS_CNAME_BASE_URL"),
             ["__BLOCKS_ALLOWED_SERVICES__"] = Resolve("BLOCKS_ALLOWED_SERVICES"),
+            ["__BLOCKS_FEATURE_AGENTS__"] = Resolve("BLOCKS_FEATURE_AGENTS"),
+            ["__BLOCKS_FEATURE_STUDIO__"] = Resolve("BLOCKS_FEATURE_STUDIO"),
             ["__BLOCKS_ROLLBAR_CLIENT_TOKEN__"] = Resolve("BLOCKS_ROLLBAR_CLIENT_TOKEN"),
             ["__BLOCKS_ROLLBAR_ENV__"] = Resolve("BLOCKS_ROLLBAR_ENV"),
         };
