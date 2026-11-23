@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- I02-WP10: the telemetry cold archive store against a real S3-compatible store (the toolchain's SeaweedFS, or
+       any S3 endpoint). A separate project, so the unit run (XUnitTest) stays fast and needs no store. The endpoint
+       and keys come from environment variables (see S3ArchiveLiveTests); a test without them fails and names the
+       missing one. -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Moq" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Cloud.LmtService\Cloud.LmtService.csproj" />
+  </ItemGroup>
+</Project>
