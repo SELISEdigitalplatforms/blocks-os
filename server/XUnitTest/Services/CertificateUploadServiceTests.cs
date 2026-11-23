@@ -1,7 +1,5 @@
-﻿using Azure;
-using Azure.Storage.Blobs;
-using Azure.Storage.Blobs.Models;
-using DomainService.Certificate;
+﻿using DomainService.Certificate;
+using DomainService.Storage;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Moq;
@@ -11,13 +9,15 @@ using XUnitTest.TestHelpers;
 namespace XUnitTest.Services
 {
     /// <summary>
-    /// Unit tests for <see cref="CertificateUploadService"/>. The Azure SDK types are mockable by
-    /// design, so the upload itself is covered here too - what is not covered is whether the
-    /// container really serves blobs anonymously, which only a real storage account can answer.
+    /// Unit tests for <see cref="CertificateUploadService"/>. The storage driver is mocked, so the
+    /// upload request itself (container, key, bytes, content type) is covered here - what is not
+    /// covered is whether the store really serves the object anonymously, which only a real store can
+    /// answer (the driver's own live tests, and the I02-WP9 run against Azurite and S3, do).
     /// </summary>
     public class CertificateUploadServiceTests : IDisposable
     {
         private const string BlobUrl = "https://acct.blob.core.windows.net/certificates/tenant-123_3rdparty";
+        private const string Container = "certificates";
 
         private readonly Mock<IStorageDriverService> _storage = new();
         private readonly CertificateUploadService _service;
@@ -34,17 +34,25 @@ namespace XUnitTest.Services
             GC.SuppressFinalize(this);
         }
 
-        private Mock<BlobClient> ArrangeBlob(string url = BlobUrl)
-        {
-            var blob = new Mock<BlobClient>();
-            blob.SetupGet(b => b.Uri).Returns(new Uri(url));
-            blob.Setup(b => b.UploadAsync(
-                    It.IsAny<Stream>(), It.IsAny<BlobUploadOptions>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
+        private readonly List<(string Container, string Key, long Length, string ContentType)> _uploads = new();
 
-            _storage.Setup(s => s.GetBlobClientAsync(It.IsAny<string>())).ReturnsAsync(blob.Object);
-            return blob;
+        private void ArrangeBlob(string url = BlobUrl)
+        {
+            _storage
+                .Setup(s => s.UploadPublicObjectAsync(
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Stream>(), It.IsAny<string>()))
+                .Callback<string, string, Stream, string>((container, key, content, contentType) =>
+                    _uploads.Add((container, key, content.Length, contentType)))
+                .ReturnsAsync(url);
         }
+
+        private void VerifyUploaded(string key) =>
+            _storage.Verify(s => s.UploadPublicObjectAsync(
+                Container, key, It.IsAny<Stream>(), It.IsAny<string>()), Times.Once);
+
+        private void VerifyNothingUploaded() =>
+            _storage.Verify(s => s.UploadPublicObjectAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Stream>(), It.IsAny<string>()), Times.Never);
 
         private static FormFile CertificateFile(
             string fileName = "public.pfx",
@@ -104,55 +112,71 @@ namespace XUnitTest.Services
         [Fact]
         public async Task UploadPublicCertificateAsync_WritesTheFileContentToTheBlob()
         {
-            var blob = ArrangeBlob();
+            ArrangeBlob();
 
             await _service.UploadPublicCertificateAsync(Request(CertificateFile(sizeInBytes: 64)));
 
-            blob.Verify(b => b.UploadAsync(
-                It.Is<Stream>(s => s.Length == 64),
-                It.IsAny<BlobUploadOptions>(),
-                It.IsAny<CancellationToken>()), Times.Once);
+            _uploads.Should().ContainSingle().Which.Length.Should().Be(64);
         }
 
         [Fact]
         public async Task UploadPublicCertificateAsync_CarriesTheUploadedContentType()
         {
-            var blob = ArrangeBlob();
+            ArrangeBlob();
 
             await _service.UploadPublicCertificateAsync(Request(CertificateFile()));
 
-            blob.Verify(b => b.UploadAsync(
-                It.IsAny<Stream>(),
-                It.Is<BlobUploadOptions>(o => o.HttpHeaders.ContentType == "application/x-pkcs12"),
-                It.IsAny<CancellationToken>()), Times.Once);
+            _uploads.Should().ContainSingle().Which.ContentType.Should().Be("application/x-pkcs12");
         }
 
         [Fact]
         public async Task UploadPublicCertificateAsync_FallsBackWhenTheBrowserSendsNoContentType()
         {
-            var blob = ArrangeBlob();
+            ArrangeBlob();
 
             await _service.UploadPublicCertificateAsync(
                 Request(CertificateFile(contentType: string.Empty)));
 
-            blob.Verify(b => b.UploadAsync(
-                It.IsAny<Stream>(),
-                It.Is<BlobUploadOptions>(o => o.HttpHeaders.ContentType == "application/octet-stream"),
-                It.IsAny<CancellationToken>()), Times.Once);
+            _uploads.Should().ContainSingle().Which.ContentType.Should().Be("application/octet-stream");
+        }
+
+        [Fact]
+        public async Task UploadPublicCertificateAsync_UsesTheSharedCertificatesContainer()
+        {
+            ArrangeBlob();
+
+            await _service.UploadPublicCertificateAsync(Request(CertificateFile()));
+
+            _uploads.Should().ContainSingle().Which.Container.Should().Be("certificates");
         }
 
         [Fact]
         public async Task UploadPublicCertificateAsync_SurfacesAStorageFailureAsAnError()
         {
             // Public blob access disabled on the account lands here, rather than as a 500.
-            _storage.Setup(s => s.GetBlobClientAsync(It.IsAny<string>()))
-                    .ThrowsAsync(new RequestFailedException(403, "no", "PublicAccessNotPermitted", null));
+            _storage.Setup(s => s.UploadPublicObjectAsync(
+                        It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Stream>(), It.IsAny<string>()))
+                    .ThrowsAsync(new PublicObjectStorageException("PublicAccessNotPermitted", "no"));
 
             var result = await _service.UploadPublicCertificateAsync(Request(CertificateFile()));
 
             result.IsSuccess.Should().BeFalse();
-            result.Errors.Should().ContainKey("storage");
+            result.Errors.Should().ContainKey("storage").WhoseValue.Should().Be("PublicAccessNotPermitted");
             result.DownloadUrl.Should().BeEmpty();
+        }
+
+        [Fact]
+        public async Task UploadPublicCertificateAsync_SaysClearlyWhenTheStorageHasNoPublicRead()
+        {
+            // An SFTP Default configuration cannot serve an object anonymously.
+            _storage.Setup(s => s.UploadPublicObjectAsync(
+                        It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Stream>(), It.IsAny<string>()))
+                    .ThrowsAsync(new PublicObjectStorageException(PublicObjectStorageException.NotSupportedCode, "sftp"));
+
+            var result = await _service.UploadPublicCertificateAsync(Request(CertificateFile()));
+
+            result.IsSuccess.Should().BeFalse();
+            result.Errors.Should().ContainKey("storage").WhoseValue.Should().Be("public_objects_not_supported");
         }
 
         // ─── tenant scoping ────────────────────────────────────────────────────────
@@ -164,7 +188,7 @@ namespace XUnitTest.Services
 
             await _service.UploadPublicCertificateAsync(Request(CertificateFile()));
 
-            _storage.Verify(s => s.GetBlobClientAsync("tenant-123_3rdparty.pfx"), Times.Once);
+            VerifyUploaded("tenant-123_3rdparty.pfx");
         }
 
         [Fact]
@@ -174,7 +198,7 @@ namespace XUnitTest.Services
 
             await _service.UploadPublicCertificateAsync(Request(CertificateFile(), isThirdParty: false));
 
-            _storage.Verify(s => s.GetBlobClientAsync("tenant-123"), Times.Once);
+            VerifyUploaded("tenant-123");
         }
 
         [Fact]
@@ -187,7 +211,7 @@ namespace XUnitTest.Services
             await _service.UploadPublicCertificateAsync(
                 Request(CertificateFile("recyclium.crt", contentType: "application/x-x509-ca-cert")));
 
-            _storage.Verify(s => s.GetBlobClientAsync("tenant-123_3rdparty.crt"), Times.Once);
+            VerifyUploaded("tenant-123_3rdparty.crt");
         }
 
         [Fact]
@@ -211,7 +235,7 @@ namespace XUnitTest.Services
 
             await _service.UploadPublicCertificateAsync(Request(CertificateFile()));
 
-            _storage.Verify(s => s.GetBlobClientAsync(It.IsAny<string>()), Times.Never);
+            VerifyNothingUploaded();
         }
 
         // ─── file validation ───────────────────────────────────────────────────────
@@ -264,7 +288,7 @@ namespace XUnitTest.Services
 
             await _service.UploadPublicCertificateAsync(Request(CertificateFile("payload.jpg")));
 
-            _storage.Verify(s => s.GetBlobClientAsync(It.IsAny<string>()), Times.Never);
+            VerifyNothingUploaded();
         }
 
         [Theory]
