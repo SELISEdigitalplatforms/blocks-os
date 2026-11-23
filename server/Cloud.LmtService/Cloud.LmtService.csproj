@@ -8,6 +8,7 @@
 		<!--<PackageReference Include="MongoDB.Driver" />-->
 		<PackageReference Include="SeliseBlocks.Genesis.OS" />
 		<PackageReference Include="Azure.Storage.Blobs" />
+		<PackageReference Include="AWSSDK.S3" />
 		<PackageReference Include="Parquet.Net" />
   <PackageReference Include="FluentValidation" />
 	</ItemGroup>

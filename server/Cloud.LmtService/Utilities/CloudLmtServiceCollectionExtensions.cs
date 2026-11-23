@@ -11,8 +11,10 @@ using Cloud.LmtService.Services.BlocksServices;
 using Cloud.LmtService.Services.ColdRestore;
 using Cloud.LmtService.Services.Logs;
 using Cloud.LmtService.Services.Trace;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -31,7 +33,14 @@ namespace Cloud.LmtService.Utilities
             services.AddSingleton<IBlocksServicesService, BlocksServicesService>();
 
             services.AddSingleton<ILmtArchiveRestoreConfigurationRepository, LmtArchiveRestoreConfigurationsRepository>();
-            services.AddSingleton<IBlobStorage, BlobStorage>();
+            // The telemetry cold archive store: Azure (default) or S3, by LmtArchive:Storage:Provider (I02-WP10).
+            services.AddSingleton<IBlobStorage>(sp =>
+            {
+                var configuration = sp.GetRequiredService<IConfiguration>();
+                return LmtArchiveStorageOptions.ReadProvider(configuration) == LmtArchiveStorageProvider.S3
+                    ? new S3BlobStorage(LmtS3ArchiveOptions.FromConfiguration(configuration), sp.GetRequiredService<ILmtArchiveRestoreConfigurationRepository>(), sp.GetRequiredService<ILogger<S3BlobStorage>>())
+                    : ActivatorUtilities.CreateInstance<BlobStorage>(sp);
+            });
             services.AddSingleton<IArchiveRepository, ArchiveRepository>();
             services.AddSingleton<ILogTraceBackupRepository, LogTraceBackupRepository>();
             // The backup reads "today" and its time budget from the clock; tests substitute it.
