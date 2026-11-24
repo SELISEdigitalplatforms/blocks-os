@@ -24,6 +24,8 @@ const h = vi.hoisted(() => ({
     { itemId: "role-1", name: "System User", slug: "clouduser", description: "" },
     { itemId: "role-2", name: "Test", slug: "test", description: "" },
   ] as IRole[],
+  /** Overrides the picker's role list for a single test; `null` falls back to `roles`. */
+  assignable: null as IRole[] | null,
 }));
 
 vi.mock("@/hooks/use-toast", () => ({
@@ -31,10 +33,10 @@ vi.mock("@/hooks/use-toast", () => ({
 }));
 
 vi.mock("@blocks-idp/iam/hooks/use-roles", () => ({
-  useGetAssignableRoles: () => ({
-    data: { data: h.roles, totalCount: h.roles.length },
-    isLoading: false,
-  }),
+  useGetAssignableRoles: () => {
+    const list = h.assignable ?? h.roles;
+    return { data: { data: list, totalCount: list.length }, isLoading: false };
+  },
 }));
 
 
@@ -45,7 +47,10 @@ const openDialog = () => {
   fireEvent.click(screen.getByRole("button", { name: /manage roles/i }));
 };
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  h.assignable = null;
+});
 
 describe("AddOrganizationRole", () => {
   it("shows the minimum-role requirement beside the modal title", async () => {
@@ -86,12 +91,12 @@ describe("AddOrganizationRole", () => {
     );
 
     openDialog();
-    expect((await screen.findByLabelText("1 out of 5 roles selected") as HTMLElement).textContent).toContain("1/5 selected",);
+    expect((await screen.findByLabelText("1 role selected") as HTMLElement).textContent).toBe("1 selected");
 
     fireEvent.click(screen.getByRole("checkbox", { name: /deselect system user/i }));
 
     await waitFor(() => {
-      expect((screen.getByLabelText("1 out of 5 roles selected") as HTMLElement).textContent).toContain("1/5 selected",);
+      expect((screen.getByLabelText("1 role selected") as HTMLElement).textContent).toBe("1 selected");
       expect(h.showErrorToast).toHaveBeenCalledWith({
         errors: "At least one role must remain assigned to this user to access resources.",
       });
@@ -173,6 +178,36 @@ describe("AddOrganizationRole", () => {
     fireEvent.click(screen.getByRole("button", { name: /^add$/i }));
 
     expect(onChange).toHaveBeenCalledWith([h.roles[1]]);
+    await waitFor(() => expect(onSave).toHaveBeenCalledOnce());
+  });
+
+  it("lets more than five roles be selected and saved (IAM enforces no role cap)", async () => {
+    const many = Array.from({ length: 7 }, (_, i) => ({
+      itemId: `many-${i + 1}`,
+      name: `Role ${i + 1}`,
+      slug: `role_${i + 1}`,
+      description: "",
+    })) as IRole[];
+    h.assignable = many;
+    const onChange = vi.fn();
+    const onSave = vi.fn();
+
+    render(
+      <AddOrganizationRole roles={[many[0]]} onChange={onChange} onSave={onSave} />,
+      { wrapper: createWrapper() },
+    );
+
+    openDialog();
+    for (const role of many.slice(1)) {
+      const box = await screen.findByRole("checkbox", { name: `Select ${role.name}` });
+      expect((box as HTMLButtonElement).disabled).toBe(false);
+      fireEvent.click(box);
+    }
+
+    expect((await screen.findByLabelText("7 roles selected") as HTMLElement).textContent).toBe("7 selected");
+    fireEvent.click(screen.getByRole("button", { name: /^add$/i }));
+
+    expect(onChange).toHaveBeenCalledWith(many);
     await waitFor(() => expect(onSave).toHaveBeenCalledOnce());
   });
 });

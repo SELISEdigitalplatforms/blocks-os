@@ -67,10 +67,21 @@ describe("AddUserRole", () => {
     expect(screen.getByText("Assign Role")).toBeTruthy();
   });
 
-  it("disables the trigger when the user already has 5 roles", () => {
-    h.slugs = ["a", "b", "c", "d", "e"];
+  it("keeps the trigger enabled when the user already has 5 or more roles", () => {
+    h.slugs = ["a", "b", "c", "d", "e", "f"];
     renderCmp();
-    expect((screen.getByText("Assign Role").closest("button") as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByText("Assign Role").closest("button") as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("shows roles the user already has as checked and locked", async () => {
+    h.slugs = ["admin"];
+    renderCmp();
+    fireEvent.click(screen.getByText("Assign Role"));
+    await waitFor(() => expect(screen.getByText("Admin")).toBeTruthy());
+    const [adminBox, viewerBox] = screen.getAllByRole("checkbox") as HTMLButtonElement[];
+    expect(adminBox.getAttribute("aria-checked")).toBe("true");
+    expect(adminBox.disabled).toBe(true);
+    expect(viewerBox.disabled).toBe(false);
   });
 
   it("shows the empty state inside the dialog when there are no roles", async () => {
@@ -134,16 +145,19 @@ describe("AddUserRole", () => {
     );
   });
 
-  it("prevents selecting beyond the five-role maximum", async () => {
-    h.slugs = ["a", "b", "c", "d"];
+  it("allows assigning roles beyond five (IAM enforces no role cap)", async () => {
+    h.addRoles.mockResolvedValue({ isSuccess: true });
+    h.slugs = ["a", "b", "c", "d", "e"];
     renderCmp();
     fireEvent.click(screen.getByText("Assign Role"));
     await waitFor(() => expect(screen.getByText("Admin")).toBeTruthy());
     const boxes = screen.getAllByRole("checkbox");
     fireEvent.click(boxes[0]);
     fireEvent.click(boxes[1]);
-    // The second selection is blocked by the max-role guard.
-    expect(boxes[1].getAttribute("aria-checked")).toBe("false");
+    expect(boxes[0].getAttribute("aria-checked")).toBe("true");
+    expect(boxes[1].getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "Include" }));
+    await waitFor(() => expect(h.addRoles).toHaveBeenCalledWith(["admin", "viewer"]));
   });
 
   it("resets its state when the dialog is closed", async () => {
