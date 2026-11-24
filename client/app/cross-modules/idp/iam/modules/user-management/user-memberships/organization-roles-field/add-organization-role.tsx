@@ -41,8 +41,6 @@ type AddOrganizationRoleProps = {
   organizationId?: string;
 };
 
-const MAX_ROLES_PER_USER = 5;
-
 export const AddOrganizationRole = ({
   onChange,
   roles,
@@ -90,7 +88,6 @@ export const AddOrganizationRole = ({
   );
 
   const totalRoleCount = selectedRoles.length;
-  const isAtMaxRoles = totalRoleCount >= MAX_ROLES_PER_USER;
 
   const isRoleSelectedInModal = (slug: string) => selectedRolesSlug.includes(slug);
 
@@ -100,9 +97,6 @@ export const AddOrganizationRole = ({
 
   const onCheckedChangeHandler = (checked: boolean, role: IRole) => {
     if (checked) {
-      if (totalRoleCount >= MAX_ROLES_PER_USER) {
-        return;
-      }
       return setSelectedRoles((currentRoles) =>
         currentRoles.some((item) => item.slug === role.slug)
           ? currentRoles
@@ -179,20 +173,14 @@ export const AddOrganizationRole = ({
               variant="success"
               className="font-normal"
               aria-live="polite"
-              aria-label={t("ADD_ORGANIZATION_ROLE.SELECTED_ARIA_LABEL", {
+              aria-label={t("ADD_ORGANIZATION_ROLE.SELECTED_COUNT_ARIA_LABEL", {
                 count: totalRoleCount,
-                max: MAX_ROLES_PER_USER,
               })}
             >
-              {t("ADD_ORGANIZATION_ROLE.SELECTED_BADGE", {
-                count: totalRoleCount,
-                max: MAX_ROLES_PER_USER,
-              })}
+              {t("ADD_ORGANIZATION_ROLE.SELECTED_COUNT_BADGE", { count: totalRoleCount })}
             </Badge>
           </div>
-          <DialogDescription className="text-left">
-            {t("ADD_ORGANIZATION_ROLE.MAX_ROLES_DESCRIPTION", { max: MAX_ROLES_PER_USER })}
-          </DialogDescription>
+          <DialogDescription></DialogDescription>
         </DialogHeader>
         <GrantHint kind="roles" />
         <div>
@@ -221,7 +209,6 @@ export const AddOrganizationRole = ({
                 <div key={item.itemId} className="col-span-1 flex items-center py-2">
                   <Checkbox
                     checked={isRoleSelectedInModal(item.slug)}
-                    disabled={!isRoleSelectedInModal(item.slug) && isAtMaxRoles}
                     aria-label={t(
                       isRoleSelectedInModal(item.slug)
                         ? "ADD_ORGANIZATION_ROLE.DESELECT_ROLE"

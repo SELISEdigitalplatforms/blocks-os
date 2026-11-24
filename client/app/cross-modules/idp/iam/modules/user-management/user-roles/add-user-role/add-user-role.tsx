@@ -13,17 +13,11 @@ import {
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui-kits/tooltip/tooltip";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { useGetAssignableRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { useUserRoles } from "@blocks-idp/iam/hooks/use-user";
-import { CirclePlus, Info } from "lucide-react";
+import { CirclePlus } from "lucide-react";
 import { useState } from "react";
 import { GrantHint } from "@blocks-idp/iam/components/grant-hint";
 import { useT } from "@seliseblocks/genesis-os";
@@ -64,7 +58,6 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
   };
 
   const onCheckedChangeHandler = (checked: boolean, slug: string) => {
-    if (checked && slugs.length + selectedRolos.length > 4) return;
     if (checked) {
       return setSelectedRoles((roles) => [...roles, slug]);
     }
@@ -87,53 +80,15 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
         setOpen(value);
       }}
     >
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span
-              className="inline-flex"
-              tabIndex={slugs.length >= 5 ? 0 : undefined}
-              aria-disabled={slugs.length >= 5}
-            >
-              <DialogTrigger asChild>
-                <Button
-                  size="sm"
-                  variant="default"
-                  className="h-10 bg-primary text-sm disabled:cursor-not-allowed disabled:opacity-50"
-                  disabled={slugs.length >= 5}
-                >
-                  <CirclePlus className="h-5 w-5 md:mr-2.5" />
-                  <span className="sr-only sm:not-sr-only">{t("ADD_USER_ROLE.ASSIGN_ROLE")}</span>
-                </Button>
-              </DialogTrigger>
-            </span>
-          </TooltipTrigger>
-          {slugs.length >= 5 && (
-            <TooltipContent side="bottom">{t("ADD_USER_ROLE.MAX_ROLES_TOOLTIP")}</TooltipContent>
-          )}
-        </Tooltip>
-      </TooltipProvider>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="default" className="h-10 bg-primary text-sm">
+          <CirclePlus className="h-5 w-5 md:mr-2.5" />
+          <span className="sr-only sm:not-sr-only">{t("ADD_USER_ROLE.ASSIGN_ROLE")}</span>
+        </Button>
+      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <div className="flex items-center gap-2">
-            <DialogTitle className="text-left">{t("ADD_USER_ROLE.TITLE")}</DialogTitle>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    aria-label={t("ADD_USER_ROLE.MAX_ROLES_INFO")}
-                    className="inline-flex items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus:outline-hidden"
-                  >
-                    <Info className="h-4 w-4" aria-hidden />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  {t("ADD_USER_ROLE.MAX_ROLES_INFO_TOOLTIP")}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
+          <DialogTitle className="text-left">{t("ADD_USER_ROLE.TITLE")}</DialogTitle>
           <DialogDescription></DialogDescription>
         </DialogHeader>
         <GrantHint kind="roles" />
@@ -161,34 +116,13 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
                 (data?.data?.length ? (
                   data.data.map((item) => {
                     const isAlreadyAssigned = !!slugs.includes(item.slug);
-                    const isAtCap = slugs.length + selectedRolos.length >= 5;
-                    const isCheckboxDisabled = isAlreadyAssigned || isAtCap;
                     return (
                       <div key={item.itemId} className="col-span-1 flex items-center py-2">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span
-                                className="inline-flex"
-                                tabIndex={isCheckboxDisabled ? 0 : undefined}
-                                aria-disabled={isCheckboxDisabled}
-                              >
-                                <Checkbox
-                                  checked={isAlreadyAssigned || selectedRolos.includes(item.slug)}
-                                  disabled={isCheckboxDisabled}
-                                  onCheckedChange={(value) =>
-                                    onCheckedChangeHandler(!!value, item.slug)
-                                  }
-                                />
-                              </span>
-                            </TooltipTrigger>
-                            {isAtCap && !isAlreadyAssigned && (
-                              <TooltipContent side="right">
-                                {t("ADD_USER_ROLE.MAX_ROLES_TOOLTIP")}
-                              </TooltipContent>
-                            )}
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Checkbox
+                          checked={isAlreadyAssigned || selectedRolos.includes(item.slug)}
+                          disabled={isAlreadyAssigned}
+                          onCheckedChange={(value) => onCheckedChangeHandler(!!value, item.slug)}
+                        />
                         <div className="ml-2 flex flex-col">
                           <div className="max-w-[150px] truncate" title={item.name}>
                             {item.name}
