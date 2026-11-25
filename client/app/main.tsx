@@ -13,6 +13,7 @@ import { router } from "./router";
 import { BlocksAppLayout, ThemeProvider } from "@seliseblocks/genesis-os/providers";
 import { RollbarProvider } from "@seliseblocks/genesis-os/observability";
 import { captureDeepLink } from "@/lib/deep-link";
+import { MergeAnnouncementBanner } from "@/components/merge-announcement/merge-announcement-banner";
 
 // Before the router mounts: the guards redirect straight away and drop the query string.
 captureDeepLink(window.location);
@@ -33,6 +34,8 @@ createRoot(document.getElementById("root")!).render(
                   },
                 }}
               >
+                {/* Temporary: Blocks OS merge announcement (until 20 Dec 2026). */}
+                <MergeAnnouncementBanner />
                 <RouterProvider router={router} />
               </BlocksAppLayout>
               <Toaster />
