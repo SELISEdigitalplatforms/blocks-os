@@ -1,3 +1,4 @@
+import { isAgentsEnabled, isStudioEnabled } from "@/lib/features";
 import { getRuntimeEnv, RuntimeKey } from "@/lib/runtime-env";
 
 /**
@@ -28,13 +29,17 @@ const isAbsoluteUrl = (value: string) => /^https?:\/\//i.test(value);
  * base URL for that service. Returns "" when the service is unknown.
  */
 export const getServiceBaseUrl = (service: string, baseUrl?: string): string => {
-  if (baseUrl && isAbsoluteUrl(baseUrl)) return trimTrailingSlash(baseUrl);
-
   const name = service
     .trim()
     .toUpperCase()
     .replace(/^BLOCKS[-_]/, "")
     .replace(/-/g, "_");
+
+  // Services that only some installations run: no link unless their feature is on.
+  if (name === "AGENTS" && !isAgentsEnabled()) return "";
+  if (name === "STUDIO" && !isStudioEnabled()) return "";
+
+  if (baseUrl && isAbsoluteUrl(baseUrl)) return trimTrailingSlash(baseUrl);
 
   const isKnown = (SERVICES_WITH_BASE_URL as readonly string[]).includes(name);
   if (!isKnown) return "";

@@ -3,6 +3,7 @@ import { ConsoleLayout } from "@seliseblocks/genesis-os/layouts";
 import { CallbackPage, ConsolePage, LoginPage, ProfilePage } from "@seliseblocks/genesis-os/pages";
 import { createBrowserRouter, matchRoutes, Navigate, Outlet, useLocation } from "react-router";
 import { navigationMenus } from "@/constants/navigation-menus";
+import { isAgentsEnabled } from "@/lib/features";
 import { ScopedDashboardRoute } from "@/routes/scoped-dashboard-route";
 import { DeepLinkRedirect } from "@/components/deep-link-redirect/deep-link-redirect";
 import { PendingConnectRedirect } from "@/components/pending-connect-redirect/pending-connect-redirect";
@@ -511,10 +512,15 @@ export const router = createBrowserRouter([
                       },
                     ],
                   },
-                  {
-                    path: "ai-credits",
-                    element: <AiCreditsPage />,
-                  },
+                  // Served by the agents service: no route at all when the feature is off.
+                  ...(isAgentsEnabled()
+                    ? [
+                        {
+                          path: "ai-credits",
+                          element: <AiCreditsPage />,
+                        },
+                      ]
+                    : []),
                   {
                     path: "lmt",
                     element: <LmtLayout />,

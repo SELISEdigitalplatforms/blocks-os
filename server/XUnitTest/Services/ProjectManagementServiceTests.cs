@@ -1852,6 +1852,68 @@ namespace XUnitTest.Services
                     "IAM is the same host in every tenant's list; Studio is absent from this configuration");
         }
 
+        private static IConfiguration WithStudio(string? studioFeature)
+        {
+            var values = new Dictionary<string, string?>
+            {
+                { "KbtclIdentifier", ".blocks.dev" },
+                { "IamDomain", "https://iam.blocks.dev" },
+                { "IamCookieDomain", "blocks.dev" },
+                { "CertificateStorageType", "Azure" },
+                { "FrontendRuntime:BLOCKS_IAM_BASE_URL", "https://dev-iam.blocksdevelopers.com" },
+                { "FrontendRuntime:BLOCKS_STUDIO_BASE_URL", "https://studio.blocks.dev/" },
+                { "FrontendRuntime:BLOCKS_FEATURE_STUDIO", studioFeature }
+            };
+            return new ConfigurationBuilder().AddInMemoryCollection(values).Build();
+        }
+
+        private async Task<IEnumerable<string?>> PlatformDefaultDomainsAsync(IConfiguration configuration)
+        {
+            Tenant? inserted = null;
+            _repo.Setup(r => r.InsertProjectAsync(It.IsAny<Tenant>()))
+                 .Callback<Tenant>(t => inserted = t)
+                 .Returns(Task.CompletedTask);
+
+            await Service(configuration).SaveProjectAsync(new CreateProjectRequest
+            {
+                Name = "Proj",
+                Resources = [RepositoryNamed("repo-1")],
+                applicationContexts = [new() { Environment = "dev" }]
+            });
+
+            return inserted!.Applications
+                .Where(a => a.DomainType == DomainType.PlatformDefault)
+                .Select(a => a.Domain);
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("false")]
+        [InlineData("1")]
+        public async Task SaveProjectAsync_LeavesStudioOut_WhenTheStudioFeatureIsNotOn(string? studioFeature)
+        {
+            using var _ = new BlocksTestContext();
+
+            var domains = await PlatformDefaultDomainsAsync(WithStudio(studioFeature));
+
+            domains.Should().BeEquivalentTo(new[] { "https://iam.blocks.dev" },
+                "an installation without Studio must not get a Studio domain on every new project");
+        }
+
+        [Theory]
+        [InlineData("true")]
+        [InlineData(" TRUE ")]
+        public async Task SaveProjectAsync_AddsStudio_WhenTheStudioFeatureIsOn(string studioFeature)
+        {
+            using var _ = new BlocksTestContext();
+
+            var domains = await PlatformDefaultDomainsAsync(WithStudio(studioFeature));
+
+            domains.Should().BeEquivalentTo(new[] { "https://iam.blocks.dev", "https://studio.blocks.dev" },
+                "Studio's host is added, without its trailing slash, when the feature is on");
+        }
+
         // --- #606 JWT issuer on project creation ---
 
         private static IConfiguration WithIamBaseUrl(string? url)

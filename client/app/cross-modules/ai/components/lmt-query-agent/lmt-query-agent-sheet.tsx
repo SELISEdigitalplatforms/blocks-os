@@ -3,6 +3,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui-kits/sheet/sh
 import { Bot } from "lucide-react";
 import { LMTQueryAgent } from "./lmt-query-agent";
 import { useState } from "react";
+import { isAgentsEnabled } from "@/lib/features";
 interface LMTQueryAgentSheetProps {
   agentName?: string;
   questions?: string[];
@@ -14,6 +15,8 @@ export const LMTQueryAgentSheet = ({
   description,
 }: LMTQueryAgentSheetProps) => {
   const [open, setOpen] = useState<boolean>(false);
+  // The agent is served by the agents service; without it the button would only lead to errors.
+  if (!isAgentsEnabled()) return null;
   return (
     <Sheet open={open} onOpenChange={setOpen} modal={false}>
       <SheetTrigger asChild>

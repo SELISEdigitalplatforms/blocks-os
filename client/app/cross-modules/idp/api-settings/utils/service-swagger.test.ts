@@ -49,6 +49,29 @@ describe("service-swagger", () => {
     });
   });
 
+  describe("services behind a feature setting", () => {
+    it("gives no agents or Studio link while their features are off", () => {
+      (window as BlocksWindow).__BLOCKS_ENV__ = {
+        BLOCKS_AGENTS_BASE_URL: "https://agents.env",
+        BLOCKS_STUDIO_BASE_URL: "https://studio.env",
+      };
+      expect(getServiceSwaggerUrl("blocks-agents")).toBe("");
+      expect(getServiceSwaggerUrl("blocks-studio")).toBe("");
+      expect(getServiceSwaggerUrl("blocks-agents", "https://agents.example.com")).toBe("");
+    });
+
+    it("gives the agents and Studio links when their features are on", () => {
+      (window as BlocksWindow).__BLOCKS_ENV__ = {
+        BLOCKS_AGENTS_BASE_URL: "https://agents.env",
+        BLOCKS_STUDIO_BASE_URL: "https://studio.env/",
+        BLOCKS_FEATURE_AGENTS: "true",
+        BLOCKS_FEATURE_STUDIO: "true",
+      };
+      expect(getServiceSwaggerUrl("blocks-agents")).toBe("https://agents.env/swagger/index.html");
+      expect(getServiceSwaggerUrl("blocks-studio")).toBe("https://studio.env/swagger/index.html");
+    });
+  });
+
   describe("getServiceSwaggerUrl", () => {
     it("appends the swagger path when a base url resolves", () => {
       expect(getServiceSwaggerUrl("iam", "https://iam.example.com")).toBe(
