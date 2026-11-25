@@ -45,12 +45,12 @@
  * - `os.secret-management` (8 keys): pages/secret-management
  * - `os.secrets` (203 keys): cross-modules/secrets
  * - `os.settings` (24 keys): pages/settings
- * - `os.shared` (219 keys): components (except those listed under feature modules), hooks, layouts, lib, routes, constants (navigation, breadcrumb, environment options, lmt/secret/auth nav)
+ * - `os.shared` (250 keys): components (except those listed under feature modules), hooks, layouts, lib, routes, constants (navigation, breadcrumb, environment options, lmt/secret/auth nav)
  * - `os.storage` (84 keys): cross-modules/storage
  * - `os.subscription-usage` (41 keys): pages/subscription-usage
  * - `os.utilities` (58 keys): cross-modules/utilities
  * - `os.webhooks` (104 keys): cross-modules/webhooks
- * Total: 5266 keys.
+ * Total: 5297 keys.
  */
 import { registerTranslations } from "@seliseblocks/genesis-os";
 import osActions from "./os.actions.en.json";
