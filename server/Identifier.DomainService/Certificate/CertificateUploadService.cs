@@ -1,6 +1,5 @@
-﻿using Azure;
-using Azure.Storage.Blobs.Models;
-using Blocks.Genesis;
+﻿using Blocks.Genesis;
+using DomainService.Storage;
 using Microsoft.AspNetCore.Http;
 using StorageDriver;
 
@@ -18,16 +17,20 @@ namespace DomainService.Certificate
     /// validates an external token. A DMS URL is a SAS that would expire underneath it.
     ///
     /// <para>
-    /// The container comes from <see cref="IStorageDriverService.GetBlobClientAsync"/>, which
-    /// resolves the tenant's storage configuration and creates the shared <c>certificates</c>
-    /// container with anonymous blob access. That is the same container blocks-data and
-    /// blocks-logic write to, so a certificate uploaded through any of them resolves identically.
+    /// The write goes through <see cref="IStorageDriverService.UploadPublicObjectAsync"/>, which
+    /// resolves the tenant's Default storage configuration, makes the shared <c>certificates</c>
+    /// container readable without credentials (the container access level on Azure, a bucket
+    /// policy on that one bucket on S3) and returns the object's permanent URL. That is the same
+    /// container blocks-data and blocks-logic write to, so a certificate uploaded through any of
+    /// them resolves identically. An SFTP configuration has no public read and is answered with a
+    /// clear error.
     /// </para>
     /// </remarks>
     public class CertificateUploadService : ICertificateUploadService
     {
         private readonly IStorageDriverService _storageDriverService;
 
+        private const string CertificateContainerName = "certificates";
         private const string ThirdPartyBlobSuffix = "_3rdparty";
         private const string FallbackContentType = "application/octet-stream";
         private const long MaxCertificateSizeInBytes = 2 * 1024 * 1024;
@@ -69,37 +72,33 @@ namespace DomainService.Certificate
 
             try
             {
-                var blobClient = await _storageDriverService.GetBlobClientAsync(
+                await using var stream = certificate.OpenReadStream();
+
+                var url = await _storageDriverService.UploadPublicObjectAsync(
+                    CertificateContainerName,
                     BuildBlobName(
                         tenantId,
                         request.IsThirdParty,
                         request.ProviderRef,
-                        Path.GetExtension(certificate.FileName)));
-
-                await using var stream = certificate.OpenReadStream();
-
-                await blobClient.UploadAsync(stream, new BlobUploadOptions
-                {
-                    HttpHeaders = new BlobHttpHeaders
-                    {
-                        ContentType = string.IsNullOrWhiteSpace(certificate.ContentType)
-                            ? FallbackContentType
-                            : certificate.ContentType
-                    }
-                });
+                        Path.GetExtension(certificate.FileName)),
+                    stream,
+                    string.IsNullOrWhiteSpace(certificate.ContentType)
+                        ? FallbackContentType
+                        : certificate.ContentType);
 
                 return new UploadCertificateResponse
                 {
                     IsSuccess = true,
-                    DownloadUrl = blobClient.Uri.ToString()
+                    DownloadUrl = url
                 };
             }
-            catch (RequestFailedException ex)
+            catch (PublicObjectStorageException ex)
             {
                 // Genesis reads the certificate back anonymously, so the container has to serve
-                // blobs without credentials. A storage account with public blob access disabled
-                // fails here, which is far easier to diagnose than tokens quietly 401ing later.
-                return Error("storage", ex.ErrorCode ?? "certificate_upload_failed");
+                // objects without credentials. A store that refuses to (public blob access
+                // disabled on the account, an SFTP configuration) fails here with the provider's
+                // own code, which is far easier to diagnose than tokens quietly 401ing later.
+                return Error("storage", ex.ErrorCode);
             }
         }
 
